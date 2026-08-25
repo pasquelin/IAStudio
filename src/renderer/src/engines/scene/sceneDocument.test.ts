@@ -11,7 +11,7 @@ import {
   spriteNodeFixture,
   textNodeFixture,
 } from './scene-fixtures'
-import { groupNode } from './nodeFactory'
+import { carvedNode, groupNode } from './nodeFactory'
 import { SPRITE_SPECS } from './propertyFields'
 import { scenePayload, sceneFromPayload } from './sceneDocument'
 import {
@@ -20,6 +20,7 @@ import {
   DEFAULT_TEXT,
   EMPTY_SCENE,
   IDENTITY_TRANSFORM,
+  type SceneNode,
   type SceneState,
 } from './sceneState'
 
@@ -808,5 +809,64 @@ describe('the timeline a file holds', () => {
     })
 
     expect(timeline.tracks).toEqual([])
+  })
+})
+
+describe('a carved solid across a save', () => {
+  const window = () =>
+    carvedNode(
+      {
+        base: {
+          name: 'Wall',
+          geometry: { kind: 'box', width: 4, height: 3, depth: 0.2 },
+          transform: IDENTITY_TRANSFORM,
+          material: DEFAULT_MATERIAL,
+        },
+        steps: [
+          {
+            operation: 'subtract',
+            part: {
+              name: 'Hole',
+              geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
+              transform: { ...IDENTITY_TRANSFORM, position: { x: 1, y: 0, z: 0 } },
+              material: DEFAULT_MATERIAL,
+            },
+          },
+        ],
+        collision: 'trimesh',
+      },
+      { name: 'Wall' },
+    )
+
+  // Through `reread`, so it is the JSON round trip that answers, not a live reference.
+  const reopened = (node: SceneNode) => reread({ ...EMPTY_SCENE, nodes: [node] }).nodes
+
+  // The one that was measured missing: written, and gone on reopening — the whole recipe with it.
+  it('comes back at all', () => {
+    expect(reopened(window())).toHaveLength(1)
+  })
+
+  it('comes back with the brushes it was cut from, and their placement', () => {
+    const back = reopened(window())[0]
+    if (back?.type !== 'carved') throw new Error('the solid did not survive the save')
+
+    expect(back.carved.base.geometry).toEqual({ kind: 'box', width: 4, height: 3, depth: 0.2 })
+    expect(back.carved.steps).toHaveLength(1)
+    expect(back.carved.steps[0]?.operation).toBe('subtract')
+    expect(back.carved.steps[0]?.part.transform.position.x).toBe(1)
+  })
+
+  it('refuses a solid whose recipe does not read, rather than drawing half of it', () => {
+    const broken = { ...window(), carved: { base: { name: 'Wall' }, steps: [], collision: 'box' } }
+    expect(reopened(broken as SceneNode)).toEqual([])
+  })
+
+  // The same half of the rule a mesh gets: a file written before a material field existed comes
+  // back with that field filled in, rather than holding `undefined`.
+  it('lays the material defaults under a solid, as it does under a mesh', () => {
+    const bare = { ...window(), material: { kind: 'standard', color: null } }
+    const back = reopened(bare as SceneNode)[0]
+
+    expect(back?.type === 'carved' && back.material).toEqual(DEFAULT_MATERIAL)
   })
 })

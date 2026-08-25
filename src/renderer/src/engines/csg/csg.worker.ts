@@ -21,13 +21,8 @@ const OPERATIONS: Record<CsgOperation, CSGOperation> = {
   intersect: INTERSECTION,
 }
 
-/**
- * Cuts solids out of solids, off the UI thread — CLAUDE.md invariant 6, and ADR-25 for why the
- * evaluation happens on release of a gesture rather than during it.
- *
- * One evaluator for the life of the worker: it holds pooled triangles and half-edge maps that a
- * fresh one would rebuild on every cut.
- */
+/** One evaluator for the life of the worker: it pools triangles and half-edge maps a fresh one
+ * would rebuild on every cut. */
 const evaluator = new Evaluator()
 // One coherent piece, one material. Groups would hand back a material array and a draw call per
 // group, where a carved node wears exactly one `MaterialDescriptor`.
@@ -56,11 +51,8 @@ self.addEventListener('message', (event: MessageEvent<CsgRequest>) => {
   }
 })
 
-/**
- * `prepareGeometry` builds the half-edge map the cut walks. Called here rather than left to the
- * evaluator so a brush that cannot be prepared fails on its own line, where the message says
- * which one.
- */
+/** Prepared here rather than inside the evaluator, so a brush that cannot be fails on its own
+ * line — where the message names which one. */
 function brushOf(part: CsgPart): Brush {
   const brush = new Brush(geometryFor(part.geometry))
   const { position, rotation, scale } = part.transform
@@ -74,28 +66,31 @@ function brushOf(part: CsgPart): Brush {
 }
 
 function meshOf(geometry: BufferGeometry): CsgMesh {
-  const position = floatsOf(geometry, 'position', 3)
-  const index = geometry.getIndex()
-  const widened = index ? Uint32Array.from(index.array) : null
+  const index = geometry.getIndex()?.array
 
   return {
-    position,
+    position: floatsOf(geometry, 'position', 3),
     normal: floatsOf(geometry, 'normal', 3),
     uv: floatsOf(geometry, 'uv', 2),
-    index: widened,
-    triangles: (widened ? widened.length : position.length / 3) / 3,
+    // `slice` on the width it already has: the evaluator always writes 32-bit, and `from` would
+    // walk it through an iterator where a memcpy does.
+    index: index ? (index instanceof Uint32Array ? index.slice() : Uint32Array.from(index)) : null,
   }
 }
 
 /**
- * One attribute as tight floats. `slice()` rather than the array itself: the buffers are
- * transferred, and an attribute the evaluator still owns would be detached under it — the next
- * cut on the same worker would then read a zero-length array and hand back an empty solid,
- * silently.
+ * One attribute as tight floats — a COPY always: the buffers are transferred, and an attribute
+ * the evaluator still owns would be detached under it, leaving the next cut on this worker to
+ * read a zero-length array and hand back an empty solid, silently.
  */
 function floatsOf(geometry: BufferGeometry, name: string, size: number): Float32Array {
   const attribute = geometry.getAttribute(name)
   if (!attribute) return new Float32Array(0)
+
+  const { array } = attribute
+  // The evaluator writes tight `Float32Array`s, so this is the path taken — and it is a memcpy
+  // against three accessor calls a vertex. Same fast path `bvhBuilder.positionsOf` holds.
+  if (array instanceof Float32Array && array.length === attribute.count * size) return array.slice()
 
   const tight = new Float32Array(attribute.count * size)
   for (let at = 0; at < attribute.count; at += 1) {

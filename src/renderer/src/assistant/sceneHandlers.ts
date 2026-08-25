@@ -47,6 +47,7 @@ import {
   setWorld,
   separateNode,
 } from '@/engines/scene/commands'
+import { carriesMaterial } from '@/engines/scene/sceneState'
 import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
 import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
 import {
@@ -277,6 +278,9 @@ function readState(): ActionOutcome {
         // The points of a rail, so binding one is not done blind — `camera.rail` takes the id
         // from here, and what the rail looks like decides which one a client wants.
         ...(node.type === 'path' ? { path: node.path } : {}),
+        // The recipe and the material: without them a solid reads as a bare `type` and a client
+        // cannot tell a pierced wall from a welded one, nor know there is anything to separate.
+        ...(node.type === 'carved' ? { carved: node.carved, material: node.material } : {}),
       })),
     },
   }
@@ -589,10 +593,11 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   'node.material': input =>
     editNode(input, node => {
-      if (node.type !== 'mesh' && node.type !== 'text') return null
-      // A text's outline is not a primitive, so its UVs never go through the tiling — the field
-      // the inspector drops for a text is refused here rather than filed and ignored.
-      if (node.type === 'text' && input.tilesPerMetre !== undefined) return null
+      if (!carriesMaterial(node)) return null
+      // Neither a text's outline nor a cut result is a primitive, so their UVs never go through
+      // the tiling — the field the inspector drops for both is refused here rather than filed
+      // and ignored.
+      if (node.type !== 'mesh' && input.tilesPerMetre !== undefined) return null
 
       const textures = texturesFrom(input)
       if (!textures) return null

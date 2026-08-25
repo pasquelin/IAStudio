@@ -5,10 +5,8 @@
 import type { CsgGraph } from '@shared/domain/csg'
 
 /**
- * The graph goes over, not the meshes — the one place this boundary differs from the BVH one,
- * and for a reason: a brush is a DESCRIPTOR, so the worker builds the geometry itself from a few
- * hundred bytes. The BVH worker has to be handed buffers because its input comes from an
- * arbitrary GLB and nothing on this side can describe it.
+ * The GRAPH goes over, never the meshes: a brush is a descriptor, so the worker builds the
+ * geometry itself from a few hundred bytes.
  */
 export type CsgRequest = {
   id: number
@@ -22,8 +20,6 @@ export type CsgMesh = {
   uv: Float32Array
   /** Absent when the evaluation produced no index — the caller draws it non-indexed. */
   index: Uint32Array | null
-  /** What the result costs, read back by the counters without walking the buffers again. */
-  triangles: number
 }
 
 /**

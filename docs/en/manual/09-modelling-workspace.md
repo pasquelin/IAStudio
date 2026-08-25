@@ -488,6 +488,39 @@ filed would vanish from the screen, and you would think it lost.
 
 ---
 
+## Carve, join, intersect
+
+**Edit ▸ Carve**, or the four toolbar buttons, after the grouping one.
+
+Set a cube inside a wall, select **the wall first, the cube second**, then **Carve**: the wall
+gains a window. That is the whole principle — the **first** shape you pick is the matter, the ones
+after it are the tools that hollow it.
+
+Three ways to combine, and one to go back:
+
+| Button | What it does |
+|---|---|
+| **Carve** | hollows the first shape with the ones after it — the cube opens the window |
+| **Join** | merges the shapes into a single solid |
+| **Keep overlap** | keeps only the part where the shapes overlap |
+| **Separate** | gives the original shapes back, each where it stood |
+
+**Nothing is lost.** The solid remembers the shapes it was made of: **Separate** hands them back
+intact, and `⌘Z` undoes the cut like any other action. So you can try things freely.
+
+The resulting solid behaves like an ordinary object: it carries a name, moves, turns, wears a
+material, and the window follows the wall when you move it.
+
+> **The calculation does not run while you drag the cube**, but when you click the button — and it
+> runs beside the window, without freezing the screen. On a very detailed shape the solid may
+> therefore show up **whole for a moment** before the hole appears: that is not an error, it is the
+> calculation not having answered yet.
+
+> **A lone shape cannot be carved.** It takes at least two, and the buttons do nothing until then.
+> **Separate** applies to one solid at a time.
+
+---
+
 ## Duplicate, copy, paste
 
 The four shortcuts you already know. **Duplicate** has its row in **Edit**; the *Cut*, *Copy* and

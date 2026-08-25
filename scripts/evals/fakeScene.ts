@@ -37,6 +37,7 @@ function add(bench: Bench, scene: StudioDocument, kind: string, input: Input): A
     scale: { ...UNIT },
     visible: true,
     carved: [],
+    operation: null,
     textures: {},
     roughness: null,
     metalness: null,
@@ -121,6 +122,7 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
         kind: 'carved',
         // Kept whole, which is what makes the fold undoable — ADR-25.
         carved: picked,
+        operation: text(input, 'operation'),
       }
       scene.nodes = [...scene.nodes.filter(one => !picked.includes(one)), solid]
       scene.modified = true

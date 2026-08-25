@@ -44,6 +44,8 @@ export type SceneNode = {
   text: string | null
   /** The nodes a carved solid was folded from — what `node.separate` gives back. */
   carved: readonly SceneNode[]
+  /** Which cut made it, so a scenario can score the verb it asked for and not merely a fold. */
+  operation: string | null
 }
 
 export type Layer = {

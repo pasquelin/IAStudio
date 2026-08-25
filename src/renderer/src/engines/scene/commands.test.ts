@@ -1055,6 +1055,20 @@ describe('carveNodes', () => {
     expect(carveNodes([wall()], 'subtract', [wall()])).toBeNull()
   })
 
+  // The reason `CsgPart` carries a material at all: welding a red cube to a blue sphere and
+  // separating them must not hand both back in one colour.
+  it('gives each shape back the colour it wore before the fold', () => {
+    const red = { ...wall(), material: { ...DEFAULT_MATERIAL, color: '#ff0000' } }
+    const blue = { ...cube(1), material: { ...DEFAULT_MATERIAL, color: '#0000ff' } }
+    const solid = carved([red, blue]).nodes[0]
+    if (solid?.type !== 'carved') throw new Error('the cut produced no solid')
+
+    const back = separateNode(solid).apply({ ...EMPTY_SCENE, nodes: [solid] })
+    const colours = back.nodes.map(node => (node.type === 'mesh' ? node.material.color : null))
+
+    expect(colours).toEqual(['#ff0000', '#0000ff'])
+  })
+
   it('gives back the very shapes it folded in, still where they stood', () => {
     const solid = carved([wall(), cube(1)]).nodes[0]
     if (solid?.type !== 'carved') throw new Error('the cut produced no solid')

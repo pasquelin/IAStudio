@@ -66,19 +66,31 @@ désigne. C'est plus étroit qu'un LRU, sans seuil à régler, et incapable de g
 personne ne dessine. Jeter est sans risque, puisque le graphe reconstruit.
 
 `[M]` **Ce qui n'est pas encore évalué s'affiche en brushes bruts.** Le mur plein, sans sa fenêtre —
-jamais un objet manquant, jamais un trou noir. La file de travail est triée *visible à l'écran →
-proche de la caméra → hors champ*, annulable, et bornée à `hardwareConcurrency − 2` comme l'exige
-l'invariant 6. L'éditeur reste utilisable pendant que le calcul rattrape.
+jamais un objet manquant, jamais un trou noir. L'éditeur reste utilisable pendant que le calcul
+rattrape.
+
+`[?]` **La file priorisée n'est PAS livrée, et ce paragraphe remplace ce que l'ADR annonçait.** Ce
+qui existe est un Worker unique en FIFO : pas de tri *visible → proche → hors champ*, pas
+d'annulation, pas de pool borné à `hardwareConcurrency − 2`. L'invariant 6 est tenu sur le point qui
+compte — le calcul quitte le thread UI — et pas sur les trois autres. Une découpe longue retarde
+donc celles qui suivent. **À reprendre quand une mesure montrera que ça gêne**, pas avant : rien
+n'est mesuré à ce jour.
 
 `[M]` **Le graphe conserve les brushes d'origine, et c'est une obligation, pas un confort.** C'est ce
 qui permet le *Separate*, et c'est surtout ce qui rend les collisions calculables — voir la section
 suivante. Un graphe qui ne garderait que le maillage résultant condamnerait la physique à la
 décomposition approchée.
 
-`[M]` **Chaque objet porte sa fidélité de collision** — `box` / `hull` / `convexes` / `trimesh`,
-comme le `CollisionFidelity` de Roblox. Le champ est ajouté **maintenant**, alors qu'aucune physique
-ne le lit encore, parce que l'ajouter plus tard voudrait dire migrer tous les documents déjà écrits.
-Son coût aujourd'hui est nul.
+`[M]` **Deux champs sont pris tant qu'ils sont libres, pour la même raison.** La **fidélité de
+collision** par solide — `box` / `hull` / `convexes` / `trimesh`, comme le `CollisionFidelity` de
+Roblox — qu'aucune physique ne lit encore. Et la **matière de chaque brosse** dans le graphe : sans
+elle, souder un cube rouge à une sphère bleue puis séparer rendait les deux dans la couleur du
+solide. Les ajouter plus tard voudrait dire migrer tous les documents déjà écrits ; aujourd'hui le
+coût est nul.
+
+`[M]` **Un solide ne se découpe pas dans un autre solide, et c'est un refus écrit.** La liste de
+pas est plate : plier un solide dedans garderait sa brosse de base et jetterait en silence toutes
+les découpes déjà faites. La barre refuse plutôt que de tronquer — il faut le séparer d'abord.
 
 `[M]` **Le graphe voyage en `extras` glTF, verbatim, et les meshes évalués au standard.** C'est le
 mécanisme déjà prouvé quatre fois par le § Formats de `CLAUDE.md` : la fenêtre produit la structure
@@ -131,6 +143,11 @@ arbitré par une mesure, et il pourra devoir changer.
 `[?]` **L'occlusion culling n'existe pas dans three.js et n'est pas fourni ici.** Un mur devant une
 pièce ne cache rien tout seul. C'est un chantier à part entière — partitionnement spatial ou Hi-Z —
 et il n'est pas ouvert par cette ADR.
+
+`[?]` **Un export part avec ce que l'écran montre.** `exportObjects` lit les objets du viewport :
+tant qu'une découpe n'a pas atterri, le `.glb` ou l'`.usdz` sort avec le mur PLEIN, sans attente ni
+avertissement. Afficher la brosse brute est la décision ci-dessus pour l'écran ; ce n'en est pas une
+pour un fichier livré, et c'est un trou connu, pas un réglage.
 
 `[?]` **Le nombre de triangles augmente.** La triangulation des faces coupées produit plus de
 triangles que les brushes d'origine. « Aucune perte » vaut pour les draw calls, pas pour la

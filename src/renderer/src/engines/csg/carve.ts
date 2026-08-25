@@ -4,54 +4,65 @@ import type { Transform } from '@shared/domain/transform'
 import type { SceneNode } from '../scene/sceneState'
 
 /**
- * A node whose shape a cut can read. A light has none, a model's lives in a file this side
- * cannot describe, and a group is a transform — only these two carry a descriptor.
+ * A node whose shape a cut can read. A light has none, a model's lives in a file this side cannot
+ * describe, and a group is a transform.
+ *
+ * A SOLID is not one either, and that is a refusal rather than an omission: the flat list of
+ * steps holds no nested recipe, so folding one in would silently keep its base brush and drop
+ * every cut already made in it. Separate it first, or weld the pieces.
  */
-export type CarvableNode = Extract<SceneNode, { type: 'mesh' } | { type: 'carved' }>
+export type CarvableNode = Extract<SceneNode, { type: 'mesh' }>
 
 export function isCarvable(node: SceneNode): node is CarvableNode {
-  return node.type === 'mesh' || node.type === 'carved'
+  return node.type === 'mesh'
 }
 
 /**
- * The recipe for cutting the tools out of the matter.
+ * Whether a selection can be folded at all — two shapes at the very least.
  *
- * The FIRST node is the matter and the rest are the tools — "pierce THIS with THAT", the order a
- * hand selects in. `null` when fewer than two nodes can be cut, which is what the toolbar leaves
- * a button inert for.
+ * Read by the toolbar to leave its buttons inert AND by `carveNodes` to refuse: written once, so
+ * a button that looks live can never be a click that does nothing.
+ */
+export function canCarve(picked: readonly SceneNode[]): boolean {
+  return picked.filter(isCarvable).length >= 2
+}
+
+/** One solid at a time: two would put back two sets of brushes with no way to tell them apart. */
+export function canSeparate(picked: readonly SceneNode[]): boolean {
+  return picked.length === 1 && picked[0]?.type === 'carved'
+}
+
+/**
+ * The recipe for cutting the tools out of the matter — "pierce THIS with THAT", the order a hand
+ * selects in. Which node is the matter is the CALLER's to decide, and the signature says so.
  *
  * Every tool is rewritten into the matter's own frame, so the solid can then be moved, turned
  * and scaled as one and its brushes follow.
  */
 export function carveGraph(
-  nodes: readonly SceneNode[],
+  matter: CarvableNode,
+  tools: readonly CarvableNode[],
   operation: CsgOperation,
   all: readonly SceneNode[],
-): CsgGraph | null {
-  const [matter, ...tools] = nodes.filter(isCarvable)
-  if (!matter || tools.length === 0) return null
-
-  const intoMatter = worldOf(matter, all).invert()
+): CsgGraph {
+  // Built once and passed down: `worldOf` walks it per node, and rebuilding it there cost a
+  // full sweep of the scene per tool.
+  const byId = new Map(all.map(node => [node.id, node]))
+  const intoMatter = worldOf(matter, byId).invert()
 
   return {
     base: partOf(matter, null),
     steps: tools.map(tool => ({
       operation,
-      part: partOf(tool, intoMatter.clone().multiply(worldOf(tool, all))),
+      part: partOf(tool, intoMatter.clone().multiply(worldOf(tool, byId))),
     })),
     // What a solid is born with. ADR-25 takes the field now and reads it later.
     collision: 'trimesh',
   }
 }
 
-/**
- * A node as one brush. A carved node contributes its BASE brush and nothing else: cutting a
- * solid out of a solid would need the whole recipe nested, which the flat list of steps cannot
- * hold — and a nested graph is a shape this toolbar has no gesture for.
- */
 function partOf(node: CarvableNode, into: Matrix4 | null): CsgPart {
-  const geometry = node.type === 'mesh' ? node.geometry : node.carved.base.geometry
-  const part = csgPartOf(node.name, geometry)
+  const part = csgPartOf(node.name, node.geometry, node.material)
   return into ? { ...part, transform: transformOf(into) } : part
 }
 
@@ -64,14 +75,13 @@ export function placedIn(outer: Transform, inner: Transform): Transform {
 }
 
 /** Where a node stands in the scene, its parents composed in. */
-function worldOf(node: SceneNode, all: readonly SceneNode[]): Matrix4 {
-  const byId = new Map(all.map(candidate => [candidate.id, candidate]))
+function worldOf(node: SceneNode, byId: ReadonlyMap<string, SceneNode>): Matrix4 {
   const world = new Matrix4()
 
+  // No visited set: `canReparent` refuses a circular parent, and the studio's other walk of this
+  // same chain does without one too.
   let walker: SceneNode | undefined = node
-  const seen = new Set<string>()
-  while (walker && !seen.has(walker.id)) {
-    seen.add(walker.id)
+  while (walker) {
     world.premultiply(matrixOf(walker.transform))
     walker = walker.parentId === null ? undefined : byId.get(walker.parentId)
   }

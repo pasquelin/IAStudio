@@ -465,12 +465,16 @@ const GRID_SINKAGE = 0.02
  * placed away from what they light or watch, and a group is only ever as big as its children,
  * which are counted on their own.
  */
-const FRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
-  'mesh',
-  'model',
-  'text',
-  'sprite',
+const UNFRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
+  'light',
+  'camera',
+  'group',
+  'path',
 ])
+
+/** Spelled as what is LEFT OUT: a node kind added to the union is framed by default, where a
+ * whitelist would have quietly stopped framing it. */
+const isFramed = (type: SceneNodeType): boolean => !UNFRAMED_NODES.has(type)
 
 /** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
 function boundsOf(objects: Iterable<Object3D>): Box3 {
@@ -693,6 +697,8 @@ export class SceneRenderer {
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
   private readonly csg: CsgEvaluator
+  /** Nodes whose cut is out. Holds which side owes the cache its reference. */
+  private readonly cutting = new Set<string>()
   private readonly skin: SkinWeights
   private readonly retarget: Retarget
   /**
@@ -1745,11 +1751,11 @@ export class SceneRenderer {
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
 
-  /** What a framing and a shadow frustum are both measured against — see `FRAMED_NODES`. */
+  /** What a framing and a shadow frustum are both measured against — see `UNFRAMED_NODES`. */
   private framedObjects(): Object3D[] {
     const objects: Object3D[] = []
     for (const [id, object] of this.objects) {
-      if (FRAMED_NODES.has(this.applied.get(id)?.type ?? 'group')) objects.push(object)
+      if (isFramed(this.applied.get(id)?.type ?? 'group')) objects.push(object)
     }
     return objects
   }
@@ -2780,6 +2786,19 @@ export class SceneRenderer {
       return
     }
 
+    if (node.type === 'carved' && object instanceof Mesh) {
+      const before = previous?.type === 'carved' ? previous : null
+      // Cut again only when the RECIPE moved: a colour change must not send the worker off, which
+      // is the one edit here that costs anything.
+      if (before?.carved !== node.carved) void this.recut(node)
+
+      const material = standardMaterialOf(object)
+      if (material && before?.material !== node.material) {
+        applyMaterial(material, node.material, this.meshColor)
+      }
+      return
+    }
+
     if (node.type === 'text' && object instanceof Mesh) {
       const before = previous?.type === 'text' ? previous : null
       // Cut again only when the words or their shape moved: a colour change must not re-extrude
@@ -2841,6 +2860,12 @@ export class SceneRenderer {
     applyMaterial(material, node.material, this.meshColor)
 
     const mesh = new Mesh(geometryFor(node.carved.base.geometry), material)
+    // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps
+    // are named by the document and loaded by nobody.
+    const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
+    textures.apply(node.material)
+    this.textures.set(node.id, textures)
+
     void this.recut(node)
 
     return mesh
@@ -2853,15 +2878,23 @@ export class SceneRenderer {
    * it is given — `release` is what frees it, and only once the last node lets go.
    */
   private async recut(node: CarvedNode): Promise<void> {
+    // Recorded BEFORE the await: `release` reads this to know whether a reference is out, so a
+    // node deleted mid-cut is given back exactly once — by whichever of the two arrives last.
+    this.cutting.add(node.id)
     const cut = await this.csg.acquire(node.carved)
+    const held = this.cutting.delete(node.id)
 
     const object = this.objects.get(node.id)
     // Edited, recut or deleted while the worker was busy: what is in the scene now decides.
     if (!cut || !(object instanceof Mesh) || this.applied.get(node.id) !== node) {
-      if (cut) this.csg.release(node.carved)
+      // Only if `release` has not already done it — `held` is false when the node went first.
+      if (cut && held) this.csg.release(node.carved)
       return
     }
 
+    // The uncut brush this node was born wearing. Its own buffers, so nothing else frees it —
+    // and the cache's geometries are never disposed here, which `owns` is what tells apart.
+    if (!this.csg.owns(object.geometry)) object.geometry.dispose()
     object.geometry = cut
     void this.bvh.accelerate(object)
     // Same reason as a model landing into a wireframe scene: the edges outline the shape that
@@ -3276,7 +3309,9 @@ export class SceneRenderer {
     // pointed at, and nothing else remembers it.
     const applied = this.applied.get(id)
     if (applied?.type === 'model') this.modelCache.release(applied.model.assetId)
-    if (applied?.type === 'carved') this.csg.release(applied.carved)
+    // Given back once: `recut` may still be in flight, and `cutting` is what says which of the
+    // two owes the reference.
+    if (applied?.type === 'carved' && !this.cutting.delete(id)) this.csg.release(applied.carved)
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)
@@ -3304,7 +3339,9 @@ export class SceneRenderer {
       // find it to remove.
       object.removeFromParent()
       if (object instanceof Mesh) {
-        object.geometry.dispose()
+        // Never a geometry the CSG cache lends: the same buffers are drawn by every node of the
+        // same graph, and freeing them here empties its neighbours' screens.
+        if (!this.csg.owns(object.geometry)) object.geometry.dispose()
         disposeMaterial(object)
       }
       // A sprite is not a mesh, so the branch above never freed its material. Its geometry is

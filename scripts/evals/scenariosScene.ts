@@ -105,19 +105,19 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     name: '6.10 cuts a window in the wall with the cube',
     said: ['Perce une fenêtre dans le mur avec le cube.'],
     setup: wallAndCube,
-    passed: run => read.nodesOfKind(run, 'carved').length === 1,
+    passed: run => read.carvedBy(run, 'subtract'),
   },
   {
     name: '6.11 joins the wall and the cube into one shape',
     said: ['Fusionne le mur et le cube en une seule forme.'],
     setup: wallAndCube,
-    passed: run => read.nodesOfKind(run, 'carved').length === 1,
+    passed: run => read.carvedBy(run, 'unite'),
   },
   {
     name: '6.12 keeps only what the wall and the cube share',
     said: ['Ne garde que la partie où le mur et le cube se chevauchent.'],
     setup: wallAndCube,
-    passed: run => read.nodesOfKind(run, 'carved').length === 1,
+    passed: run => read.carvedBy(run, 'intersect'),
   },
   {
     // The shapes come back BY NAME, which is what tells a separate from a plain delete: the

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { csgGraphOf, csgPartOf, type CsgGraph } from '@shared/domain/csg'
+import { DEFAULT_MATERIAL } from '../scene/sceneState'
+import { csgPartOf, type CsgGraph } from '@shared/domain/csg'
+import { csgGraphOf } from './csg-fixtures'
 import { csgKeyOf } from './csgKey'
 
-const wall = () => csgPartOf('wall', { kind: 'box', width: 4, height: 3, depth: 0.2 })
-const hole = () => csgPartOf('hole', { kind: 'box', width: 1, height: 1, depth: 1 })
+const wall = () =>
+  csgPartOf('wall', { kind: 'box', width: 4, height: 3, depth: 0.2 }, DEFAULT_MATERIAL)
+const hole = () =>
+  csgPartOf('hole', { kind: 'box', width: 1, height: 1, depth: 1 }, DEFAULT_MATERIAL)
 
 function pierced(): CsgGraph {
   return { ...csgGraphOf(wall()), steps: [{ operation: 'subtract', part: hole() }] }
@@ -54,8 +58,12 @@ describe('csgKeyOf', () => {
   })
 
   it('separates two shapes whose numbers read alike', () => {
-    const box = csgGraphOf(csgPartOf('a', { kind: 'box', width: 1, height: 1, depth: 1 }))
-    const plane = csgGraphOf(csgPartOf('a', { kind: 'plane', width: 1, height: 1 }))
+    const box = csgGraphOf(
+      csgPartOf('a', { kind: 'box', width: 1, height: 1, depth: 1 }, DEFAULT_MATERIAL),
+    )
+    const plane = csgGraphOf(
+      csgPartOf('a', { kind: 'plane', width: 1, height: 1 }, DEFAULT_MATERIAL),
+    )
     expect(csgKeyOf(box)).not.toBe(csgKeyOf(plane))
   })
 })

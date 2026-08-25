@@ -1,5 +1,8 @@
+import { BufferGeometry } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { csgGraphOf, csgPartOf, type CsgGraph } from '@shared/domain/csg'
+import { DEFAULT_MATERIAL } from '../scene/sceneState'
+import { csgPartOf, type CsgGraph } from '@shared/domain/csg'
+import { csgGraphOf } from './csg-fixtures'
 import { createCsgEvaluator } from './csgEvaluator'
 import type { CsgRequest, CsgResponse } from './csgMessage'
 
@@ -31,7 +34,6 @@ function fakeWorker() {
               normal: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
               uv: new Float32Array([0, 0, 1, 0, 0, 1]),
               index: null,
-              triangles: 1,
             },
           },
         } as MessageEvent<CsgResponse>)
@@ -48,7 +50,7 @@ function fakeWorker() {
 }
 
 const wall = (): CsgGraph =>
-  csgGraphOf(csgPartOf('wall', { kind: 'box', width: 4, height: 3, depth: 0.2 }))
+  csgGraphOf(csgPartOf('wall', { kind: 'box', width: 4, height: 3, depth: 0.2 }, DEFAULT_MATERIAL))
 
 describe('createCsgEvaluator', () => {
   it('hands the same geometry to two holders of one graph, and cuts once', async () => {
@@ -113,6 +115,27 @@ describe('createCsgEvaluator', () => {
       height: 3,
       depth: 0.2,
     })
+  })
+
+  it('claims the geometries it lends, and nothing else', () => {
+    const fake = fakeWorker()
+    const evaluator = createCsgEvaluator({ spawn: () => fake.worker, onFailure: vi.fn() })
+
+    expect(evaluator.owns(new BufferGeometry())).toBe(false)
+  })
+
+  // What tells a holder it must not dispose: the same buffers are drawn by every node of the
+  // same graph, and freeing them under a neighbour empties its screen with every gate green.
+  it('claims a geometry it handed out, so no holder disposes it', async () => {
+    const fake = fakeWorker()
+    const evaluator = createCsgEvaluator({ spawn: () => fake.worker, onFailure: vi.fn() })
+
+    const acquired = evaluator.acquire(wall())
+    fake.succeed()
+    const geometry = await acquired
+    if (!geometry) throw new Error('the cut answered nothing')
+
+    expect(evaluator.owns(geometry)).toBe(true)
   })
 
   it('stops the worker when the engine goes', () => {

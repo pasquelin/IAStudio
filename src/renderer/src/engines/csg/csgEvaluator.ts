@@ -14,6 +14,12 @@ export type CsgEvaluator = {
   acquire: (graph: CsgGraph) => Promise<BufferGeometry | null>
   /** Gives a reference back. The geometry is disposed once the last one goes. */
   release: (graph: CsgGraph) => void
+  /**
+   * Whether this geometry is one the cache lends out. A holder must NEVER dispose one: the same
+   * buffers are drawn by every node of the same graph, and freeing them under a neighbour is a
+   * solid that vanishes with every gate green.
+   */
+  owns: (geometry: BufferGeometry) => boolean
   /** The engine is going away: the worker with it, and every geometry it handed out. */
   dispose: () => void
 }
@@ -57,7 +63,12 @@ export function createCsgEvaluator({ spawn, onFailure }: CsgEvaluatorOptions): C
       if (key) graphs.delete(key)
       geometry.dispose()
     },
-    onFailure: (_key, error) => onFailure(error),
+    // The recipe goes with the failure: `refCache` drops its entry without ever calling `free`,
+    // so nothing else would clear it.
+    onFailure: (key, error) => {
+      graphs.delete(key)
+      onFailure(error)
+    },
   })
 
   return {
@@ -68,6 +79,7 @@ export function createCsgEvaluator({ spawn, onFailure }: CsgEvaluatorOptions): C
       return cache.acquire(key)
     },
     release: graph => cache.release(csgKeyOf(graph)),
+    owns: geometry => keys.has(geometry),
     dispose: () => {
       cache.dispose()
       session.dispose()

@@ -70,6 +70,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const meshColor = useToken('--color-mesh')
 
   const mesh = node?.type === 'mesh' ? node : null
+  const carved = node?.type === 'carved' ? node : null
   const light = node?.type === 'light' ? node : null
   const sprite = node?.type === 'sprite' ? node : null
   const text = node?.type === 'text' ? node : null
@@ -157,6 +158,21 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             gesture={edit.gesture}
           />
         </>
+      )}
+
+      {/* The material section a mesh gets, and only it: a solid's SHAPE is its recipe, which has
+          no descriptor to draw fields from — and the tiling rides on a primitive's UVs, which a
+          cut result does not have. */}
+      {carved && (
+        <MaterialSection
+          material={carved.material}
+          fallbackColor={meshColor}
+          tiling={false}
+          onChange={material =>
+            edit.run(setMaterialOn(selection, changedFields(carved.material, material)))
+          }
+          gesture={edit.gesture}
+        />
       )}
 
       {text && (
