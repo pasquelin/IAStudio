@@ -57,6 +57,7 @@
     "rotationInert": "A sprite always faces the camera: turning it shows only if it carries children",
     "pickPicture": "Choose an image",
     "pickPictureHint": "Opens the project’s image picker. A double-click opens this one where it is edited",
+    "pickPictureAloneHint": "Opens the project’s image picker",
     "clearTextureHint": "Empties this slot — the image stays in the project",
     "browseTexture": "Browse the images",
     "browseTextureHint": "Choose from the images this project holds, as thumbnails rather than a list",

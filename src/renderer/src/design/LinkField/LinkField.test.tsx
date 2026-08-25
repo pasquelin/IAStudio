@@ -55,7 +55,7 @@ function renderSlot(props: Partial<LinkFieldProps> & Pick<LinkFieldProps, 'onCha
 }
 
 const OPEN = { label: 'Ouvrir', hint: 'Ouvre la texture', run: () => {} }
-const PRESS = { label: 'Choisir', hint: 'Choisir une autre image', run: () => {}, on: false }
+const PRESS = { label: 'Choisir', hint: 'Choisir une autre image', run: () => {} }
 const BROWSE = { label: 'Parcourir', hint: 'Choisir dans tout le projet', run: () => {} }
 
 describe('LinkField', () => {
@@ -254,27 +254,13 @@ describe('LinkField', () => {
       await waitFor(() => expect(pick).toHaveBeenCalledTimes(1))
     })
 
-    // The press is named for what a single click does, since that is the gesture a hand reaches
-    // for first; the tooltip is where the other one is spelled out.
-    it('names the press after the look where a slot offers both', () => {
+    // The press names the button where a slot offers both: it is the gesture a hand reaches for
+    // first, and the tooltip is where the other one is spelled out.
+    it('names the press after the single click where a slot offers both', () => {
       render(<Slot value="tex-1" onChange={vi.fn()} press={PRESS} open={OPEN} />)
 
-      expect(screen.getByRole('button', { name: 'Choisir' })).toHaveAttribute(
-        'aria-pressed',
-        'false',
-      )
-    })
-
-    /**
-     * The wordless `open` is for a slot a `toggle` already names. Alone it draws nothing — an
-     * unnamed button is a Tab stop leading nowhere, and the type says so rather than the reader
-     * finding out.
-     */
-    it('draws no press for an opening nothing names', () => {
-      render(<Slot value="tex-1" onChange={vi.fn()} open={{ run: vi.fn() }} />)
-
-      expect(screen.queryByRole('button', { name: 'Brick' })).toBeNull()
-      expect(screen.getAllByRole('button')).toHaveLength(1)
+      expect(screen.getByRole('button', { name: 'Choisir' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Ouvrir' })).toBeNull()
     })
 
     // A slot that simply stayed empty while a library picture was being fetched read as a drop

@@ -1,6 +1,7 @@
 import { mdiClose, mdiFolderSearchOutline } from '@mdi/js'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
+import { useContextMenu } from '@/hooks/useContextMenu'
 import { useDeferredPress } from '@/hooks/useDeferredPress'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -10,6 +11,8 @@ import { Spinner } from '../Spinner'
 import { Thumbnail } from '../Thumbnail'
 import { FIELD_THUMBNAIL, ROW_ACTION_SPACER } from '../styles'
 import { ToolButton } from '../ToolButton'
+import { LinkFieldMenu } from './LinkFieldMenu'
+import type { LinkPress } from './linkPress'
 import { LinkFieldSlot } from './LinkFieldSlot'
 
 export type LinkOption = {
@@ -17,16 +20,6 @@ export type LinkOption = {
   name: string
   /** Where the picture is served from, for the thumbnail. */
   url?: string
-}
-
-/** A press, as the button wears it: what it is called, and what it explains. */
-export type LinkPress = { label: string; hint: string; run: () => void }
-
-/** The words of a press, where it has any — a wordless `open` is named by its `press`. */
-export function namedPress(
-  press: LinkPress | { run: () => void } | undefined,
-): LinkPress | undefined {
-  return press && 'label' in press ? press : undefined
 }
 
 export type LinkFieldProps = {
@@ -57,26 +50,25 @@ export type LinkFieldProps = {
    * keeps what the picture measures. Absent, a drop is the same gesture as choosing from the list.
    */
   onDropAsset?: (asset: Asset) => void
+  /** Opening what the slot holds — a double-click on its picture, and Enter with it. */
+  open?: LinkPress
   /**
-   * Opening what the slot holds — a double-click on its picture, and Enter with it. The words are
-   * the button's, so a slot whose `toggle` already names it hands over the run alone. **The
-   * wordless form without a `toggle` draws no button at all**: an unnamed one is a Tab to nowhere.
+   * What a SINGLE click on the picture does. It waits out the double-click window, so a press that
+   * opens a window of its own does not flash under a double-click meant for `open`.
    */
-  open?: LinkPress | { run: () => void }
-  /**
-   * What a SINGLE click on the picture does. It waits out the double-click window, so a press
-   * that opens something of its own does not flash under a double-click meant for `open`.
-   *
-   * `on` is for a press that TOGGLES — it draws `aria-pressed`; absent, the press just acts.
-   */
-  press?: LinkPress & { on?: boolean }
+  press?: LinkPress
   /** Choosing from the whole project rather than from `options`. Absent, no button is drawn. */
-  browse?: { label: string; hint: string; run: () => void }
+  browse?: LinkPress
   /** While what the slot points at is being fetched. */
   busy?: boolean
   busyLabel?: string
   /** The handle the MCP steers this link by. Never a translated word. */
   scId?: string
+  /**
+   * Menu rows belonging to the SURFACE rather than to the slot — a channel's flat view, its
+   * recipe. Handed the closer, since a row is what shuts the menu it was chosen in.
+   */
+  menuExtra?: (close: () => void) => ReactNode
 }
 
 /** Milliseconds the pointer rests on the picture before it is shown large. */
@@ -106,6 +98,7 @@ export function LinkField({
   busy,
   busyLabel,
   scId,
+  menuExtra,
 }: LinkFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
   /**
@@ -124,9 +117,13 @@ export function LinkField({
     [options, value, chosen, emptyLabel, missingLabel],
   )
   // Named for what a SINGLE click does where there is one: the gesture a hand reaches for first is
-  // the one the tooltip has to describe. No words, no button — an unnamed one is a Tab to nowhere.
-  const named = press ?? namedPress(open)
-  const gestures = useDeferredPress(press?.run ?? (() => {}), open?.run)
+  // the one the tooltip has to describe.
+  const named = press ?? open
+  const gestures = useDeferredPress(press?.run, open?.run)
+  const menu = useContextMenu()
+  const clearing = emptyLabel === undefined || value === null ? undefined : () => onChange(null)
+  // A right-click that opens an empty surface answers by covering the row it was aimed at.
+  const hasMenu = Boolean(browse || (chosen && open) || clearing || menuExtra)
   const [preview, setPreview] = useState<HTMLElement | null>(null)
   const resting = useRef<number | null>(null)
 
@@ -154,6 +151,7 @@ export function LinkField({
     <LinkFieldSlot
       accepts={accepts}
       onDrop={asset => (onDropAsset ? onDropAsset(asset) : onChange(asset.id))}
+      onContextMenu={hasMenu ? menu.open : undefined}
     >
       <SelectField
         label={label}
@@ -172,7 +170,6 @@ export function LinkField({
             {named && chosen ? (
               <button
                 type="button"
-                aria-pressed={press?.on}
                 {...gestures}
                 {...TIP_LEFT(named.label, false, named.hint)}
                 onPointerEnter={event => {
@@ -239,6 +236,19 @@ export function LinkField({
         <Flyout anchor={preview} placement="right">
           <img src={chosen.url} alt={chosen.name} className="max-h-64 max-w-64 object-contain" />
         </Flyout>
+      )}
+
+      {/* Guarded on what the slot RESOLVED to, like the press: an id whose asset has left the
+          project has nothing to open. */}
+      {menu.at && (
+        <LinkFieldMenu
+          at={menu.at}
+          onClose={menu.close}
+          browse={browse}
+          open={chosen && open}
+          onClear={clearing}
+          extra={menuExtra?.(menu.close)}
+        />
       )}
     </LinkFieldSlot>
   )
