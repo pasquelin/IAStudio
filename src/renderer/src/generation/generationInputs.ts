@@ -6,8 +6,20 @@ import type { AvailableInput } from '@shared/domain/aiCapability'
  * so it tests without React and `import-cycles.test.ts` stays at zero.
  */
 
-/** Where an input came from, which is what the panel says under the thumbnail. */
-export type InputOrigin = 'selection' | 'result'
+/**
+ * Where an input came from. It names what the panel writes under the thumbnail AND what taking
+ * the input off has to undo — a source nobody can trace to a gesture is one nobody can withdraw.
+ */
+export type InputOrigin =
+  /** Rows the asset shelf has picked. */
+  | 'assets'
+  /** Placements the scene in front has picked. */
+  | 'scene'
+  /** What the last generation produced, so a chain starts from it. */
+  | 'result'
+
+/** Walked by `dynamic-keys.i18n.test.ts`: the sentence under each thumbnail is composed. */
+export const INPUT_ORIGINS: readonly InputOrigin[] = ['assets', 'scene', 'result']
 
 export type GenerationInput = AvailableInput & {
   /**
@@ -19,6 +31,11 @@ export type GenerationInput = AvailableInput & {
   /** What the panel draws beside the thumbnail. Document data, never a word of the interface. */
   label: string
   origin: InputOrigin
+  /**
+   * The placement it was picked as, for the one origin whose asset id is not what selected it: a
+   * scene selects NODES, and two of them can reference the same model.
+   */
+  nodeId?: string
 }
 
 /** What the panel is handed to work out its inputs, gathered by `useGenerationContext`. */
@@ -26,7 +43,7 @@ export type WorkspaceContent = {
   /** Rows the shelf has selected, whatever their kind. */
   selectedAssets: readonly { id: string; name: string; type: AssetType }[]
   /** The models a scene has selected, by the catalogue row each one references. */
-  selectedMeshes: readonly { id: string; name: string }[]
+  selectedMeshes: readonly { id: string; name: string; nodeId: string }[]
   /** What the last generation produced, kept so a chain can start from it. */
   results: readonly { id: string; name: string; type: AssetType }[]
 }
@@ -44,7 +61,7 @@ export function availableInputsOf(content: WorkspaceContent): readonly Generatio
       kind: asset.type,
       assetId: asset.id,
       label: asset.name,
-      origin: 'selection',
+      origin: 'assets',
     })
   }
 
@@ -54,7 +71,8 @@ export function availableInputsOf(content: WorkspaceContent): readonly Generatio
       kind: 'mesh',
       assetId: mesh.id,
       label: mesh.name,
-      origin: 'selection',
+      origin: 'scene',
+      nodeId: mesh.nodeId,
     })
   }
 

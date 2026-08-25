@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import type { AssetType } from '@shared/domain/asset'
@@ -8,7 +8,7 @@ import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { latestGenerationIds, useJobs } from '@/stores/jobs'
 import { selectedAssetIds, useSelection } from '@/stores/selection'
 
@@ -21,6 +21,12 @@ import { selectedAssetIds, useSelection } from '@/stores/selection'
 export type GenerationContext = {
   inputs: readonly GenerationInput[]
   capability: CapabilityChoice
+  /**
+   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, the
+   * scene's. A `result` has no gesture behind it, so it is not withdrawn but replaced by the
+   * next generation; the panel draws no way off for one.
+   */
+  withdraw: (input: GenerationInput) => void
 }
 
 /**
@@ -71,6 +77,28 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
     })
   }, [pickedIds, rows, meshes, producedIds])
 
+  /**
+   * 🛑 Undone where it was DONE, never filtered here. A panel-side list of dismissed ids would
+   * leave the shelf showing a row as picked while the generation no longer took it, and the two
+   * answers to "what is selected" would drift apart with nothing to reconcile them.
+   */
+  const withdraw = useCallback(
+    (input: GenerationInput) => {
+      if (input.origin === 'assets') {
+        // Read at CALL time and FILTERED, never toggled against the render that drew the row: a
+        // click landing after the selection moved would otherwise put the asset back.
+        const picked = selectedAssetIds(useSelection.getState())
+        useSelection.getState().selectAssets(picked.filter(id => id !== input.assetId))
+        return
+      }
+
+      if (input.origin === 'scene' && input.nodeId !== undefined && sceneId !== null) {
+        selectIn(sceneId, [input.nodeId], 'toggle')
+      }
+    },
+    [sceneId],
+  )
+
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,
   // and the panel re-renders on every keystroke of the form below it.
   const capability = useMemo(
@@ -78,13 +106,13 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
     [family, inputs, forced],
   )
 
-  return useMemo(() => ({ inputs, capability }), [inputs, capability])
+  return useMemo(() => ({ inputs, capability, withdraw }), [inputs, capability, withdraw])
 }
 
 /** Stable, so a workspace with no scene open does not hand React a new array per render. */
 const NO_KEYS: readonly string[] = []
 
-/** A separator no node name can hold, so an id and a name travel as one comparable string. */
+/** A separator no node name can hold, so the three parts travel as one comparable string. */
 const KEY_PART = '\u0000'
 
 /**
@@ -96,14 +124,14 @@ const KEY_PART = '\u0000'
 function selectedMeshKeysOf(scene: ReturnType<typeof sceneOf>): readonly string[] {
   const picked = scene.nodes.flatMap(node =>
     node.type === 'model' && scene.selectedIds.includes(node.id)
-      ? [`${node.model.assetId}${KEY_PART}${node.name}`]
+      ? [`${node.id}${KEY_PART}${node.model.assetId}${KEY_PART}${node.name}`]
       : [],
   )
 
   return picked.length === 0 ? NO_KEYS : picked
 }
 
-function meshOfKey(key: string): { id: string; name: string } {
-  const at = key.indexOf(KEY_PART)
-  return { id: key.slice(0, at), name: key.slice(at + KEY_PART.length) }
+function meshOfKey(key: string): { id: string; name: string; nodeId: string } {
+  const [nodeId = '', id = '', name = ''] = key.split(KEY_PART)
+  return { id, name, nodeId }
 }

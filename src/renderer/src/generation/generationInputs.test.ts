@@ -19,16 +19,20 @@ describe('what the workspace offers a generation', () => {
     )
 
     expect(inputs).toEqual([
-      { role: 'source', kind: 'image', assetId: 'a1', label: 'car.png', origin: 'selection' },
+      { role: 'source', kind: 'image', assetId: 'a1', label: 'car.png', origin: 'assets' },
     ])
   })
 
   // A node is not an asset: what a scene selects is a placement, and the file it stands for is
   // the row its model names.
   it('offers the mesh a selected scene node stands for', () => {
-    const inputs = availableInputsOf(content({ selectedMeshes: [{ id: 'm1', name: 'Robot' }] }))
+    const inputs = availableInputsOf(
+      content({ selectedMeshes: [{ id: 'm1', name: 'Robot', nodeId: 'n1' }] }),
+    )
 
-    expect(inputs[0]).toMatchObject({ role: 'source', kind: 'mesh', assetId: 'm1' })
+    // The node travels beside the row: two placements of one model are two sources, and taking
+    // one off has to deselect the placement rather than the file both of them name.
+    expect(inputs[0]).toMatchObject({ role: 'source', kind: 'mesh', assetId: 'm1', nodeId: 'n1' })
   })
 
   /**
@@ -43,7 +47,7 @@ describe('what the workspace offers a generation', () => {
       }),
     )
 
-    expect(inputs.map(input => input.origin)).toEqual(['selection', 'result'])
+    expect(inputs.map(input => input.origin)).toEqual(['assets', 'result'])
   })
 
   // § 24: a result becomes a source without a round trip through the shelf — offered, never taken.
@@ -54,7 +58,7 @@ describe('what the workspace offers a generation', () => {
   it('names a row for every input it offers', () => {
     const inputs = availableInputsOf(
       content({
-        selectedMeshes: [{ id: 'm1', name: 'Robot' }],
+        selectedMeshes: [{ id: 'm1', name: 'Robot', nodeId: 'n1' }],
         results: [{ id: 'r1', name: 'robot.png', type: 'image' }],
       }),
     )
