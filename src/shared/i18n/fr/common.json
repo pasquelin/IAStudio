@@ -1,4 +1,7 @@
 {
+  "a11y": {
+    "namedValue": "{{value}} — {{name}}"
+  },
   "actions": {
     "generate": "Générer",
     "close": "Fermer",
