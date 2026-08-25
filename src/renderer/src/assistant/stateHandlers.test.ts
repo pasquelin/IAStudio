@@ -7,6 +7,9 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { holdCanvas } from '@/spaces/image/canvasHosts'
 import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
+import { installSequence } from '@/stores/sequence-fixtures'
+import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useSelection } from '@/stores/selection'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
@@ -99,6 +102,25 @@ describe('reading what the studio is', () => {
     expect(outcome).toMatchObject({
       ok: true,
       data: { selection: { kind: 'node', items: [{ id: node?.id, name: node?.name }] } },
+    })
+  })
+
+  /**
+   * 🛑 The one thing a document does not hold. Which TRACK is picked lives in the global selection
+   * and nowhere else, so a briefing read from the documents alone was blind to it — a spoken
+   * « mute this track » had nothing to aim at.
+   */
+  it('says which track is designated, which no document holds', async () => {
+    installSequence('doc-seq')
+    installDocuments({ 'doc-seq': 'video' }, 'doc-seq')
+    const track = sequenceOf(useSequences.getState(), 'doc-seq').tracks[0]
+    useSelection.getState().selectTrack('doc-seq', track?.id ?? '')
+
+    const outcome = await runAction('studio.state', {})
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      data: { selection: { kind: 'track', items: [{ id: track?.id, name: track?.name }] } },
     })
   })
 

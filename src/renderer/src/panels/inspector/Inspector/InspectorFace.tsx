@@ -20,8 +20,9 @@ import { TrackInspector } from '../TrackInspector'
 import { InspectorEmpty } from './InspectorEmpty'
 
 /**
- * 🛑 The DOCUMENT in front decides. The selection only says WHICH thing inside it — a clip, a
- * track — never whether the document gets to speak; an asset opens under its own row of the shelf
+ * 🛑 The DOCUMENT in front decides, and everything it shows is read from that document. The
+ * global selection is asked for one thing only — WHICH clip or track inside a montage — never
+ * whether the document gets to speak; an asset opens under its own row of the shelf
  * (`AssetDetails`), and a file is read in the information window.
  *
  * The order below is a reading order and not a priority: `activeIdOfKind` answers off one
@@ -39,7 +40,8 @@ export function InspectorFace() {
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
 
-  // `activeLayerId` and not the selection: a layer born on the canvas arms it without posting one.
+  // `activeLayerId`, which is where a layer's own document holds it: one born on the canvas arms
+  // it without any pointer being involved.
   if (imageId) {
     const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
     return layer ? <LayerInspector documentId={imageId} layer={layer} /> : <InspectorEmpty />

@@ -41,9 +41,8 @@ function sceneMenuState(): SceneMenuState {
   if (view.skeletons) checked.push('scene.skeletons')
   if (view.poseMode) checked.push('scene.poseMode')
 
-  // Read off the SCENE and not off `useSelection`, which `connectSceneSelection` does keep in
-  // step: that one is the studio's SINGLE pointer, so picking an asset in the shelf moves it off
-  // the nodes — and would grey a row for a scene that still holds every one of them.
+  // The scene is where its own selection lives, and the only place it ever did: the global
+  // selection carried a copy that nothing read and that any other panel could wipe.
   const picked = sceneOf(useScenes.getState(), documentId).selectedIds.length > 0
 
   return { checked, abilities: picked ? ['scene.exportSelection'] : [] }

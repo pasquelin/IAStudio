@@ -1,16 +1,16 @@
 import { create } from 'zustand'
 
 /**
- * What the inspector is looking at: what kind of thing, which document holds it, and which
- * ones were picked.
+ * What the studio's GLOBAL gestures act on: what kind of thing, which document holds it, and
+ * which ones were picked.
  *
- * The owner is carried rather than looked up. "The active sequence" is not the same question
- * as "the sequence this was selected in", and the default tracks are called `V1` and `A1` in
- * every sequence there is — so a track picked in one tab, read back after switching to
- * another, described a different track of the same name without saying so.
+ * 🛑 A layer and a scene node are NOT here: they live in their own document and are read from
+ * there. The copies kept here were read by nobody, and their one remaining effect was to wipe
+ * whatever other kind was held. Nothing goes back in without a reader.
  *
- * An asset belongs to the project rather than to a document, so its owner is null. The shape
- * stays the same all the same: one descriptor to read, not four to tell apart.
+ * The owner is carried rather than looked up — see `isTrackSelected` for what that pays for. An
+ * asset belongs to the project rather than to a document, so its owner is null; the shape stays
+ * the same all the same, one descriptor to read rather than four to tell apart.
  */
 export type Selection =
   | { kind: 'none' }
@@ -20,20 +20,12 @@ export type Selection =
    * only thing that is unique in one. Owned by no document, as an asset is: a file belongs to
    * the project, and the gestures over it are the explorer's own scope.
    *
-   * Held here rather than in the panel, and that is what the file commands need: ⌘D and ⌘⌫ are
-   * heard by the window, and a selection living inside a component would be out of their reach.
+   * Held here so the explorer's commands and its context menu read ONE answer: both go through
+   * `selectedFilePaths`, and a second copy would let them disagree.
    */
   | { kind: 'file'; ownerId: null; ids: readonly string[] }
   | { kind: 'clip'; ownerId: string; ids: readonly string[] }
   | { kind: 'track'; ownerId: string; ids: readonly string[] }
-  | { kind: 'layer'; ownerId: string; ids: readonly string[] }
-  /**
-   * A scene node, and never which one: `SceneState.selectedIds` is where that lives, and it is
-   * also written by the commands — a duplicate selects its copies, a delete drops what it
-   * removed, ⌘Z puts both back. None of those pass through `selectIn`, so a copy kept here could
-   * only go stale. This says the face is the scene's; the face reads the scene for the rest.
-   */
-  | { kind: 'node'; ownerId: string; ids: readonly string[] }
 
 type SelectionState = {
   selection: Selection
@@ -41,8 +33,6 @@ type SelectionState = {
   selectFiles: (paths: readonly string[]) => void
   selectClip: (documentId: string, clipId: string) => void
   selectTrack: (documentId: string, trackId: string) => void
-  selectLayer: (documentId: string, layerId: string) => void
-  pointAtNodes: (documentId: string, picked: boolean) => void
   clear: () => void
 }
 
@@ -53,8 +43,8 @@ const NO_IDS: readonly string[] = []
 
 /**
  * The picked assets, or none. Read as a selector rather than off `selection`: a panel that
- * watches the whole descriptor re-renders on every clip, track and layer picked anywhere in
- * the studio, and an asset shelf has no use for any of them.
+ * watches the whole descriptor re-renders on every clip and track picked anywhere in the studio,
+ * and an asset shelf has no use for either.
  */
 export function selectedAssetIds(state: Pick<SelectionState, 'selection'>): readonly string[] {
   return state.selection.kind === 'asset' ? state.selection.ids : NO_IDS
@@ -69,7 +59,7 @@ export function selectedFilePaths(state: Pick<SelectionState, 'selection'>): rea
 }
 
 /**
- * Whether the inspector is looking at this very track, in this very document.
+ * Whether this very track, in this very document, is the one picked.
  *
  * The owner is compared as well as the id, for the reason this store carries one at all: every
  * sequence names its first tracks `V1` and `A1`, so a track picked in one tab matches by id in
@@ -104,11 +94,11 @@ function unchanged(current: Selection, next: Selection): boolean {
 }
 
 /**
- * Selection is not focus and not what is open: clicking selects, double-clicking opens. It is
- * global rather than per document because one inspector serves every panel — the asset shelf,
- * the montage and the track headers all point it at what was touched last.
+ * Selection is not focus and not what is open: clicking selects, double-clicking opens. Global
+ * rather than per document because the gestures reading it are — sending to the cloud, the
+ * explorer's menu, the folder a new document opens in.
  */
-export const useSelection = create<SelectionState>()((set, get) => {
+export const useSelection = create<SelectionState>()(set => {
   const point = (next: Selection): void =>
     set(state => (unchanged(state.selection, next) ? state : { selection: next }))
 
@@ -120,17 +110,6 @@ export const useSelection = create<SelectionState>()((set, get) => {
     selectClip: (documentId, clipId) => point({ kind: 'clip', ownerId: documentId, ids: [clipId] }),
     selectTrack: (documentId, trackId) =>
       point({ kind: 'track', ownerId: documentId, ids: [trackId] }),
-    selectLayer: (documentId, layerId) =>
-      point({ kind: 'layer', ownerId: documentId, ids: [layerId] }),
-    pointAtNodes: (documentId, picked) => {
-      if (picked) return point({ kind: 'node', ownerId: documentId, ids: NO_IDS })
-
-      // Emptied only where this scene is what filled it. A click in the void of a viewport used
-      // to wipe whatever ANOTHER panel had selected — five assets picked in the shelf, and the
-      // two buttons that act on them going grey because a cube was deselected beside them.
-      const { selection } = get()
-      if (selection.kind === 'node' && selection.ownerId === documentId) point(NONE)
-    },
     clear: () => point(NONE),
   }
 })
