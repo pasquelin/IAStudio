@@ -10,10 +10,12 @@ import { MENU_FLOATING } from './styles'
  * Which side of its anchor the menu hangs on.
  *
  * `under` is the one that belongs to a FIELD: it takes the anchor's left edge and its width, the
- * way a `<select>` does. The other three hang from a control whose own width means nothing to
- * the rows, and align right so a bar at the window edge does not push them off it.
+ * way a `<select>` does. The others hang from a control whose own width means nothing to the
+ * rows: `right`, `above` and `below` align RIGHT edges, for the status line and the title bar
+ * which anchor against the window edge — `below-left` is for a bar that does not, where a menu
+ * hung from the right of a narrow button reads as belonging to whatever sits before it.
  */
-export type FlyoutPlacement = 'right' | 'above' | 'below' | 'under'
+export type FlyoutPlacement = 'right' | 'above' | 'below' | 'below-left' | 'under'
 
 export type FlyoutProps = {
   anchor: HTMLElement | null
@@ -118,11 +120,12 @@ export function Flyout({
         return
       }
 
-      // Both stacked placements align right edges: the status line and the title bar anchor
-      // against the window edge, and a menu hung from their left would run off it.
       const above = placement === 'above'
       node.style.top = `${above ? box.top - node.offsetHeight - OFFSET : box.bottom + OFFSET}px`
-      node.style.left = `${clamped(box.right - node.offsetWidth, node.offsetWidth, window.innerWidth)}px`
+      // Right edges by default — the status line and the title bar anchor against the window
+      // edge, and a menu hung from their left would run off it. `below-left` is the other case.
+      const edge = placement === 'below-left' ? box.left : box.right - node.offsetWidth
+      node.style.left = `${clamped(edge, node.offsetWidth, window.innerWidth)}px`
     },
     [anchor, placement],
   )

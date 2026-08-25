@@ -106,6 +106,24 @@ describe('ToggleMenu', () => {
     expect(screen.getByRole('button', { name: /Grid snap/ })).not.toHaveClass('bg-accent')
   })
 
+  /**
+   * Dragged, the speed went « 4 m/s » to « 10 m/s » and the button grew a character: every
+   * control after it shuffled sideways, and the whole bar flickered under the pointer.
+   */
+  it('holds the room its longest reading needs, whatever it is showing', () => {
+    setUp({ value: '4 m/s', widest: '20 m/s' })
+
+    expect(screen.getByRole('button', { name: /Grid step/ })).toHaveTextContent('20 m/s')
+  })
+
+  // Held open by a copy nobody reads: a reader hearing the widest value beside the real one would
+  // be told two speeds.
+  it('keeps that copy out of what is announced', () => {
+    setUp({ value: '4 m/s', widest: '20 m/s' })
+
+    expect(screen.getByRole('button', { name: /Grid step/ })).toHaveAccessibleName('Grid step')
+  })
+
   it('wears the icon on its value half when it has no toggle', () => {
     setUp({ onToggle: undefined, value: '4 m/s', valueLabel: 'Camera speed' })
 
