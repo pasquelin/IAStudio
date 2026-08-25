@@ -142,8 +142,9 @@ A second bar floats **at the top of the viewport**, horizontal. It carries no to
 **behaviours**: what you change *while* manipulating, without letting go of the mouse.
 
 Each entry is a group of **two zones**. The icon, on the left, **turns that one snap** on or off
-and nothing else. The value, on the right, **opens a menu** — and choosing a value arms nothing:
-you can look at the steps on offer without changing what the scene obeys.
+and nothing else. The value, on the right, **opens a menu** — and choosing a step **arms that snap
+along with it**: reaching for a step is asking for the snap, and leaving it off cost a second
+click on every first use.
 
 | Entry | What the icon toggles | What the menu sets |
 |---|---|---|
@@ -152,6 +153,8 @@ you can look at the steps on offer without changing what the scene obeys.
 | **Grid snap** | advances a move in even steps | the step, from 1 cm to 10 m |
 | **Angle snap** | turns in even steps | the angle, as an increment or as a division of a full turn |
 | **Scale snap** | changes the scale in even steps | the ratio |
+
+The bar sits at the **top right** of the viewport; the tool column already owns the left.
 
 **The four are independent.** Laying a prop on a table while its angle stays free is the gesture
 the single toggle could not spell. The **All snaps** button of the vertical bar, and the `M` key,

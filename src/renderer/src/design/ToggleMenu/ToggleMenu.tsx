@@ -36,9 +36,12 @@ export type ToggleMenuProps = {
 }
 
 /**
- * Two zones under one border: an icon that toggles, and a value that opens a menu. Choosing a
- * value does NOT arm the toggle — that separation is the whole point of the shape, and it is what
- * keeps a glance at the menu from changing what a drag obeys.
+ * Two zones side by side: an icon that toggles, and a value that opens a menu. What choosing a
+ * value does is the CALLER's to decide — the snap bar arms the toggle with it, so that reaching
+ * for a step does not cost a second click.
+ *
+ * No border of its own: the bar it sits on already draws one, and a control that framed itself
+ * inside it gave the studio two rules of bordering where it has one.
  *
  * It opens on CLICK and never on hover, which is where it parts from `MenuButton`: this menu sets
  * a value rather than offering to switch a mode, and one crossed by the pointer on the way to the
@@ -63,7 +66,7 @@ export function ToggleMenu({
   const flyout = useHoverFlyout(rowCount)
 
   return (
-    <div className="border-border flex items-center rounded-(--radius-sc-md) border">
+    <div className="flex items-center">
       {onToggle && (
         <ToolButton
           icon={icon}

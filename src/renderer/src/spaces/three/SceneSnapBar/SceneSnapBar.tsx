@@ -1,7 +1,9 @@
 import { mdiFormatVerticalAlignBottom, mdiRun } from '@mdi/js'
+import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDecimal } from '@/helpers/format'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { Separator } from '@/design/Separator'
 import { ToggleMenu } from '@/design/ToggleMenu/ToggleMenu'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
 import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
@@ -43,7 +45,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
     useSceneViews.getState().setSceneSnap(documentId, kind, !snapping[kind])
 
   return (
-    <div className="bg-surface border-border absolute top-2 left-1/2 flex max-w-full -translate-x-1/2 flex-wrap items-center justify-center gap-0.5 rounded-(--radius-sc-md) border p-0.5">
+    <div className="bg-surface border-border absolute top-2 right-2 flex max-w-full flex-wrap items-center justify-end gap-0.5 rounded-(--radius-sc-md) border p-0.5">
       <ToggleMenu
         icon={mdiRun}
         label={t('snapBar.speed')}
@@ -60,6 +62,8 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
         menu={false}
         rows={close => <SceneSpeedMenu speed={flying} onChoose={onSpeed} onClose={close} />}
       />
+
+      <Separator />
 
       <ToggleMenu
         icon={mdiFormatVerticalAlignBottom}
@@ -79,29 +83,35 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
       />
 
       {SNAP_STEP_CONTROLS.map(control => (
-        <ToggleMenu
-          key={control.kind}
-          icon={control.icon}
-          label={t(control.labelKey)}
-          description={t(control.descriptionKey)}
-          tooltip={TIP_BOTTOM}
-          pressed={snapping[control.kind]}
-          onToggle={() => toggle(control.kind)}
-          value={reading(control)}
-          valueLabel={named(reading(control), t(control.stepsKey))}
-          rowCount={control.steps.length}
-          rows={close => (
-            <SceneSnapStepMenu
-              control={control}
-              unit={view.units}
-              value={view[control.path]}
-              onChoose={step => {
-                set({ [control.path]: step })
-                close()
-              }}
-            />
-          )}
-        />
+        <Fragment key={control.kind}>
+          <Separator />
+          <ToggleMenu
+            icon={control.icon}
+            label={t(control.labelKey)}
+            description={t(control.descriptionKey)}
+            tooltip={TIP_BOTTOM}
+            pressed={snapping[control.kind]}
+            onToggle={() => toggle(control.kind)}
+            value={reading(control)}
+            valueLabel={named(reading(control), t(control.stepsKey))}
+            rowCount={control.steps.length}
+            rows={close => (
+              <SceneSnapStepMenu
+                control={control}
+                unit={view.units}
+                value={view[control.path]}
+                // Arms it too: reaching for a step IS asking for that snap, and leaving the
+                // choice inert made every first use cost a second click. Arbitrage d'Alban —
+                // it is where this bar parts from Unreal, which leaves the toggle alone.
+                onChoose={step => {
+                  set({ [control.path]: step })
+                  useSceneViews.getState().setSceneSnap(documentId, control.kind, true)
+                  close()
+                }}
+              />
+            )}
+          />
+        </Fragment>
       ))}
     </div>
   )

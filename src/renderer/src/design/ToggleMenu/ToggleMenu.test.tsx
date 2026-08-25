@@ -62,8 +62,9 @@ describe('ToggleMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
-  // The whole point of the shape: a glance at the menu must not change what a drag obeys.
-  it('opens the menu from the value half without toggling', async () => {
+  // The two halves stay separate HERE: what a choice does beyond being reported is the caller's,
+  // and the snap bar spends it on arming the toggle. This component must not do it behind them.
+  it('reports a choice without toggling on its own', async () => {
     const { onToggle, onSelect, user } = setUp()
 
     await user.click(screen.getByRole('button', { name: /Grid step/ }))
