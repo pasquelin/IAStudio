@@ -42,6 +42,10 @@ function captionOf(
 /**
  * The model in use, visible while a prompt is written. Picking one writes the preference of THIS
  * employment and no other (ADR-23 § C): the same weights serve several.
+ *
+ * 🛑 It carries the sentence for having none, because it is the only one holding the catalogue:
+ * the panel above said "no model available for this operation" over a picker listing a dozen —
+ * two different states, "the catalogue is empty here" and "none is chosen yet", under one word.
  */
 export function GeneratorModel({ capability, modelId, name, plan }: GeneratorModelProps) {
   const field = useId()
@@ -99,6 +103,22 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
           emptyLabel={t('generation.chooseModel')}
         />
       </FormField>
+
+      {/* Under the field rather than in the middle of the panel: it is about the control right
+          above it, and a picker that opens into the flow pushed a centred message off centre.
+
+          🛑 ANGLE MORT: `useModelsForCapability` answers `data ?? NONE`, so an empty list is also
+          what a catalogue being FETCHED looks like, and what a REJECTED request looks like — a
+          request that failed is stated as fact ("no model serves this"), with no retry offered.
+          Strictly better than what it replaced, which said it unconditionally; the real fix is
+          that hook publishing its pending and error states, which it does not. */}
+      {modelId === null && (
+        <p className="text-muted text-tiny pt-1">
+          {t(
+            models.length === 0 ? 'generation.noModelForOperation' : 'generation.chooseModelFirst',
+          )}
+        </p>
+      )}
     </div>
   )
 }

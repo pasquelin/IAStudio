@@ -43,6 +43,36 @@ describe('default values', () => {
 
     expect(defaultValues([field], undefined, { steps: 80 })).toEqual({ steps: 25 })
   })
+  /**
+   * 🛑 What the panel FILLED is not what the person typed. Carried alike, a source withdrawn from
+   * the panel above came straight back into the request it had just left — the list said one
+   * thing about what would be sent, the form below it said another.
+   */
+  it('drops a carried value the last preset had put there, and keeps a typed one', () => {
+    const image = field({ key: 'image' })
+
+    expect(defaultValues([image], undefined, { image: 'asset-1' }, { image: 'asset-1' })).toEqual({
+      image: '',
+    })
+    expect(defaultValues([image], undefined, { image: 'typed' }, { image: 'asset-1' })).toEqual({
+      image: 'typed',
+    })
+  })
+
+  /**
+   * 🛑 Only the SOURCES may be dropped this way. Told the whole preset instead, this blanked a
+   * prompt « regenerate with these parameters » had prefilled, the moment picking an image
+   * changed the operation and took the stored preset with it — § 22's own case, undone.
+   */
+  it('keeps what no source ever put there', () => {
+    expect(defaultValues([field({ key: 'mask' })], undefined, { mask: 'drawn' }, {})).toEqual({
+      mask: 'drawn',
+    })
+    expect(defaultValues([field({ key: 'prompt' })], undefined, { prompt: 'a cat' }, {})).toEqual({
+      prompt: 'a cat',
+    })
+  })
+
   it('uses what the model published, and a blank otherwise', () => {
     expect(
       defaultValues([

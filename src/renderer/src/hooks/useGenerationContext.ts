@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import type { AssetType } from '@shared/domain/asset'
@@ -21,6 +21,12 @@ import { selectedAssetIds, useSelection } from '@/stores/selection'
 export type GenerationContext = {
   inputs: readonly GenerationInput[]
   capability: CapabilityChoice
+  /**
+   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, and only
+   * that one. What has no gesture to undo is drawn without a way off rather than with a broken
+   * one; the implementation says why for each.
+   */
+  withdraw: (input: GenerationInput) => void
 }
 
 /**
@@ -71,6 +77,22 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
     })
   }, [pickedIds, rows, meshes, producedIds])
 
+  /**
+   * 🛑 Undone where it was DONE, never filtered here. A panel-side list of dismissed ids would
+   * leave the shelf showing a row as picked while the generation no longer took it, and the two
+   * answers to "what is selected" would drift apart with nothing to reconcile them.
+   *
+   * 🛑 THE SHELF ONLY. `selectIn` ends on `pointAtNodes`, which rewrites the WHOLE selection
+   * descriptor, so withdrawing one mesh would take every asset source down with it. Deselecting
+   * a node without moving what the inspector looks at is a change to that pair, not to this hook.
+   */
+  const withdraw = useCallback((input: GenerationInput) => {
+    // Read at CALL time and FILTERED, never toggled against the render that drew the row: a
+    // click landing after the selection moved would otherwise put the asset back.
+    const picked = selectedAssetIds(useSelection.getState())
+    useSelection.getState().selectAssets(picked.filter(id => id !== input.assetId))
+  }, [])
+
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,
   // and the panel re-renders on every keystroke of the form below it.
   const capability = useMemo(
@@ -78,7 +100,7 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
     [family, inputs, forced],
   )
 
-  return useMemo(() => ({ inputs, capability }), [inputs, capability])
+  return useMemo(() => ({ inputs, capability, withdraw }), [inputs, capability, withdraw])
 }
 
 /** Stable, so a workspace with no scene open does not hand React a new array per render. */

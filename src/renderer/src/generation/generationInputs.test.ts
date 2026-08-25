@@ -19,7 +19,7 @@ describe('what the workspace offers a generation', () => {
     )
 
     expect(inputs).toEqual([
-      { role: 'source', kind: 'image', assetId: 'a1', label: 'car.png', origin: 'selection' },
+      { role: 'source', kind: 'image', assetId: 'a1', label: 'car.png', origin: 'assets' },
     ])
   })
 
@@ -28,7 +28,12 @@ describe('what the workspace offers a generation', () => {
   it('offers the mesh a selected scene node stands for', () => {
     const inputs = availableInputsOf(content({ selectedMeshes: [{ id: 'm1', name: 'Robot' }] }))
 
-    expect(inputs[0]).toMatchObject({ role: 'source', kind: 'mesh', assetId: 'm1' })
+    expect(inputs[0]).toMatchObject({
+      role: 'source',
+      kind: 'mesh',
+      assetId: 'm1',
+      origin: 'scene',
+    })
   })
 
   /**
@@ -43,7 +48,22 @@ describe('what the workspace offers a generation', () => {
       }),
     )
 
-    expect(inputs.map(input => input.origin)).toEqual(['selection', 'result'])
+    expect(inputs.map(input => input.origin)).toEqual(['assets', 'result'])
+  })
+
+  /**
+   * A generated picture clicked in the shelf is one thing that reached the panel two ways. Listed
+   * twice, taking the shelf's pick off left the result's copy filling the very same field.
+   */
+  it('offers one row once, whichever way it reached the panel', () => {
+    const inputs = availableInputsOf(
+      content({
+        selectedAssets: [{ id: 'r1', name: 'robot.png', type: 'image' }],
+        results: [{ id: 'r1', name: 'robot.png', type: 'image' }],
+      }),
+    )
+
+    expect(inputs.map(input => input.origin)).toEqual(['assets'])
   })
 
   // § 24: a result becomes a source without a round trip through the shelf — offered, never taken.

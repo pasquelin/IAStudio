@@ -6,8 +6,20 @@ import type { AvailableInput } from '@shared/domain/aiCapability'
  * so it tests without React and `import-cycles.test.ts` stays at zero.
  */
 
-/** Where an input came from, which is what the panel says under the thumbnail. */
-export type InputOrigin = 'selection' | 'result'
+/**
+ * Where an input came from. It names what the panel writes under the thumbnail AND what taking
+ * the input off has to undo — a source nobody can trace to a gesture is one nobody can withdraw.
+ */
+export type InputOrigin =
+  /** Rows the asset shelf has picked. */
+  | 'assets'
+  /** Placements the scene in front has picked. */
+  | 'scene'
+  /** What the last generation produced, so a chain starts from it. */
+  | 'result'
+
+/** Walked by `dynamic-keys.i18n.test.ts`: the sentence under each thumbnail is composed. */
+export const INPUT_ORIGINS: readonly InputOrigin[] = ['assets', 'scene', 'result']
 
 export type GenerationInput = AvailableInput & {
   /**
@@ -37,28 +49,39 @@ export type WorkspaceContent = {
  */
 export function availableInputsOf(content: WorkspaceContent): readonly GenerationInput[] {
   const inputs: GenerationInput[] = []
+  // 🛑 One row, ONE input, whichever way it reached the panel. A picture the last generation made
+  // and that was then clicked in the shelf arrived twice, so withdrawing the shelf's pick left the
+  // result's copy filling the very same field — a cross that promised to take it off the
+  // generation and did not. The first occurrence wins, which is what the ORDER below decides.
+  const seen = new Set<string>()
 
   for (const asset of content.selectedAssets) {
+    if (seen.has(asset.id)) continue
+    seen.add(asset.id)
     inputs.push({
       role: 'source',
       kind: asset.type,
       assetId: asset.id,
       label: asset.name,
-      origin: 'selection',
+      origin: 'assets',
     })
   }
 
   for (const mesh of content.selectedMeshes) {
+    if (seen.has(mesh.id)) continue
+    seen.add(mesh.id)
     inputs.push({
       role: 'source',
       kind: 'mesh',
       assetId: mesh.id,
       label: mesh.name,
-      origin: 'selection',
+      origin: 'scene',
     })
   }
 
   for (const result of content.results) {
+    if (seen.has(result.id)) continue
+    seen.add(result.id)
     inputs.push({
       role: 'source',
       kind: result.type,

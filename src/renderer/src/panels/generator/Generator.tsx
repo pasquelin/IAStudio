@@ -49,7 +49,7 @@ export function Generator() {
 
   const forced = useGeneration(state => state.forcedCapability)
   const forceCapability = useGeneration(state => state.forceCapability)
-  const { inputs, capability } = useGenerationContext(forced)
+  const { inputs, capability, withdraw } = useGenerationContext(forced)
 
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
@@ -83,10 +83,11 @@ export function Generator() {
    * decided which operation ran. Selecting a picture switched the generator to image-to-image and
    * left the picture behind.
    */
-  const preset = useMemo(
-    () => ({ ...fillSourceFields(descriptor.data?.fields ?? [], inputs), ...prepared }),
-    [descriptor.data, inputs, prepared],
+  const sources = useMemo(
+    () => fillSourceFields(descriptor.data?.fields ?? [], inputs),
+    [descriptor.data, inputs],
   )
+  const preset = useMemo(() => ({ ...sources, ...prepared }), [sources, prepared])
   /**
    * Whether this shot carries the project's context. Held here and not in `values`: it must never
    * reach `buildBody`, which is what is sent to the API.
@@ -236,14 +237,9 @@ export function Generator() {
           plan={plan}
         />
 
-        {/* 🛑 Said rather than hidden: the panel used to return null, and the rail dropped its icon
-          with it — at the one moment the picker above is what a person needs. A model withdrawn
-          from the catalogue while it was the chosen one lands on the same line. */}
-        {modelId === null && (
-          <EmptyState icon={mdiCreationOutline} message={t('generation.noModelForOperation')} />
-        )}
-        {/* Both gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
-          pending — so the two sentences were painted one under the other. */}
+        {/* Gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
+          pending — so two sentences were painted one under the other. Having none is said by
+          `GeneratorModel`, which is the only one that knows whether the catalogue is empty. */}
         {modelId !== null && descriptor.isPending && (
           <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
         )}
@@ -251,7 +247,7 @@ export function Generator() {
           <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
         )}
 
-        <GeneratorSources inputs={inputs} />
+        <GeneratorSources inputs={inputs} onWithdraw={withdraw} />
         {/* Gated on the model as well as the descriptor: `prepare` ARMS what it is handed, and an
             empty id would arm nothing under the name of nothing. */}
         {descriptor.data && modelId !== null && (
@@ -294,6 +290,7 @@ export function Generator() {
                   (running !== null && !isFinished(running.status))
                 }
                 preset={preset}
+                sources={sources}
                 // Dictation alone now. Rewriting a prompt, translating it and reading the style of
                 // the references left this panel for the assistant: they are things one ASKS for,
                 // and three buttons under a field could only ever offer three of them.

@@ -7,7 +7,7 @@ import type { AiOverview } from '@shared/domain/aiOverview'
 import { useAiModels } from '@/stores/aiModels'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
+import type { FieldDescriptor, ModelDescriptor, ModelSummary } from '@shared/domain/model'
 import type { Job } from '@shared/domain/job'
 import type { StudioBridge } from '@shared/ipc'
 import { withQueries } from '@/app/query-fixtures'
@@ -22,7 +22,7 @@ import { useJobs } from '@/stores/jobs'
 import type { Asset } from '@shared/domain/asset'
 import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
-import { useSelection } from '@/stores/selection'
+import { selectedAssetIds, useSelection } from '@/stores/selection'
 import { connectPreparation } from '@/stores/preparation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
@@ -84,6 +84,19 @@ function selectPicture(): void {
 
   useAssets.setState({ items: [picked] })
   useSelection.getState().selectAssets([picked.id])
+}
+
+/** A row the picker can list, for the state where the catalogue holds one and none is chosen. */
+const OFFERED: ModelSummary = {
+  id: 'model_offered',
+  name: 'Offered',
+  family: 'image',
+  runsOn: SCENARIO_CLOUD,
+  source: 'scenario',
+  origin: 'official',
+  featured: false,
+  capabilities: [],
+  tags: [],
 }
 
 const PROJECT = {
@@ -176,8 +189,58 @@ describe('Generator', () => {
     chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_flux' })
     renderPanel()
 
-    expect(await screen.findByText('Aucun modèle disponible pour cette opération.')).toBeVisible()
+    expect(await screen.findByText('Aucun modèle ne sert cette opération.')).toBeVisible()
     expect(screen.getByLabelText('Opération')).toBeInTheDocument()
+  })
+
+  /**
+   * The two states wore ONE sentence, and it was the wrong one on the commoner of them: "no model
+   * available for this operation" was painted over a picker listing a dozen, because what it
+   * really meant was that none had been chosen yet.
+   */
+  it('tells having no model to choose from apart from having chosen none', async () => {
+    selectPicture()
+    chooseModels({})
+    installFakeBridge({
+      provider: {
+        searchModels: () => Promise.resolve({ items: [OFFERED], cursor: null }),
+      },
+    })
+    renderPanel()
+
+    expect(await screen.findByText('Choisissez un modèle pour continuer.')).toBeVisible()
+  })
+
+  /**
+   * The shelf it was picked in can be a closed panel, so the line saying what will be sent is the
+   * only place the source exists — and it stayed there through a document being closed, with
+   * nothing on screen to say where it came from or how to be rid of it.
+   */
+  it('takes a source off by deselecting it where it was picked', async () => {
+    selectPicture()
+    renderPanel()
+
+    await screen.findByText('Sélectionné dans les assets')
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer cette source' }))
+
+    expect(selectedAssetIds(useSelection.getState())).toEqual([])
+    expect(screen.queryByText('concept.png')).not.toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 The half a deselection does not do on its own. `defaultValues` carries what the previous
+   * descriptor held, and a preset that merely stops naming the field lets the withdrawn id back
+   * in as if it had been typed — the panel then drew one answer to "what is sent" and the form
+   * below it drew another, which is the silent generation the sources list exists to prevent.
+   */
+  it('takes the withdrawn source out of the form, not only out of the list', async () => {
+    selectPicture()
+    renderPanel()
+
+    expect(await screen.findByLabelText(/Image/)).toHaveValue('asset-picked')
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer cette source' }))
+
+    expect(screen.getByLabelText(/Image/)).toHaveValue('')
   })
 
   /**

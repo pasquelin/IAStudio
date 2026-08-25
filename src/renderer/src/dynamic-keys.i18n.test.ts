@@ -19,6 +19,7 @@ import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStac
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
+import { INPUT_ORIGINS } from '@/generation/generationInputs'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
 import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
@@ -75,6 +76,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // Where a generation's source was taken from, written under its thumbnail. An origin with no
+  // sentence would put a raw key on the one line saying what the studio is about to send.
+  ...INPUT_ORIGINS.map(origin => `generation.sourceFrom_${origin}`),
   // What a shape layer is CALLED when the hand finishes drawing it. A kind with no name would
   // put a raw key in the stack, on the one row the user has to find the shape back by.
   ...SHAPE_KINDS.map(kind => `layers.shapeName_${kind}`),
