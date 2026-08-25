@@ -27,7 +27,7 @@ export type SceneSpeedMenuProps = {
 export function SceneSpeedMenu({ speed, onChoose, onClose }: SceneSpeedMenuProps) {
   const { t, i18n } = useTranslation()
   const reading = (value: number) =>
-    t('snapBar.speedValue', { value: formatDecimal(value, i18n.language, { digits: 1 }) })
+    t('snapBar.speedValue', { value: formatDecimal(value, i18n.language, { digits: 1, least: 1 }) })
 
   return (
     <div className="flex flex-col gap-0.5">
