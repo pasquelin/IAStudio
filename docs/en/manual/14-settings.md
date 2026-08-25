@@ -424,9 +424,9 @@ Snapping is switched on in the **scene's toolbar** (the `M` key); these three se
 
 | Setting        | Range               | Starts at | What it does                           |
 | -------------- | ------------------- | --------- | -------------------------------------- |
-| **Move step**  | 0.1 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
+| **Move step**  | 0.001 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
 | **Turn step**  | 1° to 90°, in 1     | **15°**   | the angle of one rotation step         |
-| **Scale step** | 0.05 to 1, in 0.05  | **0.1**   | how far the scale advances in one step |
+| **Scale step** | 0.01 to 1, in 0.05  | **0.1**   | how far the scale advances in one step |
 
 **15° is the classic value**: twenty-four positions in a full turn, including every round angle —
 30, 45, 90. Rotation counts its steps **from where the turn began**, not from zero.
@@ -763,9 +763,9 @@ What you have on a fresh install, at a glance.
 | 3D         | Fly speed                     | 4 m/s                   | 0.5 to 20                       |
 | 3D         | Boost                         | 3×                      | 1 to 10                         |
 | 3D         | Field of view                 | 60°                     | 30 to 100                       |
-| 3D         | Move step                     | 0.5 m                   | 0.1 to 10                       |
+| 3D         | Move step                     | 0.5 m                   | 0.001 to 10                     |
 | 3D         | Rotate step                   | 15°                     | 1 to 90                         |
-| 3D         | Scale step                    | 0.1                     | 0.05 to 1                       |
+| 3D         | Scale step                    | 0.1                     | 0.01 to 1                       |
 | 3D         | Shadow softness               | Soft                    | Hard or Soft                    |
 | 3D         | Shadow detail                 | 2048                    | 512, 1024, 2048, 4096           |
 | Dictation  | Enable dictation              | on                      | —                               |

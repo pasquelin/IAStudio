@@ -438,9 +438,9 @@ disent seulement **de combien** il avance à chaque cran.
 
 | Réglage                | Bornes              | Départ    | Ce qu’il fait                         |
 | ---------------------- | ------------------- | --------- | ------------------------------------- |
-| **Pas de déplacement** | 0,1 à 10 m, par 0,1 | **0,5 m** | de combien un objet avance d’un cran  |
+| **Pas de déplacement** | 0,001 à 10 m, par 0,1 | **0,5 m** | de combien un objet avance d’un cran  |
 | **Pas de rotation**    | 1° à 90°, par 1     | **15°**   | l’angle d’un cran de rotation         |
-| **Pas d’échelle**      | 0,05 à 1, par 0,05  | **0,1**   | de combien l’échelle avance d’un cran |
+| **Pas d’échelle**      | 0,01 à 1, par 0,05  | **0,1**   | de combien l’échelle avance d’un cran |
 
 **15° est la valeur classique** : vingt-quatre positions sur un tour, dont tous les angles ronds —
 30, 45, 90. La rotation compte ses crans **depuis l’endroit où elle a commencé**, pas depuis zéro.
@@ -786,9 +786,9 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | 3D         | Vitesse de déplacement               | 4 m/s                     | 0,5 à 20                                   |
 | 3D         | Accélération                         | 3×                        | 1 à 10                                     |
 | 3D         | Angle de vue                         | 60°                       | 30 à 100                                   |
-| 3D         | Pas de déplacement                   | 0,5 m                     | 0,1 à 10                                   |
+| 3D         | Pas de déplacement                   | 0,5 m                     | 0,001 à 10                                 |
 | 3D         | Pas de rotation                      | 15°                       | 1 à 90                                     |
-| 3D         | Pas d’échelle                        | 0,1                       | 0,05 à 1                                   |
+| 3D         | Pas d’échelle                        | 0,1                       | 0,01 à 1                                   |
 | 3D         | Douceur des ombres                   | Douce                     | Dure ou Douce                              |
 | 3D         | Finesse des ombres                   | 2048                      | 512, 1024, 2048, 4096                      |
 | Dictée     | Activer la dictée                    | activée                   | —                                          |
