@@ -5,15 +5,9 @@
 export const TYPE_FACET = 'type'
 
 /**
- * Which library a line comes from.
- *
- * 🛑 It replaces the Emplacement facet, whose nine values were sync states — `local-only`,
- * `to-push`, `error` — every one of them about a row this panel no longer draws. It is also the
- * one facet that changes what is READ rather than what is drawn: the public feed is unbounded
- * and a page of it costs a search quota, so it is asked for only while it is chosen.
- *
- * Two values today because one cloud publishes assets. `CLOUD_PROVIDERS` is where a second would
- * declare itself, and this is the facet it would extend — a value, not a branch.
+ * Which library a line comes from — the one facet that changes what is READ rather than what is
+ * drawn: the public feed is unbounded and a page of it costs a search quota, so it is asked for
+ * only while chosen. A second asset cloud extends it by a value, not by a branch.
  */
 export const SOURCE_FACET = 'source'
 

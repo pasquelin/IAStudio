@@ -7,12 +7,9 @@ import { CloudAssetInspector } from './AssetInspector/CloudAssetInspector'
 import type { AssetRowModel } from './rows'
 
 /**
- * What one row opens onto.
- *
- * Two readings of the same line, and which one it gets is whether this project already holds it.
- * With a twin on disk there is a catalogue row to read out, a file to reveal and a name to
- * change; without one there is what the library says about it — and the PROMPT above all, which
- * is the field someone weighs before spending a download on it.
+ * What one row opens onto — two readings, and which it gets is whether the project holds a twin.
+ * Without one there is what the library says, the PROMPT above all: the field someone weighs
+ * before spending a download.
  */
 export function AssetDetails({
   row,

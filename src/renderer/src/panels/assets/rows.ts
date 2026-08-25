@@ -3,15 +3,10 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { runningJobs, type Job } from '@shared/domain/job'
 
 /**
- * One line of the remote browser, whatever it stands for.
+ * One line of the remote browser, whatever it stands for. A view type, kept here because `Asset`
+ * and `CloudAsset` are separate in `shared/domain` — one has a file and a hash, the other neither.
  *
- * A view type, and it stays in this folder on purpose: `Asset` and `CloudAsset` are separate in
- * `shared/domain` because one has a file and a hash and the other has neither, and every reader
- * that took a library asset for a local one would have to guard against all three.
- *
- * 🛑 There is no local provenance any more, and that is the panel's whole subject: what the
- * project holds is the Explorer's, and listing it here left two surfaces answering the same
- * question with different words.
+ * 🛑 No local provenance: what the project holds is the Explorer's subject.
  */
 export type AssetRowModel =
   | {
@@ -19,26 +14,27 @@ export type AssetRowModel =
       from: 'remote'
       asset: CloudAsset
       /**
-       * Somebody else's, off the public feed, rather than this account's own library.
-       *
-       * A FLAG and not a second provenance, because nothing about the line behaves differently:
-       * neither has a file here, both are fetched by a double-click, both are dragged by
-       * `startLibraryDrag` and pulled at the drop. What differs is one word on the badge.
+       * Somebody else's, off the public feed. A FLAG and not a second provenance: nothing about
+       * the line behaves differently, only one word on its badge.
        */
       published?: true
     }
   | { id: string; from: 'job'; job: Job; type: AssetType | null }
+
+/**
+ * The two tooltips a cell may carry, built once by the panel: a `useTranslation` inside a cell
+ * subscribes each of two hundred of them to i18next and allocates a fresh attribute object per
+ * frame of a scroll.
+ */
+export type RowHints = { fetch: Record<string, string>; generating: Record<string, string> }
 
 /** Namespaced because a row id addresses one line of one list, never a row of the catalogue. */
 const REMOTE_PREFIX = 'remote:'
 const JOB_PREFIX = 'job:'
 
 /**
- * The asset's own name — which is what the grid draws, what the list draws, and what the index
- * matched. It is derived from the PROMPT rather than from the model that made it, so it says the
- * thing rather than the machine.
- *
- * A job has no asset behind it yet, so it answers with the label it was submitted under.
+ * The asset's own name, derived from the PROMPT rather than from the model that made it — it says
+ * the thing rather than the machine. A job answers with the label it was submitted under.
  */
 export function nameOfRow(row: AssetRowModel): string {
   return row.from === 'job' ? row.job.label : row.asset.name
@@ -61,15 +57,11 @@ export type MarkContext = {
 }
 
 /**
- * The mark one line wears, whole.
+ * The mark one line wears. What is moving right now outranks every settled answer, being the only
+ * state the user is waiting on.
  *
- * The ORDER is the subtle half: what is moving right now outranks every settled answer, being
- * the only state the user is waiting on.
- *
- * 🛑 Read from the REMOTE side, which is what the panel losing its local half made possible.
- * `to-pull` and `conflict` used to sit on a project row and be reachable only while a page of
- * the library happened to be in hand; here they are properties of the line one would download,
- * which is where they were always going to be read.
+ * 🛑 Read from the REMOTE side: `to-pull` and `conflict` are properties of the line one would
+ * download, and used to be reachable only while a page of the library happened to be in hand.
  */
 export function markOf(row: AssetRowModel, { inFlight, twins }: MarkContext): AssetBadge {
   if (row.from === 'job') return 'generating'
@@ -82,11 +74,9 @@ export function markOf(row: AssetRowModel, { inFlight, twins }: MarkContext): As
 }
 
 /**
- * How the copy this project holds stands against the library's own version.
- *
- * `null` when nothing has moved, which is the ordinary answer: the catalogue records the twin's
- * stamp as of the last reconciliation, and only a fresh listing says whether the library has
- * moved since.
+ * How the copy this project holds stands against the library's own. `null` when nothing moved:
+ * only a fresh listing says whether the library has, the catalogue holding the stamp of the last
+ * reconciliation.
  */
 export function reconciled(asset: Asset, twin: CloudAsset): AssetBadge | null {
   if (!movedSince(twin.updatedAt, asset.remoteSyncedAt)) return null
@@ -97,41 +87,21 @@ export function reconciled(asset: Asset, twin: CloudAsset): AssetBadge | null {
 export type MergeInput = {
   /** A page of the account's own library. */
   remote: readonly CloudAsset[]
-  /**
-   * A page of what everyone else published.
-   *
-   * Optional: not asking for the feed is the ordinary case — it is unbounded, it would drown an
-   * account's own assets, and reading it costs a search quota.
-   */
-  published?: readonly CloudAsset[]
-  jobs: readonly Job[]
-  /** The kinds the space in front can take. `null` asks for everything. */
-  scope: readonly AssetType[] | null
+  /** A page of what everyone else published, empty while nobody asks for the feed. */
+  published: readonly CloudAsset[]
+  /** The kinds the space in front can take. */
+  scope: readonly AssetType[]
 }
 
 /**
- * The provenances as one list, newest first.
+ * The two libraries as one list, newest first: someone looking for "the thing I just made" should
+ * not have to know which produced it.
  *
- * Order is the point of putting them together: a generation running now, an asset made a minute
- * ago and one published last week belong on the same timeline, and someone looking for "the
- * thing I just made" should not have to know which produced it.
+ * 🛑 Generations are NOT here — a job reports progress every couple of seconds, and folding them
+ * in would re-sort eight hundred lines for a bar moving on one tile. See `runningRows`.
  */
-export function mergeRows({ remote, published = [], jobs, scope }: MergeInput): AssetRowModel[] {
-  const wanted = (type: AssetType | null): boolean =>
-    scope === null || type === null || scope.includes(type)
-
-  // A generation still going stands for an output nothing holds yet, so nothing can dedupe it:
-  // it leaves the list by finishing, at which point the library holds the real asset.
-  //
-  // Shown whatever the space in front, and that is a decision rather than an oversight: a job
-  // does not say what kind it will produce until it answers, and hiding a running generation
-  // because its type is unknown is worse than showing one that belongs to another space.
-  const running: AssetRowModel[] = runningJobs(jobs).map(job => ({
-    id: `${JOB_PREFIX}${job.id}`,
-    from: 'job',
-    job,
-    type: null,
-  }))
+export function mergeRows({ remote, published, scope }: MergeInput): AssetRowModel[] {
+  const wanted = (type: AssetType): boolean => scope.includes(type)
 
   const mine: AssetRowModel[] = remote
     .filter(asset => wanted(asset.type))
@@ -148,14 +118,26 @@ export function mergeRows({ remote, published = [], jobs, scope }: MergeInput): 
     }
   }
 
-  return [...running, ...newestFirst([...mine, ...publics])]
+  return newestFirst([...mine, ...publics])
 }
 
 /**
- * Newest first, on the stamp every line carries — read once per ROW and not once per comparison:
- * a listing of eight hundred lines is some fifteen thousand `Date.parse` a sort.
- *
- * A job never reaches here — running generations are placed above the sort.
+ * The generations still going, above the sort: they are what the user is waiting on, and a job
+ * leaves the list by finishing. Shown whatever the space in front — a job does not say what kind
+ * it will produce, and hiding one for that is worse than showing one of another space.
+ */
+export function runningRows(jobs: readonly Job[]): AssetRowModel[] {
+  return runningJobs(jobs).map(job => ({
+    id: `${JOB_PREFIX}${job.id}`,
+    from: 'job',
+    job,
+    type: null,
+  }))
+}
+
+/**
+ * Newest first, the stamp read once per ROW and not per comparison: eight hundred lines is some
+ * fifteen thousand `Date.parse` a sort. A job never reaches here.
  */
 function newestFirst(rows: readonly AssetRowModel[]): AssetRowModel[] {
   return rows

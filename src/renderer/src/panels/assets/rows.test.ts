@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, type Asset, type AssetType } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { job } from '@/stores/job-fixtures'
-import { markOf, mergeRows, nameOfRow, reconciled, typeOfRow, type AssetRowModel } from './rows'
+import {
+  markOf,
+  mergeRows,
+  nameOfRow,
+  reconciled,
+  runningRows,
+  typeOfRow,
+  type AssetRowModel,
+} from './rows'
+
+/** Every kind, which is what a space that takes them all asks for. */
+const ANY: readonly AssetType[] = ASSET_TYPES
 
 const NONE: ReadonlySet<string> = new Set()
 const NO_TWINS: ReadonlyMap<string, Asset> = new Map()
@@ -37,14 +48,12 @@ function cloud(overrides: Partial<CloudAsset> = {}): CloudAsset {
 }
 
 describe('the provenances a line of the remote browser can have', () => {
-  it('lists a running generation and the library as one list', () => {
-    const rows = mergeRows({
-      remote: [cloud()],
-      jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })],
-      scope: null,
-    })
+  it('places a running generation above the libraries, whatever its stamp', () => {
+    const rows = [
+      ...runningRows([job({ label: 'A skeleton', status: 'running', progress: 0.4 })]),
+      ...mergeRows({ remote: [cloud()], published: [], scope: ANY }),
+    ]
 
-    // A running generation sits above the sort: it is what is being waited on.
     expect(rows.map(row => row.from)).toEqual(['job', 'remote'])
   })
 
@@ -52,8 +61,7 @@ describe('the provenances a line of the remote browser can have', () => {
     const rows = mergeRows({
       remote: [cloud({ id: 'mine', createdAt: '2026-08-12T11:00:00.000Z' })],
       published: [cloud({ id: 'theirs', createdAt: '2026-08-20T10:00:00.000Z' })],
-      jobs: [],
-      scope: null,
+      scope: ANY,
     })
 
     expect(rows.map(row => (row.from === 'remote' ? row.asset.id : ''))).toEqual(['theirs', 'mine'])
@@ -65,8 +73,7 @@ describe('the provenances a line of the remote browser can have', () => {
     const rows = mergeRows({
       remote: [cloud({ id: 'both' })],
       published: [cloud({ id: 'both' })],
-      jobs: [],
-      scope: null,
+      scope: ANY,
     })
 
     expect(rows).toHaveLength(1)
@@ -76,7 +83,7 @@ describe('the provenances a line of the remote browser can have', () => {
   it('drops what the space in front has no use for', () => {
     const rows = mergeRows({
       remote: [cloud({ type: 'mesh' }), cloud({ id: 'a_picture', type: 'image' })],
-      jobs: [],
+      published: [],
       scope: ['image'],
     })
 
@@ -89,21 +96,11 @@ describe('the provenances a line of the remote browser can have', () => {
    * belongs to another space.
    */
   it('keeps a running generation whatever the space asks for', () => {
-    const rows = mergeRows({
-      remote: [],
-      jobs: [job({ status: 'running' })],
-      scope: ['audio'],
-    })
-
-    expect(rows.map(row => row.from)).toEqual(['job'])
+    expect(runningRows([job({ status: 'running' })]).map(row => row.from)).toEqual(['job'])
   })
 
   it('answers with the label a generation was submitted under, having no asset yet', () => {
-    const rows = mergeRows({
-      remote: [],
-      jobs: [job({ label: 'A skeleton', status: 'running' })],
-      scope: null,
-    })
+    const rows = runningRows([job({ label: 'A skeleton', status: 'running' })])
 
     expect(rows[0] && nameOfRow(rows[0])).toBe('A skeleton')
     expect(rows[0] && typeOfRow(rows[0])).toBeNull()

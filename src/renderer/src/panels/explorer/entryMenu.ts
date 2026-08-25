@@ -225,11 +225,9 @@ export function openEntryMenu({
    * afterwards. The panel greys out exactly what the disk will refuse, or it is promising
    * something it cannot do.
    */
-  const owned = selection.some(path => isPrivatePath(path))
-
-  // The count the three catalogue gestures name — a folder has no row behind it, and neither has
-  // anything the studio keeps for itself.
+  // What the catalogue gestures name — anything the studio keeps for itself has no row behind it.
   const files = selection.filter(path => !isPrivatePath(path)).length
+  const owned = files < selection.length
 
   const row = commandRows(bindings, run)
 

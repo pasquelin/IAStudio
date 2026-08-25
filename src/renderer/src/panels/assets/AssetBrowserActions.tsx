@@ -3,15 +3,10 @@ import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 
 /**
- * The remote browser's own title row.
+ * The remote browser's own title row: one number, and nothing else — no gesture of this panel
+ * acts on a library this machine has no copy of.
  *
- * One thing, and it is a number: what the panel drew. The four gestures that stood here until
- * 25 August — importing, describing, laying out a contact sheet, sending up — were all about the
- * files this project holds, and went with them to the Explorer's menus. None of them has any
- * meaning over a library this machine has no copy of.
- *
- * The bar itself is NOT here: the panel stands in a column, where 500 px of bar in a 320 px
- * header pushed the close button out of the frame.
+ * The filter bar is NOT here: 500 px of bar in a 320 px header pushed the close button out.
  */
 export function AssetBrowserActions() {
   const { t } = useTranslation()

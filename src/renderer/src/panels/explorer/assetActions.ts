@@ -1,3 +1,4 @@
+import { isPrivatePath } from '@shared/domain/folder'
 import { exportContactSheet } from '@/app/contactSheetExport'
 import { assetsAt } from '@/helpers/assetAt'
 import { getBridge } from '@/services/bridge'
@@ -8,19 +9,18 @@ import { useCloud } from '@/stores/cloud'
 export type AssetAction = 'describe' | 'contactSheet' | 'push'
 
 /**
- * Runs one of them over the paths currently selected in the explorer.
- *
- * The conversion is here and not in the menu, and it is the whole reason this module exists: a
- * menu is drawn on a click and cannot wait on a round trip, so the paths travel as they are and
- * the catalogue is asked once the gesture has been chosen. A path the catalogue knows nothing
- * about simply contributes no id — which is also how a folder in the selection is dropped.
+ * Runs one of them over the paths selected in the explorer. The catalogue is asked once the
+ * gesture is CHOSEN — a menu is drawn on a click and cannot wait on a round trip — and a path it
+ * knows nothing about contributes no id, which is also how a folder is dropped.
  */
 export async function runAssetAction(
   action: AssetAction,
   paths: readonly string[],
   contactSheetName: string,
 ): Promise<void> {
-  const held = await assetsAt(paths)
+  // The same filter the menu counted on, so a greyed row and a gesture that does nothing cannot
+  // disagree: what the studio keeps for itself has no catalogue row behind it.
+  const held = await assetsAt(paths.filter(path => !isPrivatePath(path)))
   const ids = [...held.values()].map(asset => asset.id)
   if (ids.length === 0) return
 

@@ -1,6 +1,6 @@
 import { mdiDownloadOutline } from '@mdi/js'
+import i18next from 'i18next'
 import { type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { startLibraryDrag } from '@/helpers/assetDrag'
 import { showContextMenu } from '@/helpers/contextMenu'
@@ -28,8 +28,6 @@ export type LibraryAssetProps = {
  * asset has none.
  */
 export function LibraryAsset({ asset, className, children }: LibraryAssetProps) {
-  const { t } = useTranslation()
-
   return (
     <div
       className={className}
@@ -56,9 +54,11 @@ export function LibraryAsset({ asset, className, children }: LibraryAssetProps) 
 
         void showContextMenu([
           {
-            label: t('assets.fetchAction', { count: ids.length }),
+            // Read at the gesture rather than through `useTranslation`: this wraps EVERY cell of
+            // the panel, and a hook here subscribes each of two hundred of them to i18next.
+            label: i18next.t('assets.fetchAction', { count: ids.length }),
             icon: mdiDownloadOutline,
-            tooltip: t('assets.fetchActionHint'),
+            tooltip: i18next.t('assets.fetchActionHint'),
             // Greyed rather than hidden, as every other menu here: an entry that comes and goes
             // depending on what is open is one nobody can learn.
             disabled: !canFetch,

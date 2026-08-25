@@ -9,7 +9,7 @@ import { Spinner } from '@/design/Spinner'
 import { cloudTileFace } from '@/helpers/cloudTile'
 import { cn } from '@/helpers/cn'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, typeOfRow, type AssetRowModel } from './rows'
+import { nameOfRow, typeOfRow, type AssetRowModel, type RowHints } from './rows'
 
 /** The width a tile occupies. What the CDN is asked for follows, once density is applied. */
 const PREVIEW_WIDTH = 220
@@ -24,12 +24,7 @@ export type AssetCardProps = {
   badgeLabels: Map<BadgeName, string>
   /** Resolved by the panel too, for the same reason as `badgeLabels`. */
   typeLabels: Map<AssetType, string>
-  /**
-   * The tooltip attributes for the two provenances that need a gesture explained, already
-   * built. Same reason as the labels, and the same mistake avoided: a `useTranslation` here
-   * subscribes every one of two hundred cells and allocates a fresh attribute object per frame.
-   */
-  hints: { fetch: Record<string, string>; generating: Record<string, string> }
+  hints: RowHints
 }
 
 export const AssetCard = memo(function AssetCard({

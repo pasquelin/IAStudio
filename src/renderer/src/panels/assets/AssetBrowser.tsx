@@ -33,30 +33,22 @@ import { AssetDetails } from './AssetDetails'
 import { AssetRow } from './AssetRow'
 import { OWN_SOURCE, PUBLISHED_SOURCE, SOURCE_FACET, TYPE_FACET } from './facets'
 import { mergeFeed, type FeedSource, type FeedSourceName } from './feed'
-import { markOf, mergeRows, typeOfRow, type AssetRowModel } from './rows'
+import { markOf, mergeRows, runningRows, typeOfRow, type AssetRowModel } from './rows'
 
 /** How much of a cloud listing one page asks for. The scroll asks for the next. */
 const LIBRARY_PAGE = 60
-
-/** A stable empty selection, so an untouched panel hands the same identity to every memo. */
-const NOTHING: readonly string[] = []
 
 /** What a line of the account's own library answers the Source facet with. */
 const SOURCES_OF_OWN: readonly string[] = [OWN_SOURCE]
 
 /**
- * The account's remote library, standing where an Unreal content browser would. Both views are
- * virtualized by `Collection`.
+ * The account's remote library, standing where an Unreal content browser would.
  *
- * 🛑 It lists what is NOT on this machine, and only that: the account's own cloud library, what
- * everyone else published, and the generations still being made. What the project holds is the
- * Explorer's subject — two panels answering the same question with different words is what this
- * panel used to be, and the catalogue half of it left on 25 August.
+ * 🛑 It lists what is NOT on this machine, and only that: the account's own library, what everyone
+ * else published, and the generations still being made. What the project holds is the Explorer's.
  *
- * The two remote halves are one timeline rather than two lists: someone looking for "the thing I
- * just made" should not have to know which of them produced it. Both are asked OF the API,
- * narrowed to the kinds the space in front can take — the index matches on a prompt and a
- * description this side never sees, which is what makes them searchable at all.
+ * Both halves are asked OF the API — the index matches a prompt and a description this side never
+ * sees, which is what makes them searchable at all.
  */
 export function AssetBrowser() {
   const { t } = useTranslation()
@@ -68,6 +60,9 @@ export function AssetBrowser() {
   // The key is known to WORK, not merely to be stored: `authState` resolves the credentials the
   // channels below need, so this is the earliest moment a listing can come back with anything.
   const authenticated = useSettings(state => state.auth.authenticated)
+  // `UNKNOWN_AUTH` spells « not read yet » as « missing », so the two are told apart by this and
+  // nothing else: without it, « configure a key » flashes at every launch for someone who has one.
+  const authKnown = useSettings(state => state.authKnown)
   const typeLabels = useTypeLabels()
   const badgeLabels = useBadgeLabels()
   const facets = useAssetFacets(typeLabels)
@@ -76,14 +71,9 @@ export function AssetBrowser() {
   const busy = useCloud(state => state.busy)
   const moving = useCloud(state => state.moving)
   /**
-   * The kind the space in front MAKES, written into the Type facet whenever the space changes.
-   *
-   * A default that says its own name. The scope used to be invisible — the shelf narrowed to
-   * everything a space can take, which is four kinds in 3D and all six in Video, and nothing on
-   * screen said so. Here the bar carries the answer, and one click widens it.
-   *
-   * On the space and never on the collection: this must not fight the user's own choice, only
-   * replace it when they move to another space.
+   * The kind the space in front MAKES, written into the Type facet — a default that says its own
+   * name, where the narrowing used to be invisible. On the SPACE and never on the collection: it
+   * must not fight the user's own choice, only replace it when they move to another space.
    */
   const ownType = typeOfWorkspace(workspace)
   useEffect(() => {
@@ -120,11 +110,9 @@ export function AssetBrowser() {
   /**
    * Keyed on the account, on what is asked for and on the word: another key is another library.
    *
-   * 🛑 Not read before the key is known to work, and that is a fix rather than a saving. The
-   * channel answers an EMPTY PAGE when no credentials resolve — `emptyIfUnauthenticated`, so a
-   * first run without a key does not dump a stack per poll — which react-query then holds as a
-   * successful, finished listing. Asked during the moment the keychain has not answered yet, the
-   * panel therefore cached « this account owns nothing » and had no reason to ever ask again.
+   * 🛑 Not read before the key is known to work. The channel answers an EMPTY PAGE when no
+   * credentials resolve (`emptyIfUnauthenticated`), and react-query holds that as a finished
+   * listing — the panel cached « this account owns nothing » with no reason to ask again.
    */
   const library = usePages(
     ['assets', 'library', ownerId, cloudScope, search],
@@ -142,10 +130,8 @@ export function AssetBrowser() {
   const remote = library.items
 
   /**
-   * What everyone else published, read only while the Source facet asks for it.
-   *
-   * The kind is the scope's first, which is the Type facet's answer wherever one is chosen and
-   * the space's own kind otherwise: the feed pages by one kind, and this is the one on screen.
+   * What everyone else published, read only while the Source facet asks for it. The feed pages by
+   * ONE kind, and the scope's first is the one on screen.
    */
   const publishedType = wantsPublished ? (cloudScope[0] ?? null) : null
   const feed = usePages(
@@ -176,12 +162,7 @@ export function AssetBrowser() {
   const picked = useLibraryPick(state => state.picked)
   const setPicked = useLibraryPick(state => state.setPicked)
 
-  /**
-   * The two tooltips a cell may carry, built once for the panel.
-   *
-   * A `useTranslation` inside a cell subscribes each of two hundred of them to i18next and
-   * allocates a fresh attribute object on every frame of a scroll.
-   */
+  /** The two tooltips a cell may carry, built once for the panel — see `RowHints`. */
   const hints = useMemo(
     () => ({
       fetch: HINT_LEFT(t('assets.fetchHint')),
@@ -190,37 +171,34 @@ export function AssetBrowser() {
     [t],
   )
 
-  const rows = useMemo(
-    () => mergeRows({ remote, published, jobs, scope }),
-    [remote, published, jobs, scope],
-  )
-
   /**
-   * Which of these the project already holds — asked of the catalogue, over the ids actually
-   * listed. It is what tells a line one can download from one already downloaded.
+   * 🛑 The libraries and the generations are two memos, not one: a job reports its progress every
+   * couple of seconds, and one list would re-sort eight hundred lines for a bar moving on a tile.
    */
+  const settled = useMemo(() => mergeRows({ remote, published, scope }), [remote, published, scope])
+  const rows = useMemo(() => [...runningRows(jobs), ...settled], [jobs, settled])
+
+  /** Which of these the project already holds — asked of the catalogue, over the ids listed. */
   const listed = useMemo(
-    () => rows.flatMap(row => (row.from === 'remote' ? [row.asset.id] : [])),
-    [rows],
+    () => settled.flatMap(row => (row.from === 'remote' ? [row.asset.id] : [])),
+    [settled],
   )
   const twins = useRemoteTwins(listed)
 
   /**
-   * Each line WITH the mark it wears, resolved once for the panel.
-   *
-   * Carried on the row rather than looked up per cell: a map meant every reader had to answer
-   * "and if it is missing?" for a key built from the very list it indexes. The badge is a
-   * property of the line, so the line holds it.
+   * The mark each line wears, BESIDE the lines rather than spread onto them: a fresh object per
+   * row is a fresh identity, and the cells are memoised on it — every arriving page would
+   * re-render every tile on screen, thumbnails included.
    */
-  const marked = useMemo(() => {
+  const badges = useMemo(() => {
     const inFlight = new Set(moving)
 
-    return rows.map(row => ({ ...row, badge: markOf(row, { inFlight, twins }) }))
+    return new Map(rows.map(row => [row.id, markOf(row, { inFlight, twins })]))
   }, [rows, moving, twins])
 
   const filtered = useMemo(
     () =>
-      filterLocally(marked, collection, {
+      filterLocally(rows, collection, {
         /**
          * Nothing is matched in memory: the index has already matched these, on a prompt and a
          * description this side cannot see. Judged again here, a hit found on its PROMPT would
@@ -242,14 +220,13 @@ export function AssetBrowser() {
             row.from === 'remote' && row.published ? [PUBLISHED_SOURCE] : SOURCES_OF_OWN,
         },
       }),
-    [marked, collection],
+    [rows, collection],
   )
 
   /**
-   * How far each source has been read — and only the ones that have ANSWERED, which is where
-   * this panel departs from the rule `mergeFeed` states. Counted from the first render, an
-   * opening panel would go blank for as long as the API takes to reply. What the cut protects is
-   * the SCROLL, and there every source has long since answered.
+   * How far each source has been read — only the ones that have ANSWERED, where this panel departs
+   * from `mergeFeed`'s rule: counted from the first render, an opening panel would go blank for as
+   * long as the API takes. What the cut protects is the SCROLL.
    */
   // The stamps rather than the lists: a refresh hands back a fresh array of the same rows, and
   // depending on it would walk the whole timeline again on every generation that lands.
@@ -280,19 +257,19 @@ export function AssetBrowser() {
   // either way, and cutting first would leave the tail of a filtered list unreachable.
   const { rows: shown, hungry } = useMemo(() => mergeFeed(filtered, sources), [filtered, sources])
 
-  /** Asks the source holding the list back, and only it — which one it is changes as it goes. */
-  // Through its contents, because `mergeFeed` allocates a fresh list every render: handed to the
-  // end-of-list effect as it comes, a keystroke would re-arm it and spend a page on each one.
-  const asking = hungry.join(' ')
+  // Asks the source holding the list back, and only it. Read as two booleans, because `mergeFeed`
+  // allocates a fresh list every render: depending on it would re-arm the end-of-list effect on
+  // every keystroke and spend a page on each one.
+  const wantsLibrary = hungry.includes('library')
+  const wantsFeed = hungry.includes('published')
   // Named apart because `exhaustive-deps` reads `library.more` as a dependency on `library`,
   // which takes a fresh identity every render and would re-arm the effect below with it.
   const readMoreLibrary = library.more
   const readMoreFeed = feed.more
   const askForMore = useCallback(() => {
-    const wanted = asking.split(' ')
-    if (wanted.includes('library')) readMoreLibrary()
-    if (wanted.includes('published')) readMoreFeed()
-  }, [asking, readMoreLibrary, readMoreFeed])
+    if (wantsLibrary) readMoreLibrary()
+    if (wantsFeed) readMoreFeed()
+  }, [wantsLibrary, wantsFeed, readMoreLibrary, readMoreFeed])
 
   // `ownerId` in the key: another account is another library, read from nothing — with the count
   // left where the previous one stopped, the panel would sit empty with no scroll able to fill it.
@@ -304,14 +281,12 @@ export function AssetBrowser() {
     // stop one pull in with pages still to come.
     answered: `${library.pagesRead} ${feed.pagesRead}`,
     // Nobody to ask is not a pull worth spending: no source is holding the list back.
-    ask: asking === '' ? null : askForMore,
+    ask: hungry.length === 0 ? null : askForMore,
   })
 
   /**
-   * The count in the title row says what this list holds — the header is a separate component
-   * and cannot see the library page or the filters from there.
-   *
-   * Cleared on the way out so a panel that has closed stops answering for the next one.
+   * The count in the title row says what this list holds — the header is another component and
+   * sees neither the library page nor the filters. Cleared on the way out.
    */
   const shownLength = shown.length
   useEffect(() => {
@@ -321,14 +296,9 @@ export function AssetBrowser() {
   useEffect(() => () => setShownCount(null), [setShownCount])
   // And the picked range with it: it addresses one library, and a panel that has closed must not
   // leave a range behind for whatever opens next.
-  useEffect(() => () => setPicked(NOTHING), [setPicked])
+  useEffect(() => () => setPicked([]), [setPicked])
 
-  /**
-   * Four situations, and the user can act on three of them.
-   *
-   * No key is asked FIRST: with none, nothing here can be read at all, and blaming a filter for
-   * an empty panel would send someone hunting for one to clear.
-   */
+  /** No key is asked FIRST: blaming a filter would send someone hunting for one to clear. */
   const narrowedByHand = isFiltered(
     chosenTypes?.length === 1 && chosenTypes[0] === ownType
       ? setFacetValue(collection, TYPE_FACET, null)
@@ -339,7 +309,7 @@ export function AssetBrowser() {
   const reading = !('library' in sources) && !('published' in sources)
   const refused = library.refusal !== null || feed.refusal !== null
 
-  if (!authenticated) return <MissingCredentials icon={mdiImageMultipleOutline} />
+  if (authKnown && !authenticated) return <MissingCredentials icon={mdiImageMultipleOutline} />
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -367,7 +337,7 @@ export function AssetBrowser() {
         renderCard={row => (
           <AssetCard
             row={row}
-            badge={row.badge}
+            badge={badges.get(row.id) ?? 'remote-only'}
             badgeLabels={badgeLabels}
             typeLabels={typeLabels}
             hints={hints}
@@ -386,7 +356,7 @@ export function AssetBrowser() {
           <AssetRow
             row={row}
             typeLabel={typeLabelOf(row, typeLabels)}
-            badge={row.badge}
+            badge={badges.get(row.id) ?? 'remote-only'}
             badgeLabels={badgeLabels}
             hints={hints}
           />
@@ -425,10 +395,8 @@ export function AssetBrowser() {
 }
 
 /**
- * Fetches a library asset, then opens what arrived — the double-click's whole errand.
- *
- * Opening nothing when the transfer failed is deliberate: `cloud:pull` has already written why
- * to the journal, and an editor opened on a row that was never created says less than nothing.
+ * Fetches a library asset, then opens what arrived. Opening nothing when the transfer failed is
+ * deliberate: `cloud:pull` has already written why, and an editor on a row never created says less.
  */
 async function openFetched(remoteAssetId: string): Promise<void> {
   const arrived = await useCloud.getState().fetchOne(remoteAssetId)

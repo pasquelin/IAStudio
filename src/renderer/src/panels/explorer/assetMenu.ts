@@ -35,14 +35,8 @@ export type AssetMenuProps = {
 /**
  * What can be done with an asset, listed rather than guessed — two groups on the explorer's menu.
  *
- * 🛑 Groups and not rows, which is what moving here forced: this menu already offers twelve
- * gestures about the FILE, and flattening ten more about the asset into it made a list nobody
- * could read. One level deep, which is what `ContextMenuGroup` bounds.
- *
- * Every destination comes from `ASSET_INTENTS`, and that table is what the first group is FOR:
- * before it, where an asset could go was knowledge locked inside one `if` chain, so
- * double-clicking was the only gesture that could send one anywhere. A destination whose space
- * has no document open is greyed rather than dropped.
+ * 🛑 Groups and not rows: this menu already offers twelve gestures about the FILE, and flattening
+ * ten more into it made a list nobody could read. Destinations come from `ASSET_INTENTS`.
  */
 export function assetMenuGroups({ asset, count, t, onAsset }: AssetMenuProps): ContextMenuRow[] {
   return [{ separator: true }, sendGroup(asset, t), catalogueGroup(asset, count, t, onAsset)]

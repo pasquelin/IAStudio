@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo } from 'react'
 import type { AssetBadge as BadgeName } from '@shared/domain/asset'
 import { cloudPreviewUrl } from '@shared/domain/cloudAsset'
 import { AssetBadge } from '@/design/AssetBadge'
@@ -7,7 +7,7 @@ import { ROW_QUIET } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 import { cn } from '@/helpers/cn'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, type AssetRowModel } from './rows'
+import { nameOfRow, type AssetRowModel, type RowHints } from './rows'
 
 export type AssetRowProps = {
   row: AssetRowModel
@@ -15,8 +15,7 @@ export type AssetRowProps = {
   typeLabel: string
   badge: BadgeName
   badgeLabels: Map<BadgeName, string>
-  /** Built once by the panel — see `AssetCardProps.hints`. */
-  hints: { fetch: Record<string, string>; generating: Record<string, string> }
+  hints: RowHints
 }
 
 // The type ends the line rather than sitting under the name: a subtitle would stack two lines
@@ -28,12 +27,11 @@ export const AssetRow = memo(function AssetRow({
   badgeLabels,
   hints,
 }: AssetRowProps) {
-  const thumbnailUrl = row.from === 'remote' ? cloudPreviewUrl(row.asset, 40) : undefined
-  const thumbnail: ReactNode = thumbnailUrl ? <Thumbnail url={thumbnailUrl} /> : null
+  const preview = row.from === 'remote' ? cloudPreviewUrl(row.asset, 40) : null
 
   const line = (
     <Row
-      media={thumbnail}
+      media={preview ? <Thumbnail url={preview} /> : null}
       title={nameOfRow(row)}
       actions={
         <span className="flex shrink-0 items-center gap-2">

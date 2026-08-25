@@ -75,7 +75,7 @@ beforeEach(() => {
   // pictures, and a block left in whichever space ran last would filter them all away.
   useLayouts.setState({ activeWorkspace: 'image' })
   // A working key is the ordinary state of this panel — and a CONDITION of it, see below.
-  useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_1' } })
+  useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_1' }, authKnown: true })
   useCloud.getState().clear()
   useLibraryPick.setState({ picked: [] })
   vi.clearAllMocks()
@@ -90,7 +90,7 @@ describe('a remote browser with no key to open a library', () => {
    */
   it('says what is missing rather than drawing an empty library', () => {
     holding()
-    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' }, authKnown: true })
 
     render(shelf())
 
@@ -106,7 +106,7 @@ describe('a remote browser with no key to open a library', () => {
   it('does not read the library before a key is established, and reads it as soon as one is', async () => {
     const browse = vi.fn(() => Promise.resolve({ assets: [cloud()], cursor: null }))
     installFakeBridge({ cloud: { browse } })
-    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' }, authKnown: true })
 
     const { rerender } = render(shelf())
     expect(browse).not.toHaveBeenCalled()

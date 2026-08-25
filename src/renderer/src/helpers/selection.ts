@@ -17,6 +17,15 @@ export type Modifiers = { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean 
 /** What a click on `id` asks for, given the ids in the order they are drawn. */
 export type Pick = { ids: readonly string[]; mode: SelectionMode }
 
+/**
+ * What a gesture on one row acts on: the whole selection where that row is part of it, the row
+ * alone otherwise. A drag or a menu can start without a click, and must not wipe a range the
+ * user just built.
+ */
+export function actedOn(selected: readonly string[], id: string): readonly string[] {
+  return selected.includes(id) ? selected : [id]
+}
+
 export function applySelection(
   current: readonly string[],
   ids: readonly string[],

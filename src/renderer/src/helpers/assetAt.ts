@@ -1,6 +1,6 @@
 import { orElse } from '@shared/promises'
 import { chunk } from '@shared/collections'
-import { ASSET_PATHS_MAX, type Asset } from '@shared/domain/asset'
+import { ASSET_SEARCH_LIMIT_MAX, type Asset, type AssetQuery } from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
 
 /**
@@ -22,29 +22,47 @@ export async function assetAt(path: string): Promise<Asset | null> {
 }
 
 /**
- * The same question for a whole listing, keyed by path — one round trip per `ASSET_PATHS_MAX`.
- *
- * A panel showing four hundred files asked four hundred times, and each answer is a query
- * against the project's own database, in the process that owns every window. `limit` is the
- * number of paths asked about: a path names at most one row, and leaving the catalogue's own
- * default in place would have cut the answer where the question was already bounded.
- *
- * Cut into batches rather than sent whole, and that bound is not decoration: the main process
- * REFUSES a longer list, and `assetsAt` swallows a refusal — a project of three thousand files
- * lost every catalogue answer at once, falling back to guessing from extensions with nothing
- * on screen to say so.
- *
- * Answers an empty map rather than throwing, for the reason `assetAt` answers `null`.
+ * The same question for a whole listing, keyed by path — one round trip per batch rather than one
+ * per row: a panel showing four hundred files asked four hundred times, and each answer is a
+ * query against the project's own database, in the process that owns every window.
  */
 export async function assetsAt(paths: readonly string[]): Promise<Map<string, Asset>> {
   if (paths.length === 0) return new Map()
 
+  const found = await batched(paths, batch => ({ paths: batch }))
+
+  return new Map(found.flatMap(asset => (asset.path ? [[asset.path, asset]] : [])))
+}
+
+/** Which of THESE library assets the project holds, keyed by the library's own id. */
+export async function assetsByRemoteId(
+  remoteAssetIds: readonly string[],
+): Promise<Map<string, Asset>> {
+  const found = await batched(remoteAssetIds, batch => ({ remoteAssetIds: batch }))
+
+  return new Map(
+    found.flatMap(asset => (asset.remoteAssetId ? [[asset.remoteAssetId, asset]] : [])),
+  )
+}
+
+/**
+ * One question over a list too long to ask in one go.
+ *
+ * 🛑 Cut on `ASSET_SEARCH_LIMIT_MAX` and not on `ASSET_PATHS_MAX`, which bounds the list alone:
+ * `limit` is the batch's own length, and the main process REFUSES a larger one rather than
+ * trimming it. Cut at two thousand, a listing past five hundred lost every answer at once —
+ * `orElse` swallows the refusal, so the caller reads « the catalogue holds none of these ».
+ */
+async function batched(
+  values: readonly string[],
+  ask: (batch: readonly string[]) => AssetQuery,
+): Promise<Asset[]> {
   const answers = await Promise.all(
-    chunk(paths, ASSET_PATHS_MAX).map(
+    chunk(values, ASSET_SEARCH_LIMIT_MAX).map(
       async batch =>
-        await orElse(getBridge()?.assets.search({ paths: batch, limit: batch.length }), []),
+        await orElse(getBridge()?.assets.search({ ...ask(batch), limit: batch.length }), []),
     ),
   )
 
-  return new Map(answers.flat().flatMap(asset => (asset.path ? [[asset.path, asset]] : [])))
+  return answers.flat()
 }
