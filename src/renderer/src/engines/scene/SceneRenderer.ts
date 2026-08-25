@@ -683,6 +683,11 @@ export class SceneRenderer {
    */
   private contentChanged = true
   private placementChanged = true
+  /**
+   * Read by the grouping, which is NOT behind the same switch as the counters: turning the
+   * statistics off gives back a walk, it must never change what the GPU is asked to draw.
+   */
+  private groupingStale = true
   /** What the model costs, held between the passes that cannot have changed it. */
   private modelStats: SceneStats = EMPTY_STATS
   private mode: TransformMode = 'select'
@@ -894,6 +899,9 @@ export class SceneRenderer {
     this.refreshAids()
     this.applyWorld(state.world)
     this.attachGizmo()
+    // Before the counters and after every placement: the instance matrices are copied from the
+    // world matrices, which nothing past here moves.
+    this.regroupInstances()
     this.reportStats()
     this.redraw()
   }
@@ -1349,13 +1357,36 @@ export class SceneRenderer {
       if (this.contentChanged) {
         this.modelStats = statsOf(this.objects.values())
         this.contentChanged = false
-        // On the same signal, and for the same reason it exists: the grouping walks every node,
-        // which a selection must never pay for. The world matrices are up to date by here.
-        this.instances.rebuild([...this.applied.values()], id => this.objects.get(id))
       }
       const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
       report(this.modelStats, statsOf(selected))
     })
+  }
+
+  /**
+   * Both passes a change of CONTENT makes stale — what the counters read, and how the repeated
+   * shapes are grouped for drawing. One gesture because forgetting the second is silent: the
+   * grouping is the only thing that ever gives a mesh back to the camera's layer.
+   */
+  private markContentChanged(): void {
+    this.contentChanged = true
+    this.groupingStale = true
+  }
+
+  /**
+   * Draws the repeated shapes through one `InstancedMesh` per region.
+   *
+   * Its own pass, and out of `reportStats`: it lived past that method's two early returns, so
+   * ten thousand copies were drawn one by one unless the statistics overlay happened to be on —
+   * and a node moved while it was off left stale instances with the real meshes still hidden.
+   *
+   * Outside `asDocumented`, on purpose: the grouping reads `visible` off the objects, which is
+   * exactly what that helper sets aside.
+   */
+  private regroupInstances(): void {
+    if (!this.groupingStale) return
+    this.groupingStale = false
+    this.instances.rebuild([...this.applied.values()], id => this.objects.get(id))
   }
 
   /** Which view the pointer is over — what a display command acts on. */
@@ -2609,7 +2640,7 @@ export class SceneRenderer {
     // Past that guard something about this node really changed — its shape, or where it stands,
     // and from here neither can be told from the other. A selection changes no node, so it never
     // reaches here: that walk was 12 % of the CPU of one click on 8 000 nodes, measured 20/08.
-    this.contentChanged = true
+    this.markContentChanged()
     this.placementChanged = true
 
     // A model is its file: pointing a node at another asset is a different object, not an edit
@@ -2683,10 +2714,11 @@ export class SceneRenderer {
     this.isolation = isolation
     // Here rather than in `applyVisibility`: this is the one call of the three that CHANGES what
     // is visible, and `statsOf` skips a hidden mesh — see there.
-    this.contentChanged = true
+    this.markContentChanged()
     this.applyVisibility()
     this.showAidsForSelection()
     this.refreshAids()
+    this.regroupInstances()
     this.reportStats()
     this.redraw()
   }
@@ -3052,9 +3084,10 @@ export class SceneRenderer {
       // The count is a count of what is really there: a model's triangles arrive with its file,
       // which is a tick after the `apply` that asked for it. It is also what the scene now
       // OCCUPIES, so the lights are re-cut against a set that just grew by a whole model.
-      this.contentChanged = true
+      this.markContentChanged()
       this.placementChanged = true
       this.tuneShadowsIfMoved()
+      this.regroupInstances()
       this.reportStats()
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
@@ -3339,7 +3372,7 @@ export class SceneRenderer {
   }
 
   private release(id: string): void {
-    this.contentChanged = true
+    this.markContentChanged()
     this.placementChanged = true
     // Read before `applied` is emptied: the reference the cache holds is keyed by what the node
     // pointed at, and nothing else remembers it.

@@ -1,4 +1,11 @@
-import { BoxGeometry, InstancedMesh, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import {
+  BoxGeometry,
+  IcosahedronGeometry,
+  InstancedMesh,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three'
 import { describe, expect, it } from 'vitest'
 import { meshNode } from './scene-fixtures'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING, createInstancedGroups } from './instancing'
@@ -22,7 +29,32 @@ function alike(count: number): { nodes: SceneNode[]; objects: Map<string, Mesh> 
   return { nodes, objects }
 }
 
+/** The same, of a shape dense enough to be worth splitting, spread over a level. */
+function spread(count: number, over: number): { nodes: SceneNode[]; objects: Map<string, Mesh> } {
+  const nodes: SceneNode[] = []
+  const objects = new Map<string, Mesh>()
+  const geometry = new IcosahedronGeometry(0.5, 2)
+  const material = new MeshStandardMaterial()
+
+  const side = Math.ceil(Math.sqrt(count))
+  for (let at = 0; at < count; at += 1) {
+    const node = meshNode(`n${at}`)
+    const mesh = new Mesh(geometry, material)
+    mesh.position.set(((at % side) * over) / side, 0, (Math.floor(at / side) * over) / side)
+    mesh.updateMatrixWorld(true)
+    nodes.push(node)
+    objects.set(node.id, mesh)
+  }
+  return { nodes, objects }
+}
+
+/** Enough of a 320-triangle shape for the split to be worth several regions. */
+const SPLIT_WORTHY = 2_000
+
 const host = () => new Object3D()
+
+const instancesIn = (scene: Object3D): InstancedMesh[] =>
+  scene.children.filter(child => child instanceof InstancedMesh)
 
 describe('createInstancedGroups', () => {
   it('leaves an ordinary scene alone, drawing nothing of its own', () => {
@@ -96,12 +128,26 @@ describe('createInstancedGroups', () => {
     expect(scene.children).toHaveLength(0)
   })
 
-  it('skips a hidden node, which nothing should draw at all', () => {
+  it('skips a mesh the scene does not draw, whoever hid it', () => {
     const scene = host()
     const { nodes, objects } = alike(WORTH_INSTANCING)
-    const hidden = nodes.map(node => ({ ...node, visible: false }))
+    for (const mesh of objects.values()) mesh.visible = false
 
-    expect(createInstancedGroups(scene).rebuild(hidden, id => objects.get(id))).toBe(0)
+    // Read off the object rather than the node: the viewport isolates on top of what the
+    // document hides, and only the object carries both. Instanced, a hidden mesh comes back —
+    // an `InstancedMesh` never consults the meshes it stands for.
+    expect(createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
+  })
+
+  it('skips a mesh hanging from something hidden, which three.js would not draw either', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    const branch = new Object3D()
+    branch.visible = false
+    scene.add(branch)
+    for (const mesh of objects.values()) branch.add(mesh)
+
+    expect(createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
   })
 
   it('takes its meshes away when the engine goes', () => {
@@ -112,5 +158,45 @@ describe('createInstancedGroups', () => {
 
     groups.dispose()
     expect(scene.children).toHaveLength(0)
+  })
+})
+
+describe('splitting a group across the level it covers', () => {
+  it('draws a spread-out shape through one instance per region', () => {
+    const scene = host()
+    const { nodes, objects } = spread(SPLIT_WORTHY, 600)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    // One sphere for the whole level is one sphere the frustum can never say no to.
+    expect(instancesIn(scene).length).toBeGreaterThan(1)
+  })
+
+  it('draws every mesh once across the regions, and none of them twice', () => {
+    const scene = host()
+    const { nodes, objects } = spread(SPLIT_WORTHY, 600)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    const drawn = instancesIn(scene).reduce((all, instance) => all + instance.count, 0)
+    expect(drawn).toBe(SPLIT_WORTHY)
+  })
+
+  it('gives each region bounds of its own, tight enough to be culled', () => {
+    const scene = host()
+    const { nodes, objects } = spread(SPLIT_WORTHY, 600)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    // Bounds as wide as the level would pass every frustum test and cull nothing at all.
+    for (const instance of instancesIn(scene)) {
+      expect(instance.boundingSphere?.radius ?? Infinity).toBeLessThan(300)
+    }
+  })
+
+  it('leaves a shape too cheap to split drawn in a single call', () => {
+    const scene = host()
+    // Cubes: twelve triangles, under the floor where the draw calls of a split earn it back.
+    const { nodes, objects } = alike(SPLIT_WORTHY)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    expect(instancesIn(scene)).toHaveLength(1)
   })
 })
