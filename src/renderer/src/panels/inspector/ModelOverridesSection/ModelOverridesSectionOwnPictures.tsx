@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import type { ModelRef, TextureRef, TextureSlot } from '@shared/domain/scene'
 import { slotForChannel } from '@shared/domain/texture'
@@ -8,35 +7,32 @@ import { useDerivedTextures } from '@/hooks/useDerivedTextures'
 import { hasChannel } from '@/spaces/textures/openModelMaterial'
 
 /**
- * Points every slot at the pictures extraction took out of this model's own file — the link
- * « edit the picture and the model follows » hangs on, a model otherwise wearing maps baked into
- * its `.glb` that no edit of the project can reach.
- *
  * Its own component so the fold UNMOUNTS the catalogue query with it, exactly as
- * `ModelTexturesSectionList` is: read from the section around it, the question would be asked
- * for a panel nobody opened.
+ * `ModelTexturesSectionList` is: read from the section around it, the question would be asked for
+ * a panel nobody opened. Its wording arrives translated for that file's other reason — a second
+ * `useTranslation` re-subscribes to i18next on every frame of a gizmo drag.
  */
 export function ModelOverridesSectionOwnPictures({
   assetId,
   textures,
+  label,
+  hint,
   onChange,
 }: {
   assetId: string
   /** What the slots hold now: the model's own pictures land OVER them, never instead of them. */
   textures: ModelRef['textures']
+  label: string
+  hint: string
   onChange: (textures: ModelRef['textures']) => void
 }) {
-  const { t } = useTranslation()
   const own = ownPictures(useDerivedTextures(assetId))
 
   if (!own) return null
 
   return (
-    <Button
-      {...HINT_LEFT(t('inspector.useModelPicturesHint'))}
-      onClick={() => onChange({ ...textures, ...own })}
-    >
-      {t('inspector.useModelPictures')}
+    <Button {...HINT_LEFT(hint)} onClick={() => onChange({ ...textures, ...own })}>
+      {label}
     </Button>
   )
 }

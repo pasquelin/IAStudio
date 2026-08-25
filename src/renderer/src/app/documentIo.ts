@@ -673,17 +673,20 @@ async function agreedToFlatten(
 ): Promise<boolean> {
   if (flattenAgreed.has(document.id)) return true
 
-  const bridge = getBridge()
-  if (!bridge) return true
-
-  const agreed = await bridge.documents.confirmFlatten(
+  const agreed = await askedToFlatten(
     document.title,
     format.toUpperCase(),
-    losses.join(', '),
+    // Translated HERE: a dialogue reading « layers, liveText » to a French speaker is the rawest
+    // form of this repository's costliest defect. Only picture traits arrive — see `traitsOf`.
+    losses.map(trait => i18next.t(`traits.${trait}`)).join(', '),
   )
   if (agreed) flattenAgreed.add(document.id)
   return agreed
 }
+
+/** No bridge — a test, a plain browser — answers yes: there is nobody to ask and nothing to lose. */
+const askedToFlatten = async (title: string, format: string, lost: string): Promise<boolean> =>
+  (await getBridge()?.documents.confirmFlatten(title, format, lost)) ?? true
 
 /**
  * What both saving gestures need before they can write anything, or `null` when one of them is
@@ -779,8 +782,9 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
  *
  * A format the table does not write — a `.tif`, a `.gif` — reports everything the document holds
  * rather than nothing: « no answer » must never read as « nothing to lose », which is the exact
- * shape of the silent loss this path exists to stop. Its `format` is then never used, the losses
- * having already refused the write.
+ * shape of the silent loss this path exists to stop. It writes OpenRaster rather than the flat
+ * default for that same reason: `replaceBytes` moves the extension with the bytes, so guessing
+ * `png` on an unknown format would flatten a container this table simply failed to recognise.
  */
 function writePlanFor(
   document: DocumentDescriptor,
@@ -791,10 +795,10 @@ function writePlanFor(
   // the format off it answered `null` for every asset a project actually holds, and a document
   // with two layers was then refused even by the `.ora` that could hold it.
   const format = formatOfFile(assetsById(useAssets.getState()).get(sourceAssetId)?.path ?? '')
-  if (!io.traitsOf) return { format: format ?? 'png', losses: [] }
+  if (!io.traitsOf) return { format: format ?? 'ora', losses: [] }
 
   const traits = io.traitsOf(document.id)
-  return { format: format ?? 'png', losses: format ? lossesFor(traits, format) : traits }
+  return { format: format ?? 'ora', losses: format ? lossesFor(traits, format) : traits }
 }
 
 /**

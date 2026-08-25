@@ -11,13 +11,10 @@ import { decoderFor, type PictureDecoder } from '@shared/domain/pictureDecoder'
 import { createRefCache } from '../core/refCache'
 
 /**
- * Which way up a picture is decoded, in the platform's own words rather than ours.
+ * Which way up a picture is decoded. `flipY` is the studio's convention; `from-image` is what glTF
+ * stores its UVs for, `GLTFLoader` decoding through `ImageBitmapLoader` with no orientation set.
  *
- * `flipY` is the studio's convention, and what every primitive, sky and material of it is drawn
- * against. `from-image` is what glTF stores its UVs for — `GLTFLoader` decodes through
- * `ImageBitmapLoader` and configures no orientation, so a map of the project put over one of a
- * model's own would otherwise land upside down. `texture.flipY` cannot fix it after the fact: it
- * has no effect at all on an `ImageBitmap`.
+ * Decided HERE and nowhere else: `texture.flipY` has no effect at all on an `ImageBitmap`.
  */
 export type PictureOrientation = 'flipY' | 'from-image'
 
@@ -207,26 +204,19 @@ export function createTextureCache(
   }
 }
 
-/**
- * An asset id may hold a separator; the three fields in front of it cannot — a colour space and an
- * orientation are words, and the version was escaped by `keyOf` — so the first three cuts settle
- * it and the rest is the id, however it is spelled.
- */
+/** Only the asset id may hold a separator, and it comes last — so the rest of the split IS it. */
 function splitKey(key: string): {
   colorSpace: ColorSpace
   orientation: PictureOrientation
   version: string
   assetId: string
 } {
-  const space = key.indexOf(SEPARATOR)
-  const upright = key.indexOf(SEPARATOR, space + 1)
-  const stamp = key.indexOf(SEPARATOR, upright + 1)
+  const [colorSpace, orientation, version, ...id] = key.split(SEPARATOR)
   return {
-    // `as`: the key was built by `keyOf` from a `ColorSpace`, and nothing else reaches this.
-    colorSpace: key.slice(0, space) as ColorSpace,
-    // `as`: same, from a `PictureOrientation`.
-    orientation: key.slice(space + 1, upright) as PictureOrientation,
-    version: decodeURIComponent(key.slice(upright + 1, stamp)),
-    assetId: key.slice(stamp + 1),
+    // `as` twice: the key was built by `keyOf`, and nothing else reaches this.
+    colorSpace: colorSpace as ColorSpace,
+    orientation: orientation as PictureOrientation,
+    version: decodeURIComponent(version ?? ''),
+    assetId: id.join(SEPARATOR),
   }
 }

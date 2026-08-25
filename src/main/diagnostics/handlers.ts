@@ -47,7 +47,6 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'canvas.size': 'document',
   // Same reading as its neighbour: the subject is the document that outgrew its source file,
   // and the tab is what the user has to act on.
-  'canvas.flatten': 'document',
   'canvas.edit': 'document',
   'image.export': 'document',
   'document.load': 'document',

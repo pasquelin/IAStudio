@@ -41,7 +41,13 @@ export function ModelOverridesSection({ assetId, textures, onChange }: ModelOver
           onChange(pictureId === null ? rest : { ...rest, [slot]: { assetId: pictureId } })
         }}
       />
-      <ModelOverridesSectionOwnPictures assetId={assetId} textures={textures} onChange={onChange} />
+      <ModelOverridesSectionOwnPictures
+        assetId={assetId}
+        textures={textures}
+        label={t('inspector.useModelPictures')}
+        hint={t('inspector.useModelPicturesHint')}
+        onChange={onChange}
+      />
     </PropertySection>
   )
 }

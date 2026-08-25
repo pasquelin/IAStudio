@@ -55,16 +55,22 @@ export async function askCloseChoice(ask: AskUser, title: string): Promise<Close
 export async function askConfirm(
   ask: AskUser,
   wording: { message: string; detail: string; confirm: string; cancel: string },
+  /** Only for a question whose YES destroys nothing — see `askFlattenDocument`. */
+  confirmByDefault = false,
 ): Promise<boolean> {
+  const buttons = confirmByDefault
+    ? [wording.confirm, wording.cancel]
+    : [wording.cancel, wording.confirm]
+  const cancelId = confirmByDefault ? 1 : 0
   const chosen = await ask({
     message: wording.message,
     detail: wording.detail,
-    buttons: [wording.cancel, wording.confirm],
-    defaultId: 0,
-    cancelId: 0,
+    buttons,
+    defaultId: confirmByDefault ? 0 : cancelId,
+    cancelId,
   })
 
-  return chosen === 1
+  return chosen === (confirmByDefault ? 0 : 1)
 }
 
 /**
@@ -102,10 +108,8 @@ export async function askDeleteDocument(ask: AskUser, title: string): Promise<bo
 /**
  * Whether the picture behind this document may take the flatten.
  *
- * The ONE confirmation of this file whose default is the answer that writes: nothing is
- * destroyed — the document was written first and holds the whole stack — so the risk is a
- * surprise, not a loss. Photoshop and Krita ask the same question because THEIR layers go with
- * the flatten; here they stay, and the wording says so rather than borrowing their alarm.
+ * The one question of this file that DEFAULTS to yes: the document was written first and holds
+ * the whole stack, so what is at stake is a surprise rather than a loss.
  */
 export async function askFlattenDocument(
   ask: AskUser,
@@ -116,13 +120,14 @@ export async function askFlattenDocument(
   const language = windowLanguage()
   const t = TRANSLATIONS[language].documents
 
-  const chosen = await ask({
-    message: fillHoles(t.flattenTitle, { title, format }, language),
-    detail: fillHoles(t.flattenBody, { format, lost }, language),
-    buttons: [t.flattenConfirm, t.cancel],
-    defaultId: 0,
-    cancelId: 1,
-  })
-
-  return chosen === 0
+  return await askConfirm(
+    ask,
+    {
+      message: fillHoles(t.flattenTitle, { title, format }, language),
+      detail: fillHoles(t.flattenBody, { format, lost }, language),
+      confirm: t.flattenConfirm,
+      cancel: t.cancel,
+    },
+    true,
+  )
 }

@@ -31,7 +31,8 @@ export function isPbrChannel(value: unknown): value is PbrChannel {
  * The slot of a SCENE a channel dresses — `null` for the three a `MeshStandardMaterial` reads
  * elsewhere, or not at all.
  *
- * Total rather than partial, so a ninth channel does not compile until it has answered here.
+ * Its own table rather than the material editor's `slotFor`, which answers seven slots and lives
+ * in the renderer where `shared/` cannot reach it — the two must stay in step by hand.
  *
  * **Known blind spot, and it is upstream:** extraction labels four channels only
  * (`CHANNEL_OF_SLOT`, `main/assets/glbTextures.ts`), one of which is `emissive` — so what a
@@ -40,10 +41,10 @@ export function isPbrChannel(value: unknown): value is PbrChannel {
  * unpack it.
  */
 export function slotForChannel(channel: PbrChannel): TextureSlot | null {
-  return SLOT_BY_CHANNEL[channel]
+  return SCENE_SLOT_BY_CHANNEL[channel]
 }
 
-const SLOT_BY_CHANNEL: Record<PbrChannel, TextureSlot | null> = {
+const SCENE_SLOT_BY_CHANNEL: Record<PbrChannel, TextureSlot | null> = {
   baseColor: 'map',
   normal: 'normalMap',
   roughness: 'roughnessMap',

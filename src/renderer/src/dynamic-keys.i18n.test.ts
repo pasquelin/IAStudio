@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
+import { PICTURE_TRAITS } from '@shared/domain/formatCapability'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
@@ -72,6 +73,10 @@ const COMPOSED_KEYS: readonly string[] = [
   ...TRACK_KINDS.map(kind => `timeline.addTrack.${kind}`),
   ...TRACK_KINDS.map(kind => `timeline.addTrackHint.${kind}`),
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}`),
+  // What a format could not carry, named in the flatten dialogue. The PICTURE traits alone: the
+  // image is the one kind with a `traitsOf`, so no other family can reach that sentence — the day
+  // a second kind gains one, its traits belong here too.
+  ...PICTURE_TRAITS.map(trait => `traits.${trait}`),
   // The sentence beside each of them. A menu row explains what it does, and the explanation is
   // composed the same way the label is — so it goes missing the same way, and is caught here.
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}Hint`),

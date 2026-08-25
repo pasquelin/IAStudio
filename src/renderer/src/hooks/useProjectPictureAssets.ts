@@ -1,24 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { isLocalPicture, type Asset, type AssetType } from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
-import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
-
-/**
- * Reads in flight, per question. A mesh's material stacks five slots and the model overrides five
- * more: without this, one selection opened eleven identical queries, and every write to the
- * catalogue replayed all eleven — `better-sqlite3` is synchronous in the main process, so each one
- * is a pause every window pays for (invariant 6).
- */
-const inFlight = new Map<string, Promise<readonly Asset[]>>()
-
-function askOnce(key: string, run: () => Promise<readonly Asset[]>): Promise<readonly Asset[]> {
-  const already = inFlight.get(key)
-  if (already) return already
-
-  const running = run().finally(() => inFlight.delete(key))
-  inFlight.set(key, running)
-  return running
-}
+import { askOnce, NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 
 /**
  * The pictures a PROJECT holds, of the kinds a slot can take — never the ones the browser happens

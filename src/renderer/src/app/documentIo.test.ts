@@ -461,6 +461,7 @@ describe('saveDocument', () => {
         },
         assets: { savePicture },
       })
+      shelve('Images/hero.png')
       const { documentId, release } = await openImage('asset-1')
       editImage(documentId)
 
@@ -508,6 +509,7 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
+      shelve('Images/hero.png')
       const { documentId, release } = await openImage('asset-1')
       editImage(documentId)
       useCanvases.getState().runCommand(documentId, resizeCanvas(320, 200, { x: 0, y: 0 }))
@@ -760,15 +762,16 @@ describe('saveDocument', () => {
     })
 
     /**
-     * A format this studio cannot write holds nothing, so EVERY trait is named — and the picture
-     * still goes out as a PNG, `replaceBytes` moving the extension with the bytes. What the file
-     * loses is the container it was in; what the work lives in is the document, written already.
+     * A format this studio cannot write holds nothing — but « no answer » is not « flatten it ».
+     * `replaceBytes` moves the extension with the bytes, so guessing the flat default would turn
+     * an unrecognised container into a PNG; OpenRaster is written instead, and loses nothing.
      */
-    it('writes a picture the studio can, when the source format is not one it writes', async () => {
+    it('writes OpenRaster rather than guessing, when the source format is not one it writes', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const saveLayered = vi.fn((_request: SaveLayeredRequest) => Promise.resolve(picture()))
       installFakeBridge({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
-        assets: { savePicture },
+        assets: { savePicture, saveLayered },
       })
       shelve('Images/scan.tif')
       const { documentId, release } = await openImage('asset-1')
@@ -777,7 +780,8 @@ describe('saveDocument', () => {
       await saveDocument(documentId)
       release()
 
-      expect(savePicture).toHaveBeenCalled()
+      expect(saveLayered).toHaveBeenCalled()
+      expect(savePicture).not.toHaveBeenCalled()
     })
 
     /** Which traits stood in the way, so the question names them rather than saying « something ». */
@@ -796,7 +800,7 @@ describe('saveDocument', () => {
       await saveDocument(documentId)
       release()
 
-      expect(confirmFlatten).toHaveBeenCalledWith('Gemini 3.1', 'PNG', 'layers, liveText')
+      expect(confirmFlatten).toHaveBeenCalledWith('Gemini 3.1', 'PNG', 'calques, texte modifiable')
     })
 
     /**
@@ -1141,7 +1145,10 @@ describe('saveDocument', () => {
     it('opens a document linked to the copy, and leaves the first one alone', async () => {
       installFakeBridge({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
-        assets: { savePicture: () => Promise.resolve(picture()) },
+        assets: {
+          savePicture: () => Promise.resolve(picture()),
+          saveLayered: () => Promise.resolve(picture()),
+        },
       })
       const { documentId, release } = await openLinkedImage()
 

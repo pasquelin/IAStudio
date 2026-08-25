@@ -733,10 +733,7 @@ export type LogScope =
   // Said under `assets.open`, it read « this asset has nowhere to go » while the asset was
   // appearing on screen.
   | 'canvas.size'
-  /** A save that refused to flatten a document over a source file whose format cannot hold it. */
-  | 'canvas.flatten'
-  // An edit sent to a model, whose picture the editor could not produce. Its own scope because
-  // `canvas.flatten` already carries a sentence about a SAVE, and nothing was being saved here.
+  // An edit sent to a model, whose picture the editor could not produce.
   | 'canvas.edit'
   | 'image.export'
   | 'document.load'
@@ -808,7 +805,6 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'canvas.layer',
   'canvas.place',
   'canvas.size',
-  'canvas.flatten',
   'canvas.edit',
   'image.export',
   'document.load',

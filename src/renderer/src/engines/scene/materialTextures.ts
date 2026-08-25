@@ -17,7 +17,7 @@ export function createMaterialTextures(
   material: MeshStandardMaterial,
   onChange: () => void,
 ): MaterialTextures {
-  const slots = createSlotBindings(cache, (slot, texture) => {
+  const slots = createSlotBindings(cache, 'flipY', (slot, texture) => {
     if (material[slot] === texture) return
     // Ambient occlusion reads the second UV set, which no primitive of the studio carries:
     // left alone, ticking an AO map would do nothing at all.

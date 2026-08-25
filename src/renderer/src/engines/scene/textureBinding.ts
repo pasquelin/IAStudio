@@ -98,8 +98,8 @@ export type SlotBindings = {
  */
 export function createSlotBindings(
   cache: TextureCache,
+  orientation: PictureOrientation,
   install: (slot: TextureSlot, texture: Texture | null) => void,
-  orientation: PictureOrientation = 'flipY',
 ): SlotBindings {
   const slots = TEXTURE_SLOTS.map(slot => ({
     slot,

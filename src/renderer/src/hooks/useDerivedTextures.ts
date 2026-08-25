@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import type { Asset } from '@shared/domain/asset'
 import { getBridge } from '@/services/bridge'
-import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
+import { askOnce, NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 
 /**
  * The pictures taken OUT of one asset — a model's own maps, above all.
@@ -15,8 +15,12 @@ import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 export function useDerivedTextures(sourceId: string): readonly Asset[] {
   const ask = useCallback(
     () =>
-      getBridge()?.assets.search({ derivedFrom: sourceId, type: 'texture' }) ??
-      Promise.resolve(NO_ASSETS),
+      askOnce(
+        `derived:${sourceId}`,
+        () =>
+          getBridge()?.assets.search({ derivedFrom: sourceId, type: 'texture' }) ??
+          Promise.resolve(NO_ASSETS),
+      ),
     [sourceId],
   )
 
