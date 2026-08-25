@@ -185,10 +185,10 @@
     "spaceHint": "Line the handles up with the object’s own orientation; when it is off, they follow the world axes",
     "navigate": "Navigate",
     "navigateHint": "Fly through the scene on the keyboard, the mouse holding the view",
-    "carveHint": "Hollow the first selected shape with the ones after it",
+    "carveHint": "Cut the shapes that follow out of the first selected shape",
     "weldHint": "Merge the selected shapes into a single solid",
     "intersectHint": "Keep only the part the selected shapes share",
-    "separateHint": "Give back the shapes a solid was made of"
+    "separateHint": "Restore the shapes a solid was made of"
   },
   "sceneViews": {
     "free": "Perspective",

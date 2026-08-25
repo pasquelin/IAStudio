@@ -915,11 +915,11 @@
       },
       "nodeCarve": {
         "title": "Carve, join or intersect objects",
-        "description": "Folds several objects of the scene in front into a single solid: the first id is the matter, the ones after it are the tools. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+        "description": "Folds several objects of the scene in front into a single solid: the first id is the material, the ones after it are the tools. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
       },
       "nodeSeparate": {
         "title": "Separate a solid",
-        "description": "Undoes a solid of the scene in front and gives back the shapes it was made of, each where it stood. Answers with the ids of the objects handed back."
+        "description": "Breaks apart a solid of the scene in front and gives back the shapes it was made of, each where it stood. Answers with the ids of the objects handed back."
       }
     },
     "refusals": {
@@ -1195,7 +1195,7 @@
       "cardBody": "Card text",
       "cardActive": "The card applies",
       "aimId": "Target identifier",
-      "csgOperation": "What to make of them"
+      "csgOperation": "What to do with them"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
