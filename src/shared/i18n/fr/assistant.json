@@ -7,7 +7,7 @@
       },
       "workspaceOpen": {
         "title": "Ouvrir un espace",
-        "description": "Bascule vers un espace de travail, et y crée un document si on le demande. Donnez toujours un nom : sans lui, une fenêtre de nommage s’ouvre et l’appel attend une personne."
+        "description": "Bascule vers un espace de travail, et y crée un document si on le demande — un NOUVEAU à chaque fois, ce n’est donc pas le chemin de retour vers un document déjà ouvert. Donnez toujours un nom : sans lui, une fenêtre de nommage s’ouvre et l’appel attend une personne."
       },
       "modelsSearch": {
         "title": "Chercher un modèle",
