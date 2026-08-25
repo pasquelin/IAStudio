@@ -1,6 +1,15 @@
 import type { ActionOutcome } from '@shared/domain/assistant'
-import { answered, done, front, nextId, refused, type Bench, type StudioDocument } from './bench'
-import { number, text, type Input } from './inputs'
+import {
+  answered,
+  done,
+  front,
+  nextId,
+  refused,
+  type Bench,
+  type StudioDocument,
+  type Track,
+} from './bench'
+import { byId, number, text, type Input } from './inputs'
 
 /** Everything a montage answers — the clips and tracks of sections 15 to 17. */
 
@@ -8,9 +17,6 @@ const MONTAGE = ['video', 'audio']
 
 /** What a clip lands with when nothing has trimmed it — the length of its source. */
 const SOURCE_LENGTH = 6_000_000
-
-const aimed = (montage: StudioDocument, input: Input) =>
-  montage.clips.find(one => one.id === text(input, 'clipId'))
 
 /** Where a montage ends: the last frame any clip reaches, which is what "exactly" is read on. */
 const endOf = (montage: StudioDocument): number =>
@@ -50,9 +56,9 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
     case 'track.add': {
       const kind = text(input, 'kind') === 'audio' ? 'audio' : 'video'
       const same = montage.tracks.filter(one => one.kind === kind).length
-      const track = {
+      const track: Track = {
         id: nextId(bench, 'track'),
-        kind: kind as 'video' | 'audio',
+        kind,
         name: `${kind === 'audio' ? 'A' : 'V'}${same + 1}`,
         muted: false,
       }
@@ -65,23 +71,26 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
       const id = text(input, 'trackId')
       montage.tracks = montage.tracks.filter(one => one.id !== id)
       montage.clips = montage.clips.filter(one => one.trackId !== id)
+      montage.modified = true
       return done
     }
 
     case 'track.rename': {
-      const track = montage.tracks.find(one => one.id === text(input, 'trackId'))
+      const track = byId(montage.tracks, input, 'trackId')
       const name = text(input, 'name')
       if (!track || name === '') return refused('badInput')
 
       track.name = name
+      montage.modified = true
       return done
     }
 
     case 'track.adjust': {
-      const track = montage.tracks.find(one => one.id === text(input, 'trackId'))
+      const track = byId(montage.tracks, input, 'trackId')
       if (!track) return refused('badInput')
 
       if (input['muted'] !== undefined) track.muted = input['muted'] === true
+      montage.modified = true
       return done
     }
 
@@ -117,17 +126,18 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'clip.remove': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       if (!clip) return refused('badInput')
 
       montage.clips = montage.clips.filter(one => one !== clip)
+      montage.modified = true
       return done
     }
 
     case 'clip.move': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       const start = number(input, 'start')
-      const track = montage.tracks.find(one => one.id === text(input, 'trackId'))
+      const track = byId(montage.tracks, input, 'trackId')
       if (!clip || start === null || !track) return refused('badInput')
 
       clip.start = start
@@ -141,7 +151,7 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
      * point eats the head of the source; trimming the out point sets where it ends.
      */
     case 'clip.trim': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       const edge = text(input, 'edge')
       const at = number(input, 'at')
       if (!clip || at === null || (edge !== 'in' && edge !== 'out')) return refused('badInput')
@@ -159,7 +169,7 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'clip.split': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       const at = number(input, 'at')
       if (!clip || at === null || at <= clip.start || at >= clip.start + clip.duration) {
         return refused('badInput')
@@ -177,7 +187,7 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'clip.gain': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       const gain = number(input, 'gain')
       if (!clip || gain === null) return refused('badInput')
 
@@ -187,7 +197,7 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'clip.fade': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       const edge = text(input, 'edge')
       const length = number(input, 'length')
       if (!clip || length === null || (edge !== 'in' && edge !== 'out')) return refused('badInput')
@@ -199,11 +209,12 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
     }
 
     case 'clip.speed': {
-      const clip = aimed(montage, input)
+      const clip = byId(montage.clips, input, 'clipId')
       const speed = number(input, 'speed')
       if (!clip || speed === null) return refused('badInput')
 
       clip.speed = speed
+      montage.modified = true
       return done
     }
 

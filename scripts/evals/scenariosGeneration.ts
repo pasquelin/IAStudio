@@ -63,7 +63,11 @@ export const GENERATION_SCENARIOS: readonly Scenario[] = [
       madeCar(studio)
       generated('image', 'flux.1-dev', 'a blue sports car')(studio)
     },
-    passed: run => read.assets(run).filter(one => one.jobId !== null).length === 2,
+    // Kept means neither was removed AND the model went and checked — the decor made them both.
+    passed: run =>
+      read.assets(run).filter(one => one.jobId !== null).length === 2 &&
+      !read.tried(run, 'assets.remove') &&
+      run.called.length > 0,
   },
 
   // ——— 21. Génération IA avec contexte du projet ———
@@ -160,7 +164,7 @@ export const GENERATION_SCENARIOS: readonly Scenario[] = [
     ],
     setup: cutMontage,
     passed: run => {
-      const added = read.clips(run).filter(one => read.near(one.duration, 5, 0.01))
+      const added = read.clips(run).filter(one => read.lasts(one.duration, 5))
       const sound = read.documents(run)[0]?.tracks.find(one => one.kind === 'audio')?.id
       return added.length >= 1 && read.clips(run).some(one => one.trackId === sound)
     },

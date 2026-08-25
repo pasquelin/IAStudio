@@ -1,6 +1,6 @@
 import type { Scenario } from './run'
 import * as read from './oracle'
-import { boatImage, overlay } from './setups'
+import { boatImage, layerAt, overlay } from './setups'
 
 /** Sections 18 and 19: editing a picture, and its layer stack. */
 
@@ -50,7 +50,7 @@ export const IMAGE_SCENARIOS: readonly Scenario[] = [
     said: ['Remets uniquement la rotation à zéro.'],
     setup: studio => {
       boatImage(studio)
-      const layer = studio.front()?.layers[0]?.id ?? ''
+      const layer = layerAt(studio, 0)
       studio.run('layer.transform', { layerId: layer, rotation: 15, x: 100, scaleX: 1.2 })
     },
     // The rotation goes back and NOTHING else does — that is the whole word « uniquement ».
@@ -91,10 +91,8 @@ export const IMAGE_SCENARIOS: readonly Scenario[] = [
     name: '19.4 puts Overlay Test behind the boat',
     said: ['Passe Overlay Test derrière le bateau.'],
     setup: overlay,
-    passed: run => {
-      const stack = read.layers(run)
-      return stack.at(-1)?.name.includes('Overlay Test') === true
-    },
+    // Behind means BELOW, and index 0 is the bottom of the stack.
+    passed: run => read.layers(run)[0]?.name.includes('Overlay Test') === true,
   },
   {
     name: '19.5 hides Overlay Test',
@@ -105,9 +103,11 @@ export const IMAGE_SCENARIOS: readonly Scenario[] = [
   {
     name: '19.6 shows Overlay Test again',
     said: ['Réaffiche Overlay Test.'],
+    // Index 1 and not 0: the overlay went on TOP of the boat, and hiding the boat measures
+    // nothing about showing the overlay.
     setup: studio => {
       overlay(studio)
-      studio.run('layer.style', { layerId: studio.front()?.layers[0]?.id ?? '', visible: false })
+      studio.run('layer.style', { layerId: layerAt(studio, 1), visible: false })
     },
     passed: run => read.layerNamed(run, 'Overlay Test')?.visible === true,
   },

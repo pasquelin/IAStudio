@@ -64,9 +64,23 @@ export const montage =
     if (workspace === 'audio') studio.run('track.add', { kind: 'audio' })
   }
 
-const laid = (studio: FakeStudio, track: string, ending: string, start: number): void => {
+/** One clip of the project laid on a row — `start` in the MICROSECONDS the montage counts in. */
+export const laid = (studio: FakeStudio, track: string, ending: string, start: number): void => {
   studio.run('clip.add', { trackId: track, assetId: assetOf(studio, ending), start })
 }
+
+/** The nth node, layer, row or clip of the document in front — what a decor names one by. */
+export const nodeAt = (studio: FakeStudio, at: number): string =>
+  studio.front()?.nodes[at]?.id ?? ''
+
+export const layerAt = (studio: FakeStudio, at: number): string =>
+  studio.front()?.layers[at]?.id ?? ''
+
+export const trackAt = (studio: FakeStudio, at: number): string =>
+  studio.front()?.tracks[at]?.id ?? ''
+
+export const clipAt = (studio: FakeStudio, at: number): string =>
+  studio.front()?.clips[at]?.id ?? ''
 
 /** A montage carrying the project's two videos back to back on V1 — each six seconds long. */
 export const cutMontage = (studio: FakeStudio): void => {
@@ -128,3 +142,27 @@ export const generated =
 export const madeCar = generated('image', 'flux.1-dev', 'a red sports car')
 export const madeBoat = generated('image', 'flux.1-dev', 'the boat at night')
 export const madeChest = generated('3d', 'mesh-gen-1', 'a wooden chest')
+
+/** That montage carrying BOTH of the project's sounds, one after the other on the sound row. */
+export const twoBeds = (studio: FakeStudio): void => {
+  soundBed(studio)
+  laid(studio, trackAt(studio, 1), 'waves on a wooden hull.wav', 6 * SECOND)
+}
+
+/** A model in a scene with a camera by it — what four « imprecise sentence » scenarios act on. */
+export const framedModel = (studio: FakeStudio): void => {
+  modelScene(studio)
+  studio.run('node.add', { kind: 'camera', name: 'Camera' })
+}
+
+/** The cube standing three metres up, which the read-then-write scenarios of 26 start from. */
+export const raisedCube = (studio: FakeStudio): void => {
+  cubeScene(studio)
+  studio.run('node.transform', { nodeId: nodeAt(studio, 0), positionY: 3 })
+}
+
+/** Soleil Test at an intensity worth doubling — the other half of section 26. */
+export const namedSun = (studio: FakeStudio): void => {
+  litScene(studio)
+  studio.run('node.light', { nodeId: nodeAt(studio, 1), intensity: 3 })
+}

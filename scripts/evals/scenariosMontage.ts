@@ -1,6 +1,6 @@
 import type { Scenario } from './run'
 import * as read from './oracle'
-import { cutMontage, montage, soundBed, twoSounds } from './setups'
+import { clipAt, cutMontage, laid, montage, soundBed, trackAt, twoSounds } from './setups'
 
 /** Sections 15 to 17: a video montage, its sound, and a montage of sound alone. */
 
@@ -17,11 +17,7 @@ export const MONTAGE_SCENARIOS: readonly Scenario[] = [
     said: ['Ajoute une deuxième vidéo juste après la première.'],
     setup: studio => {
       montage()(studio)
-      studio.run('clip.add', {
-        trackId: studio.front()?.tracks[0]?.id ?? '',
-        assetId: read.assetOf(studio, 'a drone shot over the sea.mp4'),
-        start: 0 * read.SECOND,
-      })
+      laid(studio, trackAt(studio, 0), 'a drone shot over the sea.mp4', 0)
     },
     passed: run => {
       const after = read.clips(run).find(one => one.start > 0)
@@ -46,10 +42,9 @@ export const MONTAGE_SCENARIOS: readonly Scenario[] = [
     said: ['Déplace le deuxième clip pour qu’il commence immédiatement après le premier.'],
     setup: studio => {
       cutMontage(studio)
-      const montage = studio.front()
       studio.run('clip.move', {
-        clipId: montage?.clips[1]?.id ?? '',
-        trackId: montage?.tracks[0]?.id ?? '',
+        clipId: clipAt(studio, 1),
+        trackId: trackAt(studio, 0),
         start: 9 * read.SECOND,
       })
     },
@@ -76,11 +71,7 @@ export const MONTAGE_SCENARIOS: readonly Scenario[] = [
     said: ["Mets l'image du bateau à l'échelle pour remplir le cadre sans la déformer."],
     setup: studio => {
       cutMontage(studio)
-      studio.run('clip.add', {
-        trackId: studio.front()?.tracks[0]?.id ?? '',
-        assetId: read.assetOf(studio, 'fais moi un bateau.png'),
-        start: 10 * read.SECOND,
-      })
+      laid(studio, trackAt(studio, 0), 'fais moi un bateau.png', 10 * read.SECOND)
     },
     // Read on the CLIP: nothing else in the studio says a picture was fitted to the frame.
     passed: run => read.clips(run).some(one => one.speed !== 1 || one.duration !== 6 * read.SECOND),

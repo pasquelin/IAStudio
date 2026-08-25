@@ -1,3 +1,4 @@
+import { isRecord } from '@shared/guards'
 import type { Run, Scenario } from './run'
 import * as read from './oracle'
 import {
@@ -6,6 +7,7 @@ import {
   cubeScene,
   litScene,
   modelScene,
+  nodeAt,
   scene,
   twoSpheres,
   withSphere,
@@ -256,9 +258,13 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ["Éloigne Camera Test de 2 mètres sans changer la cible qu'elle regarde."],
     setup: studio => {
       cameraScene(studio)
-      const camera = studio.front()?.nodes[1]?.id ?? ''
+      const camera = nodeAt(studio, 1)
       studio.run('node.transform', { nodeId: camera, positionZ: 5 })
-      studio.run('camera.shot', { nodeId: camera })
+      const shot = studio.run('camera.shot', { nodeId: camera })
+      studio.run('camera.target', {
+        shotId: shot.ok && isRecord(shot.data) ? String(shot.data['shotId']) : '',
+        targetId: nodeAt(studio, 0),
+      })
     },
     passed: run => {
       const camera = read.nodeNamed(run, 'Camera Test')
@@ -469,19 +475,20 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: [
       "Supprime uniquement l'animation de rotation du cube sans supprimer son animation de position.",
     ],
+    // The decor has to hold BOTH, or « uniquement la rotation » sorts nothing and doing
+    // nothing passes.
     setup: studio => {
       cubeScene(studio)
-      const cube = studio.front()?.nodes[0]?.id ?? ''
-      studio.run('key.pose', { nodeId: cube, timeSeconds: 0 })
-      studio.run('key.pose', { nodeId: cube, timeSeconds: 5 })
+      const cube = nodeAt(studio, 0)
+      studio.run('key.pose', { nodeId: cube, timeSeconds: 0, property: 'position' })
+      studio.run('node.transform', { nodeId: cube, positionY: 5 })
+      studio.run('key.pose', { nodeId: cube, timeSeconds: 5, property: 'position' })
+      studio.run('node.transform', { nodeId: cube, rotationY: 360 })
+      studio.run('key.pose', { nodeId: cube, timeSeconds: 5, property: 'rotation' })
     },
-    passed: run => {
-      const keys = read.inSpace(run, '3d').flatMap(one => one.animations.flatMap(a => a.keys))
-      return (
-        keys.some(one => one.channel.endsWith('position')) &&
-        !keys.some(one => one.channel.endsWith('rotation'))
-      )
-    },
+    passed: run =>
+      read.keys(run).some(one => one.channel.endsWith('position')) &&
+      !read.keys(run).some(one => one.channel.endsWith('rotation')),
   },
 
   // ——— 14. Animation de caméra ———

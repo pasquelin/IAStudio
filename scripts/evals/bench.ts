@@ -69,7 +69,7 @@ export type Clip = {
   speed: number
 }
 
-type Track = { id: string; kind: 'video' | 'audio'; name: string; muted: boolean }
+export type Track = { id: string; kind: 'video' | 'audio'; name: string; muted: boolean }
 
 type Keyframe = { channel: string; at: number; value: Vector }
 
@@ -137,8 +137,8 @@ type Job = {
   assetIds: string[]
 }
 
-/** What one turn of the studio can be undone back to — the whole state, copied. */
-type Snapshot = { documents: StudioDocument[]; files: StudioFile[] }
+/** What a file operation can be undone back to — the files alone, as `undoFile` reverses. */
+type Snapshot = { files: StudioFile[] }
 
 export type Bench = {
   files: StudioFile[]
