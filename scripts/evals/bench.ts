@@ -36,6 +36,10 @@ export type SceneNode = {
   /** What a camera looks at, by node id. */
   targetId: string | null
   castShadow: boolean
+  /** The points of a path node, in order — empty for everything else. */
+  points: Vector[]
+  /** What a 3D text node reads. */
+  text: string | null
 }
 
 export type Layer = {
@@ -52,6 +56,9 @@ export type Layer = {
   rotation: number
   assetId: string | null
   text: string | null
+  /** The group a layer was filed under, by layer id — `null` while it stands on its own. */
+  groupId: string | null
+  masked: boolean
 }
 
 /** 🛑 Microseconds throughout, and `gain` in decibels — the units the montage state holds. */
@@ -67,9 +74,28 @@ export type Clip = {
   fadeIn: number
   fadeOut: number
   speed: number
+  /** Whether the picture and its sound still travel together. */
+  linked: boolean
 }
 
-export type Track = { id: string; kind: 'video' | 'audio'; name: string; muted: boolean }
+export type Track = {
+  id: string
+  kind: 'video' | 'audio'
+  name: string
+  muted: boolean
+  solo: boolean
+  locked: boolean
+}
+
+/** What a model's skeleton holds, as the rig actions read and write it. */
+type Rig = {
+  fitted: boolean
+  hands: boolean
+  bones: { name: string; role: string | null }[]
+  iks: string[]
+}
+
+type Guide = { id: string; axis: string; at: number }
 
 type Keyframe = { channel: string; at: number; value: Vector }
 
@@ -109,6 +135,11 @@ export type StudioDocument = {
   width: number
   height: number
   world: World
+  rig: Rig
+  guides: Guide[]
+  /** Whether a move lays its own key, which is what `animation.autoKey` switches. */
+  autoKey: boolean
+  captures: number
   skybox: Skybox
   /** Which picture each PBR channel of a material document holds, by channel name. */
   channels: Record<string, string>
@@ -140,6 +171,84 @@ type Job = {
 /** What a file operation can be undone back to — the files alone, as `undoFile` reverses. */
 type Snapshot = { files: StudioFile[] }
 
+/** What a project under version control holds, as the git actions read and write it. */
+export type GitState = {
+  tracked: boolean
+  branch: string
+  branches: string[]
+  /** Files edited since the last version — what `restore` throws away and `unstage` does not. */
+  changed: string[]
+  staged: string[]
+  commits: { message: string; files: string[] }[]
+  stashes: { message: string; files: string[] }[]
+  tags: string[]
+  remotes: string[]
+  /** Set by a conflicting merge, cleared by resolving it or giving it up. */
+  merging: boolean
+  conflicts: string[]
+  fetched: boolean
+  pushed: boolean
+  pulled: boolean
+}
+
+/** The surfaces around the documents — panels, favourites, dictation, styles, accounts. */
+export type ShellState = {
+  fullScreen: boolean
+  settingsOpen: boolean
+  panels: string[]
+  favorites: string[]
+  dictating: boolean
+  updateInstalled: boolean
+  mirrored: boolean
+  helpAt: string | null
+  revealed: string[]
+  styles: { id: string; name: string }[]
+  context: Record<string, string>
+  accounts: { id: string; name: string; active: boolean }[]
+  /** What a cloud pull brought in and a push sent out, by asset name. */
+  pulled: string[]
+  pushed: string[]
+  adopted: string[]
+}
+
+export const blankGit = (): GitState => ({
+  tracked: false,
+  branch: 'main',
+  branches: ['main'],
+  changed: [],
+  staged: [],
+  commits: [],
+  stashes: [],
+  tags: [],
+  remotes: [],
+  merging: false,
+  conflicts: [],
+  fetched: false,
+  pushed: false,
+  pulled: false,
+})
+
+export const blankShell = (): ShellState => ({
+  fullScreen: false,
+  settingsOpen: false,
+  panels: [],
+  favorites: [],
+  dictating: false,
+  updateInstalled: false,
+  mirrored: false,
+  helpAt: null,
+  revealed: [],
+  styles: [],
+  context: {},
+  accounts: [
+    { id: 'account-1', name: 'Studio', active: true },
+    { id: 'account-2', name: 'Perso', active: false },
+  ],
+  pulled: [],
+  pushed: [],
+  adopted: [],
+})
+
 export type Bench = {
   files: StudioFile[]
   documents: StudioDocument[]
@@ -157,6 +266,8 @@ export type Bench = {
   past: Snapshot[]
   future: Snapshot[]
   projectName: string
+  git: GitState
+  shell: ShellState
   /** Actions the bench has no answer for. A scenario is never judged on one of them. */
   unmodelled: ActionName[]
   counter: number

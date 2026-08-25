@@ -16,27 +16,17 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **359 demandes, et le banc en joue 192** — les sections 1 à 36, dans
-cet ordre. **Les sections 37 à 58 sont écrites et pas encore jouées** : une demande par action MCP
-que rien ne mesurait, posée d'abord en français pour que ce qui reste à faire se lise sur une seule
-liste.
+La liste ci-dessous compte **360 demandes, et le banc en joue 360** — une par case, dans cet ordre.
+`batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une demande
+ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi. C'est ce qui
+rend « on en est où ? » répondable.
 
-🛑 **`batterie.test.ts` est donc ROUGE, et c'est l'état voulu.** Il tient la liste et le banc à la
-même longueur et dans le même ordre — une demande ajoutée sans scénario fait rougir la porte, un
-scénario écrit pour rien aussi. Chaque section reprise éteint sa part du rouge ; la porte ne
-redeviendra verte qu’à la 359ᵉ. C'est ce qui rend « on en est où ? » répondable.
-
-## Ce que la batterie ne mesure pas encore
+## Ce que la batterie mesure
 
 Le registre publie **228 actions**, et **toutes** partent sur le fil MCP : `mcpTools()` liste
 `actionsReaching('mcp')`, qui est le registre entier. `coverage.ts` dit, action par action, quelle
-demande l'exerce — **61 en ont une jouée, 167 n'ont qu'une phrase** (sections 37 à 58), et le faux
-studio n'en joue que 116.
-
-**Deux dettes, à ne pas confondre.** Écrire le scénario d'une demande des sections 37 à 42 ne coûte
-qu'un oracle : le faux studio sait déjà jouer ces 55 actions. Les 112 autres — git, squelette,
-panneaux, nuage, calques avancés — demandent d'ABORD d'être modélisées, sans quoi le banc les range
-sous `not modelled` et le scénario est scoré à l'aveugle, ce qui est pire que pas de scénario.
+demande l'exerce — **les 228 en ont une**, et le faux studio les joue toutes : plus une seule ligne
+`not modelled`.
 
 🛑 **Un outil qu'aucune phrase n'atteint est un outil que personne n'a vu marcher.** La table est
 un `Record<ActionName, …>` : une action ajoutée au registre **ne compile plus** tant qu'elle n'y
@@ -568,7 +558,7 @@ Dans la scène Test MCP :
 - [ ] « Change le cube en cylindre. »
 - [ ] « Ajoute un panneau plat qui porte l'image du bateau et qui fait toujours face à la caméra. »
 - [ ] « Ajoute un texte 3D qui dit Studio au-dessus du cube. »
-- [ ] « Trace un chemin qui part du cube et va vers la droite. »
+- [ ] « Trace un chemin fermé qui part du cube et va vers la droite. »
 - [ ] « Ajoute un point à ce chemin, deux mètres plus loin. »
 - [ ] « Déplace le deuxième point du chemin d'un mètre vers le haut. »
 - [ ] « Supprime le dernier point du chemin. »

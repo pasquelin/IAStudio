@@ -11,6 +11,8 @@ import type { Target, TargetKind } from '@shared/domain/target'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import {
   answered,
+  blankGit,
+  blankShell,
   done,
   front,
   nextId,
@@ -20,6 +22,9 @@ import {
   type StudioFile,
 } from './bench'
 import { fileAction, remember } from './fakeFiles'
+import { gitAction } from './fakeGit'
+import { shellAction } from './fakeShell'
+import { rigAction } from './fakeRig'
 import { imageAction } from './fakeImage'
 import { libraryAction } from './fakeLibrary'
 import { montageAction } from './fakeMontage'
@@ -118,6 +123,10 @@ function blankDocument(bench: Bench, title: string, at: WorkspaceId): StudioDocu
       shadows: false,
       shadowQuality: null,
     },
+    rig: { fitted: false, hands: false, bones: [], iks: [] },
+    guides: [],
+    autoKey: false,
+    captures: 0,
     skybox: { source: null, sunIntensity: 1, environmentIntensity: 1, adjusted: false },
     channels: {},
     material: null,
@@ -154,6 +163,8 @@ export function createFakeStudio(files: readonly StudioFile[]): FakeStudio {
     past: [],
     future: [],
     projectName: 'Démo',
+    git: blankGit(),
+    shell: blankShell(),
     unmodelled: [],
     // Past the catalogue, so a generated asset can never mint the id of a project picture — it
     // did, and `referenced` then passed on a file nobody had pointed at.
@@ -289,7 +300,10 @@ export function createFakeStudio(files: readonly StudioFile[]): FakeStudio {
       sceneAction(bench, action, input) ??
       imageAction(bench, action, input) ??
       montageAction(bench, action, input) ??
-      surfaceAction(bench, action, input)
+      surfaceAction(bench, action, input) ??
+      gitAction(bench, action, input) ??
+      shellAction(bench, action, input) ??
+      rigAction(bench, action, input)
     if (answer) return answer
 
     if (!bench.unmodelled.includes(action)) bench.unmodelled.push(action)
