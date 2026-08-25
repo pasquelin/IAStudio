@@ -232,4 +232,17 @@ describe('dressing a view before it is drawn', () => {
       expect(light).toHaveBeenCalledTimes(2)
     })
   })
+
+  /**
+   * The frame reads this to know whether its shadow maps are worth drawing again: a pane that
+   * puts the scene's lights out draws different shadows from the one beside it, and one that
+   * wears what is already on has nothing to say.
+   */
+  it('says whether it changed what the scene wears', () => {
+    const mesh = cube()
+
+    expect(dressForPane([mesh], 'solid', false, materials, memory, eye())).toBe(true)
+    expect(dressForPane([mesh], 'solid', false, materials, memory, eye())).toBe(false)
+    expect(dressForPane([mesh], 'shaded', false, materials, memory, eye())).toBe(true)
+  })
 })
