@@ -27,6 +27,7 @@ import { TextureToolbar } from './TextureToolbar'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
+import { livePreviewOf } from '@/stores/livePreviews'
 
 /**
  * A texture handed to an engine, from the row of the native menu that was picked.
@@ -97,7 +98,11 @@ export function TextureDocument({ documentId }: { documentId: string }) {
     const element = host.current
     if (!element) return
 
-    const renderer = new TextureRenderer({ loadTexture, assetVersion: assetVersionOf })
+    const renderer = new TextureRenderer({
+      loadTexture,
+      assetVersion: assetVersionOf,
+      livePreview: livePreviewOf,
+    })
     renderer.mount(element)
     engine.current = renderer
 

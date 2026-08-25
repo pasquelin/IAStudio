@@ -23,6 +23,7 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { assetVersionOf } from '@/stores/assets'
+import { livePreviewOf } from '@/stores/livePreviews'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBindingOverrides } from '@/stores/bindings'
@@ -93,6 +94,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     const renderer = new SkyboxRenderer({
       loadTexture,
       assetVersion: assetVersionOf,
+      livePreview: livePreviewOf,
       onSunChange: (angles: SphericalAngles) =>
         useSkyboxes.getState().runCommand(documentId, setSunAngles(angles)),
     })

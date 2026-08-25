@@ -30,6 +30,8 @@ export type SkyboxRendererOptions = {
    * its id, so nothing here would ever ask for it again. See `refreshSource`.
    */
   assetVersion?: (assetId: string) => string | undefined
+  /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
+  livePreview?: (assetId: string) => ImageBitmap | null
 }
 
 /**
@@ -129,6 +131,7 @@ export class SkyboxRenderer {
       options.loadTexture,
       (assetId, error) => reportFailure('skybox.source', assetId, error),
       options.assetVersion,
+      options.livePreview,
     )
     // The reference, the race and the version are all the binding's: written here too, the sky
     // would be the third copy of a rule the studio already keeps in one place.

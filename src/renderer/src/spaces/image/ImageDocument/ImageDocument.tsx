@@ -71,6 +71,8 @@ import { exportLayeredPicture, exportPicture } from '../exportPicture'
 import { maskFromSelection } from '../maskActions'
 import { placeAsset } from '../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
+import { useLivePreview } from '@/hooks/useLivePreview'
+import { useDocuments } from '@/stores/documents'
 import { holdCanvas } from '../canvasHosts'
 import { pixelPort } from '../pixelPort'
 import { turnPort } from '../turnPort'
@@ -91,6 +93,13 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const { t, i18n } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
+
+  // What this editor is drawing, published to every slot pointing at the asset it edits — the
+  // live half of « edit the picture and the model follows », ahead of any save.
+  useLivePreview(
+    documentId,
+    useDocuments(state => state.documents[documentId]?.sourceAssetId),
+  )
 
   // The pointer, not the brush: a document opens on the tool that inspects rather than the one
   // that writes, so the first click on a freshly opened picture cannot leave a mark on it.

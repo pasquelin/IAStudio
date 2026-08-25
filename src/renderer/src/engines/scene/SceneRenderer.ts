@@ -313,6 +313,8 @@ export type SceneRendererOptions = {
    * what makes an edited picture reach the scene — see `refreshTextures`.
    */
   assetVersion?: (assetId: string) => string | undefined
+  /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
+  livePreview?: (assetId: string) => ImageBitmap | null
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
   /** And again, for the skinning weights a local rig is bound with. */
@@ -756,6 +758,7 @@ export class SceneRenderer {
       options.loadTexture ?? loadTexture,
       (assetId, error) => reportFailure('scene.texture', assetId, error),
       options.assetVersion,
+      options.livePreview,
     )
     this.gltf = options.loadModel
       ? {

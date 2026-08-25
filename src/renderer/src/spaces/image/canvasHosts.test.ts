@@ -5,6 +5,7 @@ const engine = (label: string): CanvasHost => ({
   pixelSnapshots: () => Promise.resolve([{ layerId: label, mask: false, data: new Uint8Array(0) }]),
   restoreSnapshot: () => Promise.resolve(),
   flatten: () => Promise.resolve(new Uint8Array(0)),
+  flattenBitmap: () => Promise.resolve(null),
   snapshot: () => Promise.resolve(label),
   forgetPicture: () => Promise.resolve(),
   turnQuarter: () => undefined,

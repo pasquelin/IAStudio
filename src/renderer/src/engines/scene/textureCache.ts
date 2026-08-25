@@ -189,13 +189,25 @@ export function createTextureCache(
    * with no catalogue behind it — and every test — wants.
    */
   versionOf: (assetId: string) => string | undefined = () => undefined,
+  /**
+   * What an open editor is showing of an asset, ahead of its file. Absent leaves every slot on
+   * the disk, which is what a workspace with no editor — and every test — wants.
+   */
+  previewOf: (assetId: string) => ImageBitmap | null = () => null,
 ): TextureCache {
   const cache = createRefCache<Texture>({
     load: async key => {
       const { colorSpace, assetId, version, orientation } = splitKey(key)
+      // What an editor is DRAWING wins over what its file holds — the whole of the live link, and
+      // the reason a stroke reaches a model before anything is saved. The bitmap is the store's
+      // to free, so this never closes it.
+      const shown = previewOf(assetId)
       // Stamped, or a picture the studio has just overwritten would come back from the browser's
       // own cache under an id that never moved — the ⌘S would look like it did nothing.
-      const texture = await load(versionedUrl(assetUrl(assetId), version), orientation)
+      const texture = shown
+        ? new Texture(await createImageBitmap(shown, { imageOrientation: orientation }))
+        : await load(versionedUrl(assetUrl(assetId), version), orientation)
+      texture.needsUpdate = true
       // NOT over a float decode: a `.hdr` or an `.exr` comes back linear already, and stamping
       // sRGB over it has the shader decode a second time — a sky visibly darker than its file.
       if (texture.type === UnsignedByteType) texture.colorSpace = colorSpace

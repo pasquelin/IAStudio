@@ -288,3 +288,32 @@ describe('the orientation a picture is decoded in', () => {
     expect(load).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('what an open editor is drawing', () => {
+  const shown = (): ImageBitmap =>
+    ({ width: 1, height: 1, close: () => {} }) as unknown as ImageBitmap
+
+  /**
+   * The whole of the live link: a stroke reaches a model before anything has been written, and
+   * the file is never asked for while an editor is standing in front of it.
+   */
+  it('is loaded instead of the file behind the asset', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    vi.stubGlobal('createImageBitmap', () => Promise.resolve(shown()))
+    const cache = createTextureCache(load, silent, undefined, () => shown())
+
+    expect(await cache.acquire('tex-1', NoColorSpace)).not.toBeNull()
+    expect(load).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  // Revoked, the asset goes back to its file — and the slot must reach it, not a held preview.
+  it('leaves the file to answer once nothing is being shown', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    const cache = createTextureCache(load, silent, undefined, () => null)
+
+    await cache.acquire('tex-1', NoColorSpace)
+
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+})

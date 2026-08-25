@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { livePreviewVersionOf } from './livePreviews'
 import { persist } from 'zustand/middleware'
 import {
   ASSET_SEARCH_LIMIT_MAX,
@@ -190,7 +191,11 @@ export function forgetRememberedAssets(): void {
  * ⌘S rewrites a picture — see `versionedUrl`.
  */
 export function assetVersionOf(assetId: string): string | undefined {
-  return assetsById(useAssets.getState()).get(assetId)?.localChangedAt
+  const written = assetsById(useAssets.getState()).get(assetId)?.localChangedAt
+  const shown = livePreviewVersionOf(assetId)
+  // The preview's count rides ON the file's stamp rather than replacing it: revoking one has to
+  // leave a version the slot has not seen, or the file would come back under a key already held.
+  return shown === 0 ? written : `${written ?? ''}+${shown}`
 }
 
 /** The shape the store persisted before it held a whole `CollectionState`. */
