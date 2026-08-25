@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
+import { isCsgGraph } from '@shared/domain/csg'
 import { canCarve, carveGraph, isCarvable } from './carve'
 import { meshNode } from '../scene/nodeFactory'
 import type { SceneNode } from '../scene/sceneState'
@@ -103,11 +104,26 @@ describe('carveGraph', () => {
     expect(cut(only, only)).toBeNull()
   })
 
-  // Refused rather than folded in: the flat list of steps holds no nested recipe, so a solid
-  // taken as a brush would keep its base and silently drop every cut already made in it.
-  it('refuses a solid, which carries a recipe rather than a shape', () => {
-    const solid = { ...wall(), type: 'carved' } as unknown as SceneNode
-    expect(cut([solid, cube({ x: 1, y: 0, z: 0 })])).toBeNull()
+  /**
+   * Chaining booleans is the ordinary gesture of a modeller, and it used to be refused: the flat
+   * list of steps could only have kept a solid's base and dropped its cuts. The recipe travels
+   * whole into the brush instead.
+   */
+  it('folds a solid in whole, recipe and all', () => {
+    const inner = cut([wall(), cube({ x: 1, y: 0, z: 0 })])
+    if (!inner) throw new Error('the first fold was refused')
+
+    const solid: SceneNode = {
+      ...meshNode({ kind: 'box', width: 1, height: 1, depth: 1 }),
+      type: 'carved',
+      carved: inner,
+    } as unknown as SceneNode
+    const again = cut([solid, cube({ x: 2, y: 0, z: 0 })])
+    const base = again?.base.geometry
+
+    expect(again).not.toBeNull()
+    // The whole first recipe, not merely the shape it rested on.
+    expect(base && isCsgGraph(base) && base.steps).toHaveLength(1)
   })
 
   // Refused rather than quietly dropped: filtering it out used to promote the NEXT node to

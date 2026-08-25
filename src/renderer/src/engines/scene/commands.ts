@@ -36,7 +36,7 @@ import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
 import { carvedNode, groupNode, meshNode } from './nodeFactory'
 import { canCarve, carveGraph, isCarvable, placedIn } from '../csg/carve'
-import type { CsgOperation } from '@shared/domain/csg'
+import { isCsgGraph, type CsgOperation } from '@shared/domain/csg'
 import {
   canCastShadow,
   canReceiveShadow,
@@ -824,17 +824,19 @@ export function separateNode(node: CarvedNode): Command<SceneState> {
   const parts = [node.carved.base, ...node.carved.steps.map(step => step.part)]
 
   return multi(commandId('separate', [node.id]), [
-    ...parts.map(part =>
-      addNode({
-        ...meshNode(part.geometry, {
-          material: part.material,
-          parentId: node.parentId,
-          name: part.name,
-        }),
-        // In the solid's frame, so a brush lands back where the cut had it standing.
-        transform: placedIn(node.transform, part.transform),
-      }),
-    ),
+    ...parts.map(part => {
+      // In the solid's frame, so a brush lands back where the cut had it standing.
+      const transform = placedIn(node.transform, part.transform)
+      const born = { material: part.material, parentId: node.parentId, name: part.name }
+
+      // A brush that carried a RECIPE comes back a solid, not a mesh: separating once must not
+      // flatten the cuts already made inside it.
+      return addNode(
+        isCsgGraph(part.geometry)
+          ? carvedNode(part.geometry, { ...born, transform })
+          : { ...meshNode(part.geometry, born), transform },
+      )
+    }),
     removeNode(node.id),
   ])
 }

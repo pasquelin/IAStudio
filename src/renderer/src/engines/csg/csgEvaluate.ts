@@ -7,7 +7,7 @@ import {
   SUBTRACTION,
   type CSGOperation,
 } from 'three-bvh-csg'
-import type { CsgGraph, CsgOperation, CsgPart } from '@shared/domain/csg'
+import { isCsgGraph, type CsgGraph, type CsgOperation, type CsgPart } from '@shared/domain/csg'
 import { geometryFor } from '../scene/threeFactory'
 import { matrixOfTransform } from './csgMatrix'
 import type { CsgMesh } from './csgMessage'
@@ -32,11 +32,16 @@ evaluator.attributes = ['position', 'normal', 'uv']
  * defect a Worker hides was found: a brush scaled by its matrix came out unscaled.
  */
 export function evaluateGraph(graph: CsgGraph): CsgMesh {
+  return meshOf(geometryOfGraph(graph))
+}
+
+/** The recipe as one geometry. Recursive: a brush may itself be a solid — see `CsgPart`. */
+function geometryOfGraph(graph: CsgGraph): BufferGeometry {
   let result = brushOf(graph.base)
   for (const step of graph.steps) {
     result = evaluator.evaluate(result, brushOf(step.part), OPERATIONS[step.operation])
   }
-  return meshOf(result.geometry)
+  return result.geometry
 }
 
 /**
@@ -46,7 +51,9 @@ export function evaluateGraph(graph: CsgGraph): CsgMesh {
  * (1, 6, 1) evaluated one unit tall instead of six, and every gate was green on it.
  */
 function brushOf(part: CsgPart): Brush {
-  const geometry = geometryFor(part.geometry)
+  const geometry = isCsgGraph(part.geometry)
+    ? geometryOfGraph(part.geometry)
+    : geometryFor(part.geometry)
   geometry.applyMatrix4(matrixOfTransform(part.transform))
 
   const brush = new Brush(geometry)

@@ -6,16 +6,15 @@ import type { SceneNode } from '../scene/sceneState'
 
 /**
  * A node whose shape a cut can read. A light has none, a model's lives in a file this side cannot
- * describe, and a group is a transform.
+ * describe, and a group is a transform — only these two carry one.
  *
- * A SOLID is not one either, and that is a refusal rather than an omission: the flat list of
- * steps holds no nested recipe, so folding one in would silently keep its base brush and drop
- * every cut already made in it. Separate it first, or weld the pieces.
+ * A SOLID is one: its recipe travels whole into the brush, so chaining booleans keeps every cut
+ * already made. `CsgPart` is recursive for this.
  */
-export type CarvableNode = Extract<SceneNode, { type: 'mesh' }>
+export type CarvableNode = Extract<SceneNode, { type: 'mesh' } | { type: 'carved' }>
 
 export function isCarvable(node: SceneNode): node is CarvableNode {
-  return node.type === 'mesh'
+  return node.type === 'mesh' || node.type === 'carved'
 }
 
 /**
@@ -71,7 +70,9 @@ export function carveGraph(
 }
 
 function partOf(node: CarvableNode, into: Matrix4 | null): CsgPart {
-  const part = csgPartOf(node.name, node.geometry, node.material)
+  // A solid hands over its whole recipe, a mesh its shape — see `CsgPart.geometry`.
+  const shape = node.type === 'mesh' ? node.geometry : node.carved
+  const part = csgPartOf(node.name, shape, node.material)
   return into ? { ...part, transform: transformOfMatrix(into) } : part
 }
 

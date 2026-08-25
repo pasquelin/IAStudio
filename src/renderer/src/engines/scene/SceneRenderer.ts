@@ -188,6 +188,7 @@ import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import { primitiveOf } from '@shared/domain/csg'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { matrixOfTransform } from '../csg/csgMatrix'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
@@ -2869,7 +2870,7 @@ export class SceneRenderer {
 
     // The base brush AS THE RECIPE PLACES IT: its transform carries the matter's scale, so a
     // wall shown uncut while the worker runs is the size it will be once pierced.
-    const raw = geometryFor(node.carved.base.geometry)
+    const raw = geometryFor(primitiveOf(node.carved.base))
     raw.applyMatrix4(matrixOfTransform(node.carved.base.transform))
     const mesh = new Mesh(raw, material)
     // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps

@@ -296,7 +296,12 @@ function isCsgGraph(value: unknown): boolean {
 
 function isCsgPart(value: unknown): boolean {
   if (!isRecord(value) || typeof value.name !== 'string') return false
-  if (!describes(value.geometry, GEOMETRY_SPECS) || !isTransform(value.transform)) return false
+  if (!isTransform(value.transform)) return false
+  // A shape, or a whole recipe: a solid folded into another solid nests here, and the check
+  // walks down with it. `base` is what a graph has and a descriptor never does.
+  const shape = value.geometry
+  const nested = isRecord(shape) && 'base' in shape
+  if (!(nested ? isCsgGraph(shape) : describes(shape, GEOMETRY_SPECS))) return false
   // Absent on a document written before a brush kept its own: the solid's material is laid under
   // it in `revived`, which is what a separate then hands back.
   return value.material === undefined || isMaterial(value.material)

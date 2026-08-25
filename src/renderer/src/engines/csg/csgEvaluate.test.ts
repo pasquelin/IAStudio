@@ -75,6 +75,27 @@ describe('evaluateGraph', () => {
     expect(size.y).toBeCloseTo(1, 3)
   })
 
+  /**
+   * Chaining booleans, which the toolbar used to refuse. The inner recipe must survive the second
+   * fold: a wall already pierced, then joined to a block, still has its window.
+   */
+  it('keeps the cuts of a solid folded into another solid', () => {
+    const wall = placed(cube('Wall'), { scale: { x: 4, y: 3, z: 0.2 } })
+    const window = placed(cube('Window'), { scale: { x: 1, y: 1, z: 2 } })
+    const pierced: CsgGraph = graph(wall, [{ operation: 'subtract', part: window }])
+
+    const alone = evaluateGraph(pierced)
+    const block = placed(cube('Block'), { position: { x: 3, y: 0, z: 0 } })
+    const both = evaluateGraph(
+      graph(csgPartOf('Pierced', pierced, DEFAULT_MATERIAL), [{ operation: 'unite', part: block }]),
+    )
+
+    // Wider, because the block reaches past the wall — and still carrying the window's walls,
+    // which a fold that kept only the base shape would have dropped.
+    expect(sizeOf(both).x).toBeGreaterThan(sizeOf(alone).x)
+    expect(both.position.length).toBeGreaterThan(alone.position.length)
+  })
+
   it('hands back normals and uvs, which a material needs to light and to map', () => {
     const cut = evaluateGraph(
       graph(cube('A'), [
