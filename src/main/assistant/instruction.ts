@@ -130,6 +130,20 @@ const FIND_RULE =
   `  - Nothing in the catalogue fits? Answer with that ONE call and nothing else: ` +
   `{"action":"${DISCOVERY_ACTION}","input":{"query":"<a word for what you need>"}}.`
 
+/**
+ * 🛑 What a round after the first is told, and every line of it earns its place.
+ *
+ * Without the first, a model handed its own history repeats the search it has just run. Without
+ * the last, it never stops: answering with no calls is the ONLY way it says a request is done,
+ * and nothing else in the briefing asks it to.
+ */
+const CONTINUING = [
+  'You are still working on the same request. What you have already done is in the history',
+  'above, with what each action answered — build on it, and never run the same action twice.',
+  'Answer with NO calls when the request is done, or when you need something only the person',
+  'can tell you: your "say" is then what they read.',
+].join('\n')
+
 const roleWith = (rules: readonly string[]): string =>
   [
     'You drive IA Studio, a desktop application for generating images, video, 3D models,',
@@ -150,6 +164,8 @@ export function recentHistory(history: readonly string[], limit = HISTORY_MAX): 
 }
 
 export type BriefingParts = {
+  /** A round after the first on one sentence — see `CONTINUING`, which is what it adds. */
+  continuing?: boolean
   /** The spaces nothing can generate in, so the model says so before promising a picture. */
   notReady?: readonly string[]
   /** What the open project is about, already composed — see `composedContext`. */
@@ -273,6 +289,7 @@ function composed(
     '',
     ...aim,
     ...(found ? [found, ''] : []),
+    ...(parts.continuing ? [CONTINUING, ''] : []),
     FORMAT,
   ].join('\n')
 }
@@ -321,6 +338,7 @@ export async function briefingFor(
   fallbackRoom = room,
 ): Promise<Briefing> {
   return studioBriefing({
+    continuing: request.continuing === true,
     notReady: await notReady?.(),
     context: request.context,
     state: request.state,

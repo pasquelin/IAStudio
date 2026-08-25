@@ -34,6 +34,10 @@
       "comfortable": "Confort",
       "compact": "Compact"
     },
+    "assistantSteps": {
+      "title": "Étapes d’enchaînement de l’assistant",
+      "help": "Nombre d’actions que l’assistant peut enchaîner pour une seule demande, quand chacune dépend de ce que la précédente a répondu — chercher un fichier, l’ouvrir, puis le poser dans une scène. Chaque étape est un aller-retour facturé, alors ce nombre est la seule chose qui empêche une demande mal comprise de tourner sans fin. Douze suffit à la plupart des enchaînements."
+    },
     "concurrentJobs": {
       "title": "Générations simultanées",
       "help": "Nombre de créations qui travaillent en même temps. Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut mettre plus longtemps à revenir, et le service peut refuser celles qui arrivent en trop. Trois est un bon équilibre."

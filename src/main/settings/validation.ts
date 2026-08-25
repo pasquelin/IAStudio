@@ -8,6 +8,7 @@ import {
 } from '@shared/domain/aiCloud'
 import type { RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
+import { ASSISTANT_STEPS_DEFAULT, assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
   DENSITIES,
@@ -228,6 +229,10 @@ const assistant = z.object({
       ),
     )
     .optional(),
+  // Clamped rather than refused: a hand-edited zero is a chain that can never run one round, and
+  // a hand-edited thousand is a bill. `boundsOf` reads the registry, so the field and the file
+  // cannot disagree.
+  steps: z.number().int().catch(ASSISTANT_STEPS_DEFAULT).transform(assistantStepsWithin).optional(),
 })
 
 const mcp = z.object({

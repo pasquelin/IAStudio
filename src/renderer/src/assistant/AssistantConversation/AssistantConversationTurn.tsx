@@ -29,6 +29,12 @@ export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
       ))}
 
       {turn.lost && <p className="text-warning text-mini m-0">{t('assistant.lost')}</p>}
+
+      {/* A chain that did not end by itself SAYS so: cut at its ceiling or stopped by hand, it
+          reads exactly like one that finished, and a half-done job would pass for a done one. */}
+      {turn.ending && (
+        <p className="text-muted text-mini m-0 italic">{t(`assistant.ending.${turn.ending}`)}</p>
+      )}
     </li>
   )
 }

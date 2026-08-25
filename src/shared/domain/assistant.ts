@@ -140,6 +140,14 @@ export type AssistantCall = { action: ActionName; input: Record<string, unknown>
 export type AssistantThought = {
   utterance: string
   /**
+   * This is not the first round on this sentence: what has already been done, and what each
+   * action answered, is in `history`.
+   *
+   * The window's to say, because the chain is the window's: it is what turns "search, then open
+   * what you found" into two rounds instead of one plan that cannot be written in advance.
+   */
+  continuing?: boolean
+  /**
    * The turns before this one, oldest first, already rendered as lines. Rendered rather than
    * structured because that is what a model reads, and because the implementation the studio
    * ships can only carry ten blocks of text.

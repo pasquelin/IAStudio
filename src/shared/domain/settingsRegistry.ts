@@ -1,4 +1,5 @@
 import { LANGUAGES } from '../i18n/languages'
+import { ASSISTANT_STEPS_MAX, ASSISTANT_STEPS_MIN } from './assistantSteps'
 import { DICTATION_MODES } from './dictation'
 import {
   DENSITIES,
@@ -341,6 +342,15 @@ export const SETTING_REGISTRY = [
     section: 'appearance',
     titleKey: 'settings.reduceMotion.title',
     helpKey: 'settings.reduceMotion.help',
+  }),
+  setting({
+    path: 'assistant.steps',
+    kind: 'number',
+    section: 'general',
+    titleKey: 'settings.assistantSteps.title',
+    helpKey: 'settings.assistantSteps.help',
+    min: ASSISTANT_STEPS_MIN,
+    max: ASSISTANT_STEPS_MAX,
   }),
   setting({
     path: 'generation.concurrentJobs',

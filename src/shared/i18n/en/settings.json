@@ -34,6 +34,10 @@
       "comfortable": "Comfortable",
       "compact": "Compact"
     },
+    "assistantSteps": {
+      "title": "Assistant chaining steps",
+      "help": "How many actions the assistant may chain for one request, when each depends on what the one before answered — find a file, open it, then place it in a scene. Every step is a billed round trip, so this number is the only thing keeping a misread request from running without end. Twelve covers most chains."
+    },
     "concurrentJobs": {
       "title": "Concurrent generations",
       "help": "How many creations work at the same time. The higher it is, the more you can start at once — but each may take longer to come back, and the service can turn away the ones beyond its limit. Three is a good balance."

@@ -58,6 +58,10 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * `inspector.layerKind_text` where a word belongs.
  */
 const COMPOSED_KEYS: readonly string[] = [
+  // How a chain ended when it did not end by itself — composed from the turn's own field. Lost
+  // from a bundle, the raw key lands where the one sentence saying a job was cut short belongs.
+  'assistant.ending.halted',
+  'assistant.ending.stopped',
   // The three sentences an empty centre offers, per space. They are the button AND the draft it
   // writes, so one gone missing puts a raw key on the largest surface of the window.
   ...Object.values(ASSISTANT_STARTERS).flat().map(starterKey),

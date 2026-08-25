@@ -6,7 +6,15 @@ import type {
   AssistantThought,
 } from '@shared/domain/assistant'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useSettings } from './settings'
 import { useAssistant } from './assistant'
+
+/** The ceiling a case is about, without waiting for twelve rounds to reach it. */
+function chainCeiling(steps: number): void {
+  useSettings.setState(state => ({
+    settings: { ...state.settings, assistant: { ...state.settings.assistant, steps } },
+  }))
+}
 
 /** The identity of "the brain has not been called yet", so the wait has something to compare. */
 const NOT_ASKED_YET = (): void => {}
@@ -47,10 +55,13 @@ function brain(...replies: AssistantAnswer[]): { asked: AssistantThought[] } {
 beforeEach(() => {
   runConfirmedAction.mockReset()
   runConfirmedAction.mockResolvedValue({ ok: true })
+  chainCeiling(12)
   useAssistant.setState({
     open: false,
     turns: [],
     busy: false,
+    round: 0,
+    stopping: false,
     asked: null,
     spent: 0,
     draft: '',
@@ -255,5 +266,129 @@ describe('the question asked before anything is engaged', () => {
     await expect(asked).resolves.toBe(false)
     expect(useAssistant.getState().open).toBe(false)
     expect(useAssistant.getState().asked).toBeNull()
+  })
+})
+
+/**
+ * The chain, which is what turns one sentence into work: an action's INPUT is often only known
+ * once the one before it has answered — search a name, open what came back — and a single plan
+ * written in advance cannot say it. Every round is a billed round trip, so what ends one is as
+ * much the point as what continues it.
+ */
+describe('chaining rounds on one sentence', () => {
+  const searched = answer({ say: 'Je cherche.', calls: [{ action: 'files.search', input: {} }] })
+  const done = answer({ say: 'Voici le voilier vert.', calls: [] })
+
+  it('asks again with what the action answered, so the next call can use it', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: true, data: ['Images/Voilier vert.png'] })
+    const { asked } = brain(searched, done)
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    expect(asked).toHaveLength(2)
+    expect(asked[1]?.continuing).toBe(true)
+    // The path is IN what the second round reads: without it the model asks for the same search.
+    expect(asked[1]?.history.join('\n')).toContain('Images/Voilier vert.png')
+  })
+
+  /**
+   * 🛑 THREE rounds, not two, and that is the whole point of the case: `patch` replaces what a
+   * turn holds, so a round that started its list at zero wiped the round before it. The search
+   * result left the history and the model ran the search it had already run — the one failure
+   * the chain exists to remove — while two rounds stayed green throughout.
+   */
+  it('keeps what earlier rounds did, so a third round still reads the first', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: true, data: ['Images/Voilier vert.png'] })
+    const opened = answer({ say: 'Je l’ouvre.', calls: [{ action: 'file.open', input: {} }] })
+    const { asked } = brain(searched, opened, done)
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    expect(useAssistant.getState().turns[0]?.steps.map(step => step.action)).toEqual([
+      'files.search',
+      'file.open',
+    ])
+    expect(asked[2]?.history.join('\n')).toContain('files.search')
+  })
+
+  // The same wipe seen from the person's side: several actions ran and were not undone, and the
+  // turn reported none of them.
+  it('keeps the steps that ran when the chain is stopped', async () => {
+    const opened = answer({ say: 'Je l’ouvre.', calls: [{ action: 'file.open', input: {} }] })
+    brain(searched, opened, done)
+    runConfirmedAction.mockImplementation(async () => {
+      if (useAssistant.getState().round === 2) useAssistant.getState().stop()
+      return { ok: true }
+    })
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    expect(useAssistant.getState().turns[0]?.steps).toHaveLength(2)
+    expect(useAssistant.getState().turns[0]?.ending).toBe('stopped')
+  })
+
+  // The only way a model says a request is done — and the way it asks a question, its `say`
+  // being what the person answers next.
+  it('stops as soon as the model answers with no calls', async () => {
+    const { asked } = brain(searched, done, searched)
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    expect(asked).toHaveLength(2)
+    expect(useAssistant.getState().turns[0]?.ending).toBeUndefined()
+  })
+
+  // Every round's sentence, not just the last: "I am looking" then "here it is" is the chain as
+  // the person watched it happen.
+  it('keeps what was said at each round', async () => {
+    brain(searched, done)
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    expect(useAssistant.getState().turns[0]?.answered).toBe('Je cherche.\nVoici le voilier vert.')
+  })
+
+  /**
+   * 🛑 The one thing between a chain and a bill: a model that keeps asking for the same action
+   * would run until somebody noticed. Cut here, a chain reads exactly like one that finished —
+   * so the turn SAYS it was cut.
+   */
+  it('stops at the ceiling, and says it was cut rather than finished', async () => {
+    chainCeiling(2)
+    const { asked } = brain(searched, searched, searched, searched)
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    expect(asked).toHaveLength(2)
+    expect(useAssistant.getState().turns[0]?.ending).toBe('halted')
+  })
+
+  it('stops between two actions when asked to, leaving what ran alone', async () => {
+    const twice = answer({
+      calls: [
+        { action: 'files.search', input: {} },
+        { action: 'file.open', input: {} },
+      ],
+    })
+    runConfirmedAction.mockImplementation(async () => {
+      useAssistant.getState().stop()
+      return { ok: true }
+    })
+    brain(twice, done)
+
+    await useAssistant.getState().say('ouvre le voilier vert')
+
+    const turn = useAssistant.getState().turns[0]
+    // The first ran and is kept; the second never started.
+    expect(turn?.steps.map(step => step.action)).toEqual(['files.search'])
+    expect(turn?.ending).toBe('stopped')
+    expect(useAssistant.getState().stopping).toBe(false)
+  })
+
+  // Nothing to stop is nothing to arm: a flag left set would refuse the NEXT sentence a round.
+  it('ignores a stop asked for while idle', () => {
+    useAssistant.getState().stop()
+
+    expect(useAssistant.getState().stopping).toBe(false)
   })
 })

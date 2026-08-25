@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { ACTION_REFUSALS, HISTORY_MAX, type AssistantThought } from '@shared/domain/assistant'
+import {
+  ACTION_REFUSALS,
+  HISTORY_BLOCK_MAX,
+  HISTORY_MAX,
+  type AssistantThought,
+} from '@shared/domain/assistant'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { TARGET_ID_MAX, TARGET_KINDS, TARGET_NAME_MAX, TARGETS_MAX } from '@shared/domain/target'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
@@ -29,7 +34,8 @@ const TARGET = z.object({
 
 const THOUGHT = z.object({
   utterance: z.string().trim().min(1).max(UTTERANCE_MAX),
-  history: z.array(z.string().max(UTTERANCE_MAX)).max(HISTORY_MAX).default([]),
+  continuing: z.boolean().default(false),
+  history: z.array(z.string().max(HISTORY_BLOCK_MAX)).max(HISTORY_MAX).default([]),
   /**
    * Bounded HERE as well as at the window, because a caller that is not the window can reach this
    * too: the briefing has some three thousand characters of room and this is what could eat them.

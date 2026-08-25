@@ -44,6 +44,9 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
   const { t } = useTranslation()
   const turns = useAssistant(state => state.turns)
   const busy = useAssistant(state => state.busy)
+  const round = useAssistant(state => state.round)
+  const stopping = useAssistant(state => state.stopping)
+  const stop = useAssistant(state => state.stop)
   const asked = useAssistant(state => state.asked)
   const micOpen = useDictation(store => store.state === 'listening')
   const draft = useAssistant(state => state.draft)
@@ -126,8 +129,18 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
         </ol>
       )}
 
+      {/* The one thing missing while it worked: that it IS working, and on which round. A chain
+          runs for as long as it takes, and a screen saying nothing for four rounds is one the
+          person sits in front of wondering whether to type again. */}
       {busy && !asked && (
-        <Spinner label={t('assistant.thinking')} size={16} className="text-muted shrink-0" />
+        <p className="text-muted text-mini m-0 flex shrink-0 items-center gap-1.5 px-2">
+          <Spinner label={t('assistant.thinking')} size={14} />
+          {stopping
+            ? t('assistant.stopping')
+            : round > 1
+              ? t('assistant.workingRound', { round })
+              : t('assistant.thinking')}
+        </p>
       )}
 
       {asked && <AssistantConversationQuestion request={asked.request} />}
@@ -206,14 +219,27 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
               <span className="ml-auto flex items-center gap-2">
                 {voice && <DictationButton variant="header" tooltip={TIP_TOP} />}
 
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={busy || draft.trim() === ''}
-                  {...HINT_TOP(t('assistant.sendHint'))}
-                >
-                  {t('assistant.send')}
-                </Button>
+                {/* Where Send was, and never beside it: the same corner the eye already goes to
+                    for "act on this", and a chain one cannot stop is one nobody dares start. */}
+                {busy ? (
+                  <Button
+                    type="button"
+                    onClick={stop}
+                    disabled={stopping}
+                    {...HINT_TOP(t('assistant.stopHint'))}
+                  >
+                    {t('assistant.stop')}
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={draft.trim() === ''}
+                    {...HINT_TOP(t('assistant.sendHint'))}
+                  >
+                    {t('assistant.send')}
+                  </Button>
+                )}
               </span>
             </div>
           </form>

@@ -3,6 +3,7 @@ import type { LanguagePreference } from '../i18n/languages'
 // registry reads it back — `import-cycles.test.ts` holds that count at zero.
 import type { AiRoleId, RoleProvider } from './aiRole'
 import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
+import { ASSISTANT_STEPS_DEFAULT } from './assistantSteps'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
@@ -261,6 +262,17 @@ export type Settings = {
      * and a list written here would be stale the week after. Absent means what the cloud declares.
      */
     cloudModels: Record<string, string>
+    /**
+     * 🛑 How many times ONE sentence may send the model back to work — the ceiling on a chain.
+     *
+     * A request like "open it, adjust it, put it in the scene" is several actions whose inputs
+     * are only known once the one before has answered, so the assistant asks again with what it
+     * learned. Each of those is a BILLED round trip, and a model that keeps re-running the same
+     * action would spend without end: this is the one thing between a chain and a runaway.
+     *
+     * Reached, the assistant stops and says so rather than pretending it finished.
+     */
+    steps: number
   }
   /**
    * The same actions the assistant runs, offered to a client outside the application — see
@@ -370,7 +382,7 @@ export const DEFAULT_SETTINGS: Settings = {
   advanced: { logLevel: 'info' },
   media: {},
   git: {},
-  assistant: { model: DEFAULT_ASSISTANT_MODEL, cloudModels: {} },
+  assistant: { model: DEFAULT_ASSISTANT_MODEL, cloudModels: {}, steps: ASSISTANT_STEPS_DEFAULT },
   mcp: {
     enabled: false,
     delegateFiles: false,
