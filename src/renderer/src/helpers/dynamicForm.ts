@@ -60,22 +60,24 @@ function fits(field: FieldDescriptor, value: unknown): boolean {
  * over several minutes went with it — and the source, and the mask. Only the fields the NEW model
  * declares are filled, so nothing reaches a form that never had it.
  *
- * 🛑 `applied` is what tells the person's typing from the STUDIO's own filling — the preset of the
- * last reset. Without it, a value the panel had put there came back as if it had been typed: a
- * source withdrawn from the panel above was carried straight into the request it had just left.
+ * 🛑 `sourced` is what tells the person's typing from what the WORKSPACE put there — the sources
+ * of the last reset, and them alone. Without it, a source withdrawn from the panel above came
+ * back as if it had been typed, straight into the request it had just left. With the whole preset
+ * instead of the sources, it took § 22 down with it: a prompt prefilled by « regenerate with these
+ * parameters » was blanked the moment picking an image changed the operation.
  */
 export function defaultValues(
   fields: readonly FieldDescriptor[],
   preset?: FormValues,
   carried?: FormValues,
-  applied?: FormValues,
+  sourced?: FormValues,
 ): FormValues {
   const values: FormValues = {}
   for (const field of fields) {
     // Through `blankToUndefined`, and NaN is why: a numeric control the new descriptor has just
     // registered reads back as one before the reset lands, which is not a value to carry.
     const held = blankToUndefined(carried?.[field.key])
-    const put = blankToUndefined(applied?.[field.key])
+    const put = blankToUndefined(sourced?.[field.key])
 
     if (preset && field.key in preset) values[field.key] = preset[field.key]
     // Blank is not a value: a field the previous model left empty must take the new one's

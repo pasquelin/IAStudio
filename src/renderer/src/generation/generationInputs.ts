@@ -49,8 +49,15 @@ export type WorkspaceContent = {
  */
 export function availableInputsOf(content: WorkspaceContent): readonly GenerationInput[] {
   const inputs: GenerationInput[] = []
+  // 🛑 One row, ONE input, whichever way it reached the panel. A picture the last generation made
+  // and that was then clicked in the shelf arrived twice, so withdrawing the shelf's pick left the
+  // result's copy filling the very same field — a cross that promised to take it off the
+  // generation and did not. The first occurrence wins, which is what the ORDER below decides.
+  const seen = new Set<string>()
 
   for (const asset of content.selectedAssets) {
+    if (seen.has(asset.id)) continue
+    seen.add(asset.id)
     inputs.push({
       role: 'source',
       kind: asset.type,
@@ -61,6 +68,8 @@ export function availableInputsOf(content: WorkspaceContent): readonly Generatio
   }
 
   for (const mesh of content.selectedMeshes) {
+    if (seen.has(mesh.id)) continue
+    seen.add(mesh.id)
     inputs.push({
       role: 'source',
       kind: 'mesh',
@@ -71,6 +80,8 @@ export function availableInputsOf(content: WorkspaceContent): readonly Generatio
   }
 
   for (const result of content.results) {
+    if (seen.has(result.id)) continue
+    seen.add(result.id)
     inputs.push({
       role: 'source',
       kind: result.type,

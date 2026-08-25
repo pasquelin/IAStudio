@@ -83,10 +83,11 @@ export function Generator() {
    * decided which operation ran. Selecting a picture switched the generator to image-to-image and
    * left the picture behind.
    */
-  const preset = useMemo(
-    () => ({ ...fillSourceFields(descriptor.data?.fields ?? [], inputs), ...prepared }),
-    [descriptor.data, inputs, prepared],
+  const sources = useMemo(
+    () => fillSourceFields(descriptor.data?.fields ?? [], inputs),
+    [descriptor.data, inputs],
   )
+  const preset = useMemo(() => ({ ...sources, ...prepared }), [sources, prepared])
   /**
    * Whether this shot carries the project's context. Held here and not in `values`: it must never
    * reach `buildBody`, which is what is sent to the API.
@@ -289,6 +290,7 @@ export function Generator() {
                   (running !== null && !isFinished(running.status))
                 }
                 preset={preset}
+                sources={sources}
                 // Dictation alone now. Rewriting a prompt, translating it and reading the style of
                 // the references left this panel for the assistant: they are things one ASKS for,
                 // and three buttons under a field could only ever offer three of them.

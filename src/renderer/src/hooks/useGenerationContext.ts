@@ -22,9 +22,9 @@ export type GenerationContext = {
   inputs: readonly GenerationInput[]
   capability: CapabilityChoice
   /**
-   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, the
-   * the shelf's pick. What has no gesture behind it is drawn without a way off rather than with
-   * a broken one — see the note on the implementation for the scene, and for a result.
+   * Takes one input back off, by undoing the gesture that offered it — the shelf's pick, and only
+   * that one. What has no gesture to undo is drawn without a way off rather than with a broken
+   * one; the implementation says why for each.
    */
   withdraw: (input: GenerationInput) => void
 }

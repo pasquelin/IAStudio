@@ -50,6 +50,13 @@ export type DynamicFormProps = {
    */
   preset?: FormValues
   /**
+   * The half of `preset` the CONTEXT fills and takes back — a picture selected in the shelf. Kept
+   * apart because it is the half that may vanish under the person's hand: a value it stopped
+   * naming is dropped rather than carried, so withdrawing a source really leaves the form. The
+   * rest of the preset carries as § 22 asks.
+   */
+  sources?: FormValues
+  /**
    * Rendered inside each field that has room for it — the foot of a long text box, where a
    * spoken prompt is dictated. Called for every field so that nothing about any particular
    * feature is decided here; answering `null` leaves the field alone.
@@ -74,6 +81,7 @@ export function DynamicForm({
   onValuesChange,
   busy = false,
   preset,
+  sources,
   accessory,
 }: DynamicFormProps) {
   const { t } = useTranslation()
@@ -84,9 +92,10 @@ export function DynamicForm({
   const formId = useId()
   const schema = useMemo(() => buildSchema(fields), [fields])
   const initial = useMemo(() => defaultValues(fields, preset), [fields, preset])
-  // The preset of the PREVIOUS reset, so the next one can tell what the person typed from what the
-  // panel filled. Not `useLatest`, which answers with the current render: this is read before it
-  // is written, in the same effect, and answering with `preset` itself would compare it to itself.
+  // The sources of the PREVIOUS reset, so the next one can tell what the person typed from what
+  // the workspace filled. Not `useLatest`, which answers with the current render: this is read
+  // before it is written, in the same effect, and a ref answering `sources` would compare it to
+  // itself.
   const applied = useRef<FormValues | undefined>(undefined)
   // Split rather than reordered: the advanced knobs are drawn UNDER the button, and a fieldset
   // hidden in place would leave the disclosure describing something above it.
@@ -113,10 +122,10 @@ export function DynamicForm({
    */
   useEffect(() => {
     reset(defaultValues(fields, preset, getValues(), applied.current))
-    applied.current = preset
+    applied.current = sources
     // `initial` and not `fields`/`preset`: it is the memo of exactly those two, so listing them
     // beside it would say the same thing twice.
-  }, [initial, fields, preset, getValues, reset])
+  }, [initial, fields, preset, sources, getValues, reset])
 
   // Subscribed, not rendered: `watch(callback)` reports every edit without making this component
   // a listener of its own form. The body is built the same way submitting builds it, so what is

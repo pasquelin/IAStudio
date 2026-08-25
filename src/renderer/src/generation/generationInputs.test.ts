@@ -51,6 +51,21 @@ describe('what the workspace offers a generation', () => {
     expect(inputs.map(input => input.origin)).toEqual(['assets', 'result'])
   })
 
+  /**
+   * A generated picture clicked in the shelf is one thing that reached the panel two ways. Listed
+   * twice, taking the shelf's pick off left the result's copy filling the very same field.
+   */
+  it('offers one row once, whichever way it reached the panel', () => {
+    const inputs = availableInputsOf(
+      content({
+        selectedAssets: [{ id: 'r1', name: 'robot.png', type: 'image' }],
+        results: [{ id: 'r1', name: 'robot.png', type: 'image' }],
+      }),
+    )
+
+    expect(inputs.map(input => input.origin)).toEqual(['assets'])
+  })
+
   // § 24: a result becomes a source without a round trip through the shelf — offered, never taken.
   /**
    * 🛑 Every input NAMES a catalogue row. One the panel cannot attach is one it would draw and

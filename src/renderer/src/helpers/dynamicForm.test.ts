@@ -59,11 +59,17 @@ describe('default values', () => {
     })
   })
 
-  // A mask is dropped by hand and no source ever fills one, so nothing in the preset ever names
-  // it: carrying it is the whole reason § 22 exists, and telling the two apart must not cost it.
-  it('keeps what no preset ever put there', () => {
+  /**
+   * 🛑 Only the SOURCES may be dropped this way. Told the whole preset instead, this blanked a
+   * prompt « regenerate with these parameters » had prefilled, the moment picking an image
+   * changed the operation and took the stored preset with it — § 22's own case, undone.
+   */
+  it('keeps what no source ever put there', () => {
     expect(defaultValues([field({ key: 'mask' })], undefined, { mask: 'drawn' }, {})).toEqual({
       mask: 'drawn',
+    })
+    expect(defaultValues([field({ key: 'prompt' })], undefined, { prompt: 'a cat' }, {})).toEqual({
+      prompt: 'a cat',
     })
   })
 

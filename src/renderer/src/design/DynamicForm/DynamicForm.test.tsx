@@ -32,6 +32,62 @@ describe('a picture the form opens on', () => {
   })
 })
 
+describe('what a reset keeps and what it drops', () => {
+  const PROMPT = field({ key: 'prompt', label: 'Prompt' })
+  const IMAGE: FieldDescriptor = { key: 'image', kind: 'image', label: 'Image', required: true }
+
+  /**
+   * 🛑 A source the panel stopped offering must LEAVE the form, or the request goes out with what
+   * the list beside it no longer draws — one panel, two answers to what is being sent.
+   */
+  it('drops a source the workspace has taken back', () => {
+    const view = render(
+      <DynamicForm
+        fields={[IMAGE]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+        preset={{ image: 'asset-picked' }}
+        sources={{ image: 'asset-picked' }}
+      />,
+    )
+
+    view.rerender(
+      <DynamicForm fields={[IMAGE]} onSubmit={vi.fn()} submitLabel="Générer" preset={{}} />,
+    )
+
+    expect(screen.getByLabelText(/Image/)).toHaveValue('')
+  })
+
+  /**
+   * The other half, and § 22 is the whole point of it: « regenerate with these parameters » fills
+   * a prompt, then picking a picture changes the OPERATION and the stored preset goes with it.
+   * What the person is looking at must not be blanked under their hand.
+   */
+  it('keeps what the stored preset filled when the operation changes', () => {
+    const view = render(
+      <DynamicForm
+        fields={[PROMPT]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+        preset={{ prompt: 'a cat' }}
+        sources={{}}
+      />,
+    )
+
+    view.rerender(
+      <DynamicForm
+        fields={[PROMPT]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+        preset={{}}
+        sources={{}}
+      />,
+    )
+
+    expect(screen.getByLabelText(/Prompt/)).toHaveValue('a cat')
+  })
+})
+
 describe('DynamicForm', () => {
   it('renders one control per kind', () => {
     renderForm([
