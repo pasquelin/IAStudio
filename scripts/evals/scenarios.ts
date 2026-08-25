@@ -6,6 +6,11 @@ import { IMAGE_SCENARIOS } from './scenariosImage'
 import { GENERATION_SCENARIOS } from './scenariosGeneration'
 import { LANGUAGE_SCENARIOS } from './scenariosLanguage'
 import { PLANNING_SCENARIOS } from './scenariosPlanning'
+import { SKY_SCENARIOS } from './scenariosSky'
+import { CANVAS_SCENARIOS } from './scenariosCanvas'
+import { REST_SCENARIOS } from './scenariosRest'
+import { SHELL_SCENARIOS } from './scenariosShell'
+import { GIT_SCENARIOS } from './scenariosGit'
 
 /**
  * The batterie, as something the bench can run — one scenario per request of `BATTERIE.md`, in
@@ -20,4 +25,9 @@ export const SCENARIOS: readonly Scenario[] = [
   ...GENERATION_SCENARIOS,
   ...LANGUAGE_SCENARIOS,
   ...PLANNING_SCENARIOS,
+  ...SKY_SCENARIOS,
+  ...CANVAS_SCENARIOS,
+  ...REST_SCENARIOS,
+  ...SHELL_SCENARIOS,
+  ...GIT_SCENARIOS,
 ]

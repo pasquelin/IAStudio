@@ -61,6 +61,8 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
         kind,
         name: `${kind === 'audio' ? 'A' : 'V'}${same + 1}`,
         muted: false,
+        solo: false,
+        locked: false,
       }
       montage.tracks.push(track)
       montage.modified = true
@@ -118,6 +120,7 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
         fadeIn: 0,
         fadeOut: 0,
         speed: 1,
+        linked: true,
       }
       montage.clips.push(clip)
       montage.duration = Math.max(montage.duration, endOf(montage))
@@ -214,6 +217,27 @@ export function montageAction(bench: Bench, action: string, input: Input): Actio
       if (!clip || speed === null) return refused('badInput')
 
       clip.speed = speed
+      montage.modified = true
+      return done
+    }
+
+    case 'clip.unlink': {
+      const linked = montage.clips.filter(one => one.linked)
+      if (linked.length === 0) return refused('badInput')
+
+      for (const one of linked) one.linked = false
+      montage.modified = true
+      return done
+    }
+
+    case 'track.move': {
+      const track = byId(montage.tracks, input, 'trackId')
+      const by = number(input, 'by')
+      if (!track || by === null) return refused('badInput')
+
+      const at = montage.tracks.indexOf(track)
+      montage.tracks.splice(at, 1)
+      montage.tracks.splice(Math.max(0, Math.min(at + by, montage.tracks.length)), 0, track)
       montage.modified = true
       return done
     }

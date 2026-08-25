@@ -43,6 +43,9 @@ function add(bench: Bench, scene: StudioDocument, kind: string, input: Input): A
     intensity: LIGHTS.includes(kind) ? 1 : null,
     targetId: null,
     castShadow: false,
+    points: [],
+    closed: false,
+    text: null,
   }
   scene.nodes.push(node)
   scene.modified = true

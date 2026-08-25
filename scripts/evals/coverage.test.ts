@@ -16,184 +16,14 @@ import { SCENARIOS } from './scenarios'
  */
 
 /**
- * Actions no request of the batterie exercises yet, named one by one.
+ * Actions no request of the batterie exercises. **Empty, and it is to stay empty**: every action
+ * the registry publishes is measured by at least one request.
  *
- * 🛑 Not a number: a count stays green through an exchange, and the exchange is exactly what
- * happens when a family is modelled while a new one is published. This list only shrinks.
- *
- * The price, assumed: the empty lists of `coverage.ts` say the same thing, so covering a family
- * means striking it from two places. What the second one buys is a RED gate on an action added
- * with `[]` — a hole a reader would otherwise have to notice in a diff.
+ * 🛑 A list and not a count, so an action added with `[]` turns the gate red by NAME rather than
+ * by a number nobody can act on. The empty lists of `coverage.ts` say the same thing; what this
+ * second writing buys is a hole that cannot be waved through in a diff.
  */
-const AWAITING: readonly ActionName[] = [
-  'command.run',
-  'jobs.list',
-  'prompt.suggest',
-  'prompt.translate',
-  'prompt.describeStyle',
-  'chat.close',
-  'actions.find',
-  'target.select',
-  'document.open',
-  'document.rename',
-  'document.save',
-  'document.remove',
-  'document.export',
-  'activity.recent',
-  'project.open',
-  'project.create',
-  'files.copy',
-  'files.redo',
-  'files.history',
-  'file.reveal',
-  'project.rename',
-  'model.schema',
-  'cost.estimate',
-  'job.get',
-  'job.cancel',
-  'task.cancel',
-  'usage.report',
-  'assets.absent',
-  'assets.describe',
-  'asset.get',
-  'asset.reveal',
-  'assets.remove',
-  'canvas.state',
-  'canvas.resize',
-  'canvas.crop',
-  'canvas.orient',
-  'layer.select',
-  'layer.text',
-  'layer.duplicate',
-  'layer.group',
-  'layer.ungroup',
-  'layer.mergeDown',
-  'layer.lock',
-  'layer.shape',
-  'layer.adjustment',
-  'layer.mask',
-  'guide.add',
-  'guide.move',
-  'guide.remove',
-  'sequence.seek',
-  'clip.remove',
-  'clip.split',
-  'clip.unlink',
-  'clip.select',
-  'track.remove',
-  'track.move',
-  'track.rename',
-  'track.adjust',
-  'skybox.state',
-  'skybox.view',
-  'skybox.adjust',
-  'skybox.resetAdjustments',
-  'skybox.sun',
-  'skybox.environment',
-  'skybox.source',
-  'texture.state',
-  'texture.material',
-  'texture.preview',
-  'texture.channel',
-  'styles.list',
-  'style.save',
-  'style.rename',
-  'style.remove',
-  'cloud.browse',
-  'cloud.explore',
-  'cloud.similar',
-  'cloud.plan',
-  'cloud.pull',
-  'cloud.push',
-  'auth.state',
-  'window.state',
-  'window.fullScreen',
-  'settings.open',
-  'updates.state',
-  'updates.install',
-  'dictation.state',
-  'dictation.start',
-  'dictation.stop',
-  'panels.list',
-  'panel.open',
-  'panel.close',
-  'media.capabilities',
-  'media.adopt',
-  'fonts.list',
-  'favorites.list',
-  'favorite.pin',
-  'favorite.unpin',
-  'fileInfo.open',
-  'mirror.open',
-  'help.open',
-  'node.geometry',
-  'node.sprite',
-  'node.text',
-  'node.path',
-  'path.addPoint',
-  'path.movePoint',
-  'path.removePoint',
-  'camera.rail',
-  'camera.addRail',
-  'camera.reorder',
-  'node.reparent',
-  'view.direction',
-  'view.display',
-  'scene.capture',
-  'world.preset',
-  'world.fog',
-  'world.ground',
-  'world.render',
-  'rig.state',
-  'rig.fit',
-  'rig.clear',
-  'rig.hands',
-  'bone.add',
-  'bone.remove',
-  'bone.rename',
-  'bone.role',
-  'ik.add',
-  'ik.remove',
-  'animations.list',
-  'animation.block',
-  'animation.autoKey',
-  'key.clear',
-  'key.all',
-  'key.move',
-  'channel.flags',
-  'git.status',
-  'git.log',
-  'git.commitFiles',
-  'git.diff',
-  'git.branches',
-  'git.stashes',
-  'git.init',
-  'git.stage',
-  'git.unstage',
-  'git.restore',
-  'git.commit',
-  'git.createBranch',
-  'git.checkout',
-  'git.stash',
-  'git.stashPop',
-  'git.tag',
-  'git.stashDrop',
-  'git.resolve',
-  'git.abortMerge',
-  'git.remotes',
-  'git.addRemote',
-  'git.fetch',
-  'git.pull',
-  'git.push',
-  'context.read',
-  'context.write',
-  'context.remove',
-  'settings.read',
-  'settings.action',
-  'accounts.list',
-  'accounts.activate',
-  'accounts.rename',
-]
+const AWAITING: readonly ActionName[] = []
 
 /**
  * What the fake studio can play, read off the `case` labels of its modules.
@@ -235,14 +65,15 @@ describe('the MCP surface and the batterie', () => {
 
   /**
    * 🛑 An action the fake studio has no answer for is scored BLIND: the bench reports it under
-   * « not modelled » and the scenario passes or fails on something else entirely. Declaring one
-   * covered is the one way this table can be worse than empty.
+   * « not modelled » and the scenario passes or fails on something else entirely. Held on the
+   * whole registry rather than on what the table declares — a family published without a
+   * `case` of its own goes straight past every other guard here.
    */
-  it('declares covered only what the fake studio can play', () => {
+  it('leaves no action of the registry for the fake studio to score blind', () => {
     const plays = modelled()
-    const blind = Object.entries(COVERAGE)
-      .filter(([action, cited]) => cited.length > 0 && !plays.has(action))
-      .map(([action]) => action)
+    const blind = actionsReaching('mcp')
+      .map(one => one.name)
+      .filter(name => !plays.has(name))
 
     expect(blind).toEqual([])
   })
