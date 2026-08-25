@@ -37,6 +37,7 @@ import {
   setGeometry,
   setLight,
   setMaterialOn,
+  setModelMaterial,
   setModelTextures,
   setNodeVisible,
   setPath,
@@ -748,6 +749,25 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   'path.removePoint': input =>
     editPath(input, path => withoutPoint(path, numberOf(input, 'index') ?? -1)),
+
+  'model.material': input =>
+    editNode(input, node => {
+      // The mirror of `node.material`, which refuses a model: a `.glb` carries a finish per
+      // material of its own, and what the studio puts over it is this.
+      if (node.type !== 'model') return null
+
+      const colour = textOf(input, 'color')
+      const roughness = numberOf(input, 'roughness')
+      const metalness = numberOf(input, 'metalness')
+      if (!colour && roughness === null && metalness === null) return null
+
+      return setModelMaterial(node.id, {
+        ...node.model.material,
+        ...(colour ? { color: colour } : {}),
+        ...(roughness === null ? {} : { roughness }),
+        ...(metalness === null ? {} : { metalness }),
+      })
+    }),
 
   'model.textures': input =>
     editNode(input, node => {

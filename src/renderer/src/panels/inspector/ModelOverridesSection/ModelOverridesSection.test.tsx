@@ -28,7 +28,14 @@ const search = vi.fn((query: AssetQuery) =>
 const onChange = vi.fn()
 
 function showFolded(textures: ModelRef['textures'] = undefined): void {
-  render(<ModelOverridesSection assetId={MODEL} textures={textures} onChange={onChange} />)
+  render(
+    <ModelOverridesSection
+      assetId={MODEL}
+      textures={textures}
+      onChange={onChange}
+      onFinish={() => {}}
+    />,
+  )
 }
 
 async function unfold(): Promise<void> {

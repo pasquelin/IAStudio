@@ -215,6 +215,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'node.light': ['8.3', '8.5', '24.4', '26.4', '26.5'],
   'node.camera': ['9.5'],
   'model.textures': ['2.5', '3.4'],
+  'model.material': ['12.8'],
   'camera.shot': ['9.3'],
   'camera.rail': ['47.2'],
   'camera.addRail': ['47.1', '47.2'],

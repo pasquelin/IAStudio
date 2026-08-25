@@ -534,6 +534,7 @@ describe('the lists that stand for a union', () => {
       'path.movePoint': true,
       'path.removePoint': true,
       'model.textures': true,
+      'model.material': true,
       'node.light': true,
       'node.camera': true,
       'camera.shot': true,

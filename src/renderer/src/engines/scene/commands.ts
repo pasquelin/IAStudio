@@ -648,6 +648,15 @@ export function setModelTextures(id: string, textures: ModelRef['textures']): Co
   })
 }
 
+/** The finish a model wears over its file. An empty one is « what the glTF said ». */
+export function setModelMaterial(id: string, material: ModelRef['material']): Command<SceneState> {
+  return editModel(id, 'material', model => {
+    const rest = { ...model }
+    delete rest.material
+    return material && Object.keys(material).length > 0 ? { ...rest, material } : rest
+  })
+}
+
 /**
  * One field of a model's reference, with the rest of it carried over. Written once because the
  * carrying is the whole point: an edit that rebuilt the reference from `assetId` alone dropped

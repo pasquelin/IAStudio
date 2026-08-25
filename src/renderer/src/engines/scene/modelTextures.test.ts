@@ -216,4 +216,31 @@ describe('createModelTextures', () => {
 
     expect(freed).toHaveBeenCalled()
   })
+
+  /**
+   * The finish a material of the Textures space is worth to a model. Absent fields leave what the
+   * glTF put there — a model dressed by half a finish keeps the other half of its file.
+   */
+  it('wears the finish over the one its file carries', () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+    materialOf(instance).roughness = 0.9
+
+    createModelTextures(scripted.cache, instance, onChange).dress({ metalness: 0.5 })
+
+    expect(materialOf(instance).metalness).toBe(0.5)
+    expect(materialOf(instance).roughness).toBe(0.9)
+  })
+
+  // The repeat rides on the TEXTURES, not on the material: one tiling turns every map at once.
+  it('tiles the maps rather than the material', () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).dress({ tiling: { x: 4, y: 2 } })
+
+    expect(fileMap.repeat.toArray()).toEqual([4, 2])
+  })
 })

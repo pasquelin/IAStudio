@@ -633,6 +633,10 @@
         "title": "Retirer un point d’un chemin",
         "description": "Retire un point de contrôle. Un chemin ne descend jamais sous deux points, car un point n’est pas une ligne, et la demande est alors refusée."
       },
+      "modelMaterial": {
+        "title": "Régler la finition d’un modèle",
+        "description": "Pose la couleur, la rugosité ou la métallicité d’un modèle importé par-dessus celles que son fichier porte. Ce qui n’est pas nommé reste ce que le fichier disait."
+      },
       "modelTextures": {
         "title": "Remplacer les cartes d’un modèle",
         "description": "Pointe les cartes d’un modèle importé vers des images du projet, emplacement par emplacement. Ce qui n’est pas nommé revient à la carte que le fichier lui-même porte, et un ensemble vide les rend toutes."

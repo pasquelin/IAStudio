@@ -413,6 +413,24 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
+     * The finish a model wears over the one its file carries — the dials a plain standard
+     * material reads. The four its own space adds through a shader are absent by construction:
+     * a scene draws no such shader, and `ModelMaterial` says so from the other side.
+     */
+    name: 'model.material',
+    titleKey: 'assistant.actions.modelMaterial.title',
+    descriptionKey: 'assistant.actions.modelMaterial.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      NODE,
+      { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
+      { key: 'roughness', kind: 'number', labelKey: 'assistant.fields.roughness', required: false },
+      { key: 'metalness', kind: 'number', labelKey: 'assistant.fields.metalness', required: false },
+    ],
+  }),
+  action({
+    /**
      * The maps of an imported model, pointed at pictures of the project. Its own action rather
      * than `node.material`'s slots: a model's file already carries a colour and a finish per
      * material, and what the studio offers is a slot for a picture edited elsewhere to land in.

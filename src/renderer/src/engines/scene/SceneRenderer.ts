@@ -2379,7 +2379,12 @@ export class SceneRenderer {
     }
     for (const [id, maps] of this.modelMaps) {
       const node = this.applied.get(id)
-      if (node?.type === 'model') maps.apply(node.model.textures)
+      if (node?.type === 'model') {
+        maps.apply(node.model.textures)
+        // After the maps, always: the tiling rides ON the textures, so a map arriving later
+        // would come in untiled — see `dress`.
+        maps.dress(node.model.material)
+      }
     }
     // The environment too: a skybox asset is a picture of the project like any other, and the
     // lighting it drives is what would otherwise stay on the image the edit replaced.
@@ -2890,8 +2895,12 @@ export class SceneRenderer {
       const before = previous?.type === 'model' ? previous : null
       // Nothing at all until the file has landed: `buildModel` applies what the node holds the
       // moment it builds the maps, and there is no material to write into before that.
+      if (before?.model.material !== node.model.material) {
+        this.modelMaps.get(node.id)?.dress(node.model.material)
+      }
       if (before?.model.textures !== node.model.textures) {
         this.modelMaps.get(node.id)?.apply(node.model.textures)
+        this.modelMaps.get(node.id)?.dress(node.model.material)
       }
       return
     }
@@ -3118,7 +3127,10 @@ export class SceneRenderer {
           ),
       )
       this.modelMaps.set(node.id, maps)
-      if (applied.type === 'model') maps.apply(applied.model.textures)
+      if (applied.type === 'model') {
+        maps.apply(applied.model.textures)
+        maps.dress(applied.model.material)
+      }
 
       // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
       // carry them, and a clip addresses its targets by name — so the source's drive any

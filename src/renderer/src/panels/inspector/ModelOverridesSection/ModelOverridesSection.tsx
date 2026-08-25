@@ -3,6 +3,7 @@ import type { ModelRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 
 import { TextureSlotFields } from '../TextureSlotFields'
+import { ModelOverridesSectionFinish } from './ModelOverridesSectionFinish'
 import { ModelOverridesSectionOwnPictures } from './ModelOverridesSectionOwnPictures'
 
 export type ModelOverridesSectionProps = {
@@ -10,6 +11,8 @@ export type ModelOverridesSectionProps = {
   assetId: string
   textures: ModelRef['textures']
   onChange: (textures: ModelRef['textures']) => void
+  /** The finish it wears over its file — its own command, and its own undo step. */
+  onFinish: (material: ModelRef['material']) => void
 }
 
 /**
@@ -22,7 +25,12 @@ export type ModelOverridesSectionProps = {
  * Folded on sight, under the model's own pictures: pointing a slot somewhere else is the rarer
  * half of this panel, and the file's own maps are what one opens it to see.
  */
-export function ModelOverridesSection({ assetId, textures, onChange }: ModelOverridesSectionProps) {
+export function ModelOverridesSection({
+  assetId,
+  textures,
+  onChange,
+  onFinish,
+}: ModelOverridesSectionProps) {
   const { t } = useTranslation()
 
   return (
@@ -47,6 +55,12 @@ export function ModelOverridesSection({ assetId, textures, onChange }: ModelOver
         label={t('inspector.useModelPictures')}
         hint={t('inspector.useModelPicturesHint')}
         onChange={onChange}
+      />
+      <ModelOverridesSectionFinish
+        assetId={assetId}
+        label={t('inspector.useModelFinish')}
+        hint={t('inspector.useModelFinishHint')}
+        onChange={onFinish}
       />
     </PropertySection>
   )
