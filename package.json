@@ -12,6 +12,7 @@
   "scripts": {
     "start": "node scripts/fetch-engine.mjs --sources-only && node scripts/dev-app-identity.mjs && electron-vite dev --watch",
     "start:debug": "node scripts/fetch-engine.mjs --sources-only && node scripts/dev-app-identity.mjs && electron-vite dev --watch --remoteDebuggingPort 9222",
+    "cdp": "node scripts/cdp.mjs",
     "build": "pnpm typecheck && electron-vite build && node scripts/check-artefact.mjs",
     "dist": "pnpm build && bash scripts/dist.sh",
     "preview": "electron-vite preview",
