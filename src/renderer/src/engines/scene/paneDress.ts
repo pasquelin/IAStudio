@@ -45,6 +45,17 @@ export type PaneMemory = {
   worn: { mode: DisplayMode; quads: boolean } | null
 }
 
+/**
+ * Forgets what the scene is wearing, so the next pane dresses it again from scratch.
+ *
+ * Called when the set of drawn meshes changed under the dress: a freshly built `InstancedMesh`
+ * wears the material its source wore, and a pass that thought the scene was already dressed
+ * would leave it alone — one object drawn shaded in a solid view, with every gate green.
+ */
+export function forgetDress(memory: PaneMemory): void {
+  memory.worn = null
+}
+
 export function createPaneMemory(): PaneMemory {
   return { materials: new WeakMap(), lights: new WeakMap(), worn: null }
 }

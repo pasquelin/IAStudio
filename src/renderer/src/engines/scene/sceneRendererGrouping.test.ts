@@ -11,7 +11,9 @@ import source from './SceneRenderer.ts?raw'
  */
 describe('SceneRenderer and the grouping of repeated shapes', () => {
   const body = (name: string): string =>
-    new RegExp(`private ${name}\\([^)]*\\): void \\{[\\s\\S]*?\\n {2}\\}`).exec(source)?.[0] ?? ''
+    new RegExp(`private ${name}\\([^)]*\\): [\\w<>[\\]| ]+ \\{[\\s\\S]*?\\n {2}\\}`).exec(
+      source,
+    )?.[0] ?? ''
 
   it('groups outside the switch that only turns the counters off', () => {
     // Turning statistics off gives back a walk over every geometry. It must not also stop the
@@ -49,5 +51,13 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('syncNode')).toContain('keepsItsGroup')
     expect(body('syncNode')).toContain('this.movedNodes.add')
     expect(body('markContentChanged')).toContain('this.groupingStale = true')
+  })
+
+  it('dresses the meshes it draws with, and not only the ones it stands for', () => {
+    // A display mode REPLACES a mesh's material. The instance was left out of that walk, so
+    // sixty-four copies drew shaded inside a solid view — and every gate stayed green.
+    expect(body('dressPane')).toContain('this.dressable()')
+    expect(source).toContain('yield* this.instances.drawn()')
+    expect(body('regroupInstances')).toContain('forgetDress(this.paneMemory)')
   })
 })

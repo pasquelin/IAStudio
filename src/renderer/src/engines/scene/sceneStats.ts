@@ -1,4 +1,12 @@
-import { Box3, Mesh, Vector3, type Material, type Object3D, type Texture } from 'three'
+import {
+  Box3,
+  InstancedMesh,
+  Mesh,
+  Vector3,
+  type Material,
+  type Object3D,
+  type Texture,
+} from 'three'
 import { MARKER_NAME } from './markerPaint'
 
 /**
@@ -126,12 +134,17 @@ function textureBytes(texture: Texture): number {
  */
 export function densityOf(object: Object3D): number {
   const stats = statsOf([object])
-  if (stats.triangles === 0) return 0
+  // An instance holds ONE geometry and draws it `count` times, while its box spans every copy:
+  // counted once against that box, a thousand cubes read as empty space and the density view
+  // painted the most crowded thing on screen at the coolest step of its ramp.
+  const triangles =
+    object instanceof InstancedMesh ? stats.triangles * object.count : stats.triangles
+  if (triangles === 0) return 0
 
   const size = new Box3().setFromObject(object).getSize(new Vector3())
   const area = 2 * (size.x * size.y + size.y * size.z + size.z * size.x)
   // A flat plane and a point both enclose nothing; their triangles are all the answer there is.
-  return area === 0 ? stats.triangles : stats.triangles / area
+  return area === 0 ? triangles : triangles / area
 }
 
 /** Adds up what several counts hold, for a scene read object by object. */

@@ -7,6 +7,7 @@ import {
   Object3D,
 } from 'three'
 import { describe, expect, it } from 'vitest'
+import { EDGE_LAYER } from './sceneView'
 import { meshNode } from './scene-fixtures'
 import {
   DRAWN_BY_INSTANCE,
@@ -61,6 +62,16 @@ const host = () => new Object3D()
 const instancesIn = (scene: Object3D): InstancedMesh[] =>
   scene.children.filter(child => child instanceof InstancedMesh)
 
+describe('the layer a hidden mesh goes to', () => {
+  it('is not one another pass turns back on', () => {
+    // A view that shows edges enables `EDGE_LAYER` on its camera. Shared, that number put every
+    // hidden mesh back on screen beside the instance drawing it: a tight view of 10 000 went
+    // from 3.7 ms and 40 calls to 12.6 ms and 9 605, and the geometry was drawn twice over.
+    expect(DRAWN_BY_INSTANCE).not.toBe(EDGE_LAYER)
+    expect(DRAWN_BY_INSTANCE).not.toBe(0)
+  })
+})
+
 describe('createInstancedGroups', () => {
   it('leaves an ordinary scene alone, drawing nothing of its own', () => {
     const scene = host()
@@ -102,6 +113,36 @@ describe('createInstancedGroups', () => {
     if (!(instance instanceof InstancedMesh)) throw new Error('no instance was built')
     // The third instance sits where the third mesh does — x = 2, as `alike` laid them out.
     expect(instance.instanceMatrix.array[2 * 16 + 12]).toBe(2)
+  })
+
+  it('carries the shadow flags of the meshes it draws for', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    for (const mesh of objects.values()) {
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+    }
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    // The sources sit on a layer the shadow camera never looks at. Left at their default, an
+    // instanced object neither cast a shadow nor caught one — and no gate went red.
+    const instance = instancesIn(scene)[0]
+    expect({ cast: instance?.castShadow, receive: instance?.receiveShadow }).toEqual({
+      cast: true,
+      receive: true,
+    })
+  })
+
+  it('separates two meshes that answer differently to a shadow', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    for (const mesh of objects.values()) mesh.castShadow = true
+    const first = objects.get('n0')
+    if (first) first.castShadow = false
+
+    // One instance carries ONE flag: mixed, it would answer for a node that said the opposite.
+    // Split, neither half reaches the floor, so nothing is instanced at all.
+    expect(createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
   })
 
   it('separates two shapes that no single draw call could share', () => {
@@ -296,17 +337,20 @@ describe('keepsItsGroup', () => {
     expect(keepsItsGroup(node, { ...node, transform: moved })).toBe(true)
   })
 
-  it('lets go of a node whose shape, paint, visibility or parent changed', () => {
+  it('lets go of a node whose shape, paint, visibility, parent or shadow changed', () => {
     const node = meshNode('n0')
     const elsewhere: Partial<typeof node>[] = [
       { geometry: { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 8 } },
       { material: { ...node.material, color: '#ff0000' } },
       { visible: false },
       { parentId: 'other' },
+      { castShadow: !node.castShadow },
+      { receiveShadow: !node.receiveShadow },
     ]
 
-    // Each of the four is read by the grouping: kept, the node would go on being drawn by an
-    // instance that spells something it no longer is.
+    // Each of the six is read by the grouping: kept, the node would go on being drawn by an
+    // instance that spells something it no longer is — a shadow that will not go away among
+    // them, since the source that stopped casting is the one nothing draws.
     for (const moved of elsewhere) {
       expect(keepsItsGroup(node, { ...node, ...moved })).toBe(false)
     }

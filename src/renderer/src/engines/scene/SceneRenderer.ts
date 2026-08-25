@@ -156,7 +156,7 @@ import {
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
-import { createPaneMemory, dressForPane } from './paneDress'
+import { createPaneMemory, dressForPane, forgetDress } from './paneDress'
 import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
 import { EMPTY_STATS, statsOf, type SceneStats } from './sceneStats'
 import {
@@ -779,7 +779,13 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
-    this.instances = createInstancedGroups(this.viewport.scene)
+    this.instances = createInstancedGroups(
+      this.viewport.scene,
+      mesh =>
+        // What the document dresses it in, never what a view left on it: an instance born during
+        // a solid pass would wear the stand-in for good.
+        this.paneMemory.materials.get(mesh) ?? mesh.material,
+    )
     this.csg = createCsgEvaluator({
       spawn: () => new CsgWorker(),
       // The key as subject, so two solids that both fail are two lines rather than one: the node
@@ -1407,7 +1413,13 @@ export class SceneRenderer {
     if (this.groupingStale) {
       this.groupingStale = false
       this.movedNodes.clear()
-      this.instances.rebuild([...this.applied.values()], id => this.objects.get(id))
+      const instanced = this.instances.rebuild([...this.applied.values()], id =>
+        this.objects.get(id),
+      )
+      // Only when there are instances to dress: they are new objects wearing what their sources
+      // wore, so a pane that believed the scene already dressed would leave them out of a solid
+      // or a material view. An ordinary scene reaches no group and must pay nothing.
+      if (instanced > 0) forgetDress(this.paneMemory)
       return
     }
     if (this.movedNodes.size === 0) return
@@ -1608,6 +1620,12 @@ export class SceneRenderer {
     return this.displays.some(mode => showsEdges(mode, this.quadEdges))
   }
 
+  /** Everything a view dresses: the nodes it holds, and the instances that draw for them. */
+  private *dressable(): Generator<Object3D> {
+    yield* this.objects.values()
+    yield* this.instances.drawn()
+  }
+
   /**
    * How THIS view shows the scene, set while its pass is about to run.
    *
@@ -1626,7 +1644,11 @@ export class SceneRenderer {
 
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     return dressForPane(
-      this.objects.values(),
+      // The instances too: a display mode replaces a mesh's material, and one left out of this
+      // walk goes on drawing shaded while everything around it wears the stand-in. Walked
+      // LAZILY: `dressForPane` declines the work when the dress already holds, and an array
+      // built here would be ten thousand copies per pane per frame on a still viewport.
+      this.dressable(),
       mode,
       this.quadEdges,
       this.paneMaterials,
@@ -2672,8 +2694,7 @@ export class SceneRenderer {
     // one click on 8 000 nodes, measured 20/08.
     //
     // A node that only MOVED keeps its group and its slot in it, so the grouping is left alone
-    // and the slot is rewritten instead. Measured through `apply` on 10 000 nodes: moving one
-    // cost 40.95 ms before this batch, 4.15 ms once the group keys were held, and 1.67 ms here.
+    // and the slot is rewritten instead: 47.5 ms against 1.35 µs on 40 000 nodes.
     if (previous && keepsItsGroup(previous, node)) {
       this.contentChanged = true
       this.movedNodes.add(node.id)
@@ -3554,8 +3575,8 @@ export class SceneRenderer {
     this.aids.refreshBoxes()
     // The move is only reported on release, so an instanced node would stand where the last
     // grouping left it for the whole gesture. `TransformControls` has already written the world
-    // matrices this reads. The moved slots alone, never a regrouping: that costs 32.7 ms on
-    // 40 000 nodes, which per pointer move is two dropped frames.
+    // matrices this reads. The moved slots alone, never a regrouping: that costs 47.5 ms on
+    // 40 000 nodes, which per pointer move is three dropped frames.
     this.instances.moved(this.selectedIds, id => this.objects.get(id))
     this.redraw()
   }
