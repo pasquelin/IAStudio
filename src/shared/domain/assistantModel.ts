@@ -43,3 +43,14 @@ export const ASSISTANT_MODELS: readonly AssistantModel[] = [
 export const DEFAULT_ASSISTANT_MODEL: AssistantModel = 'claude-haiku-4-5'
 
 export const HISTORY_MAX = 10
+
+/**
+ * 🛑 How long ONE block of that history may be — the boundary's bound, and what the window must
+ * cut a block to before sending it.
+ *
+ * A chain writes into a single block: one round adds a sentence and a line per action, each line
+ * carrying what the action answered. Measured at twelve rounds of two acting calls, a block runs
+ * to 16 260 characters — past this, `parseThought` throws, the window reads `null`, and a chain
+ * that was working dies as "I did not manage to answer that one".
+ */
+export const HISTORY_BLOCK_MAX = 10_000

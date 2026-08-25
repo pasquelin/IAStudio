@@ -1202,6 +1202,17 @@
     "close": "Fermer",
     "closeHint": "Referme la fenêtre sans rien annuler de ce qui tourne déjà",
     "thinking": "L’assistant réfléchit…",
+    "workingRound": "L’assistant travaille — étape {{round}}",
+    "stopping": "Arrêt demandé — le studio finit ce qui tourne…",
+    "stop": "Arrêter",
+    "stopHint": "Arrête l’assistant après l’action en cours ; rien de ce qui a déjà été fait n’est défait",
+    "stepAnswered_one": "{{count, number}} résultat",
+    "stepAnswered_many": "{{count, number}} de résultats",
+    "stepAnswered_other": "{{count, number}} résultats",
+    "ending": {
+      "halted": "L’assistant s’est arrêté là : trop d’étapes pour une seule demande. Redemandez-lui la suite, ou augmentez la limite dans les réglages.",
+      "stopped": "Vous avez arrêté l’assistant ici."
+    },
     "lost": "L’assistant n’a pas su répondre à cette demande.",
     "refused": "{{action}} — {{reason}}",
     "confirm": {

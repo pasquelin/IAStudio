@@ -1,6 +1,7 @@
 import { orElse } from '@shared/promises'
 import { create } from 'zustand'
-import { HISTORY_MAX, type AssistantModel } from '@shared/domain/assistant'
+import { HISTORY_MAX, type AssistantCall, type AssistantModel } from '@shared/domain/assistant'
+import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
 import type { ConfirmRequest } from '@/assistant/confirm'
 import { assistantHistory, type AssistantStep, type AssistantTurn } from '@/assistant/conversation'
@@ -15,6 +16,17 @@ type AssistantState = {
   turns: AssistantTurn[]
   /** From the moment a sentence is sent until its last action has run or been refused. */
   busy: boolean
+  /**
+   * Which round of the chain is running, from 1 — what the person watches while it works.
+   *
+   * `0` when nothing is. Read rather than derived from the steps: a round that is still THINKING
+   * has run no action yet, and that is exactly the moment a screen saying nothing looks frozen.
+   */
+  round: number
+  /** Asked to stop between two rounds. Cleared when the turn ends, whichever way it ended. */
+  stopping: boolean
+  /** Asks the chain to stop after what is already running. Nothing in flight is undone. */
+  stop: () => void
   asked: AssistantQuestion | null
   /**
    * What this conversation has spent thinking, in creative units.
@@ -83,16 +95,20 @@ async function targetsFor(said: string): Promise<readonly Target[]> {
  * The assistant as this window holds it: what was said, what it cost, and the one question that
  * may be waiting.
  *
- * One pass of thinking per sentence — no loop. The model already answers several `calls` at
- * once, so a loop would buy the rare case where an action's result changes the plan, and pay for
- * it on every sentence: five round trips instead of one, with the history growing at each. What
- * a second pass would have done, the next sentence does, with the first one's outcome already in
- * the history.
+ * A sentence is a CHAIN of rounds, not one pass — see `chainOn`. The case a single plan cannot
+ * write turned out to be the ordinary one, not the rare one it was taken for: "open the green
+ * sailboat" needs a path that only the search before it can give, and the model would announce
+ * the search, run it, and stop there.
+ *
+ * What the single pass was right to fear is the cost — every round is billed — and that is now a
+ * ceiling (`assistant.steps`) and a stop the person can press, rather than a chain of one.
  */
 export const useAssistant = create<AssistantState>()((set, get) => ({
   open: false,
   turns: [],
   busy: false,
+  round: 0,
+  stopping: false,
   asked: null,
   spent: 0,
   seen: 0,
@@ -176,92 +192,33 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     asked.answer(granted)
   },
 
+  stop: () => {
+    // Only while there is something to stop: setting it idle would arm the next sentence with a
+    // refusal it never asked for.
+    if (get().busy) set({ stopping: true })
+  },
+
   say: async utterance => {
     const said = utterance.trim()
     // A second sentence while the first is still running would interleave two plans against one
     // generator form, and the confirmation on screen belongs to the first of them.
     if (said === '' || get().busy) return
 
-    const bridge = getBridge()
     const id = (lastTurnId += 1)
-    /**
-     * The history is read before the new turn joins it — a turn does not precede itself — and
-     * trimmed HERE rather than left to the main process.
-     *
-     * Not an optimisation: the channel VALIDATES the length before the brain trims it, so an
-     * eleventh turn made `parseThought` throw, the catch below swallowed it, and every sentence
-     * from then on was marked lost. A conversation quietly stopped working at its eleventh turn.
-     */
-    const history = assistantHistory(get().turns.slice(-HISTORY_MAX))
     const turn: AssistantTurn = { id, said, answered: '', steps: [], lost: false }
-    set(state => ({ turns: [...state.turns, turn], busy: true }))
+    set(state => ({ turns: [...state.turns, turn], busy: true, stopping: false, round: 0 }))
 
     // A turn without its targets is a turn that still answers: a chunk that fails to load must
     // not leave `busy` true for the session, which is what an unhandled rejection here would do.
     const targets = await orElse(targetsFor(said), [])
 
-    // No model in the request: the main process reads the setting on each turn, so the one this
-    // window would send could only be a copy going stale between two windows.
-    const answer = await orElse(
-      bridge?.assistant.think({ utterance: said, history, targets }),
-      null,
-    )
-
-    if (!answer) {
-      patch(set, id, { lost: true })
-      set({ busy: false })
-      return
-    }
-
-    set(state => ({ spent: state.spent + answer.cost }))
-    // Shown before anything runs: a confirmation holds for as long as the person takes to read
-    // it, and a modal saying nothing meanwhile reads as one that froze.
-    patch(set, id, {
-      answered: answer.say,
-      lost: answer.say === '' && answer.calls.length === 0,
-    })
-
-    /**
-     * One after another, never at once: `generator.prepare` fills the form that
-     * `generator.submit` then sends, and a plan run in parallel would send an empty one.
-     *
-     * Inside a `try/finally`, and the `finally` is the point: every branch of `runAction`
-     * reaches an IPC channel that genuinely rejects — the API client turns a 429, a missing key
-     * or a dropped network into a thrown error. Unguarded, one such throw left the loop, left
-     * `say`, and `busy` stayed true for the rest of the session: the field disabled, the spinner
-     * turning, nothing on screen saying why. The assistant was dead until the window reloaded.
-     */
-    const steps: AssistantStep[] = []
     try {
-      // On the turn rather than at launch, as `remoteActions.ts` loads it: the table reaches all
-      // fourteen families, and a studio nobody speaks to has no use for any of them.
-      const { runConfirmedAction } = await import('@/assistant/executor')
-      for (const call of answer.calls) {
-        const outcome = await runConfirmedAction(call.action, call.input)
-        steps.push({ action: call.action, refusal: outcome.ok ? null : outcome.refusal })
-        patch(set, id, { steps: [...steps] })
-      }
-    } catch {
-      // Said rather than swallowed: an action that threw did not run, and a turn showing only
-      // the steps that worked would read as a plan that finished.
-      patch(set, id, { lost: true })
+      await chainOn(set, get, id, said, targets)
     } finally {
-      set({ busy: false })
-    }
-
-    /**
-     * The model asking to be got out of the way, once its plan has run.
-     *
-     * The window is the surface that answered, and it is also the one covering the answer: a
-     * space opened or a form filled is behind it. `chat.close` is how the model says "what I did
-     * is now the thing to look at" — carried out here rather than in the executor, because the
-     * window belongs to the conversation.
-     *
-     * Never while a question is on screen: closing IS declining, so a plan that asked for
-     * something and then asked to be dismissed would refuse its own request.
-     */
-    if (answer.calls.some(call => call.action === 'chat.close') && !get().asked) {
-      set({ open: false })
+      // Every way out, including a throw from an IPC channel that genuinely rejects: unguarded,
+      // one such throw left `busy` true for the rest of the session — the field disabled, the
+      // spinner turning, nothing on screen saying why.
+      set({ busy: false, stopping: false, round: 0 })
     }
 
     // Read, if a surface was there to read it: the other half of the `busy` guard in `show`.
@@ -272,6 +229,139 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     void useSettings.getState().setValue('assistant.model', model)
   },
 }))
+
+type Setter = (
+  patched: Partial<AssistantState> | ((state: AssistantState) => Partial<AssistantState>),
+) => void
+type Getter = () => AssistantState
+
+/**
+ * The rounds one sentence takes, until the model answers with nothing left to do.
+ *
+ * Each round is a BILLED round trip, so three things end it and each says so differently: the
+ * model answering with no calls (done), the person pressing stop, and the ceiling. The last two
+ * are written on the turn rather than left to look like a plan that finished.
+ */
+async function chainOn(
+  set: Setter,
+  get: Getter,
+  id: number,
+  said: string,
+  targets: readonly Target[],
+): Promise<void> {
+  const bridge = getBridge()
+  const ceiling = assistantStepsWithin(useSettings.getState().settings.assistant.steps)
+
+  for (let round = 1; round <= ceiling; round += 1) {
+    set({ round })
+
+    // The turn itself is in `turns`, so a round after the first reads what it has just done and
+    // what each action answered. Left out of the FIRST, where it would only repeat the sentence
+    // the request already carries — a turn does not precede itself.
+    const told = get().turns
+    const history = assistantHistory((round === 1 ? told.slice(0, -1) : told).slice(-HISTORY_MAX))
+
+    // No model in the request: the main process reads the setting on each turn, so the one this
+    // window would send could only be a copy going stale between two windows.
+    const answer = await orElse(
+      bridge?.assistant.think({ utterance: said, history, targets, continuing: round > 1 }),
+      null,
+    )
+
+    if (!answer) {
+      // A round that came back with nothing is the end of the chain: asking again would send the
+      // same request to the same door that just failed to answer it.
+      patch(set, id, { lost: true })
+      return
+    }
+
+    set(state => ({ spent: state.spent + answer.cost }))
+    // Every round's sentence is kept, not just the last: "I am looking for it" then "here it is"
+    // is the chain as the person read it happening.
+    patch(set, id, { answered: alsoSaid(get(), id, answer.say) })
+
+    if (answer.calls.length === 0) {
+      // The one way a model says a request is done — and the way it asks a question, its `say`
+      // being what the person then answers. Nothing was lost either way.
+      patch(set, id, { lost: answer.say === '' && round === 1 })
+      return
+    }
+
+    if (!(await ranAll(set, get, id, answer.calls))) return
+
+    // Asked once the plan has run, never while a question is on screen: closing IS declining,
+    // so a plan that asked for something and then asked to be dismissed would refuse itself.
+    if (answer.calls.some(call => call.action === 'chat.close') && !get().asked) {
+      set({ open: false })
+    }
+
+    if (get().stopping) {
+      patch(set, id, { ending: 'stopped' })
+      return
+    }
+  }
+
+  // Reached rather than chosen: the model still had calls to make and the budget ran out. Said
+  // on the turn, because a chain cut here looks exactly like one that finished.
+  patch(set, id, { ending: 'halted' })
+}
+
+/** What the turn says once this round has spoken too — blank rounds add no empty lines. */
+function alsoSaid(state: AssistantState, id: number, say: string): string {
+  const before = state.turns.find(turn => turn.id === id)?.answered ?? ''
+  if (say.trim() === '') return before
+
+  return before === '' ? say : `${before}\n${say}`
+}
+
+/**
+ * One plan, one action at a time — never at once: `generator.prepare` fills the form that
+ * `generator.submit` then sends, and a plan run in parallel would send an empty one.
+ *
+ * Answers whether the chain may go on. A throw is not a refusal: the action did not run, and a
+ * turn showing only the steps that worked would read as a plan that finished.
+ */
+async function ranAll(
+  set: Setter,
+  get: Getter,
+  id: number,
+  calls: readonly AssistantCall[],
+): Promise<boolean> {
+  /**
+   * 🛑 Seeded from the turn, never from empty: `patch` REPLACES what a turn holds, so a round
+   * starting at zero wipes the rounds before it — the search result leaves the history and the
+   * model runs the search it has already run, which is the one thing the chain exists to stop.
+   */
+  const steps: AssistantStep[] = [...(get().turns.find(turn => turn.id === id)?.steps ?? [])]
+
+  try {
+    // On the turn rather than at launch, as `remoteActions.ts` loads it: the table reaches all
+    // fourteen families, and a studio nobody speaks to has no use for any of them.
+    const { runConfirmedAction } = await import('@/assistant/executor')
+
+    for (const call of calls) {
+      // Between two actions, not inside one: what is already running is left to finish, which is
+      // the only stop that cannot leave a half-written document behind.
+      if (get().stopping) {
+        patch(set, id, { steps: [...steps], ending: 'stopped' })
+        return false
+      }
+
+      const outcome = await runConfirmedAction(call.action, call.input)
+      steps.push({
+        action: call.action,
+        refusal: outcome.ok ? null : outcome.refusal,
+        ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
+      })
+      patch(set, id, { steps: [...steps] })
+    }
+  } catch {
+    patch(set, id, { lost: true })
+    return false
+  }
+
+  return true
+}
 
 /** The turn a reader would have taken in by looking — the last one there is. */
 function lastSeen(state: Pick<AssistantState, 'turns'>): number {

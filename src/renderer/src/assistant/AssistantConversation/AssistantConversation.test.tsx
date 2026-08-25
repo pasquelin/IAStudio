@@ -13,6 +13,7 @@ import { useSettings } from '@/stores/settings'
 import { AssistantConversation } from './AssistantConversation'
 
 const say = vi.hoisted(() => vi.fn<(utterance: string) => Promise<void>>())
+const stop = vi.hoisted(() => vi.fn())
 
 /** Nothing chosen for the assistant role, which is what a fresh studio looks like. */
 const unserved = () =>
@@ -23,7 +24,18 @@ const unserved = () =>
 beforeEach(() => {
   say.mockReset()
   say.mockResolvedValue(undefined)
-  useAssistant.setState({ turns: [], busy: false, asked: null, spent: 0, draft: '', say })
+  stop.mockReset()
+  useAssistant.setState({
+    turns: [],
+    busy: false,
+    round: 0,
+    stopping: false,
+    asked: null,
+    spent: 0,
+    draft: '',
+    say,
+    stop,
+  })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useDictation.setState({ partial: '', state: 'idle' })
   useLayouts.setState({ activeWorkspace: 'image' })
@@ -200,5 +212,39 @@ describe('the assistant conversation', () => {
     render(<AssistantConversation />)
 
     expect(screen.queryByRole('button', { name: 'Génère une image' })).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * What was missing while it worked: that it IS working, and that one may call it off. A chain
+ * runs for as long as it takes, and a screen saying nothing for four rounds is one the person
+ * sits in front of, wondering whether to type the sentence again.
+ */
+describe('while the assistant is working', () => {
+  it('says which round it is on, so a long chain does not read as a freeze', () => {
+    useAssistant.setState({ busy: true, round: 3 })
+    render(<AssistantConversation />)
+
+    expect(screen.getByText(/3/)).toBeInTheDocument()
+  })
+
+  // Where Send was, and never beside it: a chain one cannot call off is one nobody dares start.
+  it('offers to stop instead of to send, and cannot send meanwhile', async () => {
+    useAssistant.setState({ busy: true, round: 1 })
+    render(<AssistantConversation />)
+
+    await userEvent.click(screen.getByRole('button', { name: /arrêter/i }))
+
+    expect(stop).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /envoyer/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox')).toBeDisabled()
+  })
+
+  // Pressed twice, the second press asks nothing more: what is running is what it waits for.
+  it('says it is stopping, and takes no second press', () => {
+    useAssistant.setState({ busy: true, round: 2, stopping: true })
+    render(<AssistantConversation />)
+
+    expect(screen.getByRole('button', { name: /arrêter/i })).toBeDisabled()
   })
 })
