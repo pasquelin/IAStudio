@@ -125,7 +125,7 @@ It is **held** rather than tapped: press, speak, let go. It can be set to toggle
 
 ### Walking a list with the keyboard
 
-Every list in the studio is crossed the same way: the Explorer, the Explorer, the layers, the models,
+Every list in the studio is crossed the same way: the Explorer, the Library, the layers, the models,
 the scene tree.
 
 | Key | Effect |
@@ -242,7 +242,7 @@ studio cannot undo, and a bare delete key is too close to what a hand does while
 | **Move** | `G` | drag the coloured arrows to slide it |
 | **Rotate** | `R` | drag the coloured circles to turn it |
 | **Scale** | `S` | drag the handles. `⇧` keeps its proportions |
-| **Magnet** | `M` | steps the handles by regular amounts, set in the settings |
+| **All snaps** | `M` | turns all four snaps on or off at once — surface, grid, angle, scale. The bar at the top of the viewport sets them one by one |
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
 | **Display mode** | `Z` | cycles the nine ways of drawing |
@@ -656,7 +656,7 @@ that is not a workspace — it is open in all of them at once — and one more c
 | `G` |  |  | Move |  | Paint bucket tool |  |  |  |
 | `R` |  |  | Rotate |  |  |  |  |  |
 | `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |
-| `M` |  |  | Snap |  | Rectangular selection |  |  |  |
+| `M` |  |  | All snaps |  | Rectangular selection |  |  |  |
 | `L` |  |  | Local frame |  | Lasso |  |  |  |
 | `F` |  |  | Frame selection | Return window |  |  |  |  |
 | `H` |  |  |  |  | Hand tool |  |  |  |

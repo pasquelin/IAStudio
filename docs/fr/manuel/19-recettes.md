@@ -163,7 +163,7 @@ voulu. Pour viser les normales ou la rugosité, déposez sur **leur ligne** dans
 2. panneau **Modèles** → filtre **Capacité**, visible sans rien déplier → **Image vers vidéo** ;
 3. choisissez un modèle, donnez-lui votre image, décrivez le mouvement voulu ;
 4. **Générer** — comptez plus longtemps que pour une image : quelques minutes est normal ;
-5. le clip arrive dans les **Assets**.
+5. le clip arrive dans la **Bibliothèque**.
 
 **Pour le voir en grand** : **double-cliquez** le clip dans l’Explorateur. Un montage s’ouvre pour lui,
 avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
@@ -175,7 +175,7 @@ avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 1. espace **Audio** ;
 2. panneau **Modèles** : les éditeurs proposés sont ElevenLabs, Google, Bytedance ;
 3. décrivez le son voulu, **Générer** ;
-4. le son arrive dans les **Assets**.
+4. le son arrive dans la **Bibliothèque**.
 
 **Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’Explorateur. Un onglet
 s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n’est pas un préalable.
@@ -373,7 +373,7 @@ Tout est détaillé, sans rien cacher, dans
 | éclairer une scène d’un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
 | poser un modèle 3D dans la scène ouverte | 3D | glisser la maille sur la vue, ou clic droit |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
-| importer mes fichiers | partout | Assets → Importer un média |
+| importer mes fichiers | partout | Explorateur → Importer un média |
 | refaire la même image | partout | Inspecteur → Régénérer |
 | emporter mon projet | — | copier le dossier |
 

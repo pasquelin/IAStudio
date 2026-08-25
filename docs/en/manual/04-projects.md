@@ -473,7 +473,7 @@ the window.
 **Renaming goes through the gesture of the thing.** An asset and a document each have one, and
 the Explorer leads to it: the name changes, and the file follows in the same move. A document
 renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
-everywhere at once — the Explorer, the Explorer, the Inspector, the tab editing it — because there
+everywhere at once — the Explorer, the Inspector, the tab editing it — because there
 is only **one name**: its index row's name IS its file's name.
 
 > **A picture you dropped in yourself renames too**, even where the studio holds no entry for

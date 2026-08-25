@@ -364,7 +364,7 @@ All of it is spelled out, with nothing hidden, in
 | to light a scene with a sky | 3D | Inspector → Environment → choose the skybox |
 | to place a 3D model in the open scene | 3D | drag the mesh onto the view, or right-click |
 | to edit two shots | Video | `+` → drag the clips onto the timeline |
-| to import my files | anywhere | Assets → Import media |
+| to import my files | anywhere | Explorer → Import media |
 | to remake the same picture | anywhere | Inspector → Regenerate |
 | to carry my project | — | copy the folder |
 

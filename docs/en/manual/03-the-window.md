@@ -285,7 +285,7 @@ zone's cut: the icons above it open in the first half, those below in the second
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace — on the home, a **new project** |
 | *separator* | |
-| **Upper half** icons | Models, Generate, then Assets — what the provider offers; the home puts **Your projects** there |
+| **Upper half** icons | Models, Generate, then Library — what the provider offers; the home puts **Your projects** there |
 | *separator* | |
 | **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
 | At the bottom | Timeline then History, depending on the workspace; on the home, History alone |
@@ -382,7 +382,7 @@ close button never goes**, and the panel's name keeps its size.
 what the account hosts. Below, the **Explorer** and **Git**, which take turns as well: your
 project folder, and what has changed in it.
 
-The cut between the two halves is what makes the gesture possible: the Explorer and the Explorer
+The cut between the two halves is what makes the gesture possible: the Library and the Explorer
 hold the screen **together**, and nothing enters the project without passing from one to the other.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
