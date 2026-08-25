@@ -23,6 +23,7 @@ import type { ActivityReport } from './activityLog'
 import {
   askCloseChoice,
   askDeleteDocument,
+  askFlattenDocument,
   askOverwriteDocument,
   type AskUser,
 } from './documentDialogs'
@@ -600,6 +601,10 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.documentConfirmDelete, (_event, title) =>
     askDeleteDocument(askUser, parseDocumentTitle(title)),
+  )
+
+  handle(CHANNELS.documentConfirmFlatten, (_event, title, format, lost) =>
+    askFlattenDocument(askUser, parseDocumentTitle(title), String(format), String(lost)),
   )
 
   handle(CHANNELS.documentConfirmOverwrite, (_event, title) =>

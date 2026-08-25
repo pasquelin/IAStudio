@@ -566,10 +566,11 @@ describe('saveDocument', () => {
      * document FIRST and only falls back to the asset for a tab never saved, so the flatten is
      * never read back over the stack it came from.
      */
-    it('writes the flattened picture into a source that cannot hold the stack, and says so', async () => {
+    it('writes the flattened picture into a source that cannot hold the stack', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
-      const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+      const confirmFlatten = vi.fn(() => Promise.resolve(true))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written'), confirmFlatten },
         assets: { savePicture },
       })
       shelve('Images/hero.png')
@@ -579,9 +580,54 @@ describe('saveDocument', () => {
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
+      expect(confirmFlatten).toHaveBeenCalled()
       expect(savePicture).toHaveBeenCalled()
-      // Said, never silent: what the file cannot carry is exactly what a reader would look for.
-      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten', level: 'warn' })
+    })
+
+    /**
+     * ⌘S is the most frequent gesture of the studio: asked at every one, this question would be
+     * unbearable on a picture that keeps its layers anyway.
+     */
+    it('asks once for a document, never again', async () => {
+      const confirmFlatten = vi.fn(() => Promise.resolve(true))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written'), confirmFlatten },
+        assets: { savePicture: () => Promise.resolve(picture()) },
+      })
+      shelve('Images/hero.png')
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await saveDocument(documentId)
+      useCanvases.getState().runCommand(documentId, renameLayer('layer-2', 'Second'))
+      await saveDocument(documentId)
+      release()
+
+      expect(confirmFlatten).toHaveBeenCalledTimes(1)
+    })
+
+    /**
+     * The document was written before the question was asked, so declining costs no work: only
+     * the picture the scene reads stays behind, and the next ⌘S offers it again.
+     */
+    it('leaves the asset alone when the flatten is declined', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: {
+          write: () => Promise.resolve<DocumentWrite>('written'),
+          confirmFlatten: () => Promise.resolve(false),
+        },
+        assets: { savePicture },
+      })
+      shelve('Images/hero.png')
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(canvasStore.hasUnsavedWork(useCanvases.getState(), documentId)).toBe(false)
     })
 
     /**
@@ -720,7 +766,7 @@ describe('saveDocument', () => {
      */
     it('writes a picture the studio can, when the source format is not one it writes', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
-      const { entries } = bridgeWatchingLogs({
+      installFakeBridge({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
@@ -732,15 +778,16 @@ describe('saveDocument', () => {
       release()
 
       expect(savePicture).toHaveBeenCalled()
-      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten', level: 'warn' })
     })
 
-    /** Which traits stood in the way, so the journal names them rather than saying « something ». */
+    /** Which traits stood in the way, so the question names them rather than saying « something ». */
     it('names what the source file could not have held', async () => {
-      const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
+      const confirmFlatten = vi.fn(() => Promise.resolve(true))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve<DocumentWrite>('written'), confirmFlatten },
         assets: { savePicture: () => Promise.resolve(picture()) },
       })
+      shelve('Images/hero.png')
       const { documentId, release } = await openImage('asset-1')
       useCanvases
         .getState()
@@ -749,8 +796,7 @@ describe('saveDocument', () => {
       await saveDocument(documentId)
       release()
 
-      expect(entries()[0]?.message).toContain('layers')
-      expect(entries()[0]?.message).toContain('liveText')
+      expect(confirmFlatten).toHaveBeenCalledWith('Gemini 3.1', 'PNG', 'layers, liveText')
     })
 
     /**

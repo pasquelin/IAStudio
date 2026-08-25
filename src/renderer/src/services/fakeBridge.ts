@@ -172,6 +172,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       remove: () => Promise.resolve(),
       // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
       confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
+      confirmFlatten: () => Promise.resolve(true),
       confirmDelete: () => Promise.resolve(false),
       confirmOverwrite: () => Promise.resolve(false),
       ...overrides.documents,

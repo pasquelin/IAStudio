@@ -161,6 +161,9 @@
     "overwriteTitle": "Modifications extérieures détectées sur {{title}}",
     "overwriteBody": "Une autre application a écrit dans ce fichier depuis que le studio l’a lu. Enregistrer maintenant remplace ces modifications, et elles seront perdues.",
     "overwriteConfirm": "Écraser",
+    "flattenTitle": "Aplatir l’image de « {{title}} » dans son {{format}} ?",
+    "flattenBody": "Un {{format}} ne porte pas {{lost}}. Le fichier reçoit l’image telle que vous la voyez, et le document du studio garde vos calques intacts. Cette question ne sera plus posée pour ce document.",
+    "flattenConfirm": "Aplatir et enregistrer",
     "closeHint": "Retire l’onglet de la barre ; le document reste dans le projet",
     "closeOthersHint": "Ferme tous les autres onglets, un par un",
     "renameHint": "Change le nom du document, partout où il est écrit — son fichier compris",
@@ -202,8 +205,7 @@
     "nameEmpty": "Un document a besoin d’un nom.",
     "nameTooLong": "Ce nom est trop long pour un fichier.",
     "nameInvalid": "Ce nom contient un caractère qu’un nom de fichier ne peut pas porter.",
-    "nameTaken": "Le projet contient déjà un document de ce nom.",
-    "flattenedIntoAsset": "Le {{format}} de {{document}} a reçu l’image aplatie, ce format ne portant pas {{lost}}. Tout reste gardé dans le document."
+    "nameTaken": "Le projet contient déjà un document de ce nom."
   },
   "audio": {
     "takeRole": "La prise que vous éditez, avant montage",

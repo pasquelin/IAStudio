@@ -98,3 +98,31 @@ export async function askDeleteDocument(ask: AskUser, title: string): Promise<bo
     cancel: t.cancel,
   })
 }
+
+/**
+ * Whether the picture behind this document may take the flatten.
+ *
+ * The ONE confirmation of this file whose default is the answer that writes: nothing is
+ * destroyed — the document was written first and holds the whole stack — so the risk is a
+ * surprise, not a loss. Photoshop and Krita ask the same question because THEIR layers go with
+ * the flatten; here they stay, and the wording says so rather than borrowing their alarm.
+ */
+export async function askFlattenDocument(
+  ask: AskUser,
+  title: string,
+  format: string,
+  lost: string,
+): Promise<boolean> {
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].documents
+
+  const chosen = await ask({
+    message: fillHoles(t.flattenTitle, { title, format }, language),
+    detail: fillHoles(t.flattenBody, { format, lost }, language),
+    buttons: [t.flattenConfirm, t.cancel],
+    defaultId: 0,
+    cancelId: 1,
+  })
+
+  return chosen === 0
+}

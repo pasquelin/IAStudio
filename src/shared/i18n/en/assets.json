@@ -161,6 +161,9 @@
     "overwriteTitle": "Outside changes detected in {{title}}",
     "overwriteBody": "Another application has written to this file since the studio read it. Saving now replaces those changes, and they will be lost.",
     "overwriteConfirm": "Overwrite",
+    "flattenTitle": "Flatten the image of “{{title}}” into its {{format}}?",
+    "flattenBody": "A {{format}} carries no {{lost}}. The file receives the image as you see it, and the studio document keeps your layers intact. This will not be asked again for this document.",
+    "flattenConfirm": "Flatten and save",
     "closeHint": "Takes the tab off the bar; the document stays in the project",
     "closeOthersHint": "Closes every other tab, one after another",
     "renameHint": "Changes the document’s name everywhere it is written — its file included",
@@ -202,8 +205,7 @@
     "nameEmpty": "A document needs a name.",
     "nameTooLong": "That name is too long for a file.",
     "nameInvalid": "That name holds a character a file name cannot carry.",
-    "nameTaken": "The project already holds a document of that name.",
-    "flattenedIntoAsset": "The {{format}} of {{document}} received the flattened image, that format carrying no {{lost}}. Everything stays kept in the document."
+    "nameTaken": "The project already holds a document of that name."
   },
   "audio": {
     "takeRole": "The take you are editing, before it goes into the edit",

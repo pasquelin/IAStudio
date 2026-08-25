@@ -657,6 +657,34 @@ const unreadable = new Set<string>()
  */
 const assetBehind = new Set<string>()
 
+/** Documents whose flatten has been agreed to. ⌘S asks once; asking at each would be unbearable. */
+const flattenAgreed = new Set<string>()
+
+/**
+ * Whether the asset may take the flatten — asked once per document, remembered for the session.
+ *
+ * A refusal leaves the DOCUMENT written, which is why it is not a failure and arms no debt: the
+ * work is on disk either way, and only the picture the scene reads stays behind.
+ */
+async function agreedToFlatten(
+  document: DocumentDescriptor,
+  format: WritableFormat,
+  losses: readonly CapabilityTrait[],
+): Promise<boolean> {
+  if (flattenAgreed.has(document.id)) return true
+
+  const bridge = getBridge()
+  if (!bridge) return true
+
+  const agreed = await bridge.documents.confirmFlatten(
+    document.title,
+    format.toUpperCase(),
+    losses.join(', '),
+  )
+  if (agreed) flattenAgreed.add(document.id)
+  return agreed
+}
+
 /**
  * What both saving gestures need before they can write anything, or `null` when one of them is
  * missing — which is the same refusal for both, said once.
@@ -796,21 +824,12 @@ async function rewriteSourceAsset(
   // cannot be written back to a `.png` writes back to it whole — which is what makes an open
   // format worth reaching for rather than a second place to keep the same picture.
   const { format, losses } = writePlanFor(document, io, source)
-  // SAID, never refused. The document was written a few lines above, into the `.ora` that holds
-  // the whole stack, so the flat picture the asset receives costs nothing — it is the RENDER the
-  // scene and the shelf read, not the copy the work lives in. Refusing left the two out of step
-  // with no way back: a channel of a texture is always a `.png`, so any layer, opacity or blend
-  // stopped a ⌘S from ever reaching the model.
-  if (losses.length > 0) {
-    reportNotice(
-      'canvas.flatten',
-      i18next.t('documents.flattenedIntoAsset', {
-        format: format.toUpperCase(),
-        document: document.title,
-        lost: losses.join(', '),
-      }),
-    )
-  }
+  // ASKED, then said — never refused. The document was written a few lines above, into the `.ora`
+  // that holds the whole stack, so the flat picture the asset receives costs nothing: it is the
+  // RENDER the scene and the shelf read, not the copy the work lives in. Refusing left the two
+  // out of step with no way back — a channel of a texture is always a `.png`, so any layer,
+  // opacity or blend stopped a ⌘S from ever reaching the model.
+  if (losses.length > 0 && !(await agreedToFlatten(document, format, losses))) return
 
   try {
     const written = await io.writeAsset(
@@ -1237,6 +1256,8 @@ function forgetDocument(documentId: string, kind?: DocumentKind): void {
   // Same reason: the id goes back to the folder, and a document reopened later must not inherit
   // a debt owed by the one before it.
   assetBehind.delete(documentId)
+  // And the answer given about flattening it: another document under the same id never agreed.
+  flattenAgreed.delete(documentId)
   // Session views are not the document's state, so no `DocumentIo` drops them. `useCanvasViews`
   // and `useSceneViews` still keep their entry for the session — they hold a viewport, which is
   // harmless to inherit; an inspected channel is not, it would reopen the tab on a flat map.
