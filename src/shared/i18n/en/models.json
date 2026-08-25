@@ -178,7 +178,7 @@
     "credits": {
       "left": "Credit left: {{amount}}",
       "unreadable": "Credit left cannot be read right now.",
-      "unpublished": "This service publishes no remaining credit."
+      "unpublished": "This service does not publish remaining credit."
     }
   },
   "intents": {

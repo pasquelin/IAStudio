@@ -21,7 +21,7 @@
     "contactSheet_many": "Sheet of {{count, number}} images",
     "contactSheet_one": "Sheet of {{count, number}} image",
     "contactSheet_other": "Sheet of {{count, number}} images",
-    "countHint": "Everything this list shows — your remote library, what the community published and the generations under way, filters included",
+    "countHint": "Everything this list shows — your remote library, what the community publishes and the generations under way, filters included",
     "count_many": "{{count, number}} assets",
     "count_one": "{{count, number}} asset",
     "count_other": "{{count, number}} assets",
