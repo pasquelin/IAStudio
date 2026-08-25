@@ -123,7 +123,7 @@ describe('the channels of a material', () => {
     const badge = screen.getByRole('img', {
       name: 'Généré par un modèle — figé tel qu’il est arrivé',
     })
-    const covering = badge.parentElement?.querySelector('button[aria-pressed]')
+    const covering = badge.parentElement?.querySelector('button')
     expect(covering).not.toBeNull()
     expect(covering?.compareDocumentPosition(badge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(badge).toHaveClass('pointer-events-none')
@@ -171,21 +171,30 @@ describe('the channels of a material', () => {
   })
 
   describe('looking at one channel on its own', () => {
+    /** The picture answers choosing and opening; what is left of a channel is in its menu. */
+    const openMenu = async (channel: string): Promise<void> => {
+      await userEvent.pointer({ keys: '[MouseRight]', target: slotOf(channel) })
+      await screen.findByRole('menu')
+    }
+
     it('marks the channel the document is showing flat', async () => {
       fill('normal')
       await show()
+      await openMenu('Normale')
 
-      await userEvent.click(screen.getByRole('button', { name: /Regarder Normale seul/ }))
+      await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Normale seul/ }))
 
       expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBe('normal')
     })
 
-    it('goes back to the lit material when the same picture is pressed again', async () => {
+    it('goes back to the lit material when the same channel is asked again', async () => {
       fill('normal')
       await show()
+      await openMenu('Normale')
+      await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Normale seul/ }))
 
-      await userEvent.click(screen.getByRole('button', { name: /Regarder Normale seul/ }))
-      await userEvent.click(screen.getByRole('button', { name: /Revenir à la matière éclairée/ }))
+      await openMenu('Normale')
+      await userEvent.click(screen.getByRole('menuitem', { name: /Revenir à la matière éclairée/ }))
 
       expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBeNull()
     })
@@ -194,71 +203,46 @@ describe('the channels of a material', () => {
       fill('normal')
       fill('roughness')
       await show()
+      await openMenu('Normale')
+      await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Normale seul/ }))
 
-      await userEvent.click(screen.getByRole('button', { name: /Regarder Normale seul/ }))
-      await userEvent.click(screen.getByRole('button', { name: /Regarder Rugosité seul/ }))
+      await openMenu('Rugosité')
+      await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Rugosité seul/ }))
 
       expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBe('roughness')
     })
 
     /**
-     * Nothing to look at flat, so nothing to press: `LinkField` draws that button only once the
-     * slot RESOLVED to something, a focus stop that leads nowhere being one more Tab to cross.
-     */
-    it('offers no press at all on a channel with no pixels to look at', async () => {
-      await show()
-
-      expect(screen.queryByRole('button', { name: /Regarder Normale seul/ })).toBeNull()
-    })
-
-    it('says which row is current, so the tint is not decoration', async () => {
-      fill('normal')
-      await show()
-
-      const flat = screen.getByRole('button', { name: /Regarder Normale seul/ })
-      expect(flat).toHaveAttribute('aria-pressed', 'false')
-
-      await userEvent.click(flat)
-
-      expect(screen.getByRole('button', { name: /Revenir à la matière éclairée/ })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-    })
-
-    /**
      * `BRICK` is an `image` deliberately: the gesture used to be refused for one, and this space
-     * has no other way to Images. `baseColor`, which computes from nothing, had no menu either.
+     * has no other way to Images.
      */
-    it('opens the pixels of a channel on a double-click, without letting go of the look', async () => {
+    it('opens the pixels of a channel on a double-click', async () => {
       const paint = vi.fn()
       vi.mocked(editPixelsOf).mockReturnValue({ workspace: 'image', run: paint })
       fill('baseColor')
       await show()
 
-      await userEvent.dblClick(
-        screen.getByRole('button', { name: /Regarder Couleur de base seul/ }),
-      )
+      // The picture of THIS row: eight slots draw the same press, and the label column names them.
+      const row = slotOf('Couleur de base').closest('div')
+      const picture = within(row as HTMLElement).getByRole('button', {
+        name: /Choisir une image/,
+      })
+      await userEvent.dblClick(picture)
 
       expect(editPixelsOf).toHaveBeenCalledWith(expect.objectContaining({ id: 'img-1' }))
       expect(paint).toHaveBeenCalled()
     })
 
-    /**
-     * A channel can be emptied while it is the one being looked at. The document already fell back
-     * to the material; the row went on claiming to be the current one. Derived where both stores
-     * are visible rather than stored twice.
-     */
+    /** The document already fell back to the material; the row went on claiming to be current. */
     it('stops claiming to be current once its channel is emptied', async () => {
       fill('normal')
       await show()
-      await userEvent.click(screen.getByRole('button', { name: /Regarder Normale seul/ }))
+      await openMenu('Normale')
+      await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Normale seul/ }))
 
       useTextures.getState().runCommand('doc-1', setChannel('normal', null))
 
-      await waitFor(() =>
-        expect(screen.queryByRole('button', { name: /matière éclairée/ })).toBeNull(),
-      )
+      await waitFor(() => expect(slotOf('Normale').closest('[data-selected]')).toBeNull())
     })
   })
 
@@ -271,13 +255,17 @@ describe('the channels of a material', () => {
     const rightClick = (channel: string): Promise<unknown> =>
       userEvent.pointer({ keys: '[MouseRight]', target: slotOf(channel) })
 
-    /** `sourceFor` decides: four channels have one, and the other four have nothing to read. */
-    it('opens no menu at all on a channel nothing computes', async () => {
+    /**
+     * `sourceFor` decides: four channels have a recipe, four have none — and those four opened no
+     * menu at all until the slot's own rows moved into it, `baseColor` first among them.
+     */
+    it('still opens a menu on a channel nothing computes', async () => {
       await show()
 
       await rightClick('Couleur de base')
 
-      expect(screen.queryByRole('menu')).toBeNull()
+      expect(screen.getByRole('menuitem', { name: /Choisir une image/ })).toBeInTheDocument()
+      expect(screen.queryByRole('menuitem', { name: /Calculer depuis/ })).toBeNull()
     })
 
     it('computes the channel from the source the domain names', async () => {

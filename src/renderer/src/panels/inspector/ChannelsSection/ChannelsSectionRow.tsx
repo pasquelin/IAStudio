@@ -7,9 +7,8 @@ import { TileMark } from '@/design/TileMark'
 import type { ChannelMap, ChannelOrigin } from '@/engines/texture/textureState'
 import { cn } from '@/helpers/cn'
 import type { EditPixels } from '@/helpers/openAsset'
-import { useContextMenu } from '@/hooks/useContextMenu'
-import { PictureField } from '../PictureField'
-import { ChannelsSectionMenu } from './ChannelsSectionMenu'
+import { PictureField } from '../PictureField/PictureField'
+import { ChannelsSectionMenuRows } from './ChannelsSectionMenuRows'
 import type { ChannelDerivation } from './derivation'
 
 export type ChannelsSectionRowProps = {
@@ -40,8 +39,8 @@ const ORIGINS: Record<ChannelOrigin, { icon: string; key: string }> = {
 /**
  * One channel of a material, as the link row every texture slot of the studio already is.
  *
- * Both gestures: a single click LOOKS at the channel, a double-click goes down to its pixels.
- * `rowSkin` at its default surface, so the line does not fill under the pointer — none here does.
+ * Three gestures, the studio's own: a click CHOOSES another picture, a double-click opens its
+ * pixels, and the right-click holds what is left — looking at the channel flat, and computing it.
  */
 export function ChannelsSectionRow({
   channel,
@@ -54,46 +53,31 @@ export function ChannelsSectionRow({
   pixels,
 }: ChannelsSectionRowProps) {
   const { t } = useTranslation()
-  const menu = useContextMenu()
   const name = t(`texture.channel.${channel}`)
   const origin = map ? ORIGINS[map.origin] : null
 
   return (
-    <div
-      className={cn('min-w-0', rowSkin(inspected))}
-      data-selected={inspected || undefined}
-      // Only where the menu would hold something: a right-click that opens an empty surface is a
-      // gesture that answers by covering the row it was aimed at.
-      onContextMenu={derivation || pixels ? menu.open : undefined}
-    >
+    <div className={cn('min-w-0', rowSkin(inspected))} data-selected={inspected || undefined}>
       <PictureField
         label={name}
         value={map?.assetId ?? null}
         onChange={onChange}
         onDropAsset={onDropAsset}
         scId={`texture.channel.${channel}`}
-        toggle={{
-          label: t(inspected ? 'texture.showMaterial' : 'texture.inspectChannel', {
-            channel: name,
-          }),
-          hint: t('texture.inspectChannelHint'),
-          run: onInspect,
-          on: inspected,
-        }}
-        // The run alone: the toggle above names the button, and the double-click is announced in
-        // its hint. Left off where there is nothing to paint, so Enter leads nowhere it cannot go.
+        // The run alone: the press names the button, and its hint announces the double-click.
+        // Left off where there is nothing to paint, so Enter leads nowhere it cannot go.
         open={pixels ? { run: pixels.run } : null}
         badge={origin && <TileMark icon={origin.icon} label={t(origin.key)} />}
+        menuExtra={close => (
+          <ChannelsSectionMenuRows
+            derivation={derivation}
+            inspected={inspected}
+            channel={name}
+            onInspect={onInspect}
+            onClose={close}
+          />
+        )}
       />
-
-      {menu.at && (derivation || pixels) && (
-        <ChannelsSectionMenu
-          derivation={derivation}
-          pixels={pixels}
-          at={menu.at}
-          onClose={menu.close}
-        />
-      )}
     </div>
   )
 }

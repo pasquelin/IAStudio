@@ -55,7 +55,7 @@ function renderSlot(props: Partial<LinkFieldProps> & Pick<LinkFieldProps, 'onCha
 }
 
 const OPEN = { label: 'Ouvrir', hint: 'Ouvre la texture', run: () => {} }
-const TOGGLE = { label: 'Regarder seul', hint: 'Affiche le canal à plat', run: () => {}, on: false }
+const PRESS = { label: 'Choisir', hint: 'Choisir une autre image', run: () => {}, on: false }
 const BROWSE = { label: 'Parcourir', hint: 'Choisir dans tout le projet', run: () => {} }
 
 describe('LinkField', () => {
@@ -228,39 +228,38 @@ describe('LinkField', () => {
     })
 
     /**
-     * The two gestures of one picture, which is the studio's rule and was this component's one
-     * exception: a `toggled` press REPLACED the double-click, leaving a material's channels the
-     * only link line of the studio nothing could open.
+     * The single press waits out the window a second click could land in — without that, a
+     * double-click meant for the editor put the picker on screen first.
      */
-    it('looks with a single click and opens with a double one', async () => {
-      const look = vi.fn()
+    it('presses on a single click and opens on a double one, never both', async () => {
+      const pick = vi.fn()
       const open = vi.fn()
       render(
         <Slot
           value="tex-1"
           onChange={vi.fn()}
-          toggle={{ ...TOGGLE, run: look }}
+          press={{ ...PRESS, run: pick }}
           open={{ ...OPEN, run: open }}
         />,
       )
-      const picture = screen.getByRole('button', { name: 'Regarder seul' })
-
-      await userEvent.click(picture)
-      expect(look).toHaveBeenCalledTimes(1)
+      const picture = screen.getByRole('button', { name: 'Choisir' })
 
       await userEvent.dblClick(picture)
       expect(open).toHaveBeenCalledTimes(1)
-      // Once more, not twice: the second click of the pair belongs to the opening, and a toggle
-      // that went there and back under it would undo the very view the gesture asked for.
-      expect(look).toHaveBeenCalledTimes(2)
+      // The whole point: the deferred press was cancelled rather than fired before the opening.
+      await new Promise(settle => setTimeout(settle, 400))
+      expect(pick).not.toHaveBeenCalled()
+
+      await userEvent.click(picture)
+      await waitFor(() => expect(pick).toHaveBeenCalledTimes(1))
     })
 
     // The press is named for what a single click does, since that is the gesture a hand reaches
     // for first; the tooltip is where the other one is spelled out.
     it('names the press after the look where a slot offers both', () => {
-      render(<Slot value="tex-1" onChange={vi.fn()} toggle={TOGGLE} open={OPEN} />)
+      render(<Slot value="tex-1" onChange={vi.fn()} press={PRESS} open={OPEN} />)
 
-      expect(screen.getByRole('button', { name: 'Regarder seul' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Choisir' })).toHaveAttribute(
         'aria-pressed',
         'false',
       )

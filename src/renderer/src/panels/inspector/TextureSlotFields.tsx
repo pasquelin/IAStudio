@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { TEXTURE_SLOTS, type TextureRef, type TextureSlot } from '@shared/domain/scene'
-import { PictureField } from './PictureField'
+import { PictureField } from './PictureField/PictureField'
 
 export type TextureSlotFieldsProps = {
   /** What each slot points at today. An absent or `null` slot leaves its row empty. */
