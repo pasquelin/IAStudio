@@ -24,6 +24,7 @@ import { isDomainHeading, type ExplorerNode } from '@/helpers/domainNodes'
 import { entriesSorted, FOLDER_SORTS } from '@/helpers/folderSort'
 import { renameAsset, renameDocument } from '@/helpers/rename'
 import { startSceneDrag } from '@/helpers/sceneDrag'
+import { openProjectFile } from '@/helpers/openProjectFile'
 import { applySelection } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useDomainTree } from '@/hooks/useDomainTree'
@@ -400,32 +401,13 @@ export function Explorer() {
 
     if (node.kind === 'folder') return toggle(node.id)
 
-    // The catalogue still answers first for what it holds; what changed is the FALLBACK. A file
-    // it has never heard of used to go to the system — a picture copied in by hand, the one thing
-    // this panel must not do — and is now judged on its extension, and adopted where it can be.
-    const bridge = getBridge()
-    if (!bridge) return
-
-    // A REJECTION is not an answer of `null`, and telling them apart is the whole point: the two
-    // used to be one, and a busy catalogue sent a `.glb` to macOS Preview seconds after a
-    // download, silently. The import below stays OUT of the `try`, so a failing editor is not
-    // reported as a catalogue that refused.
-    let adopted: Asset | null
-    try {
-      adopted = await bridge.media.adopt(node.path)
-    } catch (error) {
-      reportFailure('explorer.open', nameOf(node.path), error)
-      return
+    // The gesture itself lives in `openProjectFile`, which the assistant's `file.open` runs too:
+    // a double-click and a spoken "open this" must land in the same place, or they are two
+    // studios. What it answers is for a caller that has to say what happened — and this one has
+    // a row under the pointer, so an entry that has gone since the listing is worth a line.
+    if ((await openProjectFile(node.path)) === 'missing') {
+      reportFailure('explorer.open', nameOf(node.path), new Error('not there'))
     }
-
-    if (adopted) {
-      const { openAsset } = await import('@/helpers/openAsset')
-      return openAsset(adopted)
-    }
-
-    // Handed to the system, and the journal is what says so when it refuses: a `.txt` and a `.pdf`
-    // have no editor here, and pretending otherwise would be worse than opening them outside.
-    void getBridge()?.project.openFile(node.path)
   }
 
   if (!projectPath)

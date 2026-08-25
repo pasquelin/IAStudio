@@ -19,6 +19,7 @@ import {
   activeImageId,
   activeMontageId,
   activeSceneId,
+  documentAtPath,
   useDocuments,
   type DocumentsSlice,
 } from '@/stores/documents'
@@ -151,15 +152,6 @@ function listDocuments(): ActionOutcome {
   }
 }
 
-function documentAt(path: string): DocumentDescriptor | null {
-  const { stored, documents } = useDocuments.getState()
-  return (
-    stored.find(one => one.path === path) ??
-    Object.values(documents).find(one => one.path === path) ??
-    null
-  )
-}
-
 async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome> {
   const path = textOf(input, 'path')
   if (path === null) return refused('badInput')
@@ -168,9 +160,11 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
   // answering "no such document" for one sitting on the disk is the least useful refusal there is.
   // `'own-write'` rather than a bare call, which joins a listing already in flight — one that may
   // have STARTED before the file appeared, and would answer without it.
-  if (!documentAt(path)) await useDocuments.getState().relist('own-write')
+  if (!documentAtPath(useDocuments.getState(), path)) {
+    await useDocuments.getState().relist('own-write')
+  }
 
-  const document = documentAt(path)
+  const document = documentAtPath(useDocuments.getState(), path)
   if (!document) return refused('notFound')
 
   openDocument(document)

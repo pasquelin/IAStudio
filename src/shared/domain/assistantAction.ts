@@ -43,6 +43,7 @@ export type ActionName =
   | 'activity.recent'
   | 'project.open'
   | 'project.create'
+  | 'file.open'
   | 'files.list'
   | 'files.search'
   | 'files.move'

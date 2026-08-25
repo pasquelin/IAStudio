@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FileFacts } from '@shared/domain/fileInfo'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { FOLDER_ROOT, type FolderEntry } from '@shared/domain/folder'
@@ -6,6 +8,14 @@ import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { runAction } from './executor'
+
+const openDocument = vi.hoisted(() => vi.fn())
+vi.mock('@/app/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
+
+// The editor half of the gesture, held at its own tests: what `file.open` owes a caller is which
+// of the three destinations took the file, not what the destination then did with it.
+const openAsset = vi.hoisted(() => vi.fn(async () => true))
+vi.mock('@/helpers/openAsset', () => ({ openAsset, openAssetById: vi.fn() }))
 
 const WHEN = '2026-08-17T10:00:00.000Z'
 const BATCH: FileOutcome = { done: [], refused: [], batch: 'batch-1' }
@@ -23,6 +33,9 @@ function withProject(overrides: BridgeOverrides = {}): void {
 }
 
 beforeEach(() => {
+  openDocument.mockClear()
+  openAsset.mockClear()
+  openAsset.mockResolvedValue(true)
   relist.mockClear()
   useDocuments.setState({ relist })
   withProject()
@@ -254,5 +267,142 @@ describe('the file undo stack, which lives in the main process', () => {
 
     expect(await runAction('files.undo', {})).toEqual({ ok: false, refusal: 'noProject' })
     expect(await runAction('files.history', {})).toEqual({ ok: false, refusal: 'noProject' })
+  })
+})
+
+/**
+ * The Explorer's double-click, reachable by name — the gesture that was missing altogether: a
+ * picture of the project folder is no document, so `document.open` refused every one of them and
+ * nothing else offered to open it.
+ */
+describe('opening a file of the project', () => {
+  const FILE: FileFacts = { kind: 'file', bytes: 12, createdAt: WHEN, modifiedAt: WHEN }
+
+  const picture: Asset = {
+    id: 'asset-1',
+    name: 'Voilier vert',
+    type: 'image',
+    location: 'local',
+    path: 'Images/Voilier vert.png',
+    tags: [],
+    createdAt: WHEN,
+  }
+
+  const stored = (path: string): DocumentDescriptor => ({
+    id: 'doc-1',
+    kind: 'scene',
+    workspace: '3d',
+    title: 'Niveau',
+    path,
+  })
+
+  it('brings a document of the folder to its tab', async () => {
+    withProject()
+    useDocuments.setState({ stored: [stored('documents/Niveau.gltf')], documents: {} })
+
+    expect(await runAction('file.open', { path: 'documents/Niveau.gltf' })).toEqual({
+      ok: true,
+      data: { opened: 'document' },
+    })
+    expect(openDocument).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-1' }))
+  })
+
+  it('adopts a picture the catalogue has never heard of, and opens it', async () => {
+    const adopt = vi.fn(async () => picture)
+    withProject({ media: { adopt } })
+    useDocuments.setState({ stored: [], documents: {} })
+
+    expect(await runAction('file.open', { path: 'Images/Voilier vert.png' })).toEqual({
+      ok: true,
+      data: { opened: 'asset' },
+    })
+    expect(adopt).toHaveBeenCalledWith('Images/Voilier vert.png')
+    expect(openAsset).toHaveBeenCalledWith(picture)
+    // No re-walk of the project: a listing holds documents alone, so it could not have answered
+    // for a `.png` however fresh it was.
+    expect(relist).not.toHaveBeenCalled()
+  })
+
+  // A `.txt` and a `.pdf` have no editor here, and pretending otherwise would be worse than
+  // opening them outside — but the answer says which of the two happened.
+  it('hands a file no editor here takes to the system, and says so', async () => {
+    const openFile = vi.fn(async () => true)
+    withProject({ project: { fileFacts: vi.fn(async () => FILE), openFile } })
+    useDocuments.setState({ stored: [], documents: {} })
+
+    expect(await runAction('file.open', { path: 'documents/Notes.txt' })).toEqual({
+      ok: true,
+      data: { opened: 'system' },
+    })
+    expect(openFile).toHaveBeenCalledWith('documents/Notes.txt')
+  })
+
+  /**
+   * 🛑 The one that must not fall through: a path nobody holds used to end at the system, which
+   * opens whatever the spelling happens to hit — or nothing at all, silently.
+   *
+   * `adopt` REJECTS here rather than answering `null`, which is what the real channel does: it
+   * stats the file itself and lets ENOENT through. Written the other way, this case passed while
+   * a model's misspelled name was answered `failed` — "the studio broke", not "no such file".
+   */
+  it('refuses a path the project does not hold, without handing it to the system', async () => {
+    const openFile = vi.fn(async () => true)
+    withProject({
+      media: { adopt: vi.fn(() => Promise.reject(new Error('ENOENT'))) },
+      project: { fileFacts: vi.fn(async () => null), openFile },
+    })
+    useDocuments.setState({ stored: [], documents: {} })
+
+    expect(await runAction('file.open', { path: 'Images/Absent.png' })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
+    expect(openFile).not.toHaveBeenCalled()
+  })
+
+  // `shell.openPath` answers with a sentence when it refuses, and the channel turns that into
+  // `false`. Reported as `ok`, a model tells the person about a file nothing happened to.
+  it('does not call a refused system open a success', async () => {
+    const FILE: FileFacts = { kind: 'file', bytes: 12, createdAt: WHEN, modifiedAt: WHEN }
+    withProject({
+      project: { fileFacts: vi.fn(async () => FILE), openFile: vi.fn(async () => false) },
+    })
+    useDocuments.setState({ stored: [], documents: {} })
+
+    expect(await runAction('file.open', { path: 'documents/Notes.txt' })).toEqual({
+      ok: false,
+      refusal: 'failed',
+    })
+  })
+
+  it('refuses a folder, which is opened by listing it', async () => {
+    const folder: FileFacts = { ...FILE, kind: 'folder' }
+    withProject({ project: { fileFacts: vi.fn(async () => folder) } })
+    useDocuments.setState({ stored: [], documents: {} })
+
+    expect(await runAction('file.open', { path: 'Images' })).toEqual({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  // The same re-read `document.open` does: a client's listing may predate a file that has since
+  // arrived, and refusing one that sits on the disk is the least useful answer there is.
+  it('re-reads the folder before deciding a path is unknown to it', async () => {
+    withProject()
+    useDocuments.setState({ stored: [], documents: {} })
+
+    await runAction('file.open', { path: 'documents/Niveau.gltf' })
+    expect(relist).toHaveBeenCalled()
+  })
+
+  it('refuses with no project for the path to be relative to', async () => {
+    installFakeBridge()
+    useProject.setState({ project: null })
+
+    expect(await runAction('file.open', { path: 'Images/a.png' })).toEqual({
+      ok: false,
+      refusal: 'noProject',
+    })
   })
 })

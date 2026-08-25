@@ -1,8 +1,11 @@
-import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import { refused, type ActionOutcome, type ActionRefusal } from '@shared/domain/assistant'
+import { isDocumentExtension } from '@shared/domain/document'
+import { extensionOf } from '@shared/domain/fileName'
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
-import { useDocuments } from '@/stores/documents'
+import { openProjectFile, type FileOpening } from '@/helpers/openProjectFile'
+import { documentAtPath, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, textOf, textsOf } from './actionInputs'
@@ -61,6 +64,40 @@ async function facts(input: Record<string, unknown>): Promise<ActionOutcome> {
   return outcome.ok && outcome.data === null ? refused('notFound') : outcome
 }
 
+/**
+ * The endings that are refusals. The three that are not — a tab, an editor, another program —
+ * answer `ok` and NAME which one: a model told `ok` alone reports a tab that is not there.
+ */
+const REFUSAL_OF_OPENING: Record<FileOpening, ActionRefusal | null> = {
+  document: null,
+  asset: null,
+  system: null,
+  folder: 'badInput',
+  missing: 'notFound',
+  unreachable: 'noBridge',
+  failed: 'failed',
+}
+
+async function openFile(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const path = textOf(input, 'path')
+  if (path === null) return refused('badInput')
+  if (!useProject.getState().project) return refused('noProject')
+
+  /**
+   * The same re-read `document.open` does — a listing the client holds may predate a file that
+   * has since arrived — but only where the answer could change: a listing holds documents alone,
+   * so re-walking the project for a `.png` costs one head per document and can find nothing.
+   */
+  if (isDocumentExtension(extensionOf(path)) && !documentAtPath(useDocuments.getState(), path)) {
+    await useDocuments.getState().relist('own-write')
+  }
+
+  const opening = await openProjectFile(path)
+  const refusal = REFUSAL_OF_OPENING[opening]
+
+  return refusal ? refused(refusal) : { ok: true, data: { opened: opening } }
+}
+
 async function openProject(input: Record<string, unknown>): Promise<ActionOutcome> {
   const path = textOf(input, 'path')
   if (path === null) return refused('badInput')
@@ -86,6 +123,7 @@ export const FILE_HANDLERS: ActionHandlers = {
   'project.open': openProject,
   'project.create': createProject,
   'file.facts': facts,
+  'file.open': openFile,
 
   'files.list': input =>
     inProject(bridge =>

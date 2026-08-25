@@ -113,6 +113,16 @@ const RULES = [
   // inferred: a model handed a space and a document still opened a second one for the subject of
   // the sentence, which is where "make me a bicycle" became a document named Bicycle.
   '  - Act on what is in front of the person. Only make a document when asked for a new one.',
+  /**
+   * The three that place a NAMED file, and they are one story: a model shown two hundred actions
+   * reached for documents.list, which holds documents alone, then said it had found a picture.
+   *
+   * 🛑 Every character is paid for in the SHORT briefing, which this file's test holds to a
+   * saturated 8 000 — measure the worst case again before lengthening any of them.
+   */
+  '  - A file the person names is in the project: find it by name there, then file.open it.',
+  '  - Several files match? Choose none: name them in "say" and ask which.',
+  '  - The remote library is not this project. Look there only when asked to.',
 ]
 
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */

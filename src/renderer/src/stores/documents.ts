@@ -133,6 +133,23 @@ export function documentOfKind(
 }
 
 /**
+ * The document a project path names, open in a tab or merely sitting in the folder.
+ *
+ * `stored` first: it is the folder, and a document listed there but closed is exactly the case
+ * an open-by-path has to find. Both halves, for the same reason `documentForAsset` reads both.
+ */
+export function documentAtPath(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  path: string,
+): DocumentDescriptor | null {
+  return (
+    state.stored.find(one => one.path === path) ??
+    Object.values(state.documents).find(one => one.path === path) ??
+    null
+  )
+}
+
+/**
  * The document already editing an asset, open or merely on disk, or `null` when none is.
  *
  * What keeps a double-click idempotent: opening the same asset twice must come back to its tab

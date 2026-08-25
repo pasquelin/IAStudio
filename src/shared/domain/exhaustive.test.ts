@@ -401,6 +401,7 @@ describe('the lists that stand for a union', () => {
       'activity.recent': true,
       'project.open': true,
       'project.create': true,
+      'file.open': true,
       'files.list': true,
       'files.search': true,
       'files.move': true,

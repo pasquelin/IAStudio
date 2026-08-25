@@ -89,6 +89,8 @@ const nothingMoved = (): Promise<FileOutcome> =>
  * `catalogued` is what the folder cannot say: whether a file it shows is an asset. Empty by
  * default, which is a folder of files the studio has never heard of.
  */
+const WHEN_FACTS = '2026-08-17T10:00:00.000Z'
+
 function install(
   byFolder: Record<string, FolderEntry[]>,
   documents: DocumentDescriptor[] = [],
@@ -134,6 +136,20 @@ function install(
       createdAt: '2026-08-17T10:00:00.000Z',
     })
   })
+  /**
+   * The disk, as far as a case here describes one: an entry some listing holds is there, and
+   * anything else is not. `openProjectFile` asks before handing a path to the system, which is
+   * what keeps a name nobody holds from reaching `shell.openPath`.
+   */
+  const fileFacts = vi.fn((relative: string) => {
+    const entry = [...Object.values(byFolder), ...Object.values(found), walked]
+      .flat()
+      .find(one => one.path === relative)
+
+    return Promise.resolve(
+      entry ? { kind: entry.kind, bytes: 12, createdAt: WHEN_FACTS, modifiedAt: WHEN_FACTS } : null,
+    )
+  })
   const revealFile = vi.fn(() => Promise.resolve())
   const openFileInfo = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(nothingMoved)
@@ -156,6 +172,7 @@ function install(
       searchFolder,
       walkFolder,
       openFile,
+      fileFacts,
       revealFile,
       renameFile,
       moveFiles,

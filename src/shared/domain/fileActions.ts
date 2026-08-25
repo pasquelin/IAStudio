@@ -54,6 +54,19 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /**
+     * `both`, alone in this family: "open the green sailboat" is what a person SAYS, and a small
+     * model shown only the short share could not answer it. `document.open` stayed `mcp` because
+     * it needs a listing first; this one needs a name and a search.
+     */
+    name: 'file.open',
+    titleKey: 'assistant.actions.fileOpen.title',
+    descriptionKey: 'assistant.actions.fileOpen.description',
+    commitment: 'none',
+    reach: 'both',
+    fields: [{ key: 'path', kind: 'text', labelKey: 'assistant.fields.filePath', required: true }],
+  }),
+  action({
     name: 'files.list',
     titleKey: 'assistant.actions.filesList.title',
     descriptionKey: 'assistant.actions.filesList.description',
