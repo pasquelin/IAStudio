@@ -26,16 +26,21 @@ describe('SceneRenderer and the size of its handles', () => {
 })
 
 describe('what the handle size is allowed to be', () => {
-  it('opens on half, which is what the library calls one cut in two', () => {
-    expect(DEFAULT_SETTINGS.three.gizmoSize).toBe(0.5)
+  // Three quarters of what the object measures: the handles read as belonging to it without
+  // tracing its outline, which is what wrapping it exactly ended up looking like.
+  it('opens at three quarters of what it holds', () => {
+    expect(DEFAULT_SETTINGS.three.gizmoSize).toBe(0.75)
   })
 
-  // The library's own default is 1, and it covered half the view. It stays REACHABLE — somebody
-  // who wants it back should not have to edit a file — but it is no longer what the studio opens on.
-  it('still reaches the default the library ships with', () => {
+  /**
+   * The studio opens at the bottom of the range — handles that wrap the object exactly — and the
+   * range reaches TWICE that: a small part is easier to work on with the handles standing clear
+   * of its outline than hugging it. The library's own default of 1 sits inside either way.
+   */
+  it('opens at the floor of a range that reaches twice the object', () => {
     const { min, max } = boundsOf('three.gizmoSize')
 
-    expect(min).toBeLessThan(DEFAULT_SETTINGS.three.gizmoSize)
-    expect(max).toBeGreaterThanOrEqual(1)
+    expect(min).toBe(DEFAULT_SETTINGS.three.gizmoSize)
+    expect(max).toBe(2)
   })
 })
