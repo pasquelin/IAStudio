@@ -124,6 +124,26 @@ describe('what the explorer offers', () => {
   })
 
   /**
+   * 🛑 What is already resolved STAYS while the next question is in flight. Emptied on the way,
+   * every pick left the panel with no source for a frame: the operation fell back to
+   * text-to-image, the model swapped, and the form cleared the picture it was working from.
+   */
+  it('keeps the sources it has while a newly picked file is being resolved', async () => {
+    const second: Asset = { ...PICTURE, id: 'asset-second', path: 'Images/second.png' }
+    useSelection.getState().selectFiles([PICTURE_PATH])
+    const { result, rerender } = renderHook(() => useGenerationContext(null))
+    await waitFor(() => expect(result.current.inputs).toHaveLength(1))
+
+    catalogueHolding([PICTURE, second])
+    act(() => useSelection.getState().selectFiles([PICTURE_PATH, second.path!]))
+    rerender()
+
+    // The render the second pick commits: the first source is still there, not blanked.
+    expect(files(result.current.inputs).map(input => input.path)).toContain(PICTURE_PATH)
+    await waitFor(() => expect(result.current.inputs).toHaveLength(2))
+  })
+
+  /**
    * 🛑 A source with no catalogue row is one the panel would draw and never send: `assetId` is
    * required, and this window has no upload of its own. Silently skipped, as a scene skips every
    * node that is not a model.

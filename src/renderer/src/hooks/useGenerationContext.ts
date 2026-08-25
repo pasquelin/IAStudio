@@ -9,11 +9,10 @@ import {
 import { resolveCapability, type CapabilityChoice } from '@/generation/capabilityResolver'
 import { nameOf } from '@shared/domain/folder'
 import { selectedNodes } from '@/engines/scene/sceneState'
-import { assetsAt } from '@/helpers/assetAt'
+import { usePickedRows } from './usePickedRows'
 import { deselect } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
-import { useCatalogueAssets } from './useCatalogueAssets'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
@@ -48,15 +47,9 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
   /**
    * 🛑 Asked OF the catalogue, never off `useAssets.items`: that store pages two hundred rows at
    * a time, so a file picked past the first page would have offered nothing at all, in silence.
-   * The paths are a stable reference — the store keeps one when the pick has not moved — so this
-   * question keeps its identity, which is what `useCatalogueAssets` reads it by.
    */
   const pickedPaths = useSelection(selectedFilePaths)
-  const askForPicked = useCallback(
-    async () => [...(await assetsAt(pickedPaths)).values()],
-    [pickedPaths],
-  )
-  const pickedRows = useCatalogueAssets(askForPicked)
+  const pickedRows = usePickedRows(pickedPaths)
   const rows = useAssets(assetsById)
 
   /**
@@ -79,13 +72,11 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
   const producedIds = useJobs(latestGenerationIds)
 
   const inputs = useMemo(() => {
-    // In the ORDER they were picked, which the catalogue's own answer does not keep: the panel
-    // fills each slot of the contract from the first input that fits.
-    const byPath = new Map(pickedRows.flatMap(row => (row.path ? [[row.path, row]] : [])))
-
     return availableInputsOf({
+      // In the ORDER they were picked, which the catalogue's answer does not keep: the panel
+      // fills each slot of the contract from the first input that fits.
       selectedFiles: pickedPaths.flatMap(path => {
-        const asset = byPath.get(path)
+        const asset = pickedRows.get(path)
         // The FILE's name, as the explorer shows it: a catalogue row is filed under its stem, and
         // a `concept.png` clicked in the tree stood under the thumbnail as `concept`.
         return asset ? [{ assetId: asset.id, name: nameOf(path), path, type: asset.type }] : []
