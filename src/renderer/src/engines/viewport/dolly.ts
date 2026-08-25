@@ -42,20 +42,27 @@ export type DollyRequest = {
   notches: number
 }
 
-export type DollyMove = { position: Vector3; pivot: Vector3 }
+export type DollyMove = {
+  position: Vector3
+  pivot: Vector3
+  /** The aimed point is behind the camera now. Whoever aimed has to aim again — see `DOLLY_RATE`. */
+  crossed: boolean
+}
 
 export function dollyTo({ position, forward, aim, aimed, notches }: DollyRequest): DollyMove {
   const step = Math.max(position.distanceTo(aimed) * DOLLY_RATE, DOLLY_FLOOR) * notches
   const moved = position.clone().addScaledVector(aim, step)
 
-  // ON the line of sight, always, and only its DEPTH taken from what was aimed at: `OrbitControls`
-  // ends its frame on `lookAt(target)`, so a pivot set off-axis would swing the view round to
-  // centre whatever the pointer happened to be over. Depth measured from where the camera LANDS —
-  // from where it left, a step stopping just short of the target would read as a crossing.
+  // ON the line of sight, always: `OrbitControls` ends its frame on `lookAt(target)`, so a pivot
+  // set off-axis would swing the view round to centre whatever the pointer was over. Its DEPTH is
+  // the aimed point's own, measured from where the camera LANDS — a floor applied to a surface
+  // merely NEARER than `PIVOT_AHEAD` would bury the pivot behind it.
   const depth = aimed.clone().sub(moved).dot(forward)
+  const crossed = depth <= DOLLY_FLOOR
 
   return {
     position: moved,
-    pivot: moved.clone().addScaledVector(forward, Math.max(depth, PIVOT_AHEAD)),
+    pivot: moved.clone().addScaledVector(forward, crossed ? PIVOT_AHEAD : depth),
+    crossed,
   }
 }

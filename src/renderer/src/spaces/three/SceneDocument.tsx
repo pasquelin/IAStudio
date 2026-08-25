@@ -49,7 +49,7 @@ import { openSceneNodeMenu } from './sceneNodeMenu'
 import { openPathPointMenu } from './pathPointMenu'
 import { removePickedPathPoint, runSceneCommand, toggleNodeVisible } from './sceneCommands'
 import { ScenePaneGrid } from './ScenePaneGrid/ScenePaneGrid'
-import { ADD_TOOLS, SCENE_TOOLS, addedKind } from './sceneTools'
+import { ADD_TOOLS, NAVIGATE_TOOL, SCENE_TOOLS, addedKind } from './sceneTools'
 import { sceneExportFiles } from './sceneExportFiles'
 import { hideIn, isolating, NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
 import { toggledIsolation } from '@/engines/scene/sceneVisibility'
@@ -392,6 +392,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
+  const armTool = useCallback((tool: TransformMode) => {
+    setNavigating(false)
+    setMode(tool)
+  }, [])
+
   const run = useCallback(
     (command: CommandId) => {
       // What acts on the selection is shared with the node menu, which arrives by the same ids —
@@ -401,14 +406,17 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       const store = useScenes.getState()
 
       switch (command) {
+        // Each of these LEAVES navigation. `useShortcuts` only swallows the motion keys, so `V`,
+        // `G` and `R` reach here mid-flight: left alone, the gizmo changed under a captured
+        // pointer while the bar went on showing Naviguer.
         case 'scene.select':
-          return setMode('select')
+          return armTool('select')
         case 'scene.translate':
-          return setMode('translate')
+          return armTool('translate')
         case 'scene.rotate':
-          return setMode('rotate')
+          return armTool('rotate')
         case 'scene.scale':
-          return setMode('scale')
+          return armTool('scale')
         case 'scene.snap':
           return useSceneViews.getState().setSceneSnapping(documentId, !view.snapping)
         // The rules themselves are in `sceneVisibility`, which the panel's buttons reach too:
@@ -454,7 +462,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return store.redo(documentId)
       }
     },
-    [documentId, view, cycleDisplay],
+    [documentId, view, cycleDisplay, armTool],
   )
 
   /** Two flyouts answer here: the ways of drawing, and the three families a scene grows by. */
@@ -513,7 +521,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // The one tool of the bar whose armed state is not a setting: it says an isolation is
       // running, which is what makes leaving it the same press that entered it.
       'scene.isolate': isolated,
-      'scene.navigate': armed,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -566,7 +573,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     view.quadEdges,
     view.displays,
     isolated,
-    armed,
   ])
 
   return (
@@ -596,7 +602,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       <Toolbar
         className={PANE_TOOLBAR}
         tools={tools}
-        activeTool={mode}
+        activeTool={armed ? NAVIGATE_TOOL : mode}
         onTool={id => {
           const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
           if (command) run(command)

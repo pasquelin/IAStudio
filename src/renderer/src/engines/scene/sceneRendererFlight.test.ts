@@ -15,6 +15,10 @@ describe('SceneRenderer and the buttons that fly', () => {
 
   const pointerDown = handler('onPointerDown', 'event: PointerEvent')
   const pointerUp = handler('onPointerUp', 'event: PointerEvent')
+  const endFlight =
+    source.match(
+      /private endFlight\(button: number, event: PointerEvent\): void \{[\s\S]*?\n {2}\}/,
+    )?.[0] ?? ''
   const draggingChanged = handler('onDraggingChanged', '')
 
   // A regex that matched nothing would make every assertion below vacuously true.
@@ -71,6 +75,16 @@ describe('SceneRenderer and the buttons that fly', () => {
       source.match(/private syncPaneFreeze\(\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
 
     expect(syncPaneFreeze).toContain('this.navigating')
+  })
+
+  /**
+   * A click during an armed flight ends the BUTTON's flight, and used to take the keys with it:
+   * the camera stopped with `W` still physically down, and nothing pushes the set again until the
+   * next key transition.
+   */
+  it('leaves the held keys alone when a button ends but the mode is still armed', () => {
+    expect(endFlight).toContain('if (!this.navigating) this.held.clear()')
+    expect(draggingChanged).toContain('if (!this.navigating) this.held.clear()')
   })
 
   it('captures the pointer for as long as the mode is armed', () => {

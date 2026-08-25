@@ -292,6 +292,38 @@ describe('snapping and the coordinate frame', () => {
     expect(setNavigating).toHaveBeenLastCalledWith(false)
   })
 
+  // Full accent says « this is what is being acted on », and only one thing ever is.
+  it('arms navigation INSTEAD of the transform tool', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(screen.getByRole('button', { name: /Sélectionner/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+
+    expect(screen.getByRole('button', { name: /Naviguer/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Sélectionner/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  /**
+   * `useShortcuts` only swallows the MOTION keys, so `G` reaches the dispatch mid-flight. Left
+   * alone, the gizmo changed under a captured pointer while the bar went on showing Naviguer.
+   */
+  it('leaves navigation when a transform tool is armed on its key', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+    expect(setNavigating).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{g}')
+
+    expect(setMode).toHaveBeenLastCalledWith('translate')
+    expect(setNavigating).toHaveBeenLastCalledWith(false)
+  })
+
   // The pointer is captured while it is armed, and a captured pointer over a tab nobody is
   // looking at would fly a scene out of sight.
   it('disarms navigation when another tab comes to the front', async () => {

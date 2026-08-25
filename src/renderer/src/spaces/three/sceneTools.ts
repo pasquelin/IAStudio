@@ -66,6 +66,9 @@ const DISPLAY_ICONS: Record<DisplayMode, string> = {
   skeleton: mdiBone,
 }
 
+/** Named, because the space reads it back to draw the bar: a rename must not silently unlight it. */
+export const NAVIGATE_TOOL = 'navigate'
+
 /** Every tool of this bar carries one now: the two groups that acted through rows have left. */
 export type SceneTool = ToolbarItem & { command: CommandId }
 
@@ -128,7 +131,7 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
   // Under `select` rather than over it: the bar opens on the tool that grabs nothing, and moving
   // the camera is what one reaches for next — before any handle.
   {
-    id: 'navigate',
+    id: NAVIGATE_TOOL,
     command: 'scene.navigate',
     labelKey: 'sceneTools.navigate',
     descriptionKey: 'sceneTools.navigateHint',

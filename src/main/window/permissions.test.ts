@@ -2,17 +2,23 @@ import { describe, expect, it } from 'vitest'
 import { grantsPermission, originOf } from './permissions'
 
 describe('grantsPermission', () => {
-  it('grants the microphone to the application itself', () => {
-    expect(grantsPermission({ permission: 'media', origin: 'app://studio' }, 'app://studio')).toBe(
-      true,
-    )
+  // Chromium routes `requestPointerLock` through this very handler: refused, the 3D navigation
+  // mode disarms the instant it is armed.
+  const ASKED = ['media', 'pointerLock']
+
+  it('grants what the studio asks for to the application itself', () => {
+    for (const permission of ASKED) {
+      expect(grantsPermission({ permission, origin: 'app://studio' }, 'app://studio')).toBe(true)
+    }
   })
 
   // Electron grants everything when no handler is installed, which is what this replaces.
-  it('refuses the microphone to any other origin', () => {
-    expect(
-      grantsPermission({ permission: 'media', origin: 'https://example.test' }, 'app://studio'),
-    ).toBe(false)
+  it('refuses those same permissions to any other origin', () => {
+    for (const permission of ASKED) {
+      expect(grantsPermission({ permission, origin: 'https://example.test' }, 'app://studio')).toBe(
+        false,
+      )
+    }
   })
 
   it('refuses every permission the studio never asks for', () => {

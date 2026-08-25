@@ -616,6 +616,8 @@ export class SceneRenderer {
   private flew = false
   /** Armed persistent navigation. `flownWith` stays null throughout: that one records a BUTTON. */
   private navigating = false
+  /** Whether the capture was actually granted. A refused mode must not move anybody's pivot. */
+  private captured = false
   /** Where the head looks while the pointer is captured. Read off the camera when the mode opens. */
   private look: SphericalAngles = DEFAULT_LOOK
   /** What the wheel left this session at. `configure` drops it, so an edited preference wins. */
@@ -2065,7 +2067,10 @@ export class SceneRenderer {
     canvas?.removeEventListener('pointermove', this.onLookMove)
     if (document.pointerLockElement === canvas) document.exitPointerLock()
     this.held.clear()
-    this.restPivot()
+    // Only for a mode that engaged: a capture refused never flew anywhere, and resting the pivot
+    // would swing the next drag for a reason nothing on screen explains.
+    if (this.captured) this.restPivot()
+    this.captured = false
     // After `restPivot`: thawing re-arms the orbit, and it must find the pivot already ahead.
     this.syncPaneFreeze()
     this.options.onNavigatingChange?.(false)
@@ -2089,7 +2094,11 @@ export class SceneRenderer {
 
   /** Escape releases the capture without telling this engine; the browser's own event does. */
   private readonly onPointerLockChange = (): void => {
-    if (document.pointerLockElement !== this.viewport.canvas) this.setNavigating(false)
+    if (document.pointerLockElement === this.viewport.canvas) {
+      this.captured = true
+      return
+    }
+    this.setNavigating(false)
   }
 
   /** Sign flipped against `turnBy`, written for a hand that GRABS the world: here the mouse IS the head. */
@@ -3395,7 +3404,10 @@ export class SceneRenderer {
     const froze = this.flownWith === 2
     this.flownFrom = null
     this.flownWith = null
-    this.held.clear()
+    // Not while the mode is armed: it owns the keys with no button down, and a click that ends
+    // this button's flight would stop a camera whose `W` is still physically held — `useShortcuts`
+    // pushes nothing again until the next key transition.
+    if (!this.navigating) this.held.clear()
     // Only what froze thaws: the left button never froze anything, and thawing would re-arm the
     // orbits it never took. Asked rather than asserted, a handle may still be held under it.
     if (froze) this.syncPaneFreeze()
@@ -3744,7 +3756,7 @@ export class SceneRenderer {
     if (this.gizmo?.dragging === true && this.flownWith === 0) {
       this.flownFrom = null
       this.flownWith = null
-      this.held.clear()
+      if (!this.navigating) this.held.clear()
     }
     this.syncPaneFreeze()
   }

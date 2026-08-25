@@ -31,9 +31,28 @@ describe('dollying towards what the pointer aims at', () => {
     expect(moved.position.z).toBeLessThan(target.z)
   })
 
+  /**
+   * The band all close-up work lives in. A floor applied to a surface merely NEARER than the
+   * resting distance puts the pivot behind it, and the next drag orbits a point past the model.
+   */
+  it('keeps the pivot ON a surface that is nearer than the resting distance', () => {
+    const moved = ahead(new Vector3(), new Vector3(0, 0, -2), 1)
+    expect(moved.pivot.z).toBeCloseTo(-2, 6)
+    expect(moved.crossed).toBe(false)
+  })
+
   it('rests the pivot ahead of the camera once it has crossed', () => {
     const moved = ahead(new Vector3(), new Vector3(0, 0, -0.02), 1)
     expect(moved.pivot.z).toBeCloseTo(moved.position.z - PIVOT_AHEAD, 6)
+  })
+
+  /**
+   * What the caller re-aims on. The step is scaled by the distance to what was aimed at, so a
+   * crossed point left in place makes every further notch of one flick ~12% larger than the last.
+   */
+  it('says when it has crossed, so the caller can aim again', () => {
+    expect(ahead(new Vector3(), new Vector3(0, 0, -0.02), 1).crossed).toBe(true)
+    expect(ahead(new Vector3(), new Vector3(0, 0, -100), 1).crossed).toBe(false)
   })
 
   it('puts the pivot at the depth of what was aimed at while that is still ahead', () => {

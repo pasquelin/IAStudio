@@ -204,6 +204,9 @@ const borrowedAim = new Vector3()
 
 /** Metres. What a wheel over nothing at all scales its step by — see `aimWheel`. */
 const DEFAULT_REACH = 10
+
+/** How long a wheel must be still before the framing it left is published. */
+const WHEEL_SETTLES_MS = 250
 const gaze = new Vector3()
 
 /** The camera an added view is currently drawing through — a borrowed one wins over both. */
@@ -229,6 +232,8 @@ export class ViewportEngine {
    * full-scene raycast at trackpad rates — 8 to 32 ms a notch on a scene with no BVH tree.
    */
   private wheelAim: { readonly aim: Vector3; readonly aimed: Vector3 } | null = null
+  /** Pending « the wheel has stopped ». One gesture reports once — see `reportWheelSettled`. */
+  private wheelSettling: ReturnType<typeof setTimeout> | null = null
   private output: ViewportOutput = {}
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
@@ -779,6 +784,9 @@ export class ViewportEngine {
     this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
 
+    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
+    this.wheelSettling = null
+
     if (this.insetCatchUp !== null) clearTimeout(this.insetCatchUp)
     this.insetCatchUp = null
     this.disposeInset()
@@ -911,9 +919,29 @@ export class ViewportEngine {
     orbit.target.copy(move.pivot)
     orbit.update()
     this.requestRender()
+    this.reportWheelSettled(index)
+    // Held past a crossing, the aimed point sits BEHIND the camera and the distance to it grows
+    // again — every further notch of one flick would be larger than the last.
+    if (move.crossed) this.wheelAim = null
 
     event.preventDefault()
     event.stopPropagation()
+  }
+
+  /**
+   * The end of a zoom, once the notches stop. `OrbitControls` dispatched `end` around every notch
+   * of the wheel it used to own; taking the wheel took that with it, and whoever listens publishes
+   * where the view now stands — a montage reads that framing back.
+   */
+  private reportWheelSettled(pane: number): void {
+    const settled = this.options.onCameraSettled
+    if (!settled) return
+
+    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
+    this.wheelSettling = setTimeout(() => {
+      this.wheelSettling = null
+      settled(pane)
+    }, WHEEL_SETTLES_MS)
   }
 
   /**
