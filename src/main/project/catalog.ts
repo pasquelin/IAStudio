@@ -202,6 +202,16 @@ const MIGRATIONS: readonly string[] = [
   -- is the handful of dated rows, which is what a listing of them would seek.
   CREATE INDEX assets_missing_at_idx ON assets(missing_at) WHERE missing_at IS NOT NULL;
   `,
+  `
+  -- The glTF slot an extracted picture came out of, for the ones \`map\` cannot name. A
+  -- \`metallicRoughnessTexture\` packs two of the studio's channels into one image and an ORM
+  -- three; a \`clearcoatTexture\` names something the studio has no channel for at all. Both
+  -- arrived here with no channel claimed, indistinguishable — so nothing could offer to unpack
+  -- one without offering it on the other, which would have written a roughness out of a coat.
+  --
+  -- No index: it is read for the rows of ONE model, already narrowed by \`derived_from\`.
+  ALTER TABLE assets ADD COLUMN packed_slot TEXT;
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -242,6 +252,7 @@ function assetType(row: SqlRow): AssetType {
 
 function assetOf(row: SqlRow, tags: string[]): Asset {
   const map = optionalText(row, 'map')
+  const packedSlot = optionalText(row, 'packed_slot')
   const syncState = optionalText(row, 'sync_state')
 
   return {
@@ -282,6 +293,7 @@ function assetOf(row: SqlRow, tags: string[]): Asset {
     ...(isPbrChannel(map)
       ? { map, ...(optionalNumber(row, 'map_inverted') === 1 ? { mapInverted: true } : {}) }
       : {}),
+    ...(packedSlot ? { packedSlot } : {}),
   }
 }
 
@@ -575,11 +587,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     INSERT OR REPLACE INTO assets
       (id, name, type, location, path, remote_asset_id, job_id, width, height, bytes,
        created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path, poster_path,
-       map, map_inverted,
+       map, map_inverted, packed_slot,
        model_id, model_label, prompt, seed, gen_params,
        remote_owner_id, remote_updated_at, remote_synced_at, local_changed_at,
        sync_state, sync_error, group_id, output_index)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
@@ -748,6 +760,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         asset.posterPath ?? null,
         asset.map ?? null,
         asset.mapInverted ? 1 : null,
+        asset.packedSlot ?? null,
         asset.generation?.modelId ?? null,
         asset.generation?.modelLabel ?? null,
         asset.generation?.prompt ?? null,

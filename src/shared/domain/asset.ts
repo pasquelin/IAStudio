@@ -221,6 +221,13 @@ export type Asset = {
   /** Set when the pixels read the other way round — a smoothness map stored as roughness. */
   mapInverted?: boolean
   /**
+   * The glTF slot an extracted picture came out of, when `map` cannot name it — a
+   * `metallicRoughnessTexture` packs two channels into one image, a `clearcoatTexture` names one
+   * the studio has no channel for. Without it the two are indistinguishable, and offering to
+   * unpack either would write a roughness out of a coat.
+   */
+  packedSlot?: string
+  /**
    * Absolute path of a linked external media. A twenty-minute 4K rush is twenty gigabytes: it
    * is linked, never copied into the project, which is why `hash` exists to relink it.
    */

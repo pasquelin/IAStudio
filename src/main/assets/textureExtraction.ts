@@ -145,7 +145,9 @@ function requestFor(source: Asset, texture: EmbeddedTexture, id: string): WriteR
     // Traceable both ways: the inspector shows a model's own pictures beside it by asking the
     // catalogue what was derived from it.
     derivedFrom: source.id,
-    ...(texture.channel ? { map: texture.channel } : {}),
+    // One or the other, never both: a slot naming exactly one channel says so through `map`, and
+    // the rest carry the slot they came out of so something can later tell an ORM from a coat.
+    ...(texture.channel ? { map: texture.channel } : { packedSlot: texture.slot }),
     // A PNG carries its size in its header, which `probePng` reads. A JPEG's is not read at all —
     // nothing probes an extracted picture afterwards, so its row shows none.
     ...(isPngBytes(texture.bytes) ? { probe: probePng(texture.bytes) ?? undefined } : {}),

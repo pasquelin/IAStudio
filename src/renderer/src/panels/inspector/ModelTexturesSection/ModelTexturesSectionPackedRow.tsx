@@ -1,7 +1,10 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
+import { Button } from '@/design/Button'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { openAsset } from '@/helpers/openAsset'
+import { packedChannels, unpackTextureChannels } from '@/spaces/textures/unpackChannels'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
 
 /**
@@ -13,6 +16,9 @@ import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
  * (`glbTextures.ts` says both at its own line). WHICH of the two the catalogue cannot say — the
  * glTF slot survives only inside the asset's name — so the sentence says the one thing true of
  * every case: this image is not one channel. Blank underneath, the row read as an oversight.
+ *
+ * The slot now survives on the row too (`packedSlot`), which is what lets the unpacking be
+ * offered on the one that packs channels and on nothing else.
  */
 export const ModelTexturesSectionPackedRow = memo(function ModelTexturesSectionPackedRow({
   texture,
@@ -22,15 +28,25 @@ export const ModelTexturesSectionPackedRow = memo(function ModelTexturesSectionP
   const { t } = useTranslation()
 
   return (
-    <ModelTexturesSectionRow
-      media={pictureOf(texture)}
-      // The name over the kind: what the thing IS on the first line, what KIND of thing on the
-      // second. One list reading the other way round was one list to learn twice.
-      title={texture.name}
-      subtitle={t('inspector.unclaimedChannel')}
-      label={t('home.open', { name: texture.name })}
-      hint={t('inspector.openTextureHint')}
-      onOpen={() => void openAsset(texture)}
-    />
+    <>
+      <ModelTexturesSectionRow
+        media={pictureOf(texture)}
+        // The name over the kind: what the thing IS on the first line, what KIND of thing on the
+        // second. One list reading the other way round was one list to learn twice.
+        title={texture.name}
+        subtitle={t('inspector.unclaimedChannel')}
+        label={t('home.open', { name: texture.name })}
+        hint={t('inspector.openTextureHint')}
+        onOpen={() => void openAsset(texture)}
+      />
+      {packedChannels(texture).length > 0 && (
+        <Button
+          {...HINT_LEFT(t('inspector.unpackChannelsHint'))}
+          onClick={() => void unpackTextureChannels(texture)}
+        >
+          {t('inspector.unpackChannels')}
+        </Button>
+      )}
+    </>
   )
 })

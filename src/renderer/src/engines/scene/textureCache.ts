@@ -7,6 +7,7 @@ import {
   type Loader,
 } from 'three'
 import { assetUrl, versionedUrl } from '@shared/domain/asset'
+import { ORA_MERGED_PATH } from '@shared/domain/openRaster'
 import { decoderFor, type PictureDecoder } from '@shared/domain/pictureDecoder'
 import { createRefCache } from '../core/refCache'
 
@@ -21,8 +22,11 @@ export type PictureOrientation = 'flipY' | 'from-image'
 /** A port rather than a hard-wired `TextureLoader`, like `SqliteDriver`: jsdom decodes no image. */
 export type TextureSource = (url: string, orientation?: PictureOrientation) => Promise<Texture>
 
-/** What `decoderFor` reads: an OpenEXR magic, a TIFF one, or the `#?RADIANCE` line. */
-const SIGNATURE_BYTES = 16
+/**
+ * What `decoderFor` reads. Past the magic numbers, because OpenRaster is told from any other ZIP
+ * by the NAME of its first entry, which a local file header writes at byte 30.
+ */
+const SIGNATURE_BYTES = 64
 
 /**
  * What production hands every engine that decodes a picture. Here rather than at each of them:
@@ -47,6 +51,15 @@ export const loadTexture: TextureSource = async (url, orientation = 'flipY') => 
   // for and no three loader reads. The one path that does need every byte asks for them here.
   if (decoder === 'tiff') return tiffTexture(new Uint8Array(await blob.arrayBuffer()), orientation)
 
+  // A container too, and the picture is INSIDE it — the flatten the standard requires every
+  // writer to put there, which is exactly what any other application draws of the file.
+  if (decoder === 'openraster') {
+    return await bitmapTexture(
+      await oraFlatten(new Uint8Array(await blob.arrayBuffer())),
+      orientation,
+    )
+  }
+
   // HDR/EXR have no `<img>` decoder. PNG/JPEG/WebP go through `createImageBitmap`, which Chromium
   // decodes on a thread that is not this one — `TextureLoader` would decode on the UI thread.
   if (decoder === 'radiance' || decoder === 'openexr') {
@@ -67,10 +80,28 @@ export const loadTexture: TextureSource = async (url, orientation = 'flipY') => 
   // `UNPACK_FLIP_Y_WEBGL` entirely when the source is an `ImageBitmap`, so the `true` a `Texture`
   // carries by default is a wish nothing grants. Every other decoder of this module lands upright
   // — an equirectangular sky is simply the first picture legible enough to show it.
-  const bitmap = await createImageBitmap(blob, { imageOrientation: orientation })
-  const texture = new Texture(bitmap)
+  return await bitmapTexture(blob, orientation)
+}
+
+async function bitmapTexture(source: Blob, orientation: PictureOrientation): Promise<Texture> {
+  const texture = new Texture(await createImageBitmap(source, { imageOrientation: orientation }))
   texture.needsUpdate = true
   return texture
+}
+
+/**
+ * The flatten an OpenRaster carries, as a blob a decoder can read.
+ *
+ * `mergedimage.png` is REQUIRED by the standard, so its absence is a broken container rather than
+ * a picture with none — said out loud, since the slot beside it would otherwise just read empty.
+ */
+async function oraFlatten(bytes: Uint8Array): Promise<Blob> {
+  const merged = (await import('fflate')).unzipSync(bytes, {
+    filter: file => file.name === ORA_MERGED_PATH,
+  })[ORA_MERGED_PATH]
+  if (!merged) throw new Error(`this OpenRaster carries no ${ORA_MERGED_PATH}`)
+
+  return new Blob([merged], { type: 'image/png' })
 }
 
 /**

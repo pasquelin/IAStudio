@@ -8,6 +8,8 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DataTexture } from 'three'
+import { strToU8, zipSync } from 'fflate'
+import { ORA_MERGED_PATH } from '@shared/domain/openRaster'
 import { loadTexture } from './textureCache'
 
 /** The real one decodes nothing under jsdom; what is under test is the flag, not the pixels. */
@@ -83,5 +85,40 @@ describe('loadTexture, on a float picture', () => {
     serveFloat()
 
     expect((await loadTexture('sky.exr', 'from-image')).flipY).toBe(true)
+  })
+})
+
+/**
+ * A `.ora` reaches a texture slot like any other picture — an asset URL spells no extension, so
+ * the container has to be told from its bytes and opened. Without this, the ZIP went to
+ * `createImageBitmap` whole and the slot drew nothing at all.
+ */
+describe('loadTexture, on an OpenRaster', () => {
+  // Copied into a buffer of its own: `zipSync` answers `Uint8Array<ArrayBufferLike>`, which is
+  // not what `Response` takes.
+  const oraOf = (entries: Record<string, Uint8Array>): Uint8Array<ArrayBuffer> => {
+    const zipped = zipSync({ mimetype: strToU8('image/openraster'), ...entries })
+    const body = new Uint8Array(zipped.byteLength)
+    body.set(zipped)
+    return body
+  }
+
+  it('decodes the flatten the standard requires it to carry', async () => {
+    const served = servePicture()
+    const ora = oraOf({ [ORA_MERGED_PATH]: PNG_HEAD })
+    vi.stubGlobal('fetch', async () => new Response(ora, { status: 200 }))
+
+    await loadTexture('layered.ora')
+
+    expect(served.calls).toEqual([{ imageOrientation: 'flipY' }])
+  })
+
+  // Required by the spec, so its absence is a broken file — and a slot reading empty says nothing.
+  it('refuses a container that carries none', async () => {
+    servePicture()
+    const ora = oraOf({ 'data/layer0.png': PNG_HEAD })
+    vi.stubGlobal('fetch', async () => new Response(ora, { status: 200 }))
+
+    await expect(loadTexture('layered.ora')).rejects.toThrow(ORA_MERGED_PATH)
   })
 })
