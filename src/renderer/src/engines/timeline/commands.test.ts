@@ -26,6 +26,16 @@ const withClips = (clips: Clip[], locked = false): SequenceState =>
   ])
 
 describe('sequence commands', () => {
+  // The inspector follows the last thing pressed: a drop describes what it laid down, not the
+  // row a header press had put the panel on.
+  it('takes the inspector off a designated row when it lays a clip down', () => {
+    const state: SequenceState = { ...withClips([]), selectedTrackId: 'V1' }
+    const next = addClip('V1', clip('a', 0, 1_000)).apply(state)
+
+    expect(next.selectedId).toBe('a')
+    expect(next.selectedTrackId).toBeNull()
+  })
+
   it('adds a clip and selects it', () => {
     const command = addClip('V1', clip('a', 0, 1_000))
     const next = command.apply(withClips([]))
@@ -500,7 +510,7 @@ describe('track commands', () => {
   })
 
   it('drops the selection when the removed track was carrying it', () => {
-    const state = {
+    const state: SequenceState = {
       ...sequenceWith([
         trackFixture('V1', 'video', [clipFixture('a', 0, 1_000)]),
         trackFixture('A1', 'audio'),
@@ -508,6 +518,19 @@ describe('track commands', () => {
       selectedId: 'a',
     }
     expect(removeTrack('V1').apply(state).selectedId).toBeNull()
+  })
+
+  // The row itself as much as what sat on it: a header taken away while designated left the
+  // inspector describing a track the column no longer holds. Undo puts it back with the track.
+  it('drops the designated row with the track it names, and gives it back on undo', () => {
+    const state: SequenceState = {
+      ...sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]),
+      selectedTrackId: 'V1',
+    }
+    const command = removeTrack('V1')
+
+    expect(command.apply(state).selectedTrackId).toBeNull()
+    expect(command.revert(command.apply(state)).selectedTrackId).toBe('V1')
   })
 
   it('leaves a locked track where it is', () => {

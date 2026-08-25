@@ -31,7 +31,7 @@ import {
   type SequenceState,
 } from '@/engines/timeline/timelineState'
 import { activeMontageId, useDocuments } from '@/stores/documents'
-import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
+import { selectClipIn, sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { withAsset, withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
 
@@ -108,6 +108,7 @@ function readState(): ActionOutcome {
       settings: open.state.settings,
       playhead: open.state.playhead,
       selectedId: open.state.selectedId,
+      selectedTrackId: open.state.selectedTrackId,
       duration: sequenceDuration(open.state),
       tracks: open.state.tracks.map(track => ({
         id: track.id,
@@ -220,7 +221,7 @@ function select(input: Record<string, unknown>): ActionOutcome {
   const clip = clipById(open.state, textOf(input, 'clipId') ?? '')
   if (!clip) return refused('notFound')
 
-  useSequences.getState().replace(open.documentId, { ...open.state, selectedId: clip.id })
+  selectClipIn(open.documentId, clip.id)
   return { ok: true }
 }
 

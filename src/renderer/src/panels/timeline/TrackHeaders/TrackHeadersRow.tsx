@@ -14,8 +14,7 @@ import {
 import { clamp } from '@shared/numeric'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'
-import { isTrackSelected, useSelection } from '@/stores/selection'
-import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
+import { selectTrackIn, sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 import { TrackFlagButton } from '../TrackFlagButton'
 import { TRACK_FLAGS } from '../trackFlags'
@@ -64,7 +63,7 @@ export function TrackHeadersRow({
   const write = (change: (current: Track) => Track): void =>
     writeTrack(documentId, track.id, change)
 
-  const selected = useSelection(state => isTrackSelected(state, documentId, track.id))
+  const selected = sequence.selectedTrackId === track.id
   const audible = playsThrough(sequence, track)
   const rows = { documentId, trackId: track.id, canRise, canFall }
 
@@ -84,7 +83,7 @@ export function TrackHeadersRow({
       // the track to the inspector, which then talks about a row the column does not mark.
       // `true` rather than `page`, which is for navigation — this is a selection within a list.
       aria-current={selected ? 'true' : undefined}
-      onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
+      onPointerDown={() => selectTrackIn(documentId, track.id)}
       onContextMenu={event => {
         // A right-click in the rename field belongs to the native clipboard and spelling menu
         // (`main/window/contextMenu.ts`), which `preventDefault` would keep from ever being asked.

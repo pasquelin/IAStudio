@@ -8,6 +8,7 @@ import {
   montageHoldsMore,
   otioTimelineOf,
   readSequenceFromOtio,
+  STUDIO_COMPOSED_KEYS,
   type OtioSource,
 } from '@/engines/timeline/otioTimeline'
 import type { Clip, SequenceState } from '@/engines/timeline/timelineState'
@@ -109,14 +110,7 @@ export function serializeSequencePayload(payload: unknown): string {
  */
 const carried = new Map<string, Record<string, unknown>>()
 
-const COMPOSED = new Set([
-  DOCUMENT_ID_KEY,
-  'width',
-  'height',
-  'sampleRate',
-  'playhead',
-  'selectedId',
-])
+const COMPOSED = new Set([DOCUMENT_ID_KEY, ...STUDIO_COMPOSED_KEYS])
 
 function remember(payload: unknown, documentId: string): void {
   const kept = Object.entries(otioStudioMetadata(payload)).filter(([key]) => !COMPOSED.has(key))

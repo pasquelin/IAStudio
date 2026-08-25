@@ -12,7 +12,7 @@ import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { installSequence } from '@/stores/sequence-fixtures'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { selectTrackIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
 import { Inspector } from './Inspector'
@@ -115,7 +115,6 @@ describe('Inspector, on the document in front', () => {
         'doc-1',
         addClip('A1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
       )
-    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Inspector />)
 
     expect(screen.getByText('pad.wav')).toBeInTheDocument()
@@ -130,7 +129,6 @@ describe('Inspector, on the document in front', () => {
         'doc-1',
         addClip('V1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
       )
-    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Inspector />)
 
     expect(screen.queryByLabelText('Gain')).not.toBeInTheDocument()
@@ -144,7 +142,6 @@ describe('Inspector, on the document in front', () => {
         'doc-1',
         addClip('A1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
       )
-    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(<Inspector />)
 
     const field = screen.getByLabelText('Fondu d’entrée')
@@ -156,7 +153,7 @@ describe('Inspector, on the document in front', () => {
 
   it('reads out the track that was selected', () => {
     openSequence()
-    useSelection.getState().selectTrack('doc-1', 'A1')
+    selectTrackIn('doc-1', 'A1')
     render(<Inspector />)
 
     expect(screen.getByText('A1')).toBeInTheDocument()
@@ -166,7 +163,7 @@ describe('Inspector, on the document in front', () => {
 
   it('falls back to the empty state when the selected track is gone', () => {
     openSequence()
-    useSelection.getState().selectTrack('doc-1', 'nope')
+    selectTrackIn('doc-1', 'nope')
     render(<Inspector />)
 
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
@@ -202,27 +199,11 @@ describe('Inspector, on the document in front', () => {
       },
       histories: {},
     })
-    useSelection.getState().selectTrack('doc-1', 'A1')
+    selectTrackIn('doc-1', 'A1')
 
     render(<Inspector />)
 
     expect(screen.queryByText('Ambiance')).not.toBeInTheDocument()
-    expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
-  })
-
-  it('says nothing rather than reading a clip out of the sequence in front', () => {
-    openSequence()
-    useSequences
-      .getState()
-      .runCommand(
-        'doc-1',
-        addClip('A1', clipFixture('clip-1', 0, 2_000_000, { assetId: 'asset-1' })),
-      )
-    // Selected in a montage that is no longer the active tab.
-    useSelection.getState().selectClip('doc-other', 'clip-1')
-
-    render(<Inspector />)
-
     expect(screen.getByText(/Sélectionnez un élément/)).toBeInTheDocument()
   })
 })

@@ -13,7 +13,7 @@ import { closeDocument, documentIsDirty, dropDocument, saveDocument } from '@/ap
 import { openDocument } from '@/app/dockviewApi'
 import { layerById } from '@/engines/canvas/canvasState'
 import { selectedNodes } from '@/engines/scene/sceneState'
-import { trackById } from '@/engines/timeline/timelineState'
+import { designatedIn } from '@/engines/timeline/timelineState'
 import { reportFailure } from '@/services/diagnostics'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import {
@@ -30,7 +30,6 @@ import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { useSelection } from '@/stores/selection'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { numberOf, oneOf, textOf } from './actionInputs'
 
@@ -92,24 +91,15 @@ function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
   const sequences = useSequences.getState()
   if (!sequenceStore.hasState(sequences, montageId)) return null
 
-  /**
-   * 🛑 WHICH of the two is designated comes from the selection, the ids from the document — the
-   * arrangement `InspectorFace` already reads. Clicking a track header leaves `selectedId` on the
-   * clip it was on, so reading the document alone reported that clip for ever and « mute this
-   * track » never had anything to aim at.
-   */
-  const sequence = sequenceOf(sequences, montageId)
-  const selection = useSelection.getState().selection
-  if (selection.kind !== 'clip' && selection.kind !== 'track') return null
-  if (selection.ownerId !== montageId) return null
+  // The one answer `InspectorFace` reads. A clip has no name of its own, so it stands under its id.
+  const designated = designatedIn(sequenceOf(sequences, montageId))
+  if (designated === null) return null
 
-  if (selection.kind === 'clip') {
-    const clipId = sequence.selectedId
-    return clipId === null ? null : { kind: 'clip', items: [{ id: clipId, name: clipId }] }
-  }
-
-  const track = trackById(sequence, selection.ids[0] ?? '')
-  return track === null ? null : { kind: 'track', items: [{ id: track.id, name: track.name }] }
+  const { id, name } =
+    designated.kind === 'track'
+      ? designated.track
+      : { id: designated.clip.id, name: designated.clip.id }
+  return { kind: designated.kind, items: [{ id, name }] }
 }
 
 /**

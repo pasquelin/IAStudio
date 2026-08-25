@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timelineState'
-import { useSelection } from '@/stores/selection'
 import { sequenceHistoryOf, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { useSelection } from '@/stores/selection'
 import { useTimelineView } from '@/stores/timelineView'
 import { TrackHeaders } from './TrackHeaders'
 
@@ -31,8 +31,6 @@ const headers = (): ReturnType<typeof render> =>
 describe('TrackHeaders', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
-    // The selection is one store for the whole window: a case that picks a track leaves it picked
-    // for the next one, which then reads an answer it never asked for.
     useSelection.getState().clear()
     installTracks([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
   })
@@ -278,15 +276,35 @@ describe('TrackHeaders', () => {
     })
 
     /**
-     * Every sequence names its first tracks `V1` and `A1`, so an id alone matches across tabs.
-     * A track picked in another document must leave this column saying nothing.
+     * 🛑 The clip is the montage's WORK — the block under the take editor, the highlight on the
+     * strip, the picture in the source monitor — and a header pressed to rename or mute is not a
+     * clip being deselected. Sharing one slot emptied the editor beside the column.
      */
-    it('says nothing for a track of the same name picked in another document', () => {
+    it('leaves the clip the montage is working on alone', () => {
+      useSequences.getState().replace('doc-1', {
+        ...sequenceOf(useSequences.getState(), 'doc-1'),
+        selectedId: 'clip-1',
+      })
       headers()
 
-      act(() => useSelection.getState().selectTrack('doc-2', 'A1'))
+      fireEvent.pointerDown(screen.getByText('A1'))
 
-      expect(row('A1')).not.toHaveAttribute('aria-current')
+      expect(sequenceOf(useSequences.getState(), 'doc-1').selectedId).toBe('clip-1')
+      expect(sequenceOf(useSequences.getState(), 'doc-1').selectedTrackId).toBe('A1')
+    })
+
+    /**
+     * 🛑 The reason the row lives in the montage. A press used to write the track into the
+     * studio's single descriptor, which held one thing at a time: the images picked in a shelf
+     * beside it went away, and the generator's sources with them.
+     */
+    it('leaves what a shelf picked where it is', () => {
+      useSelection.getState().selectAssets(['asset-1'])
+      headers()
+
+      fireEvent.pointerDown(screen.getByText('A1'))
+
+      expect(useSelection.getState().selection).toEqual({ kind: 'asset', ids: ['asset-1'] })
     })
   })
 })

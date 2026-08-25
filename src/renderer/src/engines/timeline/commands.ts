@@ -15,6 +15,7 @@ import {
   newClipId,
   nextTrackId,
   reindexTracks,
+  selectClip,
   snapToFrame,
   trackById,
   trackOfClip,
@@ -22,6 +23,7 @@ import {
   updateTrack,
   type Clip,
   type ClipEdge,
+  type SequenceSelection,
   type SequenceState,
   type Track,
   type TrackKind,
@@ -37,6 +39,13 @@ import {
 const withoutClip = (track: Track, clipId: string): Track => ({
   ...track,
   clips: track.clips.filter(clip => clip.id !== clipId),
+})
+
+// Both halves together: a command that put one back and not the other would leave the inspector
+// on a row while the strip highlighted a clip.
+const selectionOf = ({ selectedId, selectedTrackId }: SequenceState): SequenceSelection => ({
+  selectedId,
+  selectedTrackId,
 })
 
 /**
@@ -89,7 +98,7 @@ function acrossLink(
       // state that differs — and undo would have nothing to put back for it.
       const moved = current.selectedId
       const ontoTwin = moved !== null && moved !== clipId && linked.includes(moved)
-      return ontoTwin ? { ...current, selectedId: clipId } : current
+      return ontoTwin ? selectClip(current, clipId) : current
     },
     revert: state => (held && parts ? composed(id, parts).revert(state) : state),
   }
@@ -155,7 +164,7 @@ export function addClips(placements: readonly ClipPlacement[]): Command<Sequence
     placements.map(({ trackId, clip }) => addClip(trackId, clip)),
   )
 
-  return { ...all, apply: state => ({ ...all.apply(state), selectedId: aimed }) }
+  return { ...all, apply: state => selectClip(all.apply(state), aimed) }
 }
 
 /**
@@ -209,7 +218,7 @@ export function addClipsOnNewTracks(
 }
 
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
-  let before: { clips: Clip[]; selectedId: string | null } | null = null
+  let before: { clips: Clip[]; selection: SequenceSelection } | null = null
   const tailId = newClipId()
 
   return {
@@ -218,16 +227,16 @@ export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
       const track = editableTrack(state, trackId)
       if (!track) return state
 
-      before = { clips: track.clips, selectedId: state.selectedId }
-      return {
-        ...updateTrack(state, trackId, current => insertClip(current, clip, tailId)),
-        selectedId: clip.id,
-      }
+      before = { clips: track.clips, selection: selectionOf(state) }
+      return selectClip(
+        updateTrack(state, trackId, current => insertClip(current, clip, tailId)),
+        clip.id,
+      )
     },
     revert: state => {
       const origin = before
       if (!origin) return state
-      return { ...restore(state, trackId, origin.clips), selectedId: origin.selectedId }
+      return { ...restore(state, trackId, origin.clips), ...origin.selection }
     },
   }
 }
@@ -257,7 +266,7 @@ function moveOneClip(clipId: string, toTrackId: string, start: Us): Command<Sequ
     trackId: string
     sourceClips: Clip[]
     targetClips: Clip[]
-    selectedId: string | null
+    selection: SequenceSelection
   } | null = null
   const tailId = newClipId()
 
@@ -273,15 +282,15 @@ function moveOneClip(clipId: string, toTrackId: string, start: Us): Command<Sequ
         trackId: source.id,
         sourceClips: source.clips,
         targetClips: target.clips,
-        selectedId: state.selectedId,
+        selection: selectionOf(state),
       }
 
       const moved: Clip = { ...clip, start: snapToFrame(start, state.settings) }
       const lifted = updateTrack(state, source.id, current => withoutClip(current, clipId))
-      return {
-        ...updateTrack(lifted, toTrackId, current => insertClip(current, moved, tailId)),
-        selectedId: clipId,
-      }
+      return selectClip(
+        updateTrack(lifted, toTrackId, current => insertClip(current, moved, tailId)),
+        clipId,
+      )
     },
     revert: state => {
       const origin = from
@@ -290,10 +299,7 @@ function moveOneClip(clipId: string, toTrackId: string, start: Us): Command<Sequ
       // The target first: moving within one track makes both of these the same track, and the
       // source is the list that was there before anything moved.
       const restored = restore(state, toTrackId, origin.targetClips)
-      return {
-        ...restore(restored, origin.trackId, origin.sourceClips),
-        selectedId: origin.selectedId,
-      }
+      return { ...restore(restored, origin.trackId, origin.sourceClips), ...origin.selection }
     },
   }
 }
@@ -540,7 +546,7 @@ export function addTrack(kind: TrackKind): Command<SequenceState> {
  * silently change what covers what.
  */
 export function removeTrack(trackId: string): Command<SequenceState> {
-  let before: { position: number; track: Track } | null = null
+  let before: { position: number; track: Track; selection: SequenceSelection } | null = null
 
   return {
     id: `track:remove:${trackId}`,
@@ -549,13 +555,15 @@ export function removeTrack(trackId: string): Command<SequenceState> {
       const track = state.tracks[position]
       if (!track || track.locked) return state
 
-      before = { position, track }
+      before = { position, track, selection: selectionOf(state) }
       return {
         ...state,
         tracks: reindexTracks(state.tracks.filter(current => current.id !== trackId)),
+        // The row itself as much as what sat on it, and undo puts both back.
         selectedId: track.clips.some(clip => clip.id === state.selectedId)
           ? null
           : state.selectedId,
+        selectedTrackId: state.selectedTrackId === trackId ? null : state.selectedTrackId,
       }
     },
     revert: state => {
@@ -564,7 +572,7 @@ export function removeTrack(trackId: string): Command<SequenceState> {
 
       const tracks = [...state.tracks]
       tracks.splice(origin.position, 0, origin.track)
-      return { ...state, tracks: reindexTracks(tracks) }
+      return { ...state, tracks: reindexTracks(tracks), ...origin.selection }
     },
   }
 }
@@ -646,7 +654,7 @@ export function removeClip(clipId: string): Command<SequenceState> {
 }
 
 function removeOneClip(clipId: string): Command<SequenceState> {
-  let removed: { clip: Clip; trackId: string; index: number; selectedId: string | null } | null =
+  let removed: { clip: Clip; trackId: string; index: number; selection: SequenceSelection } | null =
     null
 
   return {
@@ -659,7 +667,7 @@ function removeOneClip(clipId: string): Command<SequenceState> {
       const clip = track.clips[index]
       if (!clip) return state
 
-      removed = { clip, trackId: track.id, index, selectedId: state.selectedId }
+      removed = { clip, trackId: track.id, index, selection: selectionOf(state) }
       return {
         ...updateTrack(state, track.id, current => withoutClip(current, clipId)),
         selectedId: state.selectedId === clipId ? null : state.selectedId,
@@ -675,7 +683,7 @@ function removeOneClip(clipId: string): Command<SequenceState> {
           clips.splice(origin.index, 0, origin.clip)
           return { ...current, clips }
         }),
-        selectedId: origin.selectedId,
+        ...origin.selection,
       }
     },
   }

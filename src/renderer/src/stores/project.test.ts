@@ -6,6 +6,7 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { useActivity } from './activity'
 import { assetsById, useAssets } from './assets'
 import { useProject } from './project'
+import { useSelection } from './selection'
 import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
@@ -163,6 +164,29 @@ describe('settling the tabs of a project being followed', () => {
     assetsById(useAssets.getState())
 
     await vi.waitFor(() => expect(assetsById(useAssets.getState()).get('a')).toBeUndefined())
+  })
+
+  /**
+   * A folder row is named by its path INSIDE the project, so `Repérages/ruelle.png` names a file
+   * in whichever project is open. Left picked across a change, the explorer of the new one
+   * highlighted a row nobody chose — and every gesture of that panel acts on the selection.
+   */
+  it('unpicks what was picked in the project it is leaving', async () => {
+    const listeners: ((project: Project | null) => void)[] = []
+    installFakeBridge({
+      project: {
+        onChange: listener => {
+          listeners.push(listener)
+          return () => {}
+        },
+      },
+    })
+    await useProject.getState().connect()
+    useSelection.getState().selectFiles(['Repérages/ruelle.png'])
+
+    listeners.forEach(listener => listener({ path: '/projects/winter', manifest: MANIFEST }))
+
+    expect(useSelection.getState().selection).toEqual({ kind: 'none' })
   })
 })
 

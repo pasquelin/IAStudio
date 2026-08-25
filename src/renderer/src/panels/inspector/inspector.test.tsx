@@ -851,7 +851,6 @@ describe('inspector panel', () => {
       ],
       selectedId: 'clip-1',
     })
-    useSelection.getState().selectClip('doc-1', 'clip-1')
     render(withQueries(<Content />))
 
     // A folding heading like every other section of the studio, since the fixed one was merged

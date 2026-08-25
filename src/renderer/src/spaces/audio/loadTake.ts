@@ -1,6 +1,5 @@
 import type { Asset } from '@shared/domain/asset'
 import { clipById } from '@/engines/timeline/timelineState'
-import { useSelection } from '@/stores/selection'
 import { addTakeToSequence, sequenceOf, useSequences } from '@/stores/sequences'
 
 /**
@@ -24,8 +23,5 @@ export function loadTake(documentId: string, asset: Asset): void {
   const shown = montage.selectedId ? clipById(montage, montage.selectedId) : null
   if (shown?.assetId === asset.id) return
 
-  const clipId = addTakeToSequence(documentId, asset)
-  // The montage's own selection comes with `addClips`; this is the studio-wide one the inspector
-  // reads, and a block in the editor that the inspector describes as nothing is half a selection.
-  if (clipId) useSelection.getState().selectClip(documentId, clipId)
+  addTakeToSequence(documentId, asset)
 }

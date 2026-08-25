@@ -7,9 +7,9 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { holdCanvas } from '@/spaces/image/canvasHosts'
 import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
+import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { installSequence } from '@/stores/sequence-fixtures'
-import { sequenceOf, useSequences } from '@/stores/sequences'
-import { useSelection } from '@/stores/selection'
+import { selectTrackIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
@@ -105,22 +105,40 @@ describe('reading what the studio is', () => {
     })
   })
 
-  /**
-   * 🛑 The one thing a document does not hold. Which TRACK is picked lives in the global selection
-   * and nowhere else, so a briefing read from the documents alone was blind to it — a spoken
-   * « mute this track » had nothing to aim at.
-   */
-  it('says which track is designated, which no document holds', async () => {
+  // Which TRACK is designated, not the clip that was designated before it: a briefing that read
+  // the clip for ever left a spoken « mute this track » with nothing to aim at.
+  it('says which track is designated', async () => {
     installSequence('doc-seq')
     installDocuments({ 'doc-seq': 'video' }, 'doc-seq')
     const track = sequenceOf(useSequences.getState(), 'doc-seq').tracks[0]
-    useSelection.getState().selectTrack('doc-seq', track?.id ?? '')
+    selectTrackIn('doc-seq', track?.id ?? '')
 
     const outcome = await runAction('studio.state', {})
 
     expect(outcome).toMatchObject({
       ok: true,
       data: { selection: { kind: 'track', items: [{ id: track?.id, name: track?.name }] } },
+    })
+  })
+
+  /**
+   * 🛑 The same answer as the inspector, resolved by `designatedIn`. Written twice, the two
+   * diverged on exactly this input: the panel fell back to the clip and the briefing said nothing,
+   * so a model was told nothing was designated over a clip the user could see highlighted.
+   */
+  it('falls back to the clip when the designated row is no longer there', async () => {
+    installSequence('doc-seq', {
+      ...sequenceWith([trackFixture('V1', 'video', [clipFixture('clip-1', 0, 1_000_000)])]),
+      selectedId: 'clip-1',
+      selectedTrackId: 'gone',
+    })
+    installDocuments({ 'doc-seq': 'video' }, 'doc-seq')
+
+    const outcome = await runAction('studio.state', {})
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      data: { selection: { kind: 'clip', items: [{ id: 'clip-1' }] } },
     })
   })
 
