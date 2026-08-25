@@ -1,7 +1,8 @@
 import { mdiClose, mdiFolderSearchOutline } from '@mdi/js'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { useContextMenu } from '@/hooks/useContextMenu'
+import { useForgettableTimeout } from '@/hooks/useForgettableTimeout'
 import { useDeferredPress } from '@/hooks/useDeferredPress'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -125,14 +126,7 @@ export function LinkField({
   // A right-click that opens an empty surface answers by covering the row it was aimed at.
   const hasMenu = Boolean(browse || (chosen && open) || clearing || menuExtra)
   const [preview, setPreview] = useState<HTMLElement | null>(null)
-  const resting = useRef<number | null>(null)
-
-  const forget = (): void => {
-    if (resting.current !== null) window.clearTimeout(resting.current)
-    resting.current = null
-  }
-
-  useEffect(() => forget, [])
+  const resting = useForgettableTimeout()
 
   const picture = (
     <span className={cn(FIELD_THUMBNAIL, 'relative shrink-0')}>
@@ -174,11 +168,10 @@ export function LinkField({
                 {...TIP_LEFT(named.label, false, named.hint)}
                 onPointerEnter={event => {
                   const anchor = event.currentTarget
-                  forget()
-                  resting.current = window.setTimeout(() => setPreview(anchor), PREVIEW_DELAY)
+                  resting.after(PREVIEW_DELAY, () => setPreview(anchor))
                 }}
                 onPointerLeave={() => {
-                  forget()
+                  resting.forget()
                   setPreview(null)
                 }}
                 className="cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent p-0"
