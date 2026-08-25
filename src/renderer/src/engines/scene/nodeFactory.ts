@@ -11,7 +11,15 @@ import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
-import { CAMERA_ICON, GROUP_ICON, MODEL_ICON, PATH_ICON, SPRITE_ICON, TEXT_ICON } from './nodeKinds'
+import {
+  CAMERA_ICON,
+  CARVED_ICON,
+  GROUP_ICON,
+  MODEL_ICON,
+  PATH_ICON,
+  SPRITE_ICON,
+  TEXT_ICON,
+} from './nodeKinds'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -207,6 +215,7 @@ export function iconOf(node: SceneNode): string {
   if (node.type === 'text') return TEXT_ICON
   if (node.type === 'camera') return CAMERA_ICON
   if (node.type === 'path') return PATH_ICON
+  if (node.type === 'carved') return CARVED_ICON
 
   const kind = node.type === 'light' ? node.light.kind : node.geometry.kind
   return (primitiveByKind(kind) ?? lightByKind(kind))?.icon ?? mdiCubeOutline

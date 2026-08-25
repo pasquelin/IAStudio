@@ -1,4 +1,5 @@
 import type { ActionOutcome } from '@shared/domain/assistant'
+import { CSG_OPERATIONS } from '@shared/domain/csg'
 import { MESH_ENTRIES } from '@shared/domain/scene'
 import {
   answered,
@@ -35,6 +36,7 @@ function add(bench: Bench, scene: StudioDocument, kind: string, input: Input): A
     rotation: { ...ORIGIN },
     scale: { ...UNIT },
     visible: true,
+    carved: [],
     textures: {},
     roughness: null,
     metalness: null,
@@ -94,6 +96,42 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
       if (!node) return refused('badInput')
 
       scene.nodes = scene.nodes.filter(one => one !== node)
+      scene.modified = true
+      return done
+    }
+
+    case 'node.carve': {
+      const picked = texts(input, 'nodeIds')
+        .map(id => scene.nodes.find(one => one.id === id))
+        .filter(one => one !== undefined)
+      const [matter, ...tools] = picked
+      // Two at the very least, and an operation the registry publishes: one shape alone is not
+      // a cut, and an unknown verb is not one either.
+      if (
+        !matter ||
+        tools.length === 0 ||
+        !CSG_OPERATIONS.some(one => one === text(input, 'operation'))
+      ) {
+        return refused('badInput')
+      }
+
+      const solid: SceneNode = {
+        ...matter,
+        id: nextId(bench, 'node'),
+        kind: 'carved',
+        // Kept whole, which is what makes the fold undoable — ADR-25.
+        carved: picked,
+      }
+      scene.nodes = [...scene.nodes.filter(one => !picked.includes(one)), solid]
+      scene.modified = true
+      return answered({ nodeId: solid.id })
+    }
+
+    case 'node.separate': {
+      const node = byId(scene.nodes, input, 'nodeId')
+      if (!node || node.kind !== 'carved' || node.carved.length === 0) return refused('badInput')
+
+      scene.nodes = [...scene.nodes.filter(one => one !== node), ...node.carved]
       scene.modified = true
       return done
     }

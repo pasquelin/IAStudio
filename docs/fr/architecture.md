@@ -647,9 +647,20 @@ Les trois qui montrent de la 3D partagent `engines/viewport/` — canevas, camé
 redimensionnement, boucle à la demande, éclairage par image. Chacun écrivant le sien, c’était
 trois chances de ne pas être d’accord sur un redimensionnement ou une libération.
 
-**Six moteurs, neuf dossiers sous `engines/` : les trois autres ne sont pas des moteurs.**
-`core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, et `gpu/` les passes
-de shader et le compteur de frame.
+**Six moteurs, dix dossiers sous `engines/` : les quatre autres ne sont pas des moteurs.**
+`core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, `gpu/` les passes
+de shader et le compteur de frame, et `csg/` la découpe booléenne.
+
+**`csg/` est une couche, pas un moteur, et c’est délibéré** : elle ne détient aucune scène, ne
+connaît ni document ni sélection, et c’est ce qui la rendra réutilisable hors du studio — pour
+faire tourner un jeu, où la découpe a lieu à l’ÉDITION et jamais à l’exécution. Le graphe
+(brushes, opérations, placements) est le document ; le maillage évalué est un cache compté par
+références, jeté dès que plus aucun nœud ne le désigne, et reconstruit à la demande. Rien n’est
+évalué pendant un geste : tout part au relâchement, dans un Worker qui reçoit le GRAPHE et rend
+des buffers transférables. Ce que la découpe n’a pas fini de calculer s’affiche en brushes bruts —
+le mur plein, sans sa fenêtre — jamais un objet manquant.
+[ADR-25](../ci/adr/ADR-25-le-graphe-booleen-fait-foi.md) porte les décisions, y compris celles qui
+préparent les collisions sans les livrer.
 
 Celui du son est une paire de modules plutôt qu’une classe — `audioData.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même

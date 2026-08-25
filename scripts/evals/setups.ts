@@ -30,6 +30,13 @@ export const withSphere = (studio: FakeStudio): void => {
   studio.run('node.add', { kind: 'sphere', name: 'Sphere Droite' })
 }
 
+/** A wall with a cube standing inside it — what a window is cut out of. */
+export const wallAndCube = (studio: FakeStudio): void => {
+  scene()(studio)
+  studio.run('node.add', { kind: 'box', name: 'Mur' })
+  studio.run('node.add', { kind: 'box', name: 'Cube' })
+}
+
 export const twoSpheres = (studio: FakeStudio): void => {
   withSphere(studio)
   studio.run('node.add', { kind: 'sphere', name: 'Sphere Gauche' })

@@ -440,6 +440,14 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
           commandItem('scene.group', t.commands.sceneGroup.title),
+          // The solids, under the grouping they read like: both fold a selection into one row
+          // of the outliner. Their keys are unbound, so the menu is where a hand finds them.
+          { type: 'separator' },
+          commandItem('scene.carve', t.commands.sceneCarve.title),
+          commandItem('scene.weld', t.commands.sceneWeld.title),
+          commandItem('scene.intersect', t.commands.sceneIntersect.title),
+          commandItem('scene.separate', t.commands.sceneSeparate.title),
+          { type: 'separator' },
           // Both, where the context menu shows one at a time: a row is posted before anything is
           // selected, so it cannot know which of the two the hand will want. Each does nothing
           // where it does not apply, which a menu row is allowed to do and a context row is not.

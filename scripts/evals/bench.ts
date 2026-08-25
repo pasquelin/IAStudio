@@ -42,6 +42,8 @@ export type SceneNode = {
   closed: boolean
   /** What a 3D text node reads. */
   text: string | null
+  /** The nodes a carved solid was folded from — what `node.separate` gives back. */
+  carved: readonly SceneNode[]
 }
 
 export type Layer = {

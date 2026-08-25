@@ -73,6 +73,7 @@ import {
   type SceneNodeType,
   type SceneState,
   type SpriteNode,
+  type CarvedNode,
   type TextNode,
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
@@ -84,6 +85,7 @@ import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   cameraBody,
+  geometryFor,
   helperFor,
   knobIndexOf,
   knobName,
@@ -172,6 +174,7 @@ import {
 } from './sceneView'
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
+import CsgWorker from '../csg/csg.worker?worker'
 import SkinWorker from './skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
@@ -184,6 +187,7 @@ import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
 import { NOTHING_SNAPPED, type Snapping } from '@shared/domain/snap'
@@ -688,6 +692,7 @@ export class SceneRenderer {
   /** What each mesh wore, and which lights the material preview put out — see `pane-dress`. */
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
+  private readonly csg: CsgEvaluator
   private readonly skin: SkinWeights
   private readonly retarget: Retarget
   /**
@@ -744,6 +749,11 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
+    this.csg = createCsgEvaluator({
+      spawn: () => new CsgWorker(),
+      // The node keeps drawing its raw brushes: a cut that fails must not empty the scene.
+      onFailure: error => reportFailure('scene.carved', '', error),
+    })
     this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
     this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
     // Before any file lands: a skeleton this project has already been taught is recognised on
@@ -2215,6 +2225,7 @@ export class SceneRenderer {
     for (const id of [...this.skeletons.keys()]) this.unbindSkeleton(id)
     this.textureCache.dispose()
     this.modelCache.dispose()
+    this.csg.dispose()
     this.gltf.dispose()
     this.wireMaterial.dispose()
     this.paneMaterials.dispose()
@@ -2790,6 +2801,7 @@ export class SceneRenderer {
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
     if (node.type === 'path') return buildPath(node.path, this.meshColor)
+    if (node.type === 'carved') return this.buildCarved(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
   }
@@ -2817,6 +2829,45 @@ export class SceneRenderer {
     this.frustums.set(node.id, helper)
     this.markers.set(node.id, body)
     return camera
+  }
+
+  /**
+   * A solid cut out of other solids. Born wearing its BASE brush — the wall before the window —
+   * because ADR-25 refuses an empty node: what the cut has not finished is shown uncut, never
+   * missing.
+   */
+  private buildCarved(node: CarvedNode): Mesh {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, node.material, this.meshColor)
+
+    const mesh = new Mesh(geometryFor(node.carved.base.geometry), material)
+    void this.recut(node)
+
+    return mesh
+  }
+
+  /**
+   * The solid, cut again from whatever the node now says.
+   *
+   * The evaluator hands out one geometry per distinct graph, so the mesh must never dispose what
+   * it is given — `release` is what frees it, and only once the last node lets go.
+   */
+  private async recut(node: CarvedNode): Promise<void> {
+    const cut = await this.csg.acquire(node.carved)
+
+    const object = this.objects.get(node.id)
+    // Edited, recut or deleted while the worker was busy: what is in the scene now decides.
+    if (!cut || !(object instanceof Mesh) || this.applied.get(node.id) !== node) {
+      if (cut) this.csg.release(node.carved)
+      return
+    }
+
+    object.geometry = cut
+    void this.bvh.accelerate(object)
+    // Same reason as a model landing into a wireframe scene: the edges outline the shape that
+    // was there before the cut arrived — the uncut brush — until they are built again.
+    if (this.needsEdges()) this.applyDisplay(object)
+    this.redraw()
   }
 
   /**
@@ -3225,6 +3276,7 @@ export class SceneRenderer {
     // pointed at, and nothing else remembers it.
     const applied = this.applied.get(id)
     if (applied?.type === 'model') this.modelCache.release(applied.model.assetId)
+    if (applied?.type === 'carved') this.csg.release(applied.carved)
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)

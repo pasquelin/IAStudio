@@ -192,6 +192,7 @@ describe('the lists that stand for a union', () => {
     const all: Record<LogScope, true> = {
       'scene.model': true,
       'scene.bvh': true,
+      'scene.carved': true,
       'scene.texture': true,
       'scene.animation': true,
       'scene.export': true,
@@ -518,6 +519,8 @@ describe('the lists that stand for a union', () => {
       'scene.state': true,
       'node.add': true,
       'node.addModel': true,
+      'node.carve': true,
+      'node.separate': true,
       'node.remove': true,
       'node.rename': true,
       'node.transform': true,

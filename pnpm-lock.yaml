@@ -62,6 +62,9 @@ importers:
       three:
         specifier: 0.185.1
         version: 0.185.1
+      three-bvh-csg:
+        specifier: ^0.0.18
+        version: 0.0.18(three-mesh-bvh@0.9.14(three@0.185.1))(three@0.185.1)
       three-mesh-bvh:
         specifier: ^0.9.14
         version: 0.9.14(three@0.185.1)
@@ -4342,6 +4345,12 @@ packages:
   temp@0.9.4:
     resolution: {integrity: sha512-yYrrsWnrXMcdsnu/7YMYAofM1ktpL5By7vZhf15CrXijWWrEYZks5AXBudalfSWJLlnen/QUJUB5aoB0kqZUGA==}
     engines: {node: '>=6.0.0'}
+
+  three-bvh-csg@0.0.18:
+    resolution: {integrity: sha512-M3GCZMmGFgASGuDf+YMamM83nVlD/vdwzVHcYbFxgW+g1S7/nKPiuY00YVHOMbjmJPh8mLevGZL65ItHUuGt2w==}
+    peerDependencies:
+      three: '>=0.179.0'
+      three-mesh-bvh: '>=0.9.7'
 
   three-mesh-bvh@0.9.14:
     resolution: {integrity: sha512-xJzfUXnLYjgw5tRKGxjfJW3Pcx0IbwNskvpdwRryhK07SYrKrYB4W8zAaPxu784gK7G4lCBgG+vfG3YeYn95kg==}
@@ -8992,6 +9001,11 @@ snapshots:
     dependencies:
       mkdirp: 0.5.6
       rimraf: 2.6.3
+
+  three-bvh-csg@0.0.18(three-mesh-bvh@0.9.14(three@0.185.1))(three@0.185.1):
+    dependencies:
+      three: 0.185.1
+      three-mesh-bvh: 0.9.14(three@0.185.1)
 
   three-mesh-bvh@0.9.14(three@0.185.1):
     dependencies:

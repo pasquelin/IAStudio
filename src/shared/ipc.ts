@@ -695,6 +695,8 @@ export type LogScope =
   // Apart from `scene.model`, though both read a `.glb`: a scope says a subject once, so an
   // animation that will not load would otherwise silence what the MODEL had to say.
   | 'scene.animation'
+  /** A boolean cut that would not evaluate. The node goes on drawing its uncut brush. */
+  | 'scene.carved'
   | 'scene.export'
   | 'scene.render'
   /** A still of the view, on its way into the project's pictures. */
@@ -782,6 +784,7 @@ export type LogScope =
   | 'explorer.open'
 
 export const LOG_SCOPES: readonly LogScope[] = [
+  'scene.carved',
   'scene.model',
   'scene.bvh',
   'scene.texture',

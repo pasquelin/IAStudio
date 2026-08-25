@@ -176,6 +176,10 @@ Dans la scène Test MCP :
 - [ ] « Place la sphère exactement 2 mètres à droite du cube. »
 - [ ] « Duplique la sphère et place la copie à gauche du cube. »
 - [ ] « Renomme les deux sphères Sphere Droite et Sphere Gauche. »
+- [ ] « Perce une fenêtre dans le mur avec le cube. »
+- [ ] « Fusionne le mur et le cube en une seule forme. »
+- [ ] « Ne garde que la partie où le mur et le cube se chevauchent. »
+- [ ] « Sépare ce solide et rends-moi les formes d'origine. »
 
 ## 7. Manipulation relative — important
 

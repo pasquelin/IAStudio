@@ -173,6 +173,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'node.add': ['6.1', '6.6', '6.8', '8.1', '8.4', '9.1', '25.1', '25.3', '31.1'],
   'node.addModel': ['11.1', '11.5', '22.4', '23.2', '24.2', '31.1'],
   'node.remove': ['25.7', '29.4', '29.5'],
+  'node.carve': ['6.10', '6.11', '6.12', '6.13'],
+  'node.separate': ['6.13'],
   'node.rename': ['6.2', '6.9', '8.2'],
   'node.transform': [
     '6.3',

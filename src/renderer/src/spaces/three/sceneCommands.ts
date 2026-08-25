@@ -1,8 +1,11 @@
 import type { CommandId } from '@shared/domain/command'
+import type { CsgOperation } from '@shared/domain/csg'
 import {
   addNodes,
+  carveNodes,
   copiesOf,
   groupNodes,
+  separateNode,
   removeNodes,
   rootedIn,
   setNodeVisible,
@@ -99,6 +102,13 @@ export function removePickedShot(documentId: string): boolean {
   return true
 }
 
+/** Which cut each of the three buttons asks for. */
+const OPERATION_OF: Record<'scene.carve' | 'scene.weld' | 'scene.intersect', CsgOperation> = {
+  'scene.carve': 'subtract',
+  'scene.weld': 'unite',
+  'scene.intersect': 'intersect',
+}
+
 export function runSceneCommand(documentId: string, command: CommandId): boolean {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)
@@ -156,6 +166,24 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
     case 'scene.group':
       if (picked.length > 0) store.runCommand(documentId, groupNodes(picked))
       return true
+
+    // The three that fold a selection into one solid. A selection nothing can be cut out of is
+    // left alone rather than refused out loud: the button is inert, which already said so.
+    case 'scene.carve':
+    case 'scene.weld':
+    case 'scene.intersect': {
+      const folded = carveNodes(picked, OPERATION_OF[command], nodes)
+      if (folded) store.runCommand(documentId, folded)
+      return true
+    }
+
+    // Only ever one: separating two solids at once would put back two sets of brushes with no
+    // way to tell whose is whose in the outliner.
+    case 'scene.separate': {
+      const solid = picked.length === 1 ? picked[0] : null
+      if (solid?.type === 'carved') store.runCommand(documentId, separateNode(solid))
+      return true
+    }
 
     default:
       return false

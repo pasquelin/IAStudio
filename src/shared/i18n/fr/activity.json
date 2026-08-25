@@ -86,6 +86,7 @@
     "scope": {
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
       "scene.bvh": "Un modèle 3D n’a pas pu être préparé pour la sélection",
+      "scene.carved": "Une forme n’a pas pu être percée",
       "scene.texture": "Une texture n’a pas pu être chargée",
       "scene.animation": "Une animation n’a pas pu être posée sur le personnage",
       "scene.export": "L’export de la scène a échoué",

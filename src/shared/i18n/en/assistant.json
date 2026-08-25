@@ -912,6 +912,14 @@
       "targetSelect": {
         "title": "Aim at a target",
         "description": "Points at what the next step will act on in the open document — a layer, a scene object, a clip. Take the identifier from the target list in this briefing; without that list there is nothing to aim at."
+      },
+      "nodeCarve": {
+        "title": "Carve, join or intersect objects",
+        "description": "Folds several objects of the scene in front into a single solid: the first id is the matter, the ones after it are the tools. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+      },
+      "nodeSeparate": {
+        "title": "Separate a solid",
+        "description": "Undoes a solid of the scene in front and gives back the shapes it was made of, each where it stood. Answers with the ids of the objects handed back."
       }
     },
     "refusals": {
@@ -1062,7 +1070,7 @@
       "scalePixels": "Rescale the layers with the frame",
       "turn": "Which way to flip or turn",
       "nodeId": "Object identifier",
-      "nodeIds": "Object identifiers",
+      "nodeIds": "Ids of the objects",
       "nodeKind": "What to add",
       "positionX": "Position in width",
       "positionY": "Position in height",
@@ -1186,7 +1194,8 @@
       "cardTitle": "Card title",
       "cardBody": "Card text",
       "cardActive": "The card applies",
-      "aimId": "Target identifier"
+      "aimId": "Target identifier",
+      "csgOperation": "What to make of them"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

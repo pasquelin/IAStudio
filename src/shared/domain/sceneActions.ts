@@ -1,5 +1,6 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { EASINGS } from './animation'
+import { CSG_OPERATIONS } from './csg'
 import { FONT_SOURCES } from './font'
 import { CAPTURE_QUALITIES } from './sceneCapture'
 import {
@@ -180,6 +181,42 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: false },
     ],
+  }),
+  action({
+    /**
+     * Folds shapes into one solid. The first id is the matter and the rest are the tools, which
+     * is the order the toolbar reads a selection in — "pierce THIS with THAT".
+     */
+    name: 'node.carve',
+    titleKey: 'assistant.actions.nodeCarve.title',
+    descriptionKey: 'assistant.actions.nodeCarve.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'nodeIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.nodeIds',
+        required: true,
+        repeated: true,
+      },
+      {
+        key: 'operation',
+        kind: 'choice',
+        labelKey: 'assistant.fields.csgOperation',
+        required: true,
+        options: CSG_OPERATIONS,
+      },
+    ],
+  }),
+  action({
+    /** Undoes a fold: the brushes the graph kept come back as meshes, where they stood. */
+    name: 'node.separate',
+    titleKey: 'assistant.actions.nodeSeparate.title',
+    descriptionKey: 'assistant.actions.nodeSeparate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [NODE],
   }),
   action({
     name: 'node.remove',

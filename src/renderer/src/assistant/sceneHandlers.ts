@@ -20,6 +20,7 @@ import {
   type TextureSlot,
   type Vector3,
 } from '@shared/domain/scene'
+import { CSG_OPERATIONS } from '@shared/domain/csg'
 import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { SECOND } from '@shared/domain/time'
 import { withinBounds } from '@shared/numeric'
@@ -27,6 +28,7 @@ import { captureSceneView } from '@/helpers/captureSceneView'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
   addNode,
+  carveNodes,
   multi,
   removeNode,
   renameNode,
@@ -43,6 +45,7 @@ import {
   setSpriteOn,
   setTextOn,
   setWorld,
+  separateNode,
 } from '@/engines/scene/commands'
 import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
 import { EASINGS, POINT_TARGET, type CameraShot } from '@shared/domain/animation'
@@ -527,6 +530,29 @@ export const SCENE_HANDLERS: ActionHandlers = {
   },
 
   'node.remove': input => editNode(input, node => removeNode(node.id)),
+
+  /**
+   * The ids in the ORDER they were given: the first is the matter, the rest are the tools. A
+   * client that names them in another order asks for another solid, which is what the toolbar
+   * does too — see `carveGraph`.
+   */
+  'node.carve': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const operation = oneOf(input, 'operation', CSG_OPERATIONS)
+    const picked = textsOf(input, 'nodeIds')
+      .map(id => nodeById(open.state, id))
+      .filter(node => node !== null)
+    const command = operation && carveNodes(picked, operation, open.state.nodes)
+    if (!command) return refused('badInput')
+
+    useScenes.getState().runCommand(open.documentId, command)
+    return { ok: true }
+  },
+
+  'node.separate': input =>
+    editNode(input, node => (node.type === 'carved' ? separateNode(node) : null)),
 
   'node.rename': input =>
     editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),

@@ -34,7 +34,9 @@ import { changedFields } from '@/helpers/objects'
 import { applySelection, deselect, type SelectionMode } from '@/helpers/selection'
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
-import { groupNode } from './nodeFactory'
+import { groupNode, meshNode } from './nodeFactory'
+import { carveGraph, isCarvable, placedIn } from '../csg/carve'
+import type { CsgOperation } from '@shared/domain/csg'
 import {
   canCastShadow,
   canReceiveShadow,
@@ -42,10 +44,12 @@ import {
   hasChildren,
   nodeById,
   rotationShows,
+  shadowDefaults,
   subtreeOf,
   withAxisLock,
   withoutLockedAxes,
   type AxisLock,
+  type CarvedNode,
   type SceneNodeBase,
   type SceneNodeType,
   type MeshNode,
@@ -743,6 +747,67 @@ export function groupNodes(nodes: readonly SceneNode[]): Command<SceneState> {
   return multi(commandId('group', [group.id]), [
     addNode(group),
     ...roots.map(node => reparentNode(node.id, group.id)),
+  ])
+}
+
+/**
+ * Folds a selection into one solid, and takes the nodes it was cut from out of the scene.
+ *
+ * The first node is the matter: the solid stands where it stood, wears its material and hangs
+ * from its parent, so the cut looks like the wall gaining a window rather than a new object
+ * appearing. `null` when fewer than two nodes carry a shape — the toolbar leaves its button
+ * inert on the same test.
+ */
+export function carveNodes(
+  picked: readonly SceneNode[],
+  operation: CsgOperation,
+  all: readonly SceneNode[],
+): Command<SceneState> | null {
+  const graph = carveGraph(picked, operation, all)
+  const matter = picked.find(isCarvable)
+  if (!graph || !matter) return null
+
+  const solid: SceneNode = {
+    ...shadowDefaults({ type: 'carved' }),
+    id: newId(),
+    parentId: matter.parentId,
+    name: matter.name,
+    visible: true,
+    transform: matter.transform,
+    type: 'carved',
+    carved: graph,
+    material: matter.material,
+  }
+
+  return multi(commandId('carve', [solid.id]), [
+    addNode(solid),
+    ...picked.filter(isCarvable).map(node => removeNode(node.id)),
+  ])
+}
+
+/**
+ * Undoes a fold: the solid goes, and the brushes it was cut from come back as meshes.
+ *
+ * What comes back is what the GRAPH kept, which is the whole point of ADR-25 — a mesh alone
+ * could not be taken apart again. The material is the solid's: the brushes each had their own
+ * before the cut, and the graph does not carry them.
+ */
+export function separateNode(node: CarvedNode): Command<SceneState> {
+  const parts = [node.carved.base, ...node.carved.steps.map(step => step.part)]
+
+  return multi(commandId('separate', [node.id]), [
+    ...parts.map(part =>
+      addNode({
+        ...meshNode(part.geometry, {
+          material: node.material,
+          parentId: node.parentId,
+          name: part.name,
+        }),
+        // In the solid's frame, so a brush lands back where the cut had it standing.
+        transform: placedIn(node.transform, part.transform),
+      }),
+    ),
+    removeNode(node.id),
   ])
 }
 

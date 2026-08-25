@@ -30,6 +30,7 @@ export const SHIPPED: string[] = [
   'sherpa-onnx-node',
   'simple-git',
   'three',
+  'three-bvh-csg',
   'three-mesh-bvh',
   'utif',
   // The runtime itself.
