@@ -99,14 +99,13 @@ import { MARKER_NAME } from './markerPaint'
 import { aimLightMarker, holdMarkerSize } from './markerPose'
 import {
   applyCamera,
-  applyGeometry,
+  wearGeometry,
   applyLight,
   applyMaterial,
   applyPath,
   applySprite,
   lightFor,
   showPathKnobs,
-  tiledGeometry,
   standardMaterialOf,
 } from './threeSync'
 import {
@@ -190,7 +189,8 @@ import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skelet
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { primitiveOf } from '@shared/domain/csg'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
-import { createInstancedGroups, type InstancedGroups } from './instancing'
+import { createGeometryCache, type GeometryCache } from './geometryCache'
+import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
 import { matrixOfTransform } from '../csg/csgMatrix'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -688,6 +688,8 @@ export class SceneRenderer {
    * statistics off gives back a walk, it must never change what the GPU is asked to draw.
    */
   private groupingStale = true
+  /** Nodes that only MOVED since the last grouping — their slots are still theirs. */
+  private readonly movedNodes = new Set<string>()
   /** What the model costs, held between the passes that cannot have changed it. */
   private modelStats: SceneStats = EMPTY_STATS
   private mode: TransformMode = 'select'
@@ -716,6 +718,8 @@ export class SceneRenderer {
   private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
   private readonly csg: CsgEvaluator
+  /** One shape per distinct descriptor, lent to every node wearing it. */
+  private readonly shapes: GeometryCache = createGeometryCache()
   private readonly instances: InstancedGroups
   /** Nodes whose cut is out. Holds which side owes the cache its reference. */
   private readonly cutting = new Set<string>()
@@ -1364,6 +1368,22 @@ export class SceneRenderer {
   }
 
   /**
+   * Gives a geometry back to whichever cache lends it, and disposes it when none does.
+   *
+   * Two of them lend the same class of buffers — the shapes and the solids — and the same node
+   * wears one then the other as it is carved. Disposing what a cache lends empties every
+   * neighbour of the same shape, with every gate green.
+   */
+  private freeGeometry(geometry: BufferGeometry): void {
+    if (this.csg.owns(geometry)) return
+    if (this.shapes.owns(geometry)) {
+      this.shapes.release(geometry)
+      return
+    }
+    geometry.dispose()
+  }
+
+  /**
    * Both passes a change of CONTENT makes stale — what the counters read, and how the repeated
    * shapes are grouped for drawing. One gesture because forgetting the second is silent: the
    * grouping is the only thing that ever gives a mesh back to the camera's layer.
@@ -1384,9 +1404,18 @@ export class SceneRenderer {
    * exactly what that helper sets aside.
    */
   private regroupInstances(): void {
-    if (!this.groupingStale) return
-    this.groupingStale = false
-    this.instances.rebuild([...this.applied.values()], id => this.objects.get(id))
+    if (this.groupingStale) {
+      this.groupingStale = false
+      this.movedNodes.clear()
+      this.instances.rebuild([...this.applied.values()], id => this.objects.get(id))
+      return
+    }
+    if (this.movedNodes.size === 0) return
+
+    // Only the slots that moved. Their region's bounds are widened rather than recut, so the
+    // culling stays conservative until the next real change of content puts them back exact.
+    this.instances.moved(this.movedNodes, id => this.objects.get(id))
+    this.movedNodes.clear()
   }
 
   /** Which view the pointer is over — what a display command acts on. */
@@ -2283,6 +2312,7 @@ export class SceneRenderer {
     this.textureCache.dispose()
     this.modelCache.dispose()
     this.csg.dispose()
+    this.shapes.dispose()
     this.instances.dispose()
     this.gltf.dispose()
     this.wireMaterial.dispose()
@@ -2637,10 +2667,17 @@ export class SceneRenderer {
     const previous = this.applied.get(node.id)
     if (previous === node) return
 
-    // Past that guard something about this node really changed — its shape, or where it stands,
-    // and from here neither can be told from the other. A selection changes no node, so it never
-    // reaches here: that walk was 12 % of the CPU of one click on 8 000 nodes, measured 20/08.
-    this.markContentChanged()
+    // Past that guard something about this node really changed — its shape, or where it stands.
+    // A selection changes no node, so it never reaches here: that walk was 12 % of the CPU of
+    // one click on 8 000 nodes, measured 20/08.
+    //
+    // A node that only MOVED keeps its group and its slot in it, so the grouping is left alone
+    // and the slot is rewritten instead. Measured through `apply` on 10 000 nodes: moving one
+    // cost 40.95 ms before this batch, 4.15 ms once the group keys were held, and 1.67 ms here.
+    if (previous && keepsItsGroup(previous, node)) {
+      this.contentChanged = true
+      this.movedNodes.add(node.id)
+    } else this.markContentChanged()
     this.placementChanged = true
 
     // A model is its file: pointing a node at another asset is a different object, not an edit
@@ -2778,7 +2815,15 @@ export class SceneRenderer {
         before?.geometry !== node.geometry ||
         before.material.tilesPerMetre !== node.material.tilesPerMetre
       ) {
-        applyGeometry(object, node.geometry, node.material.tilesPerMetre)
+        const worn = wearGeometry(
+          object,
+          this.shapes.acquire(node.geometry, node.material.tilesPerMetre),
+        )
+        // A descriptor minted again with the same content lands here — the comparison above is
+        // by reference. The mesh keeps the shape it wore, so the reference just taken is given
+        // straight back; held, it would pin the shape for the life of the engine.
+        if (worn) this.freeGeometry(worn)
+        else this.shapes.release(object.geometry)
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
         if (this.needsEdges()) this.applyDisplay(object)
@@ -2960,9 +3005,10 @@ export class SceneRenderer {
     }
     const object = into
 
-    // The uncut brush this node was born wearing. Its own buffers, so nothing else frees it —
-    // and the cache's geometries are never disposed here, which `owns` is what tells apart.
-    if (!this.csg.owns(object.geometry)) object.geometry.dispose()
+    // The uncut brush this node was born wearing. Its OWN buffers — `buildCarved` bakes the
+    // base transform into them, which a shared shape could never carry — so `freeGeometry` falls
+    // through to disposing it, and only a cache that really lends it would say otherwise.
+    this.freeGeometry(object.geometry)
     object.geometry = cut
     void this.bvh.accelerate(object)
     // Same reason as a model landing into a wireframe scene: the edges outline the shape that
@@ -3003,7 +3049,9 @@ export class SceneRenderer {
     // in the scene now is what decides, never what asked.
     if (!font || !(object instanceof Mesh) || this.applied.get(node.id) !== node) return
 
-    object.geometry.dispose()
+    // Through the caches like every other shape, though a typed word is never one they lend:
+    // the rule holds without an exception to remember, and neither answers for these buffers.
+    this.freeGeometry(object.geometry)
     object.geometry = textGeometry(font, node.text)
     // Same reason as a model landing into a wireframe scene: the edges were built from the shape
     // that was there before the face arrived — an empty one at first, the previous words after an
@@ -3263,7 +3311,7 @@ export class SceneRenderer {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
 
-    const mesh = new Mesh(tiledGeometry(node.geometry, node.material.tilesPerMetre), material)
+    const mesh = new Mesh(this.shapes.acquire(node.geometry, node.material.tilesPerMetre), material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
     const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
@@ -3410,9 +3458,7 @@ export class SceneRenderer {
       // find it to remove.
       object.removeFromParent()
       if (object instanceof Mesh) {
-        // Never a geometry the CSG cache lends: the same buffers are drawn by every node of the
-        // same graph, and freeing them here empties its neighbours' screens.
-        if (!this.csg.owns(object.geometry)) object.geometry.dispose()
+        this.freeGeometry(object.geometry)
         disposeMaterial(object)
       }
       // A sprite is not a mesh, so the branch above never freed its material. Its geometry is
@@ -3506,6 +3552,11 @@ export class SceneRenderer {
     // A box that stayed behind while its object moved is a box that says nothing. Re-reading a
     // bounding box is cheap — building one is not, which is why this is not `refreshAids`.
     this.aids.refreshBoxes()
+    // The move is only reported on release, so an instanced node would stand where the last
+    // grouping left it for the whole gesture. `TransformControls` has already written the world
+    // matrices this reads. The moved slots alone, never a regrouping: that costs 32.7 ms on
+    // 40 000 nodes, which per pointer move is two dropped frames.
+    this.instances.moved(this.selectedIds, id => this.objects.get(id))
     this.redraw()
   }
 

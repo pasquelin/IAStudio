@@ -28,6 +28,10 @@ const BYTES_PER_TEXEL = 4
  * Geometries and textures are counted per distinct object, not per mesh: ten cubes sharing one
  * box carry one box's triangles on the GPU, and a count that added them ten times would send
  * someone optimising a model that is already fine.
+ *
+ * The studio's own primitives share a shape since `geometryCache`, so this reading now covers
+ * them too: five hundred identical cubes report one cube's triangles and five hundred draws.
+ * Before, only a model's clones were shared and the two halves of the overlay disagreed.
  */
 export function statsOf(
   objects: Iterable<Object3D>,

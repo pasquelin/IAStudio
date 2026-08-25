@@ -20,7 +20,7 @@ import {
   spriteNodeFixture,
 } from './scene-fixtures'
 import type { SceneStats } from './sceneStats'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
+import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './sceneState'
 
 /**
  * What an edit does to a scene already built — and, above all, what it frees. The renderer is
@@ -291,6 +291,16 @@ describe('a scene told what changed', () => {
     })
 
     /**
+     * Distinct shapes on purpose: `statsOf` counts a geometry once however many meshes wear it,
+     * and the cache now really shares one between nodes of the same descriptor — two default
+     * boxes carry one box's triangles, which is what the GPU holds.
+     */
+    const sizedBox = (id: string, width: number): MeshNode => ({
+      ...meshNode(id),
+      geometry: { kind: 'box', width, height: 1, depth: 1 },
+    })
+
+    /**
      * The count is the engine's to make: the document holds an asset id, and what a model
      * actually brought is known only once its file has landed here.
      */
@@ -303,12 +313,12 @@ describe('a scene told what changed', () => {
           reported.push({ scene: scene.triangles, selected: selected.triangles }),
       })
 
-      renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1'), meshNode('box-2')] })
+      renderer.apply({ ...EMPTY_SCENE, nodes: [sizedBox('box-1', 1), sizedBox('box-2', 2)] })
       const both = reported.at(-1)
 
       renderer.apply({
         ...EMPTY_SCENE,
-        nodes: [meshNode('box-1'), meshNode('box-2')],
+        nodes: [sizedBox('box-1', 1), sizedBox('box-2', 2)],
         selectedIds: ['box-1'],
       })
       const one = reported.at(-1)
@@ -339,7 +349,7 @@ describe('a scene told what changed', () => {
         onTransform: vi.fn(),
         onStats: scene => reported.push(scene),
       })
-      const nodes = [meshNode('box-1'), meshNode('box-2')]
+      const nodes = [sizedBox('box-1', 1), sizedBox('box-2', 2)]
 
       renderer.apply({ ...EMPTY_SCENE, nodes })
       const counted = reported.at(-1)
@@ -349,7 +359,7 @@ describe('a scene told what changed', () => {
       expect(reported.at(-1)).toBe(counted)
 
       // And a node that really arrives is counted again, or the whole thing would be frozen.
-      renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes, meshNode('box-3')] })
+      renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes, sizedBox('box-3', 3)] })
 
       expect(reported.at(-1)).not.toBe(counted)
       expect(reported.at(-1)?.triangles).toBeGreaterThan(counted?.triangles ?? 0)

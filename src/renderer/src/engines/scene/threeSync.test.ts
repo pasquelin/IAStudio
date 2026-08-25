@@ -19,7 +19,7 @@ import { buildPath, geometryFor, PATH_CURVE_NAME, sizeKnobFor } from './threeFac
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
   applyCamera,
-  applyGeometry,
+  wearGeometry,
   applyLight,
   applyMaterial,
   applyPath,
@@ -113,22 +113,34 @@ describe('applySprite', () => {
   })
 })
 
-describe('applyGeometry', () => {
-  it('swaps in the geometry the descriptor asks for', () => {
-    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
+describe('wearGeometry', () => {
+  const box = (width: number): BufferGeometry =>
+    geometryFor({ kind: 'box', width, height: 1, depth: 1 })
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
+  it('puts the mesh on the shape it is given', () => {
+    const mesh = new Mesh(box(1))
+    const next = box(2)
 
-    expect(mesh.geometry.type).toBe('SphereGeometry')
+    wearGeometry(mesh, next)
+
+    expect(mesh.geometry).toBe(next)
   })
 
-  it('disposes the geometry it replaces', () => {
-    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
-    const dispose = vi.spyOn(mesh.geometry, 'dispose')
+  it('hands back the shape it took off, rather than disposing it', () => {
+    const worn = box(1)
+    const mesh = new Mesh(worn)
+    const dispose = vi.spyOn(worn, 'dispose')
 
-    applyGeometry(mesh, { kind: 'box', width: 2, height: 1, depth: 1 }, 1)
+    // The caller frees it: only it knows which cache lent it, and disposing one the cache still
+    // lends empties every other node of that shape.
+    expect(wearGeometry(mesh, box(2))).toBe(worn)
+    expect(dispose).not.toHaveBeenCalled()
+  })
 
-    expect(dispose).toHaveBeenCalled()
+  it('says nothing was taken off when the mesh already wore that shape', () => {
+    const worn = box(1)
+
+    expect(wearGeometry(new Mesh(worn), worn)).toBeNull()
   })
 })
 
@@ -215,7 +227,7 @@ describe('tiledGeometry', () => {
     const mesh = new Mesh(tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 1))
     expect(spanOf(mesh.geometry).u).toBeCloseTo(4)
 
-    applyGeometry(mesh, { kind: 'plane', width: 4, height: 4 }, 2)
+    wearGeometry(mesh, tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 2))
     expect(spanOf(mesh.geometry).u).toBeCloseTo(8)
   })
 })
@@ -530,12 +542,15 @@ describe('applyPath', () => {
 })
 
 // An occlusion map reads the second UV set; without this, nudging a radius would stop it dead.
-describe('applyGeometry and the second UV set', () => {
+describe('wearGeometry and the second UV set', () => {
   it('carries it over to the shape that replaces the one that had it', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
     giveSecondUvSet(mesh.geometry)
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
+    wearGeometry(
+      mesh,
+      geometryFor({ kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }),
+    )
 
     expect(mesh.geometry.attributes.uv1).toBeDefined()
   })
@@ -543,7 +558,10 @@ describe('applyGeometry and the second UV set', () => {
   it('does not invent one for a shape that never had it', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
+    wearGeometry(
+      mesh,
+      geometryFor({ kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }),
+    )
 
     expect(mesh.geometry.attributes.uv1).toBeUndefined()
   })
