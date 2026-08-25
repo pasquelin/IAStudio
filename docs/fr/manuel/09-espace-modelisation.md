@@ -44,17 +44,22 @@ contourne, **orange pour tout ce qui se grimpe** — rampe, marches, blocs, pass
 
 ## Se déplacer dans la scène
 
-Deux modes de navigation, qui coexistent.
+Trois façons de se déplacer, qui coexistent.
 
 ### Tourner autour de la scène — la souris seule
 
 | Geste | Effet |
 |---|---|
 | **Clic gauche + glisser** dans le vide | fait tourner la vue autour du point regardé |
-| **Molette** | avance et recule |
+| **Molette** | avance et recule **vers ce que vise le pointeur** |
 | **Clic droit + glisser** *(voir ci-dessous)* | fait voler |
 
 C’est le mode par défaut. On tourne **autour** de la scène, comme si on en faisait le tour.
+
+> **La molette avance vers ce que vous visez, et ne bute sur rien.** Le point autour duquel la vue
+> tourne se replace sur ce que le pointeur désigne, et la caméra le **traverse** si vous continuez
+> — il n’y a pas de mur invisible devant lequel on ralentit sans jamais arriver. Le pas suit la
+> distance de ce que vous visez : vaste au loin, fin de près.
 
 ### Voler dans la scène — un bouton maintenu
 
@@ -80,6 +85,21 @@ déplacent pas la caméra — sans quoi le même geste bougerait l’objet et le
 > **Les touches sont lues à leur position physique.** WASD sur un clavier QWERTY et ZQSD sur un
 > clavier AZERTY sont **les mêmes quatre touches**. Il n’y a rien à reconfigurer.
 
+### Naviguer en continu — le mode, sans rien tenir
+
+Le bouton **Naviguer** de la barre d’outils, ou la touche <kbd>`</kbd> (celle sous Échap,
+<kbd>²</kbd> sur un clavier français), arme un mode où l’on n’a **plus rien à maintenir** :
+
+- la **souris devient le regard** — elle disparaît, et la vue suit ses mouvements ;
+- les **mêmes touches** que ci-dessus déplacent la caméra ;
+- la **molette règle la vitesse** au lieu d’avancer, le temps de la session ;
+- <kbd>Échap</kbd> rend la souris et quitte le mode.
+
+Les touches sont rappelées quelques secondes en bas du viewport à chaque fois que le mode s’arme.
+
+> **Tant que le mode est armé, les lettres appartiennent à la caméra.** <kbd>S</kbd> fait reculer
+> et n’appelle pas l’outil Redimensionner ; les outils reprennent leurs touches dès la sortie.
+
 Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ Modélisation**
 
 | Réglage | Ce qu’il fait | Défaut |
@@ -102,6 +122,7 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ Modé
 | **Repère local** | `L` | aligne les poignées sur l’orientation de **l’objet** plutôt que sur celle du monde |
 | **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
+| **Naviguer** | `` ` `` | arme le vol continu : la souris tient le regard, les touches déplacent |
 
 La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste est au menu natif :
 

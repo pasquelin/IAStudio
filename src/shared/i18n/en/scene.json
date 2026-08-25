@@ -182,7 +182,9 @@
     "space": "Local frame",
     "display": "Display mode",
     "displayHint": "Draw the surfaces, their edges, or both",
-    "spaceHint": "Line the handles up with the object’s own orientation; when it is off, they follow the world axes"
+    "spaceHint": "Line the handles up with the object’s own orientation; when it is off, they follow the world axes",
+    "navigate": "Navigate",
+    "navigateHint": "Fly through the scene on the keyboard, the mouse holding the view"
   },
   "sceneViews": {
     "free": "Perspective",
@@ -282,5 +284,12 @@
     "addLane": "Add a sub-track",
     "addLaneHint": "One more animation, played at the same time as the ones above",
     "removeLane": "Remove sub-track {{name}}"
+  },
+  "sceneNavigation": {
+    "move": "move",
+    "altitude": "up, down",
+    "boost": "faster",
+    "leave": "Esc to leave",
+    "speed": "{{value}} m/s"
   }
 }

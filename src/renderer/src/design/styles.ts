@@ -82,6 +82,17 @@ export const STATUS_BUTTON = cn(
 )
 
 /**
+ * A read-out laid over a viewport: the counters in one corner, the flight keys along the bottom.
+ *
+ * Deaf to the pointer — it covers the canvas, and a click meant for the model must not land on a
+ * read-out. The translucent panel fill keeps it legible over whatever the scene renders behind.
+ */
+export const VIEWPORT_READOUT = cn(
+  'text-muted bg-panel/80 text-mini pointer-events-none absolute',
+  'rounded-(--radius-sc-md) px-2 py-1',
+)
+
+/**
  * A control laid over a canvas rather than in a bar: the view name on each 3D pane, which opens
  * that pane's menu.
  *

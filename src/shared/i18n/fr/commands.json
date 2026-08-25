@@ -448,6 +448,10 @@
     "scenePoseMode": {
       "title": "Mode pose",
       "help": "Bascule entre la sélection des objets et celle des os d’un squelette."
+    },
+    "sceneNavigate": {
+      "title": "Naviguer",
+      "help": "Traverser la scène comme dans un jeu : la souris tient le regard, W A S D déplacent, E et Q montent et descendent. La molette règle la vitesse. Échap rend la souris."
     }
   }
 }

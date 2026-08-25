@@ -65,6 +65,7 @@ describe('SCENE_TOOLS', () => {
   it('holds what a hand reaches for while manipulating, and nothing else', () => {
     expect(SCENE_TOOLS.map(tool => tool.id)).toEqual([
       'select',
+      'navigate',
       'translate',
       'rotate',
       'scale',

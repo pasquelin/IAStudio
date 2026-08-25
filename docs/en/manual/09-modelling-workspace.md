@@ -43,17 +43,22 @@ The colours say a role: grey for what is walked on, dark grey for walls and what
 
 ## Moving through the scene
 
-Two navigation modes, which coexist.
+Three ways to move, which coexist.
 
 ### Orbiting the scene — the mouse alone
 
 | Gesture | Effect |
 |---|---|
 | **Left-click + drag** in empty space | turns the view around the point being looked at |
-| **Wheel** | moves forward and back |
+| **Wheel** | moves forward and back, **towards whatever the pointer aims at** |
 | **Right-click + drag** *(see below)* | flies |
 
 This is the default mode. You turn **around** the scene, as if walking round it.
+
+> **The wheel travels towards what you aim at, and stops at nothing.** The point the view turns
+> around moves onto whatever the pointer names, and the camera **crosses** it if you keep going —
+> there is no invisible wall to slow down against and never reach. The step follows the distance
+> of what you aim at: wide far off, fine up close.
 
 ### Flying through the scene — a button held
 
@@ -78,6 +83,21 @@ gesture would move both the object and the point of view.
 > **The keys are read at their physical position.** WASD on a QWERTY keyboard and ZQSD on an AZERTY
 > one are **the same four keys**. There is nothing to reconfigure.
 
+### Navigating continuously — the mode, holding nothing
+
+The **Navigate** button in the toolbar, or the <kbd>`</kbd> key (the one under Escape), arms a
+mode where there is **nothing left to hold**:
+
+- the **mouse becomes the view** — it disappears, and the view follows it;
+- the **same keys** as above move the camera;
+- the **wheel sets the speed** instead of moving the camera, for the length of the session;
+- <kbd>Esc</kbd> gives the mouse back and leaves the mode.
+
+The keys are recalled for a few seconds at the bottom of the viewport each time the mode is armed.
+
+> **While the mode is armed, the letters belong to the camera.** <kbd>S</kbd> backs away and does
+> not call the Scale tool; the tools take their keys back the moment you leave.
+
 Three settings govern flying: **Settings ▸ Workspaces ▸ Modelling**
 
 | Setting | What it does | Default |
@@ -100,6 +120,7 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ Modelling**
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
 | **Display mode** | `Z` | cycles the nine ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |
+| **Navigate** | `` ` `` | arms continuous flight: the mouse holds the view, the keys travel |
 
 The bar carries only what the hand asks for **without letting go of the mouse**. The rest is in
 the native menu:

@@ -43,6 +43,7 @@ import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 import { CameraPreview } from './CameraPreview/CameraPreview'
 import { SceneCounters } from './SceneCounters'
+import { SceneNavigationHint } from './SceneNavigationHint'
 import { openSceneAddMenu } from './sceneAddMenu'
 import { openSceneNodeMenu } from './sceneNodeMenu'
 import { openPathPointMenu } from './pathPointMenu'
@@ -190,6 +191,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const [live, setLive] = useState<SceneRenderer | null>(null)
   const [mode, setMode] = useState<TransformMode>('select')
   const [localFrame, setLocalFrame] = useState(false)
+  /** Armed navigation. Not a `TransformMode`: that one aims the gizmo, and this aims the camera. */
+  const [navigating, setNavigating] = useState(false)
+  /** What the wheel left the flight at. Kept across armings, as the engine keeps the speed. */
+  const [flySpeed, setFlySpeed] = useState<number | null>(null)
   /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
   const [stats, setStats] = useState<{ scene: SceneStats; selected: SceneStats }>({
     scene: EMPTY_STATS,
@@ -253,6 +258,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           onRemove: () => removePickedPathPoint(documentId),
         }),
       onStats: (scene, selected) => setStats({ scene, selected }),
+      // Escape and a lost window release the capture without passing through the button, and the
+      // armed state has to follow or the bar would stay lit over a mode that is over.
+      onNavigatingChange: setNavigating,
+      onFlySpeedChange: setFlySpeed,
       // Published so a montage can look through this very view: a scene with no camera of its
       // own has no other framing anybody chose. Once per orbit, never per frame of one.
       onView: placement => useSceneViews.getState().setCamera(documentId, placement),
@@ -412,6 +421,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return changeIsolation(documentId, () => NOTHING_ISOLATED)
         case 'scene.space':
           return setLocalFrame(current => !current)
+        case 'scene.navigate':
+          return setNavigating(current => !current)
         case 'scene.display':
           return cycleDisplay()
         // The keyboard and the palette take the view's own size; the menu rows carry the rest.
@@ -459,6 +470,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     [documentId, paneInHand],
   )
 
+  // Derived rather than stored: a background tab keeps its engine, and a captured pointer there
+  // would fly a scene nobody is looking at. The engine owns the capture; this only says whether
+  // the mode is meant to be on.
+  const armed = navigating && active
+  useEffect(() => {
+    engine.current?.setNavigating(armed)
+  }, [armed, live])
+
   useShortcuts({
     scope: 'scene',
     // Dockview keeps hidden tabs mounted, and the hook swallows the keys it recognises: a
@@ -494,6 +513,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // The one tool of the bar whose armed state is not a setting: it says an isolation is
       // running, which is what makes leaving it the same press that entered it.
       'scene.isolate': isolated,
+      'scene.navigate': armed,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -546,6 +566,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     view.quadEdges,
     view.displays,
     isolated,
+    armed,
   ])
 
   return (
@@ -563,6 +584,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       <div ref={host} className="absolute inset-0" />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      {armed && <SceneNavigationHint speed={flySpeed} />}
       <CameraPreview documentId={documentId} />
       {view.quad && (
         <ScenePaneGrid

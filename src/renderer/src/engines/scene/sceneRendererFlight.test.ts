@@ -57,10 +57,52 @@ describe('SceneRenderer and the buttons that fly', () => {
     expect(draggingChanged).toContain('this.flownWith = null')
   })
 
-  // `flownFrom` is where the button went down, which a second press would overwrite; only the
-  // button that armed the flight says whether one is under way.
-  it('reads the flight from the button that armed it', () => {
-    expect(source).toContain('return this.flownWith !== null')
+  // Never from one alone: the mode flies with no button, and a button flies with no mode.
+  it('reads the flight from the button that armed it, or from the armed mode', () => {
+    expect(source).toContain('return this.flownWith !== null || this.navigating')
+  })
+
+  /**
+   * The defect this case exists for: `OrbitControls.update()` ends on `lookAt(target)`, so an
+   * orbit left running through the mode undoes the turn `onLookMove` just wrote, every frame.
+   */
+  it('takes the orbit out of the loop while the mode is armed', () => {
+    const syncPaneFreeze =
+      source.match(/private syncPaneFreeze\(\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
+
+    expect(syncPaneFreeze).toContain('this.navigating')
+  })
+
+  it('captures the pointer for as long as the mode is armed', () => {
+    const setNavigating =
+      source.match(/setNavigating\(on: boolean\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
+
+    expect(setNavigating).toContain('requestPointerLock')
+  })
+
+  /**
+   * The wheel means speed in the MODE alone. Gated on `flying` it would change meaning under a
+   * held button, where the manual promises a dolly and no hint is on screen to say otherwise.
+   */
+  it('spends the wheel on speed for the mode, never under a held button', () => {
+    const spend =
+      source.match(
+        /private spendWheelOnSpeed\(event: WheelEvent\): boolean \{[\s\S]*?\n {2}\}/,
+      )?.[0] ?? ''
+
+    expect(spend).toContain('if (!this.navigating) return false')
+  })
+
+  // The same trap `turnToViewHelper` guards the trihedron against.
+  it('rests the pivot ahead of the camera rather than where the flight left it', () => {
+    const restPivot = source.match(/private restPivot\(\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
+
+    // Whitespace collapsed: Prettier wraps this very call, and a literal would break on a
+    // reformat that changed nothing.
+    const written = restPivot.replace(/\s+/g, '')
+
+    expect(written).toContain('orbit.target.copy(camera.position)')
+    expect(written).toContain('PIVOT_AHEAD')
   })
 
   /**

@@ -30,6 +30,7 @@ import {
   mdiSquareOpacity,
   mdiThermometer,
   mdiTrashCanOutline,
+  mdiVideo3d,
   mdiVectorSquare,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
@@ -123,6 +124,15 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     icon: mdiCursorDefaultOutline,
     // What a scene GAINS stands above, and this is the rule under it — see `ADD_TOOLS`.
     separatorBefore: true,
+  },
+  // Under `select` rather than over it: the bar opens on the tool that grabs nothing, and moving
+  // the camera is what one reaches for next — before any handle.
+  {
+    id: 'navigate',
+    command: 'scene.navigate',
+    labelKey: 'sceneTools.navigate',
+    descriptionKey: 'sceneTools.navigateHint',
+    icon: mdiVideo3d,
   },
   {
     id: 'translate',

@@ -13,7 +13,7 @@ import { createTextureBinding, type TextureBinding } from '../scene/textureBindi
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/textureCache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createTestObjects, type TestObjects } from '../viewport/testObjects'
-import { turnBy } from '../viewport/lookAround'
+import { aimAlong, turnBy } from '../viewport/lookAround'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { createProjectionPass, type ProjectionPass } from './projectionShader'
 import { gestureFor, type SkyboxGesture } from './sunDrag'
@@ -342,9 +342,7 @@ export class SkyboxRenderer {
   }
 
   private aimCamera(): void {
-    const { x, y, z } = directionFromAngles(this.look)
-    const camera = this.viewport.camera
-    camera.lookAt(camera.position.x + x, camera.position.y + y, camera.position.z + z)
+    aimAlong(this.viewport.camera, this.look)
     this.viewport.requestRender()
   }
 

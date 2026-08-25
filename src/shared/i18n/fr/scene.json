@@ -182,7 +182,9 @@
     "space": "Repère local",
     "display": "Mode de rendu",
     "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
-    "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde"
+    "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
+    "navigate": "Naviguer",
+    "navigateHint": "Voler dans la scène au clavier, la souris tenant le regard"
   },
   "sceneViews": {
     "free": "Perspective",
@@ -282,5 +284,12 @@
     "addLane": "Ajouter une sous-piste",
     "addLaneHint": "Une animation de plus, jouée en même temps que celles du dessus",
     "removeLane": "Supprimer la sous-piste {{name}}"
+  },
+  "sceneNavigation": {
+    "move": "déplacer",
+    "altitude": "monter, descendre",
+    "boost": "accélérer",
+    "leave": "Échap pour sortir",
+    "speed": "{{value}} m/s"
   }
 }

@@ -30,6 +30,10 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
+import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles'
+import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
+import { speedAfterWheel } from './flySpeed'
+import { notchesOf, PIVOT_AHEAD } from '../viewport/dolly'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -263,6 +267,10 @@ export type SceneRendererOptions = {
    * a model actually brought: the document holds an asset id, not the triangles behind it.
    */
   onStats?: (stats: SceneStats, selected: SceneStats) => void
+  /** The navigation mode is over — by Escape, by a lost capture, or by the caller's own call. */
+  onNavigatingChange?: (navigating: boolean) => void
+  /** What the wheel left the flying speed at, so a panel can show the figure it is flying at. */
+  onFlySpeedChange?: (speed: number) => void
   /**
    * Where the free camera came to rest, once a drag of it is over.
    *
@@ -347,6 +355,7 @@ const railed = new ThreeVector3()
 const forward = new ThreeVector3()
 const right = new ThreeVector3()
 const step = new ThreeVector3()
+const flightGaze = new ThreeVector3()
 
 /**
  * three-mesh-bvh reads a `boundsTree` if the mesh has one and falls back to walking triangles if
@@ -497,6 +506,10 @@ export class SceneRenderer {
     onInset: () => this.hideWorkshop(),
     // Read back rather than computed here: only the controls know where an orbit ended up.
     onCameraSettled: pane => this.reportCameraSettled(pane),
+    // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
+    // a surface one lands the pivot on.
+    pickTargets: () => [...this.objects.values()],
+    onWheel: event => this.spendWheelOnSpeed(event),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -601,6 +614,12 @@ export class SceneRenderer {
    * way to end one — leaves a release that never moved a pixel, and every flight ended in a menu.
    */
   private flew = false
+  /** Armed persistent navigation. `flownWith` stays null throughout: that one records a BUTTON. */
+  private navigating = false
+  /** Where the head looks while the pointer is captured. Read off the camera when the mode opens. */
+  private look: SphericalAngles = DEFAULT_LOOK
+  /** What the wheel left this session at. `configure` drops it, so an edited preference wins. */
+  private sessionFlySpeed: number | null = null
 
   private gizmo: TransformControls | null = null
   /**
@@ -2011,6 +2030,94 @@ export class SceneRenderer {
     }
   }
 
+  /**
+   * Arms the persistent navigation mode: the pointer is captured, the mouse becomes the head and
+   * the keys fly without a button held.
+   *
+   * The capture is what settles the keyboard too — `flying` covers this mode, so `S` means back
+   * rather than scale for exactly as long as the mode is on.
+   */
+  setNavigating(on: boolean): void {
+    if (on === this.navigating) return
+
+    const canvas = this.viewport.canvas
+    if (on) {
+      if (!canvas) return
+
+      this.navigating = true
+      this.look = anglesFromDirection(this.viewport.camera.getWorldDirection(flightGaze), this.look)
+      document.addEventListener('pointerlockchange', this.onPointerLockChange)
+      canvas.addEventListener('pointermove', this.onLookMove)
+      // Before the first turn: an orbit left running ends its frame on `lookAt(target)`, which
+      // is exactly the rotation this mode writes — the head would snap back every frame.
+      this.syncPaneFreeze()
+      // A capture refused — no gesture behind the call — must not leave the bar lit over a mode
+      // that never opened. Not awaited, so the `.catch` is a handler, not a chain under an await.
+      void canvas.requestPointerLock()?.catch(() => this.setNavigating(false))
+      // Before the first frame of the mode, or its opening step spans the whole idle time.
+      this.viewport.resetClock()
+      this.repaint()
+      return
+    }
+
+    this.navigating = false
+    document.removeEventListener('pointerlockchange', this.onPointerLockChange)
+    canvas?.removeEventListener('pointermove', this.onLookMove)
+    if (document.pointerLockElement === canvas) document.exitPointerLock()
+    this.held.clear()
+    this.restPivot()
+    // After `restPivot`: thawing re-arms the orbit, and it must find the pivot already ahead.
+    this.syncPaneFreeze()
+    this.options.onNavigatingChange?.(false)
+    this.repaint()
+  }
+
+  /**
+   * Put back ahead of the camera: left where a flight walked away from it, the first drag
+   * afterwards orbits a point off screen — the trap `turnToViewHelper` guards the trihedron against.
+   */
+  private restPivot(): void {
+    const orbit = this.viewport.orbit
+    if (!orbit) return
+
+    const camera = this.viewport.camera
+    orbit.target
+      .copy(camera.position)
+      .addScaledVector(camera.getWorldDirection(flightGaze), PIVOT_AHEAD)
+    orbit.update()
+  }
+
+  /** Escape releases the capture without telling this engine; the browser's own event does. */
+  private readonly onPointerLockChange = (): void => {
+    if (document.pointerLockElement !== this.viewport.canvas) this.setNavigating(false)
+  }
+
+  /** Sign flipped against `turnBy`, written for a hand that GRABS the world: here the mouse IS the head. */
+  private readonly onLookMove = (event: PointerEvent): void => {
+    if (!this.navigating) return
+
+    this.look = turnBy(this.look, -event.movementX, -event.movementY)
+    aimAlong(this.viewport.camera, this.look)
+    this.repaint()
+  }
+
+  /**
+   * The wheel means speed in the armed MODE alone, never under a held button: there the wheel
+   * still dollies, which is what the manual promises and what the hint — mode-only — could say.
+   */
+  private spendWheelOnSpeed(event: WheelEvent): boolean {
+    if (!this.navigating) return false
+
+    this.sessionFlySpeed = speedAfterWheel(this.flySpeed, notchesOf(event.deltaY))
+    this.options.onFlySpeedChange?.(this.sessionFlySpeed)
+    return true
+  }
+
+  /** What this session flies at: the wheel's value while one was set, the preference otherwise. */
+  private get flySpeed(): number {
+    return this.sessionFlySpeed ?? this.view.flySpeed
+  }
+
   setMotion(held: Set<MotionId>): void {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
@@ -2018,13 +2125,13 @@ export class SceneRenderer {
   }
 
   /**
-   * Whether the right button is down, which is the whole of what flying means here.
+   * Whether the camera owns the keyboard — a button held, or the mode armed.
    *
    * Public because a key can mean two things at once: ⇧A opens the Add menu and is also
    * boost-strafe-left, and the held set cannot tell them apart — Shift is down either way.
    */
   get flying(): boolean {
-    return this.flownWith !== null
+    return this.flownWith !== null || this.navigating
   }
 
   dispose(): void {
@@ -2037,6 +2144,8 @@ export class SceneRenderer {
     this.stopPaletteWatch = null
 
     const canvas = this.viewport.canvas
+    this.setNavigating(false)
+
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
@@ -2124,6 +2233,15 @@ export class SceneRenderer {
       shadowMapSizeFor(held.quality, held.shadowMapSize)
     const shadowsMoved =
       shadowsResized || next.shadowQuality !== held.shadowQuality || next.shadows !== held.shadows
+
+    // A preference the user just edited wins over whatever the wheel left behind, and only then:
+    // dropped on every configure, an unrelated setting would reset a speed mid-flight.
+    if (next.flySpeed !== held.flySpeed) {
+      this.sessionFlySpeed = null
+      // Or the overlay goes on showing what the wheel last produced while the camera flies at
+      // the figure the person just typed.
+      this.options.onFlySpeedChange?.(next.flySpeed)
+    }
 
     this.view = next
 
@@ -3235,8 +3353,11 @@ export class SceneRenderer {
    */
   private syncPaneFreeze(): void {
     // `flownWith === 2`, not `flying`: a flight under the LEFT button is orbiting at the same
-    // time, and freezing would take that orbit away — see `startFlight`.
-    this.viewport.freezePanes(this.gizmo?.dragging === true || this.flownWith === 2)
+    // time, and freezing would take that orbit away — see `startFlight`. The armed mode DOES
+    // freeze: `OrbitControls.update()` ends on `lookAt(target)` and would undo every turn.
+    this.viewport.freezePanes(
+      this.gizmo?.dragging === true || this.flownWith === 2 || this.navigating,
+    )
   }
 
   private readonly onPointerAim = (event: PointerEvent): void => {
@@ -3653,7 +3774,7 @@ export class SceneRenderer {
   private fly(delta: number): void {
     const camera = this.viewport.camera
     const boost = this.held.has('boost') ? this.view.boostFactor : 1
-    const speed = this.view.flySpeed * delta * boost
+    const speed = this.flySpeed * delta * boost
 
     camera.getWorldDirection(forward)
     right.crossVectors(forward, camera.up).normalize()
