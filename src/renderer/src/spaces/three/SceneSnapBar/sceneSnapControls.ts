@@ -1,5 +1,4 @@
 import { mdiAngleAcute, mdiGrid, mdiResize } from '@mdi/js'
-import type { DisplayUnit } from '@shared/domain/scene'
 import {
   SNAP_ROTATE_DIVISIONS,
   SNAP_ROTATE_STEPS,
@@ -84,14 +83,4 @@ export const SNAP_READING_KEYS: Record<SnapReading, string> = {
   length: 'snapBar.lengthValue',
   angle: 'snapBar.angleValue',
   ratio: 'snapBar.ratioValue',
-}
-
-/**
- * The symbol a length wears, keyed by unit. Written out rather than composed at the call site:
- * a key built from a value at runtime is a key no guard can see, and an unseen key shows raw.
- */
-export const SNAP_UNIT_KEYS: Record<DisplayUnit, string> = {
-  mm: 'snapBar.unitMm',
-  cm: 'snapBar.unitCm',
-  m: 'snapBar.unitM',
 }

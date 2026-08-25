@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import type { DisplayUnit } from '@shared/domain/scene'
 import { Separator } from '@/design/Separator'
 import { ValueGrid } from '@/design/ValueGrid/ValueGrid'
-import { SNAP_READING_KEYS, SNAP_UNIT_KEYS, type SnapStepControl } from './sceneSnapControls'
-import { snapFigure } from './snapFigure'
+import { useSnapReading } from '@/hooks/useSnapReading'
+import type { SnapStepControl } from './sceneSnapControls'
 
 export type SceneSnapStepMenuProps = {
   control: SnapStepControl
@@ -19,16 +19,11 @@ export type SceneSnapStepMenuProps = {
  * stacked rather than side by side, so both spread over the same width.
  */
 export function SceneSnapStepMenu({ control, unit, value, onChoose }: SceneSnapStepMenuProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
+  const reading = useSnapReading(unit)
 
   const optionsOf = (steps: readonly number[]) =>
-    steps.map(step => ({
-      value: step,
-      label: t(SNAP_READING_KEYS[control.reads], {
-        value: snapFigure(step, control.reads, unit, i18n.language),
-        unit: t(SNAP_UNIT_KEYS[unit]),
-      }),
-    }))
+    steps.map(step => ({ value: step, label: reading(control.reads, step) }))
 
   return (
     <div className="flex flex-col gap-0.5">

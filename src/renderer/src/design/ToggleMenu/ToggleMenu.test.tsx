@@ -19,7 +19,7 @@ const setUp = (props: Partial<Parameters<typeof ToggleMenu>[0]> = {}) => {
       pressed={false}
       onToggle={onToggle}
       value="0.5"
-      valueLabel="Grid step"
+      valueName="Grid step"
       rowCount={2}
       rows={close => (
         <ValueGrid
@@ -116,16 +116,21 @@ describe('ToggleMenu', () => {
     expect(screen.getByRole('button', { name: /Grid step/ })).toHaveTextContent('20 m/s')
   })
 
-  // Held open by a copy nobody reads: a reader hearing the widest value beside the real one would
-  // be told two speeds.
-  it('keeps that copy out of what is announced', () => {
+  /**
+   * The name carries what is READ — the figure on screen — and what the control IS. Composed
+   * here rather than by five callers, and it must not pick up the copy held open behind it: a
+   * reader hearing the widest value beside the real one would be told two speeds.
+   */
+  it('names itself by the figure on screen, never by the copy behind it', () => {
     setUp({ value: '4 m/s', widest: '20 m/s' })
 
-    expect(screen.getByRole('button', { name: /Grid step/ })).toHaveAccessibleName('Grid step')
+    expect(screen.getByRole('button', { name: /Grid step/ })).toHaveAccessibleName(
+      '4 m/s — Grid step',
+    )
   })
 
   it('wears the icon on its value half when it has no toggle', () => {
-    setUp({ onToggle: undefined, value: '4 m/s', valueLabel: 'Camera speed' })
+    setUp({ onToggle: undefined, value: '4 m/s', valueName: 'Camera speed' })
 
     expect(screen.queryByRole('button', { name: /Grid snap/ })).toBeNull()
     expect(screen.getByRole('button', { name: /Camera speed/ })).toBeInTheDocument()

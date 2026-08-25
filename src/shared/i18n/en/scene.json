@@ -290,7 +290,6 @@
     "speedHint": "How fast the camera flies. The menu offers rungs and a free run between them; in flight, the wheel does the same.",
     "speedFree": "Speed",
     "speedValue": "{{value}} m/s",
-    "namedValue": "{{value}} — {{name}}",
     "title": "Snapping and camera speed",
     "surface": "Surface snap",
     "surfaceHint": "Lays what you drag on the first surface below it. The submenu sets how it lands and how far above.",

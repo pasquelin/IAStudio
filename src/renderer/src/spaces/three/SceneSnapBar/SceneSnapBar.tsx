@@ -8,13 +8,19 @@ import { formatDecimal } from '@/helpers/format'
 import { tipFor } from '@/helpers/tooltip'
 import { Separator } from '@/design/Separator'
 import { ToggleMenu } from '@/design/ToggleMenu/ToggleMenu'
+import { useSnapReading } from '@/hooks/useSnapReading'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
 import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
-import { SNAP_READING_KEYS, SNAP_STEP_CONTROLS, SNAP_UNIT_KEYS } from './sceneSnapControls'
+import { SNAP_STEP_CONTROLS } from './sceneSnapControls'
 import { SceneSnapStepMenu } from './SceneSnapStepMenu'
 import { SceneSnapSurfaceMenu } from './SceneSnapSurfaceMenu'
 import { SceneSpeedMenu } from './SceneSpeedMenu'
-import { snapFigure } from './snapFigure'
+
+// Read once: the registry answers by walking every descriptor, and this sits on a render path.
+const FLY_SPEED = boundsOf('three.flySpeed')
+
+/** The bar is horizontal, so its tips go under — `SequenceActions` reaches for the same. */
+const TIP = tipFor('horizontal')
 
 export type SceneSnapBarProps = {
   documentId: string
@@ -36,18 +42,9 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
   const snapping = useSceneViews(state => sceneViewOf(state, documentId).snapping)
 
   const flying = speed ?? view.flySpeed
-  // The figure OPENS the accessible name, because it is what is on screen: a name that dropped it
-  // would leave a speech-input user saying what they read and reaching nothing (WCAG 2.5.3).
-  const named = (value: string, name: string) => t('snapBar.namedValue', { value, name })
-  const readingOf = (control: (typeof SNAP_STEP_CONTROLS)[number], step: number) =>
-    t(SNAP_READING_KEYS[control.reads], {
-      value: snapFigure(step, control.reads, view.units, i18n.language),
-      unit: t(SNAP_UNIT_KEYS[view.units]),
-    })
-  // ALWAYS one decimal, and the widest reading taken from the BOUND rather than from the rungs:
-  // the slider reaches 14,5 — longer than every rung, « 0,5 » included — so a box held open by
-  // the rungs alone still jumped. With a fixed decimal the length follows the whole part only,
-  // and the largest whole part the setting allows is its maximum.
+  const reading = useSnapReading(view.units)
+  // ALWAYS one decimal: the length then follows the whole part alone, which is what lets the
+  // widest reading be taken from the bound rather than from a list the slider steps between.
   const speedReading = (value: number) =>
     t('snapBar.speedValue', {
       value: formatDecimal(value, i18n.language, { digits: 1, least: 1 }),
@@ -76,10 +73,10 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             scId="snapBar.speed"
             label={t('snapBar.speed')}
             description={t('snapBar.speedHint')}
-            tooltip={tipFor('horizontal')}
+            tooltip={TIP}
             value={speedReading(flying)}
-            widest={speedReading(boundsOf('three.flySpeed').max)}
-            valueLabel={named(speedReading(flying), t('snapBar.speed'))}
+            widest={speedReading(FLY_SPEED.max)}
+            valueName={t('snapBar.speed')}
             rowCount={2}
             rows={close => <SceneSpeedMenu speed={flying} onChoose={onSpeed} onClose={close} />}
           />
@@ -91,15 +88,12 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             scId="snapBar.surface"
             label={t('snapBar.surface')}
             description={t('snapBar.surfaceHint')}
-            tooltip={tipFor('horizontal')}
+            tooltip={TIP}
             pressed={snapping.surface}
             onToggle={() => toggle('surface')}
             value={t(view.snapSurfaceAlign ? 'snapBar.surfaceAligned' : 'snapBar.surfaceFlat')}
             widest={widestOf([t('snapBar.surfaceAligned'), t('snapBar.surfaceFlat')])}
-            valueLabel={named(
-              t(view.snapSurfaceAlign ? 'snapBar.surfaceAligned' : 'snapBar.surfaceFlat'),
-              t('snapBar.surfaceSettings'),
-            )}
+            valueName={t('snapBar.surfaceSettings')}
             rowCount={2}
             rows={() => <SceneSnapSurfaceMenu view={view} onViewport={set} />}
           />
@@ -112,16 +106,16 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
                 scId={`snapBar.${control.kind}`}
                 label={t(control.labelKey)}
                 description={t(control.descriptionKey)}
-                tooltip={tipFor('horizontal')}
+                tooltip={TIP}
                 pressed={snapping[control.kind]}
                 onToggle={() => toggle(control.kind)}
-                value={readingOf(control, view[control.path])}
+                value={reading(control.reads, view[control.path])}
                 widest={widestOf(
                   [...control.steps, ...(control.divisions ?? [])].map(step =>
-                    readingOf(control, step),
+                    reading(control.reads, step),
                   ),
                 )}
-                valueLabel={named(readingOf(control, view[control.path]), t(control.stepsKey))}
+                valueName={t(control.stepsKey)}
                 rowCount={control.steps.length}
                 rows={close => (
                   <SceneSnapStepMenu

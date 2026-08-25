@@ -1,4 +1,5 @@
 import { mdiChevronDown } from '@mdi/js'
+import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { fieldHandle } from '../scHandle'
@@ -30,8 +31,13 @@ export type ToggleMenuProps = {
    * button, and the whole bar shuffles under a dragged slider.
    */
   widest?: string
-  /** Already translated. Names the menu half, which its bare figure cannot do. */
-  valueLabel: string
+  /**
+   * Already translated. What the menu half IS — « Grid step », « Camera speed ». The accessible
+   * name is composed from it and `value`, here rather than at each caller: a name that dropped
+   * the figure on screen would leave a speech-input user reaching nothing (WCAG 2.5.3), and that
+   * is this component's rule to keep, not something five callers should each remember.
+   */
+  valueName: string
   /** How many rows the menu holds. One or none leaves the value half inert. */
   rowCount: number
   rows: (close: () => void) => ReactNode
@@ -63,11 +69,12 @@ export function ToggleMenu({
   onToggle,
   value,
   widest,
-  valueLabel,
+  valueName,
   rowCount,
   rows,
   scId,
 }: ToggleMenuProps) {
+  const { t } = useTranslation()
   const flyout = useHoverFlyout(rowCount)
 
   return (
@@ -96,7 +103,7 @@ export function ToggleMenu({
       <ToolButton
         {...flyout.triggerProps}
         icon={onToggle ? undefined : icon}
-        label={valueLabel}
+        label={t('a11y.namedValue', { value, name: valueName })}
         description={description}
         tooltip={tooltip}
         variant="bar"
