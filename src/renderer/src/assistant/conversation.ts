@@ -44,6 +44,15 @@ export function resultLine(data: unknown): string {
  * model would call with, and a call on half a path opens nothing.
  */
 function listWithin(items: readonly unknown[]): string {
+  // 🛑 An empty list is where a chain stalls, and `0 results: []` reads as an answer rather than
+  // as nothing at all: the model reported it to the person and stopped. Said in words rather
+  // than in brackets, at the moment it decides.
+  //
+  // No instruction with it, and that is deliberate: `jobs.list` answers empty for a job that has
+  // not registered yet, and "do not repeat it" would tell a model to stop watching its own
+  // generation — the very thing it was asked to do.
+  if (items.length === 0) return '0 results — nothing matched.'
+
   const kept: string[] = []
   let left = RESULT_MAX
 

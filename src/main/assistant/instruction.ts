@@ -113,26 +113,36 @@ const RULES = [
   // inferred: a model handed a space and a document still opened a second one for the subject of
   // the sentence, which is where "make me a bicycle" became a document named Bicycle.
   '  - Act on what is in front of the person. Only make a document when asked for a new one.',
+]
+
+/**
+ * 🛑 The rules that NAME an action of the wide catalogue, and are therefore given only to a door
+ * that holds it.
+ *
+ * Told to a narrow door, they are worse than useless: `parseReply` refuses a reply WHOLE the
+ * moment one call names an action the briefing did not show, so a model obeying "list the folder"
+ * with `files.list` loses its entire answer — twice, since the retry only complains about JSON —
+ * and the turn dies as "I did not manage to answer that one", two billed round trips spent.
+ * `FIND_RULE` does not rescue it either: `discoveryIn` only reads a reply whose SINGLE call is
+ * `actions.find`.
+ *
+ * They cost nothing here: a door shown the whole registry has room measured in the hundred
+ * thousands, where the short share lives against 8 000.
+ */
+const WIDE_RULES = [
   /**
    * The three that place a NAMED file, and they are one story: a model shown two hundred actions
    * reached for documents.list, which holds documents alone, then said it had found a picture.
-   *
-   * 🛑 Every character is paid for in the SHORT briefing, which this file's test holds to a
-   * saturated 8 000 — measure the worst case again before lengthening any of them.
    */
   '  - A file the person names is in the project: find it by name there, then file.open it.',
   /**
-   * 🛑 The one that unblocks a studio spoken to in one language and filled in another: a picture
-   * is named after the PROMPT that made it, so "le voilier vert" is on disk as "a beautiful
-   * sailing ship, sailboat, on the open sea, green". No wording of a search reaches that — and
-   * the model answered "no such file" over a folder of nine, which it could simply have read.
-   *
-   * **Its blind spot, and the sibling rule's**: neither `files.list` nor `files.search` is in the
-   * short share — measured on 2026-08-25, either one there leaves the expansion no room to answer
-   * `actions.find`. A narrow door following this literally spends one round being refused before
-   * FIND_RULE puts it right. The wide door, which is every cloud, reads both in its catalogue.
+   * What unblocks a studio spoken to in one language and filled in another: a picture is named
+   * after the PROMPT that made it, so "le voilier vert" is on disk as "a beautiful sailing ship,
+   * sailboat, on the open sea, green". No wording of a search reaches that — and the model asked
+   * three times over to be ALLOWED to list a folder of nine it could simply have read.
    */
-  '  - Nothing found by name? List the folder and read it: names follow the prompt, not the speaker.',
+  '  - Nothing found by name? List the folders YOURSELF and read the names in them, in this same',
+  '    answer. Never ask to be allowed: a name follows the prompt that made it, not what is spoken.',
   '  - Several files match? Choose none: name them in "say" and ask which.',
   '  - The remote library is not this project. Look there only when asked to.',
 ]
@@ -317,7 +327,7 @@ export function studioBriefing(parts: BriefingParts): Briefing {
   // and every 4 096-token model would otherwise join 69 000 characters on every sentence typed.
   if (parts.room < whole.text.length) return narrowBriefing(parts)
 
-  const wide = briefingText(parts, whole.text, RULES, '')
+  const wide = briefingText(parts, whole.text, [...RULES, ...WIDE_RULES], '')
   if (wide.length > parts.room) return narrowBriefing(parts)
 
   return { text: wide, allowed: whole.allowed, expand: null, narrow: () => narrowBriefing(parts) }
