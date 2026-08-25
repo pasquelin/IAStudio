@@ -58,6 +58,7 @@ import {
 } from './skyboxDocument'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
+import { useLivePreviews } from '@/stores/livePreviews'
 import { audioEditStore } from '@/stores/audioEdits'
 import { sceneStore } from '@/stores/scenes'
 import { sequenceStore } from '@/stores/sequences'
@@ -851,6 +852,9 @@ async function rewriteSourceAsset(
     if (!written) throw new Error('nothing to bake yet')
 
     assetBehind.delete(document.id)
+    // The file now holds what the preview was standing in for. Revoked rather than left: two
+    // answers for one asset is exactly the drift a preview must never become.
+    useLivePreviews.getState().revokePreview(source)
     // The tile still holds the bitmap it decoded: only a fresh `localChangedAt` moves the URL
     // `posterUrl` builds, and without it the overwrite looks like a gesture that did nothing.
     //

@@ -30,6 +30,7 @@ import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { assetVersionOf } from '@/stores/assets'
+import { livePreviewOf } from '@/stores/livePreviews'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
 import { useModelClips } from '@/stores/modelClips'
@@ -270,6 +271,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onView: placement => useSceneViews.getState().setCamera(documentId, placement),
       onPane: pane => useSceneViews.getState().setActivePane(documentId, pane),
       assetVersion: assetVersionOf,
+      livePreview: livePreviewOf,
     })
 
     renderer.mount(element)

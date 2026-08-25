@@ -10,6 +10,8 @@ export type CanvasHost = {
    * requires and every other application draws of a `.ora`.
    */
   flatten: () => Promise<Uint8Array<ArrayBuffer> | null>
+  /** The same picture UNENCODED, for a consumer inside this window — see `flattenBitmap`. */
+  flattenBitmap: () => Promise<ImageBitmap | null>
   /**
    * The same picture, base64 — what a PNG asset and the API take.
    *

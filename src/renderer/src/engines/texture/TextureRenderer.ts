@@ -42,6 +42,8 @@ export type TextureRendererOptions = {
    * stayed on screen as it was: its id does not move when ⌘S rewrites the file. See `refreshMaps`.
    */
   assetVersion?: (assetId: string) => string | undefined
+  /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
+  livePreview?: (assetId: string) => ImageBitmap | null
 }
 
 /** Radians per second of auto spin — slow enough to read a normal map, fast enough to see. */
@@ -95,6 +97,7 @@ export class TextureRenderer {
       options.loadTexture,
       (assetId, error) => reportFailure('texture.map', assetId, error),
       options.assetVersion,
+      options.livePreview,
     )
     this.sky = createSkyBinding(this.cache, () => this.paintBackground())
     // One per channel, built with the cache and never after: the reference, the race and the
