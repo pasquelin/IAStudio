@@ -1,26 +1,25 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { EditPixels } from '@/helpers/openAsset'
-import { ChannelsSectionMenu } from './ChannelsSectionMenu'
+import { ChannelsSectionMenuRows } from './ChannelsSectionMenuRows'
 import type { ChannelDerivation } from './derivation'
 
 const READY: ChannelDerivation = { source: 'baseColor', state: 'ready', run: vi.fn() }
 
-const open = (
-  derivation: ChannelDerivation | null = READY,
-  pixels: EditPixels | null = null,
-): void => {
+const open = (derivation: ChannelDerivation | null = READY, inspected = false): void => {
   render(
-    <ChannelsSectionMenu
-      derivation={derivation}
-      pixels={pixels}
-      at={{ x: 10, y: 10 }}
-      onClose={vi.fn()}
-    />,
+    <div role="menu">
+      <ChannelsSectionMenuRows
+        derivation={derivation}
+        inspected={inspected}
+        channel="Normale"
+        onInspect={vi.fn()}
+        onClose={vi.fn()}
+      />
+    </div>,
   )
 }
 
-describe('ChannelsSectionMenu', () => {
+describe('what only a channel can be asked', () => {
   it('says what the row does to the channel rather than reading it back', () => {
     open()
 
@@ -50,15 +49,22 @@ describe('ChannelsSectionMenu', () => {
   })
 
   /**
-   * Four of the eight channels compute from nothing — `baseColor` first among them — so a menu
-   * that only ever held a derivation did not open at all on the very row a model's colour lands in.
+   * Four of the eight channels compute from nothing — `baseColor` first among them — so the flat
+   * view has to stand on its own, or those rows would answer a right-click with an empty surface.
    */
-  it('offers to paint a channel that nothing computes', () => {
-    const run = vi.fn()
-    open(null, { workspace: 'image', run })
+  it('offers the flat view on a channel that nothing computes', () => {
+    open(null)
 
-    screen.getByRole('menuitem', { name: 'Modifier l’image' }).click()
+    expect(screen.getByRole('menuitem', { name: 'Regarder Normale seul' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Calculer depuis/ })).toBeNull()
+  })
 
-    expect(run).toHaveBeenCalled()
+  // One gesture in and out, rather than a second row to find.
+  it('offers the way back once the channel is the one being looked at', () => {
+    open(READY, true)
+
+    expect(
+      screen.getByRole('menuitem', { name: 'Revenir à la matière éclairée' }),
+    ).toBeInTheDocument()
   })
 })

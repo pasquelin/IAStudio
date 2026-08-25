@@ -1,7 +1,7 @@
 import { mdiClose, mdiFolderSearchOutline } from '@mdi/js'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { activation, selection } from '@/helpers/activation'
+import { useDeferredPress } from '@/hooks/useDeferredPress'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { Flyout } from '../Flyout'
@@ -20,7 +20,14 @@ export type LinkOption = {
 }
 
 /** A press, as the button wears it: what it is called, and what it explains. */
-type LinkPress = { label: string; hint: string; run: () => void }
+export type LinkPress = { label: string; hint: string; run: () => void }
+
+/** The words of a press, where it has any — a wordless `open` is named by its `press`. */
+export function namedPress(
+  press: LinkPress | { run: () => void } | undefined,
+): LinkPress | undefined {
+  return press && 'label' in press ? press : undefined
+}
 
 export type LinkFieldProps = {
   label: string
@@ -57,10 +64,12 @@ export type LinkFieldProps = {
    */
   open?: LinkPress | { run: () => void }
   /**
-   * What a SINGLE click does — a way of LOOKING at the slot, never a way of leaving it. `on` says
-   * where it stands, and Space fires it, as it picks everywhere else in the studio.
+   * What a SINGLE click on the picture does. It waits out the double-click window, so a press
+   * that opens something of its own does not flash under a double-click meant for `open`.
+   *
+   * `on` is for a press that TOGGLES — it draws `aria-pressed`; absent, the press just acts.
    */
-  toggle?: LinkPress & { on: boolean }
+  press?: LinkPress & { on?: boolean }
   /** Choosing from the whole project rather than from `options`. Absent, no button is drawn. */
   browse?: { label: string; hint: string; run: () => void }
   /** While what the slot points at is being fetched. */
@@ -92,7 +101,7 @@ export function LinkField({
   badge,
   onDropAsset,
   open,
-  toggle,
+  press,
   browse,
   busy,
   busyLabel,
@@ -116,7 +125,8 @@ export function LinkField({
   )
   // Named for what a SINGLE click does where there is one: the gesture a hand reaches for first is
   // the one the tooltip has to describe. No words, no button — an unnamed one is a Tab to nowhere.
-  const press: LinkPress | undefined = toggle ?? (open && 'label' in open ? open : undefined)
+  const named = press ?? namedPress(open)
+  const gestures = useDeferredPress(press?.run ?? (() => {}), open?.run)
   const [preview, setPreview] = useState<HTMLElement | null>(null)
   const resting = useRef<number | null>(null)
 
@@ -159,13 +169,12 @@ export function LinkField({
             {/* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives
                 the picture it points at, and an id whose asset has left the project offered to
                 open something no longer there — a focus stop leading nowhere is a Tab to cross. */}
-            {press && chosen ? (
+            {named && chosen ? (
               <button
                 type="button"
-                aria-pressed={toggle?.on}
-                {...(open ? activation(open.run) : {})}
-                {...(toggle ? selection(toggle.run) : {})}
-                {...TIP_LEFT(press.label, false, press.hint)}
+                aria-pressed={press?.on}
+                {...gestures}
+                {...TIP_LEFT(named.label, false, named.hint)}
                 onPointerEnter={event => {
                   const anchor = event.currentTarget
                   forget()

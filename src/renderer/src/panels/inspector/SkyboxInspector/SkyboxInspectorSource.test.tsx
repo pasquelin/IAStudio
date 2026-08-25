@@ -43,23 +43,26 @@ describe('the panorama a sky is made of', () => {
     setSkyboxSource('doc-1', PANORAMA)
     await show()
 
-    await userEvent.dblClick(screen.getByRole('button', { name: 'Modifier l’image' }))
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Choisir une image' }))
 
     expect(editPixelsOf).toHaveBeenCalledWith(expect.objectContaining({ id: 'sky-1' }))
     expect(paint).toHaveBeenCalled()
   })
 
   /**
-   * Nothing to paint, no press at all — not the generic one `PictureField` falls back to, which
-   * would send the panorama to a SECOND skybox document from inside the skybox inspector.
+   * Nothing to paint, nothing to open — and not the generic fallback either, which would send the
+   * panorama to a SECOND skybox document from inside the skybox inspector. The press stays: it
+   * chooses, which a slot can always do.
    */
-  it('offers no press where there is nothing on disk to paint', async () => {
+  it('opens nothing on a double-click where there is nothing on disk to paint', async () => {
+    const paint = vi.fn()
     vi.mocked(editPixelsOf).mockReturnValue(null)
     setSkyboxSource('doc-1', PANORAMA)
     await show()
 
-    expect(screen.queryByRole('button', { name: 'Modifier l’image' })).toBeNull()
-    // And not the generic fallback either: `PictureField` supplies one where a caller says nothing.
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Choisir une image' }))
+
+    expect(paint).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Ouvrir la texture' })).toBeNull()
   })
 
