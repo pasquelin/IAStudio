@@ -143,8 +143,9 @@ Une seconde barre flotte **en haut du viewport**, horizontale. Elle ne porte pas
 des **comportements** : ce qu’on change *pendant* qu’on manipule, sans lâcher la souris.
 
 Chaque entrée est un groupe de **deux zones**. L’icône, à gauche, **allume ou éteint** ce
-magnétisme-là et rien d’autre. La valeur, à droite, **ouvre un menu** — et choisir une valeur
-n’allume rien : on peut consulter les crans offerts sans changer ce que la scène obéit.
+magnétisme-là et rien d’autre. La valeur, à droite, **ouvre un menu** — et choisir un cran
+**allume ce magnétisme au passage** : aller chercher un pas, c’est demander ce magnétisme, et le
+laisser éteint coûtait un second clic à chaque première utilisation.
 
 | Entrée | Ce que l’icône bascule | Ce que le menu règle |
 |---|---|---|
@@ -153,6 +154,8 @@ n’allume rien : on peut consulter les crans offerts sans changer ce que la sc�
 | **Magnétisme de grille** | faire avancer un déplacement par pas réguliers | le pas, de 1 cm à 10 m |
 | **Magnétisme d’angle** | faire tourner par crans | l’angle, en incréments ou en divisions du tour |
 | **Magnétisme d’échelle** | faire varier l’échelle par crans | le ratio |
+
+La barre est en **haut à droite** du viewport ; la colonne d’outils tient déjà le côté gauche.
 
 **Les quatre sont indépendants.** Poser un accessoire sur une table pendant que son angle reste
 libre est le geste que la bascule unique ne savait pas dire. Le bouton **Tous les magnétismes**

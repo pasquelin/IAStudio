@@ -358,6 +358,17 @@ describe('snapping and the coordinate frame', () => {
     expect(setSnapping).toHaveBeenLastCalledWith(EVERYTHING_SNAPPED)
   })
 
+  // Reaching for a step IS asking for that snap: leaving the choice inert cost a second click on
+  // every first use. Where this bar parts from Unreal — arbitrage d'Alban.
+  it('arms a snap by choosing its step, without a second click', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Pas de la grille/ }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: '1 m' }))
+
+    expect(setSnapping).toHaveBeenLastCalledWith({ ...NOTHING_SNAPPED, translate: true })
+  })
+
   // The whole point of the snap bar: one kind arms without the other three following it.
   it('arms one snap alone from the snap bar', async () => {
     render(<SceneDocument documentId="doc-1" />)
