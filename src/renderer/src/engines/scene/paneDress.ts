@@ -12,7 +12,10 @@ import {
 import { type DisplayMode } from '@shared/domain/scene'
 
 /**
- * What one view does to the scene just before it is drawn.
+ * What one view does to the scene just before it is drawn, and whether it changed anything.
+ *
+ * The answer is what tells the frame its shadow maps are worth drawing again: a pane that puts
+ * the scene's lights out for a material preview draws different shadows from the one beside it.
  *
  * A module of its own rather than a method: it runs from the render loop, which needs a GPU, and
  * a rule that only executes behind a context is a rule no test can reach. Here it is exercised on
@@ -59,7 +62,7 @@ export function dressForPane(
    * view and a rendered view can stand side by side in a quad layout.
    */
   light: (studio: boolean) => void = () => {},
-): void {
+): boolean {
   // The layers are the camera's own and have to be set every pass; the scene's dress does not.
   if (showsEdges(mode, quads)) eye.layers.enable(EDGE_LAYER)
   else eye.layers.disable(EDGE_LAYER)
@@ -67,7 +70,7 @@ export function dressForPane(
   // Every pass, like the layers: what the previous pane left is not what this one wants.
   light(hidesSceneEnvironment(mode))
 
-  if (memory.worn?.mode === mode && memory.worn.quads === quads) return
+  if (memory.worn?.mode === mode && memory.worn.quads === quads) return false
   memory.worn = { mode, quads }
 
   const substitute = substituteFor(mode, quads)
@@ -92,6 +95,7 @@ export function dressForPane(
 
     applyDisplayMode(object, mode)
   }
+  return true
 }
 
 /**

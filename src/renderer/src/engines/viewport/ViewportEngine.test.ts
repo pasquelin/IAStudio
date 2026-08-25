@@ -30,6 +30,8 @@ const scissorTest = vi.fn()
 const clearColor = vi.fn()
 const cleared = vi.fn()
 const renderTarget = vi.fn()
+/** Whether the shadow maps were drawn again, one entry per `render` — three.js reads it once. */
+let shadowDraws: boolean[] = []
 /** What the display is worth. Two is a laptop retina screen, which is where the fault showed. */
 let displayRatio = 1
 
@@ -37,7 +39,7 @@ vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
   WebGLRenderer: class {
     readonly domElement: HTMLCanvasElement
-    readonly shadowMap = { enabled: false, autoUpdate: true }
+    readonly shadowMap = { enabled: false, autoUpdate: true, needsUpdate: false }
     /** What the preview target is sized against: the drawing buffer's own sample count. */
     readonly capabilities = { maxSamples: 4 }
     toneMapping = NoToneMapping
@@ -86,6 +88,11 @@ vi.mock('three', async importOriginal => ({
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
       this.info.render.calls += 1
+      // To the letter of `WebGLShadowMap.render`: it draws when told to, then says so no more.
+      const drawing =
+        this.shadowMap.enabled && (this.shadowMap.autoUpdate || this.shadowMap.needsUpdate)
+      shadowDraws.push(drawing)
+      if (drawing) this.shadowMap.needsUpdate = false
       rendered(...args)
     }
   },
@@ -104,6 +111,7 @@ describe('a viewport', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    shadowDraws = []
     // `performance` among them: the preview holds itself to a cadence, and a clock the test
     // cannot move would make that cadence depend on how fast the machine ran the assertions.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] })
@@ -435,35 +443,26 @@ describe('a viewport', () => {
     })
 
     /**
-     * `render` redoes the world matrices and every shadow map from scratch, and the pane pass of
-     * this frame has just done both over a scene nothing has moved since — 1,2 ms of the 5,1 the
-     * second pass cost. Only when the panes ran: a grown preview skips them, and the preview
-     * camera is a node of the scene, so its own world matrix rides on that traversal.
+     * `render` redoes the world matrices from scratch, and the pane pass of this frame has just
+     * done them over a scene nothing has moved since — 1,2 ms of the 5,1 the second pass cost.
+     * Only when the panes ran: a grown preview skips them, and the preview camera is a node of
+     * the scene, so its own world matrix rides on that traversal.
+     *
+     * The shadow maps used to be spared here too. They are spared for the whole frame now — see
+     * the shadow maps this viewport reuses.
      */
-    it('leaves the matrices and the shadow maps of the frame alone, and puts both flags back', () => {
+    it('leaves the matrices of the frame alone, and puts the flag back', () => {
       const engine = atRest()
-      const renderer = engine.gl
-      if (!renderer) throw new Error('the viewport mounts a renderer')
 
-      const seen: { matrices: boolean; shadows: boolean }[] = []
-      rendered.mockImplementation(() =>
-        seen.push({
-          matrices: engine.scene.matrixWorldAutoUpdate,
-          shadows: renderer.shadowMap.autoUpdate,
-        }),
-      )
+      const seen: boolean[] = []
+      rendered.mockImplementation(() => seen.push(engine.scene.matrixWorldAutoUpdate))
 
       engine.setInsetPane(insetPane())
       drawFrames()
 
-      // Panes, preview, quad — and only the preview is spared the two.
-      expect(seen).toEqual([
-        { matrices: true, shadows: true },
-        { matrices: false, shadows: false },
-        { matrices: true, shadows: true },
-      ])
+      // Panes, preview, quad — and only the preview is spared.
+      expect(seen).toEqual([true, false, true])
       expect(engine.scene.matrixWorldAutoUpdate).toBe(true)
-      expect(renderer.shadowMap.autoUpdate).toBe(true)
     })
 
     it('keeps them on for a grown preview, which has no pane pass to ride on', () => {
@@ -740,7 +739,12 @@ describe('a viewport', () => {
     /** The seam a per-view display mode hangs on: each pane is announced before its own pass. */
     it('says which pane is about to be drawn, before drawing it', () => {
       const dressed: number[] = []
-      const engine = atRest({ onPane: index => dressed.push(index) })
+      const engine = atRest({
+        onPane: index => {
+          dressed.push(index)
+          return false
+        },
+      })
 
       engine.setLayout('quad')
       dressed.length = 0
@@ -751,7 +755,12 @@ describe('a viewport', () => {
 
     it('announces the one pane of a single layout too', () => {
       const dressed: number[] = []
-      const engine = atRest({ onPane: index => dressed.push(index) })
+      const engine = atRest({
+        onPane: index => {
+          dressed.push(index)
+          return false
+        },
+      })
 
       dressed.length = 0
       engine.requestRender()
@@ -1168,6 +1177,81 @@ describe('a viewport', () => {
 
     it('disposes cleanly when it was never mounted', () => {
       expect(() => new ViewportEngine().dispose()).not.toThrow()
+    })
+  })
+
+  /**
+   * A shadow map is drawn FROM A LIGHT, never from the camera, so an orbit can reuse the one the
+   * last frame drew. Measured on this Mac at 1600×900 while orbiting 400 shadowed spheres:
+   * 2,6 ms against 1,9 for one sun, 4,9 against 2,2 for four point lights.
+   *
+   * The direction of the mistake is what matters: reusing when something moved shows a shadow of
+   * what WAS, and no gate would go red on it.
+   */
+  describe('and the shadow maps it reuses', () => {
+    const shadowed = (): ViewportEngine => atRest({ shadows: true })
+
+    it('draws them again on a frame anything but the camera asked for', () => {
+      const engine = shadowed()
+      shadowDraws.length = 0
+
+      engine.requestRender()
+      drawFrames()
+
+      expect(shadowDraws).toContain(true)
+    })
+
+    it('reuses them on a frame the camera alone asked for', () => {
+      const engine = shadowed()
+      engine.requestRender()
+      drawFrames()
+      shadowDraws.length = 0
+
+      engine.requestCameraRender()
+      drawFrames()
+
+      expect(shadowDraws).not.toContain(true)
+    })
+
+    it('draws them again for a pane that changed what the scene wears', () => {
+      // A quad layout where one pane puts the scene's lights out for a material preview: its
+      // maps are drawn from a scene the pane beside it is not showing.
+      const engine = atRest({ shadows: true, onPane: index => index === 2 })
+      engine.setLayout('quad')
+      drawFrames()
+      shadowDraws.length = 0
+
+      engine.requestCameraRender()
+      drawFrames()
+
+      // The third pane alone, and not the three that wear what is already on.
+      expect(shadowDraws).toEqual([false, false, true, false])
+    })
+
+    it('leaves them armed for whatever renders between two frames', () => {
+      const engine = shadowed()
+      const renderer = engine.gl
+      if (!renderer) throw new Error('the viewport mounts a renderer')
+
+      engine.requestCameraRender()
+      drawFrames()
+
+      // A film being written out, a capture, a scene clip: none comes through the frame loop and
+      // none would know to ask. An exported video was reusing the maps of the pose Render was
+      // pressed on, with an animated character moving over a shadow that stood still.
+      expect(renderer.shadowMap.needsUpdate).toBe(true)
+    })
+
+    it('draws them again when something moves mid-orbit', () => {
+      const engine = shadowed()
+      engine.requestCameraRender()
+      // Both in the same turn, and the camera one first: the frame is already asked for, so a
+      // scene change that only scheduled would be drawn against the shadows of the last one.
+      engine.requestRender()
+      shadowDraws.length = 0
+      drawFrames()
+
+      expect(shadowDraws).toContain(true)
     })
   })
 })

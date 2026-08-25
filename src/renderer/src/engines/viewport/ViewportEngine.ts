@@ -57,10 +57,12 @@ export type ViewportEngineOptions = {
   onOverlay?: (renderer: WebGLRenderer) => void
   /**
    * Called just before each pane is drawn, so whoever owns the scene can say how THIS view shows
-   * it. The one seam that makes a per-view display mode possible: `overrideMaterial` and a
-   * camera's layers are read at render time, so a pane's answer only has to hold for its own pass.
+   * it, and answering whether that changed what the scene wears — which is what tells the frame
+   * its shadow maps are worth drawing again. The one seam that makes a per-view display mode
+   * possible: `overrideMaterial` and a camera's layers are read at render time, so a pane's
+   * answer only has to hold for its own pass.
    */
-  onPane?: (index: number, camera: ViewportCamera) => void
+  onPane?: (index: number, camera: ViewportCamera) => boolean
   /**
    * Called around the inset pass, and it hands back the call that undoes whatever it did.
    *
@@ -566,7 +568,7 @@ export class ViewportEngine {
 
     const controls = new OrbitControls(orthographic, canvas)
     controls.enableDamping = true
-    controls.addEventListener('change', this.requestRender)
+    controls.addEventListener('change', this.requestCameraRender)
     // Only the pane under the pointer listens — see `armPaneUnderPointer`. Four live orbits on
     // one canvas would each answer the same drag, and the three off-screen ones would answer it
     // invisibly.
@@ -729,6 +731,12 @@ export class ViewportEngine {
     if (this.output.alpha) renderer.setClearAlpha(0)
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
     renderer.shadowMap.enabled = this.options.shadows ?? false
+    // Drawn when this engine says so, never per frame: `requestRender` is what says a shadow
+    // could have moved, and a camera frame goes through `requestCameraRender` instead. Stale
+    // from here, so a context rebuilt under a mounted engine draws its maps on the first frame
+    // rather than showing a scene with no shadows until something else moves.
+    renderer.shadowMap.autoUpdate = false
+    this.shadowsStale = true
     // three.js clears the counters at the top of every `render`, and the overlay pass calls
     // `render` a second time — left automatic, a frame would report the trihedron alone.
     renderer.info.autoReset = false
@@ -737,7 +745,7 @@ export class ViewportEngine {
     if (this.options.controls !== 'none') {
       this.controls = new OrbitControls(this.camera, canvas)
       this.controls.enableDamping = true
-      this.controls.addEventListener('change', this.requestRender)
+      this.controls.addEventListener('change', this.requestCameraRender)
       // On `end` rather than on `change`: the latter fires per frame of an orbit, and whoever
       // listens here publishes into a store. Once the hand lets go is when the framing is a
       // decision rather than a gesture in progress.
@@ -773,7 +781,7 @@ export class ViewportEngine {
     this.observer?.disconnect()
     this.observer = null
 
-    this.controls?.removeEventListener('change', this.requestRender)
+    this.controls?.removeEventListener('change', this.requestCameraRender)
     this.controls?.dispose()
     this.controls = null
 
@@ -977,7 +985,28 @@ export class ViewportEngine {
     this.lastTime = performance.now()
   }
 
+  /** Whether anything but the camera has moved since the last frame drew its shadow maps. */
+  private shadowsStale = true
+
   readonly requestRender = (): void => {
+    // Stale by DEFAULT, and only ever cleared by a frame that drew: whoever forgets to say what
+    // moved pays a shadow pass, and whoever forgets the other way shows a shadow of what was.
+    this.shadowsStale = true
+    this.schedule()
+  }
+
+  /**
+   * A frame the CAMERA alone asked for — an orbit, a fly, a damping settling.
+   *
+   * A shadow map is drawn from a light, never from the camera, so the one drawn last still
+   * holds. Measured while orbiting on this Mac at 1600×900: 2.6 ms against 1.9 for one sun over
+   * 400 shadowed spheres, and 4.9 against 2.2 for four point lights, which cast six faces each.
+   */
+  readonly requestCameraRender = (): void => {
+    this.schedule()
+  }
+
+  private schedule(): void {
     if (this.frame !== null || this.renderer === null) return
     this.frame = requestAnimationFrame(this.renderFrame)
   }
@@ -1024,7 +1053,7 @@ export class ViewportEngine {
    */
   private renderPanes(renderer: WebGLRenderer): void {
     if (this.extras.length === 0) {
-      this.options.onPane?.(0, this.camera)
+      if (this.options.onPane?.(0, this.camera) === true) renderer.shadowMap.needsUpdate = true
       renderer.render(this.scene, this.camera)
       return
     }
@@ -1042,7 +1071,9 @@ export class ViewportEngine {
         const { x, y, width, height: paneHeight } = glRect(rect, height)
         renderer.setViewport(x, y, width, paneHeight)
         renderer.setScissor(x, y, width, paneHeight)
-        this.options.onPane?.(index, camera)
+        // A pane that put the scene's lights out draws different shadows from the one beside
+        // it: what THIS pane wears is what its maps have to be drawn from.
+        if (this.options.onPane?.(index, camera) === true) renderer.shadowMap.needsUpdate = true
         renderer.render(this.scene, camera)
       }
     } finally {
@@ -1140,18 +1171,15 @@ export class ViewportEngine {
     const heldAlpha = renderer.getClearAlpha()
     const heldAutoClear = renderer.autoClear
     const heldMatrix = this.scene.matrixWorldAutoUpdate
-    const heldShadows = renderer.shadowMap.autoUpdate
     const loan = aspectLoan(target.width, target.height)
 
-    // Both of these are redone from scratch by every `render`, and the pane pass of THIS frame
-    // has just done them over a scene nothing has moved since — measured at 1,2 ms of the 5,1 the
-    // second pass cost. Only when the panes actually ran: the preview camera is a node of the
-    // scene, so `render` leaves its world matrix to the scene traversal (`camera.parent !== null`
-    // skips the camera's own update), and a grown preview skips the panes entirely.
-    if (panesDrawn) {
-      this.scene.matrixWorldAutoUpdate = false
-      renderer.shadowMap.autoUpdate = false
-    }
+    // Redone from scratch by every `render`, and the pane pass of THIS frame has just done it
+    // over a scene nothing has moved since — measured at 1,2 ms of the 5,1 the second pass cost.
+    // Only when the panes actually ran: the preview camera is a node of the scene, so `render`
+    // leaves its world matrix to the scene traversal (`camera.parent !== null` skips the
+    // camera's own update), and a grown preview skips the panes entirely. The shadow maps need
+    // no such care since `renderFrame` owns `needsUpdate`: the pane pass consumed it.
+    if (panesDrawn) this.scene.matrixWorldAutoUpdate = false
 
     try {
       renderer.setRenderTarget(target)
@@ -1162,7 +1190,6 @@ export class ViewportEngine {
     } finally {
       loan.restore()
       this.scene.matrixWorldAutoUpdate = heldMatrix
-      renderer.shadowMap.autoUpdate = heldShadows
       renderer.autoClear = heldAutoClear
       renderer.setClearColor(this.insetClear, heldAlpha)
       renderer.setRenderTarget(null)
@@ -1287,6 +1314,11 @@ export class ViewportEngine {
 
     // The panes are skipped when the preview covers them whole: drawing a scene twice over to
     // throw the first one away is the most expensive thing a frame can do.
+    // Read by the first pass of the frame alone: three.js turns it back off once it has drawn
+    // the maps, and the preview pass behind it reuses what this one left.
+    renderer.shadowMap.needsUpdate = this.shadowsStale
+    this.shadowsStale = false
+
     const panesDrawn = !this.insetCoversAll()
     if (panesDrawn) this.renderPanes(renderer)
     // After the panes and before the overlay: the preview covers the view it sits on, and the
@@ -1314,8 +1346,16 @@ export class ViewportEngine {
     // Read per frame, never cached: a context restore replaces `info` and its two counter objects.
     recordFrame(renderer.info, this.stats)
 
+    // Armed again for whatever renders BETWEEN two frames — a film being written out, a capture,
+    // a scene clip — none of which comes through here and none of which would know to ask. The
+    // reuse is a property of the next viewport frame, so it is granted there and nowhere else:
+    // an exported video was reusing the maps of the pose the Render button was pressed on.
+    renderer.shadowMap.needsUpdate = true
+
     if (moving || settling) {
-      this.requestRender()
+      // A fly and a damping settling move the camera and nothing else: the shadow maps this
+      // frame drew are the ones the next one wants.
+      this.requestCameraRender()
       return
     }
 

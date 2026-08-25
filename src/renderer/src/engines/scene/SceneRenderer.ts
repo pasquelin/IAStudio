@@ -1616,7 +1616,7 @@ export class SceneRenderer {
    * manipulator nobody can grab. Only the document's own objects are walked — the gizmo, the
    * grid and the trihedron are siblings, never in `objects`.
    */
-  private dressPane(index: number, camera: ViewportCamera): void {
+  private dressPane(index: number, camera: ViewportCamera): boolean {
     // Only while it HOLDS something: three keeps the helper hidden with nothing attached, and
     // writing `true` here showed a gizmo no selection stood behind — it grabs nothing, so the
     // drag fell through to the orbit and turned the scene. A single layout keeps `active` at 0.
@@ -1625,7 +1625,7 @@ export class SceneRenderer {
     }
 
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
-    dressForPane(
+    return dressForPane(
       this.objects.values(),
       mode,
       this.quadEdges,
