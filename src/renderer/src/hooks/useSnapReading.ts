@@ -7,8 +7,8 @@ import { snapFigure } from '@/spaces/three/SceneSnapBar/snapFigure'
 export type SnapReader = (reads: SnapReading, step: number) => string
 
 /**
- * Written once because the bar and its menus both need it, and each had its own copy: the closed
- * value said one thing and the cell one chose it from said another, with nothing to notice.
+ * Written once because the bar and its menu both compose it — the same three lines over the same
+ * `reads`, `step` and unit. They agreed; what this removes is the second place to change.
  */
 export function useSnapReading(unit: DisplayUnit): SnapReader {
   const { t, i18n } = useTranslation()

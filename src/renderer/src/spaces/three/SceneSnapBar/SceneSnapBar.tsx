@@ -19,9 +19,6 @@ import { SceneSpeedMenu } from './SceneSpeedMenu'
 // Read once: the registry answers by walking every descriptor, and this sits on a render path.
 const FLY_SPEED = boundsOf('three.flySpeed')
 
-/** The bar is horizontal, so its tips go under — `SequenceActions` reaches for the same. */
-const TIP = tipFor('horizontal')
-
 export type SceneSnapBarProps = {
   documentId: string
   /** The session speed the wheel writes in flight, or `null` while nothing has moved it. */
@@ -73,7 +70,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             scId="snapBar.speed"
             label={t('snapBar.speed')}
             description={t('snapBar.speedHint')}
-            tooltip={TIP}
+            tooltip={tipFor('horizontal')}
             value={speedReading(flying)}
             widest={speedReading(FLY_SPEED.max)}
             valueName={t('snapBar.speed')}
@@ -88,7 +85,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             scId="snapBar.surface"
             label={t('snapBar.surface')}
             description={t('snapBar.surfaceHint')}
-            tooltip={TIP}
+            tooltip={tipFor('horizontal')}
             pressed={snapping.surface}
             onToggle={() => toggle('surface')}
             value={t(view.snapSurfaceAlign ? 'snapBar.surfaceAligned' : 'snapBar.surfaceFlat')}
@@ -106,7 +103,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
                 scId={`snapBar.${control.kind}`}
                 label={t(control.labelKey)}
                 description={t(control.descriptionKey)}
-                tooltip={TIP}
+                tooltip={tipFor('horizontal')}
                 pressed={snapping[control.kind]}
                 onToggle={() => toggle(control.kind)}
                 value={reading(control.reads, view[control.path])}
