@@ -50,7 +50,11 @@ export const loadTexture: TextureSource = async url => {
     }
   }
 
-  const bitmap = await createImageBitmap(blob)
+  // Flipped HERE, at the decode, because `texture.flipY` cannot reach it: `WebGLTextures` skips
+  // `UNPACK_FLIP_Y_WEBGL` entirely when the source is an `ImageBitmap`, so the `true` a `Texture`
+  // carries by default is a wish nothing grants. Every other decoder of this module lands upright
+  // — an equirectangular sky is simply the first picture legible enough to show it.
+  const bitmap = await createImageBitmap(blob, { imageOrientation: 'flipY' })
   const texture = new Texture(bitmap)
   texture.needsUpdate = true
   return texture
