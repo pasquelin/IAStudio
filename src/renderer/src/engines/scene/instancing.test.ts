@@ -8,7 +8,12 @@ import {
 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { meshNode } from './scene-fixtures'
-import { DRAWN_BY_INSTANCE, WORTH_INSTANCING, createInstancedGroups } from './instancing'
+import {
+  DRAWN_BY_INSTANCE,
+  WORTH_INSTANCING,
+  createInstancedGroups,
+  keepsItsGroup,
+} from './instancing'
 import type { SceneNode } from './sceneState'
 
 /** One shape, N nodes of it — a decor someone copied and pasted, which is the case that costs. */
@@ -150,6 +155,22 @@ describe('createInstancedGroups', () => {
     expect(createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
   })
 
+  it('regroups a node repainted since the last pass, rather than the spelling it had', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    const first = nodes[0]
+    if (!first || first.type !== 'mesh') throw new Error('no node to repaint')
+    // A node is REPLACED when it is edited, which is what the spelling is held against. Held
+    // against its id instead, a repaint would keep drawing the colour it had.
+    nodes[0] = { ...first, material: { ...first.material, color: '#ff0000' } }
+
+    // One shape short of the floor on each side, so neither half is drawn by an instance.
+    expect(groups.rebuild(nodes, id => objects.get(id))).toBe(0)
+  })
+
   it('takes its meshes away when the engine goes', () => {
     const scene = host()
     const groups = createInstancedGroups(scene)
@@ -198,5 +219,96 @@ describe('splitting a group across the level it covers', () => {
     createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
 
     expect(instancesIn(scene)).toHaveLength(1)
+  })
+})
+
+describe('a node dragged while its instance draws it', () => {
+  const drawnBy = (scene: Object3D): InstancedMesh => {
+    const instance = instancesIn(scene)[0]
+    if (!instance) throw new Error('nothing was instanced')
+    return instance
+  }
+
+  it('follows the mesh, without waiting for the gesture to end', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    const mesh = objects.get('n0')
+    if (!mesh) throw new Error('no mesh to drag')
+    mesh.position.set(0, 9, 0)
+    mesh.updateMatrixWorld(true)
+
+    expect(groups.moved(['n0'], id => objects.get(id))).toBe(true)
+    // Slot 0 of the buffer, thirteenth number of its matrix: where the mesh now stands.
+    expect(drawnBy(scene).instanceMatrix.array[13]).toBe(9)
+  })
+
+  it('asks for the moved slot alone to be uploaded again', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+    drawnBy(scene).instanceMatrix.clearUpdateRanges()
+
+    groups.moved(['n0'], id => objects.get(id))
+
+    // Sixty-four matrices re-uploaded per pointer move is what this exists to give back.
+    expect(drawnBy(scene).instanceMatrix.updateRanges).toEqual([{ start: 0, count: 16 }])
+  })
+
+  it('grows the region bounds rather than let a dragged node be culled out of them', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+    const before = drawnBy(scene).boundingSphere?.radius ?? 0
+
+    const mesh = objects.get('n0')
+    if (!mesh) throw new Error('no mesh to drag')
+    mesh.position.set(0, 500, 0)
+    mesh.updateMatrixWorld(true)
+    groups.moved(['n0'], id => objects.get(id))
+
+    // A predicate that stayed put would make the dragged object VANISH the moment it left.
+    expect(drawnBy(scene).boundingSphere?.radius ?? 0).toBeGreaterThan(before)
+  })
+
+  it('says nothing moved when no instance draws the node', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING - 1)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    expect(groups.moved(['n0'], id => objects.get(id))).toBe(false)
+  })
+})
+
+describe('keepsItsGroup', () => {
+  it('keeps a node whose placement is all that moved', () => {
+    const node = meshNode('n0')
+
+    // What a draw call is grouped by has not moved, so neither has the group — and rewriting one
+    // slot costs 3.5 µs against 32.7 ms to group 40 000 nodes again.
+    const moved = { ...node.transform, position: { x: 4, y: 0, z: 0 } }
+
+    expect(keepsItsGroup(node, { ...node, transform: moved })).toBe(true)
+  })
+
+  it('lets go of a node whose shape, paint, visibility or parent changed', () => {
+    const node = meshNode('n0')
+    const elsewhere: Partial<typeof node>[] = [
+      { geometry: { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 8 } },
+      { material: { ...node.material, color: '#ff0000' } },
+      { visible: false },
+      { parentId: 'other' },
+    ]
+
+    // Each of the four is read by the grouping: kept, the node would go on being drawn by an
+    // instance that spells something it no longer is.
+    for (const moved of elsewhere) {
+      expect(keepsItsGroup(node, { ...node, ...moved })).toBe(false)
+    }
   })
 })

@@ -11,7 +11,7 @@ import source from './SceneRenderer.ts?raw'
  */
 describe('SceneRenderer and the grouping of repeated shapes', () => {
   const body = (name: string): string =>
-    new RegExp(`private ${name}\\(\\): void \\{[\\s\\S]*?\\n {2}\\}`).exec(source)?.[0] ?? ''
+    new RegExp(`private ${name}\\([^)]*\\): void \\{[\\s\\S]*?\\n {2}\\}`).exec(source)?.[0] ?? ''
 
   it('groups outside the switch that only turns the counters off', () => {
     // Turning statistics off gives back a walk over every geometry. It must not also stop the
@@ -28,16 +28,26 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('regroupInstances')).not.toContain('asDocumented')
   })
 
-  it('never marks one of the two content flags without the other', () => {
-    // They are read by different passes and cleared separately, so a bare assignment leaves the
-    // other stale — and a stale grouping shows the scene frozen where it stood.
-    const bare = source
+  it('answers a node that only moved without grouping everything again', () => {
+    // A rebuild of 40 000 nodes costs 32.7 ms; rewriting the slots that moved costs 3.5 µs. Both
+    // paths live here, and a `regroupInstances` that lost one would silently take the other.
+    expect(body('regroupInstances')).toContain('instances.rebuild')
+    expect(body('regroupInstances')).toContain('instances.moved')
+  })
+
+  it('never lets a changed node mark neither the grouping nor its own slot', () => {
+    // Marked as neither, a node keeps the matrix the last grouping wrote — it stands where it
+    // stood, and nothing rebuilds it. `syncNode` is the one place that may tell the two apart.
+    const settled = source
       .replace(body('markContentChanged'), '')
+      .replace(body('syncNode'), '')
       .split('\n')
       .map((line, at) => ({ line: line.trim(), at: at + 1 }))
       .filter(({ line }) => line === 'this.contentChanged = true')
 
-    expect(bare).toEqual([])
+    expect(settled).toEqual([])
+    expect(body('syncNode')).toContain('keepsItsGroup')
+    expect(body('syncNode')).toContain('this.movedNodes.add')
     expect(body('markContentChanged')).toContain('this.groupingStale = true')
   })
 })

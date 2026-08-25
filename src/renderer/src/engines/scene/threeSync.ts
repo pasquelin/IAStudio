@@ -54,22 +54,18 @@ export function giveSecondUvSet(geometry: BufferGeometry): void {
 }
 
 /**
- * A geometry cannot be mutated into another shape, so this one swaps it — and disposes the one
- * it replaces. Left behind, every character typed in a radius field leaks a buffer on the GPU.
+ * Puts a mesh on another shape and hands back the one it was wearing, `null` when it already
+ * wore it — for the caller to give back, since only it knows which cache lent it.
  */
-export function applyGeometry(
-  mesh: Mesh,
-  descriptor: GeometryDescriptor,
-  tilesPerMetre: number,
-): void {
+export function wearGeometry(mesh: Mesh, next: BufferGeometry): BufferGeometry | null {
   const previous = mesh.geometry
-  const next = tiledGeometry(descriptor, tilesPerMetre)
+  if (previous === next) return null
+
   // The new shape inherits the second UV set, or an occlusion map already in place would stop
   // doing anything the moment a radius is nudged.
   if (previous.attributes.uv1) giveSecondUvSet(next)
-
   mesh.geometry = next
-  previous.dispose()
+  return previous
 }
 
 /** The shape, with its maps repeated at the material's density — see `uvTiling` for how. */
