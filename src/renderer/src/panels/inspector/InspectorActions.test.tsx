@@ -32,7 +32,7 @@ function openTexture(): void {
 beforeEach(() => {
   vi.clearAllMocks()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
-  useSelection.getState().clear()
+  useSelection.getState().selectFiles([])
   useStyles.setState({ styles: [], loaded: true })
   // A module-wide store, and no section is mounted here: the offer would otherwise carry over
   // whatever the previous case left answering.

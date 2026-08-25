@@ -350,8 +350,7 @@ export function Explorer() {
       const bridge = getBridge()?.project
       if (!bridge) return
 
-      const chosen = useSelection.getState().selection
-      const paths = chosen.kind === 'file' ? chosen.ids : []
+      const paths = selectedFilePaths(useSelection.getState())
       const held = useFileClipboard.getState()
       const answer = (outcome: Promise<FileOutcome>): void => void outcome.then(settled)
 

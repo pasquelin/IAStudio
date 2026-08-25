@@ -6,7 +6,7 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { useActivity } from './activity'
 import { assetsById, useAssets } from './assets'
 import { useProject } from './project'
-import { useSelection } from './selection'
+import { selectedFilePaths, useSelection } from './selection'
 import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
@@ -186,7 +186,7 @@ describe('settling the tabs of a project being followed', () => {
 
     listeners.forEach(listener => listener({ path: '/projects/winter', manifest: MANIFEST }))
 
-    expect(useSelection.getState().selection).toEqual({ kind: 'none' })
+    expect(selectedFilePaths(useSelection.getState())).toEqual([])
   })
 })
 

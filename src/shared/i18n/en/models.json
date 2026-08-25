@@ -14,7 +14,7 @@
     "noModelForOperation": "No model serves this operation.",
     "chooseModelFirst": "Choose a model to carry on.",
     "sources": "Sources",
-    "sourceFrom_assets": "Picked in the assets",
+    "sourceFrom_explorer": "Picked in the explorer",
     "sourceFrom_scene": "Picked in the scene",
     "sourceFrom_result": "Previous result",
     "dropSource": "Remove this source",

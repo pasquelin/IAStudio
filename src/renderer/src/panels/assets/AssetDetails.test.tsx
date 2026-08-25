@@ -58,7 +58,7 @@ const line = (one: CloudAsset = cloud()): AssetRowModel => ({
 describe('what a row of the remote browser opens onto', () => {
   beforeEach(() => {
     useLayouts.setState({ activeWorkspace: 'image', home: false })
-    useSelection.setState({ selection: { kind: 'none' } })
+    useSelection.getState().selectFiles([])
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
     useDocuments.setState({ documents: {}, activeId: null })

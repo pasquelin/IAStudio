@@ -55,7 +55,7 @@ describe('createDocumentIn', () => {
     asks.length = 0
     installFakeBridge()
     useDocuments.setState({ documents: {}, stored: [] })
-    useSelection.getState().clear()
+    useSelection.getState().selectFiles([])
     const stamp = '2026-08-16T10:00:00.000Z'
     useProject.setState({
       project: {

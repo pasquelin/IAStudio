@@ -868,7 +868,7 @@ describe('inspector panel', () => {
     // Cleared on purpose: the suite above points the selection at a layer, and a face chosen by
     // `selection.kind` would answer that instead of the document this describes.
     beforeEach(() => {
-      useSelection.getState().clear()
+      useSelection.getState().selectFiles([])
     })
 
     it('describes the material of a texture', () => {
@@ -996,7 +996,7 @@ describe('the inspector on an imported model', () => {
   // The panel selection outlives a test file, and one left behind puts another face of the
   // inspector in front — an asset's, a layer's — where this one reads a scene node.
   beforeEach(() => {
-    useSelection.getState().clear()
+    useSelection.getState().selectFiles([])
   })
 
   it('offers no clip picker while the file has reported none', () => {
@@ -1040,12 +1040,12 @@ describe('the inspector on an imported model', () => {
  */
 describe('the inspector and what is picked in a scene', () => {
   beforeEach(() => {
-    useSelection.getState().clear()
+    useSelection.getState().selectFiles([])
   })
 
-  it('describes the node picked in the scene, over the asset picked in the browser before it', () => {
+  it('describes the node picked in the scene, over the file picked in the explorer before it', () => {
     install(meshNode('box-1'), false)
-    useSelection.getState().selectAssets(['asset-1'])
+    useSelection.getState().selectFiles(['Images/etude.png'])
     selectIn('doc-1', ['box-1'])
     render(withQueries(<Content />))
 

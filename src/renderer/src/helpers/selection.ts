@@ -34,7 +34,7 @@ export function applySelection(
   const next = mode === 'replace' ? [...new Set(ids)] : toggled(current, ids)
   // Identity kept when the answer is the one already held: clicking the selected row again, or
   // in the void with nothing selected, must not re-render every panel that watches it.
-  return same(current, next) ? current : next
+  return samePicks(current, next) ? current : next
 }
 
 /**
@@ -57,7 +57,8 @@ function toggled(current: readonly string[], ids: readonly string[]): readonly s
   return next
 }
 
-function same(current: readonly string[], next: readonly string[]): boolean {
+/** Whether two picks name the same rows, in the same order. */
+export function samePicks(current: readonly string[], next: readonly string[]): boolean {
   return current.length === next.length && current.every((id, at) => id === next[at])
 }
 

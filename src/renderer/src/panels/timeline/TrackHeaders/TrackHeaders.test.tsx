@@ -6,7 +6,7 @@ import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, type Track } from '@/engines/timeline/timelineState'
 import { sequenceHistoryOf, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { useSelection } from '@/stores/selection'
+import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { useTimelineView } from '@/stores/timelineView'
 import { TrackHeaders } from './TrackHeaders'
 
@@ -31,7 +31,7 @@ const headers = (): ReturnType<typeof render> =>
 describe('TrackHeaders', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
-    useSelection.getState().clear()
+    useSelection.getState().selectFiles([])
     installTracks([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
   })
 
@@ -299,12 +299,12 @@ describe('TrackHeaders', () => {
      * beside it went away, and the generator's sources with them.
      */
     it('leaves what a shelf picked where it is', () => {
-      useSelection.getState().selectAssets(['asset-1'])
+      useSelection.getState().selectFiles(['Images/etude.png'])
       headers()
 
       fireEvent.pointerDown(screen.getByText('A1'))
 
-      expect(useSelection.getState().selection).toEqual({ kind: 'asset', ids: ['asset-1'] })
+      expect(selectedFilePaths(useSelection.getState())).toEqual(['Images/etude.png'])
     })
   })
 })
