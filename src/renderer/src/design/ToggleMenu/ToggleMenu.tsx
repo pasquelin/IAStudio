@@ -73,7 +73,7 @@ export function ToggleMenu({
           label={label}
           description={description}
           tooltip={tooltip}
-          variant="header"
+          variant="bar"
           active={pressed}
           // An armed snap is something one ACTIONS, which `CLAUDE.md` gives the full accent —
           // and `active` alone paints it `elevated`, the colour the hover already uses. The bar
@@ -90,7 +90,7 @@ export function ToggleMenu({
         label={valueLabel}
         description={description}
         tooltip={tooltip}
-        variant="header"
+        variant="bar"
         // The rows cover the button and its own tip with them, which then reads as a sentence
         // cut in half. The accessible name stays — it is not the tooltip's to lose.
         tipHidden={flyout.showing}

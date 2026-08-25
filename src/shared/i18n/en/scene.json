@@ -291,6 +291,7 @@
     "speedFree": "Speed",
     "speedValue": "{{value}} m/s",
     "namedValue": "{{value}} — {{name}}",
+    "title": "Snapping and camera speed",
     "surface": "Surface snap",
     "surfaceHint": "Lays what you drag on the first surface below it. The submenu sets how it lands and how far above.",
     "surfaceSettings": "Surface snap settings",
