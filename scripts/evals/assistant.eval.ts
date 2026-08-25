@@ -3,10 +3,12 @@ import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { CLOUD_PROVIDERS, defaultChatModel } from '@shared/domain/aiCloud'
 import { orElse } from '@shared/promises'
 import { isRecord } from '@shared/guards'
-import type { ActionName } from '@shared/domain/assistant'
+import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
 import { assistantHistory, type AssistantTurn } from '@/assistant/conversation'
 import { createHttpChatBrain } from '@main/assistant/brainHttp'
-import { PROJECT, SCENARIOS, type Run, type Scenario } from './scenarios'
+import { PROJECT } from './project'
+import { SCENARIOS } from './scenarios'
+import type { Run, Scenario } from './run'
 import { createFakeStudio } from './fakeStudio'
 
 /**
@@ -88,9 +90,56 @@ const unmodelled: ActionName[] = []
 const sumOf = (read: (one: Measured) => number): number =>
   measured.reduce((total, one) => total + read(one), 0)
 
+/** What a value was, short enough to read in a failure list. */
+const shortly = (value: unknown): string => {
+  const written = typeof value === 'string' ? value : JSON.stringify(value)
+  return written.length > 60 ? `${written.slice(0, 57)}…` : written
+}
+
+const inputShown = (input: Record<string, unknown>): string =>
+  Object.entries(input)
+    .map(([key, value]) => `${key}=${shortly(value)}`)
+    .join(' ')
+
+/**
+ * 🛑 One failed run, as something a reader can act on WITHOUT paying for another.
+ *
+ * The names alone cost this bench a whole session: `files.search → documents.list` says the model
+ * searched and stopped, and says nothing about whether it searched with the wrong words, failed
+ * to recognise the file in what came back, or believed it was done. Three causes, three different
+ * fixes — so the arguments and what the studio answered are here, and so is the last sentence it
+ * wrote, which is the only place "I believed I was done" is ever written down.
+ */
+function transcriptOf(played: Run): string {
+  if (played.called.length === 0) return `no call — said: ${shortly(played.said)}`
+
+  const steps = played.called.map((one, at) => {
+    const said = inputShown(one.input)
+    return `      ${at + 1}. ${one.action}${said ? ` ${said}` : ''} → ${played.answers[at] ?? '?'}`
+  })
+
+  return [`${played.called.length} calls`, ...steps, `      said: ${shortly(played.said)}`].join(
+    '\n',
+  )
+}
+
+/**
+ * What the studio answered, as the model was shown it: a refusal by name, or how much came back.
+ * The COUNT and not the rows — "found 0" is the whole finding, and nine paths are three lines.
+ */
+function answerShown(outcome: ActionOutcome): string {
+  if (!outcome.ok) return `refused ${outcome.refusal}`
+  if (Array.isArray(outcome.data)) return `found ${outcome.data.length}`
+
+  return outcome.data === undefined ? 'ok' : `ok ${shortly(outcome.data)}`
+}
+
 /** Everything a chain of rounds spends, run against one scenario. */
 async function play(scenario: Scenario): Promise<Run & { rounds: number } & Tokens> {
   const studio = createFakeStudio(PROJECT)
+  scenario.setup?.(studio)
+  // What the decor changed is not what the model changed — see `settle`.
+  studio.settle()
   const tokens: Tokens = { ...NOTHING }
   const brain = createHttpChatBrain({
     chat: chat ?? { kind: 'openai', baseUrl: '', model: '' },
@@ -99,45 +148,58 @@ async function play(scenario: Scenario): Promise<Run & { rounds: number } & Toke
     fetch: counting(tokens),
   })
 
-  const turn: AssistantTurn = { id: 1, said: scenario.said, answered: '', steps: [], lost: false }
   const called: { action: ActionName; input: Record<string, unknown> }[] = []
+  const answers: string[] = []
+  const spoken: string[] = []
+  const before: AssistantTurn[] = []
   let refused = 0
   let rounds = 0
 
-  for (let round = 1; round <= assistantStepsWithin(8); round += 1) {
-    rounds = round
-    const answer = await brain.think({
-      utterance: scenario.said,
-      continuing: round > 1,
-      history: round === 1 ? [] : assistantHistory([turn]),
-      state: studio.state(),
-      // The app passes these on every round; without them the bench's briefing is not the app's.
-      targets: [],
-    })
+  // One turn per sentence the person types, the studio and the history carrying between them:
+  // "add a cube" then "rename it" is one conversation, and a bench that reset in between would
+  // measure a studio nobody was looking at.
+  for (const [at, said] of scenario.said.entries()) {
+    const turn: AssistantTurn = { id: at + 1, said, answered: '', steps: [], lost: false }
 
-    turn.answered = turn.answered ? `${turn.answered}\n${answer.say}` : answer.say
-    if (answer.calls.length === 0) break
+    for (let round = 1; round <= assistantStepsWithin(8); round += 1) {
+      rounds += 1
+      const answer = await brain.think({
+        utterance: said,
+        continuing: round > 1,
+        history: assistantHistory(round === 1 ? before : [...before, turn]),
+        state: studio.state(),
+        // The app passes these on every round; without them the bench's briefing is not the app's.
+        targets: studio.targets(),
+      })
 
-    for (const call of answer.calls) {
-      const outcome = studio.run(call.action, call.input)
-      called.push({ action: call.action as ActionName, input: call.input })
-      if (!outcome.ok) refused += 1
-      turn.steps = [
-        ...turn.steps,
-        {
-          action: call.action,
-          refusal: outcome.ok ? null : outcome.refusal,
-          ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
-        },
-      ]
+      turn.answered = turn.answered ? `${turn.answered}\n${answer.say}` : answer.say
+      if (answer.calls.length === 0) break
+
+      for (const call of answer.calls) {
+        const outcome = studio.run(call.action, call.input)
+        called.push({ action: call.action as ActionName, input: call.input })
+        answers.push(answerShown(outcome))
+        if (!outcome.ok) refused += 1
+        turn.steps = [
+          ...turn.steps,
+          {
+            action: call.action,
+            refusal: outcome.ok ? null : outcome.refusal,
+            ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
+          },
+        ]
+      }
     }
+
+    before.push(turn)
+    spoken.push(turn.answered)
   }
 
-  return { studio, called, refused, said: turn.answered, rounds, ...tokens }
+  return { studio, called, answers, refused, said: spoken.join('\n'), rounds, ...tokens }
 }
 
 describe.skipIf(KEY === '' || chat === null)(`what ${PROVIDER} does with a real request`, () => {
-  it.each(SCENARIOS)('$name', { timeout: 600_000 }, async scenario => {
+  it.each(SCENARIOS)('$name', { timeout: 1_800_000 }, async scenario => {
     const tally: Measured = {
       name: scenario.name,
       passed: 0,
@@ -157,9 +219,10 @@ describe.skipIf(KEY === '' || chat === null)(`what ${PROVIDER} does with a real 
       tally.cached += played.cached
 
       // What it CHOSE is the whole finding: a bare `false` sends the reader back to spend the
-      // same money again to learn what this line already holds.
+      // same money again to learn what this line already holds. Names alone are not enough —
+      // "searched, then stopped" and "searched with the wrong words" read identically.
       if (scenario.passed(played)) tally.passed += 1
-      else missed.push(`${played.called.map(one => one.action).join(' → ') || 'no call'}`)
+      else missed.push(transcriptOf(played))
 
       // 🛑 A step this bench has no answer for is a verdict it has not earned: the model may
       // have done the right thing and been scored on a studio that did nothing. Named on the

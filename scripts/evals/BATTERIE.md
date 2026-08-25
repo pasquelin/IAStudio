@@ -16,27 +16,27 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **192 demandes**. Le banc en joue **5**, chacune trois fois, contre le
-vrai modèle — et **trois seulement** figurent ici, marquées **[banc]** : les deux autres (ouvrir un
-document au nom quasi exact, poser une image sur un plan dans une scène neuve) sont nées d'une
-panne observée et n'ont pas encore de ligne. Les **189 restantes ne sont mesurées par rien.**
+La liste ci-dessous compte **192 demandes, et le banc en joue 192** — une par case, dans cet
+ordre. `batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une
+demande ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi.
+C'est ce qui rend « on en est où ? » répondable.
 
-Dernière mesure — DeepSeek, 2026-08-25, trois passes par scénario : **0/3** ouvre une image nommée
-dans une autre langue · **2/3** ouvre un document au nom quasi exact · **3/3** demande lequel quand
-deux fichiers matchent · **0/3** pose une image sur un plan en 3D · **3/3** répond sans toucher au
-studio. Soit 8 tirages sur 15, 33 tours, 17 875 tokens par tour dont 94 % servis par le cache.
+**Aucune passe complète n'a encore été lancée.** Les scénarios sont écrits, pas mesurés — et une
+case ne se coche que sur un chiffre.
+
+Dernière mesure partielle — DeepSeek, 2026-08-25, cinq scénarios seulement, trois passes chacun :
+**0/3** ouvre une image nommée dans une autre langue · **2/3** ouvre un document au nom quasi
+exact · **3/3** demande lequel quand deux fichiers matchent · **0/3** pose une image sur un plan ·
+**3/3** répond sans toucher au studio.
 
 **Ce que les chaînes montrent, et qu'aucun pourcentage ne dit** : le modèle CHERCHE puis s'arrête.
-`files.search`, `files.list → files.search`, `files.search → documents.list` — puis rien. Sur
-« ouvre la charge 2000 », une passe sur trois n'émet **aucun appel** alors que la recherche rendait
-le chemin. Ce n'est pas un problème de connaissance du projet.
+`files.search`, `files.list → files.search`, `files.search → documents.list` — puis rien, alors que
+la recherche a rendu le chemin. Ce n'est pas un problème de connaissance du projet.
 
-L'ordre n'est pas celui de la liste : ce qui se mesure d'abord est ce qui échoue.
-
-🛑 **Un pourcentage global de ce banc ne se compare à rien : quinze tirages, c'est tout.** Le même
-code a rendu 33 %, 40 % et 53 % dans la même journée — d'où les lignes par scénario ci-dessus
-plutôt qu'un chiffre de tête. Et trois passes séparent mal 1/3 de 2/3. La seule comparaison qui
-vaut est celle qu'on peut expliquer : « ce scénario ne pouvait pas passer, il passe ».
+🛑 **Un pourcentage global de ce banc ne se compare à rien tant qu'il tient sur quinze tirages.**
+Le même code a rendu 33 %, 40 % et 53 % dans la même journée. Ce qui se lit est la ligne d'UN
+scénario, et la seule comparaison qui vaut est celle qu'on peut expliquer : « ce scénario ne
+pouvait pas passer, il passe ».
 
 🛑 **Une action que le studio simulé modélise MAL ne se voit nulle part.** La ligne `not modelled`
 du rapport nomme celles qu'il ignore, jamais celles qu'il lit de travers — et une action lue de
@@ -45,17 +45,54 @@ travers ressemble trait pour trait à un modèle qui choisit mal. `node.material
 appel correct revenait `badInput`, et trois passes ont bouclé dessus. Le studio simulé passe
 désormais **toute** entrée par `validatesInput`, la porte que le vrai chemin tient
 (`renderer/src/assistant/executor.ts`), plutôt que de relire les champs à la main action par
-action ; `fakeStudio.test.ts` garde le reste, et `pnpm evals` ne peut voir ni l'un ni l'autre.
+action.
 
-🛑 **Une case cochée à la main ne vaut rien.** Toutes les erreurs de cette session étaient
+🛑 **Une case cochée à la main ne vaut rien.** Toutes les erreurs de la session du 25/08 étaient
 annoncées comme des succès par le modèle lui-même, et une passe unique a donné 60 % là où trois
-passes donnaient 0 %. Ce qui compte est ce que le studio CONTIENT après coup.
+passes donnaient 0 %. Ce qui compte est ce que le studio CONTIENT après coup — et c'est la seule
+chose qu'un oracle lit ici.
+
+## Trois unités que le banc a d'abord lues de travers
+
+Elles sont écrites ici parce qu'aucune ne se devine et que chacune a rendu une section entière
+fausse — un modèle qui répondait JUSTE échouait, et un qui répondait faux passait.
+
+- **Le montage compte en MICROSECONDES**, pas en secondes (`sequenceActions.ts`, en-tête). Trois
+  secondes s'écrivent `3_000_000`.
+- **Un gain est en DÉCIBELS**, borné `GAIN_MIN`/`GAIN_MAX`, neutre à **0** — pas une fraction.
+  « Mets le son à 50 % » vaut **−6 dB**, et un banc lisant `0.5` récompensait +0,5 dB.
+- **La pile de calques a l'index 0 EN BAS** (`engines/canvas/commands.ts`), à l'inverse du
+  réflexe. « Passe ce calque derrière » est donc `index: 0`.
+
+## Comment un scénario est écrit
+
+Un scénario porte **ce que la personne dit** (une phrase, ou plusieurs quand l'enchaînement EST le
+sujet — sections 25 et 26), un **décor** posé par le banc lui-même, et un **oracle** qui lit l'état
+du studio simulé.
+
+Le décor n'est pas une facilité : « Dans la scène Test MCP » est une phrase de la batterie, pas une
+demande. Le faire rejouer au modèle à chaque case scorerait quarante fois la même étape et ferait
+tomber une section entière sur son premier échec.
+
+**Ce qu'un oracle ne lit JAMAIS, ce sont les mots du modèle.** `said` ne sert qu'à deux choses :
+vérifier qu'une question a bien été **renvoyée** à la personne (section 30), et qu'une demande de
+lecture a reçu **une** réponse. Jamais comme preuve qu'une action a eu lieu.
+
+🛑 **Le décor est neutralisé avant que la personne parle** (`studio.settle()`). Sans cela, un décor
+qui construit quoi que ce soit marquait le document modifié et remplissait la pile d'annulation :
+les dix-sept scénarios en lecture seule — toute la section 30 comprise — étaient **impassables**,
+et rien ne le disait.
+
+🛑 **Un décor ne doit jamais poser la conclusion.** `batterie.test.ts` vérifie qu'aucun de ses
+appels n'est refusé — un décor refusé en silence laisse le scénario jouer sur un studio vide, et
+l'échec est imputé au modèle. Ce qu'il ne peut PAS voir, en revanche, c'est un décor qui pose déjà
+le résultat : ça se relit à la main, et sept l'avaient fait.
 
 ---
 
 ## 1. Compréhension du projet — lecture seule
 
-- [ ] « Quel projet est actuellement ouvert et quels documents sont ouverts ? » **[banc]**
+- [ ] « Quel projet est actuellement ouvert et quels documents sont ouverts ? »
 - [ ] « Liste-moi les fichiers présents dans mon projet, classés par type. »
 - [ ] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D, de textures et de skyboxes ? »
 - [ ] « Quel document est actuellement actif ? »
@@ -67,7 +104,7 @@ passes donnaient 0 %. Ce qui compte est ce que le studio CONTIENT après coup.
 
 ## 2. Navigation dans l'application
 
-- [ ] « Ouvre mon image du bateau. » **[banc]**
+- [ ] « Ouvre mon image du bateau. »
 - [ ] « Ouvre ma première vidéo. »
 - [ ] « Ouvre mon premier fichier audio. »
 - [ ] « Ouvre ma scène 3D. »
@@ -77,7 +114,7 @@ passes donnaient 0 %. Ce qui compte est ce que le studio CONTIENT après coup.
 
 ## 3. Recherche intelligente d'assets
 
-- [ ] « Trouve-moi l'image qui représente un bateau. » **[banc]**
+- [ ] « Trouve-moi l'image qui représente un bateau. »
 - [ ] « Trouve-moi tous les modèles 3D de personnages. »
 - [ ] « Trouve-moi les fichiers qui pourraient être utilisés comme environnement. »
 - [ ] « Trouve-moi toutes les textures associées à mon modèle 3D actuel. »
