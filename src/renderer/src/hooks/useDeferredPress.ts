@@ -1,5 +1,7 @@
-import { useEffect, useRef, type MouseEvent } from 'react'
+import { useCallback, useMemo, type MouseEvent } from 'react'
 import { activation, type ActivationProps } from '@/helpers/activation'
+import { useForgettableTimeout } from './useForgettableTimeout'
+import { useLatest } from './useLatest'
 
 export type DeferredPressProps = Partial<ActivationProps> & {
   onClick?: (event: MouseEvent) => void
@@ -14,40 +16,40 @@ const DOUBLE_CLICK_WINDOW = 500
 /**
  * The two pointer gestures of one surface, when the SINGLE click opens something of its own.
  *
- * 🛑 Not `selection`: it fires on the FIRST click of a pair, so a double-click meant for the
- * editor put a picker on screen first. Here the press waits that window out, and opening cancels it.
+ * 🛑 Not `selection`: it fired on the FIRST click of a pair, so a double-click meant for the
+ * editor put a picker on screen first. Here the press waits that window out, and opening cancels
+ * it. The handlers keep their identity across renders, which is why both runs are mirrored.
  */
 export function useDeferredPress(press?: () => void, open?: () => void): DeferredPressProps {
-  const waiting = useRef<number | null>(null)
+  const timeout = useForgettableTimeout()
+  const latest = useLatest({ press, open })
 
-  const forget = (): void => {
-    if (waiting.current !== null) window.clearTimeout(waiting.current)
-    waiting.current = null
-  }
+  const onClick = useCallback(
+    (event: MouseEvent) => {
+      const { press: pressing, open: opening } = latest.current
+      if (event.detail > 1 || !pressing) return
+      // Nothing to wait for where the surface does not open: the press is its only gesture.
+      if (!opening) return pressing()
 
-  useEffect(() => forget, [])
+      timeout.after(DOUBLE_CLICK_WINDOW, pressing)
+    },
+    [latest, timeout],
+  )
 
-  const opening = open && activation(open)
+  const opening = useCallback(() => {
+    timeout.forget()
+    latest.current.open?.()
+  }, [latest, timeout])
 
-  return {
-    ...(press && {
-      onClick: (event: MouseEvent) => {
-        if (event.detail > 1) return
-        // Nothing to wait for where the surface does not open: the press is its only gesture.
-        if (!open) return press()
+  // Composed, never re-spelled: `activation` is the studio's one answer to "what opens a thing".
+  const opens = useMemo(() => activation(opening), [opening])
 
-        forget()
-        waiting.current = window.setTimeout(press, DOUBLE_CLICK_WINDOW)
-      },
-    }),
-    // Composed rather than handed a closure: `activation` is called with `open` itself, and the
-    // cancellation is laid over what it returns — `react-hooks/refs` refuses the other order.
-    ...(opening && {
-      ...opening,
-      onDoubleClick: () => {
-        forget()
-        opening.onDoubleClick()
-      },
-    }),
-  }
+  // The RUNS are mirrored, so what the object depends on is only whether each gesture EXISTS.
+  const presses = Boolean(press)
+  const opened = Boolean(open)
+
+  return useMemo(
+    () => ({ ...(presses && { onClick }), ...(opened && opens) }),
+    [presses, opened, onClick, opens],
+  )
 }
