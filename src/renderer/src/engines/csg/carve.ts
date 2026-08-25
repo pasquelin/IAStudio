@@ -1,6 +1,7 @@
-import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
+import { Matrix4 } from 'three'
 import { csgPartOf, type CsgGraph, type CsgOperation, type CsgPart } from '@shared/domain/csg'
 import type { Transform } from '@shared/domain/transform'
+import { matrixOfTransform, transformOfMatrix } from './csgMatrix'
 import type { SceneNode } from '../scene/sceneState'
 
 /**
@@ -71,7 +72,7 @@ export function carveGraph(
 
 function partOf(node: CarvableNode, into: Matrix4 | null): CsgPart {
   const part = csgPartOf(node.name, node.geometry, node.material)
-  return into ? { ...part, transform: transformOf(into) } : part
+  return into ? { ...part, transform: transformOfMatrix(into) } : part
 }
 
 /**
@@ -79,7 +80,7 @@ function partOf(node: CarvableNode, into: Matrix4 | null): CsgPart {
  * brush's inside it. What `separateNode` gives each mesh it hands back.
  */
 export function placedIn(outer: Transform, inner: Transform): Transform {
-  return transformOf(matrixOf(outer).multiply(matrixOf(inner)))
+  return transformOfMatrix(matrixOfTransform(outer).multiply(matrixOfTransform(inner)))
 }
 
 /**
@@ -105,38 +106,8 @@ function worldOf(node: SceneNode, byId: ReadonlyMap<string, SceneNode>): Matrix4
   // same chain does without one too.
   let walker: SceneNode | undefined = node
   while (walker) {
-    world.premultiply(matrixOf(walker.transform))
+    world.premultiply(matrixOfTransform(walker.transform))
     walker = walker.parentId === null ? undefined : byId.get(walker.parentId)
   }
   return world
-}
-
-/** A placement as the matrix three.js applies. Published for the raw brush a solid wears
- * while its cut is still out. */
-export function matrixOfTransform(transform: Transform): Matrix4 {
-  return matrixOf(transform)
-}
-
-function matrixOf(transform: Transform): Matrix4 {
-  return new Matrix4().compose(
-    new Vector3(transform.position.x, transform.position.y, transform.position.z),
-    new Quaternion().setFromEuler(
-      new Euler(transform.rotation.x, transform.rotation.y, transform.rotation.z),
-    ),
-    new Vector3(transform.scale.x, transform.scale.y, transform.scale.z),
-  )
-}
-
-function transformOf(matrix: Matrix4): Transform {
-  const position = new Vector3()
-  const quaternion = new Quaternion()
-  const scale = new Vector3()
-  matrix.decompose(position, quaternion, scale)
-  const rotation = new Euler().setFromQuaternion(quaternion)
-
-  return {
-    position: { x: position.x, y: position.y, z: position.z },
-    rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
-    scale: { x: scale.x, y: scale.y, z: scale.z },
-  }
 }
