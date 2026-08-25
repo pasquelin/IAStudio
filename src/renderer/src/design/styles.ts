@@ -507,6 +507,13 @@ export const MENU_FLOATING = cn(MENU_RAISED, 'fixed z-70')
 export const PANE_TOOLBAR = 'absolute top-2 left-2'
 
 /**
+ * A surface laid beside that column rather than under it — the snap bar. The offset is a gauge
+ * (`--sc-pane-aside`) and not a number here: it follows `--sc-control`, so a change of density
+ * cannot leave the two overlapping.
+ */
+export const PANE_TOOLBAR_ASIDE = 'absolute top-2 left-(--sc-pane-aside)'
+
+/**
  * The word a bar sets beside its buttons: which take is loaded, which half of a pair this
  * monitor is, how far along the playhead sits. It answers a question asked OF the bar, so it
  * takes the muted ink rather than the ink of something to reach for.

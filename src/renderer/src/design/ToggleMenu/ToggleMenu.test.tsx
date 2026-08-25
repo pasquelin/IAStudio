@@ -84,6 +84,24 @@ describe('ToggleMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
+  /**
+   * An armed snap is something one ACTIONS, and `CLAUDE.md` spends the full accent on exactly
+   * that. Painted by `active` alone it took `bg-elevated` — the colour the HOVER already uses —
+   * so the bar said the same thing about the control under the pointer and the one in hand.
+   * `ToolbarTool` carries the same pair for the same reason.
+   */
+  it('paints an armed toggle in the full accent, not in the hover colour', () => {
+    setUp({ pressed: true })
+
+    expect(screen.getByRole('button', { name: /Grid snap/ })).toHaveClass('bg-accent')
+  })
+
+  it('leaves a toggle that is off out of the accent', () => {
+    setUp()
+
+    expect(screen.getByRole('button', { name: /Grid snap/ })).not.toHaveClass('bg-accent')
+  })
+
   it('wears the icon on its value half when it has no toggle', () => {
     setUp({ onToggle: undefined, value: '4 m/s', valueLabel: 'Camera speed' })
 

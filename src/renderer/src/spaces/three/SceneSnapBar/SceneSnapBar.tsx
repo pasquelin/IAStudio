@@ -1,6 +1,8 @@
 import { mdiFormatVerticalAlignBottom, mdiRun } from '@mdi/js'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/helpers/cn'
+import { PANE_TOOLBAR_ASIDE } from '@/design/styles'
 import { formatDecimal } from '@/helpers/format'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { Separator } from '@/design/Separator'
@@ -45,7 +47,12 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
     useSceneViews.getState().setSceneSnap(documentId, kind, !snapping[kind])
 
   return (
-    <div className="bg-surface border-border absolute top-2 right-2 flex max-w-full flex-wrap items-center justify-end gap-0.5 rounded-(--radius-sc-md) border p-0.5">
+    <div
+      className={cn(
+        PANE_TOOLBAR_ASIDE,
+        'bg-surface border-border flex flex-wrap items-center gap-0.5 rounded-(--radius-sc-md) border p-0.5',
+      )}
+    >
       <ToggleMenu
         icon={mdiRun}
         label={t('snapBar.speed')}
