@@ -226,7 +226,7 @@
     },
     "gizmoSize": {
       "title": "Taille des poignées",
-      "help": "La place que les poignées de manipulation prennent à l’écran. Leur taille apparente ne change jamais avec la distance — c’est ce que font tous les logiciels 3D, sans quoi elles deviendraient impossibles à attraper de loin. Ce réglage dit seulement quelle part de la vue elles occupent."
+      "help": "La place MAXIMALE que les poignées de manipulation prennent à l’écran. Elles ne dépassent jamais l’objet qu’elles tiennent. Sur une petite pièce elles suivent sa taille, et au-delà elles s’en tiennent à cette part de la vue plutôt que de grandir sans fin."
     },
     "snapSurfaceAlign": {
       "title": "Orienter selon la surface",

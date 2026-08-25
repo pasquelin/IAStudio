@@ -178,10 +178,14 @@ interrupteurs, eux, appartiennent au document en cours. Les mêmes crans se retr
 bas depuis ce que vous tirez et le pose sur ce qu’il rencontre. Il n’agit que pendant un
 **déplacement** — pas pendant une rotation ni un redimensionnement.
 
-**Les poignées gardent la même taille à l’écran**, quelle que soit la distance. Ce n’est pas un
-défaut : tous les logiciels 3D font ainsi, sans quoi elles deviendraient impossibles à attraper
-dès qu’on recule. Quelle PART de la vue elles occupent se règle dans **Réglages ▸ Espaces de
-travail ▸ Modélisation ▸ Taille des poignées**.
+**Les poignées ne dépassent jamais l’objet qu’elles tiennent.** Sur une petite pièce elles
+suivent sa taille et rétrécissent avec elle quand on recule ; au-delà, elles gardent une taille
+constante à l’écran plutôt que de grandir sans fin — sans quoi elles deviendraient impossibles à
+attraper de loin. Le plafond se règle dans **Réglages ▸ Espaces de travail ▸ Modélisation ▸
+Taille des poignées**.
+
+Une lumière et une caméra n’ont pas de volume à mesurer : leurs poignées gardent la taille du
+réglage, sans quoi il n’y aurait plus rien à attraper.
 
 **Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
 toujours vers l’est. En repère local, elle pointe vers la droite **de l’objet** : c’est ce qu’on

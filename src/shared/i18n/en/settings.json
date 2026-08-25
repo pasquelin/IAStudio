@@ -226,7 +226,7 @@
     },
     "gizmoSize": {
       "title": "Handle size",
-      "help": "How much room the transform handles take on screen. Their apparent size never changes with distance — every 3D application does that, or they would be impossible to grab from afar. This only says what share of the view they take."
+      "help": "The MOST room the transform handles take on screen. They never grow past the object they hold: on a small part they follow its size, and beyond that they keep to this share of the view rather than growing without end."
     },
     "snapSurfaceAlign": {
       "title": "Align to surface",
