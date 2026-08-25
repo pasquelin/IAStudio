@@ -209,8 +209,9 @@ export type BriefingParts = {
    * BRAIN and not to this file. What the model is SHOWN of the catalogue follows from it.
    *
    * Not a ceiling on the whole: the short share plus a full project context and a full state
-   * block runs to 7 793 characters against `roomFor(4096)` = 7 116, measured on 2026-08-25. What
-   * gives ground there is the sentence (`sentenceWithin`), never the instructions.
+   * block runs to 8 232 characters against `roomFor(4096)` = 7 116, measured on 2026-08-26 —
+   * a figure that moves whenever a `both` action's description does. What gives ground there is
+   * the sentence (`sentenceWithin`), never the instructions.
    */
   room: number
   /**

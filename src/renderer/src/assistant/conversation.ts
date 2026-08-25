@@ -142,6 +142,10 @@ function blockOf(turn: AssistantTurn): string {
 
   for (const step of turn.steps) {
     if (step.refusal !== null) {
+      // 🛑 The refusal's own sentence and nothing more. A repair named here would name an
+      // ACTION, and this history reaches every door — including the ones shown fourteen actions,
+      // where `parseReply` refuses a whole reply for naming a fifteenth. `WIDE_RULES` is where
+      // advice that names an action belongs, because only there is it filtered by door.
       lines.push(`You tried ${step.action}, refused: ${englishText(refusalKey(step.refusal))}`)
       continue
     }
