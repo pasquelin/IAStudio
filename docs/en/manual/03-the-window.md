@@ -359,7 +359,7 @@ close button never goes**, and the panel's name keeps its size.
 |---|---|---|---|---|
 | **Models** | left | 1st | everywhere | the remote catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
-| **Library** | left | 1st | everywhere | what your key owns online, what the community published, what is being made — **absent without an API key** |
+| **Library** | left | 1st | everywhere | what your key owns online, what the community publishes, what is being made — **absent without an API key** |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |

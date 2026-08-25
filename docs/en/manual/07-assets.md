@@ -11,7 +11,7 @@ chapter:
 
 | Panel | What it shows | Where |
 |---|---|---|
-| **Library** | what your account hosts **online**, what the community published, and the generations under way | left column, upper half |
+| **Library** | what your account hosts **online**, what the community publishes, and the generations under way | left column, upper half |
 | **Explorer** | what your project holds **on this disk** | left column, lower half |
 
 **They hold the screen together, and that is deliberate**: what enters your project passes from
