@@ -73,9 +73,9 @@ export const SCENARIOS: readonly Scenario[] = [
     said: "mets moi l'image du chateau sur un plan dans un nouveau fichier 3D",
     passed: run => {
       const scenes = run.studio.documents().filter(one => one.space === '3d')
-      // Read off what the scene HOLDS: a plane that carries the picture. One scene, not two —
-      // repairing a wrong surface by opening a workspace again is what makes the second.
-      const carried = scenes.some(one => one.nodes.some(node => node.material !== null))
+      // The COLOUR map of a node that wears one. Not "any texture slot" — a normal map is not a
+      // picture on the plane — and not a sprite's own picture, which is not a plane at all.
+      const carried = scenes.some(one => one.nodes.some(node => node.textures.map !== undefined))
       return scenes.length === 1 && carried
     },
   },

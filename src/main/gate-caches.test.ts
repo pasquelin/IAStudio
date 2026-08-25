@@ -62,7 +62,9 @@ describe('the gate not rereading what it has already judged', () => {
   it('anchors every project’s benchmark glob, which inherits nothing and defaults to the disk', () => {
     const config = read('vitest.config.ts')
     const projects = [...config.matchAll(/name: '[\w-]+'/g)].length
-    const anchored = [...config.matchAll(/benchmark: \{ include: \['src\//g)].length
+    // `src/` OR `scripts/`: the bench's own fixtures live under the second, and a regex naming
+    // only the first called an anchored glob unanchored.
+    const anchored = [...config.matchAll(/benchmark: \{ include: \['(src|scripts)\//g)].length
 
     expect(projects).toBeGreaterThan(0)
     expect(anchored).toBe(projects)
