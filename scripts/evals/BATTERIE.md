@@ -16,16 +16,27 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **192 demandes, et le banc en joue 192** — une par case, dans cet
-ordre. `batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une
-demande ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi.
-C'est ce qui rend « on en est où ? » répondable.
+La liste ci-dessous compte **359 demandes, et le banc en joue 192** — les sections 1 à 36, dans
+cet ordre. **Les sections 37 à 58 sont écrites et pas encore jouées** : une demande par action MCP
+que rien ne mesurait, posée d'abord en français pour que ce qui reste à faire se lise sur une seule
+liste.
+
+🛑 **`batterie.test.ts` est donc ROUGE, et c'est l'état voulu.** Il tient la liste et le banc à la
+même longueur et dans le même ordre — une demande ajoutée sans scénario fait rougir la porte, un
+scénario écrit pour rien aussi. Chaque section reprise éteint sa part du rouge ; la porte ne
+redeviendra verte qu’à la 359ᵉ. C'est ce qui rend « on en est où ? » répondable.
 
 ## Ce que la batterie ne mesure pas encore
 
 Le registre publie **228 actions**, et **toutes** partent sur le fil MCP : `mcpTools()` liste
 `actionsReaching('mcp')`, qui est le registre entier. `coverage.ts` dit, action par action, quelle
-demande l'exerce — **61 en ont une, 167 n'en ont aucune**, et le faux studio n'en joue que 116.
+demande l'exerce — **61 en ont une jouée, 167 n'ont qu'une phrase** (sections 37 à 58), et le faux
+studio n'en joue que 116.
+
+**Deux dettes, à ne pas confondre.** Écrire le scénario d'une demande des sections 37 à 42 ne coûte
+qu'un oracle : le faux studio sait déjà jouer ces 55 actions. Les 112 autres — git, squelette,
+panneaux, nuage, calques avancés — demandent d'ABORD d'être modélisées, sans quoi le banc les range
+sous `not modelled` et le scénario est scoré à l'aveugle, ce qui est pire que pas de scénario.
 
 🛑 **Un outil qu'aucune phrase n'atteint est un outil que personne n'a vu marcher.** La table est
 un `Record<ActionName, …>` : une action ajoutée au registre **ne compile plus** tant qu'elle n'y
@@ -449,3 +460,260 @@ Puis, sans autre contexte :
 Enfin :
 
 - [ ] « Vérifie tout ce que tu viens de faire et indique-moi les éventuelles erreurs ou incohérences restantes. »
+
+## 37. Le ciel
+
+Un ciel ouvert, `Ciel Test` — **l'espace, jamais le fichier** : un `.png` de `Skyboxes/` s'ouvre en
+document IMAGE, et tout `skybox.*` est alors refusé avant d'atteindre un gestionnaire.
+
+- [ ] « Quelle image sert de ciel en ce moment, et à quelle intensité ? »
+- [ ] « Utilise ma première skybox comme image de ce ciel. »
+- [ ] « Monte l'intensité du soleil à 3. »
+- [ ] « Réduis l'intensité de l'environnement du ciel à 0,4. »
+- [ ] « Augmente le contraste et la saturation de ce ciel. »
+- [ ] « Remets les réglages colorimétriques du ciel à zéro. »
+- [ ] « Affiche les sondes de lumière de ce ciel. »
+
+## 38. La matière
+
+Une matière ouverte, `Matière Test` — même remarque que pour le ciel : c'est l'espace qui l'ouvre.
+
+- [ ] « De quoi est faite cette matière et quelles images porte-t-elle ? »
+- [ ] « Mets sa couleur de base en bleu. »
+- [ ] « Assigne ma texture de planches à son canal de couleur de base. »
+- [ ] « Ajoute la normal map correspondante sur son canal de relief. »
+- [ ] « Fais tourner l'aperçu de la matière et monte l'intensité de son environnement. »
+
+## 39. Le document image, au-delà des calques
+
+Sur l'image du bateau ouverte :
+
+- [ ] « Quelle est la taille de ce document et combien de calques porte-t-il ? »
+- [ ] « Passe ce document en 1080 sur 1080. »
+- [ ] « Sélectionne le calque Bateau. »
+- [ ] « Duplique le calque Bateau. »
+- [ ] « Verrouille le calque Bateau pour ne plus y toucher. »
+- [ ] « Ajoute un calque de texte qui dit Bonjour. »
+
+## 40. Les pistes et la tête de lecture
+
+Sur un montage vidéo portant deux plans et un fond sonore :
+
+- [ ] « Place la tête de lecture à 3 secondes. »
+- [ ] « Coupe le premier plan en deux à 3 secondes. »
+- [ ] « Supprime le deuxième plan du montage. »
+- [ ] « Sélectionne le premier plan. »
+- [ ] « Renomme la piste audio Ambiance. »
+- [ ] « Coupe le son de la piste audio. »
+- [ ] « Supprime la piste audio et tout ce qu'elle porte. »
+
+## 41. Documents et projet
+
+- [ ] « Ouvre le document Scène 1 qui est dans mon dossier documents. »
+- [ ] « Renomme ce document Scène Finale. »
+- [ ] « Enregistre le document ouvert. »
+- [ ] « Ferme Scène Finale et supprime son fichier du projet. »
+- [ ] « Exporte la scène ouverte dans mon dossier documents. »
+- [ ] « Crée un nouveau projet appelé Démo Assistant. »
+- [ ] « Rouvre mon projet Démo. »
+- [ ] « Renomme mon projet Démo Assistant. »
+
+## 42. Fichiers — le reste
+
+- [ ] « Copie l'image du bateau dans mon dossier Textures sans la déplacer. »
+- [ ] « Montre-moi l'historique de mes dernières opérations sur les fichiers. »
+- [ ] « Qu'est-ce que j'ai ouvert récemment dans ce projet ? »
+- [ ] « Refais l'opération que je viens d'annuler. »
+- [ ] « Montre-moi l'image du bateau dans le Finder. »
+- [ ] « Ouvre la fiche d'informations de l'image du bateau. »
+
+## 43. Bibliothèque et compte
+
+- [ ] « Donne-moi les informations que tu as sur l'image du bateau. »
+- [ ] « Supprime de ma bibliothèque l'image que tu viens de générer. »
+- [ ] « Y a-t-il des assets de ma bibliothèque dont le fichier a disparu ? »
+- [ ] « Décris-moi ce que représente l'image du bateau et range-la avec des mots-clés. »
+- [ ] « Montre-moi le fichier de cet asset sur mon disque. »
+- [ ] « Suis-je connecté à mon compte Scenario ? »
+- [ ] « Combien de crédits me reste-t-il ce mois-ci ? »
+- [ ] « Quels comptes ai-je enregistrés ? »
+- [ ] « Bascule sur mon deuxième compte. »
+- [ ] « Renomme ce compte Studio Perso. »
+
+## 44. Générations en cours
+
+Après une génération lancée :
+
+- [ ] « Où en sont mes générations ? »
+- [ ] « Donne-moi le résultat de ma dernière génération. »
+- [ ] « Annule la génération en cours. »
+- [ ] « Arrête la tâche d'indexation qui tourne. »
+- [ ] « Quels réglages accepte le modèle image que j'ai armé ? »
+- [ ] « Combien me coûterait cette génération avant que je la lance ? »
+
+## 45. Le vocabulaire de l'assistant
+
+- [ ] « Ouvre les préférences par le menu, comme si je cliquais dessus. »
+- [ ] « De quoi es-tu capable au sujet des calques ? »
+- [ ] « Ferme la fenêtre de discussion. »
+- [ ] « Prends le calque Bateau comme cible de mes prochaines demandes. »
+- [ ] « Propose-moi trois prompts pour générer un port au coucher du soleil. »
+- [ ] « Traduis ce prompt en anglais avant de le lancer : un bateau en bois sur une mer calme. »
+- [ ] « Décris-moi le style de mon image du bateau, en une phrase réutilisable comme prompt. »
+
+## 46. Formes, chemins et texte 3D
+
+Dans la scène Test MCP :
+
+- [ ] « Change le cube en cylindre. »
+- [ ] « Ajoute un panneau plat qui porte l'image du bateau et qui fait toujours face à la caméra. »
+- [ ] « Ajoute un texte 3D qui dit Studio au-dessus du cube. »
+- [ ] « Trace un chemin qui part du cube et va vers la droite. »
+- [ ] « Ajoute un point à ce chemin, deux mètres plus loin. »
+- [ ] « Déplace le deuxième point du chemin d'un mètre vers le haut. »
+- [ ] « Supprime le dernier point du chemin. »
+- [ ] « Range la sphère sous le cube, pour qu'elle le suive quand je le déplace. »
+
+## 47. Caméras et vue
+
+Dans la scène Test MCP, avec Camera Test :
+
+- [ ] « Crée un rail de caméra qui part de la gauche et arrive à droite du cube. »
+- [ ] « Fais suivre ce rail à Camera Test. »
+- [ ] « Mets Camera Test en premier dans la liste des caméras. »
+- [ ] « Passe la vue en vue de dessus. »
+- [ ] « Affiche la scène en fil de fer. »
+- [ ] « Prends une capture de la vue actuelle et range-la dans mes images. »
+
+## 48. Le monde
+
+- [ ] « Applique un préréglage d'éclairage de studio à la scène. »
+- [ ] « Ajoute un brouillard léger. »
+- [ ] « Ajoute un sol sous mes objets. »
+- [ ] « Passe le rendu en qualité maximale. »
+
+## 49. Animation — le reste
+
+Dans la scène Test MCP, avec une animation déjà posée :
+
+- [ ] « Quelles animations porte cette scène ? »
+- [ ] « Découpe cette animation en un bloc de 0 à 5 secondes. »
+- [ ] « Active la pose automatique de clés pendant que je travaille. »
+- [ ] « Efface la clé posée à 5 secondes. »
+- [ ] « Efface toutes les clés de Cube Test. »
+- [ ] « Décale toutes les clés de Cube Test de 2 secondes vers la droite. »
+- [ ] « Boucle le canal de rotation de Cube Test. »
+
+## 50. Le squelette
+
+Sur mon personnage principal, dans la scène Test MCP :
+
+- [ ] « Ce personnage a-t-il déjà un squelette ? »
+- [ ] « Pose un squelette adapté à sa taille. »
+- [ ] « Ajoute les mains à ce squelette. »
+- [ ] « Ajoute un os supplémentaire au bout de son bras droit. »
+- [ ] « Renomme cet os Main Droite. »
+- [ ] « Dis que cet os est la main droite du personnage. »
+- [ ] « Supprime l'os que je viens d'ajouter. »
+- [ ] « Ajoute une contrainte IK sur sa jambe gauche. »
+- [ ] « Retire cette contrainte IK. »
+- [ ] « Enlève complètement le squelette de ce personnage. »
+
+## 51. Calques avancés et repères
+
+Sur l'image du bateau, avec deux calques :
+
+- [ ] « Regroupe mes deux calques dans un groupe appelé Fond. »
+- [ ] « Dégroupe le groupe Fond. »
+- [ ] « Fusionne le calque du dessus avec celui d'en dessous. »
+- [ ] « Ajoute un rectangle rouge en bas de l'image. »
+- [ ] « Ajoute un calque de réglage qui monte le contraste. »
+- [ ] « Ajoute un masque au calque Bateau. »
+- [ ] « Recadre l'image sur un carré centré. »
+- [ ] « Fais pivoter le document de 90 degrés vers la droite. »
+- [ ] « Pose un repère vertical au milieu de l'image. »
+- [ ] « Déplace ce repère au tiers de la largeur. »
+- [ ] « Supprime ce repère. »
+
+## 52. Le montage — liens et ordre des pistes
+
+- [ ] « Détache le son de ma première vidéo pour pouvoir le déplacer seul. »
+- [ ] « Fais passer la piste audio au-dessus de la piste vidéo. »
+
+## 53. Styles de génération
+
+- [ ] « Quels styles ai-je enregistrés ? »
+- [ ] « Enregistre le style de mon image du bateau sous le nom Marine. »
+- [ ] « Renomme ce style Marine Nuit. »
+- [ ] « Supprime le style Marine Nuit. »
+
+## 54. Le nuage Scenario
+
+- [ ] « Montre-moi ce que contient ma bibliothèque en ligne. »
+- [ ] « Cherche des voitures rouges dans ma bibliothèque en ligne. »
+- [ ] « Trouve-moi en ligne des images qui ressemblent à mon bateau. »
+- [ ] « Dis-moi ce que téléchargerait une synchronisation, avant de la lancer. »
+- [ ] « Télécharge dans mon projet les images en ligne qui manquent ici. »
+- [ ] « Envoie l'image du bateau dans ma bibliothèque en ligne. »
+
+## 55. La fenêtre et les panneaux
+
+- [ ] « Dans quel état est ma fenêtre en ce moment ? »
+- [ ] « Passe en plein écran. »
+- [ ] « Ouvre les préférences. »
+- [ ] « Quels panneaux puis-je ouvrir ? »
+- [ ] « Ouvre le panneau des calques. »
+- [ ] « Ferme le panneau des calques. »
+- [ ] « Ouvre un miroir de la vue sur mon second écran. »
+- [ ] « Ouvre le manuel au chapitre du montage vidéo. »
+- [ ] « Quels sont mes favoris ? »
+- [ ] « Mets l'image du bateau en favori. »
+- [ ] « Retire l'image du bateau de mes favoris. »
+
+## 56. Le système
+
+- [ ] « Une mise à jour est-elle disponible ? »
+- [ ] « Installe la mise à jour et redémarre. »
+- [ ] « La dictée est-elle prête à être utilisée ? »
+- [ ] « Lance la dictée. »
+- [ ] « Arrête la dictée. »
+- [ ] « Mon ordinateur peut-il encoder de la vidéo en accéléré matériel ? »
+- [ ] « Ajoute à mon projet la vidéo que je viens de déposer sur la fenêtre. »
+- [ ] « Quelles polices puis-je utiliser pour un texte ? »
+
+## 57. Réglages et mémoire du projet
+
+- [ ] « Quels sont mes réglages 3D actuels ? »
+- [ ] « Remets les réglages d'affichage à leurs valeurs par défaut. »
+- [ ] « Qu'as-tu retenu de ce projet jusqu'ici ? »
+- [ ] « Retiens que ce projet vise un rendu photoréaliste marine. »
+- [ ] « Oublie ce que tu avais retenu sur le style de ce projet. »
+
+## 58. Le versionnement du projet
+
+Sur un projet suivi par git :
+
+- [ ] « Où en est mon projet côté versions ? »
+- [ ] « Montre-moi mes dernières versions enregistrées. »
+- [ ] « Quels fichiers a changé ma dernière version ? »
+- [ ] « Montre-moi ce qui a changé dans l'image du bateau depuis la dernière version. »
+- [ ] « Quelles branches ai-je dans ce projet ? »
+- [ ] « Quelles mises de côté ai-je en attente ? »
+- [ ] « Mets ce projet sous suivi de versions. »
+- [ ] « Prépare l'image du bateau pour la prochaine version. »
+- [ ] « Retire l'image du bateau de ce qui est préparé. »
+- [ ] « Annule mes modifications sur l'image du bateau et reviens à la dernière version. »
+- [ ] « Enregistre une version appelée Premier jet. »
+- [ ] « Crée une branche appelée essai-couleurs. »
+- [ ] « Bascule sur la branche essai-couleurs. »
+- [ ] « Mets mon travail en cours de côté. »
+- [ ] « Reprends le travail que j'avais mis de côté. »
+- [ ] « Jette la mise de côté que je n'utiliserai pas. »
+- [ ] « Pose une étiquette v1 sur la version actuelle. »
+- [ ] « J'ai un conflit sur l'image du bateau : garde ma version. »
+- [ ] « Abandonne la fusion en cours. »
+- [ ] « Quels dépôts distants sont configurés ? »
+- [ ] « Ajoute mon dépôt distant origin. »
+- [ ] « Récupère ce qui a changé sur le dépôt distant. »
+- [ ] « Récupère et applique les changements du dépôt distant. »
+- [ ] « Envoie mes versions sur le dépôt distant. »
