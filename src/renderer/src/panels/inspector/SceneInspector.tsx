@@ -5,6 +5,7 @@ import {
   setPath,
   setLightOn,
   setMaterialOn,
+  setModelMaterial,
   setModelTextures,
   setSpriteOn,
   setTextOn,
@@ -209,6 +210,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             assetId={model.model.assetId}
             textures={model.model.textures}
             onChange={textures => edit.run(setModelTextures(model.id, textures))}
+            onFinish={material => edit.run(setModelMaterial(model.id, material))}
           />
         </>
       )}

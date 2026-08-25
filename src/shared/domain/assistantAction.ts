@@ -177,6 +177,7 @@ export type ActionName =
   | 'node.light'
   | 'node.camera'
   | 'model.textures'
+  | 'model.material'
   | 'camera.shot'
   | 'camera.rail'
   | 'camera.addRail'

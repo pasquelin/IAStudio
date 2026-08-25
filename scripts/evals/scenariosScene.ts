@@ -455,6 +455,17 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     },
     passed: run => read.spoke(run),
   },
+  {
+    /**
+     * An imported model, NOT a primitive: its finish rides on `model.material` rather than on
+     * `node.material` — a `.glb` carries its own per material, and what the studio puts over it
+     * is the eight dials a plain standard material reads.
+     */
+    name: '12.8 makes an imported model matter',
+    said: ['Rends ce modèle importé plus mat, sa rugosité à 0,8.'],
+    setup: modelScene,
+    passed: run => read.near(read.nodeNamed(run, 'Knight')?.roughness ?? 0, 0.8, 0.01),
+  },
 
   // ——— 13. Timeline 3D ———
   {

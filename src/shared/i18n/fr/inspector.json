@@ -62,6 +62,8 @@
     "browseTexture": "Parcourir les images",
     "browseTextureHint": "Choisir parmi les images du projet, en vignettes plutôt qu’en liste",
     "modelOverrides": "Remplacer un canal",
+    "useModelFinish": "Reprendre la finition de la matière",
+    "useModelFinishHint": "Copie la couleur, la rugosité, la métallicité et le placement des cartes depuis la matière assemblée de ce modèle",
     "useModelPictures": "Reprendre les images du modèle",
     "useModelPicturesHint": "Pointe chaque canal vers les images extraites de ce modèle, pour qu’en éditer une repeigne le modèle",
     "noModelTexture": "Aucune image extraite de ce modèle.",

@@ -171,6 +171,22 @@ export function sceneAction(bench: Bench, action: string, input: Input): ActionO
       return done
     }
 
+    case 'model.material': {
+      const node = byId(scene.nodes, input, 'nodeId')
+      // The mirror of `node.material`: that one refuses an imported model, this one takes only it.
+      if (!node || node.kind !== 'model') return refused('badInput')
+
+      const colour = text(input, 'color')
+      const roughness = number(input, 'roughness')
+      const metalness = number(input, 'metalness')
+      if (colour === '' && roughness === null && metalness === null) return refused('badInput')
+
+      if (colour !== '') node.color = colour
+      if (roughness !== null) node.roughness = roughness
+      if (metalness !== null) node.metalness = metalness
+      scene.modified = true
+      return done
+    }
     case 'node.material': {
       const node = byId(scene.nodes, input, 'nodeId')
       // An imported model wears `model.textures`, never this one.

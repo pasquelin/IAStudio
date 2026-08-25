@@ -1,5 +1,10 @@
 import { Mesh, MeshStandardMaterial, type Material, type Object3D, type Texture } from 'three'
-import { TEXTURE_SLOTS, type ModelRef, type TextureSlot } from '@shared/domain/scene'
+import {
+  TEXTURE_SLOTS,
+  type ModelMaterial,
+  type ModelRef,
+  type TextureSlot,
+} from '@shared/domain/scene'
 import { createSlotBindings } from './textureBinding'
 import type { TextureCache } from './textureCache'
 import { giveSecondUvSet } from './threeSync'
@@ -7,6 +12,8 @@ import { giveSecondUvSet } from './threeSync'
 export type ModelTextures = {
   /** The overrides a node holds, or none. An empty set puts every map back to the file's own. */
   apply: (overrides: ModelRef['textures']) => void
+  /** The finish it wears over its file. Absent fields leave what the glTF put there. */
+  dress: (finish: ModelRef['material']) => void
   /** Gives every reference back. The materials go with the instance that wore them. */
   dispose: () => void
 }
@@ -96,6 +103,15 @@ export function createModelTextures(
 
   return {
     apply: overrides => slots.apply(overrides ?? {}),
+    dress: finish => {
+      for (const { material, worn, fileMaps } of dressed) {
+        wear(material, finish)
+        // The repeat rides on the TEXTURES, so it reaches the clones this file owns and the
+        // file's own maps alike — a model tiled by its material tiles every slot at once.
+        for (const slot of TEXTURE_SLOTS) tile(worn.get(slot) ?? fileMaps.get(slot), finish)
+      }
+      onChange()
+    },
     dispose: () => {
       slots.clear()
       // Cloned copies only — SceneRenderer.release never sees them; file maps stay with the cache.
@@ -127,4 +143,28 @@ function sampledLike(texture: Texture, file: Texture | null | undefined): Textur
   // The UV set the glTF told this slot to read — a model carrying a second one dresses from it.
   worn.channel = file.channel
   return worn
+}
+
+/** The dials a plain `MeshStandardMaterial` carries. The four it does not are named on `ModelMaterial`. */
+function wear(material: MeshStandardMaterial, finish: ModelMaterial | undefined): void {
+  if (!finish) return
+
+  if (finish.color !== undefined) material.color.set(finish.color)
+  if (finish.roughness !== undefined) material.roughness = finish.roughness
+  if (finish.metalness !== undefined) material.metalness = finish.metalness
+  if (finish.normalScale !== undefined)
+    material.normalScale.set(finish.normalScale, finish.normalScale)
+  if (finish.aoIntensity !== undefined) material.aoMapIntensity = finish.aoIntensity
+  if (finish.emissive !== undefined) material.emissive.set(finish.emissive)
+  if (finish.emissiveIntensity !== undefined) material.emissiveIntensity = finish.emissiveIntensity
+  material.needsUpdate = true
+}
+
+/** The repeat, the shift and the turn of one map. Left alone by a finish that names none. */
+function tile(texture: Texture | null | undefined, finish: ModelMaterial | undefined): void {
+  if (!texture || !finish) return
+
+  if (finish.tiling) texture.repeat.set(finish.tiling.x, finish.tiling.y)
+  if (finish.offset) texture.offset.set(finish.offset.x, finish.offset.y)
+  if (finish.rotation !== undefined) texture.rotation = finish.rotation
 }

@@ -107,6 +107,32 @@ export type ModelRef = {
    * (see above), so there is no name to hang a per-material override on.
    */
   textures?: Partial<Record<TextureSlot, TextureRef>>
+  /**
+   * The finish put over the one the file carries — what a material of the Textures space is
+   * worth to a model, once the maps have been pointed at its own pictures.
+   *
+   * NOT `MaterialSettings`: four of that type's fifteen dials — the two ranges, the green flip,
+   * the cavity — are read in the texture engine's `onBeforeCompile` and reach no plain
+   * `MeshStandardMaterial`. Copying them here would promise a look this renderer cannot draw.
+   * It is also what keeps `texture.ts` out of this module, which `angles.ts` already reaches.
+   */
+  material?: ModelMaterial
+}
+
+/** What a model wears over its file. Every field optional: absent leaves what the glTF said. */
+export type ModelMaterial = {
+  color?: string
+  roughness?: number
+  metalness?: number
+  normalScale?: number
+  aoIntensity?: number
+  emissive?: string
+  emissiveIntensity?: number
+  /** Repeat and shift of every map at once — applied to the textures, not to the material. */
+  tiling?: { x: number; y: number }
+  offset?: { x: number; y: number }
+  /** Radians. */
+  rotation?: number
 }
 
 /**
