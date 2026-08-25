@@ -224,6 +224,10 @@
       "title": "Scale step",
       "help": "How much the scale moves in one step while snapping is on. What is reachable is the multiples of the step: 0.1 lands exactly on tenths and halves, 0.25 on quarters."
     },
+    "gizmoSize": {
+      "title": "Handle size",
+      "help": "How much room the transform handles take on screen. Their apparent size never changes with distance — every 3D application does that, or they would be impossible to grab from afar. This only says what share of the view they take."
+    },
     "snapSurfaceAlign": {
       "title": "Align to surface",
       "help": "While the surface snap is on, what you lay down lies along the slope it meets. Unchecked, it keeps its own orientation and only drops."

@@ -471,6 +471,16 @@ export const SETTING_REGISTRY = [
     step: 0.05,
   }),
   setting({
+    path: 'three.gizmoSize',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.gizmoSize.title',
+    helpKey: 'settings.gizmoSize.help',
+    min: 0.2,
+    max: 1.5,
+    step: 0.05,
+  }),
+  setting({
     path: 'three.snapSurfaceAlign',
     kind: 'boolean',
     section: 'spaces.three',

@@ -178,6 +178,11 @@ interrupteurs, eux, appartiennent au document en cours. Les mêmes crans se retr
 bas depuis ce que vous tirez et le pose sur ce qu’il rencontre. Il n’agit que pendant un
 **déplacement** — pas pendant une rotation ni un redimensionnement.
 
+**Les poignées gardent la même taille à l’écran**, quelle que soit la distance. Ce n’est pas un
+défaut : tous les logiciels 3D font ainsi, sans quoi elles deviendraient impossibles à attraper
+dès qu’on recule. Quelle PART de la vue elles occupent se règle dans **Réglages ▸ Espaces de
+travail ▸ Modélisation ▸ Taille des poignées**.
+
 **Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
 toujours vers l’est. En repère local, elle pointe vers la droite **de l’objet** : c’est ce qu’on
 veut pour avancer une voiture dans le sens où elle roule.
