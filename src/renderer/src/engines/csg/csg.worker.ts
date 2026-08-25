@@ -1,108 +1,28 @@
 /// <reference lib="webworker" />
-import {
-  ADDITION,
-  Brush,
-  Evaluator,
-  INTERSECTION,
-  SUBTRACTION,
-  type CSGOperation,
-} from 'three-bvh-csg'
-import type { BufferGeometry } from 'three'
 import { messageOf } from '@shared/guards'
-import type { CsgOperation, CsgPart } from '@shared/domain/csg'
-import { geometryFor } from '../scene/threeFactory'
-import type { CsgMesh, CsgRequest, CsgResponse } from './csgMessage'
+import { evaluateGraph, transferablesOf } from './csgEvaluate'
+import type { CsgRequest, CsgResponse } from './csgMessage'
 
 declare const self: DedicatedWorkerGlobalScope
 
-const OPERATIONS: Record<CsgOperation, CSGOperation> = {
-  subtract: SUBTRACTION,
-  unite: ADDITION,
-  intersect: INTERSECTION,
-}
-
-/** One evaluator for the life of the worker: it pools triangles and half-edge maps a fresh one
- * would rebuild on every cut. */
-const evaluator = new Evaluator()
-// One coherent piece, one material. Groups would hand back a material array and a draw call per
-// group, where a carved node wears exactly one `MaterialDescriptor`.
-evaluator.useGroups = false
-evaluator.attributes = ['position', 'normal', 'uv']
-
+/**
+ * Cuts solids out of solids, off the UI thread — CLAUDE.md invariant 6.
+ *
+ * A message adapter and nothing else: the arithmetic lives in `csgEvaluate.ts`, where a test can
+ * reach it. What a Worker hides, no gate sees — a brush scaled by its matrix came out unscaled
+ * and every gate stayed green.
+ */
 self.addEventListener('message', (event: MessageEvent<CsgRequest>) => {
   const { id, graph } = event.data
 
   try {
-    let result = brushOf(graph.base)
-    for (const step of graph.steps) {
-      result = evaluator.evaluate(result, brushOf(step.part), OPERATIONS[step.operation])
-    }
-
-    const mesh = meshOf(result.geometry)
-    const response: CsgResponse = { id, ok: true, mesh }
+    const mesh = evaluateGraph(graph)
     // Transferred rather than copied: a dense cut is megabytes, and copying it back would spend
     // on the UI thread exactly what the worker was there to save.
-    self.postMessage(response, transferablesOf(mesh))
+    self.postMessage({ id, ok: true, mesh } satisfies CsgResponse, transferablesOf(mesh))
   } catch (error) {
     // An evaluation that raises — a degenerate brush, memory the result could not have — must
     // answer all the same: the other side holds a promise on this id and nothing else settles it.
-    const failed: CsgResponse = { id, ok: false, error: messageOf(error) }
-    self.postMessage(failed)
+    self.postMessage({ id, ok: false, error: messageOf(error) } satisfies CsgResponse)
   }
 })
-
-/** Prepared here rather than inside the evaluator, so a brush that cannot be fails on its own
- * line — where the message names which one. */
-function brushOf(part: CsgPart): Brush {
-  const brush = new Brush(geometryFor(part.geometry))
-  const { position, rotation, scale } = part.transform
-  brush.position.set(position.x, position.y, position.z)
-  brush.rotation.set(rotation.x, rotation.y, rotation.z)
-  brush.scale.set(scale.x, scale.y, scale.z)
-  // The evaluator reads world matrices, and nothing in a worker ever renders to update them.
-  brush.updateMatrixWorld(true)
-  brush.prepareGeometry()
-  return brush
-}
-
-function meshOf(geometry: BufferGeometry): CsgMesh {
-  const index = geometry.getIndex()?.array
-
-  return {
-    position: floatsOf(geometry, 'position', 3),
-    normal: floatsOf(geometry, 'normal', 3),
-    uv: floatsOf(geometry, 'uv', 2),
-    // `slice` on the width it already has: the evaluator always writes 32-bit, and `from` would
-    // walk it through an iterator where a memcpy does.
-    index: index ? (index instanceof Uint32Array ? index.slice() : Uint32Array.from(index)) : null,
-  }
-}
-
-/**
- * One attribute as tight floats — a COPY always: the buffers are transferred, and an attribute
- * the evaluator still owns would be detached under it, leaving the next cut on this worker to
- * read a zero-length array and hand back an empty solid, silently.
- */
-function floatsOf(geometry: BufferGeometry, name: string, size: number): Float32Array {
-  const attribute = geometry.getAttribute(name)
-  if (!attribute) return new Float32Array(0)
-
-  const { array } = attribute
-  // The evaluator writes tight `Float32Array`s, so this is the path taken — and it is a memcpy
-  // against three accessor calls a vertex. Same fast path `bvhBuilder.positionsOf` holds.
-  if (array instanceof Float32Array && array.length === attribute.count * size) return array.slice()
-
-  const tight = new Float32Array(attribute.count * size)
-  for (let at = 0; at < attribute.count; at += 1) {
-    tight[at * size] = attribute.getX(at)
-    tight[at * size + 1] = attribute.getY(at)
-    if (size > 2) tight[at * size + 2] = attribute.getZ(at)
-  }
-  return tight
-}
-
-function transferablesOf(mesh: CsgMesh): Transferable[] {
-  const buffers: Transferable[] = [mesh.position.buffer, mesh.normal.buffer, mesh.uv.buffer]
-  if (mesh.index) buffers.push(mesh.index.buffer)
-  return buffers
-}
