@@ -24,6 +24,7 @@ import {
 } from '@shared/domain/tool'
 import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
+import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
 import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
 
@@ -111,6 +112,7 @@ export function toolStateOf(): ToolState {
   return {
     hasProject: useProject.getState().project !== null,
     hasGit: gitHoldsFolder(useGit.getState().repository),
+    hasCloud: accountsHoldLibrary(useAccounts.getState()),
   }
 }
 
@@ -120,6 +122,12 @@ export type ToolState = {
   hasProject: boolean
   /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
   hasGit: boolean
+  /**
+   * A key opening onto a remote library — see `accountsHoldLibrary`. Read off the account LIST
+   * and never off `auth.authenticated`, which is the answer to a network round trip: an icon
+   * keyed on that one would be absent for the first second of every launch.
+   */
+  hasCloud: boolean
 }
 
 /**
@@ -136,6 +144,7 @@ function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   // `git` implies `project`, and the conjunction is not redundant: the repository is corrected
   // asynchronously, so a project just closed still reads `ready` until the next status lands.
   if (requires === 'git') return state.hasProject && state.hasGit
+  if (requires === 'cloud') return state.hasCloud
   return true
 }
 

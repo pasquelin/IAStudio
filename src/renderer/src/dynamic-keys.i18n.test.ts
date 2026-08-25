@@ -35,6 +35,7 @@ import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 import { CHOICE_SCOPES } from '@shared/domain/aiOverview'
 import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
 import { ASSISTANT_STARTERS, starterKey } from '@/assistant/starters'
+import { SOURCES } from '@/panels/assets/facets'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -112,6 +113,9 @@ const COMPOSED_KEYS: readonly string[] = [
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
   // Every row of the menu that says where an asset may go.
   ...ASSET_INTENTS.map(intent => `${intent.labelKey}Hint`),
+  // Which library a line of the remote browser came from. A source with no word would put a raw
+  // key inside the one facet that decides what the panel READS rather than what it draws.
+  ...SOURCES.map(source => `assets.sourceName.${source}`),
   // Everything a scene can gain: the panels' add menus draw the mesh and light families, and
   // the 3D bar's own add menu draws all three — `objects` included, which is why it is here.
   ...ADD_ENTRIES.flatMap(({ labelKey }) => [labelKey, `${labelKey}Hint`]),

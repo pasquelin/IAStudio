@@ -44,7 +44,8 @@ Un fichier de matière première dans votre *projet* : une image, une vidéo, un
 une *texture*, un ciel. Le mot est anglais et n’a pas d’équivalent français court ; « ressource »
 ou « média » s’en approchent. Retenez : **un asset est un fichier fini, réutilisable**.
 
-Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement *l’étagère*.
+Les assets vivent dans l’**Explorateur** une fois sur votre disque, et dans la **Bibliothèque**
+tant qu’ils ne sont qu’en ligne.
 
 **Assistant**
 La fenêtre où l’on dit ce que l’on veut faire, en une phrase ordinaire, plutôt que de le cliquer.
@@ -248,8 +249,8 @@ Un des six arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **
 Ce n’est pas six logiciels : c’est un logiciel qui se réarrange.
 
 **Étagère**
-Le surnom du panneau **Assets**. On y range ce qu’on a fabriqué et importé ; on y pioche pour
-travailler.
+L’ancien surnom du panneau **Assets**, qui listait à la fois le projet et le compte. Il n’existe
+plus : le projet se lit dans l’**Explorateur**, le compte dans la **Bibliothèque**.
 
 **Étalonnage**
 Le réglage général des couleurs et des lumières d’une image, après coup : *exposition*,

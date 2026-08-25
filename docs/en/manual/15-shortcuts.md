@@ -125,7 +125,7 @@ It is **held** rather than tapped: press, speak, let go. It can be set to toggle
 
 ### Walking a list with the keyboard
 
-Every list in the studio is crossed the same way: the shelf, the Explorer, the layers, the models,
+Every list in the studio is crossed the same way: the Explorer, the Explorer, the layers, the models,
 the scene tree.
 
 | Key | Effect |
@@ -142,7 +142,7 @@ document may take you to another workspace, and `Space` promises that nowhere el
 `Tab` brings you back where you were: a list keeps a single way in — your selection if there is
 one, the first visible cell otherwise.
 
-**In the shelf, the selection can also be plural** — `⌘` picks, `Shift` extends. See
+**In the Explorer, the selection can also be plural** — `⌘` picks, `Shift` extends. See
 [Picking several assets](07-assets.md#picking-several-assets).
 
 ### Walking a menu with the keyboard

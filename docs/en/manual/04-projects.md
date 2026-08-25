@@ -120,16 +120,16 @@ when a medium is imported, and throwing them away costs one reimport. `filmstrip
 ahead of time and stays empty — nothing writes to it yet.
 
 **`posters/` is not one.** It is the picture a thumbnail carries, and **two kinds get one**: video
-and 3D model — the two no thumbnail could tell apart otherwise, a shelf of rushes being a shelf of
+and 3D model — the two no thumbnail could tell apart otherwise, a list of rushes being a list of
 grey rectangles.
 
 For an imported video the frame is grabbed **a tenth of the way in**, not at the start: a take
-opens on black often enough that a shelf of first frames would be a shelf of black tiles. For a
+opens on black often enough that a list of first frames would be a list of black tiles. For a
 model, it is the preview that came down with it.
 
 **It is written once** — on import or on fetching — and nothing remakes it afterwards. Throw that
 folder away and your thumbnails fall back to their kind's generic glyph. None of your work is
-lost; it is the shelf that stops being readable at a glance.
+lost; it is the Explorer that stops being readable at a glance.
 
 **`catalog.db` is not one.** It is what holds every asset's name, its tags, its dimensions, the
 model and prompt that produced it, what it derives from — and, for an imported medium, **the path
@@ -473,7 +473,7 @@ the window.
 **Renaming goes through the gesture of the thing.** An asset and a document each have one, and
 the Explorer leads to it: the name changes, and the file follows in the same move. A document
 renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
-everywhere at once — the Explorer, the shelf, the Inspector, the tab editing it — because there
+everywhere at once — the Explorer, the Explorer, the Inspector, the tab editing it — because there
 is only **one name**: its index row's name IS its file's name.
 
 > **A picture you dropped in yourself renames too**, even where the studio holds no entry for
@@ -881,7 +881,7 @@ The studio works, but several things are unavailable, and say so:
 | What you see | Why |
 |---|---|
 | "Open a project to generate." | a made image has to land somewhere |
-| "Open a project to see its assets." | the shelf shows a project's contents |
+| "Open a project to see its assets." | the Explorer shows a project's contents |
 | The rail's **+** button is greyed out | a document is a file in a project folder |
 
 ---

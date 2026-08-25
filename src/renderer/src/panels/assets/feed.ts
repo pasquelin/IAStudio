@@ -1,11 +1,11 @@
 import { stampOfIso, stampOfRow, type AssetRowModel } from './rows'
 
 /**
- * The three lists the shelf shows as one. Named rather than left to free strings: `hungry` travels
- * back to the panel, which asks the source by name, and a typo there is a scroll that silently
- * stops paging one of them.
+ * The lists the panel shows as one. Named rather than left to free strings: `hungry` travels back
+ * to the panel, which asks the source by name, and a typo there is a scroll that silently stops
+ * paging one of them.
  */
-export type FeedSourceName = 'local' | 'library' | 'published'
+export type FeedSourceName = 'library' | 'published'
 
 /**
  * How far one source of the timeline has been read.
@@ -75,4 +75,4 @@ function named(
   })
 }
 
-const NAMES: readonly FeedSourceName[] = ['local', 'library', 'published']
+const NAMES: readonly FeedSourceName[] = ['library', 'published']

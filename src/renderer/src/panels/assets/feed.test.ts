@@ -1,20 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { job } from '@/stores/job-fixtures'
 import { mergeFeed } from './feed'
 import type { AssetRowModel } from './rows'
 
 function row(id: string, createdAt: string): AssetRowModel {
-  const asset: Asset = {
+  const asset: CloudAsset = {
     id,
     name: id,
     type: 'image',
-    location: 'local',
-    path: `assets/img/${id}.png`,
-    tags: [],
+    remoteType: 'txt2img',
+    ownerId: 'proj_1',
     createdAt,
+    updatedAt: createdAt,
+    privacy: 'private',
+    tags: [],
+    collectionIds: [],
   }
-  return { id, from: 'local', asset }
+  return { id, from: 'remote', asset }
 }
 
 /** Newest first, as `mergeRows` hands them over. */
@@ -29,7 +32,7 @@ const idsOf = (rows: readonly AssetRowModel[]): string[] => rows.map(shown => sh
 describe('what the merged timeline may publish', () => {
   it('publishes everything once every source is at its end', () => {
     const merged = mergeFeed(ROWS, {
-      local: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
+      published: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
       library: { readTo: '2026-08-01T00:00:00.000Z', exhausted: true },
     })
 
@@ -41,7 +44,7 @@ describe('what the merged timeline may publish', () => {
     // The library has only been read back to July, so nothing older than that is settled: a
     // June row drawn now is one the next library page may insert five rows above.
     const merged = mergeFeed(ROWS, {
-      local: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
+      published: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
       library: { readTo: '2026-07-01T00:00:00.000Z', exhausted: false },
     })
 
@@ -64,7 +67,7 @@ describe('what the merged timeline may publish', () => {
    */
   it('publishes the rest when a source answered with nothing, and asks that one again', () => {
     const merged = mergeFeed(ROWS, {
-      local: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
+      published: { readTo: '2026-06-01T00:00:00.000Z', exhausted: true },
       library: { exhausted: false },
     })
 
@@ -82,34 +85,33 @@ describe('what the merged timeline may publish', () => {
   })
 
   it('names the source sitting on the cut, and only it', () => {
-    // Asking them all spends a search quota on a feed that is not what the list is short of.
+    // Asking them both spends a search quota on the one that is not what the list is short of.
     const merged = mergeFeed(ROWS, {
-      local: { readTo: '2026-06-01T00:00:00.000Z', exhausted: false },
+      published: { readTo: '2026-06-01T00:00:00.000Z', exhausted: false },
       library: { readTo: '2026-08-01T00:00:00.000Z', exhausted: false },
-      published: { readTo: '2026-08-01T00:00:00.000Z', exhausted: true },
     })
 
-    expect(merged.hungry).toEqual(['local'])
+    expect(merged.hungry).toEqual(['published'])
   })
 
   it('names every source sharing the cut', () => {
     const merged = mergeFeed(ROWS, {
-      local: { readTo: '2026-07-01T00:00:00.000Z', exhausted: false },
+      published: { readTo: '2026-07-01T00:00:00.000Z', exhausted: false },
       library: { readTo: '2026-07-01T00:00:00.000Z', exhausted: false },
     })
 
-    expect(merged.hungry).toEqual(['local', 'library'])
+    expect(merged.hungry).toEqual(['library', 'published'])
   })
 
   it('ignores a source nobody is reading', () => {
-    // The public feed is read only while the Location facet asks for it. Left out, it must not
-    // hold the two that ARE being read — an unnamed source would otherwise cut everything.
+    // The public feed is read only while the Source facet asks for it. Left out, it must not
+    // hold back the one that IS being read — an unnamed source would otherwise cut everything.
     const merged = mergeFeed(ROWS, {
-      local: { readTo: '2026-06-01T00:00:00.000Z', exhausted: false },
+      published: { readTo: '2026-06-01T00:00:00.000Z', exhausted: false },
     })
 
     expect(idsOf(merged.rows)).toEqual(['august', 'july'])
-    expect(merged.hungry).toEqual(['local'])
+    expect(merged.hungry).toEqual(['published'])
   })
 
   it('draws a running generation whatever the sources have reached', () => {

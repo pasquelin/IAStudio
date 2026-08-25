@@ -5,7 +5,8 @@ import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
-import { openAssetMenu } from './assetMenu'
+import { showContextMenu } from '@/helpers/contextMenu'
+import { assetMenuGroups } from './assetMenu'
 
 function asset(overrides: Partial<Asset> = {}): Asset {
   return {
@@ -22,10 +23,17 @@ function asset(overrides: Partial<Asset> = {}): Asset {
 
 let menu = fakeMenu()
 
-/** Raises the menu, since a native one leaves nothing on screen for a case to read. */
-function raise(subject: Asset = asset()): void {
-  openAssetMenu({ asset: subject, t: i18next.t })
+/**
+ * Raises the menu, since a native one leaves nothing on screen for a case to read.
+ *
+ * Through `showContextMenu`, because these are the two GROUPS the explorer's own menu ends on:
+ * what a case reads is what the system was actually sent, submenus flattened in — see `fakeMenu`.
+ */
+function raise(subject: Asset | null = asset(), count = 1): void {
+  void showContextMenu(assetMenuGroups({ asset: subject, count, t: i18next.t, onAsset }))
 }
+
+const onAsset = vi.fn()
 
 const row = (pattern: RegExp): string | undefined =>
   menu.labels().find(label => pattern.test(label))
@@ -35,11 +43,51 @@ const offered = (pattern: RegExp): boolean | undefined => {
   return label === undefined ? undefined : menu.offers(label)
 }
 
-describe('what the shelf offers to do with an asset', () => {
+describe('what the explorer offers to do with an asset', () => {
   beforeEach(() => {
     useDocuments.setState({ documents: {}, activeId: null })
     menu = fakeMenu()
     installFakeBridge({ menu: menu.bridge })
+    vi.clearAllMocks()
+  })
+
+  /**
+   * 🛑 Two groups and not ten rows, which is what moving here forced: this menu already offers
+   * twelve gestures about the FILE, and flattening the asset's own into it made a list nobody
+   * could read.
+   */
+  it('folds them into two groups rather than into the twelve rows already there', () => {
+    raise()
+
+    expect(row(/^Envoyer vers$/)).toBeDefined()
+    expect(row(/^Asset$/)).toBeDefined()
+  })
+
+  // The three that act on the SELECTION rather than on the clicked row — they name their count.
+  it('names how many rows the catalogue gestures will act on', () => {
+    raise(asset(), 3)
+
+    expect(row(/Nommer 3 assets/)).toBeDefined()
+    expect(row(/Envoyer 3 assets/)).toBeDefined()
+  })
+
+  // Greyed on a selection holding no file the catalogue could answer for.
+  it('greys the catalogue gestures out when nothing in the selection has a row', () => {
+    raise(null, 0)
+
+    expect(offered(/Nommer/)).toBe(false)
+  })
+
+  /**
+   * 🛑 Left OUT and not greyed, which is the whole difference: the main process refuses a submenu
+   * with no row, and it refuses the WHOLE menu with it — a right-click on any folder lost its
+   * twelve other gestures, silently, since `fakeMenu` never validates what it is sent.
+   */
+  it('drops the destinations group rather than opening it onto nothing', () => {
+    raise(null, 0)
+
+    expect(row(/^Envoyer vers$/)).toBeUndefined()
+    expect(row(/^Asset$/)).toBeDefined()
   })
 
   it('lists every destination that takes this kind', () => {
@@ -62,12 +110,6 @@ describe('what the shelf offers to do with an asset', () => {
     raise()
 
     expect(offered(/ciel/)).toBe(false)
-  })
-
-  it('cannot show a cloud asset in a folder, since there is no file yet', () => {
-    raise(asset({ location: 'cloud' }))
-
-    expect(offered(/dans le dossier/)).toBe(false)
   })
 
   // The row used to be offered live whatever was open, because `ready` counted tabs and never
@@ -139,25 +181,5 @@ describe('what the shelf offers to do with an asset', () => {
     raise()
 
     expect(row(/Modifier l’image/)).toBeUndefined()
-  })
-
-  /**
-   * Handed back to the host rather than commanded here — the field belongs to the tile the name
-   * is read on, and this menu is gone by the time it opens. The layer menu is the same shape.
-   */
-  it('hands the rename back to the row instead of commanding it', async () => {
-    const onRename = vi.fn()
-    menu.picks(i18next.t('assets.rename'))
-
-    openAssetMenu({ asset: asset(), t: i18next.t, onRename })
-
-    await vi.waitFor(() => expect(onRename).toHaveBeenCalled())
-  })
-
-  // A host that draws no name has nothing to open — a job still generating has a tile and no row.
-  it('says nothing about renaming where no name is drawn', () => {
-    raise()
-
-    expect(row(/Renommer/)).toBeUndefined()
   })
 })

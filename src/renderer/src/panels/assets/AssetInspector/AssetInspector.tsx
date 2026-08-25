@@ -1,29 +1,34 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Asset } from '@shared/domain/asset'
+import { assetBadgeOf, type Asset } from '@shared/domain/asset'
+import { defined } from '@shared/guards'
+import { AssetBadge } from '@/design/AssetBadge'
 import { InlineRename } from '@/design/InlineRename'
 import { PropertySection } from '@/design/PropertySection'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
-import { formatDuration } from '@/engines/timeline/timecode'
-import { formatBytes, formatMoment } from '@/helpers/format'
 import { generationOf } from '@/helpers/generation'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { renameAsset } from '@/helpers/rename'
 import { RoleField } from '@/panels/shared/RoleField'
+import { useBadgeLabels } from '@/hooks/useBadgeLabels'
 import { useJobs } from '@/stores/jobs'
+import { activeOwnerId, useSettings } from '@/stores/settings'
 import { AssetInspectorGeneration } from './AssetInspectorGeneration'
+import { AssetMeasureRows } from './AssetMeasureRows'
 
 /**
  * One asset, read out — and the prompt behind it, which is what makes the shelf navigable
  * rather than a wall of thumbnails.
  */
 export function AssetInspector({ asset }: { asset: Asset }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const jobs = useJobs(state => state.jobs)
   const bodies = useJobs(state => state.bodies)
+  const badgeLabels = useBadgeLabels()
+  const ownerId = useSettings(activeOwnerId)
   const [missing, setMissing] = useState(false)
   const [renaming, setRenaming] = useState(false)
 
@@ -42,6 +47,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
   }
 
   const generation = generationOf(asset, jobs, bodies)
+  const badge = assetBadgeOf(asset, ownerId)
   const probe = asset.probe
 
   return (
@@ -73,26 +79,20 @@ export function AssetInspector({ asset }: { asset: Asset }) {
         {/* The same field the explorer's face carries, and correctable here for the same
             reason: an asset IS a file the catalogue holds a row for. */}
         <RoleField assetId={asset.id} domain={asset.type} />
-        {probe?.duration !== undefined && (
-          <PropertyRow label={t('inspector.duration')}>
-            {formatDuration(probe.duration)}
-          </PropertyRow>
-        )}
-        {probe?.width !== undefined && probe.height !== undefined && (
-          <PropertyRow label={t('inspector.dimensions')}>
-            {probe.width} × {probe.height}
-          </PropertyRow>
-        )}
-        {asset.bytes !== undefined && (
-          <PropertyRow label={t('inspector.size')}>
-            {formatBytes(asset.bytes, unit => t(`units.${unit}`), i18n.language)}
-          </PropertyRow>
-        )}
-        <PropertyRow label={t('inspector.created')}>
-          {/* The studio's language, not the machine's — the two differ. */}
-          {/* Local: this says when a person made the thing, not what an account was billed. */}
-          {formatMoment(asset.createdAt, i18n.language, 'local')}
+        {/* Where this row stands against the library — the one reading of an asset the remote
+            browser can no longer show, having stopped drawing local lines. */}
+        <PropertyRow label={t('assets.syncState')}>
+          <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? ''} showQuiet />
         </PropertyRow>
+        <AssetMeasureRows
+          createdAt={asset.createdAt}
+          {...defined({
+            duration: probe?.duration,
+            width: probe?.width,
+            height: probe?.height,
+            bytes: asset.bytes,
+          })}
+        />
       </PropertySection>
 
       {generation && <AssetInspectorGeneration assetId={asset.id} generation={generation} />}

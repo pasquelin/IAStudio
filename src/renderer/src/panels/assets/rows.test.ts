@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, type Asset, type AssetType } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { job } from '@/stores/job-fixtures'
-import { badgeOfRow, mergeRows, nameOfRow, reconciled, typeOfRow } from './rows'
+import {
+  markOf,
+  mergeRows,
+  nameOfRow,
+  reconciled,
+  runningRows,
+  typeOfRow,
+  type AssetRowModel,
+} from './rows'
+
+/** Every kind, which is what a space that takes them all asks for. */
+const ANY: readonly AssetType[] = ASSET_TYPES
 
 const NONE: ReadonlySet<string> = new Set()
+const NO_TWINS: ReadonlyMap<string, Asset> = new Map()
 
 function local(overrides: Partial<Asset> = {}): Asset {
   return {
@@ -35,312 +47,163 @@ function cloud(overrides: Partial<CloudAsset> = {}): CloudAsset {
   }
 }
 
-describe('the three provenances a browser line can have', () => {
-  it('lists a running generation, the catalogue and the library as one list', () => {
-    const rows = mergeRows({
-      local: [local()],
-      remote: [cloud()],
-      jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })],
-      scope: null,
-      absent: NONE,
-    })
+describe('the provenances a line of the remote browser can have', () => {
+  it('places a running generation above the libraries, whatever its stamp', () => {
+    const rows = [
+      ...runningRows([job({ label: 'A skeleton', status: 'running', progress: 0.4 })]),
+      ...mergeRows({ remote: [cloud()], published: [], scope: ANY }),
+    ]
 
-    // Newest first, whatever produced it — the library asset is dated after the local one, so it
-    // comes first. A running generation sits above the sort: it is what is being waited on.
-    expect(rows.map(row => row.from)).toEqual(['job', 'remote', 'local'])
+    expect(rows.map(row => row.from)).toEqual(['job', 'remote'])
   })
 
-  it('orders the two settled provenances by date rather than by origin', () => {
+  it('orders the two libraries by date rather than by origin', () => {
     const rows = mergeRows({
-      local: [local({ id: 'asset_new', createdAt: '2026-08-20T10:00:00.000Z' })],
-      remote: [cloud({ createdAt: '2026-08-12T11:00:00.000Z' })],
-      jobs: [],
-      scope: null,
-      absent: NONE,
+      remote: [cloud({ id: 'mine', createdAt: '2026-08-12T11:00:00.000Z' })],
+      published: [cloud({ id: 'theirs', createdAt: '2026-08-20T10:00:00.000Z' })],
+      scope: ANY,
     })
 
-    expect(rows.map(row => row.id)).toEqual(['asset_new', 'remote:asset_remote'])
+    expect(rows.map(row => (row.from === 'remote' ? row.asset.id : ''))).toEqual(['theirs', 'mine'])
   })
 
-  // A finished job has already been collected: the row it stood for now exists for real, and
-  // leaving it would show the same output twice.
-  it('drops a generation the moment it stops running', () => {
+  // An asset one owns AND has published is one line, and it is one's own: the account's copy is
+  // the truer of the two, and two lines under one id collide as a React key.
+  it('shows an asset one owns and has also published once, as one’s own', () => {
     const rows = mergeRows({
-      local: [],
-      remote: [],
-      jobs: [job({ status: 'succeeded' }), job({ id: 'job_2', status: 'failed' })],
-      scope: null,
-      absent: NONE,
-    })
-
-    expect(rows).toEqual([])
-  })
-
-  it('shows a library asset the project already holds once, not twice', () => {
-    const rows = mergeRows({
-      local: [local({ remoteAssetId: 'asset_remote' })],
-      remote: [cloud()],
-      jobs: [],
-      scope: null,
-      absent: NONE,
+      remote: [cloud({ id: 'both' })],
+      published: [cloud({ id: 'both' })],
+      scope: ANY,
     })
 
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.from).toBe('local')
+    expect(rows[0]?.from === 'remote' && rows[0].published).toBeUndefined()
   })
 
-  it('narrows both sides to what the space in front can take', () => {
+  it('drops what the space in front has no use for', () => {
     const rows = mergeRows({
-      local: [local(), local({ id: 'asset_mesh', type: 'mesh' })],
-      remote: [cloud(), cloud({ id: 'asset_pic', type: 'image' })],
-      jobs: [],
-      scope: ['mesh'],
-      absent: NONE,
+      remote: [cloud({ type: 'mesh' }), cloud({ id: 'a_picture', type: 'image' })],
+      published: [],
+      scope: ['image'],
     })
 
-    expect(rows.map(row => typeOfRow(row))).toEqual(['mesh', 'mesh'])
+    expect(rows.map(row => (row.from === 'remote' ? row.asset.id : ''))).toEqual(['a_picture'])
   })
 
   /**
-   * A job says nothing about what it will produce until it answers, so it has no kind to be
-   * narrowed by. Hiding it would be the studio refusing to mention a generation the user is
-   * waiting on because it cannot yet name its shelf.
+   * A job does not say what kind it will produce until it answers, and this panel exists to show
+   * it: hiding a running generation because its type is unknown is worse than showing one that
+   * belongs to another space.
    */
   it('keeps a running generation whatever the space asks for', () => {
-    const rows = mergeRows({
-      local: [],
-      remote: [],
-      jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })],
-      scope: ['audio'],
-      absent: NONE,
-    })
+    expect(runningRows([job({ status: 'running' })]).map(row => row.from)).toEqual(['job'])
+  })
 
-    expect(rows).toHaveLength(1)
-    expect(typeOfRow(rows[0] as never)).toBeNull()
+  it('answers with the label a generation was submitted under, having no asset yet', () => {
+    const rows = runningRows([job({ label: 'A skeleton', status: 'running' })])
+
+    expect(rows[0] && nameOfRow(rows[0])).toBe('A skeleton')
+    expect(rows[0] && typeOfRow(rows[0])).toBeNull()
   })
 })
 
-describe('a row whose file the disk has lost', () => {
-  // The whole point of the recovery path: what is gone is the FILE, and the asset is one
-  // download away — so the line goes back to being the library one it can be fetched from.
-  it('gives its place back to its twin when the library still holds one', () => {
-    const rows = mergeRows({
-      local: [local({ id: 'asset_gone', remoteAssetId: 'asset_remote' })],
-      remote: [cloud()],
-      jobs: [],
-      scope: null,
-      absent: new Set(['asset_gone']),
-    })
-
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.from).toBe('remote')
+describe('the mark one line wears', () => {
+  const line = (asset: CloudAsset, published?: true): AssetRowModel => ({
+    id: `remote:${asset.id}`,
+    from: 'remote',
+    asset,
+    ...(published ? { published } : {}),
   })
 
-  // Lost with nothing to fetch it back from: the row stays, and the badge is all that can be
-  // said. Handing it to the library would promise a download that has no source.
-  it('stays a local row when no twin answers for it', () => {
-    const rows = mergeRows({
-      local: [local({ id: 'asset_gone' })],
-      remote: [cloud()],
-      jobs: [],
-      scope: null,
-      absent: new Set(['asset_gone']),
-    })
-
-    expect(rows.map(row => row.from)).toEqual(['remote', 'local'])
+  it('says a library asset is not on this disk', () => {
+    expect(markOf(line(cloud()), { inFlight: NONE, twins: NO_TWINS })).toBe('remote-only')
   })
 
-  // The twin is only recoverable if it is in the page actually read: a row whose twin sits
-  // beyond it would be handed to a library line that is not there to receive it.
-  it('stays local when its twin is outside the page that was read', () => {
-    const rows = mergeRows({
-      local: [local({ id: 'asset_gone', remoteAssetId: 'asset_elsewhere' })],
-      remote: [cloud()],
-      jobs: [],
-      scope: null,
-      absent: new Set(['asset_gone']),
-    })
-
-    expect(rows.map(row => row.from)).toEqual(['remote', 'local'])
-  })
-})
-
-describe('what a line is called and what mark it wears', () => {
-  it('names a job by its label and a library asset by its own name', () => {
-    const rows = mergeRows({
-      local: [],
-      remote: [cloud()],
-      jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })],
-      scope: null,
-      absent: NONE,
-    })
-
-    expect(rows.map(nameOfRow)).toEqual(['A skeleton', 'skeleton'])
+  it('tells someone else’s from one’s own', () => {
+    expect(markOf(line(cloud(), true), { inFlight: NONE, twins: NO_TWINS })).toBe('published')
   })
 
   /**
-   * The name and nothing else, where this used to answer with the model that made it. Two things
-   * took that away: a name is derived from the PROMPT now, so it says the thing rather than the
-   * machine — and an asset can be renamed, which left it listed under its old word and
-   * unfindable by its new one, the search reading exactly this.
+   * What the panel is FOR: the one thing a store has to say about a line is whether spending a
+   * download on it would bring anything.
    */
-  it('calls a generated asset by its name, not by the model that made it', () => {
-    const rows = mergeRows({
-      local: [
-        {
-          id: 'asset_1',
-          name: 'Pas courus dans les feuilles',
-          type: 'audio',
-          location: 'local',
-          tags: [],
-          createdAt: '2026-08-07',
-          generation: {
-            modelId: 'model_1',
-            modelLabel: 'ElevenLabs Sound Effects',
-            prompt: 'Background footsteps and rustling sounds',
-            params: {},
-          },
-        },
-      ],
-      remote: [],
-      jobs: [],
-      scope: null,
-      absent: NONE,
+  it('says when the project already holds it', () => {
+    const held = local({
+      remoteAssetId: 'asset_remote',
+      remoteSyncedAt: '2026-08-12T11:00:00.000Z',
     })
+    const twins = new Map([['asset_remote', held]])
 
-    expect(rows.map(nameOfRow)).toEqual(['Pas courus dans les feuilles'])
+    expect(markOf(line(cloud()), { inFlight: NONE, twins })).toBe('synced')
   })
 
-  it('marks the two provenances the catalogue cannot answer for', () => {
-    const rows = mergeRows({
-      local: [],
-      remote: [cloud()],
-      jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })],
-      scope: null,
-      absent: NONE,
+  // What is moving right now outranks every settled answer: it is the only state the user is
+  // waiting on, and the tile draws a veil over it.
+  it('lets a transfer under way outrank what is settled', () => {
+    const held = local({
+      remoteAssetId: 'asset_remote',
+      remoteSyncedAt: '2026-08-12T11:00:00.000Z',
     })
+    const twins = new Map([['asset_remote', held]])
+    const inFlight = new Set(['asset_remote'])
 
-    expect(rows.map(row => badgeOfRow(row, 'proj_1'))).toEqual(['generating', 'remote-only'])
+    expect(markOf(line(cloud()), { inFlight, twins })).toBe('fetching')
   })
 
-  // A local row still goes through `assetBadgeOf`, which is what keeps the rule that reads a
-  // catalogue row in one place rather than two that must agree.
-  it('leaves a catalogue row to the shared reader', () => {
-    const row = mergeRows({
-      local: [local()],
-      remote: [],
-      jobs: [],
-      scope: null,
-      absent: NONE,
-    })[0]
+  it('marks a generation still running', () => {
+    const row: AssetRowModel = {
+      id: 'job:1',
+      from: 'job',
+      job: job({ status: 'running' }),
+      type: null,
+    }
 
-    expect(row && badgeOfRow(row, 'proj_1')).toBe('local-only')
-  })
-})
-
-describe('reading a local row against the library page in hand', () => {
-  const synced = local({
-    remoteAssetId: 'asset_remote',
-    remoteSyncedAt: '2026-08-12T11:00:00.000Z',
-  })
-
-  it('says nothing at all when no page was read for it', () => {
-    expect(reconciled(synced, undefined)).toBeNull()
-  })
-
-  it('says nothing when the twin has not moved since the two were reconciled', () => {
-    expect(reconciled(synced, cloud({ updatedAt: '2026-08-12T11:00:00.000Z' }))).toBeNull()
-  })
-
-  // The state nothing could reach before a page was read beside the catalogue.
-  it('asks for a pull when only the library has moved', () => {
-    expect(reconciled(synced, cloud({ updatedAt: '2026-08-12T12:00:00.000Z' }))).toBe('to-pull')
-  })
-
-  it('calls it a conflict when both sides moved since the baseline', () => {
-    const edited = { ...synced, localChangedAt: '2026-08-12T11:30:00.000Z' }
-
-    expect(reconciled(edited, cloud({ updatedAt: '2026-08-12T12:00:00.000Z' }))).toBe('conflict')
-  })
-
-  // Without a twin recorded there is nothing to compare: judging it would mean reading another
-  // asset's stamp against this one's baseline.
-  it('says nothing about a row that never had a twin', () => {
-    expect(reconciled(local(), cloud())).toBeNull()
+    expect(markOf(row, { inFlight: NONE, twins: NO_TWINS })).toBe('generating')
   })
 })
 
 /**
- * What everyone else published. A line of the same PROVENANCE as a library asset — neither has a
- * file here, both are fetched by a double-click and pulled at a drop — carrying one flag, for
- * the one thing that differs: whose it is.
+ * Read from the REMOTE side, which is what losing the local half made possible: `to-pull` and
+ * `conflict` used to sit on a project row and be reachable only while a page of the library
+ * happened to be in hand.
  */
-describe('the public feed', () => {
-  it('is absent from the list until it has been asked for', () => {
-    const rows = mergeRows({ local: [local()], remote: [], jobs: [], scope: null, absent: NONE })
-
-    expect(rows.map(row => row.from)).toEqual(['local'])
-  })
-
-  it('takes its place on the same timeline, newest first', () => {
-    const rows = mergeRows({
-      local: [local({ createdAt: '2026-08-20T10:00:00.000Z' })],
-      remote: [],
-      published: [cloud({ id: 'asset_theirs', createdAt: '2026-08-25T10:00:00.000Z' })],
-      jobs: [],
-      scope: null,
-      absent: NONE,
+describe('how the copy a project holds stands against the library', () => {
+  it('says nothing has moved when the stamps agree', () => {
+    const asset = local({
+      remoteAssetId: 'asset_remote',
+      remoteSyncedAt: '2026-08-12T11:00:00.000Z',
     })
 
-    expect(rows.map(row => row.id)).toEqual(['remote:asset_theirs', 'asset_local'])
+    expect(reconciled(asset, cloud())).toBeNull()
   })
 
-  it('wears a mark of its own, which is not the library’s', () => {
-    const rows = mergeRows({
-      local: [],
-      remote: [cloud({ id: 'asset_mine' })],
-      published: [cloud({ id: 'asset_theirs' })],
-      jobs: [],
-      scope: null,
-      absent: NONE,
+  it('asks for a download when only the library moved', () => {
+    const asset = local({
+      remoteAssetId: 'asset_remote',
+      remoteSyncedAt: '2026-08-10T11:00:00.000Z',
     })
 
-    expect(rows.map(row => badgeOfRow(row, null))).toEqual(
-      expect.arrayContaining(['remote-only', 'published']),
-    )
+    expect(reconciled(asset, cloud({ updatedAt: '2026-08-12T11:00:00.000Z' }))).toBe('to-pull')
   })
 
-  /**
-   * The one collision worth handling: an asset this account owns AND has published comes back on
-   * both pages. Two lines for one thing would offer to fetch what is already in the library.
-   */
-  it('leaves one line for an asset the library page already holds', () => {
-    const rows = mergeRows({
-      local: [],
-      remote: [cloud({ id: 'asset_both' })],
-      published: [cloud({ id: 'asset_both' })],
-      jobs: [],
-      scope: null,
-      absent: NONE,
+  it('says conflict when both sides moved since the last reconciliation', () => {
+    const asset = local({
+      remoteAssetId: 'asset_remote',
+      remoteSyncedAt: '2026-08-10T11:00:00.000Z',
+      localChangedAt: '2026-08-11T11:00:00.000Z',
     })
 
-    expect(rows).toHaveLength(1)
-    expect(badgeOfRow(rows[0]!, null)).toBe('remote-only')
+    expect(reconciled(asset, cloud({ updatedAt: '2026-08-12T11:00:00.000Z' }))).toBe('conflict')
   })
 
-  it('is narrowed by the scope, as every other provenance is', () => {
-    const rows = mergeRows({
-      local: [],
-      remote: [],
-      published: [
-        cloud({ id: 'asset_mesh', type: 'mesh' }),
-        cloud({ id: 'asset_img', type: 'image' }),
-      ],
-      jobs: [],
-      scope: ['mesh'],
-      absent: NONE,
+  it('marks the line with it, so the panel and the badge cannot disagree', () => {
+    const asset = local({
+      remoteAssetId: 'asset_remote',
+      remoteSyncedAt: '2026-08-10T11:00:00.000Z',
     })
+    const twins = new Map([['asset_remote', asset]])
+    const row: AssetRowModel = { id: 'remote:asset_remote', from: 'remote', asset: cloud() }
 
-    expect(rows.map(row => row.id)).toEqual(['remote:asset_mesh'])
+    expect(markOf(row, { inFlight: NONE, twins })).toBe('to-pull')
   })
 })

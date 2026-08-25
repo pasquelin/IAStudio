@@ -38,7 +38,7 @@ machine, without sending them anywhere.
 | 4 | [Projects](manual/04-projects.md) | What a project is, what is inside it, how to save and move it |
 | 5 | [Finding a model](manual/05-models.md) | The catalogue, search, filters, and how to choose |
 | 6 | [Generating](manual/06-generating.md) | The form, the prompt, the job queue, errors and retries |
-| 7 | [Assets](manual/07-assets.md) | The project's shelf, search, importing your own files |
+| 7 | [Assets and the Library](manual/07-assets.md) | The remote library, downloading, importing your own files |
 
 ### The workspaces
 
@@ -99,7 +99,7 @@ The request leaves. Bottom right of the window, the status line shows "1 generat
 fills. Click it for the detail. You can keep working while it runs.
 
 **7. Collect the result.**
-When the job reaches "Done", the image arrives in the **Assets** panel — the project's shelf —
+When the job reaches "Done", the image arrives in your account's **Library** — and in the folder
 and on your disk, in the `Images/` folder. Click it: the **Inspector**, on the right, shows
 its model, its prompt and its seed, and can open the folder holding it.
 

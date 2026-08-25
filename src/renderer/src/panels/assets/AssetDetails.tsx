@@ -1,26 +1,32 @@
 import { useTranslation } from 'react-i18next'
+import type { Asset } from '@shared/domain/asset'
 import { SectionFoldScope } from '@/design/SectionFoldScope'
 import { ROW_DETAIL } from '@/design/styles'
 import { AssetInspector } from './AssetInspector/AssetInspector'
+import { CloudAssetInspector } from './AssetInspector/CloudAssetInspector'
 import type { AssetRowModel } from './rows'
 
 /**
- * What one row of the shelf opens onto — the inspector describes the document in front and only
- * that, so an asset reads out where it was picked.
- *
- * Only a row the catalogue holds has any of this to say: a library line has no file here and a
- * running job has no asset yet, and both are told by the chevron being drawn on nothing.
+ * What one row opens onto — two readings, and which it gets is whether the project holds a twin.
+ * Without one there is what the library says, the PROMPT above all: the field someone weighs
+ * before spending a download.
  */
-export function AssetDetails({ row }: { row: AssetRowModel }) {
+export function AssetDetails({
+  row,
+  twin,
+}: {
+  row: AssetRowModel
+  twin: Asset | null | undefined
+}) {
   const { t } = useTranslation()
-  if (row.from !== 'local') return null
+  if (row.from !== 'remote') return null
 
   return (
     // Outside the inspector's fold order: these sections must not answer for the button its
     // title row carries — see `SectionFoldScope`.
     <SectionFoldScope value={false}>
       <section className={ROW_DETAIL} aria-label={t('assets.details')}>
-        <AssetInspector asset={row.asset} />
+        {twin ? <AssetInspector asset={twin} /> : <CloudAssetInspector asset={row.asset} />}
       </section>
     </SectionFoldScope>
   )

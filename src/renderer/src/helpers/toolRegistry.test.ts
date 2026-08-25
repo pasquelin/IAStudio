@@ -11,14 +11,16 @@ import { useGit } from '@/stores/git'
 import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
 import { useAvailableTools } from '@/hooks/useAvailableTools'
-import { shownTool, toolIcon, TOOLS, type ToolState } from './toolRegistry'
+import { shownTool, toolIcon, toolsAvailableIn, TOOLS, type ToolState } from './toolRegistry'
 
 /** What a workspace answers to: a project is always open in one, by definition. */
-const IN_WORKSPACE: ToolState = { hasProject: true, hasGit: true }
+const IN_WORKSPACE: ToolState = { hasProject: true, hasGit: true, hasCloud: true }
 /** The home before anything has been opened, which is where a launch starts. */
-const NO_PROJECT: ToolState = { hasProject: false, hasGit: false }
+const NO_PROJECT: ToolState = { hasProject: false, hasGit: false, hasCloud: true }
 /** A project open in a folder git is not tracking, which is every folder until `git init`. */
-const NO_GIT: ToolState = { hasProject: true, hasGit: false }
+const NO_GIT: ToolState = { hasProject: true, hasGit: false, hasCloud: true }
+/** No key opening onto a remote library, which is every launch before one is entered. */
+const NO_CLOUD: ToolState = { hasProject: true, hasGit: true, hasCloud: false }
 
 /** A project open, which is what the home's Explorer answers to. */
 const openProject = (): void => {
@@ -209,6 +211,16 @@ describe('what a half of a zone shows', () => {
   it('leaves a tool alone in the zone this section gives it', () => {
     expect(shownTool('timeline', 'bottomRight', 'primary', 'video', IN_WORKSPACE)).toBe('timeline')
     expect(shownTool('assets', 'left', 'primary', 'image', IN_WORKSPACE)).toBe('assets')
+  })
+
+  /**
+   * 🛑 Absent rather than greyed, and unlike the generator beside it: that one still has this
+   * machine's own models to offer, where a remote library with no account to open has not one
+   * row. The half falls back to what it does hold.
+   */
+  it('keeps the remote browser out of a studio holding no key', () => {
+    expect(shownTool('assets', 'left', 'primary', 'image', NO_CLOUD)).toBe('generator')
+    expect(toolsAvailableIn('left', 'image', NO_CLOUD).map(tool => tool.id)).not.toContain('assets')
   })
 
   it('substitutes within the half, never across the separator', () => {

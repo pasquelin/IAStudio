@@ -35,11 +35,14 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { currentOverrides } from '@/stores/bindings'
 import { useDocuments } from '@/stores/documents'
+import { useMedia } from '@/stores/media'
 import { fileClipboardCut, useFileClipboard } from '@/stores/fileClipboard'
 import { explorerSearch, useExplorerView } from '@/stores/explorerView'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
+import { runAssetAction } from './assetActions'
+import { ImportProgress } from './ImportProgress'
 import { openEntryMenu, openRootMenu } from './entryMenu'
 import { DomainRow } from './DomainRow'
 import { EntryCard, type EntryKind } from './EntryCard'
@@ -508,6 +511,12 @@ export function Explorer() {
         t,
         onOpen: () => void activate(node),
         onRename: () => setRenaming({ nodeId: node.id, asset }),
+        onAsset: action =>
+          void runAssetAction(
+            action,
+            selectedFilePaths(useSelection.getState()),
+            t('assets.contactSheetName'),
+          ),
         run,
       }),
     )
@@ -524,6 +533,7 @@ export function Explorer() {
       history,
       bindings: currentOverrides(),
       t,
+      onImport: () => void useMedia.getState().importMedia(),
       run: command => run(command, into),
     })
   }
@@ -579,6 +589,10 @@ export function Explorer() {
       {/* Nothing at all unless a pass LASTS, which on a project where nothing moved it never
           does: inserted here, a row that came and went would push the tree down and back. */}
       <RescanBar />
+
+      {/* Where files coming IN report their progress — it followed the import here, the shelf
+          having stopped listing what the project holds. */}
+      <ImportProgress />
 
       <div className="min-h-0 flex-1">
         {grid ? (

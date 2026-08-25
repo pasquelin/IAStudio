@@ -1,10 +1,11 @@
 import { mdiDownloadOutline } from '@mdi/js'
+import i18next from 'i18next'
 import { type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { startLibraryDrag } from '@/helpers/assetDrag'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { useCloud } from '@/stores/cloud'
+import { pickedWith } from '@/stores/libraryPick'
 import { useProject } from '@/stores/project'
 
 export type LibraryAssetProps = {
@@ -27,8 +28,6 @@ export type LibraryAssetProps = {
  * asset has none.
  */
 export function LibraryAsset({ asset, className, children }: LibraryAssetProps) {
-  const { t } = useTranslation()
-
   return (
     <div
       className={className}
@@ -49,16 +48,21 @@ export function LibraryAsset({ asset, className, children }: LibraryAssetProps) 
          * time is `useCloud`'s own rule.
          */
         const canFetch = useProject.getState().project !== null && !useCloud.getState().busy
+        // The whole picked range, so a shelf of twelve comes down in one transfer — which is
+        // also `useCloud`'s own rule: one at a time, and twelve clicks would be eleven refusals.
+        const ids = pickedWith(asset.id)
 
         void showContextMenu([
           {
-            label: t('assets.fetchAction'),
+            // Read at the gesture rather than through `useTranslation`: this wraps EVERY cell of
+            // the panel, and a hook here subscribes each of two hundred of them to i18next.
+            label: i18next.t('assets.fetchAction', { count: ids.length }),
             icon: mdiDownloadOutline,
-            tooltip: t('assets.fetchActionHint'),
+            tooltip: i18next.t('assets.fetchActionHint'),
             // Greyed rather than hidden, as every other menu here: an entry that comes and goes
             // depending on what is open is one nobody can learn.
             disabled: !canFetch,
-            onSelect: () => void useCloud.getState().pull([asset.id]),
+            onSelect: () => void useCloud.getState().pull(ids),
           },
         ])
       }}

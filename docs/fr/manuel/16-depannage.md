@@ -30,7 +30,7 @@ menu dont le bouton dit ce qu'il retient. Le détail est au
 Le volet se referme de trois façons : un clic à côté, `Échap`, ou le passage à une autre
 application. Recliquer l’icône marche aussi. C’est vrai de la barre des générations à sa gauche.
 
-> **Une génération réussie dit dans quelle étagère elle a atterri** — utile dès qu’un modèle
+> **Une génération réussie dit dans quel dossier elle a atterri** — utile dès qu’un modèle
 > produit autre chose que ce que l’espace où vous êtes montre.
 
 **Un échec fait aussi apparaître une bulle** dans le coin, qui ne s’efface pas toute seule. Si
@@ -48,10 +48,10 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 |---|---|
 | « Aucun projet ouvert » | il faut créer ou ouvrir un projet (`⌘N` / `⌘O`) |
 | « Aucun document ouvert. Générez ou ouvrez un asset pour commencer. » | le centre de la fenêtre attend un premier onglet |
-| « Aucun asset. Générez quelque chose pour commencer. » | l’étagère du projet est encore vide |
+| « Aucun asset. Générez quelque chose pour commencer. » | l’Explorateur du projet est encore vide |
 | « Aucune génération en cours. » | rien ne se génère en ce moment — la liste des générations est vide |
 | « Ouvrez un projet pour générer. » | le formulaire attend un projet où déposer le résultat |
-| « Ouvrez un projet pour voir ses assets. » | idem, pour l’étagère |
+| « Ouvrez un projet pour voir ses assets. » | idem, pour l’Explorateur |
 | « Ouvrez une scène pour voir son contenu. » | le panneau **Scène** attend une scène ouverte |
 | « Ouvrez une scène pour voir ses mailles. » / « Ouvrez une scène pour voir ses lumières. » | idem, pour les deux panneaux voisins |
 | « Aucun modèle choisi » / « Rien n’est facturé tant qu’aucun modèle n’est choisi. » | aucun modèle n’a été validé — Scenario n’est pas utilisé tant que vous n’en choisissez pas un |
@@ -318,7 +318,7 @@ enlève la ligne une fois qu’elle est finie.
 
 ### « Préparation vidéo indisponible : ni copie allégée ni forme d’onde. »
 
-**Où ça s’affiche.** Sur un triangle d’alerte ambre, dans la barre de titre de l’étagère à
+**Où ça s’affiche.** Sur un triangle d’alerte ambre, dans la barre de titre de l’Explorateur à
 assets : survolez-le ou atteignez-le au clavier. Le même état est écrit en toutes lettres, et en
 permanence, dans **Réglages ▸ Médias**.
 
@@ -376,7 +376,7 @@ brew reinstall ffmpeg
 **Ce que ça veut dire.** Ce fichier a la même empreinte qu’un asset déjà présent. Le studio
 refuse d’en garder deux copies.
 
-**Ce n’est pas une erreur.** Cherchez-le dans le panneau **Assets** : il y est déjà.
+**Ce n’est pas une erreur.** Cherchez-le dans l’**Explorateur** : il y est déjà.
 
 ### « Fichier illisible »
 

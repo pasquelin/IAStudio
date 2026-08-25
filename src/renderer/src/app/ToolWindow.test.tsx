@@ -4,6 +4,7 @@ import { DEFAULT_COLLECTION_STATE } from '@/helpers/collectionState'
 import { useAssets } from '@/stores/assets'
 import { useMedia } from '@/stores/media'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
 import { withQueries } from './query-fixtures'
 import { ToolWindow } from './ToolWindow'
 
@@ -40,6 +41,9 @@ beforeEach(() => {
   useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
   useProject.setState({ project: null })
   useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+  // The remote browser draws nothing at all without one — see `MissingCredentials`, and the
+  // placement that keeps its icon off the rail entirely.
+  useSettings.setState({ auth: { authenticated: true, ownerId: 'proj_a' } })
 })
 
 describe('a panel lying in a band', () => {

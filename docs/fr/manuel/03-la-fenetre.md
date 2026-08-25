@@ -137,7 +137,7 @@ chaque création, rouvre le formulaire déjà rempli — modèle, prompt et rég
 de l’asset.
 
 **Rapatrier un asset distant ne se fait plus depuis cet écran** : le panneau qui listait ce que
-votre compte détient en ligne a quitté l’accueil. Le geste vit dans le panneau **Assets**, au clic
+votre compte détient en ligne a quitté l’accueil. Le geste vit dans le panneau **Bibliothèque**, au clic
 droit sur une vignette de la bibliothèque — voir [Les assets](07-assets.md).
 
 ### Ranger la page
@@ -369,7 +369,7 @@ garde sa taille.
 |---|---|---|---|---|
 | **Modèles** | gauche | 1re | partout | le catalogue distant, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
-| **Assets** | gauche | 1re | partout | l’étagère : ce que le projet tient, ce que votre clé possède, ce qui est en train d’être produit |
+| **Bibliothèque** | gauche | 1re | partout | ce que votre clé possède en ligne, ce que la communauté publie, ce qui est en train d’être produit — **absente sans clé API** |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
@@ -390,10 +390,10 @@ garde sa taille.
 
 **La colonne de gauche se lit en deux temps : ce que le fournisseur propose, puis ce qui est déjà à
 vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
-son formulaire, et l’étagère de ce qu’il produit. En bas, l’**Explorateur** et **Git**, qui se
+son formulaire, et la **Bibliothèque** de ce que le compte héberge. En bas, l’**Explorateur** et **Git**, qui se
 relaient aussi : le dossier de votre projet, et ce qui y a changé.
 
-La coupure entre les deux moitiés est ce qui rend le geste possible : l’étagère et l’Explorateur
+La coupure entre les deux moitiés est ce qui rend le geste possible : la Bibliothèque et l’Explorateur
 tiennent l’écran **ensemble**, et rien n’entre dans le projet sans passer de l’une à l’autre.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
@@ -417,7 +417,7 @@ l’espace y déclare. C’est ce que vous voyez à la première ouverture, et c
 Réinitialiser la disposition** rétablit.
 
 La moitié haute de gauche s’ouvre sur les **Modèles** dans tous les espaces — choisir un modèle
-est ce par quoi tout commence, et l’étagère se demande. La moitié basse s’ouvre sur
+est ce par quoi tout commence, et la Bibliothèque se demande. La moitié basse s’ouvre sur
 l’**Explorateur**, partout aussi.
 
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |

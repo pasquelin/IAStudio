@@ -109,7 +109,7 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'git'
+  requires?: 'project' | 'git' | 'cloud'
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -129,7 +129,13 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   // Second, so entering a space lands on the generator: a half with nothing chosen opens on the
   // first tool it declares, and generating is where every space starts.
-  { id: 'assets', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
+  //
+  // 🛑 `requires: 'cloud'`, unlike the generator beside it, and the difference is what the panel
+  // could still show without a key: the generator has this machine's own models to offer and
+  // says which of the five refusals it is, while a remote library with no account to open has
+  // nothing at all — not one row, no local half since 25 August. An icon opening onto a panel
+  // that can only ever say « configure a key » is an icon that lies about what it does.
+  { id: 'assets', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'cloud' },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the
   // upper one, so the generator stays visible WHILE the Explorer is read.

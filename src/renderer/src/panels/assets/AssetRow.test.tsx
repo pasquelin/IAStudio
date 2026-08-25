@@ -1,26 +1,29 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
+import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { job } from '@/stores/job-fixtures'
 import { AssetRow } from './AssetRow'
 
 /** Built by the panel in production — see `AssetCardProps.hints`. */
 const HINTS = { fetch: {}, generating: {} }
 
-function asset(overrides: Partial<Asset> = {}): Asset {
+function cloud(overrides: Partial<CloudAsset> = {}): CloudAsset {
   return {
-    id: 'asset_1',
-    name: 'Boulder',
-    type: 'image',
-    location: 'local',
-    path: 'assets/img/asset_1.png',
+    id: 'asset_remote',
+    name: 'A skeleton',
+    type: 'mesh',
+    remoteType: 'img23d',
+    ownerId: 'proj_1',
+    createdAt: '2026-08-12T11:00:00.000Z',
+    updatedAt: '2026-08-12T11:00:00.000Z',
+    privacy: 'private',
     tags: [],
-    createdAt: '2026-08-06T10:00:00.000Z',
+    collectionIds: [],
     ...overrides,
   }
 }
 
-describe('a row of the asset shelf', () => {
+describe('a row of the remote browser', () => {
   /**
    * The kind sits in the row's `actions`, so the fill under it is the cell's — `accent-soft` once
    * picked, where `muted` reads 3.25:1. It therefore wears `ROW_QUIET` like every other quiet word
@@ -32,42 +35,25 @@ describe('a row of the asset shelf', () => {
   it('lifts the kind out of muted once the row is picked', () => {
     render(
       <AssetRow
-        row={{ id: 'asset_1', from: 'local', asset: asset() }}
-        typeLabel="Image"
-        badge="local-only"
+        row={{ id: 'remote:asset_remote', from: 'remote', asset: cloud() }}
+        typeLabel="3D"
+        badge="remote-only"
         badgeLabels={new Map()}
         hints={HINTS}
       />,
     )
 
-    expect(screen.getByText('Image')).toHaveClass(
+    expect(screen.getByText('3D')).toHaveClass(
       'text-muted',
       'group-data-selected/row:text-text',
       'transition-colors',
     )
   })
-})
 
-describe('the same line in the list view', () => {
-  it('names a library line and says what a double-click will do', () => {
+  it('names a library line', () => {
     render(
       <AssetRow
-        row={{
-          id: 'remote:asset_remote',
-          from: 'remote',
-          asset: {
-            id: 'asset_remote',
-            name: 'A skeleton',
-            type: 'mesh',
-            remoteType: 'img23d',
-            ownerId: 'proj_1',
-            createdAt: '2026-08-12T11:00:00.000Z',
-            updatedAt: '2026-08-12T11:00:00.000Z',
-            privacy: 'private',
-            tags: [],
-            collectionIds: [],
-          },
-        }}
+        row={{ id: 'remote:asset_remote', from: 'remote', asset: cloud() }}
         typeLabel="3D"
         badge="remote-only"
         badgeLabels={new Map()}

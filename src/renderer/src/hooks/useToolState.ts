@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { gitHoldsFolder } from '@shared/domain/git'
 import type { ToolState } from '@/helpers/toolRegistry'
+import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
 import { useGit } from '@/stores/git'
 import { useProject } from '@/stores/project'
 
@@ -11,6 +12,7 @@ import { useProject } from '@/stores/project'
 export function useToolState(): ToolState {
   const hasProject = useProject(state => state.project !== null)
   const hasGit = useGit(state => gitHoldsFolder(state.repository))
+  const hasCloud = useAccounts(accountsHoldLibrary)
 
-  return useMemo(() => ({ hasProject, hasGit }), [hasProject, hasGit])
+  return useMemo(() => ({ hasProject, hasGit, hasCloud }), [hasProject, hasGit, hasCloud])
 }

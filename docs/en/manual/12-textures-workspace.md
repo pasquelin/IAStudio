@@ -156,7 +156,7 @@ spent**.
 The computation is what **right-clicking the row** offers. When the source channel is empty, the
 entry says so and cannot be clicked: that is the one to fill first.
 
-The result is a **picture of the project** like any other — it shows up in the shelf, it can be read
+The result is a **picture of the project** like any other — it shows up in the Explorer, it can be read
 flat, it travels with the project — and the channel carries it with the "derived" badge. Each
 computation makes a new one: running it three times leaves three pictures, only one of them in place.
 

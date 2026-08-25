@@ -9,8 +9,8 @@ The workspace where you assemble shots one after another into a sequence.
 ## How this workspace is laid out
 
 Like the Audio workspace, this is one where the **bottom strip belongs to the edit**. A sequence
-reads across the full width of the screen: the **Timeline** therefore takes all of it. The asset
-shelf stays where it is everywhere else — upper half of the **left column** — and so holds the
+reads across the full width of the screen: the **Timeline** therefore takes all of it. The
+**Explorer** stays where it is everywhere else — lower half of the **left column** — and so holds the
 screen at the same time as the edit, which is what dragging a take onto a track needs.
 
 The upper half of the right column is **empty** in this workspace: Video declares no panel there.
@@ -49,7 +49,7 @@ Four gestures, and **they do not put the clip in the same place**:
 
 | Gesture | On which track | At what time |
 |---|---|---|
-| **Drag and drop** from the shelf | the one you are hovering, **if it can take it** | where you release |
+| **Drag and drop** from the Explorer | the one you are hovering, **if it can take it** | where you release |
 | **Drag and drop** into the empty space below the last track | a **new** track, opened for it — except for a 3D scene | where you release |
 | **Drag and drop** a 3D scene row from the **Explorer** | a picture track, never a sound one | where you release |
 | **Right-click ▸ Add to the edit** | the studio chooses | at the **playhead** |

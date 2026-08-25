@@ -547,7 +547,7 @@ it would degrade `ToolId` to `string`.
 
 A tool may declare **more than one placement**, for disjoint sets of workspaces — the Explorer
 holds the same half in every workspace and on the home, but only the home's asks for an open
-project. **No tool declares two workspace halves since 17 August**, the shelf having given up its
+project. **No tool declares two workspace halves since 17 August**, the Explorer having given up its
 second one when it moved into the left column.
 `tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
 placements never overlap, and the placements of one tool share a slot — a tool that changed half as
@@ -690,7 +690,7 @@ a logo laid over it.
 8. it polls                      jobs.retrieve — 2 s is the FLOOR, not the rate
 9. progress flows back           evt:job-progress → status line
 10. success                      metadata.assetIds → downloaded into the project
-11. the catalogue records it     SQLite → the asset appears in the shelf
+11. the catalogue records it     SQLite → the asset appears in the Explorer
 ```
 
 Steps 3 and 4 are the reason invariant 5 exists. A model's inputs are its own; a form written by
@@ -763,7 +763,7 @@ the FOLDER rather than in the settings, unlike `settings.ai.projectRoles` — th
 unreadable or from a newer build, the opposite of `jobStore.ts`: what it holds is somebody's text.
 
 The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, name, type,
-location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf
+location, tags, timestamps, and the path when the asset is local. It exists so the Explorer
 can search thousands of items without touching the filesystem, and so a project remains portable.
 
 **It does not rebuild.** Nothing guesses again what a file IS: the catalogue fills up as you
@@ -947,7 +947,7 @@ Three consequences for the caller, none of them optional:
   `aria-setsize` come from the real index: without them a 2000-model catalogue says "1 of 35",
   and the number changes as you scroll.
 - **`aria-multiselectable` is declared, never inferred.** `pickFrom` offers shift and ⌘ to every
-  caller, but most keep a single selection — only two pass `multiple`, the asset shelf and the
+  caller, but most keep a single selection — only two pass `multiple`, the Explorer and the
   node list. Inferring it would promise a range the others do not build.
 
 `aria-selected` is only ever set on an `option`, and **a list that merely opens is not one**:

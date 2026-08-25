@@ -5,7 +5,6 @@ import { bytesToBase64 } from '@/helpers/base64'
 import { fetchAsset } from '@/helpers/assetFetch'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { assetsById, useAssets } from '@/stores/assets'
 
 /** Three across on A4 is what a sheet is looked at: wider and a face is no longer a face. */
 const COLUMNS = 3
@@ -61,19 +60,20 @@ async function reduced(asset: Asset): Promise<SheetPicture | null> {
  * was a picture — a video has no frame to put on a sheet without decoding one first.
  */
 export async function exportContactSheet(
-  assetIds: readonly string[],
+  assets: readonly Asset[],
   title: string,
 ): Promise<string | null> {
   const bridge = getBridge()
   if (!bridge) return null
 
   try {
-    const byId = assetsById(useAssets.getState())
+    // 🛑 Taken as they come rather than looked up: `useAssets` is capped at two hundred rows and
+    // nothing scrolls it since the remote browser stopped listing local lines — a project past
+    // that answered with an empty sheet, no dialog and no journal line.
+    //
     // `isLocalPicture` and not the type alone: a library picture has no file behind it here, and
     // `fetchAsset` answers 404 for one — which used to cost the WHOLE sheet rather than its cell.
-    const chosen = assetIds
-      .map(id => byId.get(id))
-      .filter((asset): asset is Asset => !!asset && isLocalPicture(asset))
+    const chosen = assets.filter(isLocalPicture)
 
     // One at a time: a bitmap is the decoded picture, and forty 4K ones alive at once is what a
     // browser drops a live viewport's context to make room for. One that will not decode costs

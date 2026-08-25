@@ -129,7 +129,7 @@ en bascule dans les [réglages](14-reglages.md#façon-de-déclencher).
 
 ### Parcourir une liste au clavier
 
-Les listes du studio se traversent toutes de la même façon : l’étagère, l’Explorateur, les
+Les listes du studio se traversent toutes de la même façon : l’Explorateur, l’Explorateur, les
 calques, les modèles, l’arbre de la scène.
 
 | Touche | Effet |
@@ -147,7 +147,7 @@ l’Explorateur : ouvrir un document peut vous emmener dans un autre espace de t
 `Tab` ramène là où vous étiez : la liste garde un seul point d’entrée, celui de votre sélection
 s’il y en a une, la première cellule visible sinon.
 
-**Dans l’étagère, la sélection se fait aussi à plusieurs** — `⌘` pioche, `Maj` étend. Voir
+**Dans l’Explorateur, la sélection se fait aussi à plusieurs** — `⌘` pioche, `Maj` étend. Voir
 [Choisir plusieurs assets](07-assets.md#choisir-plusieurs-assets).
 
 ### Parcourir un menu au clavier

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { AssetType } from '@shared/domain/asset'
 import type { FacetDescriptor } from '@/helpers/collectionState'
-import { useLocationFacet } from './useLocationFacet'
+import { useSourceFacet } from './useSourceFacet'
 import { useTypeFacet } from './useTypeFacet'
 
 /**
@@ -13,7 +13,7 @@ import { useTypeFacet } from './useTypeFacet'
  */
 export function useAssetFacets(typeLabels: Map<AssetType, string>): FacetDescriptor[] {
   const typeFacet = useTypeFacet(typeLabels)
-  const locationFacet = useLocationFacet()
+  const sourceFacet = useSourceFacet()
 
-  return useMemo(() => [...typeFacet, ...locationFacet], [typeFacet, locationFacet])
+  return useMemo(() => [...typeFacet, ...sourceFacet], [typeFacet, sourceFacet])
 }

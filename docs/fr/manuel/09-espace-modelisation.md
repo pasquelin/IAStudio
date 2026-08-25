@@ -166,7 +166,7 @@ Trois chemins mènent au même endroit :
 
 - le menu **Ajouter**, qui range les trois familles — maille, lumière, objet ;
 - les boutons **+** des panneaux **Mailles** et **Lumières** ;
-- le glisser-déposer, pour un modèle qui vient de l'étagère.
+- le glisser-déposer, pour un modèle qui vient de l'Explorateur.
 
 L’objet se pose à **l’origine de la scène** — le centre du monde, là où les axes se croisent.
 
@@ -174,11 +174,11 @@ L’objet se pose à **l’origine de la scène** — le centre du monde, là o�
 
 Les formes ci-dessous sont celles que le studio sait **construire**. Un modèle qui vient
 d’ailleurs — généré par un modèle *texte vers 3D*, ou importé depuis un `.glb` — entre par
-l’étagère :
+l’Explorateur :
 
 | Geste | Résultat |
 |---|---|
-| **Double-clic** sur une maille dans l’étagère | une **scène à elle** s’ouvre, avec la maille dedans |
+| **Double-clic** sur une maille dans l’Explorateur | une **scène à elle** s’ouvre, avec la maille dedans |
 | **Glisser-déposer** sur la vue 3D | elle entre dans la scène **ouverte devant vous** — n’importe où sur la vue, la barre d’outils comprise |
 | **Clic droit ▸ Ajouter à la scène** | idem, sans viser la vue — il suffit qu’une scène soit ouverte quelque part |
 

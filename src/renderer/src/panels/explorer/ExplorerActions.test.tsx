@@ -3,9 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LIST_ONLY } from '@/helpers/collectionState'
 import { useExplorerView } from '@/stores/explorerView'
+import { useMedia } from '@/stores/media'
 import { ExplorerActions } from './ExplorerActions'
 
-beforeEach(() => useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' }))
+beforeEach(() => {
+  useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' })
+  useMedia.setState({ capabilities: { ffmpeg: true } })
+})
 
 describe('the explorer title row', () => {
   it('turns the studio own files on and off', async () => {
@@ -40,4 +44,16 @@ describe('the explorer title row', () => {
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('combobox')).toBeNull()
   })
+})
+
+/**
+ * It followed the import here: nothing else on screen says a proxy and a waveform will not be
+ * made, and the panel that used to carry it no longer imports anything.
+ */
+it('says the encoder is missing, where the import now lives', () => {
+  useMedia.setState({ capabilities: { ffmpeg: false } })
+
+  render(<ExplorerActions />)
+
+  expect(screen.getByRole('img', { name: /Préparation vidéo indisponible/ })).toBeInTheDocument()
 })

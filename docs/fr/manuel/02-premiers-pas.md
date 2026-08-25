@@ -203,7 +203,7 @@ comptez de dix secondes à deux minutes. Vous n’avez pas à rester à regarder
 toute seule, et vous pouvez faire autre chose pendant ce temps.
 
 Quand la ligne affiche **Terminée**, votre image est arrivée. Elle est rangée dans le panneau
-**Assets** — l’étagère du projet — et sur votre disque, dans `Images/`.
+l’**Explorateur** — le dossier du projet — et sur votre disque, dans `Images/`.
 
 **Cliquez sur la vignette** : l’**Inspecteur**, à droite, montre tout ce qu’on sait d’elle — sa
 taille, son poids, le modèle qui l’a faite, le prompt que vous avez écrit, et la *graine* qui

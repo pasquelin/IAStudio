@@ -68,7 +68,8 @@ une texture, un ciel.
 Le mot est anglais et n’a pas de bon équivalent français court. On dit parfois « ressource »
 ou « média ». Retenez : **un asset est un fichier fini que vous pouvez réutiliser**.
 
-Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement « l’étagère ».
+Les assets vivent dans l’**Explorateur** une fois sur votre disque, et dans la **Bibliothèque**
+tant qu’ils ne sont qu’en ligne.
 
 ### 3. Un **document**
 

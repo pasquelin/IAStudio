@@ -125,15 +125,15 @@ est créé d’avance et reste vide — rien ne l’écrit encore.
 
 **`posters/` n’en est pas un.** C’est l’image que porte la vignette, et **deux types y ont droit** :
 la vidéo et le modèle 3D — les deux qu’aucune vignette ne saurait distinguer autrement, une
-étagère de rushes étant une étagère de rectangles gris.
+liste de rushes étant une liste de rectangles gris.
 
 Pour une vidéo importée, l’image est saisie **au dixième de la durée**, et non au début : une
-prise commence assez souvent sur du noir pour qu’une étagère de premières images soit une étagère
+prise commence assez souvent sur du noir pour qu’une liste de premières images soit une liste
 de tuiles noires. Pour un modèle, c’est l’aperçu descendu avec lui.
 
 **Elle n’est écrite qu’une fois** — à l’import ou au rapatriement — et rien ne la refabrique après
 coup. Jetez ce dossier, et vos vignettes retombent sur l’icône générique de leur type. Rien n’est
-perdu de votre travail ; c’est l’étagère qui devient illisible d’un coup d’œil.
+perdu de votre travail ; c’est l’Explorateur qui devient illisible d’un coup d’œil.
 
 **`catalog.db` n’en est pas un.** C’est lui qui garde le nom de chaque asset, ses tags, ses
 dimensions, le modèle et le prompt qui l’ont produit, ce dont il dérive — et, pour un média
@@ -487,7 +487,7 @@ c’est ce que la passe de réconciliation fait à l’ouverture et au retour da
 **Le renommage, lui, passe par le geste de la chose.** Un asset et un document ont chacun le leur, et
 l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
 renommé ici garde son onglet ouvert, qui prend le nouveau nom. Un asset renommé ici change de nom
-partout à la fois — l’Explorateur, l’étagère, l’Inspecteur, l’onglet qui l’édite — parce qu’il
+partout à la fois — l’Explorateur, l’Inspecteur, l’onglet qui l’édite — parce qu’il
 n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fichier.
 
 > **Une image que vous avez déposée vous-même se renomme aussi**, même si le studio n’en a
@@ -913,7 +913,7 @@ Le studio fonctionne, mais plusieurs choses sont indisponibles, et le disent :
 | Ce que vous voyez | Pourquoi |
 |---|---|
 | « Ouvrez un projet pour générer. » | une image fabriquée doit atterrir quelque part |
-| « Ouvrez un projet pour voir ses assets. » | l’étagère montre le contenu d’un projet |
+| « Ouvrez un projet pour voir ses assets. » | l’Explorateur montre le contenu d’un projet |
 | Le bouton **+** du rail est grisé | un document est un fichier dans un dossier de projet |
 
 ---

@@ -13,7 +13,7 @@ C’est le cœur du studio : vous décrivez, il fabrique.
 **2. La demande part.** Elle ne revient pas tout de suite. Elle devient une **tâche**, visible
 dans le panneau du même nom, avec une barre de progression.
 
-**3. Le résultat arrive** dans le panneau Assets et sur votre disque.
+**3. Le résultat arrive** dans la **Bibliothèque** de votre compte, puis sur votre disque.
 
 Entre les deux, vous pouvez continuer à travailler, changer d’espace, ouvrir un autre document.
 Rien ne bloque.
@@ -49,7 +49,7 @@ publié demain aura, lui aussi, le sien — sans mise à jour du studio.
 > **Une image posée sur un formulaire part chez le fournisseur au moment de générer.** Le modèle
 > tourne sur les serveurs du fournisseur : il ne peut lire que ce que la bibliothèque du compte
 > contient. Le studio envoie donc l’asset du projet, garde le lien entre les deux, et n’envoie
-> rien la fois suivante. Vous la retrouvez dans le panneau **Assets**, parmi ce que la
+> rien la fois suivante. Vous la retrouvez dans le panneau **Bibliothèque**, parmi ce que la
 > bibliothèque du compte détient.
 >
 > Une image modifiée depuis son envoi repart : sans quoi la génération tournerait sur une
@@ -442,7 +442,7 @@ un modèle, et la première continue tranquillement.
 
 La ligne passe à **Terminée**, et l’asset apparaît :
 
-- dans le panneau **Assets** — l’étagère du projet ;
+- dans la **Bibliothèque** de votre compte, d’où vous pouvez le télécharger ;
 - sur votre disque, dans `Images/`, `Video/`, `Audio/`… selon son type, tant que vous ne l’avez pas
   rangé ailleurs.
 
@@ -472,7 +472,7 @@ ou le glisser-déposer. Voir [Les assets](07-assets.md).
 
 ## Régénérer avec les mêmes réglages
 
-Sélectionnez un asset dans l’étagère, et regardez l’**Inspecteur**, à droite. S’il connaît la
+Sélectionnez un asset dans l’Explorateur, et regardez l’**Inspecteur**, à droite. S’il connaît la
 génération qui l’a produit, il affiche son modèle, son prompt et sa graine — et propose
 **Régénérer**.
 

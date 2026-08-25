@@ -130,7 +130,7 @@ describe('the default layout', () => {
     // The upper left, on the first panel it declares. The shelf shares that half and is NOT what
     // a default layout opens on: one asks for it, and choosing a model comes first.
     expect(screen.getByLabelText('Génération')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Bibliothèque')).not.toBeInTheDocument()
     // The lower half of the left column, open like every other half a surface has: two halves
     // exist so the shelf stays visible WHILE the Explorer is read.
     expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
@@ -173,7 +173,7 @@ describe('the Video layout', () => {
     renderShell()
 
     expect(screen.getByLabelText('Timeline')).toBeInTheDocument()
-    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bibliothèque')).toBeInTheDocument()
   })
 
   it('gives the same halves the panels Image puts there', () => {
@@ -181,7 +181,7 @@ describe('the Video layout', () => {
     useTools.setState({ arrangements: arrangedFor('image', { open: SHELF_IN_COLUMN }) })
     renderShell()
 
-    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bibliothèque')).toBeInTheDocument()
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
     expect(screen.queryByLabelText('Timeline')).not.toBeInTheDocument()
   })
@@ -232,7 +232,7 @@ describe('a side column', () => {
     })
     renderShell()
 
-    expect(screen.getByLabelText('Assets')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bibliothèque')).toBeInTheDocument()
     expect(handles()).toHaveLength(1)
   })
 
@@ -264,7 +264,7 @@ describe('the home', () => {
     renderShell()
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Bibliothèque')).not.toBeInTheDocument()
     // ONE divider — where a workspace has four. The right column went with the account's library,
     // and a column split needs both halves populated: with no project open the left one holds
     // the projects alone, so a handle drawn there would drag a cut with nothing on its far side.

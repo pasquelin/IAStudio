@@ -1,43 +1,20 @@
-import type { AssetBadge } from '@shared/domain/asset'
-
 /**
- * What the shelf narrows by. The hooks that turn these into descriptors live under `hooks/` —
- * `useAssetFacets`, `useTypeFacet`, `useLocationFacet`.
+ * What the remote browser narrows by. The hooks that turn these into descriptors live under
+ * `hooks/` — `useAssetFacets`, `useTypeFacet`, `useSourceFacet`.
  */
 export const TYPE_FACET = 'type'
 
-export const LOCATION_FACET = 'location'
-
 /**
- * The states worth narrowing to, out of every mark a badge can show.
- *
- * `to-pull` and `conflict` joined the list when the browser started reading a page of the
- * library beside the catalogue: they are what comparing the two stamps produces, and until
- * something did that comparison they were filters that always answered nothing.
- *
- * Three stay out, each for its own reason. `other-account` cannot be reached while the panel
- * only ever lists one key's own library. `fetching` lasts under a second — a filter on it would
- * answer nothing by the time the pointer arrived. And `missing` is not a place an asset is: a
- * row that lost its file is either handed back to the library or forgotten, so narrowing to it
- * would offer a shelf of things about to disappear.
+ * Which library a line comes from — the one facet that changes what is READ rather than what is
+ * drawn: the public feed is unbounded and a page of it costs a search quota, so it is asked for
+ * only while chosen. A second asset cloud extends it by a value, not by a branch.
  */
-export const FILTERABLE_BADGES: readonly AssetBadge[] = [
-  'local-only',
-  'synced',
-  'to-push',
-  'to-pull',
-  'conflict',
-  'error',
-  'remote-only',
-  'published',
-  'generating',
-]
+export const SOURCE_FACET = 'source'
 
-/**
- * The one value of that facet that changes what is READ rather than what is drawn.
- *
- * Every other narrows a list the panel already holds. This one asks the API for what everyone
- * published — unbounded, and a search's worth of quota — so it is read only while it is chosen.
- * Left in the merge by default, a project's dozen assets would sit under a thousand strangers'.
- */
-export const PUBLISHED_BADGE: AssetBadge = 'published'
+/** The account's own library: what its key opens onto. The default, and what `browse` reads. */
+export const OWN_SOURCE = 'mine'
+
+/** What everyone else published, which is what `explore` reads. */
+export const PUBLISHED_SOURCE = 'published'
+
+export const SOURCES: readonly string[] = [OWN_SOURCE, PUBLISHED_SOURCE]

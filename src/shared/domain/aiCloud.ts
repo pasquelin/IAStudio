@@ -75,6 +75,16 @@ export const CLOUD_PROVIDERS: readonly CloudProvider[] = [
 
 export const CLOUD_IDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.map(one => one.id)
 
+/**
+ * The clouds that hold a LIBRARY of assets, rather than only a key the assistant talks through.
+ *
+ * Read off `families` rather than named: a cloud that publishes no generation family has no
+ * assets to browse, and a ninth provider joins this list by declaring one.
+ */
+export const ASSET_CLOUDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.filter(
+  cloud => cloud.families.length > 0,
+).map(cloud => cloud.id)
+
 /** Whether a cloud publishes what this role asks for, read off its declaration. */
 function serves(cloud: CloudProvider, role: AiRoleId): boolean {
   const parts = partsOfRole(role)
