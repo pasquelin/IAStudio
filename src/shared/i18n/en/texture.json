@@ -12,6 +12,8 @@
     "sky.exr": "OpenEXR panorama (.exr)"
   },
   "skybox": {
+    "source": "Source",
+    "panorama": "Panorama",
     "sun": "Sun",
     "elevation": "Elevation",
     "azimuth": "Azimuth",
@@ -104,7 +106,7 @@
       "edge": "Cavity"
     },
     "inspectChannel": "Look at {{channel}} on its own",
-    "inspectChannelHint": "Shows this channel flat, as it is, with no lighting and no relief",
+    "inspectChannelHint": "Shows this channel flat, as it is, with no lighting and no relief. A double-click opens its pixels in the Image space.",
     "showMaterial": "Back to the lit material",
     "litMaterial": "Lit material",
     "litMaterialHint": "Back to the material as rendered, every channel combined",

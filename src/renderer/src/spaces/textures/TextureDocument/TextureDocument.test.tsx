@@ -29,8 +29,10 @@ vi.mock('@/engines/texture/TextureRenderer', () => ({
   },
 }))
 
-const openAsset = vi.fn()
-vi.mock('@/helpers/openAsset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+const editPixelsOf = vi.fn()
+vi.mock('@/helpers/openAsset', () => ({
+  editPixelsOf: (...args: unknown[]) => editPixelsOf(...args),
+}))
 
 const DOCUMENT = 'tex-1'
 
@@ -54,7 +56,7 @@ beforeEach(() => {
   installTexture(DOCUMENT)
   useTextureViews.setState({ inspected: {} })
   useAssets.setState({ items: [] })
-  openAsset.mockClear()
+  editPixelsOf.mockReset()
   resetViewSpy.mockClear()
 })
 
@@ -128,10 +130,11 @@ describe('TextureDocument', () => {
 
     /**
      * The last step of « take a model's texture out, edit it, and the model follows »: a texture
-     * is assembled here and its pixels are painted in Images, which nothing but the shelf's own
-     * menu row could reach.
+     * is assembled here and its pixels are painted in Images, which nothing else here reaches.
      */
     it('opens the picture where its pixels are edited, on a double-click', async () => {
+      const paint = vi.fn()
+      editPixelsOf.mockReturnValue({ workspace: 'image', run: paint })
       fill('normal', 'normal-1')
       useAssets.setState({ items: [shelved()] })
       useTextureViews.getState().inspect(DOCUMENT, 'normal')
@@ -139,14 +142,13 @@ describe('TextureDocument', () => {
 
       await userEvent.dblClick(screen.getByRole('button', { name: 'Modifier l’image' }))
 
-      expect(openAsset).toHaveBeenCalledWith(
-        shelved(),
-        expect.objectContaining({ workspace: 'image' }),
-      )
+      expect(editPixelsOf).toHaveBeenCalledWith(shelved())
+      expect(paint).toHaveBeenCalled()
     })
 
-    /** A picture whose bytes are not on this disk has no pixels to open. */
+    /** A picture whose bytes are not on this disk has no pixels to open — see `editPixelsOf`. */
     it('refuses the gesture rather than opening a tab on pixels it cannot reach', () => {
+      editPixelsOf.mockReturnValue(null)
       fill('normal', 'normal-1')
       useAssets.setState({ items: [shelved({ location: 'cloud' })] })
       useTextureViews.getState().inspect(DOCUMENT, 'normal')

@@ -5,6 +5,7 @@ import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { PropertySection } from '@/design/PropertySection'
 import { setChannel } from '@/engines/texture/commands'
 import { canDerive, sourceFor } from '@/engines/texture/textureState'
+import { editPixelsOf, type EditPixels } from '@/helpers/openAsset'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { placeTextureChannel } from '@/spaces/textures/placeChannel'
 import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
@@ -67,6 +68,10 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
     return canDerive(channels, channel) ? 'ready' : 'missing'
   }
 
+  // Not this space: a material is assembled here and its images are painted in Images.
+  const editPixels = (channel: PbrChannel): EditPixels | null =>
+    editPixelsOf(pictures.find(candidate => candidate.id === channels[channel]?.assetId))
+
   // The list only offers what can be decoded, so the row it names is always there; the `if` is
   // what the type asks for, not a case a user reaches.
   const pick = (channel: PbrChannel, assetId: string | null): void => {
@@ -107,6 +112,7 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
             // Pressing the one already shown flat goes back to the lit material: one gesture in and
             // out, rather than a second control to find.
             onInspect={() => inspect(documentId, shown === channel ? null : channel)}
+            pixels={editPixels(channel)}
           />
         )
       })}

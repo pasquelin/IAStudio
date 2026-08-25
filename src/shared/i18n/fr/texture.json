@@ -12,6 +12,8 @@
     "sky.exr": "Panorama OpenEXR (.exr)"
   },
   "skybox": {
+    "source": "Source",
+    "panorama": "Panorama",
     "sun": "Soleil",
     "elevation": "Élévation",
     "azimuth": "Azimut",
@@ -104,7 +106,7 @@
       "edge": "Cavité"
     },
     "inspectChannel": "Regarder {{channel}} seul",
-    "inspectChannelHint": "Affiche ce canal à plat, tel qu’il est, sans éclairage ni relief",
+    "inspectChannelHint": "Affiche ce canal à plat, tel qu’il est, sans éclairage ni relief. Double-cliquer ouvre ses pixels dans l’espace Image.",
     "showMaterial": "Revenir à la matière éclairée",
     "litMaterial": "Matière éclairée",
     "litMaterialHint": "Revient au rendu de la matière, tous canaux combinés",

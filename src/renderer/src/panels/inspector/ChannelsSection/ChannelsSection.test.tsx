@@ -9,6 +9,7 @@ import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { editPixelsOf } from '@/helpers/openAsset'
 import { useAssets } from '@/stores/assets'
 import { installTexture } from '@/stores/texture-fixtures'
 import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
@@ -16,6 +17,9 @@ import { textureOf, useTextures } from '@/stores/textures'
 import { ChannelsSection } from './ChannelsSection'
 
 vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
+
+/** Behind it sit the six editors, which is why the row reaches it and nothing here loads one. */
+vi.mock('@/helpers/openAsset', () => ({ editPixelsOf: vi.fn(), openAssetById: vi.fn() }))
 
 const picture = (id: string, name: string, location: Asset['location'] = 'local'): Asset => ({
   id,
@@ -49,6 +53,7 @@ beforeEach(() => {
   // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.
   deriveTextureChannel.mockClear()
   vi.mocked(reportFailure).mockClear()
+  vi.mocked(editPixelsOf).mockReset()
 })
 
 /**
@@ -219,6 +224,24 @@ describe('the channels of a material', () => {
         'aria-pressed',
         'true',
       )
+    })
+
+    /**
+     * `BRICK` is an `image` deliberately: the gesture used to be refused for one, and this space
+     * has no other way to Images. `baseColor`, which computes from nothing, had no menu either.
+     */
+    it('opens the pixels of a channel on a double-click, without letting go of the look', async () => {
+      const paint = vi.fn()
+      vi.mocked(editPixelsOf).mockReturnValue({ workspace: 'image', run: paint })
+      fill('baseColor')
+      await show()
+
+      await userEvent.dblClick(
+        screen.getByRole('button', { name: /Regarder Couleur de base seul/ }),
+      )
+
+      expect(editPixelsOf).toHaveBeenCalledWith(expect.objectContaining({ id: 'img-1' }))
+      expect(paint).toHaveBeenCalled()
     })
 
     /**

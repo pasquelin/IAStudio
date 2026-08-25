@@ -1,7 +1,7 @@
 import { mdiClose, mdiFolderSearchOutline } from '@mdi/js'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { activation } from '@/helpers/activation'
+import { activation, selection } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { Flyout } from '../Flyout'
@@ -18,6 +18,9 @@ export type LinkOption = {
   /** Where the picture is served from, for the thumbnail. */
   url?: string
 }
+
+/** A press, as the button wears it: what it is called, and what it explains. */
+type LinkPress = { label: string; hint: string; run: () => void }
 
 export type LinkFieldProps = {
   label: string
@@ -48,13 +51,16 @@ export type LinkFieldProps = {
    */
   onDropAsset?: (asset: Asset) => void
   /**
-   * Opening what the slot holds — a double-click on its picture, and Enter with it.
-   *
-   * `toggled` names both jobs it does: it turns that press into a TOGGLE, answering a single
-   * click, and it says where the toggle stands. Nothing is opened when the press only changes how
-   * the slot is looked at.
+   * Opening what the slot holds — a double-click on its picture, and Enter with it. The words are
+   * the button's, so a slot whose `toggle` already names it hands over the run alone. **The
+   * wordless form without a `toggle` draws no button at all**: an unnamed one is a Tab to nowhere.
    */
-  open?: { label: string; hint: string; run: () => void; toggled?: boolean }
+  open?: LinkPress | { run: () => void }
+  /**
+   * What a SINGLE click does — a way of LOOKING at the slot, never a way of leaving it. `on` says
+   * where it stands, and Space fires it, as it picks everywhere else in the studio.
+   */
+  toggle?: LinkPress & { on: boolean }
   /** Choosing from the whole project rather than from `options`. Absent, no button is drawn. */
   browse?: { label: string; hint: string; run: () => void }
   /** While what the slot points at is being fetched. */
@@ -86,6 +92,7 @@ export function LinkField({
   badge,
   onDropAsset,
   open,
+  toggle,
   browse,
   busy,
   busyLabel,
@@ -107,6 +114,9 @@ export function LinkField({
     ],
     [options, value, chosen, emptyLabel, missingLabel],
   )
+  // Named for what a SINGLE click does where there is one: the gesture a hand reaches for first is
+  // the one the tooltip has to describe. No words, no button — an unnamed one is a Tab to nowhere.
+  const press: LinkPress | undefined = toggle ?? (open && 'label' in open ? open : undefined)
   const [preview, setPreview] = useState<HTMLElement | null>(null)
   const resting = useRef<number | null>(null)
 
@@ -149,12 +159,13 @@ export function LinkField({
             {/* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives
                 the picture it points at, and an id whose asset has left the project offered to
                 open something no longer there — a focus stop leading nowhere is a Tab to cross. */}
-            {open && chosen ? (
+            {press && chosen ? (
               <button
                 type="button"
-                aria-pressed={open.toggled}
-                {...(open.toggled === undefined ? activation(open.run) : { onClick: open.run })}
-                {...TIP_LEFT(open.label, false, open.hint)}
+                aria-pressed={toggle?.on}
+                {...(open ? activation(open.run) : {})}
+                {...(toggle ? selection(toggle.run) : {})}
+                {...TIP_LEFT(press.label, false, press.hint)}
                 onPointerEnter={event => {
                   const anchor = event.currentTarget
                   forget()

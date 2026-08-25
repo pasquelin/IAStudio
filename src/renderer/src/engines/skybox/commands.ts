@@ -83,7 +83,7 @@ export function setSource(source: TextureRef | null): Command<SkyboxContent> {
  * beside a new picture would credit it with something it did not make.
  */
 export function applyGeneration(
-  source: TextureRef,
+  source: TextureRef | null,
   generation: SkyboxContent['generation'],
 ): Command<SkyboxContent> {
   let before: Pick<SkyboxContent, 'source' | 'generation'> | null = null

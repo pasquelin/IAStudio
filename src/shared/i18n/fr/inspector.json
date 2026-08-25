@@ -59,7 +59,7 @@
     "browseTextureHint": "Choisir parmi les images du projet, en vignettes plutôt qu’en liste",
     "modelOverrides": "Remplacer un canal",
     "noModelTexture": "Aucune image extraite de ce modèle.",
-    "openTextureHint": "Double-cliquer pour ouvrir cette image dans l’espace Textures",
+    "openTextureHint": "Double-cliquer pour ouvrir cette image dans l’espace qui l’édite",
     "modelMaterial": "Matière du modèle",
     "openMaterial": "Ouvrir la matière du modèle",
     "openMaterialHint": "Double-cliquer pour ouvrir cette matière dans l’espace Textures",

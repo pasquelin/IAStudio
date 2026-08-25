@@ -8,9 +8,9 @@ import {
 } from '@mdi/js'
 import type { TFunction } from 'i18next'
 import type { Asset } from '@shared/domain/asset'
-import { intentsFor, pixelEditorIntent } from '@/helpers/assetIntents'
+import { editorIntent, intentsFor } from '@/helpers/assetIntents'
 import type { ContextMenuAction, ContextMenuRow } from '@/helpers/contextMenu'
-import { openAsset } from '@/helpers/openAsset'
+import { editPixelsOf } from '@/helpers/openAsset'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -62,7 +62,9 @@ export function assetMenuGroups({ asset, count, t, onAsset }: AssetMenuProps): C
 
 /** Sending it into a document already open — a gesture of its own, not a fallback of opening. */
 function sendRows(asset: Asset | null, t: TFunction): ContextMenuAction[] {
-  const pixels = asset && pixelEditorIntent(asset)
+  // Left out where THIS surface's own double-click already opens Images — the shelf's does, for a
+  // plain picture. The question belongs to the caller: an assembling space has no such gesture.
+  const pixels = asset && editorIntent(asset)?.workspace !== 'image' ? editPixelsOf(asset) : null
 
   const rows: ContextMenuAction[] = asset
     ? intentsFor(asset.type).map(intent => ({
@@ -82,7 +84,7 @@ function sendRows(asset: Asset | null, t: TFunction): ContextMenuAction[] {
       label: t('assets.editPixels'),
       icon: workspaceById(pixels.workspace).icon,
       tooltip: t('assets.editPixelsHint'),
-      onSelect: () => void openAsset(asset, pixels),
+      onSelect: pixels.run,
     })
   }
 

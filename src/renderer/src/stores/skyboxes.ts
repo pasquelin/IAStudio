@@ -15,7 +15,8 @@ export const skyboxHistoryOf = store.historyOf
 export const isSkyboxDirty = store.isDirty
 
 /**
- * Hangs a picture of the project in a given sky. The target is passed rather than read off the
+ * Hangs a picture of the project in a given sky, or takes the one it wears back off. The target
+ * is passed rather than read off the
  * active tab: a drop knows which viewport it landed in, and two skybox panels can sit side by
  * side in one Dockview group — asking which is in front would write into the wrong one.
  *
@@ -27,14 +28,17 @@ export const isSkyboxDirty = store.isDirty
  * disk: `assetUrl` resolves an id against the catalogue, and a cloud asset answers 404, which
  * the engine has no way to tell from a sky that is simply black.
  */
-export function setSkyboxSource(documentId: string, asset: Asset): void {
-  if (!isLocalPicture(asset)) return
+export function setSkyboxSource(documentId: string, asset: Asset | null): void {
+  if (asset && !isLocalPicture(asset)) return
 
   // Outside any gesture: this hangs off a job that lands whenever it lands, and off a drop —
   // neither belongs to the cursor a panel may be holding at that moment.
   store.use
     .getState()
-    .runOutsideGesture(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+    .runOutsideGesture(
+      documentId,
+      applyGeneration(asset && { assetId: asset.id }, asset ? provenanceOf(asset) : undefined),
+    )
 }
 
 /**
