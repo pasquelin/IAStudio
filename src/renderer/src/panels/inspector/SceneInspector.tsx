@@ -121,7 +121,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         skeletons={view.skeletons}
         onSkeletons={skeletons => useSceneViews.getState().setSkeletons(documentId, skeletons)}
         snapping={view.snapping}
-        onSnapping={snapping => useSceneViews.getState().setSceneSnapping(documentId, snapping)}
+        onSnap={(kind, on) => useSceneViews.getState().setSceneSnap(documentId, kind, on)}
       />
 
       {node && (

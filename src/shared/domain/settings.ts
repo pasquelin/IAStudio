@@ -187,6 +187,10 @@ export type Settings = {
     /** In degrees, like the inspector: radians are stored, never typed. */
     snapRotate: number
     snapScale: number
+    /** Whether a surface snap turns what it lays down to match the slope it lands on. */
+    snapSurfaceAlign: boolean
+    /** Metres a surface snap leaves between what it lays down and what it landed on. */
+    snapSurfaceOffset: number
     /** Whether shadow maps are drawn at all — a depth pass per casting light, and the way out of it. */
     shadows: boolean
     /** How soft a shadow edge is. Which objects throw one is a property of the node. */
@@ -361,6 +365,8 @@ export const DEFAULT_SETTINGS: Settings = {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
+    snapSurfaceAlign: true,
+    snapSurfaceOffset: 0,
     shadows: true,
     shadowQuality: 'soft',
     shadowMapSize: 2048,

@@ -471,6 +471,23 @@ export const SETTING_REGISTRY = [
     step: 0.05,
   }),
   setting({
+    path: 'three.snapSurfaceAlign',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.snapSurfaceAlign.title',
+    helpKey: 'settings.snapSurfaceAlign.help',
+  }),
+  setting({
+    path: 'three.snapSurfaceOffset',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapSurfaceOffset.title',
+    helpKey: 'settings.snapSurfaceOffset.help',
+    min: 0,
+    max: 1,
+    step: 0.01,
+  }),
+  setting({
     path: 'three.shadows',
     kind: 'boolean',
     section: 'spaces.three',

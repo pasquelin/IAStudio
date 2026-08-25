@@ -1,4 +1,5 @@
 import type { DisplayMode, SceneWorld } from '@shared/domain/scene'
+import type { SnapKind, Snapping } from '@shared/domain/snap'
 import { setWorld } from '@/engines/scene/commands'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
@@ -20,8 +21,8 @@ export type EnvironmentPanelProps = {
   onMode: (mode: DisplayMode) => void
   skeletons: boolean
   onSkeletons: (skeletons: boolean) => void
-  snapping: boolean
-  onSnapping: (snapping: boolean) => void
+  snapping: Snapping
+  onSnap: (kind: SnapKind, on: boolean) => void
 }
 
 /**
@@ -40,7 +41,7 @@ export function EnvironmentPanel({
   skeletons,
   onSkeletons,
   snapping,
-  onSnapping,
+  onSnap,
 }: EnvironmentPanelProps) {
   const edit = useSceneEdit(documentId)
   const viewport = useViewportSetting()
@@ -76,7 +77,7 @@ export function EnvironmentPanel({
         view={viewport.view}
         onViewport={viewport.set}
         snapping={snapping}
-        onSnapping={onSnapping}
+        onSnap={onSnap}
       />
 
       <EnvironmentShadowsSection view={viewport.view} onViewport={viewport.set} />

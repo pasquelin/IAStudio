@@ -8,6 +8,8 @@ import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { PANE_TOOLBAR } from '@/design/styles'
+import { isSnapping } from '@shared/domain/snap'
+import { SceneSnapBar } from './SceneSnapBar/SceneSnapBar'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { nodeById } from '@/engines/scene/sceneState'
 import { movesToCommand } from '@/engines/scene/animationCommands'
@@ -418,7 +420,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         case 'scene.scale':
           return armTool('scale')
         case 'scene.snap':
-          return useSceneViews.getState().setSceneSnapping(documentId, !view.snapping)
+          return useSceneViews.getState().toggleSceneSnapping(documentId)
         // The rules themselves are in `sceneVisibility`, which the panel's buttons reach too:
         // « isolating is a toggle » must not be written once per surface.
         case 'scene.isolate':
@@ -511,7 +513,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // Keyed by command rather than by tool id, so a renamed command fails to compile instead of
     // quietly leaving a toggle unlit.
     const pressed: Partial<Record<CommandId, boolean>> = {
-      'scene.snap': view.snapping,
+      'scene.snap': isSnapping(view.snapping),
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
       'scene.skeletons': view.skeletons,
@@ -590,6 +592,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       <div ref={host} className="absolute inset-0" />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      <SceneSnapBar
+        documentId={documentId}
+        speed={flySpeed}
+        onSpeed={speed => engine.current?.setFlySpeed(speed)}
+      />
       {armed && <SceneNavigationHint speed={flySpeed} />}
       <CameraPreview documentId={documentId} />
       {view.quad && (

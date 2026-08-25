@@ -9,10 +9,12 @@ import {
   type Intersection,
   Light,
   LineBasicMaterial,
+  Matrix3,
   Mesh,
   MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
+  Quaternion,
   Raycaster,
   type Camera,
   SkeletonHelper,
@@ -32,7 +34,7 @@ import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles'
 import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
-import { speedAfterWheel } from './flySpeed'
+import { clampFlySpeed, speedAfterWheel } from './flySpeed'
 import { notchesOf, PIVOT_AHEAD } from '../viewport/dolly'
 import { onPaletteChange } from '../core/palette'
 import {
@@ -184,6 +186,8 @@ import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skelet
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
+import { NOTHING_SNAPPED, type Snapping } from '@shared/domain/snap'
+import { heldBy, surfaceLift, surfaceRayFrom, surfaceTurn } from './surfaceSnap'
 import { snapSteps } from './snapSteps'
 import {
   createTextureCache,
@@ -379,6 +383,10 @@ const RAIL_SPOT = new Vector3()
 const RAIL_ANCHOR = new Vector3()
 const RAIL_FACING = new Vector3()
 
+/** Where the surface snap looks, and what turns a face's own normal into the world's. */
+const DOWNWARD = new Vector3(0, -1, 0)
+const SURFACE_NORMAL = new Matrix3()
+
 /**
  * A pick that may widen the ray's tolerance, with both thresholds put back whatever it does.
  *
@@ -524,6 +532,15 @@ export class SceneRenderer {
   private view: ViewportOptions = { ...DEFAULT_SETTINGS.three }
 
   private readonly raycaster = new Raycaster()
+  /**
+   * The surface snap's own, never the shared one: that one's `Line` and `Points` thresholds are
+   * widened by whoever picked last, and a downward ray would then meet a rail before the floor.
+   */
+  private readonly surfaceRay = new Raycaster()
+  private readonly surfaceBox = new Box3()
+  private readonly surfaceFrom = new Vector3()
+  /** What the pivot wore when the drag began. A turn composed onto its own result drifts. */
+  private readonly surfaceHeld = new Quaternion()
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
@@ -641,7 +658,7 @@ export class SceneRenderer {
   /** What the model costs, held between the passes that cannot have changed it. */
   private modelStats: SceneStats = EMPTY_STATS
   private mode: TransformMode = 'select'
-  private snapping = false
+  private snapping: Snapping = NOTHING_SNAPPED
   private space: TransformSpace = 'world'
   /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
   private selectedIds: readonly string[] = []
@@ -1150,8 +1167,8 @@ export class SceneRenderer {
     this.redraw()
   }
 
-  /** Whether a drag lands on the steps `configure` was given, or wherever it was let go. */
-  setSnapping(snapping: boolean): void {
+  /** Which snaps a drag obeys: the steps `configure` was given, and the surface under it. */
+  setSnapping(snapping: Snapping): void {
     this.snapping = snapping
     this.applySnap()
   }
@@ -2122,6 +2139,15 @@ export class SceneRenderer {
     return true
   }
 
+  /**
+   * The same session speed the wheel writes, set from a surface instead — the snap bar. Clamped
+   * here rather than at the caller: two surfaces reaching the same value must share its bounds.
+   */
+  setFlySpeed(speed: number): void {
+    this.sessionFlySpeed = clampFlySpeed(speed)
+    this.options.onFlySpeedChange?.(this.sessionFlySpeed)
+  }
+
   /** What this session flies at: the wheel's value while one was set, the preference otherwise. */
   private get flySpeed(): number {
     return this.sessionFlySpeed ?? this.view.flySpeed
@@ -2300,6 +2326,67 @@ export class SceneRenderer {
       normal: this.viewport.paletteToken('--color-accent'),
     })
     this.redraw()
+  }
+
+  /**
+   * Lays what is dragged onto whatever is under it, once per frame of the gesture.
+   *
+   * Recomputed from the drag's own start each time rather than added to the last result:
+   * `TransformControls` rewrites the pivot from `_positionStart` on every move, so a correction
+   * folded into the previous one would drift for as long as the gesture lasts.
+   */
+  private layOnSurface(): void {
+    // What the GIZMO holds, never the pivot: a lone selection attaches straight to its object and
+    // leaves the pivot empty — `gizmoTargetFor` routes only two nodes and up through it. Read from
+    // the pivot, the snap did nothing at all on one object, which is its main use.
+    const held = this.gizmo?.object
+    if (!this.snapping.surface || this.mode !== 'translate' || !held) return
+
+    const aligning = this.view.snapSurfaceAlign
+    if (aligning) held.quaternion.copy(this.surfaceHeld)
+    held.updateMatrixWorld(true)
+    this.surfaceBox.setFromObject(held)
+    if (this.surfaceBox.isEmpty()) return
+
+    this.surfaceRay.set(surfaceRayFrom(this.surfaceBox, this.surfaceFrom), DOWNWARD)
+    const hit = this.surfaceRay
+      .intersectObjects(this.surfaceRoots(), true)
+      .find(candidate => this.landsOn(candidate.object, held))
+    if (!hit) return
+
+    // Measured AFTER the turn: an object tipped onto a slope has a new lowest point, and lifting
+    // it by the one it had upright buries whichever corner the rotation just brought down.
+    if (aligning && hit.normal) {
+      surfaceTurn(
+        hit.normal.clone().applyMatrix3(SURFACE_NORMAL.getNormalMatrix(hit.object.matrixWorld)),
+        this.surfaceHeld,
+        held.quaternion,
+      )
+      held.updateMatrixWorld(true)
+      this.surfaceBox.setFromObject(held)
+    }
+
+    held.position.y += surfaceLift(this.surfaceBox.min.y, hit.point.y, this.view.snapSurfaceOffset)
+    held.updateMatrixWorld(true)
+  }
+
+  /**
+   * Where the ray starts looking. The ROOTS alone: `this.objects` holds parents AND descendants,
+   * so handing it every one makes a node at depth *d* intersect *d+1* times.
+   */
+  private surfaceRoots(): Object3D[] {
+    return [...this.objects.values()].filter(object => object.parent === this.viewport.scene)
+  }
+
+  /**
+   * Whether something the ray met is a surface to rest on: a `Mesh` and nothing else — a rail is
+   * a `Line` and its knobs are spheres, neither of which is ground — never what is being dragged,
+   * and never scenery the picker already refuses. Landing on a wall somebody isolated away is the
+   * same defect as picking one.
+   */
+  private landsOn(object: Object3D, held: Object3D): boolean {
+    if (!(object instanceof Mesh) || heldBy(object, held)) return false
+    return isScenery(object, id => this.applied.get(id)?.type === 'path')
   }
 
   private applySnap(): void {
@@ -3220,6 +3307,7 @@ export class SceneRenderer {
 
   private readonly onGizmoChange = (): void => {
     this.dragged = true
+    this.layOnSurface()
     // A box that stayed behind while its object moved is a box that says nothing. Re-reading a
     // bounding box is cheap — building one is not, which is why this is not `refreshAids`.
     this.aids.refreshBoxes()
@@ -3753,10 +3841,16 @@ export class SceneRenderer {
   private readonly onDraggingChanged = (): void => {
     // A handle taken under the left button ends the flight that button armed: dragging a gizmo
     // and flying at once would move the camera and the object on one gesture.
-    if (this.gizmo?.dragging === true && this.flownWith === 0) {
-      this.flownFrom = null
-      this.flownWith = null
-      if (!this.navigating) this.held.clear()
+    if (this.gizmo?.dragging === true) {
+      // Before the branch below, and outside it: a surface snap composes its turn onto this one
+      // every frame, so it has to be the one the gesture STARTED on whether or not a flight was
+      // running.
+      if (this.gizmo?.object) this.surfaceHeld.copy(this.gizmo.object.quaternion)
+      if (this.flownWith === 0) {
+        this.flownFrom = null
+        this.flownWith = null
+        if (!this.navigating) this.held.clear()
+      }
     }
     this.syncPaneFreeze()
   }

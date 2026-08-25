@@ -130,12 +130,12 @@ describe('environment panel', () => {
       expect(screen.getByTitle('Flou du fond')).toBeInTheDocument()
     })
 
-    it('offers the snap steps only while snapping is on', async () => {
+    it('offers the snap steps once any one snap is on', async () => {
       render(<Content />)
       await userEvent.click(screen.getByRole('button', { name: /Guides et magnétisme/ }))
       expect(screen.queryByTitle('Déplacement')).not.toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('checkbox', { name: 'Magnétisme' }))
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Magnétisme d’angle' }))
       expect(screen.getByTitle('Déplacement')).toBeInTheDocument()
     })
   })

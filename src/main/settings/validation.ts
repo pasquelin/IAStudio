@@ -161,6 +161,7 @@ const lens = boundsOf('three.fieldOfView')
 const moveStep = boundsOf('three.snapTranslate')
 const turnStep = boundsOf('three.snapRotate')
 const scaleStep = boundsOf('three.snapScale')
+const surfaceOffset = boundsOf('three.snapSurfaceOffset')
 
 const three = z.object({
   showGrid: z.boolean().optional(),
@@ -171,6 +172,8 @@ const three = z.object({
   snapTranslate: z.number().min(moveStep.min).max(moveStep.max).optional(),
   snapRotate: z.number().min(turnStep.min).max(turnStep.max).optional(),
   snapScale: z.number().min(scaleStep.min).max(scaleStep.max).optional(),
+  snapSurfaceAlign: z.boolean().optional(),
+  snapSurfaceOffset: z.number().min(surfaceOffset.min).max(surfaceOffset.max).optional(),
   shadows: z.boolean().optional(),
   shadowQuality: z.enum(SHADOW_QUALITIES).optional(),
   // Read from the shared list, never retyped: what the panel offers and what this refuses have

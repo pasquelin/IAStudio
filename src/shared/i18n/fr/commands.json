@@ -109,8 +109,8 @@
       "help": "Annule les masquages et l’isolation faits depuis le viewport. Les objets que le document déclare masqués le restent."
     },
     "sceneSnap": {
-      "title": "Magnétisme",
-      "help": "Fait avancer les poignées par pas réguliers au lieu de les laisser libres. Pratique pour poser des objets bien alignés. La finesse des pas se règle dans les réglages de l’espace Modélisation."
+      "title": "Tous les magnétismes",
+      "help": "Allume ou éteint d’un coup les quatre magnétismes — surface, grille, angle, échelle. Une seconde pression rend exactement ceux qui étaient allumés. La barre en haut du viewport les règle un par un."
     },
     "sceneSpace": {
       "title": "Repère local",

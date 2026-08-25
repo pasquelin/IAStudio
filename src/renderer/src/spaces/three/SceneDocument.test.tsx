@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { EVERYTHING_SNAPPED, NOTHING_SNAPPED } from '@shared/domain/snap'
 import type { SceneExportCommand } from '@shared/ipc'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
@@ -277,7 +278,7 @@ describe('snapping and the coordinate frame', () => {
   it('opens with both off, so nothing is quietly constrained', () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    expect(setSnapping).toHaveBeenCalledWith(false)
+    expect(setSnapping).toHaveBeenCalledWith(NOTHING_SNAPPED)
     expect(setSpace).toHaveBeenCalledWith('world')
   })
 
@@ -337,22 +338,33 @@ describe('snapping and the coordinate frame', () => {
     expect(setNavigating).toHaveBeenLastCalledWith(false)
   })
 
-  it('toggles snapping from the toolbar and back off on the next click', async () => {
+  // The magnet of the vertical bar is a master switch since the snap bar split the four apart:
+  // one press turns everything off, the next gives back exactly what was on.
+  it('toggles every snap from the toolbar and back off on the next click', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    const button = screen.getByRole('button', { name: /Magnétisme/ })
+    const button = screen.getByRole('button', { name: /Tous les magnétismes/ })
 
     await userEvent.click(button)
-    expect(setSnapping).toHaveBeenLastCalledWith(true)
+    expect(setSnapping).toHaveBeenLastCalledWith(EVERYTHING_SNAPPED)
 
     await userEvent.click(button)
-    expect(setSnapping).toHaveBeenLastCalledWith(false)
+    expect(setSnapping).toHaveBeenLastCalledWith(NOTHING_SNAPPED)
   })
 
-  it('toggles snapping on the bound key', async () => {
+  it('toggles every snap on the bound key', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.keyboard('{m}')
-    expect(setSnapping).toHaveBeenLastCalledWith(true)
+    expect(setSnapping).toHaveBeenLastCalledWith(EVERYTHING_SNAPPED)
+  })
+
+  // The whole point of the snap bar: one kind arms without the other three following it.
+  it('arms one snap alone from the snap bar', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Magnétisme de grille' }))
+
+    expect(setSnapping).toHaveBeenLastCalledWith({ ...NOTHING_SNAPPED, translate: true })
   })
 
   it('swaps the coordinate frame from the toolbar', async () => {
@@ -377,9 +389,9 @@ describe('snapping and the coordinate frame', () => {
   it('draws a toggle as pressed without unarming the tool', async () => {
     render(<SceneDocument documentId="doc-1" />)
     await userEvent.click(screen.getByRole('button', { name: /Pivoter/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Magnétisme/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Tous les magnétismes/ }))
 
-    expect(screen.getByRole('button', { name: /Magnétisme/ })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /Tous les magnétismes/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
