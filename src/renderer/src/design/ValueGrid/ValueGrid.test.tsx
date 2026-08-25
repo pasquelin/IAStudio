@@ -11,15 +11,7 @@ const OPTIONS = [
 
 const setUp = (chosen = 0.5) => {
   const onChoose = vi.fn()
-  render(
-    <ValueGrid
-      options={OPTIONS}
-      chosen={chosen}
-      columns={3}
-      label="Grid step"
-      onChoose={onChoose}
-    />,
-  )
+  render(<ValueGrid options={OPTIONS} chosen={chosen} label="Grid step" onChoose={onChoose} />)
   return { onChoose, user: userEvent.setup() }
 }
 

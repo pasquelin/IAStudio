@@ -34,7 +34,6 @@ export function SceneSpeedMenu({ speed, onChoose, onClose }: SceneSpeedMenuProps
       <ValueGrid
         options={FLY_SPEEDS.map(rung => ({ value: rung, label: reading(rung) }))}
         chosen={speed}
-        columns={2}
         label={t('snapBar.speed')}
         scId="snapBar.speed.rung"
         onChoose={value => {

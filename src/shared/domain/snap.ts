@@ -46,20 +46,25 @@ export function snappingToggled(snapping: Snapping, remembered: Snapping): Snapp
  * Metres. Down to a millimetre, which `settingsRegistry` justifies its `min` with: these are what
  * the Environment panel offers too. Each list stays inside the bounds its setting declares —
  * `boundsOf('three.snapScale')` stops at 1, so the ratio of ten Unreal offers is not ours.
+ *
+ * EVERY list below holds a multiple of four, which is what lets the bar lay them out as one
+ * family — `sceneSnapControls.test.ts` holds it against the width the window actually uses.
  */
-export const SNAP_TRANSLATE_STEPS: readonly number[] = [0.001, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 5, 10]
+export const SNAP_TRANSLATE_STEPS: readonly number[] = [0.001, 0.01, 0.1, 0.25, 0.5, 1, 5, 10]
 
 /** Degrees. The angles a set is laid out on, from a nudge to a quarter turn. */
 export const SNAP_ROTATE_STEPS: readonly number[] = [1, 5, 10, 15, 30, 45, 60, 90]
 
 /**
  * Degrees, as 360 divided by a power of two. What spreading *n* objects round a circle needs,
- * and the reason the angle menu is the one menu with two columns.
+ * and the reason the angle menu is the one menu with two families.
  */
 export const SNAP_ROTATE_DIVISIONS: readonly number[] = [2.812, 5.625, 11.25, 22.5]
 
 /** Ratios, largest first, as Unreal reads them. */
-export const SNAP_SCALE_RATIOS: readonly number[] = [1, 0.5, 0.25, 0.125, 0.1, 0.0625, 0.03125]
+export const SNAP_SCALE_RATIOS: readonly number[] = [
+  1, 0.5, 0.25, 0.125, 0.1, 0.0625, 0.03125, 0.015625,
+]
 
 /** Metres per second. Rungs inside `boundsOf('three.flySpeed')`, which the slider covers between. */
-export const FLY_SPEEDS: readonly number[] = [0.5, 1, 2, 4, 8, 12, 20]
+export const FLY_SPEEDS: readonly number[] = [0.5, 1, 2, 4, 8, 12, 16, 20]

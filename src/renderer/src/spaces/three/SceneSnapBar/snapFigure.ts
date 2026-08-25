@@ -3,8 +3,8 @@ import { toDisplayLength } from '@shared/domain/units'
 import { formatDecimal } from '@/helpers/format'
 import type { SnapReading } from './sceneSnapControls'
 
-/** Enough for the finest value each list holds: a ratio goes to 0.03125, the rest to 0.001. */
-const DIGITS: Record<SnapReading, number> = { length: 3, angle: 3, ratio: 5 }
+/** Enough for the finest value each list holds: a ratio goes to 0.015625, the rest to 0.001. */
+const DIGITS: Record<SnapReading, number> = { length: 3, angle: 3, ratio: 6 }
 
 /**
  * What a snap step reads as, without its symbol — the caller adds that, translated.

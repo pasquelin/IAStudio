@@ -505,6 +505,16 @@
      drawn behind as a div, so a single pair of values answers every slider of the studio. */
   --sc-slider-rail: 4px;
   --sc-slider-thumb: 14px;
+  /* Every menu of figures the studio offers — snap steps, turn divisions, fly speeds. The COUNT
+     lives here beside the track because both are what make four menus read as one family: a width
+     alone still let a short list lay itself out three across.
+     In `ch` and not pixels, for the reason `--sc-tooltip` gives below: the cells wear
+     `--text-tiny`, which follows `appearance.fontScale` up to 1.4, and a fixed track would wrap
+     `10000 mm` onto a second line inside a box whose height cannot grow. Out of the density block
+     with it — what sets this width is the text, and density does not move the text.
+     Eleven, measured 2026-08-25: the two longest readings any menu prints, `×0,015625` and
+     `10000 mm`, both draw 56px against the 68px a cell leaves inside its padding. */
+  --sc-value-grid: repeat(4, 11ch);
   /* How wide the home's column is allowed to grow. Not a density gauge — it does not change with
      one — but a gauge all the same, so no component writes the number. On a 2 000px display an
      unbounded column put a row's label at one edge and its value at the other; the rails narrow

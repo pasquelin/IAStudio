@@ -11,8 +11,6 @@ export type ValueGridOption = {
 export type ValueGridProps = {
   options: readonly ValueGridOption[]
   chosen: number
-  /** How wide the choice spreads. A list of figures grows sideways, never downwards. */
-  columns: 2 | 3
   /** Names the group. Already translated — a grid of bare figures says nothing on its own. */
   label: string
   onChoose: (value: number) => void
@@ -21,23 +19,20 @@ export type ValueGridProps = {
 }
 
 /**
- * A choice among figures, laid out in columns.
+ * A choice among figures, on the track `--sc-value-grid` declares — count and cell width both, so
+ * every value menu of the studio is exactly as wide as its neighbour.
  *
- * A menu of rows was the first shape and it was the wrong one: nine steps became a column tall
- * enough to cover the viewport it is about to change, and the choice was said by a tick two
- * hundred pixels from the figure it belonged to. Here the chosen cell CARRIES the mark —
- * `accent-soft`, which `CLAUDE.md` spends on exactly this: a content that is designated, never
- * a control one actions.
- *
- * Radios rather than menu items: this is one value out of several, which is what a `radiogroup`
- * means — and it frees the flyout from promising a `menu` it no longer holds.
+ * The chosen cell CARRIES the mark, in `accent-soft`: designated content, never a control one
+ * actions. Radios rather than menu items — one value out of several is what a `radiogroup` means.
  */
-export function ValueGrid({ options, chosen, columns, label, onChoose, scId }: ValueGridProps) {
+export function ValueGrid({ options, chosen, label, onChoose, scId }: ValueGridProps) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('grid gap-0.5', columns === 2 ? 'grid-cols-2' : 'grid-cols-3')}
+      // `text-tiny` here and not on the cells alone: `ch` resolves against the font of the element
+      // the track is declared on, so a grid left at the default size sizes its columns for it.
+      className="text-tiny grid grid-cols-(--sc-value-grid) gap-0.5"
     >
       {options.map(option => (
         <button
@@ -49,7 +44,7 @@ export function ValueGrid({ options, chosen, columns, label, onChoose, scId }: V
           data-sc={scId && fieldHandle(`${scId}.${option.value}`)}
           className={cn(
             BUTTON_BASE,
-            'text-tiny h-(--sc-control) bg-transparent px-2 text-center tabular-nums',
+            'text-tiny h-(--sc-control) min-w-0 bg-transparent px-1 text-center tabular-nums',
             'text-muted hover:bg-elevated hover:text-text',
             option.value === chosen && 'bg-accent-soft text-text',
           )}
