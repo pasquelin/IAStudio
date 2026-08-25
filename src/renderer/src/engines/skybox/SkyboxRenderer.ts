@@ -6,6 +6,8 @@ import {
   type SphericalAngles,
 } from '@shared/domain/angles'
 import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@shared/domain/skybox'
+import { bundledTextureUrl, type CheckerTextureId } from '@shared/domain/checkerTexture'
+import { createRefCache, type RefCache } from '../core/refCache'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
 import { reportFailure } from '@/services/diagnostics'
@@ -43,6 +45,12 @@ const EYE_HEIGHT = 1.6
 /** How far in front the probes float — clear of the camera, close enough to read. */
 const PROBE_DISTANCE = 5
 
+/**
+ * The floor's grid. Named here rather than taken from `DEFAULT_CHECKER_TEXTURE`, which a scene
+ * may move: only this one holds ONE square, and the floor's tiling counts on it.
+ */
+const GROUND_TEXTURE: CheckerTextureId = 'gridLarge'
+
 /** Working resolution of the graded picture. Export re-renders at full size; this is for looking. */
 const PREVIEW_WIDTH = 2048
 const PREVIEW_HEIGHT = 1024
@@ -68,6 +76,19 @@ export class SkyboxRenderer {
   private readonly adjust = createAdjustPass()
   private readonly projection: ProjectionPass = createProjectionPass()
   private readonly probes: TestObjects = createTestObjects({ probeDistance: PROBE_DISTANCE })
+  /**
+   * The floor's grid, on a cache of its own: `this.cache` keys on an asset id and builds its URL
+   * from it, so it cannot ask for a host no project answers on.
+   */
+  private readonly grid: RefCache<Texture> = createRefCache({
+    load: async url => {
+      const texture = await this.options.loadTexture(url)
+      texture.colorSpace = SRGBColorSpace
+      return texture
+    },
+    free: texture => texture.dispose(),
+    onFailure: (url, error) => reportFailure('skybox.probes', url, error),
+  })
   private readonly sunLight = new DirectionalLight(0xffffff, 1)
   private readonly cache: TextureCache
   private readonly raycaster = new Raycaster()
@@ -121,6 +142,21 @@ export class SkyboxRenderer {
     // Hidden until a sky arrives, and before the first frame rather than after it: `apply` is
     // what reveals them, and a viewport mounted before it would flash the ground for a frame.
     this.probes.setVisible(false)
+    void this.dressGround()
+  }
+
+  /**
+   * The floor's grid, read from beside the app rather than out of the project: nothing a probe
+   * wears is ever written to a file, and a sky can be judged with no project open at all.
+   */
+  private async dressGround(): Promise<void> {
+    // `null` covers both the failed read, which the cache has already reported, and the engine
+    // disposed while this was in flight — the cache frees what arrives for a holder gone.
+    const map = await this.grid.acquire(bundledTextureUrl(GROUND_TEXTURE))
+    if (!map) return
+
+    this.probes.setGroundMap(map)
+    this.viewport.requestRender()
   }
 
   mount(host: HTMLElement): void {
@@ -270,6 +306,7 @@ export class SkyboxRenderer {
     this.adjust.dispose()
     this.projection.dispose()
     this.probes.dispose()
+    this.grid.dispose()
     this.viewport.dispose()
   }
 

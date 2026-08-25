@@ -96,6 +96,7 @@
       "texture.shader": "L’aperçu de la matière a perdu l’un de ses réglages",
       "texture.export": "L’export de la matière a échoué",
       "skybox.source": "L’image du ciel n’a pas pu être chargée",
+      "skybox.probes": "Les repères du ciel n’ont pas pu être chargés",
       "skybox.export": "L’export du ciel a échoué",
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "canvas.place": "Cette image n’a pas pu être posée sur le document",

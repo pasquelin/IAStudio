@@ -4,6 +4,7 @@ import { ANIMATION_HOST } from '@shared/domain/animationLibrary'
 import { TEMPLATE_HOST } from '@shared/domain/sceneTemplate'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { MODEL_HOST } from '@shared/domain/localModel'
+import { TEXTURE_HOST } from '@shared/domain/checkerTexture'
 import { orWhenGone } from '@main/project/store'
 import { exportFileOf, posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
 
@@ -21,6 +22,8 @@ export type AssetResolverDeps = {
   bundledTemplate: (file: string) => Promise<string | null>
   /** And for the picture of a local model, which is the same folder shape one level over. */
   bundledModel: (file: string) => Promise<string | null>
+  /** And for a working texture, which a probe wears without any project having a row for it. */
+  bundledTexture: (file: string) => Promise<string | null>
 }
 
 /**
@@ -57,5 +60,6 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
     // which is what makes shipping a picture per template optional rather than required.
     [TEMPLATE_HOST]: file => deps.bundledTemplate(file),
     [MODEL_HOST]: file => deps.bundledModel(file),
+    [TEXTURE_HOST]: file => deps.bundledTexture(file),
   }
 }

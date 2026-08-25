@@ -52,6 +52,7 @@ import {
   bundledFfmpeg,
   bundledModels,
   bundledTemplates,
+  bundledTextures,
   bundledVad,
   resourcesRoot,
 } from './resources'
@@ -1889,6 +1890,7 @@ export function createServices(settings: SettingsStore): Services {
       bundledAnimation: id => bundledAnimationFile(bundledAnimations(resourcesRoot()), id),
       bundledTemplate: file => bundledFile(bundledTemplates(resourcesRoot()), file),
       bundledModel: file => bundledFile(bundledModels(resourcesRoot()), file),
+      bundledTexture: file => bundledFile(bundledTextures(resourcesRoot()), file),
     }),
   )
 
