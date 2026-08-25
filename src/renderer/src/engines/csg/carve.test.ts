@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
-import { carveGraph, isCarvable } from './carve'
+import { canCarve, carveGraph, isCarvable } from './carve'
 import { meshNode } from '../scene/nodeFactory'
 import type { SceneNode } from '../scene/sceneState'
 
@@ -43,7 +43,47 @@ describe('carveGraph', () => {
 
   it('leaves the matter at the origin of its own frame', () => {
     const nodes = [wall(), cube({ x: 1, y: 0, z: 0 })]
-    expect(cut(nodes, nodes)?.base.transform).toEqual(IDENTITY_TRANSFORM)
+    expect(cut(nodes, nodes)?.base.transform.position).toEqual({ x: 0, y: 0, z: 0 })
+  })
+
+  /**
+   * The matter's SCALE travels in its brush, never in the solid's frame. Inverting a non-uniform
+   * scale into a turned tool yields a sheared matrix, which `Matrix4.decompose` cannot describe —
+   * measured at 2.09 units of drift on a wall scaled (4, 3, 0.2) with a tool turned 30°.
+   */
+  it('places a turned tool exactly, even under a non-uniformly scaled matter', () => {
+    const matter = {
+      ...wall(),
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 3, z: 0.2 } },
+    }
+    const tool = {
+      ...cube({ x: 1, y: 0, z: 0 }),
+      transform: {
+        ...IDENTITY_TRANSFORM,
+        position: { x: 1, y: 0, z: 0 },
+        rotation: { x: 0, y: Math.PI / 6, z: 0 },
+      },
+    }
+    const step = cut([matter, tool], [matter, tool])?.steps[0]?.part
+
+    expect(step?.transform.position.x).toBeCloseTo(1, 6)
+    expect(step?.transform.position.y).toBeCloseTo(0, 6)
+    expect(step?.transform.position.z).toBeCloseTo(0, 6)
+    expect(step?.transform.rotation.y).toBeCloseTo(Math.PI / 6, 6)
+    expect(step?.transform.scale.x).toBeCloseTo(1, 6)
+  })
+
+  it('carries the matter scale in its own brush, so the shape keeps its size', () => {
+    const matter = {
+      ...wall(),
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 3, z: 0.2 } },
+    }
+    const tool = cube({ x: 1, y: 0, z: 0 })
+    const scale = cut([matter, tool], [matter, tool])?.base.transform.scale
+
+    expect(scale?.x).toBeCloseTo(4, 6)
+    expect(scale?.y).toBeCloseTo(3, 6)
+    expect(scale?.z).toBeCloseTo(0.2, 6)
   })
 
   it('composes a parent transform into the tool it carries', () => {
@@ -70,9 +110,15 @@ describe('carveGraph', () => {
     expect(cut([solid, cube({ x: 1, y: 0, z: 0 })])).toBeNull()
   })
 
-  it('ignores what carries no shape at all', () => {
-    const nodes: SceneNode[] = [wall(), { ...wall(), type: 'group' } as SceneNode]
-    expect(cut(nodes, nodes)).toBeNull()
+  // Refused rather than quietly dropped: filtering it out used to promote the NEXT node to
+  // matter, so a client naming three nodes got a cut of two it never asked for.
+  it('refuses a selection where anything carries no shape', () => {
+    const nodes: SceneNode[] = [
+      wall(),
+      cube({ x: 1, y: 0, z: 0 }),
+      { ...wall(), type: 'group' } as SceneNode,
+    ]
+    expect(canCarve(nodes)).toBe(false)
   })
 
   it('carries the operation asked for, so a weld is not a cut', () => {

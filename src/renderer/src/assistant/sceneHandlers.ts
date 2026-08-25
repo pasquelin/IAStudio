@@ -552,11 +552,28 @@ export const SCENE_HANDLERS: ActionHandlers = {
     if (!command) return refused('badInput')
 
     useScenes.getState().runCommand(open.documentId, command)
-    return { ok: true }
+    // The id the description promises: a client cannot address the solid otherwise, short of
+    // re-reading the whole scene. Read off the state after, since the command mints it.
+    const solid = sceneOf(useScenes.getState(), open.documentId).nodes.find(
+      node => node.type === 'carved' && !open.state.nodes.includes(node),
+    )
+    return { ok: true, data: { nodeId: solid?.id ?? '' } }
   },
 
-  'node.separate': input =>
-    editNode(input, node => (node.type === 'carved' ? separateNode(node) : null)),
+  'node.separate': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const node = nodeById(open.state, textOf(input, 'nodeId') ?? '')
+    if (node?.type !== 'carved') return refused('badInput')
+
+    useScenes.getState().runCommand(open.documentId, separateNode(node))
+    // The shapes handed back, as the description promises — their ids are what a client aims at
+    // next, and nothing else names them.
+    const after = sceneOf(useScenes.getState(), open.documentId)
+    const given = after.nodes.filter(one => !open.state.nodes.includes(one)).map(one => one.id)
+    return { ok: true, data: { nodeIds: given } }
+  },
 
   'node.rename': input =>
     editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),

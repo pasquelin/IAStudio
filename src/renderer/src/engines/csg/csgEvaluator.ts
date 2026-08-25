@@ -26,8 +26,11 @@ export type CsgEvaluator = {
 
 export type CsgEvaluatorOptions = {
   spawn: () => Worker
-  /** Told when a cut fails. Injected, so the engine knows nothing of how a window logs. */
-  onFailure: (error: unknown) => void
+  /**
+   * Told when a cut fails, with the KEY of the graph that failed — `reportFailure` dedupes on
+   * its subject, so a constant one silences every failure after the first.
+   */
+  onFailure: (key: string, error: unknown) => void
 }
 
 /**
@@ -67,7 +70,7 @@ export function createCsgEvaluator({ spawn, onFailure }: CsgEvaluatorOptions): C
     // so nothing else would clear it.
     onFailure: (key, error) => {
       graphs.delete(key)
-      onFailure(error)
+      onFailure(key, error)
     },
   })
 

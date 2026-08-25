@@ -144,6 +144,15 @@ arbitré par une mesure, et il pourra devoir changer.
 pièce ne cache rien tout seul. C'est un chantier à part entière — partitionnement spatial ou Hi-Z —
 et il n'est pas ouvert par cette ADR.
 
+`[M]` **Le solide ne prend PAS l'échelle de sa matière ; elle voyage dans la brosse de base.**
+Ce n'est pas cosmétique. `Matrix4.decompose` ne sait décrire qu'une matrice sans cisaillement, et
+inverser une échelle non uniforme dans un outil TOURNÉ en produit exactement une : **mesuré à 2,09
+unités de dérive** sur un mur à l'échelle (4, 3, 0.2) avec un outil tourné de 30°, soit un trou
+franchement ailleurs. Le repère du solide est donc une isométrie — translation et rotation seules —
+et composée avec n'importe quelle pose elle reste une pose. **L'angle mort qui subsiste** : une
+matière suspendue sous un groupe lui-même mis à l'échelle non uniformément ramène le cisaillement
+par le parent, et rien ne le redresse.
+
 `[?]` **Un export part avec ce que l'écran montre.** `exportObjects` lit les objets du viewport :
 tant qu'une découpe n'a pas atterri, le `.glb` ou l'`.usdz` sort avec le mur PLEIN, sans attente ni
 avertissement. Afficher la brosse brute est la décision ci-dessus pour l'écran ; ce n'en est pas une

@@ -67,6 +67,7 @@ import {
 import type { PaneRect } from '../viewport/panes'
 import {
   canReceiveShadow,
+  carriesMaterial,
   type ModelNode,
   type NodeMove,
   type SceneNode,
@@ -188,6 +189,7 @@ import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
+import { matrixOfTransform } from '../csg/carve'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
 import { NOTHING_SNAPPED, type Snapping } from '@shared/domain/snap'
@@ -757,8 +759,9 @@ export class SceneRenderer {
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
     this.csg = createCsgEvaluator({
       spawn: () => new CsgWorker(),
-      // The node keeps drawing its raw brushes: a cut that fails must not empty the scene.
-      onFailure: error => reportFailure('scene.carved', '', error),
+      // The key as subject, so two solids that both fail are two lines rather than one: the node
+      // keeps drawing its raw brushes, and a silent second failure would look like a success.
+      onFailure: (key, error) => reportFailure('scene.carved', key, error),
     })
     this.skin = options.skin ?? createSkinWeights(() => new SkinWorker())
     this.retarget = options.retarget ?? createRetarget(() => new RetargetWorker())
@@ -2262,7 +2265,9 @@ export class SceneRenderer {
   refreshTextures(): void {
     for (const [id, maps] of this.textures) {
       const node = this.applied.get(id)
-      if (node?.type === 'mesh') maps.apply(node.material)
+      // A solid wears the same descriptor and registers the same slots — `carriesMaterial` is
+      // what keeps the three in step, where a list of types drifts.
+      if (node && carriesMaterial(node)) maps.apply(node.material)
     }
     for (const [id, maps] of this.spriteMaps) {
       const node = this.applied.get(id)
@@ -2790,11 +2795,14 @@ export class SceneRenderer {
       const before = previous?.type === 'carved' ? previous : null
       // Cut again only when the RECIPE moved: a colour change must not send the worker off, which
       // is the one edit here that costs anything.
-      if (before?.carved !== node.carved) void this.recut(node)
+      if (before?.carved !== node.carved) void this.recut(node, object)
 
       const material = standardMaterialOf(object)
       if (material && before?.material !== node.material) {
         applyMaterial(material, node.material, this.meshColor)
+        // The slots too, exactly as a mesh: `buildCarved` registers them, and without this a map
+        // assigned in the inspector changed the document and nothing on screen.
+        this.textures.get(node.id)?.apply(node.material)
       }
       return
     }
@@ -2859,14 +2867,18 @@ export class SceneRenderer {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
 
-    const mesh = new Mesh(geometryFor(node.carved.base.geometry), material)
+    // The base brush AS THE RECIPE PLACES IT: its transform carries the matter's scale, so a
+    // wall shown uncut while the worker runs is the size it will be once pierced.
+    const raw = geometryFor(node.carved.base.geometry)
+    raw.applyMatrix4(matrixOfTransform(node.carved.base.transform))
+    const mesh = new Mesh(raw, material)
     // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps
     // are named by the document and loaded by nobody.
     const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
     textures.apply(node.material)
     this.textures.set(node.id, textures)
 
-    void this.recut(node)
+    void this.recut(node, mesh)
 
     return mesh
   }
@@ -2877,20 +2889,26 @@ export class SceneRenderer {
    * The evaluator hands out one geometry per distinct graph, so the mesh must never dispose what
    * it is given — `release` is what frees it, and only once the last node lets go.
    */
-  private async recut(node: CarvedNode): Promise<void> {
-    // Recorded BEFORE the await: `release` reads this to know whether a reference is out, so a
-    // node deleted mid-cut is given back exactly once — by whichever of the two arrives last.
+  private async recut(node: CarvedNode, into: Mesh): Promise<void> {
+    // Recorded BEFORE the await: `release` reads this to know a reference is out, so a node
+    // deleted mid-cut is given back exactly once.
     this.cutting.add(node.id)
     const cut = await this.csg.acquire(node.carved)
     const held = this.cutting.delete(node.id)
 
-    const object = this.objects.get(node.id)
-    // Edited, recut or deleted while the worker was busy: what is in the scene now decides.
-    if (!cut || !(object instanceof Mesh) || this.applied.get(node.id) !== node) {
-      // Only if `release` has not already done it — `held` is false when the node went first.
+    // The OBJECT and the RECIPE, never the node itself: any edit — a drag, a rename, a colour —
+    // mints a fresh node while leaving `carved` the same, and comparing identity threw the cut
+    // away for a solid that still wanted it. `buildModel` compares its holder the same way.
+    const applied = this.applied.get(node.id)
+    if (!cut || this.objects.get(node.id) !== into || applied?.type !== 'carved') {
       if (cut && held) this.csg.release(node.carved)
       return
     }
+    if (applied.carved !== node.carved) {
+      if (held) this.csg.release(node.carved)
+      return
+    }
+    const object = into
 
     // The uncut brush this node was born wearing. Its own buffers, so nothing else frees it —
     // and the cache's geometries are never disposed here, which `owns` is what tells apart.
@@ -3311,7 +3329,9 @@ export class SceneRenderer {
     if (applied?.type === 'model') this.modelCache.release(applied.model.assetId)
     // Given back once: `recut` may still be in flight, and `cutting` is what says which of the
     // two owes the reference.
-    if (applied?.type === 'carved' && !this.cutting.delete(id)) this.csg.release(applied.carved)
+    // `has`, never `delete`: consuming the token here left `recut` believing the reference had
+    // already been given back, and neither side ever returned it.
+    if (applied?.type === 'carved' && !this.cutting.has(id)) this.csg.release(applied.carved)
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)

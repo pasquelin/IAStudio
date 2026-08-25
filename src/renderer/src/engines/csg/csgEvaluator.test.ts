@@ -101,7 +101,8 @@ describe('createCsgEvaluator', () => {
     fake.fail('degenerate brush')
 
     expect(await acquired).toBeNull()
-    expect(onFailure).toHaveBeenCalledOnce()
+    // The key as subject, so two solids that both fail are two lines in the log rather than one.
+    expect(onFailure).toHaveBeenCalledWith(expect.stringContaining('box'), expect.any(Error))
   })
 
   it('sends the graph itself, not a mesh', async () => {

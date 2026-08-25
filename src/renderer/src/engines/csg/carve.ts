@@ -24,7 +24,10 @@ export function isCarvable(node: SceneNode): node is CarvableNode {
  * a button that looks live can never be a click that does nothing.
  */
 export function canCarve(picked: readonly SceneNode[]): boolean {
-  return picked.filter(isCarvable).length >= 2
+  // EVERY node must carry a shape, not merely two of them. Filtering instead of refusing dropped
+  // a selected solid without a word — and through the MCP door it silently promoted the SECOND
+  // id to matter, cutting something nobody asked for.
+  return picked.length >= 2 && picked.every(isCarvable)
 }
 
 /** One solid at a time: two would put back two sets of brushes with no way to tell them apart. */
@@ -48,10 +51,15 @@ export function carveGraph(
   // Built once and passed down: `worldOf` walks it per node, and rebuilding it there cost a
   // full sweep of the scene per tool.
   const byId = new Map(all.map(node => [node.id, node]))
-  const intoMatter = worldOf(matter, byId).invert()
+  // The matter's PLACEMENT, without its scale — and that is what keeps every brush a clean TRS.
+  // `Matrix4.decompose` only describes a matrix free of shear, and inverting a non-uniform scale
+  // into a turned tool produces exactly that shear: measured at 2.09 units of drift on a wall
+  // scaled (4, 3, 0.2) with a tool turned 30°. An isometry composed with any TRS stays a TRS, so
+  // the scale travels in the base brush instead, where it is the matter's own and shears nothing.
+  const intoMatter = placementOf(matter, byId).invert()
 
   return {
-    base: partOf(matter, null),
+    base: partOf(matter, intoMatter.clone().multiply(worldOf(matter, byId))),
     steps: tools.map(tool => ({
       operation,
       part: partOf(tool, intoMatter.clone().multiply(worldOf(tool, byId))),
@@ -74,6 +82,21 @@ export function placedIn(outer: Transform, inner: Transform): Transform {
   return transformOf(matrixOf(outer).multiply(matrixOf(inner)))
 }
 
+/**
+ * Where a node stands, its own scale left out — the frame a solid is given. Its parents' scales
+ * are still composed in: a matter hanging under a non-uniformly scaled group is the one case
+ * this does not straighten, and it is written in ADR-25 rather than silently wrong.
+ */
+function placementOf(node: SceneNode, byId: ReadonlyMap<string, SceneNode>): Matrix4 {
+  return worldOf(node, byId).multiply(
+    new Matrix4().makeScale(
+      1 / node.transform.scale.x,
+      1 / node.transform.scale.y,
+      1 / node.transform.scale.z,
+    ),
+  )
+}
+
 /** Where a node stands in the scene, its parents composed in. */
 function worldOf(node: SceneNode, byId: ReadonlyMap<string, SceneNode>): Matrix4 {
   const world = new Matrix4()
@@ -86,6 +109,12 @@ function worldOf(node: SceneNode, byId: ReadonlyMap<string, SceneNode>): Matrix4
     walker = walker.parentId === null ? undefined : byId.get(walker.parentId)
   }
   return world
+}
+
+/** A placement as the matrix three.js applies. Published for the raw brush a solid wears
+ * while its cut is still out. */
+export function matrixOfTransform(transform: Transform): Matrix4 {
+  return matrixOf(transform)
 }
 
 function matrixOf(transform: Transform): Matrix4 {

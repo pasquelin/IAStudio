@@ -508,8 +508,13 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const nothingSelected = scene.selectedIds.length === 0
   // Booleans rather than the selection itself, like `isolated` below: a fresh array on every
   // render would remap the whole bar on each frame of a drag, which is what this memo avoids.
-  const cannotCarve = !canCarve(selectedNodes(scene.nodes, scene.selectedIds))
-  const cannotSeparate = !canSeparate(selectedNodes(scene.nodes, scene.selectedIds))
+  // Resolved ONCE — `selectedNodes` indexes the whole scene, and this body runs on every render.
+  const foldable = useMemo(
+    () => selectedNodes(scene.nodes, scene.selectedIds),
+    [scene.nodes, scene.selectedIds],
+  )
+  const cannotCarve = !canCarve(foldable)
+  const cannotSeparate = !canSeparate(foldable)
   const nothingHeld = useSceneClipboard(state => state.nodes.length === 0)
   // The boolean rather than the object: `hideIn` mints a fresh isolation on every hidden node,
   // which would remap all the tools for a state that has not changed.

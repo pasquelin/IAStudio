@@ -791,10 +791,14 @@ export function carveNodes(
 ): Command<SceneState> | null {
   if (!canCarve(picked)) return null
   const [matter, ...tools] = picked.filter(isCarvable)
+  // Unreachable through `canCarve`, which now demands every node carry a shape — kept because
+  // the destructuring cannot say so to the compiler.
   if (!matter) return null
 
   const solid = carvedNode(carveGraph(matter, tools, operation, all), {
-    transform: matter.transform,
+    // Without the matter's SCALE, which travelled into the base brush — see `carveGraph`, where
+    // keeping it here is what sheared a turned tool.
+    transform: { ...matter.transform, scale: { x: 1, y: 1, z: 1 } },
     material: matter.material,
     parentId: matter.parentId,
     name: matter.name,
@@ -802,7 +806,12 @@ export function carveNodes(
 
   return multi(commandId('carve', [solid.id]), [
     addNode(solid),
-    ...[matter, ...tools].map(node => removeNode(node.id)),
+    // Their subtrees with them, exactly as `removeNodes` does: a child left hanging from a node
+    // the scene no longer holds is dropped by `flattenTree` — invisible in the outliner, still
+    // written to the file.
+    ...subtreeOf(all, matter.id)
+      .concat(tools.flatMap(tool => subtreeOf(all, tool.id)))
+      .map(node => removeNode(node.id)),
   ])
 }
 
