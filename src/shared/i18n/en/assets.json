@@ -202,7 +202,8 @@
     "nameEmpty": "A document needs a name.",
     "nameTooLong": "That name is too long for a file.",
     "nameInvalid": "That name holds a character a file name cannot carry.",
-    "nameTaken": "The project already holds a document of that name."
+    "nameTaken": "The project already holds a document of that name.",
+    "flattenedIntoAsset": "The {{format}} of {{document}} received the flattened image, that format carrying no {{lost}}. Everything stays kept in the document."
   },
   "audio": {
     "takeRole": "The take you are editing, before it goes into the edit",

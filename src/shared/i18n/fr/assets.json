@@ -202,7 +202,8 @@
     "nameEmpty": "Un document a besoin d’un nom.",
     "nameTooLong": "Ce nom est trop long pour un fichier.",
     "nameInvalid": "Ce nom contient un caractère qu’un nom de fichier ne peut pas porter.",
-    "nameTaken": "Le projet contient déjà un document de ce nom."
+    "nameTaken": "Le projet contient déjà un document de ce nom.",
+    "flattenedIntoAsset": "Le {{format}} de {{document}} a reçu l’image aplatie, ce format ne portant pas {{lost}}. Tout reste gardé dans le document."
   },
   "audio": {
     "takeRole": "La prise que vous éditez, avant montage",

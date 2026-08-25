@@ -33,7 +33,7 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isOraSurfacePath } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
-import { addLayer, removeLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
+import { addLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvasHosts'
 import { bytesToBase64 } from '@/helpers/base64'
 import { canvasStore, useCanvases } from '@/stores/canvases'
@@ -558,14 +558,15 @@ describe('saveDocument', () => {
     })
 
     /**
-     * The rule the whole feature turns on: a flat picture cannot hold a stack, so ⌘S writes the
-     * document and leaves the file it was opened from exactly as it was.
+     * A flat picture cannot hold a stack, so the `.png` takes the FLATTEN and the document keeps
+     * the layers. Refusing instead left a channel of a texture — always a `.png` — unable to
+     * receive any edit carrying a layer, an opacity or a blend: the model never saw it.
      *
-     * What used to happen instead is what makes this worth a test: the stack was flattened over
-     * the source, and a remount then redrew the layers carrying `source` from that flatten —
-     * folding the whole picture into the one layer it came from, with nothing said.
+     * The remount this used to break is what makes it safe now: `rehydrateDocument` reads the
+     * document FIRST and only falls back to the asset for a tab never saved, so the flatten is
+     * never read back over the stack it came from.
      */
-    it('leaves the source file alone once the document holds more than it can', async () => {
+    it('writes the flattened picture into a source that cannot hold the stack, and says so', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       const { entries } = bridgeWatchingLogs({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
@@ -578,8 +579,9 @@ describe('saveDocument', () => {
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
-      expect(savePicture).not.toHaveBeenCalled()
-      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten' })
+      expect(savePicture).toHaveBeenCalled()
+      // Said, never silent: what the file cannot carry is exactly what a reader would look for.
+      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten', level: 'warn' })
     })
 
     /**
@@ -712,13 +714,13 @@ describe('saveDocument', () => {
     })
 
     /**
-     * A format this studio cannot write is not a format that holds everything. Answering « no
-     * loss » for a `.tif` would overwrite it with a PNG under its own name, which is the silent
-     * loss the whole path exists to stop.
+     * A format this studio cannot write holds nothing, so EVERY trait is named — and the picture
+     * still goes out as a PNG, `replaceBytes` moving the extension with the bytes. What the file
+     * loses is the container it was in; what the work lives in is the document, written already.
      */
-    it('refuses a format it has no answer for, rather than assuming it holds everything', async () => {
+    it('writes a picture the studio can, when the source format is not one it writes', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({
+      const { entries } = bridgeWatchingLogs({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
         assets: { savePicture },
       })
@@ -729,7 +731,8 @@ describe('saveDocument', () => {
       await saveDocument(documentId)
       release()
 
-      expect(savePicture).not.toHaveBeenCalled()
+      expect(savePicture).toHaveBeenCalled()
+      expect(entries()[0]).toMatchObject({ scope: 'canvas.flatten', level: 'warn' })
     })
 
     /** Which traits stood in the way, so the journal names them rather than saying « something ». */
@@ -751,11 +754,11 @@ describe('saveDocument', () => {
     })
 
     /**
-     * The refusal is not a debt. `assetBehind` exists so a save whose second half FAILED is tried
-     * again; retrying a refusal would write the very flatten that was refused, the next time
-     * anything else marked the asset late.
+     * A flatten that WENT THROUGH is not a debt. `assetBehind` exists so a save whose second half
+     * failed is tried again; a notice arms nothing, so an untouched tab written once stays
+     * written once however often ⌘S is pressed.
      */
-    it('does not retry a refusal on the next ⌘S', async () => {
+    it('does not write the asset again when nothing moved since', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
         documents: { write: () => Promise.resolve<DocumentWrite>('written') },
@@ -766,27 +769,6 @@ describe('saveDocument', () => {
 
       await saveDocument(documentId)
       await saveDocument(documentId)
-      release()
-
-      expect(savePicture).not.toHaveBeenCalled()
-    })
-
-    /**
-     * And it lifts. Flattening the stack by hand leaves one layer again, which the source file
-     * can hold — so the picture behind the tab catches up rather than staying stale for ever.
-     */
-    it('writes the source again once the document is flat enough for it', async () => {
-      const savePicture = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({
-        documents: { write: () => Promise.resolve<DocumentWrite>('written') },
-        assets: { savePicture },
-      })
-      const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-2', 'Layer')))
-      await saveDocument(documentId)
-
-      useCanvases.getState().runCommand(documentId, removeLayer('layer-2'))
-      await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
       expect(savePicture).toHaveBeenCalledTimes(1)

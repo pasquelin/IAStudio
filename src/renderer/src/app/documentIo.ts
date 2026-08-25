@@ -796,11 +796,20 @@ async function rewriteSourceAsset(
   // cannot be written back to a `.png` writes back to it whole — which is what makes an open
   // format worth reaching for rather than a second place to keep the same picture.
   const { format, losses } = writePlanFor(document, io, source)
+  // SAID, never refused. The document was written a few lines above, into the `.ora` that holds
+  // the whole stack, so the flat picture the asset receives costs nothing — it is the RENDER the
+  // scene and the shelf read, not the copy the work lives in. Refusing left the two out of step
+  // with no way back: a channel of a texture is always a `.png`, so any layer, opacity or blend
+  // stopped a ⌘S from ever reaching the model.
   if (losses.length > 0) {
-    // NOT `assetBehind`: this is a refusal, not a failure, and a retry would write the very
-    // thing that was refused the moment anything else marked the asset late.
-    reportFailure('canvas.flatten', document.title, new Error(losses.join(', ')))
-    return
+    reportNotice(
+      'canvas.flatten',
+      i18next.t('documents.flattenedIntoAsset', {
+        format: format.toUpperCase(),
+        document: document.title,
+        lost: losses.join(', '),
+      }),
+    )
   }
 
   try {
