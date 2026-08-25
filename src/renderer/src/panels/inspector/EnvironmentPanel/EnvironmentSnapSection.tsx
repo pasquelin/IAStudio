@@ -1,5 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import type { Settings } from '@shared/domain/settings'
+import {
+  SNAP_KINDS,
+  SNAP_ROTATE_STEPS,
+  SNAP_SCALE_RATIOS,
+  SNAP_TRANSLATE_STEPS,
+  type SnapKind,
+  type Snapping,
+} from '@shared/domain/snap'
 import { PropertySection } from '@/design/PropertySection'
 import { SelectField } from '@/design/SelectField'
 import { ToggleField } from '@/design/ToggleField'
@@ -8,8 +16,8 @@ import { HINT_LEFT } from '@/helpers/tooltip'
 export type EnvironmentSnapSectionProps = {
   view: Settings['three']
   onViewport: (patch: Partial<Settings['three']>) => void
-  snapping: boolean
-  onSnapping: (snapping: boolean) => void
+  snapping: Snapping
+  onSnap: (kind: SnapKind, on: boolean) => void
 }
 
 /**
@@ -20,7 +28,7 @@ export function EnvironmentSnapSection({
   view,
   onViewport,
   snapping,
-  onSnapping,
+  onSnap,
 }: EnvironmentSnapSectionProps) {
   const { t } = useTranslation()
 
@@ -32,16 +40,19 @@ export function EnvironmentSnapSection({
 
   return (
     <PropertySection title={t('environment.snap')} defaultOpen={false} scId="snap">
-      <ToggleField
-        label={t('environment.snapEnabled')}
-        scId="environment.snapEnabled"
-        value={snapping}
-        onChange={onSnapping}
-      />
+      {SNAP_KINDS.map(kind => (
+        <ToggleField
+          key={kind}
+          label={t(SNAP_LABELS[kind])}
+          scId={`environment.snap.${kind}`}
+          value={snapping[kind]}
+          onChange={on => onSnap(kind, on)}
+        />
+      ))}
 
-      {/* Shown only while it is on: a step that changes nothing right now is a control that
-          reads as broken, and the toggle above is one click away. */}
-      {snapping && (
+      {/* The three that HAVE steps, never the surface snap, which lands rather than advances:
+          a step that changes nothing right now is a control that reads as broken. */}
+      {STEPPED_KINDS.some(kind => snapping[kind]) && (
         <>
           {/* The preferences set these three by a free SLIDER, so a stored step can fall between
               two of the ones offered here — it then reads as itself rather than as the first. */}
@@ -49,7 +60,7 @@ export function EnvironmentSnapSection({
             label={t('environment.snapTranslate')}
             scId="environment.snapTranslate"
             value={String(view.snapTranslate)}
-            options={steps(TRANSLATE_STEPS)}
+            options={steps(SNAP_TRANSLATE_STEPS)}
             onChange={value => onViewport({ snapTranslate: Number(value) })}
             unnamedLabel={String(view.snapTranslate)}
             hint={hint}
@@ -59,7 +70,7 @@ export function EnvironmentSnapSection({
             label={t('environment.snapRotate')}
             scId="environment.snapRotate"
             value={String(view.snapRotate)}
-            options={steps(ROTATE_STEPS, degrees)}
+            options={steps(SNAP_ROTATE_STEPS, degrees)}
             onChange={value => onViewport({ snapRotate: Number(value) })}
             unnamedLabel={degrees(view.snapRotate)}
             hint={hint}
@@ -69,7 +80,7 @@ export function EnvironmentSnapSection({
             label={t('environment.snapScale')}
             scId="environment.snapScale"
             value={String(view.snapScale)}
-            options={steps(SCALE_STEPS)}
+            options={steps(SNAP_SCALE_RATIOS)}
             onChange={value => onViewport({ snapScale: Number(value) })}
             unnamedLabel={String(view.snapScale)}
             hint={hint}
@@ -80,10 +91,13 @@ export function EnvironmentSnapSection({
   )
 }
 
-/** In scene units, which are metres. A millimetre through to a metre. */
-const TRANSLATE_STEPS: readonly number[] = [0.001, 0.01, 0.1, 0.5, 1]
+/** Written out rather than composed: a key built at runtime is a key no guard can see. */
+const SNAP_LABELS: Record<SnapKind, string> = {
+  surface: 'snapBar.surface',
+  translate: 'snapBar.translate',
+  rotate: 'snapBar.rotate',
+  scale: 'snapBar.scale',
+}
 
-/** Degrees. The angles a set is actually laid out on, from a nudge to a quarter turn. */
-const ROTATE_STEPS: readonly number[] = [1, 5, 10, 15, 30, 45, 90]
-
-const SCALE_STEPS: readonly number[] = [0.01, 0.05, 0.1, 0.25, 0.5]
+/** The three a step applies to. The surface snap lands on something; it advances by nothing. */
+const STEPPED_KINDS: readonly SnapKind[] = ['translate', 'rotate', 'scale']

@@ -109,8 +109,8 @@
       "help": "Undoes the hiding and isolating done from the viewport. Objects the document itself declares hidden stay hidden."
     },
     "sceneSnap": {
-      "title": "Snap",
-      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the Modelling workspace settings."
+      "title": "All snaps",
+      "help": "Turns all four snaps on or off at once — surface, grid, angle, scale. A second press gives back exactly the ones that were on. The bar at the top of the viewport sets them one by one."
     },
     "sceneSpace": {
       "title": "Local frame",

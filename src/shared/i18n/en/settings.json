@@ -224,6 +224,14 @@
       "title": "Scale step",
       "help": "How much the scale moves in one step while snapping is on. What is reachable is the multiples of the step: 0.1 lands exactly on tenths and halves, 0.25 on quarters."
     },
+    "snapSurfaceAlign": {
+      "title": "Align to surface",
+      "help": "While the surface snap is on, what you lay down lies along the slope it meets. Unchecked, it keeps its own orientation and only drops."
+    },
+    "snapSurfaceOffset": {
+      "title": "Surface offset",
+      "help": "How many metres what you lay down floats above the surface. Zero rests it on contact; a few centimetres keep two faces from fighting over the same plane on screen."
+    },
     "fieldOfView": {
       "title": "Field of view",
       "help": "How much the camera takes in, in degrees. A narrow angle pulls close and flattens, like a telephoto lens; a wide one shows far more but bends the edges. 60 is close to what an eye sees."

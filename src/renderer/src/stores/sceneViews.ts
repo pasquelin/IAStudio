@@ -8,6 +8,7 @@ import {
 } from '@/engines/scene/sceneView'
 import { type ClipRef, type DisplayMode } from '@shared/domain/scene'
 import { NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
+import { NOTHING_SNAPPED, snappingToggled, type SnapKind, type Snapping } from '@shared/domain/snap'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
 /**
@@ -42,14 +43,16 @@ export type SceneView = {
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
   quadEdges: boolean
   /**
-   * Whether a drag advances in steps. HOW COARSE those steps are is a preference of the person;
-   * whether they apply at all is a way of working on this document at this moment, which is why
-   * the two live apart.
+   * Which snaps a drag obeys. HOW COARSE their steps are is a preference of the person; whether
+   * each applies at all is a way of working on this document at this moment.
    *
-   * Here rather than in the viewport's own state because two surfaces toggle it — the toolbar
-   * and the Environment panel — and a `useState` inside the viewport is unreachable from a dock.
+   * Here rather than in the viewport's own state because three surfaces toggle them — the snap
+   * bar, the toolbar and the Environment panel — and a `useState` inside the viewport is
+   * unreachable from a dock.
    */
-  snapping: boolean
+  snapping: Snapping
+  /** What the master switch gives back, so one press of it undoes the other. Never shown. */
+  snapMemory: Snapping
   /**
    * What the VIEWPORT is hiding — an isolation, and nodes hidden by hand.
    *
@@ -113,7 +116,8 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   pickedPathPoint: null,
   quad: false,
   quadEdges: false,
-  snapping: false,
+  snapping: NOTHING_SNAPPED,
+  snapMemory: NOTHING_SNAPPED,
   isolation: NOTHING_ISOLATED,
   previewSize: 'inset',
   previewOffset: { x: 0, y: 0 },
@@ -143,7 +147,9 @@ export type SceneViewsState = {
   setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
-  setSceneSnapping: (documentId: string, snapping: boolean) => void
+  setSceneSnap: (documentId: string, kind: SnapKind, on: boolean) => void
+  /** Turns every snap off, then gives back exactly what was on. What `M` and the magnet do. */
+  toggleSceneSnapping: (documentId: string) => void
   setActivePane: (documentId: string, activePane: number) => void
   setSceneIsolation: (documentId: string, isolation: Isolation) => void
   setPreviewSize: (documentId: string, previewSize: SceneView['previewSize']) => void
@@ -215,10 +221,27 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quadEdges } },
     })),
 
-  setSceneSnapping: (documentId, snapping) =>
-    set(state => ({
-      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), snapping } },
-    })),
+  setSceneSnap: (documentId, kind, on) =>
+    set(state => {
+      const view = sceneViewOf(state, documentId)
+      const snapping = { ...view.snapping, [kind]: on }
+      return {
+        views: { ...state.views, [documentId]: { ...view, snapping, snapMemory: snapping } },
+      }
+    }),
+
+  toggleSceneSnapping: documentId =>
+    set(state => {
+      const view = sceneViewOf(state, documentId)
+      // The memory is kept as it was on the way down: what comes back up is what was last CHOSEN,
+      // not the emptiness the switch itself just wrote.
+      return {
+        views: {
+          ...state.views,
+          [documentId]: { ...view, snapping: snappingToggled(view.snapping, view.snapMemory) },
+        },
+      }
+    }),
 
   setActivePane: (documentId, activePane) =>
     set(state => {

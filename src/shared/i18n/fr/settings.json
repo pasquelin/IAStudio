@@ -224,6 +224,14 @@
       "title": "Pas d’échelle",
       "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
     },
+    "snapSurfaceAlign": {
+      "title": "Orienter selon la surface",
+      "help": "Quand le magnétisme de surface est actif, ce que vous posez se couche sur la pente de ce qu’il touche. Décoché, l’objet garde son orientation et ne fait que descendre."
+    },
+    "snapSurfaceOffset": {
+      "title": "Décalage de surface",
+      "help": "De combien de mètres ce que vous posez flotte au-dessus de la surface. Zéro le pose au contact. Quelques centimètres évitent que deux faces coplanaires scintillent l’une sur l’autre."
+    },
     "fieldOfView": {
       "title": "Angle de vue",
       "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."

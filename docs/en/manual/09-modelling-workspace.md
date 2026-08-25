@@ -116,7 +116,7 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ Modelling**
 | **Move** | `G` | drags the object along the coloured arrows |
 | **Rotate** | `R` | turns the object with the coloured circles |
 | **Scale** | `S` | grows or shrinks it with the handles |
-| **Snap** | `M` | moves the handles **in steps** instead of leaving them free |
+| **All snaps** | `M` | turns all four snaps on or off at once; a second press gives back the ones that were on |
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
 | **Display mode** | `Z` | cycles the nine ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |
@@ -134,8 +134,39 @@ the native menu:
 | Copy, cut, paste | **the keys alone** — see below |
 
 **Snapping is for lining things up.** Without it an object lands 1.0374 m from the previous one;
-with it, at a round 1 m. How fine the steps are — one for moving, one for rotating, one for
-scaling — is set in **Settings ▸ Workspaces ▸ Modelling**.
+with it, at a round 1 m.
+
+### The bar at the top — what you set while manipulating
+
+A second bar floats **at the top of the viewport**, horizontal. It carries no tools but
+**behaviours**: what you change *while* manipulating, without letting go of the mouse.
+
+Each entry is a group of **two zones**. The icon, on the left, **turns that one snap** on or off
+and nothing else. The value, on the right, **opens a menu** — and choosing a value arms nothing:
+you can look at the steps on offer without changing what the scene obeys.
+
+| Entry | What the icon toggles | What the menu sets |
+|---|---|---|
+| **Camera speed** | *(nothing: it has no toggle)* | rungs from 0.5 to 20 m/s, and a free run between them |
+| **Surface snap** | lays what you drag on the first surface below it | whether it follows the slope, and how far above it floats |
+| **Grid snap** | advances a move in even steps | the step, from 1 cm to 10 m |
+| **Angle snap** | turns in even steps | the angle, as an increment or as a division of a full turn |
+| **Scale snap** | changes the scale in even steps | the ratio |
+
+**The four are independent.** Laying a prop on a table while its angle stays free is the gesture
+the single toggle could not spell. The **All snaps** button of the vertical bar, and the `M` key,
+turn every one of them off at once — and a second press gives back exactly the ones that were on.
+
+**The speed on the bar is the speed of flight.** It is the same value the wheel sets while the
+Navigate mode is armed: the two cannot contradict each other.
+
+The steps themselves are **settings**, shared by every document; the four switches belong to the
+document in hand. The same steps are in **Settings ▸ Workspaces ▸ Modelling** and in the
+**Environment** panel.
+
+**The surface snap is the one that counts in no steps**: it casts a ray downwards from what you
+are dragging and lays it on whatever it meets. It only acts during a **move** — not during a
+rotation or a resize.
 
 **The local frame shows on a turned object.** With world handles, the red arrow always points
 east. With local handles it points to the **object's** right: which is what you want to drive a

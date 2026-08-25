@@ -118,7 +118,7 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ Modé
 | **Déplacer** | `G` | tire l’objet le long des flèches de couleur |
 | **Pivoter** | `R` | fait pivoter l’objet avec les cercles de couleur |
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
-| **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
+| **Tous les magnétismes** | `M` | allume ou éteint les quatre magnétismes d’un coup ; une seconde pression rend ceux qui étaient allumés |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de **l’objet** plutôt que sur celle du monde |
 | **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
@@ -135,8 +135,40 @@ La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste es
 | Copier, couper, coller | **les touches seules** — voir plus bas |
 
 **Le magnétisme sert à aligner.** Sans lui, un objet se pose à 1,0374 m du précédent ; avec lui,
-à 1 m tout rond. La finesse des crans — un pour le déplacement, un pour la rotation, un pour
-l’échelle — se règle dans **Réglages ▸ Espaces de travail ▸ Modélisation**.
+à 1 m tout rond.
+
+### La barre du haut — ce qui se règle en manipulant
+
+Une seconde barre flotte **en haut du viewport**, horizontale. Elle ne porte pas des outils mais
+des **comportements** : ce qu’on change *pendant* qu’on manipule, sans lâcher la souris.
+
+Chaque entrée est un groupe de **deux zones**. L’icône, à gauche, **allume ou éteint** ce
+magnétisme-là et rien d’autre. La valeur, à droite, **ouvre un menu** — et choisir une valeur
+n’allume rien : on peut consulter les crans offerts sans changer ce que la scène obéit.
+
+| Entrée | Ce que l’icône bascule | Ce que le menu règle |
+|---|---|---|
+| **Vitesse de caméra** | *(rien : elle n’a pas de bascule)* | des paliers de 0,5 à 20 m/s, et un curseur libre entre eux |
+| **Magnétisme de surface** | poser ce qu’on déplace sur la première surface en dessous | s’orienter selon la pente, et de combien flotter au-dessus |
+| **Magnétisme de grille** | faire avancer un déplacement par pas réguliers | le pas, de 1 cm à 10 m |
+| **Magnétisme d’angle** | faire tourner par crans | l’angle, en incréments ou en divisions du tour |
+| **Magnétisme d’échelle** | faire varier l’échelle par crans | le ratio |
+
+**Les quatre sont indépendants.** Poser un accessoire sur une table pendant que son angle reste
+libre est le geste que la bascule unique ne savait pas dire. Le bouton **Tous les magnétismes**
+de la barre verticale, et la touche `M`, les éteignent tous d’un coup — et une seconde pression
+rend exactement ceux qui étaient allumés.
+
+**La vitesse de la barre est celle du vol.** C’est la même valeur que la molette règle quand le
+mode Naviguer est armé : les deux ne peuvent pas se contredire.
+
+Les crans eux-mêmes sont des **réglages**, partagés par tous les documents ; les quatre
+interrupteurs, eux, appartiennent au document en cours. Les mêmes crans se retrouvent dans
+**Réglages ▸ Espaces de travail ▸ Modélisation** et dans le panneau **Environnement**.
+
+**Le magnétisme de surface est le seul qui ne compte pas en crans** : il lance un rayon vers le
+bas depuis ce que vous tirez et le pose sur ce qu’il rencontre. Il n’agit que pendant un
+**déplacement** — pas pendant une rotation ni un redimensionnement.
 
 **Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
 toujours vers l’est. En repère local, elle pointe vers la droite **de l’objet** : c’est ce qu’on
