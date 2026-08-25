@@ -295,7 +295,7 @@
     "surface": "Surface snap",
     "surfaceHint": "Lays what you drag on the first surface below it. The submenu sets how it lands and how far above.",
     "surfaceSettings": "Surface snap settings",
-    "surfaceAlign": "Align to surface",
+    "surfaceAlign": "Align",
     "surfaceAligned": "Aligned",
     "surfaceFlat": "Upright",
     "surfaceOffset": "Offset",

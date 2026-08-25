@@ -295,7 +295,7 @@
     "surface": "Magnétisme de surface",
     "surfaceHint": "Poser ce que vous déplacez sur la première surface en dessous. Le sous-menu règle l’orientation et le décalage.",
     "surfaceSettings": "Réglages du magnétisme de surface",
-    "surfaceAlign": "Orienter selon la surface",
+    "surfaceAlign": "Orienter",
     "surfaceAligned": "Orienté",
     "surfaceFlat": "À plat",
     "surfaceOffset": "Décalage",
