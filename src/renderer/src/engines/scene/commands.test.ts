@@ -18,6 +18,7 @@ import {
   moveNodes,
   negateNodes,
   reparentNode,
+  reorderNode,
   multi,
   removeIkChain,
   removeNode,
@@ -531,6 +532,74 @@ describe('setLightOn', () => {
   })
 })
 
+describe('reorderNode', () => {
+  // The outliner reads a level off the order of `nodes`: `a`, `b`, then `c` inside `b`.
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
+  const order = (state: SceneState, parentId: string | null = null): string[] =>
+    state.nodes.filter(node => node.parentId === parentId).map(node => node.id)
+
+  it('moves a node down its own level, and puts it back', () => {
+    const command = reorderNode('a', null, 1)
+    const moved = command.apply(start)
+
+    expect(order(moved)).toEqual(['b', 'a'])
+    expect(order(command.revert(moved))).toEqual(['a', 'b'])
+  })
+
+  it('moves a node up its own level', () => {
+    expect(order(reorderNode('b', null, 0).apply(start))).toEqual(['b', 'a'])
+  })
+
+  // The other half of the gesture: a row dropped between two rows of ANOTHER level changes both
+  // where it hangs and where it sits.
+  it('lands in another level at the place asked for', () => {
+    const moved = reorderNode('a', 'b', 0).apply(start)
+
+    expect(order(moved, 'b')).toEqual(['a', 'c'])
+    expect(order(moved)).toEqual(['b'])
+  })
+
+  it('takes a node back out of the group holding it', () => {
+    const moved = reorderNode('c', null, 0).apply(start)
+
+    expect(order(moved)).toEqual(['c', 'a', 'b'])
+    expect(order(moved, 'b')).toEqual([])
+  })
+
+  // Applied, it would close the tree on itself and every walk of it would run forever.
+  it('refuses a move under its own descendant, and leaves the scene untouched', () => {
+    expect(reorderNode('b', 'c', 0).apply(start)).toBe(start)
+  })
+
+  it('leaves an unknown node alone', () => {
+    expect(reorderNode('ghost', null, 0).apply(start)).toBe(start)
+  })
+
+  /**
+   * A parent ahead of its own children is the one property the rest of the engine reads the flat
+   * array for. The case that breaks it is a GROUP dragged past its own children, which needs a
+   * fourth node to be aimed at — `b` holds `c`, and `d` is the row it lands after.
+   */
+  it('carries what hangs from a group when the group moves past it', () => {
+    const held: SceneState = { ...start, nodes: [...start.nodes, mesh('d')] }
+    const moved = reorderNode('b', null, 2).apply(held)
+    const ids = moved.nodes.map(node => node.id)
+
+    expect(order(moved)).toEqual(['a', 'd', 'b'])
+    expect(order(moved, 'b')).toEqual(['c'])
+    expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('c'))
+  })
+
+  // The place it came from is only known once the move runs — a redo has to capture it again.
+  it('captures where it came from again when it is replayed', () => {
+    const command = reorderNode('a', null, 1)
+    const moved = command.apply(start)
+    const back = command.revert(moved)
+
+    expect(order(command.apply(back))).toEqual(['b', 'a'])
+  })
+})
+
 describe('reparentNode', () => {
   const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
 
@@ -880,6 +949,7 @@ describe('a revert asked for before its apply', () => {
     ['setLight', setLight('l', { kind: 'ambient', color: '#fff', intensity: 2 })],
     ['setSprite', setSprite('s', DEFAULT_SPRITE)],
     ['reparentNode', reparentNode('a', 'l')],
+    ['reorderNode', reorderNode('a', null, 0)],
     ['setWorld', setWorld({ environment: { kind: 'skybox', assetId: 'sky-1' } })],
   ]
 

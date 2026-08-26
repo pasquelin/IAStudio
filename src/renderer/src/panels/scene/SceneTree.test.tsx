@@ -157,6 +157,48 @@ describe('SceneTree', () => {
     expect(scene().nodes[0]?.parentId).toBeNull()
   })
 
+  /**
+   * The half the outliner did not have until 2026-08-26: every row was a target over its whole
+   * height, so a node aimed BETWEEN two rows went inside one. jsdom measures at zero, so the row
+   * is given a height — where in it the pointer sits tells an insertion from a reparent.
+   */
+  it('moves a node along its level when dropped between two rows, through the history', () => {
+    render(<SceneTree documentId="doc-1" />)
+    const rows = screen.getAllByRole('treeitem')
+    const order = (): (string | undefined)[] =>
+      scene()
+        .nodes.filter(node => node.parentId === null)
+        .map(node => node.name)
+    const before = order()
+
+    const data = dragData()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    // The bottom edge of the row below it: past it, and at the same level.
+    rows[2]!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+    fireEvent.drop(rows[2]!, { dataTransfer: data, clientY: 27 })
+
+    expect(order()).toEqual([before[1], before[0], ...before.slice(2)])
+
+    useScenes.getState().undo('doc-1')
+    expect(order()).toEqual(before)
+  })
+
+  // It stands for the scene, not for a node: there is nothing for a row to sit beside it in.
+  it('offers no insertion beside the root, only the drop that goes into it', () => {
+    render(<SceneTree documentId="doc-1" />)
+    const rows = screen.getAllByRole('treeitem')
+    const before = scene().nodes.map(node => node.parentId)
+
+    const data = dragData()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    rows[0]!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+    fireEvent.drop(rows[0]!, { dataTransfer: data, clientY: 1 })
+
+    // Taken as a drop INTO the scene, which is what the root means, and the node was already
+    // there: nothing moved, and nothing was written to the history either.
+    expect(scene().nodes.map(node => node.parentId)).toEqual(before)
+  })
+
   it('folds the root away, which is session state and not an edit', async () => {
     render(<SceneTree documentId="doc-1" />)
 

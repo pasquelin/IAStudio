@@ -3,10 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
 import { Tree, type TreeNode } from '@/design/Tree'
-import { canReparent, type SceneNode } from '@/engines/scene/sceneState'
+import type { Command } from '@/engines/core/history'
+import { canReparent, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
-import { reparentNode } from '@/engines/scene/commands'
+import { reorderNode, reparentNode } from '@/engines/scene/commands'
 import { openSceneNodeMenu } from '@/spaces/three/sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/sceneCommands'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -52,6 +53,24 @@ export function SceneTree({ documentId }: { documentId: string }) {
     [nodes],
   )
 
+  /** What the two halves of the drag share: where the row aims, and opening what it lands in. */
+  const move = (
+    ids: readonly string[],
+    parentId: string | null,
+    build: (id: string, wanted: string | null) => Command<SceneState> | null,
+  ): void => {
+    const id = ids[0]
+    const wanted = parentId === SCENE_ROOT ? null : parentId
+    if (id === undefined || !canReparent(nodes, id, wanted)) return
+
+    const command = build(id, wanted)
+    if (!command) return
+
+    useScenes.getState().runCommand(documentId, command)
+    // Opened, or the node just moved would vanish into a folded branch.
+    if (wanted) setExpandedIds(current => new Set(current).add(wanted))
+  }
+
   return (
     <Tree
       nodes={items}
@@ -61,24 +80,22 @@ export function SceneTree({ documentId }: { documentId: string }) {
       // The root is a row but not a node: clicking it selects nothing, and a range that spans
       // it steps over it rather than selecting a thing the scene has never heard of.
       selectable={item => item.node !== null}
-      // The root stands for the scene, so dropping onto it is how a node comes back out of a
-      // group.
-      // One row at a time: `dragMultiple` is off here, so the batch is always the row itself.
-      onDrop={(ids, parentId) => {
-        const id = ids[0]
-        if (id === undefined) return
-
-        const wanted = parentId === SCENE_ROOT ? null : parentId
-        const node = nodes.find(candidate => candidate.id === id)
-        // Refused here rather than by the command: a move that changes nothing — dropping a row
-        // back where it came from, the commonest gesture of the whole drag — would otherwise
-        // leave a dead entry in the history, and a ⌘Z that appears to do nothing.
-        if (!node || node.parentId === wanted || !canReparent(nodes, id, wanted)) return
-
-        useScenes.getState().runCommand(documentId, reparentNode(id, wanted))
-        // Opened, or the node just moved would vanish into a folded branch.
-        if (wanted) setExpandedIds(current => new Set(current).add(wanted))
-      }}
+      // Dropped ONTO a row, which hangs the node from it — the root standing for the scene, so
+      // that is also how a node comes back out of a group. One row at a time: `dragMultiple` is
+      // off here, so the batch is always the row itself.
+      onDrop={(ids, parentId) =>
+        move(ids, parentId, (id, wanted) =>
+          // Refused here rather than by the command: a row dropped back where it came from is the
+          // commonest gesture of the drag, and it would leave a dead entry in the history.
+          nodes.find(one => one.id === id)?.parentId === wanted ? null : reparentNode(id, wanted),
+        )
+      }
+      // Dropped BETWEEN two rows, which gives the node a PLACE in a level — what every 3D
+      // outliner does and what the middle of a row cannot say. `Tree` offers none beside the
+      // root: that row stands for the scene, which has no siblings.
+      onInsert={(ids, parentId, index) =>
+        move(ids, parentId, (id, wanted) => reorderNode(id, wanted, index))
+      }
       // A second channel beside the tree's own, which reparents: this one is what the animation
       // band reads to put an object on itself. The tree knows nothing of it, and it knows nothing
       // of the tree — see `onDragStart` on `Tree`.

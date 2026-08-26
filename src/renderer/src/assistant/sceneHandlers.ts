@@ -33,6 +33,7 @@ import {
   multi,
   removeNode,
   renameNode,
+  reorderNode,
   reparentNode,
   setCamera,
   setGeometry,
@@ -449,10 +450,18 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   const parentId = textOf(input, 'parentId')
   if (parentId !== null && !nodeAimed(open.state, parentId)) return refused('notFound')
 
+  // A place among the new siblings, or none: hanging a node somewhere leaves it where it already
+  // sits, which is what dropping a row ONTO another does on screen.
+  const index = numberOf(input, 'index')
+
   // A move that would close the tree on itself is refused by handing the state back untouched,
   // which without this reads as done.
   return editNode(input, node =>
-    canReparent(open.state.nodes, node.id, parentId) ? reparentNode(node.id, parentId) : null,
+    !canReparent(open.state.nodes, node.id, parentId)
+      ? null
+      : index === null
+        ? reparentNode(node.id, parentId)
+        : reorderNode(node.id, parentId, index),
   )
 }
 

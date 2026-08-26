@@ -667,7 +667,7 @@
       },
       "nodeReparent": {
         "title": "Reparent an object",
-        "description": "Hangs one node under another, or under the scene itself when no parent is given. The node keeps its own transform, which is then read relative to its new parent."
+        "description": "Hangs one node under another, or under the scene itself when no parent is given, and puts it where asked among its new neighbours. Giving a place without a parent therefore lifts the node up to the scene: repeat the parent to change nothing but the place. The node keeps its own transform, which is then read relative to its new parent."
       },
       "nodeSelect": {
         "title": "Select objects",
@@ -1055,6 +1055,7 @@
       "adjustment": "Which dial the layer carries",
       "parentId": "Group to move it into",
       "index": "Place in the stack, counted from the bottom",
+      "nodeIndex": "Place among the objects of the same level, counted from the top of the list",
       "opacity": "Opacity, from 0 to 1",
       "fillOpacity": "Fill opacity, from 0 to 1",
       "blend": "Blend mode",

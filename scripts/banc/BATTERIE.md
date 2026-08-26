@@ -726,6 +726,7 @@ Dans la scène Test MCP :
 - [ ] « Déplace le deuxième point du chemin d'un mètre vers le haut. »
 - [ ] « Supprime le dernier point du chemin. »
 - [ ] « Range la sphère sous le cube, pour qu'elle le suive quand je le déplace. »
+- [ ] « Mets la sphère tout en haut de la liste de la scène. »
 
 ## 47. Caméras et vue
 

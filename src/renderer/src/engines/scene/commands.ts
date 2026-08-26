@@ -715,6 +715,65 @@ export function reparentNode(id: string, parentId: string | null): Command<Scene
 }
 
 /**
+ * Moves a node WITHIN the order of a level, and to another level in the same gesture — a row
+ * dragged between two others, where `reparentNode` answers the drop onto one.
+ *
+ * `index` counts the level once the node has LEFT it, which is what `Tree` reports. The order of
+ * a level IS the order of the flat `nodes`, so the node is placed relative to its SIBLINGS — just
+ * before the one it takes the place of, which keeps a parent ahead of its own children.
+ */
+export function reorderNode(
+  id: string,
+  parentId: string | null,
+  index: number,
+): Command<SceneState> {
+  let previous: { parentId: string | null; at: number } | null = null
+
+  return {
+    id: `reorder:${id}`,
+    apply: state => {
+      const at = state.nodes.findIndex(node => node.id === id)
+      if (at < 0 || !canReparent(state.nodes, id, parentId)) return state
+
+      previous = { parentId: state.nodes[at]?.parentId ?? null, at }
+      return lifted(state, id, parentId, rest => {
+        const before = rest.filter(one => one.parentId === parentId)[index]
+        // Past the last sibling is the end of the level, and the array's end is a place no
+        // sibling comes after — the subtree having left, nothing of it is stranded there.
+        return before === undefined ? rest.length : rest.indexOf(before)
+      })
+    },
+    // Back where it was taken from. The subtree lands whole at that one index, so a subtree that
+    // was SCATTERED comes back gathered — the same tree, since a level is read by `parentId`.
+    revert: state =>
+      previous === null ? state : lifted(state, id, previous.parentId, () => previous?.at ?? 0),
+  }
+}
+
+/**
+ * A node and everything under it, taken out of the flat array and put back where `target` says.
+ *
+ * 🛑 The subtree travels WHOLE: dragging a group past its own children would otherwise leave it
+ * BEHIND them in the array, and a parent that trails its children is the one property the rest of
+ * the engine reads this array for.
+ */
+function lifted(
+  state: SceneState,
+  id: string,
+  parentId: string | null,
+  target: (rest: readonly SceneNode[]) => number,
+): SceneState {
+  const moving = new Set(subtreesOf(state.nodes, [id]).map(one => one.id))
+  const rest = state.nodes.filter(one => !moving.has(one.id))
+  const carried = state.nodes
+    .filter(one => moving.has(one.id))
+    .map(one => (one.id === id ? { ...one, parentId } : one))
+  const at = target(rest)
+
+  return { ...state, nodes: [...rest.slice(0, at), ...carried, ...rest.slice(at)] }
+}
+
+/**
  * Puts a group over the selected nodes, and hangs them from it.
  *
  * Only the roots of the selection move: a node whose own parent is selected too is already
