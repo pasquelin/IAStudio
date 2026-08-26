@@ -7,7 +7,7 @@ import type { Command } from '@/engines/core/history'
 import { canReparent, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
-import { reorderNode, reparentNode } from '@/engines/scene/commands'
+import { multi, reorderNodes, reparentNode } from '@/engines/scene/commands'
 import { openSceneNodeMenu } from '@/spaces/three/sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/sceneCommands'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -53,21 +53,28 @@ export function SceneTree({ documentId }: { documentId: string }) {
     [nodes],
   )
 
-  /** What the two halves of the drag share: where the row aims, and opening what it lands in. */
+  /**
+   * What the two halves of the drag share: where the batch aims, and opening what it lands in.
+   * ONE entry in the history for the whole of it — six objects filed into a group cost one ⌘Z.
+   *
+   * The batch is handed to `build` WHOLE and never one member at a time: an insertion counts the
+   * level once they have ALL left it, so a command per member would count the ones still in
+   * place as siblings.
+   */
+  const nodeOf = (id: string): SceneNode | undefined => nodes.find(one => one.id === id)
+
   const move = (
     ids: readonly string[],
     parentId: string | null,
-    build: (id: string, wanted: string | null) => Command<SceneState> | null,
+    build: (batch: readonly string[], wanted: string | null) => Command<SceneState> | null,
   ): void => {
-    const id = ids[0]
     const wanted = parentId === SCENE_ROOT ? null : parentId
-    if (id === undefined || !canReparent(nodes, id, wanted)) return
-
-    const command = build(id, wanted)
+    const allowed = ids.filter(id => canReparent(nodes, id, wanted))
+    const command = allowed.length === 0 ? null : build(allowed, wanted)
     if (!command) return
 
     useScenes.getState().runCommand(documentId, command)
-    // Opened, or the node just moved would vanish into a folded branch.
+    // Opened, or the nodes just moved would vanish into a folded branch.
     if (wanted) setExpandedIds(current => new Set(current).add(wanted))
   }
 
@@ -80,21 +87,30 @@ export function SceneTree({ documentId }: { documentId: string }) {
       // The root is a row but not a node: clicking it selects nothing, and a range that spans
       // it steps over it rather than selecting a thing the scene has never heard of.
       selectable={item => item.node !== null}
-      // Dropped ONTO a row, which hangs the node from it — the root standing for the scene, so
-      // that is also how a node comes back out of a group. One row at a time: `dragMultiple` is
-      // off here, so the batch is always the row itself.
+      // Taking hold of a row already picked takes the whole selection with it: six objects filed
+      // into a group in one gesture, which is the reason anyone selects six. A row OUTSIDE the
+      // selection travels alone and leaves it whole — see `batchFrom`.
+      dragMultiple
+      // Dropped ONTO a row, which hangs the batch from it — the root standing for the scene, so
+      // that is also how a node comes back out of a group.
       onDrop={(ids, parentId) =>
-        move(ids, parentId, (id, wanted) =>
+        move(ids, parentId, (batch, wanted) => {
           // Refused here rather than by the command: a row dropped back where it came from is the
           // commonest gesture of the drag, and it would leave a dead entry in the history.
-          nodes.find(one => one.id === id)?.parentId === wanted ? null : reparentNode(id, wanted),
-        )
+          const moving = batch.filter(id => nodeOf(id)?.parentId !== wanted)
+          return moving.length === 0
+            ? null
+            : multi(
+                `reparent:${moving.join(':')}`,
+                moving.map(id => reparentNode(id, wanted)),
+              )
+        })
       }
       // Dropped BETWEEN two rows, which gives the node a PLACE in a level — what every 3D
       // outliner does and what the middle of a row cannot say. `Tree` offers none beside the
       // root: that row stands for the scene, which has no siblings.
       onInsert={(ids, parentId, index) =>
-        move(ids, parentId, (id, wanted) => reorderNode(id, wanted, index))
+        move(ids, parentId, (batch, wanted) => reorderNodes(batch, wanted, index))
       }
       // A second channel beside the tree's own, which reparents: this one is what the animation
       // band reads to put an object on itself. The tree knows nothing of it, and it knows nothing

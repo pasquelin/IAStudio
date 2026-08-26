@@ -18,7 +18,7 @@ import {
   moveNodes,
   negateNodes,
   reparentNode,
-  reorderNode,
+  reorderNodes,
   multi,
   removeIkChain,
   removeNode,
@@ -532,14 +532,14 @@ describe('setLightOn', () => {
   })
 })
 
-describe('reorderNode', () => {
+describe('reorderNodes', () => {
   // The outliner reads a level off the order of `nodes`: `a`, `b`, then `c` inside `b`.
   const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
   const order = (state: SceneState, parentId: string | null = null): string[] =>
     state.nodes.filter(node => node.parentId === parentId).map(node => node.id)
 
   it('moves a node down its own level, and puts it back', () => {
-    const command = reorderNode('a', null, 1)
+    const command = reorderNodes(['a'], null, 1)
     const moved = command.apply(start)
 
     expect(order(moved)).toEqual(['b', 'a'])
@@ -547,20 +547,20 @@ describe('reorderNode', () => {
   })
 
   it('moves a node up its own level', () => {
-    expect(order(reorderNode('b', null, 0).apply(start))).toEqual(['b', 'a'])
+    expect(order(reorderNodes(['b'], null, 0).apply(start))).toEqual(['b', 'a'])
   })
 
   // The other half of the gesture: a row dropped between two rows of ANOTHER level changes both
   // where it hangs and where it sits.
   it('lands in another level at the place asked for', () => {
-    const moved = reorderNode('a', 'b', 0).apply(start)
+    const moved = reorderNodes(['a'], 'b', 0).apply(start)
 
     expect(order(moved, 'b')).toEqual(['a', 'c'])
     expect(order(moved)).toEqual(['b'])
   })
 
   it('takes a node back out of the group holding it', () => {
-    const moved = reorderNode('c', null, 0).apply(start)
+    const moved = reorderNodes(['c'], null, 0).apply(start)
 
     expect(order(moved)).toEqual(['c', 'a', 'b'])
     expect(order(moved, 'b')).toEqual([])
@@ -568,11 +568,11 @@ describe('reorderNode', () => {
 
   // Applied, it would close the tree on itself and every walk of it would run forever.
   it('refuses a move under its own descendant, and leaves the scene untouched', () => {
-    expect(reorderNode('b', 'c', 0).apply(start)).toBe(start)
+    expect(reorderNodes(['b'], 'c', 0).apply(start)).toBe(start)
   })
 
   it('leaves an unknown node alone', () => {
-    expect(reorderNode('ghost', null, 0).apply(start)).toBe(start)
+    expect(reorderNodes(['ghost'], null, 0).apply(start)).toBe(start)
   })
 
   /**
@@ -582,7 +582,7 @@ describe('reorderNode', () => {
    */
   it('carries what hangs from a group when the group moves past it', () => {
     const held: SceneState = { ...start, nodes: [...start.nodes, mesh('d')] }
-    const moved = reorderNode('b', null, 2).apply(held)
+    const moved = reorderNodes(['b'], null, 2).apply(held)
     const ids = moved.nodes.map(node => node.id)
 
     expect(order(moved)).toEqual(['a', 'd', 'b'])
@@ -590,9 +590,43 @@ describe('reorderNode', () => {
     expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('c'))
   })
 
+  /**
+   * 🛑 The case a command PER MEMBER gets wrong, and it is the everyday one: two rows already in
+   * the receiving level, dragged past a row that sits between them. `index` counts the level once
+   * BOTH have left it, so a member still in place must not be counted as a sibling by the other —
+   * measured before this was one command: they landed two apart.
+   */
+  it('lands a batch contiguous, even at the end of the level it came from', () => {
+    const five: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b'), mesh('c'), mesh('d'), mesh('e')],
+    }
+    const command = reorderNodes(['a', 'c'], null, 3)
+    const moved = command.apply(five)
+
+    expect(order(moved)).toEqual(['b', 'd', 'e', 'a', 'c'])
+    expect(order(command.revert(moved))).toEqual(['a', 'b', 'c', 'd', 'e'])
+  })
+
+  it('carries the whole batch into another level, in the order given', () => {
+    const moved = reorderNodes(['a', 'c'], 'b', 0).apply(start)
+
+    expect(order(moved, 'b')).toEqual(['a', 'c'])
+    expect(order(moved)).toEqual(['b'])
+  })
+
+  // It already travels inside the member carrying it, and taking it twice would put it in the
+  // flat array twice.
+  it('takes a member nested inside another member only once', () => {
+    const moved = reorderNodes(['b', 'c'], null, 0).apply(start)
+
+    expect(moved.nodes.map(node => node.id)).toEqual(['b', 'c', 'a'])
+    expect(order(moved, 'b')).toEqual(['c'])
+  })
+
   // The place it came from is only known once the move runs — a redo has to capture it again.
   it('captures where it came from again when it is replayed', () => {
-    const command = reorderNode('a', null, 1)
+    const command = reorderNodes(['a'], null, 1)
     const moved = command.apply(start)
     const back = command.revert(moved)
 
@@ -949,7 +983,7 @@ describe('a revert asked for before its apply', () => {
     ['setLight', setLight('l', { kind: 'ambient', color: '#fff', intensity: 2 })],
     ['setSprite', setSprite('s', DEFAULT_SPRITE)],
     ['reparentNode', reparentNode('a', 'l')],
-    ['reorderNode', reorderNode('a', null, 0)],
+    ['reorderNodes', reorderNodes(['a'], null, 0)],
     ['setWorld', setWorld({ environment: { kind: 'skybox', assetId: 'sky-1' } })],
   ]
 

@@ -33,7 +33,7 @@ import {
   multi,
   removeNode,
   renameNode,
-  reorderNode,
+  reorderNodes,
   reparentNode,
   setCamera,
   setGeometry,
@@ -461,7 +461,7 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
       ? null
       : index === null
         ? reparentNode(node.id, parentId)
-        : reorderNode(node.id, parentId, index),
+        : reorderNodes([node.id], parentId, index),
   )
 }
 

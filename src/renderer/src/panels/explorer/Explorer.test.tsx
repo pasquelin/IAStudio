@@ -853,6 +853,9 @@ describe('dragging a row of the explorer', () => {
   const drag = async (from: string, onto: string): Promise<void> => {
     const data = dragTransfer()
     fireEvent.dragStart(await rowFor(from), { dataTransfer: data })
+    // The hover comes first, as the browser sends it: it is where the tree resolves what a
+    // release would do, and the drop reports that same answer.
+    fireEvent.dragOver(await rowFor(onto), { dataTransfer: data })
     fireEvent.drop(await rowFor(onto), { dataTransfer: data })
   }
 
@@ -1000,9 +1003,37 @@ describe('picking several rows of the explorer', () => {
 
     const data = dragTransfer()
     fireEvent.dragStart(await rowFor('a.png'), { dataTransfer: data })
+    fireEvent.dragOver(await rowFor('notes'), { dataTransfer: data })
     fireEvent.drop(await rowFor('notes'), { dataTransfer: data })
 
     expect(moveFiles).toHaveBeenCalledWith(['a.png', 'b.png'], 'notes')
+  })
+
+  /**
+   * A file inside a folder that is being moved travels WITH the folder: naming it as well would
+   * hand the disk a path that no longer exists by the time its turn comes.
+   */
+  it('leaves out a file whose own folder is in the batch', async () => {
+    withProject()
+    const { moveFiles } = install({
+      '': [folder('notes'), folder('keep')],
+      notes: [file('a.png', 'notes')],
+    })
+    const user = userEvent.setup()
+
+    render(<Explorer />)
+    await user.click(await within(await listing()).findByText('notes'))
+    await user.keyboard('{ArrowRight}')
+    await user.keyboard('{Meta>}')
+    await user.click(await screen.findByText('a.png'))
+    await user.keyboard('{/Meta}')
+
+    const data = dragTransfer()
+    fireEvent.dragStart(await rowFor('notes'), { dataTransfer: data })
+    fireEvent.dragOver(await rowFor('keep'), { dataTransfer: data })
+    fireEvent.drop(await rowFor('keep'), { dataTransfer: data })
+
+    expect(moveFiles).toHaveBeenCalledWith(['notes'], 'keep')
   })
 
   // What every file browser does, and what keeps a slip of the hand from moving thirty files.
@@ -1015,6 +1046,7 @@ describe('picking several rows of the explorer', () => {
 
     const data = dragTransfer()
     fireEvent.dragStart(await rowFor('b.png'), { dataTransfer: data })
+    fireEvent.dragOver(await rowFor('notes'), { dataTransfer: data })
     fireEvent.drop(await rowFor('notes'), { dataTransfer: data })
 
     expect(moveFiles).toHaveBeenCalledWith(['b.png'], 'notes')
