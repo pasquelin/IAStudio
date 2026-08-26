@@ -14,11 +14,11 @@ import type { NumericBounds } from '../numeric'
  *
  * That module reaches `scene.ts` through `material.ts`, and `scene.ts` reads THIS one — the
  * import would close a cycle, and `import-cycles.test.ts` counts a type-only import like any
- * other. `propertySpec.test.ts` holds these two to being real `AssetType` members.
+ * other. `propertySpec.test.ts` holds this to being a real `AssetType` member.
  */
-export type PropertyAssetType = 'texture' | 'image'
+export type PropertyAssetType = 'image'
 
-export const PROPERTY_ASSET_TYPES: readonly PropertyAssetType[] = ['texture', 'image']
+export const PROPERTY_ASSET_TYPES: readonly PropertyAssetType[] = ['image']
 
 export type PropertySpec =
   | ({ control: 'number' } & NumericBounds & { step: number })
