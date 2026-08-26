@@ -99,7 +99,11 @@ export default defineConfig(({ command }) => ({
   renderer: {
     root: resolve('src/renderer'),
     plugins: [react(), tailwindcss(), strippedDecoderUrls()],
-    resolve: { alias: { '@': resolve('src/renderer/src'), '@shared': partage } },
+    // `@game` here as well as in `tsconfig.web.json`: a path the compiler resolves and the
+    // bundler does not fails at RUNTIME with a green typecheck.
+    resolve: {
+      alias: { '@': resolve('src/renderer/src'), '@game': resolve('src/game'), '@shared': partage },
+    },
     build: {
       rollupOptions: {
         input: {
