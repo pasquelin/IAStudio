@@ -10,9 +10,10 @@ const STACK: PostStack = {
   effects: [{ id: 'fx-1', effect: 'bloom', enabled: true, params: {} }],
 }
 
-const field = (stack: PostStack = STACK) => {
+const field = (stack: PostStack = STACK, onApply = vi.fn()) => {
   cleanup()
-  render(<PostPresetField title="Scène" stack={stack} onApply={vi.fn()} />)
+  render(<PostPresetField title="Scène" stack={stack} onApply={onApply} />)
+  return onApply
 }
 
 const saved = () => usePostPresets.getState().saved
@@ -65,5 +66,41 @@ describe('naming a preset', () => {
     field()
 
     expect(screen.getByRole('option', { name: 'Nuit' })).toBeInTheDocument()
+  })
+})
+
+/**
+ * A preset is a GESTURE and never a value: it builds a stack, and from then on the stack is what
+ * the panel shows. The row that came back to "None" after a pick read as a pick that had failed —
+ * and left open whether the effects already there had been kept.
+ */
+describe('what the preset row says it does', () => {
+  beforeEach(() => {
+    usePostPresets.setState({ saved: [] })
+  })
+
+  // And "None" could not have served: a SHIPPED preset already answers to that name — the one
+  // that empties the stack — so the resting row and a real choice read exactly alike.
+  it('rests on the gesture rather than on a state', () => {
+    field()
+    expect(screen.getByRole('combobox')).toHaveDisplayValue('Remplacer la composition…')
+    expect(screen.getAllByRole('option', { name: 'Aucun' })).toHaveLength(1)
+  })
+
+  /**
+   * And it truly replaces. Appending instead would double what the shipped presets share —
+   * `colorGrading` is in 11 of the 12, `smaa` in 10 — which is two gradings and a wasted pass.
+   */
+  it('hands back the preset alone, never the two stacks joined', async () => {
+    const onApply = field(STACK)
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'game')
+
+    const applied = onApply.mock.calls[0]?.[0] as PostStack
+    expect(applied.effects.map(one => one.effect)).toEqual([
+      'bloom',
+      'colorGrading',
+      'vignette',
+      'fxaa',
+    ])
   })
 })

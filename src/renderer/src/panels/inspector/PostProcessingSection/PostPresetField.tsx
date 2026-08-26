@@ -77,8 +77,11 @@ export function PostPresetField({ title, stack, onApply }: PostPresetFieldProps)
       scId="postfx.preset"
       // No preset is ever the VALUE: applying one builds a stack, so what is shown afterwards
       // is a composition — a document pointing at a preset would change look the day it did.
+      // Which is why the resting row spells the GESTURE, and spells REPLACE: a select falling
+      // back to a state reads as a pick that did not take, and "apply" leaves open whether the
+      // effects already there are kept. They are not — a preset is a whole composition.
       value={null}
-      unnamedLabel={t('postfx.presetNone')}
+      unnamedLabel={t('postfx.presetReplace')}
       options={presets}
       onChange={name => {
         const next = stackOfPreset(name, saved, newId)
