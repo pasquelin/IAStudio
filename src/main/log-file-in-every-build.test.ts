@@ -4,7 +4,12 @@ import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { siteOf, walkIn } from './astSites'
 
-const ENTRY = 'main/index.ts'
+/**
+ * `bootstrap.ts` and not `index.ts`: the entry point now decides between opening the studio and
+ * being one client's way in, and the way in installs NOTHING — it silences the log, since stdout
+ * there is the client's JSON-RPC stream and it reports on stderr instead.
+ */
+const ENTRY = 'main/bootstrap.ts'
 
 const callsRecordLogsTo = (node: ts.Node): node is ts.CallExpression =>
   ts.isCallExpression(node) &&
@@ -50,10 +55,17 @@ function recordingIn(path: string, source: string): { installed: string[]; condi
  */
 describe('the log reaches a file whatever the build', () => {
   const entry = (): ReturnType<typeof recordingIn> =>
-    recordingIn(ENTRY, readFileSync(join(import.meta.dirname, 'index.ts'), 'utf8'))
+    recordingIn(ENTRY, readFileSync(join(import.meta.dirname, 'bootstrap.ts'), 'utf8'))
 
-  it('installs the file destination from the entry point', () => {
+  it('installs the file destination where the studio starts', () => {
     expect(entry().installed).not.toEqual([])
+  })
+
+  /** The entry has to REACH it, or the guard above holds a file nothing runs. */
+  it('is reached by the entry point', () => {
+    expect(readFileSync(join(import.meta.dirname, 'index.ts'), 'utf8')).toContain(
+      "await import('@main/bootstrap')",
+    )
   })
 
   it('installs it outside any question about the build', () => {
