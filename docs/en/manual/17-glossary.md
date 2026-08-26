@@ -36,7 +36,7 @@ back.
 That is its strength: it never writes into the other layers' pixels. You can adjust it a hundred
 times, or delete it, having spoilt nothing.
 
-**Ambient occlusion** *(AO, texture channel)*
+**Ambient occlusion** *(AO, material channel)*
 A greyscale image marking the places ambient light struggles to reach: hollows, corners, joints. It
 adds depth to a material that looked flat.
 
@@ -50,7 +50,7 @@ The second half of your API credentials, the equivalent of a password. It always
 *API key*, and is never displayed in the clear once stored.
 
 **Asset**
-A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *texture*, a sky.
+A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *sky*.
 Keep this in mind: **an asset is a finished, reusable file**.
 
 Assets live in the **Explorer** once they are on your disk, and in the **Library** while they are
@@ -605,10 +605,6 @@ carries a dot (`•`) beside its name.
 **Temperature**
 An image's shift towards cold (blue) or warm (orange). It is the setting that stops a photograph
 taken under a bulb from looking yellow.
-
-**Texture**
-One of the images a *material* is made of: base colour, normals, roughness. A flat file. It is not
-a material, which is the whole set of those images and their settings.
 
 **Theme**
 The interface's colour scheme: **Dark**, **Light**, or **System** (which follows your computer and

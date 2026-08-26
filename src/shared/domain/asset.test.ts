@@ -169,7 +169,7 @@ describe('how long the media runs', () => {
    */
   it('tells a picture from an asset whose length is merely unknown', () => {
     expect(isTimeless(asset({ type: 'image' }))).toBe(true)
-    expect(isTimeless(asset({ type: 'texture' }))).toBe(true)
+    expect(isTimeless(asset({ type: 'image' }))).toBe(true)
     expect(isTimeless(asset({ type: 'skybox' }))).toBe(true)
 
     expect(isTimeless(asset({ type: 'video' }))).toBe(false)

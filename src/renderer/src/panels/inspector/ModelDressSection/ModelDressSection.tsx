@@ -51,7 +51,7 @@ export function ModelDressSection({
   const assemble = async (slot: number): Promise<void> => {
     // Asked at the press, not subscribed to: nothing this panel DRAWS depends on the model's own
     // pictures, and a query per selection would run in the two modes that never offer this.
-    const own = await (getBridge()?.assets.search({ derivedFrom: assetId, type: 'texture' }) ?? [])
+    const own = await (getBridge()?.assets.search({ derivedFrom: assetId, type: 'image' }) ?? [])
     const materialId = await openModelMaterial({ id: assetId, name }, own)
     if (materialId) onWearAt(slot, materialId)
   }

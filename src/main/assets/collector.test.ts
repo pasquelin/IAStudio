@@ -178,7 +178,7 @@ describe('asset collector', () => {
 
   // One converter job answers with several pictures. Filed as plain images, the material
   // would be lost: the channel a picture carries is what makes it part of one.
-  it('files a PBR channel as a texture, whatever its kind says', async () => {
+  it('files a PBR channel as the picture it is, its channel remembered', async () => {
     const { backend, imported } = backendSpy()
     const collect = createAssetCollector({
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-normal' }),
@@ -188,7 +188,7 @@ describe('asset collector', () => {
     })
 
     await collect(JOB, ['remote_1'], null)
-    expect(imported[0]).toMatchObject({ type: 'texture', map: 'normal' })
+    expect(imported[0]).toMatchObject({ type: 'image', map: 'normal' })
     expect(imported[0]?.mapInverted).toBeUndefined()
   })
 

@@ -225,7 +225,7 @@
     "triangles": "Triangles",
     "vertices": "Sommets",
     "draws": "Appels de dessin",
-    "textures": "Textures",
+    "textures": "Images en mémoire",
     "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
   },
   "sceneDisplay": {

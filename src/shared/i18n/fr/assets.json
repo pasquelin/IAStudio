@@ -32,7 +32,7 @@
     "details": "Détail de la ligne",
     "editPixels": "Modifier l’image",
     "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place",
-    "extractTextures": "Extraire ses textures",
+    "extractTextures": "Extraire ses images",
     "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes",
     "fetchActionHint": "Télécharge les assets choisis de la bibliothèque distante dans le projet ouvert",
     "fetchAction_many": "Télécharger {{count, number}} assets",
@@ -88,7 +88,7 @@
     "video": "Vidéo",
     "audio": "Audio",
     "mesh": "Maille",
-    "texture": "Texture",
+    "material": "Matière",
     "skybox": "Skybox",
     "animation": "Animation",
     "other": "Autre"

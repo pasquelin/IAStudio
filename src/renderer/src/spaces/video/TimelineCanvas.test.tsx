@@ -584,7 +584,7 @@ describe('TimelineCanvas', () => {
   // The strip takes every kind of asset, and a texture is as timeless as an image: reading the
   // type alone rather than `isTimeless` refused this pull on two of the three kinds of picture.
   it('lengthens a texture the same way, since a picture is a picture however it was made', () => {
-    useAssets.setState({ items: [asset({ id: 'a1', type: 'texture', name: 'brick.png' })] })
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'image', name: 'brick.png' })] })
     layDown()
 
     pullLeftEdgeTo(1_000_000)

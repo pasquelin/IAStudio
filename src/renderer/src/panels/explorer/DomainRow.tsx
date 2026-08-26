@@ -1,4 +1,4 @@
-import { mdiFileOutline } from '@mdi/js'
+import { mdiFileOutline, mdiTextureBox } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { FileDomain } from '@shared/domain/fileRole'
 import { Row } from '@/design/Row'
@@ -18,17 +18,23 @@ export function DomainRow({ domain, count }: { domain: FileDomain; count: number
 
   return (
     <Row
-      media={
-        <UiIcon
-          path={domain === 'other' ? mdiFileOutline : assetIcon(domain)}
-          size={14}
-          className="shrink-0"
-        />
-      }
+      media={<UiIcon path={glyphOf(domain)} size={14} className="shrink-0" />}
       title={t(`assetTypes.${domain}`)}
       // Beside the name rather than after it: the count is what this row exists to say, and a
       // domain of four hundred pictures reads at a glance.
       actions={<span className="text-muted text-mini tabular-nums">{count}</span>}
     />
   )
+}
+
+/**
+ * `material` and `other` are the two domains no asset type answers for: one is a document, the
+ * other is a file the studio leaves alone. Both would fall through `assetIcon`, which is written
+ * on the shelves.
+ */
+function glyphOf(domain: FileDomain): string {
+  if (domain === 'other') return mdiFileOutline
+  if (domain === 'material') return mdiTextureBox
+
+  return assetIcon(domain)
 }

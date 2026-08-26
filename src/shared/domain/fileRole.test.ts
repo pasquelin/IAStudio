@@ -22,8 +22,8 @@ describe('natureOf', () => {
     expect(natureOf('Level.gltf')).toEqual({ domain: 'mesh', role: 'edit' })
     expect(natureOf('Cover.ora')).toEqual({ domain: 'image', role: 'edit' })
     expect(natureOf('Montage.otio')).toEqual({ domain: 'video', role: 'edit' })
-    expect(natureOf('Brick.mtlx')).toEqual({ domain: 'texture', role: 'edit' })
-    expect(natureOf('Dusk.mtlx')).toEqual({ domain: 'texture', role: 'edit' })
+    expect(natureOf('Brick.mtlx')).toEqual({ domain: 'material', role: 'edit' })
+    expect(natureOf('Dusk.mtlx')).toEqual({ domain: 'material', role: 'edit' })
   })
 
   // A project folder is the user's own: a `.pdf` of notes beside the rushes is shown and left
@@ -53,7 +53,7 @@ describe('natureOf', () => {
 
   it('offers every domain a file can be filed under', () => {
     expect(FILE_DOMAINS).toContain('other')
-    expect(FILE_DOMAINS).toContain('texture')
+    expect(FILE_DOMAINS).toContain('material')
   })
 })
 

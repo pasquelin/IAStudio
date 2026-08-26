@@ -253,7 +253,7 @@ aucune surface : il ouvre l’asset dans un onglet à lui.
 | une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-Une texture se double-clique comme les autres : une **matière à elle** s’ouvre, dont elle remplit
+Une image qui porte un canal se double-clique comme les autres : une **matière à elle** s’ouvre, dont elle remplit
 la couleur de base. Pour la poser dans la matière que vous avez devant vous, c’est le
 glisser-déposer ou le clic droit ▸ **Utiliser comme couleur de base**.
 

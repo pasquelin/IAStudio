@@ -210,7 +210,7 @@
         "description": "Parmi les assets nommés, rend ceux dont le catalogue attend un fichier qui n’est plus là. Un asset qui n’a jamais eu de fichier local n’en est jamais, puisque rien n’était attendu de lui."
       },
       "assetExtractTextures": {
-        "title": "Extraire les textures d’un modèle",
+        "title": "Extraire les images d’un modèle",
         "description": "Sort les images qu’un fichier 3D transporte et les fait entrer dans la bibliothèque du projet comme des assets à part entière. Rend les lignes qui viennent d’être créées."
       },
       "assetReveal": {

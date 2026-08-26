@@ -236,7 +236,7 @@ describe('local backend', () => {
     await expect(readFile(source)).rejects.toThrow()
   })
 
-  // One folder per kind, and the catalogue reads a texture's channel off the folder it sits in.
+  // One folder per kind, and the catalogue reads a channel off the row rather than off the folder.
   it('files each kind under its own folder', async () => {
     const landed = async (type: AssetType): Promise<string | undefined> => {
       const asset = await backend.importFromBytes(
@@ -304,7 +304,7 @@ describe('local backend', () => {
       id: 'asset_1',
       url: 'https://cdn.example/render.png',
       name: 'Albedo',
-      type: 'texture',
+      type: 'image',
       jobId: 'job_1',
       remoteAssetId: 'asset_remote',
       remoteOwnerId: 'proj_a',
@@ -758,7 +758,7 @@ describe('the still brought down beside the bytes', () => {
    * `posterUrl` like every other surface, and the still would be painted under its waveform.
    */
   it('writes none for a kind that has a picture of its own', async () => {
-    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'audio']
+    const alreadyShowable: AssetType[] = ['image', 'skybox', 'audio']
     for (const type of alreadyShowable) {
       const asset = await backend.importFromUrl({
         id: `asset_${type}`,
@@ -772,7 +772,7 @@ describe('the still brought down beside the bytes', () => {
     }
 
     // One download per asset, and not one thumbnail among them.
-    expect(download).toHaveBeenCalledTimes(4)
+    expect(download).toHaveBeenCalledTimes(3)
   })
 
   // The model is the asset; the still is a convenience. A CDN answering 404 must not cost the

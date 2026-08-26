@@ -272,7 +272,7 @@ le résultat : ça se relit à la main, et sept l'avaient fait.
 
 - [ ] « Quel projet est actuellement ouvert et quels documents sont ouverts ? »
 - [x] « Liste-moi les fichiers présents dans mon projet, classés par type. »
-- [x] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D, de textures et de skyboxes ? »
+- [x] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D et de skyboxes ? »
 - [x] « Quel document est actuellement actif ? »
 - [ ] « Quels sont les éléments présents dans la scène 3D actuellement ouverte ? »
 - [ ] « Quelles caméras et quelles lumières sont présentes dans ma scène ? »

@@ -100,7 +100,7 @@ describe('opening an asset', () => {
    * The two documents coexist on one asset: the channel and the picture are not the same edit.
    */
   it('opens the pixels of a texture in Images, beside the tab its own space opened', async () => {
-    const texture = picture({ id: 'asset-tex', type: 'texture', name: 'body.png' })
+    const texture = picture({ id: 'asset-tex', map: 'baseColor', name: 'body.png' })
     await openAsset(texture)
     const channel = opened().id
 

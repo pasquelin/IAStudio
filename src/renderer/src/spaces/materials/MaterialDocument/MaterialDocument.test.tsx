@@ -45,7 +45,7 @@ const fill = (channel: 'baseColor' | 'normal', assetId = 'img-1'): void => {
 const shelved = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'normal-1',
   name: 'Robot — Normale',
-  type: 'texture',
+  type: 'image',
   location: 'local',
   tags: [],
   createdAt: '2026-08-13T10:00:00.000Z',

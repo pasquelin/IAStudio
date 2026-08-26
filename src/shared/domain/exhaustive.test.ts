@@ -68,7 +68,6 @@ describe('the lists that stand for a union', () => {
       video: true,
       audio: true,
       mesh: true,
-      texture: true,
       skybox: true,
       animation: true,
     }

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { channelFromProviderType } from './material'
 import { assetTypeOfRemote } from './assetKind'
 
 describe('assetTypeOfRemote', () => {
-  it('files every PBR channel as a texture, whatever its kind says', () => {
+  it('files every PBR channel as a picture, whatever its kind says', () => {
     const channels = [
       'texture-albedo',
       'texture-normal',
@@ -18,12 +19,12 @@ describe('assetTypeOfRemote', () => {
     ]
 
     for (const metadataType of channels) {
-      expect(assetTypeOfRemote({ kind: 'image', metadataType })).toBe('texture')
+      expect(assetTypeOfRemote({ kind: 'image', metadataType })).toBe('image')
     }
   })
 
-  it('files a channel of a textured mesh as a texture rather than as the mesh', () => {
-    expect(assetTypeOfRemote({ kind: '3d', metadataType: '3d-texture-normal' })).toBe('texture')
+  it('files a channel of a textured mesh as a picture rather than as the mesh', () => {
+    expect(assetTypeOfRemote({ kind: '3d', metadataType: '3d-texture-normal' })).toBe('image')
   })
 
   it('files an LDR skybox as a skybox, though the API calls it an image', () => {
@@ -39,11 +40,11 @@ describe('assetTypeOfRemote', () => {
     expect(assetTypeOfRemote({ kind: 'image-hdr' })).toBe('skybox')
   })
 
-  it('files a picture of a material as a texture', () => {
-    expect(assetTypeOfRemote({ kind: 'image', metadataType: 'texture' })).toBe('texture')
-    expect(assetTypeOfRemote({ kind: 'image', metadataType: 'upscale-texture' })).toBe('texture')
+  it('files a picture of a material as the picture it is', () => {
+    expect(assetTypeOfRemote({ kind: 'image', metadataType: 'texture' })).toBe('image')
+    expect(assetTypeOfRemote({ kind: 'image', metadataType: 'upscale-texture' })).toBe('image')
     expect(assetTypeOfRemote({ kind: 'image', metadataType: 'inference-txt2img-texture' })).toBe(
-      'texture',
+      'image',
     )
   })
 
@@ -110,5 +111,31 @@ describe('assetTypeOfRemote', () => {
   it('lets a type this build has never heard of land on its kind', () => {
     // The API adds types without warning; an unknown one must not make the asset vanish.
     expect(assetTypeOfRemote({ kind: 'image', metadataType: 'txt2hologram' })).toBe('image')
+  })
+})
+
+/**
+ * The kind is gone, so `map` is the only thing left saying a picture belongs to a material —
+ * `editorIntent` reads it and nothing else. A whole-surface generation carries no NAMED channel,
+ * which is exactly the commonest one the Materials space makes.
+ */
+describe('the channel a generated picture carries', () => {
+  it('reads a whole surface as the base colour it fills', () => {
+    for (const metadataType of ['texture', 'upscale-texture', 'inference-txt2img-texture']) {
+      expect(channelFromProviderType(metadataType)).toEqual({ channel: 'baseColor' })
+    }
+  })
+
+  it('leaves a named channel alone', () => {
+    expect(channelFromProviderType('texture-normal')).toEqual({ channel: 'normal' })
+    expect(channelFromProviderType('texture-smoothness')).toEqual({
+      channel: 'roughness',
+      inverted: true,
+    })
+  })
+
+  it('claims nothing for a picture no material asked for', () => {
+    expect(channelFromProviderType('txt2img')).toBeNull()
+    expect(channelFromProviderType('skybox-base-360')).toBeNull()
   })
 })

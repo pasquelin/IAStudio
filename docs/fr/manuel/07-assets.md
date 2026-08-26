@@ -33,7 +33,7 @@ reste offerte : elle a les modèles de votre machine à vous proposer. Voir
 
 ## Ce qu’on y trouve
 
-Sept types d’assets :
+Six types d’assets :
 
 | Type | Ce que c’est | Où il atterrit |
 |---|---|---|
@@ -41,11 +41,10 @@ Sept types d’assets :
 | **Vidéo** | un plan animé | `Video/` |
 | **Audio** | un son, une musique | `Audio/` |
 | **Maille** | un objet en 3D | `3D/` |
-| **Texture** | une carte de matière | `Materials/` |
 | **Skybox** | un ciel à 360° | `Sky/` |
 | **Animation** | un mouvement, à rejouer sur un personnage | `Animations/` |
 
-**Où il atterrit, pas où il vit.** Ces sept dossiers sont posés à la création du projet et ne sont
+**Où il atterrit, pas où il vit.** Ces six dossiers sont posés à la création du projet et ne sont
 qu’un point de départ : déplacez un asset où vous voulez, renommez le dossier, videz-le. Ce qu’un
 fichier EST ne dépend pas de l’endroit où il est — le studio le retrouve, et sa fiche le suit.
 
@@ -160,7 +159,7 @@ moitié basse. Le clic droit sur un fichier y offre douze gestes sur le fichier 
 | Groupe | Ce qu’il contient |
 |---|---|
 | **Envoyer vers ▸** | toutes les destinations capables de recevoir ce type d’asset |
-| **Asset ▸** | **Nommer**, **Planche-contact**, **Envoyer** au cloud, et **Extraire ses textures** pour une maille |
+| **Asset ▸** | **Nommer**, **Planche-contact**, **Envoyer** au cloud, et **Extraire ses images** pour une maille |
 
 **Deux groupes et non dix lignes** : ce menu offrait déjà douze gestes sur le fichier, et tout
 mettre à plat donnait une liste que personne ne lit.
@@ -179,7 +178,7 @@ l’Explorateur, pas seulement sur la ligne cliquée ; leur libellé annonce le 
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Matières | images |
-| **Modifier l’image** | un onglet à elle, espace Image | textures et ciels |
+| **Modifier l’image** | un onglet à elle, espace Image | canaux et ciels |
 
 
 **Renommer, Afficher dans le dossier et Mettre à la corbeille sont ailleurs dans le même menu**,
@@ -206,12 +205,12 @@ sélectionné, la ligne reste active et ne fait rien**, sans message. C’est la
 qui reste allumée alors qu’il manque quelque chose — partout ailleurs, ce qui manque grise :
 choisissez d’abord le personnage dans la scène, puis lancez le mouvement.
 
-**Modifier l’image est la ligne qui ouvre un onglet**, et elle n’apparaît que sur une texture
+**Modifier l’image est la ligne qui ouvre un onglet**, et elle n’apparaît que sur un canal
 ou un ciel déjà posés sur le disque : ces deux-là s’assemblent dans leur espace — l’un tient
 des canaux, l’autre une projection — et aucun des deux ne réécrit l’image qui est dessous.
 C’est donc dans Image qu’on la retouche, et l’onglet ouvert est celui de l’asset lui-même.
 
-**Extraire ses textures ne s’adresse qu’à une maille**, et c’est l’autre moitié du même
+**Extraire ses images ne s’adresse qu’à une maille**, et c’est l’autre moitié du même
 besoin : les images que le modèle porte à l’intérieur ressortent dans le projet, où elles
 deviennent des assets comme les autres — donc retouchables. Elle vit dans le groupe **Asset**, et
 reste grisée tant que le modèle n’est pas sur votre disque.
@@ -252,7 +251,7 @@ Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compt
 | Ce que vous double-cliquez | Où il s’ouvre |
 |---|---|
 | une **image** | l’espace Image |
-| une **texture** | l’espace Matières |
+| une **image qui porte un canal** | l’espace Matières |
 | un **ciel** | l’espace Skyboxes |
 | une **maille** | l’espace Modélisation |
 | un **son** | l’espace Audio |
@@ -280,7 +279,7 @@ disque — pas d’un asset abîmé.
 | un son | l’**éditeur audio** | il s’ajoute au montage comme un clip, et c’est lui qu’on édite |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 | un mouvement, ou une maille qui en porte | une **sous-piste** de la bande, en 3D | il y devient un bloc, là où vous lâchez |
-| une image | une ligne de texture de l’**Inspecteur** — les cartes d’une matière, l’image d’un sprite | elle remplit cette ligne-là, et elle seule |
+| une image | une ligne d’image de l’**Inspecteur** — les cartes d’une matière, l’image d’un sprite | elle remplit cette ligne-là, et elle seule |
 | un ciel | la ligne **Ciel** de l’Inspecteur, en 3D comme en Matières | il éclaire l’aperçu |
 | n’importe quel asset | une **ligne de dossier** de l’Explorateur | son fichier y est déplacé |
 
@@ -548,7 +547,7 @@ sans avoir exécuté `pnpm ffmpeg:fetch`.
 
 ## Où sont vraiment vos fichiers
 
-**Là où vous les avez mis.** Un asset généré atterrit dans l’un des sept dossiers de départ — voir
+**Là où vous les avez mis.** Un asset généré atterrit dans l’un des six dossiers de départ — voir
 [Ce qu’on y trouve](#ce-quon-y-trouve) — et rien ne l’y retient : déplacez-le, rangez-le dans une
 arborescence à vous, l’Explorateur continue de le montrer et sa fiche le suit. La disposition du
 dossier de projet est décrite au chapitre [Les projets](04-projets.md#ce-quil-y-a-dedans).

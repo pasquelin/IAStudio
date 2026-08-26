@@ -210,7 +210,7 @@
         "description": "Among the named assets, returns those the catalogue expects a file for that is no longer there. An asset that never had a local file is never one of them, since nothing was expected of it."
       },
       "assetExtractTextures": {
-        "title": "Extract a model’s textures",
+        "title": "Extract a model’s images",
         "description": "Pulls the images a 3D file carries out of it and brings them into the project’s library as assets of their own. Returns the rows it has just created."
       },
       "assetReveal": {

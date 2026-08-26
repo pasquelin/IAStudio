@@ -152,13 +152,13 @@ describe('FileInfoWindow', () => {
     render(<FileInfoWindow />)
 
     const role = await screen.findByRole('combobox', { name: 'Rôle' })
-    await userEvent.selectOptions(role, 'texture')
+    await userEvent.selectOptions(role, 'skybox')
 
-    await waitFor(() => expect(update).toHaveBeenCalledWith('asset_facade', { type: 'texture' }))
+    await waitFor(() => expect(update).toHaveBeenCalledWith('asset_facade', { type: 'skybox' }))
     // 🛑 And it STAYS: this window holds its asset in a state only a folder change refreshes,
     // and retyping moves nothing on disk — so the control used to snap back to the old role
     // the moment it was corrected, with nothing on screen to say the write had gone through.
-    expect(role).toHaveValue('texture')
+    expect(role).toHaveValue('skybox')
   })
 
   /** Read out, never offered: there is nowhere to write a correction down. */

@@ -31,18 +31,19 @@ type BundledTextureDeps = {
 
 /** Where one lands in the project, and where it is looked for before being copied again. */
 function pathOf(id: CheckerTextureId): string {
-  return pathIn(DEFAULT_ASSET_FOLDERS.texture, checkerTextureFile(id))
+  return pathIn(DEFAULT_ASSET_FOLDERS.image, checkerTextureFile(id))
 }
 
 /**
- * Where a project created before `Textures` became `Materials` filed it — searched too, since this
- * folder is a catalogue LOOKUP here and not merely where a new file lands.
+ * Where a project filed one before the folder settled — searched too, since this folder is a
+ * catalogue LOOKUP here and not merely where a new file lands.
  *
- * Without it the first 3D open of such a project installs a second set of four under fresh ids,
- * and its meshes go on wearing the first: eight working textures where there should be four.
+ * BOTH earlier spellings, and the second is easy to forget: `Textures` became `Materials` and
+ * then `Images` within a day. Miss either and the first 3D open of such a project installs a
+ * second set of four under fresh ids, while its meshes go on wearing the first.
  */
-function formerPathOf(id: CheckerTextureId): string {
-  return pathIn('Textures', checkerTextureFile(id))
+function formerPathsOf(id: CheckerTextureId): readonly string[] {
+  return ['Materials', 'Textures'].map(folder => pathIn(folder, checkerTextureFile(id)))
 }
 
 /**
@@ -71,9 +72,10 @@ export function registerBundledTextureHandlers({
   exists,
 }: BundledTextureDeps): void {
   const install = async (id: CheckerTextureId): Promise<Asset> => {
-    const held =
-      (await catalog().search({ path: pathOf(id) }))[0] ??
-      (await catalog().search({ path: formerPathOf(id) }))[0]
+    let held = (await catalog().search({ path: pathOf(id) }))[0]
+    for (const former of formerPathsOf(id)) {
+      held ??= (await catalog().search({ path: former }))[0]
+    }
     // The row alone is not enough: a texture deleted in the Finder leaves it behind, and every
     // primitive of that project would then be born wearing a map that resolves to no file.
     const file = held ? ownFileOf(projectPath(), held) : null
@@ -97,9 +99,7 @@ export function registerBundledTextureHandlers({
         {
           id: newAssetId(),
           name: CHECKER_TEXTURE_NAMES[id],
-          // A working texture is a texture in the catalogue: it lands under the shelf's own
-          // facet, and a mesh reads it through the same door as any other map.
-          type: 'texture',
+          type: 'image',
           extension: '.png',
           map: 'baseColor',
         },

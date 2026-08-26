@@ -89,8 +89,8 @@ export async function freeAssetPath(
 /**
  * Moves an asset's file so that it is called after its new name, and answers where it now is.
  *
- * The extension and the folder are kept: a rename is neither a conversion nor a move, and a
- * texture's channel is read off the folder it sits in.
+ * The extension and the folder are kept: a rename is neither a conversion nor a move, and where
+ * a picture sits says nothing about what it is — the row does.
  *
  * Answers `undefined` for an asset that has no file of ours — one linked where the user left it,
  * one that lives in the library alone. Writing into a folder the user merely pointed at is a

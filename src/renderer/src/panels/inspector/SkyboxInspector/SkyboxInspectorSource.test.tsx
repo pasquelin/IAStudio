@@ -81,7 +81,7 @@ describe('the panorama a sky is made of', () => {
     setSkyboxSource('doc-1', PANORAMA)
     await show()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Retirer la texture' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer l’image' }))
 
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').source).toBeNull()
   })

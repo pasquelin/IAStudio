@@ -35,10 +35,9 @@ describe('where an asset can be sent', () => {
   })
 
   it('offers every picture kind the same destinations', () => {
-    // A texture and a sky ARE pictures: the sky slot takes one, and so does a layer.
+    // A sky IS a picture: the sky slot takes one, and so does a layer.
     const picture = intentsFor('image').map(intent => intent.id)
 
-    expect(intentsFor('texture').map(intent => intent.id)).toEqual(picture)
     expect(intentsFor('skybox').map(intent => intent.id)).toEqual(picture)
     expect(picture).toContain('skyboxes.source')
     expect(picture).toContain('materials.channel')
@@ -96,10 +95,12 @@ describe('where an asset is edited', () => {
     expect(editorIntent(picture())?.id).toBe('image.layer')
   })
 
-  // The two kinds a plain image shares its destinations with are edited in their own space,
-  // which is the whole difference between editing an asset and placing one.
-  it('edits a texture in Materials and a sky in Skyboxes', () => {
-    expect(editorIntent(picture({ type: 'texture' }))?.id).toBe('materials.channel')
+  /**
+   * A sky is told apart by its KIND; a channel is not, and cannot be — the studio files it as the
+   * picture it is. `map` is what remains of the distinction, and it is what has to answer here.
+   */
+  it('edits a channel in Materials and a sky in Skyboxes', () => {
+    expect(editorIntent(picture({ map: 'normal' }))?.id).toBe('materials.channel')
     expect(editorIntent(picture({ type: 'skybox' }))?.id).toBe('skyboxes.source')
   })
 
