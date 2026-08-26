@@ -25,7 +25,7 @@ const MODEL = { id: 'asset-model', name: 'Robot' }
 const texture = (overrides: Partial<ChannelTexture> = {}): ChannelTexture => ({
   id: 'asset-base',
   name: 'Robot — Couleur de base',
-  type: 'texture',
+  type: 'image',
   location: 'local',
   derivedFrom: MODEL.id,
   map: 'baseColor',

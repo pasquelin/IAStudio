@@ -1,4 +1,4 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import { action, RELATIVE_FIELD, type ActionField, type AssistantAction } from './assistantAction'
 import { BLEND_MODES } from './canvasBlend'
 
 /**
@@ -177,12 +177,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
       // Degrees, not radians: the state stores radians, and a client writing 90 for a quarter
       // turn is right more often than one writing 1.5707963.
       { key: 'rotation', kind: 'number', labelKey: 'assistant.fields.rotation', required: false },
-      {
-        key: 'relative',
-        kind: 'boolean',
-        labelKey: 'assistant.fields.relative',
-        required: false,
-      },
+      RELATIVE_FIELD,
     ],
   }),
   action({

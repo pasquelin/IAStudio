@@ -61,11 +61,10 @@ back. It is the gesture that cleans up a list where a moved folder lingers.
 ```
 My project/
 │
-├── Images/               SEVEN FOLDERS TO START FROM
+├── Images/               SIX FOLDERS TO START FROM
 ├── Video/                  laid down at creation, and ordinary: rename them,
 ├── Audio/                  empty them, throw them away, arrange them otherwise
 ├── 3D/
-├── Materials/
 ├── Sky/
 ├── Animations/
 │                           …and whatever you make beside them
@@ -91,14 +90,14 @@ Your files stay visible and you arrange them as you see fit — you must be able
 copy them, repair them. The identity card, the index and the backup do not: they are the studio's
 tools, not your work.
 
-> **The seven starter folders are only a starting point.** They are laid down at creation and never
+> **The six starter folders are only a starting point.** They are laid down at creation and never
 > put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
 > land, where the studio recreates it rather than refusing to work.
 
-> **A project created before 26/08 has a `Textures/` where this one has `Materials/`**, and it
-> keeps it: every asset carries its own path, and nothing reads its role off a folder name. What it
-> takes in from now on lands beside it, in `Materials/`. The two are renamed and merged by hand,
-> like any other folder of your project.
+> **A project created before 26/08 has one `Textures/` more**, and it keeps it: every asset
+> carries its own path, and nothing reads its role off a folder name. The pictures already there
+> stay readable and editable; the ones that arrive from now on land in `Images/`, with the rest.
+> The folder is renamed, emptied or merged by hand, like any other.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
 > sets it on `.project.json` and on `.index/` itself. **`.ia-studio/` does not get it**: the day it
@@ -281,7 +280,7 @@ write a first card.
 
 ### What the context touches, and what it does not
 
-**It applies to every generation** — images, video, 3D models, audio, textures, skies — as soon as
+**It applies to every generation** — images, video, 3D models, audio, skies — as soon as
 the model has a description field. An upscale, a conversion, a mesh made from a picture have none:
 the context then does nothing, silently.
 
@@ -330,12 +329,12 @@ wherever you filed it — under an extension that says what it is:
 The extension is there so the folder **reads at a glance**. `a3f1.gltf` next to `b204.mtlx` says
 what each one is; `a3f1.json` next to `b204.json` says nothing.
 
-> **All seven kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
+> **All six kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
 > closed document is reopened. Closing a tab whose work is not written asks before losing it.
 
 ### Walking the project — the Explorer panel
 
-The **Explorer** panel shows **the project folder**, as a tree: the seven starter folders, and
+The **Explorer** panel shows **the project folder**, as a tree: the six starter folders, and
 whatever you made or dropped in there yourself. Folders unfold, files are inside them, as in your
 system's own file browser.
 
@@ -356,8 +355,8 @@ the two is always lit:
 | **By folder** | the project as it is filed on disk, as a tree |
 | **By domain** | every file in the project grouped by what it **is**, wherever it is filed |
 
-**By domain** ignores folders. It lays down at most eight headings — the studio's seven kinds, plus
-**Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
+**By domain** ignores folders. It lays down at most eight headings — the studio's six kinds, **Material**
+for a `.mtlx` document, and **Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
 fills does not appear**: eight empty headings over a new project would say nothing at all.
 
 A heading names, it does not open: it cannot be selected, it cannot be renamed, and nothing drops
@@ -470,7 +469,7 @@ but what it holds is the studio's own writing: a file dropped in there would be 
 save, which rebuilds that folder. The document itself moves like any other file — it is its inside
 that does not open.
 
-**Everything else obeys you**, the seven starter folders included: rename them, empty them, throw
+**Everything else obeys you**, the six starter folders included: rename them, empty them, throw
 them away, take an asset out of one and file it elsewhere, cut, copy, duplicate. The studio
 follows — that is what the reconciliation pass does when a project opens and when you come back to
 the window.
@@ -519,7 +518,7 @@ moment is enough on its own.
 
 **It recognises a file by its contents, not by its path.** Move a picture from one folder to
 another, rename it, do both: the entry finds it again and follows. The ids do not change, so **a
-3D scene keeps pointing at its texture** after you have filed it elsewhere.
+3D scene keeps pointing at its image** after you have filed it elsewhere.
 
 **It never deletes an entry.** A file it cannot find is **dated as gone**, and its entry stays:
 the prompt, the seed and the lineage are written on no disk, and losing them because a file is on

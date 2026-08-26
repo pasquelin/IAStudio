@@ -33,7 +33,7 @@ one.
 
 ## What you find there
 
-Seven asset types:
+Six asset types:
 
 | Type | What it is | Where it lands |
 |---|---|---|
@@ -41,11 +41,10 @@ Seven asset types:
 | **Video** | a moving shot | `Video/` |
 | **Audio** | a sound, a piece of music | `Audio/` |
 | **Mesh** | a 3D object | `3D/` |
-| **Texture** | a material map | `Materials/` |
 | **Skybox** | a 360° sky | `Sky/` |
 | **Animation** | a motion, to be replayed on a character | `Animations/` |
 
-**Where it lands, not where it lives.** These seven folders are laid down when the project is
+**Where it lands, not where it lives.** These six folders are laid down when the project is
 created and are only a starting point: move an asset wherever you like, rename the folder, empty
 it. What a file IS does not depend on where it sits — the studio finds it again, and its entry
 follows.
@@ -159,7 +158,7 @@ aimed at the asset:
 | Group | What it holds |
 |---|---|
 | **Send to ▸** | every destination able to take this kind of asset |
-| **Asset ▸** | **Name**, **Contact sheet**, **Send** to the cloud, and **Extract its textures** for a mesh |
+| **Asset ▸** | **Name**, **Contact sheet**, **Send** to the cloud, and **Extract its images** for a mesh |
 
 **Two groups and not ten rows**: this menu already offered twelve gestures about the file, and
 flattening everything into it made a list nobody reads.
@@ -178,7 +177,7 @@ on the row clicked; their label says the count.
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the edit** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Materials workspace | pictures |
-| **Edit the image** | a tab of its own, Image workspace | textures and skies |
+| **Edit the image** | a tab of its own, Image workspace | channels and skies |
 
 **Rename, Show in folder and Move to bin are elsewhere in the same menu**, among the twelve
 gestures about the file: they are gestures on a file, not on an asset.
@@ -204,12 +203,12 @@ without a word. It is the one row of this menu that stays lit while something is
 everywhere else, what is missing greys out: pick the character in the scene first, then start the
 motion.
 
-**Edit the image is the row that opens a tab**, and it only appears on a texture or a sky already
+**Edit the image is the row that opens a tab**, and it only appears on a channel or a sky already
 on disk: those two are assembled in their own workspace — one holds channels, the other a
 projection — and neither writes back the picture underneath. Retouching it therefore happens in
 Image, and the tab opened is the asset's own.
 
-**Extract its textures only speaks to a mesh**, and it is the other half of the same need: the
+**Extract its images only speaks to a mesh**, and it is the other half of the same need: the
 pictures the model carries inside come out into the project, where they become assets like any
 other — and so can be retouched. It lives in the **Asset** group, and stays greyed as long as the
 model is not on your disk.
@@ -249,7 +248,7 @@ The asset's kind picks its editor, and nothing else weighs in:
 | What you double-click | Where it opens |
 |---|---|
 | a **picture** | the Image workspace |
-| a **texture** | the Materials workspace |
+| an **image that holds a channel** | the Materials workspace |
 | a **sky** | the Skyboxes workspace |
 | a **mesh** | the Modelling workspace |
 | a **sound** | the Audio workspace |
@@ -276,7 +275,7 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | a sound | the **audio editor** | it joins the edit as a clip, and that clip is what you edit |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
 | a motion, or a mesh that carries one | a **sub-track** of the band, in 3D | it becomes a block there, where you release it |
-| an image | a texture row of the **Inspector** — a material's maps, a sprite's picture | it fills that row, and that row only |
+| an image | an image row of the **Inspector** — a material's maps, a sprite's picture | it fills that row, and that row only |
 | a sky | the **Sky** row of the Inspector, in 3D as in Materials | it lights the preview |
 | any asset | a **folder row** of the Explorer | its file is moved there |
 
@@ -531,7 +530,7 @@ without having run `pnpm ffmpeg:fetch`.
 
 ## Where your files really are
 
-**Wherever you put them.** A generated asset lands in one of the seven starter folders — see
+**Wherever you put them.** A generated asset lands in one of the six starter folders — see
 [What you find there](#what-you-find-there) — and nothing holds it there: move it, file it in a
 tree of your own, the Explorer keeps showing it and its entry follows. The layout of the project
 folder is described in [Projects](04-projects.md#what-is-inside).

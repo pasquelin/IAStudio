@@ -52,6 +52,9 @@ export function ComponentField({ component, field, onChange, gesture, scId }: Co
           label: t(`game.values.${option}`, option),
         }))}
         onChange={value => onChange(value)}
+        // A value no option carries reads as the FIRST one otherwise, so the panel would show
+        // `X` while the document held something else — and the next edit would save that reading.
+        unnamedLabel={t('game.values.unknown')}
         scId={scId}
       />
     )

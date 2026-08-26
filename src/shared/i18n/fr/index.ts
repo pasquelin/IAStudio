@@ -13,6 +13,7 @@ import image from './image.json'
 import inspector from './inspector.json'
 import material from './material.json'
 import models from './models.json'
+import postfx from './postfx.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
@@ -42,6 +43,7 @@ export const fr = {
   ...image,
   ...inspector,
   ...models,
+  ...postfx,
   ...scene,
   ...settings,
   ...shell,

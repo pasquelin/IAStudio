@@ -167,11 +167,12 @@ describe('what the explorer offers to do with an asset', () => {
   })
 
   /**
-   * A texture is assembled in its own space, which writes no image back — so without this row an
-   * extracted map could be looked at and never retouched, and `replaces` had nothing to bite on.
+   * A material is assembled in its own space, which writes no image back — so without this row
+   * an extracted map could be looked at and never retouched, and `replaces` had nothing to bite
+   * on. A channel is a picture now, so `map` is what says the space that opens it does not paint.
    */
   it('offers to edit the pixels of a picture whose own space does not paint', () => {
-    raise(asset({ type: 'texture' }))
+    raise(asset({ map: 'normal' }))
 
     expect(row(/Modifier l’image/)).toBeDefined()
   })

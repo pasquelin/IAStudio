@@ -243,7 +243,7 @@ it for its tools, with every parameter of every action.
 | **Files** | open a project, rename it, list, search, move, copy, rename, bin, show in the system file manager, undo and redo the last batch | **files**, for whatever moves or destroys |
 | **Documents** | open, bring to the front, rename, close, export into the project | **files**, for closing, renaming and exporting |
 | **Generating** | read a model's inputs, price them, prepare, start, wait, cancel | **creative units** for starting, and for starting alone |
-| **The library** | search, read, tag, caption and remove assets, find the ones whose file has gone, pull a model's textures out | **files** for removing, **a server** for removing from the remote library too |
+| **The library** | search, read, tag, caption and remove assets, find the ones whose file has gone, pull a model's images out | **files** for removing, **a server** for removing from the remote library too |
 | **The remote library** | browse your own and the public feed, find likenesses, plan, fetch, send | **an asset**, for sending |
 | **The image** | the layer stack: add, style, place, group, merge, crop, set a mask, lay and move the guides | nothing |
 | **The edit** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |

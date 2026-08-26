@@ -247,7 +247,8 @@ asset in a tab of its own.
 | a picture as sky | drag onto the **sky preview** | a sky tab |
 | a 3D object in a scene | drag onto the **3D view** | a scene tab |
 
-A texture double-clicks like the rest: a **material of its own** opens, whose base colour it fills.
+An image that holds a channel double-clicks like the rest: a **material of its own** opens, whose
+base colour it fills.
 To place it in the material you have in front of you, use drag and drop or right-click ▸ **Use as
 base colour**.
 

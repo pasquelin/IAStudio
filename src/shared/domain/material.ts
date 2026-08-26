@@ -95,7 +95,28 @@ export const CHANNEL_BY_PROVIDER_TYPE: Record<string, ChannelSource> = {
  * warning, and one of them must land in the project as an ordinary picture rather than vanish.
  */
 export function channelFromProviderType(metadataType: string | undefined): ChannelSource | null {
-  return metadataType === undefined ? null : (CHANNEL_BY_PROVIDER_TYPE[metadataType] ?? null)
+  if (metadataType === undefined) return null
+
+  const named = CHANNEL_BY_PROVIDER_TYPE[metadataType]
+  if (named) return named
+
+  // A whole surface rather than one channel of one — `texture`, `upscale-texture`, the
+  // `inference-*-texture` family. It IS the base colour: dropping such a picture on the preview
+  // fills that channel and nothing else, and the panel says so in as many words.
+  //
+  // 🛑 Not decoration. The studio no longer files a channel under a kind of its own, so `map` is
+  // the ONLY thing left saying a picture belongs to a material — a double-click that read no
+  // channel here would open the pixels instead of the material, on the commonest generation the
+  // Materials space makes.
+  return isMaterialPicture(metadataType) ? { channel: 'baseColor' } : null
+}
+
+/**
+ * A picture OF a material, as opposed to one channel of one. `texture`, `upscale-texture` and
+ * the `inference-*-texture` family all describe a whole surface.
+ */
+export function isMaterialPicture(metadataType: string): boolean {
+  return metadataType === 'texture' || metadataType.endsWith('-texture')
 }
 
 /** What a seam reading means, in words. A ratio is a number nobody reads without a scale. */

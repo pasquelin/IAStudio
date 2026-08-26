@@ -215,6 +215,10 @@ const bridge: StudioBridge = {
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
   },
+  post: {
+    export: request => ipcRenderer.invoke(CHANNELS.postExport, request),
+    import: () => ipcRenderer.invoke(CHANNELS.postImport),
+  },
   montage: {
     export: request => ipcRenderer.invoke(CHANNELS.montageExport, request),
     import: id => ipcRenderer.invoke(CHANNELS.montageImport, { id }),

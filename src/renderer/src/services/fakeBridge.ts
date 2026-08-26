@@ -230,6 +230,11 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onEntries: () => () => {},
       ...overrides.activity,
     },
+    post: {
+      export: () => Promise.resolve(null),
+      import: () => Promise.resolve(null),
+      ...overrides.post,
+    },
     scene: {
       export: () => Promise.resolve(null),
       ...overrides.scene,

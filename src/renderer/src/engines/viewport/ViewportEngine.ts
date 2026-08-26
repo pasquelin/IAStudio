@@ -9,6 +9,7 @@ import {
   PerspectiveCamera,
   Raycaster,
   Scene,
+  SRGBColorSpace,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -116,9 +117,49 @@ export type ViewportEngineOptions = {
    * they set the speed. `true` consumes the event and no dolly happens.
    */
   onWheel?: (event: WheelEvent) => boolean
+  /**
+   * Draws the scene the way its owner COMPOSES it, and answers whether it drew anything.
+   *
+   * The one seam through which the viewport, every camera preview and every off-screen render
+   * reach the same code — without this engine learning what a post-processing stack is, which is
+   * the same line it holds against gizmos and outliners. `false` means « nothing composed », and
+   * the plain render happens here.
+   */
+  onDraw?: (request: DrawRequest) => boolean
   fieldOfView?: number
   near?: number
   far?: number
+}
+
+/**
+ * Which surface is being drawn, so its owner can answer with the composition that belongs to it:
+ * a pane films through the SCENE's, a preview through its camera's, and an off-screen render
+ * through whichever camera the film is on at that instant.
+ */
+export type DrawSurface = 'pane' | 'inset' | 'offscreen'
+
+/**
+ * One request to draw the scene somewhere. Sizes are in DEVICE pixels — an effect that reads a
+ * resolution reads the one it is actually drawing at, never a CSS measure.
+ */
+export type DrawRequest = {
+  scene: Scene
+  camera: ViewportCamera
+  surface: DrawSurface
+  /** Which pane, for a `pane` request. Zero everywhere else. */
+  paneIndex: number
+  /**
+   * Which node of the document the camera belongs to, when it is one — a preview and an
+   * off-screen render film through a camera the document holds, and what that camera composes
+   * with lives on the node. `null` for a pane, which looks through the workshop's own.
+   */
+  cameraNodeId: string | null
+  /** `null` is the canvas. */
+  target: WebGLRenderTarget | null
+  /** Where on the canvas, when only part of it is being drawn. Absent means all of it. */
+  rect: PaneRect | null
+  width: number
+  height: number
 }
 
 /**
@@ -151,6 +192,8 @@ export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 /** A camera drawn over the panes, in a rectangle of its own — the camera preview. */
 export type InsetPane = {
   camera: PerspectiveCamera
+  /** Which node of the document that camera IS — what its owner resolves a composition by. */
+  cameraNodeId: string | null
   /** In CSS pixels, origin top-left, like every other pane rect. */
   rect: PaneRect
   /**
@@ -1045,6 +1088,30 @@ export class ViewportEngine {
   }
 
   /**
+   * The ONE call every surface of the studio draws a 3D scene through — the panes, the camera
+   * preview, and whatever renders off screen.
+   *
+   * `onDraw` is offered the request first and answers whether it drew. That answer is not
+   * decoration: what it composed is tone-mapped and encoded on the way OUT, where a plain render
+   * leaves the working space behind, and both the preview's quad and a film's pixels have to know
+   * which of the two they are looking at.
+   */
+  drawScene(request: DrawRequest): boolean {
+    const renderer = this.renderer
+    if (!renderer) return false
+
+    // BEFORE `onDraw`, and it is the whole contract: a film and a still hand over a target and
+    // then read its pixels back, so whoever draws must be pointed at it. Bound here rather than
+    // by each caller — a composition that plans no pass answers `false` without `PostComposer`
+    // ever running, and the plain render below would have gone to the canvas.
+    renderer.setRenderTarget(request.target)
+    if (this.options.onDraw?.(request) === true) return true
+
+    renderer.render(request.scene, request.camera)
+    return false
+  }
+
+  /**
    * One render in a single layout, four scissored ones in a quad — never four contexts.
    *
    * A second WebGL context per view would quadruple what the machine holds for a view that shows
@@ -1052,9 +1119,23 @@ export class ViewportEngine {
    * what keeps a pane from clearing the three beside it.
    */
   private renderPanes(renderer: WebGLRenderer): void {
+    const ratio = renderer.getPixelRatio()
+
     if (this.extras.length === 0) {
       if (this.options.onPane?.(0, this.camera) === true) renderer.shadowMap.needsUpdate = true
-      renderer.render(this.scene, this.camera)
+      this.drawScene({
+        scene: this.scene,
+        camera: this.camera,
+        surface: 'pane',
+        paneIndex: 0,
+        cameraNodeId: null,
+        target: null,
+        // No rectangle at all rather than one covering the canvas: a composition then draws
+        // without a scissor, which is one piece of state fewer on the frame path.
+        rect: null,
+        width: Math.round(renderer.domElement.clientWidth * ratio),
+        height: Math.round(renderer.domElement.clientHeight * ratio),
+      })
       return
     }
 
@@ -1074,7 +1155,17 @@ export class ViewportEngine {
         // A pane that put the scene's lights out draws different shadows from the one beside
         // it: what THIS pane wears is what its maps have to be drawn from.
         if (this.options.onPane?.(index, camera) === true) renderer.shadowMap.needsUpdate = true
-        renderer.render(this.scene, camera)
+        this.drawScene({
+          scene: this.scene,
+          camera,
+          surface: 'pane',
+          paneIndex: index,
+          cameraNodeId: null,
+          target: null,
+          rect: { x, y, width, height: paneHeight },
+          width: Math.round(width * ratio),
+          height: Math.round(paneHeight * ratio),
+        })
       }
     } finally {
       // In a `finally`, and both of them: a throw mid-pane would otherwise leave every later
@@ -1186,7 +1277,21 @@ export class ViewportEngine {
       renderer.autoClear = true
       renderer.setClearColor(inset.backdrop, 1)
       loan.frame(inset.camera)
-      renderer.render(this.scene, inset.camera)
+      this.dressInsetBlit(
+        renderer,
+        target,
+        this.drawScene({
+          scene: this.scene,
+          camera: inset.camera,
+          surface: 'inset',
+          paneIndex: 0,
+          cameraNodeId: inset.cameraNodeId,
+          target,
+          rect: null,
+          width: target.width,
+          height: target.height,
+        }),
+      )
     } finally {
       loan.restore()
       this.scene.matrixWorldAutoUpdate = heldMatrix
@@ -1196,6 +1301,36 @@ export class ViewportEngine {
       // In a `finally`, as `renderPanes` does: a throw here would otherwise leave the workshop
       // hidden for every later frame.
       restore?.()
+    }
+  }
+
+  /**
+   * How the preview's quad reads what was just drawn into its target, and it is not a detail: get
+   * it wrong and the preview comes back doubly tone-mapped, or washed out, with every gate green.
+   *
+   * A PLAIN render leaves the working space in the target — three skips tone mapping for anything
+   * but the canvas — so the quad wears the curve on the way out and the texture stays linear. A
+   * COMPOSED one has already been through the output transform, so the texture holds sRGB and the
+   * quad must apply nothing: it is declared sRGB so three decodes it once and the canvas encodes
+   * it once, which is the identity.
+   */
+  private dressInsetBlit(
+    renderer: WebGLRenderer,
+    target: WebGLRenderTarget,
+    composed: boolean,
+  ): void {
+    const blit = this.insetBlitOf(renderer)
+    const space = composed ? SRGBColorSpace : LinearSRGBColorSpace
+    const toneMapped = !composed && renderer.toneMapping !== NoToneMapping
+
+    if (target.texture.colorSpace !== space) {
+      target.texture.colorSpace = space
+      // The colour space is a shader DEFINE on the material sampling it, not a uniform.
+      blit.material.needsUpdate = true
+    }
+    if (blit.material.toneMapped !== toneMapped) {
+      blit.material.toneMapped = toneMapped
+      blit.material.needsUpdate = true
     }
   }
 

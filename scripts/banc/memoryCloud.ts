@@ -36,7 +36,7 @@ const OUTPUT: Partial<Record<ModelFamily, { type: AssetType; extension: string }
   video: { type: 'video', extension: 'mp4' },
   '3d': { type: 'mesh', extension: 'glb' },
   audio: { type: 'audio', extension: 'wav' },
-  material: { type: 'texture', extension: 'png' },
+  material: { type: 'image', extension: 'png' },
   skybox: { type: 'skybox', extension: 'png' },
 }
 

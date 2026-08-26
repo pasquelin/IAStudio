@@ -84,7 +84,7 @@ export function createTextureExtraction(deps: TextureExtractionDeps): TextureExt
 async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asset[]> {
   if (source.type !== 'mesh') throw new Error(`asset ${source.id} is not a mesh`)
 
-  const already = await deps.search({ derivedFrom: source.id, type: 'texture' })
+  const already = await deps.search({ derivedFrom: source.id, type: 'image' })
   if (already.length > 0) return [...already]
 
   const file = deps.fileOf(source)
@@ -140,7 +140,7 @@ function requestFor(source: Asset, texture: EmbeddedTexture, id: string): WriteR
   return {
     id,
     name: extractedTextureName(source.name, texture),
-    type: 'texture',
+    type: 'image',
     extension: extensionOfMime(texture.mimeType),
     // Traceable both ways: the inspector shows a model's own pictures beside it by asking the
     // catalogue what was derived from it.

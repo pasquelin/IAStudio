@@ -20,6 +20,17 @@ export function messageOf(error: unknown): string {
 }
 
 /**
+ * The same record under renamed keys, for a blob read back from storage whose keys have since
+ * been renamed away. Two persisted shapes migrate this way, one per side of the boundary.
+ */
+export function mapKeys(
+  held: Record<string, unknown>,
+  rename: (key: string) => string,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(held).map(([key, value]) => [rename(key), value]))
+}
+
+/**
  * The same object without the keys whose value is `undefined`.
  *
  * For building a record out of columns that may be null, where `{ width: undefined }` and `{}`

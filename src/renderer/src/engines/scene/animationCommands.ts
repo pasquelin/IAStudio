@@ -1,6 +1,7 @@
 import {
+  DIRECT_PROPERTIES,
   POSE_PROPERTIES,
-  TRACK_PROPERTIES,
+  SCENE_SUBJECT_ID,
   type AnimationTimeline,
   type AnimationTrack,
   type CameraMotion,
@@ -208,8 +209,12 @@ export function keyableProperties(
   state: SceneState,
   subject: { nodeId: string; bone?: string },
 ): readonly TrackProperty[] {
+  // The scene's composition has no pose and no lens: its channels are opened one parameter at a
+  // time from the composition panel, so the band's diamond must open none of its own.
+  if (subject.nodeId === SCENE_SUBJECT_ID) return []
+
   const camera = !subject.bone && nodeById(state, subject.nodeId)?.type === 'camera'
-  return camera ? TRACK_PROPERTIES : POSE_PROPERTIES
+  return camera ? DIRECT_PROPERTIES : POSE_PROPERTIES
 }
 
 /**

@@ -74,3 +74,18 @@ describe('a scene document carrying components', () => {
     expect(sceneHoldsMore(written(sceneWith([newComponent('Health')])))).toEqual([])
   })
 })
+
+/**
+ * The reader empties a `components` that is not a list; without a refusal the loss would be
+ * written back at the first ⌘S, with no journal line and no gate going red.
+ */
+describe('a components member that is not a list at all', () => {
+  it('refuses to save over it, rather than emptying it in silence', () => {
+    const document = written(sceneWith([newComponent('Health')]))
+    const node = payloadNodes(document)[0]
+    if (node) node.components = { Health: { max: 10 } }
+
+    expect(sceneFromGltf(document).nodes[0]?.components).toEqual([])
+    expect(sceneHoldsMore(document)).toEqual(['components'])
+  })
+})

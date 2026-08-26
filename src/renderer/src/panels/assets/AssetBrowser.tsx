@@ -16,7 +16,7 @@ import { cloudPage } from '@/helpers/cloudPage'
 import { filterLocally, isFiltered, setFacetValue } from '@/helpers/collectionState'
 import { applySelection } from '@/helpers/selection'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { assetTypesOf } from '@/helpers/workspaces'
+import { assetTypesOf, soleTypeOf } from '@/helpers/workspaces'
 import { useAssetFacets } from '@/hooks/useAssetFacets'
 import { useAutomaticPulls } from '@/hooks/useAutomaticPulls'
 import { useBadgeLabels } from '@/hooks/useBadgeLabels'
@@ -88,7 +88,7 @@ export function AssetBrowser() {
    * name, where the narrowing used to be invisible. On the SPACE and never on the collection: it
    * must not fight the user's own choice, only replace it when they move to another space.
    */
-  const ownType = typeOfWorkspace(workspace)
+  const ownType = typeOfWorkspace(workspace) ?? soleTypeOf(workspace)
   useEffect(() => {
     if (ownType) setCollection(setFacetValue(useAssets.getState().collection, TYPE_FACET, ownType))
   }, [ownType, setCollection])

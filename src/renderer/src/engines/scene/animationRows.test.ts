@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CameraShot } from '@shared/domain/animation'
+import { SCENE_SUBJECT_ID, type CameraShot } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
 import {
@@ -25,7 +25,12 @@ const rowsOf = (
   expanded: string[] = [],
   nodes = CUBE,
   sheet: string[] = nodes.map(node => node.id),
-) => animationRows(timelineWith(tracks, { sheet }), { nodes, expanded: new Set(expanded) })
+) =>
+  animationRows(timelineWith(tracks, { sheet }), {
+    sceneName: 'Scene',
+    nodes,
+    expanded: new Set(expanded),
+  })
 
 describe('the camera lines', () => {
   const CAMERAS = [
@@ -34,7 +39,11 @@ describe('the camera lines', () => {
   ]
 
   const shotRowsOf = (...shots: CameraShot[]) =>
-    animationRows(timelineWith([], { shots }), { nodes: CAMERAS, expanded: new Set() })
+    animationRows(timelineWith([], { shots }), {
+      sceneName: 'Scene',
+      nodes: CAMERAS,
+      expanded: new Set(),
+    })
 
   // One line per camera, named by the camera, in the order the DOCUMENT lays its shots down —
   // that order is what settles an overlap, so the picture and `activeShotAt` cannot disagree.
@@ -78,7 +87,7 @@ describe('the camera lines', () => {
           shots: [cameraShot('a1', { cameraId: 'cam-a' })],
         },
       ),
-      { nodes: CAMERAS, expanded: new Set(['cam-a']) },
+      { sceneName: 'Scene', nodes: CAMERAS, expanded: new Set(['cam-a']) },
     )
 
     // `cam-b` is on no sheet and holds nothing, so it has no line — it used to get one purely
@@ -101,6 +110,7 @@ describe('who is on the band', () => {
 
   it('leaves out an object the sheet does not name, however much the scene holds it', () => {
     const rows = animationRows(timelineWith([], { sheet: ['walker'] }), {
+      sceneName: 'Scene',
       nodes: TWO,
       expanded: new Set(),
     })
@@ -110,6 +120,7 @@ describe('who is on the band', () => {
 
   it('shows nothing at all when the sheet is empty', () => {
     const rows = animationRows(timelineWith([], { sheet: [] }), {
+      sceneName: 'Scene',
       nodes: TWO,
       expanded: new Set(),
     })
@@ -121,6 +132,7 @@ describe('who is on the band', () => {
   // for a departed object draws none.
   it('skips an id the scene no longer holds', () => {
     const rows = animationRows(timelineWith([], { sheet: ['walker', 'gone'] }), {
+      sceneName: 'Scene',
       nodes: TWO,
       expanded: new Set(),
     })
@@ -247,6 +259,7 @@ describe('arranging the lines', () => {
 
   const arranged = (order: string[]) =>
     animationRows(timelineWith([], { sheet: THREE.map(node => node.id) }), {
+      sceneName: 'Scene',
       nodes: THREE,
       expanded: new Set(),
       order,
@@ -284,6 +297,7 @@ describe('the lanes of an object', () => {
 
   const withLanes = (lanes: SheetLane[], expanded: string[] = ['cube']) =>
     animationRows(timelineWith([], { sheet: ['cube'] }), {
+      sceneName: 'Scene',
       nodes: CUBE,
       expanded: new Set(expanded),
       lanes,
@@ -327,6 +341,7 @@ describe('the lanes of an object', () => {
         }),
       ]),
       {
+        sceneName: 'Scene',
         nodes: CUBE,
         expanded: new Set(['cube', 'cube/Hips']),
         lanes: [sheetLane('main')],
@@ -334,6 +349,55 @@ describe('the lanes of an object', () => {
     )
 
     expect(rows.filter(row => row.kind === 'lane')).toHaveLength(1)
+  })
+})
+
+/**
+ * The scene's own composition is a subject with no node behind it, and every filter of the sheet
+ * decides through the node names — so without a name of its own it had channels that evaluated
+ * and rendered, and not one line to see, mute or delete them on.
+ */
+describe('the composition line', () => {
+  const postTrack = (id: string, param: string) =>
+    animationTrack(id, 'post', [key(1)], {
+      name: `Bloom · ${param}`,
+      target: { nodeId: SCENE_SUBJECT_ID, property: 'post', post: { effectId: 'fx', param } },
+    })
+
+  it('gives the scene a line of its own, named from the bundle', () => {
+    const rows = animationRows(timelineWith([postTrack('a', 'strength')]), {
+      sceneName: 'Scene composition',
+      nodes: CUBE,
+      expanded: new Set(),
+    })
+
+    expect(rows).toMatchObject([
+      { kind: 'subject', id: SCENE_SUBJECT_ID, name: 'Scene composition' },
+    ])
+  })
+
+  it('folds the composition channels under it', () => {
+    const rows = animationRows(
+      timelineWith([postTrack('a', 'strength'), postTrack('b', 'radius')]),
+      { sceneName: 'Scene composition', nodes: CUBE, expanded: new Set([SCENE_SUBJECT_ID]) },
+    )
+
+    expect(rows.map(row => row.kind === 'channel' && row.name)).toEqual([
+      false,
+      'Bloom · strength',
+      'Bloom · radius',
+    ])
+  })
+
+  // Put there by the template, which opens the panel on a composition nobody has keyed yet.
+  it('keeps the line for a scene put on the sheet with nothing keyed', () => {
+    const rows = animationRows(timelineWith([], { sheet: [SCENE_SUBJECT_ID] }), {
+      sceneName: 'Scene composition',
+      nodes: CUBE,
+      expanded: new Set(),
+    })
+
+    expect(rows.map(row => row.id)).toEqual([SCENE_SUBJECT_ID])
   })
 })
 

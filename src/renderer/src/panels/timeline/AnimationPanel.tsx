@@ -99,7 +99,13 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
       }
     }
 
-    return animationRows(timeline, { nodes, expanded, lanes: sheetLanes, order })
+    return animationRows(timeline, {
+      nodes,
+      expanded,
+      lanes: sheetLanes,
+      order,
+      sceneName: t('animation.sceneSubject'),
+    })
   }, [timeline, nodes, expanded, lengths, order, t])
 
   /**

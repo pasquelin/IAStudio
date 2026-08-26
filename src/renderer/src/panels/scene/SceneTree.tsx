@@ -7,7 +7,7 @@ import type { Command } from '@/engines/core/history'
 import { canReparent, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
-import { multi, reorderNodes, reparentNode } from '@/engines/scene/commands'
+import { commandId, multi, reorderNodes, reparentNode } from '@/engines/scene/commands'
 import { openSceneNodeMenu } from '@/spaces/three/sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/sceneCommands'
 import { sceneEngineOf } from '@/stores/sceneEngines'
@@ -61,8 +61,6 @@ export function SceneTree({ documentId }: { documentId: string }) {
    * level once they have ALL left it, so a command per member would count the ones still in
    * place as siblings.
    */
-  const nodeOf = (id: string): SceneNode | undefined => nodes.find(one => one.id === id)
-
   const move = (
     ids: readonly string[],
     parentId: string | null,
@@ -97,11 +95,11 @@ export function SceneTree({ documentId }: { documentId: string }) {
         move(ids, parentId, (batch, wanted) => {
           // Refused here rather than by the command: a row dropped back where it came from is the
           // commonest gesture of the drag, and it would leave a dead entry in the history.
-          const moving = batch.filter(id => nodeOf(id)?.parentId !== wanted)
+          const moving = batch.filter(id => nodes.find(one => one.id === id)?.parentId !== wanted)
           return moving.length === 0
             ? null
             : multi(
-                `reparent:${moving.join(':')}`,
+                commandId('reparent', moving),
                 moving.map(id => reparentNode(id, wanted)),
               )
         })

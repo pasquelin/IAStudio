@@ -40,7 +40,7 @@ export const PROJECT_SCENARIOS: readonly Scenario[] = [
   ),
   asking(
     '1.3 counts the assets of each kind',
-    "Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D, de textures et de skyboxes ?",
+    "Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D et de skyboxes ?",
     run =>
       read.idle(run) &&
       (read.answeredWith(run, 'assets.counts') || read.answeredWith(run, 'assets.search')),

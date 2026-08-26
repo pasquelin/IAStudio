@@ -10,6 +10,7 @@ import {
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
+import { ownedStackOf } from '@shared/domain/postProcessing'
 import { snapToFrame } from '@shared/domain/time'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
@@ -18,6 +19,7 @@ import { lensAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
+import { SCENE_POST, type PostTargetRef } from '@/engines/scene/postCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { sceneViewOf, useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
@@ -30,6 +32,8 @@ import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { ComponentsSection } from './ComponentsSection/ComponentsSection'
 import { RigSection } from './RigSection'
 import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
+import { CameraPostSection } from './PostProcessingSection/CameraPostSection'
+import { PostProcessingSection } from './PostProcessingSection/PostProcessingSection'
 import { MaterialSection } from './MaterialSection'
 import { ModelDressSection } from './ModelDressSection/ModelDressSection'
 import { materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
@@ -92,6 +96,13 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // clock during playback and stops between two frames, so reading it raw would show a value the
   // key written a frame earlier never takes.
   const at = snapToFrame(playhead, animation.fps)
+  // Derived from the node the component already holds, not a third subscription: a selector
+  // would re-scan `nodes` on every emission of any drag to find a camera that is right here.
+  const cameraStack = ownedStackOf(camera?.camera.post)
+  const cameraTarget = useMemo(
+    (): PostTargetRef => ({ kind: 'camera', nodeId: camera?.id ?? '' }),
+    [camera?.id],
+  )
   // `lensAt`, which the viewport draws through too: the field writes the same number back, so
   // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
   const lens = useMemo(
@@ -130,6 +141,17 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         onSkeletons={skeletons => useSceneViews.getState().setSkeletons(documentId, skeletons)}
         snapping={view.snapping}
         onSnap={(kind, on) => useSceneViews.getState().setSceneSnap(documentId, kind, on)}
+      />
+
+      {/* Beside the environment and for the same reason: a composition belongs to the DOCUMENT
+          rather than to a node, so it is there to be built the moment a scene is opened — with
+          no camera to make first, which is the whole of § 2. */}
+      <PostProcessingSection
+        documentId={documentId}
+        target={SCENE_POST}
+        stack={world.post}
+        edit={edit}
+        title={t('postfx.title')}
       />
 
       {node && (
@@ -241,6 +263,20 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           path={path.path}
           onChange={next => edit.run(setPath(path.id, next))}
           gesture={edit.gesture}
+        />
+      )}
+
+      {camera && <CameraPostSection documentId={documentId} camera={camera} edit={edit} />}
+
+      {/* Only while it OWNS one: a camera that inherits edits the scene's stack above, and a
+          second panel writing into the same place is two panels disagreeing about one value. */}
+      {cameraStack && camera && (
+        <PostProcessingSection
+          documentId={documentId}
+          target={cameraTarget}
+          stack={cameraStack}
+          edit={edit}
+          title={t('postfx.cameraOwner', { name: camera.name })}
         />
       )}
 

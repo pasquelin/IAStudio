@@ -11,6 +11,7 @@ import { CANVAS_SCENARIOS } from './scenariosCanvas'
 import { REST_SCENARIOS } from './scenariosRest'
 import { SHELL_SCENARIOS } from './scenariosShell'
 import { GIT_SCENARIOS } from './scenariosGit'
+import { POST_SCENARIOS } from './scenariosPost'
 import { GAME_SCENARIOS } from './scenariosGame'
 
 /**
@@ -31,5 +32,6 @@ export const SCENARIOS: readonly Scenario[] = [
   ...REST_SCENARIOS,
   ...SHELL_SCENARIOS,
   ...GIT_SCENARIOS,
+  ...POST_SCENARIOS,
   ...GAME_SCENARIOS,
 ]

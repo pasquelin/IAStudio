@@ -14,6 +14,7 @@ import type * as frImage from '../fr/image.json'
 import type * as frInspector from '../fr/inspector.json'
 import type * as frMaterial from '../fr/material.json'
 import type * as frModels from '../fr/models.json'
+import type * as frPostfx from '../fr/postfx.json'
 import type * as frScene from '../fr/scene.json'
 import type * as frSettings from '../fr/settings.json'
 import type * as frShell from '../fr/shell.json'
@@ -33,6 +34,7 @@ import image from './image.json'
 import inspector from './inspector.json'
 import material from './material.json'
 import models from './models.json'
+import postfx from './postfx.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
@@ -66,6 +68,7 @@ export const en = {
   ...(image satisfies Section<keyof typeof frImage>),
   ...(inspector satisfies Section<keyof typeof frInspector>),
   ...(models satisfies Section<keyof typeof frModels>),
+  ...(postfx satisfies Section<keyof typeof frPostfx>),
   ...(scene satisfies Section<keyof typeof frScene>),
   ...(settings satisfies Section<keyof typeof frSettings>),
   ...(shell satisfies Section<keyof typeof frShell>),

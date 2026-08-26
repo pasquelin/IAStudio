@@ -122,12 +122,6 @@ export function mcpAddCommand(launch: McpLaunch, name: string): string {
 
 const serverEntry = (launch: McpLaunch) => ({ command: launch.command, args: [...launch.args] })
 
-/** The same command for a client configured by a FILE — the `mcpServers` map `claude mcp add`
- * itself writes, and that `.mcp.json` at the root of a checkout carries. */
-export function mcpConfigJson(launch: McpLaunch, name: string): string {
-  return `${JSON.stringify({ mcpServers: { [name]: serverEntry(launch) } }, null, 2)}\n`
-}
-
 /**
  * The same entry ADDED to what a checkout already declares, or `null` when it is already there.
  *
@@ -145,4 +139,13 @@ export function mcpConfigWith(existing: string, launch: McpLaunch, name: string)
   if (JSON.stringify(servers[name]) === JSON.stringify(ours)) return null
 
   return `${JSON.stringify({ ...root, mcpServers: { ...servers, [name]: ours } }, null, 2)}\n`
+}
+
+/**
+ * The same command for a client configured by a FILE — the `mcpServers` map `claude mcp add`
+ * itself writes, and that `.mcp.json` at the root of a checkout carries. One spelling of the
+ * shape, its twin's, since nothing to merge into is what an empty file is.
+ */
+export function mcpConfigJson(launch: McpLaunch, name: string): string {
+  return mcpConfigWith('', launch, name) ?? ''
 }

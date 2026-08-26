@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { bound } from '@shared/numeric'
 import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
@@ -17,6 +18,8 @@ export type SliderFieldProps = GestureProps & {
   scId?: string
   /** Puts the value back where it started. Absent while it already stands there. */
   onReset?: () => void
+  /** One more button for the row’s end column, drawn before the reset — a padlock, say. */
+  action?: ReactNode
 }
 
 /**
@@ -32,6 +35,7 @@ export function SliderField({
   onChange,
   scId,
   onReset,
+  action,
   onGestureStart,
   onGestureEnd,
 }: SliderFieldProps) {
@@ -54,6 +58,7 @@ export function SliderField({
       <Readout values={[value]} />
 
       <FieldActions>
+        {action}
         <ResetButton onReset={onReset} />
       </FieldActions>
     </label>

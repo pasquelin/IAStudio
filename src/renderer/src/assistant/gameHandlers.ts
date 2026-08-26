@@ -1,10 +1,8 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
-import type { ActionField } from '@shared/domain/assistantAction'
-import type { ComponentType, JsonValue } from '@shared/domain/component'
-import { descriptorOf, isComponentType } from '@shared/domain/componentRegistry'
-import type { Command } from '@/engines/core/history'
+import type { ComponentType } from '@shared/domain/component'
+import { componentValueOf, descriptorOf, isComponentType } from '@shared/domain/componentRegistry'
 import { attachComponent, detachComponent, setComponentField } from '@/engines/scene/commands'
-import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
@@ -16,17 +14,16 @@ import { nodeAimed } from './nodeAimed'
  *
  * Its own file from the first action, `sceneHandlers.ts` at 41,9 Ko being the warning: the game
  * families would double it, and nobody opens a file that size to add a component.
+ *
+ * 🛑 Every way of missing is told apart — the surface, the object, the type, the field, the
+ * value. One refusal for all of them sent a model repairing what was not broken: a `component.set`
+ * on an object with no such component answered « already as asked », and attaching it was the one
+ * thing that would have helped.
  */
 
-/**
- * The node and the component type both named, in the scene in front. Every way of missing is told
- * apart — the surface, the object, the type — because one refusal for all three sent a model
- * repairing what was not broken.
- */
-function aimed(
-  input: Record<string, unknown>,
-  build: (node: SceneNode, type: ComponentType) => Command<SceneState> | null,
-): ActionOutcome {
+type Aimed = { node: SceneNode; type: ComponentType; documentId: string }
+
+function aim(input: Record<string, unknown>): Aimed | ActionOutcome {
   const documentId = activeSceneId(useDocuments.getState())
   if (documentId === null) return refused('wrongSurface')
 
@@ -37,46 +34,63 @@ function aimed(
   const type = textOf(input, 'type') ?? ''
   if (!isComponentType(type)) return refused('badInput', `no component type "${type}"`)
 
-  const command = build(node, type)
-  if (!command) return refused('badInput', `"${node.name}" has no such field on ${type}`)
+  return { node, type, documentId }
+}
 
-  // 🛑 Told apart from a call that did nothing: a command the state refuses leaves the document
-  // untouched, and answering `ok` is what sent a client re-sending the same call.
-  if (command.refuses?.(sceneOf(useScenes.getState(), documentId))) {
-    return refused('badInput', `"${node.name}" is already as asked`)
+const missed = (aimed: Aimed | ActionOutcome): aimed is ActionOutcome => 'ok' in aimed
+
+function runOn(
+  aimed: Aimed,
+  command: ReturnType<typeof attachComponent>,
+  already = 'is already as asked',
+): ActionOutcome {
+  // A command the state refuses leaves the document untouched, and answering `ok` is what sent a
+  // client re-sending the same call.
+  if (command.refuses?.(sceneOf(useScenes.getState(), aimed.documentId))) {
+    return refused('badInput', `"${aimed.node.name}" ${already}`)
   }
 
-  useScenes.getState().runCommand(documentId, command)
+  useScenes.getState().runCommand(aimed.documentId, command)
   return { ok: true }
 }
 
-/**
- * The text a client sent, read as the kind the descriptor declares. A client cannot type a
- * component's value — the fields differ by type — so it types a word and the registry says what
- * that word means here.
- */
-function writable(field: ActionField, said: string): JsonValue | null {
-  if (field.kind === 'boolean') return said === 'true' ? true : said === 'false' ? false : null
-  if (field.kind !== 'number' && field.kind !== 'integer') return said
-
-  const value = Number(said)
-  return Number.isFinite(value) ? value : null
-}
-
 export const GAME_HANDLERS: ActionHandlers = {
-  'component.attach': input => aimed(input, (node, type) => attachComponent(node.id, type)),
+  'component.attach': input => {
+    const aimed = aim(input)
+    if (missed(aimed)) return aimed
 
-  'component.detach': input => aimed(input, (node, type) => detachComponent(node.id, type)),
+    return runOn(
+      aimed,
+      attachComponent(aimed.node.id, aimed.type),
+      `already carries a ${aimed.type}`,
+    )
+  },
 
-  'component.set': input =>
-    aimed(input, (node, type) => {
-      const named = textOf(input, 'field') ?? ''
-      // Refused rather than dropped: `withComponentField` alone would ignore a mistyped name and
-      // let the call report success.
-      const field = descriptorOf(type).fields.find(one => one.key === named)
-      if (!field) return null
+  'component.detach': input => {
+    const aimed = aim(input)
+    if (missed(aimed)) return aimed
 
-      const value = writable(field, textOf(input, 'value') ?? '')
-      return value === null ? null : setComponentField(node.id, type, named, value)
-    }),
+    return runOn(aimed, detachComponent(aimed.node.id, aimed.type), `carries no ${aimed.type}`)
+  },
+
+  'component.set': input => {
+    const aimed = aim(input)
+    if (missed(aimed)) return aimed
+
+    // Said before the field is read: a value written on a component the object has not got is a
+    // component to ATTACH, not a field to correct.
+    if (!(aimed.node.components ?? []).some(component => component.type === aimed.type)) {
+      return refused('notFound', `"${aimed.node.name}" carries no ${aimed.type}`)
+    }
+
+    const named = textOf(input, 'field') ?? ''
+    const field = descriptorOf(aimed.type).fields.find(one => one.key === named)
+    if (!field) return refused('badInput', `${aimed.type} has no field "${named}"`)
+
+    const said = textOf(input, 'value') ?? ''
+    const value = componentValueOf(field, said)
+    if (value === null) return refused('badInput', `"${said}" does not fit ${aimed.type}.${named}`)
+
+    return runOn(aimed, setComponentField(aimed.node.id, aimed.type, named, value))
+  },
 }

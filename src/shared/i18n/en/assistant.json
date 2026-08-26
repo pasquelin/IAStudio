@@ -210,7 +210,7 @@
         "description": "Among the named assets, returns those the catalogue expects a file for that is no longer there. An asset that never had a local file is never one of them, since nothing was expected of it."
       },
       "assetExtractTextures": {
-        "title": "Extract a model’s textures",
+        "title": "Extract a model’s images",
         "description": "Pulls the images a 3D file carries out of it and brings them into the project’s library as assets of their own. Returns the rows it has just created."
       },
       "assetReveal": {
@@ -937,6 +937,74 @@
         "title": "Cover a model with an image",
         "description": "Puts one image of the project over a whole imported model, as its base colour — the simple way to dress it. It excludes materials: a model covered with an image wears none, and the other way round. No other channel is derived from it. With no image, the dress comes off and the model goes back to what its own file carries."
       },
+      "postState": {
+        "title": "Read the post-processing composition",
+        "description": "Returns the stack of effects the scene — or the named camera — films through, with the id of each instance, which effect it is, its parameters, whether it is on, and whether the chain leaves it out."
+      },
+      "postAdd": {
+        "title": "Add a post-processing effect",
+        "description": "Puts an effect from the catalogue at the end of the stack, on its own defaults. With no camera named it is the scene’s composition that receives it, the one the viewport already shows."
+      },
+      "postRemove": {
+        "title": "Remove a post-processing effect",
+        "description": "Takes an instance out of the stack, and with it the timeline channels that drove it — left behind, they would aim at an effect nothing can reach any more."
+      },
+      "postMove": {
+        "title": "Move an effect within the stack",
+        "description": "Changes where an instance sits in the chain, which changes the image obtained — a grade before a bloom does not give the same result as a grade after it."
+      },
+      "postSet": {
+        "title": "Set one parameter of an effect",
+        "description": "Writes a value onto one parameter of an instance, held to the bounds the catalogue declares for that parameter. Which field to fill depends on its nature — a number, a switch or a word."
+      },
+      "postEnable": {
+        "title": "Switch one effect on or off",
+        "description": "Turns an instance off without removing it, which takes it out of the computation and not merely out of the image. Its parameters stay where they are, ready to be turned back on."
+      },
+      "postSwitch": {
+        "title": "Switch the whole composition off",
+        "description": "Turns the entire stack off or back on in one go, losing nothing — the Before/After, as a value of the document that undo can take back."
+      },
+      "postPreset": {
+        "title": "Apply a post-processing preset",
+        "description": "Replaces the stack with a ready-made composition — a set of effects, in an order, on values that agree with one another. The document receives the stack itself, never a reference to the preset."
+      },
+      "postCamera": {
+        "title": "Say what a camera does about post-processing",
+        "description": "Chooses whether this camera follows the scene’s composition, carries its own, or applies none at all. Moving it to its own starts it from what it was already filming."
+      },
+      "postPresets": {
+        "title": "List the post-processing presets",
+        "description": "Answers the ready-made compositions the studio ships and the ones saved on this machine, by name. This is the list post.preset knows how to answer to."
+      },
+      "postDuplicate": {
+        "title": "Duplicate a post-processing effect",
+        "description": "Puts a copy of the effect right after it, on the same values and under a fresh identity. Refused for an effect a second instance of means nothing — an anti-aliaser, an occlusion."
+      },
+      "postReset": {
+        "title": "Reset a post-processing effect",
+        "description": "Brings every parameter of that effect back to what the catalogue declares, without taking it out of the stack or moving it."
+      },
+      "postKey": {
+        "title": "Key a post-processing parameter",
+        "description": "Opens an animation channel on that parameter where it has none, and lays a key at the head. The value given is the one to SEE, and the delta against the stack is worked out here."
+      },
+      "postUnkey": {
+        "title": "Take a post-processing key off",
+        "description": "Removes the key standing at the head on that parameter. The channel stays, exactly as when a key is taken off from the band."
+      },
+      "postSave": {
+        "title": "Save the composition as a preset",
+        "description": "Keeps the stack in front under a name, on this machine. Nothing is written into the document or the project."
+      },
+      "postRename": {
+        "title": "Rename a saved preset",
+        "description": "Changes the name of a preset on this machine, named by its id or by the name it holds. What it contains does not move."
+      },
+      "postForget": {
+        "title": "Forget a saved preset",
+        "description": "Takes a saved preset off this machine. Compositions already applied do not change: a document holds its stack, never a reference."
+      },
       "componentAttach": {
         "title": "Attach a component",
         "description": "Gives an object of the scene something to DO while the game runs — its health, its motion. Refused when the object already carries one of that type."
@@ -1231,6 +1299,18 @@
       "aimId": "Target identifier",
       "csgOperation": "What to do with them",
       "materialSlot": "Material slot",
+      "postCameraId": "Id of the camera whose composition is being set — absent means the scene’s",
+      "postEffectId": "Id of the instance within the stack",
+      "postEffect": "Effect of the catalogue to put in",
+      "postBy": "How many places to move the effect, negative to move it earlier",
+      "postParam": "Name of the parameter to set",
+      "postValue": "Numeric value of the parameter",
+      "postText": "Textual value of the parameter — a word from a list, a colour, an asset id",
+      "postOn": "Value of a parameter that is a switch",
+      "postEnabled": "On or off",
+      "postPreset": "Preset to apply",
+      "postMode": "What the camera does about the scene’s composition",
+      "postPresetName": "Name to give the preset",
       "componentType": "Component type",
       "componentField": "Field",
       "componentValue": "Value"

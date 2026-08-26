@@ -54,7 +54,6 @@ const OWN_ICON: Record<AssetType, string | null> = {
   video: null,
   audio: null,
   mesh: null,
-  texture: null,
   skybox: null,
   animation: mdiRun,
 }
@@ -71,23 +70,36 @@ export function assetIcon(type: AssetType): string {
  * What each space has any use for — which is not the reverse of the table above.
  *
  * A space consumes more than it produces: the 3D one takes materials and skies as much as
- * meshes, and the texture one is fed by ordinary pictures. Video takes everything, because a
+ * meshes, and the material one is fed by ordinary pictures. Video takes everything, because a
  * montage is where the others end up.
  *
  * This is what keeps takes out of the way while painting, without hiding anything that space
  * could actually accept — the shelf offers a way back to everything.
  */
 const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
-  image: ['image', 'texture', 'skybox'],
+  image: ['image', 'skybox'],
   video: ASSET_TYPES,
-  '3d': ['mesh', 'animation', 'texture', 'skybox', 'image'],
+  '3d': ['mesh', 'animation', 'skybox', 'image'],
   audio: ['audio'],
-  materials: ['texture', 'image'],
+  materials: ['image'],
   skyboxes: ['skybox', 'image'],
 }
 
 export function assetTypesOf(workspace: WorkspaceId): readonly AssetType[] {
   return USED_BY_WORKSPACE[workspace]
+}
+
+/**
+ * The one kind a space takes, where it takes only one — `null` otherwise.
+ *
+ * What `typeOfWorkspace` answered for Materials until a channel stopped being a kind of its own.
+ * Without it the shelf keeps whichever Type the previous space posed: arriving from 3D, Materials
+ * listed meshes.
+ */
+export function soleTypeOf(workspace: WorkspaceId): AssetType | null {
+  const used = USED_BY_WORKSPACE[workspace]
+
+  return used.length === 1 ? (used[0] ?? null) : null
 }
 
 /**

@@ -16,7 +16,7 @@ const picture = (): Asset => ({
   id: 'asset-base',
   name: 'pierre',
   path: 'Images/pierre.png',
-  type: 'texture',
+  type: 'image',
   location: 'local',
   tags: [],
   createdAt: '2026-08-26T10:00:00.000Z',

@@ -268,7 +268,7 @@ the letters their shape — the **size**, the **depth** (set it to zero for flat
 **curve segments**, which decide how finely the curves are cut.
 
 A text is lit like a mesh and wears the same **material**: colour, roughness, metalness, and the
-five textures. It casts and receives shadows.
+five images. It casts and receives shadows.
 
 #### The fonts on offer
 
@@ -292,13 +292,13 @@ does. It is what you use for a spark, a glow, a marker, a label above an object 
 has to stay readable from wherever you look.
 
 **Add ▸ Object ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
-under **Sprite**, from the project's own images — the same ones a material takes as a texture.
+under **Sprite**, from the project's own images — the same ones a material takes into a channel.
 
 | Setting | What it does |
 |---|---|
 | **Colour** | tints the picture. On a sprite with none, it is the colour of the quad itself |
 | **Opacity** | from transparent to opaque |
-| **Texture** | the picture shown, taken from the project's assets |
+| **Image** | the picture shown, taken from the project's assets |
 
 Four things to know:
 
@@ -601,7 +601,7 @@ its radius, a torus shows its tube, a spot shows its angle.
 | **Identity** | the name, editable |
 | **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z). A childless sprite selected on its own has no Rotation row: it would show nowhere |
 | **Geometry** | what defines the shape: radius, width, segments… |
-| **Material** | Colour, Roughness, Metalness, Tiles per metre, and five texture slots |
+| **Material** | Colour, Roughness, Metalness, Tiles per metre, and five image slots |
 
 #### Every geometry field
 
@@ -636,15 +636,15 @@ result you cannot predict without trying.
 | **Roughness** | perfect mirror | fully matte |
 | **Metalness** | plastic, wood, stone | metal |
 
-The five texture slots — **Texture**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
-occlusion** — take images from the project. The **Choose a texture** button opens the list;
-**Remove the texture** empties it.
+The five image slots — **Image**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
+occlusion** — take images from the project. The **Choose an image** button opens the list;
+**Remove the image** empties it.
 
 **Every new shape arrives already dressed** in a working chequer. It is there for three things:
-judging a scale, seeing a texture stretch, and telling one face from another. Replace it whenever
+judging a scale, seeing an image stretch, and telling one face from another. Replace it whenever
 you like — it is a starting point, not a decoration.
 
-Four chequers are copied into the project's **Materials** folder the first time a scene asks for
+Four chequers are copied into the project's **Images** folder the first time a scene asks for
 one: `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. They are project images like any
 other.
 
@@ -804,7 +804,7 @@ light markers are not part of the scene: they are display aids. The file holds o
 **A sprite does not come out either**, and without warning: neither format has an object that
 always turns to face the camera. In glTF the file keeps its name and its place, but nothing is
 drawn there; in USDZ nothing of it remains at all. A flat image that has to survive the export is
-made with a plane and a texture.
+made with a plane and an image.
 
 **A nested selection keeps its place.** Exporting an object filed inside a group writes it where it
 stands in the scene, not where it stands inside its group.

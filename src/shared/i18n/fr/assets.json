@@ -32,7 +32,7 @@
     "details": "Détail de la ligne",
     "editPixels": "Modifier l’image",
     "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place",
-    "extractTextures": "Extraire ses textures",
+    "extractTextures": "Extraire ses images",
     "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes",
     "fetchActionHint": "Télécharge les assets choisis de la bibliothèque distante dans le projet ouvert",
     "fetchAction_many": "Télécharger {{count, number}} assets",
@@ -88,7 +88,7 @@
     "video": "Vidéo",
     "audio": "Audio",
     "mesh": "Maille",
-    "texture": "Texture",
+    "material": "Matière",
     "skybox": "Skybox",
     "animation": "Animation",
     "other": "Autre"
@@ -182,7 +182,8 @@
       "archvis": "Architecture",
       "firstPerson": "1re personne",
       "thirdPerson": "3e personne",
-      "topDown": "Vue de dessus"
+      "topDown": "Vue de dessus",
+      "postProcessing": "Post-traitement"
     },
     "templateHints": {
       "empty": "Trois lumières, et rien d’autre à retirer",
@@ -192,7 +193,8 @@
       "archvis": "Un ciel, un soleil incliné et un sol large, caméra à hauteur d’œil",
       "firstPerson": "La caméra à hauteur d’œil, prête à marcher",
       "thirdPerson": "La caméra derrière l’épaule d’une silhouette",
-      "topDown": "La caméra en plongée, au-dessus de la scène"
+      "topDown": "La caméra en plongée, au-dessus de la scène",
+      "postProcessing": "Un mouvement de caméra, une bascule de point et un halo animé — de quoi juger toute la chaîne"
     },
     "folderField": "Emplacement",
     "folderHint": "Choisit le dossier du projet où le document sera enregistré",

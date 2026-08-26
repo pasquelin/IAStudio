@@ -140,6 +140,8 @@ type ChannelMethod = {
   [CHANNELS.activityRead]: StudioBridge['activity']['read']
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
+  [CHANNELS.postExport]: StudioBridge['post']['export']
+  [CHANNELS.postImport]: StudioBridge['post']['import']
   [CHANNELS.montageExport]: StudioBridge['montage']['export']
   [CHANNELS.montageImport]: StudioBridge['montage']['import']
   [CHANNELS.montageStems]: StudioBridge['montage']['stems']

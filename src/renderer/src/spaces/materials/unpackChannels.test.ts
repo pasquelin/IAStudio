@@ -6,7 +6,7 @@ import { packedChannels, unpackMaterialChannels } from './unpackChannels'
 const packed = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-orm',
   name: 'Robot — metallicRoughness',
-  type: 'texture',
+  type: 'image',
   location: 'local',
   derivedFrom: 'asset-model',
   packedSlot: 'metallicRoughnessTexture',

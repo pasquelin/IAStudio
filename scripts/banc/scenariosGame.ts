@@ -3,7 +3,7 @@ import * as read from './oracle'
 import { cubeScene } from './setups'
 
 /**
- * Section 59: what an object DOES while the game runs, as opposed to what it draws.
+ * Section 60: what an object DOES while the game runs, as opposed to what it draws.
  *
  * Read off the node rather than off the call: a component written and then written back by a
  * second call would pass a check that only counted calls.
@@ -13,13 +13,13 @@ const componentOf = (run: Run, name: string, type: string): Record<string, unkno
 
 export const GAME_SCENARIOS: readonly Scenario[] = [
   {
-    name: '59.1 gives Cube Test some health',
+    name: '60.1 gives Cube Test some health',
     said: ['Donne de la santé à Cube Test.'],
     setup: cubeScene,
     passed: run => componentOf(run, 'Cube Test', 'Health') !== undefined,
   },
   {
-    name: '59.2 raises its maximum health to 250',
+    name: '60.2 raises its maximum health to 250',
     said: ['Monte la santé maximum de Cube Test à 250.'],
     setup: async studio => {
       await cubeScene(studio)
@@ -28,13 +28,15 @@ export const GAME_SCENARIOS: readonly Scenario[] = [
     passed: run => componentOf(run, 'Cube Test', 'Health')?.max === 250,
   },
   {
-    name: '59.3 makes it travel up and down',
-    said: ['Fais monter et descendre Cube Test.'],
+    name: '60.3 makes it travel from side to side',
+    said: ['Fais aller Cube Test de gauche à droite.'],
     setup: cubeScene,
-    passed: run => componentOf(run, 'Cube Test', 'Movement')?.axis === 'y',
+    // 🛑 Never on a default: `y` and `pingPong` are what `component.attach` alone already writes,
+    // so an oracle reading either would pass without `component.set` being called at all.
+    passed: run => componentOf(run, 'Cube Test', 'Movement')?.axis === 'x',
   },
   {
-    name: '59.4 takes its health back off',
+    name: '60.4 takes its health back off',
     said: ['Retire la santé de Cube Test.'],
     setup: async studio => {
       await cubeScene(studio)

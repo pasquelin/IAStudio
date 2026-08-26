@@ -225,7 +225,7 @@
     "triangles": "Triangles",
     "vertices": "Sommets",
     "draws": "Appels de dessin",
-    "textures": "Textures",
+    "textures": "Images en mémoire",
     "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
   },
   "sceneDisplay": {
@@ -255,6 +255,7 @@
     "rotation": "Rotation",
     "scale": "Échelle",
     "fov": "Angle de vue",
+    "post": "Post-traitement",
     "addTrack": "Ajouter une piste {{property}}",
     "removeTrack": "Supprimer la piste {{name}}",
     "arm": "Armer la piste {{name}} en écriture",
@@ -283,6 +284,7 @@
     "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet",
     "reorderRow": "Déplacer la ligne {{name}}",
     "rowList": "Lignes de l’animation",
+    "sceneSubject": "Composition de la scène",
     "addShot": "Mettre cette caméra à l’antenne",
     "addShotHint": "Ouvre un plan pour la caméra choisie, à partir de la tête",
     "addShotNeedsCamera": "Choisissez une caméra de la scène pour lui ouvrir un plan",

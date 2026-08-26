@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_MESSAGES, ACTIVITY_TOPICS } from '../domain/activity'
 import { TRACK_PROPERTIES } from '../domain/animation'
+import {
+  CAMERA_POST_MODES,
+  POST_CATEGORIES,
+  POST_COSTS,
+  POST_EFFECT_IDS,
+  POST_EFFECTS,
+} from '../domain/postProcessing'
+import { POST_PRESET_IDS } from '../domain/postPresets'
 import { HOME_SECTION_IDS } from '../domain/home'
 import {
   BACKGROUND_KINDS,
@@ -14,6 +22,7 @@ import {
   VIEWPORT_QUALITIES,
 } from '../domain/scene'
 import { CAPTURE_QUALITIES } from '../domain/sceneCapture'
+import { COMPONENTS } from '../domain/componentRegistry'
 import { CONTEXT_TEMPLATES } from '../domain/projectContext'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
@@ -258,6 +267,8 @@ describe('the translation bundles', () => {
       'materialExportTargets.gltf',
       'materialExportTargets.unity',
       'materialExportTargets.unreal',
+      // A console, and consoles keep their name. `preset_psx` reads as one word to `wordsOf`.
+      'postfx.preset_gameBoy',
     ])
 
     const copied = [...BUNDLES.fr]
@@ -399,6 +410,16 @@ describe('the translation bundles', () => {
       { dropped: /maillages?/i, kept: 'maille', except: ['sceneDisplay.wireframeHint'] },
       { dropped: /matériaux?/i, kept: 'matière' },
       /**
+       * A texture IS a picture, and the studio stopped filing it apart — the kind is gone, the
+       * shelf is gone, and what a picture serves is read off its channel. The word survives in
+       * KEYS, which come from the API and are not screen text.
+       *
+       * No `except`: the two senses this would wrongly catch — the glTF vocabulary of a file
+       * "with its textures beside it", and the audio one of a sound with no texture — live in
+       * `docs/`, which this guard cannot reach anyway.
+       */
+      { dropped: /textures?/i, kept: 'image' },
+      /**
        * `rigué` is English wearing a French ending, and the workspace that gave a mesh its bones
        * had already decided against it: seven of its nine sentences said `squelette`, two command
        * hints still said `rigué` and `un rig`.
@@ -453,6 +474,8 @@ describe('the translation bundles', () => {
     ],
     en: [
       { dropped: /\bfile browsers?\b/i, kept: 'file manager' },
+      /** The same word settled on the French side, for the same reason. */
+      { dropped: /\btextures?\b/i, kept: 'image' },
       { dropped: /\bpreferences?\b/i, kept: 'settings' },
       {
         dropped: /\bpictures?\b/i,
@@ -503,7 +526,15 @@ describe('the translation bundles', () => {
    * plural, `montages` slips through the very typo the canary is there to catch — `montagess?`
    * still reads it, and the canary shipped green when it was.
    */
-  const ENGLISH_SAMPLES = ['file browser', 'preference', 'picture', 'log', 'montage', 'reveal']
+  const ENGLISH_SAMPLES = [
+    'file browser',
+    'preference',
+    'picture',
+    'log',
+    'montage',
+    'reveal',
+    'texture',
+  ]
 
   /**
    * The negative half. Each word matches its reading once the boundary is dropped, which is what
@@ -511,7 +542,14 @@ describe('the translation bundles', () => {
    * `preferences?` has none: no English word carries `preference` inside a longer one. Which is
    * the blind spot — a reading added tomorrow without a near miss of its own stays green.
    */
-  const ENGLISH_NEAR_MISSES = ['profile browser', 'catalogue', 'pictured', 'remontage', 'revealed']
+  const ENGLISH_NEAR_MISSES = [
+    'profile browser',
+    'catalogue',
+    'pictured',
+    'remontage',
+    'revealed',
+    'textured',
+  ]
 
   it.each(CODES)('says one thing one way in %s', code => {
     const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
@@ -565,6 +603,8 @@ describe('the translation bundles', () => {
       'des rigs',
       'plan',
       'plans',
+      'texture',
+      'textures',
     ]
 
     // The canary of an assertion on an empty list: a reading that stopped matching would pass it.
@@ -635,10 +675,36 @@ describe('the translation bundles', () => {
       '150,000. when smart low poly is on and face limit is unset, defaults to 10,000',
   ])
 
+  /**
+   * `texture` is not asked of this dictionary, and the reason is the same one twice over: these
+   * are a MODEL's own parameters — `texture quality`, `texture seed` — where the word is the
+   * trade's for what a mesh wears, and the studio neither chose the parameter nor can rename it
+   * in a sentence that cites it by name.
+   *
+   * What the studio DID drop is the shelf: a texture is a picture in the catalogue now. The two
+   * are not in conflict — a 3D model still wears textures, they are just filed as the pictures
+   * they are.
+   */
+  const TEXTURE_ON_A_MESH: ReadonlySet<string> = new Set([
+    'texture quality',
+    'texture alignment',
+    'texture seed',
+    'enable texturing. set to false for a model without textures',
+    "texture quality level. 'detailed' gives hd quality textures",
+    'determines the prioritization of texture alignment in the 3d model',
+    'random seed for texture generation. using the same seed will produce identical textures',
+    'generate segmented 3d model parts. incompatible with texture, pbr, and quad',
+    'enable pbr generation. default value is true. if this option is set to true, texture ' +
+      'parameters will be ignored',
+  ])
+
   it('says one thing one way in the dictionary of what a model wrote about itself', () => {
+    const exempt = (source: string, kept: string): boolean =>
+      kept === 'image' ? TEXTURE_ON_A_MESH.has(source) : PAVAGE_NOT_THE_OBJECT.has(source)
+
     const drifted = Object.entries(modelTextFr).flatMap(([source, french]) =>
       SETTLED_WORDS.fr
-        .filter(({ dropped }) => dropped.test(french) && !PAVAGE_NOT_THE_OBJECT.has(source))
+        .filter(({ dropped, kept }) => dropped.test(french) && !exempt(source, kept))
         .map(({ kept }) => `${source} — say "${kept}"`),
     )
 
@@ -646,12 +712,14 @@ describe('the translation bundles', () => {
   })
 
   it('drops a dictionary exemption once its entry stops saying the word', () => {
-    const covering = [...PAVAGE_NOT_THE_OBJECT].filter(source => {
-      const french = Object.entries(modelTextFr).find(([key]) => key === source)?.[1]
-      return french === undefined || !/maillages?/i.test(french)
-    })
+    const stale = (exempted: ReadonlySet<string>, word: RegExp): string[] =>
+      [...exempted].filter(source => {
+        const french = Object.entries(modelTextFr).find(([key]) => key === source)?.[1]
+        return french === undefined || !word.test(french)
+      })
 
-    expect(covering).toEqual([])
+    expect(stale(PAVAGE_NOT_THE_OBJECT, /maillages?/i)).toEqual([])
+    expect(stale(TEXTURE_ON_A_MESH, /textures?/i)).toEqual([])
   })
 
   /**
@@ -923,7 +991,6 @@ describe('the translation bundles', () => {
    * the day both agree again. A channel absent here and divergent is drift, in either language.
    */
   const NAMED_TWICE: Partial<Record<PbrChannel, string>> = {
-    baseColor: "`Texture` is three.js' own name for `map`; the tile names the channel instead",
     normal: 'the inspector counts them, as the trade writes the map; the tile names one channel',
     metalness: 'the trade word beside `Rugosité`, and the short one that fits a tile',
     ao: 'the full name beside the other maps, and the short one that fits a tile',
@@ -1168,6 +1235,16 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...TRACK_PROPERTIES.map(property => `animation.${property}`),
   ...HOME_SECTION_IDS.map(id => `home.sections.${id}`),
   ...[...new Set(TOOL_PLACEMENTS.map(placement => placement.id))].map(id => `panels.${id}`),
+  // Every word the component registry names, read off the registry itself. A third component,
+  // or a fourth value of a choice, arrives with its lines or this goes red — the descriptor is
+  // read through `t(<variable>)` from the add menu, the section heading and every field label,
+  // so nothing else would see it.
+  ...Object.values(COMPONENTS).flatMap(descriptor => [
+    descriptor.titleKey,
+    descriptor.descriptionKey,
+    ...descriptor.fields.map(field => field.labelKey),
+    ...descriptor.fields.flatMap(field => (field.options ?? []).map(one => `game.values.${one}`)),
+  ]),
   // The ways into a first context card, read off the list rather than off a literal: a model
   // added without its two lines would offer the reader its own key as a menu row.
   ...CONTEXT_TEMPLATES.flatMap(template => [template.titleKey, template.bodyKey]),
@@ -1192,6 +1269,24 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...explained('environment.visibility_', HELPER_VISIBILITIES),
   ...explained('environment.quality_', VIEWPORT_QUALITIES),
   ...explained('environment.unit_', DISPLAY_UNITS),
+  // The composition catalogue, composed on three sides at once — the stack rows, the library and
+  // the inspector's generated controls. An effect added without its two lines would offer the
+  // reader its own identifier as a row of the Add menu.
+  ...explained('postfx.effect_', POST_EFFECT_IDS),
+  ...POST_CATEGORIES.map(category => `postfx.category_${category}`),
+  ...POST_COSTS.map(cost => `postfx.cost_${cost}`),
+  ...explained('postfx.mode_', CAMERA_POST_MODES),
+  ...POST_PRESET_IDS.map(preset => `postfx.preset_${preset}`),
+  // Every parameter of every effect, and every value of every closed list one offers. The panel
+  // is GENERATED from the catalogue, so a knob without a line is a knob labelled by its own key.
+  ...POST_EFFECT_IDS.flatMap(effect =>
+    Object.keys(POST_EFFECTS[effect].params).map(param => `postfx.param_${param}`),
+  ),
+  ...POST_EFFECT_IDS.flatMap(effect =>
+    Object.values(POST_EFFECTS[effect].params).flatMap(spec =>
+      spec.control === 'choice' ? spec.options.map(option => `${spec.labelPrefix}${option}`) : [],
+    ),
+  ),
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),

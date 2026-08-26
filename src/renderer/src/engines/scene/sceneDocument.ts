@@ -35,6 +35,7 @@ import {
   DEFAULT_FPS,
   EASINGS,
   EMPTY_TIMELINE,
+  SCENE_SUBJECT_ID,
   sheetFromAnimated,
   TRACK_PROPERTIES,
   type AnimationTimeline,
@@ -43,9 +44,11 @@ import {
   type Keyframe,
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
+import { readCameraPost } from '@shared/domain/postProcessing'
 import { isRecord, readNumber } from '@shared/guards'
 import type { Component } from '@shared/domain/component'
 import { isComponentType } from '@shared/domain/componentRegistry'
+import { newId } from '@/helpers/ids'
 import { clamp } from '@shared/numeric'
 import {
   GEOMETRY_SPECS,
@@ -73,7 +76,9 @@ export type ScenePayload = {
 }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  const alive = new Set(state.nodes.map(node => node.id))
+  // The scene's own composition line stands beside the nodes, never among them: without it here
+  // a save would quietly drop `@scene` from the sheet, and the composition would lose its line.
+  const alive = new Set([...state.nodes.map(node => node.id), SCENE_SUBJECT_ID])
   const sheet = state.animation.sheet.filter(id => alive.has(id))
 
   return {
@@ -167,7 +172,11 @@ function revived(node: SceneNode): SceneNode {
     return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
   }
   if (filled.type === 'camera') {
-    return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
+    const { post, ...lens } = { ...DEFAULT_CAMERA, ...filled.camera }
+    const read = readCameraPost(post, newId)
+    // `inherit` is what an ABSENT field already means, so it is not written back: a camera that
+    // follows the scene reads the same in a file written before compositions existed.
+    return { ...filled, camera: read.mode === 'inherit' ? lens : { ...lens, post: read } }
   }
   if (filled.type === 'model') {
     return { ...filled, model: withDress(withLanes(filled.model)) }
@@ -585,8 +594,15 @@ function isTrack(value: unknown): value is AnimationTrack {
   if (typeof target.nodeId !== 'string') return false
   if (target.bone !== undefined && typeof target.bone !== 'string') return false
   if (!TRACK_PROPERTIES.some(property => property === target.property)) return false
+  // A composition channel that names no effect and no parameter drives nothing: kept, it would
+  // sit on the sheet as a row whose keys reach nowhere.
+  if (target.property === 'post' && !isPostTarget(target.post)) return false
 
   return Array.isArray(value.keys) && value.keys.every(isKeyframe)
+}
+
+function isPostTarget(value: unknown): boolean {
+  return isRecord(value) && typeof value.effectId === 'string' && typeof value.param === 'string'
 }
 
 function isKeyframe(value: unknown): value is Keyframe {

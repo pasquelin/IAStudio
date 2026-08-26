@@ -1,7 +1,7 @@
 import { FILE_NAME_MAX_LENGTH } from './fileName'
 import type { PbrChannel } from './material'
 
-export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox' | 'animation'
+export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'skybox' | 'animation'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
 export const ASSET_TYPES: readonly AssetType[] = [
@@ -9,7 +9,6 @@ export const ASSET_TYPES: readonly AssetType[] = [
   'video',
   'audio',
   'mesh',
-  'texture',
   'skybox',
   'animation',
 ]
@@ -48,16 +47,15 @@ export function isAssetType(value: unknown): value is AssetType {
  *
  * `Record<AssetType, string>` still makes a new kind a compile error rather than a surprise.
  *
- * A DEFAULT and nothing more, which is what makes renaming one safe: a project created before
- * `Textures` became `Materials` keeps its folder — every row carries its own path — and only what
- * it takes in from now on lands beside it.
+ * A DEFAULT and nothing more, which is what made dropping `Textures` safe: a project that filed
+ * pictures there keeps them — every row carries its own path — and only what it takes in from now
+ * on lands under `Images` with the rest.
  */
 export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
   image: 'Images',
   video: 'Video',
   audio: 'Audio',
   mesh: '3D',
-  texture: 'Materials',
   skybox: 'Sky',
   animation: 'Animations',
 }
@@ -257,7 +255,7 @@ export type Asset = {
 }
 
 /** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
-export const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
+export const PICTURES: readonly AssetType[] = ['image', 'skybox']
 
 /**
  * Whether this asset is a picture the studio can serve from disk. One answer to the question,
@@ -548,11 +546,11 @@ export type AssetQuery = {
 export type AssetCounts = Record<AssetType, number>
 
 /**
- * A fresh tally at zero. A literal rather than built from `ASSET_TYPES`, so a seventh kind is a
+ * A fresh tally at zero. A literal rather than built from `ASSET_TYPES`, so a kind added is a
  * compile error here instead of a counter silently missing from five hand-written copies.
  */
 export function emptyAssetCounts(): AssetCounts {
-  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0, animation: 0 }
+  return { image: 0, video: 0, audio: 0, mesh: 0, skybox: 0, animation: 0 }
 }
 
 /**

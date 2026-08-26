@@ -236,6 +236,26 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'world.ground': ['48.3'],
   'world.render': ['48.4'],
 
+  // The composition. Every one of them is exercised on the SCENE's stack, which is what a first
+  // call means, and the last four on a camera that overrides it — the two halves of § 3.
+  'post.state': ['59.1'],
+  'post.add': ['59.2', '59.8'],
+  'post.set': ['59.3'],
+  'post.enable': ['59.4'],
+  'post.remove': ['59.5'],
+  'post.preset': ['59.6', '59.12', '59.17'],
+  'post.switch': ['59.7'],
+  'post.move': ['59.8'],
+  'post.camera': ['59.9', '59.10', '59.11'],
+  'post.duplicate': ['59.13'],
+  'post.reset': ['59.14'],
+  'post.key': ['59.15'],
+  'post.unkey': ['59.16'],
+  'post.presets': ['59.17'],
+  'post.save': ['59.18'],
+  'post.rename': ['59.19'],
+  'post.forget': ['59.20'],
+
   'rig.state': ['50.1'],
   'rig.fit': ['50.2'],
   'rig.clear': ['50.10'],
@@ -285,9 +305,10 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'git.pull': ['58.23'],
   'git.push': ['58.24'],
 
-  'component.attach': ['59.1', '59.2', '59.4'],
-  'component.detach': ['59.4'],
-  'component.set': ['59.2', '59.3'],
+  // 59.1 only: the two others attach it in their own DECOR, which measures the setup, not the tool.
+  'component.attach': ['60.1'],
+  'component.detach': ['60.4'],
+  'component.set': ['60.2', '60.3'],
 
   'context.read': ['57.3'],
   'context.write': ['57.4'],

@@ -33,7 +33,8 @@
       "z": "Z",
       "once": "Once",
       "loop": "Loop",
-      "pingPong": "Back and forth"
+      "pingPong": "Back and forth",
+      "unknown": "Unknown value"
     }
   }
 }

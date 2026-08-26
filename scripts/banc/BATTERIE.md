@@ -272,7 +272,7 @@ le résultat : ça se relit à la main, et sept l'avaient fait.
 
 - [ ] « Quel projet est actuellement ouvert et quels documents sont ouverts ? »
 - [x] « Liste-moi les fichiers présents dans mon projet, classés par type. »
-- [x] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D, de textures et de skyboxes ? »
+- [x] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D et de skyboxes ? »
 - [x] « Quel document est actuellement actif ? »
 - [ ] « Quels sont les éléments présents dans la scène 3D actuellement ouverte ? »
 - [ ] « Quelles caméras et quelles lumières sont présentes dans ma scène ? »
@@ -877,9 +877,34 @@ Sur un projet suivi par git :
 - [x] « Récupère et applique les changements du dépôt distant. »
 - [ ] « Envoie mes versions sur le dépôt distant. »
 
-## 59. Ce qu'un objet FAIT pendant la partie
+## 59. Le post-traitement
+
+Dans la scène Test MCP :
+
+- [ ] « Quels effets de post-traitement porte cette scène ? »
+- [ ] « Ajoute un halo lumineux au post-traitement de la scène. »
+- [ ] « Monte la force du halo lumineux à 1,5. »
+- [ ] « Désactive le halo lumineux sans le retirer. »
+- [ ] « Retire le halo lumineux de la composition. »
+- [ ] « Applique le préréglage cinéma au post-traitement de la scène. »
+- [ ] « Coupe tout le post-traitement de la scène pour comparer. »
+- [ ] « Fais passer le vignettage avant le halo lumineux. »
+- [ ] « Donne à Camera 01 son propre post-traitement, indépendant de la scène. »
+- [ ] « Rends Camera 01 sans aucun post-traitement. »
+- [ ] « Remets Camera 01 sur le post-traitement de la scène. »
+- [ ] « Applique le préréglage horreur au post-traitement de Camera 01 seule. »
+- [ ] « Duplique le halo lumineux pour en avoir un second. »
+- [ ] « Remets le halo lumineux à ses réglages par défaut. »
+- [ ] « Pose une clé sur la force du halo lumineux, à 2. »
+- [ ] « Retire la clé posée sur la force du halo lumineux. »
+- [ ] « Quels préréglages de post-traitement puis-je appliquer ? »
+- [ ] « Enregistre cette composition sous le nom Aube grise. »
+- [ ] « Renomme le préréglage Nuit froide en Nuit polaire. »
+- [ ] « Supprime le préréglage Nuit froide de cette machine. »
+
+## 60. Ce qu'un objet FAIT pendant la partie
 
 - [ ] « Donne de la santé à Cube Test. »
 - [ ] « Monte la santé maximum de Cube Test à 250. »
-- [ ] « Fais monter et descendre Cube Test. »
+- [ ] « Fais aller Cube Test de gauche à droite. »
 - [ ] « Retire la santé de Cube Test. »

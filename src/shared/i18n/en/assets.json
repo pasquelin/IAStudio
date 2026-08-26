@@ -32,7 +32,7 @@
     "details": "Row detail",
     "editPixels": "Edit the image",
     "editPixelsHint": "Opens this image in the Image space, where ⌘S writes it back over itself",
-    "extractTextures": "Extract its textures",
+    "extractTextures": "Extract its images",
     "extractTexturesHint": "Takes the images inside this model out into the project, where they can be opened and painted on",
     "fetchActionHint": "Downloads the chosen assets from the remote library into the open project",
     "fetchAction_many": "Download {{count, number}} assets",
@@ -88,7 +88,7 @@
     "video": "Video",
     "audio": "Audio",
     "mesh": "Mesh",
-    "texture": "Texture",
+    "material": "Material",
     "skybox": "Skybox",
     "animation": "Animation",
     "other": "Other"
@@ -182,7 +182,8 @@
       "archvis": "Architecture",
       "firstPerson": "First person",
       "thirdPerson": "Third person",
-      "topDown": "Top down"
+      "topDown": "Top down",
+      "postProcessing": "Post-processing"
     },
     "templateHints": {
       "empty": "Three lights, and nothing else to take away",
@@ -192,7 +193,8 @@
       "archvis": "A sky, a low sun and a wide floor, camera at eye height",
       "firstPerson": "The camera at eye height, ready to walk",
       "thirdPerson": "The camera behind a stand-in’s shoulder",
-      "topDown": "The camera looking down on the scene"
+      "topDown": "The camera looking down on the scene",
+      "postProcessing": "A camera move, a rack focus and an animated bloom — the whole chain, judged at once"
     },
     "folderField": "Location",
     "folderHint": "Chooses the project folder the document will be saved in",

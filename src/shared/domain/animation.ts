@@ -5,16 +5,40 @@ import { SECOND, type Us } from './time'
  * What a track drives. Three for a node, and the same three for one bone of a rig — a bone is
  * addressed by name because it lives inside the file, never in the document (see `ModelRef`).
  */
-export type TrackProperty = 'position' | 'rotation' | 'scale' | 'fov'
+export type TrackProperty = 'position' | 'rotation' | 'scale' | 'fov' | 'post'
 
-export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale', 'fov']
+/** Every property a track may drive. What a reader validates a stored target against. */
+export const TRACK_PROPERTIES: readonly TrackProperty[] = [
+  'position',
+  'rotation',
+  'scale',
+  'fov',
+  'post',
+]
+
+/**
+ * The properties a hand keys directly on a subject of the sheet — the pose, and the lens.
+ *
+ * `post` is deliberately out: a composition parameter is keyed from the composition panel,
+ * against an effect INSTANCE and a parameter name, neither of which a subject row can name.
+ */
+export const DIRECT_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale', 'fov']
+
+/**
+ * The subject a scene's own composition is keyed under.
+ *
+ * A reserved id rather than a nullable field: every node id is a `crypto.randomUUID()`, so no
+ * node can ever answer to this, and the whole of the track machinery — filtering, rows, solo,
+ * keys — keeps working on a plain string. `animation.test.ts` holds it to that shape.
+ */
+export const SCENE_SUBJECT_ID = '@scene'
 
 /**
  * The three a pose is made of — what every node can be keyed on, and what `contributionAt`
  * composes. `fov` is deliberately out: it drives a lens rather than a transform, and it is read
- * by `fovAt` alone.
+ * by `fovAt` alone. `post` likewise, read by `postAt`.
  */
-export type PoseProperty = Exclude<TrackProperty, 'fov'>
+export type PoseProperty = Exclude<TrackProperty, 'fov' | 'post'>
 
 export const POSE_PROPERTIES: readonly PoseProperty[] = ['position', 'rotation', 'scale']
 
@@ -30,11 +54,19 @@ export type Keyframe = { time: Us; value: Vector3 }
 
 /** Which object a track writes on, and which of its three values. */
 export type TrackTarget = {
+  /** A node of the scene, or `SCENE_SUBJECT_ID` for the scene's own composition. */
   nodeId: string
   /** A bone of that node's model, or the node itself when absent. */
   bone?: string
   property: TrackProperty
+  /**
+   * Present on a `post` track and on no other: which effect INSTANCE of the stack, and which of
+   * its parameters. The instance rather than the effect kind, so two blooms are two channels.
+   */
+  post?: PostTarget
 }
+
+export type PostTarget = { effectId: string; param: string }
 
 export type AnimationTrack = {
   id: string
@@ -182,4 +214,9 @@ export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({
  */
 export function neutralOf(property: TrackProperty): Vector3 {
   return property === 'scale' ? ONE : ZERO
+}
+
+/** Whether this target drives a composition parameter, narrowed so `post` can be read off it. */
+export function drivesPost(target: TrackTarget): target is TrackTarget & { post: PostTarget } {
+  return target.property === 'post' && target.post !== undefined
 }

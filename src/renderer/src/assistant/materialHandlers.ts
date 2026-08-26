@@ -1,7 +1,6 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { HEX_COLOR } from '@shared/domain/color'
 import { SKYBOX_VIEWS, type SkyboxContent } from '@shared/domain/skybox'
-import { ENVIRONMENT_KINDS, STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
 import type { Command } from '@/engines/core/history'
 import {
@@ -16,13 +15,14 @@ import {
   TILING_PREVIEWS,
   type MaterialState,
 } from '@/engines/material/materialState'
-import { activeSkyboxId, activeTextureId, useDocuments } from '@/stores/documents'
+import { activeMaterialId, activeSkyboxId, useDocuments } from '@/stores/documents'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { skyboxViewOf, useSkyboxViews } from '@/stores/skyboxViews'
 import { useStyles } from '@/stores/styles'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { environmentFromInput } from './environmentInput'
 
 /**
  * The sky and the material, driven by value.
@@ -41,7 +41,7 @@ function skyOpen(): { documentId: string; state: SkyboxContent } | null {
 }
 
 function materialOpen(): { documentId: string; state: MaterialState } | null {
-  const documentId = activeTextureId(useDocuments.getState())
+  const documentId = activeMaterialId(useDocuments.getState())
   return documentId === null
     ? null
     : { documentId, state: materialOf(useMaterials.getState(), documentId) }
@@ -254,47 +254,13 @@ function preview(input: Record<string, unknown>): ActionOutcome {
   ])
 }
 
-/**
- * What lights a preview, named as `world.environment` names it: a PICTURE by asset id, a sky
- * DOCUMENT by title, `studio` to put both out. Naming one is enough — `kind` is what a client
- * says only to go back to the procedural room.
- */
+/** A preview needs a source: unlike a scene, there is no intensity to set on its own. */
 function environmentOf(input: Record<string, unknown>): ActionOutcome | Promise<ActionOutcome> {
-  const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
-  const assetId = textOf(input, 'assetId')
-  const title = textOf(input, 'sky')
-  // A preview is lit by ONE prefiltered map, so naming both is a request with two answers.
-  if (assetId !== null && title !== null) return refused('badInput')
-  if (kind === 'skybox' && assetId === null) return refused('badInput')
-  if (kind === 'sky' && title === null) return refused('badInput')
-  if (kind === 'studio' && (assetId !== null || title !== null)) return refused('badInput')
-
-  // The sky DOCUMENT must EXIST, or the preview follows a reference nothing can resolve.
-  const documentId = title === null ? null : skyNamed(title)
-  if (title !== null && documentId === null) return refused('notFound')
-
-  const environment: EnvironmentRef | null =
-    documentId !== null
-      ? { kind: 'sky', documentId }
-      : assetId !== null
-        ? { kind: 'skybox', assetId }
-        : kind === 'studio'
-          ? STUDIO_ENVIRONMENT
-          : null
-  if (!environment) return refused('badInput')
-
-  const write = (): ActionOutcome => runMaterial([setPreview('environment', environment)])
-  // The picture must EXIST too, for the reason the document above does.
-  return assetId === null ? write() : withAsset(assetId, write)
-}
-
-/** The sky document of that name, or nothing — a title is what a request can carry. */
-function skyNamed(title: string): string | null {
-  const state = useDocuments.getState()
-  const found = [...state.stored, ...Object.values(state.documents)].find(
-    one => one.kind === 'skybox' && one.title === title,
+  return environmentFromInput(input, environment =>
+    environment === null
+      ? refused('badInput')
+      : runMaterial([setPreview('environment', environment)]),
   )
-  return found?.id ?? null
 }
 
 // Session state through the store, never a command: how a sky is LOOKED at is not the document,

@@ -1,5 +1,6 @@
 import { mdiChevronDown, mdiChevronRight, mdiRhombus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { snapToFrame } from '@shared/domain/time'
 import { channelNames } from '@/helpers/channelNames'
 import { ToolButton } from '@/design/ToolButton'
@@ -54,6 +55,10 @@ export function AnimationHeadersSubject({
     if (command) store.runCommand(documentId, command)
   }
 
+  // The composition has no pose to key, only the channels its panel opened: the diamond stands
+  // for what those channels hold, and there is nothing at all behind it while they are none.
+  const keyable = row.id !== SCENE_SUBJECT_ID || row.tracks.length > 0
+
   const label = t('animation.reorderRow', { name: row.name })
 
   // A camera's line IS the montage's law, so dragging it edits the document — where a plain
@@ -104,6 +109,7 @@ export function AnimationHeadersSubject({
           tooltip={TIP_RIGHT}
           variant="header"
           active={standing}
+          disabled={!keyable}
           onClick={key}
         />
         {TRACK_FLAGS.map(flag => (

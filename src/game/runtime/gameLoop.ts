@@ -32,9 +32,11 @@ export type GameLoop = {
   reset: () => void
 }
 
-export function createGameLoop(world: World, step: number = world.time.step): GameLoop {
+export function createGameLoop(world: World): GameLoop {
+  const step = world.time.step
   let accumulator = 0
   let last: number | null = null
+  const alpha = (): number => accumulator / step
 
   return {
     advance: nowSeconds => {
@@ -56,11 +58,11 @@ export function createGameLoop(world: World, step: number = world.time.step): Ga
         ran += 1
       }
 
-      world.lateUpdate(accumulator / step)
+      world.lateUpdate(alpha())
       return ran
     },
 
-    alpha: () => accumulator / step,
+    alpha,
 
     reset: () => {
       accumulator = 0

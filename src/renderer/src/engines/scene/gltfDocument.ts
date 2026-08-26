@@ -220,15 +220,26 @@ function unknownComponents(document: Record<string, unknown>): string[] {
   const unknown = new Set<string>()
 
   for (const node of nodes) {
-    if (!isRecord(node) || !Array.isArray(node.components)) continue
+    if (!isRecord(node) || node.components === undefined) continue
+
+    // Not an array at all — a later build keying them by type, or a hand edit. The reader empties
+    // it, so without this the loss would be written back at the first ⌘S without a word.
+    if (!Array.isArray(node.components)) {
+      unknown.add('')
+      continue
+    }
+
     for (const component of node.components) {
       if (!isRecord(component) || typeof component.type !== 'string') continue
       if (!isComponentType(component.type)) unknown.add(component.type)
     }
   }
 
-  // By code unit: these are identifiers a reader compares, not words anyone reads in order.
-  return [...unknown].sort(byCodeUnit).map(type => `components.${type}`)
+  // By code unit: these are identifiers a reader compares, not words anyone reads in order. The
+  // empty one names the member itself, which is what a shape rather than a list comes to.
+  return [...unknown]
+    .sort(byCodeUnit)
+    .map(type => (type === '' ? 'components' : `components.${type}`))
 }
 
 /** Fields at their default are left out. The rotation is Euler here, a quaternion there. */

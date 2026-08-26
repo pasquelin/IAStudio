@@ -722,7 +722,6 @@ describe('project handlers', () => {
       video: 1,
       audio: 0,
       mesh: 0,
-      texture: 0,
       skybox: 0,
       animation: 0,
     })
@@ -852,8 +851,8 @@ describe('project handlers', () => {
 
     const backend = () => ({
       importFromUrl: vi.fn(),
-      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
-      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(),
     })
 
@@ -882,7 +881,7 @@ describe('project handlers', () => {
       return root
     }
 
-    it('writes each one into the project as a texture of its own', async () => {
+    it('writes each one into the project as a picture of its own', async () => {
       const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
       const assets = backend()
       registerProjectHandlers(
@@ -893,7 +892,7 @@ describe('project handlers', () => {
 
       expect(wrote(assets).request).toMatchObject({
         id: 'asset-new',
-        type: 'texture',
+        type: 'image',
         // Read here because this is the only place the extracted name reaches: it carries TWO
         // holes, and nothing else in the suite would notice `{{name}} — {{channel}}` going out
         // whole. See `main/no-unfilled-placeholder.test.ts`.
@@ -917,7 +916,7 @@ describe('project handlers', () => {
     it('leaves a model that already has its pictures alone, and answers with them', async () => {
       const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
       await catalog.add(
-        asset({ id: 'asset-tex', type: 'texture', derivedFrom: 'asset-1', name: 'Skeleton base' }),
+        asset({ id: 'asset-tex', type: 'image', derivedFrom: 'asset-1', name: 'Skeleton base' }),
       )
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
@@ -1014,7 +1013,7 @@ describe('project handlers', () => {
       await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
 
       expect(wrote(assets).request).toMatchObject({
-        type: 'texture',
+        type: 'image',
         extension: '.png',
         probe: expect.objectContaining({ width: 8, height: 4 }),
       })
@@ -1045,13 +1044,13 @@ describe('project handlers', () => {
   describe('a channel the renderer computed', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
-      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
-      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(),
     })
 
     /**
-     * A channel goes in as a `texture`, which is what puts it under the right facet of the shelf,
+     * A channel goes in as a picture whose `map` is set, which is what a slot reads of the shelf,
      * and carries its `map` so the catalogue can later be asked which normal maps a project holds.
      */
     it('files it as a channel of the project, under a new identifier', async () => {
@@ -1069,7 +1068,7 @@ describe('project handlers', () => {
         {
           id: 'asset-new',
           name: 'Brique — Normale',
-          type: 'texture',
+          type: 'image',
           extension: '.png',
           map: 'normal',
           derivedFrom: 'asset-1',
@@ -1104,7 +1103,7 @@ describe('project handlers', () => {
     it('never hands back where the file sits', async () => {
       const assets = backend()
       assets.importFromBytes = vi.fn(async () =>
-        asset({ id: 'asset-new', type: 'texture', sourcePath: '/Users/someone/secret.png' }),
+        asset({ id: 'asset-new', type: 'image', sourcePath: '/Users/someone/secret.png' }),
       )
       registerProjectHandlers(deps(catalog, { assets }))
 
@@ -1117,7 +1116,7 @@ describe('project handlers', () => {
       expect(saved).toEqual(expect.not.objectContaining({ sourcePath: expect.anything() }))
     })
 
-    /** Bytes with no channel are an ordinary picture: this door files textures, and says so. */
+    /** Bytes with no channel are an ordinary picture: this door files channels, and says so. */
     it('refuses a request that names no channel', async () => {
       registerProjectHandlers(deps(catalog, { assets: backend() }))
 
@@ -1354,7 +1353,7 @@ describe('project handlers', () => {
     })
 
     /**
-     * A texture channel edited as a picture is still a channel. Read from the catalogue rather
+     * A channel edited as a picture is still a channel. Read from the catalogue rather
      * than sent by the renderer, for the reason `saveTexture` gives: the kind is what the folder
      * and the extension follow, and a channel filed as a plain picture leaves its shelf.
      */
@@ -1362,7 +1361,7 @@ describe('project handlers', () => {
       const assets = backend()
       const sourced = {
         ...catalog,
-        find: vi.fn(async () => asset({ id: 'asset-1', type: 'texture', map: 'normal' })),
+        find: vi.fn(async () => asset({ id: 'asset-1', type: 'image', map: 'normal' })),
       }
       registerProjectHandlers(deps(sourced, { assets }))
 
@@ -1373,7 +1372,7 @@ describe('project handlers', () => {
       })
 
       expect(assets.importFromBytes).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'texture', map: 'normal' }),
+        expect.objectContaining({ type: 'image', map: 'normal' }),
         expect.anything(),
       )
     })

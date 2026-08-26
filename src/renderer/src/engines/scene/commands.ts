@@ -796,18 +796,19 @@ export function reorderNodes(
   let previous: { id: string; parentId: string | null; at: number }[] | null = null
 
   return {
-    id: `reorder:${ids.join(':')}`,
+    id: commandId('reorder', ids),
     apply: state => {
       const moving = ids
-        .map(id => state.nodes.find(node => node.id === id))
-        .filter(node => node !== undefined)
+        .map(id => nodeById(state, id))
+        .filter(node => node !== null)
         .filter(node => canReparent(state.nodes, node.id, parentId))
       if (moving.length === 0) return state
 
+      const placeOf = new Map(state.nodes.map((node, at) => [node.id, at]))
       previous = moving.map(node => ({
         id: node.id,
         parentId: node.parentId,
-        at: state.nodes.findIndex(one => one.id === node.id),
+        at: placeOf.get(node.id) ?? -1,
       }))
 
       // Each subtree WHOLE, and each node once: a member nested inside another member is already
@@ -839,32 +840,21 @@ export function reorderNodes(
         ? state
         : [...previous]
             .sort((one, other) => one.at - other.at)
-            .reduce(
-              (current, back) => lifted(current, back.id, back.parentId, () => back.at),
-              state,
-            ),
+            .reduce((current, back) => lifted(current, back.id, back.parentId, back.at), state),
   }
 }
 
 /**
- * A node and everything under it, taken out of the flat array and put back where `target` says.
- *
  * 🛑 The subtree travels WHOLE: dragging a group past its own children would otherwise leave it
  * BEHIND them in the array, and a parent that trails its children is the one property the rest of
  * the engine reads this array for.
  */
-function lifted(
-  state: SceneState,
-  id: string,
-  parentId: string | null,
-  target: (rest: readonly SceneNode[]) => number,
-): SceneState {
+function lifted(state: SceneState, id: string, parentId: string | null, at: number): SceneState {
   const moving = new Set(subtreesOf(state.nodes, [id]).map(one => one.id))
   const rest = state.nodes.filter(one => !moving.has(one.id))
   const carried = state.nodes
     .filter(one => moving.has(one.id))
     .map(one => (one.id === id ? { ...one, parentId } : one))
-  const at = target(rest)
 
   return { ...state, nodes: [...rest.slice(0, at), ...carried, ...rest.slice(at)] }
 }
@@ -1151,14 +1141,16 @@ export function removeNodes(
 
       const nodes: SceneNode[] = []
       let kept = 0
+      const keep = (): void => {
+        const node = state.nodes[kept]
+        if (node) nodes.push(node)
+        kept += 1
+      }
       for (const { at, node } of taken) {
-        while (nodes.length < at && kept < state.nodes.length) {
-          nodes.push(state.nodes[kept] as SceneNode)
-          kept += 1
-        }
+        while (nodes.length < at && kept < state.nodes.length) keep()
         nodes.push(node)
       }
-      for (; kept < state.nodes.length; kept += 1) nodes.push(state.nodes[kept] as SceneNode)
+      while (kept < state.nodes.length) keep()
       return { ...state, nodes }
     },
   }

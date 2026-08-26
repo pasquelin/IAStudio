@@ -33,7 +33,7 @@ according to what you are making. Those six arrangements are called **workspaces
 
 | Workspace | What you make there | An example |
 |---|---|---|
-| **Image** | still images | a poster, an illustration, a flat texture |
+| **Image** | still images | a poster, an illustration, a material map |
 | **Video** | moving sequences | a ten-second shot, an edit of several takes |
 | **3D** | scenes with volume | a set, an object under a light |
 | **Audio** | sounds and music | an ambience, a sound effect, a musical bed |
@@ -61,7 +61,7 @@ you can open it in your file browser and look inside.
 
 ### 2. An **asset**
 
-A raw-material file in your project: an image, a video, a sound, a 3D object, a texture, a sky.
+A raw-material file in your project: an image, a video, a sound, a 3D object, a sky.
 
 Keep this in mind: **an asset is a finished file you can reuse**.
 

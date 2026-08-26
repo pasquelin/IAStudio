@@ -195,8 +195,8 @@ describe('parseDocumentDraft', () => {
 
 describe('parseAssetQuery', () => {
   it('lets a workspace ask for the kinds it uses', () => {
-    expect(parseAssetQuery({ types: ['image', 'texture', 'skybox'] })).toEqual({
-      types: ['image', 'texture', 'skybox'],
+    expect(parseAssetQuery({ types: ['image', 'skybox'] })).toEqual({
+      types: ['image', 'skybox'],
     })
   })
 

@@ -151,24 +151,24 @@ const ENTRIES: readonly ContractEntry[] = [
   // Material. The same four employments as the image family, landing on the material shelf —
   // which is exactly what `LocalModel.serves` already says: a model that draws one draws the
   // other, and only where the result is filed differs.
-  { family: 'material', capability: 'txt2img_texture', inputs: [PROMPT], output: 'texture' },
+  { family: 'material', capability: 'txt2img_texture', inputs: [PROMPT], output: 'image' },
   {
     family: 'material',
     capability: 'img2img_texture',
     inputs: [PROMPT, source('image')],
-    output: 'texture',
+    output: 'image',
   },
   {
     family: 'material',
     capability: 'controlnet_texture',
     inputs: [PROMPT, source('image')],
-    output: 'texture',
+    output: 'image',
   },
   {
     family: 'material',
     capability: 'reference_texture',
     inputs: [PROMPT, reference('image')],
-    output: 'texture',
+    output: 'image',
   },
 
   // Skybox.

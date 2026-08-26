@@ -5,13 +5,10 @@ import { FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   BACKGROUND_KINDS,
   DISPLAY_MODES,
-  ENVIRONMENT_KINDS,
   FOG_KINDS,
   MATERIAL_SLOTS,
-  STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
   VIEW_DIRECTIONS,
-  type EnvironmentRef,
   type MaterialDescriptor,
   type PathDescriptor,
   type SceneWorld,
@@ -21,7 +18,6 @@ import {
   type Vector3,
 } from '@shared/domain/scene'
 import { CSG_OPERATIONS } from '@shared/domain/csg'
-import type { DocumentKind } from '@shared/domain/document'
 import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { SECOND } from '@shared/domain/time'
 import { withinBounds } from '@shared/numeric'
@@ -81,6 +77,7 @@ import {
   withField,
   type PropertySpec,
 } from '@/engines/scene/propertyFields'
+import { numericBoundsOf } from '@shared/domain/propertySpec'
 import { newId } from '@/helpers/ids'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import type { Command } from '@/engines/core/history'
@@ -93,12 +90,13 @@ import {
   type SceneNode,
   type SceneState,
 } from '@/engines/scene/sceneState'
-import { activeSceneId, useDocuments } from '@/stores/documents'
+import { activeSceneId, documentNamedOfKind, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { nodeAimed } from './nodeAimed'
+import { environmentFromInput } from './environmentInput'
 import {
   boolOf,
   composedNumber,
@@ -118,7 +116,7 @@ import {
  */
 
 /** The scene in front and its state, or nothing — which reads as `wrongSurface`. */
-function mounted(): { documentId: string; state: SceneState } | null {
+export function mounted(): { documentId: string; state: SceneState } | null {
   const documentId = activeSceneId(useDocuments.getState())
   return documentId === null
     ? null
@@ -196,8 +194,8 @@ function namedFields(input: Record<string, unknown>): string[] {
  * just as the number field clamps its bounds, so both are limits and neither is a suggestion.
  */
 function withinSpec(spec: PropertySpec | undefined, value: number): boolean {
-  if (spec === undefined || spec.control === 'color' || spec.control === 'vector3') return true
-  return withinBounds(value, spec)
+  const bounds = numericBoundsOf(spec)
+  return bounds === null || withinBounds(value, bounds)
 }
 
 /**
@@ -481,47 +479,19 @@ function editWorld(build: (world: SceneWorld) => Partial<SceneWorld>): ActionOut
   return { ok: true }
 }
 
+/** A scene takes intensity and rotation on their own, so no source named is not a refusal. */
 function worldEnvironment(input: Record<string, unknown>): ActionOutcome | Promise<ActionOutcome> {
-  const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
-  const assetId = textOf(input, 'assetId')
-  const title = textOf(input, 'sky')
-  // A scene is lit by ONE prefiltered map, so naming both is a request with two answers.
-  if (assetId !== null && title !== null) return refused('badInput')
-  // The panel answers a kind by taking the first of the project, which from outside would be a
-  // reference nobody picked. `studio` beside either is the opposite of both readings of it.
-  if (kind === 'skybox' && assetId === null) return refused('badInput')
-  if (kind === 'sky' && title === null) return refused('badInput')
-  if (kind === 'studio' && (assetId !== null || title !== null)) return refused('badInput')
-
-  // The sky DOCUMENT must EXIST, or the scene follows a reference nothing can resolve.
-  const documentId = title === null ? null : documentNamed('skybox', title)
-  if (title !== null && documentId === null) return refused('notFound')
-
   const intensity = numberOf(input, 'intensity')
   const rotation = numberOf(input, 'rotation')
-  // A source named outright is a source chosen, so `kind` is what a client says only to put one out.
-  const environment = chosenEnvironment(kind, assetId, documentId)
 
-  const write = (): ActionOutcome =>
+  return environmentFromInput(input, environment =>
     editWorld(() => ({
       ...(environment === null ? {} : { environment }),
       ...(intensity === null ? {} : { envIntensity: intensity }),
       // Radians, as every other angle a document stores — the panel is what shows degrees.
       ...(rotation === null ? {} : { envRotation: rotation }),
-    }))
-
-  // The picture must EXIST too, for the reason the document above does.
-  return assetId === null ? write() : withAsset(assetId, write)
-}
-
-function chosenEnvironment(
-  kind: EnvironmentRef['kind'] | null,
-  assetId: string | null,
-  documentId: string | null,
-): EnvironmentRef | null {
-  if (documentId !== null) return { kind: 'sky', documentId }
-  if (assetId !== null) return { kind: 'skybox', assetId }
-  return kind === 'studio' ? STUDIO_ENVIRONMENT : null
+    })),
+  )
 }
 
 function worldBackground(input: Record<string, unknown>): ActionOutcome {
@@ -597,15 +567,6 @@ function worldGround(input: Record<string, unknown>): ActionOutcome {
 
     return Object.keys(written).length === 0 ? {} : { ground: { ...world.ground, ...written } }
   })
-}
-
-/** The document of that kind and that name, or nothing — a title is what a request can carry. */
-function documentNamed(kind: DocumentKind, title: string): string | null {
-  const state = useDocuments.getState()
-  const found = [...state.stored, ...Object.values(state.documents)].find(
-    one => one.kind === kind && one.title === title,
-  )
-  return found?.id ?? null
 }
 
 export const SCENE_HANDLERS: ActionHandlers = {
@@ -907,7 +868,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       const slot = numberOf(input, 'slot') ?? 0
       if (!Number.isInteger(slot) || slot < 0 || slot >= MATERIAL_SLOTS) return null
 
-      const wanted = documentNamed('material', title)
+      const wanted = documentNamedOfKind(useDocuments.getState(), 'material', title)
       return wanted ? wearMaterialAt(node.id, slot, wanted) : null
     }),
 

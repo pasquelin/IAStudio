@@ -30,6 +30,7 @@ import { registerWindowControls } from '@main/window/controls'
 import { registerContextMenu } from '@main/window/contextMenu'
 import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
+import { registerPostPresetHandlers } from '@main/scene/postPreset'
 import { registerExportHandlers } from '@main/export/folder'
 import { registerMontageHandlers } from '@main/export/montage'
 import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
@@ -142,6 +143,7 @@ export function registerIpc(services: Services): void {
   })
   registerDialogHandlers(services)
   registerSceneHandlers(services)
+  registerPostPresetHandlers(services)
   registerExportHandlers(services)
   // One table for both: the window names a task, this side runs it under that name, and the stop
   // button reaches it by the same name. Built here so neither handler owns the other's door.

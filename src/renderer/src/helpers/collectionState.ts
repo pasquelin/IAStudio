@@ -41,8 +41,13 @@ export const THUMBNAIL_STEP = 24
 /**
  * Bumped whenever `CollectionState` changes shape, and shared by every store that persists
  * one: a restored state missing a field it now needs lays out a grid of zero-wide columns.
+ *
+ * 3 for a facet VALUE that stopped existing, which is the same failure read from the other end:
+ * `texture` was an asset kind until 2026-08-26, the Materials shelf posed it by default, and a
+ * restored `type: ['texture']` narrows to nothing — with no option left in the select to see it
+ * by, and none to clear it with. Dropping the blob costs a filter nobody typed twice.
  */
-export const COLLECTION_PERSIST_VERSION = 2
+export const COLLECTION_PERSIST_VERSION = 3
 
 export const DEFAULT_COLLECTION_STATE: CollectionState = {
   search: '',

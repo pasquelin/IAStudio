@@ -86,13 +86,16 @@ export function useWornMaterial(materialId: string): MaterialState | null {
   const open = useMaterials(state =>
     materialStore.hasState(state, materialId) ? materialOf(state, materialId) : null,
   )
+  // Whether a TAB holds it, never the tab's CONTENT, as `useSkySource` keeps it: the effect below
+  // would otherwise tear down and set up again on every value a drag emits in that tab.
+  const held = open !== null
   const copy = materials.useCopyOf(materialId)
 
   // In an effect, never during the render: reading a file is not something a paint does. And not
   // for an EMPTY slot, which names no document — the read would fail and file a line saying so.
   useEffect(() => {
-    if (!open && isWorn(materialId)) void loadMaterialSource(materialId)
-  }, [materialId, open, copy])
+    if (!held && isWorn(materialId)) void loadMaterialSource(materialId)
+  }, [materialId, held, copy])
 
   return open ?? copy
 }

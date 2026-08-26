@@ -144,7 +144,7 @@ describe('the channels of a material', () => {
     const row = slotOf('Rugosité').closest('div')
     if (!row) throw new Error('no line drawn for Rugosité')
 
-    await userEvent.click(within(row).getByRole('button', { name: 'Retirer la texture' }))
+    await userEvent.click(within(row).getByRole('button', { name: 'Retirer l’image' }))
 
     expect(channels().roughness).toBeUndefined()
   })
@@ -361,7 +361,7 @@ describe('the channels of a material', () => {
             Promise.resolve([
               BRICK,
               { ...picture('sky-1', 'Coucher'), type: 'skybox' },
-              { ...picture('tex-1', 'Rouille'), type: 'texture' },
+              { ...picture('tex-1', 'Rouille'), type: 'image' },
             ]),
         },
       })

@@ -10,28 +10,15 @@ import type { RemoteAssetType } from './assetCatalog'
  * inverses: eighty values collapse into six, and a value this build has never heard of must
  * still land somewhere on the way in.
  *
- * `image` is deliberately absent. It is the residue — everything that is not a material, a sky,
- * a mesh, a take or a clip — and listing its forty-odd values would mean a filter that silently
- * drops every new one the API invents. Asking for pictures asks for no filter at all, and the
- * kinds are told apart once the answers are read.
+ * `image` is deliberately absent. It is the residue — everything that is not a sky, a mesh, a
+ * take or a clip — and listing its forty-odd values would mean a filter that silently drops every
+ * new one the API invents. Asking for pictures asks for no filter at all, and the kinds are told
+ * apart once the answers are read.
+ *
+ * The API's thirteen `texture-*` values fall in that residue since the studio dropped the kind:
+ * a texture IS a picture here, and which channel it holds is read off the row, not off the shelf.
  */
 const REMOTE_TYPES: Partial<Record<AssetType, readonly RemoteAssetType[]>> = {
-  texture: [
-    'texture',
-    'texture-albedo',
-    'texture-normal',
-    'texture-height',
-    'texture-metallic',
-    'texture-smoothness',
-    'texture-ao',
-    'texture-edge',
-    'upscale-texture',
-    '3d-texture',
-    '3d-texture-albedo',
-    '3d-texture-normal',
-    '3d-texture-roughness',
-    '3d-texture-metallic',
-  ],
   skybox: ['skybox-base-360', 'skybox-hdri', 'skybox-3d', 'upscale-skybox'],
   mesh: ['img23d', 'txt23d', 'video23d', '3d23d', 'img2splat', 'uploaded-3d'],
   video: ['txt2video', 'img2video', 'video2video', 'upscale-video', 'uploaded-video'],
