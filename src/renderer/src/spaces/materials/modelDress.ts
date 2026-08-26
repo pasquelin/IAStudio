@@ -6,7 +6,8 @@ import type {
   TextureRef,
   TextureSlot,
 } from '@shared/domain/scene'
-import { slotForChannel, type MaterialSettings } from '@shared/domain/material'
+import { PBR_CHANNELS, slotForChannel, type MaterialSettings } from '@shared/domain/material'
+import { cachedOn } from '@/engines/core/cachedOn'
 import type { ChannelSet, MaterialState } from '@/engines/material/materialState'
 import { loadMaterialSource, wornMaterialOf } from '@/stores/materialSources'
 
@@ -50,19 +51,18 @@ function coveredBy(assetId: string): ModelDress | null {
 }
 
 export function modelDressOf(state: MaterialState): ModelDress {
-  const held = dresses.get(state)
-  if (held) return held
-
-  const made = { textures: slotsOf(state.channels), material: modelFinishOf(state.material) }
-  dresses.set(state, made)
-  return made
+  return cachedOn(dresses, state, () => ({
+    textures: slotsOf(state.channels),
+    material: modelFinishOf(state.material),
+  }))
 }
 
 function slotsOf(channels: ChannelSet): Partial<Record<TextureSlot, TextureRef>> {
   const slots: Partial<Record<TextureSlot, TextureRef>> = {}
 
-  for (const [channel, held] of Object.entries(channels)) {
-    const slot = slotForChannel(channel as keyof ChannelSet)
+  for (const channel of PBR_CHANNELS) {
+    const slot = slotForChannel(channel)
+    const held = channels[channel]
     if (slot && held) slots[slot] = { assetId: held.assetId }
   }
 

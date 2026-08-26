@@ -1,6 +1,7 @@
 import type { FileHistory, FileOutcome, PathChange } from '@shared/domain/fileOp'
 import {
   changeOf,
+  folderSnapshot,
   foldersFor,
   planFiles,
   type FileAct,
@@ -35,22 +36,9 @@ export function createMemoryFiles(folder: MemoryFolder, catalog: MemoryCatalog):
   let batches = 0
   let stacks: UndoStacks = { past: [], future: [] }
 
-  /**
-   * What the planner reads the project as, asked the way `fileOps` asks it: only the folders the
-   * request names, and only those the disk answers for — a folder missing from the map is one
-   * that does not exist, which is how `planFiles` refuses a destination that has gone.
-   */
-  const snapshot = async (request: FileRequest): Promise<FolderSnapshot> => {
-    const unique = [...new Set(foldersFor(request))]
-    const read = await Promise.all(unique.map(one => folder.names(one)))
-
-    const known = new Map<string, readonly string[]>()
-    for (const [at, names] of read.entries()) {
-      const path = unique[at]
-      if (path !== undefined && names !== null) known.set(path, names)
-    }
-    return known
-  }
+  /** The port's own state, read the way `fileOps` reads a disk. */
+  const snapshot = (request: FileRequest): Promise<FolderSnapshot> =>
+    folderSnapshot(one => folder.names(one), foldersFor(request))
 
   const carry = async (act: FileAct): Promise<void> => {
     if (act.act === 'createFolder') await folder.createFolder(act.to)

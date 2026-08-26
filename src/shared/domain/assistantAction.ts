@@ -1,5 +1,6 @@
 import { HEX_COLOR } from './color'
 import type { FieldKind } from './model'
+import { ENVIRONMENT_KINDS } from './scene'
 
 /**
  * What an action IS, apart from which actions there are.
@@ -369,6 +370,41 @@ export type AssistantAction = {
 /** Identity, for the type annotation it forces on every entry of a family table. */
 export function action(descriptor: AssistantAction): AssistantAction {
   return descriptor
+}
+
+/**
+ * What lights a surface, as the two registries that ask it both name it: a PICTURE by asset id,
+ * a sky DOCUMENT by title. Naming one is enough — a document lit by an asset is `skybox` by that
+ * fact alone, which spares a client two calls to do one thing. A document id is not something
+ * anyone types, hence the TITLE.
+ *
+ * Written once because a fourth arm of `EnvironmentRef` would otherwise have to be added to two
+ * registries, and nothing holds them together.
+ */
+export const ENVIRONMENT_FIELDS: readonly ActionField[] = [
+  {
+    key: 'kind',
+    kind: 'choice',
+    labelKey: 'assistant.fields.environmentKind',
+    required: false,
+    options: ENVIRONMENT_KINDS,
+  },
+  { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+  { key: 'sky', kind: 'text', labelKey: 'assistant.fields.skyDocument', required: false },
+]
+
+/**
+ * 🛑 What turns « d'un mètre vers le haut » into one call instead of three.
+ *
+ * Without it a caller has to read the pose, do the arithmetic and write the result — measured on
+ * the bench pass of 2026-08-26, section 7 scored 0 on five requests, every one of them written
+ * as an absolute. The field's own label carries the rule, since that is what a model reads.
+ */
+export const RELATIVE_FIELD: ActionField = {
+  key: 'relative',
+  kind: 'boolean',
+  labelKey: 'assistant.fields.relative',
+  required: false,
 }
 
 /**

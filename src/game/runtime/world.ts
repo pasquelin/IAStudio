@@ -64,11 +64,15 @@ export type WorldOptions = {
 export function createWorld(options: WorldOptions): World {
   const systems = orderedByDeclaration(options.systems)
   const born: Entity[] = []
+  const bornIds = new Set<string>()
   const doomed: string[] = []
+  const doomedIds = new Set<string>()
   const attaching: { entity: Entity; component: Component }[] = []
   const detaching: { entity: Entity; type: ComponentType }[] = []
   let minted = 0
 
+  // Not `messageOf` of `@shared/guards`: this tree is MIT and ships without the rest, so a VALUE
+  // taken from `@shared/` would carry PolyForm code into an exported game.
   const said = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
   const world: World = {
@@ -97,6 +101,7 @@ export function createWorld(options: WorldOptions): World {
         components: [...(request.components ?? [])],
       }
       born.push(entity)
+      bornIds.add(entity.id)
       world.events.emit({ name: 'EntitySpawned', entity: entity.id, payload: {} })
       return entity
     },
@@ -104,10 +109,11 @@ export function createWorld(options: WorldOptions): World {
     destroy: id => {
       // A death announced for an entity that never lived is a handler acting on nothing. Killing
       // one twice says so once.
-      const lives = world.entities.get(id) !== null || born.some(one => one.id === id)
-      if (!lives || doomed.includes(id)) return
+      const lives = world.entities.get(id) !== null || bornIds.has(id)
+      if (!lives || doomedIds.has(id)) return
 
       doomed.push(id)
+      doomedIds.add(id)
       world.events.emit({ name: 'EntityDestroyed', entity: id, payload: {} })
     },
 
@@ -139,6 +145,7 @@ export function createWorld(options: WorldOptions): World {
         if (entity) world.entities.add(entity)
       }
       born.length = 0
+      bornIds.clear()
 
       for (let index = 0; index < attaching.length; index++) {
         const wanted = attaching[index]
@@ -157,6 +164,7 @@ export function createWorld(options: WorldOptions): World {
         if (id !== undefined) world.entities.remove(id)
       }
       doomed.length = 0
+      doomedIds.clear()
 
       world.events.drain()
       world.ports.input.endStep()

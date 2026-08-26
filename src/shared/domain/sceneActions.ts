@@ -1,4 +1,10 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import {
+  action,
+  ENVIRONMENT_FIELDS,
+  RELATIVE_FIELD,
+  type ActionField,
+  type AssistantAction,
+} from './assistantAction'
 import { EASINGS } from './animation'
 import { CSG_OPERATIONS } from './csg'
 import { FONT_SOURCES } from './font'
@@ -8,7 +14,6 @@ import {
   BACKGROUND_KINDS,
   DISPLAY_MODES,
   ENV_INTENSITY,
-  ENVIRONMENT_KINDS,
   ENVIRONMENT_PRESETS,
   EXPOSURE,
   FOG_DENSITY,
@@ -62,20 +67,6 @@ const vector = (
   labelKey: `assistant.fields.${of}${axis.toUpperCase()}`,
   required: false,
 })
-
-/**
- * 🛑 What turns « d'un mètre vers le haut » into one call instead of three.
- *
- * Without it a caller has to read the pose, do the arithmetic and write the result — measured on
- * the bench pass of 2026-08-26, section 7 scored 0 on five requests, every one of them written
- * as an absolute. The field's own label carries the rule, since that is what a model reads.
- */
-const RELATIVE: ActionField = {
-  key: 'relative',
-  kind: 'boolean',
-  labelKey: 'assistant.fields.relative',
-  required: false,
-}
 
 /** An optional dial, spelled once for the forty-odd that only differ by their bounds. */
 const dial = (key: string, bounds: { min?: number; max?: number } = {}): ActionField => ({
@@ -303,7 +294,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
       vector('x', 'scale'),
       vector('y', 'scale'),
       vector('z', 'scale'),
-      RELATIVE,
+      RELATIVE_FIELD,
     ],
   }),
   action({
@@ -533,7 +524,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         required: false,
       },
       dial('intensity', { min: 0 }),
-      RELATIVE,
+      RELATIVE_FIELD,
       // Zero means no falloff at all — three.js reads it as "reaches everywhere".
       dial('distance', { min: 0 }),
       dial('decay', { min: 0, max: 4 }),
@@ -794,19 +785,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [
-      {
-        key: 'kind',
-        kind: 'choice',
-        labelKey: 'assistant.fields.environmentKind',
-        required: false,
-        options: ENVIRONMENT_KINDS,
-      },
-      // Names the picture, and naming one is enough: a document lit by an asset is `skybox` by
-      // that fact alone, which spares a client two calls to do one thing.
-      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
-      // The sky DOCUMENT, by TITLE — a document id is not something anyone types, and this is how
-      // `model.dress` names a material. Naming one is enough, exactly as above.
-      { key: 'sky', kind: 'text', labelKey: 'assistant.fields.skyDocument', required: false },
+      ...ENVIRONMENT_FIELDS,
       {
         key: 'intensity',
         kind: 'number',

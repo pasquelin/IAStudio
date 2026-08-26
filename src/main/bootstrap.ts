@@ -1,3 +1,10 @@
+/**
+ * Opening the studio: everything a run spawned as one client's way in must never evaluate.
+ *
+ * Reached by `import()` so it lands in its own chunk — measured 2026-08-26, alternating series:
+ * 241 ms to the way in's first answer before, 131 ms after, which is a bare Electron's own time.
+ * The entry it leaves behind is 17 Ko, against 1,6 Mo.
+ */
 import { app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
@@ -19,13 +26,6 @@ import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splashWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
 
-/**
- * Opening the studio: everything a run spawned as one client's way in must never evaluate.
- *
- * Reached by `import()` so it lands in its own chunk — measured 2026-08-26, alternating series:
- * 241 ms to the way in's first answer before, 131 ms after, which is a bare Electron's own time.
- * The entry it leaves behind is 17 Ko, against 1,6 Mo.
- */
 /**
  * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
  * synchronously. Deferred by one turn so the splash gets its frame first; without it the

@@ -1,8 +1,7 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { QuietNote } from '@/design/QuietNote'
 import { withMaterialAt } from '@shared/domain/scene'
-import { documentsOfKind, useDocuments } from '@/stores/documents'
+import { useDocumentOptions } from '@/hooks/useDocumentOptions'
 import { ModelDressSectionRow } from './ModelDressSectionRow'
 
 export type ModelDressSectionMaterialsProps = {
@@ -24,20 +23,7 @@ export function ModelDressSectionMaterials({
   onAssemble,
 }: ModelDressSectionMaterialsProps) {
   const { t } = useTranslation()
-  // Both, so a material saved but not open is offered: `stored` is the folder, `documents` the
-  // tabs. Selected APART and joined in a memo — a selector building the list would hand zustand a
-  // fresh array on every notification, which is a render loop.
-  const stored = useDocuments(state => state.stored)
-  const open = useDocuments(state => state.documents)
-
-  const options = useMemo(
-    () =>
-      documentsOfKind({ stored, documents: open }, 'material').map(one => ({
-        id: one.id,
-        name: one.title,
-      })),
-    [stored, open],
-  )
+  const options = useDocumentOptions('material')
 
   return (
     <>
