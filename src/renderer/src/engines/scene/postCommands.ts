@@ -232,7 +232,10 @@ export function stackOfPreset(
   saved: readonly UserPostPreset[],
   mintId: () => string = newId,
 ): PostStack | null {
-  const mine = saved.find(preset => preset.id === name)
+  // By id OR by the name somebody gave it — the picker hands an id, a client hands a name, and a
+  // saved look reachable by a generated id alone is one nobody could ever ask for out loud.
+  // Theirs wins over a shipped one of the same name: it is the one they made on purpose.
+  const mine = saved.find(preset => preset.id === name || preset.name === name)
   if (mine) return mine.stack
   return isPostPresetId(name) ? stackFromPreset(name, mintId) : null
 }

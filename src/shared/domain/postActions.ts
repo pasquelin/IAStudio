@@ -1,6 +1,5 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { CAMERA_POST_MODES, POST_EFFECT_IDS } from './postProcessing'
-import { POST_PRESET_IDS } from './postPresets'
 
 /**
  * The composition, driven by value.
@@ -20,6 +19,14 @@ const CAMERA: ActionField = {
   kind: 'text',
   labelKey: 'assistant.fields.postCameraId',
   required: false,
+}
+
+/** Which knob of that instance. A key of the effect's own fiche, never a name of our choosing. */
+const PARAM: ActionField = {
+  key: 'param',
+  kind: 'text',
+  labelKey: 'assistant.fields.postParam',
+  required: true,
 }
 
 /** Which instance of the stack. The id the stack holds, not the kind of effect. */
@@ -85,7 +92,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     fields: [
       CAMERA,
       EFFECT,
-      { key: 'param', kind: 'text', labelKey: 'assistant.fields.postParam', required: true },
+      PARAM,
       // Three ways to say a value, because a parameter is a number, a switch or a word — and the
       // catalogue is what decides which. A call naming the wrong one is refused rather than
       // coerced: a bloom strength of `true` means nothing anybody meant.
@@ -117,6 +124,11 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
       { key: 'enabled', kind: 'boolean', labelKey: 'assistant.fields.postEnabled', required: true },
     ],
   }),
+  /**
+   * By id OR by name, like every node-facing action of the registry: `post.presets` publishes
+   * both families, and a preset somebody saved on this machine is reachable by the name they
+   * gave it. A `choice` on the shipped ids alone would have made the saved ones unreachable.
+   */
   action({
     name: 'post.preset',
     titleKey: 'assistant.actions.postPreset.title',
@@ -125,13 +137,90 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     reach: 'mcp',
     fields: [
       CAMERA,
-      {
-        key: 'preset',
-        kind: 'choice',
-        labelKey: 'assistant.fields.postPreset',
-        required: true,
-        options: POST_PRESET_IDS,
-      },
+      { key: 'preset', kind: 'text', labelKey: 'assistant.fields.postPreset', required: true },
+    ],
+  }),
+  action({
+    name: 'post.presets',
+    titleKey: 'assistant.actions.postPresets.title',
+    descriptionKey: 'assistant.actions.postPresets.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'post.duplicate',
+    titleKey: 'assistant.actions.postDuplicate.title',
+    descriptionKey: 'assistant.actions.postDuplicate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [CAMERA, EFFECT],
+  }),
+  action({
+    name: 'post.reset',
+    titleKey: 'assistant.actions.postReset.title',
+    descriptionKey: 'assistant.actions.postReset.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [CAMERA, EFFECT],
+  }),
+  /**
+   * The composition ANIMATED, which is what the fifth `TrackProperty` bought — without these two
+   * a client can compose a look and never make it move. The value is the ABSOLUTE one the panel
+   * shows; the delta against the stack is arithmetic nobody outside should have to do.
+   */
+  action({
+    name: 'post.key',
+    titleKey: 'assistant.actions.postKey.title',
+    descriptionKey: 'assistant.actions.postKey.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      CAMERA,
+      EFFECT,
+      PARAM,
+      { key: 'value', kind: 'number', labelKey: 'assistant.fields.postValue', required: true },
+    ],
+  }),
+  action({
+    name: 'post.unkey',
+    titleKey: 'assistant.actions.postUnkey.title',
+    descriptionKey: 'assistant.actions.postUnkey.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [CAMERA, EFFECT, PARAM],
+  }),
+  action({
+    name: 'post.save',
+    titleKey: 'assistant.actions.postSave.title',
+    descriptionKey: 'assistant.actions.postSave.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      CAMERA,
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.postPresetName', required: true },
+    ],
+  }),
+  action({
+    name: 'post.rename',
+    titleKey: 'assistant.actions.postRename.title',
+    descriptionKey: 'assistant.actions.postRename.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'preset', kind: 'text', labelKey: 'assistant.fields.postPreset', required: true },
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.postPresetName', required: true },
+    ],
+  }),
+  /** It leaves this MACHINE, and no document holds it: `studio` rather than `none`. */
+  action({
+    name: 'post.forget',
+    titleKey: 'assistant.actions.postForget.title',
+    descriptionKey: 'assistant.actions.postForget.description',
+    commitment: 'studio',
+    reach: 'mcp',
+    fields: [
+      { key: 'preset', kind: 'text', labelKey: 'assistant.fields.postPreset', required: true },
     ],
   }),
   action({

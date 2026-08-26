@@ -24,6 +24,7 @@ import {
 import type { MaterialState } from '@/engines/material/materialState'
 import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { usePostPresets } from '@/stores/postPresets'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -255,6 +256,32 @@ export const postParam = (run: Run, effect: PostEffectId, param: string): number
   const value = found?.params[param]
   return typeof value === 'number' ? value : null
 }
+
+/**
+ * The composition channels the scene's own band holds, named by what they DRIVE rather than by
+ * the instance id — an id is minted per run, so a scenario could never assert one.
+ */
+export const postChannels = (run: Run): { effect: PostEffectId; param: string }[] => {
+  const stack = post(run)
+  return (openScene(run)?.animation.tracks ?? []).flatMap(track => {
+    const aimed = track.target.post
+    const effect = stack.effects.find(one => one.id === aimed?.effectId)
+    return aimed && effect ? [{ effect: effect.effect, param: aimed.param }] : []
+  })
+}
+
+/** How many keys stand on the channel driving that parameter. Zero where no channel does. */
+export const postKeys = (run: Run, effect: PostEffectId, param: string): number => {
+  const instance = post(run).effects.find(one => one.effect === effect)
+  const track = (openScene(run)?.animation.tracks ?? []).find(
+    one => one.target.post?.effectId === instance?.id && one.target.post?.param === param,
+  )
+  return track?.keys.length ?? 0
+}
+
+/** The looks saved on this MACHINE — no document holds them, so no scene answers for them. */
+export const savedPresets = (): readonly { id: string; name: string }[] =>
+  usePostPresets.getState().saved
 
 /** The sky the open skybox document holds. */
 export const sky = (run: Run): SkyboxContent | null =>

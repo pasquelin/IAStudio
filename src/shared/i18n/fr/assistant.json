@@ -971,7 +971,40 @@
       },
       "postCamera": {
         "title": "Dire ce qu’une caméra fait du post-traitement",
-        "description": "Choisit si cette caméra suit la composition de la scène, porte la sienne, ou n’en applique aucune. Passer à la sienne la démarre sur ce qu’elle filmait déjà."      }
+        "description": "Choisit si cette caméra suit la composition de la scène, porte la sienne, ou n’en applique aucune. Passer à la sienne la démarre sur ce qu’elle filmait déjà."
+      },
+      "postPresets": {
+        "title": "Lister les préréglages de post-traitement",
+        "description": "Rend les compositions prêtes que le studio fournit et celles enregistrées sur cette machine, avec leur nom. C’est à cette liste que post.preset sait répondre."
+      },
+      "postDuplicate": {
+        "title": "Dupliquer un effet de post-traitement",
+        "description": "Pose une copie de l’effet juste après lui, sur les mêmes valeurs et sous une identité neuve. Refusé pour un effet dont une seconde instance ne veut rien dire — un anticrénelage, une occlusion."
+      },
+      "postReset": {
+        "title": "Réinitialiser un effet de post-traitement",
+        "description": "Ramène tous les paramètres de cet effet à ce que le catalogue déclare, sans le retirer de la pile ni toucher à sa place."
+      },
+      "postKey": {
+        "title": "Poser une clé sur un paramètre de post-traitement",
+        "description": "Ouvre un canal d’animation sur ce paramètre s’il n’en a pas, et y pose une clé à la tête. La valeur donnée est celle qu’on veut VOIR, et l’écart avec la pile est calculé ici."
+      },
+      "postUnkey": {
+        "title": "Retirer une clé de post-traitement",
+        "description": "Retire la clé posée à la tête sur ce paramètre. Le canal reste en place, comme lorsqu’on retire une clé depuis la bande."
+      },
+      "postSave": {
+        "title": "Enregistrer la composition comme préréglage",
+        "description": "Garde la pile en cours sous un nom, sur cette machine. Rien n’est écrit dans le document ni dans le projet."
+      },
+      "postRename": {
+        "title": "Renommer un préréglage enregistré",
+        "description": "Change le nom d’un préréglage de cette machine, désigné par son identifiant ou par son nom actuel. Ce qu’il contient ne bouge pas."
+      },
+      "postForget": {
+        "title": "Oublier un préréglage enregistré",
+        "description": "Retire de cette machine un préréglage enregistré. Les compositions déjà appliquées ne changent pas, un document tenant sa pile plutôt qu’une référence."
+      }
     },
     "refusals": {
       "unknownCommand": "Cette commande n’existe pas dans le studio.",
@@ -1264,7 +1297,9 @@
       "postOn": "Valeur d’un paramètre qui est un interrupteur",
       "postEnabled": "Actif ou non",
       "postPreset": "Préréglage à appliquer",
-      "postMode": "Ce que la caméra fait de la composition de la scène"    },
+      "postMode": "Ce que la caméra fait de la composition de la scène",
+      "postPresetName": "Nom à donner au préréglage"
+    },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
     "stagedHint": "L’assistant est déjà au centre de la fenêtre",

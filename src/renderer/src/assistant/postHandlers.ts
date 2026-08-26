@@ -6,12 +6,17 @@ import {
   POST_EFFECTS,
   type PostStack,
 } from '@shared/domain/postProcessing'
-import { isPostPresetId, stackFromPreset } from '@shared/domain/postPresets'
+import { POST_PRESET_IDS, type UserPostPreset } from '@shared/domain/postPresets'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { Command } from '@/engines/core/history'
 import {
   addPostEffect,
   applyPostStack,
+  duplicatePostEffect,
+  keyPostParam,
+  resetPostEffect,
+  stackOfPreset,
+  unkeyPostParam,
   movePostEffect,
   postStackOf,
   removePostEffectWholly,
@@ -22,7 +27,13 @@ import {
   type PostTargetRef,
 } from '@/engines/scene/postCommands'
 import type { SceneState } from '@/engines/scene/sceneState'
+import i18next from 'i18next'
+import { englishText } from '@shared/i18n'
+import type { Us } from '@shared/domain/time'
+import { postChannelName } from '@/helpers/channelNames'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { newId } from '@/helpers/ids'
+import { usePostPresets } from '@/stores/postPresets'
 import { useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
@@ -33,6 +44,11 @@ import { mounted } from './sceneHandlers'
  * The composition, driven by value. Nothing here knows what a bloom is: both the effect and the
  * parameter are checked against `POST_EFFECTS`, so a call naming a knob that does not exist is
  * refused rather than writing a field nothing reads.
+ *
+ * 🛑 The one gesture of the panel with no action here is the FILE — `post.export` and
+ * `post.import` open a native dialog, which waits on somebody at the screen. Nothing is out of
+ * reach for all that: `post.state` reads a whole stack out and `post.add`/`post.set` build one
+ * back, and `post.save` keeps a look on this machine without a file at all.
  */
 
 /**
@@ -88,6 +104,19 @@ function editPost(
 
   useScenes.getState().runCommand(open.documentId, command)
   return { ok: true }
+}
+
+/** Where the head of the scene in front stands. Read at CALL time: playback moves it. */
+function headAt(): Us {
+  const open = mounted()
+  return open ? sceneKeyingAt(open.documentId).at : 0
+}
+
+const savedPresets = (): readonly UserPostPreset[] => usePostPresets.getState().saved
+
+/** A saved preset by its id OR by the name somebody gave it — the rule the whole registry keeps. */
+function savedNamed(named: string): UserPostPreset | undefined {
+  return savedPresets().find(preset => preset.id === named || preset.name === named)
 }
 
 /** The instance a call names, checked against the stack it claims to be in. */
@@ -183,11 +212,108 @@ export const POST_HANDLERS: ActionHandlers = {
       return enabled === null ? null : setPostEnabled(target, enabled)
     }),
 
+  /**
+   * By id or by NAME, the shipped ones and the ones saved on this machine alike — `stackOfPreset`
+   * is the very resolution the panel's picker goes through, so a client and a hand reach the
+   * same eleven-plus-N looks.
+   */
   'post.preset': input =>
     editPost(input, target => {
-      const preset = textOf(input, 'preset') ?? ''
-      return isPostPresetId(preset) ? applyPostStack(target, stackFromPreset(preset, newId)) : null
+      const next = stackOfPreset(textOf(input, 'preset') ?? '', savedPresets(), newId)
+      return next ? applyPostStack(target, next) : null
     }),
+
+  /** What `post.preset` will answer to. Without it a client cannot know a saved look exists. */
+  'post.presets': () => ({
+    ok: true,
+    data: {
+      shipped: POST_PRESET_IDS,
+      saved: savedPresets().map(preset => ({ id: preset.id, name: preset.name })),
+    },
+  }),
+
+  'post.duplicate': input =>
+    editPost(input, (target, stack) => {
+      const effectId = effectIn(stack, input)
+      return effectId ? duplicatePostEffect(target, effectId, newId()) : null
+    }),
+
+  'post.reset': input =>
+    editPost(input, (target, stack) => {
+      const effectId = effectIn(stack, input)
+      return effectId ? resetPostEffect(target, effectId) : null
+    }),
+
+  /**
+   * The ABSOLUTE value the panel shows, at the head — `keyPostParam` writes the delta against the
+   * stack, which is arithmetic no client should have to do. A parameter the catalogue does not
+   * call animatable is refused rather than written where nothing reads.
+   */
+  'post.key': input =>
+    editPost(input, (target, stack, state) => {
+      const effectId = effectIn(stack, input)
+      const param = textOf(input, 'param') ?? ''
+      const value = numberOf(input, 'value')
+      const effect = stack.effects.find(one => one.id === effectId)
+      if (!effectId || !effect || value === null) return null
+
+      return keyPostParam(
+        state,
+        target,
+        effectId,
+        param,
+        headAt(),
+        value,
+        // A channel name is screen text: one opened from outside must read like one the diamond
+        // opened. `i18next` answers nothing before a window has initialised it — a test.
+        postChannelName(key => i18next.t(key) || englishText(key), effect.effect, param),
+      )
+    }),
+
+  'post.unkey': input =>
+    editPost(input, (target, stack, state) => {
+      const effectId = effectIn(stack, input)
+      return effectId
+        ? unkeyPostParam(state, target, effectId, textOf(input, 'param') ?? '', headAt())
+        : null
+    }),
+
+  /**
+   * On this MACHINE, beside the ones the studio ships. The three below touch no document, so they
+   * answer without a command and outside the history — forgetting a preset is not an edit ⌘Z
+   * could take back.
+   */
+  'post.save': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const target = targetOf(input, open.state)
+    if (typeof target === 'string') return lookupRefusal(target)
+
+    const stack = postStackOf(open.state, target)
+    const name = (textOf(input, 'name') ?? '').trim()
+    if (!stack || !name) return refused('badInput')
+
+    return { ok: true, data: { presetId: usePostPresets.getState().savePostPreset(name, stack) } }
+  },
+
+  'post.rename': input => {
+    const preset = savedNamed(textOf(input, 'preset') ?? '')
+    const name = (textOf(input, 'name') ?? '').trim()
+    if (!preset) return refused('notFound', 'no preset of that id or name is saved here')
+    if (!name) return refused('badInput')
+
+    usePostPresets.getState().renamePostPreset(preset.id, name)
+    return { ok: true }
+  },
+
+  'post.forget': input => {
+    const preset = savedNamed(textOf(input, 'preset') ?? '')
+    if (!preset) return refused('notFound', 'no preset of that id or name is saved here')
+
+    usePostPresets.getState().forgetPostPreset(preset.id)
+    return { ok: true }
+  },
 
   'post.camera': input => {
     const open = mounted()

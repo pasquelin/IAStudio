@@ -893,3 +893,11 @@ Dans la scène Test MCP :
 - [ ] « Rends Camera 01 sans aucun post-traitement. »
 - [ ] « Remets Camera 01 sur le post-traitement de la scène. »
 - [ ] « Applique le préréglage horreur au post-traitement de Camera 01 seule. »
+- [ ] « Duplique le halo lumineux pour en avoir un second. »
+- [ ] « Remets le halo lumineux à ses réglages par défaut. »
+- [ ] « Pose une clé sur la force du halo lumineux, à 2. »
+- [ ] « Retire la clé posée sur la force du halo lumineux. »
+- [ ] « Quels préréglages de post-traitement puis-je appliquer ? »
+- [ ] « Enregistre cette composition sous le nom Aube grise. »
+- [ ] « Renomme le préréglage Nuit froide en Nuit polaire. »
+- [ ] « Supprime le préréglage Nuit froide de cette machine. »

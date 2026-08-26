@@ -972,6 +972,38 @@
       "postCamera": {
         "title": "Say what a camera does about post-processing",
         "description": "Chooses whether this camera follows the scene’s composition, carries its own, or applies none at all. Moving it to its own starts it from what it was already filming."
+      },
+      "postPresets": {
+        "title": "List the post-processing presets",
+        "description": "Answers the ready-made compositions the studio ships and the ones saved on this machine, by name. This is the list post.preset knows how to answer to."
+      },
+      "postDuplicate": {
+        "title": "Duplicate a post-processing effect",
+        "description": "Puts a copy of the effect right after it, on the same values and under a fresh identity. Refused for an effect a second instance of means nothing — an anti-aliaser, an occlusion."
+      },
+      "postReset": {
+        "title": "Reset a post-processing effect",
+        "description": "Brings every parameter of that effect back to what the catalogue declares, without taking it out of the stack or moving it."
+      },
+      "postKey": {
+        "title": "Key a post-processing parameter",
+        "description": "Opens an animation channel on that parameter where it has none, and lays a key at the head. The value given is the one to SEE, and the delta against the stack is worked out here."
+      },
+      "postUnkey": {
+        "title": "Take a post-processing key off",
+        "description": "Removes the key standing at the head on that parameter. The channel stays, exactly as when a key is taken off from the band."
+      },
+      "postSave": {
+        "title": "Save the composition as a preset",
+        "description": "Keeps the stack in front under a name, on this machine. Nothing is written into the document or the project."
+      },
+      "postRename": {
+        "title": "Rename a saved preset",
+        "description": "Changes the name of a preset on this machine, named by its id or by the name it holds. What it contains does not move."
+      },
+      "postForget": {
+        "title": "Forget a saved preset",
+        "description": "Takes a saved preset off this machine. Compositions already applied do not change: a document holds its stack, never a reference."
       }
     },
     "refusals": {
@@ -1265,7 +1297,8 @@
       "postOn": "Value of a parameter that is a switch",
       "postEnabled": "On or off",
       "postPreset": "Preset to apply",
-      "postMode": "What the camera does about the scene’s composition"
+      "postMode": "What the camera does about the scene’s composition",
+      "postPresetName": "Name to give the preset"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

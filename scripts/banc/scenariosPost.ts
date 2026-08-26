@@ -1,7 +1,8 @@
 import type { Scenario } from './run'
 import type { Studio } from './studio'
 import * as read from './oracle'
-import { named, scene } from './setups'
+import { usePostPresets } from '@/stores/postPresets'
+import { effectAt, named, scene } from './setups'
 
 /**
  * The composition, asked for in words.
@@ -15,6 +16,18 @@ import { named, scene } from './setups'
 const composing = async (studio: Studio): Promise<void> => {
   await scene()(studio)
   await studio.run('post.add', { effect: 'bloom' })
+}
+
+/**
+ * A composition, and a machine holding no saved look at all.
+ *
+ * The store is not a document: nothing resets it between scenarios, so a look kept by an earlier
+ * decor would make « enregistre-la » true before the model has said a word — which is exactly
+ * what `batterie.test.ts` refuses.
+ */
+const composingUnsaved = async (studio: Studio): Promise<void> => {
+  usePostPresets.setState({ saved: [] })
+  await composing(studio)
 }
 
 const withCamera = async (studio: Studio): Promise<void> => {
@@ -109,5 +122,72 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     passed: run =>
       (read.cameraPost(run, 'Camera 01')?.effects.length ?? 0) > 0 &&
       read.post(run).effects.length === 0,
+  },
+  {
+    name: '59.13 puts a second bloom in the chain',
+    said: ['Duplique le halo lumineux pour en avoir un second.'],
+    setup: composing,
+    passed: run => read.post(run).effects.filter(one => one.effect === 'bloom').length === 2,
+  },
+  {
+    // Moved off its defaults first, or « remets-le par défaut » asks for what already stands.
+    name: '59.14 puts an effect back on its defaults',
+    said: ['Remets le halo lumineux à ses réglages par défaut.'],
+    setup: async studio => {
+      await composing(studio)
+      await studio.run('post.set', {
+        effectId: effectAt(studio, 0),
+        param: 'strength',
+        value: 3,
+      })
+    },
+    passed: run => read.near(read.postParam(run, 'bloom', 'strength') ?? 0, 0.6, 0.001),
+  },
+  {
+    name: '59.15 animates the strength of the bloom',
+    said: ['Pose une clé sur la force du halo lumineux, à 2.'],
+    setup: composing,
+    passed: run =>
+      read.postChannels(run).some(one => one.effect === 'bloom' && one.param === 'strength') &&
+      read.postKeys(run, 'bloom', 'strength') === 1,
+  },
+  {
+    name: '59.16 takes the key back off',
+    said: ['Retire la clé posée sur la force du halo lumineux.'],
+    setup: async studio => {
+      await composing(studio)
+      await studio.run('post.key', { effectId: effectAt(studio, 0), param: 'strength', value: 2 })
+    },
+    passed: run => read.postKeys(run, 'bloom', 'strength') === 0,
+  },
+  {
+    name: '59.17 says which looks are available',
+    said: ['Quels préréglages de post-traitement puis-je appliquer ?'],
+    setup: scene(),
+    passed: run => read.spoke(run) && read.answeredWith(run, 'post.presets'),
+  },
+  {
+    name: '59.18 keeps the composition under a name',
+    said: ['Enregistre cette composition sous le nom Aube grise.'],
+    setup: composingUnsaved,
+    passed: () => read.savedPresets().some(one => one.name === 'Aube grise'),
+  },
+  {
+    name: '59.19 renames a look kept on this machine',
+    said: ['Renomme le préréglage Nuit froide en Nuit polaire.'],
+    setup: async studio => {
+      await composingUnsaved(studio)
+      await studio.run('post.save', { name: 'Nuit froide' })
+    },
+    passed: () => read.savedPresets().some(one => one.name === 'Nuit polaire'),
+  },
+  {
+    name: '59.20 forgets a look kept on this machine',
+    said: ['Supprime le préréglage Nuit froide de cette machine.'],
+    setup: async studio => {
+      await composingUnsaved(studio)
+      await studio.run('post.save', { name: 'Nuit froide' })
+    },
+    passed: () => !read.savedPresets().some(one => one.name === 'Nuit froide'),
   },
 ]
