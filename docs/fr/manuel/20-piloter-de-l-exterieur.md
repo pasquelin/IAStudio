@@ -147,15 +147,10 @@ démarre aussitôt. Décochez-la, il s’arrête et **plus rien n’écoute**.
 
 C’est le cas le plus courant, et il tient en trois gestes.
 
-### 1. Ouvrir la porte
+### 1. Copier la ligne de connexion
 
-**Réglages ▸ Point d’entrée (MCP)**, cochez **Piloter le studio depuis l’extérieur**. La rubrique
-dit alors sur quel port le studio écoute, ce qu’un client peut faire, et ce qui garde la porte.
-
-### 2. Copier la ligne de connexion
-
-Juste en dessous, **Commande de connexion ▸ Copier**. Le studio met dans votre presse-papiers une
-ligne de cette forme :
+**Réglages ▸ Point d’entrée (MCP) ▸ Commande de connexion ▸ Copier.** Le studio met dans votre
+presse-papiers une ligne de cette forme :
 
 ```
 claude mcp add <nom> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
@@ -165,12 +160,22 @@ claude mcp add <nom> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" -
 démarrer**, pas un endroit à joindre. C’est ce qui fait que cette ligne reste vraie à tous les
 lancements — voir plus bas.
 
-### 3. Coller dans un terminal
+### 2. Coller dans un terminal
 
 Ouvrez un terminal **dans le dossier du projet où vous travaillez avec Claude Code**, et collez la
-ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses outils.
+ligne. Claude Code connaît désormais le studio.
 
-Pour vérifier, demandez-lui la liste de ses serveurs MCP — le studio doit y figurer, connecté.
+### 3. Ouvrir la porte
+
+Remontez dans la même rubrique et cochez **Piloter le studio depuis l’extérieur**. Elle dit alors
+sur quel port le studio écoute, ce qu’un client peut faire, et ce qui garde la porte.
+
+**Cet ordre n’est pas une exigence** — c’est celui de l’écran, et il n’a de sens que depuis que ce
+qui se copie ne porte plus d’adresse : la case peut être cochée avant, après, ou déjà l’être.
+
+**C’est en cochant que les outils apparaissent** : porte fermée, votre client trouve bien le
+studio mais s’entend répondre qu’il ne répond pas. Pour vérifier, demandez-lui la liste de ses
+serveurs MCP — le studio doit y figurer, connecté.
 
 ### Un client qui se configure par un fichier
 

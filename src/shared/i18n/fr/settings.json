@@ -341,7 +341,7 @@
     "mcpStepOpen": "Cochez « Piloter le studio depuis l’extérieur », quand vous voulez. Le point d’entrée démarre aussitôt, et un client déjà configuré le trouve.",
     "mcpStepCopy": "Copiez la commande de connexion, pour un client piloté depuis un terminal — ou le bloc de configuration, pour un client qui lit un fichier. Ni l’une ni l’autre ne porte de port ni de jeton.",
     "mcpStepPaste": "Collez-la dans un terminal ouvert sur votre projet, ou le bloc dans le fichier de configuration de votre client.",
-    "mcpEachLaunch": "À faire une seule fois. Ce que vous collez désigne le studio comme un programme à démarrer, jamais une adresse à joindre : cela reste valable à tous les lancements, y compris ceux où le port et le jeton sont neufs — c’est-à-dire tous. Un client déjà enregistré sous le même nom se remplace, il n’y a rien à supprimer avant.",
+    "mcpNothingToRedo": "À faire une seule fois. Ce que vous collez désigne le studio comme un programme à démarrer, jamais une adresse à joindre : cela reste valable à tous les lancements, y compris ceux où le port et le jeton sont neufs — c’est-à-dire tous. Un client déjà enregistré sous le même nom se remplace, il n’y a rien à supprimer avant.",
     "mcpExamples": "Ce qu’un client peut faire",
     "mcpExampleGenerate": "« Cherche un modèle de skybox nocturne, prépare la génération, mais ne l’envoie pas. »",
     "mcpExampleTidy": "« Range les rushes de la semaine dans un dossier par jour. »",

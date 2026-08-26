@@ -341,7 +341,7 @@
     "mcpStepOpen": "Tick “Drive the studio from outside”, whenever suits you. The way in starts at once, and a client already configured finds it.",
     "mcpStepCopy": "Copy the connection command, for a client driven from a terminal — or the configuration block, for a client that reads a file. Neither holds a port or a token.",
     "mcpStepPaste": "Paste it into a terminal open in your project, or the block into your client’s configuration file.",
-    "mcpEachLaunch": "Done once. What you paste names the studio as a program to start, never an address to reach, so it keeps working across every launch — including the ones where the port and the token are new, which is all of them. A client already registered under the same name is replaced; there is nothing to remove first.",
+    "mcpNothingToRedo": "Done once. What you paste names the studio as a program to start, never an address to reach, so it keeps working across every launch — including the ones where the port and the token are new, which is all of them. A client already registered under the same name is replaced; there is nothing to remove first.",
     "mcpExamples": "What a client can do",
     "mcpExampleGenerate": "“Find a night skybox model, prepare the generation, but do not send it.”",
     "mcpExampleTidy": "“Sort this week’s rushes into one folder per day.”",

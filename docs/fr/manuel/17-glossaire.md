@@ -409,7 +409,7 @@ objet 3D. Le studio ne dit jamais *matériau* : un seul mot pour une seule chose
 **MCP** *(Model Context Protocol)*
 La langue commune que parlent les assistants de programmation et les outils qu’ils pilotent. Le
 studio peut se présenter comme l’un de ces outils : un client comme Claude Code lance alors les
-mêmes actions que l’*assistant*. Fermé au départ, à ouvrir dans Réglages → **Avancé**. Voir
+mêmes actions que l’*assistant*. Fermé au départ, à ouvrir dans Réglages → **Point d’entrée (MCP)**. Voir
 [Piloter le studio depuis l’extérieur](20-piloter-de-l-exterieur.md).
 
 **Métallicité** *(canal de texture)*

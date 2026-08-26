@@ -415,7 +415,7 @@ object.
 **MCP** *(Model Context Protocol)*
 The common tongue coding assistants speak to the tools they drive. The studio can present itself as
 one of those tools: a client such as Claude Code then runs the same actions the *assistant* runs.
-Shut to start with, opened in Settings → **Advanced**. See
+Shut to start with, opened in Settings → **Way in (MCP)**. See
 [Driving the studio from outside](20-driving-from-outside.md).
 
 **Mesh**

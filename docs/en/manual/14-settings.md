@@ -779,7 +779,11 @@ What you have on a fresh install, at a glance.
 | Media      | Path to ffmpeg                | empty                   | —                               |
 | Storage    | Projects folder               | empty                   | —                               |
 | Advanced   | Log detail                    | Everything              | Nothing → Everything            |
-| Advanced   | Drive the studio from outside | unchecked               | —                               |
+| Way in     | Drive the studio from outside | unchecked               | —                               |
+| Way in     | Let it touch files without asking | unchecked           | —                               |
+| Way in     | Let it upload without asking  | unchecked               | —                               |
+| Way in     | Let it publish to a server without asking | unchecked    | —                               |
+| Way in     | Creative units spendable without asking | 0                 | 0 to 10,000                     |
 
 ---
 
