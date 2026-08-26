@@ -295,7 +295,7 @@ describe('closing and renaming', () => {
 
     const turnedDown: DocumentNameFailure = 'empty'
     useDocuments.setState({ rename: vi.fn(async () => turnedDown) })
-    expect(await runAction('document.rename', { documentId: 'doc-a', title: '.' })).toEqual({
+    expect(await runAction('document.rename', { documentId: 'doc-a', title: '.' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

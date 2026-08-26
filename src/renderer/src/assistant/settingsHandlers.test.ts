@@ -39,9 +39,9 @@ describe('the settings', () => {
     const write = vi.fn(async () => DEFAULT_SETTINGS)
     installFakeBridge({ settings: { write } })
 
-    expect(await runAction('settings.write', { settings: { colours: { accent: 'red' } } })).toEqual(
-      { ok: false, refusal: 'badInput' },
-    )
+    expect(
+      await runAction('settings.write', { settings: { colours: { accent: 'red' } } }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(write).not.toHaveBeenCalled()
   })
 
@@ -55,7 +55,9 @@ describe('the settings', () => {
     installFakeBridge({ settings: { write } })
 
     for (const section of ['__proto__', 'toString', 'constructor', 'valueOf']) {
-      expect(await runAction('settings.write', { settings: { [section]: { a: 1 } } })).toEqual({
+      expect(
+        await runAction('settings.write', { settings: { [section]: { a: 1 } } }),
+      ).toMatchObject({
         ok: false,
         refusal: 'badInput',
       })
@@ -151,7 +153,7 @@ describe('the buttons of the settings window', () => {
     })
     expect(runSettingAction).toHaveBeenCalledWith('advanced.openLogFolder')
 
-    expect(await runAction('settings.action', { action: 'advanced.selfDestruct' })).toEqual({
+    expect(await runAction('settings.action', { action: 'advanced.selfDestruct' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

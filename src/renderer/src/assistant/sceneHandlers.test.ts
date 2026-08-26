@@ -32,8 +32,25 @@ async function cameraId(): Promise<string> {
   return added.ok ? (added.data as { nodeId: string }).nodeId : ''
 }
 
+/** What the catalogue holds for this suite: `node.addModel` and `world.environment` read it. */
+const inCatalogue = (id: string, type: Asset['type']): Asset => ({
+  id,
+  name: id,
+  type,
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-20T10:00:00.000Z',
+})
+
+const CATALOGUE = [inCatalogue('asset-mesh', 'mesh'), inCatalogue('sky-1', 'skybox')]
+
 beforeEach(() => {
   installScene(DOCUMENT, { ...createDefaultScene(), nodes: [], selectedIds: [] })
+  installFakeBridge({
+    assets: {
+      search: query => Promise.resolve(CATALOGUE.filter(one => query.ids?.includes(one.id))),
+    },
+  })
 })
 
 describe('reading the scene in front', () => {
@@ -94,7 +111,7 @@ describe('building a scene', () => {
   // refusal rather than a node that silently never arrived.
   it('refuses a kind no registry declares', async () => {
     expect(await runAction('node.add', { kind: 'dodecahedron' })).toMatchObject({ ok: true })
-    expect(await runAction('node.add', { kind: 'teapot' })).toEqual({
+    expect(await runAction('node.add', { kind: 'teapot' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -114,10 +131,15 @@ describe('building a scene', () => {
     expect(scene().nodes).toHaveLength(0)
   })
 
-  it('refuses an id the scene does not hold rather than reporting a no-op as done', async () => {
-    expect(await runAction('node.rename', { nodeId: 'node-z', name: 'Rien' })).toEqual({
+  /**
+   * `notFound` and not `badInput`: a client re-sending a `node.remove` whose node it had just
+   * removed read the same refusal as a malformed call — 33 of them on the bench pass of
+   * 2026-08-26, none saying the object was already gone.
+   */
+  it('refuses an id the scene does not hold as missing, not as a bad input', async () => {
+    expect(await runAction('node.rename', { nodeId: 'node-z', name: 'Rien' })).toMatchObject({
       ok: false,
-      refusal: 'badInput',
+      refusal: 'notFound',
     })
   })
 })
@@ -144,7 +166,7 @@ describe('placing and dressing an object', () => {
     await runAction('node.material', { nodeId: meshId, color: '#ff8800', roughness: 0.2 })
     expect(nodeNamed('Caisse')).toMatchObject({ material: { color: '#ff8800', roughness: 0.2 } })
 
-    expect(await runAction('node.material', { nodeId: lampId, color: '#ffffff' })).toEqual({
+    expect(await runAction('node.material', { nodeId: lampId, color: '#ffffff' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -159,7 +181,7 @@ describe('placing and dressing an object', () => {
     await runAction('node.light', { nodeId: lampId, color: '#ffeedd', intensity: 4 })
     expect(nodeNamed('Lampe')).toMatchObject({ light: { color: '#ffeedd', intensity: 4 } })
 
-    expect(await runAction('node.light', { nodeId: meshId, intensity: 2 })).toEqual({
+    expect(await runAction('node.light', { nodeId: meshId, intensity: 2 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -173,10 +195,12 @@ describe('placing and dressing an object', () => {
     const added = await runAction('node.add', { kind: 'hemisphere', name: 'Ciel' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('node.light', { nodeId, color: '#ff0000', intensity: 3 })).toEqual({
-      ok: false,
-      refusal: 'badInput',
-    })
+    expect(await runAction('node.light', { nodeId, color: '#ff0000', intensity: 3 })).toMatchObject(
+      {
+        ok: false,
+        refusal: 'badInput',
+      },
+    )
 
     await runAction('node.light', { nodeId, skyColor: '#ff0000', intensity: 3 })
 
@@ -205,7 +229,7 @@ describe('placing and dressing an object', () => {
     expect(nodeNamed('Poursuite')).toMatchObject({
       light: { kind: 'spot', angle: 0.4, penumbra: 0.25, distance: 12, target: { y: 2 } },
     })
-    expect(await runAction('node.light', { nodeId: pointId, angle: 0.4 })).toEqual({
+    expect(await runAction('node.light', { nodeId: pointId, angle: 0.4 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -222,7 +246,7 @@ describe('a camera driven by value', () => {
     await runAction('node.camera', { nodeId, fov: 24 })
 
     expect(nodeNamed('Caméra')).toMatchObject({ camera: { fov: 24, near: 0.1, far: 1000 } })
-    expect(await runAction('node.camera', { nodeId: meshId, fov: 24 })).toEqual({
+    expect(await runAction('node.camera', { nodeId: meshId, fov: 24 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -243,7 +267,10 @@ describe('a camera driven by value', () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const nodeId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('camera.shot', { nodeId })).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('camera.shot', { nodeId })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
     expect(scene().animation.shots).toEqual([])
   })
 
@@ -301,7 +328,7 @@ describe('what a shot does with its camera', () => {
       data: { steps: -1 },
     })
     expect(scene().animation.shots[0]?.cameraId).toBe(first)
-    expect(await runAction('camera.reorder', { nodeId: 'node-z', by: 1 })).toEqual({
+    expect(await runAction('camera.reorder', { nodeId: 'node-z', by: 1 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -350,7 +377,7 @@ describe('what a shot does with its camera', () => {
         shotId,
         pathId: mesh.ok ? (mesh.data as { nodeId: string }).nodeId : '',
       }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(scene().animation.shots[0]?.motion).toBeUndefined()
   })
 
@@ -380,15 +407,15 @@ describe('what a shot does with its camera', () => {
 
     expect(
       await runAction('camera.target', { shotId, targetId: scene().animation.shots[0]?.cameraId }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
-    expect(await runAction('camera.target', { shotId, targetId: 'nowhere' })).toEqual({
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('camera.target', { shotId, targetId: 'nowhere' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
   })
 
   it('refuses an edit naming a shot the document has not got', async () => {
-    expect(await runAction('camera.rail', { shotId: 'nowhere', pathId: '' })).toEqual({
+    expect(await runAction('camera.rail', { shotId: 'nowhere', pathId: '' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -450,14 +477,16 @@ describe('hierarchy and selection', () => {
     const childId = child.ok ? (child.data as { nodeId: string }).nodeId : ''
     await runAction('node.reparent', { nodeId: childId, parentId })
 
-    expect(await runAction('node.reparent', { nodeId: parentId, parentId })).toEqual({
+    expect(await runAction('node.reparent', { nodeId: parentId, parentId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
-    expect(await runAction('node.reparent', { nodeId: parentId, parentId: childId })).toEqual({
-      ok: false,
-      refusal: 'badInput',
-    })
+    expect(await runAction('node.reparent', { nodeId: parentId, parentId: childId })).toMatchObject(
+      {
+        ok: false,
+        refusal: 'badInput',
+      },
+    )
     expect(nodeNamed('Parent')?.parentId).toBeNull()
   })
 
@@ -576,7 +605,7 @@ describe('the world of the scene', () => {
    * a reference nobody picked, so the call is refused rather than guessed at.
    */
   it('refuses a sky nobody named', async () => {
-    expect(await runAction('world.environment', { kind: 'skybox' })).toEqual({
+    expect(await runAction('world.environment', { kind: 'skybox' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -626,16 +655,20 @@ describe('the world of the scene', () => {
 
   /** A key a client believes took must never get a silent yes — the rule of `validatesInput`. */
   it('refuses a value that belongs to another shape, rather than dropping it', async () => {
-    expect(await runAction('world.fog', { kind: 'exp2', near: 5 })).toEqual({
+    expect(await runAction('world.fog', { kind: 'exp2', near: 5 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
-    expect(await runAction('world.background', { kind: 'transparent', color: '#000000' })).toEqual({
+    expect(
+      await runAction('world.background', { kind: 'transparent', color: '#000000' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
     // Both readings of this call contradict each other: putting the sky out, and naming one.
-    expect(await runAction('world.environment', { kind: 'studio', assetId: 'sky-1' })).toEqual({
+    expect(
+      await runAction('world.environment', { kind: 'studio', assetId: 'sky-1' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -650,9 +683,12 @@ describe('the world of the scene', () => {
   })
 
   it('refuses a call that names nothing at all', async () => {
-    expect(await runAction('world.ground', {})).toEqual({ ok: false, refusal: 'badInput' })
-    expect(await runAction('world.render', {})).toEqual({ ok: false, refusal: 'badInput' })
-    expect(await runAction('world.environment', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('world.ground', {})).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('world.render', {})).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('world.environment', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 
   /**
@@ -782,7 +818,7 @@ describe('what a node is made of', () => {
   it('refuses a parameter the shape has not got, rather than filing it', async () => {
     const nodeId = await meshNamed('box', 'Caisse')
 
-    expect(await runAction('node.geometry', { nodeId, radius: 2 })).toEqual({
+    expect(await runAction('node.geometry', { nodeId, radius: 2 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -797,7 +833,7 @@ describe('what a node is made of', () => {
     const capsule = await meshNamed('capsule', 'Gélule')
     const torus = await meshNamed('torus', 'Anneau')
 
-    expect(await runAction('node.geometry', { nodeId: capsule, radialSegments: 1 })).toEqual({
+    expect(await runAction('node.geometry', { nodeId: capsule, radialSegments: 1 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -815,7 +851,7 @@ describe('what a node is made of', () => {
 
     expect(nodeNamed('Caisse')).toMatchObject({ castShadow: true, receiveShadow: true })
     expect(nodeNamed('Lampe')).toMatchObject({ castShadow: true })
-    expect(await runAction('node.shadow', { nodeId: lamp, receiveShadow: true })).toEqual({
+    expect(await runAction('node.shadow', { nodeId: lamp, receiveShadow: true })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -845,7 +881,7 @@ describe('what a node is made of', () => {
     await runAction('node.material', { nodeId, color: '#00ff00' })
     expect(nodeNamed('Titre')).toMatchObject({ material: { color: '#00ff00' } })
 
-    expect(await runAction('node.material', { nodeId, tilesPerMetre: 2 })).toEqual({
+    expect(await runAction('node.material', { nodeId, tilesPerMetre: 2 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -913,7 +949,10 @@ describe('the shape of a rail', () => {
     await runAction('node.path', { nodeId, tension: 0, closed: true })
     expect(nodeNamed('Rail')).toMatchObject({ path: { tension: 0, closed: true } })
 
-    expect(await runAction('node.path', { nodeId })).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('node.path', { nodeId })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 
   it('lays a point where it was aimed, and slips one halfway after a named one', async () => {
@@ -931,8 +970,8 @@ describe('the shape of a rail', () => {
 
     expect(
       await runAction('path.addPoint', { nodeId, index: 0, pointX: 1, pointY: 0, pointZ: 0 }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
-    expect(await runAction('path.addPoint', { nodeId, pointX: 1 })).toEqual({
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('path.addPoint', { nodeId, pointX: 1 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -944,7 +983,7 @@ describe('the shape of a rail', () => {
     await runAction('path.movePoint', { nodeId, index: 1, pointY: 3 })
     expect(points()[1]).toEqual({ x: 0, y: 3, z: -5 })
 
-    expect(await runAction('path.movePoint', { nodeId, index: 7, pointY: 3 })).toEqual({
+    expect(await runAction('path.movePoint', { nodeId, index: 7, pointY: 3 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -960,7 +999,7 @@ describe('the shape of a rail', () => {
     await runAction('path.removePoint', { nodeId, index: 2 })
     expect(points()).toHaveLength(2)
 
-    expect(await runAction('path.removePoint', { nodeId, index: 1 })).toEqual({
+    expect(await runAction('path.removePoint', { nodeId, index: 1 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -1073,9 +1112,35 @@ describe('a node an animation already drives', () => {
     const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('node.camera', { nodeId, near: 0 })).toEqual({
+    expect(await runAction('node.camera', { nodeId, near: 0 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
+  })
+})
+
+/**
+ * 🛑 What « d'un mètre vers le haut » becomes in one call. Without it a caller reads the pose,
+ * does the arithmetic and writes the result — three chances to be wrong, and section 7 of the
+ * bench scored 0 on five requests, every one written as an absolute.
+ */
+describe('a change given as a difference', () => {
+  it('adds to a position and multiplies a scale', async () => {
+    await runAction('node.add', { kind: 'box', name: 'Caisse', positionY: 2 })
+    const id = nodeNamed('Caisse')?.id ?? ''
+
+    await runAction('node.transform', { nodeId: id, positionY: 1, relative: true })
+    expect(nodeNamed('Caisse')?.transform.position.y).toBe(3)
+
+    await runAction('node.transform', { nodeId: id, scaleX: 0.5, relative: true })
+    expect(nodeNamed('Caisse')?.transform.scale.x).toBe(0.5)
+  })
+
+  it('still writes a final value when nothing says otherwise', async () => {
+    await runAction('node.add', { kind: 'box', name: 'Caisse', positionY: 2 })
+    const id = nodeNamed('Caisse')?.id ?? ''
+
+    await runAction('node.transform', { nodeId: id, positionY: 1 })
+    expect(nodeNamed('Caisse')?.transform.position.y).toBe(1)
   })
 })

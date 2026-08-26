@@ -49,8 +49,26 @@ function actionBlock(action: AssistantAction): string {
   return lines.join('\n')
 }
 
-const cataloguePrinted = (actions: readonly AssistantAction[]): string =>
-  actions.map(actionBlock).join('\n')
+/**
+ * The catalogue, with a heading each time the family changes.
+ *
+ * 🛑 The WIDE share alone: 230 actions read flat is a list a model gives up on — « nomme les
+ * mises de côté » reached `favorites.list` on the bench pass of 2026-08-26. The short share pays
+ * 8 000 characters for eleven actions and can afford no heading at all.
+ */
+function cataloguePrinted(actions: readonly AssistantAction[], grouped = false): string {
+  const lines: string[] = []
+  let family = ''
+
+  for (const action of actions) {
+    const next = action.name.split('.')[0] ?? ''
+    if (grouped && next !== family) lines.push(`  [${next}]`)
+    family = next
+    lines.push(actionBlock(action))
+  }
+
+  return lines.join('\n')
+}
 
 const namesOf = (actions: readonly AssistantAction[]): ReadonlySet<ActionName> =>
   new Set(actions.map(action => action.name))
@@ -61,8 +79,8 @@ type Share = {
   readonly allowed: ReadonlySet<ActionName>
 }
 
-const shareOf = (actions: readonly AssistantAction[]): Share => ({
-  text: cataloguePrinted(actions),
+const shareOf = (actions: readonly AssistantAction[], grouped = false): Share => ({
+  text: cataloguePrinted(actions, grouped),
   allowed: namesOf(actions),
 })
 
@@ -72,7 +90,10 @@ let shortHeld: Share | null = null
 
 const wholeShare = (): Share =>
   // Dropped from the wide list on purpose: a model shown everything has nothing left to find.
-  (wholeHeld ??= shareOf(actionsReaching('mcp').filter(action => action.name !== DISCOVERY_ACTION)))
+  (wholeHeld ??= shareOf(
+    actionsReaching('mcp').filter(action => action.name !== DISCOVERY_ACTION),
+    true,
+  ))
 
 /**
  * The spoken vocabulary, MINUS the discovery action: `FIND_RULE` already spells that call whole,
@@ -98,8 +119,10 @@ const FORMAT = [
   '  "say": a short sentence for the person, in their language. May be empty.',
   '  "calls": a list of actions to run, in order. May be empty.',
   'Each call is {"action": "<name from the catalogue>", "input": {<the fields above>}}.',
+  // 🛑 A LITERAL id: the example spelled `"<the armed model>"` and the model copied the shape —
+  // twenty-three calls over five passes carried `<shotId>` or `<path found>` where a value goes.
   'Example: {"say":"Making an image.","calls":[{"action":"generator.prepare",',
-  '"input":{"family":"image","modelId":"<the armed model>","parameters":{"prompt":"a bicycle"}}},',
+  '"input":{"family":"image","modelId":"flux.1-dev","parameters":{"prompt":"a bicycle"}}},',
   '{"action":"generator.submit","input":{}}]}',
 ].join('\n')
 
@@ -144,7 +167,23 @@ const WIDE_RULES = [
   '  - Nothing found by name? List the folders YOURSELF and read the names in them, in this same',
   '    answer. Never ask to be allowed: a name follows the prompt that made it, not what is spoken.',
   '  - Several files match? Choose none: name them in "say" and ask which.',
+  // Four requests of the batterie died on a bare name — `files.move ["bateau-test.png"]` for a
+  // file sitting in `Images/` — each answered `refused: missing`.
+  '  - A path is the WHOLE path inside the project, folders and all: "Images/x.png", never',
+  '    "x.png". A name you were TOLD is not a path — find the file, then use the path it answered.',
+  // Six runs, none able to answer: asked to rename « la copie », it searched for the NEW name.
+  '  - Renaming: the new name is not on disk yet. Find the file by what it is called NOW.',
+  '  - Every value is literal. Never write <something> where an id goes: if you do not have it,',
+  '    call for it and use what came back on the next round.',
   '  - The remote library is not this project. Look there only when asked to.',
+  // Five requests died on it: the decor had just generated a picture, and the model answered
+  // « je ne vois aucune image générée » — nothing in the studio block says one was made.
+  '  - "that picture", "the result", "the generated model": what a generation made is in the',
+  '    project catalogue. assets.search with generated finds it; nothing else announces it.',
+  // Twice over, a reference travelled as a PATH under a key nobody reads. The field belongs to
+  // the model's own schema, and the value is an asset id.
+  '  - To work FROM a picture, read model.schema first and fill the field it names with an ASSET',
+  '    ID — never a path, and never a key you chose yourself.',
   // A plan that reads well and cannot run: opening the picture is what put the Image space in
   // front, and every scene call after it was refused.
   '  - Scene, image and montage actions work on the document IN FRONT, and opening a file changes',
@@ -153,6 +192,22 @@ const WIDE_RULES = [
   // Narrowed to the repair alone: rule 3 above is what makes a model ask, and it must keep doing
   // so for what the person alone knows.
   '  - Never ask to be allowed to repair your OWN order: do it, and say what you did.',
+  /**
+   * 🛑 The five below name no action and belong here all the same: the short share runs 8 022
+   * characters against a room of 8 000, so a line added there takes an action off the catalogue.
+   */
+  // Twelve requests died on a question the studio answers — « sur quel clip ? » to a montage
+  // holding one, « quel modèle 3D ? » to a project holding two.
+  '  - Rule 3 is for what the person ALONE knows. ONE thing of that kind in front of you is the',
+  '    one meant, and a question about what a read would have told you is a turn spent for nothing.',
+  '  - "one metre more", "half", "25% more" are RELATIVE. Read the value that stands, do the',
+  '    arithmetic, write the result: every field is an absolute value, never a difference.',
+  '  - Never say a thing is done unless a call in this conversation did it.',
+  '  - Reading is not doing: the request is done once the change it asked for has been WRITTEN.',
+  // The same call sent four times after it answered ok, one refusal collected eight times on
+  // arguments that never changed. Here and not in CONTINUING, which the narrow door also shows.
+  '  - A call that answered ok has HAPPENED — sending it again does it twice. A refused call is',
+  '    refused again on the same arguments: change them, or do something else.',
 ]
 
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */

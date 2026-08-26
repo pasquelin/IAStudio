@@ -135,3 +135,38 @@ describe('deleting while a control point is held', () => {
     expect(sceneNodeNow(DOCUMENT, 'box')).toBeNull()
   })
 })
+
+/**
+ * They lived in the viewport component, where only a mounted scene could reach them: an MCP
+ * client asking to undo was answered `wrongSurface` — measured on the bench pass of 2026-08-25,
+ * six requests, none able to take anything back.
+ */
+describe('taking a change back', () => {
+  it('undoes and redoes the scene the command names', () => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube')], selectedIds: ['cube'] })
+    runSceneCommand(DOCUMENT, 'scene.delete')
+    expect(sceneOf(useScenes.getState(), DOCUMENT).nodes).toHaveLength(0)
+
+    expect(runSceneCommand(DOCUMENT, 'scene.undo')).toBe(true)
+    expect(sceneOf(useScenes.getState(), DOCUMENT).nodes).toHaveLength(1)
+
+    expect(runSceneCommand(DOCUMENT, 'scene.redo')).toBe(true)
+    expect(sceneOf(useScenes.getState(), DOCUMENT).nodes).toHaveLength(0)
+  })
+})
+
+/**
+ * 🛑 `false` and not `true`: a caller told `ok` on an empty stack sends the undo again. Nine in
+ * a row on the bench pass of 2026-08-26, and the decor came apart.
+ */
+describe('an undo with nothing behind it', () => {
+  it('says it did nothing rather than answering done', () => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube')], selectedIds: ['cube'] })
+
+    expect(runSceneCommand(DOCUMENT, 'scene.undo')).toBe(false)
+    expect(runSceneCommand(DOCUMENT, 'scene.redo')).toBe(false)
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+    expect(runSceneCommand(DOCUMENT, 'scene.undo')).toBe(true)
+  })
+})

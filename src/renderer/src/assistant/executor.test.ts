@@ -154,7 +154,7 @@ describe('opening a workspace', () => {
   it('refuses a workspace the studio has no panel for', async () => {
     const outcome = await runAction('workspace.open', { workspace: 'holodeck' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(showWorkspace).not.toHaveBeenCalled()
   })
 })
@@ -162,7 +162,7 @@ describe('opening a workspace', () => {
 describe('running a command', () => {
   it('hands it to the surface listening for it', async () => {
     const heard: string[] = []
-    const stop = subscribeToCommands(command => heard.push(command))
+    const stop = subscribeToCommands(command => heard.push(command) > 0)
     const disarm = armCommandScope('canvas')
 
     expect(await runAction('command.run', { command: 'canvas.zoomIn' })).toEqual({ ok: true })
@@ -179,7 +179,7 @@ describe('running a command', () => {
    */
   it('says so rather than dropping a command no surface is there to take', async () => {
     const heard: string[] = []
-    const stop = subscribeToCommands(command => heard.push(command))
+    const stop = subscribeToCommands(command => heard.push(command) > 0)
 
     const outcome = await runAction('command.run', { command: 'scene.frame' })
 
@@ -197,7 +197,7 @@ describe('running a command', () => {
   it('refuses a command nothing declares, at the schema rather than at the surface', async () => {
     const outcome = await runAction('command.run', { command: 'canvas.summonADragon' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   // The catalogue offers these to the model, so refusing them all was the assistant announcing
@@ -251,7 +251,7 @@ describe('choosing and preparing a model', () => {
       parameters: 'a knight helmet',
     })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   it('searches the catalogue and answers what it found', async () => {
@@ -599,11 +599,11 @@ describe('an input the registry would not accept', () => {
   it('is refused before the action runs at all', async () => {
     onImageDocument()
 
-    expect(await runConfirmedAction('workspace.open', { workspace: 'nowhere' })).toEqual({
+    expect(await runConfirmedAction('workspace.open', { workspace: 'nowhere' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
-    expect(await runConfirmedAction('workspace.open', { worksapce: '3d' })).toEqual({
+    expect(await runConfirmedAction('workspace.open', { worksapce: '3d' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -616,7 +616,7 @@ describe('an input the registry would not accept', () => {
     const ask = vi.fn(async () => true)
     const stop = registerConfirmer(ask)
 
-    expect(await runConfirmedAction('generator.submit', { unexpected: 1 })).toEqual({
+    expect(await runConfirmedAction('generator.submit', { unexpected: 1 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

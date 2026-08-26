@@ -1,4 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
+import type { Target } from '@shared/domain/target'
 import { readColor } from '@shared/domain/color'
 import { FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
@@ -92,7 +93,8 @@ import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { type ActionHandlers } from './actionHandler'
+import { withAsset, type ActionHandlers } from './actionHandler'
+import { nodeAimed } from './nodeAimed'
 import { boolOf, numberOf, oneOf, recordOf, textOf, textsOf } from './actionInputs'
 
 /**
@@ -129,21 +131,41 @@ function editNode(
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
-  const node = nodeById(open.state, textOf(input, 'nodeId') ?? '')
-  const command = node && build(node, open.documentId)
-  if (!command) return refused('badInput')
+  const named = textOf(input, 'nodeId') ?? ''
+  const node = nodeAimed(open.state, named)
+  // 🛑 Told apart: a node that is not there and an edit with nothing to do read the same as
+  // `badInput`, and a client re-sent a `node.remove` whose node it had just removed — 33 refusals
+  // on the bench pass of 2026-08-26, none of them saying the object was already gone.
+  if (!node) return refused('notFound', `no node "${named}" in the scene in front, by id or name`)
+
+  const command = build(node, open.documentId)
+  if (!command) return refused('badInput', `"${node.name}" has nothing to change here`)
 
   useScenes.getState().runCommand(open.documentId, command)
   return { ok: true }
 }
 
-/** A vector read three axes at a time, each one falling back to where the node already is. */
-function vectorOf(input: Record<string, unknown>, of: string, current: Vector3): Vector3 {
-  return {
-    x: numberOf(input, `${of}X`) ?? current.x,
-    y: numberOf(input, `${of}Y`) ?? current.y,
-    z: numberOf(input, `${of}Z`) ?? current.z,
+/**
+ * A vector read three axes at a time, each one falling back to where the node already is.
+ *
+ * 🛑 `relative` makes the values CHANGES: added for a position or a rotation, MULTIPLIED for a
+ * scale — which is what « de moitié » and « de 20 % » mean, and what nobody says additively.
+ */
+function vectorOf(
+  input: Record<string, unknown>,
+  of: string,
+  current: Vector3,
+  relative = false,
+): Vector3 {
+  const axis = (name: 'x' | 'y' | 'z'): number => {
+    const given = numberOf(input, `${of}${name.toUpperCase()}`)
+    if (given === null) return current[name]
+    if (!relative) return given
+
+    return of === 'scale' ? current[name] * given : current[name] + given
   }
+
+  return { x: axis('x'), y: axis('y'), z: axis('z') }
 }
 
 /** The specs of one shape, read by name — the tables are keyed by kind and typed per kind. */
@@ -151,7 +173,7 @@ type Specs = { readonly [name: string]: PropertySpec | undefined }
 
 /** Everything a call names apart from the node itself: what the descriptor must answer for. */
 function namedFields(input: Record<string, unknown>): string[] {
-  return Object.keys(input).filter(key => key !== 'nodeId')
+  return Object.keys(input).filter(key => key !== 'nodeId' && key !== 'relative')
 }
 
 /**
@@ -329,7 +351,7 @@ function openShot(input: Record<string, unknown>): ActionOutcome {
   if (!open) return refused('wrongSurface')
 
   const nodeId = textOf(input, 'nodeId') ?? ''
-  if (nodeById(open.state, nodeId)?.type !== 'camera') return refused('badInput')
+  if (nodeAimed(open.state, nodeId)?.type !== 'camera') return refused('badInput')
 
   const seconds = numberOf(input, 'durationSeconds')
   const opened = newShotAt(
@@ -384,12 +406,37 @@ function select(input: Record<string, unknown>): ActionOutcome {
   return { ok: true }
 }
 
+/**
+ * What a sentence may aim at inside a scene, as the outliner names them.
+ *
+ * 🛑 Published for the same reason the layer stack is: without it the briefing named no node at
+ * all, and a model asked to move « le cube » spelled an id it had invented — `<nodeId>`, the
+ * name in the id's place, `node-1`. The tree is FLATTENED here: `narrowTargets` ranks and cuts,
+ * and depth is not what a spoken request picks by.
+ */
+export function nodeTargets(): readonly Target[] {
+  const open = mounted()
+  if (!open) return []
+
+  return open.state.nodes.map(node => ({
+    id: node.id,
+    kind: 'node',
+    name: node.name,
+    selected: open.state.selectedIds.includes(node.id),
+  }))
+}
+
+/** Aiming at one of them, through the same door `node.select` uses — never a second path. */
+export function selectNode(id: string): ActionOutcome {
+  return select({ nodeIds: [id] })
+}
+
 function reparent(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
   const parentId = textOf(input, 'parentId')
-  if (parentId !== null && !nodeById(open.state, parentId)) return refused('notFound')
+  if (parentId !== null && !nodeAimed(open.state, parentId)) return refused('notFound')
 
   // A move that would close the tree on itself is refused by handing the state back untouched,
   // which without this reads as done.
@@ -411,7 +458,7 @@ function editWorld(build: (world: SceneWorld) => Partial<SceneWorld>): ActionOut
   return { ok: true }
 }
 
-function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
+function worldEnvironment(input: Record<string, unknown>): ActionOutcome | Promise<ActionOutcome> {
   const kind = oneOf(input, 'kind', ENVIRONMENT_KINDS)
   const assetId = textOf(input, 'assetId')
   // The panel answers `skybox` by taking the first sky of the project, which from outside would
@@ -425,12 +472,22 @@ function worldEnvironment(input: Record<string, unknown>): ActionOutcome {
   const environment: EnvironmentRef | null =
     assetId !== null ? { kind: 'skybox', assetId } : kind === 'studio' ? STUDIO_ENVIRONMENT : null
 
-  return editWorld(() => ({
-    ...(environment === null ? {} : { environment }),
-    ...(intensity === null ? {} : { envIntensity: intensity }),
-    // Radians, as every other angle a document stores — the panel is what shows degrees.
-    ...(rotation === null ? {} : { envRotation: rotation }),
-  }))
+  return withEnvironmentAsset(assetId, () =>
+    editWorld(() => ({
+      ...(environment === null ? {} : { environment }),
+      ...(intensity === null ? {} : { envIntensity: intensity }),
+      // Radians, as every other angle a document stores — the panel is what shows degrees.
+      ...(rotation === null ? {} : { envRotation: rotation }),
+    })),
+  )
+}
+
+/** The sky must EXIST, or the scene keeps a reference to a picture nothing can resolve. */
+function withEnvironmentAsset(
+  assetId: string | null,
+  run: () => ActionOutcome,
+): ActionOutcome | Promise<ActionOutcome> {
+  return assetId === null ? run() : withAsset(assetId, run)
 }
 
 function worldBackground(input: Record<string, unknown>): ActionOutcome {
@@ -529,9 +586,14 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'node.select': select,
   'node.reparent': reparent,
 
+  /**
+   * 🛑 Through `withAsset`: an id nothing holds used to make a node all the same, and the caller
+   * was answered `ok` with the id of a model that shows nothing. Measured on the bench pass of
+   * 2026-08-25, where `assetId: "<meshId>"` — the placeholder, spelt out — was accepted.
+   */
   'node.addModel': input => {
     const assetId = textOf(input, 'assetId') ?? ''
-    return place(modelNode(assetId, textOf(input, 'name') ?? assetId))
+    return withAsset(assetId, () => place(modelNode(assetId, textOf(input, 'name') ?? assetId)))
   },
 
   'node.remove': input => editNode(input, node => removeNode(node.id)),
@@ -547,8 +609,8 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
     const operation = oneOf(input, 'operation', CSG_OPERATIONS)
     const picked = textsOf(input, 'nodeIds')
-      .map(id => nodeById(open.state, id))
-      .filter(node => node !== null)
+      .map(id => nodeAimed(open.state, id))
+      .filter(node => node !== undefined)
     const command = operation && carveNodes(picked, operation, open.state.nodes)
     if (!command) return refused('badInput')
 
@@ -565,7 +627,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
-    const node = nodeById(open.state, textOf(input, 'nodeId') ?? '')
+    const node = nodeAimed(open.state, textOf(input, 'nodeId') ?? '')
     if (node?.type !== 'carved') return refused('badInput')
 
     useScenes.getState().runCommand(open.documentId, separateNode(node))
@@ -591,6 +653,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     editNode(input, (node, documentId) => {
       const keying = sceneKeyingAt(documentId)
       const played = poseAt(node.transform, keying.state.animation, node.id, keying.at)
+      const by = boolOf(input, 'relative')
 
       return movesToCommand(
         keying.state,
@@ -598,9 +661,9 @@ export const SCENE_HANDLERS: ActionHandlers = {
           {
             id: node.id,
             transform: {
-              position: vectorOf(input, 'position', played.position),
-              rotation: vectorOf(input, 'rotation', played.rotation),
-              scale: vectorOf(input, 'scale', played.scale),
+              position: vectorOf(input, 'position', played.position, by),
+              rotation: vectorOf(input, 'rotation', played.rotation, by),
+              scale: vectorOf(input, 'scale', played.scale, by),
             },
           },
         ],
@@ -901,6 +964,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       if (node.type !== 'light') return null
 
       const specs: Specs = LIGHT_SPECS[node.light.kind]
+      const by = boolOf(input, 'relative')
       let light = node.light
 
       for (const name of namedFields(input)) {
@@ -917,12 +981,16 @@ export const SCENE_HANDLERS: ActionHandlers = {
           continue
         }
 
-        if (!withinSpec(specs[name], value)) return null
-        light = withField(light, name, value)
+        // « double l'intensité », « de 25 % » — a dial is multiplied, never added: nobody says
+        // "add 0.25 to the intensity", and every request of the bench spelled a factor.
+        const held = light[name as keyof typeof light]
+        const wanted = by && typeof held === 'number' ? held * value : value
+        if (!withinSpec(specs[name], wanted)) return null
+        light = withField(light, name, wanted)
       }
 
       if ('target' in node.light && TARGET_AXES.some(axis => input[axis] !== undefined)) {
-        light = withField(light, 'target', vectorOf(input, 'target', node.light.target))
+        light = withField(light, 'target', vectorOf(input, 'target', node.light.target, by))
       }
 
       return light === node.light ? null : setLight(node.id, light)

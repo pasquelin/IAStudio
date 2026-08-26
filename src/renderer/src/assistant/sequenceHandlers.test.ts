@@ -142,7 +142,7 @@ describe('laying clips down', () => {
       tracks: [makeTrack({ id: 'A1', kind: 'audio', index: 0 })],
     })
 
-    expect(await runAction('clip.add', { assetId: RUSH.id })).toEqual({
+    expect(await runAction('clip.add', { assetId: RUSH.id })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -193,7 +193,7 @@ describe('editing a clip', () => {
 
   // Outside the clip there is nothing to cut, and `splitClip` says so by changing nothing.
   it('refuses a cut that falls outside the clip', async () => {
-    expect(await runAction('clip.split', { clipId: 'clip-a', at: 9 * SECOND })).toEqual({
+    expect(await runAction('clip.split', { clipId: 'clip-a', at: 9 * SECOND })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -203,7 +203,7 @@ describe('editing a clip', () => {
   it('refuses a move onto a track the montage does not hold', async () => {
     expect(
       await runAction('clip.move', { clipId: 'clip-a', trackId: 'track-z', start: 0 }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(sequence().tracks[0]?.clips[0]?.start).toBe(0)
   })
 

@@ -16,6 +16,10 @@ import { englishText } from '@shared/i18n'
 export type AssistantStep = {
   action: ActionName
   refusal: ActionRefusal | null
+  /** What was wrong, from `inputProblem` — English, for the model, never for the screen. */
+  detail?: string
+  /** Set for a RELATIVE call alone — see `repeatedRelative`, which is what it exists for. */
+  repeatKey?: string
   data?: unknown
 }
 
@@ -146,7 +150,12 @@ function blockOf(turn: AssistantTurn): string {
       // ACTION, and this history reaches every door — including the ones shown fourteen actions,
       // where `parseReply` refuses a whole reply for naming a fifteenth. `WIDE_RULES` is where
       // advice that names an action belongs, because only there is it filtered by door.
-      lines.push(`You tried ${step.action}, refused: ${englishText(refusalKey(step.refusal))}`)
+      // The detail names a FIELD, never an action, so it stays inside the rule above: a caller
+      // told only "bad input" sends the same call again, which is what this exists to stop.
+      const why = englishText(refusalKey(step.refusal))
+      lines.push(
+        `You tried ${step.action}, refused: ${why}${step.detail === undefined ? '' : ` — ${step.detail}`}`,
+      )
       continue
     }
 
@@ -167,4 +176,19 @@ function blockOf(turn: AssistantTurn): string {
   if (turn.ending === 'stopped') lines.push('The person stopped you there.')
 
   return lines.join('\n')
+}
+
+/**
+ * 🛑 What a relative call is keyed by, so the same one cannot be applied twice in one turn.
+ *
+ * An absolute call repeated writes the same value; a RELATIVE one adds again. Measured on the
+ * bench pass of 2026-08-26: « 20 degrés de plus » was sent twice and turned the cube by 40.
+ */
+export function repeatKeyOf(action: ActionName, input: Record<string, unknown>): string | null {
+  return input.relative === true ? `${action} ${JSON.stringify(input)}` : null
+}
+
+/** Whether this turn already ran that very relative call, and got it done. */
+export function repeatedRelative(steps: readonly AssistantStep[], key: string | null): boolean {
+  return key !== null && steps.some(one => one.repeatKey === key && one.refusal === null)
 }

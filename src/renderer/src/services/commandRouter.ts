@@ -128,6 +128,7 @@ export function routeCommand(command: CommandId): CommandRouting {
   const descriptor = commandDescriptor(command)
   if (!descriptor || !commandScopeIsArmed(descriptor.scope)) return 'noSurface'
 
-  publishCommand(command)
-  return 'ran'
+  // A surface that took it and had nothing to do is not a studio showing the wrong thing — the
+  // very distinction `nothingToDo` was written for, and which nothing used to reach.
+  return publishCommand(command) ? 'ran' : 'nothingToDo'
 }

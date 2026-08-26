@@ -72,7 +72,7 @@ describe('changing the repository', () => {
     const stage = vi.fn(async () => READY)
     installFakeBridge({ git: { stage } })
 
-    expect(await runAction('git.stage', { paths: [] })).toEqual({
+    expect(await runAction('git.stage', { paths: [] })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -126,7 +126,7 @@ describe('changing the repository', () => {
     await runAction('git.resolve', { paths: ['a.png'], side: 'theirs' })
     expect(resolve).toHaveBeenCalledWith(['a.png'], 'theirs')
 
-    expect(await runAction('git.resolve', { paths: ['a.png'], side: 'mine' })).toEqual({
+    expect(await runAction('git.resolve', { paths: ['a.png'], side: 'mine' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

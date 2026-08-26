@@ -72,7 +72,7 @@ describe('an action asked for from outside the window', () => {
     await vi.waitFor(() => expect(answers).toHaveLength(1))
 
     expect(runConfirmedAction).not.toHaveBeenCalled()
-    expect(answers[0]?.outcome).toEqual({ ok: false, refusal: 'badInput' })
+    expect(answers[0]?.outcome).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   it('answers rather than going quiet when the action itself threw', async () => {

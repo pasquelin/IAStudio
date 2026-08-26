@@ -49,6 +49,22 @@ describe('searching the library', () => {
     expect(search).toHaveBeenLastCalledWith({})
   })
 
+  /**
+   * Measured on the bench pass of 2026-08-26: 35 requests died on « je ne trouve pas ». What the
+   * project HOLDS is what says whether to look again with another word, or to say it has none.
+   */
+  it('answers what the project holds when nothing matched', async () => {
+    const counts = emptyAssetCounts()
+    installFakeBridge({
+      assets: { search: vi.fn(async () => []), counts: vi.fn(async () => counts) },
+    })
+
+    expect(await runAction('assets.search', { text: 'nothing' })).toEqual({
+      ok: true,
+      data: { found: [], projectHolds: counts },
+    })
+  })
+
   it('counts the library in the catalogue rather than by listing it', async () => {
     const counts = emptyAssetCounts()
     installFakeBridge({ assets: { counts: vi.fn(async () => counts) } })
@@ -90,7 +106,7 @@ describe('reading and correcting an asset', () => {
     const update = vi.fn(async () => ASSET)
     installFakeBridge({ assets: { update } })
 
-    expect(await runAction('asset.update', { assetId: 'asset-1' })).toEqual({
+    expect(await runAction('asset.update', { assetId: 'asset-1' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -112,7 +128,7 @@ describe('reading and correcting an asset', () => {
     const remove = vi.fn(async () => {})
     installFakeBridge({ assets: { remove } })
 
-    expect(await runAction('assets.remove', { assetIds: [] })).toEqual({
+    expect(await runAction('assets.remove', { assetIds: [] })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

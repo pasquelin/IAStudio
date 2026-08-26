@@ -183,7 +183,7 @@ describe('building a stack', () => {
 
   // A shape with no box is a layer with nothing on it, which nothing on screen could show.
   it('refuses a shape that names no box', async () => {
-    expect(await runAction('layer.add', { kind: 'shape', name: 'Cadre' })).toEqual({
+    expect(await runAction('layer.add', { kind: 'shape', name: 'Cadre' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -224,7 +224,7 @@ describe('building a stack', () => {
 
   // A row in the panel that changes nothing is the one thing a layer must never be.
   it('refuses an adjustment layer that names no dial', async () => {
-    expect(await runAction('layer.add', { kind: 'adjustment', name: 'Étalonnage' })).toEqual({
+    expect(await runAction('layer.add', { kind: 'adjustment', name: 'Étalonnage' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -286,7 +286,7 @@ describe('building a stack', () => {
   it('refuses a move under something that is not a group', async () => {
     expect(
       await runAction('layer.move', { layerId: 'layer-a', parentId: 'layer-b', index: 0 }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(layerIds()).toEqual(['layer-a', 'layer-b'])
   })
 
@@ -336,7 +336,7 @@ describe('styling and placing a layer', () => {
     await runAction('layer.text', { layerId: 'layer-t', text: 'Générique', size: 64 })
     expect(canvas().layers[0]).toMatchObject({ text: 'Générique', size: 64 })
 
-    expect(await runAction('layer.text', { layerId: 'layer-p', text: 'Rien' })).toEqual({
+    expect(await runAction('layer.text', { layerId: 'layer-p', text: 'Rien' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -380,7 +380,7 @@ describe('styling and placing a layer', () => {
       fontSource: 'embedded',
     })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'badInput' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 })
 
@@ -396,7 +396,7 @@ describe('the padlocks of a layer', () => {
   })
 
   it('refuses a call that names no padlock', async () => {
-    expect(await runAction('layer.lock', { layerId: 'layer-a' })).toEqual({
+    expect(await runAction('layer.lock', { layerId: 'layer-a' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -443,7 +443,7 @@ describe('repainting a shape long after it was drawn', () => {
     })
     const layerId = made.ok ? (made.data as { layerId: string }).layerId : ''
 
-    expect(await runAction('layer.shape', { layerId, filled: true })).toEqual({
+    expect(await runAction('layer.shape', { layerId, filled: true })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -458,7 +458,7 @@ describe('repainting a shape long after it was drawn', () => {
     const layerId = await drawn()
     await runAction('layer.shape', { layerId, filled: true, stroked: false })
 
-    expect(await runAction('layer.shape', { layerId, filled: false })).toEqual({
+    expect(await runAction('layer.shape', { layerId, filled: false })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -489,7 +489,7 @@ describe('the dial of an adjustment layer', () => {
   it('refuses a dial that is not the layer’s own', async () => {
     const layerId = await adjusting()
 
-    expect(await runAction('layer.adjustment', { layerId, contrast: 1.4 })).toEqual({
+    expect(await runAction('layer.adjustment', { layerId, contrast: 1.4 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -534,7 +534,7 @@ describe('what a mask does, once the engine has carved one', () => {
 
     expect(
       await runAction('layer.mask', { layerId: 'layer-a', remove: true, enabled: false }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
 
     expect(await runAction('layer.mask', { layerId: 'layer-a', remove: true })).toEqual({
       ok: true,
@@ -544,7 +544,7 @@ describe('what a mask does, once the engine has carved one', () => {
 
   /** Carving one is the engine's, through a command: a record with no pixels behind it hides all. */
   it('refuses a layer wearing none rather than giving it an empty one', async () => {
-    expect(await runAction('layer.mask', { layerId: 'layer-a', enabled: false })).toEqual({
+    expect(await runAction('layer.mask', { layerId: 'layer-a', enabled: false })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

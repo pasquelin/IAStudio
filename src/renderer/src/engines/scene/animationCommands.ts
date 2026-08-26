@@ -325,6 +325,26 @@ export function unkeySubject(
 }
 
 /**
+ * Empties every channel of one subject, whatever instant its keys sit on.
+ *
+ * 🛑 There was no way to say « efface toutes les clés » in one call: `unkeySubject` takes one
+ * instant, so a client asking for all of them sent the same call over and over — measured on the
+ * bench pass of 2026-08-26, and it never cleared more than the key under the head.
+ */
+export function unkeySubjectWholly(
+  state: SceneState,
+  trackIds: readonly string[],
+): Command<SceneState> | null {
+  const drops = trackIds
+    .map(trackId => trackById(state, trackId))
+    .filter(track => track && !track.locked && track.keys.length > 0)
+    .map(track => keysCommand(`key:clear:${track!.id}`, track!.id, () => []))
+
+  if (drops.length === 0) return null
+  return drops.length === 1 && drops[0] ? drops[0] : multi('key:clear', drops)
+}
+
+/**
  * Slides a key along its track, keeping its value.
  *
  * A key landing on an instant another already holds REPLACES it, which is what `withKey` does

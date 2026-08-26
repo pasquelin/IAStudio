@@ -3,6 +3,8 @@ import type { DocumentKind } from '@shared/domain/document'
 import type { Target } from '@shared/domain/target'
 import { useDocuments } from '@/stores/documents'
 import { layerTargets, selectLayer } from './canvasHandlers'
+import { nodeTargets, selectNode } from './sceneHandlers'
+import { montageTargets, selectInMontage } from './sequenceHandlers'
 
 /** What one space answers about the document it holds: what may be aimed at, and how to aim. */
 export type DocumentTargets = {
@@ -15,16 +17,17 @@ export type DocumentTargets = {
  * host, the way `IO_BY_KIND` holds saving: a seventh kind does not compile until it has answered,
  * where a registry would leave the gap silent.
  *
- * `null` is a kind with nothing to aim at YET, and it is deliberately spelled out five times: the
- * compiler is what will name them the day the second space arrives.
+ * `null` is a kind with nothing to aim at YET, and it is deliberately spelled out: the compiler
+ * is what will name them the day another space grows something to aim at.
  */
 const TARGETS_BY_KIND: Record<DocumentKind, DocumentTargets | null> = {
   // Reuses `layer.select` rather than a second path to arm a layer: a guard added there — a
   // locked layer, a collapsed group — has to reach a sentence too.
   image: { targets: layerTargets, select: id => selectLayer({ layerId: id }) },
-  scene: null,
-  sequence: null,
-  audio: null,
+  scene: { targets: nodeTargets, select: selectNode },
+  // One montage, two kinds: the audio space edits the same state through the same handlers.
+  sequence: { targets: montageTargets, select: selectInMontage },
+  audio: { targets: montageTargets, select: selectInMontage },
   skybox: null,
   texture: null,
 }

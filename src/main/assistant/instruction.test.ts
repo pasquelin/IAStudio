@@ -100,6 +100,16 @@ describe('how much of the catalogue the model is shown', () => {
     expect(wide.text).toContain('The remote library is not this project')
     expect(wide.text).toContain('work on the document IN FRONT')
     expect(wide.text).toContain('repair your OWN order')
+    // The four the bench measured, and the reason they live on this door alone — see WIDE_RULES.
+    expect(wide.text).toContain('Rule 3 is for what the person ALONE knows')
+    expect(wide.text).toContain('are RELATIVE')
+    expect(wide.text).toContain('Never say a thing is done')
+    expect(wide.text).toContain('Reading is not doing')
+    expect(wide.text).toContain('has HAPPENED')
+    expect(wide.text).toContain('the WHOLE path inside the project')
+    expect(wide.text).toContain('Never write <something> where an id goes')
+    expect(wide.text).toContain('what a generation made is in the')
+    expect(wide.text).toContain('read model.schema first')
   })
 
   it('stays inside the room it was given', () => {
@@ -112,21 +122,27 @@ describe('how much of the catalogue the model is shown', () => {
    * the narrowest door leaves the briefing, and the state is what gives ground inside it — never
    * the sentence, which `brain.test.ts` holds at two thousand characters.
    */
-  it('holds its room with every part of the briefing at its widest', () => {
-    const briefing = studioBriefing({
-      notReady: WORKSPACE_IDS,
-      context: 'x'.repeat(CONTEXT_COMPOSED_MAX),
-      state: [...Array(20).keys()]
-        .map(at => `  line ${at} `.padEnd(STATE_MAX / 20, 'z'))
-        .join('\n'),
-      targets: SATURATED,
-      room: NARROW,
-    })
+  it.each([false, true])(
+    'holds its room with every part of the briefing at its widest, continuing %s',
+    // 🛑 CONTINUING as well, which the case left out: it is added to BOTH doors and grew by two
+    // lines the day the bench measured a model repeating a call it had already run.
+    continuing => {
+      const briefing = studioBriefing({
+        continuing,
+        notReady: WORKSPACE_IDS,
+        context: 'x'.repeat(CONTEXT_COMPOSED_MAX),
+        state: [...Array(20).keys()]
+          .map(at => `  line ${at} `.padEnd(STATE_MAX / 20, 'z'))
+          .join('\n'),
+        targets: SATURATED,
+        room: NARROW,
+      })
 
-    expect(briefing.text.length).toBeLessThanOrEqual(NARROW)
-    // The catalogue never gives ground, whatever else had to.
-    expect(briefing.text).toContain('  workspace.open —')
-  })
+      expect(briefing.text.length).toBeLessThanOrEqual(NARROW)
+      // The catalogue never gives ground, whatever else had to.
+      expect(briefing.text).toContain('  workspace.open —')
+    },
+  )
 
   /** The ids are what `target.select` takes back, so they have to be IN what the model reads. */
   it('lists what the open document can be aimed at, and says nothing when there is nothing', () => {

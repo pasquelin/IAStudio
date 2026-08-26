@@ -2,8 +2,9 @@ import {
   assistantAction,
   commitmentOfCall,
   needsConfirmation,
+  inputProblem,
+  readInput,
   refused,
-  validatesInput,
   type ActionName,
   type ActionOutcome,
 } from '@shared/domain/assistant'
@@ -94,9 +95,11 @@ export async function runAction(
 ): Promise<ActionOutcome> {
   const action = assistantAction(name)
   const handler = HANDLERS[name]
-  if (!action || !handler || !validatesInput(action.fields, input)) return refused('badInput')
+  const listed = action ? readInput(action.fields, input) : null
+  if (!action || !handler) return refused('badInput')
+  if (!listed) return refused('badInput', inputProblem(action.fields, input) ?? undefined)
 
-  return handler(input)
+  return handler(listed)
 }
 
 /**
@@ -115,10 +118,12 @@ export async function runConfirmedAction(
   // Checked before the question as well as inside `runAction`: a bad input asked about first
   // would have the person approve a spend that was never going to happen.
   const action = assistantAction(name)
-  if (!action || !validatesInput(action.fields, input)) return refused('badInput')
+  const listed = action ? readInput(action.fields, input) : null
+  if (!action) return refused('badInput')
+  if (!listed) return refused('badInput', inputProblem(action.fields, input) ?? undefined)
 
-  const commitment = commitmentOfCall(name, input)
-  if (!needsConfirmation(commitment)) return runAction(name, input)
+  const commitment = commitmentOfCall(name, listed)
+  if (!needsConfirmation(commitment)) return runAction(name, listed)
 
   // Read once, before the question and before the delegation is consulted: both read the same
   // figure, and a form moved between the two would price one thing and send another.
@@ -128,7 +133,7 @@ export async function runConfirmedAction(
     // Debited BEFORE the run and never given back: an action that failed halfway may already have
     // spent, and a ledger that only counted successes would let a run of failures spend forever.
     if (estimate !== null) spentUnasked += estimate
-    return runAction(name, input)
+    return runAction(name, listed)
   }
 
   const ask = mountedConfirmer()
@@ -158,7 +163,7 @@ export async function runConfirmedAction(
    */
   if (quoted && !unchangedSince(quoted)) return refused('formChanged')
 
-  return runAction(name, input)
+  return runAction(name, listed)
 }
 
 /** Whether the form still holds exactly what was priced. */

@@ -221,7 +221,9 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
   const failure = await useDocuments.getState().rename(documentId, title)
   if (failure) {
     reportFailure('document.rename', title, failure)
-    return refused('badInput')
+    // The cause, not just the refusal: `duplicate` and `too-long` are repaired by a caller,
+    // and `badInput` alone had one send the same title back — bench pass of 2026-08-26.
+    return refused('badInput', `the title "${title}" is ${failure}`)
   }
 
   return { ok: true }

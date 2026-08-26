@@ -33,7 +33,7 @@ beforeEach(() => {
 /** What the bus heard while one command was routed. */
 function published(command: CommandId): { verdict: string; heard: CommandId[] } {
   const heard: CommandId[] = []
-  const stop = subscribeToCommands(id => heard.push(id))
+  const stop = subscribeToCommands(id => heard.push(id) > 0)
   const verdict = routeCommand(command)
   stop()
   return { verdict, heard }
@@ -194,10 +194,15 @@ describe('the registry as a whole', () => {
       ),
     ]
     const disarms = surfaceScopes.map(scope => armCommandScope(scope))
+    // A mounted surface both arms its scope AND listens: `ran` now says something ACTED, so a
+    // scope armed with nobody behind it answers `nothingToDo` — which is not what this holds.
+    const stopListening = subscribeToCommands(() => true)
 
     const stranded = COMMAND_REGISTRY.filter(descriptor =>
       surfaceScopes.some(scope => scope === descriptor.scope),
     ).filter(descriptor => routeCommand(descriptor.id) !== 'ran')
+
+    stopListening()
 
     expect(stranded.map(descriptor => descriptor.id)).toEqual([])
     for (const disarm of disarms) disarm()
