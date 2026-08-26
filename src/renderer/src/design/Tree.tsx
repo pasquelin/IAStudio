@@ -284,6 +284,8 @@ export function Tree<T extends TreeNode>({
   /** The topmost row of the batch: the insertion arithmetic and the payload's head both use it. */
   const leading = dragged?.[0] ?? null
   const scroller = useRef<HTMLDivElement>(null)
+  /** The row a plain press on an already-picked row owes a reduction to, until it lets go. */
+  const reducing = useRef<string | null>(null)
   const rows = useMemo(
     () => flattenTree(nodes, expandedIds, expandable),
     [nodes, expandedIds, expandable],
@@ -612,6 +614,17 @@ export function Tree<T extends TreeNode>({
       ref={scroller}
       className="h-full overflow-auto p-2"
       /**
+       * 🛑 CAPTURE, and that is the whole point: a control inside a row stops the press from ever
+       * reaching it, so a reduction still owed would be paid by that control's RELEASE — the
+       * selection collapsed on the row whose eye was being toggled. Every press clears the debt.
+       */
+      onPointerDownCapture={() => {
+        reducing.current = null
+      }}
+      onPointerCancelCapture={() => {
+        reducing.current = null
+      }}
+      /**
        * A press on the blank below the rows clears the selection, as every file browser does.
        *
        * Not cosmetic: what a gesture applies to is the selection, and where it LANDS is read
@@ -770,6 +783,9 @@ export function Tree<T extends TreeNode>({
                   // by the type each target asks for, never by which one was announced first.
                   onDragStart?.(row.node, event)
                   setDragged(batch)
+                  // The press turned out to be a drag, so it never was a click: the reduction it
+                  // was holding back is cancelled rather than owed.
+                  reducing.current = null
                 }}
                 onDragOver={event => {
                   // A drag from elsewhere only ever lands INSIDE a row, so it takes the same
@@ -818,7 +834,31 @@ export function Tree<T extends TreeNode>({
                 // composes: on macOS it arrives as Ctrl+click, and `pickFrom` reads that modifier
                 // as a toggle — the row a menu was raised on left the very selection the menu was
                 // about to act on.
-                onPointerDown={event => event.button !== 2 && pick(row.node, event)}
+                onPointerDown={event => {
+                  if (event.button === 2) return
+                  // 🛑 A plain press on a row ALREADY picked leaves the selection alone: it may be
+                  // the start of a drag carrying all of it, and reducing here emptied the batch
+                  // before the gesture began. It reduces on the RELEASE instead, where a click is
+                  // only a click — what every file browser does.
+                  if (
+                    selected.has(row.node.id) &&
+                    !event.shiftKey &&
+                    !event.metaKey &&
+                    !event.ctrlKey
+                  ) {
+                    reducing.current = row.node.id
+                    return
+                  }
+                  reducing.current = null
+                  pick(row.node, event)
+                }}
+                // Let go without dragging, so the press really was a click: the row it landed on
+                // is the whole selection now.
+                onPointerUp={event => {
+                  if (reducing.current !== row.node.id || event.button !== 0) return
+                  reducing.current = null
+                  pick(row.node, NO_MODIFIERS)
+                }}
                 // A double-click inside a row's rename field is someone selecting a word, not
                 // asking for the row: activating it here opened the document being renamed —
                 // which, in the explorer, then greyed "Rename" out and cancelled the gesture.

@@ -418,6 +418,109 @@ describe('Tree', () => {
     expect(indentOf('a1')).toContain('* 2')
   })
 
+  describe('pressing a row that is already picked', () => {
+    const renderPicked = (onSelect: (ids: readonly string[], mode: string) => void) => {
+      render(
+        <Tree
+          nodes={NODES}
+          label="Outline"
+          selectedIds={['a', 'b']}
+          expandedIds={new Set(['scene'])}
+          onSelect={onSelect}
+          onToggle={() => {}}
+          onDrop={() => {}}
+          renderRow={row => (
+            <span>
+              {row.node.id}
+              {/* Stops its own press and lets the release through, as `VisibilityToggle` and
+                  `InlineRename` both do. */}
+              <button data-eye onPointerDown={event => event.stopPropagation()} />
+            </span>
+          )}
+        />,
+      )
+      // scene, a, a1, b
+      return screen.getAllByRole('treeitem')
+    }
+
+    /**
+     * 🛑 The press may be the start of a drag carrying the WHOLE selection, and `pickFrom` reads a
+     * plain click as "replace by this one": reducing on the press emptied the batch before the
+     * gesture began — a multi-selection that fell to one row the instant the hand pushed down.
+     */
+    it('leaves the selection whole while the press is still held', () => {
+      const onSelect = vi.fn()
+      const [, a] = renderPicked(onSelect)
+
+      fireEvent.pointerDown(a!, { button: 0 })
+
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('reduces to that row once it is let go without dragging', () => {
+      const onSelect = vi.fn()
+      const [, a] = renderPicked(onSelect)
+
+      fireEvent.pointerDown(a!, { button: 0 })
+      fireEvent.pointerUp(a!)
+
+      expect(onSelect).toHaveBeenCalledWith(['a'], 'replace')
+    })
+
+    it('owes no reduction once the press has turned into a drag', () => {
+      const onSelect = vi.fn()
+      const [, a] = renderPicked(onSelect)
+
+      fireEvent.pointerDown(a!, { button: 0 })
+      fireEvent.dragStart(a!, { dataTransfer: dragTransfer() })
+      fireEvent.pointerUp(a!)
+
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    /**
+     * 🛑 A control inside the row — the eye, a rename field — stops the press from reaching the
+     * row, but not the RELEASE. A reduction still owed from an earlier press was paid by that
+     * release: the selection collapsed on the row whose eye was being toggled.
+     */
+    it('owes nothing to a control that swallowed its own press', () => {
+      const onSelect = vi.fn()
+      const [, a] = renderPicked(onSelect)
+      const eye = a!.querySelector('[data-eye]')!
+
+      // Armed, then let go somewhere the tree never hears about — outside the window.
+      fireEvent.pointerDown(a!, { button: 0 })
+      // A later click on the eye, whose press the control keeps to itself.
+      fireEvent.pointerDown(eye, { button: 0 })
+      fireEvent.pointerUp(eye, { button: 0 })
+
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    // The debt belongs to the press that made it: another button's release is another gesture,
+    // and a right-click was about to raise a menu ON the selection it would have wiped.
+    it('is not paid by the release of another button', () => {
+      const onSelect = vi.fn()
+      const [, a] = renderPicked(onSelect)
+
+      fireEvent.pointerDown(a!, { button: 0 })
+      fireEvent.pointerUp(a!, { button: 2 })
+
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    // A row the selection does not hold is picked on the PRESS, as it always was: there is no
+    // batch to protect, and waiting for the release would make the whole list feel late.
+    it('picks a row outside the selection on the press itself', () => {
+      const onSelect = vi.fn()
+      const [scene] = renderPicked(onSelect)
+
+      fireEvent.pointerDown(scene!, { button: 0 })
+
+      expect(onSelect).toHaveBeenCalledWith(['scene'], 'replace')
+    })
+  })
+
   it('leaves the rows undraggable when nothing listens for a drop', () => {
     renderTree()
     expect(screen.getAllByRole('treeitem')[0]).not.toHaveAttribute('draggable', 'true')
