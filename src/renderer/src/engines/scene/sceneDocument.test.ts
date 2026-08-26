@@ -1,6 +1,19 @@
-import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import { EMPTY_TIMELINE, SCENE_SUBJECT_ID } from '@shared/domain/animation'
+import {
+  EMPTY_STACK,
+  postEffect,
+  type CameraPost,
+  type PostStack,
+} from '@shared/domain/postProcessing'
+import { stackFromPreset } from '@shared/domain/postPresets'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_WORLD, MESH_ENTRIES, TEXTURE_SLOTS, TILES_PER_METRE } from '@shared/domain/scene'
+import {
+  DEFAULT_CAMERA,
+  DEFAULT_WORLD,
+  MESH_ENTRIES,
+  TEXTURE_SLOTS,
+  TILES_PER_METRE,
+} from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './meshPrimitives'
 import { LIGHT_TYPES } from './lightTypes'
 import {
@@ -903,5 +916,111 @@ describe('a carved solid across a save', () => {
     const back = reopened(bare as SceneNode)[0]
 
     expect(back?.type === 'carved' && back.material).toEqual(DEFAULT_MATERIAL)
+  })
+})
+
+describe('the composition, written and read back', () => {
+  const camera = (post?: CameraPost): SceneNode => ({
+    id: 'cam',
+    parentId: null,
+    name: 'Camera 01',
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    castShadow: false,
+    receiveShadow: false,
+    type: 'camera',
+    camera: post ? { ...DEFAULT_CAMERA, post } : DEFAULT_CAMERA,
+  })
+
+  const written = (state: SceneState): SceneState =>
+    sceneFromPayload(JSON.parse(JSON.stringify(scenePayload(state))))
+
+  it('gives back the scene composition, effect by effect and value by value', () => {
+    const held: SceneState = {
+      ...EMPTY_SCENE,
+      world: { ...DEFAULT_WORLD, post: stackFromPreset('cinematic', () => 'fixed') },
+    }
+
+    expect(written(held).world.post).toEqual(held.world.post)
+  })
+
+  it('gives back what a camera overrides with, under the same instance ids', () => {
+    const own: PostStack = { enabled: true, effects: [postEffect('own-1', 'vignette')] }
+    const held: SceneState = { ...EMPTY_SCENE, nodes: [camera({ mode: 'override', stack: own })] }
+
+    const back = written(held).nodes[0]
+    expect(back?.type === 'camera' && back.camera.post).toEqual({ mode: 'override', stack: own })
+  })
+
+  it('gives back a camera that films through nothing', () => {
+    const held: SceneState = { ...EMPTY_SCENE, nodes: [camera({ mode: 'disabled' })] }
+
+    const back = written(held).nodes[0]
+    expect(back?.type === 'camera' && back.camera.post).toEqual({ mode: 'disabled' })
+  })
+
+  /**
+   * 🛑 The migration, and it is the whole of it: every document ever written says nothing about a
+   * composition, and a reader that required one would open them all on an empty scene.
+   */
+  it('opens a document written before compositions existed exactly as it was', () => {
+    const old = { nodes: [{ ...camera(), camera: { fov: 50, near: 0.1, far: 1000 } }], world: {} }
+    const back = sceneFromPayload(old)
+
+    expect(back.world.post).toEqual(EMPTY_STACK)
+    expect(back.nodes[0]?.type === 'camera' && back.nodes[0].camera.post).toBeUndefined()
+  })
+
+  it('drops an effect this build has no code for rather than refusing the file', () => {
+    const payload = {
+      nodes: [],
+      world: { post: { enabled: true, effects: [{ effect: 'bloom' }, { effect: 'raytracing' }] } },
+    }
+
+    expect(sceneFromPayload(payload).world.post.effects.map(one => one.effect)).toEqual(['bloom'])
+  })
+
+  it('keeps a channel that drives a composition parameter', () => {
+    const held: SceneState = {
+      ...EMPTY_SCENE,
+      animation: {
+        ...EMPTY_TIMELINE,
+        tracks: [
+          {
+            id: 't',
+            name: 'Bloom',
+            index: 0,
+            muted: false,
+            solo: false,
+            locked: false,
+            target: {
+              nodeId: SCENE_SUBJECT_ID,
+              property: 'post',
+              post: { effectId: 'a', param: 'strength' },
+            },
+            keys: [{ time: 0, value: { x: 1, y: 0, z: 0 } }],
+          },
+        ],
+      },
+    }
+
+    expect(written(held).animation.tracks[0]?.target.post).toEqual({
+      effectId: 'a',
+      param: 'strength',
+    })
+  })
+
+  /** A channel naming no effect drives nothing: kept, it would sit on the band reaching nowhere. */
+  it('drops a composition channel that names no effect', () => {
+    const payload = {
+      nodes: [],
+      animation: {
+        tracks: [
+          { id: 't', name: 'x', index: 0, target: { nodeId: 'a', property: 'post' }, keys: [] },
+        ],
+      },
+    }
+
+    expect(sceneFromPayload(payload).animation.tracks).toEqual([])
   })
 })

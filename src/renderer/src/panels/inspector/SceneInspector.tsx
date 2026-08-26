@@ -18,6 +18,8 @@ import { lensAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
+import { postStackOf, SCENE_POST } from '@/engines/scene/postCommands'
+import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { sceneViewOf, useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
@@ -29,6 +31,8 @@ import { CameraAlignButton } from './CameraAlignButton'
 import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
 import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
+import { CameraPostSection } from './PostProcessingSection/CameraPostSection'
+import { PostProcessingSection } from './PostProcessingSection/PostProcessingSection'
 import { MaterialSection } from './MaterialSection'
 import { ModelDressSection } from './ModelDressSection/ModelDressSection'
 import { materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
@@ -93,6 +97,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const at = snapToFrame(playhead, animation.fps)
   // `lensAt`, which the viewport draws through too: the field writes the same number back, so
   // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
+  const cameraStack = useScenes(state =>
+    camera ? postStackOf(sceneOf(state, documentId), { kind: 'camera', nodeId: camera.id }) : null,
+  )
   const lens = useMemo(
     () => (camera ? cameraFields(lensAt(camera.camera, animation, camera.id, at)) : []),
     [camera, animation, at],
@@ -129,6 +136,18 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         onSkeletons={skeletons => useSceneViews.getState().setSkeletons(documentId, skeletons)}
         snapping={view.snapping}
         onSnap={(kind, on) => useSceneViews.getState().setSceneSnap(documentId, kind, on)}
+      />
+
+      {/* Beside the environment and for the same reason: a composition belongs to the DOCUMENT
+          rather than to a node, so it is there to be built the moment a scene is opened — with
+          no camera to make first, which is the whole of § 2. */}
+      <PostProcessingSection
+        documentId={documentId}
+        target={SCENE_POST}
+        stack={world.post}
+        subject={SCENE_SUBJECT_ID}
+        edit={edit}
+        title={t('postfx.title')}
       />
 
       {node && (
@@ -237,6 +256,21 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           path={path.path}
           onChange={next => edit.run(setPath(path.id, next))}
           gesture={edit.gesture}
+        />
+      )}
+
+      {camera && <CameraPostSection documentId={documentId} camera={camera} edit={edit} />}
+
+      {/* Only while it OWNS one: a camera that inherits edits the scene's stack above, and a
+          second panel writing into the same place is two panels disagreeing about one value. */}
+      {cameraStack && camera && (
+        <PostProcessingSection
+          documentId={documentId}
+          target={{ kind: 'camera', nodeId: camera.id }}
+          stack={cameraStack}
+          subject={camera.id}
+          edit={edit}
+          title={t('postfx.cameraOwner', { name: camera.name })}
         />
       )}
 

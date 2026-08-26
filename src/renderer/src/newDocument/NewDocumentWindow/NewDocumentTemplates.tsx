@@ -1,4 +1,5 @@
 import {
+  mdiAutoFix,
   mdiCubeOutline,
   mdiEyeOutline,
   mdiGrid,
@@ -28,21 +29,24 @@ const ICONS: Record<SceneTemplateId, string> = {
   photoStudio: mdiSpotlightBeam,
   cinematic: mdiMovieOpenOutline,
   archvis: mdiHomeOutline,
+  postProcessing: mdiAutoFix,
   firstPerson: mdiEyeOutline,
   thirdPerson: mdiVideoOutline,
   topDown: mdiGrid,
 }
 
 /**
- * How each group is laid out: how many of the section's eight columns it takes, and how many
- * tiles it fits across — always as many as the group holds, so every group is one row.
+ * How each group is laid out: how many of the section's NINE columns it takes, and how many tiles
+ * it fits across — always as many as the group holds, so every group is one row, and the two
+ * spans add up to the section's own width so every tile is one column wide whichever group it is
+ * in. A group gaining a template moves both numbers, here and on the row below.
  *
  * Written rather than composed from that count, because Tailwind generates its classes by
  * reading the source: `grid-cols-${templates.length}` produces a class that does not exist.
  * `NewDocumentTemplates.test.tsx` holds the two halves together.
  */
 const LAYOUT: Record<SceneTemplateGroup, { span: string; columns: string }> = {
-  general: { span: 'col-span-5', columns: 'grid-cols-5' },
+  general: { span: 'col-span-6', columns: 'grid-cols-6' },
   character: { span: 'col-span-3', columns: 'grid-cols-3' },
 }
 
@@ -63,7 +67,7 @@ export function NewDocumentTemplates({ value, onChange }: NewDocumentTemplatesPr
   const { t } = useTranslation()
 
   return (
-    <div className="grid grid-cols-8 gap-3">
+    <div className="grid grid-cols-9 gap-3">
       {SCENE_TEMPLATE_GROUPS.map(group => (
         <section key={group} className={cn('flex min-w-0 flex-col gap-1.5', LAYOUT[group].span)}>
           <span className="text-muted text-xs">{t(`documents.templateGroups.${group}`)}</span>

@@ -81,6 +81,7 @@ import {
   withField,
   type PropertySpec,
 } from '@/engines/scene/propertyFields'
+import { numericBoundsOf } from '@shared/domain/propertySpec'
 import { newId } from '@/helpers/ids'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import type { Command } from '@/engines/core/history'
@@ -196,8 +197,8 @@ function namedFields(input: Record<string, unknown>): string[] {
  * just as the number field clamps its bounds, so both are limits and neither is a suggestion.
  */
 function withinSpec(spec: PropertySpec | undefined, value: number): boolean {
-  if (spec === undefined || spec.control === 'color' || spec.control === 'vector3') return true
-  return withinBounds(value, spec)
+  const bounds = numericBoundsOf(spec)
+  return bounds === null || withinBounds(value, bounds)
 }
 
 /**

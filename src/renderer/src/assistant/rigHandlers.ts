@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { TRACK_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
+import { DIRECT_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
   BODY_PARTS,
@@ -328,7 +328,7 @@ function tracksOfSubject(state: SceneState, subject: { nodeId: string; bone?: st
  * line stands in, never `undefined` written into a document.
  */
 function keyPose(input: Record<string, unknown>): ActionOutcome {
-  const only = oneOf(input, 'property', TRACK_PROPERTIES) ?? undefined
+  const only = oneOf(input, 'property', DIRECT_PROPERTIES) ?? undefined
 
   return editKeys(input, ({ state, at }) => {
     const subject = subjectOf(input)

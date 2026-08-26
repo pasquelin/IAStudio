@@ -1,3 +1,5 @@
+import { POST_EFFECTS, type PostEffect } from '@shared/domain/postProcessing'
+import type { FieldValue, PropertySpec } from '@shared/domain/propertySpec'
 import {
   DEFAULT_CAMERA,
   isVector3,
@@ -9,9 +11,7 @@ import {
   type SpriteDescriptor,
   type TextDescriptor,
   type TextureSlot,
-  type Vector3,
 } from '@shared/domain/scene'
-import type { NumericBounds } from '@shared/numeric'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
 import { DEFAULT_MATERIAL, DEFAULT_SPRITE, DEFAULT_TEXT } from './sceneState'
@@ -25,14 +25,12 @@ import { DEFAULT_MATERIAL, DEFAULT_SPRITE, DEFAULT_TEXT } from './sceneState'
  * every one of its parameters fails to compile.
  */
 
-export type PropertySpec =
-  | ({ control: 'number' } & NumericBounds & { step: number })
-  /** A value with both ends: how far along its range it sits is what the user is judging. */
-  | { control: 'slider'; min: number; max: number; step: number }
-  | { control: 'color' }
-  | { control: 'vector3'; step: number }
-
-export type FieldValue = number | string | Vector3
+/**
+ * Both moved to `shared/domain/propertySpec.ts` and re-exported here, so the fifty-odd files that
+ * read a field spec from this module keep reading it from this module. They had to move: the
+ * post-processing catalogue declares its parameters with them and is read by the main process.
+ */
+export type { FieldValue, PropertySpec } from '@shared/domain/propertySpec'
 
 export type PropertyField = {
   name: string
@@ -183,6 +181,22 @@ export const CAMERA_SPECS: CameraSpecs = {
   far: { control: 'number', min: 0.002, step: 10 },
 }
 
+/**
+ * One composition effect, read as a list of fields.
+ *
+ * The whole of § 11: the panel is DERIVED from the catalogue, so an effect added to
+ * `POST_EFFECTS` gets its controls the day it is declared, and not one line of JSX is written
+ * for it. A parameter the catalogue names but the document has never held opens on its default.
+ */
+export function postEffectFields(effect: PostEffect): PropertyField[] {
+  return Object.entries(POST_EFFECTS[effect.effect].params).map(([name, spec]) => ({
+    name,
+    value: effect.params[name] ?? spec.default,
+    spec,
+    fallback: spec.default,
+  }))
+}
+
 export function cameraFields(descriptor: CameraDescriptor): PropertyField[] {
   return listFields(descriptor, CAMERA_SPECS, DEFAULT_CAMERA)
 }
@@ -292,5 +306,10 @@ function listFields(
 }
 
 function isFieldValue(value: unknown): value is FieldValue {
-  return typeof value === 'number' || typeof value === 'string' || isVector3(value)
+  return (
+    typeof value === 'number' ||
+    typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    isVector3(value)
+  )
 }

@@ -90,6 +90,7 @@
       "scene.texture": "Une texture n’a pas pu être chargée",
       "scene.animation": "Une animation n’a pas pu être posée sur le personnage",
       "scene.export": "L’export de la scène a échoué",
+      "scene.post": "La composition de post-traitement n’a pas pu être lue ou écrite",
       "scene.capture": "La vue 3D n’a pas pu être capturée",
       "material.map": "Un canal de matière n’a pas pu être chargé",
       "material.channel": "Une image n’a pas pu entrer dans un canal",

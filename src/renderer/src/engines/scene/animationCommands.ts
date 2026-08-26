@@ -1,6 +1,6 @@
 import {
+  DIRECT_PROPERTIES,
   POSE_PROPERTIES,
-  TRACK_PROPERTIES,
   type AnimationTimeline,
   type AnimationTrack,
   type CameraMotion,
@@ -209,7 +209,7 @@ export function keyableProperties(
   subject: { nodeId: string; bone?: string },
 ): readonly TrackProperty[] {
   const camera = !subject.bone && nodeById(state, subject.nodeId)?.type === 'camera'
-  return camera ? TRACK_PROPERTIES : POSE_PROPERTIES
+  return camera ? DIRECT_PROPERTIES : POSE_PROPERTIES
 }
 
 /**

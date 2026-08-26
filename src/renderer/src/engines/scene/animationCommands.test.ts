@@ -426,6 +426,7 @@ describe('keying an object that was moved by hand', () => {
     rotation: 'Cube · Rotation',
     scale: 'Cube · Scale',
     fov: 'Cube · Lens',
+    post: 'Cube · Post',
   }
 
   it('holds the movement made since the channel opened, not zero', () => {
@@ -498,6 +499,7 @@ describe('dragging an object that is already keyed', () => {
     rotation: 'Cube · Rotation',
     scale: 'Cube · Scale',
     fov: 'Cube · Lens',
+    post: 'Cube · Post',
   }
 
   /** A cube keyed at zero and again at two seconds, four units along. */

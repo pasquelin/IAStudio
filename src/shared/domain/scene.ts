@@ -11,6 +11,7 @@ import type { BodyPart } from './humanoid'
 import type { Rig } from './rig'
 import type { Us } from './time'
 import type { GeometryDescriptor } from './geometry'
+import { EMPTY_STACK, type CameraPost, type PostStack } from './postProcessing'
 import type { Vector3 } from './transform'
 
 /** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */
@@ -36,6 +37,11 @@ export type CameraDescriptor = {
   fov: number
   near: number
   far: number
+  /**
+   * What this camera does about the scene's composition. Absent on every camera ever written,
+   * and absent means `inherit` — see `postOf`, the one place that says so.
+   */
+  post?: CameraPost
 }
 
 export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
@@ -616,6 +622,11 @@ export type SceneWorld = {
   exposure: number
   ground: GroundDescriptor
   play: ScenePlay
+  /**
+   * The scene's Default Post Processing — what the viewport shows, and what every camera films
+   * through unless it says otherwise. Part of the document like the fog, and belonging to no node.
+   */
+  post: PostStack
 }
 
 export const DEFAULT_WORLD: SceneWorld = Object.freeze({
@@ -630,6 +641,9 @@ export const DEFAULT_WORLD: SceneWorld = Object.freeze({
   exposure: 1,
   ground: DEFAULT_GROUND,
   play: DEFAULT_PLAY,
+  // Empty and ON: a scene opens composing nothing, and the switch is already where a first
+  // effect will be compared from.
+  post: EMPTY_STACK,
 })
 
 /** Bounds a slider and a stored value are both held to. */

@@ -13,6 +13,7 @@ export type SceneTemplateId =
   | 'photoStudio'
   | 'cinematic'
   | 'archvis'
+  | 'postProcessing'
   | 'firstPerson'
   | 'thirdPerson'
   | 'topDown'
@@ -27,7 +28,7 @@ export const SCENE_TEMPLATE_GROUPS: readonly SceneTemplateGroup[] = ['general', 
 
 /** Ordered, and the order is what the window draws: `Record` makes a new id a compile error. */
 export const TEMPLATES_BY_GROUP: Record<SceneTemplateGroup, readonly SceneTemplateId[]> = {
-  general: ['empty', 'basic', 'photoStudio', 'cinematic', 'archvis'],
+  general: ['empty', 'basic', 'photoStudio', 'cinematic', 'archvis', 'postProcessing'],
   character: ['firstPerson', 'thirdPerson', 'topDown'],
 }
 

@@ -64,6 +64,7 @@ import { screenScale } from '../viewport/screenScale'
 import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import {
   ViewportEngine,
+  type DrawRequest,
   type ProjectionKind,
   type ViewportCamera,
   type ViewportOutput,
@@ -83,7 +84,9 @@ import {
   type TextNode,
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
+import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
+import { stackDraws, type PostStack } from '@shared/domain/postProcessing'
 import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
 import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
@@ -138,13 +141,15 @@ import {
   type ForeignClip,
 } from './animation'
 import { createRefCache, type RefCache } from '../core/refCache'
-import { drivenNodes, lensAt, poseAt } from './animationEval'
+import { drivenNodes, lensAt, poseAt, postAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
-import type { Us } from '@shared/domain/time'
+import { SECOND, type Us } from '@shared/domain/time'
 import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
+import { PostComposer } from '../postfx/PostComposer'
+import { loadLutTexture } from '../postfx/lutSource'
 import { captureSize, type CaptureQuality } from '@shared/domain/sceneCapture'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import {
@@ -561,6 +566,9 @@ export class SceneRenderer {
     onPaneArmed: event => this.onPointerAim(event),
     // A preview shows what the camera FILMS: the same pass the film and the montage take.
     onInset: () => this.hideWorkshop(),
+    // Every surface — the panes, the preview, the film — reaches ONE composer through here, so
+    // an effect cannot differ between the editor and the render. See § 26 of the specification.
+    onDraw: request => this.compose(request),
     // Read back rather than computed here: only the controls know where an orbit ended up.
     onCameraSettled: pane => this.reportCameraSettled(pane),
     // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
@@ -648,6 +656,27 @@ export class SceneRenderer {
   private pickedPathPoint: { nodeId: string; index: number } | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
+
+  /** Built at mount, when there is a renderer to build passes with. */
+  private post: PostComposer | null = null
+
+  /**
+   * Whose composition the preview and an off-screen render film through.
+   *
+   * Held rather than read off the camera object: a three.js camera says nothing about which node
+   * of the document it belongs to, and the composition lives on the node.
+   */
+  private previewCameraId: string | null = null
+  private offscreenCameraId: string | null = null
+
+  /**
+   * The temporary comparison — hold to see the frame without its composition.
+   *
+   * Session state, never the document: § 2 asks for a look at what is underneath, not for an edit
+   * that ⌘Z would have to take back. The stored `enabled` of a stack is the other switch, and it
+   * IS an edit.
+   */
+  private bypassed = false
   private playhead = 0
 
   /** The frame of the preview loop, so switching block or stopping cancels the one running. */
@@ -891,6 +920,12 @@ export class SceneRenderer {
     // exactly as the texture viewport does. `apply` replaces this the moment a document says so.
     const renderer = this.viewport.gl
     if (renderer) {
+      this.post = new PostComposer(renderer, {
+        loadLut: assetId => loadLutTexture(assetId, this.textureCache.versionOf(assetId)),
+        // A grade that finished loading changes the picture, and nothing else would ask for the
+        // frame that shows it: the loop is asleep by then.
+        onReady: () => this.redraw(),
+      })
       this.environment = createEnvironment(renderer, this.viewport.scene, () => this.redraw())
       this.environment.setStudio()
       // Half strength, unlike the texture preview: image-based light comes from everywhere and
@@ -1704,6 +1739,93 @@ export class SceneRenderer {
   }
 
   /**
+   * Holds the composition off for as long as the caller says, without touching the document.
+   *
+   * What the Before/After gesture presses. A render is NOT affected: an off-screen pass resolves
+   * its own stack and never reads this — a comparison is a thing one looks at, not a thing one
+   * writes out.
+   */
+  setPostBypassed(bypassed: boolean): void {
+    if (bypassed === this.bypassed) return
+    this.bypassed = bypassed
+    this.redraw()
+  }
+
+  /**
+   * The composition one surface films through, at the instant it is being drawn.
+   *
+   * `false` when there is nothing to compose, and the viewport then draws straight — which is
+   * what the ON/OFF switch, the bypass and a camera set to `disabled` all come down to. No target
+   * is allocated and no chain compiled for a composition nobody asked to see.
+   */
+  private compose(request: DrawRequest): boolean {
+    const composer = this.post
+    if (!composer) return false
+
+    const stack = this.stackOf(request)
+    if (!stackDraws(stack)) return false
+
+    composer.draw({
+      scene: request.scene,
+      camera: request.camera,
+      stack,
+      target: request.target,
+      rect: request.rect ?? undefined,
+      width: request.width,
+      height: request.height,
+      // A render is never drawn at the cheap end: what is written out is what the quality
+      // setting means at its top, whatever the viewport is set to.
+      quality: request.surface === 'offscreen' ? 'high' : this.view.quality,
+      toneMapped: this.world.toneMapping !== 'none',
+      // The PLAYHEAD, not a wall clock: a film written twice has the same grain twice, and a
+      // frame still shows grain because the head moves between them.
+      time: this.playhead / SECOND,
+    })
+    return true
+  }
+
+  /**
+   * Which stack a surface films through, animated to where the head stands.
+   *
+   * A pane composes only in `shaded`, the mode that shows a RENDER: the other display modes are
+   * there to measure a geometry, and a bloom over a wireframe measures nothing. It is the same
+   * rule a compositor follows, and `displays` already carries it per pane.
+   */
+  private stackOf(request: DrawRequest): PostStack | null {
+    // The render is deliberately out: a comparison is something one looks at, never something
+    // that changes what a film is written from.
+    if (this.bypassed && request.surface !== 'offscreen') return null
+
+    if (request.surface === 'pane') {
+      const mode = this.displays[request.paneIndex] ?? this.displays[0] ?? 'shaded'
+      return mode === 'shaded' ? this.sceneStack() : null
+    }
+
+    const cameraId = request.surface === 'inset' ? this.previewCameraId : this.offscreenCameraId
+    return this.cameraStack(cameraId)
+  }
+
+  /** The scene's own composition, opened by whatever its channels add at this instant. */
+  private sceneStack(): PostStack {
+    return postAt(this.world.post, this.timeline, SCENE_SUBJECT_ID, this.playhead)
+  }
+
+  /**
+   * What a camera of the document films through: the scene's, its own, or nothing — and animated
+   * on the side it actually comes from. A camera inheriting picks up the SCENE's channels; one
+   * overriding picks up its own, and neither hears the other's.
+   */
+  private cameraStack(cameraId: string | null): PostStack | null {
+    const node = cameraId === null ? null : this.applied.get(cameraId)
+    const camera = node?.type === 'camera' ? node.camera.post : undefined
+    if (camera?.mode === 'disabled') return null
+    if (camera?.mode === 'override') {
+      return postAt(camera.stack, this.timeline, cameraId ?? '', this.playhead)
+    }
+    return this.sceneStack()
+  }
+
+  /**
    * Whether the bones of every rigged model are drawn over it. A rig is what a motion model
    * hands back, and nothing else in the viewport says whether a mesh carries one.
    */
@@ -1998,6 +2120,7 @@ export class SceneRenderer {
    */
   setCameraPreview(preview: CameraPreviewRequest | null): void {
     const camera = this.cameraObject(preview?.cameraNodeId ?? null)
+    this.previewCameraId = camera && preview ? preview.cameraNodeId : null
     if (!camera || !preview) return this.viewport.setInsetPane(null)
 
     // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
@@ -2142,15 +2265,27 @@ export class SceneRenderer {
         loan.frame(camera)
 
         this.setPlayhead(time)
-        gl.setRenderTarget(target)
-        gl.render(this.viewport.scene, camera)
+        // Named for THIS frame: a shot hands the film to another camera mid-way, and the
+        // composition that camera films through is the one that has to be resolved.
+        this.offscreenCameraId = cameraAt(time)
+        const composed = this.viewport.drawScene({
+          scene: this.viewport.scene,
+          camera,
+          surface: 'offscreen',
+          paneIndex: 0,
+          target,
+          rect: null,
+          width,
+          height,
+        })
         gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
         index += 1
-        await onFrame(index, await encodeFilmFrameOffThread(pixels, width, height))
+        await onFrame(index, await encodeFilmFrameOffThread(pixels, width, height, composed))
       }
     } finally {
       gl.setRenderTarget(null)
+      this.offscreenCameraId = null
       target.dispose()
       loan.restore()
       restore()
@@ -2205,11 +2340,22 @@ export class SceneRenderer {
       // keeps the view's own shape, so an orthographic frustum is already framed for it.
       if (camera instanceof PerspectiveCamera) loan.frame(camera)
 
-      gl.setRenderTarget(target)
-      gl.render(this.viewport.scene, camera)
+      // The view in hand rather than a camera of the document, so the composition is the SCENE's
+      // — which is exactly what is on screen.
+      this.offscreenCameraId = null
+      const composed = this.viewport.drawScene({
+        scene: this.viewport.scene,
+        camera,
+        surface: 'offscreen',
+        paneIndex: 0,
+        target,
+        rect: null,
+        width,
+        height,
+      })
       gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
-      return await encodeFilmFrameOffThread(pixels, width, height)
+      return await encodeFilmFrameOffThread(pixels, width, height, composed)
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
@@ -2378,6 +2524,8 @@ export class SceneRenderer {
     this.environment = null
     this.animations.clear()
     for (const id of [...this.skeletons.keys()]) this.unbindSkeleton(id)
+    this.post?.dispose()
+    this.post = null
     this.textureCache.dispose()
     this.modelCache.dispose()
     this.csg.dispose()

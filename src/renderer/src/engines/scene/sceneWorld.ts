@@ -32,7 +32,9 @@ import {
   type ScenePlay,
   type SceneWorld,
 } from '@shared/domain/scene'
+import { readStack } from '@shared/domain/postProcessing'
 import { isRecord, oneOf, readBoolean, readNumber, readString } from '@shared/guards'
+import { newId } from '@/helpers/ids'
 import { bound, type NumericBounds } from '@shared/numeric'
 
 /**
@@ -58,6 +60,9 @@ export function readWorld(value: unknown, legacyEnvironment: unknown): SceneWorl
     exposure: readBounded(held, 'exposure', DEFAULT_WORLD.exposure, EXPOSURE),
     ground: readGround(held.ground),
     play: readPlay(held.play),
+    // Effects the build has no code for are dropped rather than kept as dead entries — see
+    // `readStack`. A composition written by a newer studio opens with what this one can draw.
+    post: readStack(held.post, newId),
   }
 }
 

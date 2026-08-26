@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnimationTrack } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
+import { numericBoundsOf } from '@shared/domain/propertySpec'
 import { TEXTURE_SLOTS, type SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
@@ -750,6 +751,9 @@ describe('the world of the scene', () => {
       toneMapping: written.has('toneMapping'),
       exposure: written.has('exposure'),
       ground: written.has('receiveShadow'),
+      // The composition has actions of its own (`post.*`), which name an effect and a parameter
+      // rather than a field of the world — so no `world.*` call reaches it, and none should.
+      post: false,
       // How a set is WALKED. Nothing reads it yet either — see `ScenePlay`, whose own note says
       // it is written by templates and by nothing else.
       play: false,
@@ -759,7 +763,10 @@ describe('the world of the scene', () => {
       Object.entries(reached)
         .filter(([, held]) => !held)
         .map(([member]) => member),
-    ).toEqual(['play'])
+      // `post` is written by the composition's own actions — `post.add`, `post.set`, `post.preset`
+      // — which name an effect and a parameter rather than a field of the world. `play` is
+      // written by nothing at all; see `ScenePlay`, whose own note says why.
+    ).toEqual(['post', 'play'])
   })
 })
 
@@ -787,11 +794,7 @@ describe('what the registry offers a node', () => {
 
   /** A bound only holds where EVERY kind carrying the name has one — otherwise it is open. */
   const across = (specs: readonly PropertySpec[], edge: 'min' | 'max'): number | undefined => {
-    const bounds = specs.map(spec =>
-      spec.control === 'color' || spec.control === 'vector3'
-        ? undefined
-        : (spec[edge] ?? undefined),
-    )
+    const bounds = specs.map(spec => numericBoundsOf(spec)?.[edge] ?? undefined)
     if (bounds.some(bound => bound === undefined)) return undefined
 
     return edge === 'min' ? Math.min(...bounds.map(Number)) : Math.max(...bounds.map(Number))
@@ -812,7 +815,7 @@ describe('what the registry offers a node', () => {
   it('publishes a whole number wherever the engine steps by one', () => {
     const counted = Object.values(GEOMETRY_SPECS).flatMap(specs =>
       Object.entries(specs)
-        .filter(([, spec]) => spec.control !== 'color' && spec.step === 1)
+        .filter(([, spec]) => numericBoundsOf(spec)?.step === 1)
         .map(([key]) => key),
     )
 

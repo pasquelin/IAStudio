@@ -255,6 +255,7 @@
     "rotation": "Rotation",
     "scale": "Scale",
     "fov": "Field of view",
+    "post": "Post-processing",
     "addTrack": "Add a {{property}} track",
     "removeTrack": "Remove track {{name}}",
     "arm": "Arm track {{name}} for writing",

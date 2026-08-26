@@ -1,8 +1,8 @@
-import { flipToSrgbInto } from './film'
+import { flipInto, flipToSrgbInto } from './film'
 import type { FilmEncodeRequest, FilmEncodeResponse } from './filmEncodeMessage'
 
 self.onmessage = (event: MessageEvent<FilmEncodeRequest>): void => {
-  const { id, pixels, width, height } = event.data
+  const { id, pixels, width, height, encoded } = event.data
   const fail = (failure: string): void => {
     self.postMessage({ id, failure } satisfies FilmEncodeResponse)
   }
@@ -16,7 +16,8 @@ self.onmessage = (event: MessageEvent<FilmEncodeRequest>): void => {
     }
 
     const image = context.createImageData(width, height)
-    flipToSrgbInto(image.data, pixels, width, height)
+    if (encoded) flipInto(image.data, pixels, width, height)
+    else flipToSrgbInto(image.data, pixels, width, height)
     context.putImageData(image, 0, 0)
     void surface
       .convertToBlob({ type: 'image/png' })

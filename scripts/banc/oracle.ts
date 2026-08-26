@@ -15,6 +15,12 @@ import { toRadians } from '@shared/domain/angles'
 import { SECOND } from '@shared/domain/time'
 import { matchesWords, searchWords } from '@shared/text'
 import type { SkyboxContent } from '@shared/domain/skybox'
+import {
+  EMPTY_STACK,
+  type CameraPostMode,
+  type PostEffectId,
+  type PostStack,
+} from '@shared/domain/postProcessing'
 import type { MaterialState } from '@/engines/material/materialState'
 import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
@@ -215,6 +221,34 @@ export const world = (run: Run) => openScene(run)?.world ?? null
 
 /** How long the open scene's timeline runs, in the microseconds it counts in. */
 export const sceneLasts = (run: Run): number => openScene(run)?.animation.duration ?? 0
+
+/** The scene's own composition — what the viewport draws through, and what a camera inherits. */
+export const post = (run: Run): PostStack => openScene(run)?.world.post ?? EMPTY_STACK
+
+/** The composition a camera OWNS, `null` while it inherits or is switched off. */
+export const cameraPost = (run: Run, name: string): PostStack | null => {
+  const camera = nodes(run).find(one => one.type === 'camera' && answersTo(one.name, name))
+  if (camera?.type !== 'camera') return null
+  return camera.camera.post?.mode === 'override' ? camera.camera.post.stack : null
+}
+
+/** How a camera answers the scene's composition — `inherit` where it says nothing. */
+export const cameraPostMode = (run: Run, name: string): CameraPostMode | null => {
+  const camera = nodes(run).find(one => one.type === 'camera' && answersTo(one.name, name))
+  if (camera?.type !== 'camera') return null
+  return camera.camera.post?.mode ?? 'inherit'
+}
+
+/** Whether the composition holds an effect of that kind at all, on or off. */
+export const composes = (run: Run, effect: PostEffectId): boolean =>
+  post(run).effects.some(one => one.effect === effect)
+
+/** What one parameter of the first instance of that effect stands at. `null` where there is none. */
+export const postParam = (run: Run, effect: PostEffectId, param: string): number | null => {
+  const found = post(run).effects.find(one => one.effect === effect)
+  const value = found?.params[param]
+  return typeof value === 'number' ? value : null
+}
 
 /** The sky the open skybox document holds. */
 export const sky = (run: Run): SkyboxContent | null =>

@@ -16,6 +16,7 @@ import { GIT_ACTIONS } from './gitActions'
 import { JOB_ACTIONS } from './jobActions'
 import { MATERIAL_ACTIONS } from './materialActions'
 import { RIG_ACTIONS } from './rigActions'
+import { POST_ACTIONS } from './postActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
@@ -61,6 +62,7 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'montage', actions: SEQUENCE_ACTIONS },
   { name: 'material', actions: MATERIAL_ACTIONS },
   { name: 'scene', actions: SCENE_ACTIONS },
+  { name: 'post', actions: POST_ACTIONS },
   { name: 'rig', actions: RIG_ACTIONS },
   { name: 'git', actions: GIT_ACTIONS },
   { name: 'context', actions: CONTEXT_ACTIONS },

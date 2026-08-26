@@ -182,7 +182,8 @@
       "archvis": "Architecture",
       "firstPerson": "First person",
       "thirdPerson": "Third person",
-      "topDown": "Top down"
+      "topDown": "Top down",
+      "postProcessing": "Post-processing"
     },
     "templateHints": {
       "empty": "Three lights, and nothing else to take away",
@@ -192,7 +193,8 @@
       "archvis": "A sky, a low sun and a wide floor, camera at eye height",
       "firstPerson": "The camera at eye height, ready to walk",
       "thirdPerson": "The camera behind a stand-in’s shoulder",
-      "topDown": "The camera looking down on the scene"
+      "topDown": "The camera looking down on the scene",
+      "postProcessing": "A camera move, a rack focus and an animated bloom — the whole chain, judged at once"
     },
     "folderField": "Location",
     "folderHint": "Chooses the project folder the document will be saved in",
