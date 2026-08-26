@@ -1,10 +1,7 @@
 /**
- * A composition, carried to and from a file.
- *
- * The window is what decides what a file is ALLOWED to say — `readPostPresetFile` reads it
- * against the catalogue, drops every effect this build has no code for and names them. The main
- * process only moves bytes. That split is § 12: a preset names ids and numbers, and there is no
- * shape in which it could carry anything to run.
+ * The window decides what a file is ALLOWED to say — `readPostPresetFile` reads it against the
+ * catalogue and names what it dropped; the main process only moves bytes. A preset names ids and
+ * numbers, and has no shape in which anything runnable could ride.
  */
 import { readPostPresetFile, postPresetFile } from '@shared/domain/postPresets'
 import type { PostStack } from '@shared/domain/postProcessing'
@@ -29,10 +26,7 @@ export async function exportPostPreset(name: string, stack: PostStack): Promise<
   }
 }
 
-/**
- * Reads a composition back and hands it to the caller. Nothing is applied on a refusal, and a
- * file that named effects this build has none for is applied WITHOUT them, saying which.
- */
+/** Nothing is applied on a refusal; unknown effects are dropped and named. */
 export async function importPostPreset(apply: (stack: PostStack) => void): Promise<void> {
   const bridge = getBridge()
   if (!bridge) return

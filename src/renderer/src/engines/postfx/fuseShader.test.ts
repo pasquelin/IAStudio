@@ -73,11 +73,12 @@ describe('several per-pixel effects compiled into one shader', () => {
   /** Declared once whatever it fuses: a helper duplicated is a shader that will not compile. */
   it('writes the shared prelude once', () => {
     const fused = fuseShader([
-      chunk('colour', 'colour *= luma(colour);'),
-      chunk('colour', 'colour *= luma(colour);'),
+      chunk('colour', 'colour *= dot(colour, LUMA);'),
+      chunk('colour', 'colour *= dot(colour, LUMA);'),
     ])
 
-    expect(fused.fragmentShader.match(/float luma\(/gu)).toHaveLength(1)
+    expect(fused.fragmentShader.match(/const vec3 LUMA/gu)).toHaveLength(1)
+    expect(fused.fragmentShader.match(/float hash\(/gu)).toHaveLength(1)
   })
 
   it('compiles a chain of nothing into a shader that draws what it was given', () => {

@@ -13,17 +13,14 @@ export type PostStackRowProps = {
   effect: PostEffect
   /** True where the plan leaves this one out — a second occlusion, a second scene pass. */
   skipped: boolean
-  onRemove: () => void
-  onDuplicate: () => void
-  onReset: () => void
+  onRemove: (id: string) => void
+  onDuplicate: (id: string) => void
+  onReset: (id: string) => void
 }
 
 /**
- * One effect of the stack.
- *
- * The chevron, the indent, the selection and the drag belong to `Tree`, which owns the geometry
- * of every stack in the studio — the same bargain `LayerRow` strikes. What is drawn here is the
- * name, what the effect costs, and the two things one does to it.
+ * The chevron, the indent, the selection and the drag belong to `Tree` — the same bargain
+ * `LayerRow` strikes. What is drawn here is the name, the cost, and what one does to it.
  */
 export const PostStackRow = memo(function PostStackRow({
   effect,
@@ -56,7 +53,7 @@ export const PostStackRow = memo(function PostStackRow({
               onPointerDown={event => event.stopPropagation()}
               onClick={event => {
                 event.stopPropagation()
-                onRemove()
+                onRemove(effect.id)
               }}
             />
             <MenuButton
@@ -78,7 +75,7 @@ export const PostStackRow = memo(function PostStackRow({
                     tip={HINT_RIGHT(t('postfx.duplicateHint'))}
                     onSelect={() => {
                       close()
-                      onDuplicate()
+                      onDuplicate(effect.id)
                     }}
                   />
                   <MenuRow
@@ -87,7 +84,7 @@ export const PostStackRow = memo(function PostStackRow({
                     tip={HINT_RIGHT(t('postfx.reset'))}
                     onSelect={() => {
                       close()
-                      onReset()
+                      onReset(effect.id)
                     }}
                   />
                 </>

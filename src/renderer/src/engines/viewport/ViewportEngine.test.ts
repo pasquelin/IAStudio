@@ -280,6 +280,7 @@ describe('a viewport', () => {
     /** The corner preview, as the component opens it: a rect, a backdrop, not grown. */
     const insetPane = (over: Partial<Parameters<ViewportEngine['setInsetPane']>[0]> = {}) => ({
       camera: new PerspectiveCamera(),
+      cameraNodeId: null,
       backdrop: new Color(),
       rect: { x: 500, y: 700, width: 100, height: 56 },
       full: false,

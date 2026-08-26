@@ -1,16 +1,12 @@
 /**
- * Every edit a composition can take, as commands — so ⌘Z gives back an effect, an order, a
- * parameter or a preset without a line of undo written for any of them.
- *
- * They all come down to reading one stack, changing it, and writing it back. Which stack that is
- * — the scene's, or a camera's own — is the caller's, and it is the only thing that varies.
+ * Every edit a composition can take, as commands. They all come down to reading one stack,
+ * changing it and writing it back; which stack is the caller's, and the only thing that varies.
  */
 import {
   defaultParamsOf,
   postEffect,
   POST_EFFECTS,
   boundParam,
-  EMPTY_STACK,
   type CameraPost,
   type CameraPostMode,
   type PostEffect,
@@ -19,6 +15,7 @@ import {
   type PostStack,
 } from '@shared/domain/postProcessing'
 import { drivesPost, SCENE_SUBJECT_ID, type AnimationTrack } from '@shared/domain/animation'
+import { isPostPresetId, stackFromPreset, type UserPostPreset } from '@shared/domain/postPresets'
 import { movedWithin } from '@shared/domain/order'
 import type { CameraDescriptor } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
@@ -39,10 +36,8 @@ export type PostTargetRef = { kind: 'scene' } | { kind: 'camera'; nodeId: string
 export const SCENE_POST: PostTargetRef = Object.freeze({ kind: 'scene' })
 
 /**
- * The stack a target owns, or `null` when it owns none — a camera inheriting or disabled.
- *
- * `null` is not an error: it is what tells the panel to edit the SCENE instead, which is what
- * « Inherit » means when a hand reaches for a slider.
+ * The stack a target owns, `null` when it owns none. Not an error: it tells the panel to edit
+ * the SCENE instead, which is what « inherit » means when a hand reaches for a slider.
  */
 export function postStackOf(state: SceneState, target: PostTargetRef): PostStack | null {
   if (target.kind === 'scene') return state.world.post
@@ -69,11 +64,8 @@ function writeStack(state: SceneState, target: PostTargetRef, stack: PostStack):
 }
 
 /**
- * One edit of one stack.
- *
- * The `id` is the caller's and it is not decoration: the history may coalesce two consecutive
- * commands on it, so a slider drag has to be named after the very parameter it moves — named
- * after the target alone, adding an effect would merge with the drag that followed it.
+ * The `id` is not decoration: the history may coalesce two consecutive commands on it, so a
+ * slider drag has to be named after the parameter it moves.
  */
 function editStack(
   target: PostTargetRef,
@@ -116,10 +108,7 @@ export function removePostEffect(target: PostTargetRef, effectId: string): Comma
   }))
 }
 
-/**
- * A copy of one effect, right after the one it copies — refused where a second instance would
- * mean nothing, an anti-aliaser or an occlusion pass being the same twice over.
- */
+/** Refused where a second instance means nothing — one anti-aliaser, one occlusion. */
 export function duplicatePostEffect(
   target: PostTargetRef,
   effectId: string,
@@ -191,10 +180,7 @@ export function setPostEnabled(target: PostTargetRef, enabled: boolean): Command
   return editStack(target, `post:switch:${handleOf(target)}`, stack => ({ ...stack, enabled }))
 }
 
-/**
- * One parameter. The value is held to the spec of the effect it belongs to, so a command is never
- * the way a number nobody could have typed gets into a document.
- */
+/** Held to the spec of its own effect: a command is never how an impossible number gets in. */
 export function setPostParam(
   target: PostTargetRef,
   effectId: string,
@@ -220,22 +206,41 @@ export function resetPostEffect(target: PostTargetRef, effectId: string): Comman
   }))
 }
 
-/** A whole composition put in place of the one there — what applying a preset comes down to. */
-export function applyPostStack(target: PostTargetRef, stack: PostStack): Command<SceneState> {
+/**
+ * COPIED under fresh instance ids: one saved look applied to the scene and to a camera would
+ * otherwise share ids, and a channel keyed on one would drive both. The switch stays the
+ * person's — a look applied while the comparison is off must not turn it back on.
+ */
+export function applyPostStack(
+  target: PostTargetRef,
+  stack: PostStack,
+  mintId: () => string = newId,
+): Command<SceneState> {
+  const fresh = copiedStack(stack, mintId)
   return editStack(target, `post:stack:${handleOf(target)}`, held => ({
-    ...stack,
-    // The switch is the person's, not the preset's: applying a look while the comparison is off
-    // must not turn it back on under their hand.
+    ...fresh,
     enabled: held.enabled,
   }))
 }
 
 /**
- * What a camera does about the scene's composition.
- *
- * Going to `override` SEEDS the camera with what it was already filming through, under fresh
- * instance ids — one starts from the picture in front of them, not from an empty stack, and the
- * ids are new so a channel keyed on the scene does not silently drive a camera's copy.
+ * Here rather than in the panel: which of the two lists a name belongs to is a rule about
+ * presets, and a rule written in a click handler is one no test reaches.
+ */
+export function stackOfPreset(
+  name: string,
+  saved: readonly UserPostPreset[],
+  mintId: () => string = newId,
+): PostStack | null {
+  const mine = saved.find(preset => preset.id === name)
+  if (mine) return mine.stack
+  return isPostPresetId(name) ? stackFromPreset(name, mintId) : null
+}
+
+/**
+ * Going to `override` SEEDS the camera with what it was already filming, under fresh instance
+ * ids: one starts from the picture in front of them, and a channel keyed on the scene must not
+ * silently drive the camera's copy.
  */
 export function setCameraPostMode(
   state: SceneState,
@@ -307,19 +312,11 @@ function withoutPost(camera: CameraDescriptor): CameraDescriptor {
 }
 
 /** The same composition under fresh instance ids — see `setCameraPostMode`. */
-export function copiedStack(stack: PostStack, mintId: () => string = newId): PostStack {
-  return {
-    ...(stack.effects.length === 0 ? EMPTY_STACK : stack),
-    effects: stack.effects.map(one => ({ ...one, id: mintId() })),
-  }
+function copiedStack(stack: PostStack, mintId: () => string = newId): PostStack {
+  return { ...stack, effects: stack.effects.map(one => ({ ...one, id: mintId() })) }
 }
 
-/**
- * Which subject of the band a target is keyed under.
- *
- * A camera is a node and answers to its own id; the scene's own composition answers to the
- * reserved one, which no node can hold — see `SCENE_SUBJECT_ID`.
- */
+/** A camera answers to its own id; the scene's composition to the reserved `SCENE_SUBJECT_ID`. */
 export function postSubjectOf(target: PostTargetRef): string {
   return target.kind === 'scene' ? SCENE_SUBJECT_ID : target.nodeId
 }
@@ -342,11 +339,8 @@ export function postChannelOf(
 }
 
 /**
- * A key on one composition parameter, for the ABSOLUTE value the panel shows.
- *
- * The channel is opened where none exists yet, and the DELTA is worked out here — a key holds
- * what a channel adds to what the document stores, exactly as a lens key does. `null` where
- * there is nothing to key: no stack, no such effect, or a parameter its own spec calls still.
+ * Takes the ABSOLUTE value the panel shows and writes the DELTA, as a lens key does. Opens the
+ * channel where none exists. `null` where there is nothing to key.
  */
 export function keyPostParam(
   state: SceneState,
@@ -392,10 +386,8 @@ export function unkeyPostParam(
 }
 
 /**
- * Every channel an effect carries goes when the effect does.
- *
- * Without it a stack would leave rows on the band driving an instance nobody can reach — and a
- * ⌘Z bringing the effect back would find its animation gone, which is worse than either.
+ * Channels go with the effect: left behind they drive an instance nobody can reach, and a ⌘Z
+ * bringing the effect back would find its animation gone.
  */
 export function removePostEffectWholly(
   state: SceneState,

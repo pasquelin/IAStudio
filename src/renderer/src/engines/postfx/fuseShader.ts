@@ -1,35 +1,21 @@
 /**
- * Several per-pixel effects, compiled into ONE full-frame draw.
+ * Several per-pixel effects, compiled into ONE full-frame draw — a chain of `ShaderPass` moves a
+ * whole frame of bandwidth per effect to spend a few dozen cycles.
  *
- * This is where the performance of the whole system is decided. A chain of `ShaderPass` costs one
- * read and one write of the entire frame PER EFFECT, and the arithmetic each of them does is a
- * handful of instructions: a cinematic look — grade, vignette, grain — is three passes moving
- * three frames of bandwidth to spend perhaps thirty cycles. Fused, it is one.
- *
- * Two kinds of chunk fuse, and the distinction is not a taste:
- *
- * - a **`uv` chunk** moves the coordinate BEFORE the single fetch — a distortion, a pixel grid;
- * - a **`colour` chunk** works on the fetched colour — a grade, a grain, a vignette.
- *
- * Anything that needs to read the picture at more than one place (a blur, an edge, a fringe)
- * cannot fuse and keeps a pass of its own: fused, it would sample the pass INPUT rather than what
- * the effects before it produced, which is a different picture.
- *
- * Pure, and deliberately: it takes strings and gives strings, so what a stack compiles to is
- * read and asserted under vitest, where there is no WebGL at all.
+ * A `uv` chunk moves the coordinate before the single fetch, a `colour` chunk works on the colour
+ * after it. Anything reading the picture at more than one place cannot fuse: it would sample the
+ * pass INPUT rather than what the effects before it produced.
  */
 import type { IUniform } from 'three'
-import { PRELUDE, QUAD_VERTEX } from './shaders/quadVertex'
+import { isRecord } from '@shared/guards'
+import { PRELUDE } from './shaders/postGlsl'
 
 export type FusableKind = 'uv' | 'colour'
 
 /**
- * One effect, as something that can be merged into a shared shader.
- *
  * `body` is a run of statements, not a function: a `uv` chunk assigns to `uv`, a `colour` chunk
- * assigns to `colour`, and both may read either. Every identifier it declares — uniforms and
- * helpers alike — is rewritten with a per-instance prefix, so two graders in one stack do not
- * collide.
+ * to `colour`. Every identifier it declares is rewritten with a per-instance prefix, so two
+ * graders in one stack do not collide.
  */
 export type FusableChunk = {
   kind: FusableKind
@@ -55,10 +41,8 @@ function helperNamesIn(source: string): string[] {
 }
 
 /**
- * The same source with every listed identifier prefixed.
- *
- * Word-bounded and applied in ONE pass over the alternation rather than name by name: renaming
- * `gain` then `gamma` in sequence would rewrite the `gain` inside an already-renamed `u0_gain`.
+ * ONE pass over the alternation rather than name by name: renaming `gain` then `gamma` in
+ * sequence would rewrite the `gain` inside an already-renamed `fx0_gain`.
  */
 function renamed(source: string, names: readonly string[], prefix: string): string {
   if (names.length === 0) return source
@@ -70,16 +54,11 @@ function escapeName(name: string): string {
   return name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')
 }
 
-const GLSL_TYPES: Record<string, string> = {
-  number: 'float',
-  boolean: 'bool',
-}
-
 /** How a uniform's CURRENT value spells its type — the only description three gives us. */
 function typeOf(uniform: IUniform): string {
   const value: unknown = uniform.value
   if (typeof value === 'number' || typeof value === 'boolean') {
-    return GLSL_TYPES[typeof value] ?? 'float'
+    return typeof value === 'boolean' ? 'bool' : 'float'
   }
   if (isVectorLike(value, 'z')) return 'vec3'
   if (isVectorLike(value, 'y')) return 'vec2'
@@ -92,16 +71,10 @@ function isVectorLike(value: unknown, last: string): boolean {
   return isRecord(value) && 'x' in value && last in value
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 /**
- * The fragment shader a run of fusable chunks compiles to, and the uniforms it reads.
- *
- * The order is the caller's, with one rule that the caller has already applied: every `uv` chunk
- * comes before every `colour` chunk, because there is exactly one fetch and it sits between them.
- * A run that would need a second fetch is split upstream — see `runsOf` in `postPlan`.
+ * The order is the caller's, with one rule it has already applied: every `uv` chunk comes before
+ * every `colour` chunk, there being exactly one fetch between them. A run needing a second is
+ * split upstream — see `stepsOf`.
  */
 export function fuseShader(chunks: readonly FusableChunk[]): FusedShader {
   const uniforms: Record<string, IUniform> = { tDiffuse: { value: null } }
@@ -156,5 +129,3 @@ ${afterFetch.join('\n')}
 `,
   }
 }
-
-export { QUAD_VERTEX }

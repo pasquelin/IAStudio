@@ -10,9 +10,16 @@ export function channelNames(speaks: SpeaksBundle, subject: string): Record<Trac
     rotation: `${subject} · ${speaks('animation.rotation')}`,
     scale: `${subject} · ${speaks('animation.scale')}`,
     fov: `${subject} · ${speaks('animation.fov')}`,
-    // Never composed from here in practice: a composition channel is named after the effect
-    // INSTANCE and the parameter it drives, which only the composition panel knows. The entry
-    // exists so the table stays exhaustive over the union.
     post: `${subject} · ${speaks('postfx.title')}`,
   }
+}
+
+/**
+ * What a composition channel is called: the effect, then the parameter it drives.
+ *
+ * Here rather than in the panel that opens it — a name is what the band shows, and one composed
+ * inside a click handler is a name no test reads back.
+ */
+export function postChannelName(speaks: SpeaksBundle, effect: string, param: string): string {
+  return `${speaks(`postfx.effect_${effect}`)} · ${speaks(`postfx.param_${param}`)}`
 }

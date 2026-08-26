@@ -148,6 +148,12 @@ export type DrawRequest = {
   surface: DrawSurface
   /** Which pane, for a `pane` request. Zero everywhere else. */
   paneIndex: number
+  /**
+   * Which node of the document the camera belongs to, when it is one — a preview and an
+   * off-screen render film through a camera the document holds, and what that camera composes
+   * with lives on the node. `null` for a pane, which looks through the workshop's own.
+   */
+  cameraNodeId: string | null
   /** `null` is the canvas. */
   target: WebGLRenderTarget | null
   /** Where on the canvas, when only part of it is being drawn. Absent means all of it. */
@@ -186,6 +192,8 @@ export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 /** A camera drawn over the panes, in a rectangle of its own — the camera preview. */
 export type InsetPane = {
   camera: PerspectiveCamera
+  /** Which node of the document that camera IS — what its owner resolves a composition by. */
+  cameraNodeId: string | null
   /** In CSS pixels, origin top-left, like every other pane rect. */
   rect: PaneRect
   /**
@@ -1114,6 +1122,7 @@ export class ViewportEngine {
         camera: this.camera,
         surface: 'pane',
         paneIndex: 0,
+        cameraNodeId: null,
         target: null,
         // No rectangle at all rather than one covering the canvas: a composition then draws
         // without a scissor, which is one piece of state fewer on the frame path.
@@ -1145,6 +1154,7 @@ export class ViewportEngine {
           camera,
           surface: 'pane',
           paneIndex: index,
+          cameraNodeId: null,
           target: null,
           rect: { x, y, width, height: paneHeight },
           width: Math.round(width * ratio),
@@ -1269,6 +1279,7 @@ export class ViewportEngine {
           camera: inset.camera,
           surface: 'inset',
           paneIndex: 0,
+          cameraNodeId: inset.cameraNodeId,
           target,
           rect: null,
           width: target.width,

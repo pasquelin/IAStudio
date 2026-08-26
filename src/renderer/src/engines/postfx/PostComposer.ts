@@ -1,31 +1,24 @@
 /**
- * The one place a composition is drawn, whoever is asking.
+ * The one place a composition is drawn — the viewport, every camera preview, the film and the
+ * still all come through `draw`, so an effect cannot differ between the editor and the render.
  *
- * The viewport, each camera preview, the film and the still all come through `draw`, so an effect
- * cannot differ between the editor and the render — § 26 is not a convention here, it is the only
- * code path there is.
- *
- * **What it costs is decided by three things, in this order of importance.** A chain is compiled
- * on the SHAPE of a stack and never on its values, so moving a slider reaches a uniform and
- * nothing is rebuilt. Neighbouring per-pixel effects are merged into one draw (`fuseShader`).
- * And the output transform — tone mapping, colour space — is the same draw as the blit into the
- * destination, so a composition never pays a copy just to arrive somewhere.
+ * A chain is compiled on the SHAPE of a stack and never on its values: moving a slider reaches a
+ * uniform, and nothing is rebuilt.
  */
 import {
   HalfFloatType,
   LinearFilter,
   UnsignedByteType,
+  Camera,
+  Scene,
   Vector4,
   WebGLRenderTarget,
-  type Camera,
   type Data3DTexture,
   type IUniform,
-  type Scene,
   type WebGLRenderer,
 } from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import type { Pass } from 'three/addons/postprocessing/Pass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import {
@@ -36,12 +29,13 @@ import {
   type PostStack,
 } from '@shared/domain/postProcessing'
 import type { ViewportQuality } from '@shared/domain/scene'
-import type { EffectInstance, EffectParams, ViewInfo } from './effectInstance'
-import { fuseShader, QUAD_VERTEX, type FusableChunk } from './fuseShader'
+import { QUAD_VERTEX_SHADER } from '@/engines/gpu/passes/quad'
+import { onePass, type EffectInstance, type ViewInfo } from './effectInstance'
+import { fuseShader, type FusableChunk } from './fuseShader'
 import { budgetFor, chainSize } from './postQuality'
 import { heaviestCost, stepsOf, wantsFloat, type PostStep } from './postPlan'
-import { FUSABLE_EFFECTS } from './shaders/fusableChunks'
-import { STANDALONE_EFFECTS, type BuildContext } from './standaloneEffects'
+import { fusableFor, fusableKind } from './shaders/fusableChunks'
+import { standaloneFor, type BuildContext } from './standaloneEffects'
 
 /** Where a composition is being drawn, and at what size. Pixels, never CSS units. */
 export type PostRect = { x: number; y: number; width: number; height: number }
@@ -72,7 +66,7 @@ export type PostComposerOptions = {
   onReady?: () => void
 }
 
-type Applier = (params: EffectParams, view: ViewInfo) => void
+type Applier = EffectInstance['apply']
 
 type Chain = {
   composer: EffectComposer
@@ -80,6 +74,10 @@ type Chain = {
   head: RenderPass | null
   appliers: readonly Applier[]
   instances: readonly EffectInstance[]
+  /** The stack shape it was compiled for — what `sweep` compares, without re-parsing a key. */
+  shape: string
+  width: number
+  height: number
   usedAt: number
 }
 
@@ -92,14 +90,28 @@ type Chain = {
  */
 const CHAINS_HELD = 6
 
+/** What the scratch view opens on before the first draw fills it. Never rendered. */
+const SCRATCH_SCENE = new Scene()
+const SCRATCH_CAMERA = new Camera()
+
 export class PostComposer {
   private readonly chains = new Map<string, Chain>()
   private readonly luts = new Map<string, Data3DTexture | null>()
   private readonly loading = new Set<string>()
   private readonly output = new OutputPass()
-  /** Scratch, so holding the renderer's state costs no allocation on the frame path. */
+  /** Scratch, so a frame allocates nothing: `draw` runs once per surface, per image. */
   private readonly heldViewport = new Vector4()
   private readonly heldScissor = new Vector4()
+  private heldTarget: WebGLRenderTarget | null = null
+  private heldScissorTest = false
+  private readonly view: ViewInfo = {
+    scene: SCRATCH_SCENE,
+    camera: SCRATCH_CAMERA,
+    width: 1,
+    height: 1,
+    time: 0,
+    budget: { divisor: 1, samples: 1 },
+  }
   private clock = 0
 
   constructor(
@@ -108,11 +120,8 @@ export class PostComposer {
   ) {}
 
   /**
-   * Draws the scene through the composition, into whatever the job names.
-   *
-   * A stack that plans no pass draws straight, which is what the ON/OFF switch and the bypass both
-   * come down to: no target is allocated and no chain is compiled for a composition nobody is
-   * asking to see.
+   * A stack that plans no pass draws straight — which is what the ON/OFF switch and the bypass
+   * come down to: no target allocated, no chain compiled for a composition nobody asks to see.
    */
   draw(job: PostDrawJob): void {
     const plan = planStack(job.stack)
@@ -124,29 +133,35 @@ export class PostComposer {
     const budget = budgetFor(heaviestCost(plan.effects), job.quality)
     const size = chainSize(job.width, job.height, budget)
     const float = wantsFloat(plan.effects, job.toneMapped)
-    const key = `${stackShapeKey(job.stack)}#${size.width}x${size.height}#${float ? 'f' : 'b'}`
+    // 🛑 The SIZE is deliberately NOT in the key. A `ResizeObserver` fires per pixel of a splitter
+    // drag, and a size-keyed cache compiled a fresh composer — two full-frame buffers and a GLSL
+    // link per pass — on every tick, then evicted it. A resize resizes; it does not recompile.
+    const key = `${plan.shapeKey}#${float ? 'f' : 'b'}`
 
-    const view: ViewInfo = {
-      scene: job.scene,
-      camera: job.camera,
-      width: size.width,
-      height: size.height,
-      time: job.time,
-      budget,
-    }
+    const view = this.view
+    view.scene = job.scene
+    view.camera = job.camera
+    view.width = size.width
+    view.height = size.height
+    view.time = job.time
+    view.budget = budget
 
     const chain = this.chains.get(key) ?? this.compile(key, plan.effects, view, float)
     this.clock += 1
     chain.usedAt = this.clock
+    this.resize(chain, size.width, size.height)
 
     if (chain.head) {
       chain.head.scene = job.scene
       chain.head.camera = job.camera
     }
-    for (const [index, effect] of plan.effects.entries())
-      chain.appliers[index]?.(effect.params, view)
+    // Walked by index: `entries()` allocates an iterator and a tuple per effect per frame.
+    for (let at = 0; at < plan.effects.length; at += 1) {
+      const effect = plan.effects[at]
+      if (effect) chain.appliers[at]?.(effect, view)
+    }
 
-    const restore = this.hold()
+    this.hold()
     try {
       // Off for the whole chain: its buffers are the size of the CHAIN, and a scissor in canvas
       // coordinates would clip every one of them to a rectangle that means nothing there.
@@ -154,37 +169,43 @@ export class PostComposer {
       chain.composer.render(0)
       this.finish(job, chain.composer.readBuffer)
     } finally {
-      restore()
+      this.restore()
     }
   }
 
-  /**
-   * The renderer's target, viewport and scissor as they stand, and the call that puts them back.
-   *
-   * Restored rather than reset: this runs INSIDE the pane loop, which has already turned the
-   * scissor on and set a rectangle for the pane after this one. Forcing either off would clip —
-   * or fail to clip — every pane drawn after the first composed one.
-   */
-  private hold(): () => void {
-    const renderer = this.renderer
-    const target = renderer.getRenderTarget()
-    const scissorTest = renderer.getScissorTest()
-    renderer.getViewport(this.heldViewport)
-    renderer.getScissor(this.heldScissor)
+  /** The chain, brought to the size being drawn — three resizes both buffers and every pass. */
+  private resize(chain: Chain, width: number, height: number): void {
+    if (chain.width === width && chain.height === height) return
 
-    return () => {
-      renderer.setRenderTarget(target)
-      renderer.setViewport(this.heldViewport)
-      renderer.setScissor(this.heldScissor)
-      renderer.setScissorTest(scissorTest)
-    }
+    chain.composer.setSize(width, height)
+    for (const instance of chain.instances) instance.setSize(width, height)
+    chain.width = width
+    chain.height = height
+  }
+
+  /**
+   * Restored rather than reset: this runs INSIDE the pane loop, which has already turned the
+   * scissor on and set a rectangle for the pane after this one.
+   */
+  private hold(): void {
+    this.heldTarget = this.renderer.getRenderTarget()
+    this.heldScissorTest = this.renderer.getScissorTest()
+    this.renderer.getViewport(this.heldViewport)
+    this.renderer.getScissor(this.heldScissor)
+  }
+
+  private restore(): void {
+    this.renderer.setRenderTarget(this.heldTarget)
+    this.renderer.setViewport(this.heldViewport)
+    this.renderer.setScissor(this.heldScissor)
+    this.renderer.setScissorTest(this.heldScissorTest)
   }
 
   /** Frees every chain no live stack asks for — a scene closed, a camera stopped overriding. */
   sweep(live: readonly PostStack[]): void {
     const wanted = new Set(live.map(stackShapeKey))
     for (const [key, chain] of this.chains) {
-      if (wanted.has(shapeOf(key))) continue
+      if (wanted.has(chain.shape)) continue
       dropChain(chain)
       this.chains.delete(key)
     }
@@ -199,12 +220,9 @@ export class PostComposer {
   }
 
   /**
-   * The output transform AND the blit, in one draw.
-   *
-   * Two reasons rather than one. The chain stays in the working space from end to end, so no
-   * intermediate buffer has to lie about its colour space — the defect that makes a preview come
-   * back doubly tone-mapped. And the copy a blit would have cost is the copy the output pass was
-   * going to make anyway.
+   * The output transform AND the blit, in one draw: the chain stays in the working space from end
+   * to end, so no intermediate buffer has to lie about its colour space — and the copy a blit
+   * would cost is the one the output pass was going to make anyway.
    */
   private finish(job: PostDrawJob, read: WebGLRenderTarget): void {
     const renderer = this.renderer
@@ -226,7 +244,7 @@ export class PostComposer {
   /** No composition to draw: the scene, straight into wherever the job pointed. */
   private drawStraight(job: PostDrawJob): void {
     const renderer = this.renderer
-    const restore = this.hold()
+    this.hold()
     try {
       renderer.setRenderTarget(job.target)
       if (job.rect) {
@@ -236,7 +254,7 @@ export class PostComposer {
       }
       renderer.render(job.scene, job.camera)
     } finally {
-      restore()
+      this.restore()
     }
   }
 
@@ -283,7 +301,16 @@ export class PostComposer {
 
     for (const pass of composer.passes) pass.setSize(view.width, view.height)
 
-    const chain: Chain = { composer, head, appliers, instances, usedAt: this.clock }
+    const chain: Chain = {
+      composer,
+      head,
+      appliers,
+      instances,
+      shape: key.slice(0, key.indexOf('#')),
+      width: view.width,
+      height: view.height,
+      usedAt: this.clock,
+    }
     this.chains.set(key, chain)
     return chain
   }
@@ -296,7 +323,7 @@ export class PostComposer {
     instances: EffectInstance[],
   ): void {
     if (step.kind === 'own') {
-      const factory = STANDALONE_EFFECTS[step.effect.effect]
+      const factory = standaloneFor(step.effect.effect)
       if (!factory) return
       const instance = factory(context)
       instances.push(instance)
@@ -306,21 +333,21 @@ export class PostComposer {
     }
 
     const merged = step.effects.flatMap((effect): FusableChunk[] => {
-      const fusable = FUSABLE_EFFECTS[effect.effect]
+      const fusable = fusableFor(effect.effect)
       return fusable ? [{ ...fusable.make(), kind: fusable.kind }] : []
     })
     const fused = fuseShader(merged)
     const pass = new ShaderPass({
       name: 'FusedPostShader',
       uniforms: fused.uniforms,
-      vertexShader: QUAD_VERTEX,
+      vertexShader: QUAD_VERTEX_SHADER,
       fragmentShader: fused.fragmentShader,
     })
     composer.addPass(pass)
-    instances.push(passInstance(pass))
+    instances.push(onePass(pass, () => {}))
 
     for (const [index, effect] of step.effects.entries()) {
-      const fusable = FUSABLE_EFFECTS[effect.effect]
+      const fusable = fusableFor(effect.effect)
       const naming = fused.naming[index]
       if (!fusable || !naming) continue
       // `ShaderPass` CLONES the uniforms it is given, so the objects the applier writes into are
@@ -330,7 +357,7 @@ export class PostComposer {
         const uniform = pass.uniforms[renamed]
         if (uniform) own[name] = uniform
       }
-      appliers.push((params, view) => fusable.apply(params, view, own))
+      appliers.push((effect, view) => fusable.apply(effect, view, own))
     }
   }
 
@@ -377,26 +404,7 @@ export class PostComposer {
   }
 }
 
-/** A pass nothing writes into — the fused one, whose appliers are registered beside it. */
-function passInstance(pass: Pass): EffectInstance {
-  return {
-    passes: [pass],
-    apply: () => {},
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
-}
-
 function dropChain(chain: Chain): void {
   for (const instance of chain.instances) instance.dispose()
   chain.composer.dispose()
-}
-
-/** The shape half of a cache key — the part `sweep` compares against the live stacks. */
-function shapeOf(key: string): string {
-  return key.slice(0, key.indexOf('#'))
-}
-
-function fusableKind(effect: PostEffect): 'uv' | 'colour' | null {
-  return FUSABLE_EFFECTS[effect.effect]?.kind ?? null
 }

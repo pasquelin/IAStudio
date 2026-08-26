@@ -18,11 +18,8 @@ export type CameraPostSectionProps = {
 }
 
 /**
- * What a camera does about the scene's composition — the three answers of § 3.
- *
  * A section of its own rather than a row of the lens: what a camera FILMS THROUGH is not a lens
- * parameter, and putting the choice beside the focal length would make the stack that follows it
- * read as part of the same descriptor.
+ * parameter, and the stack that follows would read as part of the same descriptor.
  */
 export function CameraPostSection({ documentId, camera, edit }: CameraPostSectionProps) {
   const { t } = useTranslation()

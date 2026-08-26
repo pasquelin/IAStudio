@@ -1,12 +1,13 @@
 import {
   mdiCompare,
+  mdiContentSave,
   mdiExport,
   mdiImport,
-  mdiContentSave,
   mdiRhombus,
   mdiRhombusOutline,
+  mdiTrashCanOutline,
 } from '@mdi/js'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   POST_CATEGORIES,
@@ -15,7 +16,7 @@ import {
   type PostEffectId,
   type PostStack,
 } from '@shared/domain/postProcessing'
-import { POST_PRESET_IDS, stackFromPreset, type PostPresetId } from '@shared/domain/postPresets'
+import { POST_PRESET_IDS } from '@shared/domain/postPresets'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { PropertySection } from '@/design/PropertySection'
@@ -24,29 +25,32 @@ import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { EmptyState } from '@/design/EmptyState'
 import { postEffectFields } from '@/engines/scene/propertyFields'
+import { keyAt, postAt } from '@/engines/scene/animationEval'
 import {
   addPostEffect,
   applyPostStack,
   duplicatePostEffect,
   keyPostParam,
   postChannelOf,
+  postSubjectOf,
   removePostEffectWholly,
   reorderPostEffects,
   resetPostEffect,
   setPostEffectEnabled,
   setPostEnabled,
   setPostParam,
+  stackOfPreset,
   unkeyPostParam,
   type PostTargetRef,
 } from '@/engines/scene/postCommands'
-import { postAt } from '@/engines/scene/animationEval'
-import { keyAt } from '@/engines/scene/animationEval'
-import type { SceneEdit } from '@/hooks/useSceneEdit'
+import { postChannelName } from '@/helpers/channelNames'
 import { newId } from '@/helpers/ids'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
+import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { usePostPresets } from '@/stores/postPresets'
 import { HINT_LEFT, HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
+import { choicesOf } from '../EnvironmentPanel/environmentChoices'
 import { DescriptorSection } from '../DescriptorSection'
 import { PostStackList } from './PostStackList'
 import { exportPostPreset, importPostPreset } from './postPresetIo'
@@ -57,24 +61,18 @@ export type PostProcessingSectionProps = {
   target: PostTargetRef
   /** What the panel shows and edits. Read by the caller, which knows where it lives. */
   stack: PostStack
-  /** The subject its channels are keyed under — see `postSubjectOf`. */
-  subject: string
   edit: SceneEdit
   title: string
 }
 
 /**
- * A composition, edited.
- *
- * Generated from the catalogue and nothing else: the rows come from the stack, the controls of
- * the selected effect come from `POST_EFFECTS`, and adding an effect to the union is all it takes
- * for it to appear here with its own knobs. Not one line below knows what a bloom is.
+ * Generated from the catalogue: the rows come from the stack, the controls from `POST_EFFECTS`.
+ * Adding an effect to the union is all it takes for it to appear with its own knobs.
  */
 export function PostProcessingSection({
   documentId,
   target,
   stack,
-  subject,
   edit,
   title,
 }: PostProcessingSectionProps) {
@@ -83,64 +81,95 @@ export function PostProcessingSection({
   const saved = usePostPresets(state => state.saved)
 
   const selected = stack.effects.find(effect => effect.id === selectedId) ?? null
-  // Read through the evaluator the viewport draws with, so a keyed parameter shows the number
-  // that is on screen rather than the one the document stores — the rule `lensAt` already sets.
-  const shown = useMemo(() => {
-    const keying = sceneKeyingAt(documentId)
-    return postAt(stack, keying.state.animation, subject, keying.at)
-  }, [documentId, stack, subject])
-  const fields = useMemo(() => {
-    const live = selected && shown.effects.find(effect => effect.id === selected.id)
-    return live ? postEffectFields(live) : []
-  }, [selected, shown])
+  const subject = postSubjectOf(target)
+  // Read once for the whole render: three store reads and a snap, where each field asking for
+  // itself paid them again.
+  const keying = sceneKeyingAt(documentId)
+  // Through the evaluator the viewport draws with, so a keyed parameter shows the number that is
+  // on screen rather than the one the document stores — the rule `lensAt` already sets.
+  const shown = postAt(stack, keying.state.animation, subject, keying.at)
+  const live = selected ? (shown.effects.find(one => one.id === selected.id) ?? null) : null
+  const fields = useMemo(() => (live ? postEffectFields(live) : []), [live])
 
-  const effectOptions = useMemo(
-    () =>
-      POST_EFFECT_IDS.map(id => ({
-        value: id,
-        label: t(`postfx.effect_${id}`),
-        group: t(`postfx.category_${POST_EFFECTS[id].category}`),
-      })).sort(
-        (left, right) =>
-          POST_CATEGORIES.indexOf(POST_EFFECTS[left.value].category) -
-          POST_CATEGORIES.indexOf(POST_EFFECTS[right.value].category),
-      ),
-    [t],
-  )
+  /** The channels of the SELECTED effect, in one pass over the band rather than one per field. */
+  const channels = useMemo(() => {
+    const found = new Map<string, ReturnType<typeof postChannelOf>>()
+    if (!selected) return found
+    for (const name of Object.keys(POST_EFFECTS[selected.effect].params)) {
+      found.set(name, postChannelOf(keying.state, target, selected.id, name))
+    }
+    return found
+  }, [keying.state, selected, target])
 
-  const presetOptions = useMemo(
-    () => [
-      ...POST_PRESET_IDS.map(id => ({
-        value: id as string,
-        label: t(`postfx.preset_${id}`),
-        group: t('postfx.builtIn'),
+  const effects = useMemo(() => {
+    const ordered = [...POST_EFFECT_IDS].sort(
+      (left, right) =>
+        POST_CATEGORIES.indexOf(POST_EFFECTS[left].category) -
+        POST_CATEGORIES.indexOf(POST_EFFECTS[right].category),
+    )
+    const named = choicesOf(ordered, 'postfx.effect_', t)
+    return {
+      ...named,
+      options: named.options.map(option => ({
+        ...option,
+        group: t(`postfx.category_${POST_EFFECTS[option.value].category}`),
       })),
+    }
+  }, [t])
+
+  const presets = useMemo(() => {
+    const shipped = choicesOf(POST_PRESET_IDS, 'postfx.preset_', t)
+    return [
+      ...shipped.options.map(option => ({ ...option, group: t('postfx.builtIn') })),
       ...saved.map(preset => ({
         value: preset.id,
         label: preset.name,
         group: t('postfx.userPresets'),
       })),
-    ],
-    [saved, t],
+    ]
+  }, [saved, t])
+
+  const run = edit.run
+
+  const applyStack = useCallback(
+    (next: PostStack) => {
+      run(applyPostStack(target, next))
+      setSelectedId(null)
+    },
+    [run, target],
   )
 
-  const applyPreset = (id: string): void => {
-    const mine = saved.find(preset => preset.id === id)
-    const next = mine ? mine.stack : stackFromPreset(id as PostPresetId, newId)
-    edit.run(applyPostStack(target, next))
-    setSelectedId(null)
-  }
+  /** Stable, so `PostStackRow`'s memo can actually bail out on a stack of ten. */
+  const onRemove = useCallback(
+    (id: string) => {
+      run(removePostEffectWholly(sceneKeyingAt(documentId).state, target, id))
+      setSelectedId(held => (held === id ? null : held))
+    },
+    [documentId, run, target],
+  )
+  const onDuplicate = useCallback(
+    (id: string) => run(duplicatePostEffect(target, id)),
+    [run, target],
+  )
+  const onReset = useCallback((id: string) => run(resetPostEffect(target, id)), [run, target])
+  const onToggle = useCallback(
+    (id: string, enabled: boolean) => run(setPostEffectEnabled(target, id, enabled)),
+    [run, target],
+  )
+  const onReorder = useCallback(
+    (order: readonly string[]) => run(reorderPostEffects(target, order)),
+    [run, target],
+  )
 
   /** The diamond that opens a channel on one parameter, and the state it reports. */
-  const keyAction = (name: string): ReactNode | null => {
+  const keyAction = (name: string): ReactNode => {
     const effect = selected
     const spec = effect ? POST_EFFECTS[effect.effect].params[name] : undefined
     if (!effect || !spec?.animatable) return null
 
-    const keying = sceneKeyingAt(documentId)
-    const channel = postChannelOf(keying.state, target, effect.id, name)
+    const channel = channels.get(name)
     const keyed = channel !== undefined && keyAt(channel.keys, keying.at) !== undefined
-    const value = shown.effects.find(one => one.id === effect.id)?.params[name]
+    const value = live?.params[name]
 
     return (
       <ToolButton
@@ -150,6 +179,7 @@ export function PostProcessingSection({
         variant="row"
         told={keyed}
         onClick={() => {
+          // Read again at press time: the head runs on the wall clock during playback.
           const now = sceneKeyingAt(documentId)
           const command = keyed
             ? unkeyPostParam(now.state, target, effect.id, name, now.at)
@@ -161,10 +191,10 @@ export function PostProcessingSection({
                   name,
                   now.at,
                   value,
-                  `${t(`postfx.effect_${effect.effect}`)} · ${t(`postfx.param_${name}`, name)}`,
+                  postChannelName(t, effect.effect, name),
                 )
               : null
-          if (command) edit.run(command)
+          if (command) run(command)
         }}
       />
     )
@@ -177,7 +207,7 @@ export function PostProcessingSection({
           label={t('postfx.enabled')}
           scId="postfx.enabled"
           value={stack.enabled}
-          onChange={enabled => edit.run(setPostEnabled(target, enabled))}
+          onChange={enabled => run(setPostEnabled(target, enabled))}
           action={
             <ToolButton
               icon={mdiCompare}
@@ -187,7 +217,7 @@ export function PostProcessingSection({
               variant="row"
               acts
               // Held rather than toggled, and it never reaches the document: § 2 asks for a look
-              // at what is underneath, not for an edit ⌘Z would have to take back.
+              // at what is underneath, not an edit ⌘Z would have to take back.
               onPointerDown={() => sceneEngineOf(documentId)?.setPostBypassed(true)}
               onPointerUp={() => sceneEngineOf(documentId)?.setPostBypassed(false)}
               onPointerLeave={() => sceneEngineOf(documentId)?.setPostBypassed(false)}
@@ -198,13 +228,15 @@ export function PostProcessingSection({
         <SelectField
           label={t('postfx.preset')}
           scId="postfx.preset"
-          // No preset is ever the value: applying one BUILDS a stack, so what is shown afterwards
-          // is a composition and not a reference — a document that pointed at a preset would
-          // change look the day the preset did.
+          // No preset is ever the VALUE: applying one builds a stack, so what is shown afterwards
+          // is a composition — a document pointing at a preset would change look the day it did.
           value={null}
           unnamedLabel={t('postfx.presetNone')}
-          options={presetOptions}
-          onChange={applyPreset}
+          options={presets}
+          onChange={name => {
+            const next = stackOfPreset(name, saved, newId)
+            if (next) applyStack(next)
+          }}
           hint={HINT_LEFT(t('postfx.presetHint'))}
           actions={
             <MenuButton
@@ -213,7 +245,7 @@ export function PostProcessingSection({
               description={t('postfx.presetSaveHint')}
               tooltip={TIP_LEFT}
               variant="row"
-              rowCount={3}
+              rowCount={3 + saved.length}
               opensOnClick
               rows={close => (
                 <>
@@ -232,9 +264,7 @@ export function PostProcessingSection({
                     tip={HINT_RIGHT(t('postfx.presetImportHint'))}
                     onSelect={() => {
                       close()
-                      void importPostPreset((next: PostStack) =>
-                        edit.run(applyPostStack(target, next)),
-                      )
+                      void importPostPreset(applyStack)
                     }}
                   />
                   <MenuRow
@@ -246,6 +276,18 @@ export function PostProcessingSection({
                       void exportPostPreset(title, stack)
                     }}
                   />
+                  {saved.map(preset => (
+                    <MenuRow
+                      key={preset.id}
+                      label={t('postfx.presetDelete', { name: preset.name })}
+                      icon={mdiTrashCanOutline}
+                      tip={HINT_RIGHT(t('postfx.presetDeleteHint'))}
+                      onSelect={() => {
+                        close()
+                        usePostPresets.getState().forgetPostPreset(preset.id)
+                      }}
+                    />
+                  ))}
                 </>
               )}
             />
@@ -259,14 +301,11 @@ export function PostProcessingSection({
             stack={stack}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onReorder={order => edit.run(reorderPostEffects(target, order))}
-            onToggle={(id, enabled) => edit.run(setPostEffectEnabled(target, id, enabled))}
-            onRemove={id => {
-              edit.run(removePostEffectWholly(sceneKeyingAt(documentId).state, target, id))
-              if (id === selectedId) setSelectedId(null)
-            }}
-            onDuplicate={id => edit.run(duplicatePostEffect(target, id))}
-            onReset={id => edit.run(resetPostEffect(target, id))}
+            onReorder={onReorder}
+            onToggle={onToggle}
+            onRemove={onRemove}
+            onDuplicate={onDuplicate}
+            onReset={onReset}
           />
         )}
 
@@ -275,10 +314,10 @@ export function PostProcessingSection({
           scId="postfx.add"
           value={null}
           unnamedLabel={t('postfx.addEffect')}
-          options={effectOptions}
-          onChange={effect => {
+          options={effects.options}
+          onChange={(effect: PostEffectId) => {
             const id = newId()
-            edit.run(addPostEffect(target, effect as PostEffectId, id))
+            run(addPostEffect(target, effect, id))
             setSelectedId(id)
           }}
           hint={HINT_LEFT(t('postfx.addEffectHint'))}
@@ -292,7 +331,7 @@ export function PostProcessingSection({
           fields={fields}
           labelPrefix="postfx.param_"
           actionFor={keyAction}
-          onChange={(name, value) => edit.run(setPostParam(target, selected.id, name, value))}
+          onChange={(name, value) => run(setPostParam(target, selected.id, name, value))}
           gesture={edit.gesture}
         />
       )}

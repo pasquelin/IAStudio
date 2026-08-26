@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { postEffect, type PostEffect, type PostEffectId } from '@shared/domain/postProcessing'
 import { heaviestCost, stepsOf, wantsFloat } from './postPlan'
-import { FUSABLE_EFFECTS } from './shaders/fusableChunks'
+import { fusableKind } from './shaders/fusableChunks'
 
 const of = (effect: PostEffectId): PostEffect => postEffect(effect, effect)
 
-const kindOf = (effect: PostEffect): 'uv' | 'colour' | null =>
-  FUSABLE_EFFECTS[effect.effect]?.kind ?? null
-
 const shape = (...effects: readonly PostEffectId[]): string[] =>
-  stepsOf(effects.map(of), kindOf).map(step =>
+  stepsOf(effects.map(of), fusableKind).map(step =>
     step.kind === 'fused'
       ? `fused(${step.effects.map(one => one.effect).join('+')})`
       : step.effect.effect,
@@ -46,7 +43,7 @@ describe('how a stack becomes a chain of draws', () => {
   })
 
   it('plans nothing for an empty stack', () => {
-    expect(stepsOf([], kindOf)).toEqual([])
+    expect(stepsOf([], fusableKind)).toEqual([])
   })
 })
 

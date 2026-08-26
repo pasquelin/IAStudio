@@ -1,14 +1,14 @@
 /**
- * How a stack becomes a chain of DRAWS — the arithmetic that decides what the composition costs.
- *
- * A run of neighbouring per-pixel effects collapses into one pass; everything else keeps its own.
- * The rule that bounds a run is the one `fuseShader` explains: there is a single texture fetch in
- * a fused pass, so a coordinate chunk cannot follow a colour chunk. When one does, the run ends
- * and another begins — two draws where three would have been, rather than a wrong picture.
- *
- * Pure over plain data, so what a look actually costs is asserted under vitest.
+ * How a stack becomes a chain of DRAWS. A run of neighbouring per-pixel effects collapses into
+ * one pass; a coordinate chunk cannot follow a colour chunk, there being a single fetch in a
+ * fused pass, so the run ends there and another begins.
  */
-import { POST_EFFECTS, type PostCost, type PostEffect } from '@shared/domain/postProcessing'
+import {
+  POST_COSTS,
+  POST_EFFECTS,
+  type PostCost,
+  type PostEffect,
+} from '@shared/domain/postProcessing'
 import type { FusableKind } from './fuseShader'
 
 export type PostStep =
@@ -51,25 +51,21 @@ export function stepsOf(
   return steps
 }
 
-const COST_RANK: Record<PostCost, number> = { low: 0, medium: 1, high: 2 }
-
 /** The costliest effect a plan holds, or `null` for a plan that holds none. */
 export function heaviestCost(effects: readonly PostEffect[]): PostCost | null {
   let found: PostCost | null = null
   for (const effect of effects) {
     const cost = POST_EFFECTS[effect.effect].cost
-    if (found === null || COST_RANK[cost] > COST_RANK[found]) found = cost
+    // `POST_COSTS` is ordered lightest first, and is the only place that order is written.
+    if (found === null || POST_COSTS.indexOf(cost) > POST_COSTS.indexOf(found)) found = cost
   }
   return found
 }
 
 /**
- * Whether the chain has to carry high dynamic range.
- *
- * A half-float chain is twice the bandwidth of a byte one, on every buffer of every pass — it is
- * bought, never taken by default. It is bought when something in the chain works ABOVE white:
- * a bloom thresholds highlights, a defocus spreads them, and a grade that opens the exposure
- * pulls values back down from above one. On a byte chain all three read as flat clipping.
+ * Twice the bandwidth on every buffer of every pass, so it is bought rather than taken: only
+ * where something works ABOVE white — a bloom thresholds highlights, a defocus spreads them, an
+ * opened exposure pulls values back down from above one. On bytes, all three read as clipping.
  */
 export function wantsFloat(effects: readonly PostEffect[], toneMapped: boolean): boolean {
   if (toneMapped) return true

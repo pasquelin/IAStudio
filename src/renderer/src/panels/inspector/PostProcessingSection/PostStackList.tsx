@@ -14,17 +14,15 @@ export type PostStackListProps = {
   onSelect: (id: string) => void
   onReorder: (order: readonly string[]) => void
   onToggle: (id: string, enabled: boolean) => void
+  /** Stable, all four: a fresh arrow per row would defeat `PostStackRow`'s own memo. */
   onRemove: (id: string) => void
   onDuplicate: (id: string) => void
   onReset: (id: string) => void
 }
 
 /**
- * The ordered composition, drawn by the same `Tree` the layer stack and the outliner use.
- *
- * Flat rather than nested, and that is the whole of the mapping: a stack has an order and no
- * depth, so every node hangs from the root and `onInsert` is the only drop that means anything.
- * Everything else — the selection, the keyboard, the drag, the accessible name — is the tree's.
+ * The same `Tree` the layer stack and the outliner use. FLAT: a stack has an order and no depth,
+ * so every node hangs from the root and `onInsert` is the only drop that means anything.
  */
 export function PostStackList({
   stack,
@@ -81,9 +79,9 @@ export function PostStackList({
         <PostStackRow
           effect={row.node.effect}
           skipped={skipped.has(row.node.id)}
-          onRemove={() => onRemove(row.node.id)}
-          onDuplicate={() => onDuplicate(row.node.id)}
-          onReset={() => onReset(row.node.id)}
+          onRemove={onRemove}
+          onDuplicate={onDuplicate}
+          onReset={onReset}
         />
       )}
     />

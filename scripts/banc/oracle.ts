@@ -227,16 +227,22 @@ export const post = (run: Run): PostStack => openScene(run)?.world.post ?? EMPTY
 
 /** The composition a camera OWNS, `null` while it inherits or is switched off. */
 export const cameraPost = (run: Run, name: string): PostStack | null => {
-  const camera = nodes(run).find(one => one.type === 'camera' && answersTo(one.name, name))
-  if (camera?.type !== 'camera') return null
-  return camera.camera.post?.mode === 'override' ? camera.camera.post.stack : null
+  const camera = cameraNamed(run, name)
+  return camera?.camera.post?.mode === 'override' ? camera.camera.post.stack : null
 }
 
 /** How a camera answers the scene's composition — `inherit` where it says nothing. */
 export const cameraPostMode = (run: Run, name: string): CameraPostMode | null => {
-  const camera = nodes(run).find(one => one.type === 'camera' && answersTo(one.name, name))
-  if (camera?.type !== 'camera') return null
-  return camera.camera.post?.mode ?? 'inherit'
+  const camera = cameraNamed(run, name)
+  return camera ? (camera.camera.post?.mode ?? 'inherit') : null
+}
+
+const cameraNamed = (
+  run: Run,
+  name: string,
+): Extract<SceneNode, { type: 'camera' }> | undefined => {
+  const found = nodeNamed(run, name)
+  return found?.type === 'camera' ? found : undefined
 }
 
 /** Whether the composition holds an effect of that kind at all, on or off. */

@@ -155,6 +155,13 @@ export function postAt(
   nodeId: string,
   time: Us,
 ): PostStack {
+  // Asked before anything is allocated: this runs once per composed SURFACE per image, and a
+  // scene of two hundred animated nodes with no composition channel would otherwise walk them
+  // all and build a `Map` five times a frame.
+  if (!timeline.tracks.some(track => track.target.nodeId === nodeId && drivesPost(track.target))) {
+    return rest
+  }
+
   const soloed = anySoloed(timeline)
   const deltas = new Map<string, Map<string, number>>()
 

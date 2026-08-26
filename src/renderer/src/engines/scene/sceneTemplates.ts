@@ -193,15 +193,8 @@ type Template = {
   animation?: Partial<AnimationTimeline>
 }
 
-/** Instance ids the demonstration's own channels name. Fixed, because a channel aims at one. */
-const DEMO = {
-  occlusion: 'demo-gtao',
-  defocus: 'demo-dof',
-  bloom: 'demo-bloom',
-  grade: 'demo-grade',
-  vignette: 'demo-vignette',
-  edges: 'demo-smaa',
-}
+/** The three instance ids a channel of the demonstration aims at. The others are named once. */
+const DEMO = { defocus: 'demo-dof', bloom: 'demo-bloom', grade: 'demo-grade' }
 
 /** A parameter of the demonstration stack, set apart from what a fresh effect opens on. */
 const tuned = (
@@ -344,11 +337,12 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
             name: 'Backdrop',
           },
         ),
-        sun(2.2, { x: -6, y: 7, z: 5 }),
-        ambient(0.25),
-        // Close and strong: a bloom thresholds what rises ABOVE white, and nothing in a scene lit
-        // at ordinary levels ever does. This is what puts a highlight there to find.
-        pointLight(60, { x: 1.8, y: 2.2, z: 1.6 }),
+        sun(1.6, { x: -6, y: 7, z: 5 }),
+        ambient(0.2),
+        // Twelve, not the sixty a spot four metres away carries: a point light falls off as the
+        // square of a distance, and under two metres that is some eighteen times the same lamp.
+        // It still blows the specular past white, which is what a bloom needs to find.
+        pointLight(12, { x: 1.8, y: 2.2, z: 1.6 }),
         camera,
         rail,
       ],
@@ -357,12 +351,14 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
         post: {
           enabled: true,
           effects: [
-            tuned(DEMO.occlusion, 'gtao', { radius: 0.3, blend: 0.85 }),
-            tuned(DEMO.defocus, 'dof', { focusDistance: 15, aperture: 0.012, maxBlur: 0.02 }),
+            tuned('demo-gtao', 'gtao', { radius: 0.3, blend: 0.85 }),
+            // A small aperture on purpose: the shot OPENS at fifteen metres — § 14 — so the
+            // subject starts out of focus, and a wide one would open the template on a smear.
+            tuned(DEMO.defocus, 'dof', { focusDistance: 15, aperture: 0.004, maxBlur: 0.012 }),
             tuned(DEMO.bloom, 'bloom', { strength: 0.35, radius: 0.5, threshold: 0.9 }),
             tuned(DEMO.grade, 'colorGrading', { contrast: 1.15, saturation: 0.98 }),
-            tuned(DEMO.vignette, 'vignette', { offset: 0.9, darkness: 1.1 }),
-            postEffect(DEMO.edges, 'smaa'),
+            tuned('demo-vignette', 'vignette', { offset: 0.9, darkness: 1.1 }),
+            postEffect('demo-smaa', 'smaa'),
           ],
         },
       },

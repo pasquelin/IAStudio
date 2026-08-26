@@ -86,7 +86,7 @@ import {
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
-import { stackDraws, type PostStack } from '@shared/domain/postProcessing'
+import { postOf, stackDraws, type PostStack } from '@shared/domain/postProcessing'
 import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
 import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
@@ -661,15 +661,6 @@ export class SceneRenderer {
   private post: PostComposer | null = null
 
   /**
-   * Whose composition the preview and an off-screen render film through.
-   *
-   * Held rather than read off the camera object: a three.js camera says nothing about which node
-   * of the document it belongs to, and the composition lives on the node.
-   */
-  private previewCameraId: string | null = null
-  private offscreenCameraId: string | null = null
-
-  /**
    * The temporary comparison — hold to see the frame without its composition.
    *
    * Session state, never the document: § 2 asks for a look at what is underneath, not for an edit
@@ -954,6 +945,7 @@ export class SceneRenderer {
     // with it rather than the previous one.
     this.timeline = state.animation
     this.animations.setTimeline(state.animation)
+    this.sweepCompositions(state)
 
     // A Set rather than a `some` per object: `apply` runs on every state change, selection
     // included, and the quadratic form costs milliseconds well before a scene gets large.
@@ -1801,8 +1793,22 @@ export class SceneRenderer {
       return mode === 'shaded' ? this.sceneStack() : null
     }
 
-    const cameraId = request.surface === 'inset' ? this.previewCameraId : this.offscreenCameraId
-    return this.cameraStack(cameraId)
+    return this.cameraStack(request.cameraNodeId)
+  }
+
+  /**
+   * Frees the chains no composition of the document asks for any more — a camera that stopped
+   * overriding, an effect removed from the scene. Without it the only release is the cache's own
+   * ceiling, and a stack nothing can name again holds its buffers until six others push it out.
+   */
+  private sweepCompositions(state: SceneState): void {
+    const live = [state.world.post]
+    for (const node of state.nodes) {
+      if (node.type === 'camera' && node.camera.post?.mode === 'override') {
+        live.push(node.camera.post.stack)
+      }
+    }
+    this.post?.sweep(live)
   }
 
   /** The scene's own composition, opened by whatever its channels add at this instant. */
@@ -1811,18 +1817,18 @@ export class SceneRenderer {
   }
 
   /**
-   * What a camera of the document films through: the scene's, its own, or nothing — and animated
-   * on the side it actually comes from. A camera inheriting picks up the SCENE's channels; one
-   * overriding picks up its own, and neither hears the other's.
+   * What a camera of the document films through. `postOf` is the arbiter — the domain's, and the
+   * same one the MCP handlers ask — so the engine only decides WHICH SUBJECT to animate on: a
+   * camera overriding hears its own channels, one inheriting hears the scene's.
    */
   private cameraStack(cameraId: string | null): PostStack | null {
     const node = cameraId === null ? null : this.applied.get(cameraId)
     const camera = node?.type === 'camera' ? node.camera.post : undefined
-    if (camera?.mode === 'disabled') return null
-    if (camera?.mode === 'override') {
-      return postAt(camera.stack, this.timeline, cameraId ?? '', this.playhead)
-    }
-    return this.sceneStack()
+    const stack = postOf(this.world.post, camera)
+    if (!stack) return null
+
+    const subject = camera?.mode === 'override' ? (cameraId ?? '') : SCENE_SUBJECT_ID
+    return postAt(stack, this.timeline, subject, this.playhead)
   }
 
   /**
@@ -2120,13 +2126,18 @@ export class SceneRenderer {
    */
   setCameraPreview(preview: CameraPreviewRequest | null): void {
     const camera = this.cameraObject(preview?.cameraNodeId ?? null)
-    this.previewCameraId = camera && preview ? preview.cameraNodeId : null
     if (!camera || !preview) return this.viewport.setInsetPane(null)
 
     // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
     // painted on studio chrome would promise a film nobody is going to get.
     const backdrop = new Color(this.viewport.paletteToken('--color-viewport'))
-    this.viewport.setInsetPane({ camera, rect: preview.rect, backdrop, full: preview.full })
+    this.viewport.setInsetPane({
+      camera,
+      cameraNodeId: preview.cameraNodeId,
+      rect: preview.rect,
+      backdrop,
+      full: preview.full,
+    })
   }
 
   /**
@@ -2265,14 +2276,14 @@ export class SceneRenderer {
         loan.frame(camera)
 
         this.setPlayhead(time)
-        // Named for THIS frame: a shot hands the film to another camera mid-way, and the
-        // composition that camera films through is the one that has to be resolved.
-        this.offscreenCameraId = cameraAt(time)
         const composed = this.viewport.drawScene({
           scene: this.viewport.scene,
           camera,
           surface: 'offscreen',
           paneIndex: 0,
+          // Named for THIS frame: a shot hands the film to another camera mid-way, and the
+          // composition that camera films through is the one to resolve.
+          cameraNodeId: cameraAt(time),
           target,
           rect: null,
           width,
@@ -2285,7 +2296,6 @@ export class SceneRenderer {
       }
     } finally {
       gl.setRenderTarget(null)
-      this.offscreenCameraId = null
       target.dispose()
       loan.restore()
       restore()
@@ -2340,14 +2350,14 @@ export class SceneRenderer {
       // keeps the view's own shape, so an orthographic frustum is already framed for it.
       if (camera instanceof PerspectiveCamera) loan.frame(camera)
 
-      // The view in hand rather than a camera of the document, so the composition is the SCENE's
-      // — which is exactly what is on screen.
-      this.offscreenCameraId = null
       const composed = this.viewport.drawScene({
         scene: this.viewport.scene,
         camera,
         surface: 'offscreen',
         paneIndex: 0,
+        // The view in hand rather than a camera of the document, so the composition is the
+        // SCENE's — which is exactly what is on screen.
+        cameraNodeId: null,
         target,
         rect: null,
         width,

@@ -18,8 +18,7 @@ import { lensAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotOfCameraAt } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
-import { postStackOf, SCENE_POST } from '@/engines/scene/postCommands'
-import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
+import { SCENE_POST, type PostTargetRef } from '@/engines/scene/postCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { sceneViewOf, useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
@@ -97,8 +96,12 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const at = snapToFrame(playhead, animation.fps)
   // `lensAt`, which the viewport draws through too: the field writes the same number back, so
   // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
-  const cameraStack = useScenes(state =>
-    camera ? postStackOf(sceneOf(state, documentId), { kind: 'camera', nodeId: camera.id }) : null,
+  // Derived from the node the component already holds, not a third subscription: a selector
+  // would re-scan `nodes` on every emission of any drag to find a camera that is right here.
+  const cameraStack = camera?.camera.post?.mode === 'override' ? camera.camera.post.stack : null
+  const cameraTarget = useMemo(
+    (): PostTargetRef => ({ kind: 'camera', nodeId: camera?.id ?? '' }),
+    [camera?.id],
   )
   const lens = useMemo(
     () => (camera ? cameraFields(lensAt(camera.camera, animation, camera.id, at)) : []),
@@ -145,7 +148,6 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         documentId={documentId}
         target={SCENE_POST}
         stack={world.post}
-        subject={SCENE_SUBJECT_ID}
         edit={edit}
         title={t('postfx.title')}
       />
@@ -266,9 +268,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       {cameraStack && camera && (
         <PostProcessingSection
           documentId={documentId}
-          target={{ kind: 'camera', nodeId: camera.id }}
+          target={cameraTarget}
           stack={cameraStack}
-          subject={camera.id}
           edit={edit}
           title={t('postfx.cameraOwner', { name: camera.name })}
         />

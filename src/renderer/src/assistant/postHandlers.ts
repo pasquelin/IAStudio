@@ -4,7 +4,6 @@ import {
   isPostEffectId,
   planStack,
   POST_EFFECTS,
-  postOf,
   type PostStack,
 } from '@shared/domain/postProcessing'
 import { isPostPresetId, stackFromPreset } from '@shared/domain/postPresets'
@@ -24,44 +23,34 @@ import {
 } from '@/engines/scene/postCommands'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { newId } from '@/helpers/ids'
-import { activeSceneId, useDocuments } from '@/stores/documents'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { nodeAimed } from './nodeAimed'
+import { mounted } from './sceneHandlers'
 
 /**
- * The composition, driven by value.
- *
- * Nothing here knows what a bloom is: an effect is a member of the catalogue, a parameter is a
- * key of its own fiche, and both are checked against `POST_EFFECTS` — so a call naming a knob
- * that does not exist is refused rather than writing a field nothing reads.
+ * The composition, driven by value. Nothing here knows what a bloom is: both the effect and the
+ * parameter are checked against `POST_EFFECTS`, so a call naming a knob that does not exist is
+ * refused rather than writing a field nothing reads.
  */
 
-/** The scene in front and its state, or nothing — which reads as `wrongSurface`. */
-function mounted(): { documentId: string; state: SceneState } | null {
-  const documentId = activeSceneId(useDocuments.getState())
-  return documentId === null
-    ? null
-    : { documentId, state: sceneOf(useScenes.getState(), documentId) }
-}
-
 /**
- * Whose composition a call names. Absent means the SCENE's, which is what a first call means: a
- * hand opens a scene and reaches for its look before it has made a camera.
- *
- * A camera that does not OWN a stack answers the scene's target rather than refusing — asking a
- * camera in `inherit` to change a bloom is asking the scene to, and refusing would send a client
- * hunting for a stack that is deliberately not there.
+ * Absent means the SCENE's — what a first call means. A camera that does not OWN a stack answers
+ * the scene's target rather than refusing: asking a camera in `inherit` to change a bloom is
+ * asking the scene to.
  */
 function targetOf(input: Record<string, unknown>, state: SceneState): PostTargetRef | null {
-  const cameraId = textOf(input, 'cameraId')
-  if (cameraId === null) return { kind: 'scene' }
+  const named = textOf(input, 'cameraId')
+  if (named === null) return { kind: 'scene' }
 
-  const node = state.nodes.find(candidate => candidate.id === cameraId)
+  // By id OR by name, like every other node-facing action of the registry — a client that can
+  // say « Camera 01 » everywhere else must not have to find an id here.
+  const node = nodeAimed(state, named)
   if (node?.type !== 'camera') return null
-  return postStackOf(state, { kind: 'camera', nodeId: cameraId }) === null
-    ? { kind: 'scene' }
-    : { kind: 'camera', nodeId: cameraId }
+  return node.camera.post?.mode === 'override'
+    ? { kind: 'camera', nodeId: node.id }
+    : { kind: 'scene' }
 }
 
 /** One edit of the composition a call names, run on the scene in front. */
@@ -92,10 +81,7 @@ function effectIn(stack: PostStack, input: Record<string, unknown>): string | nu
 }
 
 export const POST_HANDLERS: ActionHandlers = {
-  /**
-   * What a composition holds, as a client would have to know it to change anything: the ids of
-   * the instances, what each one is, and which of them the plan actually runs.
-   */
+  /** The ids of the instances, what each one is, and which of them the plan actually runs. */
   'post.state': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
@@ -103,14 +89,9 @@ export const POST_HANDLERS: ActionHandlers = {
     const target = targetOf(input, open.state)
     if (!target) return refused('notFound')
 
-    const cameraId = target.kind === 'camera' ? target.nodeId : null
-    const node = cameraId === null ? null : open.state.nodes.find(one => one.id === cameraId)
-    const stack =
-      node?.type === 'camera'
-        ? postOf(open.state.world.post, node.camera.post)
-        : open.state.world.post
-
-    if (!stack) return { ok: true, data: { mode: 'disabled', effects: [] } }
+    // `targetOf` only answers a camera that OWNS a stack, so this is never `null` here — it is
+    // the scene's otherwise, which is what the camera would be filming through anyway.
+    const stack = postStackOf(open.state, target) ?? open.state.world.post
     const skipped = new Set(planStack(stack).skipped.map(one => one.id))
 
     return {
@@ -148,10 +129,7 @@ export const POST_HANDLERS: ActionHandlers = {
       return effectId && by !== null ? movePostEffect(target, effectId, by) : null
     }),
 
-  /**
-   * One parameter. Which of the three value fields a call may use is the SPEC's to say — a bloom
-   * strength of `true` is not a value anybody meant, and coercing it would write one.
-   */
+  /** Which of the three value fields a call may use is the SPEC's to say, never a coercion. */
   'post.set': input =>
     editPost(input, (target, stack) => {
       const effectId = effectIn(stack, input)
@@ -194,14 +172,13 @@ export const POST_HANDLERS: ActionHandlers = {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
-    const nodeId = textOf(input, 'nodeId') ?? ''
-    const node = open.state.nodes.find(candidate => candidate.id === nodeId)
+    const node = nodeAimed(open.state, textOf(input, 'nodeId') ?? '')
     if (node?.type !== 'camera') return refused('notFound')
 
     const mode = oneOf(input, 'mode', CAMERA_POST_MODES)
     if (mode === null) return refused('badInput')
 
-    useScenes.getState().runCommand(open.documentId, setCameraPostMode(open.state, nodeId, mode))
+    useScenes.getState().runCommand(open.documentId, setCameraPostMode(open.state, node.id, mode))
     return { ok: true }
   },
 }

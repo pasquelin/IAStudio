@@ -1,18 +1,14 @@
 /**
- * The effects that read the picture at MORE THAN ONE PLACE, and therefore cannot be fused.
- *
- * Each one costs a full frame of bandwidth, so each one has to earn it. That is why the tube and
- * the tape are one shader apiece rather than four effects stacked: a curvature without its
- * matching vignette reads as a bug rather than as a screen, and the four together are one draw.
+ * The effects that read the picture at MORE THAN ONE PLACE, and so cannot fuse. Each costs a
+ * full frame of bandwidth — which is why the tube and the tape are one shader apiece.
  */
 import { Color, Vector2 } from 'three'
-import { PRELUDE, QUAD_VERTEX } from './quadVertex'
+import { QUAD_VERTEX_SHADER } from '@/engines/gpu/passes/quad'
+import { PRELUDE } from './postGlsl'
 
 /**
- * The colour fringing a lens leaves, the three wavelengths not focusing in one plane.
- *
- * `radial` is what makes it a LENS defect: the offset grows with the distance from the centre, so
- * the middle of the frame stays clean. Off, it is the flat sideways shift of a video artefact.
+ * `radial` is what makes it a LENS defect: the offset grows away from the centre, so the middle
+ * of the frame stays clean. Off, it is the flat sideways shift of a video artefact.
  */
 export const chromaticAberrationShader = {
   name: 'ChromaticAberrationShader',
@@ -21,7 +17,7 @@ export const chromaticAberrationShader = {
     amount: { value: 0.003 },
     radial: { value: 1 },
   },
-  vertexShader: QUAD_VERTEX,
+  vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float amount;
@@ -50,7 +46,7 @@ export const sharpenShader = {
     amount: { value: 0.5 },
     texel: { value: new Vector2() },
   },
-  vertexShader: QUAD_VERTEX,
+  vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float amount;
@@ -74,11 +70,8 @@ export const sharpenShader = {
 }
 
 /**
- * One axis of a separable blur, worn by two passes — nine taps twice rather than eighty-one once,
- * which is the whole reason a Gaussian is affordable at all.
- *
- * `boxed` flattens the weights instead of switching shader: the kind only changes the weighting,
- * and a branch on a uniform costs nothing beside nine fetches.
+ * One axis of a separable blur — nine taps twice rather than eighty-one once. `boxed` flattens
+ * the weights rather than switching shader: a branch costs nothing beside nine fetches.
  */
 export const blurAxisShader = {
   name: 'BlurAxisShader',
@@ -89,7 +82,7 @@ export const blurAxisShader = {
     texel: { value: new Vector2() },
     boxed: { value: 0 },
   },
-  vertexShader: QUAD_VERTEX,
+  vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float radius;
@@ -116,11 +109,8 @@ export const blurAxisShader = {
 }
 
 /**
- * A Sobel edge on the luminance of the finished picture, drawn in the colour asked for.
- *
  * Deliberately NOT `OutlinePass`: that one outlines a LIST OF OBJECTS, which would tie a
- * composition to whatever happened to be selected — and make a film depend on it. An edge read
- * off the image is the same in the viewport, in the preview and in the render.
+ * composition — and a film — to whatever happened to be selected.
  */
 export const outlineShader = {
   name: 'OutlineShader',
@@ -132,7 +122,7 @@ export const outlineShader = {
     opacity: { value: 1 },
     texel: { value: new Vector2() },
   },
-  vertexShader: QUAD_VERTEX,
+  vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float thickness;
@@ -145,7 +135,7 @@ export const outlineShader = {
     ${PRELUDE}
 
     float level(vec2 at) {
-      return luma(texture2D(tDiffuse, at).rgb);
+      return dot(texture2D(tDiffuse, at).rgb, LUMA);
     }
 
     void main() {
@@ -181,7 +171,7 @@ export const crtShader = {
     edgeFall: { value: 0.4 },
     resolution: { value: new Vector2(1, 1) },
   },
-  vertexShader: QUAD_VERTEX,
+  vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float curvature;
@@ -215,11 +205,8 @@ export const crtShader = {
 }
 
 /**
- * Tape: the chroma smears sideways, the line start wanders, and a head-switching band walks up
- * the picture.
- *
- * The bleed touches the colour DIFFERENCE and not the luminance, which is exactly what a
- * composite recording loses — smeared together they would only look out of focus.
+ * The bleed touches the colour DIFFERENCE and not the luminance, which is what a composite
+ * recording loses — smeared together they would only look out of focus.
  */
 export const vhsShader = {
   name: 'VhsShader',
@@ -231,7 +218,7 @@ export const vhsShader = {
     bands: { value: 0.3 },
     seed: { value: 0 },
   },
-  vertexShader: QUAD_VERTEX,
+  vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float bleed;
@@ -252,7 +239,7 @@ export const vhsShader = {
       vec3 right = texture2D(tDiffuse, clamp(at + vec2(bleed, 0.0), 0.0, 1.0)).rgb;
 
       vec3 smeared = (left + right) * 0.5;
-      vec3 colour = vec3(luma(mid)) + (smeared - vec3(luma(smeared)));
+      vec3 colour = vec3(dot(mid, LUMA)) + (smeared - vec3(dot(smeared, LUMA)));
 
       float band = smoothstep(0.0, 0.06, abs(fract(vUv.y + seed * 0.12) - 0.5) - 0.44);
       colour = mix(colour, colour * 0.55 + 0.12, band * bands);

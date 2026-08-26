@@ -19,11 +19,6 @@ export type PropertyControlProps = {
   gesture: GestureProps
   /** What the section is called, in code. The field's own name completes it. */
   section: string
-  /**
-   * The bundle a label is read from, completed by the field's own name. The inspector's own
-   * fields by default; the composition panel names its parameters under its own section.
-   */
-  labelPrefix?: string
   /** A button acting on the value, drawn before the reset — the keyframe diamond. */
   action?: ReactNode
 }

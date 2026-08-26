@@ -1,10 +1,7 @@
 /**
- * A LUT of the project, read into the 3D texture the grade samples.
- *
- * A lookup table is stored as a plain PICTURE — a horizontal strip of slices, which is what
- * `LUTImageLoader` reads — and therefore lives in the catalogue as a texture like any other:
- * it has a thumbnail, a version, a folder, and it travels with the project. A second asset kind
- * for the same bytes would have bought nothing.
+ * A LUT is stored as a plain PICTURE — the horizontal strip of slices `LUTImageLoader` reads —
+ * so it lives in the catalogue as a texture like any other, with a thumbnail, a version and a
+ * folder. A second asset kind for the same bytes would buy nothing.
  */
 import type { Data3DTexture } from 'three'
 import { LUTImageLoader } from 'three/addons/loaders/LUTImageLoader.js'
@@ -12,10 +9,7 @@ import { assetUrl, versionedUrl } from '@shared/domain/asset'
 
 const loader = new LUTImageLoader()
 
-/**
- * `version` is what makes ⌘S over a LUT show: the id never moves, so without a stamp the browser
- * answers the picture it already had — the same rule `textureCache` follows for every map.
- */
+/** Stamped, or ⌘S over a LUT shows nothing: the id never moves — as `textureCache` does. */
 export async function loadLutTexture(
   assetId: string,
   version?: string,

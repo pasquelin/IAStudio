@@ -6,7 +6,7 @@
  * those may pull three.js in, so nothing here knows a `Pass` exists — `engines/postfx/factories`
  * is the one file that does.
  */
-import { isRecord, oneOf } from '../guards'
+import { isRecord, oneOf, readBoolean, readString } from '../guards'
 import { bound } from '../numeric'
 import type { FieldValue, PropertySpec } from './propertySpec'
 import { isVector3 } from './transform'
@@ -458,7 +458,7 @@ export type CameraPostMode = CameraPost['mode']
 
 export const CAMERA_POST_MODES: readonly CameraPostMode[] = ['inherit', 'override', 'disabled']
 
-export const INHERIT_POST: CameraPost = Object.freeze({ mode: 'inherit' })
+const INHERIT_POST: CameraPost = Object.freeze({ mode: 'inherit' })
 
 /** The values a fresh instance of this effect opens on. */
 export function defaultParamsOf(effect: PostEffectId): Record<string, PostParamValue> {
@@ -478,11 +478,31 @@ export function postEffect(id: string, effect: PostEffectId): PostEffect {
  * whatever the list says, and at most one effect of an EXCLUSIVE slot is honoured. The panel
  * reads `skipped` to say so, rather than leaving a switch that looks on and does nothing.
  */
-export function planStack(stack: PostStack): {
+export function planStack(stack: PostStack): PostPlan {
+  const held = PLANS.get(stack)
+  if (held) return held
+
+  const made = planned(stack)
+  PLANS.set(stack, made)
+  return made
+}
+
+export type PostPlan = {
   effects: readonly PostEffect[]
   skipped: readonly PostEffect[]
-} {
-  if (!stack.enabled) return { effects: [], skipped: [] }
+  /** The shape a compiled chain is cached on — see `stackShapeKey`. */
+  shapeKey: string
+}
+
+/**
+ * Held on the stack's IDENTITY, which is what makes it safe: a stack is immutable and replaced by
+ * a command, and `postAt` hands back the very same object when nothing drives it. Without this,
+ * one composed frame planned three times per surface — fifteen times in a quad layout.
+ */
+const PLANS = new WeakMap<PostStack, PostPlan>()
+
+function planned(stack: PostStack): PostPlan {
+  if (!stack.enabled) return { effects: [], skipped: [], shapeKey: 'off' }
 
   const live = stack.effects.filter(one => one.enabled)
   const ordered = [...live].sort(
@@ -505,7 +525,7 @@ export function planStack(stack: PostStack): {
     effects.push(one)
   }
 
-  return { effects, skipped }
+  return { effects, skipped, shapeKey: effects.map(one => `${one.id}:${one.effect}`).join('|') }
 }
 
 export function slotOf(one: PostEffect): PostSlot {
@@ -519,10 +539,7 @@ export function slotOf(one: PostEffect): PostSlot {
  * slider must reach a uniform, never a rebuild. That single omission is what § 20 asks for.
  */
 export function stackShapeKey(stack: PostStack): string {
-  if (!stack.enabled) return 'off'
-  return planStack(stack)
-    .effects.map(one => `${one.id}:${one.effect}`)
-    .join('|')
+  return planStack(stack).shapeKey
 }
 
 /** Whether a stack would draw anything at all — what tells a caller to take the direct path. */
@@ -579,15 +596,15 @@ export function readStack(payload: unknown, mintId: () => string): PostStack {
     if (!isRecord(one) || !isPostEffectId(one.effect)) return []
     return [
       {
-        id: typeof one.id === 'string' && one.id.length > 0 ? one.id : mintId(),
+        id: readString(one, 'id', '') || mintId(),
         effect: one.effect,
-        enabled: typeof one.enabled === 'boolean' ? one.enabled : true,
+        enabled: readBoolean(one, 'enabled', true),
         params: readParams(one.effect, one.params),
       },
     ]
   })
 
-  return { enabled: typeof payload.enabled === 'boolean' ? payload.enabled : true, effects }
+  return { enabled: readBoolean(payload, 'enabled', true), effects }
 }
 
 /** The effect ids a payload names that this build has no effect for. What an import reports. */

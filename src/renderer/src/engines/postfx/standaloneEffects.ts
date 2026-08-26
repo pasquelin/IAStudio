@@ -1,18 +1,5 @@
-/**
- * The one file that knows three.js has passes.
- *
- * Everything above it speaks of stacks, plans and parameters; everything below is `Pass`. Keeping
- * that line sharp is what would let the pass library be replaced — by pmndrs' `postprocessing`,
- * by a WebGPU chain — without a line changing anywhere else.
- */
-import {
-  Color,
-  Vector2,
-  type Camera,
-  type Data3DTexture,
-  type Scene,
-  type WebGLRenderer,
-} from 'three'
+/** The only place three.js's addon passes are BUILT. `PostComposer` chains them. */
+import { Vector2, type Camera, type Data3DTexture, type Scene, type WebGLRenderer } from 'three'
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js'
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'
 import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js'
@@ -26,9 +13,19 @@ import { SSAARenderPass } from 'three/addons/postprocessing/SSAARenderPass.js'
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js'
-import { HALFTONE_SHAPES, type PostEffectId } from '@shared/domain/postProcessing'
-import type { EffectInstance, EffectParams, ViewInfo } from './effectInstance'
+import { HALFTONE_SHAPES, type PostEffect, type PostEffectId } from '@shared/domain/postProcessing'
+import type { FusedId } from './shaders/fusableChunks'
+import { onePass, type EffectInstance, type ViewInfo } from './effectInstance'
 import { samplesOf } from './postQuality'
+import {
+  paramFlag,
+  paramNumber,
+  paramText,
+  write,
+  writeColour,
+  writeVector,
+  type Uniforms,
+} from './uniforms'
 import {
   blurAxisShader,
   chromaticAberrationShader,
@@ -51,175 +48,117 @@ export type BuildContext = {
 
 export type EffectFactory = (context: BuildContext) => EffectInstance
 
-/** A pass's uniform bag. `ShaderPass` types its values as `any`, which nothing here reads back. */
-type Uniforms = Record<string, { value: unknown }>
+/** `as`: every pass built here carries `uniforms`; three's addon types spell it `object` on three. */
+const uniformsOf = (pass: Pass): Uniforms => (pass as unknown as { uniforms: Uniforms }).uniforms
 
-const uniformsOf = (pass: Pass): Uniforms =>
-  // `as`: every pass built here carries `uniforms`; the addon types spell it `object` on three of
-  // them, which is the only reason this cannot be read off the declaration.
-  (pass as unknown as { uniforms: Uniforms }).uniforms
+/** Scratch: one pixel of the chain, in UV — what every neighbourhood shader steps by. */
+const texel = new Vector2()
 
-const num = (params: EffectParams, key: string, fallback: number): number => {
-  const value = params[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-}
+const texelOf = (view: ViewInfo): Vector2 => texel.set(1 / view.width, 1 / view.height)
 
-const flag = (params: EffectParams, key: string, fallback: boolean): boolean =>
-  typeof params[key] === 'boolean' ? params[key] : fallback
-
-const text = (params: EffectParams, key: string): string =>
-  typeof params[key] === 'string' ? params[key] : ''
-
-const setVector = (uniforms: Uniforms, name: string, x: number, y: number): void => {
-  const held = uniforms[name]?.value
-  if (held instanceof Vector2) held.set(x, y)
-}
-
-const setColour = (uniforms: Uniforms, name: string, css: string): void => {
-  const held = uniforms[name]?.value
-  // `setStyle` decodes sRGB into the working space, which is what the chain is in.
-  if (held instanceof Color && css !== '') held.setStyle(css)
-}
-
-/** One `ShaderPass`, its uniforms written by the caller. The shape most effects here take. */
+/** One `ShaderPass`, its uniforms written per frame. The shape most effects here take. */
 function shaderEffect(
   shader: object,
-  apply: (uniforms: Uniforms, params: EffectParams, view: ViewInfo) => void,
+  apply: (uniforms: Uniforms, effect: PostEffect, view: ViewInfo) => void,
 ): EffectFactory {
   return () => {
     const pass = new ShaderPass(shader)
-    return {
-      passes: [pass],
-      apply: (params, view) => apply(pass.uniforms, params, view),
-      setSize: (width, height) => pass.setSize(width, height),
-      dispose: () => pass.dispose(),
-    }
+    return onePass(pass, (effect, view) => apply(pass.uniforms, effect, view))
   }
 }
 
-/** One pixel of the chain, in UV — what every neighbourhood shader steps by. */
-const texelOf = (view: ViewInfo): [number, number] => [1 / view.width, 1 / view.height]
-
 const gtao: EffectFactory = context => {
   const pass = new GTAOPass(context.scene, context.camera, context.width, context.height)
-  return {
-    passes: [pass],
-    apply: (params, view) => {
-      pass.scene = view.scene
-      pass.camera = view.camera
-      pass.blendIntensity = num(params, 'blend', 1)
-      pass.updateGtaoMaterial({
-        radius: num(params, 'radius', 0.25),
-        distanceExponent: num(params, 'distanceExponent', 1),
-        thickness: num(params, 'thickness', 1),
-        scale: num(params, 'scale', 1),
-        samples: samplesOf(num(params, 'samples', 16), view.budget),
-      })
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, (effect, view) => {
+    pass.scene = view.scene
+    pass.camera = view.camera
+    pass.blendIntensity = paramNumber(effect, 'blend')
+    pass.updateGtaoMaterial({
+      radius: paramNumber(effect, 'radius'),
+      distanceExponent: paramNumber(effect, 'distanceExponent'),
+      thickness: paramNumber(effect, 'thickness'),
+      scale: paramNumber(effect, 'scale'),
+      samples: samplesOf(paramNumber(effect, 'samples'), view.budget),
+    })
+  })
 }
 
 const ssao: EffectFactory = context => {
   const pass = new SSAOPass(context.scene, context.camera, context.width, context.height)
-  return {
-    passes: [pass],
-    apply: (params, view) => {
-      pass.scene = view.scene
-      pass.camera = view.camera
-      pass.kernelRadius = num(params, 'radius', 8)
-      pass.minDistance = num(params, 'minDistance', 0.005)
-      pass.maxDistance = num(params, 'maxDistance', 0.1)
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, (effect, view) => {
+    pass.scene = view.scene
+    pass.camera = view.camera
+    pass.kernelRadius = paramNumber(effect, 'radius')
+    pass.minDistance = paramNumber(effect, 'minDistance')
+    pass.maxDistance = paramNumber(effect, 'maxDistance')
+  })
 }
 
 const ssaa: EffectFactory = context => {
   const pass = new SSAARenderPass(context.scene, context.camera)
-  return {
-    passes: [pass],
-    apply: (params, view) => {
-      pass.scene = view.scene
-      pass.camera = view.camera
-      // Each level DOUBLES the renders of the scene, so the budget cuts it before anything else.
-      pass.sampleLevel = Math.max(1, Math.round(num(params, 'level', 2) * view.budget.samples))
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, (effect, view) => {
+    pass.scene = view.scene
+    pass.camera = view.camera
+    // Each level DOUBLES the renders of the scene, so the budget cuts it before anything else.
+    pass.sampleLevel = Math.max(1, Math.round(paramNumber(effect, 'level') * view.budget.samples))
+  })
 }
 
 const bloom: EffectFactory = context => {
   const pass = new UnrealBloomPass(new Vector2(context.width, context.height), 0.6, 0.4, 0.85)
-  return {
-    passes: [pass],
-    apply: params => {
-      pass.strength = num(params, 'strength', 0.6)
-      pass.radius = num(params, 'radius', 0.4)
-      pass.threshold = num(params, 'threshold', 0.85)
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, effect => {
+    pass.strength = paramNumber(effect, 'strength')
+    pass.radius = paramNumber(effect, 'radius')
+    pass.threshold = paramNumber(effect, 'threshold')
+  })
 }
 
 const dof: EffectFactory = context => {
   const pass = new BokehPass(context.scene, context.camera, {})
-  return {
-    passes: [pass],
-    apply: (params, view) => {
-      pass.scene = view.scene
-      pass.camera = view.camera
-      const uniforms = uniformsOf(pass)
-      uniforms.focus = { value: num(params, 'focusDistance', 10) }
-      uniforms.aperture = { value: num(params, 'aperture', 0.005) }
-      uniforms.maxblur = { value: num(params, 'maxBlur', 0.01) }
-      uniforms.aspect = { value: view.height === 0 ? 1 : view.width / view.height }
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, (effect, view) => {
+    pass.scene = view.scene
+    pass.camera = view.camera
+    const uniforms = uniformsOf(pass)
+    write(uniforms, 'focus', paramNumber(effect, 'focusDistance'))
+    write(uniforms, 'aperture', paramNumber(effect, 'aperture'))
+    write(uniforms, 'maxblur', paramNumber(effect, 'maxBlur'))
+    write(uniforms, 'aspect', view.height === 0 ? 1 : view.width / view.height)
+  })
 }
 
 const lut: EffectFactory = context => {
   const pass = new LUTPass({ intensity: 1 })
-  return {
-    passes: [pass],
-    apply: params => {
-      const picked = text(params, 'texture')
-      const table = picked === '' ? null : context.lutOf(picked)
-      pass.lut = table ?? undefined
-      // No table means no grade, whatever the slider says — a LUT still loading must not show as
-      // « intensity 1 over nothing », which three draws as the identity anyway but at full cost.
-      pass.enabled = table !== null
-      pass.intensity = num(params, 'intensity', 1)
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, effect => {
+    const picked = paramText(effect, 'texture')
+    const table = picked === '' ? null : context.lutOf(picked)
+    pass.lut = table ?? undefined
+    // No table means no grade, whatever the slider says: a LUT still loading must not be drawn
+    // as the identity at full cost.
+    pass.enabled = table !== null
+    pass.intensity = paramNumber(effect, 'intensity')
+  })
 }
 
 const blur: EffectFactory = () => {
   const across = new ShaderPass(blurAxisShader)
   const down = new ShaderPass(blurAxisShader)
-  setVector(down.uniforms, 'direction', 0, 1)
+  // Written once: the two directions are constants, and rewriting them per frame was two
+  // vector stores for a value that never moves.
+  writeVector(across.uniforms, 'direction', 1, 0)
+  writeVector(down.uniforms, 'direction', 0, 1)
 
   return {
     passes: [across, down],
-    apply: (params, view) => {
-      const radius = num(params, 'radius', 2)
-      const boxed = params.kind === 'box' ? 1 : 0
-      const [x, y] = texelOf(view)
-      for (const pass of [across, down]) {
-        pass.uniforms.radius = { value: radius }
-        pass.uniforms.boxed = { value: boxed }
-        setVector(pass.uniforms, 'texel', x, y)
-      }
-      setVector(across.uniforms, 'direction', 1, 0)
-      setVector(down.uniforms, 'direction', 0, 1)
+    apply: (effect, view) => {
+      const radius = paramNumber(effect, 'radius')
+      const boxed = paramText(effect, 'kind') === 'box' ? 1 : 0
+      const step = texelOf(view)
+      write(across.uniforms, 'radius', radius)
+      write(down.uniforms, 'radius', radius)
+      write(across.uniforms, 'boxed', boxed)
+      write(down.uniforms, 'boxed', boxed)
+      writeVector(across.uniforms, 'texel', step.x, step.y)
+      writeVector(down.uniforms, 'texel', step.x, step.y)
     },
     setSize: (width, height) => {
       across.setSize(width, height)
@@ -234,52 +173,35 @@ const blur: EffectFactory = () => {
 
 const halftone: EffectFactory = () => {
   const pass = new HalftonePass({})
-  return {
-    passes: [pass],
-    apply: (params, view) => {
-      // The shapes are named on the panel and numbered in the shader, one-based.
-      const shape = HALFTONE_SHAPES.indexOf(text(params, 'shape'))
-      pass.uniforms.shape.value = shape < 0 ? 1 : shape + 1
-      pass.uniforms.radius.value = num(params, 'radius', 4)
-      pass.uniforms.scatter.value = num(params, 'scatter', 0)
-      pass.uniforms.blending.value = num(params, 'blending', 1)
-      pass.uniforms.width.value = view.width
-      pass.uniforms.height.value = view.height
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, (effect, view) => {
+    // The shapes are named on the panel and numbered in the shader, one-based.
+    const shape = HALFTONE_SHAPES.indexOf(paramText(effect, 'shape'))
+    pass.uniforms.shape.value = shape < 0 ? 1 : shape + 1
+    pass.uniforms.radius.value = paramNumber(effect, 'radius')
+    pass.uniforms.scatter.value = paramNumber(effect, 'scatter')
+    pass.uniforms.blending.value = paramNumber(effect, 'blending')
+    pass.uniforms.width.value = view.width
+    pass.uniforms.height.value = view.height
+  })
 }
 
 const glitch: EffectFactory = () => {
   const pass = new GlitchPass()
-  return {
-    passes: [pass],
-    apply: params => {
-      pass.goWild = flag(params, 'wild', false)
-    },
-    setSize: (width, height) => pass.setSize(width, height),
-    dispose: () => pass.dispose(),
-  }
+  return onePass(pass, effect => {
+    pass.goWild = paramFlag(effect, 'wild')
+  })
 }
 
 const passOnly =
   (make: () => Pass): EffectFactory =>
-  () => {
-    const pass = make()
-    return {
-      passes: [pass],
-      apply: () => {},
-      setSize: (width, height) => pass.setSize(width, height),
-      dispose: () => pass.dispose(),
-    }
-  }
+  () =>
+    onePass(make(), () => {})
 
 /**
- * Every effect that keeps a pass of its own. Anything NOT here is fused — see `FUSABLE_EFFECTS`,
- * and `postFactories.test.ts`, which holds the two tables to covering the catalogue exactly once.
+ * The catalogue MINUS what fuses, and typed on that difference: an effect added to `PostEffectId`
+ * fails to compile until one of the two tables implements it, and neither may claim it twice.
  */
-export const STANDALONE_EFFECTS: Readonly<Partial<Record<PostEffectId, EffectFactory>>> = {
+const OWN_PASS: Readonly<Record<Exclude<PostEffectId, FusedId>, EffectFactory>> = {
   gtao,
   ssao,
   ssaa,
@@ -292,44 +214,51 @@ export const STANDALONE_EFFECTS: Readonly<Partial<Record<PostEffectId, EffectFac
   fxaa: passOnly(() => new FXAAPass()),
   smaa: passOnly(() => new SMAAPass()),
 
-  chromaticAberration: shaderEffect(chromaticAberrationShader, (uniforms, params) => {
-    uniforms.amount = { value: num(params, 'amount', 0.003) }
-    uniforms.radial = { value: flag(params, 'radial', true) ? 1 : 0 }
+  chromaticAberration: shaderEffect(chromaticAberrationShader, (uniforms, effect) => {
+    write(uniforms, 'amount', paramNumber(effect, 'amount'))
+    write(uniforms, 'radial', paramFlag(effect, 'radial') ? 1 : 0)
   }),
 
-  sharpen: shaderEffect(sharpenShader, (uniforms, params, view) => {
-    uniforms.amount = { value: num(params, 'amount', 0.5) }
-    const [x, y] = texelOf(view)
-    setVector(uniforms, 'texel', x, y)
+  sharpen: shaderEffect(sharpenShader, (uniforms, effect, view) => {
+    write(uniforms, 'amount', paramNumber(effect, 'amount'))
+    const step = texelOf(view)
+    writeVector(uniforms, 'texel', step.x, step.y)
   }),
 
-  outline: shaderEffect(outlineShader, (uniforms, params, view) => {
-    uniforms.thickness = { value: num(params, 'thickness', 1) }
-    uniforms.threshold = { value: num(params, 'threshold', 0.1) }
-    uniforms.opacity = { value: num(params, 'opacity', 1) }
-    setColour(uniforms, 'lineColour', text(params, 'colour'))
-    const [x, y] = texelOf(view)
-    setVector(uniforms, 'texel', x, y)
+  outline: shaderEffect(outlineShader, (uniforms, effect, view) => {
+    write(uniforms, 'thickness', paramNumber(effect, 'thickness'))
+    write(uniforms, 'threshold', paramNumber(effect, 'threshold'))
+    write(uniforms, 'opacity', paramNumber(effect, 'opacity'))
+    writeColour(uniforms, 'lineColour', paramText(effect, 'colour'))
+    const step = texelOf(view)
+    writeVector(uniforms, 'texel', step.x, step.y)
   }),
 
-  rgbShift: shaderEffect(RGBShiftShader, (uniforms, params) => {
-    uniforms.amount = { value: num(params, 'amount', 0.0015) }
-    uniforms.angle = { value: num(params, 'angle', 0) }
+  rgbShift: shaderEffect(RGBShiftShader, (uniforms, effect) => {
+    write(uniforms, 'amount', paramNumber(effect, 'amount'))
+    write(uniforms, 'angle', paramNumber(effect, 'angle'))
   }),
 
-  crt: shaderEffect(crtShader, (uniforms, params, view) => {
-    uniforms.curvature = { value: num(params, 'curvature', 0.25) }
-    uniforms.scanline = { value: num(params, 'scanline', 0.3) }
-    uniforms.aberration = { value: num(params, 'aberration', 0.002) }
-    uniforms.edgeFall = { value: num(params, 'vignette', 0.4) }
-    setVector(uniforms, 'resolution', view.width, view.height)
+  crt: shaderEffect(crtShader, (uniforms, effect, view) => {
+    write(uniforms, 'curvature', paramNumber(effect, 'curvature'))
+    write(uniforms, 'scanline', paramNumber(effect, 'scanline'))
+    write(uniforms, 'aberration', paramNumber(effect, 'aberration'))
+    write(uniforms, 'edgeFall', paramNumber(effect, 'vignette'))
+    writeVector(uniforms, 'resolution', view.width, view.height)
   }),
 
-  vhs: shaderEffect(vhsShader, (uniforms, params, view) => {
-    uniforms.bleed = { value: num(params, 'bleed', 0.006) }
-    uniforms.jitter = { value: num(params, 'jitter', 0.004) }
-    uniforms.noise = { value: num(params, 'noise', 0.15) }
-    uniforms.bands = { value: num(params, 'bands', 0.3) }
-    uniforms.seed = { value: view.time }
+  vhs: shaderEffect(vhsShader, (uniforms, effect, view) => {
+    write(uniforms, 'bleed', paramNumber(effect, 'bleed'))
+    write(uniforms, 'jitter', paramNumber(effect, 'jitter'))
+    write(uniforms, 'noise', paramNumber(effect, 'noise'))
+    write(uniforms, 'bands', paramNumber(effect, 'bands'))
+    write(uniforms, 'seed', view.time)
   }),
+}
+
+/** Widened for the one lookup that arrives with any id of the catalogue. */
+const BY_ID: Partial<Record<PostEffectId, EffectFactory>> = OWN_PASS
+
+export function standaloneFor(id: PostEffectId): EffectFactory | undefined {
+  return BY_ID[id]
 }

@@ -119,7 +119,7 @@ import {
  */
 
 /** The scene in front and its state, or nothing — which reads as `wrongSurface`. */
-function mounted(): { documentId: string; state: SceneState } | null {
+export function mounted(): { documentId: string; state: SceneState } | null {
   const documentId = activeSceneId(useDocuments.getState())
   return documentId === null
     ? null

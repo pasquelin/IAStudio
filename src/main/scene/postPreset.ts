@@ -12,11 +12,7 @@ export type PostPresetDeps = {
   pickImportPath: (extension: string) => Promise<string | null>
 }
 
-/**
- * What a composition file may weigh. A stack is a few dozen numbers per effect and a name; a
- * megabyte is four orders of magnitude of room, and a bound is what keeps a file somebody
- * renamed from being read into this process whole.
- */
+/** A stack is a few dozen numbers per effect: a megabyte is four orders of magnitude of room. */
 const MAX_PRESET_BYTES = 1024 * 1024
 
 const EXTENSION = 'json'
@@ -27,12 +23,9 @@ const postExport = z.object({
 })
 
 /**
- * Reading and writing a post-processing composition as a file two projects exchange.
- *
- * This side reads BYTES and writes bytes. It does not parse the composition, and that is
- * deliberate: what a file is allowed to say is decided by `readPostPresetFile` against the
- * catalogue, in the window — a second reader here would be a second set of rules to keep in
- * agreement, and the one place a file could grow a meaning nobody declared.
+ * This side reads BYTES and writes bytes. What a file is ALLOWED to say is decided by
+ * `readPostPresetFile` against the catalogue, in the window: a second reader here would be a
+ * second set of rules to keep in agreement.
  */
 export function registerPostPresetHandlers({ pickSavePath, pickImportPath }: PostPresetDeps): void {
   handle(CHANNELS.postExport, async (_event, request) => {
