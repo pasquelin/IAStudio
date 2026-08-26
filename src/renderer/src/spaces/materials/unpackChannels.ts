@@ -14,7 +14,7 @@ const gpuUnpack = createUnpackPort({ loadTexture })
  * cannot simply be offered for unpacking: a `clearcoatTexture` names something with no channel
  * at all, and reading a roughness out of it would write a measurement of nothing.
  */
-const PACKED_BY_SLOT: Record<string, readonly PbrChannel[]> = {
+export const PACKED_BY_SLOT: Record<string, readonly PbrChannel[]> = {
   metallicRoughnessTexture: ['roughness', 'metalness'],
 }
 

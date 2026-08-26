@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Fragment, useEffect, useRef, type DragEvent, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import type { DragLike } from '@/helpers/drag'
+import { offerBlankDrop, type DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { useGrid } from '@/hooks/useGrid'
@@ -303,15 +303,10 @@ export function Collection<T extends { id: string }>({
       }}
       onDragOver={event => {
         if (!onBlank(event)) return
-        if (foreign?.carries(event)) {
-          event.preventDefault()
-          // What leaves the shelf is COPIED into the folder, never taken from it.
-          event.dataTransfer.dropEffect = 'copy'
-          return
-        }
-        if (!onDropRoot || !rowDrag.carries(event)) return
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
+        offerBlankDrop(event, {
+          copies: foreign?.carries(event) ?? false,
+          moves: onDropRoot !== undefined && rowDrag.carries(event),
+        })
       }}
       onDrop={event => {
         if (!onBlank(event)) return

@@ -63,6 +63,7 @@ import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
 import {
+  checkoutOf,
   clientName,
   mcpConfigWith,
   mcpEndpointPath,
@@ -1900,8 +1901,7 @@ export function createServices(settings: SettingsStore): Services {
     },
   })
 
-  // Unpackaged, `execPath` is Electron and `getAppPath()` is the checkout it must be told to open.
-  const checkout = isDevelopment ? app.getAppPath() : null
+  const checkout = checkoutOf(app.getAppPath())
   const endpointPath = mcpEndpointPath(app.getPath('userData'), checkout)
   const launch = mcpLaunch(process.execPath, checkout, endpointPath)
 

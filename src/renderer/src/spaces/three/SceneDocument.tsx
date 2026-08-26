@@ -43,14 +43,13 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import {
+  allNegative,
   canCarve,
   canInvertCarve,
   canNegate,
   canSeparate,
   carvePlan,
   carveScene,
-  isCarvable,
-  isNegative,
 } from '@/engines/csg/carve'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, sceneViewChromeOf, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
@@ -547,7 +546,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const cannotNegate = !canNegate(foldable)
   // Armed says « what is picked is already a tool » — the second signal, for a shape scrolled off
   // screen or hidden, where the red translucency in the viewport says nothing.
-  const allNegative = !cannotNegate && foldable.every(node => !isCarvable(node) || isNegative(node))
+  const allMarked = allNegative(foldable)
   // Named BEFORE the click, which nothing on screen did: the election weighs volume, and a
   // generous cutter can out-weigh a thin wall. `shapeVolume` holds its answer per descriptor, so
   // re-electing on every render of the bar costs one lookup a shape.
@@ -578,7 +577,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // running, which is what makes leaving it the same press that entered it.
       'scene.isolate': isolated,
       // The other one: it says the selection is already marked, so the press takes the mark off.
-      'scene.negate': allNegative,
+      'scene.negate': allMarked,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -635,7 +634,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     nothingSelected,
     cannotCarve,
     cannotNegate,
-    allNegative,
+    allMarked,
     matterName,
     foldable,
     cannotSeparate,

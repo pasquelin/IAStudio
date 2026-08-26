@@ -41,6 +41,16 @@ export function canNegate(picked: readonly SceneNode[]): boolean {
   return picked.some(isCarvable)
 }
 
+/**
+ * Whether everything a mark could reach is already marked.
+ *
+ * Read by the toolbar to light its button AND by `negateNodes` to decide which way the one button
+ * goes — written once, so the button can never say the opposite of what the click does.
+ */
+export function allNegative(picked: readonly SceneNode[]): boolean {
+  return canNegate(picked) && picked.every(node => !isCarvable(node) || isNegative(node))
+}
+
 /** One solid at a time: two would put back two sets of brushes with no way to tell them apart. */
 export function canSeparate(picked: readonly SceneNode[]): boolean {
   return picked.length === 1 && picked[0]?.type === 'carved'

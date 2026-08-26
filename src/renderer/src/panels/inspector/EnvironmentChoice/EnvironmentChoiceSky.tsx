@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
+import { urlOfPicture } from '@/hooks/useProjectPictures'
 import { openDocumentById } from '@/helpers/openAsset'
 import { useSkySource } from '@/stores/skyboxSources'
 
@@ -19,10 +20,8 @@ export function EnvironmentChoiceSky({
   onChange,
 }: EnvironmentChoiceSkyProps) {
   const { t } = useTranslation()
-  // A sky has no picture of its own: what stands for it is the picture it hangs. Looked up among
-  // the project's rather than built here, so the URL carries the version.
-  const source = useSkySource(documentId)?.source?.assetId
-  const shown = source ? pictures.find(one => one.id === source)?.url : undefined
+  // A sky has no picture of its own: what stands for it is the picture it hangs.
+  const shown = urlOfPicture(pictures, useSkySource(documentId)?.source?.assetId)
 
   return (
     <LinkField

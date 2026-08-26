@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { cn } from '@/helpers/cn'
-import type { DragLike } from '@/helpers/drag'
+import { offerBlankDrop, type DragLike } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
 import { useRemeasure } from '@/hooks/useRemeasure'
@@ -299,6 +299,10 @@ export function Tree<T extends TreeNode>({
     [nodes, expandedIds, expandable],
   )
 
+  // Where each row is, read on every `dragover` — which fires at pointer rate. Three lookups
+  // swept the whole list, once PER MEMBER of the batch for one of them.
+  const rowById = useMemo(() => new Map(rows.map((row, at) => [row.node.id, { row, at }])), [rows])
+
   /**
    * Which folder the pointer rests IN, mid-drag. A primitive and not `over` itself: `onDragOver`
    * sets a fresh object on every tick, so an effect keyed on the object would rearm for ever and
@@ -314,12 +318,12 @@ export function Tree<T extends TreeNode>({
   useEffect(() => {
     if (restingIn === null) return
     // A folder nobody has opened counts: opening it is what READS it, in a tree that loads lazily.
-    const row = rows.find(one => one.node.id === restingIn)
+    const row = rowById.get(restingIn)?.row
     if (!row?.hasChildren || row.expanded) return
 
     const timer = setTimeout(() => onToggle(restingIn), HOVER_EXPAND_MS)
     return () => clearTimeout(timer)
-  }, [restingIn, rows, onToggle])
+  }, [restingIn, rowById, onToggle])
 
   /**
    * Where the gap opens: BETWEEN two rows — `rows.length` for the very bottom — at the depth of
@@ -329,9 +333,9 @@ export function Tree<T extends TreeNode>({
   const gap = useMemo(() => {
     if (leading === null || over === null || over.target.zone === 'into') return null
 
-    const at = rows.findIndex(row => row.node.id === over.id)
-    const target = rows[at]
-    if (!target) return null
+    const found = rowById.get(over.id)
+    if (!found) return null
+    const { row: target, at } = found
 
     // After a row means after everything it holds: an insertion beside a group belongs below its
     // last visible descendant, not between the group and its first child.
@@ -342,7 +346,7 @@ export function Tree<T extends TreeNode>({
     }
 
     return { index, depth: target.depth }
-  }, [rows, over, leading])
+  }, [rows, rowById, over, leading])
 
   /**
    * The rows on screen, `null` where the gap sits: the virtualizer counts one row more and opens
@@ -419,28 +423,33 @@ export function Tree<T extends TreeNode>({
     const chosen = rows.map(row => row.node).filter(one => selected.has(one.id) && canDrag(one))
     // Only the outermost: a row whose own ancestor is in the batch already travels with it, and
     // moving it as well would lift it out of the very subtree carrying it.
-    return chosen.filter(
-      one => !chosen.some(other => other.id !== one.id && under(other.id, one.parentId)),
-    )
+    const picked = new Set(chosen.map(one => one.id))
+    return chosen.filter(one => !upFrom(one.parentId, id => picked.has(id)))
   }
 
   /**
-   * Whether `id` sits anywhere under `ancestorId` — the whole chain, not just one step. Bounded
-   * by the node count rather than by reaching a root: a tree whose data holds a cycle would
-   * otherwise hang the window instead of refusing one drop.
+   * Whether anything on the chain above `id`, itself included, answers `met`. Bounded by the node
+   * count rather than by reaching a root: a tree whose data holds a cycle would otherwise hang
+   * the window instead of refusing one drop.
+   */
+  const upFrom = (id: string | null, met: (one: string) => boolean): boolean => {
+    let current = id
+    for (let step = 0; current !== null && step <= parentById.size; step += 1) {
+      if (met(current)) return true
+      current = parentById.get(current) ?? null
+    }
+    return false
+  }
+
+  /**
+   * Whether `id` sits anywhere under `ancestorId` — the whole chain, not just one step.
    *
    * The engines refuse the same loop on their own — `canReparent` in `scene-state`, `moveLayer`
    * in the canvas commands — and deliberately: this one keeps the gesture from being OFFERED,
    * theirs keep a command arriving from anywhere else from closing the tree on itself.
    */
-  const under = (ancestorId: string, id: string | null): boolean => {
-    let current = id
-    for (let step = 0; current !== null && step <= parentById.size; step += 1) {
-      if (current === ancestorId) return true
-      current = parentById.get(current) ?? null
-    }
-    return false
-  }
+  const under = (ancestorId: string, id: string | null): boolean =>
+    upFrom(id, one => one === ancestorId)
 
   // A row receives neither itself nor anything it holds, whatever the caller answers: those two
   // belong to the tree, and a subtree dropped into itself leaves the document with no way back.
@@ -472,7 +481,7 @@ export function Tree<T extends TreeNode>({
     // the others take nothing away from it by leaving.
     const places = dragged
       .filter(one => one.parentId === parentId)
-      .map(one => (rows.find(candidate => candidate.node.id === one.id)?.position ?? 0) - 1)
+      .map(one => (rowById.get(one.id)?.row.position ?? 0) - 1)
 
     // The index counts the level once the batch has LEFT it, so every member that sat above the
     // place aimed at shifts it down by one. Written for ONE row for a long time, which is what
@@ -658,14 +667,10 @@ export function Tree<T extends TreeNode>({
         // The blank is no row, so nothing a row lit is still aimed at — cleared even where the
         // blank itself takes nothing, or the line stays on the row the pointer left.
         setOver(null)
-        if (foreign?.carries(event)) {
-          event.preventDefault()
-          event.dataTransfer.dropEffect = 'copy'
-          return
-        }
-        if (!onDropRoot || !rowDrag.carries(event)) return
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
+        offerBlankDrop(event, {
+          copies: foreign?.carries(event) ?? false,
+          moves: onDropRoot !== undefined && rowDrag.carries(event),
+        })
       }}
       onDrop={event => {
         if (event.target !== event.currentTarget) return
