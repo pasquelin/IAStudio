@@ -453,17 +453,25 @@
       "title": "Navigate",
       "help": "Move through the scene as in a game: the mouse holds the view, W A S D travel, E and Q rise and fall. The wheel sets the speed. Escape gives the mouse back."
     },
+    "sceneNegate": {
+      "title": "Negate",
+      "help": "Marks the selected shapes as tools: they are cut out of the others, whichever button is pressed next and in whatever order they were clicked. A marked shape shows translucent red. Press again to take the mark off."
+    },
     "sceneCarve": {
       "title": "Carve",
-      "help": "Cuts the shapes that follow out of the first selected shape: a cube set inside a wall opens a window in it. The original shapes are kept — Separate gives them back."
+      "help": "Cuts the shapes marked Negate — failing that, the smaller ones — out of the biggest selected shape: a cube set inside a wall opens a window in it. The order of the clicks changes nothing. The original shapes are kept — Separate gives them back."
     },
     "sceneWeld": {
       "title": "Join",
-      "help": "Merges the selected shapes into a single solid. The original shapes are kept — Separate gives them back."
+      "help": "Merges the selected shapes into a single solid. A shape marked Negate is cut out of it instead of being added to it. The original shapes are kept — Separate gives them back."
     },
     "sceneIntersect": {
       "title": "Keep overlap",
-      "help": "Keeps only the part where the selected shapes overlap, and throws the rest away. The original shapes are kept — Separate gives them back."
+      "help": "Keeps only the part where the selected shapes overlap, and throws the rest away. A shape marked Negate is cut out of it instead of being kept. The original shapes are kept — Separate gives them back."
+    },
+    "sceneInvertCarve": {
+      "title": "Flip the fold",
+      "help": "Folds the same shapes the other way round: what was carved becomes the matter, and the matter becomes the tool. One click, no undo — for the fold that ran backwards."
     },
     "sceneSeparate": {
       "title": "Separate",

@@ -138,6 +138,43 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
       read.nodeNamed(run, 'Mur') !== undefined &&
       read.nodeNamed(run, 'Cube') !== undefined,
   },
+  {
+    /**
+     * Roblox's gesture, and the whole of why the mark exists: a UNION holding a marked shape is a
+     * PIERCING. Scored on the verb the SOLID carries, which no fusion could leave behind unless
+     * the mark reached the document first.
+     */
+    name: '6.14 marks the cube as a tool, so joining it pierces the wall',
+    said: ['Marque le cube comme outil, puis fusionne-le avec le mur.'],
+    setup: wallAndCube,
+    passed: run => read.carvedBy(run, 'subtract'),
+  },
+  {
+    name: '6.15 takes the tool mark off the cube',
+    said: ["Retire au cube sa marque d'outil."],
+    setup: async studio => {
+      await wallAndCube(studio)
+      await studio.run('node.negate', { nodeIds: [named(studio, 'Cube')] })
+    },
+    passed: run => read.isNegative(read.nodeNamed(run, 'Cube')) === false,
+  },
+  {
+    /**
+     * The repair, in one call: the solid keeps the CUBE's name where the wall's was, which is
+     * what says the roles swapped rather than the fold merely being undone.
+     */
+    name: '6.16 folds a solid the other way round',
+    said: ["Ce pli est parti à l'envers, refais-le dans l'autre sens."],
+    setup: async studio => {
+      await wallAndCube(studio)
+      await studio.run('node.carve', {
+        nodeIds: [named(studio, 'Mur'), named(studio, 'Cube')],
+        operation: 'subtract',
+      })
+    },
+    passed: run =>
+      read.carvedBy(run, 'subtract') && read.nodesOfKind(run, 'carved')[0]?.name === 'Cube',
+  },
 
   // ——— 7. Manipulation relative ———
   {

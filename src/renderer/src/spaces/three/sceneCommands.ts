@@ -1,12 +1,14 @@
 import type { CommandId } from '@shared/domain/command'
 import type { CsgOperation } from '@shared/domain/csg'
-import { canSeparate } from '@/engines/csg/carve'
+import { canInvertCarve, canNegate, canSeparate } from '@/engines/csg/carve'
 import { canRedo, canUndo } from '@/engines/core/history'
 import {
   addNodes,
   carveNodes,
   copiesOf,
   groupNodes,
+  invertCarve,
+  negateNodes,
   separateNode,
   removeNodes,
   rootedIn,
@@ -169,6 +171,12 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
       if (picked.length > 0) store.runCommand(documentId, groupNodes(picked))
       return true
 
+    // Marks the selection as tools for the next fold — Roblox's Negate. Not a fold itself, so it
+    // sits above the three and asks only that something carry a shape.
+    case 'scene.negate':
+      if (canNegate(picked)) store.runCommand(documentId, negateNodes(picked))
+      return true
+
     // The three that fold a selection into one solid. A selection too thin is left alone rather
     // than refused out loud — `canCarve` is what leaves the button inert, so it never gets here.
     case 'scene.carve':
@@ -176,6 +184,17 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
     case 'scene.intersect': {
       const folded = carveNodes(picked, OPERATION_OF[command], nodes)
       if (folded) store.runCommand(documentId, folded)
+      return true
+    }
+
+    // One click to repair a fold that ran backwards, where the alternative is an undo and a
+    // rule to understand — see `invertCarve`.
+    case 'scene.invertCarve': {
+      const solid = picked[0]
+      if (canInvertCarve(picked) && solid?.type === 'carved') {
+        const flipped = invertCarve(solid, nodes)
+        if (flipped) store.runCommand(documentId, flipped)
+      }
       return true
     }
 

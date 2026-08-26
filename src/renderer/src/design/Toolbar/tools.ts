@@ -26,6 +26,8 @@ export type ToolbarItem = {
   labelKey: string
   /** i18n key of the one-line tooltip. Absent tips the label, which is better than nothing. */
   descriptionKey?: string
+  /** What fills its `{{…}}` holes — for a tooltip that has to name what the click will act ON. */
+  descriptionValues?: Record<string, string>
   icon: string
   shortcut?: string
   disabled?: boolean

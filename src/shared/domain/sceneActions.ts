@@ -198,8 +198,29 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * Folds shapes into one solid. The first id is the matter and the rest are the tools, which
-     * is the order the toolbar reads a selection in — "pierce THIS with THAT".
+     * Marks shapes as tools for the next fold, or takes the mark off — Roblox's Negate, and the
+     * one explicit way to say which way a cut runs through either door.
+     */
+    name: 'node.negate',
+    titleKey: 'assistant.actions.nodeNegate.title',
+    descriptionKey: 'assistant.actions.nodeNegate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'nodeIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.nodeIds',
+        required: true,
+        repeated: true,
+      },
+      { key: 'negative', kind: 'boolean', labelKey: 'assistant.fields.negative', required: false },
+    ],
+  }),
+  action({
+    /**
+     * Folds shapes into one solid. The ORDER OF THE IDS says nothing — `carvePlan` elects the
+     * matter, and `matterId` is what names one outright.
      */
     name: 'node.carve',
     titleKey: 'assistant.actions.nodeCarve.title',
@@ -221,7 +242,20 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         required: true,
         options: CSG_OPERATIONS,
       },
+      { key: 'matterId', kind: 'text', labelKey: 'assistant.fields.matterId', required: false },
     ],
+  }),
+  action({
+    /**
+     * The same fold run the other way — one call to repair a cut that came out inverted, where
+     * the alternative is an undo and a rule to explain.
+     */
+    name: 'node.carveInvert',
+    titleKey: 'assistant.actions.nodeCarveInvert.title',
+    descriptionKey: 'assistant.actions.nodeCarveInvert.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [{ key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true }],
   }),
   action({
     /** Undoes a fold: the brushes the graph kept come back as meshes, where they stood. */

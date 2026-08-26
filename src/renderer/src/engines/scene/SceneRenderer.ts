@@ -75,6 +75,7 @@ import {
   type SceneState,
   type SpriteNode,
   type CarvedNode,
+  type MeshNode,
   type TextNode,
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
@@ -102,6 +103,7 @@ import {
   wearGeometry,
   applyLight,
   applyMaterial,
+  applyNegative,
   applyPath,
   applySprite,
   lightFor,
@@ -191,7 +193,8 @@ import { primitiveOf } from '@shared/domain/csg'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
-import { matrixOfTransform } from '../csg/csgMatrix'
+import { bakedGeometry } from '../csg/bakedGeometry'
+import { isCarvable, isNegative } from '../csg/carve'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
 import { NOTHING_SNAPPED, type Snapping } from '@shared/domain/snap'
@@ -709,6 +712,8 @@ export class SceneRenderer {
   private markerColor = ''
   /** And what outlines them: the edges are what carry the shape where no lamp lights it. */
   private markerEdge = ''
+  /** What a shape marked as a TOOL is painted in — see `applyNegative`. */
+  private negativeColor = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
@@ -2682,6 +2687,7 @@ export class SceneRenderer {
     // off the viewport so the body reads as an object, and the edges carry the shape.
     this.markerColor = this.viewport.paletteToken('--color-elevated')
     this.markerEdge = this.viewport.paletteToken('--color-muted')
+    this.negativeColor = this.viewport.paletteToken('--color-danger')
     this.paintBackground()
 
     if (this.grid) {
@@ -2874,11 +2880,7 @@ export class SceneRenderer {
         if (this.needsEdges()) this.applyDisplay(object)
       }
 
-      const material = standardMaterialOf(object)
-      if (material && before?.material !== node.material) {
-        applyMaterial(material, node.material, this.meshColor)
-        this.textures.get(node.id)?.apply(node.material)
-      }
+      this.paintShape(object, node, before)
       return
     }
 
@@ -2941,13 +2943,7 @@ export class SceneRenderer {
       // is the one edit here that costs anything.
       if (before?.carved !== node.carved) void this.recut(node, object)
 
-      const material = standardMaterialOf(object)
-      if (material && before?.material !== node.material) {
-        applyMaterial(material, node.material, this.meshColor)
-        // The slots too, exactly as a mesh: `buildCarved` registers them, and without this a map
-        // assigned in the inspector changed the document and nothing on screen.
-        this.textures.get(node.id)?.apply(node.material)
-      }
+      this.paintShape(object, node, before)
       return
     }
 
@@ -2962,6 +2958,24 @@ export class SceneRenderer {
         applyMaterial(material, node.material, this.meshColor)
       }
     }
+  }
+
+  /**
+   * What a shape is painted with — its material, then the TOOL MARK that overrides it.
+   *
+   * The mark belongs in the same test as the material: taking one off repaints nothing otherwise,
+   * and the shape stays red for the rest of the session. The texture slots follow, exactly as a
+   * mesh's do — without them a map assigned in the inspector changes the document and not the
+   * screen.
+   */
+  private paintShape(object: Mesh, node: MeshNode | CarvedNode, before: SceneNode | null): void {
+    const material = standardMaterialOf(object)
+    const wore = before?.id === node.id && isCarvable(before) ? before : null
+    if (!material || (wore?.material === node.material && wore.negative === node.negative)) return
+
+    applyMaterial(material, node.material, this.meshColor)
+    applyNegative(material, this.negativeColor, isNegative(node))
+    this.textures.get(node.id)?.apply(node.material)
   }
 
   private build(node: SceneNode): Object3D {
@@ -3010,11 +3024,14 @@ export class SceneRenderer {
   private buildCarved(node: CarvedNode): Mesh {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
+    applyNegative(material, this.negativeColor, isNegative(node))
 
     // The base brush AS THE RECIPE PLACES IT: its transform carries the matter's scale, so a
     // wall shown uncut while the worker runs is the size it will be once pierced.
-    const raw = geometryFor(primitiveOf(node.carved.base))
-    raw.applyMatrix4(matrixOfTransform(node.carved.base.transform))
+    const raw = bakedGeometry(
+      geometryFor(primitiveOf(node.carved.base)),
+      node.carved.base.transform,
+    )
     const mesh = new Mesh(raw, material)
     // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps
     // are named by the document and loaded by nobody.
@@ -3362,6 +3379,7 @@ export class SceneRenderer {
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
     const material = new MeshStandardMaterial()
     applyMaterial(material, node.material, this.meshColor)
+    applyNegative(material, this.negativeColor, isNegative(node))
 
     const mesh = new Mesh(this.shapes.acquire(node.geometry, node.material.tilesPerMetre), material)
     // A texture arrives long after the frame that asked for it: the render is requested again

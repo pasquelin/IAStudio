@@ -145,6 +145,20 @@ describe('createInstancedGroups', () => {
     expect(createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
   })
 
+  /**
+   * The mark decides a per-node LOOK, so it decides a group. An instance draws the first member's
+   * own material — the very object `applyNegative` reddens — so one marked brick among sixty-four
+   * would have turned the whole wall red, and its own repaint would have been drawn by nobody.
+   */
+  it('separates a shape marked as a tool from the ones that are not', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    const first = nodes[0]
+    if (first?.type === 'mesh') nodes[0] = { ...first, negative: true }
+
+    expect(createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
+  })
+
   it('separates two shapes that no single draw call could share', () => {
     const scene = host()
     const { nodes, objects } = alike(WORTH_INSTANCING * 2)
@@ -337,7 +351,7 @@ describe('keepsItsGroup', () => {
     expect(keepsItsGroup(node, { ...node, transform: moved })).toBe(true)
   })
 
-  it('lets go of a node whose shape, paint, visibility, parent or shadow changed', () => {
+  it('lets go of a node whose shape, paint, visibility, parent, shadow or mark changed', () => {
     const node = meshNode('n0')
     const elsewhere: Partial<typeof node>[] = [
       { geometry: { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 8 } },
@@ -346,9 +360,12 @@ describe('keepsItsGroup', () => {
       { parentId: 'other' },
       { castShadow: !node.castShadow },
       { receiveShadow: !node.receiveShadow },
+      // An instance draws the FIRST member's own material, so a brick marked as a tool inside a
+      // wall of sixty-four would either stay grey or turn the whole wall red.
+      { negative: true },
     ]
 
-    // Each of the six is read by the grouping: kept, the node would go on being drawn by an
+    // Each of the seven is read by the grouping: kept, the node would go on being drawn by an
     // instance that spells something it no longer is — a shadow that will not go away among
     // them, since the source that stopped casting is the one nothing draws.
     for (const moved of elsewhere) {

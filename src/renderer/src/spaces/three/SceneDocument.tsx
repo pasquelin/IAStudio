@@ -37,7 +37,15 @@ import { useModelClips } from '@/stores/modelClips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
-import { canCarve, canSeparate } from '@/engines/csg/carve'
+import {
+  canCarve,
+  canInvertCarve,
+  canNegate,
+  canSeparate,
+  carvePlan,
+  isCarvable,
+  isNegative,
+} from '@/engines/csg/carve'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, sceneViewChromeOf, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfiles'
@@ -510,6 +518,18 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     [scene.nodes, scene.selectedIds],
   )
   const cannotCarve = !canCarve(foldable)
+  const cannotNegate = !canNegate(foldable)
+  // Armed says « what is picked is already a tool » — the second signal, for a shape scrolled off
+  // screen or hidden, where the red translucency in the viewport says nothing.
+  const allNegative = !cannotNegate && foldable.every(node => !isCarvable(node) || isNegative(node))
+  // Named BEFORE the click, which nothing on screen did: the election weighs volume, and a
+  // generous cutter can out-weigh a thin wall. `shapeVolume` holds its answer per descriptor, so
+  // re-electing on every render of the bar costs one lookup a shape.
+  const matterName = useMemo(
+    () =>
+      canCarve(foldable) ? carvePlan(foldable, 'subtract', scene.nodes)?.matter.name : undefined,
+    [foldable, scene.nodes],
+  )
   const cannotSeparate = !canSeparate(foldable)
   const nothingHeld = useSceneClipboard(state => state.nodes.length === 0)
   // The boolean rather than the object: `hideIn` mints a fresh isolation on every hidden node,
@@ -529,6 +549,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // The one tool of the bar whose armed state is not a setting: it says an isolation is
       // running, which is what makes leaving it the same press that entered it.
       'scene.isolate': isolated,
+      // The other one: it says the selection is already marked, so the press takes the mark off.
+      'scene.negate': allNegative,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -543,11 +565,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.isolate': nothingSelected && !isolated,
       'scene.hide': nothingSelected,
       'scene.showAll': !isolated,
+      // Marking is not folding: one shape is enough, where the three below need two.
+      'scene.negate': cannotNegate,
       // The same test `carveNodes` refuses on, so a live-looking button is never a dead click.
       'scene.carve': cannotCarve,
       'scene.weld': cannotCarve,
       'scene.intersect': cannotCarve,
       'scene.separate': cannotSeparate,
+      'scene.invertCarve': !canInvertCarve(foldable),
     }
 
     return [
@@ -560,6 +585,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
         disabled: unavailable[tool.command],
         pressed: pressed[tool.command],
+        // The one tooltip that names what the click will act ON — see `matterName`.
+        ...(tool.command === 'scene.carve' && matterName
+          ? { descriptionKey: 'sceneTools.carveOnHint', descriptionValues: { name: matterName } }
+          : {}),
         // Armed says « something is being kept from the view », which a plain Hide sets too —
         // so the word has to follow, or the button offers to isolate what it is about to reveal.
         ...(tool.id === 'isolate' && isolated
@@ -577,6 +606,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     label,
     nothingSelected,
     cannotCarve,
+    cannotNegate,
+    allNegative,
+    matterName,
+    foldable,
     cannotSeparate,
     nothingHeld,
     view.snapping,

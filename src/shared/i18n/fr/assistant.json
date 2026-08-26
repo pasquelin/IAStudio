@@ -917,9 +917,17 @@
         "title": "Désigner une cible",
         "description": "Désigne dans le document ouvert ce que la suite visera — un calque, un objet de scène, un clip. Prenez l’identifiant dans la liste des cibles de ce briefing. Sans elle, il n’y a rien à viser."
       },
+      "nodeNegate": {
+        "title": "Marquer des objets comme outils",
+        "description": "Marque des objets de la scène devant, ou retire la marque : un objet marqué est CREUSÉ dans les autres au pli suivant, quel que soit le pli demandé et quel que soit l’ordre des identifiants. Sans marque, la plus grosse forme est la matière."
+      },
       "nodeCarve": {
         "title": "Percer, fusionner ou croiser des objets",
-        "description": "Plie plusieurs objets de la scène devant en un seul solide : le premier identifiant est la matière, les suivants sont les outils. Les formes d’origine sont conservées dans le solide et « node.separate » les rend. Répond avec l’identifiant du solide."
+        "description": "Plie plusieurs objets de la scène devant en un seul solide. L’ORDRE DES IDENTIFIANTS NE COMPTE PAS : la matière est la plus grosse forme, sauf si « matterId » la nomme, et un objet marqué par « node.negate » est toujours un outil. Les formes d’origine sont conservées dans le solide et « node.separate » les rend. Répond avec l’identifiant du solide."
+      },
+      "nodeCarveInvert": {
+        "title": "Inverser un pli",
+        "description": "Refait le pli d’un solide de la scène devant dans l’autre sens : ce qui avait été creusé devient la matière, et la matière devient l’outil. Pour le pli qui est parti à l’envers, sans annuler."
       },
       "nodeSeparate": {
         "title": "Séparer un solide",
@@ -1075,6 +1083,8 @@
       "turn": "Sens du retournement ou du quart de tour",
       "nodeId": "Identifiant de l’objet",
       "nodeIds": "Identifiants des objets",
+      "matterId": "Identifiant de la forme à creuser",
+      "negative": "Marquer, ou retirer la marque",
       "nodeKind": "Ce qu’il faut ajouter",
       "relative": "À vrai, les valeurs sont des ÉCARTS et non des valeurs finales : position et rotation s’AJOUTENT à ce qui est là, échelle et intensité le MULTIPLIENT. Un mètre plus haut s’écrit positionY 1 avec relative vrai ; de moitié s’écrit scaleX 0,5 avec relative vrai",
       "positionX": "Position en largeur",

@@ -35,7 +35,7 @@ import { applySelection, deselect, type SelectionMode } from '@/helpers/selectio
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
 import { carvedNode, groupNode, meshNode } from './nodeFactory'
-import { canCarve, carveGraph, isCarvable, placedIn } from '../csg/carve'
+import { canCarve, carveGraph, carvePlan, isCarvable, isNegative, placedIn } from '../csg/carve'
 import { isCsgGraph, type CsgOperation } from '@shared/domain/csg'
 import {
   canCastShadow,
@@ -236,31 +236,41 @@ export function setMeshMaterial(id: string, material: MaterialDescriptor): Comma
 }
 
 /**
- * The material of whatever wears one — a mesh, a text or a solid.
- *
- * Keyed on the field rather than on the type, unlike `patchPart`: three node kinds hold the same
- * descriptor, and a command per kind is how the solid came to be paintable nowhere.
+ * One field of a node, on every KIND that carries it — keyed on the field rather than on the
+ * type, unlike `patchPart`. Three node kinds hold a material and two hold the tool mark; a
+ * command per kind is how the solid came to be paintable nowhere.
  */
-export function setNodeMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
-  let previous: MaterialDescriptor | null = null
+function editField<T extends SceneNode, K extends keyof T & string>(
+  id: string,
+  holds: (node: SceneNode) => node is T,
+  field: K,
+  written: T[K],
+): Command<SceneState> {
+  // Wrapped rather than compared to a sentinel: `false` and `null` are both legal values here.
+  let previous: { held: T[K] } | null = null
 
-  const write = (state: SceneState, written: MaterialDescriptor): SceneState => ({
+  const write = (state: SceneState, value: T[K]): SceneState => ({
     ...state,
     nodes: state.nodes.map(node =>
-      node.id === id && carriesMaterial(node) ? { ...node, material: written } : node,
+      node.id === id && holds(node) ? { ...node, [field]: value } : node,
     ),
   })
 
   return {
-    id: `material:${id}`,
+    id: `${field}:${id}`,
     apply: state => {
       const node = nodeById(state, id)
-      if (!node || !carriesMaterial(node)) return state
-      previous = node.material
-      return write(state, material)
+      if (!node || !holds(node)) return state
+      previous = { held: node[field] }
+      return write(state, written)
     },
-    revert: state => (previous ? write(state, previous) : state),
+    revert: state => (previous ? write(state, previous.held) : state),
   }
+}
+
+/** The material of whatever wears one — a mesh, a text or a solid. */
+export function setNodeMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+  return editField(id, carriesMaterial, 'material', material)
 }
 
 export function setLight(id: string, light: LightDescriptor): Command<SceneState> {
@@ -803,22 +813,24 @@ export function groupNodes(nodes: readonly SceneNode[]): Command<SceneState> {
 /**
  * Folds a selection into one solid, and takes the nodes it was cut from out of the scene.
  *
- * The first shape is the matter: the solid stands where it stood, wears its material and hangs
- * from its parent, so the cut reads as the wall gaining a window rather than a new object
- * appearing. `null` when fewer than two nodes carry a shape at all.
+ * The matter is `carvePlan`'s to elect and the ORDER OF THE CLICKS says nothing: the solid stands
+ * where the matter stood, wears its material and hangs from its parent, so the cut reads as the
+ * wall gaining a window rather than a new object appearing. `matterId` forces the election for
+ * the rare case a hand means the other way round; `null` when fewer than two nodes carry a shape.
  */
 export function carveNodes(
   picked: readonly SceneNode[],
   operation: CsgOperation,
   all: readonly SceneNode[],
+  matterId?: string,
 ): Command<SceneState> | null {
   if (!canCarve(picked)) return null
-  const [matter, ...tools] = picked.filter(isCarvable)
-  // Unreachable through `canCarve`, which now demands every node carry a shape — kept because
-  // the destructuring cannot say so to the compiler.
-  if (!matter) return null
+  const plan = carvePlan(picked, operation, all, matterId)
+  // A `matterId` naming nothing in the selection: refused rather than quietly elected otherwise.
+  if (!plan) return null
 
-  const solid = carvedNode(carveGraph(matter, tools, operation, all), {
+  const { matter, tools } = plan
+  const solid = carvedNode(carveGraph(matter, tools, all), {
     // Without the matter's SCALE, which travelled into the base brush — see `carveGraph`, where
     // keeping it here is what sheared a turned tool.
     transform: { ...matter.transform, scale: { x: 1, y: 1, z: 1 } },
@@ -833,9 +845,36 @@ export function carveNodes(
     // the scene no longer holds is dropped by `flattenTree` — invisible in the outliner, still
     // written to the file.
     ...subtreeOf(all, matter.id)
-      .concat(tools.flatMap(tool => subtreeOf(all, tool.id)))
+      .concat(tools.flatMap(tool => subtreeOf(all, tool.node.id)))
       .map(node => removeNode(node.id)),
   ])
+}
+
+/**
+ * Marks shapes as tools for the next boolean, or takes the mark off — Roblox's Negate.
+ *
+ * Nodes carrying no shape are skipped rather than given a flag nothing would read, exactly as
+ * `setShadowOn` skips a light.
+ */
+export function setNodesNegative(
+  picked: readonly SceneNode[],
+  negative: boolean,
+): Command<SceneState> {
+  return batch('negate', picked.filter(isCarvable), node =>
+    editField(node.id, isCarvable, 'negative', negative),
+  )
+}
+
+/**
+ * The same, decided from what is already marked — one button doing both, since a toolbar button
+ * has no room to say which of the two it means. A selection wholly marked comes back unmarked;
+ * anything else is marked, so a half-marked selection finishes the job rather than undoing it.
+ */
+export function negateNodes(picked: readonly SceneNode[]): Command<SceneState> {
+  return setNodesNegative(
+    picked,
+    picked.filter(isCarvable).some(node => !isNegative(node)),
+  )
 }
 
 /**
@@ -844,24 +883,70 @@ export function carveNodes(
  * kept, which is the whole point of ADR-25: a mesh alone could not be taken apart again.
  */
 export function separateNode(node: CarvedNode): Command<SceneState> {
-  const parts = [node.carved.base, ...node.carved.steps.map(step => step.part)]
-
   return multi(commandId('separate', [node.id]), [
-    ...parts.map(part => {
-      // In the solid's frame, so a brush lands back where the cut had it standing.
-      const transform = placedIn(node.transform, part.transform)
-      const born = { material: part.material, parentId: node.parentId, name: part.name }
-
-      // A brush that carried a RECIPE comes back a solid, not a mesh: separating once must not
-      // flatten the cuts already made inside it.
-      return addNode(
-        isCsgGraph(part.geometry)
-          ? carvedNode(part.geometry, { ...born, transform })
-          : { ...meshNode(part.geometry, born), transform },
-      )
-    }),
+    ...brushesOf(node).map(brush => addNode(brush)),
     removeNode(node.id),
   ])
+}
+
+/**
+ * The same fold, run the OTHER WAY — one gesture to repair a cut that came out inverted, with no
+ * undo and nothing to understand. The brushes come back exactly as `separateNode` gives them and
+ * are folded again with the first TOOL for matter; the roles swap through the marks, so
+ * `carvePlan` stays the one place that reads them. `null` for a solid of a single brush.
+ */
+export function invertCarve(
+  node: CarvedNode,
+  all: readonly SceneNode[],
+): Command<SceneState> | null {
+  const brushes = brushesOf(node)
+  const [was, next] = brushes
+  if (!was || !next) return null
+
+  const swapped = brushes.map(brush =>
+    brush === was ? withNegative(brush, true) : brush === next ? withNegative(brush, false) : brush,
+  )
+  const scene = all.filter(one => one.id !== node.id).concat(swapped)
+  const folded = carveNodes(swapped, node.carved.steps[0]?.operation ?? 'subtract', scene, next.id)
+  if (!folded) return null
+
+  return multi(commandId('invertCarve', [node.id]), [
+    ...swapped.map(brush => addNode(brush)),
+    removeNode(node.id),
+    folded,
+  ])
+}
+
+function withNegative(node: SceneNode, negative: boolean): SceneNode {
+  return isCarvable(node) ? { ...node, negative } : node
+}
+
+/**
+ * The shapes a solid was cut from, standing where the cut had them. A brush that was SUBTRACTED
+ * comes back MARKED, so folding the same selection again gives the same solid whichever button is
+ * pressed — DERIVED from the verb, not restored: a plain Percer with no marks hands its tool back
+ * red, and an `intersect` fold hands back nothing marked at all.
+ */
+function brushesOf(node: CarvedNode): SceneNode[] {
+  const parts = [
+    { part: node.carved.base, negative: false },
+    ...node.carved.steps.map(step => ({
+      part: step.part,
+      negative: step.operation === 'subtract',
+    })),
+  ]
+
+  return parts.map(({ part, negative }) => {
+    // In the solid's frame, so a brush lands back where the cut had it standing.
+    const transform = placedIn(node.transform, part.transform)
+    const born = { material: part.material, parentId: node.parentId, name: part.name, negative }
+
+    // A brush that carried a RECIPE comes back a solid, not a mesh: separating once must not
+    // flatten the cuts already made inside it.
+    return isCsgGraph(part.geometry)
+      ? carvedNode(part.geometry, { ...born, transform })
+      : { ...meshNode(part.geometry, born), transform }
+  })
 }
 
 function hang(state: SceneState, id: string, parentId: string | null): SceneState {

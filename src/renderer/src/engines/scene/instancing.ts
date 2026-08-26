@@ -131,8 +131,12 @@ export function createInstancedGroups(
 
         // The shadow flags belong to the key: an `InstancedMesh` carries ONE of each, and the
         // shadow camera reads only the layer the sources have left — so a group that mixed them
-        // would give its own answer to every node in it.
-        const key = `${keyOf(node)}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}`
+        // would give its own answer to every node in it. The TOOL MARK is there for the same
+        // reason and it is louder: an instance draws the first member's own material, so one
+        // negated brick among sixty-four would turn the whole wall red.
+        const key = `${keyOf(node)}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}${
+          node.negative === true ? 1 : 0
+        }`
         const held = groups.get(key)
         if (held) {
           held.ids.push(node.id)
@@ -283,10 +287,11 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
     previous.material === node.material &&
     previous.visible === node.visible &&
     previous.parentId === node.parentId &&
-    // The shadow flags are part of the group key: an instance carries one of each, so a node
-    // that changed its mind about casting has to leave the group rather than keep its slot.
+    // The shadow flags and the tool mark are part of the group key: an instance carries one of
+    // each, so a node that changed its mind has to leave the group rather than keep its slot.
     previous.castShadow === node.castShadow &&
-    previous.receiveShadow === node.receiveShadow
+    previous.receiveShadow === node.receiveShadow &&
+    previous.negative === node.negative
   )
 }
 

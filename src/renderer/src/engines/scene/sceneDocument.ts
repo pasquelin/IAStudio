@@ -244,7 +244,11 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (!isOptionalFlag(value.castShadow) || !isOptionalFlag(value.receiveShadow)) return false
 
   if (value.type === 'mesh') {
-    return describes(value.geometry, GEOMETRY_SPECS) && isMaterial(value.material)
+    return (
+      describes(value.geometry, GEOMETRY_SPECS) &&
+      isMaterial(value.material) &&
+      isOptionalFlag(value.negative)
+    )
   }
   // A model is a reference and nothing else: an absent or non-string `assetId` costs the node,
   // never the file. What it points at is resolved when the scene is built, not here — a project
@@ -269,7 +273,8 @@ function isSceneNode(value: unknown): value is SceneNode {
   // The recipe, and the material it wears like a mesh. A graph that does not read is the node
   // refused rather than a solid drawn from half a recipe — glTF being index-bound, half a graph
   // is a broken file, not a partly right one.
-  if (value.type === 'carved') return isCsgGraph(value.carved) && isMaterial(value.material)
+  if (value.type === 'carved')
+    return isCsgGraph(value.carved) && isMaterial(value.material) && isOptionalFlag(value.negative)
   // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
   // camera is without them, and `revived` lays them under whatever the file did say.
   if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
