@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
-import { flattenTree, Tree } from './Tree'
+import { flattenTree, Tree, type TreeNode } from './Tree'
 
 const NODES = [
   { id: 'scene', parentId: null },
@@ -794,6 +794,40 @@ describe('Tree', () => {
       expect(slotsDrawn()).toEqual(['scene', 'a', 'a1', 'gap', 'b'])
     })
 
+    /**
+     * 🛑 The hover says WHERE and the drop says WHEN, and between the two the document can move:
+     * another window editing it, a ⌘Z arriving while the hand still holds. An index counted on a
+     * level that has changed since lands the batch somewhere else, without a word.
+     */
+    it('works out where the drop lands again, on the rows as they are at the drop', () => {
+      const onInsert = vi.fn()
+      const tree = (nodes: readonly TreeNode[]) => (
+        <Tree
+          nodes={nodes}
+          label="Outline"
+          selectedIds={[]}
+          expandedIds={new Set(['scene', 'a'])}
+          onSelect={() => {}}
+          onToggle={() => {}}
+          onInsert={onInsert}
+          renderRow={row => <span>{row.node.id}</span>}
+        />
+      )
+      const { rerender } = render(tree(NODES))
+      const [, a, , b] = screen.getAllByRole('treeitem')
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+
+      // A row arrives ahead of `a` while the hand is still holding, so the place `b` was aiming
+      // at has moved down by one.
+      rerender(tree([NODES[0]!, { id: 'z', parentId: 'scene' }, ...NODES.slice(1)]))
+      fireEvent.drop(gap()!, { dataTransfer: data })
+
+      expect(onInsert).toHaveBeenCalledWith(['b'], 'scene', 1)
+    })
+
     it('picks up a row for a tree that only inserts', () => {
       render(
         <Tree
@@ -838,6 +872,97 @@ describe('Tree', () => {
     expect(droppable).toHaveBeenCalledWith({ id: 'b', parentId: 'scene' }, [
       { id: 'a', parentId: 'scene' },
     ])
+  })
+
+  describe('dragging several rows at once', () => {
+    // `a` holds `a1`; `b` and `c` sit beside `a` at the root.
+    const FOUR: TreeNode[] = [...NODES, { id: 'c', parentId: 'scene' }]
+
+    const renderPicked = (
+      selectedIds: readonly string[],
+      handlers: {
+        onDrop?: (ids: readonly string[], parentId: string) => void
+        onInsert?: (ids: readonly string[], parentId: string | null, index: number) => void
+      },
+    ) => {
+      render(
+        <Tree
+          nodes={FOUR}
+          label="Outline"
+          selectedIds={selectedIds}
+          expandedIds={new Set(['scene', 'a'])}
+          onSelect={() => {}}
+          onToggle={() => {}}
+          dragMultiple
+          onDrop={handlers.onDrop ?? (() => {})}
+          {...(handlers.onInsert ? { onInsert: handlers.onInsert } : {})}
+          renderRow={row => <span>{row.node.id}</span>}
+        />,
+      )
+      // scene, a, a1, b, c
+      return screen.getAllByRole('treeitem')
+    }
+
+    /**
+     * `selectedIds` runs in the order of the CLICKS that built it — its last entry is the anchor
+     * a range extends from. A batch handed over in that order would land upside down.
+     */
+    it('carries the selection in the order of the screen, not the order it was picked in', () => {
+      const onDrop = vi.fn()
+      const [scene, a, , , c] = renderPicked(['c', 'a'], { onDrop })
+      const data = dragTransfer()
+
+      fireEvent.dragStart(c!, { dataTransfer: data })
+      fireEvent.dragOver(scene!, { dataTransfer: data })
+      fireEvent.drop(scene!, { dataTransfer: data })
+
+      expect(onDrop).toHaveBeenCalledWith(['a', 'c'], 'scene')
+      expect(a).toBeDefined()
+    })
+
+    // The index counts the level once the batch has LEFT it, so each member that sat above the
+    // place aimed at shifts it down by one.
+    it('counts every member of the batch that leaves the level ahead of the drop', () => {
+      const onInsert = vi.fn()
+      const [, a, , b] = renderPicked(['a', 'c'], { onInsert })
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a!, { dataTransfer: data })
+      // The top edge of `b`, which is the second place of the level — `a` leaves it from the
+      // first, so the batch lands on the first.
+      b!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      fireEvent.dragOver(b!, { dataTransfer: data, clientY: 3 })
+      fireEvent.drop(b!, { dataTransfer: data, clientY: 3 })
+
+      expect(onInsert).toHaveBeenCalledWith(['a', 'c'], 'scene', 0)
+    })
+
+    it('says nothing when the whole batch already sits on that very run of places', () => {
+      const onInsert = vi.fn()
+      const [, a, , b] = renderPicked(['a', 'b'], { onInsert })
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a!, { dataTransfer: data })
+      // Below `b`, where `a` and `b` already are: the drop would rebuild the level into itself.
+      b!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      fireEvent.dragOver(b!, { dataTransfer: data, clientY: 27 })
+      fireEvent.drop(b!, { dataTransfer: data, clientY: 27 })
+
+      expect(onInsert).not.toHaveBeenCalled()
+    })
+
+    // It already travels inside the group carrying it, and moving it as well would lift it out.
+    it('leaves out a row whose own ancestor is in the batch', () => {
+      const onDrop = vi.fn()
+      const [scene, a] = renderPicked(['a', 'a1'], { onDrop })
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a!, { dataTransfer: data })
+      fireEvent.dragOver(scene!, { dataTransfer: data })
+      fireEvent.drop(scene!, { dataTransfer: data })
+
+      expect(onDrop).toHaveBeenCalledWith(['a'], 'scene')
+    })
   })
 
   // The drag channel is shared by every tree of the studio, so `carries` alone would let a

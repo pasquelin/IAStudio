@@ -715,38 +715,69 @@ export function reparentNode(id: string, parentId: string | null): Command<Scene
 }
 
 /**
- * Moves a node WITHIN the order of a level, and to another level in the same gesture — a row
- * dragged between two others, where `reparentNode` answers the drop onto one.
+ * Moves a BATCH within the order of a level, and to another level in the same gesture — several
+ * rows dragged between two others. They land contiguous, in the order given.
  *
- * `index` counts the level once the node has LEFT it, which is what `Tree` reports. The order of
- * a level IS the order of the flat `nodes`, so the node is placed relative to its SIBLINGS — just
- * before the one it takes the place of, which keeps a parent ahead of its own children.
+ * 🛑 `index` counts the level once the WHOLE batch has left it, which is what `Tree` reports — so
+ * they are lifted together and put back together, NEVER one after the other: a member still in
+ * place is counted as a sibling by the next one, and the batch scatters. Measured on a level of
+ * five where two members moved to its end: they landed two apart.
  */
-export function reorderNode(
-  id: string,
+export function reorderNodes(
+  ids: readonly string[],
   parentId: string | null,
   index: number,
 ): Command<SceneState> {
-  let previous: { parentId: string | null; at: number } | null = null
+  let previous: { id: string; parentId: string | null; at: number }[] | null = null
 
   return {
-    id: `reorder:${id}`,
+    id: `reorder:${ids.join(':')}`,
     apply: state => {
-      const at = state.nodes.findIndex(node => node.id === id)
-      if (at < 0 || !canReparent(state.nodes, id, parentId)) return state
+      const moving = ids
+        .map(id => state.nodes.find(node => node.id === id))
+        .filter(node => node !== undefined)
+        .filter(node => canReparent(state.nodes, node.id, parentId))
+      if (moving.length === 0) return state
 
-      previous = { parentId: state.nodes[at]?.parentId ?? null, at }
-      return lifted(state, id, parentId, rest => {
-        const before = rest.filter(one => one.parentId === parentId)[index]
-        // Past the last sibling is the end of the level, and the array's end is a place no
-        // sibling comes after — the subtree having left, nothing of it is stranded there.
-        return before === undefined ? rest.length : rest.indexOf(before)
-      })
+      previous = moving.map(node => ({
+        id: node.id,
+        parentId: node.parentId,
+        at: state.nodes.findIndex(one => one.id === node.id),
+      }))
+
+      // Each subtree WHOLE, and each node once: a member nested inside another member is already
+      // carried by it, and taking it twice would put it in the array twice.
+      const taken = new Set<string>()
+      const carried: SceneNode[] = []
+      for (const node of moving) {
+        const own = new Set(subtreesOf(state.nodes, [node.id]).map(one => one.id))
+        for (const one of state.nodes) {
+          if (!own.has(one.id) || taken.has(one.id)) continue
+          taken.add(one.id)
+          carried.push(one.id === node.id ? { ...one, parentId } : one)
+        }
+      }
+
+      const rest = state.nodes.filter(one => !taken.has(one.id))
+      const before = rest.filter(one => one.parentId === parentId)[index]
+      // Past the last sibling is the end of the level, and the array's end is a place no sibling
+      // comes after — the batch having left, nothing of it is stranded there.
+      const target = before === undefined ? rest.length : rest.indexOf(before)
+
+      return { ...state, nodes: [...rest.slice(0, target), ...carried, ...rest.slice(target)] }
     },
-    // Back where it was taken from. The subtree lands whole at that one index, so a subtree that
-    // was SCATTERED comes back gathered — the same tree, since a level is read by `parentId`.
+    // Each back where it was taken from, lowest index first: putting them back in that order
+    // rebuilds the array the batch left. A subtree that was SCATTERED comes back gathered — the
+    // same tree, since a level is read by `parentId`.
     revert: state =>
-      previous === null ? state : lifted(state, id, previous.parentId, () => previous?.at ?? 0),
+      previous === null
+        ? state
+        : [...previous]
+            .sort((one, other) => one.at - other.at)
+            .reduce(
+              (current, back) => lifted(current, back.id, back.parentId, () => back.at),
+              state,
+            ),
   }
 }
 

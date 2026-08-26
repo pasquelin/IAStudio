@@ -206,6 +206,63 @@ describe('SceneTree', () => {
     expect(scene().nodes.map(node => node.parentId)).toEqual(before)
   })
 
+  /**
+   * The reason anyone selects six objects: filing them all at once. ONE entry in the history —
+   * six ⌘Z for one gesture is six presses the hand never asked for.
+   */
+  it('files the whole selection into the row it is dropped on, in one entry', async () => {
+    const user = userEvent.setup()
+    render(<SceneTree documentId="doc-1" />)
+    const rowOf = (name: string): HTMLElement =>
+      screen.getByText(name).closest('[role="treeitem"]') as HTMLElement
+
+    await user.click(screen.getByText('AmbientLight'))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('HemisphereLight'))
+    await user.keyboard('{/Meta}')
+
+    const data = dragData()
+    fireEvent.dragStart(rowOf('AmbientLight'), { dataTransfer: data })
+    fireEvent.dragOver(rowOf('DirectionalLight'), { dataTransfer: data })
+    fireEvent.drop(rowOf('DirectionalLight'), { dataTransfer: data })
+
+    const under = (name: string): string | null | undefined =>
+      scene().nodes.find(node => node.name === name)?.parentId
+    const sun = scene().nodes.find(node => node.name === 'DirectionalLight')?.id
+    expect([under('AmbientLight'), under('HemisphereLight')]).toEqual([sun, sun])
+
+    useScenes.getState().undo('doc-1')
+    expect([under('AmbientLight'), under('HemisphereLight')]).toEqual([null, null])
+  })
+
+  // Handed over in the order of the screen, and laid down in that order: a batch that arrived
+  // upside down would be a gesture nobody asked for.
+  it('lays a selection dropped between two rows down in the order it was shown', async () => {
+    const user = userEvent.setup()
+    render(<SceneTree documentId="doc-1" />)
+    const rows = screen.getAllByRole('treeitem')
+    const order = (): (string | undefined)[] =>
+      scene()
+        .nodes.filter(node => node.parentId === null)
+        .map(node => node.name)
+    const [first, second, third] = order()
+
+    // The last two rows, picked bottom first so the selection is built against the screen.
+    await user.click(screen.getByText(third!))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText(second!))
+    await user.keyboard('{/Meta}')
+
+    const data = dragData()
+    fireEvent.dragStart(rows[2]!, { dataTransfer: data })
+    // The top edge of the first row of the level.
+    rows[1]!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+    fireEvent.dragOver(rows[1]!, { dataTransfer: data, clientY: 3 })
+    fireEvent.drop(rows[1]!, { dataTransfer: data, clientY: 3 })
+
+    expect(order().slice(0, 3)).toEqual([second, third, first])
+  })
+
   it('folds the root away, which is session state and not an edit', async () => {
     render(<SceneTree documentId="doc-1" />)
 

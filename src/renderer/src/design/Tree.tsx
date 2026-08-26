@@ -274,16 +274,15 @@ export function Tree<T extends TreeNode>({
   // is the drop.
   const [over, setOver] = useState<{ id: string; target: DropTarget } | null>(null)
   /**
-   * What the hand is holding, the row it took hold of FIRST — which is also what the ghost
-   * shows and what the insertion arithmetic runs on.
+   * What the hand is holding, IN THE ORDER OF THE SCREEN — which is the order a batch lands in.
    *
-   * The batch is settled here, when the drag starts, and read on every hover. It cannot be read
-   * off the payload: `getData` answers nothing until the drop itself, by design of the platform,
-   * so a target asked while the pointer is over it has no other way to know what is coming.
+   * Settled here, when the drag starts, and read on every hover. It cannot be read off the
+   * payload: `getData` answers nothing until the drop itself, by design of the platform, so a
+   * target asked while the pointer is over it has no other way to know what is coming.
    */
   const [dragged, setDragged] = useState<readonly T[] | null>(null)
-  /** The row the gesture started on. The ghost shows it, and the index arithmetic runs on it. */
-  const held = dragged?.[0] ?? null
+  /** The topmost row of the batch: the insertion arithmetic and the payload's head both use it. */
+  const leading = dragged?.[0] ?? null
   const scroller = useRef<HTMLDivElement>(null)
   const rows = useMemo(
     () => flattenTree(nodes, expandedIds, expandable),
@@ -318,7 +317,7 @@ export function Tree<T extends TreeNode>({
    * with the subtree would resize the list under the pointer on every hover.
    */
   const gap = useMemo(() => {
-    if (held === null || over === null || over.target.zone === 'into') return null
+    if (leading === null || over === null || over.target.zone === 'into') return null
 
     const at = rows.findIndex(row => row.node.id === over.id)
     const target = rows[at]
@@ -333,7 +332,7 @@ export function Tree<T extends TreeNode>({
     }
 
     return { index, depth: target.depth }
-  }, [rows, over, held])
+  }, [rows, over, leading])
 
   /**
    * The rows on screen, `null` where the gap sits: the virtualizer counts one row more and opens
@@ -400,16 +399,19 @@ export function Tree<T extends TreeNode>({
    * What taking hold of `node` picks up: the whole selection where the caller asked for it and
    * the row is part of it, that row alone everywhere else.
    *
-   * The row taken hold of comes FIRST, whatever its place in the selection: the ghost shows it,
-   * and it is the one the pointer is actually over.
+   * In the ORDER OF THE SCREEN, and not the order the selection was built in — `selectedIds`
+   * runs by the clicks that made it, and a batch inserted between two rows lands in the order it
+   * is handed over. A ⌘-click that put the last row first would flip the two on the way down.
    */
   const batchFrom = (node: T): readonly T[] => {
     if (!dragMultiple || !selected.has(node.id)) return [node]
 
-    const rest = rows
-      .map(row => row.node)
-      .filter(one => one.id !== node.id && selected.has(one.id) && canDrag(one))
-    return [node, ...rest]
+    const chosen = rows.map(row => row.node).filter(one => selected.has(one.id) && canDrag(one))
+    // Only the outermost: a row whose own ancestor is in the batch already travels with it, and
+    // moving it as well would lift it out of the very subtree carrying it.
+    return chosen.filter(
+      one => !chosen.some(other => other.id !== one.id && under(other.id, one.parentId)),
+    )
   }
 
   /**
@@ -452,19 +454,27 @@ export function Tree<T extends TreeNode>({
     row: TreeRow<T>,
     side: 'before' | 'after',
   ): { parentId: string | null; index: number } | null => {
-    if (!held || !dragged || dragged.some(one => under(one.id, row.node.parentId))) return null
+    if (!dragged || dragged.some(one => under(one.id, row.node.parentId))) return null
 
     const at = side === 'before' ? row.position - 1 : row.position
-    // Counted on the row the hand took hold of. An insertion is arithmetic written for ONE row
-    // leaving its level, which is why `dragMultiple` is off wherever `onInsert` is used.
-    const from =
-      held.parentId === row.node.parentId
-        ? (rows.find(candidate => candidate.node.id === held.id)?.position ?? 0) - 1
-        : null
+    const parentId = row.node.parentId
+    // Where each member of the batch sits today, for the members of the RECEIVING level alone —
+    // the others take nothing away from it by leaving.
+    const places = dragged
+      .filter(one => one.parentId === parentId)
+      .map(one => (rows.find(candidate => candidate.node.id === one.id)?.position ?? 0) - 1)
 
-    if (from === null) return { parentId: row.node.parentId, index: at }
-    const index = from < at ? at - 1 : at
-    return index === from ? null : { parentId: row.node.parentId, index }
+    // The index counts the level once the batch has LEFT it, so every member that sat above the
+    // place aimed at shifts it down by one. Written for ONE row for a long time, which is what
+    // kept `dragMultiple` off wherever `onInsert` was used.
+    const index = at - places.filter(place => place < at).length
+
+    // Already exactly there: the whole batch in this level, on the very run of places the drop
+    // would put it. The commonest gesture of the drag, and one that would leave a dead entry in
+    // the history and a ⌘Z that appears to do nothing.
+    const settled =
+      places.length === dragged.length && places.every((place, step) => place === index + step)
+    return settled ? null : { parentId, index }
   }
 
   /**
@@ -496,9 +506,13 @@ export function Tree<T extends TreeNode>({
   }
 
   /**
-   * Letting go, over a row or in the gap that row opened: what the hover resolved is what lands.
-   * The PAYLOAD says whether the drag is ours — `dragged` survives a gesture that ended without
-   * a callback, and every tree of the studio shares the channel.
+   * Letting go, over a row or in the gap that row opened. The PAYLOAD says whether the drag is
+   * ours — `dragged` survives a gesture that ended without a callback, and every tree of the
+   * studio shares the channel.
+   *
+   * 🛑 The hover says WHERE, and the answer is worked out AGAIN here: it can be a re-render old —
+   * another window editing the same document, a ⌘Z arriving mid-gesture — and an index counted on
+   * a level that has changed since lands the batch somewhere else, without a word.
    */
   const release = (event: React.DragEvent<HTMLElement>): void => {
     const aim = over
@@ -506,9 +520,15 @@ export function Tree<T extends TreeNode>({
     setDragged(null)
 
     const carried = rowDrag.idsFrom(event)
-    if (!held || aim === null || carried[0] !== held.id) return
-    if (aim.target.zone === 'into') onDrop?.(carried, aim.id)
-    else onInsert?.(carried, aim.target.parentId, aim.target.index)
+    const row = rows.find(one => one.node.id === aim?.id)
+    if (!leading || !aim || !row || carried[0] !== leading.id) return
+
+    if (aim.target.zone === 'into') {
+      if (accepts(row.node)) onDrop?.(carried, row.node.id)
+      return
+    }
+    const insertion = insertionAt(row, aim.target.zone)
+    if (insertion) onInsert?.(carried, insertion.parentId, insertion.index)
   }
 
   const pick = (node: T, modifiers: Modifiers): void => {
@@ -674,10 +694,6 @@ export function Tree<T extends TreeNode>({
                   // The aim is whatever opened the gap: the pointer has not left it.
                   event.preventDefault()
                   event.dataTransfer.dropEffect = 'move'
-                }}
-                onDragEnd={() => {
-                  setOver(null)
-                  setDragged(null)
                 }}
                 onDrop={event => {
                   event.preventDefault()
