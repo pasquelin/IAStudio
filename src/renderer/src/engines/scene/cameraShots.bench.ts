@@ -2,7 +2,7 @@ import { bench, describe } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
 import { cameraShot } from './animation-fixtures'
-import { cameraNodeFixture, meshNode } from './scene-fixtures'
+import { cameraNodeFixture, meshNodes } from './scene-fixtures'
 import { activeCameraAt } from './cameraShots'
 import type { SceneNode } from './sceneState'
 
@@ -12,11 +12,7 @@ import type { SceneNode } from './sceneState'
  * uses, since the answer used to be walked off the node list.
  */
 function sceneOf(count: number): SceneNode[] {
-  return [
-    cameraNodeFixture('cam-a'),
-    cameraNodeFixture('cam-b'),
-    ...Array.from({ length: count }, (_unused, index) => meshNode(`node_${index}`)),
-  ]
+  return [cameraNodeFixture('cam-a'), cameraNodeFixture('cam-b'), ...meshNodes(count)]
 }
 
 const timeline: AnimationTimeline = {

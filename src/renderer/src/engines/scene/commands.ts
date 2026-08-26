@@ -60,7 +60,6 @@ import {
   type CarvedNode,
   type SceneNodeBase,
   type SceneNodeType,
-  type MeshNode,
   type NodeMove,
   type SceneNode,
   type SceneState,
@@ -106,51 +105,33 @@ export function removeNode(id: string): Command<SceneState> {
 }
 
 /**
- * One shape for every edit of a shared field: they all revert by putting the old values back.
- * The whole shared set is captured rather than the single field touched — the history is a
- * linear stack, so nothing can change the node between `apply` and `revert`.
- *
- * What to write may be a function of the node and the scene around it, which only `apply` holds:
- * a command is built before it runs and replayed on redo, so a rule about the scene has to be
- * read at each `apply` rather than frozen into the closure.
+ * One shape for every edit of a shared field. What to write may be a function of the node and the
+ * scene around it, which only the sweep holds: a command is replayed on redo, so a rule about the
+ * scene has to be read at each `apply` rather than frozen into the closure.
  */
 function editNode(
   label: string,
   id: string,
   changes: NodePatch | ((node: SceneNode, state: SceneState) => NodePatch),
-): Command<SceneState> {
-  let previous: NodePatch | null = null
+): NodeEdit {
+  const wanted = (node: SceneNode, state: SceneState): NodePatch =>
+    typeof changes === 'function' ? changes(node, state) : changes
 
-  return {
-    id: `${label}:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (!node) return state
-      previous = {
-        name: node.name,
-        visible: node.visible,
-        transform: node.transform,
-        castShadow: node.castShadow,
-        receiveShadow: node.receiveShadow,
-      }
-      return patch(state, id, typeof changes === 'function' ? changes(node, state) : changes)
+  return sweep(`${label}:${id}`, [
+    {
+      id,
+      edit: (node, state) => ({ ...node, ...wanted(node, state) }),
+      /**
+       * 🛑 An edit that writes what the node already carries costs a ⌘Z that moves nothing — the
+       * defect `refuses` exists for. Measured on the bench pass of 2026-08-25: a client sent one
+       * transform three times, then had to undo three times to take one change back.
+       */
+      refuses: (node, state) =>
+        Object.entries(wanted(node, state)).every(([key, value]) =>
+          sameValues(value, node[key as keyof SceneNode]),
+        ),
     },
-    /**
-     * 🛑 An edit that writes what the node already carries costs a ⌘Z that moves nothing — the
-     * defect `refuses` exists for. Measured on the bench pass of 2026-08-25: a client sent one
-     * transform three times, then had to undo three times to take one change back.
-     */
-    refuses: state => {
-      const node = nodeById(state, id)
-      if (!node) return true
-
-      const wanted = typeof changes === 'function' ? changes(node, state) : changes
-      return Object.entries(wanted).every(([key, value]) =>
-        sameValues(value, node[key as keyof SceneNode]),
-      )
-    },
-    revert: state => (previous ? patch(state, id, previous) : state),
-  }
+  ])
 }
 
 /**
@@ -161,7 +142,7 @@ function editNode(
  * whole edit refused — a pivot drag over a mixed selection carries the sprite through space, and
  * *that* shows.
  */
-export function setTransform(id: string, next: Transform): Command<SceneState> {
+export function setTransform(id: string, next: Transform): NodeEdit {
   return editNode('transform', id, (node, state) => {
     // Held axes first, so a padlock answers the viewport handle as it answers the field: both
     // write through here, and only here can refuse for both.
@@ -183,11 +164,11 @@ export function withAxisHeld(state: SceneState, lock: AxisLock, held: boolean): 
   return { ...state, lockedAxes: withAxisLock(state.lockedAxes ?? [], lock, held) }
 }
 
-export function setNodeVisible(id: string, visible: boolean): Command<SceneState> {
+export function setNodeVisible(id: string, visible: boolean): NodeEdit {
   return editNode('visible', id, { visible })
 }
 
-export function renameNode(id: string, name: string): Command<SceneState> {
+export function renameNode(id: string, name: string): NodeEdit {
   return editNode('rename', id, { name })
 }
 
@@ -215,75 +196,28 @@ function refuses(node: SceneNode, changes: ShadowPatch): boolean {
   return changes.castShadow !== undefined && !canCastShadow(node)
 }
 
-/**
- * The discriminated half of a node, edited. A node of the other type is left alone rather than
- * patched: `type` is what forbids a light from holding a geometry, and an edit that wrote one
- * anyway would produce a document that no longer loads.
- */
-function editMesh(label: string, id: string, changes: MeshPatch): Command<SceneState> {
-  let previous: MeshPatch | null = null
-
-  return {
-    id: `${label}:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'mesh') return state
-      previous = { geometry: node.geometry, material: node.material }
-      return patchPart(state, id, 'mesh', changes)
-    },
-    revert: state => (previous ? patchPart(state, id, 'mesh', previous) : state),
-  }
+export function setGeometry(id: string, geometry: GeometryDescriptor): NodeEdit {
+  return editPart('geometry', id, 'mesh', { geometry })
 }
 
-export function setGeometry(id: string, geometry: GeometryDescriptor): Command<SceneState> {
-  return editMesh('geometry', id, { geometry })
-}
-
-export function setMeshMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
-  return editMesh('material', id, { material })
+export function setMeshMaterial(id: string, material: MaterialDescriptor): NodeEdit {
+  return editPart('material', id, 'mesh', { material })
 }
 
 /**
  * The material of whatever wears one — a mesh, a text or a solid.
  *
- * Keyed on the FIELD rather than on the type, unlike `patchPart`: three node kinds hold the same
+ * Keyed on the FIELD rather than on the type, unlike `editPart`: three node kinds hold the same
  * descriptor, and a command per kind is how the solid came to be paintable nowhere.
  */
-export function setNodeMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
-  let previous: MaterialDescriptor | null = null
-
-  const write = (state: SceneState, written: MaterialDescriptor): SceneState => ({
-    ...state,
-    nodes: state.nodes.map(node =>
-      node.id === id && carriesMaterial(node) ? { ...node, material: written } : node,
-    ),
-  })
-
-  return {
-    id: `material:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (!node || !carriesMaterial(node)) return state
-      previous = node.material
-      return write(state, material)
-    },
-    revert: state => (previous ? write(state, previous) : state),
-  }
+export function setNodeMaterial(id: string, material: MaterialDescriptor): NodeEdit {
+  return sweep(`material:${id}`, [
+    { id, edit: node => (carriesMaterial(node) ? { ...node, material } : null) },
+  ])
 }
 
-export function setLight(id: string, light: LightDescriptor): Command<SceneState> {
-  let previous: LightDescriptor | null = null
-
-  return {
-    id: `light:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'light') return state
-      previous = node.light
-      return patchPart(state, id, 'light', { light })
-    },
-    revert: state => (previous ? patchPart(state, id, 'light', { light: previous }) : state),
-  }
+export function setLight(id: string, light: LightDescriptor): NodeEdit {
+  return editPart('light', id, 'light', { light })
 }
 
 /**
@@ -294,31 +228,100 @@ type NodePatch = Partial<
   Pick<SceneNode, 'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow'>
 >
 
-function patch(state: SceneState, id: string, changes: NodePatch): SceneState {
-  return {
-    ...state,
-    nodes: state.nodes.map(node => (node.id === id ? { ...node, ...changes } : node)),
-  }
+/** What one edit writes on one node, and `null` when the node is not its business. */
+type NodeWrite = {
+  id: string
+  edit: (node: SceneNode, state: SceneState) => SceneNode | null
+  /** `Command.refuses`. A node the scene no longer holds is never asked, and counts as refusing. */
+  refuses?: (node: SceneNode, state: SceneState) => boolean
 }
 
-type MeshPatch = Partial<Pick<MeshNode, 'geometry' | 'material'>>
+/**
+ * An edit that also says what it writes node by node, so several of them fold into ONE pass. A
+ * `Command` all the same: nothing holding one has to know it composes. **Built by `sweep` alone**
+ * — `batch` keeps the writes and drops the command around them, so one made by hand would be
+ * half-applied, and no type says otherwise.
+ */
+export type NodeEdit = Command<SceneState> & { writes: readonly NodeWrite[] }
 
 /**
- * The discriminated half of one node, replaced. Keyed by `type` as well as by id: `type` is what
- * forbids a light from holding a geometry, and a node of another kind is left alone rather than
- * given a field its shape has no room for.
+ * The discriminated half of one node, replaced. Keyed by `type`: `type` is what forbids a light
+ * from holding a geometry, and a node of another kind is left alone rather than given a field its
+ * shape has no room for.
  */
-function patchPart<T extends SceneNodeType>(
-  state: SceneState,
+function editPart<T extends SceneNodeType>(
+  label: string,
   id: string,
   type: T,
   changes: Partial<Omit<Extract<SceneNode, { type: T }>, keyof SceneNodeBase | 'type'>>,
-): SceneState {
+): NodeEdit {
+  return sweep(`${label}:${id}`, [
+    { id, edit: node => (node.type === type ? { ...node, ...changes } : null) },
+  ])
+}
+
+/**
+ * ONE pass over the scene however many nodes an edit touches. Through `multi`, `refuses`, `apply`
+ * and `revert` each cost a `find` and a `map` of the WHOLE scene per node, and a drag pays them
+ * on every image it emits: moving 200 nodes of 40 000 took 76.30 ms an image, against 0.77 here.
+ *
+ * Two things `composed` did differently, and nothing guards either. The node is captured WHOLE
+ * rather than the fields written — safe only because the history is a linear stack. And every
+ * write reads the scene as it stood BEFORE the pass, where `composed` fed each part the state the
+ * one before it returned: an edit reading a sibling it also writes would read a stale value here.
+ */
+function sweep(id: string, writes: readonly NodeWrite[]): NodeEdit {
+  const byId = new Map(writes.map(write => [write.id, write]))
+  // `composed` refused only when EVERY part did, so one part with no opinion settles it without
+  // the scene being walked at all.
+  const askable = writes.every(write => write.refuses)
+  let previous: ReadonlyMap<string, SceneNode> = new Map()
+
   return {
-    ...state,
-    nodes: state.nodes.map(node =>
-      node.id === id && node.type === type ? { ...node, ...changes } : node,
-    ),
+    id,
+    writes,
+    // Asked AS the scene is walked, and the walk ends twice over: at the first node still worth
+    // editing, and at the last one asked. Without the second, re-sending the value a single node
+    // already carries — an eye clicked back, a drag on a held axis — reads 40 000 rows to say no.
+    refuses: state => {
+      if (writes.length === 0) return true
+      if (!askable) return false
+
+      let asked = 0
+      for (const node of state.nodes) {
+        const write = byId.get(node.id)
+        if (!write) continue
+        if (write.refuses?.(node, state) === false) return false
+
+        asked += 1
+        if (asked === byId.size) break
+      }
+      return true
+    },
+    // The scene is copied only once something is written: an edit meeting nothing it can act on
+    // hands back the state itself rather than a fresh array of forty thousand.
+    apply: state => {
+      const taken = new Map<string, SceneNode>()
+      let nodes: SceneNode[] | null = null
+
+      for (let at = 0; at < state.nodes.length; at += 1) {
+        const node = state.nodes[at]
+        if (!node) continue
+        const written = byId.get(node.id)?.edit(node, state)
+        if (!written) continue
+
+        nodes ??= [...state.nodes]
+        nodes[at] = written
+        taken.set(node.id, node)
+      }
+
+      previous = taken
+      return nodes ? { ...state, nodes } : state
+    },
+    revert: state =>
+      previous.size === 0
+        ? state
+        : { ...state, nodes: state.nodes.map(node => previous.get(node.id) ?? node) },
   }
 }
 
@@ -334,18 +337,22 @@ export function multi(id: string, commands: Command<SceneState>[]): Command<Scen
  * The id names the nodes rather than the count, so a gesture that keeps editing the same
  * selection keeps coalescing — and a selection of one produces the very id the single-node
  * command would have, which is what leaves the common case untouched.
+ *
+ * A `NodeEdit` and not a `Command`, so the whole selection is held to ONE sweep by the compiler:
+ * an edit that writes somewhere other than a node — a lens keyed onto a track — has to compose
+ * itself under `multi`, and say so where it is written.
  */
 export function batch<T extends { id: string }>(
   label: string,
   targets: readonly T[],
-  make: (target: T) => Command<SceneState> | null,
+  make: (target: T) => NodeEdit | null,
 ): Command<SceneState> {
-  return multi(
+  return sweep(
     commandId(
       label,
       targets.map(target => target.id),
     ),
-    targets.flatMap(target => make(target) ?? []),
+    targets.flatMap(target => make(target)?.writes ?? []),
   )
 }
 
@@ -426,35 +433,13 @@ export function setMaterialOn(
  * A rail rewritten. The three gestures a rail offers — move a point, add one, drop one — all
  * land here, because each of them is the same node holding another list of points.
  */
-export function setPath(id: string, path: PathDescriptor): Command<SceneState> {
-  let previous: PathDescriptor | null = null
-
-  return {
-    id: `path:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'path') return state
-      previous = node.path
-      return patchPart(state, id, 'path', { path })
-    },
-    revert: state => (previous ? patchPart(state, id, 'path', { path: previous }) : state),
-  }
+export function setPath(id: string, path: PathDescriptor): NodeEdit {
+  return editPart('path', id, 'path', { path })
 }
 
 /** What a camera sees through: its lens, edited like any other descriptor. */
-export function setCamera(id: string, camera: CameraDescriptor): Command<SceneState> {
-  let previous: CameraDescriptor | null = null
-
-  return {
-    id: `camera:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'camera') return state
-      previous = node.camera
-      return patchPart(state, id, 'camera', { camera })
-    },
-    revert: state => (previous ? patchPart(state, id, 'camera', { camera: previous }) : state),
-  }
+export function setCamera(id: string, camera: CameraDescriptor): NodeEdit {
+  return editPart('camera', id, 'camera', { camera })
 }
 
 /**
@@ -477,19 +462,8 @@ export function setCameraOn(
  * The sprite's own parameters. A node of another type is left alone rather than patched, exactly
  * as `editMesh` refuses to give a light a geometry.
  */
-export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneState> {
-  let previous: SpriteDescriptor | null = null
-
-  return {
-    id: `sprite:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'sprite') return state
-      previous = node.sprite
-      return patchPart(state, id, 'sprite', { sprite })
-    },
-    revert: state => (previous ? patchPart(state, id, 'sprite', { sprite: previous }) : state),
-  }
+export function setSprite(id: string, sprite: SpriteDescriptor): NodeEdit {
+  return editPart('sprite', id, 'sprite', { sprite })
 }
 
 /**
@@ -684,58 +658,23 @@ export function setModelMaterial(id: string, material: ModelRef['material']): Co
  * carrying is the whole point: an edit that rebuilt the reference from `assetId` alone dropped
  * every other field a model holds — which is how a texture override vanished on the next play.
  */
-function editModel(
-  id: string,
-  edited: string,
-  next: (model: ModelRef) => ModelRef,
-): Command<SceneState> {
-  let previous: ModelRef | null = null
-
-  return {
-    id: `${edited}:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'model') return state
-      previous = node.model
-      return patchPart(state, id, 'model', { model: next(node.model) })
-    },
-    revert: state => (previous ? patchPart(state, id, 'model', { model: previous }) : state),
-  }
+function editModel(id: string, edited: string, next: (model: ModelRef) => ModelRef): NodeEdit {
+  return sweep(`${edited}:${id}`, [
+    { id, edit: node => (node.type === 'model' ? { ...node, model: next(node.model) } : null) },
+  ])
 }
 
 /**
  * The words, the face and the three numbers that shape them. A node of another type is left
  * alone rather than patched, exactly as `editMesh` refuses to give a light a geometry.
  */
-export function setText(id: string, text: TextDescriptor): Command<SceneState> {
-  let previous: TextDescriptor | null = null
-
-  return {
-    id: `text:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'text') return state
-      previous = node.text
-      return patchPart(state, id, 'text', { text })
-    },
-    revert: state => (previous ? patchPart(state, id, 'text', { text: previous }) : state),
-  }
+export function setText(id: string, text: TextDescriptor): NodeEdit {
+  return editPart('text', id, 'text', { text })
 }
 
 /** The material a text wears — the same descriptor a mesh does, on the other node type. */
-export function setTextMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
-  let previous: MaterialDescriptor | null = null
-
-  return {
-    id: `material:${id}`,
-    apply: state => {
-      const node = nodeById(state, id)
-      if (node?.type !== 'text') return state
-      previous = node.material
-      return patchPart(state, id, 'text', { material })
-    },
-    revert: state => (previous ? patchPart(state, id, 'text', { material: previous }) : state),
-  }
+export function setTextMaterial(id: string, material: MaterialDescriptor): NodeEdit {
+  return editPart('material', id, 'text', { material })
 }
 
 /** The same, spread over a selection — the text counterpart of `setMaterialOn`. */
@@ -858,32 +797,16 @@ export function setNodesNegative(
   picked: readonly SceneNode[],
   negative: boolean,
 ): Command<SceneState> {
-  const marked = new Set(picked.filter(isCarvable).map(node => node.id))
-  let previous: ReadonlyMap<string, boolean> | null = null
+  // Not `batch`: the flag lives on the carvable half of a node, which no shared patch reaches.
+  const marked = [...new Set(picked.filter(isCarvable).map(node => node.id))]
 
-  const write = (state: SceneState, mark: (id: string) => boolean): SceneState => ({
-    ...state,
-    nodes: state.nodes.map(node =>
-      marked.has(node.id) && isCarvable(node) ? { ...node, negative: mark(node.id) } : node,
-    ),
-  })
-
-  return {
-    id: commandId('negate', [...marked]),
-    // ONE sweep, not one command per node: through `batch`, marking 500 shapes in a 40 000-node
-    // scene cost 219 ms — a fifth of a second of frozen window — against 1.28 ms this way. The
-    // house pattern is right for a transform, where each node writes its own value; a flag
-    // written from a single boolean has nothing to spread.
-    apply: state => {
-      previous = new Map(
-        state.nodes.flatMap(node =>
-          marked.has(node.id) && isCarvable(node) ? [[node.id, node.negative === true]] : [],
-        ),
-      )
-      return write(state, () => negative)
-    },
-    revert: state => (previous ? write(state, id => previous?.get(id) === true) : state),
-  }
+  return sweep(
+    commandId('negate', marked),
+    marked.map(id => ({
+      id,
+      edit: (node: SceneNode) => (isCarvable(node) ? { ...node, negative } : null),
+    })),
+  )
 }
 
 /**
@@ -1108,7 +1031,7 @@ export function moveNodes(moves: readonly NodeMove[]): Command<SceneState> {
  * turns on two consecutive commands sharing an id, and a format that drifted by a character
  * would break it silently — a drag would cost one undo per frame.
  */
-function commandId(label: string, ids: readonly string[]): string {
+export function commandId(label: string, ids: readonly string[]): string {
   return `${label}:${ids.join(',')}`
 }
 

@@ -34,17 +34,20 @@ function afterParameters(source: string, from: number): number {
 }
 
 /**
- * Every command a module publishes — an exported function whose RETURN type is a `Command`.
+ * Every command a module publishes — an exported function whose RETURN type is a `Command`, or an
+ * alias one of the four modules declares for one. READ rather than listed, and read ACROSS the
+ * four: an alias is exported, so the module that names it in a signature need not be the one that
+ * declared it — and a name the regex misses drops a whole family of commands out of this guard.
  *
  * The return type and not the name: `copiesOf` and `keyableProperties` are read by commands and
  * are not ones, while `mergeDown` is one and says nothing of the sort in its name.
  */
-function commandsOf(source: string): string[] {
+function commandsOf(source: string, types: readonly string[]): string[] {
+  const returns = new RegExp(`^: (${types.join('|')})\\b`)
+
   return [...source.matchAll(/export function (\w+)\(/g)]
     .filter(match =>
-      source
-        .slice(afterParameters(source, match.index + match[0].length - 1))
-        .startsWith(': Command<'),
+      returns.test(source.slice(afterParameters(source, match.index + match[0].length - 1))),
     )
     .map(match => match[1] ?? '')
 }
@@ -59,10 +62,21 @@ const HANDLERS = Object.entries(WINDOW_SOURCES)
   .join('\n')
 
 /** Read once, like `HANDLERS`: both rules below walk the same four modules. */
-const COMMANDS: readonly (readonly [string, readonly string[]])[] = COMMAND_MODULES.map(module => [
+const SOURCES: readonly (readonly [string, string])[] = COMMAND_MODULES.map(module => [
   module,
-  commandsOf(Object.entries(WINDOW_SOURCES).find(([path]) => path.endsWith(module))?.[1] ?? ''),
+  Object.entries(WINDOW_SOURCES).find(([path]) => path.endsWith(module))?.[1] ?? '',
 ])
+
+const COMMAND_TYPES: readonly string[] = [
+  'Command',
+  ...SOURCES.flatMap(([, source]) =>
+    [...source.matchAll(/type (\w+) = Command</g)].map(match => match[1] ?? ''),
+  ),
+]
+
+const COMMANDS: readonly (readonly [string, readonly string[]])[] = SOURCES.map(
+  ([module, source]) => [module, commandsOf(source, COMMAND_TYPES)],
+)
 
 /**
  * A command a combinator builds FROM, rather than a gesture of its own. Publishing one would be

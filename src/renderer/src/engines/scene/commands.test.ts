@@ -792,6 +792,58 @@ describe('batch', () => {
     const two = batch('transform', start.nodes, () => null)
     expect(one.id).not.toBe(two.id)
   })
+
+  it('refuses only when every target refuses, so one node still worth moving makes an entry', () => {
+    const same = batch('rename', start.nodes, node => renameNode(node.id, node.name))
+    const one = batch('rename', start.nodes, node =>
+      renameNode(node.id, node.id === 'a' ? 'other' : node.name),
+    )
+
+    expect(same.refuses?.(start)).toBe(true)
+    expect(one.refuses?.(start)).toBe(false)
+  })
+
+  it('refuses a batch that reaches nothing, rather than pushing an entry doing nothing', () => {
+    expect(batch('rename', start.nodes, () => null).refuses?.(start)).toBe(true)
+  })
+
+  it('never refuses an edit that has no opinion, however many nodes it covers', () => {
+    const command = batch('material', start.nodes, node =>
+      setMeshMaterial(node.id, DEFAULT_MATERIAL),
+    )
+    expect(command.refuses?.(start)).toBe(false)
+  })
+
+  it('writes in scene order, whatever order the targets came in', () => {
+    const applied = batch('rename', [...start.nodes].reverse(), node =>
+      renameNode(node.id, `${node.id}!`),
+    ).apply(start)
+
+    expect(applied.nodes.map(node => node.id)).toEqual(['a', 'b', 'c'])
+    expect(applied.nodes.map(node => node.name)).toEqual(['a!', 'b!', 'c!'])
+  })
+
+  it('hands back the state itself when nothing was written', () => {
+    expect(batch('rename', start.nodes, () => null).apply(start)).toBe(start)
+  })
+
+  it('leaves the scene alone for a target it does not hold, forwards and back', () => {
+    const command = batch('rename', [{ id: 'ghost' }], target => renameNode(target.id, 'x'))
+    expect(command.apply(start)).toBe(start)
+    expect(command.revert(start)).toBe(start)
+  })
+
+  it('hands back the same selection, so nothing watching it re-renders', () => {
+    const picked: SceneState = { ...start, selectedIds: ['a'] }
+    const applied = batch('rename', picked.nodes, node => renameNode(node.id, 'x')).apply(picked)
+    expect(applied.selectedIds).toBe(picked.selectedIds)
+  })
+
+  it('recaptures as it is replayed, so a redo undoes to where the redo started', () => {
+    const command = batch('rename', start.nodes, node => renameNode(node.id, 'once'))
+    const again = command.apply(command.revert(command.apply(start)))
+    expect(command.revert(again).nodes.map(node => node.name)).toEqual(['a', 'b', 'c'])
+  })
 })
 
 /**
@@ -1288,6 +1340,10 @@ describe('negateNodes', () => {
     const next = negateNodes(nodes).apply({ ...EMPTY_SCENE, nodes })
 
     expect(next.nodes[1]).toEqual(nodes[1])
+  })
+
+  it('refuses a selection carrying no shape at all, rather than costing an empty undo', () => {
+    expect(negateNodes([groupNode()]).refuses?.(EMPTY_SCENE)).toBe(true)
   })
 
   /**

@@ -12,7 +12,7 @@ import {
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
-import { addNode, batch, moveNodes, multi, setCamera, setCameraOn } from './commands'
+import { addNode, commandId, moveNodes, multi, setCamera, setCameraOn } from './commands'
 import type { FieldValue } from './propertyFields'
 import { pathNode } from './nodeFactory'
 import {
@@ -706,27 +706,35 @@ export function lensToCommand(
   if (name !== 'fov' || typeof value !== 'number') return setCameraOn(nodes, name, value)
   const soloed = anySoloed(timeline)
 
-  return batch('lens', nodes, node => {
-    if (node.type !== 'camera') return null
+  // Composed rather than batched: which of the two an angle becomes depends on the channel under
+  // it, and only one of them writes onto the node — see `batch`.
+  return multi(
+    commandId(
+      'lens',
+      nodes.map(node => node.id),
+    ),
+    nodes.flatMap(node => {
+      if (node.type !== 'camera') return []
 
-    // What the channels PLAY at that instant, which is what the field was showing. The same
-    // filter has to pick what gets written: a key laid on a muted channel is a number typed and
-    // lost, and a descriptor written under a locked one moves the lens twice.
-    const played = fovAt(timeline, node.id, at) ?? 0
-    const lenses = recordingTracksFor(timeline, node.id).filter(
-      track => track.target.property === 'fov' && playsThrough(track, soloed),
-    )
-    const lens = lenses[0]
-    if (!lens || !recordsKeys(lenses, recording)) {
-      return setCamera(node.id, { ...node.camera, fov: value - played })
-    }
+      // What the channels PLAY at that instant, which is what the field was showing. The same
+      // filter has to pick what gets written: a key laid on a muted channel is a number typed and
+      // lost, and a descriptor written under a locked one moves the lens twice.
+      const played = fovAt(timeline, node.id, at) ?? 0
+      const lenses = recordingTracksFor(timeline, node.id).filter(
+        track => track.target.property === 'fov' && playsThrough(track, soloed),
+      )
+      const lens = lenses[0]
+      if (!lens || !recordsKeys(lenses, recording)) {
+        return setCamera(node.id, { ...node.camera, fov: value - played })
+      }
 
-    // This channel's own share taken back out: whatever else plays goes on adding what it adds,
-    // so the key holds exactly what is left for the lens to READ the number typed.
-    return setAnimationKey(lens.id, at, {
-      x: value - node.camera.fov - (played - valueAt(lens, at).x),
-      y: 0,
-      z: 0,
-    })
-  })
+      // This channel's own share taken back out: whatever else plays goes on adding what it adds,
+      // so the key holds exactly what is left for the lens to READ the number typed.
+      return setAnimationKey(lens.id, at, {
+        x: value - node.camera.fov - (played - valueAt(lens, at).x),
+        y: 0,
+        z: 0,
+      })
+    }),
+  )
 }
