@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { sceneFromPayload } from '@/engines/scene/sceneDocument'
+import { sceneFromGltf } from '@/engines/scene/gltfDocument'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { CameraPlacement } from '@/engines/scene/sceneView'
 import { getBridge } from '@/services/bridge'
@@ -70,14 +70,19 @@ export function montageViewOf(sceneId: string): CameraPlacement | null {
  * Reads a scene a montage names but no tab holds. Once per document: the sink calls this when
  * the source opens, and a failure leaves the clip drawing nothing rather than retrying forever.
  */
-export function loadSceneSource(sceneId: string): void {
+export async function loadSceneSource(sceneId: string): Promise<void> {
   const bridge = getBridge()
   if (!bridge || !useSceneSources.getState().begin(sceneId)) return
 
-  void bridge.documents
-    .read(sceneId, 'scene')
-    .then(file => {
-      if (file) useSceneSources.getState().install(sceneId, sceneFromPayload(file.content))
-    })
-    .catch(error => reportFailure('document.load', sceneId, error))
+  try {
+    const file = await bridge.documents.read(sceneId, 'scene')
+    // The very door an open tab comes through: `DocumentFile.content` is the serialized glTF, and
+    // the studio's own state rides in its `extras`. Read any other way, a clip naming a scene
+    // nobody had opened drew an EMPTY one — the glTF's `nodes` parse, and none of them is ours.
+    if (file) useSceneSources.getState().install(sceneId, sceneFromGltf(JSON.parse(file.content)))
+  } catch (error) {
+    // The flag goes back, or a file caught mid-rewrite by another window is never read again.
+    useSceneSources.getState().reading.delete(sceneId)
+    reportFailure('document.load', sceneId, error)
+  }
 }

@@ -5,7 +5,8 @@ import {
   setPath,
   setLightOn,
   setMaterialOn,
-  wearMaterial,
+  dressModel,
+  wearMaterialAt,
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
@@ -29,8 +30,8 @@ import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
 import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
 import { MaterialSection } from './MaterialSection'
-import { ModelMaterialSection } from './ModelMaterialSection'
-import { ModelTexturesSection } from './ModelTexturesSection/ModelTexturesSection'
+import { ModelDressSection } from './ModelDressSection/ModelDressSection'
+import { materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { PathSection } from './PathSection'
 import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
@@ -75,6 +76,11 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const sprite = node?.type === 'sprite' ? node : null
   const text = node?.type === 'text' ? node : null
   const model = node?.type === 'model' ? node : null
+  // How many materials the selected model's file turned out to carry — engine state, since the
+  // count lives in the GLB and not in the document. Zero until that file has landed.
+  const modelSlots = useModelFiles(state =>
+    model ? materialSlotsOfNode(state, documentId, model.id) : 0,
+  )
   const camera = node?.type === 'camera' ? node : null
   const path = node?.type === 'path' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
@@ -201,13 +207,18 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         <>
           <RigSection documentId={documentId} node={model} edit={edit} />
           <AnimationSection documentId={documentId} node={model} edit={edit} />
-          {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
-              own file carries, so spreading one over a selection would dress meshes that never
-              had that slot. */}
-          <ModelTexturesSection assetId={model.model.assetId} name={model.name} />
-          <ModelMaterialSection
-            materialDocumentId={model.model.materialDocumentId}
-            onChange={materialId => edit.run(wearMaterial(model.id, materialId))}
+          {/* On the anchor alone, unlike a material: how many slots a model has depends on what
+              its own file carries, so spreading a dress over a selection would name slots meshes
+              beside it never had. */}
+          <ModelDressSection
+            assetId={model.model.assetId}
+            name={model.name}
+            dress={model.model.dress}
+            slots={modelSlots}
+            onChange={dress => edit.run(dressModel(model.id, dress))}
+            // A COMMAND, so the list it edits is the one the document holds when it lands — not
+            // the one this panel was drawn with, several awaits earlier.
+            onWearAt={(slot, materialId) => edit.run(wearMaterialAt(model.id, slot, materialId))}
           />
         </>
       )}

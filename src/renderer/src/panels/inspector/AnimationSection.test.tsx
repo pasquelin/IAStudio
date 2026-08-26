@@ -7,7 +7,7 @@ import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixture
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAnimationViews } from '@/stores/animationView'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
 import { useScenes } from '@/stores/scenes'
@@ -46,7 +46,7 @@ function Host() {
 
 /** A model whose file has landed, carrying these clips and a skeleton nothing recognises. */
 function show(clips: readonly string[] = ['walk', 'run'], bones: readonly string[] = []): void {
-  useModelClips.setState({
+  useModelFiles.setState({
     clips: { [DOCUMENT]: { a: clips } },
     rigs: { [DOCUMENT]: { a: rigStateFixture(bones) } },
   })
@@ -56,7 +56,7 @@ function show(clips: readonly string[] = ['walk', 'run'], bones: readonly string
 describe('AnimationSection', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
-    useModelClips.setState({ clips: {}, rigs: {} })
+    useModelFiles.setState({ clips: {}, rigs: {} })
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({ views: {} })
   })
@@ -202,7 +202,7 @@ describe('AnimationSection', () => {
   // Watching one animation is a look at a block, not a move of the scene's clock: wherever the
   // head stands, it is left there.
   it('leaves the head exactly where it stands, wherever that is', async () => {
-    useModelClips.setState({ lengths: { [DOCUMENT]: { a: { walk: 2 } } } })
+    useModelFiles.setState({ lengths: { [DOCUMENT]: { a: { walk: 2 } } } })
     show()
     await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))

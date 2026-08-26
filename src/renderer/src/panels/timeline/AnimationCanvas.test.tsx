@@ -16,7 +16,7 @@ import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
 import { ASSET_DRAG_TYPE } from '@/helpers/assetDrag'
 import { useAssets } from '@/stores/assets'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
@@ -76,7 +76,7 @@ describe('dragging a clip block', () => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelWithClip()] })
     // How long the clip runs in the file, which only the engine knows and a trim is measured
     // against: without it a block has no width and every trim is refused.
-    useModelClips.getState().report(DOCUMENT, 'perso', ['Walk'], { Walk: 2 })
+    useModelFiles.getState().report(DOCUMENT, 'perso', ['Walk'], { Walk: 2 })
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {
@@ -621,7 +621,7 @@ describe('dragging a shot', () => {
 describe('the three gestures a chosen block answers to', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelWithClip()] })
-    useModelClips.getState().report(DOCUMENT, 'perso', ['Walk'], { Walk: 2 })
+    useModelFiles.getState().report(DOCUMENT, 'perso', ['Walk'], { Walk: 2 })
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
       views: {

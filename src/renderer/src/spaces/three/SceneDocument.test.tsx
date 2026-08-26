@@ -18,7 +18,7 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
-import { bonesOfNode, clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
+import { bonesOfNode, clipsOfNode, rigOfNode, useModelFiles } from '@/stores/modelFiles'
 import { IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
 import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
@@ -122,7 +122,7 @@ function nodesOf(documentId: string): SceneNode[] {
 beforeEach(() => {
   vi.clearAllMocks()
   built.length = 0
-  useModelClips.setState({ clips: {}, rigs: {} })
+  useModelFiles.setState({ clips: {}, rigs: {} })
   // The export tests install a bridge; without this it would answer for the ones that follow.
   vi.unstubAllGlobals()
   // A report is said once per subject and the set lives at module scope: a second test on the
@@ -736,7 +736,7 @@ describe('SceneDocument and the timeline over the scene', () => {
     const options = built.at(-1)
     options?.onRig?.('perso', rigStateFixture(['spine', 'arm.L']))
 
-    expect(bonesOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['spine', 'arm.L'])
+    expect(bonesOfNode(useModelFiles.getState(), 'doc-1', 'perso')).toEqual(['spine', 'arm.L'])
   })
 
   it('reports what the model turned out to be, which is what the inspector answers with', () => {
@@ -744,18 +744,18 @@ describe('SceneDocument and the timeline over the scene', () => {
     const options = built.at(-1)
     options?.onRig?.('perso', rigStateFixture(['spine']))
 
-    expect(rigOfNode(useModelClips.getState(), 'doc-1', 'perso')?.status).toBe('skinnedMesh')
+    expect(rigOfNode(useModelFiles.getState(), 'doc-1', 'perso')?.status).toBe('skinnedMesh')
   })
 
   it('reports the clips too, and forgets both when the viewport goes', () => {
     const { unmount } = render(<SceneDocument documentId="doc-1" />)
     const options = built.at(-1)
     options?.onClips?.('perso', ['walk'], { walk: 2 })
-    expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['walk'])
+    expect(clipsOfNode(useModelFiles.getState(), 'doc-1', 'perso')).toEqual(['walk'])
 
     // The names came out of files that viewport parsed; nothing outside it can answer for them.
     unmount()
-    expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual([])
+    expect(clipsOfNode(useModelFiles.getState(), 'doc-1', 'perso')).toEqual([])
   })
 
   it('writes a plain move while auto-key is off', () => {

@@ -112,9 +112,44 @@ describe('sceneFromPayload', () => {
 
   it('carries the material a model wears through a round trip', () => {
     const model = modelNodeFixture('m')
-    model.model = { ...model.model, materialDocumentId: 'mat-1' }
+    model.model = { ...model.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
 
     expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+  })
+
+  it('carries the picture a model is covered by through a round trip', () => {
+    const model = modelNodeFixture('m')
+    model.model = { ...model.model, dress: { kind: 'image', assetId: 'pic-1' } }
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+  })
+
+  /**
+   * Every scene saved before the two modes existed spells one material id at the root of the
+   * node. Dropping it would undress every model already on disk, and a model back in its file's
+   * own material looks exactly like one nobody ever dressed.
+   */
+  it('folds the single material id of an older document into a one-slot list', () => {
+    const older = { ...modelNodeFixture('m'), model: { assetId: 'x', materialDocumentId: 'mat-1' } }
+    const node = sceneFromPayload({ nodes: [older] }).nodes[0]
+
+    expect(node?.type === 'model' && node.model.dress).toEqual({
+      kind: 'materials',
+      documentIds: ['mat-1'],
+    })
+    // Read once and never written again: left in place it would go on contradicting the dress.
+    expect(node?.type === 'model' && node.model.materialDocumentId).toBeUndefined()
+  })
+
+  // The two modes exclude each other, and a file spelling neither kind means something this
+  // reader cannot name: refusing the node says so, where undressing it in silence would not.
+  it('drops a model whose dress names neither mode', () => {
+    const nodes: unknown[] = [
+      mesh('a'),
+      { ...modelNodeFixture('m'), model: { assetId: 'x', dress: { kind: 'paint' } } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
   })
 
   // A material named by something that is not a string would come back as a model wearing nothing

@@ -43,7 +43,9 @@ import {
   type ExportFormat,
   type HelperVisibility,
   type LightDescriptor,
+  wornMaterials,
   type ModelDress,
+  type ModelDressRef,
   type SceneWorld,
   type Transform,
   showsAid,
@@ -228,6 +230,11 @@ export type SceneRendererOptions = {
     lengths: Readonly<Record<string, number>>,
   ) => void
   /**
+   * How many MATERIALS a model's file carries — its slots. Same reason as `onClips`: the count
+   * lives in the file, and a panel drawing one row per slot has no other way to know it.
+   */
+  onMaterials?: (nodeId: string, count: number) => void
+  /**
    * How well a clip from elsewhere fits this character, once both skeletons are in hand. Only
    * the engine ever holds the two at once, so nothing else could work it out.
    */
@@ -320,14 +327,14 @@ export type SceneRendererOptions = {
   /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
   livePreview?: (assetId: string) => ImageBitmap | null
   /**
-   * What the MATERIAL a model names is worth to it, resolved when the scene is read.
+   * What a model's DRESS is worth to one of its material slots, resolved when the scene is read.
    *
    * Synchronous, like `assetVersion`: the window answers from the open tab or from the copy it
    * read off disk (`materialSources`), and asks for the file when it holds neither. Absent
    * leaves every model on the maps its own file carries — a workspace with no documents, and
    * every test.
    */
-  wornMaterial?: (materialDocumentId: string) => ModelDress | null
+  wornDress?: (dress: ModelDressRef, slot: number) => ModelDress | null
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
   /** And again, for the skinning weights a local rig is bound with. */
@@ -2387,13 +2394,18 @@ export class SceneRenderer {
     const node = this.applied.get(nodeId)
     if (!maps || node?.type !== 'model') return
 
-    const worn = node.model.materialDocumentId
-      ? this.options.wornMaterial?.(node.model.materialDocumentId)
-      : null
+    const dress = node.model.dress
+    // Every slot, always: a slot dropped from the list goes back to its own material. And one
+    // pass for a model that carries NO material to write into — `apply` is what says so out loud,
+    // and a loop bounded by zero never reaches it.
+    const passes = dress ? Math.max(maps.count(), 1) : maps.count()
+    for (let slot = 0; slot < passes; slot += 1) {
+      const worn = dress ? (this.options.wornDress?.(dress, slot) ?? null) : null
 
-    maps.apply(worn?.textures ?? {})
-    // After the maps, always: the tiling rides ON the textures — see `dress`.
-    maps.dress(worn?.material)
+      maps.apply(slot, worn?.textures ?? {})
+      // After the maps, always: the tiling rides ON the textures — see `dress`.
+      maps.dress(slot, worn?.material)
+    }
   }
 
   /**
@@ -2416,10 +2428,30 @@ export class SceneRenderer {
       const node = this.applied.get(id)
       if (node?.type === 'sprite') maps.apply(node.sprite)
     }
-    for (const id of this.modelMaps.keys()) this.dressModel(id)
+    this.dressModels()
     // The environment too: a skybox asset is a picture of the project like any other, and the
     // lighting it drives is what would otherwise stay on the image the edit replaced.
     void this.sky.refresh()
+  }
+
+  /**
+   * The models wearing one of these material documents ask again for what their dress is worth —
+   * every model when none is named. The push behind « edit the material and the model follows »:
+   * the document a node names moved, and no id of this scene did.
+   */
+  dressModels(materialIds?: readonly string[]): void {
+    const wanted = materialIds && new Set(materialIds)
+
+    for (const id of this.modelMaps.keys()) {
+      const node = this.applied.get(id)
+      if (
+        wanted &&
+        !(node?.type === 'model' && wornMaterials(node.model.dress).some(one => wanted.has(one)))
+      ) {
+        continue
+      }
+      this.dressModel(id)
+    }
   }
 
   /**
@@ -2932,9 +2964,7 @@ export class SceneRenderer {
       const before = previous?.type === 'model' ? previous : null
       // Nothing at all until the file has landed: `buildModel` applies what the node holds the
       // moment it builds the maps, and there is no material to write into before that.
-      if (before?.model.materialDocumentId !== node.model.materialDocumentId) {
-        this.dressModel(node.id)
-      }
+      if (before?.model.dress !== node.model.dress) this.dressModel(node.id)
       return
     }
 
@@ -3175,6 +3205,7 @@ export class SceneRenderer {
           ),
       )
       this.modelMaps.set(node.id, maps)
+      this.options.onMaterials?.(node.id, maps.count())
       this.dressModel(node.id)
 
       // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not

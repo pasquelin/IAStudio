@@ -395,6 +395,9 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 - [ ] « Ajoute une normal map si une texture compatible existe dans le projet. »
 - [x] « Remets le matériau dans son état précédent. »
 - [ ] « Habille ce modèle importé avec la matière nommée Pierre. »
+- [ ] « Mets la matière Pierre sur son deuxième emplacement de matière. »
+- [ ] « Recouvre plutôt ce modèle de l'image de planches de chêne, sans matière. »
+- [ ] « Finalement retire-lui son habillage : qu'il reprenne celui de son propre fichier. »
 
 ## 13. Timeline 3D
 

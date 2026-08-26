@@ -31,7 +31,7 @@ function rendererLoading(load: (url: string) => Promise<Object3D>) {
 }
 
 /** The same, listening to which pictures the maps of a model ask for. */
-function rendererDressing(asked: string[], wornMaterial?: SceneRendererOptions['wornMaterial']) {
+function rendererDressing(asked: string[], wornDress?: SceneRendererOptions['wornDress']) {
   return new SceneRenderer({
     onSelect: vi.fn(),
     onTransform: vi.fn(),
@@ -40,7 +40,7 @@ function rendererDressing(asked: string[], wornMaterial?: SceneRendererOptions['
       asked.push(url)
       return Promise.resolve(new Texture())
     },
-    ...(wornMaterial ? { wornMaterial } : {}),
+    ...(wornDress ? { wornDress } : {}),
   })
 }
 
@@ -145,7 +145,7 @@ describe('a model node', () => {
     }))
 
     const node = modelNodeFixture('a', 'asset-a')
-    node.model = { ...node.model, materialDocumentId: 'mat-1' }
+    node.model = { ...node.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
 
     await vi.waitFor(() => expect(asked).toHaveLength(1))
@@ -162,7 +162,7 @@ describe('a model node', () => {
 
     renderer.apply(withModels('a'))
     const dressed = modelNodeFixture('a', 'asset-a')
-    dressed.model = { ...dressed.model, materialDocumentId: 'mat-1' }
+    dressed.model = { ...dressed.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [dressed], selectedIds: [] })
 
     await vi.waitFor(() => expect(asked).toHaveLength(1))
@@ -198,8 +198,8 @@ describe('a model node', () => {
 
     const one = modelNodeFixture('a', 'asset-shared')
     const two = modelNodeFixture('b', 'asset-shared')
-    one.model = { ...one.model, materialDocumentId: 'mat-1' }
-    two.model = { ...two.model, materialDocumentId: 'mat-1' }
+    one.model = { ...one.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
+    two.model = { ...two.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [one, two], selectedIds: [] })
 
     await vi.waitFor(() => expect(asked.length).toBeGreaterThan(0))
@@ -223,11 +223,11 @@ describe('a model node', () => {
         return Promise.resolve(new Texture())
       },
       assetVersion: () => version,
-      wornMaterial: () => ({ textures: { map: { assetId: 'tex-1' } }, material: {} }),
+      wornDress: () => ({ textures: { map: { assetId: 'tex-1' } }, material: {} }),
     })
 
     const node = modelNodeFixture('a', 'asset-a')
-    node.model = { ...node.model, materialDocumentId: 'mat-1' }
+    node.model = { ...node.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
     await vi.waitFor(() => expect(asked).toHaveLength(1))
 

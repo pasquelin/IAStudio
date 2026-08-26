@@ -34,7 +34,7 @@ import {
   laneHolding,
   lanesWith,
 } from '@/engines/scene/clipBlend'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { clampPlayhead } from '@/engines/scene/animationEval'
@@ -140,7 +140,7 @@ function clipLengthOf(documentId: string, where: BlockRef): number | null {
   const clip = laneClipsOf(documentId, where)?.find(candidate => candidate.id === where.clipId)
 
   return clip
-    ? (useModelClips.getState().lengths[documentId]?.[where.nodeId]?.[clipKeyOf(clip.source)] ??
+    ? (useModelFiles.getState().lengths[documentId]?.[where.nodeId]?.[clipKeyOf(clip.source)] ??
         null)
     : null
 }

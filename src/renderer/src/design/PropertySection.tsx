@@ -3,6 +3,7 @@ import { useContext, useEffect, useId, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { useSectionFolds } from '@/stores/sectionFolds'
 import { SectionFoldScope } from './SectionFoldScope'
+import { FieldActions } from './FieldActions'
 import { PROPERTY_BODY } from './styles'
 import { UiIcon } from './UiIcon'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -12,6 +13,11 @@ import { sectionHandle } from './scHandle'
 export type PropertySectionProps = {
   title: string
   children: ReactNode
+  /**
+   * Buttons the SECTION owns, at the end of its heading. Beside the fold, never inside it: a
+   * button within a button is not markup a browser keeps.
+   */
+  actions?: ReactNode
   /** Sections a node rarely needs open on sight can start folded. */
   defaultOpen?: boolean
   /** The handle the MCP folds this section by. Never a translated word. */
@@ -22,6 +28,7 @@ export type PropertySectionProps = {
 export function PropertySection({
   title,
   children,
+  actions,
   defaultOpen = true,
   scId,
 }: PropertySectionProps) {
@@ -50,22 +57,28 @@ export function PropertySection({
       {/* The fold sits INSIDE a heading, which is how a reader jumps between sections rather than
           tabbing through every control. The eight surfaces that merged into this component drew
           an `<h3>` before they folded, and would have lost that navigation silently. */}
-      <h3 className="m-0 font-normal text-inherit">
-        <button
-          type="button"
-          aria-expanded={open}
-          data-sc={scId && sectionHandle(scId)}
-          {...HINT_LEFT(t(open ? 'inspector.sectionFoldHint' : 'inspector.sectionUnfoldHint'))}
-          onClick={() => setHeld(current => ({ ...current, open: !current.open }))}
-          className={cn(
-            'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-2',
-            'text-tiny border-none bg-transparent px-2 text-left font-medium tracking-wide uppercase',
-          )}
-        >
-          <UiIcon path={open ? mdiChevronDown : mdiChevronRight} size={14} />
-          {title}
-        </button>
-      </h3>
+      <div className="flex items-center">
+        <h3 className="m-0 min-w-0 flex-1 font-normal text-inherit">
+          <button
+            type="button"
+            aria-expanded={open}
+            data-sc={scId && sectionHandle(scId)}
+            {...HINT_LEFT(t(open ? 'inspector.sectionFoldHint' : 'inspector.sectionUnfoldHint'))}
+            onClick={() => setHeld(current => ({ ...current, open: !current.open }))}
+            className={cn(
+              'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-2',
+              'text-tiny border-none bg-transparent px-2 text-left font-medium tracking-wide uppercase',
+            )}
+          >
+            <UiIcon path={open ? mdiChevronDown : mdiChevronRight} size={14} />
+            {title}
+          </button>
+        </h3>
+        {/* Only while unfolded: a button acting on rows nobody can see is a press with no reading.
+            `FieldActions` rather than a box of its own — the end column of a property line and the
+            end of its heading answer to one gauge. */}
+        {open && actions && <FieldActions>{actions}</FieldActions>}
+      </div>
 
       {/* Unmounted rather than hidden: a folded section keeps no field mounted, and a scene with
           six sections folded costs nothing to render. */}

@@ -28,6 +28,11 @@ export type LinkFieldProps = {
   /** What the slot points at, or `null` for a link that holds nothing. */
   value: string | null
   options: readonly LinkOption[]
+  /**
+   * The picture of what the slot HOLDS, when the option list cannot carry it — a material names a
+   * document, and what stands for it is a channel of that document.
+   */
+  valueUrl?: string
   onChange: (id: string | null) => void
   /**
    * Shown in place of a name while the slot is empty. **Absent means the link cannot be empty** —
@@ -88,6 +93,7 @@ export function LinkField({
   label,
   value,
   options,
+  valueUrl,
   onChange,
   emptyLabel,
   missingLabel,
@@ -128,12 +134,13 @@ export function LinkField({
   const clearing = emptyLabel === undefined || value === null ? undefined : () => onChange(null)
   // A right-click that opens an empty surface answers by covering the row it was aimed at.
   const hasMenu = Boolean(browse || (chosen && open) || clearing || menuExtra)
+  const shown = valueUrl ?? chosen?.url
   const [preview, setPreview] = useState<HTMLElement | null>(null)
   const resting = useForgettableTimeout()
 
   const picture = (
     <span className={cn(FIELD_THUMBNAIL, 'relative shrink-0')}>
-      <Thumbnail url={chosen?.url} className={FIELD_THUMBNAIL} />
+      <Thumbnail url={shown} className={FIELD_THUMBNAIL} />
       {/* The same veil the asset browser draws while a library picture is being fetched: a slot
           that simply stayed empty read as a drop that had failed. */}
       {busy && busyLabel && (
@@ -228,9 +235,13 @@ export function LinkField({
 
       {/* A 28px thumbnail is not enough to tell a normal map from an albedo. Shown only once the
           pointer has RESTED: opening on every crossing would flash over a stack of five slots. */}
-      {preview && chosen?.url && (
+      {preview && shown && (
         <Flyout anchor={preview} placement="right">
-          <img src={chosen.url} alt={chosen.name} className="max-h-64 max-w-64 object-contain" />
+          <img
+            src={shown}
+            alt={chosen?.name ?? label}
+            className="max-h-64 max-w-64 object-contain"
+          />
         </Flyout>
       )}
 

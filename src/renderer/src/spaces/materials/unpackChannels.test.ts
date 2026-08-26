@@ -37,7 +37,7 @@ describe('unpacking a packed picture', () => {
     )
     installFakeBridge({ assets: { saveTexture } })
 
-    await expect(unpackMaterialChannels(packed(), unpacked)).resolves.toBe(2)
+    await expect(unpackMaterialChannels(packed(), unpacked)).resolves.toHaveLength(2)
 
     expect(saveTexture.mock.calls.map(([request]) => request.map)).toEqual([
       'roughness',
@@ -65,7 +65,7 @@ describe('unpacking a packed picture', () => {
 
     await expect(
       unpackMaterialChannels(packed({ packedSlot: 'clearcoatTexture' }), unpacked),
-    ).resolves.toBe(0)
+    ).resolves.toEqual([])
     expect(saveTexture).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipLane, embeddedClip } from '@shared/domain/scene'
+import { clipLane, embeddedClip, wornMaterials } from '@shared/domain/scene'
 import type { Rig, RigBone } from '@shared/domain/rig'
 import { rigFit } from './rigFit'
 import { emptyHistory, run, undo, type Command } from '../core/history'
@@ -36,7 +36,8 @@ import {
   setMaterialOn,
   setModelLanes,
   setModelRig,
-  wearMaterial,
+  dressModel,
+  wearMaterialAt,
   setNodeVisible,
   setRigBoneRole,
   setWorld,
@@ -1041,35 +1042,64 @@ describe('an edit spread over a selection', () => {
   })
 })
 
-describe('wearMaterial', () => {
+describe('dressModel', () => {
   const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
 
-  const wornBy = (state: SceneState) => {
+  const dressOf = (state: SceneState) => {
     const node = nodeById(state, 'm')
-    return node?.type === 'model' ? node.model.materialDocumentId : undefined
+    return node?.type === 'model' ? node.model.dress : undefined
   }
+
+  const wornBy = (state: SceneState, slot = 0) => wornMaterials(dressOf(state))[slot]
 
   it('writes the reference and gives it back on undo', () => {
     const before = withModel()
-    const applied = wearMaterial('m', 'mat-1')
+    const applied = wearMaterialAt('m', 0, 'mat-1')
 
     const after = applied.apply(before)
     expect(wornBy(after)).toBe('mat-1')
-    expect(wornBy(applied.revert(after))).toBeUndefined()
+    expect(dressOf(applied.revert(after))).toBeUndefined()
   })
 
-  // No material is « the file's own maps », which a document should not carry a field to say.
-  it('drops the field when the material is taken off', () => {
-    const dressed = wearMaterial('m', 'mat-1').apply(withModel())
+  // No dress at all is « the file's own maps », which a document should not carry a field to say.
+  it('drops the field when the dress is taken off', () => {
+    const dressed = wearMaterialAt('m', 0, 'mat-1').apply(withModel())
 
-    expect(wornBy(wearMaterial('m', null).apply(dressed))).toBeUndefined()
+    expect(dressOf(dressModel('m', null).apply(dressed))).toBeUndefined()
+  })
+
+  // The whole point of the union: a model covered by a picture wears no material, and the other
+  // way round. Two fields would have let a switch leave the old one behind, worn by nobody.
+  it('cannot wear a picture and a material at once', () => {
+    const dressed = wearMaterialAt('m', 0, 'mat-1').apply(withModel())
+    const covered = dressModel('m', { kind: 'image', assetId: 'pic-1' }).apply(dressed)
+
+    expect(dressOf(covered)).toEqual({ kind: 'image', assetId: 'pic-1' })
+    expect(wornMaterials(dressOf(covered))).toEqual([])
+  })
+
+  // A car is a body, a glass and a set of tyres: naming the second must not name the first.
+  it('names one slot without filling the ones before it', () => {
+    const dressed = wearMaterialAt('m', 2, 'mat-3').apply(withModel())
+
+    expect(wornMaterials(dressOf(dressed))).toEqual(['', '', 'mat-3'])
+  })
+
+  // Emptying a row is not removing it: the list is what the user built, and a row that vanished
+  // under the finger that cleared it is a gesture nobody asked for.
+  it('keeps a slot that is emptied', () => {
+    const two = wearMaterialAt('m', 1, 'mat-2').apply(
+      wearMaterialAt('m', 0, 'mat-1').apply(withModel()),
+    )
+
+    expect(wornMaterials(dressOf(wearMaterialAt('m', 1, '').apply(two)))).toEqual(['mat-1', ''])
   })
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
   it('leaves the lanes of the model alone, and is left alone by them', () => {
     const lane = clipLane('main', [embeddedClip('c1', 'run', { speed: 2 })])
     const blocked = setModelLanes('m', [lane]).apply(withModel())
-    const dressed = wearMaterial('m', 'mat-1').apply(blocked)
+    const dressed = wearMaterialAt('m', 0, 'mat-1').apply(blocked)
 
     const node = nodeById(dressed, 'm')
     expect(node?.type === 'model' && node.model.lanes).toEqual([lane])

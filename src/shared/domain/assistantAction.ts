@@ -179,6 +179,7 @@ export type ActionName =
   | 'node.light'
   | 'node.camera'
   | 'model.wearMaterial'
+  | 'model.wearImage'
   | 'camera.shot'
   | 'camera.rail'
   | 'camera.addRail'

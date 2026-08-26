@@ -461,7 +461,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
       )
       // Asked for now so the clip has something to draw: without a tab holding it, nothing else
       // would ever read this document off disk.
-      loadSceneSource(sceneId)
+      void loadSceneSource(sceneId)
       return
     }
 

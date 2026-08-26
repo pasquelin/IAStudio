@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { rigFit } from '@/engines/scene/rigFit'
 import { modelNodeFixture, rigStateFixture, STANDING_BOUNDS } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useScenes } from '@/stores/scenes'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
@@ -40,7 +40,7 @@ async function makeAnimatable(): Promise<void> {
 
 /** A model whose file has landed as a bare mesh of the given shape. */
 function show(bounds = STANDING_BOUNDS, progress?: number): void {
-  useModelClips.setState({
+  useModelFiles.setState({
     rigs: { [DOCUMENT]: { a: { ...rigStateFixture([]), bounds } } },
     rigProgress: progress === undefined ? {} : { [DOCUMENT]: { a: progress } },
   })
@@ -50,7 +50,7 @@ function show(bounds = STANDING_BOUNDS, progress?: number): void {
 describe('RigSection', () => {
   beforeEach(() => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] })
-    useModelClips.setState({ rigs: {}, rigProgress: {} })
+    useModelFiles.setState({ rigs: {}, rigProgress: {} })
     useAssets.setState({ items: [] })
     // Or a bone picked by one case decides what the next one draws, whatever it installs.
     useSceneViews.setState({ views: {} })
@@ -145,7 +145,7 @@ describe('RigSection', () => {
   })
 
   it('takes itself off for a model that already carries a skeleton of its own', () => {
-    useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
+    useModelFiles.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
     render(withQueries(<Host />))
 
     expect(screen.queryByText('Squelette')).not.toBeInTheDocument()
@@ -275,7 +275,7 @@ describe('RigSection', () => {
       ...EMPTY_SCENE,
       nodes: [{ ...node, model: { ...node.model, rig: rigFit(STANDING_BOUNDS) } }],
     })
-    useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
+    useModelFiles.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
     if (bone) useSceneViews.getState().setPickedBone(DOCUMENT, { nodeId: 'a', bone })
     render(withQueries(<Host />))
   }
@@ -374,7 +374,7 @@ describe('RigSection', () => {
       ...EMPTY_SCENE,
       nodes: [{ ...node, model: { ...node.model, rig: rigFit(STANDING_BOUNDS) } }],
     })
-    useModelClips.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
+    useModelFiles.setState({ rigs: { [DOCUMENT]: { a: rigStateFixture(['Hips', 'Spine']) } } })
     render(withQueries(<Host />))
 
     expect(screen.getByText(/a reçu un squelette/)).toBeInTheDocument()

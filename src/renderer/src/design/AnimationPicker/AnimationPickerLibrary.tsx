@@ -7,7 +7,7 @@ import { rowSkin } from '../styles'
 import { clipLabel } from '@/helpers/clipLabel'
 import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { useProjectAnimations } from '@/hooks/useProjectAnimations'
-import { clipsOfNode, useModelClips } from '@/stores/modelClips'
+import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { assetIcon } from '@/helpers/workspaces'
 
 export type AnimationPickerLibraryProps = {
@@ -30,7 +30,7 @@ export function AnimationPickerLibrary({
 }: AnimationPickerLibraryProps) {
   const { t } = useTranslation()
   const bundled = useBundledAnimations()
-  const own = useModelClips(state => clipsOfNode(state, documentId, nodeId))
+  const own = useModelFiles(state => clipsOfNode(state, documentId, nodeId))
   const motions = useProjectAnimations()
 
   if (own.length === 0 && bundled.length === 0 && motions.length === 0) {

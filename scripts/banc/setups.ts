@@ -1,6 +1,6 @@
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { SECOND } from './oracle'
@@ -94,7 +94,7 @@ export const bonesOf = (studio: Studio): readonly string[] => {
  * refuses `notFound` and the whole of section 50 is scored on a model nobody could have rigged.
  */
 const measured = (studio: Studio, nodeId: string): void => {
-  useModelClips.getState().reportRig(frontId(studio), nodeId, {
+  useModelFiles.getState().reportRig(frontId(studio), nodeId, {
     status: 'staticMesh',
     bones: [],
     boneNames: [],

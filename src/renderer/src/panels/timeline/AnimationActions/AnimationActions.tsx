@@ -9,7 +9,7 @@ import { setTimelineSettings } from '@/engines/scene/animationCommands'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
-import { bonesOfNode, useModelClips } from '@/stores/modelClips'
+import { bonesOfNode, useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { TimelineTransport } from '../TimelineTransport'
@@ -41,7 +41,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
   const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
-  const bones = useModelClips(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
+  const bones = useModelFiles(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
   const picked = view.pickedBone
   const [chosen, setChosen] = useState('')
 

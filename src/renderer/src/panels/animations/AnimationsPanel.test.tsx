@@ -8,7 +8,7 @@ import { setModelLanes } from '@/engines/scene/commands'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { installDocuments } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
@@ -23,14 +23,14 @@ const DOCUMENT = 'doc-1'
 function withCharacter(clips: readonly string[]): void {
   const node = modelNodeFixture('perso')
   installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [node], selectedIds: [node.id] })
-  useModelClips.getState().report(DOCUMENT, node.id, clips)
+  useModelFiles.getState().report(DOCUMENT, node.id, clips)
 }
 
 describe('the animations panel', () => {
   beforeEach(() => {
     installFakeBridge()
     useDocuments.setState({ activeId: DOCUMENT })
-    useModelClips.setState({ clips: {}, rigs: {} })
+    useModelFiles.setState({ clips: {}, rigs: {} })
     // Or the block one case watched decides what the next one shows as playing.
     useSceneViews.setState({ views: {} })
     installScene(DOCUMENT, EMPTY_SCENE)
@@ -192,8 +192,8 @@ describe('the animations panel', () => {
     const one = modelNodeFixture('perso')
     const two = modelNodeFixture('perso-2')
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [one, two], selectedIds: [one.id] })
-    useModelClips.getState().report(DOCUMENT, one.id, ['NlaTrack'])
-    useModelClips.getState().report(DOCUMENT, two.id, ['NlaTrack'])
+    useModelFiles.getState().report(DOCUMENT, one.id, ['NlaTrack'])
+    useModelFiles.getState().report(DOCUMENT, two.id, ['NlaTrack'])
     render(<AnimationsPanel />)
     await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
 
@@ -269,7 +269,7 @@ describe('the animations panel', () => {
     const alone = modelNodeFixture('perso-b')
     useScenes.getState().replace(other, { ...EMPTY_SCENE, nodes: [alone], selectedIds: [alone.id] })
     installDocuments({ [DOCUMENT]: '3d', [other]: '3d' }, DOCUMENT)
-    useModelClips.getState().report(other, 'perso-b', ['NlaTrack'])
+    useModelFiles.getState().report(other, 'perso-b', ['NlaTrack'])
     render(<AnimationsPanel />)
     await waitFor(() => expect(screen.getByText('Animation')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: 'Jouer sur le personnage' }))

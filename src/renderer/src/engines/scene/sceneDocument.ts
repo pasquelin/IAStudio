@@ -168,7 +168,7 @@ function revived(node: SceneNode): SceneNode {
     return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
   }
   if (filled.type === 'model') {
-    return { ...filled, model: withLanes(filled.model) }
+    return { ...filled, model: withDress(withLanes(filled.model)) }
   }
   if (filled.type === 'path') {
     return { ...filled, path: { ...DEFAULT_PATH, ...filled.path } }
@@ -212,6 +212,22 @@ function withLanes(model: ModelRef): ModelRef {
   const next = { ...model, lanes: [clipLane(MAIN_LANE_ID, clips)] }
   delete next.clips
   delete next.animation
+  return next
+}
+
+/**
+ * A model's dress, folding the single material id every document written before the two modes
+ * existed spells. Read and never written again — dropping it would undress every model already
+ * saved, and a model back in its file's own material looks exactly like one never dressed.
+ */
+function withDress(model: ModelRef): ModelRef {
+  if (model.dress || !model.materialDocumentId) return model
+
+  const next: ModelRef = {
+    ...model,
+    dress: { kind: 'materials', documentIds: [model.materialDocumentId] },
+  }
+  delete next.materialDocumentId
   return next
 }
 
@@ -262,6 +278,7 @@ function isSceneNode(value: unknown): value is SceneNode {
       isOptionalLanes(value.model.lanes) &&
       isOptionalRig(value.model.rig) &&
       isOptionalTextureOverrides(value.model.textures) &&
+      isOptionalDress(value.model.dress) &&
       // A document id, never resolved here: the material may have been deleted, and a scene that
       // still opens with a model wearing its file's own maps is better than one that will not.
       (value.model.materialDocumentId === undefined ||
@@ -417,6 +434,24 @@ function isOptionalTextureOverrides(value: unknown): boolean {
   // written back on every save.
   return TEXTURE_SLOTS.every(
     slot => value[slot] === undefined || (value[slot] !== null && isTextureRef(value[slot])),
+  )
+}
+
+/**
+ * What covers a model, or nothing. A dress spelling NEITHER kind costs the node rather than being
+ * dropped to nothing: its author meant something this reader cannot name, and silently undressing
+ * the model would hide that.
+ */
+function isOptionalDress(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  if (value.kind === 'image') return typeof value.assetId === 'string'
+
+  return (
+    value.kind === 'materials' &&
+    Array.isArray(value.documentIds) &&
+    value.documentIds.every(id => typeof id === 'string')
   )
 }
 
