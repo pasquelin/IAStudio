@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { createRingLog } from './ringLog'
-import type { LogEntry } from '../ports/logPort'
+import type { LogEntry } from '@shared/domain/gameRuntime'
 
 describe('what a game says about itself', () => {
   it('keeps what was written, oldest first', () => {

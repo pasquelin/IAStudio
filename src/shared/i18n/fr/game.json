@@ -35,6 +35,21 @@
       "loop": "En boucle",
       "pingPong": "Aller-retour",
       "unknown": "Valeur inconnue"
+    },
+    "play": {
+      "faults_many": "{{count, number}} erreurs",
+      "faults_one": "{{count, number}} erreur",
+      "faults_other": "{{count, number}} erreurs",
+      "objects_many": "{{count, number}} objets",
+      "objects_one": "{{count, number}} objet",
+      "objects_other": "{{count, number}} objets",
+      "pause": "Pause",
+      "pauseHint": "Fige la partie là où elle en est",
+      "readout": "{{fps}} i/s · pas {{tick}}",
+      "start": "Jouer",
+      "startHint": "Lance la scène comme une partie, sans toucher au document",
+      "stop": "Arrêter",
+      "stopHint": "Jette la partie et remet la scène telle qu’elle était"
     }
   }
 }

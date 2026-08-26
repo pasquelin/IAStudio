@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 import type { GameApi } from '../api/gameApi'
-import type { LogEntry } from '../ports/logPort'
+import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
+import type { RenderPort } from '../ports/renderPort'
 import { createDomInput, type DomInputTarget } from './domInput'
 import { createHostedAssets } from './hostedAssets'
 import { createInertAudio } from './inertAudio'
@@ -14,6 +15,8 @@ import { createSoloNet } from './soloNet'
 export type StudioHostDeps = {
   input: DomInputTarget
   player: Player
+  /** What draws. Absent while a host has no viewport to give — see `createInertRender`. */
+  render?: RenderPort
   /** How the studio spells an asset URL — `assetUrl` from `@shared/domain/asset`. */
   urlForAsset: (id: string) => string
   /**
@@ -30,7 +33,7 @@ export function createStudioHost(deps: StudioHostDeps): GameApi {
   return {
     assets: createHostedAssets(deps.urlForAsset),
     input: createDomInput(deps.input),
-    render: createInertRender(),
+    render: deps.render ?? createInertRender(),
     audio: createInertAudio(),
     log,
     ai: createRefusedAi(log),

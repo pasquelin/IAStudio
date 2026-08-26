@@ -38,6 +38,7 @@ import { useSkyRefresh } from '@/hooks/useSkyRefresh'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
 import { useModelFiles } from '@/stores/modelFiles'
+import { usePlay } from '@/stores/play'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
@@ -57,8 +58,9 @@ import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfil
 import { useProject } from '@/stores/project'
 import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
-import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
+import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneStats'
 import { CameraPreview } from './CameraPreview/CameraPreview'
+import { PlayBar } from './PlayBar/PlayBar'
 import { SceneCounters } from './SceneCounters'
 import { SceneNavigationHint } from './SceneNavigationHint'
 import { openSceneAddMenu } from './sceneAddMenu'
@@ -276,7 +278,14 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           t: i18next.t,
           onRemove: () => removePickedPathPoint(documentId),
         }),
-      onStats: (scene, selected) => setStats({ scene, selected }),
+      // Only when a figure actually moved: `apply` ends on `reportStats`, so a running game would
+      // otherwise re-render this document and its whole subtree sixty times a second.
+      onStats: (scene, selected) =>
+        setStats(held =>
+          sameStats(held.scene, scene) && sameStats(held.selected, selected)
+            ? held
+            : { scene, selected },
+        ),
       // Escape and a lost window release the capture without passing through the button, and the
       // armed state has to follow or the bar would stay lit over a mode that is over.
       onNavigatingChange: setNavigating,
@@ -298,6 +307,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // below, or an engine whose canvas is gone would still be handed out.
     registerSceneEngine(documentId, renderer)
     return () => {
+      // 🛑 Before the engine goes: a running game holds a frame loop and draws through THIS
+      // renderer, so a viewport that unmounted while playing would leave one running against a
+      // disposed context, for the life of the window.
+      usePlay.getState().stop(documentId)
       renderer.dispose()
       engine.current = null
       setLive(null)
@@ -649,10 +662,20 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       outlined={false}
       className="relative size-full"
     >
-      {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
-      <div ref={host} className="absolute inset-0" />
+      {/*
+        The renderer makes its own canvas in here — see `SceneRenderer.mount`.
+
+        🛑 `tabIndex={-1}` is what lets a running game read the keyboard at all: key events fire
+        at the focused element, a canvas cannot hold focus, and a click inside focuses the nearest
+        focusable ANCESTOR. Out of the tab order on purpose — the viewport is reached by clicking
+        it, and a tab stop on a picture would be one nobody could act on.
+      */}
+      <div ref={host} tabIndex={-1} className="absolute inset-0 outline-none" />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      {/* The host div, not the canvas: the renderer makes its own canvas inside it, and a game
+          started before the first frame would read its keys off an element that is not there. */}
+      <PlayBar documentId={documentId} viewport={() => host.current} />
       <SceneSnapBar
         documentId={documentId}
         speed={flySpeed}

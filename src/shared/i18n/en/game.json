@@ -35,6 +35,21 @@
       "loop": "Loop",
       "pingPong": "Back and forth",
       "unknown": "Unknown value"
+    },
+    "play": {
+      "faults_many": "{{count, number}} errors",
+      "faults_one": "{{count, number}} error",
+      "faults_other": "{{count, number}} errors",
+      "objects_many": "{{count, number}} objects",
+      "objects_one": "{{count, number}} object",
+      "objects_other": "{{count, number}} objects",
+      "pause": "Pause",
+      "pauseHint": "Freezes the game where it stands",
+      "readout": "{{fps}} fps · step {{tick}}",
+      "start": "Run",
+      "startHint": "Plays the scene as a game, without touching the document",
+      "stop": "Stop",
+      "stopHint": "Throws the game away and puts the scene back as it was"
     }
   }
 }

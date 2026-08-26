@@ -67,3 +67,19 @@ describe('the clock the loop reads', () => {
     expect(loop.advance(0.5 + STEP_SECONDS * 2)).toBe(2)
   })
 })
+
+describe('a loop that comes back from a pause', () => {
+  /** A minute paused is not a minute of gameplay owed — the clamp alone would still owe 0,25 s. */
+  it('takes the next frame as an origin rather than a gap to catch up on', () => {
+    const world = testWorld()
+    const loop = createGameLoop(world)
+    loop.advance(0)
+    loop.advance(1)
+    const caught = world.time.tick
+
+    loop.reset()
+
+    expect(loop.advance(61)).toBe(0)
+    expect(world.time.tick).toBe(caught)
+  })
+})
