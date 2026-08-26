@@ -99,6 +99,56 @@ describe('opening the material of a model', () => {
   })
 
   /**
+   * The id is what makes the gesture WORTH something: the caller puts it on the slot the press
+   * came from, so the model wears the material that was just opened. Answering nothing is what
+   * left every edit saved from that tab reaching no model at all.
+   */
+  it('answers the id of the document it opened', async () => {
+    expect(await openModelMaterial(MODEL, [texture()])).toBe(opened().id)
+  })
+
+  it('answers the id of the tab it came back to', async () => {
+    const first = await openModelMaterial(MODEL, [texture()])
+
+    expect(await openModelMaterial(MODEL, [texture()])).toBe(first)
+  })
+
+  it('answers nothing when there was nothing to assemble', async () => {
+    expect(await openModelMaterial(MODEL, [texture({ location: 'cloud' })])).toBeNull()
+  })
+
+  /**
+   * A `metallicRoughnessTexture` packs two of the studio's channels into one image. The panel
+   * used to show it as a problem of its own, with a button to unpack it: the application makes
+   * the files, so it splits the picture here and fills both channels.
+   */
+  it('splits a picture that packs two channels, and fills both', async () => {
+    installFakeBridge({
+      assets: {
+        saveTexture: request =>
+          Promise.resolve(texture({ id: `asset-${request.map}`, map: request.map })),
+      },
+    })
+
+    await openModelMaterial(
+      MODEL,
+      [
+        texture(),
+        // No `map`: `channelWornBy` claims nothing when the slots wearing a picture disagree.
+        {
+          ...texture({ id: 'asset-packed', packedSlot: 'metallicRoughnessTexture' }),
+          map: undefined,
+        },
+      ],
+      () => Promise.resolve({ width: 2, height: 2, png: new Uint8Array([1]) }),
+    )
+
+    const channels = materialOf(useMaterials.getState(), opened().id).channels
+    expect(channels.roughness).toBeDefined()
+    expect(channels.metalness).toBeDefined()
+  })
+
+  /**
    * A picture the cloud still holds has no file to decode. Asked before a tab is made, the way
    * `openAsset` asks it: left to `placeMaterialChannel`, which refuses one by one, the gesture
    * would leave an empty tab standing where a refusal belonged.

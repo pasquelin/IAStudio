@@ -32,9 +32,10 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { assetVersionOf } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
 import { wornModelDress } from '@/spaces/materials/modelDress'
+import { useMaterialRefresh } from '@/hooks/useMaterialRefresh'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
@@ -243,17 +244,19 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
       onTransform: moves => recordTransform(documentId, moves),
       onClips: (nodeId, clips, lengths) =>
-        useModelClips.getState().report(documentId, nodeId, clips, lengths),
-      onRig: (nodeId, rig) => useModelClips.getState().reportRig(documentId, nodeId, rig),
+        useModelFiles.getState().report(documentId, nodeId, clips, lengths),
+      onRig: (nodeId, rig) => useModelFiles.getState().reportRig(documentId, nodeId, rig),
+      onMaterials: (nodeId, count) =>
+        useModelFiles.getState().reportMaterials(documentId, nodeId, count),
       // The project's, not the document's: the same character opens in the next document of this
       // project, and a mapping worked out once must never be worked out again.
       profiles: skeletonProfilesOf(useSkeletonProfiles.getState(), projectPath),
       onProfile: profile =>
         projectPath && useSkeletonProfiles.getState().rememberSkeletonProfile(projectPath, profile),
       onClipFit: (nodeId, clipKey, fit) =>
-        useModelClips.getState().reportClipFit(documentId, nodeId, clipKey, fit),
+        useModelFiles.getState().reportClipFit(documentId, nodeId, clipKey, fit),
       onRigProgress: (nodeId, progress) =>
-        useModelClips.getState().reportRigProgress(documentId, nodeId, progress),
+        useModelFiles.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
       onPathPoint: (nodeId, index, point) =>
@@ -282,7 +285,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onPane: pane => useSceneViews.getState().setActivePane(documentId, pane),
       assetVersion: assetVersionOf,
       livePreview: livePreviewOf,
-      wornMaterial: wornModelDress,
+      wornDress: wornModelDress,
     })
 
     renderer.mount(element)
@@ -297,7 +300,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       setLive(null)
       forgetSceneEngine(documentId)
       // The names came out of files this viewport parsed; nothing outside it can answer for them.
-      useModelClips.getState().forget(documentId)
+      useModelFiles.getState().forget(documentId)
     }
   }, [documentId])
 
@@ -307,6 +310,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [scene])
 
   useShelfRefresh(() => engine.current?.refreshTextures())
+  // The material a model NAMES moved: no asset id changed, so the shelf says nothing.
+  useMaterialRefresh(materialIds => engine.current?.dressModels(materialIds))
 
   // Same for the viewport settings, which were three constants inside the engine.
   useEffect(() => {

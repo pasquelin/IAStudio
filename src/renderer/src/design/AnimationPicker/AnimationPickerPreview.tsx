@@ -5,7 +5,7 @@ import { usToSeconds } from '@shared/domain/time'
 import { setModelLanes } from '@/engines/scene/commands'
 import { nodeById } from '@/engines/scene/sceneState'
 import { clipSpanOf, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
-import { clipLengthOf, useModelClips } from '@/stores/modelClips'
+import { clipLengthOf, useModelFiles } from '@/stores/modelFiles'
 import { SliderField } from '../SliderField'
 import { ToggleField } from '../ToggleField'
 import { ToolButton } from '../ToolButton'
@@ -47,7 +47,7 @@ export function AnimationPickerPreview({
 
   const lane = laneHolding(lanes, clipId)
   const played = lane?.clips.find(clip => clip.id === clipId)
-  const length = useModelClips(state =>
+  const length = useModelFiles(state =>
     played ? clipLengthOf(state, documentId, nodeId, clipKeyOf(played.source)) : null,
   )
   if (!lane || !played) return null

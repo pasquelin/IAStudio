@@ -928,6 +928,10 @@
       "nodeSeparate": {
         "title": "Separate a solid",
         "description": "Breaks apart a solid of the scene in front and gives back the shapes it was made of, each where it stood. Answers with the ids of the objects handed back."
+      },
+      "modelWearImage": {
+        "title": "Cover a model with an image",
+        "description": "Puts one image of the project over a whole imported model, as its base colour — the simple way to dress it. It excludes materials: a model covered with an image wears none, and the other way round. No other channel is derived from it. With no image, the dress comes off and the model goes back to what its own file carries."
       }
     },
     "refusals": {
@@ -1208,7 +1212,8 @@
       "cardBody": "Card text",
       "cardActive": "The card applies",
       "aimId": "Target identifier",
-      "csgOperation": "What to do with them"
+      "csgOperation": "What to do with them",
+      "materialSlot": "Material slot"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

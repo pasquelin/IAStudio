@@ -31,7 +31,7 @@ import { useFamilyModels } from '@/hooks/useFamilyModels'
 import { useMeshSizeLimit } from '@/hooks/useMeshSizeLimit'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { assetsById, useAssets } from '@/stores/assets'
-import { rigOfNode, rigProgressOfNode, useModelClips } from '@/stores/modelClips'
+import { rigOfNode, rigProgressOfNode, useModelFiles } from '@/stores/modelFiles'
 
 /** What is being made animatable. The studio's own rigger only knows the first two. */
 export type CharacterKind = 'auto' | 'human' | 'animal' | 'other'
@@ -58,8 +58,8 @@ export function RigSection({ documentId, node, edit }: RigSectionProps) {
   const [asking, setAsking] = useState(false)
   const [opener, setOpener] = useState<HTMLButtonElement | null>(null)
   const [kind, setKind] = useState<CharacterKind>('auto')
-  const rig = useModelClips(state => rigOfNode(state, documentId, node.id))
-  const progress = useModelClips(state => rigProgressOfNode(state, documentId, node.id))
+  const rig = useModelFiles(state => rigOfNode(state, documentId, node.id))
+  const progress = useModelFiles(state => rigProgressOfNode(state, documentId, node.id))
   const plan = usePlanAccess()
   // Asked for ONLY where the note could be drawn — on a bare mesh. Every other model selection
   // was sending a listing and a schema read to say nothing at all; seen in the log, on screen.

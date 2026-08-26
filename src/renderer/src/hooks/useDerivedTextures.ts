@@ -16,12 +16,15 @@ import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
  * panel fill itself after an import, and why a slower answer cannot land on the wrong model.
  */
 export function useDerivedTextures(sourceId: string): readonly Asset[] {
-  const ask = useCallback(
-    () =>
-      getBridge()?.assets.search({ derivedFrom: sourceId, type: 'texture' }) ??
-      Promise.resolve(NO_ASSETS),
-    [sourceId],
-  )
+  const ask = useCallback(() => derivedTexturesOf(sourceId), [sourceId])
 
   return useCatalogueAssets(ask)
+}
+
+/** The same question, asked once at a press — for a caller that shows nothing of the answer. */
+export function derivedTexturesOf(sourceId: string): Promise<readonly Asset[]> {
+  return (
+    getBridge()?.assets.search({ derivedFrom: sourceId, type: 'texture' }) ??
+    Promise.resolve(NO_ASSETS)
+  )
 }

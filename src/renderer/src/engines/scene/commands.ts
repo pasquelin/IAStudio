@@ -22,7 +22,10 @@ import {
   type SceneWorld,
   type GeometryDescriptor,
   type LightDescriptor,
+  withMaterialAt,
+  wornMaterials,
   type MaterialDescriptor,
+  type ModelDressRef,
   type ModelRef,
   type PathDescriptor,
   type SpriteDescriptor,
@@ -627,18 +630,31 @@ export function removeIkChain(id: string, chainId: string): Command<SceneState> 
   })
 }
 
+/** What covers a model — a picture, the materials it wears, or `null` for its file's own. */
+export function dressModel(id: string, dress: ModelDressRef | null): Command<SceneState> {
+  return editModel(id, 'dress', model => dressed(model, dress))
+}
+
 /**
- * The MATERIAL a model wears, by the id of its document. `null` takes it off, and the model goes
- * back to the maps and the finish its own file carries.
- *
- * A reference, so nothing of the material is copied onto the node — see `materialDocumentId`.
+ * One slot of a model's material list, the rest carried over. Emptying a slot LEAVES it — taking
+ * the row away under the finger that just cleared it is not what clearing means.
  */
-export function wearMaterial(id: string, materialDocumentId: string | null): Command<SceneState> {
-  return editModel(id, 'materialDocumentId', model => {
-    const rest = { ...model }
-    delete rest.materialDocumentId
-    return materialDocumentId ? { ...rest, materialDocumentId } : rest
-  })
+export function wearMaterialAt(id: string, slot: number, documentId: string): Command<SceneState> {
+  return editModel(id, 'dress', model =>
+    dressed(model, {
+      kind: 'materials',
+      documentIds: withMaterialAt(wornMaterials(model.dress), slot, documentId),
+    }),
+  )
+}
+
+/** The dress written onto a model — and `materialDocumentId` dropped, which is read once and
+ * never written again: left in place it would go on contradicting `dress`. */
+function dressed(model: ModelRef, dress: ModelDressRef | null): ModelRef {
+  const rest = { ...model }
+  delete rest.dress
+  delete rest.materialDocumentId
+  return dress ? { ...rest, dress } : rest
 }
 
 /**

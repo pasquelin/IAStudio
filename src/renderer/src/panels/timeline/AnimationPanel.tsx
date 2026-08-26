@@ -10,7 +10,7 @@ import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { clipLabel } from '@/helpers/clipLabel'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useScenePlayhead } from '@/stores/sceneViews'
 import { AnimationCanvas } from './AnimationCanvas'
@@ -41,7 +41,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector
   // would hand it a new snapshot every render and the subscription would never settle.
   const expanded = useMemo(() => keySetOf(expandedList), [expandedList])
-  const lengths = useModelClips(state => state.lengths[documentId])
+  const lengths = useModelFiles(state => state.lengths[documentId])
   const rows = useMemo(() => {
     const byId = new Map(nodes.map(node => [node.id, node]))
 

@@ -15,7 +15,7 @@ import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { retitleDocument } from '@/stores/document-fixtures'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
@@ -119,7 +119,7 @@ describe('the bone picker', () => {
       selectedIds: ['perso'],
     })
     useSceneViews.setState({ views: {} })
-    useModelClips.setState({ clips: {}, rigs: {}, lengths: {} })
+    useModelFiles.setState({ clips: {}, rigs: {}, lengths: {} })
   })
 
   it('offers no bone picker for a model that brought none', () => {
@@ -129,7 +129,7 @@ describe('the bone picker', () => {
   })
 
   it('offers every bone the file brought, plus the model as a whole', () => {
-    useModelClips.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
+    useModelFiles.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
     bar()
 
     expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual([

@@ -90,7 +90,7 @@ export type SlotBindings = {
 }
 
 /**
- * The five slots of a standard material, each holding one reference, driven as one.
+ * The slots of a standard material, each holding one reference, driven as one.
  *
  * What differs between a mesh's own material and a model's overrides is where the texture is
  * WRITTEN, which is the callback — everything around it, down to which colour space each slot

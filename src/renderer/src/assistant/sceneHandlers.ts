@@ -7,6 +7,7 @@ import {
   DISPLAY_MODES,
   ENVIRONMENT_KINDS,
   FOG_KINDS,
+  MATERIAL_SLOTS,
   STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
   VIEW_DIRECTIONS,
@@ -39,7 +40,8 @@ import {
   setGeometry,
   setLight,
   setMaterialOn,
-  wearMaterial,
+  dressModel,
+  wearMaterialAt,
   setNodeVisible,
   setPath,
   setNodesNegative,
@@ -877,13 +879,32 @@ export const SCENE_HANDLERS: ActionHandlers = {
       if (node.type !== 'model') return null
 
       // The TITLE, because a document id is not something anyone types. An empty one takes the
-      // material off, and the model goes back to what its own file carries.
+      // whole dress off, and the model goes back to what its own file carries.
       const title = textOf(input, 'material')
-      if (!title) return wearMaterial(node.id, null)
+      if (!title) return dressModel(node.id, null)
+
+      // Zero unless one is named: a model with one material is the ordinary case, and a caller
+      // that says nothing about slots means the first. Refused rather than swallowed out of range
+      // — `withMaterialAt` is a pure function and can only answer the list unchanged.
+      const slot = numberOf(input, 'slot') ?? 0
+      if (!Number.isInteger(slot) || slot < 0 || slot >= MATERIAL_SLOTS) return null
 
       const wanted = materialNamed(title)
-      return wanted ? wearMaterial(node.id, wanted) : null
+      return wanted ? wearMaterialAt(node.id, slot, wanted) : null
     }),
+
+  /** The picture must EXIST, or the model holds a reference nothing resolves — see `world.environment`. */
+  'model.wearImage': input => {
+    const assetId = textOf(input, 'assetId')
+    const write = (): ActionOutcome =>
+      editNode(input, node =>
+        node.type === 'model'
+          ? dressModel(node.id, assetId ? { kind: 'image', assetId } : null)
+          : null,
+      )
+
+    return assetId === null ? write() : withAsset(assetId, write)
+  },
 
   /**
    * The lens, through the inspector's own translation — `fov` may be keyed, the two distances

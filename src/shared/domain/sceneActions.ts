@@ -15,6 +15,7 @@ import {
   FOG_KINDS,
   GROUND_SIZE,
   LIGHT_ENTRIES,
+  MATERIAL_SLOTS,
   MESH_ENTRIES,
   OBJECT_ENTRIES,
   TEXTURE_SLOTS,
@@ -462,12 +463,12 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * The MATERIAL a model wears, named by the title of its document. An empty title takes it
-     * off, and the model goes back to the maps and the finish its own file carries.
+     * The MATERIAL a model wears in ONE of its slots, named by the title of its document. An empty
+     * title takes the whole dress off, and the model goes back to what its own file carries.
      *
      * A reference: what that material holds is resolved when the scene is read, so editing it
-     * reaches every model wearing it. There is nothing here to copy, and no slot to fill — a
-     * material already carries one per channel.
+     * reaches every model wearing it. The slot is Blender's — a model carries one material per
+     * primitive of its mesh, and a caller that names none means the first.
      */
     name: 'model.wearMaterial',
     titleKey: 'assistant.actions.modelWearMaterial.title',
@@ -477,6 +478,35 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     fields: [
       NODE,
       { key: 'material', kind: 'text', labelKey: 'assistant.fields.material', required: false },
+      {
+        key: 'slot',
+        kind: 'integer',
+        labelKey: 'assistant.fields.materialSlot',
+        required: false,
+        min: 0,
+        // A mesh of more primitives than this is not a model anyone dresses by hand, and the list
+        // GROWS to reach the slot named: unbounded, one call could ask for a million rows.
+        max: MATERIAL_SLOTS - 1,
+      },
+    ],
+  }),
+  action({
+    /**
+     * The simple way to cover a model: ONE picture as its base colour, which is what Roblox's
+     * `TextureID` is. No asset takes the dress off.
+     *
+     * EXCLUSIVE with `model.wearMaterial`: a model is covered one way or the other, never both,
+     * so this drops whatever materials it wore. Nothing is derived from the picture — a normal
+     * computed from the luminance of a photograph turns painted shadow into relief.
+     */
+    name: 'model.wearImage',
+    titleKey: 'assistant.actions.modelWearImage.title',
+    descriptionKey: 'assistant.actions.modelWearImage.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      NODE,
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
     ],
   }),
   action({

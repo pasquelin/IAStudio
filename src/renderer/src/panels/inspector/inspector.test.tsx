@@ -37,7 +37,7 @@ import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { useSettings } from '@/stores/settings'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/material-fixtures'
 import { inSection } from './inspector-fixtures'
@@ -1008,7 +1008,7 @@ describe('the inspector on an imported model', () => {
 
   it('offers the clips the file brought', () => {
     install(modelNodeFixture('model-1'))
-    useModelClips.setState({
+    useModelFiles.setState({
       clips: { 'doc-1': { 'model-1': ['walk'] } },
       rigs: { 'doc-1': { 'model-1': rigStateFixture([]) } },
     })
@@ -1018,16 +1018,58 @@ describe('the inspector on an imported model', () => {
   })
 
   /**
-   * The whole of what a model wears is a MATERIAL it names — no slot of its own, because a
-   * material already carries one per channel and a second, poorer list is what kept an edit from
-   * arriving. « Its own file's » is what a model naming none reads as.
+   * ONE question about what covers a model, where two panels stood: an inventory of the file's
+   * own pictures titled « material of the model », and the choice, titled the same. The first
+   * opened a material it never attached, so an edit saved from it reached nothing.
    */
-  it('names the material it wears, and its own file until one is chosen', () => {
+  it('asks one question about what covers a model, and starts on its own file', () => {
     install(modelNodeFixture('model-1'))
     render(withQueries(<Content />))
 
-    expect(screen.getByText('Matière du modèle')).toBeInTheDocument()
-    expect(screen.getByLabelText('Matière')).toHaveValue('')
+    expect(screen.getByText('Habillage')).toBeInTheDocument()
+    expect(screen.getByLabelText('Recouvert par')).toHaveValue('own')
+    // The inventory of the file's own pictures is gone with the panel that showed it.
+    expect(screen.queryByText('Images du modèle')).not.toBeInTheDocument()
+  })
+
+  // The two modes exclude each other, and the panel shows it: a model covered by a picture has no
+  // material list to read, and one wearing materials has no picture slot.
+  it('offers a picture slot or a list of materials, never both at once', () => {
+    install(modelNodeFixture('model-1'))
+    render(withQueries(<Content />))
+
+    fireEvent.change(screen.getByLabelText('Recouvert par'), { target: { value: 'image' } })
+    expect(screen.getByLabelText('Couleur de base')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Matière 1')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Recouvert par'), { target: { value: 'materials' } })
+    expect(screen.getByLabelText('Matière 1')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Couleur de base')).not.toBeInTheDocument()
+  })
+
+  // Blender's `+` and `−`, and they belong to the SECTION: a list is grown from its heading, not
+  // from a button per row.
+  it('grows and shrinks the list of material slots from its heading', () => {
+    install(modelNodeFixture('model-1'))
+    render(withQueries(<Content />))
+
+    fireEvent.change(screen.getByLabelText('Recouvert par'), { target: { value: 'materials' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter un emplacement' }))
+    expect(screen.getByLabelText('Matière 2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retirer cet emplacement' }))
+    expect(screen.queryByLabelText('Matière 2')).not.toBeInTheDocument()
+  })
+
+  // One slot is what the `materials` mode IS: taking the last away would leave a mode with no
+  // list, which reads as « own file » while the document still says otherwise.
+  it('refuses to take the last material slot away', () => {
+    install(modelNodeFixture('model-1'))
+    render(withQueries(<Content />))
+
+    fireEvent.change(screen.getByLabelText('Recouvert par'), { target: { value: 'materials' } })
+
+    expect(screen.getByRole('button', { name: 'Retirer cet emplacement' })).toBeDisabled()
   })
 })
 

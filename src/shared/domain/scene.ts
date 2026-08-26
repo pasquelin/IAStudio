@@ -95,18 +95,87 @@ export type ModelRef = {
    * into a single `ClipRef`. Never written again.
    */
   animation?: AnimationRef
+  /** What covers this model. Absent leaves it wearing what its own file carries. */
+  dress?: ModelDressRef
   /**
-   * The MATERIAL this model wears, by the id of its document.
-   *
-   * A reference, never a copy: what the material holds is resolved when the scene is READ, so
-   * editing that material — swapping the picture in a channel, turning a dial — reaches every
-   * model wearing it. It rides in `extras[studio]` verbatim, so no glTF reader sees it and no
-   * format head changes.
-   *
-   * Named by a gesture rather than guessed from the mesh: one `.glb` can have any number of
-   * materials assembled from it, and picking one would be a draw.
+   * @deprecated Read when a document written before `dress` existed is opened, and folded into a
+   * one-entry `materials`. Never written again.
    */
   materialDocumentId?: string
+}
+
+/**
+ * What covers a model: ONE picture, or the material documents it wears — never both.
+ *
+ * A union rather than two fields, so a model dressed BOTH ways cannot be written at all: the two
+ * modes contradict each other, and holding them apart by convention is how they would drift.
+ *
+ * `image` is the simple mode — one picture as the base colour of the whole model, which is what
+ * Roblox's `TextureID` is. Nothing is derived from it: a normal computed from the luminance of a
+ * photograph turns painted shadow into relief, and that guess belongs to the other mode, where
+ * the user asks for it channel by channel and sees the result.
+ *
+ * `materials` is the advanced mode — Blender's material slots and Unreal's material elements. One
+ * document id per slot, in the order the file's own materials come, and a REFERENCE rather than a
+ * copy: what a material holds is resolved when the scene is READ, so editing it reaches every
+ * model wearing it. An empty entry leaves that slot wearing the file's own material.
+ *
+ * Both ride in `extras[studio]` verbatim, so no glTF reader sees them and no format head changes.
+ */
+export type ModelDressRef =
+  { kind: 'image'; assetId: string } | { kind: 'materials'; documentIds: readonly string[] }
+
+/**
+ * The empty slot of either mode: a picture not chosen yet, a slot keeping the file's own material.
+ *
+ * Stored rather than folded back to no dress at all, and that is what makes the mode STICK: a
+ * panel switched to one mode and not filled in must stay in it, or the choice undoes itself
+ * under the hand that made it.
+ *
+ * Read through `isWorn` and never compared to directly: every reader tested falsiness instead, so
+ * the constant could not have changed value without breaking them all in silence.
+ */
+export const NOTHING_WORN = ''
+
+/**
+ * How many material slots a model may be given. The list GROWS to reach the slot named, so an
+ * outside caller asking for a millionth one would allocate a million empty rows.
+ */
+export const MATERIAL_SLOTS = 64
+
+/** Whether a slot of either mode names something. The one reading of `NOTHING_WORN`. */
+export function isWorn(id: string | undefined): id is string {
+  return id !== undefined && id !== NOTHING_WORN
+}
+
+/**
+ * The material documents a model wears, slot by slot — empty for one dressed any other way.
+ *
+ * The empty answer is SHARED: a fresh array is a new snapshot on every call, which is a render
+ * loop the day this is read inside a zustand selector.
+ */
+export function wornMaterials(dress: ModelDressRef | undefined): readonly string[] {
+  return dress?.kind === 'materials' ? dress.documentIds : NO_MATERIALS
+}
+
+const NO_MATERIALS: readonly string[] = Object.freeze([])
+
+/**
+ * One slot of a material list, the rest carried over — and the list GROWN to reach it when the
+ * slot sits past its end, since a model's slots come from its file and the list may not have
+ * caught up. The gap fills with empty slots rather than shifting what is already worn.
+ */
+export function withMaterialAt(
+  worn: readonly string[],
+  slot: number,
+  documentId: string,
+): readonly string[] {
+  if (slot < 0 || slot >= MATERIAL_SLOTS || !Number.isInteger(slot)) return worn
+
+  const next = [...worn]
+  while (next.length <= slot) next.push(NOTHING_WORN)
+  next[slot] = documentId
+  return next
 }
 
 /**
@@ -115,7 +184,8 @@ export type ModelRef = {
  */
 export type ModelDress = {
   textures: Partial<Record<TextureSlot, TextureRef>>
-  material: ModelMaterial
+  /** Absent where nothing is set — an empty finish still costs a `needsUpdate` per material. */
+  material?: ModelMaterial
 }
 
 /** What a model wears over its file. Every field optional: absent leaves what the glTF said. */

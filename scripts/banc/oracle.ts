@@ -10,6 +10,7 @@ import type { SceneNode } from '@/engines/scene/sceneState'
 import { clipEnd, type Clip, type Track } from '@/engines/timeline/timelineState'
 import { isNeutral } from '@shared/domain/adjustments'
 import type { CsgOperation } from '@shared/domain/csg'
+import { wornMaterials } from '@shared/domain/scene'
 import { toRadians } from '@shared/domain/angles'
 import { SECOND } from '@shared/domain/time'
 import { matchesWords, searchWords } from '@shared/text'
@@ -163,9 +164,19 @@ export const rig = (run: Run) => {
  * The MATERIAL an imported model wears, by the id of its document — a reference, so nothing of it
  * is on the node to read. `null` means the model wears what its own file carries.
  */
-export const modelWears = (run: Run, name: string): string | null => {
+export const modelWears = (run: Run, name: string, slot = 0): string | null => {
   const node = nodeNamed(run, name)
-  return node?.type === 'model' ? (node.model.materialDocumentId ?? null) : null
+  if (node?.type !== 'model') return null
+
+  return wornMaterials(node.model.dress)[slot] || null
+}
+
+/** The one picture covering a model whole — the simple mode, exclusive with the materials. */
+export const modelCoveredBy = (run: Run, name: string): string | null => {
+  const node = nodeNamed(run, name)
+  if (node?.type !== 'model' || node.model.dress?.kind !== 'image') return null
+
+  return node.model.dress.assetId || null
 }
 
 /** The open picture itself — its size and its guides, which no layer carries. */

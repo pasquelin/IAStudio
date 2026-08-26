@@ -8,7 +8,7 @@ import { nodeById, type SceneState } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
 import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { newId } from '@/helpers/ids'
-import { clipsOfNode, useModelClips } from '@/stores/modelClips'
+import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useScenePreview, useSceneViews, type WatchedPreview } from '@/stores/sceneViews'
@@ -31,7 +31,7 @@ export function AnimationsPanel() {
   // Through `clipsOfNode` even when nothing is chosen, for the empty list it already holds: a
   // selector handing zustand a fresh literal on every render never settles, and React then stops
   // at the update limit.
-  const own = useModelClips(state => clipsOfNode(state, documentId ?? '', nodeId ?? ''))
+  const own = useModelFiles(state => clipsOfNode(state, documentId ?? '', nodeId ?? ''))
 
   if (own.length === 0 && bundled.length === 0) {
     return <EmptyState icon={mdiRunFast} message={t('animations.empty')} />

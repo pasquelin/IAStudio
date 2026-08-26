@@ -53,7 +53,7 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { useAnimationViews } from '@/stores/animationView'
 import { getBridge } from '@/services/bridge'
 import { activeSceneId, useDocuments } from '@/stores/documents'
-import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
+import { clipsOfNode, rigOfNode, useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
 import { boolOf, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
@@ -112,7 +112,7 @@ function fitRig(input: Record<string, unknown>): ActionOutcome {
   const open = model(input)
   if (!open) return noModel()
 
-  const bounds = rigOfNode(useModelClips.getState(), open.documentId, open.node.id)?.bounds
+  const bounds = rigOfNode(useModelFiles.getState(), open.documentId, open.node.id)?.bounds
   if (!bounds) return refused('notFound')
   if (rigFitFaultOf(bounds)) return refused('failed')
 
@@ -134,7 +134,7 @@ function rigState(input: Record<string, unknown>): ActionOutcome {
       ik: rig?.ik ?? [],
       lanes: open.node.model.lanes ?? [],
       // What the engine measured, which is what decides whether a bare mesh can be rigged at all.
-      status: rigOfNode(useModelClips.getState(), open.documentId, open.node.id)?.status ?? null,
+      status: rigOfNode(useModelFiles.getState(), open.documentId, open.node.id)?.status ?? null,
     },
   }
 }
@@ -166,7 +166,7 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
   if (!open) return noModel()
   const playable =
     source === 'embedded'
-      ? clipsOfNode(useModelClips.getState(), open.documentId, open.node.id)
+      ? clipsOfNode(useModelFiles.getState(), open.documentId, open.node.id)
       : await bundledNames()
 
   if (!playable.includes(clipName)) return refused('notFound')
@@ -192,7 +192,7 @@ async function listAnimations(input: Record<string, unknown>): Promise<ActionOut
   return {
     ok: true,
     data: {
-      embedded: clipsOfNode(useModelClips.getState(), open.documentId, open.node.id),
+      embedded: clipsOfNode(useModelFiles.getState(), open.documentId, open.node.id),
       bundled: await bundledNames(),
       assets: [...assetsById(useAssets.getState()).values()]
         .filter(asset => asset.type === 'animation')

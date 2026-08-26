@@ -85,7 +85,7 @@ export function createSceneStage({
           // `.glb` while the same model on screen wears the project's — the render disagrees
           // with what was framed, from the first frame.
           assetVersion: assetVersionOf,
-          wornMaterial: wornModelDress,
+          wornDress: wornModelDress,
         })
 
       renderer.prepareOffscreen({ alpha: true, pixelRatio: 1 })

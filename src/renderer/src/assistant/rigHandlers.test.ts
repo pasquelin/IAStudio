@@ -10,7 +10,7 @@ import type { ModelNode, SceneState } from '@/engines/scene/sceneState'
 import { installScene } from '@/stores/scene-fixtures'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { useAssets } from '@/stores/assets'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { runAction } from './executor'
 
@@ -50,7 +50,7 @@ function installCharacter(rig: Rig | undefined = RIG): string {
 
 beforeEach(() => {
   useAssets.setState({ items: [ANIMATION] })
-  useModelClips.setState({ rigs: {} })
+  useModelFiles.setState({ rigs: {} })
 })
 
 describe('reading a character', () => {
@@ -214,7 +214,7 @@ describe('the three places a motion comes from', () => {
 
   it('lists the model’s own clips, the shipped ones and the library’s', async () => {
     const nodeId = installCharacter()
-    useModelClips.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
+    useModelFiles.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
 
     const outcome = await runAction('animations.list', { nodeId })
 
@@ -226,7 +226,7 @@ describe('the three places a motion comes from', () => {
 
   it('lays a clip the model’s own file spells', async () => {
     const nodeId = installCharacter()
-    useModelClips.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
+    useModelFiles.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
 
     expect(
       await runAction('animation.add', { nodeId, source: 'embedded', clipName: 'Marche' }),

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { bundledClip, clipLane, MAIN_LANE_ID, type ClipRef } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { installScene } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
 import { AnimationPickerPreview } from './AnimationPickerPreview'
@@ -31,7 +31,7 @@ function show(length: number | null = LENGTH, clip: Partial<ClipRef> = {}): void
       },
     ],
   })
-  useModelClips.setState({
+  useModelFiles.setState({
     lengths: length === null ? {} : { [DOCUMENT]: { a: { 'bundled:Capoeira': length } } },
   })
   render(<AnimationPickerPreview documentId={DOCUMENT} nodeId="a" clipId={CLIP} />)
@@ -39,7 +39,7 @@ function show(length: number | null = LENGTH, clip: Partial<ClipRef> = {}): void
 
 describe('watching the block that was laid', () => {
   beforeEach(() => {
-    useModelClips.setState({ clips: {}, rigs: {}, lengths: {} })
+    useModelFiles.setState({ clips: {}, rigs: {}, lengths: {} })
     useSceneViews.setState({ views: {} })
   })
 

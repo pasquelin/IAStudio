@@ -5,7 +5,7 @@ import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import type { ClipSource } from '@shared/domain/scene'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -47,7 +47,7 @@ function show(laid: { clipId: string; source: ClipSource } | null = null) {
 beforeEach(() => {
   installFakeBridge({ animations: { list: () => Promise.resolve(bundled) } })
   useAssets.setState({ items: [] })
-  useModelClips.setState({ clips: {}, rigs: {}, rigProgress: {}, lengths: {}, fits: {} })
+  useModelFiles.setState({ clips: {}, rigs: {}, rigProgress: {}, lengths: {}, fits: {} })
   useScenes.setState({
     states: { [DOCUMENT]: { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] } },
     histories: {},
@@ -68,7 +68,7 @@ describe('choosing an animation', () => {
 
   // The character's own clips are offered here too, and a Tripo rig spells its one `NlaTrack`.
   it('offers a clip of the character under a name of the app, not the exporter’s', async () => {
-    useModelClips.setState({ clips: { [DOCUMENT]: { a: ['NlaTrack'] } } })
+    useModelFiles.setState({ clips: { [DOCUMENT]: { a: ['NlaTrack'] } } })
     const { onChoose } = show()
 
     await userEvent.click(await screen.findByRole('button', { name: 'Animation' }))

@@ -149,6 +149,31 @@ export function documentAtPath(
   )
 }
 
+/** The document an id names. `documents` first, unlike `documentAtPath`: the tab holds the edits. */
+export function documentById(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  id: string,
+): DocumentDescriptor | null {
+  return state.documents[id] ?? state.stored.find(one => one.id === id) ?? null
+}
+
+/**
+ * Every document of one kind this project holds — the folder and the tabs, keyed by id so a
+ * document open in a tab is not listed twice.
+ */
+export function documentsOfKind(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  kind: DocumentKind,
+): readonly DocumentDescriptor[] {
+  return [
+    ...new Map(
+      [...state.stored, ...Object.values(state.documents)]
+        .filter(one => one.kind === kind)
+        .map(one => [one.id, one]),
+    ).values(),
+  ]
+}
+
 /**
  * The document already editing an asset, open or merely on disk, or `null` when none is.
  *
@@ -224,7 +249,7 @@ export function documentIsKnown(
   state: Pick<DocumentsState, 'documents' | 'stored'>,
   documentId: string,
 ): boolean {
-  return Boolean(state.documents[documentId]) || state.stored.some(one => one.id === documentId)
+  return documentById(state, documentId) !== null
 }
 
 export function documentsIn(
@@ -380,7 +405,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     ),
 
   rename: async (id, title) => {
-    const document = get().documents[id] ?? get().stored.find(entry => entry.id === id)
+    const document = documentById(get(), id)
     if (!document) return 'invalid'
 
     // Asked here as well as in the main process, and neither is the redundant one: this spares a

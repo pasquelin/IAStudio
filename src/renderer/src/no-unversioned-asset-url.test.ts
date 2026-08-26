@@ -81,10 +81,6 @@ const ALLOWED = new Map<string, string>([
     'hole: same, in the generator',
   ],
   [
-    'panels/inspector/ModelTexturesSection/ModelTexturesSectionRow.tsx | <Thumbnail url={posterUrl(asset) ?? assetUrl(asset.id)} />',
-    'hole: same, the fallback behind posterUrl',
-  ],
-  [
     'spaces/materials/MaterialDocument/MaterialDocument.tsx | const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))',
     'hole: same, the flat channel shown when a row carries no poster',
   ],

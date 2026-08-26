@@ -521,6 +521,47 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     setup: modelSceneWithMaterial,
     passed: run => read.modelWears(run, 'Knight') !== null,
   },
+  {
+    /**
+     * The SECOND slot, which is what a model with several materials needs — a car has a body, a
+     * glass and a set of tyres. The first must stay empty, or the request was read as « dress it »
+     * and the slot went unheard.
+     */
+    name: '12.9 dresses the second material slot of an imported model',
+    said: ['Mets la matière Pierre sur son deuxième emplacement de matière.'],
+    setup: modelSceneWithMaterial,
+    passed: run =>
+      read.modelWears(run, 'Knight', 1) !== null && read.modelWears(run, 'Knight') === null,
+  },
+  {
+    /**
+     * The simple mode, and its exclusivity: a model covered by a picture wears NO material, so a
+     * pass that only checks the picture would score a model dressed both ways at once.
+     */
+    name: '12.10 covers an imported model with one picture instead of a material',
+    said: ["Recouvre plutôt ce modèle de l'image de planches de chêne, sans matière."],
+    setup: modelSceneWithMaterial,
+    passed: run =>
+      read.modelCoveredBy(run, 'Knight') !== null && read.modelWears(run, 'Knight') === null,
+  },
+
+  {
+    /**
+     * The arm both dressing tools share, and the one no phrase reached: an empty name takes the
+     * WHOLE dress off rather than falling back on the other mode.
+     */
+    name: '12.11 takes the dress off an imported model',
+    said: ["Finalement retire-lui son habillage : qu'il reprenne celui de son propre fichier."],
+    setup: async studio => {
+      await modelSceneWithMaterial(studio)
+      await studio.run('model.wearMaterial', {
+        nodeId: named(studio, 'Knight'),
+        material: 'Pierre',
+      })
+    },
+    passed: run =>
+      read.modelWears(run, 'Knight') === null && read.modelCoveredBy(run, 'Knight') === null,
+  },
 
   // ——— 13. Timeline 3D ———
   {

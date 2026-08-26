@@ -8,7 +8,7 @@ import { SECOND } from '@shared/domain/time'
 import { installScene } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
 import { useAnimationViews } from '@/stores/animationView'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { AnimationPanel } from './AnimationPanel'
@@ -178,11 +178,11 @@ describe('AnimationPanel and the bones of a rig', () => {
       animation: { ...EMPTY_SCENE.animation, sheet: ['perso'] },
     })
     useSceneViews.setState({ views: {} })
-    useModelClips.setState({ clips: {}, rigs: {} })
+    useModelFiles.setState({ clips: {}, rigs: {} })
   })
 
   it('keys the model itself, on its own line', async () => {
-    useModelClips.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
+    useModelFiles.setState({ rigs: { [DOCUMENT]: { perso: rigStateFixture(['spine', 'arm.L']) } } })
     render(<AnimationPanel documentId={DOCUMENT} />)
 
     await userEvent.click(

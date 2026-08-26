@@ -1,32 +1,61 @@
-import type { ModelDress, ModelMaterial, TextureRef, TextureSlot } from '@shared/domain/scene'
+import { isWorn } from '@shared/domain/scene'
+import type {
+  ModelDress,
+  ModelDressRef,
+  ModelMaterial,
+  TextureRef,
+  TextureSlot,
+} from '@shared/domain/scene'
 import { slotForChannel, type MaterialSettings } from '@shared/domain/material'
 import type { ChannelSet, MaterialState } from '@/engines/material/materialState'
 import { loadMaterialSource, wornMaterialOf } from '@/stores/materialSources'
 
 /**
- * What a MATERIAL is worth to a model: its channels put in the slots a scene reads, and the dials
- * a plain `MeshStandardMaterial` carries.
+ * What a model's dress is worth to ONE of its material slots — the port every scene takes.
  *
- * The cavity is dropped, and so are the two ranges and the green flip: those four are read in the
- * material engine's `onBeforeCompile`, and a scene draws no such shader. Carried across they would
- * promise a look the viewport cannot draw — `ModelMaterial` says the same from the other side.
+ * Synchronous: the open tab first, then the copy read off disk, `null` while neither has arrived.
+ * The cavity, the two ranges and the green flip are dropped — a scene draws no such shader.
  */
-/**
- * What the material a model names is worth to it — the port every scene takes.
- *
- * Synchronous: the open tab first, then the copy read off disk, and `null` while neither has
- * arrived — with the read fired on the way, so the next frame has it.
- */
-export function wornModelDress(materialDocumentId: string): ModelDress | null {
-  const state = wornMaterialOf(materialDocumentId)
+export function wornModelDress(dress: ModelDressRef, slot: number): ModelDress | null {
+  if (dress.kind === 'image') return coveredBy(dress.assetId)
+
+  const materialId = dress.documentIds[slot]
+  if (!isWorn(materialId)) return null
+
+  const state = wornMaterialOf(materialId)
   if (state) return modelDressOf(state)
 
-  void loadMaterialSource(materialDocumentId)
+  void loadMaterialSource(materialId)
   return null
 }
 
+/** Asked once per SLOT of every model wearing it, on every refresh — held against its state. */
+const dresses = new WeakMap<MaterialState, ModelDress>()
+
+/**
+ * The same dress for every slot of a model covered by one picture — held, since this is asked per
+ * slot on each pass and three objects a slot is pure litter.
+ */
+const covers = new Map<string, ModelDress>()
+
+function coveredBy(assetId: string): ModelDress | null {
+  if (!isWorn(assetId)) return null
+
+  const held = covers.get(assetId)
+  if (held) return held
+
+  const made: ModelDress = { textures: { map: { assetId } } }
+  covers.set(assetId, made)
+  return made
+}
+
 export function modelDressOf(state: MaterialState): ModelDress {
-  return { textures: slotsOf(state.channels), material: modelFinishOf(state.material) }
+  const held = dresses.get(state)
+  if (held) return held
+
+  const made = { textures: slotsOf(state.channels), material: modelFinishOf(state.material) }
+  dresses.set(state, made)
+  return made
 }
 
 function slotsOf(channels: ChannelSet): Partial<Record<TextureSlot, TextureRef>> {

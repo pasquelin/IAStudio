@@ -5,7 +5,7 @@ import { QuietNote } from '../QuietNote'
 import { Row } from '../Row'
 import { INLINE_LINK } from '../styles'
 import { bodyFitOf } from '@/engines/scene/retarget'
-import { clipFitOfNode, useModelClips } from '@/stores/modelClips'
+import { clipFitOfNode, useModelFiles } from '@/stores/modelFiles'
 
 export type AnimationPickerMappingProps = {
   documentId: string
@@ -26,7 +26,7 @@ export function AnimationPickerMapping({
 }: AnimationPickerMappingProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const fit = useModelClips(state => clipFitOfNode(state, documentId, nodeId, clipKeyOf(source)))
+  const fit = useModelFiles(state => clipFitOfNode(state, documentId, nodeId, clipKeyOf(source)))
 
   // Nothing was retargeted, so there is no fit to speak of — a clip the character's own file
   // brought speaks its skeleton already.

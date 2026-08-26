@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import type { ClipSource } from '@shared/domain/scene'
-import { useModelClips } from '@/stores/modelClips'
+import { useModelFiles } from '@/stores/modelFiles'
 import { AnimationPickerMapping } from './AnimationPickerMapping'
 
 const DOCUMENT = 'doc-1'
 const SOURCE: ClipSource = { kind: 'bundled', name: 'Capoeira' }
 
 function show(missingInTarget: HumanoidRole[] = [], missingInSource: HumanoidRole[] = []): void {
-  useModelClips.setState({
+  useModelFiles.setState({
     fits: {
       [DOCUMENT]: { a: { 'bundled:Capoeira': { matched: [], missingInSource, missingInTarget } } },
     },
@@ -20,7 +20,7 @@ function show(missingInTarget: HumanoidRole[] = [], missingInSource: HumanoidRol
 
 describe('what the preview says about the fit', () => {
   beforeEach(() => {
-    useModelClips.setState({ fits: {} })
+    useModelFiles.setState({ fits: {} })
   })
 
   it('says nothing of hands a character simply does not have', () => {

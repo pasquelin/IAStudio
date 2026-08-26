@@ -928,6 +928,10 @@
       "nodeSeparate": {
         "title": "Séparer un solide",
         "description": "Défait un solide de la scène devant et rend les formes dont il a été fait, chacune là où elle se trouvait. Répond avec les identifiants des objets rendus."
+      },
+      "modelWearImage": {
+        "title": "Recouvrir un modèle d’une image",
+        "description": "Pose une seule image du projet sur tout un modèle importé, comme sa couleur de base — la façon simple de l’habiller. Elle exclut les matières : un modèle recouvert d’une image ne porte plus aucune matière, et l’inverse. Aucun autre canal n’en est déduit. Sans image, l’habillage est retiré et le modèle retrouve ce que son propre fichier porte."
       }
     },
     "refusals": {
@@ -1208,7 +1212,8 @@
       "cardBody": "Texte de la fiche",
       "cardActive": "La fiche s’applique",
       "aimId": "Identifiant de la cible",
-      "csgOperation": "Ce qu’il faut en faire"
+      "csgOperation": "Ce qu’il faut en faire",
+      "materialSlot": "Emplacement de matière"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

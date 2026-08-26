@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { withoutKey } from '@/helpers/objects'
 import type { RetargetFit } from '@/engines/scene/retarget'
 import type { RigState } from '@/engines/scene/rigState'
 
@@ -7,7 +8,7 @@ type ClipsByNode = Record<string, readonly string[]>
 /** How long each clip runs, in the seconds three measures it in, keyed by name. */
 type LengthsByNode = Record<string, Readonly<Record<string, number>>>
 
-type ModelClipsState = {
+type ModelFilesState = {
   /** Keyed by document, then by node: two tabs may hold the same model at different heads. */
   clips: Record<string, ClipsByNode>
   /** What each model IS, as the file that landed says — bones, roles and all. */
@@ -24,6 +25,9 @@ type ModelClipsState = {
     lengths?: Readonly<Record<string, number>>,
   ) => void
   reportRig: (documentId: string, nodeId: string, rig: RigState) => void
+  /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
+  materials: Record<string, Record<string, number>>
+  reportMaterials: (documentId: string, nodeId: string, count: number) => void
   /**
    * How far along binding a model's skeleton is, 0 to 1. Absent means "not binding" — which a
    * number cannot say, and a model at 0 has to read differently from one nobody asked about.
@@ -42,14 +46,17 @@ type ModelClipsState = {
 }
 
 /**
- * What clips each imported model brought, as its file reported them.
+ * What each imported model's FILE turned out to hold — its clips and their lengths, its skeleton,
+ * how many materials it carries — plus the two things only the engine can work out about it: how
+ * far a binding is, and how a foreign clip fits.
  *
- * Engine state and not document state: the names live inside the GLB, so a document holds the
- * name of the clip it plays — never the list of the ones it could.
+ * Engine state and not document state: a document holds the NAME of the clip it plays and the id
+ * of the material it wears, never the list of the ones its file could offer.
  */
-export const useModelClips = create<ModelClipsState>()(set => ({
+export const useModelFiles = create<ModelFilesState>()(set => ({
   clips: {},
   rigs: {},
+  materials: {},
   rigProgress: {},
   lengths: {},
   fits: {},
@@ -69,6 +76,14 @@ export const useModelClips = create<ModelClipsState>()(set => ({
       rigs: {
         ...state.rigs,
         [documentId]: { ...state.rigs[documentId], [nodeId]: rig },
+      },
+    })),
+
+  reportMaterials: (documentId, nodeId, count) =>
+    set(state => ({
+      materials: {
+        ...state.materials,
+        [documentId]: { ...state.materials[documentId], [nodeId]: count },
       },
     })),
 
@@ -97,19 +112,14 @@ export const useModelClips = create<ModelClipsState>()(set => ({
     }),
 
   forget: documentId =>
-    set(state => {
-      const { [documentId]: goneClips, ...clips } = state.clips
-      const { [documentId]: goneRigs, ...rigs } = state.rigs
-      const { [documentId]: goneProgress, ...rigProgress } = state.rigProgress
-      const { [documentId]: goneLengths, ...lengths } = state.lengths
-      const { [documentId]: goneFits, ...fits } = state.fits
-      void goneClips
-      void goneRigs
-      void goneProgress
-      void goneLengths
-      void goneFits
-      return { clips, rigs, rigProgress, lengths, fits }
-    }),
+    set(state => ({
+      clips: withoutKey(state.clips, documentId),
+      rigs: withoutKey(state.rigs, documentId),
+      rigProgress: withoutKey(state.rigProgress, documentId),
+      lengths: withoutKey(state.lengths, documentId),
+      fits: withoutKey(state.fits, documentId),
+      materials: withoutKey(state.materials, documentId),
+    })),
 }))
 
 /**
@@ -121,7 +131,7 @@ const NO_CLIPS: readonly string[] = []
 
 /** The clips a node can be asked to play, or none — a model still loading has none yet. */
 export function clipsOfNode(
-  state: ModelClipsState,
+  state: ModelFilesState,
   documentId: string,
   nodeId: string,
 ): readonly string[] {
@@ -130,7 +140,7 @@ export function clipsOfNode(
 
 /** How long one clip of a node runs, in seconds, or nothing while its file has not landed. */
 export function clipLengthOf(
-  state: ModelClipsState,
+  state: ModelFilesState,
   documentId: string,
   nodeId: string,
   clip: string,
@@ -140,7 +150,7 @@ export function clipLengthOf(
 
 /** How far along a node's bind is, or `null` when nothing is being bound for it. */
 export function rigProgressOfNode(
-  state: ModelClipsState,
+  state: ModelFilesState,
   documentId: string,
   nodeId: string,
 ): number | null {
@@ -149,11 +159,20 @@ export function rigProgressOfNode(
 
 /** What a node's model is, or nothing at all while its file has not landed. */
 export function rigOfNode(
-  state: ModelClipsState,
+  state: ModelFilesState,
   documentId: string,
   nodeId: string,
 ): RigState | null {
   return state.rigs[documentId]?.[nodeId] ?? null
+}
+
+/** Zero is « not known yet » as much as « nothing to dress » — hence `slots > 0` at the call site. */
+export function materialSlotsOfNode(
+  state: ModelFilesState,
+  documentId: string,
+  nodeId: string,
+): number {
+  return state.materials[documentId]?.[nodeId] ?? 0
 }
 
 /**
@@ -163,7 +182,7 @@ export function rigOfNode(
  * is no fit to speak of — and « perfectly » would be a claim rather than a measurement.
  */
 export function clipFitOfNode(
-  state: ModelClipsState,
+  state: ModelFilesState,
   documentId: string,
   nodeId: string,
   clipKey: string,
@@ -173,7 +192,7 @@ export function clipFitOfNode(
 
 /** The bones a node's model brought, or none — a mesh has none, and neither has a loading model. */
 export function bonesOfNode(
-  state: ModelClipsState,
+  state: ModelFilesState,
   documentId: string,
   nodeId: string,
 ): readonly string[] {

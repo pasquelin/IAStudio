@@ -5,7 +5,6 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { createUnpackPort, type UnpackPort } from '@/engines/material/derive/unpackPort'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { useAssets } from '@/stores/assets'
 
 /** The GPU port, built once. It holds nothing: a context is made and released per unpacking. */
 const gpuUnpack = createUnpackPort({ loadTexture })
@@ -32,37 +31,36 @@ export function packedChannels(asset: Asset): readonly PbrChannel[] {
  * to replace. They land `derivedFrom` the PACKED picture rather than the model, so a second
  * unpacking of the same file is traceable to what it came out of.
  *
- * Answers how many landed. Failures are reported rather than thrown: the caller is a row.
+ * Answers what landed, so a caller can put each piece in its channel without asking the catalogue
+ * again — and **the shelf is that caller's to refresh**, once for whatever it unpacked.
  */
 export async function unpackMaterialChannels(
   asset: Asset,
   unpack: UnpackPort = gpuUnpack,
-): Promise<number> {
+): Promise<readonly Asset[]> {
   const wanted = packedChannels(asset)
   const bridge = getBridge()
-  if (wanted.length === 0 || !bridge) return 0
+  if (wanted.length === 0 || !bridge) return []
 
-  let landed = 0
+  const landed: Asset[] = []
   for (const channel of wanted) {
     try {
       const picture = await unpack({ channel, sourceUrl: assetUrl(asset.id) })
-      await bridge.assets.saveTexture({
-        name: i18next.t('material.derivedName', {
-          name: asset.name,
-          channel: i18next.t(`material.channel.${channel}`),
+      landed.push(
+        await bridge.assets.saveTexture({
+          name: i18next.t('material.derivedName', {
+            name: asset.name,
+            channel: i18next.t(`material.channel.${channel}`),
+          }),
+          map: channel,
+          derivedFrom: asset.id,
+          png: picture.png,
         }),
-        map: channel,
-        derivedFrom: asset.id,
-        png: picture.png,
-      })
-      landed += 1
+      )
     } catch (error) {
       reportFailure('material.channel', channel, error)
     }
   }
 
-  // Once, after the whole set: the shelf is what every slot reads to show a picture, and a
-  // refresh per channel would have it re-read the catalogue for each one.
-  if (landed > 0) await useAssets.getState().refresh()
   return landed
 }
