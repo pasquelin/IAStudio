@@ -21,10 +21,7 @@ export type SceneDraw = Pick<SceneRenderer, 'apply'>
  * 🛑 It never writes to the store. That is the whole of why STOP restores nothing: one `apply` of
  * the untouched edit state puts the viewport back where it was.
  */
-export function createStudioRender(
-  renderer: SceneDraw,
-  editState: () => SceneState,
-): RenderPort {
+export function createStudioRender(renderer: SceneDraw, editState: () => SceneState): RenderPort {
   const shadow = new Map<string, SceneNode>()
   let byId = new Map<string, SceneNode>()
   let source: SceneState | null = null

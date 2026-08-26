@@ -39,8 +39,7 @@ export const usePlay = create<PlayStoreState>()(set => ({
         editState: () => sceneOf(useScenes.getState(), documentId),
         input,
         frames: animationFrames(),
-        onReport: report =>
-          set(state => ({ reports: { ...state.reports, [documentId]: report } })),
+        onReport: report => set(state => ({ reports: { ...state.reports, [documentId]: report } })),
       }),
     )
   },
