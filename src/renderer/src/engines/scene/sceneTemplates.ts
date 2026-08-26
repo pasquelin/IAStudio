@@ -327,12 +327,19 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
           { kind: 'cylinder', radiusTop: 0.12, radiusBottom: 0.12, height: 2.4, segments: 24 },
           { transform: transformAt({ x: -1.6, y: 1.2, z: 5 }), name: 'Foreground Post' },
         ),
-        // Behind everything, which is what gives the haze and the occlusion a far end to read.
+        /*
+         * Behind everything, which is what gives the haze and the occlusion a far end to read.
+         *
+         * Wide enough to FILL the frame, and a mid grey rather than the white cyclorama the photo
+         * set wears: measured at the head, 50.7 % of the top-right third was clipped past 250
+         * while the floor clipped none — the eye read a blown wall and a black void beside it,
+         * and a composition judged against a clipped wall is judged against nothing.
+         */
         meshNode(
-          { kind: 'plane', width: 24, height: 10 },
+          { kind: 'plane', width: 60, height: 16 },
           {
-            transform: transformAt({ x: 0, y: 5, z: -9 }),
-            material: BACKDROP,
+            transform: transformAt({ x: 0, y: 7, z: -9 }),
+            material: { ...BACKDROP, color: '#8c8c92' },
             castShadow: false,
             name: 'Backdrop',
           },
@@ -381,10 +388,16 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
             { time: 0, value: 0 },
             { time: 3 * SECOND, value: -13 },
           ]),
-          // § 15: a flash that opens and closes rather than a level that rises and stays.
+          /*
+           * § 15: a flash that opens and closes rather than a level that rises and stays.
+           *
+           * Peaking at 1.5 rather than at 3: looked at, a peak of three drowned the sphere in its
+           * own halo — the subject the rack focus had just brought into view disappeared behind
+           * the effect meant to celebrate it. A flash one cannot see THROUGH is not a flash.
+           */
           demoTrack('demo-flash', DEMO.bloom, 'strength', [
             { time: 0, value: 0 },
-            { time: 1.5 * SECOND, value: 2.65 },
+            { time: 1.5 * SECOND, value: 1.15 },
             { time: 3 * SECOND, value: 0 },
           ]),
           // The dark passage, in STOPS: one to four tenths of the light is about a stop and a

@@ -8,6 +8,7 @@ import {
   type PostEffectId,
   type PostStack,
 } from '@shared/domain/postProcessing'
+import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
 import { SelectField } from '@/design/SelectField'
 import { ToggleField } from '@/design/ToggleField'
@@ -201,20 +202,25 @@ export function PostProcessingSection({
 
         <PostPresetField title={title} stack={stack} onApply={applyStack} />
 
-        {stack.effects.length === 0 ? (
-          <EmptyState icon={mdiRhombusOutline} message={t('postfx.emptyHint')} />
-        ) : (
-          <PostStackList
-            stack={stack}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onReorder={onReorder}
-            onToggle={onToggle}
-            onRemove={onRemove}
-            onDuplicate={onDuplicate}
-            onReset={onReset}
-          />
-        )}
+        {/* In the label column like every other line of the section: a `Tree` set loose in the
+            body was the one block with no name and no rule beside it, and the eye lost the
+            column halfway down the panel. `shape="wrap"` because a list is taller than a line. */}
+        <PropertyRow label={t('postfx.stack')} shape="wrap">
+          {stack.effects.length === 0 ? (
+            <EmptyState icon={mdiRhombusOutline} message={t('postfx.emptyHint')} />
+          ) : (
+            <PostStackList
+              stack={stack}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onReorder={onReorder}
+              onToggle={onToggle}
+              onRemove={onRemove}
+              onDuplicate={onDuplicate}
+              onReset={onReset}
+            />
+          )}
+        </PropertyRow>
 
         <SelectField
           label={t('postfx.addEffect')}
