@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { useToolSurface } from '@/stores/layouts'
-import { DEFAULT_SIZES, DEFAULT_SPLIT, sizeKeyOf, useTools } from '@/stores/tools'
+import { DEFAULT_SIZES, sizeKeyOf, useTools } from '@/stores/tools'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { isHorizontal, isLeading, type ToolZone } from '@shared/domain/tool'
 import { useShownTools } from '@/hooks/useShownTools'
@@ -26,7 +26,9 @@ export function ShellEdge({ zone }: { zone: ToolZone }) {
   )
 
   const size = useTools(state => state.lengths.sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone])
-  const split = useTools(state => state.lengths.splits[zone] ?? DEFAULT_SPLIT)
+  // Undefined until dragged, and that IS the default: neither half is given a length, so the
+  // two divide the zone evenly — and keep dividing it when the window changes.
+  const split = useTools(state => state.lengths.splits[zone])
 
   const { primary, secondary } = useShownTools(zone)
   if (!primary && !secondary) return null

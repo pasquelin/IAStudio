@@ -225,6 +225,28 @@ describe('a side column', () => {
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
   })
 
+  /**
+   * Half each until somebody says otherwise, and it is CSS that divides them. Read off the LOWER
+   * half, the only one a length was ever written to — the upper one has taken what is left since
+   * before this rule, so asserting on it would pass whatever happens here.
+   */
+  it('divides a column evenly until a divider has been dragged', () => {
+    useTools.setState({ arrangements: arrangedFor('image', { open: COLUMN_OF_TWO }) })
+    renderShell()
+
+    expect(screen.getByLabelText('Inspecteur').style.flexBasis).toBe('')
+  })
+
+  it('gives the lower half the length a drag wrote for it', () => {
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: COLUMN_OF_TWO }),
+      lengths: { ...DEFAULT_LENGTHS, splits: { right: 200 } },
+    })
+    renderShell()
+
+    expect(screen.getByLabelText('Inspecteur').style.flexBasis).toBe('200px')
+  })
+
   // A lone half fills its zone: the divider belongs to the cut, and there is none to make here.
   it('draws no divider where only one half of a column is open', () => {
     useTools.setState({
