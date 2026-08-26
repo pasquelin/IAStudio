@@ -203,6 +203,13 @@ import { applyTheme } from './window/theme'
  */
 const USAGE_CONCURRENCY = 4
 
+/**
+ * How long rows landing in the catalogue are gathered before the windows are told. Shorter than
+ * the shelf's own 200 ms trailing debounce, so a burst still reads once — this only stops fifty
+ * imports from being fifty structured clones to every window.
+ */
+const ANNOUNCE_MS = 50
+
 export type Services = {
   settings: SettingsStore
   client: ClientProvider
@@ -823,7 +830,9 @@ export function createServices(settings: SettingsStore): Services {
        * Only when something actually changed, which is what keeps a pass on every focus quiet.
        */
       if (found.moved + found.missing + found.returned > 0) {
-        broadcast(EVENTS.assetsChanged)
+        // No rows: a rescan refiles files it found on disk, and naming them would mean
+        // reading each one back out of the catalogue to say what a re-read says anyway.
+        broadcast(EVENTS.assetsChanged, [])
         broadcast(EVENTS.projectFolderChanged)
       }
 
@@ -961,12 +970,62 @@ export function createServices(settings: SettingsStore): Services {
   }
 
   /**
+   * Rows waiting to be announced. Fifty imports are otherwise fifty structured clones to every
+   * window, each re-arming the shelf's trailing debounce so its read lands only after the burst.
+   */
+  let landed: Asset[] = []
+  let announcing: ReturnType<typeof setTimeout> | null = null
+
+  const announceAsset = (asset: Asset): void => {
+    landed.push(asset)
+    if (announcing) return
+
+    announcing = setTimeout(() => {
+      announcing = null
+      const rows = landed
+      landed = []
+      broadcast(EVENTS.assetsChanged, rows)
+    }, ANNOUNCE_MS)
+  }
+
+  /**
+   * The proxy, the waveform and the poster a take needs. No row is carried back: `derive` writes
+   * through the catalogue rather than through `announce`, so what changed is a query away.
+   */
+  const deriveLandedFiles = async (
+    asset: Asset,
+    kind: 'video' | 'audio',
+    path: string,
+    probe: MediaProbe,
+  ): Promise<void> => {
+    try {
+      await media.derive({
+        assetId: asset.id,
+        path: join(project.path() ?? '', path),
+        kind,
+        probe,
+        // The library's own still is a picture of the take; ours would be a frame of it.
+        poster: !asset.posterPath,
+        // The user is waiting on this take: what is being prepared belongs on screen.
+        announce: true,
+      })
+      broadcast(EVENTS.assetsChanged, [])
+    } catch (error: unknown) {
+      log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`)
+    }
+  }
+
+  /**
    * What every asset that lands in the project goes through — a download, a generation collected,
    * a file the explorer adopted. Named rather than inlined because the adoption needs the very
    * same derivation: two callers, one deriver, and no way for the two to drift apart.
    */
   const onAssetLanded = (asset: Asset): void => {
     noteLegacyLayout(asset)
+
+    // For EVERY kind, which is what tells the other windows: said only after a derivation, or
+    // only for a mesh, a picture rewritten by ⌘S reached its own window and no other.
+    announceAsset(asset)
 
     // A take that came down from the API never met the picker, so nothing ever derived what
     // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
@@ -975,37 +1034,18 @@ export function createServices(settings: SettingsStore): Services {
     // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
     // missing — in which case there is no ffmpeg to derive anything with either.
     if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
-      void media
-        .derive({
-          assetId: asset.id,
-          path: join(project.path() ?? '', asset.path),
-          kind: asset.type,
-          probe: asset.probe,
-          // The library's own still is a picture of the take; ours would be a frame of it.
-          poster: !asset.posterPath,
-          // The user is waiting on this take: what is being prepared belongs on screen.
-          announce: true,
-        })
-        .then(() => broadcast(EVENTS.assetsChanged))
-        .catch((error: unknown) =>
-          log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
-        )
+      void deriveLandedFiles(asset, asset.type, asset.path, asset.probe)
       return
     }
 
     if (asset.type !== 'mesh') return
-    void extractTextures(asset)
-      .then(textures => {
-        // The one write no window ordered, so the one nothing else would say out loud: the
-        // import that started this is long answered, and its shelf refreshed, by the time a
-        // GLB has been read and its pictures written.
-        if (textures.length > 0) broadcast(EVENTS.assetsChanged)
-      })
-      .catch((error: unknown) =>
-        // The journal already carries the line `extractTextures` writes; this is the rejection
-        // itself, which nothing else would ever hear.
-        log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
-      )
+    // Nothing to say when it lands: every picture it writes goes through `announce`, so each
+    // one now announces itself above. This used to be the only line that told the windows.
+    void extractTextures(asset).catch((error: unknown) =>
+      // The journal already carries the line `extractTextures` writes; this is the rejection
+      // itself, which nothing else would ever hear.
+      log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+    )
   }
 
   const assets = createLocalBackend({
@@ -1062,7 +1102,8 @@ export function createServices(settings: SettingsStore): Services {
     folder,
     catalog: () => project.catalog(),
     newBatchId: () => randomUUID(),
-    assetsChanged: () => broadcast(EVENTS.assetsChanged),
+    // Copies, moves and deletions, which name folders rather than rows — see `fileOps`.
+    assetsChanged: () => broadcast(EVENTS.assetsChanged, []),
   })
 
   const ffmpeg = createFfmpegResolver(() => ({
@@ -1140,7 +1181,7 @@ export function createServices(settings: SettingsStore): Services {
       })
 
       // The shelf and the strip both read what was just written, and neither asked for it.
-      if (done > 0) broadcast(EVENTS.assetsChanged)
+      if (done > 0) broadcast(EVENTS.assetsChanged, [])
     } catch (error: unknown) {
       log.warn('media', `could not catch up the project's takes: ${String(error)}`)
     } finally {

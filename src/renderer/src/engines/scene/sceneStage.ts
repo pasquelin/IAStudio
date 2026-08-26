@@ -2,6 +2,8 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Us } from '@shared/domain/time'
 import { offScreenHost } from '@/engines/core/offScreenHost'
 import { reportFailure } from '@/services/diagnostics'
+import { askOwnModelTextures } from '@/spaces/textures/askOwnModelTextures'
+import { assetVersionOf } from '@/stores/assets'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './sceneView'
 import { activeCameraAt } from './cameraShots'
@@ -79,6 +81,11 @@ export function createSceneStage({
           onSelect: () => {},
           onTransform: () => {},
           onClips: (nodeId, clips) => onClips?.(nodeId, clips),
+          // The same port as the viewport, or a model in a clip wears the maps buried in its
+          // `.glb` while the same model on screen wears the project's — the render disagrees
+          // with what was framed, from the first frame.
+          assetVersion: assetVersionOf,
+          ownTextures: askOwnModelTextures,
         })
 
       renderer.prepareOffscreen({ alpha: true, pixelRatio: 1 })

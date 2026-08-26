@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { AiOverview } from '@shared/domain/aiOverview'
+import type { Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
@@ -171,7 +172,7 @@ const bridge: StudioBridge = {
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
-    onChanged: callback => subscribe<void>(EVENTS.assetsChanged, callback),
+    onChanged: callback => subscribe<readonly Asset[]>(EVENTS.assetsChanged, callback),
     counts: () => ipcRenderer.invoke(CHANNELS.assetsCounts),
     peaks: assetId => ipcRenderer.invoke(CHANNELS.assetsPeaks, assetId),
     reveal: assetId => ipcRenderer.invoke(CHANNELS.assetsReveal, assetId),

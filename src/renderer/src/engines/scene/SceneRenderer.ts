@@ -43,10 +43,13 @@ import {
   type ExportFormat,
   type HelperVisibility,
   type LightDescriptor,
+  type ModelRef,
   type SceneWorld,
   type Transform,
   showsAid,
 } from '@shared/domain/scene'
+import { effectiveModelTextures } from '@shared/domain/ownModelTextures'
+import { orElse } from '@shared/promises'
 import { createGroundPlane } from './groundPlane'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids } from './viewportAids'
@@ -318,6 +321,15 @@ export type SceneRendererOptions = {
   assetVersion?: (assetId: string) => string | undefined
   /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
   livePreview?: (assetId: string) => ImageBitmap | null
+  /**
+   * The pictures a mesh shed into the project on import, by slot — asked of the catalogue.
+   *
+   * They fill the slots a node has chosen NOTHING for, which is what makes editing a model's own
+   * texture reach the model: a `.glb` carries its maps INSIDE its file, so without this the
+   * project's copy of a picture is one nothing draws. Absent leaves every model on its file's own
+   * maps, which is what a workspace with no catalogue — and every test — wants.
+   */
+  ownTextures?: (meshAssetId: string) => Promise<ModelRef['textures']>
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
   /** And again, for the skinning weights a local rig is bound with. */
@@ -597,6 +609,16 @@ export class SceneRenderer {
   private readonly spriteMaps = new Map<string, SpriteTexture>()
   /** The project's maps put over the ones a model's file carries, per node. See `model-textures`. */
   private readonly modelMaps = new Map<string, ModelTextures>()
+  /** Per MESH asset, not per node — twenty trees from one file are one question. */
+  private readonly ownMaps = new Map<string, ModelRef['textures']>()
+  /** The same question while it is still in flight, which `ownMaps` cannot hold. */
+  private readonly ownAsking = new Map<string, Promise<ModelRef['textures']>>()
+  /**
+   * Bumped whenever the catalogue moves. An extraction writes its pictures DURING the very read
+   * a fresh model triggers, so two answers are in flight and the older one — which saw no
+   * picture at all — must neither dress a model nor be cached as the answer.
+   */
+  private ownGeneration = 0
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
   private readonly textureCache: TextureCache
@@ -2369,6 +2391,62 @@ export class SceneRenderer {
   }
 
   /**
+   * One model wearing what it should. Read from `applied` rather than taken as an argument: the
+   * answer can arrive a query later, and the node may have moved on by then.
+   */
+  private dressModel(nodeId: string): void {
+    const maps = this.modelMaps.get(nodeId)
+    const node = this.applied.get(nodeId)
+    if (!maps || node?.type !== 'model') return
+
+    // Already answered for this mesh: worn on the same tick as the gesture, which is what keeps a
+    // slider drag from deferring a frame per node.
+    if (this.ownMaps.has(node.model.assetId)) {
+      this.wear(maps, node, this.ownMaps.get(node.model.assetId))
+      return
+    }
+
+    void this.wearOwnPictures(nodeId, maps, node)
+  }
+
+  /** Nothing is caught: the port is defended by `orElse`, and what follows is engine state. */
+  private async wearOwnPictures(
+    nodeId: string,
+    maps: ModelTextures,
+    node: ModelNode,
+  ): Promise<void> {
+    const asked = this.ownGeneration
+    const own = await this.ownMapsOf(node.model.assetId)
+    // Stale: the catalogue moved, or the node did, while this was in flight. A newer pass owns
+    // the node in both cases.
+    if (asked !== this.ownGeneration) return
+    if (this.modelMaps.get(nodeId) !== maps || this.applied.get(nodeId) !== node) return
+
+    this.wear(maps, node, own)
+  }
+
+  /** The question in flight, so twenty nodes of one file ask the catalogue once between them. */
+  private ownMapsOf(meshAssetId: string): Promise<ModelRef['textures']> {
+    const asking = this.ownAsking.get(meshAssetId) ?? this.askOwnMaps(meshAssetId)
+    this.ownAsking.set(meshAssetId, asking)
+    return asking
+  }
+
+  private async askOwnMaps(meshAssetId: string): Promise<ModelRef['textures']> {
+    const asked = this.ownGeneration
+    const own = await orElse(this.options.ownTextures?.(meshAssetId), undefined)
+    // Only the answer to the CURRENT catalogue is worth keeping — see `ownGeneration`.
+    if (asked === this.ownGeneration) this.ownMaps.set(meshAssetId, own)
+    return own
+  }
+
+  private wear(maps: ModelTextures, node: ModelNode, own: ModelRef['textures']): void {
+    maps.apply(effectiveModelTextures(node.model.textures, own))
+    // After the maps, always: the tiling rides ON the textures — see `dress`.
+    maps.dress(node.model.material)
+  }
+
+  /**
    * The catalogue moved: every slot asks again for what it holds, and reloads the ones whose
    * picture was overwritten since.
    *
@@ -2378,6 +2456,11 @@ export class SceneRenderer {
    * the id a slot points at does not move when ⌘S rewrites the file behind it.
    */
   refreshTextures(): void {
+    // The catalogue is the only thing that can change what a mesh's own pictures are — an
+    // extraction landing late, a channel retyped, a picture deleted.
+    this.ownGeneration += 1
+    this.ownMaps.clear()
+    this.ownAsking.clear()
     for (const [id, maps] of this.textures) {
       const node = this.applied.get(id)
       // A solid wears the same descriptor and registers the same slots — `carriesMaterial` is
@@ -2388,15 +2471,7 @@ export class SceneRenderer {
       const node = this.applied.get(id)
       if (node?.type === 'sprite') maps.apply(node.sprite)
     }
-    for (const [id, maps] of this.modelMaps) {
-      const node = this.applied.get(id)
-      if (node?.type === 'model') {
-        maps.apply(node.model.textures)
-        // After the maps, always: the tiling rides ON the textures, so a map arriving later
-        // would come in untiled — see `dress`.
-        maps.dress(node.model.material)
-      }
-    }
+    for (const id of this.modelMaps.keys()) this.dressModel(id)
     // The environment too: a skybox asset is a picture of the project like any other, and the
     // lighting it drives is what would otherwise stay on the image the edit replaced.
     void this.sky.refresh()
@@ -2913,12 +2988,11 @@ export class SceneRenderer {
       const before = previous?.type === 'model' ? previous : null
       // Nothing at all until the file has landed: `buildModel` applies what the node holds the
       // moment it builds the maps, and there is no material to write into before that.
-      if (before?.model.material !== node.model.material) {
-        this.modelMaps.get(node.id)?.dress(node.model.material)
-      }
-      if (before?.model.textures !== node.model.textures) {
-        this.modelMaps.get(node.id)?.apply(node.model.textures)
-        this.modelMaps.get(node.id)?.dress(node.model.material)
+      if (
+        before?.model.material !== node.model.material ||
+        before?.model.textures !== node.model.textures
+      ) {
+        this.dressModel(node.id)
       }
       return
     }
@@ -3160,10 +3234,7 @@ export class SceneRenderer {
           ),
       )
       this.modelMaps.set(node.id, maps)
-      if (applied.type === 'model') {
-        maps.apply(applied.model.textures)
-        maps.dress(applied.model.material)
-      }
+      this.dressModel(node.id)
 
       // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
       // carry them, and a clip addresses its targets by name — so the source's drive any

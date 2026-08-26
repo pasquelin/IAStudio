@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { assetRevisionOf, rememberAssetRevisions } from './assetRevisions'
 import { livePreviewVersionOf } from './livePreviews'
 import { persist } from 'zustand/middleware'
 import {
@@ -191,7 +192,10 @@ export function forgetRememberedAssets(): void {
  * ⌘S rewrites a picture — see `versionedUrl`.
  */
 export function assetVersionOf(assetId: string): string | undefined {
-  const written = assetsById(useAssets.getState()).get(assetId)?.localChangedAt
+  // The registry FIRST: it is fed by the event that says a file was written, where the shelf is
+  // one page of the newest rows — see `assetRevisions`.
+  const written =
+    assetRevisionOf(assetId) ?? assetsById(useAssets.getState()).get(assetId)?.localChangedAt
   const shown = livePreviewVersionOf(assetId)
   // The preview's count rides ON the file's stamp rather than replacing it: revoking one has to
   // leave a version the slot has not seen, or the file would come back under a key already held.
@@ -345,7 +349,12 @@ export const useAssets = create<AssetsState>()(
         // Through `invalidate` like every other site that says the catalogue moved, so the
         // coalescing holds: an extraction writing six pictures is one read, not six.
         connect: connectThroughBridge(async bridge =>
-          bridge.assets.onChanged(() => get().invalidate()),
+          bridge.assets.onChanged(changed => {
+            // Before the invalidation: the shelf reads a page in a third of a second, and a
+            // texture slot may ask for its version on the very next frame.
+            rememberAssetRevisions(changed)
+            get().invalidate()
+          }),
         ),
 
         invalidate: () => {

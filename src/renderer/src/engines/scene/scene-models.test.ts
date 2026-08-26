@@ -1,9 +1,10 @@
 import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { nodeIdOf, SceneRenderer } from './SceneRenderer'
+import { nodeIdOf, SceneRenderer, type SceneRendererOptions } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
 import type { SkinWeights } from './skinWeights'
 import type { SceneState } from './sceneState'
+import type { ModelRef } from '@shared/domain/scene'
 import type { Rig } from '@shared/domain/rig'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
@@ -31,7 +32,7 @@ function rendererLoading(load: (url: string) => Promise<Object3D>) {
 }
 
 /** The same, listening to which pictures the maps of a model ask for. */
-function rendererDressing(asked: string[]) {
+function rendererDressing(asked: string[], ownTextures?: SceneRendererOptions['ownTextures']) {
   return new SceneRenderer({
     onSelect: vi.fn(),
     onTransform: vi.fn(),
@@ -40,6 +41,7 @@ function rendererDressing(asked: string[]) {
       asked.push(url)
       return Promise.resolve(new Texture())
     },
+    ...(ownTextures ? { ownTextures } : {}),
   })
 }
 
@@ -160,6 +162,89 @@ describe('a model node', () => {
 
     await vi.waitFor(() => expect(asked).toHaveLength(1))
     expect(asked[0]).toContain('tex-2')
+    renderer.dispose()
+  })
+
+  /**
+   * The FIRST link of « extract a texture, edit it, and the model follows », and the one that was
+   * missing: a `.glb` carries its maps inside its own file, so a node with no slot named draws
+   * nothing the project can reach. What extraction shed on import fills them.
+   */
+  it('wears the pictures its own file shed, with nothing named on the node', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing(asked, async () => ({ map: { assetId: 'shed-1' } }))
+
+    renderer.apply(withModels('a'))
+
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+    expect(asked[0]).toContain('shed-1')
+    renderer.dispose()
+  })
+
+  /** A slot somebody filled is a DECISION; a picture the file shed is only what nobody chose. */
+  it('lets a slot named on the node beat the picture its file shed', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing(asked, async () => ({ map: { assetId: 'shed-1' } }))
+
+    const node = modelNodeFixture('a', 'asset-a')
+    node.model = { ...node.model, textures: { map: { assetId: 'chosen' } } }
+    renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
+
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+    expect(asked[0]).toContain('chosen')
+    renderer.dispose()
+  })
+
+  /**
+   * Extraction writes a model's pictures DURING the very read that importing it triggers, so two
+   * answers are in flight and the older one saw no picture at all. `useDerivedTextures` refuses
+   * to share a promise for this exact reason; here it is a generation.
+   */
+  it('drops an answer the catalogue outran', async () => {
+    const asked: string[] = []
+    // On an object rather than a `let`: assigned only inside a promise executor, a local
+    // narrows to `never` and cannot be called back.
+    const first: { release?: (own: ModelRef['textures']) => void } = {}
+    let calls = 0
+    const renderer = rendererDressing(asked, () => {
+      calls += 1
+      if (calls > 1) return Promise.resolve({ map: { assetId: 'shed-after' } })
+      return new Promise<ModelRef['textures']>(resolve => {
+        first.release = resolve
+      })
+    })
+
+    renderer.apply(withModels('a'))
+    await vi.waitFor(() => expect(calls).toBe(1))
+
+    // The catalogue moved while the first question was still out.
+    renderer.refreshTextures()
+    await vi.waitFor(() => expect(asked.some(url => url.includes('shed-after'))).toBe(true))
+
+    // And only now does the older answer land, describing the shelf from before the write.
+    first.release?.({ map: { assetId: 'shed-before' } })
+    // A macrotask, not a microtask: the answer travels through the binding and the cache before
+    // a load is recorded, and one turn of the queue is not enough to see it happen.
+    await new Promise(settle => setTimeout(settle, 0))
+
+    expect(asked.filter(url => url.includes('shed-before'))).toEqual([])
+    renderer.dispose()
+  })
+
+  /** Twenty trees out of one file are one question, not twenty synchronous catalogue reads. */
+  it('asks the catalogue once per mesh asset, however many nodes point at it', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing([], async meshAssetId => {
+      asked.push(meshAssetId)
+      return { map: { assetId: 'shed-1' } }
+    })
+
+    const one = modelNodeFixture('a', 'asset-shared')
+    const two = modelNodeFixture('b', 'asset-shared')
+    renderer.apply({ ...EMPTY_SCENE, nodes: [one, two], selectedIds: [] })
+
+    await vi.waitFor(() => expect(asked.length).toBeGreaterThan(0))
+    expect(asked).toEqual(['asset-shared'])
     renderer.dispose()
   })
 

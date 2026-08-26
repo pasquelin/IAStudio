@@ -1,19 +1,11 @@
-import { isLocalPicture, type Asset } from '@shared/domain/asset'
-import type { PbrChannel } from '@shared/domain/texture'
+import { isLocalPicture } from '@shared/domain/asset'
+import type { ChannelTexture } from '@shared/domain/ownModelTextures'
 import { openDocument } from '@/app/dockviewApi'
 import { readyForWriting } from '@/helpers/assetIntents'
 import { reportFailure } from '@/services/diagnostics'
 import { documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { placeTextureChannel } from './placeChannel'
-
-/** A picture the extraction gave a channel to — the only kind a material can be built out of. */
-export type ChannelTexture = Asset & { map: PbrChannel }
-
-/** Whether this picture says WHICH channel it is. A guard, so the caller keeps the narrowing. */
-export function hasChannel(asset: Asset): asset is ChannelTexture {
-  return asset.map !== undefined
-}
 
 /**
  * Opens a model's own maps as ONE material, in the space that edits materials.

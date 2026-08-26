@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ASSET_SEARCH_LIMIT_MAX, type Asset, type AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { assetsById, forgetRememberedAssets, useAssets } from './assets'
+import { assetsById, assetVersionOf, forgetRememberedAssets, useAssets } from './assets'
 
 function asset(id: string, name: string): Asset {
   return { id, name, type: 'image', location: 'local', tags: [], createdAt: '2026-08-07' }
@@ -314,7 +314,7 @@ describe('what the main process writes on its own', () => {
   afterEach(() => vi.useRealTimers())
 
   it('re-reads the catalogue when the main process says it wrote', async () => {
-    let announce = (): void => {}
+    let announce = (_changed: readonly Asset[]): void => {}
     const asked: unknown[] = []
     installFakeBridge({
       assets: {
@@ -330,10 +330,34 @@ describe('what the main process writes on its own', () => {
     })
 
     const stop = await useAssets.getState().connect()
-    announce()
+    announce([])
     vi.runAllTimers()
 
     expect(asked).toHaveLength(1)
+    stop()
+  })
+
+  /**
+   * The ceiling this lifts: `items` is one page of the newest rows, so an asset older than that
+   * page kept the stamp it was last SEEN with — and every texture slot pointing at it compared
+   * equal for ever. The read that follows is a third of a second away; a slot may ask before it.
+   */
+  it('carries a rewritten row before the shelf has read anything back', async () => {
+    let announce = (_changed: readonly Asset[]): void => {}
+    installFakeBridge({
+      assets: {
+        search: () => Promise.resolve([]),
+        onChanged: callback => {
+          announce = callback
+          return () => {}
+        },
+      },
+    })
+
+    const stop = await useAssets.getState().connect()
+    announce([{ ...asset('old', 'Older than the page'), localChangedAt: 'written-again' }])
+
+    expect(assetVersionOf('old')).toBe('written-again')
     stop()
   })
 
