@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 const alias = {
   '@shared': resolve('src/shared'),
   '@main': resolve('src/main'),
+  '@game': resolve('src/game'),
   '@': resolve('src/renderer/src'),
 }
 
@@ -263,6 +264,27 @@ export default defineConfig({
           testTimeout: TEST_TIMEOUT,
           include: ['scripts/banc/**/*.test.ts'],
           benchmark: { include: ['scripts/banc/**/*.bench.ts'] },
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          /**
+           * The game runtime, which is neither the window nor the main process: it has to run
+           * inside an exported game that ships none of the studio, so it gets a project of its
+           * own rather than a corner of one — no setup file, and nothing of the studio in scope.
+           *
+           * jsdom because that is where a game runs: a port reading a `KeyboardEvent` needs one.
+           * What this tree may IMPORT is held by `src/main/game-imports.test.ts`.
+           */
+          name: 'game',
+          environment: 'jsdom',
+          pool: TEST_POOL,
+          testTimeout: TEST_TIMEOUT,
+          // `.tsx` as well, though nothing here may import React: the guards sweep `\.tsx?$`, and
+          // a file no project includes runs nowhere while looking covered.
+          include: ['src/game/**/*.test.ts', 'src/game/**/*.test.tsx'],
+          benchmark: { include: ['src/game/**/*.bench.ts'] },
         },
       },
       {

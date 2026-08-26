@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import licences from '@shared/licences.json'
 import { isCopyleft, type Licence, NO_VERSION } from '@shared/domain/licence'
 import manifest from '../../package.json'
 import { BUILD_ONLY, SHIPPED } from './shippedPackages'
+import { SOURCE_ROOT } from './sourceFiles'
+import { testFilesUnder } from './wideGuards'
 
 // Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -13,6 +15,7 @@ const entries: Licence[] = licences
 const notices = readFileSync(join(ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8')
 const licence = readFileSync(join(ROOT, 'LICENSE'), 'utf8')
 const eula = readFileSync(join(ROOT, 'EULA.md'), 'utf8')
+const gameLicence = readFileSync(join(ROOT, 'src', 'game', 'LICENSE'), 'utf8')
 
 describe('the notice the repository carries', () => {
   // A stale copy would credit the wrong versions to whoever reads the repository, not the app.
@@ -104,6 +107,29 @@ describe('the terms the project ships under', () => {
   it('keeps the repository licence clear of what it does not cover', () => {
     expect(licence).toContain('THIRD-PARTY-NOTICES.md')
     expect(licence).toContain('EULA.md')
+  })
+
+  /**
+   * The one carve-out, and it is load-bearing: a game exported from this studio ships the runtime
+   * of `src/game`, so that runtime is MIT and the game is its author's to sell. Nothing else
+   * would notice the day the sentence, or the file it names, went away.
+   */
+  it('publishes the game runtime under terms an author can sell a game under', () => {
+    expect(licence).toContain('`src/game/` is published under the MIT License')
+    expect(gameLicence).toContain('MIT License')
+    expect(gameLicence).toContain('Copyright (c) 2026 Alban Pasquelin')
+  })
+
+  /**
+   * The mark on each file rather than on the folder alone: a file COPIED out of the tree carries
+   * its terms with it, and one added to the tree without them is what this notices.
+   */
+  it('marks every file of the game runtime with those terms', () => {
+    const unmarked = testFilesUnder(join(SOURCE_ROOT, 'game'), /\.tsx?$/).filter(
+      file => !readFileSync(file, 'utf8').startsWith('// SPDX-License-Identifier: MIT'),
+    )
+
+    expect(unmarked.map(file => relative(SOURCE_ROOT, file))).toEqual([])
   })
 
   it('governs the binary by its own terms, which name the FFmpeg offer', () => {

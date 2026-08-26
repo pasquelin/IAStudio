@@ -13,17 +13,17 @@ import { PROJECT_TREES, sourceFiles } from './sourceFiles'
 describe('the sweep the guards read the project through', () => {
   /**
    * An empty result proves nothing unless the files were opened: pointed at a folder that does
-   * not exist, every guard borrowing this walk stays green over nothing. The four trees are
+   * not exist, every guard borrowing this walk stays green over nothing. The five trees are
    * counted, not assumed.
    *
    * The floor is deliberately far below what the trees hold — it separates "the walk works" from
    * "the walk found one file", and a figure tracking the real count would fail for a folder
    * legitimately split.
    */
-  it('opens all four trees, modules and components alike', () => {
+  it('opens all five trees, modules and components alike', () => {
     const counts = PROJECT_TREES.map(tree => sourceFiles(tree).length)
 
-    expect(counts).toHaveLength(4)
+    expect(counts).toHaveLength(5)
     expect(counts.every(count => count > 0)).toBe(true)
     expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(600)
   })

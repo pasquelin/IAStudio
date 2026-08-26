@@ -34,6 +34,7 @@ const ALIASES: readonly [string, string][] = [
   ['@/', 'renderer/src/'],
   ['@shared/', 'shared/'],
   ['@main/', 'main/'],
+  ['@game/', 'game/'],
 ]
 
 const sources = (from: string): string[] => {

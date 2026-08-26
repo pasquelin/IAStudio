@@ -18,6 +18,7 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { isPrivatePath } from '@shared/domain/folder'
+import { GAME_VERSION, type GameManifest } from '@shared/domain/game'
 import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import {
@@ -79,6 +80,33 @@ export function parseProjectContext(value: unknown): ProjectContext {
 /** What a window, or a program driving the studio, asks to store. */
 export function parseContextCards(value: unknown): ContextCard[] {
   return z.array(contextCard).max(CONTEXT_CARDS_MAX).parse(value)
+}
+
+const gameScript = z.object({ id: z.string().min(1), path: z.string().min(1) })
+
+const gamePrefab = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  document: z.string().min(1),
+})
+
+/**
+ * Every member but the version has a default, and that is a decision: `game.json` is written by
+ * hand and merged by git, so a manifest naming only its scenes must open rather than read as
+ * broken. The version alone is required — it is what tells a file from a later build apart.
+ */
+const game = z.object({
+  version: z.number().int().min(1).max(GAME_VERSION),
+  scenes: z.array(z.string().min(1)).default([]),
+  entryScene: z.string().min(1).nullable().default(null),
+  scripts: z.array(gameScript).default([]),
+  prefabs: z.array(gamePrefab).default([]),
+  settings: z.object({ title: z.string().default('') }).default({ title: '' }),
+})
+
+/** The author's file: hand-edited, versioned by git, and merged by a tool that knows no schema. */
+export function parseGame(value: unknown): GameManifest {
+  return game.parse(value)
 }
 
 // Absolute paths only, and enforced rather than merely intended: a relative one would resolve

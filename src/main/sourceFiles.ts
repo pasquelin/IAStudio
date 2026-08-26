@@ -2,7 +2,7 @@
  * How a guard of the MAIN process reads the project's sources rather than importing them.
  *
  * The AST guards that sweep the whole repository from this side need the same three things: the
- * walk, the four trees, and a timeout wide enough for them. Held here so a guard added later
+ * walk, the five trees, and a timeout wide enough for them. Held here so a guard added later
  * inherits the same reading, and so the exclusion below is decided once. The window's guards have
  * no filesystem and borrow `renderer/src/windowSources.ts` instead — same idea, other mechanism.
  *
@@ -15,7 +15,7 @@ import { readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-/** Long enough for four trees of sources, parsed one file at a time. */
+/** Long enough for five trees of sources, parsed one file at a time. */
 export const WHOLE_PROJECT = 60_000
 
 /**
@@ -45,15 +45,18 @@ const MAIN = dirname(fileURLToPath(import.meta.url))
 export const SOURCE_ROOT = join(MAIN, '..')
 
 /**
- * The four trees, `main` first.
+ * The five trees, `main` first.
  *
- * Four and not three: `main` writes its screens through `TRANSLATIONS` and sorts what its own
- * handlers return, so a defect bound in a module there reaches a reader exactly as one bound in
- * the window does. A guard that wants three of them can take the tail.
+ * `main` is one of them, and not for symmetry: it writes its screens through `TRANSLATIONS` and
+ * sorts what its own handlers return, so a defect bound in a module there reaches a reader
+ * exactly as one bound in the window does. A guard that wants the others can take the tail.
+ *
+ * `game` is here so the rules on names, on language and on `.then()` reach it like anywhere else.
+ * What it may IMPORT is another matter, held on its own by `main/game-imports.test.ts`.
  */
 export const PROJECT_TREES: readonly string[] = [
   MAIN,
-  ...['renderer', 'shared', 'preload'].map(tree => join(SOURCE_ROOT, tree)),
+  ...['renderer', 'shared', 'preload', 'game'].map(tree => join(SOURCE_ROOT, tree)),
 ]
 
 /**
