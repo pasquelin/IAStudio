@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { isCsgGraph, type CsgOperation } from '@shared/domain/csg'
-import { canCarve, carveGraph, carvePlan, isCarvable } from './carve'
+import { canCarve, carveGraph, carvePlan, carveScene, isCarvable } from './carve'
 import { meshNode } from '../scene/nodeFactory'
 import type { SceneNode } from '../scene/sceneState'
 
@@ -20,8 +20,9 @@ const cut = (
   all: readonly SceneNode[] = nodes,
   operation: CsgOperation = 'subtract',
 ) => {
-  const plan = carvePlan(nodes.filter(isCarvable), operation, all)
-  return plan && plan.tools.length > 0 ? carveGraph(plan.matter, plan.tools, all) : null
+  const scene = carveScene(nodes.filter(isCarvable), all)
+  const plan = carvePlan(scene, operation)
+  return plan && plan.tools.length > 0 ? carveGraph(plan.matter, plan.tools, scene.byId) : null
 }
 
 const marked = (node: SceneNode): SceneNode =>
@@ -156,7 +157,7 @@ describe('carveGraph', () => {
  */
 describe('carvePlan', () => {
   const roles = (picked: readonly SceneNode[], operation: CsgOperation = 'subtract') =>
-    carvePlan(picked.filter(isCarvable), operation, picked)
+    carvePlan(carveScene(picked, picked), operation)
 
   it('elects the same matter whichever shape was clicked first', () => {
     const [big, small] = [wall(), cube({ x: 1, y: 0, z: 0 })]
@@ -239,7 +240,7 @@ describe('carvePlan', () => {
   it('lets a caller name the matter outright, for the rare cut that runs the other way', () => {
     const small = cube({ x: 1, y: 0, z: 0 })
     const picked = [wall(), small]
-    const plan = carvePlan(picked.filter(isCarvable), 'subtract', picked, small.id)
+    const plan = carvePlan(carveScene(picked, picked), 'subtract', small.id)
 
     expect(plan?.matter.name).toBe('hole')
   })
@@ -248,7 +249,7 @@ describe('carvePlan', () => {
   it('takes a named matter even when that shape carries the tool mark', () => {
     const one = marked(wall())
     const picked = [one, cube({ x: 1, y: 0, z: 0 })]
-    const plan = carvePlan(picked.filter(isCarvable), 'subtract', picked, one.id)
+    const plan = carvePlan(carveScene(picked, picked), 'subtract', one.id)
 
     expect(plan?.matter.name).toBe('wall')
     expect(plan?.tools.map(tool => tool.node.name)).toEqual(['hole'])
@@ -256,6 +257,6 @@ describe('carvePlan', () => {
 
   it('refuses a named matter that is not among the shapes picked', () => {
     const picked = [wall(), cube({ x: 1, y: 0, z: 0 })]
-    expect(carvePlan(picked.filter(isCarvable), 'subtract', picked, 'nowhere')).toBeNull()
+    expect(carvePlan(carveScene(picked, picked), 'subtract', 'nowhere')).toBeNull()
   })
 })

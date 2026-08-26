@@ -48,13 +48,13 @@ export function drawsNode(isolation: Isolation, id: string, documentVisible: boo
 export function isolate(
   held: Isolation,
   ids: readonly string[],
-  descendantsOf: (id: string) => readonly string[],
+  /** Everything under the WHOLE selection, asked once: they are melted into one set below. */
+  descendants: () => Iterable<string>,
   ancestorsOf: (id: string) => readonly string[],
 ): Isolation {
-  const only = new Set<string>()
+  const only = new Set<string>(descendants())
   for (const id of ids) {
     only.add(id)
-    for (const child of descendantsOf(id)) only.add(child)
     for (const parent of ancestorsOf(id)) only.add(parent)
   }
 

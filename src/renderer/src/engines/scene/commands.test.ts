@@ -381,6 +381,63 @@ describe('removeNodes', () => {
     expect(applied.selectedIds).toEqual([])
     expect(command.revert(applied).nodes.map(node => node.id)).toEqual(['a', 'b', 'c'])
   })
+
+  /** One sweep records where each node left from, and putting them back out of ascending order
+   * lands every later one a slot off — which only a scattered subtree shows. */
+  it('puts a scattered subtree back at the very indices it left', () => {
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      // The child declared BEFORE the parent it hangs from, which reparenting makes ordinary.
+      nodes: [mesh('leaf', 'branch'), mesh('keep'), mesh('branch'), mesh('other')],
+      selectedIds: [],
+    }
+    const command = removeNodes(start.nodes, ['branch'])
+    const applied = command.apply(start)
+
+    expect(applied.nodes.map(node => node.id)).toEqual(['keep', 'other'])
+    expect(command.revert(applied).nodes.map(node => node.id)).toEqual([
+      'leaf',
+      'keep',
+      'branch',
+      'other',
+    ])
+  })
+
+  /**
+   * What `multi` of one command per node gave for free, and the single sweep took away: a delete
+   * that reaches nothing must not push an entry. Otherwise ⌘Z gains a step doing nothing, and the
+   * redo stack is cleared for an edit that never happened.
+   */
+  it('refuses a delete that reaches no node at all', () => {
+    const nodes = [mesh('a')]
+
+    expect(removeNodes(nodes, []).refuses?.({ ...EMPTY_SCENE, nodes })).toBe(true)
+    expect(removeNodes(nodes, ['nowhere']).refuses?.({ ...EMPTY_SCENE, nodes })).toBe(true)
+    expect(removeNodes(nodes, ['a']).refuses?.({ ...EMPTY_SCENE, nodes })).toBe(false)
+  })
+
+  /** `applySelection` hands the same array back when nothing changed, and everything watching
+   * the selection re-renders on a fresh one — see `helpers/selection`. */
+  it('leaves the selection untouched, by reference, when nothing selected is deleted', () => {
+    const nodes = [mesh('a'), mesh('b')]
+    const start: SceneState = { ...EMPTY_SCENE, nodes, selectedIds: ['b'] }
+
+    expect(removeNodes(nodes, ['a']).apply(start).selectedIds).toBe(start.selectedIds)
+  })
+})
+
+/**
+ * The LAST copy is the anchor — the row an inspector reads and a gizmo lands on. The roots
+ * therefore keep the order they were PICKED in: reading them in scene order moved the gizmo onto
+ * the copy of a shape nobody had pointed at, and no test held either order.
+ */
+describe('copiesOf', () => {
+  it('keeps the picked order, so the copy of the anchor is the anchor', () => {
+    const nodes = [mesh('a'), mesh('b')]
+    const picked = [nodes[1], nodes[0]].filter(node => node !== undefined)
+
+    expect(copiesOf(nodes, picked).map(copy => copy.name)).toEqual(['b', 'a'])
+  })
 })
 
 describe('moveNodes', () => {

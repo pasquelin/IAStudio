@@ -6,7 +6,7 @@
  * plain sets; here is where a tree turns into one.
  */
 import { isolate, isolating, NOTHING_ISOLATED, type Isolation } from './isolation'
-import { subtreeOf, type SceneNode } from './sceneState'
+import { subtreesOf, type SceneNode } from './sceneState'
 
 /**
  * Isolating a selection, subtree and ancestry included.
@@ -20,11 +20,15 @@ export function isolationFor(
   held: Isolation = NOTHING_ISOLATED,
 ): Isolation {
   const parentOf = new Map(nodes.map(node => [node.id, node.parentId]))
+  // ONE pass for the whole selection: asked per id, `subtreesOf` rebuilt the scene's index that
+  // many times. `isolate` melts them into one set anyway — which root a descendant came from was
+  // never read.
+  const under = new Set(subtreesOf(nodes, ids).map(node => node.id))
 
   return isolate(
     held,
     ids,
-    id => subtreeOf(nodes, id).map(node => node.id),
+    () => under,
     id => {
       const found: string[] = []
       for (let at = parentOf.get(id); at; at = parentOf.get(at)) found.push(at)

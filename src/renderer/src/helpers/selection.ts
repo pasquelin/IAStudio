@@ -43,7 +43,16 @@ export function applySelection(
  * not there, so nothing re-renders for a gesture that changed nothing.
  */
 export function deselect(ids: readonly string[], id: string): readonly string[] {
-  return applySelection(ids, ids.includes(id) ? [id] : [], 'toggle')
+  return deselectAll(ids, new Set([id]))
+}
+
+/** The same for a whole set — a delete carries a subtree, and the rule lives in one place. */
+export function deselectAll(ids: readonly string[], gone: ReadonlySet<string>): readonly string[] {
+  return applySelection(
+    ids,
+    ids.filter(id => gone.has(id)),
+    'toggle',
+  )
 }
 
 function toggled(current: readonly string[], ids: readonly string[]): readonly string[] {
