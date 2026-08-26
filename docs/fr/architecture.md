@@ -454,6 +454,40 @@ suivant héritera.
 deux cents modules, et ce réglage est éteint par défaut. Un import statique les mettrait sur le
 démarrage de tous les studios qui n’ouvrent jamais cette porte.
 
+### Un client reçoit une commande, jamais une adresse
+
+Ce que les préférences mettent dans le presse-papiers — et ce que `.mcp.json` porte — est
+**l’application elle-même, lancée avec `--mcp-stdio=<chemin de mcp.json>`** (`mcpLaunch`,
+`endpoint.ts`). Ce processus-là n’ouvre ni fenêtre ni services, ne prend pas le verrou d’instance
+unique — un client se branchant pendant que le studio tourne serait sinon la seconde instance et
+quitterait — et relaie stdio ↔ boucle locale (`stdio.ts`).
+
+**Il relit l’adresse à CHAQUE message, jamais une fois.** C’est tout le mécanisme : les quatre
+verrous ne bougent pas, et la configuration d’un client cesse de périmer au redémarrage du studio.
+Sans cela le point d’entrée était inutilisable sous `electron-vite --watch`, qui relance le
+principal plusieurs fois par heure — et coûtait un recollage par lancement à qui l’a installé.
+
+**Le chemin de `mcp.json` voyage DANS la commande**, plutôt que d’être recalculé de l’autre côté :
+un studio lancé avec `--user-data-dir` résout un autre profil, et le processus qui écrit l’adresse
+ne serait jamais celui qui la lit. Et en développement il y a **un fichier d’adresse par
+CHECKOUT** (`mcp-<empreinte>.json`), non par profil : deux studios de développement partagent un
+`userData`, donc le second à démarrer reprenait le fichier du premier — ses clients pilotaient
+alors le mauvais studio, et sa sortie effaçait le fichier sous un studio qui écoutait encore.
+
+**`.mcp.json` se FUSIONNE, il ne s’écrase pas** (`mcpConfigWith`) : à la racine d’un dépôt, ce
+fichier est la configuration client du PROJET et pas la nôtre — d’autres serveurs y vivent, et un
+lancement qui le réécrivait les supprimait sans un mot. Un fichier malformé est laissé tel quel.
+
+🛑 **Ce processus fait taire le journal avant toute chose** (`setLogVerbosity('silent')`) :
+`log.info` écrit sur STDOUT, qui est ici le flux JSON-RPC du client. Une ligne de nous dessus et le
+client ne lit plus rien ; ce qui va mal part sur stderr.
+
+**En développement le réglage est allumé par défaut** (`defaultSettings`, `shared/domain/settings.ts`,
+injecté dans le store) et le lancement dépose un `.mcp.json` à la racine du checkout, que Claude
+Code lit seul. **`main/mcp/production-unchanged.test.ts` tient la différence** : hors développement
+le défaut est éteint, le port reste celui du système, le jeton reste minté, et les quatre lignes de
+délégation restent à zéro des deux côtés.
+
 ---
 
 ## Le renderer

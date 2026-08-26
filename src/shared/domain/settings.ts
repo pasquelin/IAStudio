@@ -413,6 +413,20 @@ export const DEFAULT_SETTINGS: Settings = {
   },
 }
 
+/**
+ * The settings a profile that has never been written starts from.
+ *
+ * `mcp.enabled` is the only one that depends on which run this is, and it is PASSED rather than
+ * read here: a development checkout opens its way in with nothing to tick, and a distributed
+ * application does not — there, the door stays the person's to open. `main/mcp/production-unchanged.test.ts`
+ * holds that difference.
+ */
+export function defaultSettings(isDevelopment: boolean): Settings {
+  if (!isDevelopment) return DEFAULT_SETTINGS
+
+  return { ...DEFAULT_SETTINGS, mcp: { ...DEFAULT_SETTINGS.mcp, enabled: true } }
+}
+
 /** Derived, so a section added to `Settings` is writable without being restated here. */
 export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 

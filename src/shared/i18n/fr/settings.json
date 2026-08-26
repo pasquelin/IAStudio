@@ -283,7 +283,7 @@
     },
     "copyMcpCommand": {
       "title": "Commande de connexion",
-      "help": "Copie la ligne à coller dans un terminal pour brancher un client. Le jeton et le port changent à chaque démarrage du studio, la ligne est donc à recopier après chaque lancement.",
+      "help": "Copie la ligne à coller dans un terminal pour brancher un client. Elle ne porte ni port ni jeton : elle reste vraie pour tous les lancements à venir.",
       "button": "Copier"
     },
     "installResolveBridge": {
@@ -338,10 +338,10 @@
     "mcpListening": "Ouvert : le studio écoute sur 127.0.0.1:{{port}}, sur cette machine seule.",
     "mcpClosed": "Fermé : rien n’écoute. Cochez le réglage ci-dessus pour ouvrir la porte.",
     "mcpHowTo": "Brancher un client",
-    "mcpStepOpen": "Cochez « Piloter le studio depuis l’extérieur ». Le point d’entrée démarre aussitôt.",
-    "mcpStepCopy": "Copiez la commande de connexion, pour un client piloté depuis un terminal — ou le bloc de configuration, pour un client qui lit un fichier.",
+    "mcpStepOpen": "Cochez « Piloter le studio depuis l’extérieur », quand vous voulez. Le point d’entrée démarre aussitôt, et un client déjà configuré le trouve.",
+    "mcpStepCopy": "Copiez la commande de connexion, pour un client piloté depuis un terminal — ou le bloc de configuration, pour un client qui lit un fichier. Ni l’une ni l’autre ne porte de port ni de jeton.",
     "mcpStepPaste": "Collez-la dans un terminal ouvert sur votre projet, ou le bloc dans le fichier de configuration de votre client.",
-    "mcpEachLaunch": "Le port et le jeton sont neufs à chaque démarrage du studio : le geste est à refaire après chaque lancement. Un client déjà enregistré sous le même nom se remplace, il n’y a rien à supprimer avant.",
+    "mcpEachLaunch": "À faire une seule fois. Ce que vous collez désigne le studio comme un programme à démarrer, jamais une adresse à joindre : cela reste valable à tous les lancements, y compris ceux où le port et le jeton sont neufs — c’est-à-dire tous. Un client déjà enregistré sous le même nom se remplace, il n’y a rien à supprimer avant.",
     "mcpExamples": "Ce qu’un client peut faire",
     "mcpExampleGenerate": "« Cherche un modèle de skybox nocturne, prépare la génération, mais ne l’envoie pas. »",
     "mcpExampleTidy": "« Range les rushes de la semaine dans un dossier par jour. »",
@@ -353,7 +353,7 @@
     "mcpGuardConsent": "Tout ce qui dépense ou téléverse s’affiche et attend votre accord — sauf ce que vous avez délégué ci-dessus.",
     "copyMcpConfig": {
       "title": "Bloc de configuration",
-      "help": "Copie le même branchement au format JSON, pour un client qui se configure par un fichier plutôt que par une commande. À recopier après chaque lancement, comme la commande.",
+      "help": "Copie le même branchement au format JSON, pour un client qui se configure par un fichier plutôt que par une commande. Comme elle, il reste vrai à chaque lancement.",
       "button": "Copier le JSON"
     }
   }

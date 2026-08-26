@@ -283,7 +283,7 @@
     },
     "copyMcpCommand": {
       "title": "Connection command",
-      "help": "Copies the line to paste in a terminal to connect a client. The token and the port change every time the studio starts, so the line has to be copied again after each launch.",
+      "help": "Copies the line to paste in a terminal to connect a client. It holds no port and no token, so it stays true for every launch to come.",
       "button": "Copy"
     },
     "installResolveBridge": {
@@ -338,10 +338,10 @@
     "mcpListening": "Open: the studio is listening on 127.0.0.1:{{port}}, on this machine alone.",
     "mcpClosed": "Shut: nothing is listening. Tick the setting above to open the door.",
     "mcpHowTo": "Connect a client",
-    "mcpStepOpen": "Tick “Drive the studio from outside”. The way in starts at once.",
-    "mcpStepCopy": "Copy the connection command, for a client driven from a terminal — or the configuration block, for a client that reads a file.",
+    "mcpStepOpen": "Tick “Drive the studio from outside”, whenever suits you. The way in starts at once, and a client already configured finds it.",
+    "mcpStepCopy": "Copy the connection command, for a client driven from a terminal — or the configuration block, for a client that reads a file. Neither holds a port or a token.",
     "mcpStepPaste": "Paste it into a terminal open in your project, or the block into your client’s configuration file.",
-    "mcpEachLaunch": "The port and the token are new every time the studio starts, so the gesture has to be repeated after each launch. A client already registered under the same name is replaced; there is nothing to remove first.",
+    "mcpEachLaunch": "Done once. What you paste names the studio as a program to start, never an address to reach, so it keeps working across every launch — including the ones where the port and the token are new, which is all of them. A client already registered under the same name is replaced; there is nothing to remove first.",
     "mcpExamples": "What a client can do",
     "mcpExampleGenerate": "“Find a night skybox model, prepare the generation, but do not send it.”",
     "mcpExampleTidy": "“Sort this week’s rushes into one folder per day.”",
@@ -353,7 +353,7 @@
     "mcpGuardConsent": "Anything that spends or uploads shows on screen and waits for your yes — except what you delegated above.",
     "copyMcpConfig": {
       "title": "Configuration block",
-      "help": "Copies the same connection as JSON, for a client configured by a file rather than by a command. To be copied again after each launch, like the command.",
+      "help": "Copies the same connection as JSON, for a client configured by a file rather than by a command. Like the command, it stays true for every launch.",
       "button": "Copy the JSON"
     }
   }

@@ -721,12 +721,15 @@ donner à votre place.
 Copie la ligne à coller dans un terminal pour brancher un client :
 
 ```
-claude mcp add --transport http <nom> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <nom> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-**Le port et le jeton changent à chaque démarrage du studio**, et c’est pour cette raison qu’il y a
-un bouton plutôt qu’une valeur affichée : il n’y a rien à noter, seulement une ligne à recopier
-après chaque lancement.
+**Elle ne porte ni port ni jeton** : elle désigne le studio comme un programme à démarrer, pas une
+adresse à joindre. Ceux-là changent bien à chaque démarrage — c’est votre client qui va les lire,
+au moment où il en a besoin. **La ligne se colle donc une fois, et vaut pour tous les lancements
+suivants.**
+
+Le chemin est celui de **votre** installation, d’où le bouton plutôt qu’une valeur imprimée ici.
 
 ### Outils de développement
 

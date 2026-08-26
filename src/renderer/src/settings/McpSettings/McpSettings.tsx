@@ -23,10 +23,12 @@ export function McpSettings() {
 
       <section>
         <h3 className={WINDOW_GROUP_LABEL}>{t('settings.mcpHowTo')}</h3>
+        {/* Copy first, tick last: what is copied holds no address, so it can be handed to a
+            client before the way in is ever opened. */}
         <ol className={cn(WINDOW_CAPTION, LIST, 'list-decimal')}>
-          <li>{t('settings.mcpStepOpen')}</li>
           <li>{t('settings.mcpStepCopy')}</li>
           <li>{t('settings.mcpStepPaste')}</li>
+          <li>{t('settings.mcpStepOpen')}</li>
         </ol>
         <p className={cn(WINDOW_HELP, 'mt-2')}>{t('settings.mcpEachLaunch')}</p>
       </section>

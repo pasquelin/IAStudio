@@ -155,11 +155,11 @@ port the studio is listening on, what a client can do, and what guards the door.
 Just below, **Connection command ▸ Copy**. The studio puts a line of this shape on your clipboard:
 
 ```
-claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <name> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-The number after `127.0.0.1:` and the token after `Bearer` **are yours, and this launch's**. They
-are not in this manual because they cannot be: they change.
+**No port, no token, no address.** What you paste names **the studio as a program to start**, not
+a place to reach. That is what makes this line true for every launch — see below.
 
 ### 3. Paste it in a terminal
 
@@ -176,29 +176,32 @@ puts the same connection on the clipboard, in the shape a configuration file exp
 ```json
 {
   "mcpServers": {
-    "ia studio": {
-      "type": "http",
-      "url": "http://127.0.0.1:54321/mcp",
-      "headers": { "Authorization": "Bearer …" }
+    "ia-studio": {
+      "command": "/Applications/IA Studio.app/Contents/MacOS/IA Studio",
+      "args": ["--mcp-stdio=…"]
     }
   }
 }
 ```
 
-Paste it into your client's MCP configuration file. The port and the token there are yours, and
-change at the same rhythm.
+Paste it into your client's MCP configuration file. Like the command, it holds no port and no
+token.
 
-### What to redo at every launch
+### There is nothing to redo
 
-**The port and the token change every time the studio starts.** Yesterday's line is worth nothing
-today: the client addresses a port where nothing is listening any more, or presents a stale token.
+**The port and the token do change every time the studio starts**: the two middle locks are intact,
+and deliberately so — a fixed port and a permanent token would hold from one session to the next,
+and would hold just as well for any program that had read them once.
 
-**So the gesture is to be redone after each launch**: copy the command again, and paste it again. A
-client already registered under the same name is replaced; there is nothing to remove first.
+**But your client does not know them.** It starts the studio, and it is that program which reads
+the current launch's address — at every message it carries, never once and for all.
 
-> **That is the price of the two middle locks**, and it is deliberate. A fixed port and a permanent
-> token would hold on their own from one session to the next — and would hold just as well for any
-> program that had read that file once.
+**A line pasted once therefore holds for every launch after it**, including the ones where the port
+and the token are new, which is all of them. A client already registered under the same name is
+replaced; there is nothing to remove first.
+
+> **Studio closed, or box unticked**: your client is told the studio is not answering, rather than
+> left waiting. Open it again and it picks up — with nothing to paste again.
 
 ### What you can ask it for
 
@@ -386,7 +389,8 @@ program outside**. The assistant is in the window: there is always someone there
 - **It never spends on its own.** One action spends — starting the prepared generation — and it
   asks, with its estimate.
 - **It does not outlive the studio.** With the studio closed the way in no longer exists, and the
-  launch's token with it.
+  launch's token with it. What your client keeps is not an address but a way to start the studio:
+  nothing it holds opens anything while the studio is not running with the box ticked.
 
 > **It does read and change your project folder**, which the first versions of this way in did not.
 > That is what lets a coding assistant work with you rather than beside you — and it is why

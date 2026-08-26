@@ -1,4 +1,5 @@
 import { orElse } from '@shared/promises'
+import { APP_NAME } from '@shared/constants'
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -31,7 +32,7 @@ import {
 } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
-import type { AuthState } from '@shared/domain/settings'
+import { defaultSettings, type AuthState } from '@shared/domain/settings'
 import { log } from './log'
 import { textAt, TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
@@ -61,7 +62,16 @@ import { bundledAnimationFile } from './animations'
 import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
-import { mcpStateOf } from './mcp/endpoint'
+import {
+  clientName,
+  mcpConfigWith,
+  mcpEndpointPath,
+  mcpLaunch,
+  mcpStateOf,
+  type McpLaunch,
+} from './mcp/endpoint'
+
+const MCP_CLIENT = clientName(APP_NAME)
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createLocalBrain } from './assistant/brainLocal'
@@ -136,7 +146,7 @@ import { createTextureExtraction, type TextureExtraction } from './assets/textur
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
-import { exists, firstBytes } from './persistence'
+import { exists, firstBytes, writeAtomic } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
@@ -272,6 +282,8 @@ export type Services = {
   remoteActions: RemoteActions
   /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
   mcp: McpControl
+  /** How a client spawns this application as its way in. No address, so it never goes stale. */
+  mcpLaunch: McpLaunch
   /** Which AI serves each role, what the machine holds, and what may be installed. */
   ai: AiManager
   /** Rank 3's gesture, whole: a picker, a GGUF header, an entry. Rejects on a file it cannot read. */
@@ -342,6 +354,20 @@ const spareCores = (): number => Math.max(1, availableParallelism() - 2)
 
 const timestamp = (): string => new Date().toISOString()
 const newAssetId = (): string => `${ASSET_ID_PREFIX}${randomUUID()}`
+
+/**
+ * Our entry added to the checkout's client configuration, which is the PROJECT's file and not
+ * ours. A malformed one is left exactly as it is: the throw lands here rather than overwriting it.
+ */
+async function leaveClientConfig(path: string, launch: McpLaunch): Promise<void> {
+  try {
+    const merged = mcpConfigWith(await orElse(readFile(path, 'utf8'), ''), launch, MCP_CLIENT)
+    if (merged !== null) await writeAtomic(path, merged)
+  } catch (error) {
+    // An unwritable or unreadable checkout costs a convenience, never a launch.
+    log.warn('mcp', `could not leave a client configuration at ${path}: ${String(error)}`)
+  }
+}
 
 async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]> {
   const parent = BrowserWindow.getFocusedWindow()
@@ -488,6 +514,9 @@ function machineLanguages(): string[] {
  */
 export function createSettings(): SettingsStore {
   const settings = createSettingsStore(createElectronAdapter(), {
+    // Passed, never read at the bottom: it is the only setting whose default depends on which
+    // run this is, and a development checkout opens its way in with nothing to tick.
+    defaults: defaultSettings(isDevelopment),
     onChange: current => {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
       // and Chromium only answers with the new value once `themeSource` has moved.
@@ -1871,6 +1900,15 @@ export function createServices(settings: SettingsStore): Services {
     },
   })
 
+  // Unpackaged, `execPath` is Electron and `getAppPath()` is the checkout it must be told to open.
+  const checkout = isDevelopment ? app.getAppPath() : null
+  const endpointPath = mcpEndpointPath(app.getPath('userData'), checkout)
+  const launch = mcpLaunch(process.execPath, checkout, endpointPath)
+
+  // A development checkout gets the client configuration Claude Code reads on its own. It holds
+  // no address, so it is written once and never removed — unlike `endpointPath`.
+  if (checkout !== null) void leaveClientConfig(join(checkout, '.mcp.json'), launch)
+
   /**
    * The door onto the machine, built here and opened only if the setting says so.
    *
@@ -1881,7 +1919,7 @@ export function createServices(settings: SettingsStore): Services {
   const mcp = createMcpControl({
     run: remoteActions.run,
     version: app.getVersion(),
-    configPath: join(app.getPath('userData'), 'mcp.json'),
+    configPath: endpointPath,
     onSettled: endpoint => broadcast(EVENTS.mcpState, mcpStateOf(endpoint)),
   })
 
@@ -1989,6 +2027,7 @@ export function createServices(settings: SettingsStore): Services {
     assistant: brain,
     remoteActions,
     mcp,
+    mcpLaunch: launch,
     ai,
     addOwnAiModel,
     dictation,

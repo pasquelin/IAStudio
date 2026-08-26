@@ -2,7 +2,7 @@ import { rm } from 'node:fs/promises'
 import type { Settings } from '@shared/domain/settings'
 import { log } from '@main/log'
 import { writeAtomic, writeQueue } from '@main/persistence'
-import type { McpEndpoint } from './endpoint'
+import { mcpEndpointJson, type McpEndpoint } from './endpoint'
 import type { McpDeps, RunningMcp } from './server'
 
 /**
@@ -21,7 +21,7 @@ export type McpControl = {
 }
 
 export type McpControlDeps = McpDeps & {
-  /** Where the port and the token are written, so a client can be pointed here. */
+  /** Where the port and the token are written, for `stdio.ts` to read per message. */
   configPath: string
   /**
    * Said once the server has settled, open or shut — the port alone, never the token.
@@ -52,7 +52,7 @@ export function createMcpControl({ configPath, onSettled, ...deps }: McpControlD
      * is the whole of what stands between a local process and `tools/call`, since a caller with
      * no `Origin` is admitted by design. At the default mode it lands world-readable.
      */
-    await writeAtomic(configPath, `${JSON.stringify({ port, token }, null, 2)}\n`, { mode: 0o600 })
+    await writeAtomic(configPath, mcpEndpointJson({ port, token }), { mode: 0o600 })
   }
 
   const unpublish = async (): Promise<void> => {
@@ -67,10 +67,9 @@ export function createMcpControl({ configPath, onSettled, ...deps }: McpControlD
         if (wanted && !running) {
           /**
            * Loaded here and not at the top of the file, which is the point of the whole
-           * arrangement: the MCP SDK pulls some two hundred modules, zod among them, and this
-           * setting is off by default. A static import would put that on the launch of every
-           * studio that never opens the door — on the one path that blocks the main loop from
-           * end to end.
+           * arrangement: the MCP SDK pulls some two hundred modules, zod among them, on the one
+           * path that blocks the main loop from end to end. A packaged studio pays it only if
+           * the person opened the door; a development one always does, the setting being on.
            */
           const { startMcp } = await import('./server')
           const started = await startMcp(deps)
