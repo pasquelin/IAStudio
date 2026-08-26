@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { clipKeyOf, CLIP_SPEED, type ClipLane } from '@shared/domain/scene'
 import { usToSeconds } from '@shared/domain/time'
 import { setModelLanes } from '@/engines/scene/commands'
+import { nodeById } from '@/engines/scene/sceneState'
 import { clipSpanOf, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { clipLengthOf, useModelClips } from '@/stores/modelClips'
 import { SliderField } from '../SliderField'
@@ -38,7 +39,7 @@ export function AnimationPickerPreview({
   const { t } = useTranslation()
   const preview = useScenePreview(documentId)
   const lanes = useScenes(state => {
-    const node = sceneOf(state, documentId).nodes.find(one => one.id === nodeId)
+    const node = nodeById(sceneOf(state, documentId), nodeId)
     // NO_LANES and never a fresh `[]`: a selector handing zustand a new array on every render
     // is a subscription that never settles, and React stops at the update limit.
     return node?.type === 'model' ? (node.model.lanes ?? NO_LANES) : NO_LANES

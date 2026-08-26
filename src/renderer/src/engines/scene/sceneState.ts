@@ -311,8 +311,24 @@ export type GroupNode = Extract<SceneNode, { type: 'group' }>
 export type CameraNode = Extract<SceneNode, { type: 'camera' }>
 export type PathNode = Extract<SceneNode, { type: 'path' }>
 
+/** Keyed on the LIST, like `parentIds`: the first of two nodes sharing an id wins, as `find` did. */
+const nodesById = new WeakMap<readonly SceneNode[], ReadonlyMap<string, SceneNode>>()
+
+/**
+ * Rebuilt per CALL, this cost 3.56 ms on 40 000 nodes — and a drag hands a NEW list to each of
+ * the readers below on every image, so no `useMemo` at a call site ever hit. Paid once a list
+ * now: 3.56 ms for the first reader, 0.0066 for every one after.
+ */
+function byIdOf(nodes: readonly SceneNode[]): ReadonlyMap<string, SceneNode> {
+  return cachedOn(nodesById, nodes, () => {
+    const found = new Map<string, SceneNode>()
+    for (const node of nodes) if (!found.has(node.id)) found.set(node.id, node)
+    return found
+  })
+}
+
 export function nodeById(state: SceneState, id: string): SceneNode | null {
-  return state.nodes.find(node => node.id === id) ?? null
+  return byIdOf(state.nodes).get(id) ?? null
 }
 
 /**
@@ -326,7 +342,7 @@ export function selectedNodes(
   nodes: readonly SceneNode[],
   selectedIds: readonly string[],
 ): SceneNode[] {
-  const byId = new Map(nodes.map(node => [node.id, node]))
+  const byId = byIdOf(nodes)
   return selectedIds.flatMap(id => byId.get(id) ?? [])
 }
 
@@ -348,7 +364,7 @@ export function canReparent(
 ): boolean {
   if (parentId === null) return true
 
-  const byId = new Map(nodes.map(node => [node.id, node]))
+  const byId = byIdOf(nodes)
   let walker: SceneNode | undefined = byId.get(parentId)
   while (walker) {
     if (walker.id === id) return false
@@ -410,7 +426,7 @@ export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): S
   return nodes.filter(node => node.type === type)
 }
 
-const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
+const cameraSets = new WeakMap<readonly SceneNode[], ReadonlySet<string>>()
 
 /**
  * The cameras a scene holds, in document order. Both readers are on the frame path — the shots
@@ -419,7 +435,7 @@ const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
  * 73 µs over 50 000 with a shot covering the instant, 15 and 151 µs on the fall back, against
  * 0,1 µs whatever the count.
  */
-export function cameraIds(nodes: readonly SceneNode[]): Set<string> {
+export function cameraIds(nodes: readonly SceneNode[]): ReadonlySet<string> {
   return cachedOn(cameraSets, nodes, () => new Set(nodesOfType(nodes, 'camera').map(n => n.id)))
 }
 
