@@ -110,7 +110,8 @@ export type TreeProps<T extends TreeNode> = {
   onToggle: (id: string) => void
   /**
    * Which rows a selection may hold. A synthetic header answers `false` and is left out of a
-   * range rather than filtered off afterwards by whoever stores the result.
+   * range rather than filtered off afterwards by whoever stores the result. It is also what says
+   * a row is not a NODE: a refused row has no siblings, so no insertion lands beside it.
    */
   selectable?: (node: T) => boolean
   /**
@@ -314,20 +315,16 @@ export function Tree<T extends TreeNode>({
   }, [restingIn, rows, onToggle])
 
   /**
-   * Where the ghost sits, and what it shows: the row being dragged, at the depth of the level
-   * that would receive it — which is the whole of what says "this leaves the group" from "this
-   * moves inside it".
-   *
-   * One row, even for a group carrying twenty: a gap that grew with the subtree would resize the
-   * list under the pointer on every hover.
+   * Where the line saying "here" is drawn: BETWEEN two rows — `rows.length` for the very bottom —
+   * at the depth of the level receiving the drop. 🛑 Drawn OVER the rows and never inserted among
+   * them, or the list oscillates: `moves no row while the drop is being aimed` says why.
    */
-  const ghost = useMemo(() => {
+  const dropLine = useMemo(() => {
     if (held === null || over === null || over.zone === 'into') return null
 
     const at = rows.findIndex(row => row.node.id === over.id)
     const target = rows[at]
-    const moved = rows.find(row => row.node.id === held.id)
-    if (!target || !moved) return null
+    if (!target) return null
 
     // After a row means after everything it holds: an insertion beside a group belongs below its
     // last visible descendant, not between the group and its first child.
@@ -337,25 +334,8 @@ export function Tree<T extends TreeNode>({
       while (index < rows.length && (rows[index]?.depth ?? 0) > target.depth) index += 1
     }
 
-    return { index, row: { ...moved, depth: target.depth } }
+    return { index, depth: target.depth }
   }, [rows, over, held])
-
-  /**
-   * The rows on screen, with the gap the ghost sits in while a drop is being aimed. Inserted
-   * into the list rather than drawn over it: the virtualizer counts one row more and opens the
-   * gap on its own, where shifting every offset by hand would be the same arithmetic written
-   * twice — once for the geometry, once for the scroll height.
-   *
-   * The row being dragged STAYS where it is, dimmed. Taking it out would remount the element
-   * the pointer is holding, and a drag whose source is unmounted mid-gesture stops firing.
-   */
-  const slots = useMemo(() => {
-    const placed = rows.map(row => ({ row, ghost: false }))
-    if (ghost === null) return placed
-
-    placed.splice(ghost.index, 0, { row: ghost.row, ghost: true })
-    return placed
-  }, [rows, ghost])
 
   // Read back from the gauge the row below is sized by: a constant is only right at one density.
   //
@@ -368,7 +348,7 @@ export function Tree<T extends TreeNode>({
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
   const virtualizer = useVirtualizer({
-    count: slots.length,
+    count: rows.length,
     getScrollElement: () => scroller.current,
     estimateSize: () => rowPixels,
     overscan: 8,
@@ -382,7 +362,7 @@ export function Tree<T extends TreeNode>({
     focusVirtualCell(index, {
       scroller: scroller.current,
       scrollToIndex: row => virtualizer.scrollToIndex(row),
-      count: slots.length,
+      count: rows.length,
       attribute: 'data-row',
     })
 
@@ -391,12 +371,9 @@ export function Tree<T extends TreeNode>({
 
   // Roving tab stop: one entry into the tree, then the arrows. Every row reachable by tab
   // would make a scene of two hundred nodes two hundred presses deep.
-  //
-  // Counted over the slots, like every index the rows carry: a ghost sitting above the anchor
-  // shifts what `data-row` numbers, and the tab stop would land on its neighbour.
   const tabStop = Math.max(
     0,
-    slots.findIndex(slot => !slot.ghost && slot.row.node.id === anchor),
+    rows.findIndex(row => row.node.id === anchor),
   )
 
   // A row that a selection may not hold is not a node either: it has nothing to move.
@@ -488,7 +465,11 @@ export function Tree<T extends TreeNode>({
     event: React.DragEvent<HTMLElement>,
   ): DropTarget | null => {
     const into = onDrop !== undefined && accepts(row.node)
-    if (onInsert === undefined) return into ? { zone: 'into' } : null
+    // A row a selection cannot hold is not a node either: no siblings, so no place in an
+    // ordering. It takes a drop over its whole HEIGHT or none — the scene's synthetic root,
+    // which is how a node comes back out of a group.
+    if (onInsert === undefined || !(selectable?.(row.node) ?? true))
+      return into ? { zone: 'into' } : null
 
     const box = event.currentTarget.getBoundingClientRect()
     const ratio = (event.clientY - box.top) / box.height
@@ -516,19 +497,8 @@ export function Tree<T extends TreeNode>({
     onSelect(ids, mode)
   }
 
-  /**
-   * What sits inside a row: the pinned column, then everything the depth moves.
-   *
-   * Written once for the real row and for the GHOST — the outline that follows the pointer during
-   * a drag. The two carry the same four pieces of geometry, and the ghost's whole job is to line
-   * up with the rows under it: a copy of them would be a copy that says where a drop lands.
-   *
-   * `ghost` turns off what a row that does not exist yet cannot have — a control for a state
-   * nothing is in, a chevron folding a branch nobody made. `invisible` rather than an empty span,
-   * so the column keeps the width the caller's control gives it, and rather than `opacity-0`,
-   * which would leave a button in the tab order.
-   */
-  const body = (row: TreeRow<T>, ghost: boolean): ReactNode => (
+  /** What sits inside a row: the pinned column, then everything the depth moves. */
+  const body = (row: TreeRow<T>): ReactNode => (
     <>
       <div
         style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
@@ -550,15 +520,13 @@ export function Tree<T extends TreeNode>({
             because it has no other handle, being `aria-hidden` — three suites used to reach it as
             the row's `firstChild`, a claim about the markup around it rather than about it. */}
         <RowChevron
-          expandable={!ghost && row.hasChildren}
+          expandable={row.hasChildren}
           expanded={row.expanded}
           onToggle={() => onToggle(row.node.id)}
         />
         {renderRow(row)}
       </div>
-      {renderTrailing && (
-        <span className={cn(PINNED, ghost && 'invisible')}>{renderTrailing(row)}</span>
-      )}
+      {renderTrailing && <span className={PINNED}>{renderTrailing(row)}</span>}
     </>
   )
 
@@ -572,7 +540,7 @@ export function Tree<T extends TreeNode>({
   ): void => {
     if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowLeft' && row.expanded) onToggle(row.node.id)
-    else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, slots.length - 1))
+    else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, rows.length - 1))
     else if (event.key === 'ArrowUp') focusRow(Math.max(index - 1, 0))
     else if (event.key === 'Enter' || event.key === ' ') {
       // Only when the row itself holds the focus, the guard `Collection` already carries: a
@@ -621,15 +589,17 @@ export function Tree<T extends TreeNode>({
       // panel would answer for every hover, outline included.
       onDragOver={event => {
         if (event.target !== event.currentTarget) return
+        // The blank is no row, so nothing a row lit is still aimed at — cleared even where the
+        // blank itself takes nothing, or the line stays on the row the pointer left.
+        setOver(null)
         if (foreign?.carries(event)) {
           event.preventDefault()
           event.dataTransfer.dropEffect = 'copy'
-          return setOver(null)
+          return
         }
         if (!onDropRoot || !rowDrag.carries(event)) return
         event.preventDefault()
         event.dataTransfer.dropEffect = 'move'
-        setOver(null)
       }}
       onDrop={event => {
         if (event.target !== event.currentTarget) return
@@ -653,35 +623,18 @@ export function Tree<T extends TreeNode>({
         className="relative"
       >
         {virtualizer.getVirtualItems().map(virtual => {
-          const slot = slots[virtual.index]
-          if (!slot) return null
-          const { row } = slot
+          const row = rows[virtual.index]
+          if (!row) return null
           const index = virtual.index
 
-          /**
-           * The ghost: the row as it would read once dropped, at the depth of its new level.
-           * Announced to nobody — it stands for a move that has not happened, and a reader
-           * walking the tree would count a layer the document does not have.
-           */
-          if (slot.ghost)
-            return (
-              <li
-                key={`ghost:${row.node.id}`}
-                role="presentation"
-                aria-hidden="true"
-                style={{ transform: `translateY(${virtual.start}px)`, height: virtual.size }}
-                className="pointer-events-none absolute inset-x-0 top-0 py-px"
-              >
-                <div
-                  className={cn(
-                    ROW_LINE,
-                    'border-accent bg-elevated rounded-(--radius-sc-sm) border border-dashed',
-                  )}
-                >
-                  {body(row, true)}
-                </div>
-              </li>
-            )
+          // Which edge of THIS row the line sits on, if any. Carried by the row rather than
+          // placed at an offset of its own: the virtualizer has already put the row where it
+          // belongs, and a second arithmetic beside it is a second chance to disagree.
+          //
+          // 🛑 The angle it leaves: an index OUTSIDE the virtual window is drawn by nobody, so
+          // aiming past a long open subtree gives no feedback while the drop still fires.
+          const lineAbove = dropLine?.index === index
+          const lineBelow = dropLine?.index === rows.length && index === rows.length - 1
 
           return (
             <li
@@ -725,10 +678,10 @@ export function Tree<T extends TreeNode>({
                   over?.id === row.node.id &&
                     over.zone === 'into' &&
                     'outline-accent outline -outline-offset-1',
-                  // The rows the hand is holding, while the ghost shows where they would land. A
+                  // The rows the hand is holding, while the line shows where they would land. A
                   // dimming rather than a hidden row: taking one out would remount the element
                   // the pointer is dragging, and the gesture would stop firing there and then.
-                  ghost !== null && dragged?.some(one => one.id === row.node.id) && 'opacity-40',
+                  dropLine !== null && dragged?.some(one => one.id === row.node.id) && 'opacity-40',
                 )}
                 // The handle is the row itself — a `draggable` makes every control inside it
                 // draggable too, so the eye would reparent instead of toggling.
@@ -758,17 +711,22 @@ export function Tree<T extends TreeNode>({
                   }
                   if (!rowDrag.carries(event)) return
                   const target = dropTargetFor(row, event)
-                  if (target === null) {
-                    return setOver(current => (current?.id === row.node.id ? null : current))
-                  }
+                  // The pointer is over THIS row, so a refusal means nothing at all is aimed at —
+                  // including whatever another row lit before the pointer got here.
+                  if (target === null) return setOver(null)
                   // Without this the browser refuses the drop, and neither callback ever fires.
                   event.preventDefault()
                   event.dataTransfer.dropEffect = 'move'
                   setOver({ id: row.node.id, zone: target.zone })
                 }}
-                onDragLeave={() =>
+                // A leave whose next stop is another row of this tree is a MOVE between rows,
+                // and the `dragover` right behind it says where: clearing here would blank the
+                // target for a frame, on every row the pointer crosses.
+                onDragLeave={event => {
+                  const next = event.relatedTarget
+                  if (next instanceof Node && scroller.current?.contains(next)) return
                   setOver(current => (current?.id === row.node.id ? null : current))
-                }
+                }}
                 onDragEnd={() => {
                   setOver(null)
                   setDragged(null)
@@ -829,8 +787,24 @@ export function Tree<T extends TreeNode>({
                 }}
                 onKeyDown={event => onRowKeyDown(row, index, event)}
               >
-                {body(row, false)}
+                {body(row)}
               </div>
+              {/* Where the drop would land, in the hairline gutter `py-px` leaves between two
+                  rows, indented to the level receiving it. After the row in the DOM, so it paints
+                  over the fill; named because `aria-hidden` leaves it no other handle. */}
+              {(lineAbove || lineBelow) && (
+                <div
+                  data-drop-line
+                  aria-hidden="true"
+                  style={{ marginLeft: `calc(${INDENT} * ${dropLine?.depth ?? 0})` }}
+                  className={cn(
+                    // A BORDER, never a fill: the full accent under a row belongs to a control,
+                    // and `styles.test.ts` refuses it in any file that also draws `rowSkin`.
+                    'border-accent pointer-events-none absolute inset-x-0 h-0 border-t-2',
+                    lineBelow ? 'bottom-0' : 'top-0',
+                  )}
+                />
+              )}
             </li>
           )
         })}

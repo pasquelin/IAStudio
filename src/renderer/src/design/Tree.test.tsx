@@ -655,17 +655,65 @@ describe('Tree', () => {
       fireEvent.dragOver(row, { dataTransfer: data, clientY: 30 * ratio })
     }
 
-    it('opens a gap where the row would land, showing the row that would land there', () => {
+    /** The line is carried by the row it lands beside — see `dropLine`. */
+    function lineOn(row: HTMLElement): HTMLElement | null {
+      return row.closest('li')!.querySelector('[data-drop-line]')
+    }
+
+    it('draws the line on the edge of the row the drop would land beside', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
       fireEvent.dragStart(b!, { dataTransfer: data })
       hoverAt(a!, 0.1, data)
 
-      // Four rows and a ghost: the list grew by one while the drop is being aimed.
-      const drawn = screen.getAllByText('b')
-      expect(drawn).toHaveLength(2)
+      expect(lineOn(a!)?.className).toContain('top-0')
       expect(a!.className).not.toContain('outline-accent')
+    })
+
+    /**
+     * 🛑 Why the line is drawn OVER the rows: a gap opened at the pointer pushes the row being
+     * aimed at out from under it, the browser calls that a `dragleave`, and the list oscillates.
+     * jsdom lays nothing out, but the virtualizer's offsets are ours — and a gap shifts them.
+     */
+    it('moves no row while the drop is being aimed', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+      const before = screen.getAllByRole('treeitem').map(row => row.closest('li')!.style.transform)
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+
+      const during = screen.getAllByRole('treeitem').map(row => row.closest('li')!.style.transform)
+      expect(during).toEqual(before)
+    })
+
+    /** A line at the depth of the group and one at its parent's are the two answers a hand aims
+     * between, and nothing else on screen tells them apart. */
+    it('indents the line to the level that would receive the row', () => {
+      const [, , a1, b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a1!, 0.1, data)
+
+      expect(lineOn(a1!)?.style.marginLeft).toBe('calc(var(--sc-indent) * 2)')
+    })
+
+    /**
+     * Crossing from one row to the next fires the leave AFTER the enter and BEFORE the
+     * `dragover` that says where the pointer now is: clearing on it blanks the target for a
+     * frame, on every row the pointer crosses.
+     */
+    it('keeps the line when the pointer merely crosses into another row', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+      fireEvent.dragLeave(a!, { dataTransfer: data, relatedTarget: b })
+
+      expect(lineOn(a!)).not.toBeNull()
     })
 
     it('dims the row the hand is holding rather than taking it out of the list', () => {
@@ -679,7 +727,37 @@ describe('Tree', () => {
       expect(b!.className).toContain('opacity-40')
     })
 
-    it('takes the gap back when the pointer leaves without dropping', () => {
+    /**
+     * The leave alone cannot do it: it fires before the `dragover` that says where the pointer
+     * now is, so it has to let a crossing pass. A row that REFUSES is then the one place nothing
+     * would ever clear — and the line stayed lit on a row the pointer had left.
+     */
+    it('takes the line off the row it left, even for a row that refuses the drop', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+      // Its own top edge: `b` would land exactly where it already sits, which is no drop at all.
+      hoverAt(b!, 0.1, data)
+
+      expect(lineOn(a!)).toBeNull()
+    })
+
+    // The blank below the rows is no row either, and it takes nothing here — `onDropRoot` is
+    // absent — so it used to return before clearing what a row had lit.
+    it('takes the line off when the pointer moves onto the blank below the rows', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+      fireEvent.dragOver(screen.getByRole('tree').parentElement!, { dataTransfer: data })
+
+      expect(lineOn(a!)).toBeNull()
+    })
+
+    it('takes the line back when the gesture ends without dropping', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
@@ -687,25 +765,24 @@ describe('Tree', () => {
       hoverAt(a!, 0.1, data)
       fireEvent.dragEnd(b!)
 
-      expect(screen.getAllByText('b')).toHaveLength(1)
+      expect(lineOn(a!)).toBeNull()
     })
 
     /**
-     * A row beside a group belongs below everything the group holds. Placing the ghost right
-     * after the group's own row would show it landing between the group and its first child —
+     * A row beside a group belongs below everything the group holds. Drawing the line right
+     * under the group's own row would show it landing between the group and its first child —
      * a place the drop never puts it.
      */
-    it('places the ghost below the whole subtree when it lands after a group', () => {
+    it('draws the line below the whole subtree when the row lands after a group', () => {
       // `a1` comes out of `a` and lands beside it, at the root.
-      const [, a, a1] = renderInsertable(() => {})
+      const [, a, a1, b] = renderInsertable(() => {})
       const data = dragTransfer()
 
       fireEvent.dragStart(a1!, { dataTransfer: data })
       hoverAt(a!, 0.9, data)
 
-      // The ghost sits below `a1`, not between `a` and it: that is where the drop puts it.
-      const drawn = screen.getAllByText(/^(a|a1|b)$/).map(node => node.textContent)
-      expect(drawn).toEqual(['a', 'a1', 'a1', 'b'])
+      expect(lineOn(b!)).not.toBeNull()
+      expect(lineOn(a1!)).toBeNull()
     })
 
     it('picks up a row for a tree that only inserts', () => {

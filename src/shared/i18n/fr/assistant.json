@@ -667,7 +667,7 @@
       },
       "nodeReparent": {
         "title": "Rattacher un objet",
-        "description": "Accroche un objet sous un autre, ou sous la scène elle-même quand aucun parent n’est donné. L’objet garde sa transformation, qui se lit alors relativement à son nouveau parent."
+        "description": "Accroche un objet sous un autre, ou sous la scène elle-même quand aucun parent n’est donné, et le place où on veut parmi ses nouveaux voisins. Donner une place sans donner de parent remonte donc l’objet à la scène : répéter le parent pour ne changer que la place. L’objet garde sa transformation, qui se lit alors relativement à son nouveau parent."
       },
       "nodeSelect": {
         "title": "Sélectionner des objets",
@@ -1055,6 +1055,7 @@
       "adjustment": "Réglage que porte le calque",
       "parentId": "Groupe dans lequel le déplacer",
       "index": "Place dans la pile, comptée depuis le bas",
+      "nodeIndex": "Place parmi les objets du même niveau, comptée depuis le haut de la liste",
       "opacity": "Opacité, de 0 à 1",
       "fillOpacity": "Opacité du fond, de 0 à 1",
       "blend": "Mode de fusion",

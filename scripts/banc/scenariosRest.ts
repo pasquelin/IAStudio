@@ -344,6 +344,18 @@ export const REST_SCENARIOS: readonly Scenario[] = [
       return cube !== undefined && read.nodeNamed(run, 'Sphere')?.parentId === cube.id
     },
   },
+  {
+    // The other half of the same action: where a node sits among its own level, which the
+    // outliner reads off the order of the scene and nothing else says.
+    name: '46.9 puts the sphere first in the scene list',
+    said: ['Mets la sphère tout en haut de la liste de la scène.'],
+    setup: async studio => {
+      await cubeScene(studio)
+      await studio.run('node.add', { kind: 'sphere', name: 'Sphere' })
+    },
+    // The top level IN ORDER: nothing else says where a node sits among its own.
+    passed: run => read.nodes(run).filter(one => one.parentId === null)[0]?.name === 'Sphere',
+  },
 
   {
     name: '47.1 cuts a rail for the camera shot',

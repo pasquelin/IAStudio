@@ -222,7 +222,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'camera.addRail': ['47.1', '47.2'],
   'camera.target': ['9.3', '9.4', '14.2', '24.5', '24.8'],
   'camera.reorder': ['47.3'],
-  'node.reparent': ['46.8'],
+  'node.reparent': ['46.8', '46.9'],
   'node.select': ['28.1'],
   'view.direction': ['47.4'],
   'view.display': ['47.5'],

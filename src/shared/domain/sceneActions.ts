@@ -644,6 +644,15 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     fields: [
       NODE,
       { key: 'parentId', kind: 'text', labelKey: 'assistant.fields.parentId', required: false },
+      // Absent, the node keeps the place it already has among its new siblings — which is what
+      // hanging it somewhere means, and what dropping a row ONTO another does on screen.
+      {
+        key: 'index',
+        kind: 'integer',
+        labelKey: 'assistant.fields.nodeIndex',
+        required: false,
+        min: 0,
+      },
     ],
   }),
   action({
