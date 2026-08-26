@@ -36,6 +36,17 @@ export type PostPresetId =
   | 'vintageFilm'
   | 'productShot'
   | 'game'
+  | 'psx'
+  | 'gameBoy'
+  | 'arcade'
+  | 'speedRush'
+  | 'damage'
+  | 'nightVision'
+  | 'underwater'
+  | 'comic'
+  | 'anime'
+  | 'painterly'
+  | 'noir'
 
 /**
  * `Record` keyed on the union: a preset named without a recipe fails to compile.
@@ -166,8 +177,118 @@ export const POST_PRESETS: Record<PostPresetId, readonly PostPresetStep[]> = {
     // FXAA rather than SMAA: a game look is the one that buys its edges at the lowest price.
     { effect: 'fxaa' },
   ],
-}
+  /*
+   * The eleven below are LOOKS of a game rather than of a camera, and the difference is the
+   * anti-aliasing: half of them deliberately ship without any, because a hard pixel edge IS the
+   * style. A PSX preset that smoothed its own dither would be a PSX preset of nothing.
+   */
 
+  /** Low resolution, few colours, ordered dither — and no AA, which is the whole point. */
+  psx: [
+    { effect: 'pixelate', params: { size: 4 } },
+    { effect: 'posterize', params: { levels: 12 } },
+    { effect: 'dither', params: { amount: 0.7, levels: 12 } },
+    { effect: 'scanlines', params: { intensity: 0.12, count: 480 } },
+  ],
+
+  /** Four values through a green screen. `tint` towards green does what no LUT is needed for. */
+  gameBoy: [
+    { effect: 'pixelate', params: { size: 3 } },
+    { effect: 'colorGrading', params: { saturation: 0.05, tint: -0.85, temperature: -0.2 } },
+    { effect: 'posterize', params: { levels: 4 } },
+    { effect: 'dither', params: { amount: 0.85, levels: 4 } },
+  ],
+
+  /** The cabinet: a curved tube, its scanlines and its glow. `crt` already carries the vignette. */
+  arcade: [
+    { effect: 'bloom', params: { strength: 0.5, radius: 0.5, threshold: 0.75 } },
+    { effect: 'colorGrading', params: { saturation: 1.18, contrast: 1.1 } },
+    {
+      effect: 'crt',
+      params: { curvature: 0.35, scanline: 0.45, aberration: 0.004, vignette: 0.5 },
+    },
+  ],
+
+  /** The dash. `hole` is what keeps the subject at the centre readable through its own smear. */
+  speedRush: [
+    { effect: 'radialBlur', params: { amount: 0.35, hole: 0.18, samples: 20 } },
+    { effect: 'chromaticAberration', params: { amount: 0.006 } },
+    { effect: 'bloom', params: { strength: 0.5, radius: 0.6, threshold: 0.8 } },
+    { effect: 'colorGrading', params: { contrast: 1.12, saturation: 1.08 } },
+    { effect: 'vignette', params: { offset: 1.4, darkness: 1.4 } },
+  ],
+
+  /** Low health: the colour drains, the edges close in, the lens gives up. */
+  damage: [
+    { effect: 'blur', params: { radius: 0.8 } },
+    { effect: 'chromaticAberration', params: { amount: 0.008 } },
+    {
+      effect: 'colorGrading',
+      params: { saturation: 0.55, temperature: 0.35, contrast: 1.15, exposure: -0.3 },
+    },
+    { effect: 'filmGrain', params: { intensity: 0.35, size: 1.4 } },
+    { effect: 'vignette', params: { offset: 1.8, darkness: 2.2 } },
+  ],
+
+  /** Amplified light through a green tube, and the noise that comes with amplifying it. */
+  nightVision: [
+    { effect: 'bloom', params: { strength: 0.9, radius: 0.7, threshold: 0.45 } },
+    {
+      effect: 'colorGrading',
+      params: { exposure: 1.1, contrast: 1.3, saturation: 0.2, tint: -0.9 },
+    },
+    { effect: 'scanlines', params: { intensity: 0.22, count: 620 } },
+    { effect: 'filmGrain', params: { intensity: 0.45, size: 1 } },
+    { effect: 'vignette', params: { offset: 1.9, darkness: 2.4 } },
+  ],
+
+  /** Under the surface: the image wobbles, the light goes blue, the distance goes soft. */
+  underwater: [
+    { effect: 'heatHaze', params: { amount: 0.006, frequency: 12, speed: 0.8 } },
+    { effect: 'blur', params: { radius: 0.9 } },
+    {
+      effect: 'colorGrading',
+      params: { temperature: -0.55, tint: -0.15, saturation: 0.85, exposure: -0.25 },
+    },
+    { effect: 'vignette', params: { offset: 1.5, darkness: 1.6 } },
+  ],
+
+  /** Inked and screened, the way a printed page is: a line, flat colour, and a dot pattern. */
+  comic: [
+    { effect: 'posterize', params: { levels: 6 } },
+    { effect: 'colorGrading', params: { saturation: 1.3, contrast: 1.18 } },
+    { effect: 'outline', params: { thickness: 1.4, threshold: 0.08 } },
+    { effect: 'halftone', params: { radius: 3, blending: 0.35 } },
+  ],
+
+  /** A thin line, a soft glow and lifted colour — cel shading read off the finished image. */
+  anime: [
+    { effect: 'outline', params: { thickness: 1, threshold: 0.12, opacity: 0.85 } },
+    { effect: 'bloom', params: { strength: 0.7, radius: 0.6, threshold: 0.8 } },
+    { effect: 'colorGrading', params: { saturation: 1.2, contrast: 1.05, vibrance: 0.25 } },
+    { effect: 'smaa' },
+  ],
+
+  /** Kuwahara flattens the inside of every shape; the sharpen gives their borders back. */
+  painterly: [
+    { effect: 'kuwahara', params: { radius: 3 } },
+    { effect: 'sharpen', params: { amount: 0.3 } },
+    { effect: 'colorGrading', params: { saturation: 1.12, contrast: 1.06 } },
+    { effect: 'vignette', params: { offset: 1.2, darkness: 1.1 } },
+  ],
+
+  /** No colour, hard contrast, and the bars that say a camera framed it. */
+  noir: [
+    {
+      effect: 'colorGrading',
+      params: { saturation: 0, contrast: 1.45, gamma: 0.95, lift: -0.02 },
+    },
+    { effect: 'filmGrain', params: { intensity: 0.35, size: 1.2 } },
+    { effect: 'vignette', params: { offset: 1.6, darkness: 1.8 } },
+    { effect: 'letterbox', params: { aspect: 2.39 } },
+    { effect: 'smaa' },
+  ],
+}
 export const POST_PRESET_IDS: readonly PostPresetId[] = Object.keys(
   POST_PRESETS,
 ) as readonly PostPresetId[]

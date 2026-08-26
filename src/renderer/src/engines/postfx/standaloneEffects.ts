@@ -34,7 +34,9 @@ import {
   blurAxisShader,
   chromaticAberrationShader,
   crtShader,
+  kuwaharaShader,
   outlineShader,
+  radialBlurShader,
   sharpenShader,
   vhsShader,
 } from './shaders/standaloneShaders'
@@ -221,6 +223,21 @@ const OWN_PASS: Readonly<Record<Exclude<PostEffectId, FusedId>, EffectFactory>> 
   chromaticAberration: shaderEffect(chromaticAberrationShader, (uniforms, effect) => {
     write(uniforms, 'amount', paramNumber(effect, 'amount'))
     write(uniforms, 'radial', paramFlag(effect, 'radial') ? 1 : 0)
+  }),
+
+  radialBlur: shaderEffect(radialBlurShader, (uniforms, effect, view) => {
+    write(uniforms, 'amount', paramNumber(effect, 'amount'))
+    write(uniforms, 'hole', paramNumber(effect, 'hole'))
+    // Through the budget, like every other sampling count: the cheap end of the quality setting
+    // is what makes a stack of heavy effects usable at all.
+    write(uniforms, 'taps', samplesOf(paramNumber(effect, 'samples'), view.budget))
+    writeVector(uniforms, 'centre', paramNumber(effect, 'centreX'), paramNumber(effect, 'centreY'))
+  }),
+
+  kuwahara: shaderEffect(kuwaharaShader, (uniforms, effect, view) => {
+    write(uniforms, 'radius', paramNumber(effect, 'radius'))
+    const step = texelOf(view)
+    writeVector(uniforms, 'texel', step.x, step.y)
   }),
 
   sharpen: shaderEffect(sharpenShader, (uniforms, effect, view) => {

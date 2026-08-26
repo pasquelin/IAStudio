@@ -70,19 +70,23 @@ export type PostEffectId =
   | 'dof'
   | 'chromaticAberration'
   | 'lensDistortion'
+  | 'heatHaze'
   | 'colorGrading'
   | 'lut'
   | 'sharpen'
   | 'blur'
+  | 'radialBlur'
   | 'pixelate'
   | 'posterize'
   | 'dither'
   | 'vignette'
+  | 'letterbox'
   | 'filmGrain'
   | 'scanlines'
   | 'outline'
   | 'halftone'
   | 'dotScreen'
+  | 'kuwahara'
   | 'glitch'
   | 'rgbShift'
   | 'crt'
@@ -228,6 +232,18 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
       zoom: slider(0.5, 1.5, 0.01, 1),
     },
   },
+  /** Rising air, a portal, under the water: the picture wobbles rather than the geometry. */
+  heatHaze: {
+    category: 'lens',
+    cost: 'low',
+    slot: 'image',
+    duplicable: true,
+    params: {
+      amount: slider(0, 0.05, 0.001, 0.008),
+      frequency: slider(1, 60, 0.5, 18),
+      speed: slider(0, 8, 0.1, 1.4),
+    },
+  },
   colorGrading: {
     category: 'color',
     cost: 'low',
@@ -273,6 +289,21 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
       radius: slider(0, 8, 0.1, 2),
     },
   },
+  /** The dash, the boost, the hit: everything smears towards a point. `centre` is where. */
+  radialBlur: {
+    category: 'image',
+    cost: 'medium',
+    slot: 'image',
+    duplicable: true,
+    params: {
+      amount: slider(0, 1, 0.01, 0.25),
+      centreX: slider(0, 1, 0.01, 0.5),
+      centreY: slider(0, 1, 0.01, 0.5),
+      /** Where the smear STARTS, so a subject at the centre can stay readable through it. */
+      hole: slider(0, 1, 0.01, 0.1),
+      samples: number(4, 32, 1, 16),
+    },
+  },
   pixelate: {
     category: 'image',
     cost: 'low',
@@ -302,6 +333,17 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
     params: {
       offset: slider(0, 3, 0.01, 1),
       darkness: slider(0, 3, 0.01, 1),
+    },
+  },
+  /** Cinematic bars, at the ratio a shot is framed for. Both axes: 4:3 on a wide view pillars. */
+  letterbox: {
+    category: 'film',
+    cost: 'low',
+    slot: 'image',
+    duplicable: false,
+    params: {
+      aspect: slider(1, 3, 0.01, 2.39),
+      softness: slider(0, 0.05, 0.001, 0),
     },
   },
   filmGrain: {
@@ -359,6 +401,14 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
       scale: slider(0.1, 4, 0.05, 0.8),
       angle: slider(0, 6.28, 0.01, 1.57),
     },
+  },
+  /** The painterly filter: each pixel takes the mean of whichever quadrant varies least. */
+  kuwahara: {
+    category: 'stylized',
+    cost: 'high',
+    slot: 'image',
+    duplicable: false,
+    params: { radius: number(1, 6, 1, 3) },
   },
   glitch: {
     category: 'stylized',

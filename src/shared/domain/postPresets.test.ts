@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { POST_EFFECTS, type PostStack } from './postProcessing'
+import { numericBoundsOf } from './propertySpec'
 import {
   POST_PRESETS,
   POST_PRESET_IDS,
@@ -27,6 +28,44 @@ describe('the compositions the studio ships', () => {
     )
 
     expect(wrong).toEqual([])
+  })
+
+  /**
+   * A value outside its own slider is not refused — `boundParam` brings it back at the moment the
+   * stack is built. So the recipe would read as one look and apply as another, and every gate
+   * would stay green: the drift lives in the source and nowhere else.
+   */
+  it('holds every value inside the bounds its own spec declares', () => {
+    const outside = POST_PRESET_IDS.flatMap(id =>
+      POST_PRESETS[id].flatMap(step =>
+        Object.entries(step.params ?? {}).flatMap(([name, value]) => {
+          const spec = POST_EFFECTS[step.effect].params[name]
+          if (!spec || typeof value !== 'number') return []
+
+          // A spec with no bounds — a toggle, a choice — has nothing to be outside of.
+          const bounds = numericBoundsOf(spec)
+          if (bounds?.min === undefined || bounds.max === undefined) return []
+
+          const inside = value >= bounds.min && value <= bounds.max
+          return inside ? [] : [`${id}: ${step.effect}.${name} = ${value}`]
+        }),
+      ),
+    )
+
+    expect(outside).toEqual([])
+  })
+
+  /**
+   * An effect of the `render` slot draws the scene ITSELF, so it stands at the head of a chain and
+   * two of them cannot both. `planStack` drops the second without a word — a recipe pairing GTAO
+   * with SSAO would ship one occlusion pass that nobody asked for and hide the other.
+   */
+  it('asks for at most one pass that draws the scene', () => {
+    const doubled = POST_PRESET_IDS.filter(
+      id => POST_PRESETS[id].filter(step => POST_EFFECTS[step.effect].slot === 'render').length > 1,
+    )
+
+    expect(doubled).toEqual([])
   })
 
   it('builds a stack of fresh instances rather than a reference', () => {

@@ -257,14 +257,63 @@ const dotScreen: FusableEffect = {
 }
 
 /**
+ * Rising air, a portal, under the water. A `uv` chunk, so the wobble costs nothing beyond the
+ * single fetch the fused pass already makes — the picture moves, never the geometry.
+ */
+const heatHaze: FusableEffect = {
+  kind: 'uv',
+  make: () => ({
+    uniforms: { amount: { value: 0.008 }, frequency: { value: 18 }, phase: { value: 0 } },
+    body: `
+    float wave = uv.y * frequency + phase;
+    uv.x += sin(wave) * amount;
+    uv.y += cos(wave * 0.7) * amount * 0.5;
+    // Clamped rather than masked: air that shimmers must not paint the edges of the frame black.
+    uv = clamp(uv, 0.0, 1.0);
+    `,
+  }),
+  apply: (effect, view, uniforms) => {
+    write(uniforms, 'amount', paramNumber(effect, 'amount'))
+    write(uniforms, 'frequency', paramNumber(effect, 'frequency'))
+    write(uniforms, 'phase', view.time * paramNumber(effect, 'speed'))
+  },
+}
+
+/**
+ * Cinematic bars at the ratio a shot is framed for — and pillars rather than bars where the view
+ * is WIDER than the ratio asked for, which is what makes 4:3 usable on a wide viewport.
+ */
+const letterbox: FusableEffect = {
+  kind: 'colour',
+  make: () => ({
+    uniforms: { aspect: { value: 2.39 }, softness: { value: 0 }, frameAspect: { value: 1.777 } },
+    body: `
+    float shownY = clamp(frameAspect / max(aspect, 0.001), 0.0, 1.0) * 0.5;
+    float shownX = clamp(aspect / max(frameAspect, 0.001), 0.0, 1.0) * 0.5;
+    float edge = max(softness, 0.0001);
+    colour *=
+      (1.0 - smoothstep(shownY - edge, shownY + edge, abs(vUv.y - 0.5))) *
+      (1.0 - smoothstep(shownX - edge, shownX + edge, abs(vUv.x - 0.5)));
+    `,
+  }),
+  apply: (effect, view, uniforms) => {
+    write(uniforms, 'aspect', paramNumber(effect, 'aspect'))
+    write(uniforms, 'softness', paramNumber(effect, 'softness'))
+    write(uniforms, 'frameAspect', view.height === 0 ? 1 : view.width / view.height)
+  },
+}
+
+/**
  * `satisfies` rather than an annotation, so the KEYS stay literal — which is what lets the other
  * table be typed on `Exclude<PostEffectId, FusedId>` and hold the partition at compile time.
  */
 export const FUSABLE_EFFECTS = {
   lensDistortion,
+  heatHaze,
   pixelate,
   colorGrading,
   vignette,
+  letterbox,
   posterize,
   dither,
   filmGrain,

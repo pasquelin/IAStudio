@@ -266,6 +266,8 @@ describe('the translation bundles', () => {
       'materialExportTargets.gltf',
       'materialExportTargets.unity',
       'materialExportTargets.unreal',
+      // A console, and consoles keep their name. `preset_psx` reads as one word to `wordsOf`.
+      'postfx.preset_gameBoy',
     ])
 
     const copied = [...BUNDLES.fr]

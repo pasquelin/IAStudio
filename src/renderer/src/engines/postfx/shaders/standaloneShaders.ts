@@ -249,3 +249,114 @@ export const vhsShader = {
     }
   `,
 }
+
+/**
+ * The dash, the boost, the hit: everything smears towards one point. `hole` is what keeps the
+ * subject at that point readable — the smear starts past it rather than at it.
+ */
+export const radialBlurShader = {
+  name: 'RadialBlurShader',
+  uniforms: {
+    tDiffuse: { value: null },
+    amount: { value: 0.25 },
+    centre: { value: new Vector2(0.5, 0.5) },
+    hole: { value: 0.1 },
+    taps: { value: 16 },
+  },
+  vertexShader: QUAD_VERTEX_SHADER,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float amount;
+    uniform vec2 centre;
+    uniform float hole;
+    uniform float taps;
+    varying vec2 vUv;
+
+    // GLSL ES 1.0 wants a constant bound, so the count is a uniform the loop breaks on.
+    const int MAX_TAPS = 32;
+
+    void main() {
+      vec2 towards = vUv - centre;
+      // Nothing moves inside the hole, and the smear eases in rather than starting at full
+      // length: a hard edge around the subject reads as a circle drawn on the picture.
+      float reach = amount * smoothstep(hole, 1.0, length(towards) * 2.0);
+
+      vec3 sum = vec3(0.0);
+      float weight = 0.0;
+      for (int i = 0; i < MAX_TAPS; i += 1) {
+        if (float(i) >= taps) break;
+        float step = float(i) / max(taps - 1.0, 1.0);
+        sum += texture2D(tDiffuse, clamp(vUv - towards * reach * step, 0.0, 1.0)).rgb;
+        weight += 1.0;
+      }
+
+      gl_FragColor = vec4(sum / max(weight, 1.0), 1.0);
+    }
+  `,
+}
+
+/**
+ * The painterly filter: each pixel takes the mean of whichever of its four quadrants varies
+ * LEAST, which flattens the inside of a shape while leaving its border alone.
+ *
+ * Four quadrants rather than the anisotropic form — eight sectors weighted by a structure tensor
+ * would be four more fetch loops for a difference this studio has nowhere to judge.
+ */
+export const kuwaharaShader = {
+  name: 'KuwaharaShader',
+  uniforms: {
+    tDiffuse: { value: null },
+    radius: { value: 3 },
+    texel: { value: new Vector2() },
+  },
+  vertexShader: QUAD_VERTEX_SHADER,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float radius;
+    uniform vec2 texel;
+    varying vec2 vUv;
+
+    ${PRELUDE}
+
+    const int MAX_RADIUS = 6;
+
+    void main() {
+      vec3 bestMean = texture2D(tDiffuse, vUv).rgb;
+      float bestSpread = 1.0e9;
+
+      for (int quadrant = 0; quadrant < 4; quadrant += 1) {
+        vec2 way = vec2(quadrant == 0 || quadrant == 3 ? 1.0 : -1.0,
+                        quadrant < 2 ? 1.0 : -1.0);
+
+        vec3 sum = vec3(0.0);
+        vec3 squares = vec3(0.0);
+        float count = 0.0;
+
+        for (int y = 0; y <= MAX_RADIUS; y += 1) {
+          if (float(y) > radius) break;
+          for (int x = 0; x <= MAX_RADIUS; x += 1) {
+            if (float(x) > radius) break;
+            vec3 seen = texture2D(
+              tDiffuse,
+              clamp(vUv + vec2(float(x), float(y)) * way * texel, 0.0, 1.0)
+            ).rgb;
+            sum += seen;
+            squares += seen * seen;
+            count += 1.0;
+          }
+        }
+
+        vec3 mean = sum / count;
+        // The variance of the LUMA rather than of each channel: a quadrant chosen per channel
+        // takes three different neighbourhoods and paints the seams between them.
+        float spread = dot(squares / count - mean * mean, LUMA);
+        if (spread < bestSpread) {
+          bestSpread = spread;
+          bestMean = mean;
+        }
+      }
+
+      gl_FragColor = vec4(bestMean, 1.0);
+    }
+  `,
+}
