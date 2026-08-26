@@ -13,7 +13,6 @@ import {
   Scene,
   Vector4,
   WebGLRenderTarget,
-  type Data3DTexture,
   type IUniform,
   type WebGLRenderer,
 } from 'three'
@@ -32,6 +31,7 @@ import type { ViewportQuality } from '@shared/domain/scene'
 import { QUAD_VERTEX_SHADER } from '@/engines/gpu/passes/quad'
 import { onePass, type EffectInstance, type ViewInfo } from './effectInstance'
 import { fuseShader, type FusableChunk } from './fuseShader'
+import { createLutCache, type LutCache, type LutSource } from './lutCache'
 import { budgetFor, chainSize } from './postQuality'
 import { heaviestCost, stepsOf, wantsFloat, type PostStep } from './postPlan'
 import { fusableFor, fusableKind } from './shaders/fusableChunks'
@@ -57,11 +57,14 @@ export type PostDrawJob = {
   time: number
 }
 
-/** Reads a LUT asset into the 3D texture the grade samples. */
-export type LutSource = (assetId: string) => Promise<Data3DTexture | null>
-
 export type PostComposerOptions = {
   loadLut?: LutSource
+  /**
+   * What the asset is worth right now — `textureCache.versionOf`. Read on every ask, because it
+   * is what makes ⌘S over a LUT show: the id never moves, so a cache keyed on the id alone holds
+   * the first table for good and the stamp `loadLutTexture` carries would only ever load once.
+   */
+  lutStamp?: (assetId: string) => string | undefined
   /** Asked for a frame once something that was loading has arrived. */
   onReady?: () => void
 }
@@ -96,8 +99,7 @@ const SCRATCH_CAMERA = new Camera()
 
 export class PostComposer {
   private readonly chains = new Map<string, Chain>()
-  private readonly luts = new Map<string, Data3DTexture | null>()
-  private readonly loading = new Set<string>()
+  private readonly luts: LutCache
   private readonly output = new OutputPass()
   /** Scratch, so a frame allocates nothing: `draw` runs once per surface, per image. */
   private readonly heldViewport = new Vector4()
@@ -116,8 +118,14 @@ export class PostComposer {
 
   constructor(
     private readonly renderer: WebGLRenderer,
-    private readonly options: PostComposerOptions = {},
-  ) {}
+    options: PostComposerOptions = {},
+  ) {
+    this.luts = createLutCache({
+      load: assetId => options.loadLut?.(assetId) ?? Promise.resolve(null),
+      stampOf: options.lutStamp,
+      onReady: options.onReady,
+    })
+  }
 
   /**
    * A stack that plans no pass draws straight — which is what the ON/OFF switch and the bypass
@@ -214,8 +222,7 @@ export class PostComposer {
   dispose(): void {
     for (const chain of this.chains.values()) dropChain(chain)
     this.chains.clear()
-    for (const lut of this.luts.values()) lut?.dispose()
-    this.luts.clear()
+    this.luts.dispose()
     this.output.dispose()
   }
 
@@ -286,7 +293,7 @@ export class PostComposer {
       renderer: this.renderer,
       width: view.width,
       height: view.height,
-      lutOf: assetId => this.lutOf(assetId),
+      lutOf: assetId => this.luts.get(assetId),
     }
 
     const appliers: Applier[] = []
@@ -373,34 +380,6 @@ export class PostComposer {
 
     dropChain(oldest[1])
     this.chains.delete(oldest[0])
-  }
-
-  /** The LUT for an asset if it is here; asks for it and answers nothing while it is not. */
-  private lutOf(assetId: string): Data3DTexture | null {
-    const held = this.luts.get(assetId)
-    if (held !== undefined) return held
-    if (!this.loading.has(assetId) && this.options.loadLut) {
-      this.loading.add(assetId)
-      void this.fetchLut(assetId)
-    }
-    return null
-  }
-
-  /**
-   * A named method rather than a `.then` on the call above: the rule is `await` everywhere, and
-   * what cannot be awaited is extracted so its body can be.
-   */
-  private async fetchLut(assetId: string): Promise<void> {
-    try {
-      this.luts.set(assetId, (await this.options.loadLut?.(assetId)) ?? null)
-    } catch {
-      // Remembered as absent rather than retried: a file that failed to parse fails every time,
-      // and asking again would do it once per frame.
-      this.luts.set(assetId, null)
-    } finally {
-      this.loading.delete(assetId)
-      this.options.onReady?.()
-    }
   }
 }
 

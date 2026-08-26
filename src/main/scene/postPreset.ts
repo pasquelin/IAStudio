@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { z } from 'zod'
 import { CHANNELS, type PostPresetExportRequest } from '@shared/ipc'
 import { writePickedFile } from '@main/export/writePickedFile'
@@ -16,6 +16,9 @@ export type PostPresetDeps = {
 const MAX_PRESET_BYTES = 1024 * 1024
 
 const EXTENSION = 'json'
+
+const tooLarge = (): Error =>
+  new Error('this file is too large to be a post-processing composition')
 
 const postExport = z.object({
   name: pathSegment,
@@ -37,12 +40,16 @@ export function registerPostPresetHandlers({ pickSavePath, pickImportPath }: Pos
     const path = await pickImportPath(EXTENSION)
     if (!path) return null
 
+    // Asked of the DISK before a byte is read: a file of a hundred megabytes would otherwise be
+    // held whole in the main process, and then again as a string on the way to the window.
+    const found = await stat(path)
+    if (found.size > MAX_PRESET_BYTES) throw tooLarge()
+
+    // Measured again on what was actually read, because the first answer is about the file as it
+    // stood: a picker points at a path, and nothing stops it growing between the two calls.
     const bytes = await readFile(path)
-    // Refused by SIZE before it is decoded: a file of a hundred megabytes becomes a hundred
-    // megabytes of string on the way to the window, and nothing downstream would refuse it.
-    if (bytes.byteLength > MAX_PRESET_BYTES) {
-      throw new Error('this file is too large to be a post-processing composition')
-    }
+    if (bytes.byteLength > MAX_PRESET_BYTES) throw tooLarge()
+
     return bytes.toString('utf8')
   })
 }

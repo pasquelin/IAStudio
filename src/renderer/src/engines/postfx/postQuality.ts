@@ -37,9 +37,31 @@ export function samplesOf(asked: number, budget: PostBudget): number {
 /** Scratch: `chainSize` answers once per surface per image, and its answer is read at once. */
 const SIZE = { width: 1, height: 1 }
 
+/**
+ * The step a chain's size is rounded UP to.
+ *
+ * 🛑 It is what stops a chain from being reallocated several times per frame. The cache is keyed
+ * on the SHAPE of a stack and never on its size, so surfaces sharing one composition share one
+ * chain — and `paneRects` hands a quad four rectangles of DIFFERENT sizes the moment a dimension
+ * is odd, which is most of the time: `left = floor(width / 2)` and the right column takes the
+ * remainder. Sized to the pixel, the four panes then walked the same chain through four sizes,
+ * and `WebGLRenderTarget.setSize` frees its buffers whenever the size changed — both full-frame
+ * targets plus every pass's own (a bloom's five mips, a GTAO G-buffer, SMAA's two), four times
+ * an image, for as long as the layout stood.
+ *
+ * UP, never down: the chain is then never coarser than the surface it fills, so the blit at the
+ * end scales down by at most eight pixels and no detail is invented. A real resize crosses a step
+ * and is followed as before.
+ */
+const SIZE_STEP = 8
+
 /** The size a pass chain is built at for a surface of this size. Never zero. */
 export function chainSize(width: number, height: number, budget: PostBudget): typeof SIZE {
-  SIZE.width = Math.max(1, Math.round(width / budget.divisor))
-  SIZE.height = Math.max(1, Math.round(height / budget.divisor))
+  SIZE.width = steppedSize(width / budget.divisor)
+  SIZE.height = steppedSize(height / budget.divisor)
   return SIZE
+}
+
+function steppedSize(pixels: number): number {
+  return Math.max(SIZE_STEP, Math.ceil(pixels / SIZE_STEP) * SIZE_STEP)
 }

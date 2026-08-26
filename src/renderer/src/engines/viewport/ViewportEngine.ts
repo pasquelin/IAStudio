@@ -1099,6 +1099,12 @@ export class ViewportEngine {
   drawScene(request: DrawRequest): boolean {
     const renderer = this.renderer
     if (!renderer) return false
+
+    // BEFORE `onDraw`, and it is the whole contract: a film and a still hand over a target and
+    // then read its pixels back, so whoever draws must be pointed at it. Bound here rather than
+    // by each caller — a composition that plans no pass answers `false` without `PostComposer`
+    // ever running, and the plain render below would have gone to the canvas.
+    renderer.setRenderTarget(request.target)
     if (this.options.onDraw?.(request) === true) return true
 
     renderer.render(request.scene, request.camera)

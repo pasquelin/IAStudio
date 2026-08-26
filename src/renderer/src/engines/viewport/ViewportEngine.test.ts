@@ -4,10 +4,12 @@ import {
   NoToneMapping,
   OrthographicCamera,
   PerspectiveCamera,
+  Scene,
+  type WebGLRenderTarget,
 } from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { INSET_CADENCE_MS, ViewportEngine } from './ViewportEngine'
+import { INSET_CADENCE_MS, ViewportEngine, type DrawRequest } from './ViewportEngine'
 
 /**
  * A renderer jsdom can hold: the real one asks the canvas for a WebGL context and gets null.
@@ -1253,6 +1255,73 @@ describe('a viewport', () => {
       drawFrames()
 
       expect(shadowDraws).toContain(true)
+    })
+  })
+
+  /**
+   * A film and a still hand `drawScene` a target and then read its pixels straight back — so
+   * whoever draws has to be pointed at it first.
+   *
+   * Not academic: a composition planning no pass answers `false` without `PostComposer` ever
+   * running, and every scene from the default template is in that state. Unbound, the render
+   * went to the CANVAS and the read came back off a target nothing had written — a black film
+   * and a black still, on exactly the scenes that use no composition.
+   */
+  describe('drawing into a target', () => {
+    // Only `isRenderTarget` is read here, and by the stand-in alone: building a real one asks
+    // jsdom for a WebGL context, which is the very thing this suite stands in for.
+    const target = { isRenderTarget: true, width: 64, height: 48 } as unknown as WebGLRenderTarget
+
+    const request = (onto: WebGLRenderTarget | null): DrawRequest => ({
+      scene: new Scene(),
+      camera: new PerspectiveCamera(),
+      surface: 'offscreen',
+      paneIndex: 0,
+      cameraNodeId: null,
+      target: onto,
+      rect: null,
+      width: 64,
+      height: 48,
+    })
+
+    it('binds the target before it renders', () => {
+      const engine = atRest()
+      renderTarget.mockClear()
+      rendered.mockClear()
+
+      expect(engine.drawScene(request(target))).toBe(false)
+
+      expect(renderTarget).toHaveBeenLastCalledWith(target)
+      expect(rendered).toHaveBeenCalledTimes(1)
+    })
+
+    // And it binds it for whoever ELSE draws, not only for its own fallback: the composer is
+    // handed the request after the target is bound, so a chain drawing into it cannot miss.
+    it('binds the target before handing the request over', () => {
+      const seen: (WebGLRenderTarget | null)[] = []
+      const engine = atRest({
+        onDraw: () => {
+          seen.push(renderTarget.mock.calls.at(-1)?.[0] ?? null)
+          return true
+        },
+      })
+      renderTarget.mockClear()
+      rendered.mockClear()
+
+      expect(engine.drawScene(request(target))).toBe(true)
+
+      expect(seen.at(-1)).toBe(target)
+      // It said it drew, so the viewport must not draw a second time over it.
+      expect(rendered).not.toHaveBeenCalled()
+    })
+
+    it('points back at the canvas for a request that names none', () => {
+      const engine = atRest()
+      renderTarget.mockClear()
+
+      engine.drawScene(request(null))
+
+      expect(renderTarget).toHaveBeenLastCalledWith(null)
     })
   })
 })

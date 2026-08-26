@@ -913,6 +913,7 @@ export class SceneRenderer {
     if (renderer) {
       this.post = new PostComposer(renderer, {
         loadLut: assetId => loadLutTexture(assetId, this.textureCache.versionOf(assetId)),
+        lutStamp: assetId => this.textureCache.versionOf(assetId),
         // A grade that finished loading changes the picture, and nothing else would ask for the
         // frame that shows it: the loop is asleep by then.
         onReady: () => this.redraw(),

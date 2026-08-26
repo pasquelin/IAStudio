@@ -22,9 +22,32 @@ describe('what a composition is allowed to spend', () => {
 })
 
 describe('the arithmetic a budget drives', () => {
-  it('halves the chain where the budget says so, and never below one pixel', () => {
-    expect(chainSize(1920, 1080, { divisor: 2, samples: 1 })).toEqual({ width: 960, height: 540 })
-    expect(chainSize(1, 1, { divisor: 2, samples: 1 })).toEqual({ width: 1, height: 1 })
+  it('halves the chain where the budget says so, and never below one step', () => {
+    expect(chainSize(1920, 1088, { divisor: 2, samples: 1 })).toEqual({ width: 960, height: 544 })
+    expect(chainSize(1, 1, { divisor: 2, samples: 1 })).toEqual({ width: 8, height: 8 })
+  })
+
+  /**
+   * Copied on the way out, and it is not a nicety: `chainSize` answers a SCRATCH object, so
+   * comparing two calls compares one object with itself and passes whatever the arithmetic does.
+   */
+  const sizeOf = (width: number, height: number) => ({
+    ...chainSize(width, height, { divisor: 1, samples: 1 }),
+  })
+
+  /**
+   * The step is what stops a chain being freed and rebuilt several times an IMAGE: chains are
+   * cached on the SHAPE of a stack and never on its size, and `paneRects` gives a quad's four
+   * panes different widths the moment the canvas is odd.
+   */
+  it('gives neighbouring sizes the same chain, rounding up so none is ever coarser', () => {
+    expect(sizeOf(683, 384)).toEqual(sizeOf(684, 384))
+    // Up, never down: a chain finer than its surface invents nothing, a coarser one blurs.
+    expect(sizeOf(683, 384).width).toBeGreaterThanOrEqual(683)
+  })
+
+  it('follows a resize that crosses a step', () => {
+    expect(sizeOf(700, 384)).not.toEqual(sizeOf(720, 384))
   })
 
   it('cuts a sample count, and never below one sample', () => {

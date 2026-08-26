@@ -36,21 +36,37 @@ import { mounted } from './sceneHandlers'
  */
 
 /**
- * Absent means the SCENE's — what a first call means. A camera that does not OWN a stack answers
- * the scene's target rather than refusing: asking a camera in `inherit` to change a bloom is
- * asking the scene to.
+ * Which composition a call names, or why none can be found.
+ *
+ * `inherit` answers the SCENE's, and that is not a shortcut: asking a camera that inherits to
+ * change a bloom IS asking the scene to. `disabled` is the opposite case and must never fall the
+ * same way — a camera filming through nothing has no stack to edit, and answering the scene's
+ * would rewrite what every OTHER camera shows while leaving the named one exactly as it was.
  */
-function targetOf(input: Record<string, unknown>, state: SceneState): PostTargetRef | null {
+type PostLookup = PostTargetRef | 'unknown' | 'disabled'
+
+function targetOf(input: Record<string, unknown>, state: SceneState): PostLookup {
   const named = textOf(input, 'cameraId')
   if (named === null) return { kind: 'scene' }
 
   // By id OR by name, like every other node-facing action of the registry — a client that can
   // say « Camera 01 » everywhere else must not have to find an id here.
   const node = nodeAimed(state, named)
-  if (node?.type !== 'camera') return null
-  return node.camera.post?.mode === 'override'
-    ? { kind: 'camera', nodeId: node.id }
-    : { kind: 'scene' }
+  if (node?.type !== 'camera') return 'unknown'
+
+  const mode = node.camera.post?.mode
+  if (mode === 'override') return { kind: 'camera', nodeId: node.id }
+  return mode === 'disabled' ? 'disabled' : { kind: 'scene' }
+}
+
+/** The refusal a lookup that found no composition hands back, spelled once for both callers. */
+function lookupRefusal(lookup: 'unknown' | 'disabled'): ActionOutcome {
+  return lookup === 'unknown'
+    ? refused('notFound', 'no camera of that id in the scene in front')
+    : refused(
+        'badInput',
+        'that camera composes through nothing: set its post mode to override or inherit first',
+      )
 }
 
 /** One edit of the composition a call names, run on the scene in front. */
@@ -62,7 +78,7 @@ function editPost(
   if (!open) return refused('wrongSurface')
 
   const target = targetOf(input, open.state)
-  if (!target) return refused('notFound', 'no camera of that id in the scene in front')
+  if (typeof target === 'string') return lookupRefusal(target)
 
   const stack = postStackOf(open.state, target)
   if (!stack) return refused('notFound')
@@ -87,7 +103,12 @@ export const POST_HANDLERS: ActionHandlers = {
     if (!open) return refused('wrongSurface')
 
     const target = targetOf(input, open.state)
-    if (!target) return refused('notFound')
+    // A READ, so a camera composing through nothing is answered rather than refused — with the
+    // truth, which is an empty stack. Handing back the scene's would name effects that camera
+    // does not run.
+    if (target === 'disabled')
+      return { ok: true, data: { owner: 'camera', enabled: false, effects: [] } }
+    if (target === 'unknown') return refused('notFound')
 
     // `targetOf` only answers a camera that OWNS a stack, so this is never `null` here — it is
     // the scene's otherwise, which is what the camera would be filming through anyway.
