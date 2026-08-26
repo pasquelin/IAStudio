@@ -5,7 +5,7 @@ import { formatDecimal } from '@/helpers/format'
 /**
  * How a fly speed reads. ALWAYS one decimal: the length then follows the whole part alone, which
  * is what lets the widest reading be taken from the bound rather than from a list the slider
- * steps between. Written once because the bar and its menu both show it.
+ * steps between.
  */
 export function useSpeedReading(): (speed: number) => string {
   const { t, i18n } = useTranslation()

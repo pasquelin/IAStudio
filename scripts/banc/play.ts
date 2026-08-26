@@ -31,9 +31,6 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
   studio.settle()
   useAssistant.setState({ turns: [], spent: 0 })
 
-  // One turn per sentence the person types, the studio and the history carrying between them:
-  // "add a cube" then "rename it" is one conversation, and a bench that reset in between would
-  // measure a studio nobody was looking at.
   for (const said of scenario.said) await useAssistant.getState().say(said)
 
   const turns = useAssistant.getState().turns

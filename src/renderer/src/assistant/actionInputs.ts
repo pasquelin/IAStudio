@@ -16,6 +16,26 @@ export function numberOf(input: Record<string, unknown>, key: string): number | 
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+/**
+ * One number composed with what the studio HOLDS, which is what `relative` names: ADDED for a
+ * position or a rotation, MULTIPLIED for a scale or a dial — « de moitié » and « de 20 % » mean
+ * a factor, and nobody says either additively.
+ *
+ * `how` is PASSED, never read off the key: the same rule was spelt out at four sites with three
+ * different tests, one of them a `startsWith('scale')` that would catch a future `scaleMode`.
+ */
+export function composedNumber(
+  held: number,
+  given: number | null,
+  relative: boolean,
+  how: 'add' | 'multiply',
+): number {
+  if (given === null) return held
+  if (!relative) return given
+
+  return how === 'multiply' ? held * given : held + given
+}
+
 export function boolOf(input: Record<string, unknown>, key: string): boolean {
   return readBoolean(input, key, false)
 }

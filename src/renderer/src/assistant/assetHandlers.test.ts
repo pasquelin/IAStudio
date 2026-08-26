@@ -49,10 +49,7 @@ describe('searching the library', () => {
     expect(search).toHaveBeenLastCalledWith({})
   })
 
-  /**
-   * Measured on the bench pass of 2026-08-26: 35 requests died on « je ne trouve pas ». What the
-   * project HOLDS is what says whether to look again with another word, or to say it has none.
-   */
+  // The measure this answers is on `searchAssets`.
   it('answers what the project holds when nothing matched', async () => {
     const counts = emptyAssetCounts()
     installFakeBridge({

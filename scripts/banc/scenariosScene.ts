@@ -480,7 +480,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     name: '12.8 makes an imported model matter',
     said: ['Rends ce modèle importé plus mat, sa rugosité à 0,8.'],
     setup: modelScene,
-    passed: run => read.near(read.nodeNamed(run, 'Knight')?.roughness ?? 0, 0.8, 0.01),
+    passed: run => read.near(read.modelFinish(run, 'Knight')?.roughness ?? 0, 0.8, 0.01),
   },
 
   // ——— 13. Timeline 3D ———

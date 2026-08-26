@@ -13,6 +13,7 @@ import type { CsgOperation } from '@shared/domain/csg'
 import { toRadians } from '@shared/domain/angles'
 import { SECOND } from '@shared/domain/time'
 import { matchesWords, searchWords } from '@shared/text'
+import type { ModelMaterial } from '@shared/domain/scene'
 import type { SkyboxContent } from '@shared/domain/skybox'
 import type { TextureState } from '@/engines/texture/textureState'
 import { toDb } from '@/engines/audio/audioData'
@@ -153,6 +154,15 @@ export const animationView = (run: Run) =>
 export const rig = (run: Run) => {
   const model = nodes(run).find(one => one.type === 'model')
   return model?.type === 'model' ? (model.model.rig ?? null) : null
+}
+
+/**
+ * What an imported model wears OVER its file: the finish rides on `model.material`, never on the
+ * node's own — a `.glb` carries a material per mesh, and the node is one row standing for all.
+ */
+export const modelFinish = (run: Run, name: string): ModelMaterial | null => {
+  const node = nodeNamed(run, name)
+  return node?.type === 'model' ? (node.model.material ?? null) : null
 }
 
 /** The open picture itself — its size and its guides, which no layer carries. */

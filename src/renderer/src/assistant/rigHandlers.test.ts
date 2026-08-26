@@ -63,10 +63,7 @@ describe('reading a character', () => {
     expect((outcome as { data: { bones: unknown[] } }).data.bones).toHaveLength(2)
   })
 
-  /**
-   * `notFound` and not `wrongSurface`: the scene IS in front. One refusal for both sent a model
-   * re-activating the document sixteen times over — bench pass of 2026-08-25.
-   */
+  // `notFound` and not `wrongSurface`: the scene IS in front. The measure is on `noModel`.
   it('refuses a node the scene does not hold as missing, not as the wrong surface', async () => {
     installCharacter()
 

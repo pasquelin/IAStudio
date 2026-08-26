@@ -11,9 +11,6 @@ export const NO_MODELS: readonly ModelSummary[] = []
 /**
  * What this MACHINE holds, off the manifests alone: `runsOn: LOCAL_RUNTIME` closes the walk in the
  * registry before its first request — no cursor, no network.
- *
- * Written once because it is the half every model surface pairs with `useModelPages`, and the two
- * copies had already started to hold their own ceiling.
  */
 export function useLocalModels(
   key: readonly unknown[],

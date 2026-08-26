@@ -30,7 +30,7 @@ import {
   type Transform,
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
-import { changedFields } from '@/helpers/objects'
+import { changedFields, sameValues } from '@/helpers/objects'
 import { applySelection, deselect, type SelectionMode } from '@/helpers/selection'
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
@@ -137,9 +137,8 @@ function editNode(
       if (!node) return true
 
       const wanted = typeof changes === 'function' ? changes(node, state) : changes
-      return Object.entries(wanted).every(
-        ([key, value]) =>
-          JSON.stringify(value) === JSON.stringify(node[key as keyof SceneNode] as unknown),
+      return Object.entries(wanted).every(([key, value]) =>
+        sameValues(value, node[key as keyof SceneNode]),
       )
     },
     revert: state => (previous ? patch(state, id, previous) : state),

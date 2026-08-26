@@ -1,7 +1,6 @@
 import type { ActionName } from '@shared/domain/assistant'
 import type { Studio } from './studio'
 
-/** What a run of one scenario produced, as an oracle reads it. */
 /** One call and what the studio answered it — paired, never two lists an index has to zip. */
 export type Called = {
   action: ActionName
