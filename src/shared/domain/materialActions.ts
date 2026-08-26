@@ -1,6 +1,10 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import {
+  action,
+  ENVIRONMENT_FIELDS,
+  type ActionField,
+  type AssistantAction,
+} from './assistantAction'
 import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from './skybox'
-import { ENVIRONMENT_KINDS } from './scene'
 import { PBR_CHANNELS, PREVIEW_SHAPES } from './material'
 
 /**
@@ -216,17 +220,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.materialEnvironment.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [
-      {
-        key: 'kind',
-        kind: 'choice',
-        labelKey: 'assistant.fields.environmentKind',
-        required: false,
-        options: ENVIRONMENT_KINDS,
-      },
-      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
-      { key: 'sky', kind: 'text', labelKey: 'assistant.fields.skyDocument', required: false },
-    ],
+    fields: ENVIRONMENT_FIELDS,
   }),
   action({
     /**

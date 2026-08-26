@@ -7,8 +7,8 @@ import { SelectField } from '@/design/SelectField'
 import { environmentOfKind } from '@/engines/scene/sceneWorld'
 import { openAssetById } from '@/helpers/openAsset'
 import { HINT_LEFT } from '@/helpers/tooltip'
+import { useDocumentOptions } from '@/hooks/useDocumentOptions'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
-import { documentsOfKind, useDocuments } from '@/stores/documents'
 import { choicesOf } from '../unionChoices'
 import { EnvironmentChoiceSky } from './EnvironmentChoiceSky'
 
@@ -28,18 +28,7 @@ export function EnvironmentChoice({ environment, onChange }: EnvironmentChoicePr
   const pictures = useProjectPictures(SKIES)
   const sources = useMemo(() => choicesOf(ENVIRONMENT_KINDS, 'environment.source_', t), [t])
 
-  // Selected APART and joined in a memo: a selector building a list hands zustand a fresh array on
-  // every notification, which is a render loop.
-  const stored = useDocuments(state => state.stored)
-  const open = useDocuments(state => state.documents)
-  const skies = useMemo(
-    () =>
-      documentsOfKind({ stored, documents: open }, 'skybox').map(one => ({
-        id: one.id,
-        name: one.title,
-      })),
-    [stored, open],
-  )
+  const skies = useDocumentOptions('skybox')
 
   const picture = environment.kind === 'skybox' ? environment.assetId : null
   const sky = environment.kind === 'sky' ? environment.documentId : null

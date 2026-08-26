@@ -2,7 +2,7 @@ import { mdiPaletteSwatchOutline, mdiUnfoldLessHorizontal, mdiUnfoldMoreHorizont
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { activeTextureId, useDocuments } from '@/stores/documents'
+import { activeMaterialId, useDocuments } from '@/stores/documents'
 import { anySectionOpen, useSectionFolds } from '@/stores/sectionFolds'
 import { useStyles } from '@/stores/styles'
 import { materialOf, useMaterials } from '@/stores/materials'
@@ -18,7 +18,7 @@ import { materialOf, useMaterials } from '@/stores/materials'
  */
 export function InspectorActions() {
   const { t } = useTranslation()
-  const documentId = useDocuments(activeTextureId)
+  const documentId = useDocuments(activeMaterialId)
   // What the sections ANSWER, never a flag that flips: the face is swapped on every selection and
   // its sections come back on their own defaults, so a flag would offer to unfold what is open.
   const foldable = useSectionFolds(anySectionOpen)

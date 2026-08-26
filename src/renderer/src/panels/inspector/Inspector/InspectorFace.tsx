@@ -6,7 +6,7 @@ import {
   activeSceneId,
   activeMontageId,
   activeSkyboxId,
-  activeTextureId,
+  activeMaterialId,
   useDocuments,
 } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -32,7 +32,7 @@ export function InspectorFace() {
   // the sequence left every clip and track picked there with an empty inspector.
   const sequenceId = useDocuments(activeMontageId)
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
-  const textureId = useDocuments(activeTextureId)
+  const textureId = useDocuments(activeMaterialId)
   const skyboxId = useDocuments(activeSkyboxId)
   const imageId = useDocuments(activeImageId)
   const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))

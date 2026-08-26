@@ -39,8 +39,13 @@ export function aimedAt<T extends { name: string }>(
   const found = byId(given)
   if (found) return found
 
-  const named = all.filter(one => one.name === given)
-  return named.length === 1 ? named[0] : undefined
+  let only: T | undefined
+  for (const one of all) {
+    if (one.name !== given) continue
+    if (only) return undefined
+    only = one
+  }
+  return only
 }
 
 /**

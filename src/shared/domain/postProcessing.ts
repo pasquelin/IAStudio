@@ -149,7 +149,7 @@ const choice = (options: readonly string[], value: string): PostParamSpec => ({
 
 const picture = (value = ''): PostParamSpec => ({
   control: 'asset',
-  assetType: 'texture',
+  assetType: 'image',
   default: value,
   animatable: false,
 })

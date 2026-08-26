@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { currentAiRoleKey, primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
 import { currentModelFamily, MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
-import { isRecord } from '@shared/guards'
+import { isRecord, mapKeys } from '@shared/guards'
 import type { FormValues } from '@/helpers/dynamicForm'
 import {
   COLLECTION_PERSIST_VERSION,
@@ -71,19 +71,12 @@ function withCurrentFamilies(persisted: unknown): unknown {
   if (!isRecord(persisted)) return persisted
 
   const brought: Record<string, unknown> = { ...persisted }
-  if (isRecord(persisted.selected)) brought.selected = renamed(persisted.selected, currentAiRoleKey)
+  if (isRecord(persisted.selected)) brought.selected = mapKeys(persisted.selected, currentAiRoleKey)
   if (isRecord(persisted.collections)) {
-    brought.collections = renamed(persisted.collections, currentModelFamily)
+    brought.collections = mapKeys(persisted.collections, currentModelFamily)
   }
 
   return brought
-}
-
-function renamed(
-  held: Record<string, unknown>,
-  rename: (key: string) => string,
-): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(held).map(([key, value]) => [rename(key), value]))
 }
 
 type ModelsState = {

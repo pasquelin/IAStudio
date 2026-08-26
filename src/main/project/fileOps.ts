@@ -5,6 +5,7 @@ import type { AsyncCatalog } from './catalogClient'
 import { appendMove, clearJournal } from './fileJournal'
 import {
   changeOf,
+  folderSnapshot,
   foldersFor,
   planFiles,
   type FileAct,
@@ -105,17 +106,8 @@ export function createFileOps({
     stacks = { past: [], future: [] }
   }
 
-  const snapshot = async (folders: readonly string[]): Promise<FolderSnapshot> => {
-    const unique = [...new Set(folders)]
-    const read = await Promise.all(unique.map(one => folder.names(one)))
-
-    const known = new Map<string, readonly string[]>()
-    for (const [at, names] of read.entries()) {
-      const path = unique[at]
-      if (path !== undefined && names !== null) known.set(path, names)
-    }
-    return known
-  }
+  const snapshot = (folders: readonly string[]): Promise<FolderSnapshot> =>
+    folderSnapshot(one => folder.names(one), folders)
 
   /** One act on the disk. Answers whether it happened; the writer refuses rather than throwing. */
   const write = async (act: FileAct): Promise<boolean> => {

@@ -1,6 +1,6 @@
 import { currentModelFamily } from '@shared/domain/model'
 import { LANDING_CHOICES } from '@shared/domain/settings'
-import { isRecord } from '@shared/guards'
+import { isRecord, mapKeys } from '@shared/guards'
 import { z } from 'zod'
 import {
   isCloudProviderId,
@@ -382,13 +382,6 @@ function currentOwnModel(model: unknown): unknown {
   }
 
   return brought
-}
-
-function mapKeys(
-  held: Record<string, unknown>,
-  rename: (key: string) => string,
-): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(held).map(([key, value]) => [rename(key), value]))
 }
 
 /**

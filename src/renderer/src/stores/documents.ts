@@ -175,6 +175,20 @@ export function documentsOfKind(
 }
 
 /**
+ * The document of one kind carrying that title, or `null` — a title is what a spoken request has.
+ *
+ * Through `documentsOfKind`, so an OPEN tab answers for a document the folder still lists under
+ * its former title.
+ */
+export function documentNamedOfKind(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  kind: DocumentKind,
+  title: string,
+): string | null {
+  return documentsOfKind(state, kind).find(one => one.title === title)?.id ?? null
+}
+
+/**
  * The document already editing an asset, open or merely on disk, or `null` when none is.
  *
  * What keeps a double-click idempotent: opening the same asset twice must come back to its tab
@@ -235,8 +249,8 @@ export const activeMontageId = (state: DocumentsSlice): string | null =>
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')
 
-/** The texture in front, as a selector. Same reason again, for the material inspector. */
-export const activeTextureId = (state: DocumentsSlice): string | null =>
+/** The material in front, as a selector. Same reason again, for the material inspector. */
+export const activeMaterialId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'material')
 
 /**
