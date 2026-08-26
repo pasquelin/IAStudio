@@ -91,6 +91,16 @@ describe('the home', () => {
     expect(screen.getByText('Vos modèles')).toBeInTheDocument()
   })
 
+  /**
+   * And the band that reads somebody else's hub is the opposite case: nothing about it is worth a
+   * heading on a studio that talks to nobody.
+   */
+  it('leaves out the news band on a studio with no key at all', () => {
+    render(<HomeView />, { wrapper: queryHost() })
+
+    expect(screen.queryByText('Ce qui bouge')).not.toBeInTheDocument()
+  })
+
   it('points back at what was open, which is the one thing it still lists itself', () => {
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({

@@ -32,16 +32,18 @@ export function SpotlightCard({ slide, layout }: { slide: Slide; layout: 'banner
         slide.leading ? 'bg-create/15 border-create/40 border' : 'bg-surface',
       )}
     >
-      <UiIcon
-        path={slide.icon}
-        size={banner ? 20 : 16}
-        className={cn('shrink-0', slide.leading ? 'text-create' : 'text-muted')}
-      />
+      <div className={cn('flex min-w-0 flex-1 flex-col gap-2', !banner && 'w-full')}>
+        {/* The icon reads as the heading's mark, not as a stamp above the card: on one line with
+            the title it says what the card is about where the eye already is. */}
+        <span className="flex items-center gap-2">
+          <UiIcon
+            path={slide.icon}
+            size={banner ? 20 : 16}
+            className={cn('shrink-0', slide.leading ? 'text-create' : 'text-muted')}
+          />
+          <h3 className="text-text text-body m-0 font-semibold">{slide.title}</h3>
+        </span>
 
-      {/* `contents` rather than a second flex column when stacked: the heading and the body are
-          then the card's own children, spaced by its gap like the button under them. */}
-      <span className={banner ? 'flex min-w-0 flex-1 flex-col gap-2' : 'contents'}>
-        <h3 className="text-text text-body m-0 font-semibold">{slide.title}</h3>
         {/* Bounded, and the button is not: a body long enough to push the action out of the
             card would leave the one thing to click off screen. */}
         <p
@@ -52,7 +54,7 @@ export function SpotlightCard({ slide, layout }: { slide: Slide; layout: 'banner
         >
           {slide.body}
         </p>
-      </span>
+      </div>
 
       {slide.action && (
         <span className="shrink-0">

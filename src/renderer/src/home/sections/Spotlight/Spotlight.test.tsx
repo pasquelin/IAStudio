@@ -99,3 +99,18 @@ describe('the spotlight while the studio is still opening', () => {
     expect(screen.getByText('1 génération en cours')).toBeInTheDocument()
   })
 })
+
+/**
+ * The mark belongs to the heading, not to the card: stamped on its own line above the title it
+ * read as decoration, and pushed the sentence under it down a card whose height is fixed.
+ */
+describe('the card', () => {
+  it('sets the icon on the same line as the title', () => {
+    useSettings.setState({ authKnown: true })
+    useProject.setState({ known: true })
+    render(<Spotlight />)
+
+    const heading = screen.getByRole('heading', { name: 'Connecter une clé API' })
+    expect(heading.parentElement?.querySelector('svg')).toBeInTheDocument()
+  })
+})

@@ -42,6 +42,7 @@ function renderCarousel(items: Card[], props = {}) {
       renderCard={item => <span>{item.name}</span>}
       itemWidth={160}
       itemHeight={120}
+      perView={3}
       label="Shelf"
       {...props}
     />,
@@ -96,6 +97,33 @@ describe('the arrows', () => {
 
     const arrow = await screen.findByRole('button', { name: 'Faire défiler' })
     expect(arrow.className).toContain(SHELF_OVERLAY)
+  })
+})
+
+/**
+ * A fixed card width slices the last card of a page on any rail narrower than a whole number of
+ * them. The cards divide the rail instead, `itemWidth` being the floor they never go under.
+ */
+describe('a rail asked for a fixed number of cards per page', () => {
+  it('divides its width between them instead of keeping the card width', () => {
+    renderCarousel(cards(4), { perView: 2 })
+
+    // Half of the 640 px viewport the setup stubs, less the gutter between the two.
+    expect(screen.getByText('Card 0').parentElement).toHaveStyle({ width: '316px' })
+  })
+
+  it('shows fewer than asked rather than cards narrower than their floor', () => {
+    renderCarousel(cards(4), { itemWidth: 400, perView: 2 })
+
+    expect(screen.getByText('Card 0').parentElement).toHaveStyle({ width: '640px' })
+  })
+
+  /** Those few pixels are wider than nothing: the rail called itself two pages long. */
+  it('leaves no gutter after the last card', () => {
+    renderCarousel(cards(2), { perView: 2 })
+
+    const sizer = screen.getByRole('region', { name: 'Shelf' }).firstElementChild
+    expect(sizer).toHaveStyle({ width: '640px' })
   })
 })
 
@@ -209,6 +237,7 @@ describe('a shelf that fills up later', () => {
         renderCard={item => <span>{item.name}</span>}
         itemWidth={160}
         itemHeight={120}
+        perView={3}
         label="Shelf"
       />,
     )
