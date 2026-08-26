@@ -305,6 +305,11 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'git.pull': ['58.23'],
   'git.push': ['58.24'],
 
+  // 59.1 only: the two others attach it in their own DECOR, which measures the setup, not the tool.
+  'component.attach': ['60.1'],
+  'component.detach': ['60.4'],
+  'component.set': ['60.2', '60.3'],
+
   'context.read': ['57.3'],
   'context.write': ['57.4'],
   'context.remove': ['57.5'],

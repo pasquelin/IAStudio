@@ -29,6 +29,8 @@ import {
   type GltfPunctualLight,
 } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
+import { isComponentType } from '@shared/domain/componentRegistry'
+import { byCodeUnit } from '@shared/text'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload } from './sceneDocument'
 import type { SceneState } from './sceneState'
@@ -198,10 +200,46 @@ export function sceneHoldsMore(document: unknown): string[] {
   held.push(
     ...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`),
   )
+  held.push(...unknownComponents(document))
   held.push(...gltfForeignAsset(document))
   held.push(...gltfForeignExtensions(document, KHR_LIGHTS_PUNCTUAL))
 
   return held
+}
+
+/**
+ * The component types this build cannot act on, named `components.<Type>`.
+ *
+ * A scene written by a later build carries components whose behaviour this one has no system for.
+ * The loader drops them from the state, so a save would recompose the file WITHOUT them — the same
+ * silent loss `sceneHoldsMore` exists to prevent everywhere else.
+ */
+function unknownComponents(document: Record<string, unknown>): string[] {
+  const held3d = gltfStudioMetadata(document)[GLTF_SCENE_STATE]
+  const nodes = isRecord(held3d) && Array.isArray(held3d.nodes) ? held3d.nodes : []
+  const unknown = new Set<string>()
+
+  for (const node of nodes) {
+    if (!isRecord(node) || node.components === undefined) continue
+
+    // Not an array at all — a later build keying them by type, or a hand edit. The reader empties
+    // it, so without this the loss would be written back at the first ⌘S without a word.
+    if (!Array.isArray(node.components)) {
+      unknown.add('')
+      continue
+    }
+
+    for (const component of node.components) {
+      if (!isRecord(component) || typeof component.type !== 'string') continue
+      if (!isComponentType(component.type)) unknown.add(component.type)
+    }
+  }
+
+  // By code unit: these are identifiers a reader compares, not words anyone reads in order. The
+  // empty one names the member itself, which is what a shape rather than a list comes to.
+  return [...unknown]
+    .sort(byCodeUnit)
+    .map(type => (type === '' ? 'components' : `components.${type}`))
 }
 
 /** Fields at their default are left out. The rotation is Euler here, a quaternion there. */

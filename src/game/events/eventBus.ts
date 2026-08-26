@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import type { GameEvent, GameEventName } from './gameEvent'
+import type { GameEvent, GameEventName } from '@shared/domain/gameEvent'
 
 /**
  * What a throwing handler is told to. Required rather than optional: a game whose event handler

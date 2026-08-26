@@ -901,3 +901,10 @@ Dans la scène Test MCP :
 - [ ] « Enregistre cette composition sous le nom Aube grise. »
 - [ ] « Renomme le préréglage Nuit froide en Nuit polaire. »
 - [ ] « Supprime le préréglage Nuit froide de cette machine. »
+
+## 60. Ce qu'un objet FAIT pendant la partie
+
+- [ ] « Donne de la santé à Cube Test. »
+- [ ] « Monte la santé maximum de Cube Test à 250. »
+- [ ] « Fais aller Cube Test de gauche à droite. »
+- [ ] « Retire la santé de Cube Test. »

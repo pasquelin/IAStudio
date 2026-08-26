@@ -46,6 +46,8 @@ import {
 import { readFontRef } from '@shared/domain/font'
 import { readCameraPost } from '@shared/domain/postProcessing'
 import { isRecord, readNumber } from '@shared/guards'
+import type { Component } from '@shared/domain/component'
+import { isComponentType } from '@shared/domain/componentRegistry'
 import { newId } from '@/helpers/ids'
 import { clamp } from '@shared/numeric'
 import {
@@ -138,7 +140,7 @@ function playingModels(nodes: readonly SceneNode[]): string[] {
  * the engine is what reports that this machine cannot honour it.
  */
 function revived(node: SceneNode): SceneNode {
-  const filled = { ...node, ...withDefaults(node) }
+  const filled = { ...withComponentsRead(node), ...withDefaults(node) }
 
   // Every descriptor a spec table describes is laid over its default, so a field the table has
   // gained since the file was written arrives with a value instead of `undefined`. `measures`
@@ -190,6 +192,27 @@ function revived(node: SceneNode): SceneNode {
     text: { ...DEFAULT_TEXT, ...filled.text, font: readFontRef(filled.text.font) },
   }
 }
+
+/**
+ * The components the studio can act on, and only those.
+ *
+ * A type this build does not know is dropped from the STATE — nothing would simulate it and no
+ * form could show it — and `sceneHoldsMore` then refuses to save the file over it, exactly as it
+ * refuses a glTF extension we do not write. Dropping and saving would lose an author's work in
+ * silence; refusing says so.
+ *
+ * An untouched node comes back untouched: a document written before components existed keeps no
+ * key, so it saves back byte for byte.
+ */
+function withComponentsRead(node: SceneNode): SceneNode {
+  if (node.components === undefined) return node
+
+  const raw: unknown = node.components
+  return { ...node, components: Array.isArray(raw) ? raw.filter(isKnownComponent) : [] }
+}
+
+const isKnownComponent = (value: unknown): value is Component =>
+  isRecord(value) && isComponentType(value.type)
 
 /**
  * A material over its defaults, with its tiling held inside the bounds the field offers.

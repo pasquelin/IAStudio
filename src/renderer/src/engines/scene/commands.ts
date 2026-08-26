@@ -34,6 +34,13 @@ import {
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import { changedFields, sameValues } from '@/helpers/objects'
+import {
+  withComponent,
+  withoutComponent,
+  type ComponentType,
+  type JsonValue,
+} from '@shared/domain/component'
+import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import { applySelection, deselect, deselectAll, type SelectionMode } from '@/helpers/selection'
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
@@ -219,6 +226,48 @@ export function setNodeMaterial(id: string, material: MaterialDescriptor): NodeE
   ])
 }
 
+/**
+ * Gives an object something to DO while the game runs. Refused when it already carries one of
+ * that type — a second `Health` would leave the winner to whichever system read first, and an
+ * attach that overwrote the first would throw away what the author typed into it.
+ */
+export function attachComponent(id: string, type: ComponentType): NodeEdit {
+  return editNode('component.add', id, node =>
+    (node.components ?? []).some(component => component.type === type)
+      ? {}
+      : { components: [...(node.components ?? []), newComponent(type)] },
+  )
+}
+
+/** Refused on an object that has not got one: an empty patch costs no entry in the history. */
+export function detachComponent(id: string, type: ComponentType): NodeEdit {
+  return editNode('component.remove', id, node =>
+    (node.components ?? []).some(component => component.type === type)
+      ? { components: withoutComponent(node.components ?? [], type) }
+      : {},
+  )
+}
+
+/**
+ * One field of one component. Labelled by the field, so a drag on the speed coalesces into one
+ * history entry while a change of axis right after stays a step of its own.
+ */
+export function setComponentField(
+  id: string,
+  type: ComponentType,
+  key: string,
+  value: JsonValue,
+): NodeEdit {
+  return editNode(`component.${type}.${key}`, id, node => {
+    const held = (node.components ?? []).find(component => component.type === type)
+    if (!held) return {}
+
+    return {
+      components: withComponent(node.components ?? [], withComponentField(held, key, value)),
+    }
+  })
+}
+
 export function setLight(id: string, light: LightDescriptor): NodeEdit {
   return editPart('light', id, 'light', { light })
 }
@@ -228,7 +277,7 @@ export function setLight(id: string, light: LightDescriptor): NodeEdit {
  * geometry, which is exactly what the union exists to forbid.
  */
 type NodePatch = Partial<
-  Pick<SceneNode, 'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow'>
+  Pick<SceneNode, 'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow' | 'components'>
 >
 
 /** What one edit writes on one node, and `null` when the node is not its business. */

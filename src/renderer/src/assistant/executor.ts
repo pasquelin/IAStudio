@@ -27,6 +27,7 @@ import { POST_HANDLERS } from './postHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { CONTEXT_HANDLERS } from './contextHandlers'
+import { GAME_HANDLERS } from './gameHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
@@ -42,6 +43,7 @@ import { TARGET_HANDLERS } from './targetHandlers'
  */
 const HANDLERS: ActionHandlers = {
   ...CORE_HANDLERS,
+  ...GAME_HANDLERS,
   ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,

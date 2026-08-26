@@ -1,0 +1,40 @@
+{
+  "game": {
+    "components": {
+      "Health": {
+        "title": "Santé",
+        "description": "Des points de vie, qui descendent quand l’entité est touchée et la font mourir à zéro."
+      },
+      "Movement": {
+        "title": "Mouvement",
+        "description": "Fait aller et venir l’entité toute seule, le long d’un axe — une plate-forme, un ascenseur, un piège."
+      }
+    },
+    "fields": {
+      "axis": "Axe",
+      "current": "Actuelle",
+      "distance": "Distance",
+      "max": "Maximum",
+      "mode": "Parcours",
+      "speed": "Vitesse"
+    },
+    "section": {
+      "title": "Composants",
+      "add": "Ajouter un composant",
+      "addHint": "Donner à cet objet quelque chose à faire pendant la partie",
+      "remove": "Détacher",
+      "removeHint": "Détacher ce composant de l’objet",
+      "empty": "Cet objet ne fait rien pendant la partie.",
+      "emptyHint": "Un composant dit ce que l’objet FAIT, quand son type dit ce qu’il dessine."
+    },
+    "values": {
+      "x": "X",
+      "y": "Y",
+      "z": "Z",
+      "once": "Une fois",
+      "loop": "En boucle",
+      "pingPong": "Aller-retour",
+      "unknown": "Valeur inconnue"
+    }
+  }
+}

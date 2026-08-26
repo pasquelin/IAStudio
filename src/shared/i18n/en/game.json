@@ -1,0 +1,40 @@
+{
+  "game": {
+    "components": {
+      "Health": {
+        "title": "Health",
+        "description": "Hit points, which fall as the entity is hurt and kill it at zero."
+      },
+      "Movement": {
+        "title": "Motion",
+        "description": "Makes the entity travel on its own along one axis — a platform, a lift, a hazard."
+      }
+    },
+    "fields": {
+      "axis": "Axis",
+      "current": "Current",
+      "distance": "Distance",
+      "max": "Maximum",
+      "mode": "Course",
+      "speed": "Speed"
+    },
+    "section": {
+      "title": "Components",
+      "add": "Add a component",
+      "addHint": "Give this object something to do while the game runs",
+      "remove": "Detach",
+      "removeHint": "Detach this component from the object",
+      "empty": "This object does nothing while the game runs.",
+      "emptyHint": "A component says what the object DOES, where its type says what it draws."
+    },
+    "values": {
+      "x": "X",
+      "y": "Y",
+      "z": "Z",
+      "once": "Once",
+      "loop": "Loop",
+      "pingPong": "Back and forth",
+      "unknown": "Unknown value"
+    }
+  }
+}

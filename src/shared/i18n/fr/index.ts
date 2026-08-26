@@ -7,6 +7,7 @@ import common from './common.json'
 import context from './context.json'
 import environment from './environment.json'
 import fileInfo from './fileInfo.json'
+import game from './game.json'
 import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
@@ -37,6 +38,7 @@ export const fr = {
   ...context,
   ...environment,
   ...fileInfo,
+  ...game,
   ...git,
   ...image,
   ...inspector,

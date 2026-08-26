@@ -19,6 +19,7 @@ import {
   type Transform,
   type Vector3,
 } from '@shared/domain/scene'
+import type { Component } from '@shared/domain/component'
 import type { CsgGraph } from '@shared/domain/csg'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
@@ -35,6 +36,15 @@ export type SceneNodeBase = {
   castShadow: boolean
   /** Catches the shadows of others. Meaningless on a light, and ignored there. */
   receiveShadow: boolean
+  /**
+   * What the entity DOES, beside what `type` says it DRAWS. Absent means none, so no document
+   * written before this existed changes by one byte.
+   *
+   * Beside the type rather than replacing it: the `switch (node.type)` is the contract of several
+   * thousand lines, and it is what gives the compiler its grip. A component is gameplay, not
+   * rendering — the behaviour lives in a system, never in the component.
+   */
+  components?: readonly Component[]
 }
 
 export type SceneNode = SceneNodeBase &

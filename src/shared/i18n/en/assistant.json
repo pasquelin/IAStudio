@@ -1004,6 +1004,18 @@
       "postForget": {
         "title": "Forget a saved preset",
         "description": "Takes a saved preset off this machine. Compositions already applied do not change: a document holds its stack, never a reference."
+      },
+      "componentAttach": {
+        "title": "Attach a component",
+        "description": "Gives an object of the scene something to DO while the game runs — its health, its motion. Refused when the object already carries one of that type."
+      },
+      "componentDetach": {
+        "title": "Detach a component",
+        "description": "Takes the component of the named type off an object of the scene. Refused when the object has not got one."
+      },
+      "componentSet": {
+        "title": "Set a component",
+        "description": "Writes one field of a component the object carries. A field the component does not declare is ignored."
       }
     },
     "refusals": {
@@ -1298,7 +1310,10 @@
       "postEnabled": "On or off",
       "postPreset": "Preset to apply",
       "postMode": "What the camera does about the scene’s composition",
-      "postPresetName": "Name to give the preset"
+      "postPresetName": "Name to give the preset",
+      "componentType": "Component type",
+      "componentField": "Field",
+      "componentValue": "Value"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

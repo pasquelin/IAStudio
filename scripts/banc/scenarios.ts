@@ -12,6 +12,7 @@ import { REST_SCENARIOS } from './scenariosRest'
 import { SHELL_SCENARIOS } from './scenariosShell'
 import { GIT_SCENARIOS } from './scenariosGit'
 import { POST_SCENARIOS } from './scenariosPost'
+import { GAME_SCENARIOS } from './scenariosGame'
 
 /**
  * The batterie, as something the bench can run — one scenario per request of `BATTERIE.md`, in
@@ -32,4 +33,5 @@ export const SCENARIOS: readonly Scenario[] = [
   ...SHELL_SCENARIOS,
   ...GIT_SCENARIOS,
   ...POST_SCENARIOS,
+  ...GAME_SCENARIOS,
 ]

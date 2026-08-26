@@ -8,6 +8,7 @@ import type * as frCommon from '../fr/common.json'
 import type * as frContext from '../fr/context.json'
 import type * as frEnvironment from '../fr/environment.json'
 import type * as frFileInfo from '../fr/fileInfo.json'
+import type * as frGame from '../fr/game.json'
 import type * as frGit from '../fr/git.json'
 import type * as frImage from '../fr/image.json'
 import type * as frInspector from '../fr/inspector.json'
@@ -27,6 +28,7 @@ import common from './common.json'
 import context from './context.json'
 import environment from './environment.json'
 import fileInfo from './fileInfo.json'
+import game from './game.json'
 import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
@@ -61,6 +63,7 @@ export const en = {
   ...(context satisfies Section<keyof typeof frContext>),
   ...(environment satisfies Section<keyof typeof frEnvironment>),
   ...(fileInfo satisfies Section<keyof typeof frFileInfo>),
+  ...(game satisfies Section<keyof typeof frGame>),
   ...(git satisfies Section<keyof typeof frGit>),
   ...(image satisfies Section<keyof typeof frImage>),
   ...(inspector satisfies Section<keyof typeof frInspector>),

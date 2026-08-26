@@ -1004,6 +1004,18 @@
       "postForget": {
         "title": "Oublier un préréglage enregistré",
         "description": "Retire de cette machine un préréglage enregistré. Les compositions déjà appliquées ne changent pas, un document tenant sa pile plutôt qu’une référence."
+      },
+      "componentAttach": {
+        "title": "Attacher un composant",
+        "description": "Donne à un objet de la scène quelque chose à FAIRE pendant la partie — sa santé, son mouvement. Refusé si l’objet en porte déjà un du même type."
+      },
+      "componentDetach": {
+        "title": "Détacher un composant",
+        "description": "Retire d’un objet de la scène le composant du type nommé. Refusé si l’objet ne le porte pas."
+      },
+      "componentSet": {
+        "title": "Régler un composant",
+        "description": "Écrit un champ d’un composant que l’objet porte. Un champ que le composant ne déclare pas est ignoré."
       }
     },
     "refusals": {
@@ -1298,7 +1310,10 @@
       "postEnabled": "Actif ou non",
       "postPreset": "Préréglage à appliquer",
       "postMode": "Ce que la caméra fait de la composition de la scène",
-      "postPresetName": "Nom à donner au préréglage"
+      "postPresetName": "Nom à donner au préréglage",
+      "componentType": "Type de composant",
+      "componentField": "Champ",
+      "componentValue": "Valeur"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
