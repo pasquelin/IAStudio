@@ -3,7 +3,7 @@ import { type Asset } from '@shared/domain/asset'
 import { createSkyboxContent } from '@shared/domain/skybox'
 import { newMaterial } from '@/engines/material/materialState'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { installIn } from '@/stores/document-fixtures'
+import { installDocuments, installIn } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { skyboxOf, skyboxStore, useSkyboxes } from '@/stores/skyboxes'
 import { materialOf, materialStore, useMaterials } from '@/stores/materials'
@@ -100,6 +100,41 @@ describe('the sky', () => {
 describe('the material', () => {
   beforeEach(() => {
     withMaterial()
+  })
+
+  /**
+   * A preview judged under a different world than the scene it is headed for decided nothing —
+   * so it names a sky the way a scene does: a picture by asset id, a DOCUMENT by title.
+   */
+  it('lights the preview by a sky document named by its title', async () => {
+    // Both tabs: `installIn` replaces the whole list, so the sky the decor opened is gone by here.
+    installDocuments({ [SKY]: 'skyboxes', [MATERIAL]: 'materials' }, MATERIAL)
+
+    expect(await runAction('material.environment', { sky: SKY })).toEqual({ ok: true })
+    expect(material().preview.environment).toEqual({ kind: 'sky', documentId: SKY })
+  })
+
+  it('hangs a picture of the project instead, and puts both out', async () => {
+    expect(await runAction('material.environment', { assetId: PICTURE.id })).toEqual({ ok: true })
+    expect(material().preview.environment).toEqual({ kind: 'skybox', assetId: PICTURE.id })
+
+    await runAction('material.environment', { kind: 'studio' })
+
+    expect(material().preview.environment).toEqual({ kind: 'studio' })
+  })
+
+  it('refuses a sky document the project does not hold', async () => {
+    expect(await runAction('material.environment', { sky: 'Nulle part' })).toMatchObject({
+      ok: false,
+      refusal: 'notFound',
+    })
+  })
+
+  // A preview is lit by ONE prefiltered map, so naming both is a request with two answers.
+  it('refuses a picture and a sky document at once', async () => {
+    expect(
+      await runAction('material.environment', { assetId: PICTURE.id, sky: SKY }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   it('answers its channels, its render settings and its preview', async () => {

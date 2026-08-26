@@ -484,6 +484,7 @@ describe('the lists that stand for a union', () => {
       'skybox.source': true,
       'material.state': true,
       'material.material': true,
+      'material.environment': true,
       'material.preview': true,
       'material.channel': true,
       'styles.list': true,

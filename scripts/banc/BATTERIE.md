@@ -640,6 +640,7 @@ Une matière ouverte, `Matière Test` — même remarque que pour le ciel : c'es
 - [ ] « Assigne ma texture de planches à son canal de couleur de base. »
 - [ ] « Ajoute la normal map correspondante sur son canal de relief. »
 - [ ] « Fais tourner l'aperçu de la matière et monte l'intensité de son environnement. »
+- [ ] « Éclaire cet aperçu avec mon ciel Ciel Test. »
 
 ## 39. Le document image, au-delà des calques
 
