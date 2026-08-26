@@ -9,6 +9,7 @@ export type PostPresetsState = {
   /** In the order they were saved. What the picker lists under the ones the studio ships. */
   saved: readonly UserPostPreset[]
   savePostPreset: (name: string, stack: PostStack) => string
+  renamePostPreset: (id: string, name: string) => void
   forgetPostPreset: (id: string) => void
 }
 
@@ -27,6 +28,11 @@ export const usePostPresets = create<PostPresetsState>()(
         set(state => ({ saved: [...state.saved, { id, name, stack }] }))
         return id
       },
+
+      renamePostPreset: (id, name) =>
+        set(state => ({
+          saved: state.saved.map(preset => (preset.id === id ? { ...preset, name } : preset)),
+        })),
 
       forgetPostPreset: id =>
         set(state => ({ saved: state.saved.filter(preset => preset.id !== id) })),

@@ -3,8 +3,8 @@
  *
  * Data only, and deliberately: the catalogue is read by the renderer to build passes, by the MCP
  * registry to publish actions, and by the main process to validate an imported preset. None of
- * those may pull three.js in, so nothing here knows a `Pass` exists — `engines/postfx/factories`
- * is the one file that does.
+ * those may pull three.js in, so nothing here knows a `Pass` exists — `engines/postfx/` is the
+ * one folder that does.
  */
 import { isRecord, oneOf, readBoolean, readString } from '../guards'
 import { bound } from '../numeric'

@@ -720,6 +720,18 @@ describe('the timeline a file holds', () => {
     expect(state.animation.sheet).toEqual(['a', 'gone'])
   })
 
+  // The composition line has no node behind it, so the filter above would take it out of every
+  // file written — and the scene's own effects would come back with nowhere to be keyed.
+  it('keeps the scene composition line on the sheet it writes', () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a')],
+      animation: { ...EMPTY_TIMELINE, sheet: [SCENE_SUBJECT_ID, 'a'] },
+    }
+
+    expect(reread(state).animation.sheet).toEqual([SCENE_SUBJECT_ID, 'a'])
+  })
+
   it('carries the sheet through a save and a read, in order', () => {
     const state: SceneState = {
       ...EMPTY_SCENE,

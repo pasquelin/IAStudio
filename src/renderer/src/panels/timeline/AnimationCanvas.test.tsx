@@ -50,6 +50,7 @@ const modelWithClip = () => {
 
 const blockRows = () =>
   animationRows(timelineWith([], { sheet: ['perso'] }), {
+    sceneName: 'Scene',
     nodes: [{ id: 'perso', name: 'Perso' }],
     expanded: new Set(['perso']),
     lanes: [
@@ -67,6 +68,7 @@ const LANE_Y = RULER_HEIGHT + SUBJECT_HEIGHT + CHANNEL_HEIGHT / 2
 
 const keyRows = () =>
   animationRows(timelineWith([animationTrack('a', 'position', [key(1)])]), {
+    sceneName: 'Scene',
     nodes: [{ id: 'cube', name: 'Circle' }],
     expanded: new Set(),
   })
@@ -461,6 +463,7 @@ describe('removing a picked key with the keyboard', () => {
     act(() => state.runCommand(DOCUMENT, setAnimationKey('t1', 2 * SECOND, { x: 2, y: 0, z: 0 })))
 
     return animationRows(sceneOf(useScenes.getState(), DOCUMENT).animation, {
+      sceneName: 'Scene',
       nodes: [{ id: 'cube', name: 'Cube' }],
       expanded: new Set(),
     })
@@ -537,6 +540,7 @@ describe('dragging a shot', () => {
 
   const shotRows = () =>
     animationRows(sceneOf(useScenes.getState(), DOCUMENT).animation, {
+      sceneName: 'Scene',
       nodes: [{ id: 'cam-a', name: 'Camera A' }],
       expanded: new Set(),
     })

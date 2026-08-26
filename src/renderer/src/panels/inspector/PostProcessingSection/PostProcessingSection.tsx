@@ -1,12 +1,4 @@
-import {
-  mdiCompare,
-  mdiContentSave,
-  mdiExport,
-  mdiImport,
-  mdiRhombus,
-  mdiRhombusOutline,
-  mdiTrashCanOutline,
-} from '@mdi/js'
+import { mdiCompare, mdiRhombus, mdiRhombusOutline } from '@mdi/js'
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -16,9 +8,6 @@ import {
   type PostEffectId,
   type PostStack,
 } from '@shared/domain/postProcessing'
-import { POST_PRESET_IDS } from '@shared/domain/postPresets'
-import { MenuButton } from '@/design/MenuButton'
-import { MenuRow } from '@/design/MenuRow'
 import { PropertySection } from '@/design/PropertySection'
 import { SelectField } from '@/design/SelectField'
 import { ToggleField } from '@/design/ToggleField'
@@ -39,7 +28,6 @@ import {
   setPostEffectEnabled,
   setPostEnabled,
   setPostParam,
-  stackOfPreset,
   unkeyPostParam,
   type PostTargetRef,
 } from '@/engines/scene/postCommands'
@@ -48,12 +36,11 @@ import { newId } from '@/helpers/ids'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { sceneEngineOf } from '@/stores/sceneEngines'
-import { usePostPresets } from '@/stores/postPresets'
-import { HINT_LEFT, HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from '../EnvironmentPanel/environmentChoices'
 import { DescriptorSection } from '../DescriptorSection'
+import { PostPresetField } from './PostPresetField'
 import { PostStackList } from './PostStackList'
-import { exportPostPreset, importPostPreset } from './postPresetIo'
 
 export type PostProcessingSectionProps = {
   documentId: string
@@ -78,7 +65,6 @@ export function PostProcessingSection({
 }: PostProcessingSectionProps) {
   const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const saved = usePostPresets(state => state.saved)
 
   const selected = stack.effects.find(effect => effect.id === selectedId) ?? null
   const subject = postSubjectOf(target)
@@ -116,18 +102,6 @@ export function PostProcessingSection({
       })),
     }
   }, [t])
-
-  const presets = useMemo(() => {
-    const shipped = choicesOf(POST_PRESET_IDS, 'postfx.preset_', t)
-    return [
-      ...shipped.options.map(option => ({ ...option, group: t('postfx.builtIn') })),
-      ...saved.map(preset => ({
-        value: preset.id,
-        label: preset.name,
-        group: t('postfx.userPresets'),
-      })),
-    ]
-  }, [saved, t])
 
   const run = edit.run
 
@@ -225,74 +199,7 @@ export function PostProcessingSection({
           }
         />
 
-        <SelectField
-          label={t('postfx.preset')}
-          scId="postfx.preset"
-          // No preset is ever the VALUE: applying one builds a stack, so what is shown afterwards
-          // is a composition — a document pointing at a preset would change look the day it did.
-          value={null}
-          unnamedLabel={t('postfx.presetNone')}
-          options={presets}
-          onChange={name => {
-            const next = stackOfPreset(name, saved, newId)
-            if (next) applyStack(next)
-          }}
-          hint={HINT_LEFT(t('postfx.presetHint'))}
-          actions={
-            <MenuButton
-              icon={mdiContentSave}
-              label={t('postfx.presetSave')}
-              description={t('postfx.presetSaveHint')}
-              tooltip={TIP_LEFT}
-              variant="row"
-              rowCount={3 + saved.length}
-              opensOnClick
-              rows={close => (
-                <>
-                  <MenuRow
-                    label={t('postfx.presetSave')}
-                    icon={mdiContentSave}
-                    tip={HINT_RIGHT(t('postfx.presetSaveHint'))}
-                    onSelect={() => {
-                      close()
-                      usePostPresets.getState().savePostPreset(title, stack)
-                    }}
-                  />
-                  <MenuRow
-                    label={t('postfx.presetImport')}
-                    icon={mdiImport}
-                    tip={HINT_RIGHT(t('postfx.presetImportHint'))}
-                    onSelect={() => {
-                      close()
-                      void importPostPreset(applyStack)
-                    }}
-                  />
-                  <MenuRow
-                    label={t('postfx.presetExport')}
-                    icon={mdiExport}
-                    tip={HINT_RIGHT(t('postfx.presetExportHint'))}
-                    onSelect={() => {
-                      close()
-                      void exportPostPreset(title, stack)
-                    }}
-                  />
-                  {saved.map(preset => (
-                    <MenuRow
-                      key={preset.id}
-                      label={t('postfx.presetDelete', { name: preset.name })}
-                      icon={mdiTrashCanOutline}
-                      tip={HINT_RIGHT(t('postfx.presetDeleteHint'))}
-                      onSelect={() => {
-                        close()
-                        usePostPresets.getState().forgetPostPreset(preset.id)
-                      }}
-                    />
-                  ))}
-                </>
-              )}
-            />
-          }
-        />
+        <PostPresetField title={title} stack={stack} onApply={applyStack} />
 
         {stack.effects.length === 0 ? (
           <EmptyState icon={mdiRhombusOutline} message={t('postfx.emptyHint')} />

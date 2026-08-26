@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { StrictMode, useMemo } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
 import { animationRows, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
 import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
@@ -30,7 +31,7 @@ function withTwoChannels(): void {
 const rowsOf = (expanded: string[] = []) =>
   animationRows(
     { ...timelineOf(), sheet: ['cube-1'] },
-    { nodes: [{ id: 'cube-1', name: 'Cube' }], expanded: new Set(expanded) },
+    { sceneName: 'Scene', nodes: [{ id: 'cube-1', name: 'Cube' }], expanded: new Set(expanded) },
   )
 
 const headers = (expanded: string[] = []) => {
@@ -212,7 +213,7 @@ describe('arranging the lines', () => {
         documentId={DOCUMENT}
         rows={animationRows(
           { ...timelineOf(), sheet: TWO.map(node => node.id) },
-          { nodes: TWO, expanded: new Set() },
+          { sceneName: 'Scene', nodes: TWO, expanded: new Set() },
         )}
       />,
     )
@@ -260,7 +261,7 @@ describe('a line of the sheet dragged by its grip', () => {
       () =>
         animationRows(
           { ...timelineOf(), sheet: THREE.map(node => node.id) },
-          { nodes: THREE, expanded: new Set(), order },
+          { sceneName: 'Scene', nodes: THREE, expanded: new Set(), order },
         ),
       [order],
     )
@@ -348,6 +349,7 @@ describe('the line of a sub-track', () => {
     const rows = animationRows(
       { ...timelineOf(), sheet: ['perso'] },
       {
+        sceneName: 'Scene',
         nodes: [{ id: 'perso', name: 'Perso' }],
         expanded: new Set(['perso']),
         lanes: laneIds.map(laneId => ({
@@ -399,5 +401,63 @@ describe('the line of a sub-track', () => {
     showLanes('1', '2')
 
     expect(screen.getByRole('button', { name: 'Déplacer la ligne Anim. 1' })).toBeTruthy()
+  })
+})
+
+/**
+ * The scene's composition gets a line like any other subject, and it is the only one with no
+ * pose behind it: its channels are opened one parameter at a time, from the composition panel.
+ */
+describe('the composition line', () => {
+  beforeEach(() => {
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  const compositionRows = (withChannel: boolean) => {
+    const base = { ...EMPTY_SCENE, nodes: [meshNode('cube-1')] }
+    const opened = withChannel
+      ? addAnimationTrack(
+          {
+            nodeId: SCENE_SUBJECT_ID,
+            property: 'post',
+            post: { effectId: 'fx', param: 'strength' },
+          },
+          'Bloom · Strength',
+          'post-1',
+        ).apply(base)
+      : base
+    installScene(DOCUMENT, opened)
+
+    return animationRows(
+      { ...timelineOf(), sheet: [SCENE_SUBJECT_ID] },
+      { sceneName: 'Composition', nodes: [], expanded: new Set() },
+    )
+  }
+
+  const compositionLine = (withChannel: boolean) => {
+    cleanup()
+    render(<AnimationHeaders documentId={DOCUMENT} rows={compositionRows(withChannel)} />)
+    return within(screen.getByTestId(`anim-subject-${SCENE_SUBJECT_ID}`))
+  }
+
+  it('names the line from the bundle rather than from a node', () => {
+    expect(compositionLine(false).getByText('Composition')).toBeInTheDocument()
+  })
+
+  // The diamond stands for what the channels hold, so with none it stands for nothing at all.
+  it('offers no key where the composition has no channel', () => {
+    const diamond = compositionLine(false).getByRole('button', {
+      name: /Poser une clé sur Composition/,
+    })
+
+    expect(diamond).toBeDisabled()
+  })
+
+  it('keys the composition channels that stand', async () => {
+    const line = compositionLine(true)
+    await userEvent.click(line.getByRole('button', { name: /Poser une clé sur Composition/ }))
+
+    expect(tracks()[0]?.keys.map(key => key.time)).toEqual([0])
   })
 })

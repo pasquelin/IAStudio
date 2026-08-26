@@ -284,6 +284,7 @@
     "unkeySubjectHint": "Removes the key standing here, on every property of this object",
     "reorderRow": "Move the {{name}} line",
     "rowList": "Animation rows",
+    "sceneSubject": "Scene composition",
     "addShot": "Put this camera on air",
     "addShotHint": "Opens a shot for the chosen camera, from the playhead onwards",
     "addShotNeedsCamera": "Choose a camera of the scene to open a shot for it",

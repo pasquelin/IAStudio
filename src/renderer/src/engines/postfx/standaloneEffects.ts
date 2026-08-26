@@ -1,4 +1,8 @@
-/** The only place three.js's addon passes are BUILT. `PostComposer` chains them. */
+/**
+ * Where the CATALOGUE's passes are built — one factory per effect that draws by itself.
+ * `PostComposer` builds the frame around them (render, fusion, output) and chains the lot, so
+ * `engines/postfx/` and nothing else knows three.js has passes at all.
+ */
 import { Vector2, type Camera, type Data3DTexture, type Scene, type WebGLRenderer } from 'three'
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js'
 import { FXAAPass } from 'three/addons/postprocessing/FXAAPass.js'

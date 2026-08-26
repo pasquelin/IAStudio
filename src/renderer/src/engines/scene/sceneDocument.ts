@@ -35,6 +35,7 @@ import {
   DEFAULT_FPS,
   EASINGS,
   EMPTY_TIMELINE,
+  SCENE_SUBJECT_ID,
   sheetFromAnimated,
   TRACK_PROPERTIES,
   type AnimationTimeline,
@@ -73,7 +74,9 @@ export type ScenePayload = {
 }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  const alive = new Set(state.nodes.map(node => node.id))
+  // The scene's own composition line stands beside the nodes, never among them: without it here
+  // a save would quietly drop `@scene` from the sheet, and the composition would lose its line.
+  const alive = new Set([...state.nodes.map(node => node.id), SCENE_SUBJECT_ID])
   const sheet = state.animation.sheet.filter(id => alive.has(id))
 
   return {

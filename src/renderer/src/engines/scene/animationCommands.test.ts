@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TrackTarget } from '@shared/domain/animation'
+import { SCENE_SUBJECT_ID, type TrackTarget } from '@shared/domain/animation'
 import { SECOND, type Us } from '@shared/domain/time'
 import { fovAt, poseAt } from './animationEval'
 import {
@@ -769,5 +769,40 @@ describe('the shots of a sequence', () => {
       y: 1,
       z: -2,
     })
+  })
+})
+
+/**
+ * The scene's composition stands on the sheet like any other subject, so the band's diamond
+ * points at it — and it has neither a pose nor a lens. Opening the three pose channels there
+ * would key a subject nothing can move, and nothing in the type system says otherwise.
+ */
+describe('keying the scene composition line', () => {
+  const NAMES = {
+    position: 'Scene · Position',
+    rotation: 'Scene · Rotation',
+    scale: 'Scene · Scale',
+    fov: 'Scene · Lens',
+    post: 'Scene · Composition',
+  }
+
+  const keyed = (state: SceneState) =>
+    keyNode(state, { nodeId: SCENE_SUBJECT_ID }, SECOND, NAMES, property => `t-${property}`)
+
+  it('opens no channel of its own where the composition holds none', () => {
+    expect(keyed(EMPTY_SCENE)).toBeNull()
+  })
+
+  it('keys the composition channels that stand, and opens no pose beside them', () => {
+    const state = addAnimationTrack(
+      { nodeId: SCENE_SUBJECT_ID, property: 'post', post: { effectId: 'fx', param: 'strength' } },
+      'Bloom · Strength',
+      'post-1',
+    ).apply(EMPTY_SCENE)
+
+    const after = keyed(state)?.apply(state)
+
+    expect(after?.animation.tracks.map(track => track.id)).toEqual(['post-1'])
+    expect(after?.animation.tracks[0]?.keys.map(key => key.time)).toEqual([SECOND])
   })
 })

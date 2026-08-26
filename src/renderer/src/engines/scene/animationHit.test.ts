@@ -16,7 +16,7 @@ function contextWith(expanded: string[] = []): HitContext {
       animationTrack('a', 'position', [key(0), key(2)]),
       animationTrack('b', 'rotation', [key(1)]),
     ]),
-    { nodes: [{ id: 'cube', name: 'Circle' }], expanded: new Set(expanded) },
+    { sceneName: 'Scene', nodes: [{ id: 'cube', name: 'Circle' }], expanded: new Set(expanded) },
   )
   return { rows, viewport, fps: 25 }
 }
@@ -112,6 +112,7 @@ describe('pointing at the animation band', () => {
 describe('pointing at a clip block', () => {
   const laneWith = (...blocks: readonly ClipBlock[]): HitContext => ({
     rows: animationRows(timelineWith([], { sheet: ['perso'] }), {
+      sceneName: 'Scene',
       nodes: [{ id: 'perso', name: 'Perso' }],
       expanded: new Set(['perso']),
       lanes: [{ nodeId: 'perso', laneId: 'main', name: 'Animation 1', blocks }],
@@ -184,7 +185,7 @@ describe('pointing at a shot', () => {
       timelineWith([], {
         shots: [cameraShot('s1', { start: 1 * SECOND, duration: 2 * SECOND })],
       }),
-      { nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
+      { sceneName: 'Scene', nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
     ),
     viewport,
     fps: 25,
