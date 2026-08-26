@@ -1428,14 +1428,18 @@ export type StudioBridge = {
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
     /**
-     * Says the catalogue was written by the MAIN process, with no window having asked — the
-     * pictures a model sheds on import are the case this exists for. Every other write is
-     * answered where it was ordered, and the shelf invalidates itself there.
+     * Says the catalogue was written — by this window or by any other, since every write goes
+     * through the main process and comes back here.
      *
-     * No payload: what changed is a query away, and a window that was told « these six rows »
-     * would still have to ask for the ones it is scoped to.
+     * The rows it carries are NOT for the shelf, which is scoped and pages and would have to ask
+     * anyway. They are for the version every texture slot compares (`assetVersionOf`): read from
+     * the shelf, that version is capped at the page it holds, so an older asset stopped
+     * propagating in silence. Written straight from here, it never is.
+     *
+     * An emitter that changed rows it cannot name — a rescan refiling twelve files — sends none,
+     * which means « something moved, ask ».
      */
-    onChanged: (callback: () => void) => Unsubscribe
+    onChanged: (callback: (changed: readonly Asset[]) => void) => Unsubscribe
     /**
      * How many assets of each kind the project holds — counted in SQL, so the answer is six
      * numbers rather than the catalogue itself.

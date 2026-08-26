@@ -12,6 +12,7 @@ import {
 } from '@/engines/audio/audioRender'
 import { initI18n } from '@/i18n'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
+import { forgetAssetRevisions } from '@/stores/assetRevisions'
 // The rules that need no browser, shared with the `renderer-node` project — it says why there.
 // Imports are hoisted, so the user agent it pins is in place before anything below reads it, and
 // its `beforeEach` registers before the hooks written here.
@@ -320,3 +321,6 @@ afterEach(() => useAssets.getState().cancelInvalidate())
  * case puts in the catalogue would answer a lookup in the next.
  */
 afterEach(forgetRememberedAssets)
+
+/** And the stamps beside them: `assetVersionOf` reads the registry FIRST — see `assetRevisions`. */
+afterEach(forgetAssetRevisions)

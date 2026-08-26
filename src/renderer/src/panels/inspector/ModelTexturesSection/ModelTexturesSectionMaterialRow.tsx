@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Thumbnail } from '@/design/Thumbnail'
-import { openModelMaterial, type ChannelTexture } from '@/spaces/textures/openModelMaterial'
+import { openModelMaterial } from '@/spaces/textures/openModelMaterial'
+import type { ChannelTexture } from '@shared/domain/ownModelTextures'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
 
 /**

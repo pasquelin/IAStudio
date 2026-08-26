@@ -64,8 +64,6 @@
     "modelOverrides": "Swap a channel",
     "useModelFinish": "Take the material’s finish",
     "useModelFinishHint": "Copies the colour, the roughness, the metalness and the placement of the maps from this model’s assembled material",
-    "useModelPictures": "Use the model’s own images",
-    "useModelPicturesHint": "Points every channel at the images extracted from this model, so editing one of them repaints the model",
     "noModelTexture": "No image was taken out of this model.",
     "openTextureHint": "Double-click to open this image in the space that edits it",
     "modelMaterial": "Model material",

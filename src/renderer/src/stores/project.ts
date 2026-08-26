@@ -15,6 +15,7 @@ import { useSettings } from './settings'
 import { useActivity } from './activity'
 import { useProjectContext } from './projectContext'
 import { forgetRememberedAssets, useAssets } from './assets'
+import { forgetAssetRevisions } from './assetRevisions'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './sceneClipboard'
 import { useSelection } from './selection'
@@ -103,6 +104,9 @@ async function followProject(project: Project | null): Promise<void> {
   // until `refresh` answers, `items` still holds the rows of the project being left. Forgetting
   // first leaves any render in that window putting them straight back, for the session's life.
   forgetRememberedAssets()
+  // Another project's stamps say nothing about this one's files, and this map has no other
+  // way to shrink.
+  forgetAssetRevisions()
 
   // Last, and only on a folder that answered: the reconciliation above is what says which tabs
   // have a document, and a listing that failed says nothing about any of them.

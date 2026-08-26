@@ -4,7 +4,6 @@ import { PropertySection } from '@/design/PropertySection'
 
 import { TextureSlotFields } from '../TextureSlotFields'
 import { ModelOverridesSectionFinish } from './ModelOverridesSectionFinish'
-import { ModelOverridesSectionOwnPictures } from './ModelOverridesSectionOwnPictures'
 
 export type ModelOverridesSectionProps = {
   /** The model's own asset — what the pictures offered at the foot were taken out of. */
@@ -22,8 +21,9 @@ export type ModelOverridesSectionProps = {
  * colour and a finish per material, and the studio has no business restating either — what it
  * offers here is a slot for a picture that was edited elsewhere to land back on.
  *
- * Folded on sight, under the model's own pictures: pointing a slot somewhere else is the rarer
- * half of this panel, and the file's own maps are what one opens it to see.
+ * Folded on sight: pointing a slot somewhere else is the rarer half of this panel, and a model
+ * already wears the pictures its own file shed — `effectiveModelTextures` fills every slot left
+ * empty here, so there is nothing to press to get them.
  */
 export function ModelOverridesSection({
   assetId,
@@ -48,13 +48,6 @@ export function ModelOverridesSection({
           delete rest[slot]
           onChange(pictureId === null ? rest : { ...rest, [slot]: { assetId: pictureId } })
         }}
-      />
-      <ModelOverridesSectionOwnPictures
-        assetId={assetId}
-        textures={textures}
-        label={t('inspector.useModelPictures')}
-        hint={t('inspector.useModelPicturesHint')}
-        onChange={onChange}
       />
       <ModelOverridesSectionFinish
         assetId={assetId}
