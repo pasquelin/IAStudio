@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { useSkyboxes } from '@/stores/skyboxes'
-import { onSkiesRead } from '@/stores/skyboxSources'
+import { onSkyChange } from '@/stores/skyboxSources'
 import { useLatest } from './useLatest'
 
 /**
@@ -10,15 +9,5 @@ import { useLatest } from './useLatest'
 export function useSkyRefresh(refresh: () => void): void {
   const latest = useLatest(refresh)
 
-  useEffect(() => {
-    const tabs = useSkyboxes.subscribe(
-      (state, before) => state.states !== before.states && latest.current(),
-    )
-    const files = onSkiesRead(() => latest.current())
-
-    return () => {
-      tabs()
-      files()
-    }
-  }, [latest])
+  useEffect(() => onSkyChange(() => latest.current()), [latest])
 }

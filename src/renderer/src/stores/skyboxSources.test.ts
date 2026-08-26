@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createSkyboxContent } from '@shared/domain/skybox'
 import { skyboxPayload } from '@/app/skyboxDocument'
@@ -130,5 +130,28 @@ describe('the skies a scene is lit by whose document is not open', () => {
     await loadSkySource(SKY)
 
     expect(litSkyOf(SKY)).toBe(first)
+  })
+
+  /**
+   * BOTH halves, and the tab half is the one that was missing: a montage clip followed the first
+   * landing of a file and then no edit at all — measured, the pixels never moved again.
+   */
+  it('says the sky moved for an edit in its tab as well as for a read', async () => {
+    const { onSkyChange } = await import('./skyboxSources')
+    const { skyboxStore } = await import('./skyboxes')
+    const { createSkyboxContent } = await import('@shared/domain/skybox')
+    const moved = vi.fn()
+    const stop = onSkyChange(moved)
+
+    // Through `replace`, the door production brings a document in by — see the setup's own guard.
+    skyboxStore.use.getState().replace(SKY, createSkyboxContent())
+    expect(moved).toHaveBeenCalledTimes(1)
+
+    await loadSkySource(SKY)
+    expect(moved).toHaveBeenCalledTimes(2)
+
+    stop()
+    skyboxStore.use.getState().replace(SKY, createSkyboxContent())
+    expect(moved).toHaveBeenCalledTimes(2)
   })
 })
