@@ -124,6 +124,11 @@ export function carvePlan(
   return tools.length === 0 ? null : { matter, tools }
 }
 
+/**
+ * The matter when no mark says which: the biggest. Wrong where the tool outweighs what it pierces
+ * — a cutter 1.2 × 1.6 × 2 makes 3.84 against a 4 × 3 × 0.3 wall's 3.6 — and KEPT so (Alban,
+ * 2026-08-26). Do not swap it for another rule without asking again.
+ */
 function biggest(
   nodes: readonly CarvableNode[],
   byId: ReadonlyMap<string, SceneNode>,

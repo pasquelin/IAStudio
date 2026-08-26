@@ -1,7 +1,7 @@
 import { bench, describe } from 'vitest'
 import type { Command } from '../core/history'
 import { moveNodes, setShadowOn } from './commands'
-import { meshNodes } from './scene-fixtures'
+import { meshNodes, spriteNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneState } from './sceneState'
 
 /**
@@ -17,6 +17,23 @@ function frame(state: SceneState, command: Command<SceneState>): void {
 }
 
 describe('one image of a gesture over a selection', () => {
+  // Sprites, and nothing else: turning one shows only when something hangs from it, which is a
+  // question about the WHOLE scene — the one a mesh never asks. The index of parents is warm from
+  // the second image here, where a drag rebuilds it every one: this catches the regression, not
+  // the absolute.
+  const sprites = Array.from({ length: 200 }, (_unused, index) =>
+    spriteNodeFixture(`sprite_${index}`),
+  )
+  const spriteScene: SceneState = { ...EMPTY_SCENE, nodes: [...sprites, ...meshNodes(39_800)] }
+  const swung = sprites.map(node => ({
+    id: node.id,
+    transform: { ...IDENTITY_TRANSFORM, position: { x: 1, y: 0, z: 0 } },
+  }))
+
+  bench('moving 200 sprites of 40000', () => {
+    frame(spriteScene, moveNodes(swung))
+  })
+
   for (const total of [2_000, 40_000]) {
     const nodes = meshNodes(total)
     const state: SceneState = { ...EMPTY_SCENE, nodes }

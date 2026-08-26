@@ -99,8 +99,8 @@ describe('subtreesOf', () => {
   })
 
   /**
-   * Reparenting changes a `parentId` in place, so a child can perfectly well be listed before
-   * the parent it now hangs from. Reading the array in order left those behind — nodes nothing
+   * Reparenting rewrites a `parentId` without moving the node, so a child can perfectly well be
+   * listed before the parent it now hangs from. Reading the array in order left those behind — nodes nothing
    * showed any more, that no delete could reach, and that the file kept.
    */
   it('finds a branch whose child is declared before its parent', () => {
