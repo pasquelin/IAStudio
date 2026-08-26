@@ -255,8 +255,8 @@ const MAX_STUDIO_STATE = 64 * 1024 * 1024
 
 const oraBase = {
   name: z.string().max(200),
-  x: z.number().finite(),
-  y: z.number().finite(),
+  x: z.number(),
+  y: z.number(),
   opacity: z.number().min(0).max(1),
   visible: z.boolean(),
   composite: z.string().max(64),

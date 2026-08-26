@@ -2,10 +2,9 @@
  * The port onto the retargeting worker: an animation authored for one skeleton, replayed on
  * another.
  *
- * `skinWeights`'s shape — an injected `spawn`, one worker, a register of what is out, `abandon`
- * when it dies, a request that answers many times and can be taken back. What is its own is the
- * short circuit: two identical skeletons need no worker at all, and asking for one would replace
- * an exact clip with a resampled approximation of itself.
+ * `skinWeights`'s shape, over the same `workerPort`. What is its own is the short circuit: two
+ * identical skeletons need no worker at all, and asking for one would replace an exact clip with
+ * a resampled approximation of itself.
  */
 import {
   AnimationClip,
@@ -36,6 +35,7 @@ import {
   type WireTrack,
   type WireTrackKind,
 } from './retargetMessage'
+import { createWorkerPort } from '../core/workerPort'
 
 export type Retarget = {
   /**
@@ -60,42 +60,16 @@ export type Retarget = {
 }
 
 export function createRetarget(spawn: () => Worker): Retarget {
-  const waiting = new Map<number, Slot>()
+  const port = createWorkerPort<readonly WireClip[], RetargetResponse>(
+    spawn,
+    'retargeting',
+    answer => answer.clips,
+  )
   const profiles = new Map<string, SkeletonProfile>()
-  let worker: Worker | null = null
-  let disposed = false
-  let nextId = 0
-
-  const abandon = (dead: Worker, reason: string): void => {
-    // A late event from a worker already replaced must not take its successor down with it.
-    if (worker !== dead) return
-
-    worker.terminate()
-    worker = null
-    for (const slot of waiting.values()) slot.reject(new Error(reason))
-    waiting.clear()
-  }
-
-  const workerOf = (): Worker => {
-    if (worker) return worker
-
-    const started = spawn()
-    started.addEventListener('message', (event: MessageEvent<RetargetResponse>) =>
-      settle(waiting, event.data),
-    )
-    started.addEventListener('error', event =>
-      abandon(started, `retargeting worker failed: ${event.message}`),
-    )
-    started.addEventListener('messageerror', () =>
-      abandon(started, 'retargeting worker sent an unreadable answer'),
-    )
-    worker = started
-    return started
-  }
 
   const send = (request: RetargetRequest, watch: Watch): Promise<readonly WireClip[] | null> =>
     new Promise((resolve, reject) => {
-      const running = workerOf()
+      const running = port.running()
 
       // Posted before it is recorded, so a payload the structured clone cannot carry throws with
       // no slot left behind — `bvhInflight` says why this order is safe.
@@ -111,14 +85,14 @@ export function createRetarget(spawn: () => Worker): Retarget {
         stop.abort()
         reject(error)
       }
-      waiting.set(request.id, { resolve: give, reject: fail, onProgress: watch?.onProgress })
+      port.record(request.id, { resolve: give, reject: fail, onProgress: watch?.onProgress })
 
       // `{ signal }` rather than a bare listener: a caller keeping ONE controller for its whole
       // life would otherwise leave one listener per request behind it, each holding a `resolve`.
       watch?.signal?.addEventListener(
         'abort',
         () => {
-          if (!waiting.delete(request.id)) return
+          if (!port.forget(request.id)) return
           running.postMessage({ id: request.id, cancel: true })
           give(null)
         },
@@ -128,7 +102,7 @@ export function createRetarget(spawn: () => Worker): Retarget {
       // An `abort` already fired has already been delivered, so the listener above would never
       // run: without this the worker does the whole job and answers clips for a dead caller.
       if (watch?.signal?.aborted) {
-        waiting.delete(request.id)
+        port.forget(request.id)
         running.postMessage({ id: request.id, cancel: true })
         give(null)
       }
@@ -136,7 +110,7 @@ export function createRetarget(spawn: () => Worker): Retarget {
 
   return {
     adapt: async (target, source, clips, watch) => {
-      if (disposed) return null
+      if (port.isGone()) return null
 
       const targetBones = wireBonesOf(target)
       const sourceBones = wireBonesOf(source)
@@ -144,7 +118,7 @@ export function createRetarget(spawn: () => Worker): Retarget {
       if (sameSkeleton(targetBones, sourceBones)) return [...clips]
 
       const request: RetargetRequest = {
-        id: (nextId += 1),
+        id: port.claim(),
         ...retargetPlanOf(targetBones, sourceBones, clips.map(wireClipOf), undefined, profiles),
       }
       const adapted = await send(request, watch)
@@ -155,38 +129,13 @@ export function createRetarget(spawn: () => Worker): Retarget {
     remember: profile => void profiles.set(profile.signature, profile),
 
     dispose: () => {
-      disposed = true
-      worker?.terminate()
-      worker = null
-      // Resolved, not rejected: a window closing is nobody's failure.
-      for (const slot of waiting.values()) slot.resolve(null)
-      waiting.clear()
+      profiles.clear()
+      port.dispose()
     },
   }
 }
 
 type Watch = { onProgress?: (progress: number) => void; signal?: AbortSignal } | undefined
-
-type Slot = {
-  resolve: (clips: readonly WireClip[] | null) => void
-  reject: (error: Error) => void
-  onProgress?: (progress: number) => void
-}
-
-/** A progress report leaves the slot in place; only a `done` message takes it out. */
-function settle(waiting: Map<number, Slot>, response: RetargetResponse): void {
-  const slot = waiting.get(response.id)
-  if (!slot) return
-
-  if (!response.done) {
-    slot.onProgress?.(response.progress)
-    return
-  }
-
-  waiting.delete(response.id)
-  if (response.ok) slot.resolve(response.clips)
-  else slot.reject(new Error(response.error))
-}
 
 /**
  * What to ask the worker for: which target bone reads which source bone, and where the hips are.

@@ -287,11 +287,6 @@ export class SkyboxRenderer {
     this.pipeline.renderToScreen(this.projection.material)
   }
 
-  setGroundVisible(visible: boolean): void {
-    this.probes.setGroundVisible(visible)
-    this.viewport.requestRender()
-  }
-
   dispose(): void {
     if (this.quiet !== null) clearTimeout(this.quiet)
     this.quiet = null

@@ -424,10 +424,6 @@ export class TimelineEngine {
     this.draw()
   }
 
-  openSinks(): number {
-    return this.pool.openCount()
-  }
-
   dispose(): void {
     this.disposed = true
     this.pause()

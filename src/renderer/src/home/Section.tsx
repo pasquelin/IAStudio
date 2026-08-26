@@ -13,12 +13,8 @@ export type SectionProps = {
    */
   actions?: ReactNode
   /**
-   * Keeps the heading against the top of the page while the band scrolls past it. For a band
-   * tall enough to outlast its own controls — scrolling back up to change tab is the symptom.
-   *
-   * `top-0` is right because the page's scroller starts where the sections do — the same
-   * invariant `ScrollHost` publishes for the grids. A page that inset its scroller would need
-   * this offset with it.
+   * Keeps the heading against the top of the page while the band scrolls past it. `top-0` holds
+   * only because the page's scroller starts where the sections do.
    */
   sticky?: boolean
   children: ReactNode

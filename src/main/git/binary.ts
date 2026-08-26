@@ -36,6 +36,6 @@ export async function detectGit(probe: VersionProbe): Promise<boolean> {
 export function gitVersionProbe(binary?: string): VersionProbe {
   return async () => {
     const git = binary ? simpleGit({ binary }) : simpleGit()
-    return await git.version()
+    return git.version()
   }
 }

@@ -60,9 +60,6 @@ export type MemorySnapshot = {
  */
 export type RuntimeSnapshot = MemorySnapshot & { readonly source: 'runtime' }
 
-/** What a probe answered. It sorts a catalogue and explains a refusal; it admits nothing — R1. */
-export type ProbeSnapshot = MemorySnapshot & { readonly source: 'probe' }
-
 /**
  * Whether a runtime's bytes may enter a release plan RIGHT NOW.
  *

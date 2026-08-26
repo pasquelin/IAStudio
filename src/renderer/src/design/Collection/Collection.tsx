@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Fragment, useEffect, useRef, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, type DragEvent, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import type { DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
@@ -136,7 +136,7 @@ export type CollectionProps<T extends { id: string }> = {
    */
   foreign?: {
     carries: (event: DragLike) => boolean
-    onDrop: (event: React.DragEvent<HTMLElement>) => void
+    onDrop: (event: DragEvent<HTMLElement>) => void
   }
   /** A right-click on that blank. Raised after `onPressRoot`, never instead of it. */
   onContextMenuRoot?: () => void
