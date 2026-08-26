@@ -7,10 +7,13 @@ import {
   mdiPlaylistPlus,
   mdiPlaylistRemove,
   mdiRenameOutline,
+  mdiSelectionEllipseRemove,
+  mdiSwapHorizontal,
   mdiTrashCanOutline,
 } from '@mdi/js'
 import type { TFunction } from 'i18next'
 import { commandDescriptor, type CommandId } from '@shared/domain/command'
+import { canInvertCarve, canNegate } from '@/engines/csg/carve'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
 
@@ -42,7 +45,7 @@ export type SceneNodeMenuProps = {
 /**
  * What can be done with one node of a scene, right-clicked — in the outliner or in the viewport.
  *
- * Five of the six rows are `CommandId`s rather than commands: they are the very ones the toolbar,
+ * Every row but two is a `CommandId` rather than a command: they are the very ones the toolbar,
  * the keyboard and the native Édition menu already run, and a second copy of "duplicate" would
  * drift from the first the day one of them learns to offset its copies.
  *
@@ -90,6 +93,11 @@ export function openSceneNodeMenu({
       : []),
     command('scene.duplicate', mdiContentCopy),
     command('scene.group', mdiFolderPlusOutline),
+    // The two of the boolean family a hand reaches for from HERE: marking a tool, and repairing a
+    // fold that ran backwards. Greyed rather than hidden, like framing below — the menu keeps its
+    // length whatever is under the pointer.
+    { ...command('scene.negate', mdiSelectionEllipseRemove), disabled: !canNegate([node]) },
+    { ...command('scene.invertCarve', mdiSwapHorizontal), disabled: !canInvertCarve([node]) },
     // On or off the band, by the same shape the eye row takes: one row whose label flips, so the
     // menu keeps its length. Both sides act on the selection, like every other row here.
     command(

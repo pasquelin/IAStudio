@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
-import { isCsgGraph } from '@shared/domain/csg'
-import { canCarve, carveGraph, isCarvable } from './carve'
+import { isCsgGraph, type CsgOperation } from '@shared/domain/csg'
+import { canCarve, carveGraph, carvePlan, isCarvable } from './carve'
 import { meshNode } from '../scene/nodeFactory'
 import type { SceneNode } from '../scene/sceneState'
 
@@ -14,14 +14,21 @@ function cube(at: { x: number; y: number; z: number }): SceneNode {
   return { ...node, name: 'hole', transform: { ...IDENTITY_TRANSFORM, position: at } }
 }
 
-/** The caller decides which node is the matter; these tests spell that split out loud. */
-const cut = (nodes: readonly SceneNode[], all: readonly SceneNode[] = nodes) => {
-  const [matter, ...tools] = nodes.filter(isCarvable)
-  return matter && tools.length > 0 ? carveGraph(matter, tools, 'subtract', all) : null
+/** The two halves the toolbar runs, in the order it runs them: elect, then compose. */
+const cut = (
+  nodes: readonly SceneNode[],
+  all: readonly SceneNode[] = nodes,
+  operation: CsgOperation = 'subtract',
+) => {
+  const plan = carvePlan(nodes.filter(isCarvable), operation, all)
+  return plan && plan.tools.length > 0 ? carveGraph(plan.matter, plan.tools, all) : null
 }
 
+const marked = (node: SceneNode): SceneNode =>
+  node.type === 'mesh' ? { ...node, negative: true } : node
+
 describe('carveGraph', () => {
-  it('makes the first node the matter and the rest the tools', () => {
+  it('makes the biggest shape the matter and the rest the tools', () => {
     const nodes = [wall(), cube({ x: 1, y: 0, z: 0 })]
     const graph = cut(nodes, nodes)
 
@@ -100,8 +107,7 @@ describe('carveGraph', () => {
   })
 
   it('refuses a lone node, which no cut can be made of', () => {
-    const only = [wall()]
-    expect(cut(only, only)).toBeNull()
+    expect(canCarve([wall()])).toBe(false)
   })
 
   /**
@@ -139,8 +145,117 @@ describe('carveGraph', () => {
 
   it('carries the operation asked for, so a weld is not a cut', () => {
     const nodes = [wall(), cube({ x: 0, y: 0, z: 0 })]
-    const [matter, ...tools] = nodes.filter(isCarvable)
-    if (!matter) throw new Error('the wall carries a shape')
-    expect(carveGraph(matter, tools, 'unite', nodes).steps[0]?.operation).toBe('unite')
+    expect(cut(nodes, nodes, 'unite')?.steps[0]?.operation).toBe('unite')
+  })
+})
+
+/**
+ * Adding a shape SELECTS it, so the natural gesture — drop the tool in, then add the wall — fed
+ * the two the wrong way round every time, and an undo emptying the selection is what made it
+ * "work on the third try".
+ */
+describe('carvePlan', () => {
+  const roles = (picked: readonly SceneNode[], operation: CsgOperation = 'subtract') =>
+    carvePlan(picked.filter(isCarvable), operation, picked)
+
+  it('elects the same matter whichever shape was clicked first', () => {
+    const [big, small] = [wall(), cube({ x: 1, y: 0, z: 0 })]
+
+    expect(roles([big, small])?.matter.name).toBe('wall')
+    expect(roles([small, big])?.matter.name).toBe('wall')
+  })
+
+  it('writes the same steps whichever shape was clicked first', () => {
+    const [big, small] = [wall(), cube({ x: 1, y: 0, z: 0 })]
+    const named = (picked: readonly SceneNode[]) => roles(picked)?.tools.map(tool => tool.node.name)
+
+    expect(named([small, big])).toEqual(named([big, small]))
+  })
+
+  /**
+   * The volume, never the bounding box: a wall 4 × 3 × 0.2 has a box six times a unit cube's and
+   * barely twice its matter — 2.4 against 1. A box that reached the other way would have made
+   * this rule pick the wrong shape for exactly the wall this studio is used to build.
+   */
+  it('weighs matter rather than the box it fits in', () => {
+    // Wide and flat, so its bounding box beats the cube's while its matter does not.
+    const sliver: SceneNode = {
+      ...meshNode({ kind: 'box', width: 8, height: 8, depth: 0.001 }),
+      name: 'sliver',
+    }
+    expect(roles([sliver, cube({ x: 0, y: 0, z: 0 })])?.matter.name).toBe('hole')
+  })
+
+  it('counts the scale a shape is placed at, not the shape alone', () => {
+    const grown: SceneNode = {
+      ...cube({ x: 5, y: 0, z: 0 }),
+      name: 'grown',
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 4, z: 4 } },
+    }
+    expect(roles([grown, wall()])?.matter.name).toBe('grown')
+  })
+
+  /** Roblox's Negate: the sense of a cut belongs to the object, and is shown on it. */
+  it('makes a marked shape a tool even when it is the biggest', () => {
+    const plan = roles([marked(wall()), cube({ x: 1, y: 0, z: 0 })])
+
+    expect(plan?.matter.name).toBe('hole')
+    expect(plan?.tools.map(tool => tool.node.name)).toEqual(['wall'])
+  })
+
+  /** A union holding a negative IS a piercing — the whole of how Roblox spells a subtraction. */
+  it('subtracts a marked shape even when the button says unite', () => {
+    const plan = roles([wall(), marked(cube({ x: 1, y: 0, z: 0 }))], 'unite')
+
+    expect(plan?.matter.name).toBe('wall')
+    expect(plan?.tools[0]?.operation).toBe('subtract')
+  })
+
+  it('leaves the button its say over what is not marked', () => {
+    const plan = roles([wall(), cube({ x: 1, y: 0, z: 0 })], 'unite')
+    expect(plan?.tools[0]?.operation).toBe('unite')
+  })
+
+  /**
+   * Roblox refuses this outright. Refusing here would be a live-looking button doing nothing —
+   * `canCarve` is what greys it out, and it cannot see a mark.
+   */
+  it('drops the marks when everything is marked, rather than folding to nothing', () => {
+    const plan = roles([marked(wall()), marked(cube({ x: 1, y: 0, z: 0 }))])
+
+    expect(plan?.matter.name).toBe('wall')
+    expect(plan?.tools[0]?.operation).toBe('subtract')
+  })
+
+  /**
+   * `canCarve` counts IDS, and `nodeAimed` resolves an id OR a name — so two entries can be one
+   * node. Folded, it would have replaced the shape with a solid that cuts nothing.
+   */
+  it('refuses a selection that is one shape named twice', () => {
+    const one = wall()
+    expect(roles([one, one])).toBeNull()
+  })
+
+  it('lets a caller name the matter outright, for the rare cut that runs the other way', () => {
+    const small = cube({ x: 1, y: 0, z: 0 })
+    const picked = [wall(), small]
+    const plan = carvePlan(picked.filter(isCarvable), 'subtract', picked, small.id)
+
+    expect(plan?.matter.name).toBe('hole')
+  })
+
+  /** Saying it outright outranks the mark — that is what the parameter is FOR. */
+  it('takes a named matter even when that shape carries the tool mark', () => {
+    const one = marked(wall())
+    const picked = [one, cube({ x: 1, y: 0, z: 0 })]
+    const plan = carvePlan(picked.filter(isCarvable), 'subtract', picked, one.id)
+
+    expect(plan?.matter.name).toBe('wall')
+    expect(plan?.tools.map(tool => tool.node.name)).toEqual(['hole'])
+  })
+
+  it('refuses a named matter that is not among the shapes picked', () => {
+    const picked = [wall(), cube({ x: 1, y: 0, z: 0 })]
+    expect(carvePlan(picked.filter(isCarvable), 'subtract', picked, 'nowhere')).toBeNull()
   })
 })

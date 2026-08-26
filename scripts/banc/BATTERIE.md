@@ -335,6 +335,9 @@ Dans la scène Test MCP :
 - [x] « Fusionne le mur et le cube en une seule forme. »
 - [x] « Ne garde que la partie où le mur et le cube se chevauchent. »
 - [x] « Sépare ce solide et rends-moi les formes d'origine. »
+- [ ] « Marque le cube comme outil, puis fusionne-le avec le mur. »
+- [ ] « Retire au cube sa marque d'outil. »
+- [ ] « Ce pli est parti à l'envers, refais-le dans l'autre sens. »
 
 ## 7. Manipulation relative — important
 

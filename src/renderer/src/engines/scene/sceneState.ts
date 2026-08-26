@@ -39,7 +39,17 @@ export type SceneNodeBase = {
 
 export type SceneNode = SceneNodeBase &
   (
-    | { type: 'mesh'; geometry: GeometryDescriptor; material: MaterialDescriptor }
+    | {
+        type: 'mesh'
+        geometry: GeometryDescriptor
+        material: MaterialDescriptor
+        /**
+         * Marked as a TOOL for the next boolean — Roblox's Negate, and the only explicit way to
+         * say which way a cut runs. Absent on every node ever written so far, and absent means
+         * matter: that is the whole migration.
+         */
+        negative?: boolean
+      }
     | { type: 'light'; light: LightDescriptor }
     | { type: 'model'; model: ModelRef }
     | { type: 'sprite'; sprite: SpriteDescriptor }
@@ -48,7 +58,7 @@ export type SceneNode = SceneNodeBase &
     | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
     // A solid cut out of other solids. It wears a material like a mesh, and its SHAPE is a
     // recipe rather than a descriptor — ADR-25: the graph is the document, the mesh is a cache.
-    | { type: 'carved'; carved: CsgGraph; material: MaterialDescriptor }
+    | { type: 'carved'; carved: CsgGraph; material: MaterialDescriptor; negative?: boolean }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
     // What a render looks through. Not the viewport's camera: that one is how the scene is being

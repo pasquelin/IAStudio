@@ -509,24 +509,43 @@ ranger disparaîtrait de l’écran, et on le croirait perdu.
 
 ## Percer, fusionner, croiser
 
-**Édition ▸ Percer**, ou les quatre boutons de la barre d’outils, après le groupe.
+**Édition ▸ Percer**, ou les boutons de la barre d’outils, après le groupe.
 
-Posez un cube dans un mur, sélectionnez **le mur d’abord, le cube ensuite**, puis **Percer** : le
-mur gagne une fenêtre. C’est tout le principe — la **première** forme choisie est la matière, les
-suivantes sont les outils qui la creusent.
+Posez un cube dans un mur, sélectionnez les deux — **dans l’ordre que vous voulez** — puis
+**Percer** : le mur gagne une fenêtre. C’est tout le principe. **La plus grosse forme est la
+matière**, les autres sont les outils qui la creusent, et l’ordre des clics n’y change rien.
 
-Trois façons de combiner, et une pour revenir en arrière :
+Une façon de marquer, trois de combiner, et deux pour revenir en arrière :
 
 | Bouton | Ce qu’il fait |
 |---|---|
-| **Percer** | creuse la première forme avec les suivantes — le cube ouvre la fenêtre |
+| **Négatif** | marque les formes choisies comme **outils** — elles deviennent rouges et translucides |
+| **Percer** | creuse les plus petites formes dans la plus grosse — le cube ouvre la fenêtre |
 | **Fusionner** | réunit les formes en un seul solide |
 | **Garder le commun** | ne garde que la partie où les formes se chevauchent |
 | **Séparer** | rend les formes d’origine, chacune là où elle était |
+| **Inverser le pli** | `I` — refait le pli à l’envers, sans annuler |
+
+**Si le pli part à l’envers, ne cherchez pas pourquoi : pressez `I`.** « Inverser le pli »
+refait le même pli dans l’autre sens — ce qui avait été creusé devient la matière — en un clic et
+sans rien annuler. C’est aussi une ligne du clic droit sur le solide.
+
+**Pour dire d’avance quelle forme sera creusée**, marquez l’outil : sélectionnez-le, pressez `N`,
+et il s’affiche en rouge translucide. Une forme marquée est **toujours** creusée dans les autres,
+quel que soit le bouton pressé ensuite — **Fusionner** avec un négatif dans la sélection perce donc
+au lieu de réunir. Presser `N` à nouveau retire la marque.
+
+> **La marque se voit, l’ordre des clics non.** C’est toute la raison d’être du bouton : avant,
+> rien à l’écran ne disait quel objet allait être creusé, et ajouter une forme la sélectionnant
+> aussitôt, le geste naturel donnait presque toujours le mauvais sens.
 
 **Rien n’est perdu.** Le solide garde en mémoire les formes dont il a été fait : **Séparer** vous
-les rend intactes, et `⌘Z` annule la découpe comme n’importe quelle autre action. Vous pouvez donc
-essayer sans crainte.
+les rend là où elles étaient, et `⌘Z` annule la découpe comme n’importe quelle autre action. Vous
+pouvez donc essayer sans crainte.
+
+> **Ce qui a été creusé revient marqué.** Une forme qui servait d’outil vous est rendue en rouge
+> translucide, pour que refaire le même pli donne le même solide. Pressez `N` pour lui retirer la
+> marque et en refaire une forme ordinaire.
 
 Le solide obtenu se comporte comme un objet ordinaire : il porte un nom, se déplace, se tourne,
 s’habille d’une matière, et la fenêtre suit le mur quand vous le déplacez.

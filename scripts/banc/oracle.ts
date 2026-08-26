@@ -82,6 +82,10 @@ export const carvedBy = (run: Run, operation: CsgOperation): boolean => {
   return only?.type === 'carved' && only.carved.steps.every(one => one.operation === operation)
 }
 
+/** Whether a shape is MARKED as a tool. `undefined` for a node that could not carry the mark. */
+export const isNegative = (node?: SceneNode): boolean | undefined =>
+  node?.type === 'mesh' || node?.type === 'carved' ? node.negative === true : undefined
+
 /** The same word, for the node a sentence names — « renomme-la Soleil Test » scores on both. */
 export const kindNamed = (run: Run, name: string): string | null => {
   const node = nodeNamed(run, name)

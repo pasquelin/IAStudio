@@ -61,10 +61,12 @@ export type CommandId =
   | 'scene.add'
   | 'scene.addToSheet'
   | 'scene.removeFromSheet'
+  | 'scene.negate'
   | 'scene.carve'
   | 'scene.weld'
   | 'scene.intersect'
   | 'scene.separate'
+  | 'scene.invertCarve'
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.copy'
@@ -562,8 +564,17 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: null,
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
-  // The four verbs of a solid. No default key: nothing in a 3D package claims one for these,
-  // and reserving a letter here would take it from a tool a hand reaches for far more often.
+  // The verbs of a solid. No default key: nothing in a 3D package claims one for these, and
+  // reserving a letter here would take it from a tool a hand reaches for far more often.
+  // `N` as in négatif and in negate, `I` as in inverser and in invert — the two the hand reaches
+  // for while modelling, and the only two letters this scope had left that say what they do.
+  command({
+    id: 'scene.negate',
+    scope: 'scene',
+    titleKey: 'commands.sceneNegate.title',
+    helpKey: 'commands.sceneNegate.help',
+    defaultBinding: 'KeyN',
+  }),
   command({
     id: 'scene.carve',
     scope: 'scene',
@@ -591,6 +602,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneSeparate.title',
     helpKey: 'commands.sceneSeparate.help',
     defaultBinding: null,
+  }),
+  command({
+    id: 'scene.invertCarve',
+    scope: 'scene',
+    titleKey: 'commands.sceneInvertCarve.title',
+    helpKey: 'commands.sceneInvertCarve.help',
+    defaultBinding: 'KeyI',
   }),
   command({
     id: 'scene.group',

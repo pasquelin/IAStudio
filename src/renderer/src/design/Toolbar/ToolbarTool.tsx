@@ -34,7 +34,7 @@ export function ToolbarTool({ tool, active, tip, onTool, onMode }: ToolbarToolPr
     <MenuButton
       icon={armed?.icon ?? tool.icon}
       label={t(armed?.labelKey ?? tool.labelKey)}
-      description={description ? t(description) : undefined}
+      description={description ? t(description, tool.descriptionValues) : undefined}
       // No `??` onto the tool's own: a group's shortcut belongs to its first mode, and
       // showing it on another one contradicts the menu row right below.
       shortcut={tool.modes ? armed?.shortcut : tool.shortcut}

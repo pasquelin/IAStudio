@@ -22,6 +22,8 @@ import {
   wearGeometry,
   applyLight,
   applyMaterial,
+  applyNegative,
+  unmarkTools,
   applyPath,
   applySprite,
   giveSecondUvSet,
@@ -29,6 +31,70 @@ import {
   standardMaterialOf,
   tiledGeometry,
 } from './threeSync'
+
+describe('applyNegative', () => {
+  const painted = (negative: boolean): MeshStandardMaterial => {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, { ...DEFAULT_MATERIAL, color: '#00ff00' }, '')
+    applyNegative(material, '#ff715b', negative)
+    return material
+  }
+
+  /** Roblox's look for a tool: seen through, and not wearing the paint it will be cut with. */
+  it('shows a marked shape red and translucent', () => {
+    const material = painted(true)
+
+    expect(material.color.getHexString()).toBe('ff715b')
+    expect(material.transparent).toBe(true)
+    expect(material.opacity).toBeLessThan(1)
+  })
+
+  // Or a tool standing in front of the matter would hide it rather than show through it.
+  it('lets a marked shape be seen through by whatever stands behind it', () => {
+    expect(painted(true).depthWrite).toBe(false)
+  })
+
+  /** Taking the mark off has to give the shape its own paint back, opaque, in the same pass. */
+  it('leaves an unmarked shape exactly as its descriptor asked', () => {
+    const material = painted(false)
+
+    expect(material.color.getHexString()).toBe('00ff00')
+    expect(material.transparent).toBe(false)
+    expect(material.opacity).toBe(1)
+    expect(material.depthWrite).toBe(true)
+  })
+})
+
+describe('unmarkTools', () => {
+  /**
+   * The export SHARES its materials — `placedCopy` says so — so a mark left on one shipped a red,
+   * 45 %-opaque cube into every `.glb`. A mark is an editing role, not a finish.
+   */
+  it('gives an exported copy back the paint the mark was covering', () => {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, { ...DEFAULT_MATERIAL, color: '#00ff00' }, '')
+    applyNegative(material, '#ff715b', true)
+    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material)
+
+    unmarkTools(mesh)
+    const worn = standardMaterialOf(mesh)
+
+    expect(worn?.color.getHexString()).toBe('00ff00')
+    expect(worn?.transparent).toBe(false)
+    expect(worn?.opacity).toBe(1)
+    // The one on screen keeps its mark: the copy is what travels, and the viewport is not it.
+    expect(material.color.getHexString()).toBe('ff715b')
+  })
+
+  it('leaves a shape that carries no mark exactly as it was', () => {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, { ...DEFAULT_MATERIAL, color: '#00ff00' }, '')
+    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material)
+
+    unmarkTools(mesh)
+    expect(mesh.material).toBe(material)
+  })
+})
 
 describe('applyMaterial', () => {
   it('writes the descriptor into the material it was given', () => {

@@ -15,6 +15,7 @@ import { decompress } from 'three/addons/utils/WebGLTextureUtils.js'
 import type { ExportFormat } from '@shared/domain/scene'
 import { OVERLAY_NAME } from './sceneView'
 import { MARKER_NAME } from './markerPaint'
+import { unmarkTools } from './threeSync'
 
 /**
  * A scene on its way out of the studio.
@@ -190,6 +191,10 @@ export function placedCopy(object: Object3D): Object3D {
   copy.updateMatrix()
 
   dropOverlays(copy)
+  // The tool mark is an editing role, not a finish — and the copy SHARES its materials, so
+  // without this a shape marked Negate shipped red at 45 % into the file. Same rule as the
+  // overlays above: what only the viewport needed does not travel.
+  unmarkTools(copy)
   return copy
 }
 

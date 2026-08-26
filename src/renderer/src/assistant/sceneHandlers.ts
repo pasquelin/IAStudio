@@ -26,10 +26,12 @@ import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/scene
 import { SECOND } from '@shared/domain/time'
 import { withinBounds } from '@shared/numeric'
 import { captureSceneView } from '@/helpers/captureSceneView'
+import { canNegate } from '@/engines/csg/carve'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
   addNode,
   carveNodes,
+  invertCarve,
   multi,
   removeNode,
   renameNode,
@@ -42,6 +44,7 @@ import {
   setModelTextures,
   setNodeVisible,
   setPath,
+  setNodesNegative,
   setSelection,
   setShadowOn,
   setSpriteOn,
@@ -95,7 +98,16 @@ import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { nodeAimed } from './nodeAimed'
-import { boolOf, composedNumber, numberOf, oneOf, recordOf, textOf, textsOf } from './actionInputs'
+import {
+  boolOf,
+  composedNumber,
+  maybeBoolOf,
+  numberOf,
+  oneOf,
+  recordOf,
+  textOf,
+  textsOf,
+} from './actionInputs'
 
 /**
  * The scene graph, driven by value.
@@ -143,6 +155,13 @@ function editNode(
 
   useScenes.getState().runCommand(open.documentId, command)
   return { ok: true }
+}
+
+/** The nodes a `nodeIds` list names, by id or by name — what the two folding handlers aim at. */
+function aimedNodes(state: SceneState, input: Record<string, unknown>): SceneNode[] {
+  return textsOf(input, 'nodeIds')
+    .map(id => nodeAimed(state, id))
+    .filter(node => node !== undefined)
 }
 
 /** A vector read three axes at a time, each one falling back to where the node already is. */
@@ -588,20 +607,49 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'node.remove': input => editNode(input, node => removeNode(node.id)),
 
   /**
-   * The ids in the ORDER they were given: the first is the matter, the rest are the tools. A
-   * client that names them in another order asks for another solid, which is what the toolbar
-   * does too — see `carveGraph`.
+   * Marks shapes as tools for the next fold, or takes the mark off. The same command the toolbar
+   * runs, so both doors read one rule — `carvePlan` says what a mark means.
+   */
+  'node.negate': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    const named = textsOf(input, 'nodeIds')
+    const picked = aimedNodes(open.state, input)
+    // Every id, not merely the ones that resolved: a misspelt name would otherwise mark half the
+    // selection and answer `ok`, and the next fold would run the wrong way with nothing said.
+    if (picked.length !== named.length)
+      return refused('notFound', `no node "${named}" in the scene in front`)
+    if (!canNegate(picked)) return refused('badInput', 'none of those nodes carries a shape')
+
+    // Absent means "mark them", the gesture a client asks for nine times out of ten; the toolbar
+    // toggles instead, since a button has no room to say which of the two it means.
+    const negative = maybeBoolOf(input, 'negative') ?? true
+    useScenes.getState().runCommand(open.documentId, setNodesNegative(picked, negative))
+    return { ok: true }
+  },
+
+  /**
+   * The ORDER OF THE IDS says nothing: a marked shape is a tool, and what is left is elected by
+   * volume — `carvePlan` is where both rules live, and the toolbar reads the same one. `matterId`
+   * names the matter outright, for the rare cut that runs the other way.
    */
   'node.carve': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
     const operation = oneOf(input, 'operation', CSG_OPERATIONS)
-    const picked = textsOf(input, 'nodeIds')
-      .map(id => nodeAimed(open.state, id))
-      .filter(node => node !== undefined)
-    const command = operation && carveNodes(picked, operation, open.state.nodes)
-    if (!command) return refused('badInput')
+    const command =
+      operation &&
+      carveNodes(
+        aimedNodes(open.state, input),
+        operation,
+        open.state.nodes,
+        textOf(input, 'matterId') ?? undefined,
+      )
+    // Two ways in: a selection where something carries no shape, or a `matterId` naming nothing
+    // that could BE the matter — see `carvePlan`, which refuses rather than electing otherwise.
+    if (!command) return refused('badInput', 'every id must carry a shape, and matterId be one')
 
     useScenes.getState().runCommand(open.documentId, command)
     // The id the description promises: a client cannot address the solid otherwise, short of
@@ -611,6 +659,13 @@ export const SCENE_HANDLERS: ActionHandlers = {
     )
     return { ok: true, data: { nodeId: solid?.id ?? '' } }
   },
+
+  'node.carveInvert': input =>
+    editNode(input, (node, documentId) =>
+      node.type === 'carved'
+        ? invertCarve(node, sceneOf(useScenes.getState(), documentId).nodes)
+        : null,
+    ),
 
   'node.separate': input => {
     const open = mounted()

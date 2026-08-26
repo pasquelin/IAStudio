@@ -26,6 +26,7 @@ import {
   mdiLightbulbOn70,
   mdiMagnet,
   mdiResize,
+  mdiSelectionEllipseRemove,
   mdiSphere,
   mdiSquareOpacity,
   mdiThermometer,
@@ -207,13 +208,25 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
   },
   // What a selection becomes. Their own group, under the three verbs that act on it: these do
   // not edit what is selected, they REPLACE it with one solid — and the fourth undoes that.
+  //
+  // The mark comes first because it is what the three read: a shape carrying it is a TOOL
+  // whatever button follows, so it is pressed before them and never after.
+  {
+    // A toggle, not an action: the same press takes the mark off, so it wears `aria-pressed`
+    // rather than `acts` — the shape `scene.isolate` already has for the same reason.
+    id: 'negate',
+    command: 'scene.negate',
+    labelKey: 'commands.sceneNegate.title',
+    descriptionKey: 'sceneTools.negateHint',
+    icon: mdiSelectionEllipseRemove,
+    separatorBefore: true,
+  },
   {
     id: 'carve',
     command: 'scene.carve',
     labelKey: 'commands.sceneCarve.title',
     descriptionKey: 'sceneTools.carveHint',
     icon: mdiVectorDifferenceAb,
-    separatorBefore: true,
     acts: true,
   },
   {

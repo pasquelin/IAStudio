@@ -490,23 +490,41 @@ filed would vanish from the screen, and you would think it lost.
 
 ## Carve, join, intersect
 
-**Edit ▸ Carve**, or the four toolbar buttons, after the grouping one.
+**Edit ▸ Carve**, or the toolbar buttons, after the grouping one.
 
-Set a cube inside a wall, select **the wall first, the cube second**, then **Carve**: the wall
-gains a window. That is the whole principle — the **first** shape you pick is the material, the ones
-after it are the tools that carve it.
+Set a cube inside a wall, select both — **in whichever order you like** — then **Carve**: the wall
+gains a window. That is the whole principle. **The biggest shape is the material**, the others are
+the tools that carve it, and the order of the clicks changes nothing.
 
-Three ways to combine, and one to go back:
+One way to mark, three to combine, and two to go back:
 
 | Button | What it does |
 |---|---|
-| **Carve** | cuts the shapes that follow out of the first one — the cube opens the window |
+| **Negate** | marks the chosen shapes as **tools** — they turn red and translucent |
+| **Carve** | cuts the smaller shapes out of the biggest one — the cube opens the window |
 | **Join** | merges the shapes into a single solid |
 | **Keep overlap** | keeps only the part where the shapes overlap |
 | **Separate** | gives the original shapes back, each where it stood |
+| **Flip the fold** | `I` — folds the same shapes the other way round, with no undo |
+
+**If the fold runs backwards, do not look for the reason: press `I`.** Flip the fold runs the same
+fold the other way round — what was carved becomes the matter — in one click and with no undo. It
+is a row of the right-click menu on the solid too.
+
+**To say in advance which shape will be carved**, mark the tool: select it, press `N`, and it shows
+translucent red. A marked shape is **always** cut out of the others, whichever button follows
+— so **Join** with a negative in the selection pierces rather than merges. Press `N` again to take the mark off.
+
+> **The mark shows; the order of the clicks did not.** That is the whole reason for the button:
+> before it, nothing on screen said which object was about to be carved, and since adding a shape
+> selects it, the natural gesture nearly always ran the wrong way round.
 
 **Nothing is lost.** The solid remembers the shapes it was made of: **Separate** hands them back
-intact, and `⌘Z` undoes the cut like any other action. So you can try things freely.
+where they stood, and `⌘Z` undoes the cut like any other action. So you can try things freely.
+
+> **What was carved comes back marked.** A shape that served as a tool is handed back translucent
+> red, so folding the same selection again gives the same solid. Press `N` to take the mark
+> off and make it an ordinary shape again.
 
 The resulting solid behaves like an ordinary object: it carries a name, moves, turns, wears a
 material, and the window follows the wall when you move it.

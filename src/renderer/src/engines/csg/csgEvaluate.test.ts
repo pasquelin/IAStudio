@@ -1,9 +1,10 @@
-import { Box3, BufferAttribute, Vector3 } from 'three'
+import { Box3, BufferAttribute, BufferGeometry, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { csgPartOf, type CsgGraph, type CsgPart } from '@shared/domain/csg'
 import { DEFAULT_MATERIAL } from '../scene/sceneState'
 import { evaluateGraph } from './csgEvaluate'
 import type { CsgMesh } from './csgMessage'
+import { meshVolume } from './meshVolume'
 
 /**
  * The real cut, run in Node. Its own suite because the worker hides everything: the evaluator
@@ -29,6 +30,17 @@ const graph = (base: CsgPart, steps: CsgGraph['steps']): CsgGraph => ({
   steps,
   collision: 'trimesh',
 })
+
+/** A solid is POSITIVE; a solid turned inside out is not. The only reading an eye cannot fake. */
+function volumeOf(mesh: CsgMesh): number {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(mesh.position, 3))
+  if (mesh.index) geometry.setIndex(new BufferAttribute(mesh.index, 1))
+  return meshVolume(geometry)
+}
+
+const trianglesOf = (mesh: CsgMesh): number =>
+  mesh.index ? mesh.index.length / 3 : mesh.position.length / 9
 
 describe('evaluateGraph', () => {
   it('keeps the size a scaled brush was given', () => {
@@ -94,6 +106,39 @@ describe('evaluateGraph', () => {
     // which a fold that kept only the base shape would have dropped.
     expect(sizeOf(both).x).toBeGreaterThan(sizeOf(alone).x)
     expect(both.position.length).toBeGreaterThan(alone.position.length)
+  })
+
+  /**
+   * A gizmo drag that passes through zero flips the sign of a scale — the inspector shows
+   * `-2,13 / -7,82 / -7,79` and nothing else says a word. Every boolean on that shape then came
+   * out MIRRORED: 48 triangles of signed volume -127.32, the faces wound backwards so
+   * `three-bvh-csg` had nothing left to cut into. Both signs now give the same solid.
+   */
+  it('cuts a matter whose scale is negative exactly as it cuts a positive one', () => {
+    const pierced = (sign: number) => {
+      const wall = placed(cube('Wall'), {
+        scale: { x: sign * 2.13, y: sign * 7.83, z: sign * 7.79 },
+      })
+      const hole = placed(cube('Hole'), { scale: { x: 1, y: 1, z: 20 } })
+      return evaluateGraph(graph(wall, [{ operation: 'subtract', part: hole }]))
+    }
+
+    const mirrored = pierced(-1)
+    const plain = pierced(1)
+
+    expect(volumeOf(mirrored)).toBeGreaterThan(0)
+    expect(volumeOf(mirrored)).toBeCloseTo(volumeOf(plain), 6)
+    expect(trianglesOf(mirrored)).toBe(trianglesOf(plain))
+  })
+
+  /** A cut ADDS triangles, because the opening it makes is walled. A mirrored one added none. */
+  it('costs more triangles than the shape it was cut from', () => {
+    const wall = placed(cube('Wall'), { scale: { x: -2.13, y: -7.83, z: -7.79 } })
+    const hole = placed(cube('Hole'), { scale: { x: 1, y: 1, z: 20 } })
+    const whole = evaluateGraph(graph(wall, []))
+    const cut = evaluateGraph(graph(wall, [{ operation: 'subtract', part: hole }]))
+
+    expect(trianglesOf(cut)).toBeGreaterThan(trianglesOf(whole))
   })
 
   it('hands back normals and uvs, which a material needs to light and to map', () => {

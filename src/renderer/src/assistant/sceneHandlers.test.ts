@@ -1144,3 +1144,90 @@ describe('a change given as a difference', () => {
     expect(nodeNamed('Caisse')?.transform.position.y).toBe(1)
   })
 })
+
+/**
+ * The two doors read ONE rule — `carvePlan` — and this is the half of it the window cannot show.
+ * The scar this must not reopen: `canCarve` once filtered instead of refusing, and through this
+ * very door that silently promoted the SECOND id to matter.
+ */
+describe('folding shapes through the outside door', () => {
+  const shapes = async (): Promise<{ wall: string; cube: string }> => {
+    await runAction('node.add', { kind: 'box', name: 'Mur' })
+    await runAction('node.add', { kind: 'sphere', name: 'Cube' })
+    // The wall is scaled up, so the election has a bigger and a smaller to tell apart.
+    await runAction('node.transform', {
+      nodeId: nodeNamed('Mur')?.id ?? '',
+      scaleX: 4,
+      scaleY: 3,
+      scaleZ: 2,
+    })
+    return { wall: nodeNamed('Mur')?.id ?? '', cube: nodeNamed('Cube')?.id ?? '' }
+  }
+
+  const solid = (): SceneNode | undefined => scene().nodes.find(node => node.type === 'carved')
+
+  it('elects the same matter whichever order the ids are named in', async () => {
+    const { wall, cube } = await shapes()
+    await runAction('node.carve', { nodeIds: [cube, wall], operation: 'subtract' })
+
+    expect(solid()?.name).toBe('Mur')
+  })
+
+  it('lets a client name the matter outright', async () => {
+    const { wall, cube } = await shapes()
+    await runAction('node.carve', {
+      nodeIds: [wall, cube],
+      operation: 'subtract',
+      matterId: cube,
+    })
+
+    expect(solid()?.name).toBe('Cube')
+  })
+
+  it('marks a shape as a tool, so joining it pierces instead', async () => {
+    const { wall, cube } = await shapes()
+    await runAction('node.negate', { nodeIds: [cube] })
+    await runAction('node.carve', { nodeIds: [wall, cube], operation: 'unite' })
+
+    const cut = solid()
+    expect(cut?.type === 'carved' && cut.carved.steps[0]?.operation).toBe('subtract')
+  })
+
+  it('takes the mark off when asked', async () => {
+    const { cube } = await shapes()
+    await runAction('node.negate', { nodeIds: [cube] })
+    await runAction('node.negate', { nodeIds: [cube], negative: false })
+
+    const shape = nodeNamed('Cube')
+    expect(shape?.type === 'mesh' && shape.negative).toBe(false)
+  })
+
+  /** The repair a client reaches for when the fold ran backwards — one call, no undo. */
+  it('folds a solid the other way round', async () => {
+    const { wall, cube } = await shapes()
+    await runAction('node.carve', { nodeIds: [wall, cube], operation: 'subtract' })
+    const made = scene().nodes.find(node => node.type === 'carved')
+    expect(made?.name).toBe('Mur')
+
+    await runAction('node.carveInvert', { nodeId: made?.id ?? '' })
+
+    expect(scene().nodes.find(node => node.type === 'carved')?.name).toBe('Cube')
+  })
+
+  it('refuses to flip what is not a solid', async () => {
+    const { wall } = await shapes()
+
+    expect(await runAction('node.carveInvert', { nodeId: wall })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  it('refuses to mark what carries no shape', async () => {
+    await runAction('node.add', { kind: 'point', name: 'Lampe' })
+
+    expect(
+      await runAction('node.negate', { nodeIds: [nodeNamed('Lampe')?.id ?? ''] }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+})

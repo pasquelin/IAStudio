@@ -917,9 +917,17 @@
         "title": "Aim at a target",
         "description": "Points at what the next step will act on in the open document — a layer, a scene object, a clip. Take the identifier from the target list in this briefing; without that list there is nothing to aim at."
       },
+      "nodeNegate": {
+        "title": "Mark objects as tools",
+        "description": "Marks objects of the scene in front, or takes the mark off: a marked object is CUT OUT of the others at the next fold, whichever fold is asked for and whatever the order of the ids. With no mark, the biggest shape is the matter."
+      },
       "nodeCarve": {
         "title": "Carve, join or intersect objects",
-        "description": "Folds several objects of the scene in front into a single solid: the first id is the material, the ones after it are the tools. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.negate is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+      },
+      "nodeCarveInvert": {
+        "title": "Flip a fold",
+        "description": "Folds a solid of the scene in front the other way round: what had been carved becomes the matter, and the matter becomes the tool. For the fold that ran backwards, with no undo."
       },
       "nodeSeparate": {
         "title": "Separate a solid",
@@ -1075,6 +1083,8 @@
       "turn": "Which way to flip or turn",
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
+      "matterId": "Identifier of the shape to be carved",
+      "negative": "Mark, or take the mark off",
       "nodeKind": "What to add",
       "relative": "Set true to give CHANGES rather than final values: position and rotation are ADDED to what stands, scale and intensity MULTIPLY it. One metre up is positionY 1 with relative true; half is scaleX 0.5 with relative true",
       "positionX": "Position in width",

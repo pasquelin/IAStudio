@@ -45,6 +45,8 @@ describe('what the 3D space offers to do with a node', () => {
       'Renommer l’objet',
       'Dupliquer',
       'Grouper',
+      'Négatif',
+      'Inverser le pli',
       'Ajouter à la bande d’animation',
       'Cadrer la sélection',
       'Masquer l’objet',
@@ -62,7 +64,7 @@ describe('what the 3D space offers to do with a node', () => {
 
     expect(menu.labels()).toContain('Retirer de la bande d’animation')
     expect(menu.labels()).not.toContain('Ajouter à la bande d’animation')
-    expect(menu.labels()).toHaveLength(7)
+    expect(menu.labels()).toHaveLength(9)
   })
 
   // A viewport draws no name to type over, so the row that would open one has nowhere to land.

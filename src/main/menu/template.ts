@@ -443,10 +443,12 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           // The solids, under the grouping they read like: both fold a selection into one row
           // of the outliner. Their keys are unbound, so the menu is where a hand finds them.
           { type: 'separator' },
+          commandItem('scene.negate', t.commands.sceneNegate.title),
           commandItem('scene.carve', t.commands.sceneCarve.title),
           commandItem('scene.weld', t.commands.sceneWeld.title),
           commandItem('scene.intersect', t.commands.sceneIntersect.title),
           commandItem('scene.separate', t.commands.sceneSeparate.title),
+          commandItem('scene.invertCarve', t.commands.sceneInvertCarve.title),
           { type: 'separator' },
           // Both, where the context menu shows one at a time: a row is posted before anything is
           // selected, so it cannot know which of the two the hand will want. Each does nothing

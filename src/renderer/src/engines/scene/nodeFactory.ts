@@ -59,6 +59,7 @@ export function meshNode(
     castShadow,
     parentId = null,
     name = classNameOf(geometry.kind),
+    negative = false,
   }: MeshOptions = {},
 ): SceneNode {
   return {
@@ -72,6 +73,8 @@ export function meshNode(
     type: 'mesh',
     geometry,
     material,
+    // A node is BORN unmarked, and absent is what that means — so a fresh box carries no field.
+    ...(negative ? { negative } : {}),
   }
 }
 
@@ -89,6 +92,8 @@ export type MeshOptions = {
    * eleven rows would read `Box`.
    */
   name?: string
+  /** Marked as a tool for the next boolean — see `SceneNode`. What `separateNode` gives back. */
+  negative?: boolean
 }
 
 export function lightNode(light: LightDescriptor, position: Vector3): SceneNode {
@@ -199,11 +204,13 @@ export function carvedNode(
     material = DEFAULT_MATERIAL,
     parentId = null,
     name = 'Solid',
+    negative = false,
   }: {
     transform?: Transform
     material?: MaterialDescriptor
     parentId?: string | null
     name?: string
+    negative?: boolean
   } = {},
 ): SceneNode {
   return {
@@ -216,6 +223,7 @@ export function carvedNode(
     type: 'carved',
     carved,
     material,
+    ...(negative ? { negative } : {}),
   }
 }
 

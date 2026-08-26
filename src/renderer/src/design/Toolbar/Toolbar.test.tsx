@@ -97,6 +97,25 @@ describe('Toolbar', () => {
     const button = screen.getByRole('button', { name: 'Générer' })
     expect(button).toHaveAttribute('data-tooltip-content', 'Fermer')
   })
+
+  /** A tooltip that has to name what the click will act ON — the shape a boolean will carve. */
+  it('fills the holes of a description with what the caller gave it', () => {
+    const named: ToolbarItem[] = [
+      {
+        id: 'carve',
+        labelKey: 'actions.generate',
+        descriptionKey: 'sceneTools.carveOnHint',
+        descriptionValues: { name: 'Mur' },
+        icon: mdiPencil,
+      },
+    ]
+    render(<Toolbar tools={named} onTool={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Générer' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Creuser les autres formes dans « Mur »',
+    )
+  })
 })
 
 const WITH_MODES: ToolbarItem[] = [

@@ -453,17 +453,25 @@
       "title": "Naviguer",
       "help": "Traverser la scène comme dans un jeu : la souris tient le regard, W A S D déplacent, E et Q montent et descendent. La molette règle la vitesse. Échap rend la souris."
     },
+    "sceneNegate": {
+      "title": "Négatif",
+      "help": "Marque les formes sélectionnées comme outils : elles seront creusées dans les autres, quel que soit le bouton pressé ensuite et quel que soit l’ordre des clics. Une forme marquée s’affiche en rouge translucide. Presser à nouveau retire la marque."
+    },
     "sceneCarve": {
       "title": "Percer",
-      "help": "Creuse la première forme sélectionnée avec les suivantes : un cube posé dans un mur y ouvre une fenêtre. Les formes d’origine sont conservées — « Séparer » les rend."
+      "help": "Creuse les formes marquées « Négatif » — à défaut, les plus petites — dans la plus grosse forme sélectionnée : un cube posé dans un mur y ouvre une fenêtre. L’ordre des clics ne change rien. Les formes d’origine sont conservées — « Séparer » les rend."
     },
     "sceneWeld": {
       "title": "Fusionner",
-      "help": "Réunit les formes sélectionnées en un seul solide. Les formes d’origine sont conservées — « Séparer » les rend."
+      "help": "Réunit les formes sélectionnées en un seul solide. Une forme marquée « Négatif » y est creusée au lieu d’y être ajoutée. Les formes d’origine sont conservées — « Séparer » les rend."
     },
     "sceneIntersect": {
       "title": "Garder le commun",
-      "help": "Ne garde que la partie où les formes sélectionnées se chevauchent, et jette le reste. Les formes d’origine sont conservées — « Séparer » les rend."
+      "help": "Ne garde que la partie où les formes sélectionnées se chevauchent, et jette le reste. Une forme marquée « Négatif » y est creusée au lieu d’être gardée. Les formes d’origine sont conservées — « Séparer » les rend."
+    },
+    "sceneInvertCarve": {
+      "title": "Inverser le pli",
+      "help": "Refait le pli dans l’autre sens : ce qui a été creusé devient la matière, et la matière devient l’outil. Un clic, sans annuler — pour le pli qui est parti à l’envers."
     },
     "sceneSeparate": {
       "title": "Séparer",

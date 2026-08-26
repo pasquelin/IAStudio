@@ -120,6 +120,9 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
   // The same bargain for who is ON the animation band: the selection, then the command beside it.
   putOnAnimationSheet: 'scene.addToSheet',
   takeOffAnimationSheet: 'scene.removeFromSheet',
+  // The toggle half of the tool mark: `node.negate` publishes `setNodesNegative`, which SAYS
+  // which of the two it means, where a button has to read what is already marked.
+  negateNodes: 'scene.negate',
 }
 
 /**

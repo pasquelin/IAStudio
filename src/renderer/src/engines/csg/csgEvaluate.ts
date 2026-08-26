@@ -9,8 +9,8 @@ import {
 } from 'three-bvh-csg'
 import { isCsgGraph, type CsgGraph, type CsgOperation, type CsgPart } from '@shared/domain/csg'
 import { geometryFor } from '../scene/threeFactory'
+import { bakedGeometry } from './bakedGeometry'
 import { csgKeyOf } from './csgKey'
-import { matrixOfTransform } from './csgMatrix'
 import type { CsgMesh } from './csgMessage'
 
 const OPERATIONS: Record<CsgOperation, CSGOperation> = {
@@ -77,13 +77,14 @@ function geometryOfGraph(graph: CsgGraph): BufferGeometry {
  * 🛑 The placement is BAKED into the geometry, never left on the brush's matrix.
  *
  * `three-bvh-csg` reads the position but NOT the scale off a brush: measured, a pillar scaled
- * (1, 6, 1) evaluated one unit tall instead of six, and every gate was green on it.
+ * (1, 6, 1) evaluated one unit tall instead of six, and every gate was green on it. Mirroring is
+ * the other half of the same lesson, and `bakedGeometry` carries it.
  */
 function brushOf(part: CsgPart): Brush {
-  const geometry = isCsgGraph(part.geometry)
-    ? geometryOfGraph(part.geometry)
-    : geometryFor(part.geometry)
-  geometry.applyMatrix4(matrixOfTransform(part.transform))
+  const geometry = bakedGeometry(
+    isCsgGraph(part.geometry) ? geometryOfGraph(part.geometry) : geometryFor(part.geometry),
+    part.transform,
+  )
 
   const brush = new Brush(geometry)
   brush.updateMatrixWorld(true)
