@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { aiRoleId } from '@shared/domain/aiRole'
 import {
@@ -39,11 +39,14 @@ vi.mock('@/services/bridge', () => ({
 
 const ROLE = aiRoleId('image', 'txt2img')
 
-/** Lets every answer already settled reach the hook, react-query's own chain included. */
-const settle = () => act(async () => void (await new Promise(resolve => setTimeout(resolve, 10))))
+/** The catalogue asks the hook makes, which is not the same question as what it draws. */
+const walked = (): (ModelQuery | undefined)[] =>
+  searchModels.mock.calls.map(([query]) => query).filter(query => query?.runsOn !== LOCAL_RUNTIME)
 
 beforeEach(() => {
   searchModels.mockClear()
+  // Module state: without this a case inherits whatever resolver the one before it left behind.
+  releaseCatalogue = () => {}
 })
 
 describe('the models one employment is served by', () => {
@@ -55,34 +58,30 @@ describe('the models one employment is served by', () => {
   it('draws what is on this machine without waiting on the catalogue', async () => {
     const { result } = renderHook(() => useModelsForCapability(ROLE), { wrapper: queryHost() })
 
-    await settle()
-
-    expect(result.current.map(one => one.id)).toEqual(['ssd-1b'])
+    // Waited on the answer rather than on a delay: react-query's chain settles in its own time,
+    // and a fixed ten milliseconds is a race this test lost on a loaded machine.
+    await waitFor(() => expect(result.current.map(one => one.id)).toEqual(['ssd-1b']))
   })
 
   it('hands over to the catalogue once its first page lands, without doubling a row', async () => {
     const { result } = renderHook(() => useModelsForCapability(ROLE), { wrapper: queryHost() })
-    await settle()
+    // The walk has to have STARTED, or `releaseCatalogue` is still the no-op it opens on.
+    await waitFor(() => expect(walked()).not.toHaveLength(0))
 
     releaseCatalogue({
       items: [model('ssd-1b', LOCAL_RUNTIME), model('flux', 'scenario')],
       cursor: null,
     })
-    await settle()
 
-    expect(result.current.map(one => one.id)).toEqual(['ssd-1b', 'flux'])
+    await waitFor(() => expect(result.current.map(one => one.id)).toEqual(['ssd-1b', 'flux']))
   })
 
   // The walk pages a hundred records at a time and stops on MATCHES, so a wide first ask is what
   // multiplied the round trips — the rest of the hundred arrives behind the paint.
   it('asks its first page small rather than the whole picker', async () => {
     renderHook(() => useModelsForCapability(ROLE), { wrapper: queryHost() })
-    await settle()
+    await waitFor(() => expect(walked()).not.toHaveLength(0))
 
-    const walked = searchModels.mock.calls
-      .map(([query]) => query)
-      .filter(query => query?.runsOn !== LOCAL_RUNTIME)
-
-    expect(walked[0]?.limit).toBeLessThan(30)
+    expect(walked()[0]?.limit).toBeLessThan(30)
   })
 })
