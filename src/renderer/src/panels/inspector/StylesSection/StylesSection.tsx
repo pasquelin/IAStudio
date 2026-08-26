@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next'
 import type { MaterialStyle } from '@shared/domain/style'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
-import { applyStyle } from '@/engines/texture/commands'
+import { applyStyle } from '@/engines/material/commands'
 import { sameValues } from '@/helpers/objects'
 import { useStyles } from '@/stores/styles'
-import { useTextures } from '@/stores/textures'
+import { useMaterials } from '@/stores/materials'
 import { StylesSectionRow } from './StylesSectionRow'
 
 export type StylesSectionProps = { documentId: string }
@@ -21,7 +21,7 @@ export type StylesSectionProps = { documentId: string }
 export function StylesSection({ documentId }: StylesSectionProps) {
   const { t } = useTranslation()
   const styles = useStyles(state => state.styles)
-  const material = useTextures(state => state.states[documentId]?.material ?? null)
+  const material = useMaterials(state => state.states[documentId]?.material ?? null)
 
   useEffect(() => {
     void useStyles.getState().load()
@@ -34,12 +34,12 @@ export function StylesSection({ documentId }: StylesSectionProps) {
    */
   const apply = useCallback(
     (style: MaterialStyle): void =>
-      useTextures.getState().runCommand(documentId, applyStyle(style.id, style.values)),
+      useMaterials.getState().runCommand(documentId, applyStyle(style.id, style.values)),
     [documentId],
   )
 
   return (
-    <PropertySection title={t('inspector.styles')} scId="texture.styles">
+    <PropertySection title={t('inspector.styles')} scId="material.styles">
       {styles.length === 0 ? (
         <QuietNote>{t('styles.none')}</QuietNote>
       ) : (

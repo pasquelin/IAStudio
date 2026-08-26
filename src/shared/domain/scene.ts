@@ -114,7 +114,7 @@ export type ModelRef = {
    * NOT `MaterialSettings`: four of that type's fifteen dials — the two ranges, the green flip,
    * the cavity — are read in the texture engine's `onBeforeCompile` and reach no plain
    * `MeshStandardMaterial`. Copying them here would promise a look this renderer cannot draw.
-   * It is also what keeps `texture.ts` out of this module, which `angles.ts` already reaches.
+   * It is also what keeps `material.ts` out of this module, which `angles.ts` already reaches.
    */
   material?: ModelMaterial
 }

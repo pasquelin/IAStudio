@@ -1,5 +1,5 @@
 import { ASSET_TYPES, type AssetType } from './asset'
-import { channelFromProviderType } from './texture'
+import { channelFromProviderType } from './material'
 import type { WorkspaceId } from './workspace'
 
 /**
@@ -137,7 +137,7 @@ const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
   video: 'video',
   audio: 'audio',
   mesh: '3d',
-  texture: 'textures',
+  texture: 'materials',
   skybox: 'skyboxes',
   // Where a motion is USED, which is the only shelf that means anything for one: nothing
   // generates an animation on its own, it is laid on a character.

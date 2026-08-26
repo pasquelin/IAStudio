@@ -1,6 +1,6 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from './skybox'
-import { PBR_CHANNELS, PREVIEW_SHAPES } from './texture'
+import { PBR_CHANNELS, PREVIEW_SHAPES } from './material'
 
 /**
  * The sky and the material, driven by value.
@@ -123,7 +123,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'texture.state',
+    name: 'material.state',
     titleKey: 'assistant.actions.textureState.title',
     descriptionKey: 'assistant.actions.textureState.description',
     commitment: 'none',
@@ -131,7 +131,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
-    name: 'texture.material',
+    name: 'material.material',
     titleKey: 'assistant.actions.textureMaterial.title',
     descriptionKey: 'assistant.actions.textureMaterial.description',
     commitment: 'none',
@@ -166,7 +166,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'texture.preview',
+    name: 'material.preview',
     titleKey: 'assistant.actions.texturePreview.title',
     descriptionKey: 'assistant.actions.texturePreview.description',
     commitment: 'none',
@@ -209,7 +209,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
      * No `assetId` means EMPTY the channel, which is the one thing an optional field can say here
      * that a required one cannot — clearing a map is a real gesture of the panel.
      */
-    name: 'texture.channel',
+    name: 'material.channel',
     titleKey: 'assistant.actions.textureChannel.title',
     descriptionKey: 'assistant.actions.textureChannel.description',
     commitment: 'none',

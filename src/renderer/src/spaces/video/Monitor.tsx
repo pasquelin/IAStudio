@@ -277,7 +277,7 @@ export function Monitor({
       }
     >
       <div ref={hostRef} className="absolute inset-0" />
-      {/* Positioned, like `TextureDocument` does over its own viewport: the canvas host is
+      {/* Positioned, like `MaterialDocument` does over its own viewport: the canvas host is
           absolute, so anything left in normal flow is painted under the opaque backdrop. */}
       <div className="pointer-events-none absolute inset-0">
         {/* Ahead of the host's own placeholder: a clip that is there and shows nothing is the

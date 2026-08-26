@@ -143,7 +143,7 @@ describe('moving a space along the bar', () => {
 
     expect(routeCommand('spaces.moveLeft')).toBe('ran')
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'materials', 'skyboxes'] },
     })
   })
 

@@ -157,8 +157,8 @@ export type CommandId =
   | 'skybox.redo'
   | 'audio.undo'
   | 'audio.redo'
-  | 'texture.undo'
-  | 'texture.redo'
+  | 'material.undo'
+  | 'material.redo'
 
 /**
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
@@ -1224,14 +1224,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   // The other one, and worse: the manual already promised ⌘Z on a style applied to a material
   // (`docs/fr/manuel/12-espace-textures.md`) while nothing at all could reach that history.
   command({
-    id: 'texture.undo',
+    id: 'material.undo',
     scope: 'texture',
     titleKey: 'commands.undo.title',
     helpKey: 'commands.undo.help',
     defaultBinding: 'Meta+KeyZ',
   }),
   command({
-    id: 'texture.redo',
+    id: 'material.redo',
     scope: 'texture',
     titleKey: 'commands.redo.title',
     helpKey: 'commands.redo.help',
@@ -1274,7 +1274,7 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   video: 'sequence',
   skyboxes: 'skybox',
   audio: 'audio',
-  textures: 'texture',
+  materials: 'texture',
 }
 
 /**

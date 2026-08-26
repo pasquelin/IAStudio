@@ -12,7 +12,7 @@ import { openDocument } from '@/app/dockviewApi'
 import { restoreDocument } from '@/app/documentIo'
 import { loadTake } from '@/spaces/audio/loadTake'
 import { becomeAsset, placeAsset } from '@/spaces/image/placeAsset'
-import { placeTextureChannel } from '@/spaces/textures/placeChannel'
+import { placeMaterialChannel } from '@/spaces/materials/placeChannel'
 import { documentOfKind, useDocuments } from '@/stores/documents'
 import { addAnimationTo, addModelTo } from '@/stores/scenes'
 import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
@@ -235,11 +235,11 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
   },
   {
     id: 'textures.channel',
-    workspace: 'textures',
+    workspace: 'materials',
     labelKey: 'intents.textureChannel',
     accepts: PICTURES,
     // The base colour is what a bare drop fills; a named channel comes from the slot itself.
-    ...inDocument('texture', placeTextureChannel, isLocalPicture),
+    ...inDocument('material', placeMaterialChannel, isLocalPicture),
   },
 ]
 

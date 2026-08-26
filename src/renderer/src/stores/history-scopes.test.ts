@@ -21,7 +21,7 @@ const HISTORY_STORES: Readonly<Record<string, WorkspaceId>> = {
   'scenes.ts': '3d',
   'sequences.ts': 'video',
   'skyboxes.ts': 'skyboxes',
-  'textures.ts': 'textures',
+  'materials.ts': 'materials',
 }
 
 /**

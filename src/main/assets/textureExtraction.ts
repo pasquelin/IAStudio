@@ -29,7 +29,7 @@ function extensionOfMime(mimeType: string): string {
  */
 function extractedTextureName(modelName: string, texture: EmbeddedTexture): string {
   const language = windowLanguage()
-  const t = TRANSLATIONS[language].texture
+  const t = TRANSLATIONS[language].material
   const role = texture.channel ? t.channel[texture.channel] : texture.slot
 
   return fillHoles(t.derivedName, { name: modelName, channel: role }, language)

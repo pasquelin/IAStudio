@@ -1,6 +1,6 @@
 import type { Asset } from './asset'
 import type { ModelRef, TextureRef, TextureSlot } from './scene'
-import { slotForChannel, type PbrChannel } from './texture'
+import { slotForChannel, type PbrChannel } from './material'
 
 /** A picture that says WHICH channel it is. A guard, so the caller keeps the narrowing. */
 export function hasChannel(asset: Asset): asset is ChannelTexture {

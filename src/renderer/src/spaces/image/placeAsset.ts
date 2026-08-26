@@ -20,7 +20,7 @@ import type { PictureMeasure } from './pictureSize'
  */
 export function placeAsset(documentId: string, asset: Asset): void {
   if (!isLocalPicture(asset)) {
-    // Said rather than swallowed, exactly as `placeTextureChannel` says it: `AssetDropTarget`
+    // Said rather than swallowed, exactly as `placeMaterialChannel` says it: `AssetDropTarget`
     // cannot refuse this one while it flies — a drag announces its TYPE and not where its file
     // is — so the refusal can only be spoken here, and a silent drop is the worse of the two.
     reportFailure('canvas.place', asset.id, new Error(`${asset.name} has no local file yet`))

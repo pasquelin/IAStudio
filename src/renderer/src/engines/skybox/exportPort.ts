@@ -7,7 +7,7 @@ import { encodeRgbeOffThread, type RgbeEncoder } from './rgbePort'
 import { faceFileNames } from '@shared/domain/skybox'
 import type { ExportedFile, SkyboxExportCommand } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
-import { encodePng, runOffscreenPass, type PictureSize } from '../texture/derive/offscreen'
+import { encodePng, runOffscreenPass, type PictureSize } from '../material/derive/offscreen'
 import type { TextureSource } from '../scene/textureCache'
 import { createProjectionPass } from './projectionShader'
 

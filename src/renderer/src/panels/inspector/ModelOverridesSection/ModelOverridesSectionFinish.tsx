@@ -1,9 +1,9 @@
 import type { ModelRef } from '@shared/domain/scene'
 import { Button } from '@/design/Button'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { modelFinishOf } from '@/spaces/textures/modelFinish'
+import { modelFinishOf } from '@/spaces/materials/modelFinish'
 import { documentForAsset, useDocuments } from '@/stores/documents'
-import { textureOf, useTextures } from '@/stores/textures'
+import { materialOf, useMaterials } from '@/stores/materials'
 
 /**
  * Copies the finish of the material assembled from this model's own pictures onto the model.
@@ -24,8 +24,10 @@ export function ModelOverridesSectionFinish({
   hint: string
   onChange: (material: ModelRef['material']) => void
 }) {
-  const document = useDocuments(state => documentForAsset(state, assetId, 'texture'))
-  const material = useTextures(state => (document ? textureOf(state, document.id).material : null))
+  const document = useDocuments(state => documentForAsset(state, assetId, 'material'))
+  const material = useMaterials(state =>
+    document ? materialOf(state, document.id).material : null,
+  )
 
   if (!material) return null
 

@@ -221,7 +221,7 @@ describe('what a store exports about a shared word', () => {
       'sceneHistoryOf',
       'sequenceHistoryOf',
       'skyboxHistoryOf',
-      'textureHistoryOf',
+      'materialHistoryOf',
       'canvasViewOf',
       'sceneViewOf',
       'skyboxViewOf',

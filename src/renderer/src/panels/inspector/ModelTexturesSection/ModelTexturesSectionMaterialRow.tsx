@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Thumbnail } from '@/design/Thumbnail'
-import { openModelMaterial } from '@/spaces/textures/openModelMaterial'
+import { openModelMaterial } from '@/spaces/materials/openModelMaterial'
 import type { ChannelTexture } from '@shared/domain/ownModelTextures'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
 
@@ -34,7 +34,7 @@ export const ModelTexturesSectionMaterialRow = memo(function ModelTexturesSectio
       title={t('inspector.modelMaterial')}
       // What KIND of thing this is, which is what the second line of a row says everywhere else —
       // and for a material the kind IS the set of channels it holds.
-      subtitle={channels.map(texture => t(`texture.channel.${texture.map}`)).join(', ')}
+      subtitle={channels.map(texture => t(`material.channel.${texture.map}`)).join(', ')}
       label={t('inspector.openMaterial')}
       hint={t('inspector.openMaterialHint')}
       onOpen={() => void openModelMaterial({ id: assetId, name }, channels)}

@@ -4,7 +4,7 @@ import type { Asset } from '@shared/domain/asset'
 import { Button } from '@/design/Button'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { openAsset } from '@/helpers/openAsset'
-import { packedChannels, unpackTextureChannels } from '@/spaces/textures/unpackChannels'
+import { packedChannels, unpackMaterialChannels } from '@/spaces/materials/unpackChannels'
 import { ModelTexturesSectionRow, pictureOf } from './ModelTexturesSectionRow'
 
 /**
@@ -42,7 +42,7 @@ export const ModelTexturesSectionPackedRow = memo(function ModelTexturesSectionP
       {packedChannels(texture).length > 0 && (
         <Button
           {...HINT_LEFT(t('inspector.unpackChannelsHint'))}
-          onClick={() => void unpackTextureChannels(texture)}
+          onClick={() => void unpackMaterialChannels(texture)}
         >
           {t('inspector.unpackChannels')}
         </Button>

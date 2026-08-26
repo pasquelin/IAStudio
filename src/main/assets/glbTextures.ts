@@ -1,6 +1,6 @@
 import { isRecord } from '@shared/guards'
 import { textureSlotsOf } from '@shared/domain/gltf'
-import type { PbrChannel } from '@shared/domain/texture'
+import type { PbrChannel } from '@shared/domain/material'
 
 /** `glTF` in ASCII, little-endian — the four bytes every `.glb` opens with. */
 const GLB_MAGIC = 0x46546c67

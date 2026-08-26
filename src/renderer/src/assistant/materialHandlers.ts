@@ -1,7 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { HEX_COLOR } from '@shared/domain/color'
 import { SKYBOX_VIEWS, type SkyboxContent } from '@shared/domain/skybox'
-import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
 import type { Command } from '@/engines/core/history'
 import {
   resetAdjustments,
@@ -9,13 +9,17 @@ import {
   setEnvironmentSetting,
   setSunSetting,
 } from '@/engines/skybox/commands'
-import { setChannel, setPreview, setTextureMaterial } from '@/engines/texture/commands'
-import { PREVIEW_SHAPES, TILING_PREVIEWS, type TextureState } from '@/engines/texture/textureState'
+import { setChannel, setPreview, setMaterialSetting } from '@/engines/material/commands'
+import {
+  PREVIEW_SHAPES,
+  TILING_PREVIEWS,
+  type MaterialState,
+} from '@/engines/material/materialState'
 import { activeSkyboxId, activeTextureId, useDocuments } from '@/stores/documents'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { skyboxViewOf, useSkyboxViews } from '@/stores/skyboxViews'
 import { useStyles } from '@/stores/styles'
-import { textureOf, useTextures } from '@/stores/textures'
+import { materialOf, useMaterials } from '@/stores/materials'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
 
@@ -35,11 +39,11 @@ function skyOpen(): { documentId: string; state: SkyboxContent } | null {
     : { documentId, state: skyboxOf(useSkyboxes.getState(), documentId) }
 }
 
-function materialOpen(): { documentId: string; state: TextureState } | null {
+function materialOpen(): { documentId: string; state: MaterialState } | null {
   const documentId = activeTextureId(useDocuments.getState())
   return documentId === null
     ? null
-    : { documentId, state: textureOf(useTextures.getState(), documentId) }
+    : { documentId, state: materialOf(useMaterials.getState(), documentId) }
 }
 
 function runSky(commands: readonly Command<SkyboxContent>[]): ActionOutcome {
@@ -51,12 +55,12 @@ function runSky(commands: readonly Command<SkyboxContent>[]): ActionOutcome {
   return { ok: true }
 }
 
-function runMaterial(commands: readonly Command<TextureState>[]): ActionOutcome {
+function runMaterial(commands: readonly Command<MaterialState>[]): ActionOutcome {
   const open = materialOpen()
   if (!open) return refused('wrongSurface')
   if (commands.length === 0) return refused('badInput')
 
-  for (const command of commands) useTextures.getState().runCommand(open.documentId, command)
+  for (const command of commands) useMaterials.getState().runCommand(open.documentId, command)
   return { ok: true }
 }
 
@@ -146,18 +150,18 @@ function readSky(): ActionOutcome {
   }
 }
 
-const MATERIAL_DIALS: Dials<TextureState> = {
-  roughness: value => setTextureMaterial('roughness', value),
-  metalness: value => setTextureMaterial('metalness', value),
-  normalScale: value => setTextureMaterial('normalScale', value),
-  heightScale: value => setTextureMaterial('heightScale', value),
-  aoIntensity: value => setTextureMaterial('aoIntensity', value),
-  edgeIntensity: value => setTextureMaterial('edgeIntensity', value),
-  emissiveIntensity: value => setTextureMaterial('emissiveIntensity', value),
-  rotation: value => setTextureMaterial('rotation', value),
+const MATERIAL_DIALS: Dials<MaterialState> = {
+  roughness: value => setMaterialSetting('roughness', value),
+  metalness: value => setMaterialSetting('metalness', value),
+  normalScale: value => setMaterialSetting('normalScale', value),
+  heightScale: value => setMaterialSetting('heightScale', value),
+  aoIntensity: value => setMaterialSetting('aoIntensity', value),
+  edgeIntensity: value => setMaterialSetting('edgeIntensity', value),
+  emissiveIntensity: value => setMaterialSetting('emissiveIntensity', value),
+  rotation: value => setMaterialSetting('rotation', value),
 }
 
-const PREVIEW_DIALS: Dials<TextureState> = {
+const PREVIEW_DIALS: Dials<MaterialState> = {
   envIntensity: value => setPreview('envIntensity', value),
   envRotation: value => setPreview('envRotation', value),
 }
@@ -169,15 +173,15 @@ const VECTOR_KEYS: readonly VectorKey[] = ['tiling', 'offset']
 /** `tiling` and `offset` are one vector each, so a call naming one axis has to carry the other. */
 function vectorCommands(
   input: Record<string, unknown>,
-  state: TextureState,
-): Command<TextureState>[] {
+  state: MaterialState,
+): Command<MaterialState>[] {
   return VECTOR_KEYS.flatMap(key => {
     const x = numberOf(input, `${key}X`)
     const y = numberOf(input, `${key}Y`)
     return x === null && y === null
       ? []
       : [
-          setTextureMaterial(key, {
+          setMaterialSetting(key, {
             x: x ?? state.material[key].x,
             y: y ?? state.material[key].y,
           }),
@@ -195,8 +199,8 @@ const RANGES: readonly (readonly ['roughnessRange' | 'metalnessRange', string])[
 // above its ceiling is a remap the shader reads and no gesture on screen can undo.
 function rangeCommands(
   input: Record<string, unknown>,
-  state: TextureState,
-): Command<TextureState>[] {
+  state: MaterialState,
+): Command<MaterialState>[] {
   return RANGES.flatMap(([key, stem]) => {
     const min = numberOf(input, `${stem}Min`)
     const max = numberOf(input, `${stem}Max`)
@@ -204,7 +208,7 @@ function rangeCommands(
 
     const held = state.material[key]
     return [
-      setTextureMaterial(key, {
+      setMaterialSetting(key, {
         min: Math.min(min ?? held.min, max ?? held.max),
         max: Math.max(max ?? held.max, min ?? held.min),
       }),
@@ -223,10 +227,10 @@ function material(input: Record<string, unknown>): ActionOutcome {
     ...dialsOf(input, MATERIAL_DIALS),
     ...vectorCommands(input, open.state),
     ...rangeCommands(input, open.state),
-    ...(colour === null ? [] : [setTextureMaterial('color', colour)]),
-    ...(emissive === null ? [] : [setTextureMaterial('emissive', emissive)]),
-    ...switchesOf<TextureState>(input, {
-      invertNormalGreen: value => setTextureMaterial('invertNormalGreen', value),
+    ...(colour === null ? [] : [setMaterialSetting('color', colour)]),
+    ...(emissive === null ? [] : [setMaterialSetting('emissive', emissive)]),
+    ...switchesOf<MaterialState>(input, {
+      invertNormalGreen: value => setMaterialSetting('invertNormalGreen', value),
     }),
   ])
 }
@@ -239,7 +243,7 @@ function preview(input: Record<string, unknown>): ActionOutcome {
 
   return runMaterial([
     ...dialsOf(input, PREVIEW_DIALS),
-    ...switchesOf<TextureState>(input, {
+    ...switchesOf<MaterialState>(input, {
       showBackground: value => setPreview('showBackground', value),
       autoSpin: value => setPreview('autoSpin', value),
       showSeam: value => setPreview('showSeam', value),
@@ -286,7 +290,7 @@ function readMaterial(): ActionOutcome {
 /**
  * Fills one channel from the library, or empties it when no asset is named.
  *
- * Through `placeTextureChannel`, which the drop and the shelf menu already go through: it is the
+ * Through `placeMaterialChannel`, which the drop and the shelf menu already go through: it is the
  * one place that refuses an asset with no local file, and a second way in would be a second answer
  * to that question.
  */
@@ -303,9 +307,9 @@ async function channel(input: Record<string, unknown>): Promise<ActionOutcome> {
   // Loaded on the call rather than imported at the top: this table is evaluated by the first
   // screen, and `eager-graph.test.ts` holds that chunk to reaching no third module out of an
   // editor's folder.
-  const { placeTextureChannel } = await import('@/spaces/textures/placeChannel')
+  const { placeMaterialChannel } = await import('@/spaces/materials/placeChannel')
   return withAsset(assetId, asset =>
-    placeTextureChannel(open.documentId, asset, which) ? { ok: true } : refused('badInput'),
+    placeMaterialChannel(open.documentId, asset, which) ? { ok: true } : refused('badInput'),
   )
 }
 
@@ -331,10 +335,10 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
     })
   },
 
-  'texture.state': readMaterial,
-  'texture.material': material,
-  'texture.preview': preview,
-  'texture.channel': channel,
+  'material.state': readMaterial,
+  'material.material': material,
+  'material.preview': preview,
+  'material.channel': channel,
 
   'styles.list': async () => {
     await useStyles.getState().load()

@@ -2,12 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MaterialStyle } from '@shared/domain/style'
-import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
-import { newTexture } from '@/engines/texture/textureState'
+import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/material'
+import { newMaterial } from '@/engines/material/materialState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useStyles } from '@/stores/styles'
-import { installTexture } from '@/stores/texture-fixtures'
-import { useTextures } from '@/stores/textures'
+import { installTexture } from '@/stores/material-fixtures'
+import { useMaterials } from '@/stores/materials'
 import { StylesSection } from './StylesSection'
 
 const METAL: MaterialStyle = {
@@ -47,7 +47,7 @@ describe('the styles of a material', () => {
    */
   describe('the style in force', () => {
     const openTexture = (material = DEFAULT_TEXTURE_MATERIAL): void =>
-      installTexture('doc-1', { ...newTexture(), material })
+      installTexture('doc-1', { ...newMaterial(), material })
 
     it('paints the style whose values the material carries', () => {
       openTexture(METAL.values)
@@ -163,7 +163,7 @@ describe('the styles of a material', () => {
    */
   it('writes every value of the style onto the document it was given', async () => {
     const runCommand = vi.fn()
-    useTextures.setState({ runCommand })
+    useMaterials.setState({ runCommand })
     show('tex-1')
 
     await userEvent.click(screen.getByRole('button', { name: 'Style 1' }))

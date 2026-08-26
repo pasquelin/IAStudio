@@ -233,11 +233,11 @@ describe('createDocumentFiles', () => {
    * that used to address it, and reads as never saved rather than as broken.
    */
   it('refuses a file whose kind disagrees with its extension', async () => {
-    await documents.write('doc-1', 'texture', { title: 'Untitled', content: '{}' })
+    await documents.write('doc-1', 'material', { title: 'Untitled', content: '{}' })
     const source = await readFile(join(root, 'documents', 'Untitled.mtlx'), 'utf8')
     await writeFile(join(root, 'documents', 'doc-1.gltf'), source, 'utf8')
 
-    await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/texture/)
+    await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/material/)
   })
 
   /**
@@ -250,7 +250,7 @@ describe('createDocumentFiles', () => {
     const head = (kind: string): string =>
       `${JSON.stringify({ version: DOCUMENT_VERSION, kind, title: kind, updatedAt: NOW })}\n{}`
     await writeFile(join(root, 'documents', 'Dusk.gltf'), head('skybox'), 'utf8')
-    await writeFile(join(root, 'documents', 'Rock.gltf'), head('texture'), 'utf8')
+    await writeFile(join(root, 'documents', 'Rock.gltf'), head('material'), 'utf8')
 
     expect((await documents.list()).map(one => one.kind)).toEqual(['skybox'])
   })
@@ -333,20 +333,20 @@ describe('createDocumentFiles', () => {
       values: [{ input: 'specular_roughness', type: 'float', value: 0.5 }],
       studio: { material: { edgeIntensity: 0.4 } },
     })
-    await documents.write('doc-mat', 'texture', { title: 'Laiton', content: material })
+    await documents.write('doc-mat', 'material', { title: 'Laiton', content: material })
 
     const listed = await documents.list()
-    expect(listed).toMatchObject([{ id: 'doc-mat', kind: 'texture', title: 'Laiton' }])
+    expect(listed).toMatchObject([{ id: 'doc-mat', kind: 'material', title: 'Laiton' }])
 
     // Real MaterialX, not a spelling of the studio's own wearing the extension.
     const onDisk = await readFile(join(root, 'documents', 'Laiton.mtlx'), 'utf8')
     expect(onDisk.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
     expect(onDisk).toContain('<standard_surface name="SR_iastudio" type="surfaceshader">')
 
-    await documents.rename('doc-mat', 'texture', 'Bronze')
+    await documents.rename('doc-mat', 'material', 'Bronze')
     expect(await readdir(join(root, 'documents'))).toEqual(['Bronze.mtlx'])
     // The dial no MaterialX input can carry survived the rewrite the rename does.
-    expect((await documents.read('doc-mat', 'texture'))?.content).toContain('edgeIntensity')
+    expect((await documents.read('doc-mat', 'material'))?.content).toContain('edgeIntensity')
     expect(await documents.list()).toMatchObject([{ id: 'doc-mat', title: 'Bronze' }])
   })
 
@@ -492,10 +492,10 @@ describe('createDocumentFiles', () => {
    */
   it('gives the extension back to such a document when it is renamed', async () => {
     await mkdir(join(root, 'documents'), { recursive: true })
-    const envelope = { version: 2, kind: 'texture', title: 'Perdu', updatedAt: NOW }
+    const envelope = { version: 2, kind: 'material', title: 'Perdu', updatedAt: NOW }
     await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
 
-    await documents.rename('demo', 'texture', 'Retrouvé')
+    await documents.rename('demo', 'material', 'Retrouvé')
 
     expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.mtlx'])
     expect((await documents.list()).map(one => one.title)).toEqual(['Retrouvé'])

@@ -28,7 +28,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   setDisplay: () => {},
   exportScene: () => {},
   captureScene: () => {},
-  exportTexture: () => {},
+  exportMaterial: () => {},
   exportSkybox: () => {},
   ...overrides,
 })
@@ -261,7 +261,7 @@ describe('every command the studio declares', () => {
     }
 
     // Every workspace posts its own rows, so the union is what the studio actually offers.
-    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'textures', 'skyboxes']
+    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'materials', 'skyboxes']
     for (const workspace of spaces) collect(menuTemplate(options({ workspace })))
 
     const stranded = COMMAND_REGISTRY.filter(
@@ -684,7 +684,7 @@ describe('the export menu', () => {
   })
 
   it('offers the five targets where a texture is what is being edited', () => {
-    const exports = exportsIn(menuTemplate(options({ workspace: 'textures' })))
+    const exports = exportsIn(menuTemplate(options({ workspace: 'materials' })))
 
     expect(submenuOf(exports, 'Matière').map(item => item.label)).toEqual([
       'glTF / GLB (.glb)',
@@ -696,15 +696,15 @@ describe('the export menu', () => {
   })
 
   it('asks for the engine the row names', () => {
-    const exportTexture = vi.fn()
+    const exportMaterial = vi.fn()
     const exports = exportsIn(
-      menuTemplate(options({ workspace: 'textures', actions: actions({ exportTexture }) })),
+      menuTemplate(options({ workspace: 'materials', actions: actions({ exportMaterial }) })),
     )
     const roblox = submenuOf(exports, 'Matière')[3]
 
     roblox?.click?.(...([] as never[] as [never, never, never]))
 
-    expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
+    expect(exportMaterial).toHaveBeenCalledWith({ target: 'roblox' })
   })
 
   it('shows each workspace only the export that belongs to it', () => {
@@ -713,8 +713,8 @@ describe('the export menu', () => {
 
     expect(labels('3d')).toContain('Scène')
     expect(labels('3d')).not.toContain('Matière')
-    expect(labels('textures')).toContain('Matière')
-    expect(labels('textures')).not.toContain('Scène')
+    expect(labels('materials')).toContain('Matière')
+    expect(labels('materials')).not.toContain('Scène')
     expect(labels('skyboxes')).toContain('Ciel')
     expect(labels('skyboxes')).not.toContain('Matière')
     // Two rows rather than a submenu of formats, as the montage has: what an image writes is

@@ -317,7 +317,7 @@ function mtlxEnvelope(envelope: string): DocumentEnvelope {
   const { id, kind } = mtlxStamp(envelope)
   return {
     version: DOCUMENT_VERSION,
-    kind: isDocumentKind(kind) ? kind : 'texture',
+    kind: isDocumentKind(kind) ? kind : 'material',
     title: '',
     updatedAt: '',
     ...(id ? { id } : {}),
@@ -374,7 +374,7 @@ const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
   [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
   [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
-  [EXTENSIONS_BY_KIND.texture]: OPEN_MATERIALX,
+  [EXTENSIONS_BY_KIND.material]: OPEN_MATERIALX,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

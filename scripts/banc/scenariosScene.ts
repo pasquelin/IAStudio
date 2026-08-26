@@ -473,31 +473,32 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     name: '12.2 turns its first material red',
     said: ['Change la couleur de base de son premier matériau en rouge.'],
     setup: blockScene,
-    passed: run => read.materialOf(read.nodeNamed(run, 'Bloc'))?.color !== null,
+    passed: run => read.nodeMaterialOf(read.nodeNamed(run, 'Bloc'))?.color !== null,
   },
   {
     name: '12.3 puts its roughness at 0.25',
     said: ['Mets sa rugosité à 0,25.'],
     setup: blockScene,
-    passed: run => read.near(read.materialOf(read.nodeNamed(run, 'Bloc'))?.roughness ?? 1, 0.25),
+    passed: run =>
+      read.near(read.nodeMaterialOf(read.nodeNamed(run, 'Bloc'))?.roughness ?? 1, 0.25),
   },
   {
     name: '12.4 puts its metalness at 0.8',
     said: ['Mets son métal à 0,8.'],
     setup: blockScene,
-    passed: run => read.near(read.materialOf(read.nodeNamed(run, 'Bloc'))?.metalness ?? 0, 0.8),
+    passed: run => read.near(read.nodeMaterialOf(read.nodeNamed(run, 'Bloc'))?.metalness ?? 0, 0.8),
   },
   {
     name: '12.5 assigns a project texture to its base colour',
     said: ['Assigne une texture de mon projet à sa couleur de base.'],
     setup: blockScene,
-    passed: run => read.materialOf(read.nodeNamed(run, 'Bloc'))?.map != null,
+    passed: run => read.nodeMaterialOf(read.nodeNamed(run, 'Bloc'))?.map != null,
   },
   {
     name: '12.6 adds a normal map if a compatible texture exists',
     said: ['Ajoute une normal map si une texture compatible existe dans le projet.'],
     setup: blockScene,
-    passed: run => read.materialOf(read.nodeNamed(run, 'Bloc'))?.normalMap != null,
+    passed: run => read.nodeMaterialOf(read.nodeNamed(run, 'Bloc'))?.normalMap != null,
   },
   {
     name: '12.7 puts the material back as it was',

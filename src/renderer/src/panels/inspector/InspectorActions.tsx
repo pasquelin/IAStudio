@@ -5,7 +5,7 @@ import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { activeTextureId, useDocuments } from '@/stores/documents'
 import { anySectionOpen, useSectionFolds } from '@/stores/sectionFolds'
 import { useStyles } from '@/stores/styles'
-import { textureOf, useTextures } from '@/stores/textures'
+import { materialOf, useMaterials } from '@/stores/materials'
 
 /**
  * What the inspector's title row carries.
@@ -48,7 +48,7 @@ export function InspectorActions() {
           // here, and a drag emits one value per frame: a subscription would redraw this button on
           // every one of them — the cost `useDocumentEdit` exists to keep off the inspector.
           onClick={() => {
-            const { material } = textureOf(useTextures.getState(), documentId)
+            const { material } = materialOf(useMaterials.getState(), documentId)
             void useStyles.getState().save(material, t('styles.newName'))
           }}
         />

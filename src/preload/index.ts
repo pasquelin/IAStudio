@@ -226,8 +226,8 @@ const bridge: StudioBridge = {
     finish: id => ipcRenderer.invoke(CHANNELS.renderFinish, id),
     cancel: id => ipcRenderer.invoke(CHANNELS.renderCancel, id),
   },
-  texture: {
-    export: request => ipcRenderer.invoke(CHANNELS.textureExport, request),
+  material: {
+    export: request => ipcRenderer.invoke(CHANNELS.materialExport, request),
   },
   skybox: {
     export: request => ipcRenderer.invoke(CHANNELS.skyboxExport, request),
@@ -316,7 +316,7 @@ const bridge: StudioBridge = {
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
     onSceneCapture: callback => subscribe<SceneCaptureCommand>(EVENTS.sceneCapture, callback),
-    onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
+    onMaterialExport: callback => subscribe<TextureExportCommand>(EVENTS.materialExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
   },
   diagnostics: {

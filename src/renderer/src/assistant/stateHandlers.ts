@@ -7,7 +7,7 @@ import type {
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
-import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
+import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import type { FolderExportRequest } from '@shared/ipc'
 import { closeDocument, documentIsDirty, dropDocument, saveDocument } from '@/app/documentIo'
 import { openDocument } from '@/app/dockviewApi'
@@ -298,11 +298,11 @@ async function exportOf(
         size: numberOf(input, 'size') ?? DEFAULT_FACE,
       })
     }
-    case 'texture': {
-      const { textureExportFiles } = await import('@/spaces/textures/textureExportFiles')
-      return textureExportFiles(
+    case 'material': {
+      const { materialExportFiles } = await import('@/spaces/materials/materialExportFiles')
+      return materialExportFiles(
         document.id,
-        oneOf(input, 'target', TEXTURE_EXPORT_TARGETS) ?? 'raw',
+        oneOf(input, 'target', MATERIAL_EXPORT_TARGETS) ?? 'raw',
       )
     }
     case 'sequence':

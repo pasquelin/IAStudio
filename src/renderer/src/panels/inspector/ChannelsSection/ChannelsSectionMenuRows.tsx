@@ -30,9 +30,9 @@ export function ChannelsSectionMenuRows({
   return (
     <>
       <MenuRow
-        label={t(inspected ? 'texture.showMaterial' : 'texture.inspectChannel', { channel })}
+        label={t(inspected ? 'material.showMaterial' : 'material.inspectChannel', { channel })}
         icon={mdiImageFilterBlackWhite}
-        tip={HINT_RIGHT(t('texture.inspectChannelHint'))}
+        tip={HINT_RIGHT(t('material.inspectChannelHint'))}
         onSelect={() => {
           onInspect()
           onClose()
@@ -42,11 +42,11 @@ export function ChannelsSectionMenuRows({
       {derivation && (
         <MenuRow
           label={t(DERIVE_LABELS[derivation.state], {
-            source: t(`texture.channel.${derivation.source}`),
+            source: t(`material.channel.${derivation.source}`),
           })}
           icon={mdiCogOutline}
           disabled={derivation.state !== 'ready'}
-          tip={HINT_RIGHT(t('texture.deriveHint'))}
+          tip={HINT_RIGHT(t('material.deriveHint'))}
           onSelect={() => {
             derivation.run()
             onClose()

@@ -23,7 +23,7 @@ import { connectImageGeneration } from '@/stores/imageGeneration'
 import { connectAudioGeneration } from '@/stores/audioGeneration'
 import { connectModelGeneration } from '@/stores/modelGeneration'
 import { connectSequenceGeneration } from '@/stores/sequenceGeneration'
-import { connectTextureGeneration } from '@/stores/textureGeneration'
+import { connectMaterialGeneration } from '@/stores/materialGeneration'
 import { connectPreparation } from '@/stores/preparation'
 import { connectSubSelectionRelease } from '@/stores/subSelection'
 import { connectSkyboxGeneration } from '@/stores/skyboxGeneration'
@@ -89,7 +89,7 @@ export function Application() {
   useEffect(() => connectModelGeneration(), [])
   useEffect(() => connectSequenceGeneration(), [])
   useEffect(() => connectAudioGeneration(), [])
-  useEffect(() => connectTextureGeneration(), [])
+  useEffect(() => connectMaterialGeneration(), [])
 
   // Same reason, the other way round: what an edit asked the generator to open on belongs to the
   // space that asked, and has to close when the user leaves it.

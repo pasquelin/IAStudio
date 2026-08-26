@@ -94,7 +94,8 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
       await studio.run('node.add', { kind: 'box', name: 'Bloc' })
       await studio.run('node.select', { nodeIds: [named(studio, 'Bloc')] })
     },
-    passed: run => read.materialOf(read.nodeNamed(run, 'Bloc'))?.map != null || read.askedBack(run),
+    passed: run =>
+      read.nodeMaterialOf(read.nodeNamed(run, 'Bloc'))?.map != null || read.askedBack(run),
   },
   {
     name: '24.10 makes a variant of that',

@@ -33,7 +33,7 @@ describe('kindForWorkspace', () => {
   })
 
   it('gives the textures workspace a material to edit', () => {
-    expect(kindForWorkspace('textures')).toBe('texture')
+    expect(kindForWorkspace('materials')).toBe('material')
   })
 
   // Every workspace opens a document of its own now. The `null` branch stays for the next one
@@ -117,7 +117,7 @@ describe('isDocumentKind', () => {
   })
 
   it('rejects what a hand-edited file could hold', () => {
-    expect(isDocumentKind('material')).toBe(false)
+    expect(isDocumentKind('sculpture')).toBe(false)
     expect(isDocumentKind('')).toBe(false)
     expect(isDocumentKind(null)).toBe(false)
     expect(isDocumentKind(undefined)).toBe(false)

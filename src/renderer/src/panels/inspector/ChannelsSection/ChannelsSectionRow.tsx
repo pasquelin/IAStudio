@@ -1,10 +1,10 @@
 import { mdiCogOutline, mdiFileImageOutline, mdiTextureBox } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
-import type { PbrChannel } from '@shared/domain/texture'
+import type { PbrChannel } from '@shared/domain/material'
 import { rowSkin } from '@/design/styles'
 import { TileMark } from '@/design/TileMark'
-import type { ChannelMap, ChannelOrigin } from '@/engines/texture/textureState'
+import type { ChannelMap, ChannelOrigin } from '@/engines/material/materialState'
 import { cn } from '@/helpers/cn'
 import type { EditPixels } from '@/helpers/openAsset'
 import { PictureField } from '../PictureField/PictureField'
@@ -31,9 +31,9 @@ export type ChannelsSectionRowProps = {
  * an *imported* one is the user's own file. Someone about to repaint a height map needs to know.
  */
 const ORIGINS: Record<ChannelOrigin, { icon: string; key: string }> = {
-  generated: { icon: mdiTextureBox, key: 'texture.originGenerated' },
-  derived: { icon: mdiCogOutline, key: 'texture.originDerived' },
-  imported: { icon: mdiFileImageOutline, key: 'texture.originImported' },
+  generated: { icon: mdiTextureBox, key: 'material.originGenerated' },
+  derived: { icon: mdiCogOutline, key: 'material.originDerived' },
+  imported: { icon: mdiFileImageOutline, key: 'material.originImported' },
 }
 
 /**
@@ -53,7 +53,7 @@ export function ChannelsSectionRow({
   pixels,
 }: ChannelsSectionRowProps) {
   const { t } = useTranslation()
-  const name = t(`texture.channel.${channel}`)
+  const name = t(`material.channel.${channel}`)
   const origin = map ? ORIGINS[map.origin] : null
 
   return (
@@ -69,7 +69,7 @@ export function ChannelsSectionRow({
         value={map?.assetId ?? null}
         onChange={onChange}
         onDropAsset={onDropAsset}
-        scId={`texture.channel.${channel}`}
+        scId={`material.channel.${channel}`}
         // Named even though the press names the button: the MENU reads these words out loud, and
         // painting a channel was reachable from nowhere else once its own menu went away.
         open={

@@ -68,7 +68,7 @@
     "openTextureHint": "Double-click to open this image in the space that edits it",
     "modelMaterial": "Model material",
     "openMaterial": "Open the model material",
-    "openMaterialHint": "Double-click to open this material in the Textures space",
+    "openMaterialHint": "Double-click to open this material in the Materials space",
     "unpackChannels": "Unpack the channels",
     "unpackChannelsHint": "Writes the roughness and the metalness of this image as two channels of their own, which a model can then follow",
     "unclaimedChannel": "This image does not fit a single channel",

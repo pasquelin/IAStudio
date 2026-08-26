@@ -39,11 +39,11 @@ import { useSettings } from '@/stores/settings'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelClips } from '@/stores/modelClips'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
-import { installTexture } from '@/stores/texture-fixtures'
+import { installTexture } from '@/stores/material-fixtures'
 import { inSection } from './inspector-fixtures'
-import { useTextureViews } from '@/stores/textureViews'
-import { textureOf, useTextures } from '@/stores/textures'
-import { setChannel } from '@/engines/texture/commands'
+import { useMaterialViews } from '@/stores/materialViews'
+import { materialOf, useMaterials } from '@/stores/materials'
+import { setChannel } from '@/engines/material/commands'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -895,7 +895,7 @@ describe('inspector panel', () => {
         '4',
       )
 
-      const texture = textureOf(useTextures.getState(), 'doc-1')
+      const texture = materialOf(useMaterials.getState(), 'doc-1')
       expect(texture.preview.tilingPreview).toBe(4)
       expect(texture.material.tiling).toEqual({ x: 1, y: 1 })
     })
@@ -907,7 +907,7 @@ describe('inspector panel', () => {
 
       await userEvent.click(screen.getByLabelText('Amener les coutures au centre'))
 
-      const texture = textureOf(useTextures.getState(), 'doc-1')
+      const texture = materialOf(useMaterials.getState(), 'doc-1')
       expect(texture.preview.showSeam).toBe(true)
       expect(texture.material.offset).toEqual({ x: 0, y: 0 })
     })
@@ -923,7 +923,7 @@ describe('inspector panel', () => {
 
     it('offers the measurement once a base colour is there', async () => {
       installTexture('doc-1')
-      useTextures
+      useMaterials
         .getState()
         .runCommand(
           'doc-1',
@@ -938,13 +938,13 @@ describe('inspector panel', () => {
     /** The base colour a reading was taken off, so the words on screen can be checked against it. */
     const measured = (assetId: string, ratio: number) => {
       installTexture('doc-1')
-      useTextures
+      useMaterials
         .getState()
         .runCommand(
           'doc-1',
           setChannel('baseColor', { assetId, origin: 'imported', width: 8, height: 8 }),
         )
-      useTextureViews.setState({ seams: { 'doc-1': { assetId: 'img-1', ratio } } })
+      useMaterialViews.setState({ seams: { 'doc-1': { assetId: 'img-1', ratio } } })
     }
 
     it('reads a measurement back in words rather than as a ratio', async () => {

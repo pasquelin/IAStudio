@@ -1,7 +1,7 @@
 import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import { nextStyleName, type MaterialStyle } from '@shared/domain/style'
-import type { MaterialSettings } from '@shared/domain/texture'
+import type { MaterialSettings } from '@shared/domain/material'
 import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
 

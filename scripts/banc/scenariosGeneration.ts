@@ -193,7 +193,7 @@ export const GENERATION_SCENARIOS: readonly Scenario[] = [
     },
     // The selected one wears it and the OTHER one does not — that is « sans modifier les autres ».
     passed: run =>
-      read.materialOf(read.nodeNamed(run, 'Coffre'))?.map != null &&
-      read.materialOf(read.nodeNamed(run, 'Autre'))?.map == null,
+      read.nodeMaterialOf(read.nodeNamed(run, 'Coffre'))?.map != null &&
+      read.nodeMaterialOf(read.nodeNamed(run, 'Autre'))?.map == null,
   },
 ]

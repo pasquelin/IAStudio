@@ -59,7 +59,7 @@ describe('TitleBar', () => {
     drag('Image', 'Audio')
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', '3d', 'audio', 'image', 'textures', 'skyboxes'] },
+      workspaces: { order: ['video', '3d', 'audio', 'image', 'materials', 'skyboxes'] },
     })
   })
 
@@ -142,7 +142,7 @@ describe('TitleBar', () => {
     })
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'materials', 'skyboxes'] },
     })
   })
 
@@ -175,7 +175,7 @@ describe('TitleBar', () => {
     fireEvent.keyDown(pill('Image'), { key: 'l', code: 'KeyL', altKey: true })
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'materials', 'skyboxes'] },
     })
   })
 
@@ -238,7 +238,7 @@ describe('TitleBar', () => {
 
     await vi.waitFor(() =>
       expect(write).toHaveBeenCalledWith({
-        workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
+        workspaces: { order: ['video', 'image', '3d', 'audio', 'materials', 'skyboxes'] },
       }),
     )
   })

@@ -51,13 +51,13 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'project.forget',
   // A drop is a gesture: dropping the same cloud picture twice must say so twice, which is the
   // very defect `feat/documents-erreurs` fixed for the others.
-  'texture.channel',
+  'material.channel',
   // And so is pressing Measure: the second press happens precisely because the first said
   // nothing, and a silent button is how a measurement that keeps failing looks like one that ran.
-  'texture.seam',
+  'material.seam',
   // Picking a row of the export menu is one as well, and it is the same row twice that says the
   // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
-  'texture.export',
+  'material.export',
   'skybox.export',
   // The two of this branch, for that same reason and one more: both spend minutes before they can
   // fail, so a second press silenced is a wait nobody is told the outcome of.

@@ -1,7 +1,7 @@
 /**
  * Which way up a decoded picture arrives.
  *
- * `texture.flipY` cannot answer for it: `WebGLTextures` skips `UNPACK_FLIP_Y_WEBGL` entirely when
+ * `material.flipY` cannot answer for it: `WebGLTextures` skips `UNPACK_FLIP_Y_WEBGL` entirely when
  * the source is an `ImageBitmap`, so the `true` a `Texture` carries by default is granted by
  * nobody. The orientation has to be asked for at the DECODE, and that is what this reads —
  * jsdom has no `createImageBitmap`, so the call itself is the only witness available.

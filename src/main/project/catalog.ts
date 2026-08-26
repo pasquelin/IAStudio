@@ -24,7 +24,7 @@ import {
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
-import { isPbrChannel } from '@shared/domain/texture'
+import { isPbrChannel } from '@shared/domain/material'
 import { LOG_SCOPES } from '@shared/ipc'
 import { byCodeUnit } from '@shared/text'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'

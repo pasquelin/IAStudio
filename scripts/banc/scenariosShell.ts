@@ -27,7 +27,7 @@ const shellOf = (run: Run) => run.studio.shell
 const styled =
   (name = 'Marine') =>
   async (studio: Studio): Promise<void> => {
-    await opened('textures', 'Matière Test')(studio)
+    await opened('materials', 'Matière Test')(studio)
     await studio.run('style.save', { name })
   }
 

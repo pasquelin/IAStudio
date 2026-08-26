@@ -5,7 +5,7 @@ const bytesOf = (value: string): number => new TextEncoder().encode(value).lengt
 
 /**
  * What `safeFileName` already did when it belonged to the texture export is covered in
- * `textureExport.test.ts`, where those cases stayed. Here is what it learnt when documents came
+ * `materialExport.test.ts`, where those cases stayed. Here is what it learnt when documents came
  * to be named by hand.
  */
 describe('the name a file takes', () => {

@@ -1,6 +1,6 @@
 import { action, type AssistantAction } from './assistantAction'
 import { EXPORT_FORMATS } from './scene'
-import { TEXTURE_EXPORT_TARGETS } from './textureExport'
+import { MATERIAL_EXPORT_TARGETS } from './materialExport'
 
 /**
  * What the studio is, and which document is in front.
@@ -149,7 +149,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.exportTarget',
         required: false,
-        options: TEXTURE_EXPORT_TARGETS,
+        options: MATERIAL_EXPORT_TARGETS,
       },
       {
         key: 'size',

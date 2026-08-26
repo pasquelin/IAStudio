@@ -17,13 +17,13 @@ import {
   type MaterialTrait,
 } from './formatCapability'
 import type { ExportFormat as SceneExportFormat } from './scene'
-import type { PbrChannel } from './texture'
+import type { PbrChannel } from './material'
 import {
   bakesRemap,
   channelsWrittenBy,
   writesOneFile,
-  type TextureExportTarget,
-} from './textureExport'
+  type MaterialExportTarget,
+} from './materialExport'
 
 /** A (section, target) pair. Named for the section first, so the list reads by surface. */
 export type ExportTargetId =
@@ -173,14 +173,14 @@ const MATERIAL_SETTINGS: readonly CapabilityTrait[] = [
 
 /**
  * Derived from the recipes rather than listed beside them: what a texture target carries is
- * exactly the channels it reads, and a sixth engine added to `textureExport` gets its losses for
+ * exactly the channels it reads, and a sixth engine added to `materialExport` gets its losses for
  * free instead of getting them wrong.
  *
  * Three traits are carried by being BAKED rather than written, and they are classed the same way
  * for it: `valueRanges` when the target bakes the remap, `normalGreenFlip` wherever a normal goes
  * out at all — `resolveComponent` reconciles the convention in the pixels, remap or not.
  */
-function materialCapability(target: TextureExportTarget): FormatCapability {
+function materialCapability(target: MaterialExportTarget): FormatCapability {
   const written = channelsWrittenBy(target)
   const interchange: CapabilityTrait[] = written.map(channel => TRAIT_OF_CHANNEL[channel])
 
@@ -458,7 +458,7 @@ export const SCENE_TARGET_OF_FORMAT: Record<SceneExportFormat, ExportTargetId> =
   stl: 'scene.stl',
 }
 
-export const MATERIAL_TARGET_OF: Record<TextureExportTarget, ExportTargetId> = {
+export const MATERIAL_TARGET_OF: Record<MaterialExportTarget, ExportTargetId> = {
   gltf: 'material.gltf',
   unity: 'material.unity',
   unreal: 'material.unreal',

@@ -148,7 +148,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
   'src/renderer/src/engines/scene/threeFactory.test.ts',
   'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',
-  'src/renderer/src/engines/texture/TextureRenderer.test.ts',
+  'src/renderer/src/engines/material/MaterialRenderer.test.ts',
   'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
   'src/renderer/src/engines/timeline/painter.test.ts',
   // The stage it stands in for hands back a canvas, and a canvas is what the sink wraps.
@@ -180,7 +180,7 @@ const DOM_BOUND = [
   'src/renderer/src/hooks/useShortcutLabel.test.ts',
   'src/renderer/src/i18n/index.test.ts',
   'src/renderer/src/spaces/image/imageTools.test.ts',
-  'src/renderer/src/spaces/textures/deriveChannel.test.ts',
+  'src/renderer/src/spaces/materials/deriveChannel.test.ts',
   'src/renderer/src/spaces/three/sceneTools.test.ts',
   'src/renderer/src/spaces/video/videoTools.test.ts',
   'src/renderer/src/stores/dictation.test.ts',
