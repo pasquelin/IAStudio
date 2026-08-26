@@ -89,7 +89,7 @@ export const GENERATION_SCENARIOS: readonly Scenario[] = [
     setup: async studio => {
       await studio.run('file.open', { path: 'Images/fais moi un bateau.png' })
     },
-    passed: run => read.generated(run, 'texture'),
+    passed: run => read.generated(run, 'material'),
   },
   {
     name: '21.4 generates an environment matching the boat picture',

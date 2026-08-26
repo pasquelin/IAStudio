@@ -4,13 +4,17 @@ import { kindForExtension, workspaceForKind } from './document'
 import { extensionOf } from './fileName'
 
 /**
- * Which of the studio's six domains a file belongs to, plus the answer for one it does not.
+ * Which domain a file belongs to, plus the answer for one that belongs to none.
+ *
+ * `material` is here and NOT in `AssetType`, and that is the whole difference between the two: a
+ * material is a DOCUMENT — one `.mtlx` gathering several pictures and their settings — where an
+ * asset type is a kind of bytes the studio generates and files. Nothing generates a material.
  *
  * `other` is not a failure to classify. A project folder is the user's own, and a `.pdf` of
  * storyboard notes sitting beside the rushes is a file the explorer shows and the studio leaves
  * alone — there is no domain to file it under, and inventing one would be worse than saying so.
  */
-export type FileDomain = AssetType | 'other'
+export type FileDomain = AssetType | 'material' | 'other'
 
 /** Bytes to look at, or a state of editing over them. */
 export type FileRole = 'source' | 'edit'
@@ -94,6 +98,10 @@ export function natureOf(fileName: string): FileNature {
 
   const kind = kindForExtension(extension)
   if (kind) {
+    // The one kind whose domain is not an asset type: a material is a document and nothing else,
+    // so no shelf answers for it and the table below would hand back `other`.
+    if (kind === 'material') return { domain: 'material', role: 'edit' }
+
     const workspace = workspaceForKind(kind)
     return { domain: (workspace && typeOfWorkspace(workspace)) ?? 'other', role: 'edit' }
   }
@@ -151,14 +159,20 @@ export function opensInStudio(fileName: string): boolean {
 }
 
 /**
- * What a file could be as MATERIAL — bytes to look at — whatever a document of that name would
- * be. The two questions came apart the day a document took the extension of an open format: an
- * `.ora` from another application is a picture to adopt, and `natureOf` calls it an edit.
+ * What a file could be as BYTES to look at, whatever a document of that name would be. The two
+ * questions came apart the day a document took the extension of an open format: an `.ora` from
+ * another application is a picture to adopt, and `natureOf` calls it an edit.
  *
  * `openable` is narrower than a domain on purpose: `.heic` and `.gltf` carry one and nothing here
  * draws them, so adopting one would post a tab over a file the studio cannot show.
+ *
+ * Narrower than `FileDomain` in its return, and the compiler is what holds it: bytes adopted into
+ * the catalogue take an asset TYPE, and `material` is a document rather than one.
  */
-export function sourceNatureOf(fileName: string): { domain: FileDomain; openable: boolean } {
+export function sourceNatureOf(fileName: string): {
+  domain: AssetType | 'other'
+  openable: boolean
+} {
   const extension = extensionOf(fileName).toLowerCase()
   return {
     domain: DOMAIN_BY_EXTENSION[extension] ?? 'other',
@@ -169,7 +183,8 @@ export function sourceNatureOf(fileName: string): { domain: FileDomain; openable
 /**
  * Every domain a file can be filed under, for a facet list or a picker.
  *
- * Built from `ASSET_TYPES` rather than written out: a seventh domain would otherwise be a domain
- * the shelf knows and this list does not.
+ * Built from `ASSET_TYPES` rather than written out: a kind added to the shelf would otherwise be
+ * a domain the shelf knows and this list does not. `material` is added by hand, being a document
+ * rather than a kind of bytes.
  */
-export const FILE_DOMAINS: readonly FileDomain[] = [...ASSET_TYPES, 'other']
+export const FILE_DOMAINS: readonly FileDomain[] = [...ASSET_TYPES, 'material', 'other']

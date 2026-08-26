@@ -2,6 +2,7 @@ import type { CameraShot, Keyframe, TrackProperty } from '@shared/domain/animati
 import { commitmentOfCall, type ActionName } from '@shared/domain/assistant'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import type { ModelFamily } from '@shared/domain/model'
 import { isRecord } from '@shared/guards'
 import type { Job } from '@shared/domain/job'
 import type { WorkspaceId } from '@shared/domain/workspace'
@@ -326,7 +327,7 @@ export const assets = (run: Run): readonly Asset[] => run.studio.assets()
 export const jobs = (run: Run): readonly Job[] => run.studio.jobs()
 
 /** Whether a generation ran at all, which is what every section-20 scenario turns on. */
-export const generated = (run: Run, family?: string): boolean =>
+export const generated = (run: Run, family?: ModelFamily): boolean =>
   jobs(run).some(
     one =>
       one.status === 'succeeded' &&

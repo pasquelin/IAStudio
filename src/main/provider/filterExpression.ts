@@ -87,12 +87,13 @@ function contains(needle: string): string {
 export function publicFeedFilter(type: CloudAssetType): string {
   const clauses = [NSFW_EMPTY]
 
-  if (type === 'texture' || type === 'skybox') clauses.push(contains(type))
+  if (type === 'skybox') clauses.push(contains(type))
   else {
     clauses.push(`kind = ${quoted(kindOf(type))}`)
-    // Both share `kind: image`, and a feed of pictures that opens on seven channels of one
-    // material is not the feed anyone asked for.
-    if (type === 'image') clauses.push(`NOT ${contains('texture')}`, `NOT ${contains('skybox')}`)
+    // A sky shares `kind: image` and is a shelf of its own, so a feed of pictures that opened on
+    // panoramas would not be the feed anyone asked for. The channels of a material stay in: they
+    // ARE pictures here, which is the whole of the studio's answer since the kind was dropped.
+    if (type === 'image') clauses.push(`NOT ${contains('skybox')}`)
   }
 
   return clauses.join(' AND ')

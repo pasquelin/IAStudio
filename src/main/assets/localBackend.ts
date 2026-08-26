@@ -19,7 +19,6 @@ const FALLBACK_EXTENSION: Record<AssetType, string> = {
   video: '.mp4',
   audio: '.mp3',
   mesh: '.glb',
-  texture: '.png',
   skybox: '.png',
   animation: '.glb',
 }

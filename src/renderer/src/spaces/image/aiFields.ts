@@ -37,7 +37,6 @@ export function fillEditFields(
  */
 const FIELD_KIND: Record<AssetType, FieldKind> = {
   image: 'image',
-  texture: 'image',
   skybox: 'image',
   mesh: 'mesh',
   animation: 'mesh',

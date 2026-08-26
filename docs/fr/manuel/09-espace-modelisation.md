@@ -275,7 +275,7 @@ lettres — le **corps**, la **profondeur** (mettez-la à zéro pour des lettres
 **segments de courbe**, qui décident de la finesse des arrondis.
 
 Un texte est éclairé comme une maille, et porte la même **matière** : couleur, rugosité, métal,
-et les cinq textures. Il projette et reçoit les ombres.
+et les cinq images. Il projette et reçoit les ombres.
 
 #### Les polices offertes
 
@@ -301,13 +301,13 @@ que soit l’angle de la vue. C’est ce qu’on emploie pour une étincelle, un
 
 **Ajouter ▸ Objet ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
 l’Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu’une
-matière accepte en texture.
+matière accepte dans un canal.
 
 | Réglage | Ce qu’il fait |
 |---|---|
 | **Couleur** | teinte l’image. Sur un sprite sans image, c’est la couleur du carré lui-même |
 | **Opacité** | de transparent à opaque |
-| **Texture** | l’image affichée, prise dans les assets du projet |
+| **Image** | l’image affichée, prise dans les assets du projet |
 
 Quatre choses à savoir :
 
@@ -625,7 +625,7 @@ montre son rayon, un tore montre son tube, un projecteur montre son angle.
 | **Identité** | le nom, modifiable |
 | **Transformation** | Position, Rotation, Échelle — trois nombres chacune (X, Y, Z). Un sprite sans enfant, sélectionné seul, n’a pas de ligne Rotation : elle ne se verrait nulle part |
 | **Géométrie** | ce qui définit la forme : rayon, largeur, segments… |
-| **Matière** | Couleur, Rugosité, Métallicité, Répétition au mètre, et cinq emplacements de textures |
+| **Matière** | Couleur, Rugosité, Métallicité, Répétition au mètre, et cinq emplacements d’images |
 
 #### Les champs de géométrie, tous
 
@@ -661,15 +661,15 @@ on ne peut pas prévoir le résultat sans essayer.
 | **Rugosité** | miroir parfait | mat complet |
 | **Métallicité** | plastique, bois, pierre | métal |
 
-Les cinq emplacements de textures — **Texture**, **Normales**, **Carte de rugosité**, **Carte de
+Les cinq emplacements d’images — **Image**, **Normales**, **Carte de rugosité**, **Carte de
 métallicité**, **Occlusion ambiante** — reçoivent des images du projet. Le bouton **Choisir une
-texture** ouvre la liste ; **Retirer la texture** la vide.
+image** ouvre la liste ; **Retirer l’image** la vide.
 
 **Toute forme neuve arrive déjà habillée** d’un damier de travail. Il sert à trois choses : juger
-une échelle, voir une texture s’étirer, et distinguer une face d’une autre. Remplacez-le quand
+une échelle, voir une image s’étirer, et distinguer une face d’une autre. Remplacez-le quand
 vous voulez — c’est un point de départ, pas une décoration.
 
-Quatre damiers sont copiés dans le dossier **Materials** du projet la première fois qu’une scène
+Quatre damiers sont copiés dans le dossier **Images** du projet la première fois qu’une scène
 en demande un : `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. Ce sont des images du
 projet comme les autres.
 
@@ -834,7 +834,7 @@ plus.
 **Un sprite ne sort pas non plus**, et sans avertissement : aucun des deux formats n’a d’objet qui
 se tourne toujours vers la caméra. En glTF le fichier garde son nom et sa place, mais rien n’y est
 dessiné ; en USDZ il n’en reste rien du tout. Une image plate qui doit survivre à l’export se fait
-avec un plan et une texture.
+avec un plan et une image.
 
 **Une sélection imbriquée garde sa place.** Exporter un objet rangé dans un groupe l’écrit là où il
 est dans la scène, pas là où il est dans son groupe.

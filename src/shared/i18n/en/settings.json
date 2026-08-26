@@ -190,7 +190,7 @@
     },
     "viewportQuality": {
       "title": "Viewport quality",
-      "help": "How finely the same frame is drawn. Nothing about the models or the textures changes — only the number of pixels worked out. Performance also caps how fine the shadows get.",
+      "help": "How finely the same frame is drawn. Nothing about the models or the images changes — only the number of pixels worked out. Performance also caps how fine the shadows get.",
       "performance": "Performance",
       "balanced": "Balanced",
       "high": "High"

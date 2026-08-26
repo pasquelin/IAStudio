@@ -248,7 +248,7 @@ lit à la source** quand vous lui demandez ses outils, avec le détail de chaque
 | **Les fichiers** | ouvrir un projet, le renommer, lister, chercher, déplacer, copier, renommer, mettre à la corbeille, montrer dans le gestionnaire de fichiers, annuler et refaire le dernier lot | **des fichiers** pour ce qui déplace ou détruit |
 | **Les documents** | ouvrir, mettre devant, renommer, fermer, exporter dans le projet | **des fichiers** pour fermer, renommer et exporter |
 | **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
-| **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les textures d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
+| **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les images d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
 | **La bibliothèque distante** | parcourir la vôtre et le flux public, chercher des ressemblances, prévoir, rapatrier, envoyer | **un asset** pour envoyer |
 | **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer, régler un masque, poser et déplacer les repères | rien |
 | **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes. L’export du document sort la **coupe** en OpenTimelineIO, jamais un film — le rendu image par image demande une session que rien d’extérieur ne peut tenir | rien, sauf l’export |

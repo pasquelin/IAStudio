@@ -626,7 +626,7 @@ describe('catalogue provenance and sync', () => {
         asset({
           id: `asset_${index}`,
           name,
-          type: 'texture',
+          type: 'image',
           groupId: 'job_1',
           outputIndex: 2 - index,
           createdAt: `2026-08-06T10:0${index}:00.000Z`,
@@ -644,9 +644,9 @@ describe('catalogue provenance and sync', () => {
   it('narrows to the kinds a workspace accepts', () => {
     catalog.add(asset({ id: 'a', type: 'image' }))
     catalog.add(asset({ id: 'b', type: 'audio' }))
-    catalog.add(asset({ id: 'c', type: 'texture' }))
+    catalog.add(asset({ id: 'c', type: 'image' }))
 
-    const found = catalog.search({ types: ['image', 'texture'] })
+    const found = catalog.search({ types: ['image'] })
     expect(found.map(one => one.id).sort()).toEqual(['a', 'c'])
   })
 
@@ -674,7 +674,6 @@ describe('catalogue provenance and sync', () => {
       video: 0,
       audio: 0,
       mesh: 0,
-      texture: 0,
       skybox: 1,
       animation: 0,
     })

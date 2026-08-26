@@ -8,9 +8,8 @@ export type UploadKind = '3d' | 'asset' | 'audio' | 'avatar' | 'image' | 'model'
 
 export const UPLOAD_KIND_BY_TYPE: Record<AssetType, UploadKind> = {
   image: 'image',
-  // The API has no notion of either: both are pictures on the way up, and what makes them a
-  // texture or a sky is how the studio files them on the way back.
-  texture: 'image',
+  // The API has no notion of a sky: it is a picture on the way up, and what makes it one is how
+  // the studio files it on the way back.
   skybox: 'image',
   video: 'video',
   audio: 'audio',

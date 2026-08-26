@@ -22,8 +22,8 @@ describe('the filter a search is narrowed by', () => {
   })
 
   it('collapses the kinds our types share', () => {
-    // A texture and a sky are both pictures to the API; asking for all three is one clause.
-    expect(filterExpression({ types: ['image', 'texture', 'skybox'] })).toBe('kind = "image"')
+    // A sky is a picture to the API; asking for both is one clause.
+    expect(filterExpression({ types: ['image', 'skybox'] })).toBe('kind = "image"')
   })
 
   it('narrows to a collection', () => {
@@ -47,11 +47,13 @@ describe('the filter a search is narrowed by', () => {
 })
 
 describe('the provenance values that stand for our kinds', () => {
-  it('names every type a material can arrive under', () => {
-    const textures = remoteTypesFor(['texture'])
-    expect(textures).toContain('texture-albedo')
-    expect(textures).toContain('texture-smoothness')
-    expect(textures).toContain('3d-texture-roughness')
+  /**
+   * The API's thirteen `texture-*` values fall in the picture residue since the studio dropped
+   * that kind, and the residue is asked for by asking for NO filter — listing its forty-odd
+   * values would drop every new one the API invents.
+   */
+  it('asks for no filter at all when pictures are wanted', () => {
+    expect(remoteTypesFor(['image'])).toBeUndefined()
   })
 
   it('names the skies, which the API files as ordinary images', () => {
@@ -61,11 +63,6 @@ describe('the provenance values that stand for our kinds', () => {
       'skybox-3d',
       'upscale-skybox',
     ])
-  })
-
-  it('asks for no filter at all when pictures alone are wanted', () => {
-    // Pictures are the residue: enumerating them would drop every type the API later invents.
-    expect(remoteTypesFor(['image'])).toBeUndefined()
   })
 
   it('drops the pictures from a mixed ask and filters on the rest', () => {
@@ -105,28 +102,29 @@ describe('the filter the public feed is narrowed by', () => {
     expect(publicFeedFilter('mesh')).toBe('nsfw IS EMPTY AND kind = "3d"')
   })
 
-  it('keeps materials and skies out of the pictures they share a kind with', () => {
+  /**
+   * A sky alone. The channels of a material stay in: they ARE pictures here, which is the whole
+   * of the studio's answer since the kind was dropped.
+   */
+  it('keeps skies out of the pictures they share a kind with', () => {
     expect(publicFeedFilter('image')).toBe(
-      'nsfw IS EMPTY AND kind = "image"' +
-        ' AND NOT metadata.type CONTAINS "texture"' +
-        ' AND NOT metadata.type CONTAINS "skybox"',
+      'nsfw IS EMPTY AND kind = "image" AND NOT metadata.type CONTAINS "skybox"',
     )
   })
 
-  it('asks for materials and skies by provenance, which is the only thing that names them', () => {
-    expect(publicFeedFilter('texture')).toBe('nsfw IS EMPTY AND metadata.type CONTAINS "texture"')
+  it('asks for skies by provenance, which is the only thing that names them', () => {
     expect(publicFeedFilter('skybox')).toBe('nsfw IS EMPTY AND metadata.type CONTAINS "skybox"')
   })
 
   /**
-   * The one that matters. `CONTAINS` is not decoration: a material arrives as `texture`,
-   * `upscale-texture` or `3d-texture-roughness`, and the tempting `STARTS WITH` — the only other
-   * operator the API honours, since `ENDS WITH` answers 500 — would silently lose two of those
+   * The one that matters. `CONTAINS` is not decoration: a sky arrives as `skybox-base-360`,
+   * `skybox-hdri` or `upscale-skybox`, and the tempting `STARTS WITH` — the only other operator
+   * the API honours, since `ENDS WITH` answers 500 — would silently lose the last of those
    * three. The feed may over-catch, because the hits are typed again on arrival; it may never
    * under-catch, because nothing downstream can recover an asset the index was not asked for.
    */
-  it('catches every provenance the studio files as a material or a sky', () => {
-    const byProvenance: CloudAssetType[] = ['texture', 'skybox']
+  it('catches every provenance the studio files as a sky', () => {
+    const byProvenance: CloudAssetType[] = ['skybox']
 
     for (const type of byProvenance) {
       const filter = publicFeedFilter(type)
@@ -150,7 +148,7 @@ describe('the round trip between what we ask for and what comes back', () => {
   // a value we send as a filter must come back as the kind we asked for, or the shelf shows
   // what it did not request. Nothing enforced that before this test.
   it('reads every filtered provenance back as the kind it stands for', () => {
-    const kinds: CloudAssetType[] = ['texture', 'skybox', 'mesh', 'video', 'audio']
+    const kinds: CloudAssetType[] = ['skybox', 'mesh', 'video', 'audio']
 
     for (const kind of kinds) {
       for (const remoteType of remoteTypesFor([kind]) ?? []) {

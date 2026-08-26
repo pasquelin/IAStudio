@@ -41,7 +41,7 @@ directement : elle sert à d’autres calculs.
 
 **Asset**
 Un fichier de matière première dans votre *projet* : une image, une vidéo, un son, un objet 3D,
-une *texture*, un ciel. Le mot est anglais et n’a pas d’équivalent français court ; « ressource »
+un *ciel*. Le mot est anglais et n’a pas d’équivalent français court ; « ressource »
 ou « média » s’en approchent. Retenez : **un asset est un fichier fini, réutilisable**.
 
 Les assets vivent dans l’**Explorateur** une fois sur votre disque, et dans la **Bibliothèque**
@@ -453,7 +453,7 @@ enchaînés ne se donnent pas un coup de volume l’un à l’autre.
 
 ## O
 
-**Occlusion ambiante** *(AO, canal de texture)*
+**Occlusion ambiante** *(AO, canal de matière)*
 Une image en niveaux de gris qui marque les endroits où la lumière ambiante entre mal : les creux,
 les coins, les jointures. Elle ajoute de la profondeur à une matière qui semblait plate.
 
@@ -665,10 +665,6 @@ l’encombrement au lieu de le résoudre.
 **Tête de lecture**
 La ligne verticale qui marque l’instant en cours dans le montage. On la déplace pour se situer, et
 c’est à son endroit qu’un *clip* se coupe.
-
-**Texture**
-Une des images qui composent une *matière* : la couleur de base, les normales, la rugosité. Un
-fichier plat. Ce n’est pas une matière, qui est le jeu complet de ces images et leurs réglages.
 
 **Thème**
 Le jeu de couleurs de l’interface : **Sombre**, **Clair**, ou **Système** (qui suit votre

@@ -212,6 +212,15 @@ const MIGRATIONS: readonly string[] = [
   -- No index: it is read for the rows of ONE model, already narrowed by \`derived_from\`.
   ALTER TABLE assets ADD COLUMN packed_slot TEXT;
   `,
+  `
+  -- A texture IS a picture, and the studio no longer files it apart. Rows written under the old
+  -- kind would answer no filter and show under no shelf — the type is what the explorer, the
+  -- picture guard and every search read, and none of them knows this word any more.
+  --
+  -- What told a channel from a plain picture was never the kind: \`map\` carries it, and it is
+  -- untouched here. Nothing moves on disk — a row keeps the path it has.
+  UPDATE assets SET type = 'image' WHERE type = 'texture';
+  `,
 ]
 
 const DEFAULT_LIMIT = 200

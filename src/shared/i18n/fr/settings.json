@@ -190,7 +190,7 @@
     },
     "viewportQuality": {
       "title": "Qualité du viewport",
-      "help": "La finesse à laquelle la même image est dessinée. Rien des modèles ni des textures ne change — seul le nombre de pixels calculés. Le niveau Performance plafonne aussi la finesse des ombres.",
+      "help": "La finesse à laquelle la même vue est dessinée. Rien des modèles ni des images ne change — seul le nombre de pixels calculés. Le niveau Performance plafonne aussi la finesse des ombres.",
       "performance": "Performance",
       "balanced": "Équilibrée",
       "high": "Haute"

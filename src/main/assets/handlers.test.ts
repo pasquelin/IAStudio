@@ -331,13 +331,13 @@ describe('the public feed', () => {
       remote: {
         search: () =>
           Promise.resolve({
-            assets: [{ ...cloudAsset('a'), type: 'texture' }, cloudAsset('b')],
+            assets: [{ ...cloudAsset('a'), type: 'skybox' }, cloudAsset('b')],
             token: null,
           }),
       },
     })
 
-    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'texture' })
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'skybox' })
     expect(page.assets.map(asset => asset.id)).toEqual(['a'])
   })
 
@@ -594,9 +594,9 @@ describe('renaming and tagging', () => {
   it('writes what a file is, leaving the file where it is', async () => {
     await harness.catalog.add(localAsset({ type: 'image', path: 'Repérages/ruelle.png' }))
 
-    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { type: 'texture' })
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { type: 'image' })
 
-    expect(updated).toMatchObject({ type: 'texture', path: 'Repérages/ruelle.png' })
+    expect(updated).toMatchObject({ type: 'image', path: 'Repérages/ruelle.png' })
   })
 
   it('tells the library which tags moved, not the whole set', async () => {

@@ -64,11 +64,10 @@ C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 ```
 Mon projet/
 │
-├── Images/               SEPT DOSSIERS POUR COMMENCER
+├── Images/               SIX DOSSIERS POUR COMMENCER
 ├── Video/                  posés à la création, et ordinaires : renommez-les,
 ├── Audio/                  videz-les, jetez-les, rangez-les autrement
 ├── 3D/
-├── Materials/
 ├── Sky/
 ├── Animations/
 │                           …et tout ce que vous créez à côté
@@ -94,14 +93,14 @@ règle. Vos fichiers restent visibles et vous les rangez comme vous l’entendez
 les regarder, les copier, les réparer. La carte d’identité, l’index et la sauvegarde, non : ce sont
 les outils du studio, pas votre travail.
 
-> **Les sept dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
+> **Les six dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
 > jamais remis : si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a
 > besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
 
-> **Un projet créé avant le 26/08 a un `Textures/` là où celui-ci a `Materials/`**, et il le
-> garde : chaque asset porte son propre chemin, rien ne lit son rôle dans le nom du dossier. Ce
-> qu'il reçoit à partir de maintenant atterrit à côté, dans `Materials/`. Les deux se renomment et
-> se fusionnent à la main, comme n'importe quel dossier de votre projet.
+> **Un projet créé avant le 26/08 a un `Textures/` de plus**, et il le garde : chaque asset porte
+> son propre chemin, rien ne lit son rôle dans le nom du dossier. Les images qui y sont restent
+> lisibles et modifiables ; celles qui arrivent désormais atterrissent dans `Images/`, avec les
+> autres. Le dossier se renomme, se vide ou se fusionne à la main, comme n'importe quel autre.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
 > Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.ia-studio/` ne le reçoit
@@ -290,7 +289,7 @@ tant que vous n'avez pas écrit une première fiche.
 
 ### Ce que le contexte touche, et ce qu'il ne touche pas
 
-**Il s'applique à toutes les générations** — images, vidéos, modèles 3D, sons, textures, ciels — dès
+**Il s'applique à toutes les générations** — images, vidéos, modèles 3D, sons, ciels — dès
 que le modèle a un champ de description. Un agrandissement, une conversion, un maillage fait à
 partir d'une image n'en ont pas : le contexte ne fait alors rien, silencieusement.
 
@@ -347,7 +346,7 @@ Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.gltf`
 
 ### Parcourir le projet — le panneau Explorateur
 
-Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : les sept dossiers de
+Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : les six dossiers de
 départ, et tout ce que vous y avez créé ou déposé vous-même. Les dossiers se déplient, les fichiers
 sont dedans, exactement comme dans l’explorateur de votre système.
 
@@ -368,8 +367,8 @@ l’un des deux est toujours allumé :
 | **Par dossier** | le projet tel qu’il est rangé sur le disque, en arborescence |
 | **Par domaine** | tous les fichiers du projet groupés par ce qu’ils **sont**, où qu’ils soient rangés |
 
-**Par domaine** ignore les dossiers. Il pose huit en-têtes au plus — les sept types du studio, plus
-**Autre** pour ce qui n’en relève d’aucun — chacun suivi du nombre de fichiers qu’il compte. **Un
+**Par domaine** ignore les dossiers. Il pose huit en-têtes au plus — les six types du studio,
+**Matière** pour un document `.mtlx`, et **Autre** pour ce qui n’en relève d’aucun — chacun suivi du nombre de fichiers qu’il compte. **Un
 domaine que rien ne remplit n’apparaît pas** : huit en-têtes vides sur un projet neuf ne diraient
 rien.
 
@@ -485,7 +484,7 @@ répertoire, mais ce qu’il contient est l’écriture du studio : un fichier q
 serait effacé par la prochaine sauvegarde, qui reconstruit ce dossier. Le document lui-même se
 déplace comme n’importe quel fichier — c’est son intérieur qui ne s’ouvre pas.
 
-**Tout le reste vous obéit**, les sept dossiers de départ compris : renommez-les, videz-les,
+**Tout le reste vous obéit**, les six dossiers de départ compris : renommez-les, videz-les,
 jetez-les, sortez-en un asset pour le ranger ailleurs, coupez, copiez, dupliquez. Le studio suit —
 c’est ce que la passe de réconciliation fait à l’ouverture et au retour dans la fenêtre.
 
@@ -535,7 +534,7 @@ dossier de projet ; ni l’un ni l’autre moment ne suffit seul.
 
 **Elle reconnaît un fichier à son contenu, pas à son chemin.** Déplacez une image d’un dossier à
 l’autre, renommez-la, faites les deux : la fiche la retrouve et la suit. Les identifiants ne
-changent pas, donc **une scène 3D continue de pointer sur sa texture** après que vous l’avez
+changent pas, donc **une scène 3D continue de pointer sur son image** après que vous l’avez
 rangée ailleurs.
 
 **Elle n’efface jamais une fiche.** Un fichier introuvable est **daté comme absent**, et sa fiche

@@ -589,7 +589,7 @@ describe('inspector panel', () => {
 
     beforeEach(() => {
       cataloguing([
-        asset('tex-1', 'Brique', 'texture'),
+        asset('tex-1', 'Brique', 'image'),
         asset('img-1', 'Rendu', 'image'),
         asset('vid-1', 'Rush', 'video'),
       ])
@@ -615,20 +615,20 @@ describe('inspector panel', () => {
       expect(await screen.findAllByRole('option', { name: /Brique/ })).not.toHaveLength(0)
     })
 
-    it('leaves out what could never be loaded as a texture', async () => {
+    it('leaves out what could never be loaded into a channel', async () => {
       render(withQueries(<Content />))
       await screen.findAllByRole('option', { name: /Brique/ })
 
       expect(screen.queryByRole('option', { name: /Rush/ })).not.toBeInTheDocument()
     })
 
-    // A texture is a reference to an asset, never an image: that is what a reopened scene can
+    // A channel is a reference to an asset, never pixels: that is what a reopened scene can
     // resolve again.
     it('stores the asset identifier in the material', async () => {
       render(withQueries(<Content />))
       await screen.findAllByRole('option', { name: /Brique/ })
 
-      await userEvent.selectOptions(screen.getByLabelText('Texture'), 'tex-1')
+      await userEvent.selectOptions(screen.getByLabelText('Couleur de base'), 'tex-1')
 
       const node = nodeInStore('box-1')
       expect(node?.type === 'mesh' && node.material.map).toEqual({ assetId: 'tex-1' })
@@ -641,7 +641,7 @@ describe('inspector panel', () => {
       })
       render(withQueries(<Content />))
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Retirer la texture/ })[0]!)
+      await userEvent.click(screen.getAllByRole('button', { name: /Retirer l’image/ })[0]!)
 
       const cleared = nodeInStore('box-1')
       expect(cleared?.type === 'mesh' && cleared.material.map).toBeNull()

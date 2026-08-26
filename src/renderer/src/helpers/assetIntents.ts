@@ -258,9 +258,15 @@ export function intentsFor(type: AssetType): readonly AssetIntent[] {
  *
  * `null` would mean a kind whose own space takes nothing of it, which no kind does today — a
  * test holds the six.
+ *
+ * A picture that HOLDS A CHANNEL is edited in Materials, and `map` is the whole of what says so:
+ * the studio stopped filing channels under a kind of their own — a channel is a picture — and
+ * without this a double-click on a normal map would open the pixels rather than the material
+ * they belong to.
  */
 export function editorIntent(asset: Asset): AssetIntent | null {
-  const workspace = workspaceOfType(asset.type)
+  const workspace = asset.map ? 'materials' : workspaceOfType(asset.type)
+
   return (
     ASSET_INTENTS.find(
       intent => intent.workspace === workspace && intent.accepts.includes(asset.type),

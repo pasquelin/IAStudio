@@ -528,10 +528,9 @@ export function registerProjectHandlers({
         {
           id: newAssetId(),
           name: request.name,
-          // A channel is a texture in the catalogue, which is what puts it under the right
-          // facet of the shelf and what `PICTURES` then lets a tile show. Decided here and
-          // never sent by the renderer: the kind is what the extension and the folder follow.
-          type: 'texture',
+          // A channel is a picture in the catalogue — `map`, set below, is what says which
+          // channel it holds. Decided here and never sent by the renderer.
+          type: 'image',
           extension: PNG_EXTENSION,
           map: request.map,
           ...(probe ? { probe } : {}),

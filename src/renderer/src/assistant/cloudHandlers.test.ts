@@ -16,8 +16,8 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    await runAction('cloud.browse', { text: 'stone', types: ['texture'], pageSize: 20 })
-    expect(browse).toHaveBeenCalledWith({ text: 'stone', types: ['texture'], pageSize: 20 })
+    await runAction('cloud.browse', { text: 'stone', types: ['skybox'], pageSize: 20 })
+    expect(browse).toHaveBeenCalledWith({ text: 'stone', types: ['skybox'], pageSize: 20 })
 
     await runAction('cloud.browse', {})
     expect(browse).toHaveBeenLastCalledWith({})
@@ -61,7 +61,7 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    expect(await runAction('cloud.browse', { types: ['texture', 'hologram'] })).toMatchObject({
+    expect(await runAction('cloud.browse', { types: ['skybox', 'hologram'] })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

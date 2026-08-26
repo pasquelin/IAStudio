@@ -32,7 +32,7 @@
     "details": "Row detail",
     "editPixels": "Edit the image",
     "editPixelsHint": "Opens this image in the Image space, where ⌘S writes it back over itself",
-    "extractTextures": "Extract its textures",
+    "extractTextures": "Extract its images",
     "extractTexturesHint": "Takes the images inside this model out into the project, where they can be opened and painted on",
     "fetchActionHint": "Downloads the chosen assets from the remote library into the open project",
     "fetchAction_many": "Download {{count, number}} assets",
@@ -88,7 +88,7 @@
     "video": "Video",
     "audio": "Audio",
     "mesh": "Mesh",
-    "texture": "Texture",
+    "material": "Material",
     "skybox": "Skybox",
     "animation": "Animation",
     "other": "Other"

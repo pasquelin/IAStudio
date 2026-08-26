@@ -33,7 +33,7 @@ selon ce que vous fabriquez. Ces six arrangements s’appellent des **espaces de
 
 | Espace | Ce qu’on y fabrique | Un exemple |
 |---|---|---|
-| **Image** | des images fixes | une affiche, une illustration, une texture à plat |
+| **Image** | des images fixes | une affiche, une illustration, une carte de matière |
 | **Vidéo** | des séquences animées | un plan de dix secondes, un montage de plusieurs prises |
 | **3D** | des scènes en volume | un décor, un objet posé sous une lumière |
 | **Audio** | des sons et des musiques | une ambiance, un bruitage, une nappe musicale |
@@ -63,7 +63,7 @@ ordinaire — vous pouvez l’ouvrir dans votre explorateur de fichiers et regar
 ### 2. Un **asset**
 
 Un fichier de matière première dans votre projet : une image, une vidéo, un son, un objet 3D,
-une texture, un ciel.
+un ciel.
 
 Le mot est anglais et n’a pas de bon équivalent français court. On dit parfois « ressource »
 ou « média ». Retenez : **un asset est un fichier fini que vous pouvez réutiliser**.

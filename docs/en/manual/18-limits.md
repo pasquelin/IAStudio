@@ -187,7 +187,7 @@ away for good whatever falls outside the frame**. `⌘Z` restores the original s
 area comes back empty, and the brush strokes it held do not come back either. This is Photoshop's
 behaviour with "Delete cropped pixels" ticked — except that its history can give them back.
 
-**The reason.** Pixels do not live in the document but in GPU textures, and the history only keeps
+**The reason.** Pixels do not live in the document but in GPU images, and the history only keeps
 512 px tiles of them, capped at 256 MB. A hard crop would remove more tiles than that cap allows.
 Keeping the whole picture from before would mean full-size snapshots in the undo stack, which the
 studio rules out precisely so `⌘Z` stays instant on heavy documents.

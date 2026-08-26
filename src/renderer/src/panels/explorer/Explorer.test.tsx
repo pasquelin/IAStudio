@@ -122,7 +122,12 @@ function install(
     // A document is never adopted — it is opened, or it is nothing: a `.gltf` the project has
     // no envelope for is a file like any other. `adoptFile` refuses it for the same reason.
     const { domain, role } = natureOf(relative)
-    if (role === 'edit' || domain === 'other' || !opensInStudio(relative)) {
+    if (
+      role === 'edit' ||
+      domain === 'other' ||
+      domain === 'material' ||
+      !opensInStudio(relative)
+    ) {
       return Promise.resolve(null)
     }
 
@@ -1587,7 +1592,7 @@ describe('the explorer read by domain', () => {
         {
           id: 'asset_1',
           name: 'Ruelle',
-          type: 'texture',
+          type: 'skybox',
           location: 'local',
           path: 'Repérages/ruelle.png',
           tags: [],
@@ -1600,7 +1605,7 @@ describe('the explorer read by domain', () => {
 
     render(<Explorer />)
 
-    expect(await screen.findByText('Texture')).toBeInTheDocument()
+    expect(await screen.findByText('Skybox')).toBeInTheDocument()
   })
 
   /**

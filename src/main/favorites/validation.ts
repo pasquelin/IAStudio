@@ -25,7 +25,13 @@ export function parseFavoriteId(value: unknown): string {
 const storedRecipe = z.object({
   id: favoriteId,
   label: z.string(),
-  type: z.enum(ASSET_TYPES),
+  /**
+   * Brought up to date before the enum sees it — a whole entry is DROPPED on a value it does not
+   * name, and this file has no version to migrate on. `texture` was a kind of its own until
+   * 2026-08-26: every recipe pinned from the Materials space carries it, and every one of them
+   * would have left the shelf without a word, then left the FILE at the next pin.
+   */
+  type: z.preprocess(stored => (stored === 'texture' ? 'image' : stored), z.enum(ASSET_TYPES)),
   generation: z.object({
     modelId: z.string().trim().min(1),
     modelLabel: z.string().catch(''),

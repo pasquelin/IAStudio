@@ -40,9 +40,9 @@ describe('what the project holds, as one shape', () => {
    * can only guess — and a row is the one thing that remembers what was answered.
    */
   it('lets the catalogue overrule what the extension guessed', () => {
-    const item = itemOfPath('Repérages/ruelle.png', { asset: asset({ type: 'texture' }) })
+    const item = itemOfPath('Repérages/ruelle.png', { asset: asset({ type: 'image' }) })
 
-    expect(item.domain).toBe('texture')
+    expect(item.domain).toBe('image')
     expect(item.assetId).toBe('asset_1')
   })
 

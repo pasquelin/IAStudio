@@ -195,7 +195,7 @@ la zone retirée revient vide, et les traits de pinceau qu’elle contenait ne r
 plus. C’est le comportement de Photoshop quand « Supprimer les pixels rognés » est coché — sauf
 que son historique à lui sait les rendre.
 
-**La raison.** Les pixels ne vivent pas dans le document mais dans des textures GPU, et
+**La raison.** Les pixels ne vivent pas dans le document mais dans des images GPU, et
 l’historique n’en garde que des tuiles de 512 px, plafonnées à 256 Mo. Un recadrage sévère
 retirerait plus de tuiles que ce plafond n’en autorise. Garder l’intégralité de l’image d’avant
 demanderait des instantanés pleine taille dans la pile d’annulation, ce que le studio s’interdit

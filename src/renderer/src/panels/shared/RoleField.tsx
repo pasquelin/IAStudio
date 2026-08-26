@@ -45,12 +45,13 @@ export function RoleField({ assetId, domain }: { assetId: string | null; domain:
         value: type,
         label: t(`assetTypes.${type}`),
         // Listed as a STATE, never as a choice: `other` is what the studio reads when no
-        // extension answers, and there is nothing to retype a file to. Left out, the row showed
-        // « Image » over a file that is not one — the select simply fell back to its first option.
-        disabled: type === 'other',
+        // extension answers, and `material` is a DOCUMENT rather than a kind of bytes — neither
+        // is something a file can be retyped TO. Left out, the row showed « Image » over a file
+        // that is not one — the select simply fell back to its first option.
+        disabled: type === 'other' || type === 'material',
       }))}
       onChange={picked => {
-        if (picked === 'other') return
+        if (picked === 'other' || picked === 'material') return
         setWritten(picked)
         // Given back on a refusal: the catalogue is what decides, and a control left showing a
         // correction nobody recorded is the same lie the other way round.

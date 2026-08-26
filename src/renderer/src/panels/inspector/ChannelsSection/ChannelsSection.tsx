@@ -31,7 +31,7 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
 
   /**
    * Asked of the CATALOGUE, never filtered out of `useAssets`: that shelf is the scope the browser
-   * is asking for, and the Materials space narrows it to `['texture','image']`. Held as ASSETS
+   * is asking for, and the Materials space narrows it to `['image']`. Held as ASSETS
    * because `placeMaterialChannel` keeps what the picture measures.
    */
   const pictures = useProjectPictureAssets(PICTURES)

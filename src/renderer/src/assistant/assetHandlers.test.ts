@@ -21,10 +21,10 @@ describe('searching the library', () => {
     const search = vi.fn(async () => [])
     installFakeBridge({ assets: { search } })
 
-    await runAction('assets.search', { text: 'stone', type: 'texture', tags: ['pbr'], limit: 10 })
+    await runAction('assets.search', { text: 'stone', type: 'image', tags: ['pbr'], limit: 10 })
     expect(search).toHaveBeenCalledWith({
       text: 'stone',
-      type: 'texture',
+      type: 'image',
       tags: ['pbr'],
       limit: 10,
     })

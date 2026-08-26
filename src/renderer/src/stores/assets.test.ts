@@ -91,9 +91,9 @@ describe('the kinds the catalogue is asked for', () => {
   it('asks for the kinds the space uses, and nothing else', async () => {
     const asked = watchSearch()
 
-    await useAssets.getState().setScope(['image', 'texture'])
+    await useAssets.getState().setScope(['image'])
 
-    expect(asked).toEqual([{ types: ['image', 'texture'], limit: 200, offset: 0 }])
+    expect(asked).toEqual([{ types: ['image'], limit: 200, offset: 0 }])
   })
 
   it('asks for everything once the scope is dropped', async () => {
@@ -119,7 +119,7 @@ describe('the kinds the catalogue is asked for', () => {
   it('tells two scopes apart by what they hold, not by identity', async () => {
     const asked = watchSearch()
 
-    await useAssets.getState().setScope(['image', 'texture'])
+    await useAssets.getState().setScope(['image'])
     await useAssets.getState().setScope(['image', 'skybox'])
 
     expect(asked).toHaveLength(2)
@@ -466,7 +466,7 @@ describe('renaming an asset', () => {
  * has just become a texture is no longer a row the Image space asked for.
  */
 describe('correcting what an asset is', () => {
-  const retyped = (): Asset => ({ ...asset('a', 'Ruelle'), type: 'texture' })
+  const retyped = (): Asset => ({ ...asset('a', 'Ruelle'), type: 'skybox' })
 
   beforeEach(() => {
     forgetRememberedAssets()
@@ -477,7 +477,7 @@ describe('correcting what an asset is', () => {
     useAssets.setState({ scope: ['image'] })
     installFakeBridge({ assets: { update: () => Promise.resolve(retyped()) } })
 
-    await useAssets.getState().retype('a', 'texture')
+    await useAssets.getState().retype('a', 'skybox')
 
     expect(useAssets.getState().items.map(item => item.id)).toEqual(['b'])
   })
@@ -486,8 +486,8 @@ describe('correcting what an asset is', () => {
     useAssets.setState({ scope: null })
     installFakeBridge({ assets: { update: () => Promise.resolve(retyped()) } })
 
-    await useAssets.getState().retype('a', 'texture')
+    await useAssets.getState().retype('a', 'skybox')
 
-    expect(assetsById(useAssets.getState()).get('a')?.type).toBe('texture')
+    expect(assetsById(useAssets.getState()).get('a')?.type).toBe('skybox')
   })
 })
