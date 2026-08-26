@@ -104,4 +104,16 @@ export const SKY_SCENARIOS: readonly Scenario[] = [
       read.surface(run)?.preview.autoSpin === true &&
       (read.surface(run)?.preview.envIntensity ?? 1) > 1,
   },
+  {
+    name: '38.6 judges the material under a sky DOCUMENT of the project',
+    said: ['Éclaire cet aperçu avec mon ciel Ciel Test.'],
+    setup: async studio => {
+      // The sky first, so the material is the document in front when the request lands.
+      await sky()(studio)
+      await material()(studio)
+    },
+    // The DOCUMENT and not an asset: a preview naming the picture would read `skybox`, and editing
+    // that sky would reach no preview at all.
+    passed: run => read.surface(run)?.preview.environment.kind === 'sky',
+  },
 ]

@@ -1,5 +1,6 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from './skybox'
+import { ENVIRONMENT_KINDS } from './scene'
 import { PBR_CHANNELS, PREVIEW_SHAPES } from './material'
 
 /**
@@ -202,6 +203,29 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
         min: 1,
         max: 4,
       },
+    ],
+  }),
+  action({
+    /**
+     * The sibling of `world.environment`, and it names its sources the same way: a PICTURE by asset
+     * id, a sky DOCUMENT by title. A preview judged under a different world than the scene it is
+     * headed for is a preview that decided nothing.
+     */
+    name: 'material.environment',
+    titleKey: 'assistant.actions.materialEnvironment.title',
+    descriptionKey: 'assistant.actions.materialEnvironment.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'kind',
+        kind: 'choice',
+        labelKey: 'assistant.fields.environmentKind',
+        required: false,
+        options: ENVIRONMENT_KINDS,
+      },
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+      { key: 'sky', kind: 'text', labelKey: 'assistant.fields.skyDocument', required: false },
     ],
   }),
   action({

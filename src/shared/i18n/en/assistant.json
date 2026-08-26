@@ -401,6 +401,10 @@
         "title": "Set a material",
         "description": "Changes the tint, roughness, metalness, relief, occlusion, emission, tiling, offset or rotation of the material in front. Every field is optional."
       },
+      "materialEnvironment": {
+        "title": "Choose what lights a material preview",
+        "description": "Lights the preview by the procedural studio, by an image of the project named by its asset identifier, or by a sky document named by its title — the preview then takes its graded image and its intensity, as a scene does."
+      },
       "texturePreview": {
         "title": "Set a material’s preview",
         "description": "Changes the strength and rotation of the environment lighting the preview, whether the background is drawn, the automatic spin and the seam highlight."

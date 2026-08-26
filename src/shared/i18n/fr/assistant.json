@@ -401,6 +401,10 @@
         "title": "Régler une matière",
         "description": "Change la teinte, la rugosité, le métal, le relief, l’occlusion, l’émission, le pavage, le décalage ou la rotation de la matière devant. Chaque champ est facultatif."
       },
+      "materialEnvironment": {
+        "title": "Choisir ce qui éclaire l’aperçu d’une matière",
+        "description": "Éclaire l’aperçu par le studio procédural, par une image du projet nommée par son identifiant d’asset, ou par un document ciel nommé par son titre — l’aperçu prend alors son image étalonnée et son intensité, comme une scène le fait."
+      },
       "texturePreview": {
         "title": "Régler l’aperçu d’une matière",
         "description": "Change l’intensité et la rotation de l’environnement qui éclaire l’aperçu, l’affichage du fond, la rotation automatique et la mise en évidence des coutures."

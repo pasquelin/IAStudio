@@ -132,6 +132,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'skybox.source': ['37.2'],
   'material.state': ['38.1'],
   'material.material': ['38.2'],
+  'material.environment': ['38.6'],
   'material.preview': ['38.5'],
   'material.channel': ['38.3', '38.4'],
 

@@ -123,6 +123,7 @@ export type ActionName =
   | 'skybox.source'
   | 'material.state'
   | 'material.material'
+  | 'material.environment'
   | 'material.preview'
   | 'material.channel'
   | 'styles.list'
