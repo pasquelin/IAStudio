@@ -2743,12 +2743,11 @@ export class SceneRenderer {
     // A selection changes no node, so it never reaches here: that walk was 12 % of the CPU of
     // one click on 8 000 nodes, measured 20/08.
     //
-    // A node that only MOVED keeps its group and its slot in it, so the grouping is left alone
-    // and the slot is rewritten instead: 47.5 ms against 1.35 µs on 40 000 nodes.
-    if (previous && keepsItsGroup(previous, node)) {
-      this.contentChanged = true
-      this.movedNodes.add(node.id)
-    } else this.markContentChanged()
+    // A node that only MOVED keeps its slot, so the slot is rewritten rather than the grouping
+    // redone: 47.5 ms against 1.35 µs on 40 000 nodes. The counters are left alone too —
+    // `keepsItsGroup` lets nothing they read through.
+    if (previous && keepsItsGroup(previous, node)) this.movedNodes.add(node.id)
+    else this.markContentChanged()
     this.placementChanged = true
 
     // A model is its file: pointing a node at another asset is a different object, not an edit

@@ -48,11 +48,15 @@ export function statsOf(
   const geometries = seen.geometries ?? new Set<unknown>()
   const textures = seen.textures ?? new Set<unknown>()
   const stats = { ...EMPTY_STATS }
+  // A caller hands the object of every node AND each of those holds its children, so a node
+  // hanging from another arrived twice: `draws` counted it twice, the deduped three did not.
+  const met = new Set<Object3D>()
 
   const count = (child: Object3D): void => {
     // Walked by hand rather than by `traverse`: a marker is a whole subtree to step over, and
     // `traverse` offers no way to stop at one. Visibility still gates the MESH alone, as before.
-    if (child.name === MARKER_NAME) return
+    if (child.name === MARKER_NAME || met.has(child)) return
+    met.add(child)
 
     if (child instanceof Mesh && child.visible) {
       const geometry = child.geometry

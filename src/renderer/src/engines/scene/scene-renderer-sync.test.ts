@@ -368,6 +368,37 @@ describe('a scene told what changed', () => {
     })
 
     /**
+     * The same for a node that only MOVED, and it is the other half of the pair: `keepsItsGroup`
+     * lets through nothing the counters read, so a drag re-counted every geometry of the scene on
+     * every image — 116.7 ms an image against 91.7 on 40 000 nodes, measured in the app 26/08.
+     */
+    it('does not count the scene again when a node only moved', () => {
+      const reported: SceneStats[] = []
+      const renderer = new SceneRenderer({
+        onSelect: vi.fn(),
+        onTransform: vi.fn(),
+        onStats: scene => reported.push(scene),
+      })
+      const box = sizedBox('box-1', 1)
+
+      renderer.apply({ ...EMPTY_SCENE, nodes: [box] })
+      const counted = reported.at(-1)
+      renderer.apply({
+        ...EMPTY_SCENE,
+        nodes: [{ ...box, transform: { ...box.transform, position: { x: 3, y: 0, z: 0 } } }],
+      })
+
+      expect(reported.at(-1)).toBe(counted)
+
+      // A node that changes its SHAPE is counted again: moving is the only thing exempt.
+      renderer.apply({ ...EMPTY_SCENE, nodes: [sizedBox('box-1', 4)] })
+
+      expect(reported.at(-1)).not.toBe(counted)
+
+      renderer.dispose()
+    })
+
+    /**
      * The one three.js gets to decide for us: `CameraHelper` sets `this.matrix` to the camera's
      * own world matrix and turns `matrixAutoUpdate` off, so it places ITSELF on the camera. Made
      * a child of that camera, the placement applied twice — a camera at (0, 2, 6) drew its
