@@ -173,7 +173,7 @@ const FAMILY_BY_CAPABILITY: readonly { pattern: RegExp; family: ModelFamily }[] 
   { pattern: /video$/, family: 'video' },
   { pattern: /3d$/, family: '3d' },
   { pattern: /audio$/, family: 'audio' },
-  { pattern: /texture/, family: 'texture' },
+  { pattern: /texture/, family: 'material' },
   // Ahead of the image pattern, which `img2txt` would otherwise match: what a model produces
   // decides its family, and only `model_scenario-llm` produces text among the public models.
   { pattern: /txt$/, family: 'other' },

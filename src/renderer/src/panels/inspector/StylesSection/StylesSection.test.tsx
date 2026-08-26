@@ -6,7 +6,7 @@ import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/material'
 import { newMaterial } from '@/engines/material/materialState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useStyles } from '@/stores/styles'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { useMaterials } from '@/stores/materials'
 import { StylesSection } from './StylesSection'
 
@@ -47,7 +47,7 @@ describe('the styles of a material', () => {
    */
   describe('the style in force', () => {
     const openTexture = (material = DEFAULT_TEXTURE_MATERIAL): void =>
-      installTexture('doc-1', { ...newMaterial(), material })
+      installMaterial('doc-1', { ...newMaterial(), material })
 
     it('paints the style whose values the material carries', () => {
       openTexture(METAL.values)

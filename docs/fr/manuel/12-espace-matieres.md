@@ -1,4 +1,4 @@
-# 12. Espace Textures
+# 12. Espace Matières
 
 [← Espace Audio](11-espace-audio.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Skyboxes →](13-espace-skyboxes.md)
 
@@ -6,7 +6,7 @@ L’espace où l’on juge une **matière** : du bois, du métal rouillé, du ti
 
 ---
 
-## Une texture n’est pas une image
+## Une matière n’est pas une image
 
 C’est le point de départ, et il change tout.
 
@@ -19,9 +19,9 @@ volume, sous une vraie lumière**, et le fait tourner.
 
 ---
 
-## Créer une texture
+## Créer une matière
 
-1. Passez dans l’espace **Textures**.
+1. Passez dans l’espace **Matières**.
 2. Cliquez le bouton **+** du rail gauche. Un document neuf s’ouvre.
 3. **Glissez une image du projet sur l’aperçu.** Elle devient la **couleur de base**.
 
@@ -115,7 +115,7 @@ Chaque canal a une **origine** :
 
 ### La section Canaux
 
-Première section de l’**Inspecteur** — c’est ce que Textures est. Une ligne par canal, les huit,
+Première section de l’**Inspecteur** — c’est ce que Matières est. Une ligne par canal, les huit,
 **y compris ceux qui sont vides** : ce qui manque à une matière compte autant que ce qu’elle a.
 
 | Geste | Ce qu’il fait |
@@ -181,7 +181,7 @@ sous les valeurs qu’ils regardent :
 
 **Les deux premiers ne touchent jamais la matière.** Ils changent la façon de la regarder, pas ce
 qu’elle est : la répétition qui part dans une scène reste celle du champ **Répéter**, et le décalage
-reste celui du champ **Décalage**. Regarder à 4× ne fabrique pas une texture répétée quatre fois.
+reste celui du champ **Décalage**. Regarder à 4× ne fabrique pas une matière répétée quatre fois.
 
 **La mesure est un rapport, pas une différence.** Une pierre bruitée supporte un saut qui ferait une
 cicatrice sur un enduit lisse : ce qu’on lit comme une couture, c’est la marche au raccord comparée
@@ -340,7 +340,7 @@ puce sur l’onglet dit ce qui attend encore d’être écrit.
 ## Exporter la matière
 
 Menu **Fichier ▸ Exporter ▸ Matière**, puis la ligne du moteur qui va la recevoir. Le menu
-n'apparaît que dans l'espace Textures, et il s'adresse à **l'onglet au premier plan** : deux
+n'apparaît que dans l'espace Matières, et il s'adresse à **l'onglet au premier plan** : deux
 matières ouvertes ne répondent pas ensemble au même clic.
 
 Le studio demande **un dossier**, et crée dedans un sous-dossier au nom de votre document. Les

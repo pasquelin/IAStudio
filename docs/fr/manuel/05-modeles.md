@@ -110,14 +110,14 @@ C’est le filtre le plus utile. Le vocabulaire est technique mais court :
 | **Audio vers audio** | un son est transformé en un autre |
 | **Vidéo vers audio** | une vidéo reçoit une bande son |
 
-**Dans l’espace Textures**
+**Dans l’espace Matières**
 
 | Capacité | En français clair |
 |---|---|
-| **Texte vers texture** | une phrase devient une matière |
-| **Image vers texture** | une image est transformée en matière |
-| **Guidage de texture** | il suit une structure que vous imposez |
-| **Texture de référence** | il s’inspire d’une matière que vous fournissez |
+| **Texte vers matière** | une phrase devient une matière |
+| **Image vers matière** | une image est transformée en matière |
+| **Guidage de matière** | il suit une structure que vous imposez |
+| **Matière de référence** | il s’inspire d’une matière que vous fournissez |
 
 ### Tag — les mots-clés des publieurs
 
@@ -149,7 +149,7 @@ Les grands noms du domaine, différents selon l’espace :
 
 Utile pour voir ce qui vient de sortir.
 
-> **L’espace Skyboxes n’a ni capacités, ni tags, ni éditeurs à filtrer, et l’espace Textures n’a
+> **L’espace Skyboxes n’a ni capacités, ni tags, ni éditeurs à filtrer, et l’espace Matières n’a
 > ni tags ni éditeurs** : ces familles ne comptent que quelques modèles.
 
 ---

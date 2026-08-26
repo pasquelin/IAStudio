@@ -27,7 +27,7 @@ export type CommandScope =
   | 'canvas'
   | 'skybox'
   | 'audio'
-  | 'texture'
+  | 'material'
 
 export type CommandId =
   | 'project.new'
@@ -1222,17 +1222,17 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   }),
 
   // The other one, and worse: the manual already promised ⌘Z on a style applied to a material
-  // (`docs/fr/manuel/12-espace-textures.md`) while nothing at all could reach that history.
+  // (`docs/fr/manuel/12-espace-matieres.md`) while nothing at all could reach that history.
   command({
     id: 'material.undo',
-    scope: 'texture',
+    scope: 'material',
     titleKey: 'commands.undo.title',
     helpKey: 'commands.undo.help',
     defaultBinding: 'Meta+KeyZ',
   }),
   command({
     id: 'material.redo',
-    scope: 'texture',
+    scope: 'material',
     titleKey: 'commands.redo.title',
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
@@ -1248,7 +1248,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'canvas',
   'skybox',
   'audio',
-  'texture',
+  'material',
 ]
 
 /**
@@ -1260,7 +1260,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
  * **Total, not partial, and that is the guard.** A workspace whose store holds a history and is
  * missing here reaches nothing: the native role keeps the accelerator, ⌘Z never reaches the
  * window, and the failure is silent. It cost Skyboxes once, Audio until its bar
- * was asked to stop drawing the only undo it had, and Textures for as long as the manual
+ * was asked to stop drawing the only undo it had, and Materials for as long as the manual
  * promised a key nothing answered. Written as a full `Record`, the next workspace added does
  * not COMPILE until someone answers the question for it — `Partial` let all four slip through.
  *
@@ -1274,7 +1274,7 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   video: 'sequence',
   skyboxes: 'skybox',
   audio: 'audio',
-  materials: 'texture',
+  materials: 'material',
 }
 
 /**

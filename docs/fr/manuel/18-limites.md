@@ -84,8 +84,8 @@ avec des parties que le studio ne compose pas. Il s’ouvre, il s’affiche — 
 d’écrire**, avec la raison en clair. Ce n’est pas une précaution excessive : un glTF est lié par
 **index**, donc réécrire la scène depuis ce que le studio en connaît supprimerait ces parties, et
 un fichier à demi réécrit ne s’ouvrirait nulle part. Le même refus protège un ciel qui contient
-une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — un second
-matériau, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
+une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — une seconde
+matière, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
 
 **Un montage est protégé de la même façon**, et pour deux raisons distinctes. Un `.otio` qui porte
 un marqueur, un effet ou une transition que le studio ne compose pas s’ouvre en lecture seule ; et
@@ -342,7 +342,7 @@ nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas
 
 ---
 
-## Espace Textures
+## Espace Matières
 
 ### Ce qui manque
 
@@ -465,16 +465,6 @@ proxy et votre agent ssh, eux, sont conservés.
 
 ## Réglages et raccourcis
 
-### Deux familles n’ont pas de modèle par défaut
-
-**Réglages ▸ Génération** propose sept sous-sections : Image, Vidéo, 3D, Audio, Agrandissement,
-Détourage, Vectorisation. **Texture** et **Skybox** manquent, alors que ce sont désormais des
-familles de modèles à part entière.
-
-Conséquence : dans les espaces Textures et Skyboxes, le panneau **Génération** n’apparaît qu’après
-avoir choisi un modèle à la main, et il faut recommencer à chaque session — les autres espaces
-peuvent, eux, mémoriser leur choix.
-
 ### Un projet reste sur votre disque, toujours
 
 Le fichier de réglages prévoit un choix entre « sur votre disque » et « dans le nuage » pour
@@ -557,16 +547,14 @@ ne peut pas divulguer votre compte.
 
 ## Récapitulatif : par ordre d’importance
 
-Si vous ne deviez retenir que cinq choses de ce chapitre :
+Si vous ne deviez retenir que quatre choses de ce chapitre :
 
 1. **Les six documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
    quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **l’export vidéo sort muet** — le fichier final est livrable, le son du montage n’y est pas ;
-4. **les familles Texture et Skybox n’ont pas de modèle par défaut** — ces deux espaces font
-   rechoisir leur modèle à chaque session ;
-5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
+4. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
 
 Tout le reste est du confort.
 

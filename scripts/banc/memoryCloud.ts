@@ -36,7 +36,7 @@ const OUTPUT: Partial<Record<ModelFamily, { type: AssetType; extension: string }
   video: { type: 'video', extension: 'mp4' },
   '3d': { type: 'mesh', extension: 'glb' },
   audio: { type: 'audio', extension: 'wav' },
-  texture: { type: 'texture', extension: 'png' },
+  material: { type: 'texture', extension: 'png' },
   skybox: { type: 'skybox', extension: 'png' },
 }
 
@@ -60,7 +60,7 @@ const REFERENCE: FieldDescriptor = {
 }
 
 /** The families the batterie generates in — one demo model each. */
-const FAMILIES: readonly ModelFamily[] = ['image', 'video', '3d', 'audio', 'texture', 'skybox']
+const FAMILIES: readonly ModelFamily[] = ['image', 'video', '3d', 'audio', 'material', 'skybox']
 
 const MODELS: readonly (ModelSummary & { fields: FieldDescriptor[] })[] = FAMILIES.map(family => ({
   id: `model-${family}`,

@@ -393,7 +393,7 @@ describe('exporting the document in front', () => {
   })
 
   // Same question as the picture above, on the last door that still left the fallback to
-  // `safeFileName`: a montage with no usable title came out named after the texture space.
+  // `safeFileName`: a montage with no usable title came out named after the material space.
   it('names a montage with no usable title after its own space', async () => {
     installDocuments({ 'doc-m': 'video' }, 'doc-m')
     retitleDocument('doc-m', '...')

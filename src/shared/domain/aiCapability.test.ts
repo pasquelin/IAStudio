@@ -24,7 +24,7 @@ describe('the contract of an employment', () => {
   it('produces the kind its family is filed under, or the kind the employment makes', () => {
     expect(contract('image', 'txt2img').output).toBe('image')
     expect(contract('3d', 'img23d').output).toBe('mesh')
-    expect(contract('texture', 'txt2img_texture').output).toBe('texture')
+    expect(contract('material', 'txt2img_texture').output).toBe('texture')
     // The one employment of the 3D family that does not answer with a mesh.
     expect(contract('3d', 'motion').output).toBe('animation')
     // The three the canvas edits reach for: their family names the treatment, not the output.

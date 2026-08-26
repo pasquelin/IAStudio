@@ -133,10 +133,10 @@ tout le reste sont cuits dans les fichiers. Voir [Espace Skyboxes](13-espace-sky
 
 ## Faire une matière pour un objet 3D
 
-Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’on juge **sur un objet
-éclairé**, pas à plat.
+Une *matière* n’est pas une image : c’est une surface qu’on juge **sur un objet éclairé**, pas
+à plat.
 
-1. espace **Textures** ;
+1. espace **Matières** ;
 2. bouton **+** du rail gauche ;
 3. **glissez une image du projet sur l’aperçu** — un cadre bleu confirme que le dépôt sera pris.
    Elle devient la **couleur de base** ;
@@ -249,7 +249,7 @@ aucune surface : il ouvre l’asset dans un onglet à lui.
 |---|---|---|
 | un clip sur un montage | glisser sur la **timeline** | un onglet séquence |
 | une image en calque | glisser sur la **toile** | un onglet image |
-| une image en couleur de base | glisser sur l’**aperçu de la matière** | un onglet texture |
+| une image en couleur de base | glisser sur l’**aperçu de la matière** | un onglet matière |
 | une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
@@ -366,7 +366,7 @@ Tout est détaillé, sans rien cacher, dans
 | une variante d’une image | Image | filtre *Image vers image* → donner l’image |
 | une image plus grande | Image | menu **Image ▸ Agrandir**, après avoir réglé son modèle |
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
-| une matière | Textures | `+` → glisser une image sur l’aperçu → `⌘S` |
+| une matière | Matières | `+` → glisser une image sur l’aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |
 | un son | Audio | Modèles → Générer, puis double-clic sur le son |
 | une scène 3D | 3D | `+` → une lumière **d’abord**, puis les objets → `⌘S` |

@@ -91,7 +91,7 @@
       "scene.animation": "An animation could not be laid on the character",
       "scene.export": "Exporting the scene failed",
       "scene.capture": "Capturing the 3D view failed",
-      "material.map": "A texture channel could not be loaded",
+      "material.map": "A material channel could not be loaded",
       "material.channel": "An image could not go into a channel",
       "material.seam": "The seams could not be measured",
       "material.shader": "The material preview lost one of its settings",

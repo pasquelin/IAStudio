@@ -174,7 +174,7 @@ Twenty-one prefixes, the busiest being:
 | `styles:*` | 4 | material settings, saved and replayed |
 | `favorites:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 each | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 each | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `material:*`, `skybox:*` | 1 each | — |
 
 **`EVENTS` is the other direction** — main pushing to the renderer, eighteen entries: job and
 media progress, log lines, project and settings changes, window state, dictation previews, and the
@@ -235,7 +235,7 @@ src/main/
 ├── mcp/                     the same catalogue of actions, offered to a client outside
 ├── settings/                the encrypted store, its adapter, its handlers
 ├── favorites/               the pinned recipes, kept outside every project
-├── styles/                  the material settings replayed from one texture to the next
+├── styles/                  the material settings replayed from one material to the next
 ├── scene/                   exporting a scene, and validating it
 ├── export/                  writing several files into a folder: a material, six sky faces
 ├── diagnostics/             the channel the renderer reports a failure through
@@ -452,13 +452,13 @@ src/renderer/src/
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
 ├── design/       the in-house design system — see below
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, gpu, and `core/` — what every engine shares
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, and `core/` — what every engine shares
 ├── spaces/       one editor per document kind — SIX, as many as there are workspaces
 │   ├── image/      Pixi-backed canvas and its tools
 │   ├── three/      the three.js viewport and its tools
 │   ├── video/      the timeline canvas, the monitor, its tools
 │   ├── audio/      the waveform, its tools, the decoder
-│   ├── textures/   a material's channels, and their tiled preview
+│   ├── materials/  a material's channels, and their tiled preview
 │   └── skyboxes/   the immersive sky and its three flat projections
 ├── panels/       the twenty-seven dockable tools
 ├── home/         the home screen and its three bands — a page, not a layout
@@ -891,7 +891,7 @@ leaves the file as it is. The same refusal covers a sky holding a whole scene an
 holding more than one (`incomplete` in `IO_BY_KIND`).
 
 Either way a space that learns to save needs no channel of its own. **All six kinds can write
-themselves today** — image, scene, sequence, audio, skybox and texture, declared in one place,
+themselves today** — image, scene, sequence, audio, skybox and material, declared in one place,
 `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from that table has a Save that does nothing,
 rather than one that writes an empty body.
 
@@ -969,7 +969,7 @@ Key primitives, all in `design/`:
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
-| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `PictureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
 | `FormHeader` | the line naming what the form is for — the model, in Generate |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
@@ -1132,7 +1132,7 @@ Seven things go through the bundles without looking like it, and each answers an
   narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.
   The count of keys carrying it climbs with every batch; `bundles.test.ts` is what holds, not a
   figure written here. **The exception is a factor, not a count**:
-  `texture.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
+  `material.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
   the grouping would show — `bundles.test.ts` holds the rule **and its exception**. A **creative
   unit** does not go through `{{units, number}}` either but through `formatUnits`, which does more
   than group: it keeps two decimals under ten units, because a cheap call rounded to zero would

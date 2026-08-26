@@ -31,7 +31,7 @@ describe('ollamaModel', () => {
     expect(model?.modality).toBe('image')
     expect(rolesOfOllamaModel(model!)).toEqual([
       aiRoleId('image', 'txt2img'),
-      aiRoleId('texture', 'txt2img_texture'),
+      aiRoleId('material', 'txt2img_texture'),
     ])
   })
 

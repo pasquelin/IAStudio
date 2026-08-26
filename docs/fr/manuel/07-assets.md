@@ -41,7 +41,7 @@ Sept types d’assets :
 | **Vidéo** | un plan animé | `Video/` |
 | **Audio** | un son, une musique | `Audio/` |
 | **Maille** | un objet en 3D | `3D/` |
-| **Texture** | une matière | `Textures/` |
+| **Texture** | une carte de matière | `Materials/` |
 | **Skybox** | un ciel à 360° | `Sky/` |
 | **Animation** | un mouvement, à rejouer sur un personnage | `Animations/` |
 
@@ -178,7 +178,7 @@ l’Explorateur, pas seulement sur la ligne cliquée ; leur libellé annonce le 
 | **Ouvrir dans l’éditeur audio** | le montage ouvert, espace Audio | sons |
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
-| **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
+| **Utiliser comme couleur de base** | la matière ouverte, espace Matières | images |
 | **Modifier l’image** | un onglet à elle, espace Image | textures et ciels |
 
 
@@ -252,7 +252,7 @@ Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compt
 | Ce que vous double-cliquez | Où il s’ouvre |
 |---|---|
 | une **image** | l’espace Image |
-| une **texture** | l’espace Textures |
+| une **texture** | l’espace Matières |
 | un **ciel** | l’espace Skyboxes |
 | une **maille** | l’espace Modélisation |
 | un **son** | l’espace Audio |
@@ -281,7 +281,7 @@ disque — pas d’un asset abîmé.
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 | un mouvement, ou une maille qui en porte | une **sous-piste** de la bande, en 3D | il y devient un bloc, là où vous lâchez |
 | une image | une ligne de texture de l’**Inspecteur** — les cartes d’une matière, l’image d’un sprite | elle remplit cette ligne-là, et elle seule |
-| un ciel | la ligne **Ciel** de l’Inspecteur, en 3D comme en Textures | il éclaire l’aperçu |
+| un ciel | la ligne **Ciel** de l’Inspecteur, en 3D comme en Matières | il éclaire l’aperçu |
 | n’importe quel asset | une **ligne de dossier** de l’Explorateur | son fichier y est déplacé |
 
 **La timeline ne trie pas sur la durée** : un asset qui n’en a pas en reçoit une par défaut plutôt

@@ -32,12 +32,12 @@ import { livePreviewOf } from '@/stores/livePreviews'
 import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
 
 /**
- * A texture handed to an engine, from the row of the native menu that was picked.
+ * A material handed to an engine, from the row of the native menu that was picked.
  *
  * The port is reached through `import()` rather than at the top of this file. Not for the first
  * screen — `eager-graph.test.ts` says this component is not in the opening chunk — but for the
  * one after it: statically imported, `GLTFExporter` would be downloaded by anyone who opens a
- * texture tab, and it is only ever read by somebody who exports one.
+ * material tab, and it is only ever read by somebody who exports one.
  */
 async function exportMaterial(documentId: string, target: MaterialExportTarget): Promise<void> {
   const bridge = getBridge()
@@ -45,7 +45,7 @@ async function exportMaterial(documentId: string, target: MaterialExportTarget):
 
   try {
     await runTask(
-      documentExportName(useDocuments.getState(), documentId, 'texture'),
+      documentExportName(useDocuments.getState(), documentId, 'material'),
       // The baking is `materialExportFiles`, which the outside door shares — including its refusal
       // of a material with no channel, which throws before any dialog is raised.
       async (_id, watch) =>
@@ -88,7 +88,7 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
     [documentId],
   )
 
-  useShortcuts({ scope: 'texture', enabled: active, documentId, onCommand })
+  useShortcuts({ scope: 'material', enabled: active, documentId, onCommand })
 
   useExportMenu(active, bridge =>
     bridge.menu.onMaterialExport(({ target }) => {

@@ -38,7 +38,7 @@ studio, avec un champ, et c’est tout.
 Vous y écrivez ce que vous voulez faire, en une phrase ordinaire :
 
 > *Ouvre un nouveau fichier 3D*
-> *Cherche un modèle de texture pour de la pierre*
+> *Cherche un modèle de matière pour de la pierre*
 > *Prépare une génération d’image en 1024 par 1024*
 
 L’assistant lit la phrase, choisit une ou plusieurs actions dans le catalogue, et les exécute.
@@ -223,7 +223,7 @@ votre projet de code :
 > *Liste les générations en cours*
 > *Prépare une génération d’image avec ce prompt, mais ne l’envoie pas*
 > *Range les rushes de la semaine dans un dossier par jour*
-> *Génère une texture de pierre, attends-la, et pose-la dans la scène*
+> *Génère une matière de pierre, attends-la, et pose-la dans la scène*
 > *Ajoute un calque de texte « Générique » en bas de l’image, en 64 points*
 > *Pose une sphère à deux mètres à droite du cube et éclaire-la en chaud*
 > *Enregistre une version avec un message qui décrit ce qu’on vient de faire*

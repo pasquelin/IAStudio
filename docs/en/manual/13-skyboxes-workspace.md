@@ -1,6 +1,6 @@
 # 13. Skyboxes workspace
 
-[← Textures workspace](12-textures-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Every setting →](14-settings.md)
+[← Materials workspace](12-materials-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Every setting →](14-settings.md)
 
 The workspace where you make and adjust a **360° sky**.
 
@@ -237,4 +237,4 @@ The detail is in [What does not exist yet](18-limits.md).
 
 ---
 
-[← Textures workspace](12-textures-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Every setting →](14-settings.md)
+[← Materials workspace](12-materials-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Every setting →](14-settings.md)

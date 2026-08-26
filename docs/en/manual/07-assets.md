@@ -41,7 +41,7 @@ Seven asset types:
 | **Video** | a moving shot | `Video/` |
 | **Audio** | a sound, a piece of music | `Audio/` |
 | **Mesh** | a 3D object | `3D/` |
-| **Texture** | a material | `Textures/` |
+| **Texture** | a material map | `Materials/` |
 | **Skybox** | a 360° sky | `Sky/` |
 | **Animation** | a motion, to be replayed on a character | `Animations/` |
 
@@ -177,7 +177,7 @@ on the row clicked; their label says the count.
 | **Open in the audio editor** | the open edit, Audio workspace | sounds |
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the edit** | the open sequence, Video workspace | all |
-| **Use as base colour** | the open material, Textures workspace | pictures |
+| **Use as base colour** | the open material, Materials workspace | pictures |
 | **Edit the image** | a tab of its own, Image workspace | textures and skies |
 
 **Rename, Show in folder and Move to bin are elsewhere in the same menu**, among the twelve
@@ -249,7 +249,7 @@ The asset's kind picks its editor, and nothing else weighs in:
 | What you double-click | Where it opens |
 |---|---|
 | a **picture** | the Image workspace |
-| a **texture** | the Textures workspace |
+| a **texture** | the Materials workspace |
 | a **sky** | the Skyboxes workspace |
 | a **mesh** | the Modelling workspace |
 | a **sound** | the Audio workspace |
@@ -277,7 +277,7 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | an asset | an **asset field** of a generation form | it becomes that field's input |
 | a motion, or a mesh that carries one | a **sub-track** of the band, in 3D | it becomes a block there, where you release it |
 | an image | a texture row of the **Inspector** — a material's maps, a sprite's picture | it fills that row, and that row only |
-| a sky | the **Sky** row of the Inspector, in 3D as in Textures | it lights the preview |
+| a sky | the **Sky** row of the Inspector, in 3D as in Materials | it lights the preview |
 | any asset | a **folder row** of the Explorer | its file is moved there |
 
 **The timeline does not sort on duration**: an asset with no duration of its own gets a default

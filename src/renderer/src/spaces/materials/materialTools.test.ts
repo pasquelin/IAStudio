@@ -27,7 +27,7 @@ function resolve(code: Language, key: string): unknown {
     .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined), bundle)
 }
 
-describe('the texture bar registry', () => {
+describe('the material bar registry', () => {
   /**
    * Every key it names, in both bundles. There is no reader of a `.mtlx` on this machine and no
    * screen in a test, so what stands in for looking at the bar is that each of its labels
@@ -60,7 +60,7 @@ describe('the texture bar registry', () => {
    * A channel with no picture has nothing to show flat: inspecting it left the viewport black,
    * which is indistinguishable from a map of black pixels.
    */
-  it('greys the channels this texture has not filled', () => {
+  it('greys the channels this material has not filled', () => {
     const rows = materialTools(input({ filled: ['baseColor'] })).find(
       tool => tool.id === 'channel',
     )?.modes
@@ -123,7 +123,7 @@ describe('stepping to the next entry', () => {
   })
 
   /** Registry order, not fill order: a cycle that follows what was dropped first moves under
-   * the hand from one texture to the next. */
+   * the hand from one material to the next. */
   it('follows the registry order rather than the order they were filled', () => {
     expect(nextInspected(['roughness', 'baseColor'], null)).toBe('baseColor')
   })

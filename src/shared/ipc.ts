@@ -956,7 +956,7 @@ export type AssistantActionRequest = { callId: string; call: AssistantCall }
 export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
-export type TextureExportCommand = { target: MaterialExportTarget }
+export type MaterialExportCommand = { target: MaterialExportTarget }
 
 /**
  * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
@@ -1929,7 +1929,7 @@ export type StudioBridge = {
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe
-    onMaterialExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
+    onMaterialExport: (callback: (command: MaterialExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }
   diagnostics: {

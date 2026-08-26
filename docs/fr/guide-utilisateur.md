@@ -50,7 +50,7 @@ part.
 | 9 | [Espace Modélisation](manuel/09-espace-modelisation.md) | Voler dans une scène, poser des objets et des lumières, les régler |
 | 10 | [Espace Vidéo](manuel/10-espace-video.md) | Monter une séquence, couper, régler des pistes |
 | 11 | [Espace Audio](manuel/11-espace-audio.md) | Rogner un son, faire des fondus, normaliser |
-| 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
+| 12 | [Espace Matières](manuel/12-espace-matieres.md) | Juger une matière sur un objet éclairé |
 | 13 | [Espace Skyboxes](manuel/13-espace-skyboxes.md) | Fabriquer un ciel à 360° et le régler |
 
 ### Les annexes
@@ -83,7 +83,7 @@ tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 tout ce que vous fabriquerez atterrira dedans.
 
 **3. Choisissez un espace.**
-En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Matières**,
 **Skyboxes**. Cliquez **Image**.
 
 **4. Choisissez un modèle.**

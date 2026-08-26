@@ -28,7 +28,7 @@ import {
   type SceneCaptureCommand,
   type SceneExportCommand,
   type SkyboxExportCommand,
-  type TextureExportCommand,
+  type MaterialExportCommand,
   type StudioBridge,
   type ToolRequest,
   type Unsubscribe,
@@ -316,7 +316,7 @@ const bridge: StudioBridge = {
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
     onSceneCapture: callback => subscribe<SceneCaptureCommand>(EVENTS.sceneCapture, callback),
-    onMaterialExport: callback => subscribe<TextureExportCommand>(EVENTS.materialExport, callback),
+    onMaterialExport: callback => subscribe<MaterialExportCommand>(EVENTS.materialExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
   },
   diagnostics: {

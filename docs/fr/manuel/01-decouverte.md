@@ -37,7 +37,7 @@ selon ce que vous fabriquez. Ces six arrangements s’appellent des **espaces de
 | **Vidéo** | des séquences animées | un plan de dix secondes, un montage de plusieurs prises |
 | **3D** | des scènes en volume | un décor, un objet posé sous une lumière |
 | **Audio** | des sons et des musiques | une ambiance, un bruitage, une nappe musicale |
-| **Textures** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
+| **Matières** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
 | **Skyboxes** | des ciels à 360° | ce qu’on voit autour de soi quand on lève les yeux dans une scène |
 
 Vous changez d’espace en cliquant sur son nom, en haut de la fenêtre. Les panneaux se
@@ -88,7 +88,7 @@ Il y a six sortes de documents, une par espace :
 | Vidéo | une séquence | `.otio` |
 | Audio | un son en cours d’édition | `.otio` |
 | Skyboxes | un ciel | `.gltf` |
-| Textures | une matière | `.mtlx` |
+| Matières | une matière | `.mtlx` |
 
 ### 4. Un **modèle**
 

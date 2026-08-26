@@ -77,7 +77,7 @@ function sendRows(asset: Asset | null, t: TFunction): ContextMenuAction[] {
       }))
     : []
 
-  // The other half of extracting a model's textures: a channel is assembled in the Textures
+  // The other half of extracting a model's textures: a channel is assembled in the Materials
   // space, which writes no image back, so this is where its pixels are opened for editing.
   if (pixels) {
     rows.push({

@@ -209,7 +209,7 @@ describe('the models band', () => {
             ],
           }),
           row({
-            role: aiRoleId('texture', 'txt2img_texture'),
+            role: aiRoleId('material', 'txt2img_texture'),
             candidates: [
               candidate({
                 model: localModel({ id: 'ssd', name: 'SSD-1B', diskBytes: 4 * GIBI }),
@@ -223,7 +223,7 @@ describe('the models band', () => {
     )
 
     const line = screen.getByText('SSD-1B').parentElement as HTMLElement
-    expect(line).toHaveTextContent('Image · Texture')
+    expect(line).toHaveTextContent('Image · Matière')
     expect(line).toHaveTextContent('6 opérations')
   })
 

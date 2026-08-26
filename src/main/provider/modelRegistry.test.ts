@@ -840,12 +840,12 @@ describe('model registry', () => {
 
       expect((await registry.search({ family: 'image' })).items).toHaveLength(1)
       expect((await registry.search({ family: 'video' })).items).toEqual([])
-      expect((await registry.search({ family: 'texture' })).items).toEqual([])
+      expect((await registry.search({ family: 'material' })).items).toEqual([])
       expect((await registry.search({ capabilities: ['img2img'] })).items).toEqual([])
     })
 
     /**
-     * A painter is filed under image and still draws textures. Asking the texture space used
+     * A painter is filed under image and still draws textures. Asking the materials space used
      * to answer nothing, and the panel told the person to type a key for models that need none.
      */
     it("lists a model in the space it serves, wearing that space's family", async () => {
@@ -853,16 +853,16 @@ describe('model registry', () => {
         id: 'ssd-1b',
         family: 'image',
         capabilities: ['txt2img', 'img2img'],
-        serves: ['texture/txt2img_texture', 'texture/img2img_texture'],
+        serves: ['material/txt2img_texture', 'material/img2img_texture'],
         modality: 'image',
       })
       const registry = registryOf({ catalog: publicCatalog([]), localModels: () => [painter] })
 
-      const textures = await registry.search({ family: 'texture' })
+      const textures = await registry.search({ family: 'material' })
       expect(textures.items).toEqual([
         expect.objectContaining({
           id: 'ssd-1b',
-          family: 'texture',
+          family: 'material',
           capabilities: ['txt2img_texture', 'img2img_texture'],
         }),
       ])

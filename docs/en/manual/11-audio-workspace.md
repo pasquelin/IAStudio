@@ -1,6 +1,6 @@
 # 11. Audio workspace
 
-[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Textures workspace →](12-textures-workspace.md)
+[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Materials workspace →](12-materials-workspace.md)
 
 The workspace where you shape a sound — shorten it, bring it up gently, even out its volume — and
 then lay it beside the others.
@@ -306,4 +306,4 @@ The detail is in [What does not exist yet](18-limits.md).
 
 ---
 
-[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Textures workspace →](12-textures-workspace.md)
+[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Materials workspace →](12-materials-workspace.md)

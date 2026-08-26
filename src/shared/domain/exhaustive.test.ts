@@ -101,7 +101,7 @@ describe('the lists that stand for a union', () => {
       video: true,
       '3d': true,
       audio: true,
-      texture: true,
+      material: true,
       skybox: true,
       upscale: true,
       'background-removal': true,

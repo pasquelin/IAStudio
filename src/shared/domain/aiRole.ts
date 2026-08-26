@@ -1,4 +1,9 @@
-import { CAPABILITIES_BY_FAMILY, LOCAL_RUNTIME, type ModelFamily } from './model'
+import {
+  CAPABILITIES_BY_FAMILY,
+  currentModelFamily,
+  LOCAL_RUNTIME,
+  type ModelFamily,
+} from './model'
 
 /**
  * What an AI is FOR — see `docs/ci/adr/ADR-21-le-fournisseur-se-choisit-par-emploi.md`.
@@ -36,6 +41,20 @@ export function aiRoleId(family: ModelFamily, capability: string): AiRoleId {
 
   // The one cast of this module beyond the two constants: a brand is unforgeable anywhere but here.
   return `${family}/${capability}` as AiRoleId
+}
+
+/**
+ * A role key off disk, its family brought up to date.
+ *
+ * A key with no slash is a FAMILY on its own — what the model browser filed a choice under before
+ * ADR-23, and what its own migration still reads — or a standalone role, which no rename touches.
+ */
+export function currentAiRoleKey(stored: string): string {
+  const slash = stored.indexOf('/')
+
+  return slash < 0
+    ? currentModelFamily(stored)
+    : `${currentModelFamily(stored.slice(0, slash))}${stored.slice(slash)}`
 }
 
 /**

@@ -124,8 +124,8 @@
     "remove": "Delete",
     "newName": "Style",
     "save": "Save as style",
-    "saveHint": "Keeps the current material settings, without its maps, to replay on another texture.",
-    "applyHint": "Puts these settings back on the open texture, leaving its channels alone",
+    "saveHint": "Keeps the current material settings, without its maps, to replay on another material.",
+    "applyHint": "Puts these settings back on the open material, leaving its channels alone",
     "renameHint": "Changes the saved style’s name, leaving what it holds alone",
     "removeHint": "Takes the style off the list; documents already using it keep their settings"
   },

@@ -30,7 +30,7 @@ export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily> = {
   video: 'video',
   '3d': '3d',
   audio: 'audio',
-  materials: 'texture',
+  materials: 'material',
   skyboxes: 'skybox',
 }
 

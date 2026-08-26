@@ -9,7 +9,7 @@ import { useMaterialViews } from '@/stores/materialViews'
 const gpuSeam = createSeamPort({ loadTexture })
 
 /**
- * How visible the wrap edge of this texture is, measured and remembered for the session.
+ * How visible the wrap edge of this material is, measured and remembered for the session.
  *
  * The base colour and nothing else: it is the channel a seam is seen in, and the eight are laid
  * out together — a normal map whose edges disagree disagrees at the same places. Measuring all

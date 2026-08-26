@@ -62,7 +62,7 @@ export function ollamaModel(tag: OllamaTag): LocalModel | null {
       ...baseOf(tag),
       family: 'image',
       capabilities: ['txt2img'],
-      serves: [aiRoleId('texture', 'txt2img_texture')],
+      serves: [aiRoleId('material', 'txt2img_texture')],
       modality: 'image',
     }
   }
@@ -78,7 +78,7 @@ export function ollamaModel(tag: OllamaTag): LocalModel | null {
 export function rolesOfOllamaModel(model: LocalModel): readonly AiRoleId[] {
   if (model.loader !== 'ollama') return []
   if (model.family === 'image') {
-    return [aiRoleId('image', 'txt2img'), aiRoleId('texture', 'txt2img_texture')]
+    return [aiRoleId('image', 'txt2img'), aiRoleId('material', 'txt2img_texture')]
   }
   return [ASSISTANT_ROLE]
 }

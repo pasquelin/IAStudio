@@ -32,7 +32,7 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('skyboxes')).toBe('skybox')
   })
 
-  it('gives the textures workspace a material to edit', () => {
+  it('gives the materials workspace a material to edit', () => {
     expect(kindForWorkspace('materials')).toBe('material')
   })
 

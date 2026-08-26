@@ -669,7 +669,7 @@ texture** ouvre la liste ; **Retirer la texture** la vide.
 une échelle, voir une texture s’étirer, et distinguer une face d’une autre. Remplacez-le quand
 vous voulez — c’est un point de départ, pas une décoration.
 
-Quatre damiers sont copiés dans le dossier **Textures** du projet la première fois qu’une scène
+Quatre damiers sont copiés dans le dossier **Materials** du projet la première fois qu’une scène
 en demande un : `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. Ce sont des images du
 projet comme les autres.
 

@@ -1,4 +1,4 @@
-# 12. Textures workspace
+# 12. Materials workspace
 
 [← Audio workspace](11-audio-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Skyboxes workspace →](13-skyboxes-workspace.md)
 
@@ -6,7 +6,7 @@ The workspace where you judge a **material**: wood, rusted metal, fabric, stone.
 
 ---
 
-## A texture is not an image
+## A material is not an image
 
 That is the starting point, and it changes everything.
 
@@ -19,9 +19,9 @@ volume, under a real light**, and turns it.
 
 ---
 
-## Creating a texture
+## Creating a material
 
-1. Switch to the **Textures** workspace.
+1. Switch to the **Materials** workspace.
 2. Click the **+** button on the left rail. A fresh document opens.
 3. **Drag an image from the project onto the preview.** It becomes the **base colour**.
 
@@ -115,7 +115,7 @@ Each channel has an **origin**:
 
 ### The Channels section
 
-The **Inspector**'s first section — it is what Textures is. One row per channel, all eight,
+The **Inspector**'s first section — it is what Materials is. One row per channel, all eight,
 **empty ones included**: what a material lacks counts as much as what it has.
 
 | Gesture | What it does |
@@ -181,7 +181,7 @@ values they look at:
 
 **The first two never touch the material.** They change how it is looked at, not what it is: the
 repeat that goes out into a scene stays the one in the **Repeat** field, and the shift stays the one
-in **Offset**. Looking at 4× does not make a texture repeated four times.
+in **Offset**. Looking at 4× does not make a material repeated four times.
 
 **The measurement is a ratio, not a difference.** A noisy stone tolerates a jump that would be a
 scar across smooth plaster: what reads as a seam is the step at the wrap compared with the grain the
@@ -336,7 +336,7 @@ is still waiting to be written.
 ## Exporting the material
 
 Menu **File ▸ Export ▸ Material**, then the row of the engine that will receive it. The menu only
-appears in the Textures workspace, and it speaks to the **tab in front**: two open materials do
+appears in the Materials workspace, and it speaks to the **tab in front**: two open materials do
 not both answer one click.
 
 The studio asks for **a folder**, and creates a sub-folder inside it named after your document.

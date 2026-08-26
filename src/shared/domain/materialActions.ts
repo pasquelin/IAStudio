@@ -125,16 +125,16 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'material.state',
-    titleKey: 'assistant.actions.textureState.title',
-    descriptionKey: 'assistant.actions.textureState.description',
+    titleKey: 'assistant.actions.materialState.title',
+    descriptionKey: 'assistant.actions.materialState.description',
     commitment: 'none',
     reach: 'mcp',
     fields: [],
   }),
   action({
     name: 'material.material',
-    titleKey: 'assistant.actions.textureMaterial.title',
-    descriptionKey: 'assistant.actions.textureMaterial.description',
+    titleKey: 'assistant.actions.materialSettings.title',
+    descriptionKey: 'assistant.actions.materialSettings.description',
     commitment: 'none',
     reach: 'mcp',
     fields: [
@@ -168,8 +168,8 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'material.preview',
-    titleKey: 'assistant.actions.texturePreview.title',
-    descriptionKey: 'assistant.actions.texturePreview.description',
+    titleKey: 'assistant.actions.materialPreview.title',
+    descriptionKey: 'assistant.actions.materialPreview.description',
     commitment: 'none',
     reach: 'mcp',
     fields: [
@@ -234,8 +234,8 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
      * that a required one cannot — clearing a map is a real gesture of the panel.
      */
     name: 'material.channel',
-    titleKey: 'assistant.actions.textureChannel.title',
-    descriptionKey: 'assistant.actions.textureChannel.description',
+    titleKey: 'assistant.actions.materialChannel.title',
+    descriptionKey: 'assistant.actions.materialChannel.description',
     commitment: 'none',
     reach: 'mcp',
     fields: [

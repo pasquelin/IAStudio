@@ -89,7 +89,7 @@ serve several at once.
 
 **Under them, what one download covers.** This is the reading the manager cannot give at a glance:
 the catalogue holds twenty-five models for nineteen operations, and what separates them is not
-the quality. An image model that also does textures answers six operations for four gigabytes
+the quality. An image model that also does materials answers six operations for four gigabytes
 where another answers one for a hundred and thirty-three. The families it spans are named, not
 counted. What the machine cannot hold stays on screen, marked **beyond this machine** — hiding it
 would make the catalogue look smaller than it is.
@@ -106,7 +106,7 @@ What other people publish — **the models trending** on Hugging Face, and **the
 there. The chips above the band filter: Image, Video, 3D, Audio, or Articles. One category shows
 at a time, and that is one request.
 
-**No Texture or Sky chip**, and that is not an oversight: nothing publishes either as a category
+**No Material or Sky chip**, and that is not an oversight: nothing publishes either as a category
 of its own — the studio serves both with image models — so a chip for one would repeat the Image
 list under another name.
 
@@ -221,7 +221,7 @@ on it are **darker**, with rounded corners.
 
 It does not carry the file name, but the **six workspaces**:
 
-**Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes**
+**Image** · **Video** · **3D** · **Audio** · **Materials** · **Skyboxes**
 
 A click switches workspace; the active one is lighter than the others. Switching does three
 things:
@@ -299,7 +299,7 @@ zone's cut: the icons above it open in the first half, those below in the second
 The right column's icons — Layers, Scene, Lights, Meshes, Animations, whichever the workspace
 declares, in that order — then, below the separator, Inspector.
 
-In **Video**, **Audio**, **Textures** and **Skyboxes** the upper half of that column is empty:
+In **Video**, **Audio**, **Materials** and **Skyboxes** the upper half of that column is empty:
 none of those four declares anything there, and the rail then carries the Inspector alone — what a
 sky or a material IS is described by the inspector itself.
 
@@ -413,7 +413,7 @@ starts, and the Explorer is asked for. The lower half opens on the **Explorer**,
 | **Video** | *nothing* | Timeline |
 | **3D** | Scene | Timeline |
 | **Audio** | *nothing* | Timeline |
-| **Textures** | *nothing* | History |
+| **Materials** | *nothing* | History |
 | **Skyboxes** | *nothing* | History |
 
 > **History needs a folder tracked by git.** Until tracking is in place — no project open, or a

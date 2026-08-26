@@ -37,7 +37,7 @@ and that is all.
 You write what you want to do, in an ordinary sentence:
 
 > *Open a new 3D file*
-> *Search for a texture model for stone*
+> *Search for a material model for stone*
 > *Prepare an image generation at 1024 by 1024*
 
 The assistant reads the sentence, picks one or more actions from the catalogue, and runs them.
@@ -219,7 +219,7 @@ from your code project:
 > *List the generations under way*
 > *Prepare an image generation with this prompt, but do not send it*
 > *Sort this week's rushes into a folder per day*
-> *Generate a stone texture, wait for it, and place it in the scene*
+> *Generate a stone material, wait for it, and place it in the scene*
 > *Add a text layer saying “Credits” at the bottom of the image, at 64 points*
 > *Put a sphere two metres to the right of the cube and light it warm*
 > *Record a version with a message describing what we have just done*

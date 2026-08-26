@@ -7,7 +7,7 @@ import { useMaterials } from '@/stores/materials'
 /**
  * Puts a picture into one channel of a material.
  *
- * Shared by the drop on the viewport and by "send to Textures" in the shelf menu: both mean the
+ * Shared by the drop on the viewport and by "send to Materials" in the shelf menu: both mean the
  * same thing, and writing the command twice is how the two would come to disagree about which
  * channel a bare drop fills.
  *

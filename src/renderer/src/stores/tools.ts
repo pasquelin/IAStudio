@@ -547,7 +547,7 @@ export const useTools = create<ToolsState>()(
       // what each half HOLDS, and a length holds nothing — the right column changed width on the
       // way to the home for no reason anyone had chosen. The spaces' lengths become the studio's.
       // 17 drops `channels` and `styles`, which became sections of the inspector: the upper right
-      // of Textures declares nothing now, and a stored arrangement still naming one of them would
+      // of Materials declares nothing now, and a stored arrangement still naming one of them would
       // keep it written for ever — `openEverywhereItSits` only reads what a bump makes it read.
       // 18 is `models` leaving the docks for the settings, and it is the SAME rule: without the
       // bump `migrate` never runs, and every installed arrangement keeps naming a dead panel.

@@ -75,7 +75,7 @@ Neuf contextes :
 | **Dans l’image** | le canvas de l’espace Image |
 | **Dans le ciel** | la vue de l’espace Skyboxes |
 | **Dans l’éditeur audio** | la forme d’onde de l’espace Audio |
-| **Dans la matière** | l’aperçu et les canaux de l’espace Textures |
+| **Dans la matière** | l’aperçu et les canaux de l’espace Matières |
 
 **Une surface peut écouter une touche sans être un contexte, et la garantie ci-dessus ne la couvre
 alors pas.** La bande d’animation de l’espace Modélisation en est le cas, et elle écoute
@@ -532,7 +532,7 @@ touche : ils se prennent à la barre, sous la forme d’onde.
 
 ## Dans la matière
 
-Le dernier contexte de la liste, et le plus court : l’espace Textures n’écoute que l’annulation.
+Le dernier contexte de la liste, et le plus court : l’espace Matières n’écoute que l’annulation.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
@@ -540,7 +540,7 @@ Le dernier contexte de la liste, et le plus court : l’espace Textures n’éco
 | **Rétablir** | `⇧⌘Z` | |
 
 > **Un style appliqué est une seule annulation.** `⌘Z` remet exactement ce qui était réglé
-> avant, d’un coup — voir [L’espace Textures](12-espace-textures.md).
+> avant, d’un coup — voir [L’espace Matières](12-espace-matieres.md).
 
 ---
 

@@ -38,7 +38,7 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'ai.video': () => <AiSettings family="video" />,
   'ai.3d': () => <AiSettings family="3d" />,
   'ai.audio': () => <AiSettings family="audio" />,
-  'ai.texture': () => <AiSettings family="texture" />,
+  'ai.material': () => <AiSettings family="material" />,
   'ai.skybox': () => <AiSettings family="skybox" />,
   'ai.upscale': () => <AiSettings family="upscale" />,
   'ai.background-removal': () => <AiSettings family="background-removal" />,

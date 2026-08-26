@@ -177,7 +177,7 @@ describe('what one download covers', () => {
   const spread = (): AiOverview =>
     overview([
       row({ role: aiRoleId('image', 'txt2img'), candidates: [wide, narrow] }),
-      row({ role: aiRoleId('texture', 'txt2img_texture'), candidates: [wide] }),
+      row({ role: aiRoleId('material', 'txt2img_texture'), candidates: [wide] }),
     ])
 
   it('ranks by employments answered, not by what a model weighs', () => {
@@ -189,7 +189,7 @@ describe('what one download covers', () => {
    * makes one download worth two, and its own `family` field names only where its card is filed.
    */
   it('names the families a model spans, read off the rows it is a candidate of', () => {
-    expect(coverageOf(spread(), 1)[0]?.families).toEqual(['image', 'texture'])
+    expect(coverageOf(spread(), 1)[0]?.families).toEqual(['image', 'material'])
   })
 
   it('gives a tie to the lighter one', () => {

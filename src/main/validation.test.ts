@@ -12,7 +12,9 @@ describe('a path segment', () => {
   // `safeFileName` cuts by code point, so a title of emoji came back at twice its length in
   // UTF-16 units and was refused by the boundary that had just been handed it.
   it('keeps every name the cleaner is willing to produce', () => {
-    expect(pathSegment.safeParse(safeFileName(astral(FILE_NAME_MAX_LENGTH * 2))).success).toBe(true)
+    expect(
+      pathSegment.safeParse(safeFileName(astral(FILE_NAME_MAX_LENGTH * 2), 'file')).success,
+    ).toBe(true)
   })
 
   // Both rows, so the bound is pinned at one number rather than at an interval.

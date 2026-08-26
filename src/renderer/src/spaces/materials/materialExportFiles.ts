@@ -13,31 +13,31 @@ import { materialOf, useMaterials } from '@/stores/materials'
  *
  * Split out for the reason its skybox twin was: two destinations, one rendering. The port is
  * reached through `import()` for the chunk after the first screen — statically imported,
- * `GLTFExporter` would be downloaded by anyone who opens a texture tab.
+ * `GLTFExporter` would be downloaded by anyone who opens a material tab.
  */
 export async function materialExportFiles(
   documentId: string,
   target: MaterialExportTarget,
   watch?: TaskWatch,
 ): Promise<FolderExportRequest> {
-  const texture = materialOf(useMaterials.getState(), documentId)
-  const name = documentExportName(useDocuments.getState(), documentId, 'texture')
+  const state = materialOf(useMaterials.getState(), documentId)
+  const name = documentExportName(useDocuments.getState(), documentId, 'material')
 
-  const { createTextureExportPort } = await import('@/engines/material/export/exportPort')
-  const files = await createTextureExportPort({ loadTexture })(
+  const { createMaterialExportPort } = await import('@/engines/material/export/exportPort')
+  const files = await createMaterialExportPort({ loadTexture })(
     {
       target,
-      channels: exportChannelsOf(texture),
+      channels: exportChannelsOf(state),
       name,
-      material: texture.material,
-      shape: texture.preview.shape,
+      material: state.material,
+      shape: state.preview.shape,
     },
     watch,
   )
 
-  // A texture with no channels resolves to no file, and a destination asked for nothing is a
+  // A material with no channels resolves to no file, and a destination asked for nothing is a
   // question nobody can answer — whoever asked it.
-  if (files.length === 0) throw new Error('this texture has no channel to export')
+  if (files.length === 0) throw new Error('this material has no channel to export')
 
   return { folder: name, target: MATERIAL_TARGET_OF[target], files }
 }
