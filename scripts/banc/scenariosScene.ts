@@ -7,6 +7,7 @@ import {
   cubeScene,
   litScene,
   modelScene,
+  modelSceneWithMaterial,
   named,
   scene,
   twoSpheres,
@@ -511,14 +512,14 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
   },
   {
     /**
-     * An imported model, NOT a primitive: its finish rides on `model.material` rather than on
-     * `node.material` — a `.glb` carries its own per material, and what the studio puts over it
-     * is the eight dials a plain standard material reads.
+     * An imported model, NOT a primitive: it WEARS a material document rather than holding a
+     * finish of its own, so editing that material reaches it — which is what the reference is
+     * for. `node.material` still refuses a model.
      */
-    name: '12.8 makes an imported model matter',
-    said: ['Rends ce modèle importé plus mat, sa rugosité à 0,8.'],
-    setup: modelScene,
-    passed: run => read.near(read.modelFinish(run, 'Knight')?.roughness ?? 0, 0.8, 0.01),
+    name: '12.8 dresses an imported model in a material of the project',
+    said: ['Habille ce modèle importé avec la matière nommée Pierre.'],
+    setup: modelSceneWithMaterial,
+    passed: run => read.modelWears(run, 'Knight') !== null,
   },
 
   // ——— 13. Timeline 3D ———

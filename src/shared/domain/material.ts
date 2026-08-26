@@ -50,8 +50,8 @@ const SCENE_SLOT_BY_CHANNEL: Record<PbrChannel, TextureSlot | null> = {
   roughness: 'roughnessMap',
   metalness: 'metalnessMap',
   ao: 'aoMap',
-  height: null,
-  emissive: null,
+  height: 'displacementMap',
+  emissive: 'emissiveMap',
   edge: null,
 }
 

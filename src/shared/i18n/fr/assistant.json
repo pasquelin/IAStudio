@@ -633,13 +633,9 @@
         "title": "Retirer un point d’un chemin",
         "description": "Retire un point de contrôle. Un chemin ne descend jamais sous deux points, car un point n’est pas une ligne, et la demande est alors refusée."
       },
-      "modelMaterial": {
-        "title": "Régler la finition d’un modèle",
-        "description": "Pose la couleur, la rugosité ou la métallicité d’un modèle importé par-dessus celles que son fichier porte. Ce qui n’est pas nommé reste ce que le fichier disait."
-      },
-      "modelTextures": {
-        "title": "Remplacer les cartes d’un modèle",
-        "description": "Pointe les cartes d’un modèle importé vers des images du projet, emplacement par emplacement. Ce qui n’est pas nommé revient à la carte que le fichier lui-même porte, et un ensemble vide les rend toutes."
+      "modelWearMaterial": {
+        "title": "Habiller un modèle d’une matière",
+        "description": "Fait porter à un modèle importé une matière du projet, nommée par le titre de son document. Le modèle suit ensuite cette matière, si bien qu’en éditer un canal ou un réglage le repeint, sans rien redemander ici. Un titre vide la lui retire, et il retrouve ce que son propre fichier porte."
       },
       "nodeLight": {
         "title": "Régler une lumière",
@@ -1094,6 +1090,7 @@
       "rotationY": "Rotation autour de Y, en radians",
       "rotationZ": "Rotation autour de Z, en radians",
       "scaleZ": "Échelle en profondeur",
+      "material": "Matière",
       "roughness": "Rugosité, de 0 à 1",
       "metalness": "Aspect métallique, de 0 à 1",
       "intensity": "Intensité",

@@ -125,6 +125,8 @@ const BACKDROP: MaterialDescriptor = {
   roughnessMap: null,
   metalnessMap: null,
   aoMap: null,
+  emissiveMap: null,
+  displacementMap: null,
 }
 
 /**

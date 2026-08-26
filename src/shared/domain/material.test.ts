@@ -137,9 +137,13 @@ describe('the scene slot a channel dresses', () => {
     expect(slotForChannel('ao')).toBe('aoMap')
   })
 
-  it('answers nothing for a channel no scene slot reads', () => {
-    expect(slotForChannel('height')).toBeNull()
-    expect(slotForChannel('emissive')).toBeNull()
+  it('dresses the two slots a scene gained', () => {
+    expect(slotForChannel('height')).toBe('displacementMap')
+    expect(slotForChannel('emissive')).toBe('emissiveMap')
+  })
+
+  /** The cavity is read in the material editor's own shader, which a scene never draws. */
+  it('answers nothing for the one channel no scene slot reads', () => {
     expect(slotForChannel('edge')).toBeNull()
   })
 })

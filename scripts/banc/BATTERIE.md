@@ -394,7 +394,7 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 - [ ] « Assigne une texture de mon projet à sa couleur de base. »
 - [ ] « Ajoute une normal map si une texture compatible existe dans le projet. »
 - [x] « Remets le matériau dans son état précédent. »
-- [ ] « Rends ce modèle importé plus mat, sa rugosité à 0,8. »
+- [ ] « Habille ce modèle importé avec la matière nommée Pierre. »
 
 ## 13. Timeline 3D
 

@@ -633,13 +633,9 @@
         "title": "Remove a point from a rail",
         "description": "Drops a control point. A rail never falls below two points, one point being no line, and the call is refused there."
       },
-      "modelMaterial": {
-        "title": "Set an imported model’s finish",
-        "description": "Puts a colour, a roughness or a metalness over the ones an imported model’s file carries. Whatever is not named stays as the file had it."
-      },
-      "modelTextures": {
-        "title": "Override a model’s maps",
-        "description": "Points the maps of an imported model at images of the project, slot by slot. Whatever is not named goes back to the map the file itself carries, and an empty set gives them all back."
+      "modelWearMaterial": {
+        "title": "Dress a model in a material",
+        "description": "Makes an imported model wear a material of the project, named by the title of its document. The model then follows that material, so editing one of its channels or dials repaints it, with nothing asked here again. An empty title takes it off, and the model goes back to what its own file carries."
       },
       "nodeLight": {
         "title": "Set a light",
@@ -1094,6 +1090,7 @@
       "rotationY": "Rotation about Y, in radians",
       "rotationZ": "Rotation about Z, in radians",
       "scaleZ": "Scale in depth",
+      "material": "Material",
       "roughness": "Roughness, from 0 to 1",
       "metalness": "Metalness, from 0 to 1",
       "intensity": "Intensity",

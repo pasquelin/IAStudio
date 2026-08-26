@@ -788,14 +788,10 @@ describe('what the registry offers a node', () => {
     ).toEqual([])
   })
 
-  it('names every map slot the material holds, on both actions that take one', () => {
-    const takers: readonly ActionName[] = ['node.material', 'model.textures']
-
-    for (const name of takers) {
-      expect([...(fieldOf(name, 'textures')?.options ?? [])].sort(), name).toEqual(
-        [...TEXTURE_SLOTS].sort(),
-      )
-    }
+  it('names every map slot the material holds, on the action that takes one', () => {
+    expect([...(fieldOf('node.material', 'textures')?.options ?? [])].sort()).toEqual(
+      [...TEXTURE_SLOTS].sort(),
+    )
   })
 })
 
@@ -915,20 +911,22 @@ describe('what a node is made of', () => {
     expect(nodeNamed('Panneau')).toMatchObject({ sprite: { map: null } })
   })
 
-  it('overrides a model’s maps, and gives them all back on an empty set', async () => {
+  /**
+   * A model NAMES a material and holds nothing of it, so taking one off is the whole gesture in
+   * reverse: the node goes back to the maps its own `.glb` carries.
+   */
+  it('refuses a material the project does not hold, and takes one off on an empty name', async () => {
     const added = await runAction('node.addModel', { assetId: 'asset-mesh', name: 'Chevalier' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    await runAction('model.textures', { nodeId, textures: { map: 'asset-albedo' } })
-    expect(nodeNamed('Chevalier')).toMatchObject({
-      model: { textures: { map: { assetId: 'asset-albedo' } } },
-    })
+    const missing = await runAction('model.wearMaterial', { nodeId, material: 'Aucune matière' })
+    expect(missing.ok).toBe(false)
 
-    await runAction('model.textures', { nodeId, textures: {} })
+    await runAction('model.wearMaterial', { nodeId, material: '' })
 
     const bare = nodeNamed('Chevalier')
     expect(bare).toMatchObject({ model: { assetId: 'asset-mesh' } })
-    expect(bare?.type === 'model' && bare.model.textures).toBeUndefined()
+    expect(bare?.type === 'model' && bare.model.materialDocumentId).toBeUndefined()
   })
 })
 

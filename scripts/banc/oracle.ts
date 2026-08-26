@@ -13,7 +13,6 @@ import type { CsgOperation } from '@shared/domain/csg'
 import { toRadians } from '@shared/domain/angles'
 import { SECOND } from '@shared/domain/time'
 import { matchesWords, searchWords } from '@shared/text'
-import type { ModelMaterial } from '@shared/domain/scene'
 import type { SkyboxContent } from '@shared/domain/skybox'
 import type { MaterialState } from '@/engines/material/materialState'
 import { toDb } from '@/engines/audio/audioData'
@@ -161,12 +160,12 @@ export const rig = (run: Run) => {
 }
 
 /**
- * What an imported model wears OVER its file: the finish rides on `model.material`, never on the
- * node's own — a `.glb` carries a material per mesh, and the node is one row standing for all.
+ * The MATERIAL an imported model wears, by the id of its document — a reference, so nothing of it
+ * is on the node to read. `null` means the model wears what its own file carries.
  */
-export const modelFinish = (run: Run, name: string): ModelMaterial | null => {
+export const modelWears = (run: Run, name: string): string | null => {
   const node = nodeNamed(run, name)
-  return node?.type === 'model' ? (node.model.material ?? null) : null
+  return node?.type === 'model' ? (node.model.materialDocumentId ?? null) : null
 }
 
 /** The open picture itself — its size and its guides, which no layer carries. */

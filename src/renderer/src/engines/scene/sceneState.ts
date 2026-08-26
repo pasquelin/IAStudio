@@ -247,6 +247,8 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   roughnessMap: null,
   metalnessMap: null,
   aoMap: null,
+  emissiveMap: null,
+  displacementMap: null,
 }
 
 export const DEFAULT_SPRITE: SpriteDescriptor = {

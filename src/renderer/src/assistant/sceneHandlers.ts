@@ -8,12 +8,10 @@ import {
   ENVIRONMENT_KINDS,
   FOG_KINDS,
   STUDIO_ENVIRONMENT,
-  TEXTURE_SLOTS,
   TONE_MAPPINGS,
   VIEW_DIRECTIONS,
   type EnvironmentRef,
   type MaterialDescriptor,
-  type ModelRef,
   type PathDescriptor,
   type SceneWorld,
   type SpriteDescriptor,
@@ -40,8 +38,7 @@ import {
   setGeometry,
   setLight,
   setMaterialOn,
-  setModelMaterial,
-  setModelTextures,
+  wearMaterial,
   setNodeVisible,
   setPath,
   setNodesNegative,
@@ -573,6 +570,15 @@ function worldGround(input: Record<string, unknown>): ActionOutcome {
   })
 }
 
+/** The material document of that name, or nothing — a title is what a request can carry. */
+function materialNamed(title: string): string | null {
+  const state = useDocuments.getState()
+  const found = [...state.stored, ...Object.values(state.documents)].find(
+    one => one.kind === 'material' && one.title === title,
+  )
+  return found?.id ?? null
+}
+
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
 
@@ -857,41 +863,17 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'path.removePoint': input =>
     editPath(input, path => withoutPoint(path, numberOf(input, 'index') ?? -1)),
 
-  'model.material': input =>
-    editNode(input, node => {
-      // The mirror of `node.material`, which refuses a model: a `.glb` carries a finish per
-      // material of its own, and what the studio puts over it is this.
-      if (node.type !== 'model') return null
-
-      const colour = textOf(input, 'color')
-      const roughness = numberOf(input, 'roughness')
-      const metalness = numberOf(input, 'metalness')
-      if (!colour && roughness === null && metalness === null) return null
-
-      return setModelMaterial(node.id, {
-        ...node.model.material,
-        ...(colour ? { color: colour } : {}),
-        ...(roughness === null ? {} : { roughness }),
-        ...(metalness === null ? {} : { metalness }),
-      })
-    }),
-
-  'model.textures': input =>
+  'model.wearMaterial': input =>
     editNode(input, node => {
       if (node.type !== 'model') return null
 
-      const asked = texturesFrom(input)
-      if (!asked) return null
+      // The TITLE, because a document id is not something anyone types. An empty one takes the
+      // material off, and the model goes back to what its own file carries.
+      const title = textOf(input, 'material')
+      if (!title) return wearMaterial(node.id, null)
 
-      // The whole set, as `setModelTextures` takes it: a slot left out of the record is a slot
-      // put back to the map the file itself carries, which is what an empty id says too.
-      const textures: ModelRef['textures'] = {}
-      for (const slot of TEXTURE_SLOTS) {
-        const ref = asked[slot]
-        if (ref) textures[slot] = ref
-      }
-
-      return setModelTextures(node.id, textures)
+      const wanted = materialNamed(title)
+      return wanted ? wearMaterial(node.id, wanted) : null
     }),
 
   /**

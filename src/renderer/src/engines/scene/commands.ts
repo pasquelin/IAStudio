@@ -628,28 +628,16 @@ export function removeIkChain(id: string, chainId: string): Command<SceneState> 
 }
 
 /**
- * The project's own maps over the ones the model's file carries. An empty record puts every slot
- * back to what the file brought.
+ * The MATERIAL a model wears, by the id of its document. `null` takes it off, and the model goes
+ * back to the maps and the finish its own file carries.
  *
- * The whole set is written rather than one slot patched, for the reason `setMaterialOn` states
- * about a descriptor: what the inspector holds IS the set, and a partial write would leave the
- * revert unable to say which slots it was answering for.
+ * A reference, so nothing of the material is copied onto the node — see `materialDocumentId`.
  */
-export function setModelTextures(id: string, textures: ModelRef['textures']): Command<SceneState> {
-  return editModel(id, 'textures', model => {
+export function wearMaterial(id: string, materialDocumentId: string | null): Command<SceneState> {
+  return editModel(id, 'materialDocumentId', model => {
     const rest = { ...model }
-    delete rest.textures
-    // An empty set is « the file's own maps », which is what a document says by holding no field.
-    return textures && Object.keys(textures).length > 0 ? { ...rest, textures } : rest
-  })
-}
-
-/** The finish a model wears over its file. An empty one is « what the glTF said ». */
-export function setModelMaterial(id: string, material: ModelRef['material']): Command<SceneState> {
-  return editModel(id, 'material', model => {
-    const rest = { ...model }
-    delete rest.material
-    return material && Object.keys(material).length > 0 ? { ...rest, material } : rest
+    delete rest.materialDocumentId
+    return materialDocumentId ? { ...rest, materialDocumentId } : rest
   })
 }
 
