@@ -13,6 +13,7 @@ export function fakeEnvironment(): ViewportEnvironment {
     setTexture: vi.fn(),
     setAdjustments: vi.fn(),
     refresh: vi.fn(),
+    shownTexture: vi.fn(() => null),
     setStudio: vi.fn(),
     borrowStudio: vi.fn(),
     setIntensity: vi.fn(),

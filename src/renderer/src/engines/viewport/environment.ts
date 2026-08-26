@@ -33,6 +33,12 @@ export type ViewportEnvironment = {
   /** Expensive. Rebuilds the prefiltered map from the current texture — debounce the caller. */
   refresh: () => void
   /**
+   * The picture as it is SHOWN — graded when the document grades, the source itself when it does
+   * not. What a FLAT view of a sky draws: it looks at the same image the backdrop hangs, and
+   * asking the grading twice would be a second target for one picture.
+   */
+  shownTexture: () => Texture | null
+  /**
    * Neutral light with no picture behind it: three builds a small lit room and prefilters it,
    * so the studio ships no HDRI at all and a brand new project still shows a material under
    * usable light. A roughness judged under no light is not judged.
@@ -196,6 +202,8 @@ export function createEnvironment(
     },
 
     refresh,
+
+    shownTexture: () => source,
 
     setStudio: () => {
       // A grading rebuild still owed would put the sky back over the room a beat later.
