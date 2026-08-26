@@ -7,7 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { materialOf, useMaterials } from '@/stores/materials'
-import type { ChannelTexture } from '@shared/domain/ownModelTextures'
+import type { ChannelTexture } from '@shared/domain/channelTexture'
 import { openModelMaterial } from './openModelMaterial'
 
 const PROJECT: Project = {

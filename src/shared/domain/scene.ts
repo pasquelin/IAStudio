@@ -96,27 +96,26 @@ export type ModelRef = {
    */
   animation?: AnimationRef
   /**
-   * Maps of the project put over the ones the file carries, slot by slot.
+   * The MATERIAL this model wears, by the id of its document.
    *
-   * A slot that is absent leaves what the GLB brought, which is why this is a partial and not the
-   * `MaterialDescriptor` a mesh wears: overriding a model means REPLACING one picture, never
-   * restating a colour and a roughness the file already got right.
+   * A reference, never a copy: what the material holds is resolved when the scene is READ, so
+   * editing that material — swapping the picture in a channel, turning a dial — reaches every
+   * model wearing it. It rides in `extras[studio]` verbatim, so no glTF reader sees it and no
+   * format head changes.
    *
-   * It applies to every material of the model at once. A file whose materials want different
-   * maps is not addressable here — the inside of a model is not a thing this document holds
-   * (see above), so there is no name to hang a per-material override on.
+   * Named by a gesture rather than guessed from the mesh: one `.glb` can have any number of
+   * materials assembled from it, and picking one would be a draw.
    */
-  textures?: Partial<Record<TextureSlot, TextureRef>>
-  /**
-   * The finish put over the one the file carries — what a material of the Textures space is
-   * worth to a model, once the maps have been pointed at its own pictures.
-   *
-   * NOT `MaterialSettings`: four of that type's fifteen dials — the two ranges, the green flip,
-   * the cavity — are read in the texture engine's `onBeforeCompile` and reach no plain
-   * `MeshStandardMaterial`. Copying them here would promise a look this renderer cannot draw.
-   * It is also what keeps `material.ts` out of this module, which `angles.ts` already reaches.
-   */
-  material?: ModelMaterial
+  materialDocumentId?: string
+}
+
+/**
+ * What a MATERIAL is worth to a model — its maps by slot, and the dials a plain standard material
+ * reads. Resolved from the document the node names, never stored on the node.
+ */
+export type ModelDress = {
+  textures: Partial<Record<TextureSlot, TextureRef>>
+  material: ModelMaterial
 }
 
 /** What a model wears over its file. Every field optional: absent leaves what the glTF said. */
@@ -576,7 +575,19 @@ export const SHADOW_QUALITIES: readonly ShadowQuality[] = ['hard', 'soft']
 export const SHADOW_MAP_SIZES: readonly number[] = [512, 1024, 2048, 4096]
 
 /** The maps a `MeshStandardMaterial` reads, in the order the inspector lists them. */
-export type TextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap' | 'aoMap'
+export type TextureSlot =
+  | 'map'
+  | 'normalMap'
+  | 'roughnessMap'
+  | 'metalnessMap'
+  | 'aoMap'
+  | 'emissiveMap'
+  /**
+   * Displaces VERTICES, so it shows nothing on a shape with no vertices to move — a plane of two
+   * triangles stays flat however strong the map. The material's own preview tessellates; a scene
+   * draws what its geometry has.
+   */
+  | 'displacementMap'
 
 export const TEXTURE_SLOTS: readonly TextureSlot[] = [
   'map',
@@ -584,6 +595,8 @@ export const TEXTURE_SLOTS: readonly TextureSlot[] = [
   'roughnessMap',
   'metalnessMap',
   'aoMap',
+  'emissiveMap',
+  'displacementMap',
 ]
 
 export type MaterialDescriptor = {

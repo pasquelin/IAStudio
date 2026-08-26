@@ -261,7 +261,11 @@ function isSceneNode(value: unknown): value is SceneNode {
       isOptionalClips(value.model.clips) &&
       isOptionalLanes(value.model.lanes) &&
       isOptionalRig(value.model.rig) &&
-      isOptionalTextureOverrides(value.model.textures)
+      isOptionalTextureOverrides(value.model.textures) &&
+      // A document id, never resolved here: the material may have been deleted, and a scene that
+      // still opens with a model wearing its file's own maps is better than one that will not.
+      (value.model.materialDocumentId === undefined ||
+        typeof value.model.materialDocumentId === 'string')
     )
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
   // checked against the same table.

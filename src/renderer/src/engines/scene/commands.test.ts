@@ -35,7 +35,7 @@ import {
   setMaterialOn,
   setModelLanes,
   setModelRig,
-  setModelTextures,
+  wearMaterial,
   setNodeVisible,
   setRigBoneRole,
   setWorld,
@@ -885,41 +885,39 @@ describe('an edit spread over a selection', () => {
   })
 })
 
-describe('setModelTextures', () => {
+describe('wearMaterial', () => {
   const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
 
-  const texturesOf = (state: SceneState) => {
+  const wornBy = (state: SceneState) => {
     const node = nodeById(state, 'm')
-    return node?.type === 'model' ? node.model.textures : undefined
+    return node?.type === 'model' ? node.model.materialDocumentId : undefined
   }
 
-  it('writes the overrides and gives them back on undo', () => {
+  it('writes the reference and gives it back on undo', () => {
     const before = withModel()
-    const applied = setModelTextures('m', { map: { assetId: 'tex-1' } })
+    const applied = wearMaterial('m', 'mat-1')
 
     const after = applied.apply(before)
-    expect(texturesOf(after)).toEqual({ map: { assetId: 'tex-1' } })
-    expect(texturesOf(applied.revert(after))).toBeUndefined()
+    expect(wornBy(after)).toBe('mat-1')
+    expect(wornBy(applied.revert(after))).toBeUndefined()
   })
 
-  // An empty set is « the file's own maps », which a document should not carry a field to say.
-  it('drops the field when the last override goes', () => {
-    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(withModel())
+  // No material is « the file's own maps », which a document should not carry a field to say.
+  it('drops the field when the material is taken off', () => {
+    const dressed = wearMaterial('m', 'mat-1').apply(withModel())
 
-    expect(texturesOf(setModelTextures('m', {}).apply(dressed))).toBeUndefined()
+    expect(wornBy(wearMaterial('m', null).apply(dressed))).toBeUndefined()
   })
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
   it('leaves the lanes of the model alone, and is left alone by them', () => {
     const lane = clipLane('main', [embeddedClip('c1', 'run', { speed: 2 })])
     const blocked = setModelLanes('m', [lane]).apply(withModel())
-    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(blocked)
+    const dressed = wearMaterial('m', 'mat-1').apply(blocked)
 
     const node = nodeById(dressed, 'm')
     expect(node?.type === 'model' && node.model.lanes).toEqual([lane])
-    expect(texturesOf(setModelLanes('m', []).apply(dressed))).toEqual({
-      map: { assetId: 'tex-1' },
-    })
+    expect(wornBy(setModelLanes('m', []).apply(dressed))).toBe('mat-1')
   })
 
   // One empty lane is exactly what the band shows a model that has never played anything, so

@@ -2,7 +2,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Us } from '@shared/domain/time'
 import { offScreenHost } from '@/engines/core/offScreenHost'
 import { reportFailure } from '@/services/diagnostics'
-import { askOwnModelTextures } from '@/spaces/materials/askOwnModelTextures'
+import { wornModelDress } from '@/spaces/materials/modelDress'
 import { assetVersionOf } from '@/stores/assets'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './sceneView'
@@ -85,7 +85,7 @@ export function createSceneStage({
           // `.glb` while the same model on screen wears the project's — the render disagrees
           // with what was framed, from the first frame.
           assetVersion: assetVersionOf,
-          ownTextures: askOwnModelTextures,
+          wornMaterial: wornModelDress,
         })
 
       renderer.prepareOffscreen({ alpha: true, pixelRatio: 1 })

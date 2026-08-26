@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Asset } from '@shared/domain/asset'
 import { QuietNote } from '@/design/QuietNote'
-import { hasChannel, type ChannelTexture } from '@shared/domain/ownModelTextures'
+import { hasChannel, type ChannelTexture } from '@shared/domain/channelTexture'
 import { useDerivedTextures } from '@/hooks/useDerivedTextures'
 import { ModelTexturesSectionMaterialRow } from './ModelTexturesSectionMaterialRow'
 import { ModelTexturesSectionPackedRow } from './ModelTexturesSectionPackedRow'

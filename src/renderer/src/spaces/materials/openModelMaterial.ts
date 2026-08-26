@@ -1,5 +1,5 @@
 import { isLocalPicture } from '@shared/domain/asset'
-import type { ChannelTexture } from '@shared/domain/ownModelTextures'
+import type { ChannelTexture } from '@shared/domain/channelTexture'
 import { openDocument } from '@/app/dockviewApi'
 import { readyForWriting } from '@/helpers/assetIntents'
 import { reportFailure } from '@/services/diagnostics'

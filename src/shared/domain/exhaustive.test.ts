@@ -292,6 +292,8 @@ describe('the lists that stand for a union', () => {
       roughnessMap: true,
       metalnessMap: true,
       aoMap: true,
+      emissiveMap: true,
+      displacementMap: true,
     }
 
     expect(sorted(TEXTURE_SLOTS)).toEqual(sorted(Object.keys(all)))
@@ -535,8 +537,7 @@ describe('the lists that stand for a union', () => {
       'path.addPoint': true,
       'path.movePoint': true,
       'path.removePoint': true,
-      'model.textures': true,
-      'model.material': true,
+      'model.wearMaterial': true,
       'node.light': true,
       'node.camera': true,
       'camera.shot': true,

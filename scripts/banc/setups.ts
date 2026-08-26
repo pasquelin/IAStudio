@@ -72,6 +72,15 @@ export const modelScene = async (studio: Studio): Promise<void> => {
   measured(studio, named(studio, 'Knight'))
 }
 
+/**
+ * The same, with a material of the project to dress it in — a model WEARS a material now, so a
+ * decor that offers none leaves the request nothing to name.
+ */
+export const modelSceneWithMaterial = async (studio: Studio): Promise<void> => {
+  await opened('materials', 'Pierre')(studio)
+  await modelScene(studio)
+}
+
 /** The bones the model in front carries, for a decor that has to name the one it just added. */
 export const bonesOf = (studio: Studio): readonly string[] => {
   const node = sceneOf(useScenes.getState(), frontId(studio)).nodes.find(

@@ -1017,19 +1017,17 @@ describe('the inspector on an imported model', () => {
     expect(screen.getByLabelText('Clip')).toBeInTheDocument()
   })
 
-  // The other half of extracting a model's textures: without a slot to point back at, an edited
-  // picture has nowhere to land. Folded away, because the errand is a rare one — what the panel
-  // shows on sight is the model's OWN pictures.
-  it('offers a slot per map, reading « the file own » until one is overridden', async () => {
+  /**
+   * The whole of what a model wears is a MATERIAL it names — no slot of its own, because a
+   * material already carries one per channel and a second, poorer list is what kept an edit from
+   * arriving. « Its own file's » is what a model naming none reads as.
+   */
+  it('names the material it wears, and its own file until one is chosen', () => {
     install(modelNodeFixture('model-1'))
     render(withQueries(<Content />))
 
-    expect(screen.getByText('Textures du modèle')).toBeInTheDocument()
-    expect(screen.queryByText('Celle du fichier')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /Remplacer un canal/ }))
-
-    expect(screen.getAllByText('Celle du fichier')).toHaveLength(TEXTURE_SLOTS.length)
+    expect(screen.getByText('Matière du modèle')).toBeInTheDocument()
+    expect(screen.getByLabelText('Matière')).toHaveValue('')
   })
 })
 

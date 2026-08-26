@@ -2,7 +2,7 @@ import { Mesh, MeshStandardMaterial, type Material, type Object3D, type Texture 
 import {
   TEXTURE_SLOTS,
   type ModelMaterial,
-  type ModelRef,
+  type ModelDress,
   type TextureSlot,
 } from '@shared/domain/scene'
 import { createSlotBindings } from './textureBinding'
@@ -11,9 +11,9 @@ import { giveSecondUvSet } from './threeSync'
 
 export type ModelTextures = {
   /** The overrides a node holds, or none. An empty set puts every map back to the file's own. */
-  apply: (overrides: ModelRef['textures']) => void
+  apply: (maps: ModelDress['textures']) => void
   /** The finish it wears over its file. Absent fields leave what the glTF put there. */
-  dress: (finish: ModelRef['material']) => void
+  dress: (finish: ModelMaterial | undefined) => void
   /** Gives every reference back. The materials go with the instance that wore them. */
   dispose: () => void
 }
@@ -102,7 +102,7 @@ export function createModelTextures(
   })
 
   return {
-    apply: overrides => slots.apply(overrides ?? {}),
+    apply: maps => slots.apply(maps),
     dress: finish => {
       for (const { material, worn, fileMaps } of dressed) {
         wear(material, finish)

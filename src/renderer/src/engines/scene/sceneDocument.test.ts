@@ -110,19 +110,19 @@ describe('sceneFromPayload', () => {
     expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
   })
 
-  it('carries the maps put over a model own through a round trip', () => {
+  it('carries the material a model wears through a round trip', () => {
     const model = modelNodeFixture('m')
-    model.model = { ...model.model, textures: { map: { assetId: 'tex-1' } } }
+    model.model = { ...model.model, materialDocumentId: 'mat-1' }
 
     expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
   })
 
-  // A slot spelled with something that is not a reference would come back as a model missing one
-  // map with nothing said — the node is refused instead, like a malformed animation.
-  it('drops a model whose override is not a reference', () => {
+  // A material named by something that is not a string would come back as a model wearing nothing
+  // with nothing said — the node is refused instead, like a malformed animation.
+  it('drops a model whose material is not named by a string', () => {
     const nodes: unknown[] = [
       mesh('a'),
-      { ...modelNodeFixture('m'), model: { assetId: 'x', textures: { map: 'tex-1' } } },
+      { ...modelNodeFixture('m'), model: { assetId: 'x', materialDocumentId: 7 } },
     ]
 
     expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])

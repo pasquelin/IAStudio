@@ -5,8 +5,7 @@ import {
   setPath,
   setLightOn,
   setMaterialOn,
-  setModelMaterial,
-  setModelTextures,
+  wearMaterial,
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
@@ -30,7 +29,7 @@ import { CameraShotSection } from './CameraShotSection/CameraShotSection'
 import { RigSection } from './RigSection'
 import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
 import { MaterialSection } from './MaterialSection'
-import { ModelOverridesSection } from './ModelOverridesSection/ModelOverridesSection'
+import { ModelMaterialSection } from './ModelMaterialSection'
 import { ModelTexturesSection } from './ModelTexturesSection/ModelTexturesSection'
 import { PathSection } from './PathSection'
 import { ShadowSection } from './ShadowSection'
@@ -206,11 +205,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               own file carries, so spreading one over a selection would dress meshes that never
               had that slot. */}
           <ModelTexturesSection assetId={model.model.assetId} name={model.name} />
-          <ModelOverridesSection
-            assetId={model.model.assetId}
-            textures={model.model.textures}
-            onChange={textures => edit.run(setModelTextures(model.id, textures))}
-            onFinish={material => edit.run(setModelMaterial(model.id, material))}
+          <ModelMaterialSection
+            materialDocumentId={model.model.materialDocumentId}
+            onChange={materialId => edit.run(wearMaterial(model.id, materialId))}
           />
         </>
       )}
