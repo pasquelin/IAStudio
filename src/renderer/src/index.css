@@ -303,6 +303,14 @@
   initial-value: 18px;
 }
 
+/* Registered for the same reason, and it is what lets the one below be DERIVED at all:
+   `useGauge` reads it back, and an unregistered `calc()` reads as its own text. */
+@property --sc-spotlight-card {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 168px;
+}
+
 /*
  * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
  * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
@@ -520,6 +528,11 @@
      unbounded column put a row's label at one edge and its value at the other; the rails narrow
      the centre for a workspace, and the home has none of them open on most of its width. */
   --sc-home-width: 1100px;
+  /* How tall a card of the home's top band stands. A gauge because the rail is handed a NUMBER,
+     and derived because the card is prose under `--text-*`: at scale 1.4 its four clamped lines
+     no longer fit a 168px box, and `overflow` cuts the fourth through the middle — for exactly
+     the readers who enlarged the text. Registered above, or `useGauge` reads the calc as text. */
+  --sc-spotlight-card: calc(168px * var(--sc-font-scale));
   /* The coverage bar of the home's models band. Bounded, and short on purpose: a bar running the
      width of the page reads as a download in progress rather than as a proportion. */
   --sc-verdict-bar: 320px;

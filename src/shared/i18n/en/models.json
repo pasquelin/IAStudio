@@ -136,7 +136,7 @@
     "secret": "API secret",
     "configure": "Set up credentials",
     "explanation": "Your credentials are encrypted by the system keychain and never leave your machine.",
-    "configureHint": "Opens the settings, at the account section"
+    "configureHint": "Opens the settings, at the API keys section"
   },
   "accounts": {
     "name": "Name",

@@ -44,12 +44,13 @@ export function SpotlightCard({ slide, layout }: { slide: Slide; layout: 'banner
           <h3 className="text-text text-body m-0 font-semibold">{slide.title}</h3>
         </span>
 
-        {/* Bounded, and the button is not: a body long enough to push the action out of the
-            card would leave the one thing to click off screen. */}
+        {/* Bounded, and the button is not: a body long enough to push the action out of the card
+            would leave the one thing to click off screen. The clamp is for what this file cannot
+            shorten — a project or document name a person chose — and it ends on an ellipsis. */}
         <p
           className={cn(
             'text-muted text-tiny m-0 overflow-hidden leading-relaxed',
-            banner ? 'max-w-[80ch]' : 'max-w-[64ch] flex-1',
+            banner ? 'max-w-[80ch]' : 'line-clamp-4 max-w-[64ch] flex-1',
           )}
         >
           {slide.body}

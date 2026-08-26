@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ARTICLES_TOPIC, NEWS_TOPICS, type NewsTopic } from '@shared/domain/news'
+import { ARTICLES_TOPIC, NEWS_TOPICS, OPENING_TOPIC, type NewsTopic } from '@shared/domain/news'
 import { Chip } from '@/design/Chip'
 import { useNews } from '@/hooks/useNews'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
@@ -20,14 +20,18 @@ import { NewsBody } from './NewsBody'
 export function News() {
   const { t } = useTranslation()
   const reading = useSettings(state => state.settings.home.news)
-  // One topic at a time, and the first family rather than a mixed list: five topics answered at
-  // once is five requests for a band nobody has looked at yet.
-  const [topic, setTopic] = useState<NewsTopic>(NEWS_TOPICS[0] ?? ARTICLES_TOPIC)
+  const [chosen, setChosen] = useState<NewsTopic | null>(null)
+  const topic = chosen ?? OPENING_TOPIC
   const news = useNews(topic, reading)
 
-  // A source that says nothing leaves nothing to head: heading, chips and retry button all stood
-  // over an empty band. An empty CATEGORY keeps it — the chips are the way to a full one.
-  if (news.isError) return null
+  // Untouched and with nothing to show, it does not open: a heading, five chips and a line
+  // saying so is worse than no band. Once a chip has been pressed the band ALWAYS answers, note
+  // and all — one that vanished under the press would take the way back to a full category with
+  // it, and the main process holds a page for six hours.
+  //
+  // `reading` guards the whole of it: switched off, the query is disabled and `data` is whatever
+  // the cache still holds, which would take the "switch it back on" line off the page with it.
+  if (reading && chosen === null && (news.isError || news.data?.items.length === 0)) return null
 
   return (
     <Section
@@ -43,14 +47,14 @@ export function News() {
                 hint={t('home.news.topicHint')}
                 selected={candidate === topic}
                 tip={HINT_BOTTOM}
-                onClick={() => setTopic(candidate)}
+                onClick={() => setChosen(candidate)}
               />
             ))}
           </div>
         )
       }
     >
-      <NewsBody items={news.data?.items} reading={reading} />
+      <NewsBody news={news} reading={reading} />
     </Section>
   )
 }

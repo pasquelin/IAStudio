@@ -25,9 +25,8 @@ function show(items: readonly NewsItem[] = [item()]) {
       Promise.resolve({ topic, items: [...items], readAt: '2026-08-24T00:00:00.000Z' }) as never,
   )
   installFakeBridge({ news: { read } })
-  render(withQueries(<News />))
 
-  return { read }
+  return { read, ...render(withQueries(<News />)) }
 }
 
 beforeEach(() => {
@@ -114,8 +113,69 @@ describe('the news band', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('says a category is empty once the hub has actually answered', async () => {
-    show([])
+  /**
+   * The half that keeps the rule from becoming a trap: the main process holds a page for six
+   * hours, so a band that took itself off the page under a chip would be gone for six hours,
+   * with the four categories that do answer behind it.
+   */
+  it('stays, and says the source refused, when the category a reader chose does', async () => {
+    const read = vi.fn((topic: string) =>
+      topic === 'articles'
+        ? Promise.reject(new Error('502'))
+        : (Promise.resolve({
+            topic,
+            items: [item()],
+            readAt: '2026-08-24T00:00:00.000Z',
+          }) as never),
+    )
+    installFakeBridge({ news: { read } })
+    render(withQueries(<News />))
+    await screen.findByText('black-forest-labs/FLUX.1-dev')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Articles' }))
+
+    expect(await screen.findByText('La source n’a pas répondu.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+  })
+
+  /**
+   * Switched off, the query is disabled but the cache still answers — and what the band owes a
+   * reader then is the way to switch it back on, not silence.
+   */
+  it('keeps the way back on when the news are cut after an empty read', async () => {
+    const { read } = show([])
+    await settled(read)
+
+    useSettings.setState(state => ({
+      settings: { ...state.settings, home: { ...state.settings.home, news: false } },
+    }))
+
+    expect(await screen.findByText(/Les actualités sont coupées/)).toBeInTheDocument()
+  })
+
+  /** A heading, five chips and a line saying there is nothing is worse than no band at all. */
+  it('does not open on a band whose first category is empty', async () => {
+    const { read, container } = show([])
+
+    await settled(read)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  /** A band that vanished under the chip that emptied it would take the way back with it. */
+  it('stays, and says so, when the category a reader chose is empty', async () => {
+    const read = vi.fn(
+      (topic: string): Promise<NewsPage> =>
+        Promise.resolve({
+          topic,
+          items: topic === 'articles' ? [] : [item()],
+          readAt: '2026-08-24T00:00:00.000Z',
+        }) as never,
+    )
+    installFakeBridge({ news: { read } })
+    render(withQueries(<News />))
+    await screen.findByText('black-forest-labs/FLUX.1-dev')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Articles' }))
 
     expect(await screen.findByText('Rien à signaler dans cette catégorie.')).toBeInTheDocument()
   })

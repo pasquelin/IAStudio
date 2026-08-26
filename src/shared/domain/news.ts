@@ -43,6 +43,13 @@ export const ARTICLES_TOPIC = 'articles'
 
 export const NEWS_TOPICS: readonly NewsTopic[] = [...NEWS_FAMILIES, ARTICLES_TOPIC]
 
+/**
+ * What the band opens on: the first family rather than a mixed list, five topics answered at once
+ * being five requests for a band nobody has looked at yet. The `??` is what
+ * `noUncheckedIndexedAccess` asks of a read the registry can never fail.
+ */
+export const OPENING_TOPIC: NewsTopic = NEWS_TOPICS[0] ?? ARTICLES_TOPIC
+
 export function isNewsTopic(value: unknown): value is NewsTopic {
   return NEWS_TOPICS.some(topic => topic === value)
 }

@@ -1,17 +1,17 @@
 import { useTranslation } from 'react-i18next'
-import type { NewsItem } from '@shared/domain/news'
 import { Button } from '@/design/Button'
 import { QuietNote } from '@/design/QuietNote'
+import type { NewsQuery } from '@/hooks/useNews'
 import { useSettings } from '@/stores/settings'
 import { NewsRow } from './NewsRow'
 import { NewsSkeleton } from './NewsSkeleton'
 
 /**
- * The states of one topic that have something to draw: switched off, still reading, empty, and
- * the rows. A refusal has none — `News` takes the whole band off the page for that one, which is
- * why this reads the items rather than the query.
+ * The five states of one topic: switched off, reading, refused, empty, and the rows. The last
+ * four are what a reader who PRESSED a chip sees — `News` only draws this band at all when it
+ * has something to say, or when a chip made it the reader's own.
  */
-export function NewsBody({ items, reading }: { items?: readonly NewsItem[]; reading: boolean }) {
+export function NewsBody({ news, reading }: { news: NewsQuery; reading: boolean }) {
   const { t } = useTranslation()
   const setValue = useSettings(state => state.setValue)
 
@@ -24,13 +24,22 @@ export function NewsBody({ items, reading }: { items?: readonly NewsItem[]; read
     )
   }
 
-  if (!items) return <NewsSkeleton />
+  if (news.isPending) return <NewsSkeleton />
 
-  if (items.length === 0) return <QuietNote>{t('home.news.none')}</QuietNote>
+  if (news.isError) {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <QuietNote>{t('home.news.refused')}</QuietNote>
+        <Button onClick={() => void news.refetch()}>{t('home.retry')}</Button>
+      </div>
+    )
+  }
+
+  if (news.data.items.length === 0) return <QuietNote>{t('home.news.none')}</QuietNote>
 
   return (
     <div className="flex flex-col">
-      {items.map(item => (
+      {news.data.items.map(item => (
         <NewsRow key={item.id} item={item} />
       ))}
     </div>

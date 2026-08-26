@@ -4,6 +4,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { isFinished } from '@shared/domain/job'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { Carousel } from '@/design/Carousel/Carousel'
+import { useGauge } from '@/hooks/useGauge'
 import { getBridge } from '@/services/bridge'
 import { useDocuments, type DocumentsSlice } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
@@ -19,6 +20,8 @@ const PER_VIEW = 2
 
 /** Under this a half-band card no longer holds a heading and a sentence, so one takes the width. */
 const MIN_CARD_WIDTH = 320
+
+/** What the gauge says at scale 1, and what a window with no stylesheet falls back to. */
 const CARD_HEIGHT = 168
 
 /**
@@ -51,6 +54,8 @@ export function Spotlight() {
   const running = useJobs(state => state.jobs.filter(job => !isFinished(job.status)).length)
   const authenticated = useSettings(state => state.auth.authenticated)
   const authKnown = useSettings(state => state.authKnown)
+  // The card holds prose, which follows `appearance.fontScale`; its height has to follow with it.
+  const cardHeight = useGauge('--sc-spotlight-card', CARD_HEIGHT)
 
   const slides: Slide[] = []
 
@@ -135,7 +140,7 @@ export function Spotlight() {
       items={slides}
       itemWidth={MIN_CARD_WIDTH}
       perView={PER_VIEW}
-      itemHeight={CARD_HEIGHT}
+      itemHeight={cardHeight}
       label={t('home.sections.spotlight')}
       renderCard={slide => <SpotlightCard slide={slide} layout="stacked" />}
     />

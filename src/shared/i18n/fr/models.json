@@ -136,7 +136,7 @@
     "secret": "Secret API",
     "configure": "Configurer les identifiants",
     "explanation": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine.",
-    "configureHint": "Ouvre les réglages, à la section du compte"
+    "configureHint": "Ouvre les réglages, à la section des clés API"
   },
   "accounts": {
     "name": "Nom",

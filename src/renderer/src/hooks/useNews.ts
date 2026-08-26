@@ -9,6 +9,8 @@ import { getBridge } from '@/services/bridge'
  * `retry: false`: the source is somebody else's server and the band is decoration — three
  * silent attempts before a person is told nothing answered is three attempts too many.
  */
+export type NewsQuery = ReturnType<typeof useNews>
+
 export function useNews(topic: NewsTopic, enabled: boolean) {
   return useQuery<NewsPage>({
     queryKey: ['news', topic],
