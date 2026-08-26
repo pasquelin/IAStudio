@@ -32,7 +32,7 @@ if (files.length < LEAST_FILES) {
   process.exit(1)
 }
 
-const copies = shippedTwice(files)
+const copies = shippedTwice(ARTEFACT, files)
 
 if (copies.length > 0) {
   console.error(

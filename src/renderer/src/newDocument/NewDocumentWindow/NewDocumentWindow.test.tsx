@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
@@ -45,7 +45,13 @@ describe('NewDocumentWindow', () => {
 
     const field = await screen.findByRole('textbox')
     expect(field).toHaveValue('Scène 1')
-    expect(field).toHaveFocus()
+    // Awaited: the field is focused by an effect, which React runs AFTER the commit that puts it
+    // in the DOM — so the query that finds it can win the race, and did on a loaded machine.
+    await waitFor(() => expect(field).toHaveFocus())
+    // SELECTED, and nothing else in the suite says so: the whole name is there to be replaced,
+    // and `select()` could be deleted with every case still green.
+    expect(field).toHaveProperty('selectionStart', 0)
+    expect(field).toHaveProperty('selectionEnd', 'Scène 1'.length)
     expect(screen.getByText('.gltf')).toBeInTheDocument()
   })
 

@@ -22,25 +22,46 @@ function folderHolding(files: Record<string, string>): string {
 describe('what a build ships twice', () => {
   it('names every path holding the same bytes, once', () => {
     const root = folderHolding({
-      'assets/transcoder-a1b2.wasm': 'the same bytes',
-      'decoders/basis/transcoder.wasm': 'the same bytes',
-      'assets/index.js': 'something else',
+      'renderer/assets/transcoder-a1b2.wasm': 'the same bytes',
+      'renderer/decoders/basis/transcoder.wasm': 'the same bytes',
+      'renderer/assets/index.js': 'something else',
     })
 
-    const copies = shippedTwice(filesUnder(root))
+    const copies = shippedTwice(root, filesUnder(root))
 
     expect(copies).toHaveLength(1)
     expect(copies[0]?.paths.map(path => path.slice(root.length + 1)).sort()).toEqual([
-      'assets/transcoder-a1b2.wasm',
-      'decoders/basis/transcoder.wasm',
+      'renderer/assets/transcoder-a1b2.wasm',
+      'renderer/decoders/basis/transcoder.wasm',
     ])
   })
 
+  /** Neither program can load the other's file, and `shared/` compiles into both. */
+  it('does not call the same helper in two programs a copy', () => {
+    const root = folderHolding({
+      'main/promises-a1b2.js': 'the same bytes',
+      'renderer/assets/promises-a1b2.js': 'the same bytes',
+    })
+
+    expect(shippedTwice(root, filesUnder(root))).toEqual([])
+  })
+
+  /** The root of the artefact is no program, so what lies there is one set — `out/` holds none. */
+  it('judges two files lying at the root of the artefact as copies of each other', () => {
+    const root = folderHolding({ 'one.js': 'the same bytes', 'two.js': 'the same bytes' })
+
+    expect(shippedTwice(root, filesUnder(root))).toHaveLength(1)
+  })
+
   it('leaves an artefact where every file is its own alone', () => {
-    const root = folderHolding({ 'a.js': 'one', 'nested/b.js': 'two', 'nested/deep/c.js': 'three' })
+    const root = folderHolding({
+      'main/a.js': 'one',
+      'main/nested/b.js': 'two',
+      'main/nested/deep/c.js': 'three',
+    })
 
     expect(filesUnder(root)).toHaveLength(3)
-    expect(shippedTwice(filesUnder(root))).toEqual([])
+    expect(shippedTwice(root, filesUnder(root))).toEqual([])
   })
 
   /**
@@ -48,14 +69,17 @@ describe('what a build ships twice', () => {
    * failing a build over. This is the whole tolerance the check has — see `artefact.ts`.
    */
   it('does not call two empty files a copy', () => {
-    const root = folderHolding({ 'one.txt': '', 'two.txt': '' })
+    const root = folderHolding({ 'main/one.txt': '', 'main/two.txt': '' })
 
-    expect(shippedTwice(filesUnder(root))).toEqual([])
+    expect(shippedTwice(root, filesUnder(root))).toEqual([])
   })
 
   it('counts every path beyond the first, at its own weight', () => {
-    const root = folderHolding({ 'a.bin': 'sixteen bytes!!', 'b.bin': 'sixteen bytes!!' })
-    const copies = shippedTwice(filesUnder(root))
+    const root = folderHolding({
+      'main/a.bin': 'sixteen bytes!!',
+      'main/b.bin': 'sixteen bytes!!',
+    })
+    const copies = shippedTwice(root, filesUnder(root))
 
     expect(wastedBytes(copies)).toBe(15)
   })
