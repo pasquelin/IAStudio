@@ -441,6 +441,7 @@ describe('Tree', () => {
     const rows = screen.getAllByRole('treeitem')
     const data = dragTransfer()
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.dragOver(rows[2]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
     expect(onDrop).toHaveBeenCalledWith(['a'], 'b')
@@ -550,8 +551,14 @@ describe('Tree', () => {
      * rectangle would say nothing about the drop.
      */
     function dropAt(row: HTMLElement, ratio: number, data: DataTransfer): void {
-      row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      hoverAt(row, ratio, data)
       fireEvent.drop(row, { dataTransfer: data, clientY: 30 * ratio })
+    }
+
+    /** jsdom measures at zero, so the row is given a height for the hover as for the drop. */
+    function hoverAt(row: HTMLElement, ratio: number, data: DataTransfer): void {
+      row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      fireEvent.dragOver(row, { dataTransfer: data, clientY: 30 * ratio })
     }
 
     function renderInsertable(
@@ -649,55 +656,58 @@ describe('Tree', () => {
       expect(onInsert).not.toHaveBeenCalled()
     })
 
-    /** jsdom measures at zero, so the row is given a height for the hover as for the drop. */
-    function hoverAt(row: HTMLElement, ratio: number, data: DataTransfer): void {
-      row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
-      fireEvent.dragOver(row, { dataTransfer: data, clientY: 30 * ratio })
-    }
+    /** The gap, wherever it opened: it is a row of its own, so no row carries it. */
+    const gap = (): HTMLElement | null => document.querySelector('[data-drop-line]')
 
-    /** The line is carried by the row it lands beside — see `dropLine`. */
-    function lineOn(row: HTMLElement): HTMLElement | null {
-      return row.closest('li')!.querySelector('[data-drop-line]')
-    }
+    /** Which slot the gap sits in, counted like the rows around it. */
+    const slotsDrawn = (): string[] =>
+      [...document.querySelectorAll('[data-drop-line], [role="treeitem"]')].map(one =>
+        one.hasAttribute('data-drop-line') ? 'gap' : (one.textContent ?? ''),
+      )
 
-    it('draws the line on the edge of the row the drop would land beside', () => {
+    it('opens the gap where the row would land', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
       fireEvent.dragStart(b!, { dataTransfer: data })
       hoverAt(a!, 0.1, data)
 
-      expect(lineOn(a!)?.className).toContain('top-0')
+      expect(slotsDrawn()).toEqual(['scene', 'gap', 'a', 'a1', 'b'])
       expect(a!.className).not.toContain('outline-accent')
     })
 
     /**
-     * 🛑 Why the line is drawn OVER the rows: a gap opened at the pointer pushes the row being
-     * aimed at out from under it, the browser calls that a `dragleave`, and the list oscillates.
-     * jsdom lays nothing out, but the virtualizer's offsets are ours — and a gap shifts them.
+     * 🛑 The gap slides UNDER the pointer the moment it opens — it takes the place the pointer
+     * was aiming at. A gap that let events through left nobody answering: the browser drew a
+     * refusal, and the `dragleave` of the row it had just pushed closed it again, once per
+     * `dragover`. That was the layer stack until 2026-08-26.
      */
-    it('moves no row while the drop is being aimed', () => {
-      const [, a, , b] = renderInsertable(() => {})
+    it('holds the aim while the pointer rests in the gap it opened', () => {
+      const onInsert = vi.fn()
+      const [, a, , b] = renderInsertable(onInsert)
       const data = dragTransfer()
-      const before = screen.getAllByRole('treeitem').map(row => row.closest('li')!.style.transform)
 
       fireEvent.dragStart(b!, { dataTransfer: data })
       hoverAt(a!, 0.1, data)
+      // The pointer has not moved; the gap has moved under it. `false` is the event CANCELLED,
+      // which is the whole of what tells the browser a drop may land here.
+      expect(fireEvent.dragOver(gap()!, { dataTransfer: data })).toBe(false)
+      expect(slotsDrawn()).toEqual(['scene', 'gap', 'a', 'a1', 'b'])
 
-      const during = screen.getAllByRole('treeitem').map(row => row.closest('li')!.style.transform)
-      expect(during).toEqual(before)
+      fireEvent.drop(gap()!, { dataTransfer: data })
+      expect(onInsert).toHaveBeenCalledWith(['b'], 'scene', 0)
     })
 
-    /** A line at the depth of the group and one at its parent's are the two answers a hand aims
+    /** A gap at the depth of the group and one at its parent's are the two answers a hand aims
      * between, and nothing else on screen tells them apart. */
-    it('indents the line to the level that would receive the row', () => {
+    it('indents the gap to the level that would receive the row', () => {
       const [, , a1, b] = renderInsertable(() => {})
       const data = dragTransfer()
 
       fireEvent.dragStart(b!, { dataTransfer: data })
       hoverAt(a1!, 0.1, data)
 
-      expect(lineOn(a1!)?.style.marginLeft).toBe('calc(var(--sc-indent) * 2)')
+      expect(gap()?.style.marginLeft).toBe('calc(var(--sc-indent) * 2)')
     })
 
     /**
@@ -705,7 +715,7 @@ describe('Tree', () => {
      * `dragover` that says where the pointer now is: clearing on it blanks the target for a
      * frame, on every row the pointer crosses.
      */
-    it('keeps the line when the pointer merely crosses into another row', () => {
+    it('keeps the gap when the pointer merely crosses into another row', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
@@ -713,7 +723,7 @@ describe('Tree', () => {
       hoverAt(a!, 0.1, data)
       fireEvent.dragLeave(a!, { dataTransfer: data, relatedTarget: b })
 
-      expect(lineOn(a!)).not.toBeNull()
+      expect(gap()).not.toBeNull()
     })
 
     it('dims the row the hand is holding rather than taking it out of the list', () => {
@@ -732,7 +742,7 @@ describe('Tree', () => {
      * now is, so it has to let a crossing pass. A row that REFUSES is then the one place nothing
      * would ever clear — and the line stayed lit on a row the pointer had left.
      */
-    it('takes the line off the row it left, even for a row that refuses the drop', () => {
+    it('takes the gap back on a row that refuses the drop', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
@@ -741,12 +751,12 @@ describe('Tree', () => {
       // Its own top edge: `b` would land exactly where it already sits, which is no drop at all.
       hoverAt(b!, 0.1, data)
 
-      expect(lineOn(a!)).toBeNull()
+      expect(gap()).toBeNull()
     })
 
     // The blank below the rows is no row either, and it takes nothing here — `onDropRoot` is
     // absent — so it used to return before clearing what a row had lit.
-    it('takes the line off when the pointer moves onto the blank below the rows', () => {
+    it('takes the gap back when the pointer moves onto the blank below the rows', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
@@ -754,10 +764,10 @@ describe('Tree', () => {
       hoverAt(a!, 0.1, data)
       fireEvent.dragOver(screen.getByRole('tree').parentElement!, { dataTransfer: data })
 
-      expect(lineOn(a!)).toBeNull()
+      expect(gap()).toBeNull()
     })
 
-    it('takes the line back when the gesture ends without dropping', () => {
+    it('takes the gap back when the gesture ends without dropping', () => {
       const [, a, , b] = renderInsertable(() => {})
       const data = dragTransfer()
 
@@ -765,24 +775,23 @@ describe('Tree', () => {
       hoverAt(a!, 0.1, data)
       fireEvent.dragEnd(b!)
 
-      expect(lineOn(a!)).toBeNull()
+      expect(gap()).toBeNull()
     })
 
     /**
-     * A row beside a group belongs below everything the group holds. Drawing the line right
-     * under the group's own row would show it landing between the group and its first child —
-     * a place the drop never puts it.
+     * A row beside a group belongs below everything the group holds. Opening the gap right under
+     * the group's own row would show it landing between the group and its first child — a place
+     * the drop never puts it.
      */
-    it('draws the line below the whole subtree when the row lands after a group', () => {
+    it('opens the gap below the whole subtree when the row lands after a group', () => {
       // `a1` comes out of `a` and lands beside it, at the root.
-      const [, a, a1, b] = renderInsertable(() => {})
+      const [, a, a1] = renderInsertable(() => {})
       const data = dragTransfer()
 
       fireEvent.dragStart(a1!, { dataTransfer: data })
       hoverAt(a!, 0.9, data)
 
-      expect(lineOn(b!)).not.toBeNull()
-      expect(lineOn(a1!)).toBeNull()
+      expect(slotsDrawn()).toEqual(['scene', 'a', 'a1', 'gap', 'b'])
     })
 
     it('picks up a row for a tree that only inserts', () => {
@@ -822,6 +831,7 @@ describe('Tree', () => {
     const rows = screen.getAllByRole('treeitem')
     const data = dragTransfer()
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.dragOver(rows[2]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
     // The batch, always — one row long unless `dragMultiple` says otherwise.

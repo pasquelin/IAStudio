@@ -853,6 +853,9 @@ describe('dragging a row of the explorer', () => {
   const drag = async (from: string, onto: string): Promise<void> => {
     const data = dragTransfer()
     fireEvent.dragStart(await rowFor(from), { dataTransfer: data })
+    // The hover comes first, as the browser sends it: it is where the tree resolves what a
+    // release would do, and the drop reports that same answer.
+    fireEvent.dragOver(await rowFor(onto), { dataTransfer: data })
     fireEvent.drop(await rowFor(onto), { dataTransfer: data })
   }
 
@@ -1000,6 +1003,7 @@ describe('picking several rows of the explorer', () => {
 
     const data = dragTransfer()
     fireEvent.dragStart(await rowFor('a.png'), { dataTransfer: data })
+    fireEvent.dragOver(await rowFor('notes'), { dataTransfer: data })
     fireEvent.drop(await rowFor('notes'), { dataTransfer: data })
 
     expect(moveFiles).toHaveBeenCalledWith(['a.png', 'b.png'], 'notes')
@@ -1015,6 +1019,7 @@ describe('picking several rows of the explorer', () => {
 
     const data = dragTransfer()
     fireEvent.dragStart(await rowFor('b.png'), { dataTransfer: data })
+    fireEvent.dragOver(await rowFor('notes'), { dataTransfer: data })
     fireEvent.drop(await rowFor('notes'), { dataTransfer: data })
 
     expect(moveFiles).toHaveBeenCalledWith(['b.png'], 'notes')

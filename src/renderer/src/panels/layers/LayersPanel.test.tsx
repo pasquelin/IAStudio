@@ -251,6 +251,9 @@ describe('LayersPanel', () => {
       // `as DOMRect`: the handler reads `top` and `height`, and the ten other fields of a
       // rectangle would say nothing about the drop.
       row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      // The hover comes first, as the browser sends it: it is where the panel resolves what a
+      // release would do, and the drop reports that same answer.
+      fireEvent.dragOver(row, { dataTransfer: data, clientY: 30 * ratio })
       fireEvent.drop(row, { dataTransfer: data, clientY: 30 * ratio })
     }
 

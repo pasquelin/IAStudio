@@ -129,6 +129,9 @@ describe('SceneTree', () => {
 
     const data = dragData()
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    // The hover comes first, as the browser sends it: it is where the tree resolves what a
+    // release would do, and the drop reports that same answer.
+    fireEvent.dragOver(rows[2]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
     const [first, second] = scene().nodes
@@ -146,12 +149,14 @@ describe('SceneTree', () => {
 
     const down = dragData()
     fireEvent.dragStart(rowOf('AmbientLight'), { dataTransfer: down })
+    fireEvent.dragOver(rowOf('DirectionalLight'), { dataTransfer: down })
     fireEvent.drop(rowOf('DirectionalLight'), { dataTransfer: down })
     expect(scene().nodes[0]?.parentId).not.toBeNull()
 
     // The drop opened the branch it landed in, so the moved row is still on screen.
     const out = dragData()
     fireEvent.dragStart(rowOf('AmbientLight'), { dataTransfer: out })
+    fireEvent.dragOver(rowOf('Scène'), { dataTransfer: out })
     fireEvent.drop(rowOf('Scène'), { dataTransfer: out })
 
     expect(scene().nodes[0]?.parentId).toBeNull()
@@ -175,6 +180,7 @@ describe('SceneTree', () => {
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     // The bottom edge of the row below it: past it, and at the same level.
     rows[2]!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+    fireEvent.dragOver(rows[2]!, { dataTransfer: data, clientY: 27 })
     fireEvent.drop(rows[2]!, { dataTransfer: data, clientY: 27 })
 
     expect(order()).toEqual([before[1], before[0], ...before.slice(2)])
@@ -192,6 +198,7 @@ describe('SceneTree', () => {
     const data = dragData()
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     rows[0]!.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+    fireEvent.dragOver(rows[0]!, { dataTransfer: data, clientY: 1 })
     fireEvent.drop(rows[0]!, { dataTransfer: data, clientY: 1 })
 
     // Taken as a drop INTO the scene, which is what the root means, and the node was already

@@ -23,10 +23,8 @@ const NO_MODIFIERS: Modifiers = { shiftKey: false, metaKey: false, ctrlKey: fals
  */
 const HOVER_EXPAND_MS = 600
 
-/** Where in a row the pointer is: its edges insert beside it, its middle drops into it. */
-type DropZone = 'before' | 'into' | 'after'
-
-/** What releasing over a row would do. An insertion carries where it would land. */
+/** What releasing over a row would do. Its edges insert beside it, its middle drops into it,
+ * and an insertion carries where it would land. */
 type DropTarget =
   { zone: 'into' } | { zone: 'before' | 'after'; parentId: string | null; index: number }
 
@@ -274,7 +272,7 @@ export function Tree<T extends TreeNode>({
   // Which row the pointer is over during a drag, where in it, and what is being dragged. Session
   // state of the gesture itself, so none of it reaches the caller: what the caller hears about
   // is the drop.
-  const [over, setOver] = useState<{ id: string; zone: DropZone } | null>(null)
+  const [over, setOver] = useState<{ id: string; target: DropTarget } | null>(null)
   /**
    * What the hand is holding, the row it took hold of FIRST — which is also what the ghost
    * shows and what the insertion arithmetic runs on.
@@ -297,7 +295,7 @@ export function Tree<T extends TreeNode>({
    * sets a fresh object on every tick, so an effect keyed on the object would rearm for ever and
    * never fire once.
    */
-  const restingIn = over?.zone === 'into' ? over.id : null
+  const restingIn = over?.target.zone === 'into' ? over.id : null
 
   /**
    * A folder hovered long enough opens itself, so something can be carried two levels down without
@@ -315,12 +313,12 @@ export function Tree<T extends TreeNode>({
   }, [restingIn, rows, onToggle])
 
   /**
-   * Where the line saying "here" is drawn: BETWEEN two rows — `rows.length` for the very bottom —
-   * at the depth of the level receiving the drop. 🛑 Drawn OVER the rows and never inserted among
-   * them, or the list oscillates: `moves no row while the drop is being aimed` says why.
+   * Where the gap opens: BETWEEN two rows — `rows.length` for the very bottom — at the depth of
+   * the level receiving the drop. One row tall even for a group carrying twenty: a gap that grew
+   * with the subtree would resize the list under the pointer on every hover.
    */
-  const dropLine = useMemo(() => {
-    if (held === null || over === null || over.zone === 'into') return null
+  const gap = useMemo(() => {
+    if (held === null || over === null || over.target.zone === 'into') return null
 
     const at = rows.findIndex(row => row.node.id === over.id)
     const target = rows[at]
@@ -329,13 +327,24 @@ export function Tree<T extends TreeNode>({
     // After a row means after everything it holds: an insertion beside a group belongs below its
     // last visible descendant, not between the group and its first child.
     let index = at
-    if (over.zone === 'after') {
+    if (over.target.zone === 'after') {
       index += 1
       while (index < rows.length && (rows[index]?.depth ?? 0) > target.depth) index += 1
     }
 
     return { index, depth: target.depth }
   }, [rows, over, held])
+
+  /**
+   * The rows on screen, `null` where the gap sits: the virtualizer counts one row more and opens
+   * it on its own. The row being DRAGGED stays where it is, dimmed — taking it out would remount
+   * the element the pointer is holding, and the gesture would stop firing there and then.
+   */
+  const slots = useMemo(() => {
+    const placed: (TreeRow<T> | null)[] = [...rows]
+    if (gap !== null) placed.splice(gap.index, 0, null)
+    return placed
+  }, [rows, gap])
 
   // Read back from the gauge the row below is sized by: a constant is only right at one density.
   //
@@ -348,7 +357,7 @@ export function Tree<T extends TreeNode>({
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
   const virtualizer = useVirtualizer({
-    count: rows.length,
+    count: slots.length,
     getScrollElement: () => scroller.current,
     estimateSize: () => rowPixels,
     overscan: 8,
@@ -362,7 +371,7 @@ export function Tree<T extends TreeNode>({
     focusVirtualCell(index, {
       scroller: scroller.current,
       scrollToIndex: row => virtualizer.scrollToIndex(row),
-      count: rows.length,
+      count: slots.length,
       attribute: 'data-row',
     })
 
@@ -371,9 +380,12 @@ export function Tree<T extends TreeNode>({
 
   // Roving tab stop: one entry into the tree, then the arrows. Every row reachable by tab
   // would make a scene of two hundred nodes two hundred presses deep.
+  //
+  // Counted over the SLOTS, like every index a row carries: a gap sitting above the anchor
+  // shifts what `data-row` numbers, and the tab stop would land on its neighbour.
   const tabStop = Math.max(
     0,
-    rows.findIndex(row => row.node.id === anchor),
+    slots.findIndex(slot => slot?.node.id === anchor),
   )
 
   // A row that a selection may not hold is not a node either: it has nothing to move.
@@ -483,6 +495,22 @@ export function Tree<T extends TreeNode>({
     return insertion === null ? null : { zone: side, ...insertion }
   }
 
+  /**
+   * Letting go, over a row or in the gap that row opened: what the hover resolved is what lands.
+   * The PAYLOAD says whether the drag is ours — `dragged` survives a gesture that ended without
+   * a callback, and every tree of the studio shares the channel.
+   */
+  const release = (event: React.DragEvent<HTMLElement>): void => {
+    const aim = over
+    setOver(null)
+    setDragged(null)
+
+    const carried = rowDrag.idsFrom(event)
+    if (!held || aim === null || carried[0] !== held.id) return
+    if (aim.target.zone === 'into') onDrop?.(carried, aim.id)
+    else onInsert?.(carried, aim.target.parentId, aim.target.index)
+  }
+
   const pick = (node: T, modifiers: Modifiers): void => {
     // An unselectable row selects nothing rather than itself — clicking a header clears.
     if (selectable && !selectable(node)) return onSelect([], 'replace')
@@ -540,7 +568,7 @@ export function Tree<T extends TreeNode>({
   ): void => {
     if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowLeft' && row.expanded) onToggle(row.node.id)
-    else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, rows.length - 1))
+    else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, slots.length - 1))
     else if (event.key === 'ArrowUp') focusRow(Math.max(index - 1, 0))
     else if (event.key === 'Enter' || event.key === ' ') {
       // Only when the row itself holds the focus, the guard `Collection` already carries: a
@@ -623,18 +651,46 @@ export function Tree<T extends TreeNode>({
         className="relative"
       >
         {virtualizer.getVirtualItems().map(virtual => {
-          const row = rows[virtual.index]
-          if (!row) return null
           const index = virtual.index
+          const row = slots[index]
 
-          // Which edge of THIS row the line sits on, if any. Carried by the row rather than
-          // placed at an offset of its own: the virtualizer has already put the row where it
-          // belongs, and a second arithmetic beside it is a second chance to disagree.
-          //
-          // 🛑 The angle it leaves: an index OUTSIDE the virtual window is drawn by nobody, so
-          // aiming past a long open subtree gives no feedback while the drop still fires.
-          const lineAbove = dropLine?.index === index
-          const lineBelow = dropLine?.index === rows.length && index === rows.length - 1
+          /**
+           * The gap, underlined at the depth of the level that would receive the row, and
+           * announced to nobody: it stands for a move that has not happened. 🛑 A TARGET, not a
+           * decoration — it slides UNDER the pointer the moment it opens, and one that let events
+           * through would leave nobody answering: `holds the aim` says what that cost.
+           */
+          if (row === undefined) return null
+          if (row === null)
+            return (
+              <li
+                key="gap"
+                role="presentation"
+                aria-hidden="true"
+                style={{ transform: `translateY(${virtual.start}px)`, height: virtual.size }}
+                className="absolute inset-x-0 top-0 py-px"
+                onDragOver={event => {
+                  if (!rowDrag.carries(event)) return
+                  // The aim is whatever opened the gap: the pointer has not left it.
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                }}
+                onDragEnd={() => {
+                  setOver(null)
+                  setDragged(null)
+                }}
+                onDrop={event => {
+                  event.preventDefault()
+                  release(event)
+                }}
+              >
+                <div
+                  data-drop-line
+                  style={{ marginLeft: `calc(${INDENT} * ${gap?.depth ?? 0})` }}
+                  className={cn(ROW_LINE, 'border-accent border-b-2')}
+                />
+              </li>
+            )
 
           return (
             <li
@@ -676,12 +732,12 @@ export function Tree<T extends TreeNode>({
                   rowSkin(selected.has(row.node.id), { surface: 'row' }),
                   // The row a drop would land in, told apart from the row that is selected.
                   over?.id === row.node.id &&
-                    over.zone === 'into' &&
+                    over.target.zone === 'into' &&
                     'outline-accent outline -outline-offset-1',
-                  // The rows the hand is holding, while the line shows where they would land. A
+                  // The rows the hand is holding, while the gap shows where they would land. A
                   // dimming rather than a hidden row: taking one out would remount the element
                   // the pointer is dragging, and the gesture would stop firing there and then.
-                  dropLine !== null && dragged?.some(one => one.id === row.node.id) && 'opacity-40',
+                  gap !== null && dragged?.some(one => one.id === row.node.id) && 'opacity-40',
                 )}
                 // The handle is the row itself — a `draggable` makes every control inside it
                 // draggable too, so the eye would reparent instead of toggling.
@@ -707,7 +763,7 @@ export function Tree<T extends TreeNode>({
                     event.preventDefault()
                     // What leaves the shelf is COPIED into the folder, never taken from it.
                     event.dataTransfer.dropEffect = 'copy'
-                    return setOver({ id: row.node.id, zone: 'into' })
+                    return setOver({ id: row.node.id, target: { zone: 'into' } })
                   }
                   if (!rowDrag.carries(event)) return
                   const target = dropTargetFor(row, event)
@@ -717,7 +773,7 @@ export function Tree<T extends TreeNode>({
                   // Without this the browser refuses the drop, and neither callback ever fires.
                   event.preventDefault()
                   event.dataTransfer.dropEffect = 'move'
-                  setOver({ id: row.node.id, zone: target.zone })
+                  setOver({ id: row.node.id, target })
                 }}
                 // A leave whose next stop is another row of this tree is a MOVE between rows,
                 // and the `dragover` right behind it says where: clearing here would blank the
@@ -740,27 +796,7 @@ export function Tree<T extends TreeNode>({
                     if (foreign.accepts(row.node)) foreign.onDrop(event, row.node)
                     return
                   }
-                  const target = dropTargetFor(row, event)
-                  setOver(null)
-
-                  /**
-                   * The payload decides, not what this tree remembers picking up. `dragged`
-                   * survives a gesture that ended without either callback — a drag cancelled
-                   * after its source row scrolled out of the window fires no `dragEnd` — and
-                   * the channel is shared by every tree, so the next drag started ANYWHERE
-                   * would otherwise be reported here as this tree's stale nodes.
-                   *
-                   * The head of the list is what is compared: it is the row the gesture started
-                   * on, and no two trees can be holding the same one.
-                   */
-                  const carried = rowDrag.idsFrom(event)
-                  if (held && target !== null && carried[0] === held.id) {
-                    if (target.zone === 'into') onDrop?.(carried, row.node.id)
-                    else onInsert?.(carried, target.parentId, target.index)
-                  }
-                  // Cleared here as well as on `dragEnd`: the source row is virtualized, so a
-                  // drag that scrolled it out of view has no element left to end on.
-                  setDragged(null)
+                  release(event)
                 }}
                 // The secondary button is left to `onContextMenu` below, which aims rather than
                 // composes: on macOS it arrives as Ctrl+click, and `pickFrom` reads that modifier
@@ -789,22 +825,6 @@ export function Tree<T extends TreeNode>({
               >
                 {body(row)}
               </div>
-              {/* Where the drop would land, in the hairline gutter `py-px` leaves between two
-                  rows, indented to the level receiving it. After the row in the DOM, so it paints
-                  over the fill; named because `aria-hidden` leaves it no other handle. */}
-              {(lineAbove || lineBelow) && (
-                <div
-                  data-drop-line
-                  aria-hidden="true"
-                  style={{ marginLeft: `calc(${INDENT} * ${dropLine?.depth ?? 0})` }}
-                  className={cn(
-                    // A BORDER, never a fill: the full accent under a row belongs to a control,
-                    // and `styles.test.ts` refuses it in any file that also draws `rowSkin`.
-                    'border-accent pointer-events-none absolute inset-x-0 h-0 border-t-2',
-                    lineBelow ? 'bottom-0' : 'top-0',
-                  )}
-                />
-              )}
             </li>
           )
         })}
