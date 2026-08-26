@@ -85,6 +85,7 @@ import {
 } from './sceneState'
 import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
+import { createAnimatedStacks } from './animatedStack'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
 import { postOf, stackDraws, type PostStack } from '@shared/domain/postProcessing'
 import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
@@ -668,9 +669,8 @@ export class SceneRenderer {
    * IS an edit.
    */
   private bypassed = false
-  /** Per subject, the stack `postAt` answered and what it was answered FROM — see `stackAtHead`. */
-  private readonly animated = new Map<string, { rest: PostStack; made: PostStack }>()
-  private animatedAt: Us | null = null
+  /** Per subject, the stack `postAt` answered and everything it was answered FROM. */
+  private readonly animated = createAnimatedStacks(postAt)
   private playhead = 0
 
   /** The frame of the preview loop, so switching block or stopping cancels the one running. */
@@ -1815,28 +1815,9 @@ export class SceneRenderer {
     this.post?.sweep(live)
   }
 
-  /**
-   * One subject's stack, animated to the head and held for the IMAGE.
-   *
-   * `compose` runs once per SURFACE — five times in a quad with a preview open — and `postAt`
-   * builds a fresh object whenever a channel drives the stack. A fresh object misses the plan
-   * cache `planStack` keys on identity, so one composition that had not moved was re-planned
-   * five times an image: filter, spread, sort, `Set`, `map`, `join`, and five throwaway entries.
-   */
+  /** One subject's stack, animated to the head and held for the image — see `animatedStack`. */
   private stackAtHead(rest: PostStack, subject: string): PostStack {
-    // The rest pose too, not just the head: moving a slider edits the stack without touching
-    // either, and a cache blind to it would hold yesterday's look until the head moved.
-    const held = this.animated.get(subject)
-    if (held && held.rest === rest && this.animatedAt === this.playhead) return held.made
-
-    if (this.animatedAt !== this.playhead) {
-      this.animated.clear()
-      this.animatedAt = this.playhead
-    }
-
-    const made = postAt(rest, this.timeline, subject, this.playhead)
-    this.animated.set(subject, { rest, made })
-    return made
+    return this.animated.of(rest, this.timeline, subject, this.playhead)
   }
 
   /** The scene's own composition, opened by whatever its channels add at this instant. */

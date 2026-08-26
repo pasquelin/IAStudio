@@ -231,15 +231,22 @@ export function applyPostStack(
 /**
  * Here rather than in the panel: which of the two lists a name belongs to is a rule about
  * presets, and a rule written in a click handler is one no test reaches.
+ *
+ * 🛑 IDS FIRST, both families, and only then a saved preset by NAME. The picker hands an id for
+ * either list, so a look somebody saved as « Film noir » must not swallow the shipped `noir` row
+ * standing right above it — while a client, which has only words, still reaches its own by name.
  */
 export function stackOfPreset(
   name: string,
   saved: readonly UserPostPreset[],
   mintId: () => string = newId,
 ): PostStack | null {
-  const mine = postPresetNamed(saved, name)
-  if (mine) return mine.stack
-  return isPostPresetId(name) ? stackFromPreset(name, mintId) : null
+  const byId = saved.find(preset => preset.id === name)
+  if (byId) return byId.stack
+  if (isPostPresetId(name)) return stackFromPreset(name, mintId)
+
+  const byName = postPresetNamed(saved, name)
+  return byName ? byName.stack : null
 }
 
 /**

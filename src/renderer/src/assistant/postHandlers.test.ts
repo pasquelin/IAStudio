@@ -179,6 +179,21 @@ describe('the looks kept on this machine', () => {
     expect(scene().world.post.effects.map(one => one.effect)).toEqual(['bloom'])
   })
 
+  /**
+   * The picker hands an ID for either list, and the two rows stand one above the other under
+   * their own headings. Matched by name first, a look saved as « noir » would swallow the
+   * shipped `noir` — and the row somebody clicked would apply somebody else's stack.
+   */
+  it('lets a shipped preset through when a saved one bears its name', async () => {
+    await withBloom()
+    await runAction('post.save', { name: 'noir' })
+    await runAction('post.remove', { effectId: scene().world.post.effects[0]?.id ?? '' })
+
+    await runAction('post.preset', { preset: 'noir' })
+
+    expect(scene().world.post.effects.map(one => one.effect)).toContain('letterbox')
+  })
+
   it('still applies one the studio ships, by its id', async () => {
     expect((await runAction('post.preset', { preset: 'noir' })).ok).toBe(true)
 

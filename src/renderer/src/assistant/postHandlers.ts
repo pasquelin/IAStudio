@@ -27,7 +27,7 @@ import {
   type PostTargetRef,
 } from '@/engines/scene/postCommands'
 import type { SceneState } from '@/engines/scene/sceneState'
-import { speaksBundle } from '@shared/i18n'
+import { speaksBundle } from '@/helpers/speaksBundle'
 import type { Us } from '@shared/domain/time'
 import { postChannelName } from '@/helpers/channelNames'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'

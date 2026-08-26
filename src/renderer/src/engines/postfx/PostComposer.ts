@@ -37,7 +37,11 @@ import { heaviestCost, stepsOf, wantsFloat, type PostStep } from './postPlan'
 import { fusableFor, fusableKind } from './shaders/fusableChunks'
 import { standaloneFor, type BuildContext } from './standaloneEffects'
 
-/** Where a composition is being drawn, and at what size. Pixels, never CSS units. */
+/**
+ * Where on the CANVAS a composition lands, in CSS pixels — `setViewport` and `setScissor`
+ * multiply by the device ratio themselves. The `width`/`height` of the job beside it are device
+ * pixels; pre-multiplying this rect too would scissor a pane off screen on any HiDPI display.
+ */
 export type PostRect = { x: number; y: number; width: number; height: number }
 
 export type PostDrawJob = {

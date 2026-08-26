@@ -6,7 +6,7 @@ import {
   type BodyPart,
   type HumanoidRole,
 } from '@shared/domain/humanoid'
-import { speaksBundle } from '@shared/i18n'
+import { speaksBundle } from '@/helpers/speaksBundle'
 import { childBone } from '@shared/domain/rig'
 import {
   assetClip,
