@@ -16,7 +16,7 @@
  */
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
 
 /**
  * Below this the walk found something other than a build — an emptied folder, a wrong root — and
@@ -38,20 +38,34 @@ export function filesUnder(folder: string): string[] {
 }
 
 /**
- * Every group of files under `folder` holding identical bytes.
- *
- * Empty files are left out: two of them are the same bytes by definition, and a duplicate that
- * weighs nothing is not one worth failing a build over. There is no exemption list beyond that —
- * an exemption is the line someone adds instead of deleting the copy.
+ * Which of the artefact's programs a file belongs to — `main`, `preload` or `renderer`. A file
+ * lying at the root of the artefact belongs to none, and those are one set.
  */
-export function shippedTwice(files: string[]): ShippedTwice[] {
+function programOf(root: string, path: string): string {
+  const [first, ...rest] = relative(root, path).split(sep)
+  return rest.length === 0 ? '' : (first ?? '')
+}
+
+/**
+ * Every group of files holding identical bytes WITHIN one program.
+ *
+ * Across two it is not a copy: they cannot share a file at run time — one is a Node process
+ * reading from disk, the other a window loading over its own protocol — and `shared/` compiles
+ * into both, so there will always be some.
+ *
+ * 🛑 What that buys, in clear: an asset copied into a program that has no use for it is waste
+ * this cannot see. Empty files are left out too, two of them being the same bytes by definition.
+ * Those are the whole tolerance; an exemption list is the line someone adds instead of deleting
+ * the copy.
+ */
+export function shippedTwice(root: string, files: string[]): ShippedTwice[] {
   const byDigest = new Map<string, { paths: string[]; bytes: number }>()
 
   for (const path of files) {
     const content = readFileSync(path)
     if (content.length === 0) continue
 
-    const digest = createHash('sha256').update(content).digest('hex')
+    const digest = `${programOf(root, path)}:${createHash('sha256').update(content).digest('hex')}`
     const seen = byDigest.get(digest)
     if (seen) seen.paths.push(path)
     else byDigest.set(digest, { paths: [path], bytes: content.length })
