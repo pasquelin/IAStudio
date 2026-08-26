@@ -4,7 +4,7 @@ import { refreshPalette } from '@/engines/core/palette'
 import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from '@/design/styles'
 import { useRowHeight, type RowHeight } from './useRowHeight'
 
-function declare(gauge: string, value: string | null): void {
+function setGauge(gauge: string, value: string | null): void {
   const root = document.documentElement
   if (value === null) root.style.removeProperty(gauge)
   else root.style.setProperty(gauge, value)
@@ -13,9 +13,9 @@ function declare(gauge: string, value: string | null): void {
 }
 
 afterEach(() => {
-  declare('--sc-control', null)
-  declare('--sc-row-stacked', null)
-  declare('--sc-row-filled', null)
+  setGauge('--sc-control', null)
+  setGauge('--sc-row-stacked', null)
+  setGauge('--sc-row-filled', null)
 })
 
 // `RowHeight` itself, never a copy of its members: the union grew a third shape and a hand-written
@@ -24,7 +24,7 @@ const height = (shape: RowHeight): number => renderHook(() => useRowHeight(shape
 
 describe('how tall a list row is', () => {
   it('reads the control gauge for one line of text', () => {
-    declare('--sc-control', '24px')
+    setGauge('--sc-control', '24px')
 
     expect(height('control')).toBe(24)
   })
@@ -32,8 +32,8 @@ describe('how tall a list row is', () => {
   // The one the explorer was missing — `index.css` writes what a stacked row costs, beside the
   // gauge that answers for it.
   it('reads the taller gauge for a name stacked over a subtitle', () => {
-    declare('--sc-control', '24px')
-    declare('--sc-row-stacked', '32px')
+    setGauge('--sc-control', '24px')
+    setGauge('--sc-row-stacked', '32px')
 
     expect(height('stacked')).toBe(32)
   })
@@ -43,8 +43,8 @@ describe('how tall a list row is', () => {
    * one for the home's filled rows is exactly what loosened the explorer and the documents panel.
    */
   it('reads a gauge of its own for a row painted edge to edge', () => {
-    declare('--sc-row-stacked', '32px')
-    declare('--sc-row-filled', '38px')
+    setGauge('--sc-row-stacked', '32px')
+    setGauge('--sc-row-filled', '38px')
 
     expect(height('filled')).toBe(38)
   })
