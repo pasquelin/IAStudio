@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Settings } from '@shared/domain/settings'
 import { SNAP_KINDS, type SnapKind, type Snapping } from '@shared/domain/snap'
@@ -33,8 +34,19 @@ export function EnvironmentSnapSection({
   // read `0,25 m` — no unit, no symbol, and the decimal separator of no language in particular.
   const reading = useSnapReading(view.units)
 
-  const options = (control: SnapStepControl) =>
-    control.steps.map(step => ({ value: String(step), label: reading(control.reads, step) }))
+  // 🛑 Held across renders, as the bar holds its own: the three fields format eight steps each,
+  // and a dragged slider of a sister section re-renders this panel at pointer rate.
+  const stepped = useMemo(
+    () =>
+      SNAP_STEP_CONTROLS.map(control => ({
+        control,
+        options: control.steps.map(step => ({
+          value: String(step),
+          label: reading(control.reads, step),
+        })),
+      })),
+    [reading],
+  )
 
   const hint = HINT_LEFT(t('environment.snapEnabledHint'))
 
@@ -56,13 +68,13 @@ export function EnvironmentSnapSection({
         <>
           {/* The preferences set these three by a free SLIDER, so a stored step can fall between
               two of the ones offered here — it then reads as itself rather than as the first. */}
-          {SNAP_STEP_CONTROLS.map(control => (
+          {stepped.map(({ control, options }) => (
             <SelectField
               key={control.kind}
               label={t(FIELD_KEYS[control.path])}
               scId={FIELD_KEYS[control.path]}
               value={String(view[control.path])}
-              options={options(control)}
+              options={options}
               onChange={value => onViewport({ [control.path]: Number(value) })}
               unnamedLabel={reading(control.reads, view[control.path])}
               hint={hint}

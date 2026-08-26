@@ -14,8 +14,6 @@ import { SCENARIOS } from './scenarios'
  */
 const LIST = readFileSync('scripts/banc/BATTERIE.md', 'utf8').split('\n')
 
-const REQUESTS = LIST.filter(one => /^- \[[ x]\] «/.test(one))
-
 /** A sentence as either side spells it — the quotes and the wrapping are not the point. */
 const plainly = (said: string): string =>
   said.replace(/[’']/g, "'").replace(/\s+/g, ' ').trim().toLowerCase()
@@ -58,7 +56,7 @@ async function overEachScenario(
 
 describe('the batterie and the bench', () => {
   it('carries one scenario per request of the list', () => {
-    expect(SCENARIOS).toHaveLength(REQUESTS.length)
+    expect(SCENARIOS).toHaveLength(asked().length)
   })
 
   /**
@@ -178,7 +176,6 @@ describe('a scenario played out', () => {
       ]),
     )
 
-    //  here would mean the picture never came forward.
     // A `wrongSurface` here would mean the picture never came forward.
     expect(played.called[1]?.answer).toContain('layerId')
     played.studio.close()

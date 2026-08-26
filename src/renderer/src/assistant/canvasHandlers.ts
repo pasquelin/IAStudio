@@ -65,7 +65,7 @@ import { turnPort } from '@/spaces/image/turnPort'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { activeImageId, useDocuments } from '@/stores/documents'
 import type { ActionHandlers } from './actionHandler'
-import { boolOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
+import { boolOf, composedNumber, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The layer stack, driven by value.
@@ -268,30 +268,24 @@ function transform(input: Record<string, unknown>): ActionOutcome {
   const degrees = numberOf(input, 'rotation')
   const by = boolOf(input, 'relative')
 
-  // A move is ADDED and a scale MULTIPLIED — « 100 pixels à droite » against « de 20 % ».
-  const shifted = (key: string, held: number): number => {
-    const given = numberOf(input, key)
-    if (given === null) return held
-    if (!by) return given
-
-    return key.startsWith('scale') ? held * given : held + given
-  }
+  const shifted = (key: string, held: number, how: 'add' | 'multiply'): number =>
+    composedNumber(held, numberOf(input, key), by, how)
 
   return editLayer(input, layer => [
     setLayerTransform(layer.id, {
       ...layer.transform,
-      x: shifted('x', layer.transform.x),
-      y: shifted('y', layer.transform.y),
-      scaleX: shifted('scaleX', layer.transform.scaleX),
-      scaleY: shifted('scaleY', layer.transform.scaleY),
+      x: shifted('x', layer.transform.x, 'add'),
+      y: shifted('y', layer.transform.y, 'add'),
+      scaleX: shifted('scaleX', layer.transform.scaleX, 'multiply'),
+      scaleY: shifted('scaleY', layer.transform.scaleY, 'multiply'),
       // Degrees in, radians stored: a client writing 90 for a quarter turn is right more often
       // than one writing 1.5707963.
-      rotation:
-        degrees === null
-          ? layer.transform.rotation
-          : by
-            ? layer.transform.rotation + toRadians(degrees)
-            : toRadians(degrees),
+      rotation: composedNumber(
+        layer.transform.rotation,
+        degrees === null ? null : toRadians(degrees),
+        by,
+        'add',
+      ),
     }),
   ])
 }

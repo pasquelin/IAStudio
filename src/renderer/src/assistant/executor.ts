@@ -79,6 +79,20 @@ export function resetDelegatedSpendForTests(): void {
   spentUnasked = 0
 }
 
+/** The input as its fields declare it, or the refusal that names the field to repair. */
+function readOrRefusal(
+  name: ActionName,
+  input: Record<string, unknown>,
+): { listed: Record<string, unknown> } | { refusal: ActionOutcome } {
+  const action = assistantAction(name)
+  if (!action) return { refusal: refused('badInput') }
+
+  const listed = readInput(action.fields, input)
+  return listed
+    ? { listed }
+    : { refusal: refused('badInput', inputProblem(action.fields, input) ?? undefined) }
+}
+
 /**
  * Runs one action, having checked its input against the fields that declare it.
  *
@@ -93,13 +107,11 @@ export async function runAction(
   name: ActionName,
   input: Record<string, unknown>,
 ): Promise<ActionOutcome> {
-  const action = assistantAction(name)
   const handler = HANDLERS[name]
-  const listed = action ? readInput(action.fields, input) : null
-  if (!action || !handler) return refused('badInput')
-  if (!listed) return refused('badInput', inputProblem(action.fields, input) ?? undefined)
+  if (!handler) return refused('badInput')
 
-  return handler(listed)
+  const read = readOrRefusal(name, input)
+  return 'refusal' in read ? read.refusal : handler(read.listed)
 }
 
 /**
@@ -117,11 +129,10 @@ export async function runConfirmedAction(
 ): Promise<ActionOutcome> {
   // Checked before the question as well as inside `runAction`: a bad input asked about first
   // would have the person approve a spend that was never going to happen.
-  const action = assistantAction(name)
-  const listed = action ? readInput(action.fields, input) : null
-  if (!action) return refused('badInput')
-  if (!listed) return refused('badInput', inputProblem(action.fields, input) ?? undefined)
+  const read = readOrRefusal(name, input)
+  if ('refusal' in read) return read.refusal
 
+  const listed = read.listed
   const commitment = commitmentOfCall(name, listed)
   if (!needsConfirmation(commitment)) return runAction(name, listed)
 

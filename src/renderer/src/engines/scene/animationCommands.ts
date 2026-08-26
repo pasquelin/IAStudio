@@ -304,6 +304,19 @@ function dedupeMoves(moves: readonly NodeMove[]): NodeMove[] {
   return [...byId.values()]
 }
 
+// Narrowed as it is gathered: a `filter` on the same predicate leaves `AnimationTrack | undefined`
+// behind, and both callers then need a non-null assertion to read the track they just kept.
+function unlockedTracks(
+  state: SceneState,
+  trackIds: readonly string[],
+  keeps: (track: AnimationTrack) => boolean,
+): AnimationTrack[] {
+  return trackIds.flatMap(trackId => {
+    const track = trackById(state, trackId)
+    return track && !track.locked && keeps(track) ? [track] : []
+  })
+}
+
 /**
  * Takes a key off every channel of one subject at that instant.
  *
@@ -315,10 +328,9 @@ export function unkeySubject(
   trackIds: readonly string[],
   time: Us,
 ): Command<SceneState> | null {
-  const drops = trackIds
-    .map(trackId => trackById(state, trackId))
-    .filter(track => track && !track.locked && track.keys.some(key => key.time === time))
-    .map(track => removeAnimationKey(track!.id, time))
+  const drops = unlockedTracks(state, trackIds, track =>
+    track.keys.some(key => key.time === time),
+  ).map(track => removeAnimationKey(track.id, time))
 
   if (drops.length === 0) return null
   return drops.length === 1 && drops[0] ? drops[0] : multi('key:unset', drops)
@@ -335,10 +347,9 @@ export function unkeySubjectWholly(
   state: SceneState,
   trackIds: readonly string[],
 ): Command<SceneState> | null {
-  const drops = trackIds
-    .map(trackId => trackById(state, trackId))
-    .filter(track => track && !track.locked && track.keys.length > 0)
-    .map(track => keysCommand(`key:clear:${track!.id}`, track!.id, () => []))
+  const drops = unlockedTracks(state, trackIds, track => track.keys.length > 0).map(track =>
+    keysCommand(`key:clear:${track.id}`, track.id, () => []),
+  )
 
   if (drops.length === 0) return null
   return drops.length === 1 && drops[0] ? drops[0] : multi('key:clear', drops)

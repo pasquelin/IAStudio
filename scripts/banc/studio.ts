@@ -13,9 +13,7 @@ import { nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
 import type { ModelFamily } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
-import { narrowTargets, type Target } from '@shared/domain/target'
 import { describeStudio } from '@main/assistant/studioState'
-import { frontTargets } from '@/assistant/documentTargets'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
@@ -30,7 +28,7 @@ import { useProject } from '@/stores/project'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/spaces/three/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
-import { createMemoryCatalog, type MemoryCatalog } from './memoryCatalog'
+import { createMemoryCatalog } from './memoryCatalog'
 import { WHEN } from './project'
 import { createMemoryCloud } from './memoryCloud'
 import { createMemoryFiles } from './memoryFiles'
@@ -47,7 +45,6 @@ export type Studio = {
   run: (action: ActionName, input: Record<string, unknown>) => Promise<ActionOutcome>
   /** The sentences the briefing carries, written by the application's own composer. */
   state: () => Promise<string>
-  targets: (said: string) => readonly Target[]
   documents: () => readonly DocumentDescriptor[]
   front: () => DocumentDescriptor | null
   files: () => readonly string[]
@@ -104,7 +101,7 @@ export async function createStudio(
   think?: Think,
 ): Promise<Studio> {
   const folder = createMemoryFolder(seed)
-  const catalog: MemoryCatalog = createMemoryCatalog(seed)
+  const catalog = createMemoryCatalog(seed)
   const ops = createMemoryFiles(folder, catalog)
   const cloud = createMemoryCloud(folder, catalog)
   const documentsOnDisk = new Map(descriptorsOf(folder).map(one => [one.id, one]))
@@ -212,8 +209,7 @@ export async function createStudio(
   /**
    * 🛑 Dockview announces the active panel, and nothing announces it headless — every space-bound
    * action then refuses `wrongSurface`. SUBSCRIBED, never wrapped around a call: the window's own
-   * chain reaches `runConfirmedAction` directly, so a wrapper sees the decor's calls and not one
-   * of the model's.
+   * chain reaches `runConfirmedAction` directly.
    */
   const followTheDock = (): (() => void) => {
     const onDocument = useDocuments.subscribe(state => {
@@ -281,7 +277,6 @@ export async function createStudio(
       const read = await runAction('studio.state', {})
       return read.ok ? describeStudio(read.data) : ''
     },
-    targets: said => narrowTargets(frontTargets()?.targets() ?? [], said),
     documents: () => Object.values(useDocuments.getState().documents),
     front,
     files: () => folder.paths(),

@@ -153,10 +153,7 @@ describe('a block long enough to be refused', () => {
   })
 })
 
-/**
- * 🛑 An absolute call repeated writes the same value; a RELATIVE one adds again. Measured on the
- * bench pass of 2026-08-26: « 20 degrés de plus » was sent twice and turned the cube by 40.
- */
+// The measure this answers is on `repeatKeyOf`.
 describe('a relative call sent twice in one turn', () => {
   const call = { nodeId: 'n-1', rotationY: 0.35, relative: true }
 

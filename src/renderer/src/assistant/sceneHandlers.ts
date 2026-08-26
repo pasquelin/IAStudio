@@ -95,7 +95,7 @@ import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { nodeAimed } from './nodeAimed'
-import { boolOf, numberOf, oneOf, recordOf, textOf, textsOf } from './actionInputs'
+import { boolOf, composedNumber, numberOf, oneOf, recordOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The scene graph, driven by value.
@@ -145,25 +145,20 @@ function editNode(
   return { ok: true }
 }
 
-/**
- * A vector read three axes at a time, each one falling back to where the node already is.
- *
- * 🛑 `relative` makes the values CHANGES: added for a position or a rotation, MULTIPLIED for a
- * scale — which is what « de moitié » and « de 20 % » mean, and what nobody says additively.
- */
+/** A vector read three axes at a time, each one falling back to where the node already is. */
 function vectorOf(
   input: Record<string, unknown>,
   of: string,
   current: Vector3,
   relative = false,
 ): Vector3 {
-  const axis = (name: 'x' | 'y' | 'z'): number => {
-    const given = numberOf(input, `${of}${name.toUpperCase()}`)
-    if (given === null) return current[name]
-    if (!relative) return given
-
-    return of === 'scale' ? current[name] * given : current[name] + given
-  }
+  const axis = (name: 'x' | 'y' | 'z'): number =>
+    composedNumber(
+      current[name],
+      numberOf(input, `${of}${name.toUpperCase()}`),
+      relative,
+      of === 'scale' ? 'multiply' : 'add',
+    )
 
   return { x: axis('x'), y: axis('y'), z: axis('z') }
 }
@@ -472,22 +467,16 @@ function worldEnvironment(input: Record<string, unknown>): ActionOutcome | Promi
   const environment: EnvironmentRef | null =
     assetId !== null ? { kind: 'skybox', assetId } : kind === 'studio' ? STUDIO_ENVIRONMENT : null
 
-  return withEnvironmentAsset(assetId, () =>
+  const write = (): ActionOutcome =>
     editWorld(() => ({
       ...(environment === null ? {} : { environment }),
       ...(intensity === null ? {} : { envIntensity: intensity }),
       // Radians, as every other angle a document stores — the panel is what shows degrees.
       ...(rotation === null ? {} : { envRotation: rotation }),
-    })),
-  )
-}
+    }))
 
-/** The sky must EXIST, or the scene keeps a reference to a picture nothing can resolve. */
-function withEnvironmentAsset(
-  assetId: string | null,
-  run: () => ActionOutcome,
-): ActionOutcome | Promise<ActionOutcome> {
-  return assetId === null ? run() : withAsset(assetId, run)
+  // The sky must EXIST, or the scene keeps a reference to a picture nothing can resolve.
+  return assetId === null ? write() : withAsset(assetId, write)
 }
 
 function worldBackground(input: Record<string, unknown>): ActionOutcome {
@@ -981,10 +970,9 @@ export const SCENE_HANDLERS: ActionHandlers = {
           continue
         }
 
-        // « double l'intensité », « de 25 % » — a dial is multiplied, never added: nobody says
-        // "add 0.25 to the intensity", and every request of the bench spelled a factor.
         const held = light[name as keyof typeof light]
-        const wanted = by && typeof held === 'number' ? held * value : value
+        const wanted =
+          typeof held === 'number' ? composedNumber(held, value, by, 'multiply') : value
         if (!withinSpec(specs[name], wanted)) return null
         light = withField(light, name, wanted)
       }

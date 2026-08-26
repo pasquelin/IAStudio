@@ -62,19 +62,20 @@ function counting(into: Tokens): (input: string, init?: RequestInit) => Promise<
     // parse error here would abort the run before the code below could report the real one.
     const body: unknown = parsed(written)
     const usage = isRecord(body) && isRecord(body['usage']) ? body['usage'] : {}
-    const read = (key: string): number => (typeof usage[key] === 'number' ? usage[key] : 0)
-
     // Three spellings for one figure: OpenAI and its compatibles, Anthropic, and Gemini. Read
     // from one of them only, every count stays 0 and the report divides by it.
     const nested = isRecord(body) && isRecord(body['usageMetadata']) ? body['usageMetadata'] : {}
     const from = (of: Record<string, unknown>, key: string): number =>
       typeof of[key] === 'number' ? of[key] : 0
 
-    into.sent += read('prompt_tokens') + read('input_tokens') + from(nested, 'promptTokenCount')
+    into.sent +=
+      from(usage, 'prompt_tokens') + from(usage, 'input_tokens') + from(nested, 'promptTokenCount')
     into.back +=
-      read('completion_tokens') + read('output_tokens') + from(nested, 'candidatesTokenCount')
+      from(usage, 'completion_tokens') +
+      from(usage, 'output_tokens') +
+      from(nested, 'candidatesTokenCount')
     // What the door served from its own cache — the figure the next lot is about.
-    into.cached += read('prompt_cache_hit_tokens') + read('cache_read_input_tokens')
+    into.cached += from(usage, 'prompt_cache_hit_tokens') + from(usage, 'cache_read_input_tokens')
     // 204, 205 and 304 carry no body, and the constructor refuses one on those.
     return new Response(NO_BODY.includes(answer.status) ? null : written, answer)
   }

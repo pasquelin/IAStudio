@@ -60,11 +60,6 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
       })),
     [reading],
   )
-  const widestSpeed = useMemo(() => speedReading(FLY_SPEED.max), [speedReading])
-  const widestSurface = useMemo(
-    () => widestOf([t('snapBar.surfaceAligned'), t('snapBar.surfaceFlat')]),
-    [t],
-  )
 
   const toggle = (kind: keyof typeof snapping) =>
     useSceneViews.getState().setSceneSnap(documentId, kind, !snapping[kind])
@@ -87,7 +82,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             description={t('snapBar.speedHint')}
             tooltip={tipFor('horizontal')}
             value={speedReading(flying)}
-            widest={widestSpeed}
+            widest={speedReading(FLY_SPEED.max)}
             valueName={t('snapBar.speed')}
             rowCount={2}
             rows={close => <SceneSpeedMenu speed={flying} onChoose={onSpeed} onClose={close} />}
@@ -104,7 +99,7 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
             pressed={snapping.surface}
             onToggle={() => toggle('surface')}
             value={t(view.snapSurfaceAlign ? 'snapBar.surfaceAligned' : 'snapBar.surfaceFlat')}
-            widest={widestSurface}
+            widest={widestOf([t('snapBar.surfaceAligned'), t('snapBar.surfaceFlat')])}
             valueName={t('snapBar.surfaceSettings')}
             rowCount={2}
             rows={() => <SceneSnapSurfaceMenu view={view} onViewport={set} />}

@@ -188,10 +188,6 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
     }
 
     /**
-     * Here rather than in the viewport that used to hold them: neither reads a camera or a
-     * canvas, and every other door to a scene — the native menu, the palette, an MCP client —
-     * reaches this function and not that component.
-     *
      * 🛑 `false` on an empty stack, which is what a caller needs: answered `ok` regardless, a
      * model sent nine undos in a row and took the whole decor apart (bench pass, 2026-08-26).
      */
