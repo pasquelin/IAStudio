@@ -23,3 +23,14 @@ export function useProjectPictures(types: readonly AssetType[]): readonly LinkOp
     [pictures],
   )
 }
+
+/**
+ * What stands for a DOCUMENT among the offered pictures: a material shows its base colour, a sky
+ * the picture it hangs. Looked up rather than built, so the URL carries the version.
+ */
+export function urlOfPicture(
+  pictures: readonly LinkOption[],
+  assetId: string | null | undefined,
+): string | undefined {
+  return assetId ? pictures.find(one => one.id === assetId)?.url : undefined
+}

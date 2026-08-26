@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { isRecord } from '@shared/guards'
 import type { McpState } from '@shared/ipc'
+import { isDevelopment } from '@main/environment'
 
 /**
  * Where the server is, and how a client is pointed at it.
@@ -52,6 +53,16 @@ export const mcpEndpointPath = (userData: string, checkout: string | null): stri
       ? 'mcp.json'
       : `mcp-${createHash('sha256').update(checkout).digest('hex').slice(0, 8)}.json`,
   )
+
+/**
+ * The checkout a launch must be told to open, or nothing in a packaged run — unpackaged,
+ * `execPath` is Electron itself.
+ *
+ * One derivation, because the FILE NAME above turns on it: the way in derived it as `null` while
+ * the studio derived it from the checkout, so the fallback looked for a file a development studio
+ * never writes. Nothing reddened — a `.mcp.json` always passes the address on the command line.
+ */
+export const checkoutOf = (appPath: string): string | null => (isDevelopment ? appPath : null)
 
 /** The address as it is written. Its twin `mcpEndpointOf` reads it — one spelling of the shape. */
 export const mcpEndpointJson = ({ port, token }: McpEndpoint): string =>

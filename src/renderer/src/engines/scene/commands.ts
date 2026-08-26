@@ -46,12 +46,12 @@ import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
 import { carvedNode, groupNode, meshNode } from './nodeFactory'
 import {
+  allNegative,
   canCarve,
   carveGraph,
   carvePlan,
   carveScene,
   isCarvable,
-  isNegative,
   placedIn,
 } from '../csg/carve'
 import { isCsgGraph, type CsgOperation } from '@shared/domain/csg'
@@ -948,10 +948,7 @@ export function setNodesNegative(
  * anything else is marked, so a half-marked selection finishes the job rather than undoing it.
  */
 export function negateNodes(picked: readonly SceneNode[]): Command<SceneState> {
-  return setNodesNegative(
-    picked,
-    picked.filter(isCarvable).some(node => !isNegative(node)),
-  )
+  return setNodesNegative(picked, !allNegative(picked))
 }
 
 /**

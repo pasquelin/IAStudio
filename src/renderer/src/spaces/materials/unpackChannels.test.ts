@@ -1,7 +1,9 @@
+import { Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { packedChannels, unpackMaterialChannels } from './unpackChannels'
+import { createUnpackPass } from '@/engines/material/derive/unpackShaders'
+import { PACKED_BY_SLOT, packedChannels, unpackMaterialChannels } from './unpackChannels'
 
 const packed = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-orm',
@@ -67,5 +69,20 @@ describe('unpacking a packed picture', () => {
       unpackMaterialChannels(packed({ packedSlot: 'clearcoatTexture' }), unpacked),
     ).resolves.toEqual([])
     expect(saveTexture).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The list an unpacking OFFERS, held against the table the pass reads. A slot that named a
+ * channel no component holds would be offered and then throw, mid-unpacking, after the earlier
+ * channels had already landed in the project.
+ */
+describe('what a slot may be split into', () => {
+  it('names only channels a component of a packed picture holds', () => {
+    for (const channels of Object.values(PACKED_BY_SLOT)) {
+      for (const channel of channels) {
+        expect(() => createUnpackPass(channel, new Texture())).not.toThrow()
+      }
+    }
   })
 })

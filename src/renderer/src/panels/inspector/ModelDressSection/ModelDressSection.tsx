@@ -128,6 +128,7 @@ export function ModelDressSection({
       {dress?.kind === 'materials' && (
         <ModelDressSectionMaterials
           worn={wornMaterials(dress)}
+          pictures={pictures}
           slots={slots}
           onChange={documentIds => onChange({ kind: 'materials', documentIds })}
           onAssemble={slot => void assemble(slot)}

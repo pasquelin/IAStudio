@@ -3,7 +3,7 @@ import { APP_NAME } from '@shared/constants'
 import { registerAssetScheme } from '@main/assets/protocol'
 import { isDevelopment } from '@main/environment'
 import { log, setLogVerbosity } from '@main/log'
-import { mcpEndpointPath, spawnedAsWayIn, stdioEndpointFrom } from '@main/mcp/endpoint'
+import { checkoutOf, mcpEndpointPath, spawnedAsWayIn, stdioEndpointFrom } from '@main/mcp/endpoint'
 import { runStdioBridge } from '@main/mcp/stdio'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a
@@ -29,7 +29,8 @@ async function carryOneClient(): Promise<void> {
       // Named on the command line by whoever wrote it, since a run started with
       // `--user-data-dir` resolves a profile this one would work out differently.
       endpointPath:
-        stdioEndpointFrom(process.argv) ?? mcpEndpointPath(app.getPath('userData'), null),
+        stdioEndpointFrom(process.argv) ??
+        mcpEndpointPath(app.getPath('userData'), checkoutOf(app.getAppPath())),
     })
   } catch (error) {
     process.stderr.write(`${APP_NAME} mcp: ${String(error)}\n`)

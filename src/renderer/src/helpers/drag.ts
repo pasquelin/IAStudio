@@ -74,3 +74,21 @@ export function dragListChannel(
     idsFrom: event => (one.idFrom(event) ?? '').split('\n').filter(Boolean),
   }
 }
+
+/** What a hover may answer: a `DragEvent` satisfies it, and so does a test's double. */
+export type DropOffer = { dataTransfer: DataTransfer; preventDefault: () => void }
+
+/**
+ * What the BLANK below a list answers a hover: a drag from elsewhere is COPIED into the folder,
+ * one of our own rows is MOVED, anything else is left for the browser to refuse.
+ *
+ * Written once because the tree and the grid read the same folder and have to answer one gesture
+ * the same way — they had drifted by a line. Missing the `preventDefault` is the difference
+ * between a drop that works and one refused in silence.
+ */
+export function offerBlankDrop(event: DropOffer, takes: { copies: boolean; moves: boolean }): void {
+  if (!takes.copies && !takes.moves) return
+
+  event.preventDefault()
+  event.dataTransfer.dropEffect = takes.copies ? 'copy' : 'move'
+}

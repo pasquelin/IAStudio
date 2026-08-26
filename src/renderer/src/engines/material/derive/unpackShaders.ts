@@ -30,13 +30,6 @@ const COMPONENT_BY_CHANNEL: Record<PbrChannel, string | null> = {
   edge: null,
 }
 
-/** The channels a packed picture can be split into, in the order an unpacking offers them. */
-export const UNPACKABLE_CHANNELS: readonly PbrChannel[] = ['roughness', 'metalness', 'ao']
-
-export function unpacks(channel: PbrChannel): boolean {
-  return COMPONENT_BY_CHANNEL[channel] !== null
-}
-
 /**
  * The pass that reads one channel out of a packed picture. Throws for a channel no component
  * holds: a pass drawing nothing would write an empty picture into the project.

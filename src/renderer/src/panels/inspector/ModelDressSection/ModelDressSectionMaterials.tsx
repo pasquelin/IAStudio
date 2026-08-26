@@ -1,11 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import { QuietNote } from '@/design/QuietNote'
+import type { LinkOption } from '@/design/LinkField/LinkField'
 import { withMaterialAt } from '@shared/domain/scene'
 import { useDocumentOptions } from '@/hooks/useDocumentOptions'
 import { ModelDressSectionRow } from './ModelDressSectionRow'
 
 export type ModelDressSectionMaterialsProps = {
   worn: readonly string[]
+  /** The project's pictures, asked ONCE by the section and handed down — a row would ask per slot. */
+  pictures: readonly LinkOption[]
   /** How many materials the model's own file carries. Zero while its file has not landed. */
   slots: number
   onChange: (documentIds: readonly string[]) => void
@@ -18,6 +21,7 @@ export type ModelDressSectionMaterialsProps = {
  */
 export function ModelDressSectionMaterials({
   worn,
+  pictures,
   slots,
   onChange,
   onAssemble,
@@ -33,6 +37,7 @@ export function ModelDressSectionMaterials({
           slot={slot}
           documentId={documentId}
           options={options}
+          pictures={pictures}
           // Beyond what the file carries — the row is kept, and does nothing until the model has
           // that many materials. Said on the note below rather than on every row.
           inert={slots > 0 && slot >= slots}

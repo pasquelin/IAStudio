@@ -1,9 +1,8 @@
 import { mdiAutoFix } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { isWorn } from '@shared/domain/scene'
-import { PICTURES } from '@shared/domain/asset'
 import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
-import { useProjectPictures } from '@/hooks/useProjectPictures'
+import { urlOfPicture } from '@/hooks/useProjectPictures'
 import { openDocumentById } from '@/helpers/openAsset'
 import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
@@ -13,6 +12,8 @@ export type ModelDressSectionRowProps = {
   slot: number
   documentId: string
   options: readonly LinkOption[]
+  /** The project's pictures, so the slot shows its base colour — held by the parent, not per row. */
+  pictures: readonly LinkOption[]
   /** A slot past what the model's file carries: kept, and wearing nothing until the file has it. */
   inert: boolean
   onChange: (documentId: string) => void
@@ -27,17 +28,15 @@ export function ModelDressSectionRow({
   slot,
   documentId,
   options,
+  pictures,
   inert,
   onChange,
   onAssemble,
 }: ModelDressSectionRowProps) {
   const { t } = useTranslation()
   const index = slot + 1
-  // A material has no picture of its own: what stands for it is its BASE COLOUR. Looked up among
-  // the project's pictures rather than built here, so the URL carries the version.
-  const pictures = useProjectPictures(PICTURES)
-  const base = useWornMaterial(documentId)?.channels.baseColor?.assetId
-  const shown = base ? pictures.find(one => one.id === base)?.url : undefined
+  // A material has no picture of its own: what stands for it is its BASE COLOUR.
+  const shown = urlOfPicture(pictures, useWornMaterial(documentId)?.channels.baseColor?.assetId)
 
   return (
     <LinkField
