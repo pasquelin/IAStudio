@@ -1,14 +1,8 @@
 import type { Box3, Camera, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three'
 
-/**
- * How big the transform handles are allowed to be: never wider than what they hold.
- *
- * `TransformControls` divides the distance out of its own scale, so the handles keep one size on
- * SCREEN however far the camera stands. That is what every 3D application does — a handle that
- * shrank away would be impossible to grab — but it also means a small object ends up inside a
- * gizmo several times its width. Capped here, the handles follow the object once it is the
- * smaller of the two, and hold their screen size the rest of the time.
- */
+// How big the transform handles are allowed to be: never wider than what they hold.
+// `TransformControls` keeps them one SCREEN size however far the camera stands, which puts a
+// small object inside a gizmo several times its width. The cap is what makes them follow it.
 
 /**
  * three's own, from `TransformControls.updateMatrixWorld` — copied rather than approximated,

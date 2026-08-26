@@ -12,19 +12,10 @@ import {
 } from '@/engines/audio/audioRender'
 import { initI18n } from '@/i18n'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
-// The rule that needs no browser, shared with the `renderer-node` project — it says why there.
-// Its `beforeEach` registers on import, so it runs before the hooks written below.
+// The rules that need no browser, shared with the `renderer-node` project — it says why there.
+// Imports are hoisted, so the user agent it pins is in place before anything below reads it, and
+// its `beforeEach` registers before the hooks written here.
 import './testSetupStores'
-
-/**
- * The desktop every renderer case is written for. Pinned rather than inherited: jsdom builds its
- * user agent from the machine, so `IS_MAC` — and with it the modifier every ⌘ chord is signed
- * with — answered `true` here and `false` on the Linux runner. What a keyboard does off macOS is
- * covered where it belongs, on the pure functions of `shared/domain/shortcut.ts`.
- */
-const MAC_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-
-Object.defineProperty(globalThis.navigator, 'userAgent', { value: MAC_USER_AGENT })
 
 /**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is

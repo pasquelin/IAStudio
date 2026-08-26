@@ -138,5 +138,18 @@ describe('environment panel', () => {
       await userEvent.click(screen.getByRole('checkbox', { name: 'Magnétisme d’angle' }))
       expect(screen.getByTitle('Déplacement')).toBeInTheDocument()
     })
+
+    /**
+     * 🛑 The steps read `0.5` here while the viewport read `0,5 m` for the same preference:
+     * this panel formatted them with `String`, having its own table of the three kinds.
+     */
+    it('reads a step the way the viewport does, unit and all', async () => {
+      render(<Content />)
+      await userEvent.click(screen.getByRole('button', { name: /Guides et magnétisme/ }))
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Magnétisme d’angle' }))
+
+      expect(screen.getByLabelText('Déplacement')).toHaveDisplayValue('0,5 m')
+      expect(screen.getByLabelText('Rotation')).toHaveDisplayValue('15°')
+    })
   })
 })

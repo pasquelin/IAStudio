@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DisplayUnit } from '@shared/domain/scene'
 import { SNAP_READING_KEYS, type SnapReading } from '@/spaces/three/SceneSnapBar/sceneSnapControls'
@@ -13,11 +14,14 @@ export type SnapReader = (reads: SnapReading, step: number) => string
 export function useSnapReading(unit: DisplayUnit): SnapReader {
   const { t, i18n } = useTranslation()
 
-  return (reads, step) =>
-    t(SNAP_READING_KEYS[reads], {
-      value: snapFigure(step, reads, unit, i18n.language),
-      unit: t(SNAP_UNIT_KEYS[unit]),
-    })
+  return useCallback(
+    (reads, step) =>
+      t(SNAP_READING_KEYS[reads], {
+        value: snapFigure(step, reads, unit, i18n.language),
+        unit: t(SNAP_UNIT_KEYS[unit]),
+      }),
+    [t, i18n.language, unit],
+  )
 }
 
 /**

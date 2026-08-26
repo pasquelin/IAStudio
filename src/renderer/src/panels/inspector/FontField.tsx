@@ -70,6 +70,7 @@ export function FontField({ label, value, onChange, scId }: FontFieldProps) {
       }}
       missingLabel={t('inspector.noFontOffered')}
       clearLabel={t('inspector.chooseFont')}
+      clearHint={t('inspector.chooseFontHint')}
       scId={scId}
     />
   )

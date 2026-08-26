@@ -11,6 +11,7 @@ export function isMacUserAgent(userAgent: string): boolean {
  * Read once, from the user agent rather than over the bridge: a keydown cannot await, and a
  * value arriving one frame late would sign the first chords of a session with the wrong modifier.
  *
- * Under test it is whatever the setup files pin, never the runner's own — see `testSetup.ts`.
+ * Under test it is whatever the setup files pin, never the runner's own — see
+ * `testSetupStores.ts`, which both renderer projects load.
  */
 export const IS_MAC = isMacUserAgent(navigator.userAgent)

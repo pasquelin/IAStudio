@@ -14,6 +14,11 @@ const RAY_LIFT = 0.001
 
 const UP = new Vector3(0, 1, 0)
 
+// Scratch, because the turn is measured once per frame of a drag: two fresh vectors per call is
+// two allocations a gesture cannot afford. Nothing here re-enters, and nothing keeps them.
+const UPRIGHT = new Vector3()
+const SLOPE = new Vector3()
+
 /** Where a downward ray starts to find what a box is standing over, written into `out`. */
 export function surfaceRayFrom(box: Box3, out: Vector3): Vector3 {
   box.getCenter(out)
@@ -36,8 +41,8 @@ export function surfaceTurn(normal: Vector3, held: Quaternion, out: Quaternion):
   // From where the object's up ALREADY points, not from the world's: composing a turn measured
   // off `UP` onto a `held` that tilts sends the up to `held · normal`, which is the slope only
   // when `held` leaves the vertical alone. A pivot wearing the anchor's orientation never does.
-  const upright = UP.clone().applyQuaternion(held)
-  return out.setFromUnitVectors(upright, normal.clone().normalize()).multiply(held)
+  const upright = UPRIGHT.copy(UP).applyQuaternion(held)
+  return out.setFromUnitVectors(upright, SLOPE.copy(normal).normalize()).multiply(held)
 }
 
 /**

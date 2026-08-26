@@ -14,6 +14,10 @@ const PLATFORM_DEFAULTS = platformDefaults(IS_MAC)
  * The remaps over what this system ships. Cached on the identity of the stored object: this is
  * read on every keystroke, and a fresh merge per press would be a new object every time — which
  * a zustand selector reads as a change and re-renders on.
+ *
+ * 🛑 What SHOWS a binding reads this; what WRITES one reads the stored table. Merged into the
+ * written table, the platform's own keys would be saved as though the user had remapped them —
+ * which is also why a row asks the stored table whether it is remapped.
  */
 let mergedFrom: BindingOverrides | null = null
 let merged: BindingOverrides = PLATFORM_DEFAULTS
@@ -24,6 +28,16 @@ function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
     merged = { ...PLATFORM_DEFAULTS, ...overrides }
   }
   return merged
+}
+
+/**
+ * The same merge, uncached, for a table the store does not hold — the shortcuts screen reads its
+ * own draft. 🛑 Never `withPlatformDefaults`: its memo has ONE slot, and two identities alternating
+ * through it would make `useBindingOverrides` answer a fresh object every other read, which is
+ * exactly what `useSyncExternalStore` refuses. The caller memoises.
+ */
+export function resolveBindings(overrides: BindingOverrides): BindingOverrides {
+  return { ...PLATFORM_DEFAULTS, ...overrides }
 }
 
 /**

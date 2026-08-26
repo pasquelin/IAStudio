@@ -4,7 +4,7 @@ import { FLY_SPEEDS } from '@shared/domain/snap'
 import { Separator } from '@/design/Separator'
 import { Slider } from '@/design/Slider'
 import { ValueGrid } from '@/design/ValueGrid/ValueGrid'
-import { formatDecimal } from '@/helpers/format'
+import { useSpeedReading } from '@/hooks/useSpeedReading'
 
 // Read once: the registry answers by walking every descriptor.
 const SPEED = boundsOf('three.flySpeed')
@@ -25,9 +25,8 @@ export type SceneSpeedMenuProps = {
  * nothing, so the handle could not be dragged at all, and the reset button hung off the edge.
  */
 export function SceneSpeedMenu({ speed, onChoose, onClose }: SceneSpeedMenuProps) {
-  const { t, i18n } = useTranslation()
-  const reading = (value: number) =>
-    t('snapBar.speedValue', { value: formatDecimal(value, i18n.language, { digits: 1, least: 1 }) })
+  const { t } = useTranslation()
+  const reading = useSpeedReading()
 
   return (
     <div className="flex flex-col gap-0.5">

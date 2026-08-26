@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_MOTION, type MotionId } from '@shared/domain/shortcut'
 import { VIEWPORT_READOUT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
+import { useForgettableTimeout } from '@/hooks/useForgettableTimeout'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 
 export type SceneNavigationHintProps = {
@@ -34,11 +35,23 @@ export function SceneNavigationHint({ speed }: SceneNavigationHintProps) {
   const label = useShortcutLabel()
   // Open, and only ever closed by the timer: this component lives exactly as long as one arming.
   const [shown, setShown] = useState(true)
+  const timeout = useForgettableTimeout()
 
-  useEffect(() => {
-    const timer = setTimeout(() => setShown(false), LINGER_MS)
-    return () => clearTimeout(timer)
-  }, [])
+  useEffect(() => timeout.after(LINGER_MS, () => setShown(false)), [timeout])
+
+  // Held across renders: the speed under the hand re-renders this at wheel rate, and the keys
+  // answer to nothing but the language.
+  const keys = useMemo(
+    () =>
+      NAVIGATION_HINT_GROUPS.map(group => ({
+        key: group.key,
+        labels: group.motions.map(motion => ({
+          motion,
+          label: label(DEFAULT_MOTION[motion][0] ?? null),
+        })),
+      })),
+    [label],
+  )
 
   // The speed outlives the keys — it moves under the hand — but an empty panel must not.
   if (!shown && speed === null) return null
@@ -49,11 +62,11 @@ export function SceneNavigationHint({ speed }: SceneNavigationHintProps) {
     >
       {shown && (
         <>
-          {NAVIGATION_HINT_GROUPS.map(group => (
+          {keys.map(group => (
             <span key={group.key} className="flex items-center gap-2">
-              {group.motions.map(motion => (
-                <kbd key={motion} className="text-text">
-                  {label(DEFAULT_MOTION[motion][0] ?? null)}
+              {group.labels.map(one => (
+                <kbd key={one.motion} className="text-text">
+                  {one.label}
                 </kbd>
               ))}
               <span>{t(`sceneNavigation.${group.key}`)}</span>

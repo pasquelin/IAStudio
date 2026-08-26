@@ -82,6 +82,7 @@ export function PictureField({
       emptyLabel={emptyLabel === null ? undefined : (emptyLabel ?? t('inspector.noTexture'))}
       missingLabel={t('inspector.missingTexture')}
       clearLabel={t('inspector.clearTexture')}
+      clearHint={t('inspector.clearTextureHint')}
       // The three kinds that decode as an image, which is exactly what `options` was filtered to:
       // a slot that lit up for a mesh would promise a drop it then refuses.
       accepts={PICTURES}

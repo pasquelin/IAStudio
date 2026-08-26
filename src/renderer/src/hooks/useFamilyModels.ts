@@ -1,12 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { LOCAL_RUNTIME, type ModelFamily, type ModelSummary } from '@shared/domain/model'
-import { getBridge } from '@/services/bridge'
+import { type ModelFamily, type ModelSummary } from '@shared/domain/model'
+import { useLocalModels } from './useLocalModels'
 import { useModelPages } from './useModelPages'
-
-/** Named rather than left to the registry's own default, which is 24 and would truncate in silence. */
-const EVERY_LOCAL = 100
-
-const NONE: readonly ModelSummary[] = []
 
 /**
  * The models of one family, local and cloud. Read through the registry rather than a store: it
@@ -16,30 +10,15 @@ const NONE: readonly ModelSummary[] = []
  * send a listing per selection — measured on screen, the inspector did exactly that.
  */
 export function useFamilyModels(family: ModelFamily | null): readonly ModelSummary[] {
-  const { data: onThisMachine } = useQuery<readonly ModelSummary[]>({
-    queryKey: ['models', 'family', family, LOCAL_RUNTIME],
-    queryFn: async () =>
-      (
-        await getBridge()?.provider.searchModels({
-          ...(family ? { family } : {}),
-          runsOn: LOCAL_RUNTIME,
-          limit: EVERY_LOCAL,
-        })
-      )?.items ?? NONE,
-    enabled: family !== null,
-  })
+  const narrowed = family ? { family } : {}
+  const onThisMachine = useLocalModels(['models', 'family', family], narrowed, family !== null)
 
   // Eight, for the hundred the single wide ask used to bring: what reads this derives the list of
   // services from it, so a model past the ceiling is a service that vanishes.
-  const pages = useModelPages(
-    ['models', 'family', family],
-    family ? { family } : {},
-    family !== null,
-    8,
-  )
+  const pages = useModelPages(['models', 'family', family], narrowed, family !== null, 8)
 
   // 🛑 `exhausted`, not `pending`: what reads this picks the FIRST service off the list and reads
   // its schema, so a list still growing changed that pick under the user — and the « mesh too
   // large » sentence appeared, then vanished. The manifests stand in until the walk is over.
-  return pages.exhausted ? pages.items : (onThisMachine ?? NONE)
+  return pages.exhausted ? pages.items : onThisMachine
 }

@@ -28,7 +28,9 @@ export const SkyboxInspectorSource = memo(function SkyboxInspectorSource({
   const place = (assetId: string | null): void =>
     setSkyboxSource(documentId, pictures.find(candidate => candidate.id === assetId) ?? null)
 
-  const pixels = editPixelsOf(pictures.find(candidate => candidate.id === source?.assetId))
+  const pixels = source
+    ? editPixelsOf(pictures.find(candidate => candidate.id === source.assetId))
+    : null
 
   return (
     <PropertySection title={t('skybox.source')} scId="skybox.source">

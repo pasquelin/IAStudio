@@ -37,6 +37,7 @@ function Slot(props: Partial<LinkFieldProps> & Pick<LinkFieldProps, 'value' | 'o
       emptyLabel="Aucune"
       missingLabel="Introuvable"
       clearLabel="Retirer la texture"
+      clearHint="Vide ce slot"
       {...props}
     />
   )

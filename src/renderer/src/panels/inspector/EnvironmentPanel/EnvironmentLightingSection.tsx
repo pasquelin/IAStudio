@@ -67,6 +67,7 @@ export function EnvironmentLightingSection({
         emptyLabel={t('inspector.studio')}
         missingLabel={t('inspector.missingSky')}
         clearLabel={t('inspector.clearSky')}
+        clearHint={t('inspector.clearSkyHint')}
         // A sky and nothing else: the slot lights up for what it can actually hold, so a drag
         // across the panel says where it may land before the hand commits to it.
         accepts={SKIES}

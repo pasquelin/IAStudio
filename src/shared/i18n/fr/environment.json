@@ -75,7 +75,6 @@
     "snapTranslate": "Déplacement",
     "snapRotate": "Rotation",
     "snapScale": "Échelle",
-    "snapDegrees": "{{value}}°",
 
     "shadows": "Qualité des ombres",
     "shadowsLevel": "Niveau",

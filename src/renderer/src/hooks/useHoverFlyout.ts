@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useMemo, useState, type KeyboardEvent } from 'react'
+import { useForgettableTimeout } from './useForgettableTimeout'
 
 export type HoverFlyout = {
   /** A single row is not a menu: the button acts directly, as map3D's toolbar does. */
@@ -80,43 +81,35 @@ const opensWith = (event: KeyboardEvent<HTMLElement>): boolean =>
 export function useHoverFlyout(rowCount: number): HoverFlyout {
   const [openedBy, setOpenedBy] = useState<Opening>(null)
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeout = useForgettableTimeout()
   const hasFlyout = rowCount > 1
-
-  const cancel = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = null
-  }, [])
 
   // Never overwrites: the pointer crossing a menu that was asked for must not demote it to a
   // hovered one, which would take its keyboard away mid-walk.
   const enter = useCallback(() => {
-    cancel()
+    timeout.forget()
     setOpenedBy(opened => opened ?? 'pointer')
-  }, [cancel])
+  }, [timeout])
 
   // Walking the rows with the arrows while the mouse sits elsewhere is ONE gesture, so only a
   // keyboard opening survives the pointer leaving. Everything else the pointer closes.
   const leave = useCallback(() => {
     if (openedBy === 'key') return
-    cancel()
-    timer.current = setTimeout(() => setOpenedBy(null), GRACE)
-  }, [cancel, openedBy])
+    timeout.after(GRACE, () => setOpenedBy(null))
+  }, [openedBy, timeout])
 
   const ask = useCallback(
     (by: Opening) => {
-      cancel()
+      timeout.forget()
       setOpenedBy(by)
     },
-    [cancel],
+    [timeout],
   )
 
   const close = useCallback(() => {
-    cancel()
+    timeout.forget()
     setOpenedBy(null)
-  }, [cancel])
-
-  useEffect(() => cancel, [cancel])
+  }, [timeout])
 
   /**
    * Wrapped rather than handed `ask` with a default: a caller passing it straight to `onClick`

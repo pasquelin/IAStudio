@@ -23,7 +23,7 @@ import { acceleratorOf } from '@shared/domain/shortcut'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
 import type { FolderNode } from '@/hooks/useFolderTree'
 import { getBridge } from '@/services/bridge'
-import type { AssetAction } from './assetActions'
+import { actionablePaths, type AssetAction } from './assetActions'
 import { assetMenuGroups } from './assetMenu'
 
 export type EntryMenuProps = {
@@ -226,7 +226,7 @@ export function openEntryMenu({
    * something it cannot do.
    */
   // What the catalogue gestures name — anything the studio keeps for itself has no row behind it.
-  const files = selection.filter(path => !isPrivatePath(path)).length
+  const files = actionablePaths(selection).length
   const owned = files < selection.length
 
   const row = commandRows(bindings, run)

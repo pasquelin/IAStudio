@@ -7,6 +7,7 @@ import { stemOf } from '@shared/domain/fileName'
 import { sourceNatureOf } from '@shared/domain/fileRole'
 import { isPrivatePath } from '@shared/domain/folder'
 import { assetFilePath } from '@main/assets/protocol'
+import { isAbsent } from '@main/persistence'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { ActivityReport } from '@main/project/activityLog'
 
@@ -75,16 +76,11 @@ export async function adoptFile(relative: string, deps: AdoptFileDeps): Promise<
   return adopting
 }
 
-/** The two codes that mean "nothing sits there"; every other failure is one worth hearing. */
-const ABSENT = new Set(['ENOENT', 'ENOTDIR'])
-
 async function statOrAbsent(absolute: string): Promise<Stats | null> {
   try {
     return await stat(absolute)
   } catch (error) {
-    if (error instanceof Error && ABSENT.has(String((error as NodeJS.ErrnoException).code))) {
-      return null
-    }
+    if (isAbsent(error)) return null
 
     throw error
   }

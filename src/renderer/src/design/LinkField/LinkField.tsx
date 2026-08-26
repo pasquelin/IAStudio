@@ -42,6 +42,8 @@ export type LinkFieldProps = {
    */
   missingLabel: string
   clearLabel: string
+  /** What emptying the slot explains — the menu row reads it. */
+  clearHint: string
   /** The kinds a drag may drop here. Absent leaves the slot undroppable. */
   accepts?: readonly AssetType[]
   /** A standing laid over the picture — never an action, the slot `MediaTile` reserves by name. */
@@ -90,6 +92,7 @@ export function LinkField({
   emptyLabel,
   missingLabel,
   clearLabel,
+  clearHint,
   accepts,
   badge,
   onDropAsset,
@@ -239,7 +242,7 @@ export function LinkField({
           onClose={menu.close}
           browse={browse}
           open={chosen && open}
-          onClear={clearing}
+          clear={clearing && { label: clearLabel, hint: clearHint, run: clearing }}
           extra={menuExtra?.(menu.close)}
         />
       )}

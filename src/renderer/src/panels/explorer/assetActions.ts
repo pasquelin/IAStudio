@@ -9,6 +9,13 @@ import { useCloud } from '@/stores/cloud'
 export type AssetAction = 'describe' | 'contactSheet' | 'push'
 
 /**
+ * What a catalogue gesture can reach in a selection. Read by the menu to grey a row and by the
+ * run to pick its ids, so a greyed row and a gesture that does nothing cannot disagree.
+ */
+export const actionablePaths = (paths: readonly string[]): readonly string[] =>
+  paths.filter(path => !isPrivatePath(path))
+
+/**
  * Runs one of them over the paths selected in the explorer. The catalogue is asked once the
  * gesture is CHOSEN — a menu is drawn on a click and cannot wait on a round trip — and a path it
  * knows nothing about contributes no id, which is also how a folder is dropped.
@@ -18,9 +25,7 @@ export async function runAssetAction(
   paths: readonly string[],
   contactSheetName: string,
 ): Promise<void> {
-  // The same filter the menu counted on, so a greyed row and a gesture that does nothing cannot
-  // disagree: what the studio keeps for itself has no catalogue row behind it.
-  const held = await assetsAt(paths.filter(path => !isPrivatePath(path)))
+  const held = await assetsAt(actionablePaths(paths))
   const chosen = [...held.values()]
   if (chosen.length === 0) return
 
