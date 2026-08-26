@@ -106,9 +106,10 @@ describe('a game running inside the studio', () => {
     expect(reports.at(-1)?.tick).toBe(played)
 
     session.resume()
-    // The first frame back is an origin — see the case below — so the second is what plays.
+    // The first frame back is an origin — see the case below — so the second is what plays. The
+    // report is thrown six times a second rather than sixty, hence the gap between the two.
     frames.advance(3)
-    frames.advance(3.1)
+    frames.advance(3.3)
     expect(reports.at(-1)?.tick).toBeGreaterThan(played)
   })
 
@@ -121,14 +122,15 @@ describe('a game running inside the studio', () => {
     const { session, frames, reports } = playing()
 
     frames.advance(0)
-    frames.advance(0.1)
+    frames.advance(0.2)
     const played = reports.at(-1)?.tick ?? 0
 
     session.pause()
     frames.advance(60)
     session.resume()
     frames.advance(60)
+    frames.advance(60.2)
 
-    expect(reports.at(-1)?.tick).toBe(played)
+    expect(reports.at(-1)?.tick).toBe(played + 12)
   })
 })

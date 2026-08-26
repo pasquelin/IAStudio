@@ -42,9 +42,12 @@ describe('the edit state, translated into something that runs', () => {
     if (!entity) throw new Error('no entity')
 
     entity.transform.position.y = 42
-    entity.components = []
+    const held = entity.components[0]
+    if (held) Object.assign(held, { speed: 99 })
 
     expect(state.nodes[0]?.transform.position.y).toBe(0)
+    // The components too, and not by a spread: a shallow copy leaves the document's own objects
+    // in the world, where a system writing into one edits the scene with no store action at all.
     expect(state.nodes[0]?.components).toEqual([newComponent('Movement')])
   })
 

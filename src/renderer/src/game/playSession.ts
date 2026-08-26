@@ -8,6 +8,10 @@ import type { SceneState } from '@/engines/scene/sceneState'
 import { createStudioRender, type SceneDraw } from './studioRender'
 import { worldFromScene } from './worldFromScene'
 
+/** How often the game says what it is doing. Six times a second, and that is a decision — see
+ * `publish`. */
+const REPORT_MS = 160
+
 /** What drives the frames. Injected so a test can step them rather than wait for a browser. */
 export type FrameDriver = {
   start: (frame: (nowMs: number) => void) => void
@@ -55,6 +59,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   let state: PlayState = 'playing'
   let frameMs = 0
   let last: number | null = null
+  let said = Number.NEGATIVE_INFINITY
 
   const publish = (): void =>
     deps.onReport({
@@ -66,6 +71,22 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       logs: ports.log.recent(),
     })
 
+  /**
+   * 🛑 Not on every frame. `onReport` writes into a store the panel subscribes to, so publishing at
+   * sixty hertz re-renders the transport — its four lookups, its formatter and its filter — on
+   * every frame of every game. Six times a second is faster than an eye reads a counter, and what
+   * CHANGES state says so at once through `publish`.
+   */
+  const publishIfDue = (nowMs: number): void => {
+    if (nowMs - said < REPORT_MS) return
+    said = nowMs
+    publish()
+  }
+
+  /**
+   * Every entity, every frame — the port is what decides whether anything has to be redrawn, and
+   * it holds the shadow that answers that. One comparison there beats one here and one there.
+   */
   const draw = (): void => {
     let count = 0
     for (const entity of world.entities.all()) {
@@ -83,15 +104,20 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   }
 
   deps.frames.start(nowMs => {
-    if (state !== 'playing') return
+    if (state === 'playing') {
+      // Smoothed rather than read raw: a figure that jumps every frame is one nobody can read.
+      if (last !== null)
+        frameMs = frameMs === 0 ? nowMs - last : frameMs * 0.9 + (nowMs - last) * 0.1
+      last = nowMs
 
-    // Smoothed rather than read raw: a figure that jumps every frame is one nobody can read.
-    if (last !== null) frameMs = frameMs === 0 ? nowMs - last : frameMs * 0.9 + (nowMs - last) * 0.1
-    last = nowMs
+      loop.advance(nowMs / 1000)
+    }
 
-    loop.advance(nowMs / 1000)
+    // 🛑 Drawn even while PAUSED, and the frames keep coming for it: the viewport re-applies the
+    // document on any change — a click on a node is one, the selection being part of the state —
+    // and a paused game that stopped drawing would snap back to the authored pose and stay there.
     draw()
-    publish()
+    publishIfDue(nowMs)
   })
 
   publish()
@@ -117,6 +143,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     },
 
     stop: () => {
+      said = Number.NEGATIVE_INFINITY
       state = 'edit'
       deps.frames.stop()
       world.events.clear()

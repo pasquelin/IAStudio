@@ -41,7 +41,7 @@ describe('the transport of a scene played as a game', () => {
 
     expect(screen.getByRole('button', { name: 'Jouer' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Arrêter' })).toBeDisabled()
-    expect(screen.queryByText(/objets/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/objet/)).not.toBeInTheDocument()
   })
 
   it('says what the game holds once it runs, and offers to pause it', async () => {
@@ -51,7 +51,7 @@ describe('the transport of a scene played as a game', () => {
 
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Arrêter' })).toBeEnabled()
-    expect(screen.getByText(/1 objets/)).toBeInTheDocument()
+    expect(screen.getByText(/1 objet ·/)).toBeInTheDocument()
   })
 
   it('offers Play again once paused, and takes the game back to edit on stop', async () => {
@@ -63,7 +63,7 @@ describe('the transport of a scene played as a game', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Arrêter' }))
     expect(screen.getByRole('button', { name: 'Arrêter' })).toBeDisabled()
-    expect(screen.queryByText(/objets/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/objet/)).not.toBeInTheDocument()
   })
 })
 

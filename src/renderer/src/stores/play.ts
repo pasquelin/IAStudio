@@ -50,7 +50,11 @@ export const usePlay = create<PlayStoreState>()(set => ({
   stop: documentId => {
     sessions.get(documentId)?.stop()
     sessions.delete(documentId)
-    set(state => ({ reports: withoutReport(state.reports, documentId) }))
+    // Guarded: every viewport teardown calls this, playing or not, and an unconditional write
+    // would re-render every subscriber for a document that was never played.
+    set(state =>
+      documentId in state.reports ? { reports: withoutReport(state.reports, documentId) } : state,
+    )
   },
 }))
 

@@ -37,7 +37,15 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
   }
 
   return (
-    <div className={cn(VIEWPORT_READOUT, 'top-2 left-2 flex items-center gap-2 tabular-nums')}>
+    <div
+      className={cn(
+        VIEWPORT_READOUT,
+        // 🛑 `VIEWPORT_READOUT` turns pointer events OFF — a drag has to reach the viewport
+        // through it, and the two other readouts are words nobody clicks. This one is a
+        // transport, so it catches the pointer back, exactly as `CANVAS_TRIGGER` does.
+        'pointer-events-auto top-2 left-2 flex items-center gap-2 tabular-nums',
+      )}
+    >
       {report.state === 'playing' ? (
         <ToolButton
           icon={mdiPause}
@@ -67,8 +75,9 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
 
       {running && (
         <span aria-live="off">
+          {t('game.play.objects', { count: report.entities })}
+          {' · '}
           {t('game.play.readout', {
-            entities: report.entities,
             fps: formatDecimal(report.fps, i18n.language, { digits: 0 }),
             tick: report.tick,
           })}

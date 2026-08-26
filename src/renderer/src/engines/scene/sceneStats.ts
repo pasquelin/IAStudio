@@ -163,3 +163,16 @@ export function totalStats(parts: readonly SceneStats[]): SceneStats {
     { ...EMPTY_STATS },
   )
 }
+
+/**
+ * Whether two readings say the same thing. Read by the viewport, which is handed one on every
+ * `apply` — and a running game applies sixty times a second.
+ */
+export function sameStats(one: SceneStats, other: SceneStats): boolean {
+  return (
+    one.triangles === other.triangles &&
+    one.vertices === other.vertices &&
+    one.draws === other.draws &&
+    one.textureBytes === other.textureBytes
+  )
+}

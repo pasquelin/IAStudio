@@ -15,8 +15,12 @@ export type SceneDraw = Pick<SceneRenderer, 'apply'>
  * SHADOW state the document knows nothing about.
  *
  * The nodes a step did not move are handed over BY IDENTITY, and `SceneRenderer.apply` skips a
- * node it has already applied — so a frame costs the entities that actually moved, plus one array
- * when at least one did.
+ * node it has already applied.
+ *
+ * 🛑 That is not the whole cost, and saying so would be a comfortable lie: `apply` is the engine's
+ * FULL pass — every node walked twice, poses laid, shadows re-cut, instances regrouped — so one
+ * moving platform in a large scene pays all of it, sixty times a second. A `SceneRenderer` of its
+ * own for Play is what fixes that, and it is not this lot.
  *
  * 🛑 It never writes to the store. That is the whole of why STOP restores nothing: one `apply` of
  * the untouched edit state puts the viewport back where it was.
@@ -29,15 +33,24 @@ export function createStudioRender(renderer: SceneDraw, editState: () => SceneSt
   return {
     place: (placements: readonly EntityPlacement[]) => {
       const state = editState()
+      let changed = false
+
       if (state !== source) {
-        // The document changed under a running game: the shadow is rebased on it rather than
-        // holding positions of nodes that may no longer be there.
+        // 🛑 The document changed under a running game — a click on a node is one, the selection
+        // being part of the state — and the viewport has just applied it OVER what the game had
+        // drawn. The shadow is rebuilt on the new nodes, keeping where the game had put them, and
+        // repainted at once: without that a PAUSED game snaps back to the authored pose and stays
+        // there, since nothing moves to trigger a redraw.
         source = state
         byId = new Map(state.nodes.map(node => [node.id, node]))
-        shadow.clear()
+        for (const [id, held] of shadow) {
+          const fresh = byId.get(id)
+          if (fresh) shadow.set(id, { ...fresh, transform: held.transform })
+          else shadow.delete(id)
+        }
+        changed = shadow.size > 0
       }
 
-      let changed = false
       for (let index = 0; index < placements.length; index++) {
         const placement = placements[index]
         if (!placement) continue

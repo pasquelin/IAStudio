@@ -65,3 +65,40 @@ describe('what draws a running game inside the studio', () => {
     expect(apply).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * The viewport re-applies the document on any change — a click on a node is one, the selection
+ * being part of the state — and it applies it OVER what the game had drawn. A paused game does
+ * not move, so without a repaint here everything snaps back to the authored pose and stays there.
+ */
+describe('a game whose document changed under it', () => {
+  it('puts back where it had drawn, on the nodes the document now holds', () => {
+    let state = scene()
+    const apply = vi.fn()
+    const render = createStudioRender({ apply }, () => state)
+
+    render.place([{ entity: 'a', transform: raised }])
+    apply.mockClear()
+
+    state = { ...scene(), nodes: [{ ...meshNode('a'), name: 'Renamed' }, meshNode('b')] }
+    render.place([{ entity: 'a', transform: raised }])
+
+    const drawn: SceneState = apply.mock.calls[0]?.[0]
+    expect(drawn.nodes[0]?.name).toBe('Renamed')
+    expect(drawn.nodes[0]?.transform.position.y).toBe(3)
+  })
+
+  it('forgets an object the document no longer holds', () => {
+    let state = scene()
+    const apply = vi.fn()
+    const render = createStudioRender({ apply }, () => state)
+
+    render.place([{ entity: 'a', transform: raised }])
+    apply.mockClear()
+
+    state = { ...scene(), nodes: [meshNode('b')] }
+    render.place([])
+
+    expect(apply).not.toHaveBeenCalled()
+  })
+})

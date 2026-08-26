@@ -39,7 +39,11 @@ export function worldFromScene(
         rotation: { ...node.transform.rotation },
         scale: { ...node.transform.scale },
       },
-      components: [...(node.components ?? [])],
+      // 🛑 Deep, not a spread: a shallow copy leaves the DOCUMENT'S own component objects in the
+      // world, and a system writing into one would edit the scene being edited — with no store
+      // action, so `isSceneDirty` stays false and a ⌘S saves it. Safe because a component is pure
+      // JSON by contract.
+      components: JSON.parse(JSON.stringify(node.components ?? [])),
     })
   }
 

@@ -12,8 +12,11 @@ import type { System, World } from '../world'
  * live position in the document, where a ⌘S would save it and a STOP would not give it back.
  */
 export function createMovementSystem(): System {
-  const origins = new Map<string, number>()
-  const travelled = new Map<string, number>()
+  // Keyed by the ENTITY, not by its id: keyed by id, a game that spawns and destroys movers grows
+  // both maps for the life of the session, and an id given out again inherits the dead one's
+  // distance.
+  const origins = new WeakMap<Entity, number>()
+  const travelled = new WeakMap<Entity, number>()
 
   return {
     name: 'movement',
@@ -43,23 +46,23 @@ function move(
   entity: Entity,
   component: Component,
   dt: number,
-  origins: Map<string, number>,
-  travelled: Map<string, number>,
+  origins: WeakMap<Entity, number>,
+  travelled: WeakMap<Entity, number>,
 ): void {
   const axis = axisOf(component)
   const distance = numberOf(component, 'distance', 0)
   const speed = numberOf(component, 'speed', 0)
   if (distance <= 0 || speed <= 0) return
 
-  const origin = origins.get(entity.id) ?? entity.transform.position[axis]
-  origins.set(entity.id, origin)
+  const origin = origins.get(entity) ?? entity.transform.position[axis]
+  origins.set(entity, origin)
 
-  const gone = (travelled.get(entity.id) ?? 0) + speed * dt
+  const gone = (travelled.get(entity) ?? 0) + speed * dt
   const mode = component.mode
   // `once` stops at the far end; the two others fold the distance back, one by wrapping and one
   // by walking the way it came.
   const done = mode === 'once' ? Math.min(gone, distance) : gone
-  travelled.set(entity.id, done)
+  travelled.set(entity, done)
 
   entity.transform.position[axis] = origin + offsetOf(done, distance, mode)
 }
