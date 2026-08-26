@@ -103,8 +103,6 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
   bottomRight: 240,
 }
 
-export const DEFAULT_SPLIT = 240
-
 /**
  * The half that carries what the single `bottom` zone used to: the strip's height, stored once
  * because two halves lying at two heights would leave the frame above them in a step, and

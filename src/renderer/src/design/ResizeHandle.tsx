@@ -7,7 +7,8 @@ export type ResizeHandleProps = {
   axis: 'vertical' | 'horizontal'
   /** The panel grows as the pointer moves backwards — true for a right, bottom or lower half. */
   invert?: boolean
-  size: number
+  /** Where the cut stands. Absent means CSS is dividing the box, and the handle measures it. */
+  size?: number
   onSize: (size: number, available: number) => void
 }
 
@@ -46,13 +47,18 @@ export function ResizeHandle({ axis, invert = false, size, onSize }: ResizeHandl
       role="separator"
       aria-orientation={lying ? 'horizontal' : 'vertical'}
       onPointerDown={event => {
-        const parent = event.currentTarget.parentElement
+        const room = (node: Element | null | undefined): number =>
+          (lying ? node?.clientHeight : node?.clientWidth) ?? 0
+        // The panel this handle moves is its SIBLING on the side `invert` names. Every caller that
+        // leaves `size` out is laid out that way; one that is not has to pass its own number.
+        const panel = invert
+          ? event.currentTarget.nextElementSibling
+          : event.currentTarget.previousElementSibling
+
         drag.start(event, {
           position: lying ? event.clientY : event.clientX,
-          size,
-          available: lying
-            ? (parent?.clientHeight ?? window.innerHeight)
-            : (parent?.clientWidth ?? window.innerWidth),
+          size: size ?? room(panel),
+          available: room(event.currentTarget.parentElement),
         })
       }}
       onPointerMove={onMove}

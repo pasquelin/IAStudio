@@ -1,7 +1,6 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { cn } from '@/helpers/cn'
-import { useElementWidth } from '@/hooks/useElementWidth'
 import { useTools } from '@/stores/tools'
 import { ShellEdge } from './ShellEdge'
 
@@ -18,9 +17,7 @@ export type ShellBandProps = {
  * column. Together they share the width, parted by a handle that starts at the middle.
  */
 export function ShellBand({ left, right }: ShellBandProps) {
-  const bandSplit = useTools(state => state.lengths.bandSplit)
-  const band = useRef<HTMLDivElement>(null)
-  const width = useElementWidth(band)
+  const split = useTools(state => state.lengths.bandSplit)
 
   const resplit = useCallback(
     (size: number, available: number) => useTools.getState().resplitBand(size, available),
@@ -30,15 +27,12 @@ export function ShellBand({ left, right }: ShellBandProps) {
   if (!left && !right) return null
   if (!left || !right) return <ShellEdge zone={left ? 'bottomLeft' : 'bottomRight'} />
 
-  // Zero until the observer has answered, and `fitSplit` never lets a real one reach it: the
-  // two halves stay evenly spread by flex until there IS a width to take a half of.
-  const split = bandSplit ?? Math.round(width / 2)
-
   return (
-    <div ref={band} className="flex min-h-0">
+    <div className="flex min-h-0">
+      {/* Undefined until dragged: both halves are then flex and the strip parts in the middle. */}
       <div
-        className={cn('flex min-w-0 flex-col', split === 0 && 'flex-1')}
-        style={split === 0 ? undefined : { width: split }}
+        className={cn('flex min-w-0 flex-col', split === undefined && 'flex-1')}
+        style={split === undefined ? undefined : { width: split }}
       >
         <ShellEdge zone="bottomLeft" />
       </div>
