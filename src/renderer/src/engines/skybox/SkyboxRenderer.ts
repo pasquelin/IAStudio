@@ -1,26 +1,17 @@
-import { DirectionalLight, Raycaster, SRGBColorSpace, Vector2, type Texture } from 'three'
-import type { WebGLRenderTarget } from 'three'
-import {
-  anglesFromDirection,
-  directionFromAngles,
-  type SphericalAngles,
-} from '@shared/domain/angles'
+import { Raycaster, SRGBColorSpace, Vector2, type Texture } from 'three'
+import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles'
 import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@shared/domain/skybox'
 import { bundledTextureUrl, type CheckerTextureId } from '@shared/domain/checkerTexture'
 import { createRefCache, type RefCache } from '../core/refCache'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
-import { createAdjustPass } from '../gpu/passes/adjust'
 import { reportFailure } from '@/services/diagnostics'
 import { createTextureBinding, type TextureBinding } from '../scene/textureBinding'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/textureCache'
-import {
-  createEnvironment,
-  PMREM_QUIET_MS,
-  type ViewportEnvironment,
-} from '../viewport/environment'
+import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createTestObjects, type TestObjects } from '../viewport/testObjects'
 import { aimAlong, turnBy } from '../viewport/lookAround'
 import { ViewportEngine } from '../viewport/ViewportEngine'
+import { createSkySun, type SkySun } from '../scene/skySun'
 import { createProjectionPass, type ProjectionPass } from './projectionShader'
 import { gestureFor, type SkyboxGesture } from './sunDrag'
 
@@ -50,10 +41,6 @@ const PROBE_DISTANCE = 5
  */
 const GROUND_TEXTURE: CheckerTextureId = 'gridLarge'
 
-/** Working resolution of the graded picture. Export re-renders at full size; this is for looking. */
-const PREVIEW_WIDTH = 2048
-const PREVIEW_HEIGHT = 1024
-
 /**
  * A skybox, seen from the inside. The environment is the subject here, not the decor: the
  * camera stands at the centre and the spheres are probes for judging what the sky lights.
@@ -72,7 +59,6 @@ export class SkyboxRenderer {
     onOverlay: () => this.drawProjection(),
   })
 
-  private readonly adjust = createAdjustPass()
   private readonly projection: ProjectionPass = createProjectionPass()
   private readonly probes: TestObjects = createTestObjects({ probeDistance: PROBE_DISTANCE })
   /**
@@ -88,14 +74,15 @@ export class SkyboxRenderer {
     free: texture => texture.dispose(),
     onFailure: (url, error) => reportFailure('skybox.probes', url, error),
   })
-  private readonly sunLight = new DirectionalLight(0xffffff, 1)
+  /** The same light a SCENE hangs for the sky it names — one description of a sun, not two. */
+  private readonly sunLight: SkySun = createSkySun(this.viewport.scene)
   private readonly cache: TextureCache
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
 
+  /** For the FLAT views alone: they draw a quad to the screen, which grades nothing. */
   private pipeline: GpuPipeline | null = null
   private environment: ViewportEnvironment | null = null
-  private graded: WebGLRenderTarget | null = null
 
   private look: SphericalAngles = { elevation: 0, azimuth: 0 }
   private sun: SphericalAngles = { elevation: Math.PI / 6, azimuth: 0 }
@@ -108,10 +95,8 @@ export class SkyboxRenderer {
   /** What the document asks of the backdrop. A flat view turns it off without forgetting it. */
   private backgroundWanted = true
   private sourceAssetId: string | null = null
-  private sourceTexture: Texture | null = null
   /** The one reference this engine holds on a picture, and what settles its races. */
   private readonly source: TextureBinding
-  private quiet: ReturnType<typeof setTimeout> | null = null
 
   /**
    * What the last `apply` was given. Held by reference rather than copied: an edit replaces the
@@ -133,12 +118,14 @@ export class SkyboxRenderer {
     // The reference, the race and the version are all the binding's: written here too, the sky
     // would be the third copy of a rule the studio already keeps in one place.
     this.source = createTextureBinding(this.cache, SRGBColorSpace, texture => {
-      this.sourceTexture = texture
-      this.adjust.setSource(texture)
-      this.regrade()
+      // Raw: the grading lives in `ViewportEnvironment` now, which the scene reads too.
+      this.environment?.setTexture(texture)
+      // On a picture LANDING only — the binding empties the slot first, and prefiltering nothing
+      // would throw the map away for the frame between the two.
+      if (texture) this.environment?.refresh()
     })
     this.viewport.camera.position.set(0, EYE_HEIGHT, 0)
-    this.viewport.scene.add(this.probes.group, this.sunLight, this.sunLight.target)
+    this.viewport.scene.add(this.probes.group)
     // Hidden until a sky arrives, and before the first frame rather than after it: `apply` is
     // what reveals them, and a viewport mounted before it would flash the ground for a frame.
     this.probes.setVisible(false)
@@ -168,9 +155,6 @@ export class SkyboxRenderer {
 
     this.pipeline = createGpuPipeline(renderer)
     this.environment = createEnvironment(renderer, this.viewport.scene, this.viewport.requestRender)
-    // Half-float, not bytes: this target is what the prefiltered map is built from, and eight
-    // bits per channel banding shows on a sky gradient long before it shows on a texture.
-    this.graded = this.pipeline.createTarget(PREVIEW_WIDTH, PREVIEW_HEIGHT, 'float')
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     window.addEventListener('pointermove', this.onPointerMove)
@@ -212,7 +196,6 @@ export class SkyboxRenderer {
     }
 
     const graded = previous?.adjustments !== content.adjustments
-    if (graded) this.adjust.setAdjustments(content.adjustments)
 
     // Before `syncView`, which reads the sky through `syncProbes`, and before `regrade`, which
     // would otherwise grade the picture this call is about to release.
@@ -220,7 +203,8 @@ export class SkyboxRenderer {
 
     if (environmentMoved || skyMoved) this.syncView()
 
-    if (graded) this.regrade()
+    // Instant on the picture, prefiltered once the hand settles — see `setAdjustments`.
+    if (graded) this.environment?.setAdjustments(content.adjustments)
   }
 
   setFieldOfView(degrees: number): void {
@@ -276,18 +260,16 @@ export class SkyboxRenderer {
 
   /** The flat views, drawn after the scene. The immersive one is the scene. */
   private drawProjection(): void {
-    if (this.view === 'immersive' || !this.pipeline || !this.graded) return
+    const shown = this.environment?.shownTexture() ?? null
+    if (this.view === 'immersive' || !this.pipeline || !shown) return
 
     const canvas = this.viewport.canvas
     this.projection.setFrame(canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0)
-    this.projection.setSource(this.graded.texture)
+    this.projection.setSource(shown)
     this.pipeline.renderToScreen(this.projection.material)
   }
 
   dispose(): void {
-    if (this.quiet !== null) clearTimeout(this.quiet)
-    this.quiet = null
-
     const canvas = this.viewport.canvas
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     window.removeEventListener('pointermove', this.onPointerMove)
@@ -296,41 +278,12 @@ export class SkyboxRenderer {
     this.releaseSource()
     this.cache.dispose()
     this.environment?.dispose()
-    this.graded?.dispose()
     this.pipeline?.dispose()
-    this.adjust.dispose()
+    this.sunLight.dispose()
     this.projection.dispose()
     this.probes.dispose()
     this.grid.dispose()
     this.viewport.dispose()
-  }
-
-  /** Runs the grading pass and hands its result to the background — the cheap half. */
-  private regrade(): void {
-    const pipeline = this.pipeline
-    const graded = this.graded
-    if (!pipeline || !graded || !this.sourceTexture) return
-
-    pipeline.renderTo(this.adjust.material, graded)
-    this.environment?.setTexture(graded.texture)
-    this.scheduleRefresh()
-  }
-
-  /**
-   * The expensive half, once the gesture settles. Rescheduled on every change rather than
-   * queued, so a drag of two hundred frames costs one prefilter instead of two hundred.
-   *
-   * Only work that changes the PICTURE reschedules it, which is why `apply` reaches this through
-   * `regrade` alone. A sun drag is a light moving, not a picture changing: it has no prefilter of
-   * its own to delay, and postponing the one an exposure edit already owed would leave the probes
-   * lit by a stale map for as long as the hand keeps moving.
-   */
-  private scheduleRefresh(): void {
-    if (this.quiet !== null) clearTimeout(this.quiet)
-    this.quiet = setTimeout(() => {
-      this.quiet = null
-      this.environment?.refresh()
-    }, PMREM_QUIET_MS)
   }
 
   /** Whether the sky moved. The fact is decided here, so `apply` reads it rather than guessing. */
@@ -359,17 +312,10 @@ export class SkyboxRenderer {
   private releaseSource(): void {
     this.source(null)
     this.sourceAssetId = null
-    this.sourceTexture = null
   }
 
   private applySun(content: SkyboxContent): void {
-    const { x, y, z } = directionFromAngles(this.sun)
-    // Placed far out along its direction: a directional light has no position of its own, but
-    // three.js reads the vector from the light to its target, which sits at the origin.
-    this.sunLight.position.set(x * 100, y * 100, z * 100)
-    this.sunLight.intensity = content.sun.intensity
-    // `.set`, not a new Color: this runs on every frame of every drag, and three owns the instance.
-    this.sunLight.color.set(content.sun.color)
+    this.sunLight.apply(content.sun)
     this.viewport.requestRender()
   }
 
