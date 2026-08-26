@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACTION_REGISTRY } from '@shared/domain/assistant'
+import { ACTION_FAMILIES, ACTION_REGISTRY } from '@shared/domain/assistant'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
@@ -56,6 +56,21 @@ describe('how much of the catalogue the model is shown', () => {
     expect(briefing.text).toContain('  git.checkout —')
     expect(briefing.allowed.has('git.checkout')).toBe(true)
     expect(briefing.expand).toBeNull()
+  })
+
+  /**
+   * 🛑 Headed by the FAMILY the registry publishes, not by the first token of a name: read off
+   * the name, 231 actions cut into 83 headings for 65 prefixes — a heading every 2.8 actions,
+   * grouping nothing. `model.schema` and `model.textures` are two families under one prefix.
+   */
+  it('heads the catalogue with the families the registry publishes', () => {
+    const { text } = studioBriefing({ room: WIDE })
+    const headings = text.split('\n').filter(one => /^ {2}\[[a-z]+\]$/.test(one))
+
+    expect(headings).toHaveLength(ACTION_FAMILIES.length)
+    expect(new Set(headings).size).toBe(headings.length)
+    expect(headings).toContain('  [scene]')
+    expect(headings).not.toContain('  [model]')
   })
 
   /** And nothing to find, since there is nothing left it has not been shown. */

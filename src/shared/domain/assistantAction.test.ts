@@ -169,6 +169,18 @@ describe('why an input was refused', () => {
     expect(inputProblem(one, { nodeId: 'node-7' })).toBeNull()
   })
 
+  /**
+   * 🛑 The message above was unreachable for a year of one morning: `inputProblem` only speaks
+   * once something ELSE has refused, and `fits` took any non-blank string. A placeholder reached
+   * the handler and came back as `notFound`, and the case here was green on code nothing ran.
+   */
+  it('refuses a placeholder at the gate, not only in the message', () => {
+    const one = [field({ key: 'nodeId', kind: 'text', required: true })]
+
+    expect(readInput(one, { nodeId: '<path_id>' })).toBeNull()
+    expect(readInput(one, { nodeId: 'node-7' })).toEqual({ nodeId: 'node-7' })
+  })
+
   it('names a field nothing declares, and what the action does take', () => {
     const problem = inputProblem([field({ key: 'path', kind: 'text' })], { pah: 'assets' })
 

@@ -188,7 +188,14 @@ export function repeatKeyOf(action: ActionName, input: Record<string, unknown>):
   return input.relative === true ? `${action} ${JSON.stringify(input)}` : null
 }
 
-/** Whether this turn already ran that very relative call, and got it done. */
+/**
+ * Whether this TURN already ran that very relative call, and got it done.
+ *
+ * 🛑 Its blind spot, and a deliberate one: an MCP client reaching `runConfirmedAction` has no
+ * turn, so nothing stops it repeating. That is right — a model writes a turn's calls in one
+ * breath, where two MCP calls are two intentions. The bench measures `say()`, so it measures a
+ * path better guarded than the MCP door it certifies.
+ */
 export function repeatedRelative(steps: readonly AssistantStep[], key: string | null): boolean {
   return key !== null && steps.some(one => one.repeatKey === key && one.refusal === null)
 }

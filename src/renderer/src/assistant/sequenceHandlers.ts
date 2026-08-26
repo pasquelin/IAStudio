@@ -1,5 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
-import type { Target } from '@shared/domain/target'
+import { aimedAt, type Target } from '@shared/domain/target'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,
@@ -236,7 +236,11 @@ function adjustTrack(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
-  const track = trackById(open.state, textOf(input, 'trackId') ?? '')
+  const track = aimedAt(
+    open.state.tracks,
+    id => trackById(open.state, id),
+    textOf(input, 'trackId'),
+  )
   if (!track) return refused('notFound')
 
   const height = numberOf(input, 'height')
@@ -351,8 +355,9 @@ export function selectInMontage(id: string): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
-  if (trackById(open.state, id)) {
-    selectTrackIn(open.documentId, id)
+  const track = aimedAt(open.state.tracks, one => trackById(open.state, one), id)
+  if (track) {
+    selectTrackIn(open.documentId, track.id)
     return { ok: true }
   }
   if (!clipById(open.state, id)) return refused('notFound')

@@ -44,25 +44,42 @@ export { commitmentOfCommand } from './coreActions'
  *
  * Order matters to one reader only — the assistant's model reads its share in this order — so
  * the spoken vocabulary comes first and the families a program drives follow.
+ *
+ * 🛑 The families are DATA, not a spread: the briefing heads its catalogue with them, and read
+ * off the first token of a name instead it cut 231 actions into 83 headings that grouped nothing
+ * — `model.schema` and `model.textures` belong to two families and shared a heading.
  */
-export const ACTION_REGISTRY: readonly AssistantAction[] = [
-  ...CORE_ACTIONS,
-  ...TARGET_ACTIONS,
-  ...STATE_ACTIONS,
-  ...FILE_ACTIONS,
-  ...JOB_ACTIONS,
-  ...ASSET_ACTIONS,
-  ...CLOUD_ACTIONS,
-  ...CANVAS_ACTIONS,
-  ...SEQUENCE_ACTIONS,
-  ...MATERIAL_ACTIONS,
-  ...SCENE_ACTIONS,
-  ...RIG_ACTIONS,
-  ...GIT_ACTIONS,
-  ...CONTEXT_ACTIONS,
-  ...SETTINGS_ACTIONS,
-  ...SHELL_ACTIONS,
+export const ACTION_FAMILIES: readonly ActionFamily[] = [
+  { name: 'core', actions: CORE_ACTIONS },
+  { name: 'target', actions: TARGET_ACTIONS },
+  { name: 'state', actions: STATE_ACTIONS },
+  { name: 'file', actions: FILE_ACTIONS },
+  { name: 'job', actions: JOB_ACTIONS },
+  { name: 'asset', actions: ASSET_ACTIONS },
+  { name: 'cloud', actions: CLOUD_ACTIONS },
+  { name: 'canvas', actions: CANVAS_ACTIONS },
+  { name: 'montage', actions: SEQUENCE_ACTIONS },
+  { name: 'material', actions: MATERIAL_ACTIONS },
+  { name: 'scene', actions: SCENE_ACTIONS },
+  { name: 'rig', actions: RIG_ACTIONS },
+  { name: 'git', actions: GIT_ACTIONS },
+  { name: 'context', actions: CONTEXT_ACTIONS },
+  { name: 'settings', actions: SETTINGS_ACTIONS },
+  { name: 'shell', actions: SHELL_ACTIONS },
 ]
+
+/** One family of the registry: what a briefing heads a run of actions with. */
+export type ActionFamily = { readonly name: string; readonly actions: readonly AssistantAction[] }
+
+/** Derived, never restated: a family added above is in the registry on the spot. */
+export const ACTION_REGISTRY: readonly AssistantAction[] = ACTION_FAMILIES.flatMap(
+  family => family.actions,
+)
+
+/** Which family publishes each action — what the catalogue's headings are read from. */
+export const familyOfAction: ReadonlyMap<string, string> = new Map(
+  ACTION_FAMILIES.flatMap(family => family.actions.map(one => [one.name, family.name])),
+)
 
 /**
  * The share of the registry one door offers. `mcp` is everything; `both` is the short list.

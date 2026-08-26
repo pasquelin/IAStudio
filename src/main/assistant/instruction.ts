@@ -1,6 +1,7 @@
 import {
   actionsReaching,
   DISCOVERY_ACTION,
+  familyOfAction,
   findActions,
   type AssistantThought,
   type ActionField,
@@ -61,7 +62,7 @@ function cataloguePrinted(actions: readonly AssistantAction[], grouped = false):
   let family = ''
 
   for (const action of actions) {
-    const next = action.name.split('.')[0] ?? ''
+    const next = familyOfAction.get(action.name) ?? ''
     if (grouped && next !== family) lines.push(`  [${next}]`)
     family = next
     lines.push(actionBlock(action))
