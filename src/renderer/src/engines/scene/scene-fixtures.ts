@@ -44,6 +44,11 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
   }
 }
 
+/** Nothing but shapes, for the benches that measure what a node COUNT costs. */
+export function meshNodes(count: number): MeshNode[] {
+  return Array.from({ length: count }, (_unused, index) => meshNode(`node_${index}`))
+}
+
 /** The one light kind that builds a helper and a target beside itself. */
 export function directionalLight(id: string): LightNode {
   return lightNodeFixture(id, {
