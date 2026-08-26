@@ -60,9 +60,11 @@ export function PostPresetField({ title, stack, onApply }: PostPresetFieldProps)
           accepts={name => name.trim() !== ''}
           scId="postfx.presetName"
           onSubmit={name => {
+            // Handed over untrimmed: the store is what trims and what refuses a blank one, so
+            // this field and the MCP handler cannot end up disagreeing on what a name is.
             const store = usePostPresets.getState()
-            if (renamed) store.renamePostPreset(renamed.id, name.trim())
-            else store.savePostPreset(name.trim(), stack)
+            if (renamed) store.renamePostPreset(renamed.id, name)
+            else store.savePostPreset(name, stack)
             setNaming(null)
           }}
           onCancel={() => setNaming(null)}

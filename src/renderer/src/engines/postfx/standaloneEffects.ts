@@ -134,9 +134,13 @@ const dof: EffectFactory = context => {
 
 const lut: EffectFactory = context => {
   const pass = new LUTPass({ intensity: 1 })
+  // The one field it needs, not the whole context: closing over `context` would hold the Scene,
+  // the Camera and the WebGLRenderer of the FIRST draw for the life of the chain — six of them.
+  const { lutOf } = context
+
   return onePass(pass, effect => {
     const picked = paramText(effect, 'texture')
-    const table = picked === '' ? null : context.lutOf(picked)
+    const table = picked === '' ? null : lutOf(picked)
     pass.lut = table ?? undefined
     // No table means no grade, whatever the slider says: a LUT still loading must not be drawn
     // as the identity at full cost.
@@ -230,12 +234,20 @@ const OWN_PASS: Readonly<Record<Exclude<PostEffectId, FusedId>, EffectFactory>> 
     write(uniforms, 'hole', paramNumber(effect, 'hole'))
     // Through the budget, like every other sampling count: the cheap end of the quality setting
     // is what makes a stack of heavy effects usable at all.
-    write(uniforms, 'taps', samplesOf(paramNumber(effect, 'samples'), view.budget))
+    const taps = samplesOf(paramNumber(effect, 'samples'), view.budget)
+    write(uniforms, 'taps', taps)
+    // The reciprocal here rather than a division per TAP: a uniform is not a compile-time
+    // constant, so the driver cannot fold it out of the loop.
+    write(uniforms, 'spread', 1 / Math.max(taps - 1, 1))
     writeVector(uniforms, 'centre', paramNumber(effect, 'centreX'), paramNumber(effect, 'centreY'))
   }),
 
   kuwahara: shaderEffect(kuwaharaShader, (uniforms, effect, view) => {
-    write(uniforms, 'radius', paramNumber(effect, 'radius'))
+    const radius = paramNumber(effect, 'radius')
+    write(uniforms, 'radius', radius)
+    // One reciprocal for the whole quadrant rather than six divisions each: the count is a
+    // function of the radius alone, and a uniform is never folded.
+    write(uniforms, 'invCount', 1 / (Math.min(radius, 6) + 1) ** 2)
     const step = texelOf(view)
     writeVector(uniforms, 'texel', step.x, step.y)
   }),

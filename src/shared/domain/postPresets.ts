@@ -8,8 +8,8 @@
  */
 import { isRecord } from '../guards'
 import {
-  boundParam,
-  POST_EFFECTS,
+  postEffect,
+  readParams,
   readStack,
   unknownEffectsIn,
   type PostEffectId,
@@ -308,15 +308,10 @@ export function stackFromPreset(id: PostPresetId, mintId: () => string): PostSta
   return {
     enabled: true,
     effects: POST_PRESETS[id].map(step => ({
-      id: mintId(),
-      effect: step.effect,
-      enabled: true,
-      params: Object.fromEntries(
-        Object.entries(POST_EFFECTS[step.effect].params).map(([key, spec]) => [
-          key,
-          key in (step.params ?? {}) ? boundParam(spec, step.params?.[key]) : spec.default,
-        ]),
-      ),
+      ...postEffect(mintId(), step.effect),
+      // `readParams` fills in from the catalogue and bounds what the recipe does say — a key the
+      // recipe leaves out reaches `boundParam` as `undefined`, which is its own default.
+      params: readParams(step.effect, step.params),
     })),
   }
 }
@@ -326,6 +321,20 @@ export type UserPostPreset = {
   id: string
   name: string
   stack: PostStack
+}
+
+/**
+ * A saved look by its id OR by the name somebody gave it, theirs winning over a shipped one of
+ * the same name — it is the one they made on purpose.
+ *
+ * Here rather than at each caller: the picker hands an id and a client hands a name, and a rule
+ * written twice is a rule that drifts.
+ */
+export function postPresetNamed(
+  saved: readonly UserPostPreset[],
+  named: string,
+): UserPostPreset | undefined {
+  return saved.find(preset => preset.id === named || preset.name === named)
 }
 
 export const POST_PRESET_FILE_TYPE = 'post-processing-preset'

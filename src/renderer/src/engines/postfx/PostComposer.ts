@@ -59,11 +59,7 @@ export type PostDrawJob = {
 
 export type PostComposerOptions = {
   loadLut?: LutSource
-  /**
-   * What the asset is worth right now — `textureCache.versionOf`. Read on every ask, because it
-   * is what makes ⌘S over a LUT show: the id never moves, so a cache keyed on the id alone holds
-   * the first table for good and the stamp `loadLutTexture` carries would only ever load once.
-   */
+  /** What the asset is worth right now — `textureCache.versionOf`. See `lutCache`. */
   lutStamp?: (assetId: string) => string | undefined
   /** Asked for a frame once something that was loading has arrived. */
   onReady?: () => void
@@ -77,8 +73,6 @@ type Chain = {
   head: RenderPass | null
   appliers: readonly Applier[]
   instances: readonly EffectInstance[]
-  /** The stack shape it was compiled for — what `sweep` compares, without re-parsing a key. */
-  shape: string
   width: number
   height: number
   usedAt: number
@@ -213,7 +207,9 @@ export class PostComposer {
   sweep(live: readonly PostStack[]): void {
     const wanted = new Set(live.map(stackShapeKey))
     for (const [key, chain] of this.chains) {
-      if (wanted.has(chain.shape)) continue
+      // The shape is the head of the key — held as a field it was state nothing but this line
+      // read, and `sweep` runs on a change of scene rather than per image.
+      if (wanted.has(key.slice(0, key.indexOf('#')))) continue
       dropChain(chain)
       this.chains.delete(key)
     }
@@ -313,7 +309,6 @@ export class PostComposer {
       head,
       appliers,
       instances,
-      shape: key.slice(0, key.indexOf('#')),
       width: view.width,
       height: view.height,
       usedAt: this.clock,

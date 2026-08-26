@@ -2,16 +2,18 @@ import { Euler, Quaternion } from 'three'
 import {
   ONE,
   ZERO,
+  drivesPost,
   neutralOf,
   type AnimationTimeline,
   type AnimationTrack,
   type Keyframe,
+  type PostTarget,
   type TrackProperty,
 } from '@shared/domain/animation'
-import { drivesPost, type PostTarget } from '@shared/domain/animation'
 import {
   boundParam,
   POST_EFFECTS,
+  type PostEffectId,
   type PostParamValue,
   type PostStack,
 } from '@shared/domain/postProcessing'
@@ -198,7 +200,7 @@ function addDelta(
  * the way, so an animation cannot drive a value somewhere no hand could have put it.
  */
 function openedBy(
-  effect: keyof typeof POST_EFFECTS,
+  effect: PostEffectId,
   params: Readonly<Record<string, PostParamValue>>,
   deltas: ReadonlyMap<string, number>,
 ): Record<string, PostParamValue> {

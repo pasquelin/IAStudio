@@ -10,6 +10,7 @@ import {
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
+import { ownedStackOf } from '@shared/domain/postProcessing'
 import { snapToFrame } from '@shared/domain/time'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
@@ -94,15 +95,15 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // clock during playback and stops between two frames, so reading it raw would show a value the
   // key written a frame earlier never takes.
   const at = snapToFrame(playhead, animation.fps)
-  // `lensAt`, which the viewport draws through too: the field writes the same number back, so
-  // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
   // Derived from the node the component already holds, not a third subscription: a selector
   // would re-scan `nodes` on every emission of any drag to find a camera that is right here.
-  const cameraStack = camera?.camera.post?.mode === 'override' ? camera.camera.post.stack : null
+  const cameraStack = ownedStackOf(camera?.camera.post)
   const cameraTarget = useMemo(
     (): PostTargetRef => ({ kind: 'camera', nodeId: camera?.id ?? '' }),
     [camera?.id],
   )
+  // `lensAt`, which the viewport draws through too: the field writes the same number back, so
+  // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
   const lens = useMemo(
     () => (camera ? cameraFields(lensAt(camera.camera, animation, camera.id, at)) : []),
     [camera, animation, at],

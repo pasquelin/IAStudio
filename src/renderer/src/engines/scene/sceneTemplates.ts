@@ -16,7 +16,12 @@ import {
   type AnimationTimeline,
   type AnimationTrack,
 } from '@shared/domain/animation'
-import { postEffect, type PostEffect, type PostEffectId } from '@shared/domain/postProcessing'
+import {
+  postEffect,
+  readParams,
+  type PostEffect,
+  type PostEffectId,
+} from '@shared/domain/postProcessing'
 import { SECOND, type Us } from '@shared/domain/time'
 import {
   DEFAULT_WORLD,
@@ -142,18 +147,10 @@ const BACKDROP: MaterialDescriptor = {
  * demonstration puts at the centre of its frame. Metal because a rough dielectric hides both.
  */
 const METAL: MaterialDescriptor = {
-  kind: 'standard',
+  ...BACKDROP,
   color: '#dfe3ea',
   roughness: 0.14,
   metalness: 1,
-  tilesPerMetre: 1,
-  map: null,
-  normalMap: null,
-  roughnessMap: null,
-  metalnessMap: null,
-  aoMap: null,
-  emissiveMap: null,
-  displacementMap: null,
 }
 
 /**
@@ -202,8 +199,9 @@ const tuned = (
   effect: PostEffectId,
   params: Record<string, number | string | boolean>,
 ): PostEffect => {
-  const fresh = postEffect(id, effect)
-  return { ...fresh, params: { ...fresh.params, ...params } }
+  // `readParams` rather than a spread: it fills in from the catalogue AND bounds what is given,
+  // so a value that drifted out of its own slider is caught rather than written.
+  return { ...postEffect(id, effect), params: readParams(effect, params) }
 }
 
 /** One composition channel of the demonstration, on the SCENE's own stack. */

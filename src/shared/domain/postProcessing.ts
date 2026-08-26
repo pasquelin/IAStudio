@@ -100,6 +100,13 @@ export type PostEffectMeta = {
   slot: PostSlot
   /** Whether two of them in one stack mean anything. An anti-aliaser twice does not. */
   duplicable: boolean
+  /**
+   * Whether it works ABOVE white — a bloom thresholds highlights, a defocus spreads them, an
+   * opened exposure pulls values back from over one. On bytes all three read as clipping, so the
+   * chain buys half-float for them. Declared here rather than named in the renderer: a thirtieth
+   * HDR effect would otherwise draw into bytes and nothing would redden.
+   */
+  hdr?: boolean
   params: Readonly<Record<string, PostParamSpec>>
 }
 
@@ -190,6 +197,7 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
     params: { level: number(1, 4, 1, 2) },
   },
   bloom: {
+    hdr: true,
     category: 'light',
     cost: 'medium',
     slot: 'image',
@@ -201,6 +209,7 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
     },
   },
   dof: {
+    hdr: true,
     category: 'lens',
     cost: 'high',
     slot: 'image',
@@ -245,6 +254,7 @@ export const POST_EFFECTS: Record<PostEffectId, PostEffectMeta> = {
     },
   },
   colorGrading: {
+    hdr: true,
     category: 'color',
     cost: 'low',
     slot: 'image',
@@ -505,6 +515,11 @@ export type CameraPost =
   { mode: 'inherit' } | { mode: 'disabled' } | { mode: 'override'; stack: PostStack }
 
 export type CameraPostMode = CameraPost['mode']
+
+/** The stack a camera OWNS — `null` while it inherits the scene's or films through none. */
+export function ownedStackOf(post: CameraPost | undefined): PostStack | null {
+  return post?.mode === 'override' ? post.stack : null
+}
 
 export const CAMERA_POST_MODES: readonly CameraPostMode[] = ['inherit', 'override', 'disabled']
 

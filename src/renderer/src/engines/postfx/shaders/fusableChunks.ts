@@ -286,20 +286,25 @@ const heatHaze: FusableEffect = {
 const letterbox: FusableEffect = {
   kind: 'colour',
   make: () => ({
-    uniforms: { aspect: { value: 2.39 }, softness: { value: 0 }, frameAspect: { value: 1.777 } },
+    // Half the shown span on each axis, and the softness — all three are functions of the
+    // parameters alone, so they are worked out once per image rather than once per pixel.
+    uniforms: { shown: { value: new Vector2(0.5, 0.5) }, edge: { value: 0.0001 } },
     body: `
-    float shownY = clamp(frameAspect / max(aspect, 0.001), 0.0, 1.0) * 0.5;
-    float shownX = clamp(aspect / max(frameAspect, 0.001), 0.0, 1.0) * 0.5;
-    float edge = max(softness, 0.0001);
     colour *=
-      (1.0 - smoothstep(shownY - edge, shownY + edge, abs(vUv.y - 0.5))) *
-      (1.0 - smoothstep(shownX - edge, shownX + edge, abs(vUv.x - 0.5)));
+      (1.0 - smoothstep(shown.y - edge, shown.y + edge, abs(vUv.y - 0.5))) *
+      (1.0 - smoothstep(shown.x - edge, shown.x + edge, abs(vUv.x - 0.5)));
     `,
   }),
   apply: (effect, view, uniforms) => {
-    write(uniforms, 'aspect', paramNumber(effect, 'aspect'))
-    write(uniforms, 'softness', paramNumber(effect, 'softness'))
-    write(uniforms, 'frameAspect', view.height === 0 ? 1 : view.width / view.height)
+    const aspect = Math.max(paramNumber(effect, 'aspect'), 0.001)
+    const frame = view.height === 0 ? 1 : view.width / view.height
+    writeVector(
+      uniforms,
+      'shown',
+      Math.min(aspect / frame, 1) * 0.5,
+      Math.min(frame / aspect, 1) * 0.5,
+    )
+    write(uniforms, 'edge', Math.max(paramNumber(effect, 'softness'), 0.0001))
   },
 }
 

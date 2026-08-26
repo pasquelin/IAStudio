@@ -15,7 +15,12 @@ import {
   type PostStack,
 } from '@shared/domain/postProcessing'
 import { drivesPost, SCENE_SUBJECT_ID, type AnimationTrack } from '@shared/domain/animation'
-import { isPostPresetId, stackFromPreset, type UserPostPreset } from '@shared/domain/postPresets'
+import {
+  isPostPresetId,
+  postPresetNamed,
+  stackFromPreset,
+  type UserPostPreset,
+} from '@shared/domain/postPresets'
 import { movedWithin } from '@shared/domain/order'
 import type { CameraDescriptor } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
@@ -232,10 +237,7 @@ export function stackOfPreset(
   saved: readonly UserPostPreset[],
   mintId: () => string = newId,
 ): PostStack | null {
-  // By id OR by the name somebody gave it — the picker hands an id, a client hands a name, and a
-  // saved look reachable by a generated id alone is one nobody could ever ask for out loud.
-  // Theirs wins over a shipped one of the same name: it is the one they made on purpose.
-  const mine = saved.find(preset => preset.id === name || preset.name === name)
+  const mine = postPresetNamed(saved, name)
   if (mine) return mine.stack
   return isPostPresetId(name) ? stackFromPreset(name, mintId) : null
 }

@@ -138,9 +138,8 @@ export function PostProcessingSection({
 
   /** The diamond that opens a channel on one parameter, and the state it reports. */
   const keyAction = (name: string): ReactNode => {
-    const effect = selected
-    const spec = effect ? POST_EFFECTS[effect.effect].params[name] : undefined
-    if (!effect || !spec?.animatable) return null
+    const spec = selected ? POST_EFFECTS[selected.effect].params[name] : undefined
+    if (!selected || !spec?.animatable) return null
 
     const channel = channels.get(name)
     const keyed = channel?.keys.some(key => key.time === keying.at) ?? false
@@ -157,16 +156,16 @@ export function PostProcessingSection({
           // Read again at press time: the head runs on the wall clock during playback.
           const now = sceneKeyingAt(documentId)
           const command = keyed
-            ? unkeyPostParam(now.state, target, effect.id, name, now.at)
+            ? unkeyPostParam(now.state, target, selected.id, name, now.at)
             : typeof value === 'number'
               ? keyPostParam(
                   now.state,
                   target,
-                  effect.id,
+                  selected.id,
                   name,
                   now.at,
                   value,
-                  postChannelName(t, effect.effect, name),
+                  postChannelName(t, selected.effect, name),
                 )
               : null
           if (command) run(command)

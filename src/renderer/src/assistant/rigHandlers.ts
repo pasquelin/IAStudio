@@ -1,4 +1,3 @@
-import i18next from 'i18next'
 import { DIRECT_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
@@ -7,7 +6,7 @@ import {
   type BodyPart,
   type HumanoidRole,
 } from '@shared/domain/humanoid'
-import { englishText } from '@shared/i18n'
+import { speaksBundle } from '@shared/i18n'
 import { childBone } from '@shared/domain/rig'
 import {
   assetClip,
@@ -339,7 +338,7 @@ function keyPose(input: Record<string, unknown>): ActionOutcome {
       state,
       subject,
       at,
-      channelNames(key => i18next.t(key) || englishText(key), subject.bone ?? node.name),
+      channelNames(speaksBundle(), subject.bone ?? node.name),
       () => `track_${newId()}`,
       only,
     )

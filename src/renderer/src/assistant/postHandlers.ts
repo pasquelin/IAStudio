@@ -6,7 +6,7 @@ import {
   POST_EFFECTS,
   type PostStack,
 } from '@shared/domain/postProcessing'
-import { POST_PRESET_IDS, type UserPostPreset } from '@shared/domain/postPresets'
+import { POST_PRESET_IDS, postPresetNamed, type UserPostPreset } from '@shared/domain/postPresets'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { Command } from '@/engines/core/history'
 import {
@@ -27,8 +27,7 @@ import {
   type PostTargetRef,
 } from '@/engines/scene/postCommands'
 import type { SceneState } from '@/engines/scene/sceneState'
-import i18next from 'i18next'
-import { englishText } from '@shared/i18n'
+import { speaksBundle } from '@shared/i18n'
 import type { Us } from '@shared/domain/time'
 import { postChannelName } from '@/helpers/channelNames'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
@@ -85,10 +84,15 @@ function lookupRefusal(lookup: 'unknown' | 'disabled'): ActionOutcome {
       )
 }
 
-/** One edit of the composition a call names, run on the scene in front. */
-function editPost(
+/** The composition a call names, with the scene it belongs to — or the refusal that stands. */
+function withStack(
   input: Record<string, unknown>,
-  build: (target: PostTargetRef, stack: PostStack, state: SceneState) => Command<SceneState> | null,
+  answer: (found: {
+    target: PostTargetRef
+    stack: PostStack
+    state: SceneState
+    documentId: string
+  }) => ActionOutcome,
 ): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
@@ -99,11 +103,21 @@ function editPost(
   const stack = postStackOf(open.state, target)
   if (!stack) return refused('notFound')
 
-  const command = build(target, stack, open.state)
-  if (!command) return refused('badInput')
+  return answer({ target, stack, state: open.state, documentId: open.documentId })
+}
 
-  useScenes.getState().runCommand(open.documentId, command)
-  return { ok: true }
+/** One edit of the composition a call names, run on the scene in front. */
+function editPost(
+  input: Record<string, unknown>,
+  build: (target: PostTargetRef, stack: PostStack, state: SceneState) => Command<SceneState> | null,
+): ActionOutcome {
+  return withStack(input, ({ target, stack, state, documentId }) => {
+    const command = build(target, stack, state)
+    if (!command) return refused('badInput')
+
+    useScenes.getState().runCommand(documentId, command)
+    return { ok: true }
+  })
 }
 
 /** Where the head of the scene in front stands. Read at CALL time: playback moves it. */
@@ -114,10 +128,8 @@ function headAt(): Us {
 
 const savedPresets = (): readonly UserPostPreset[] => usePostPresets.getState().saved
 
-/** A saved preset by its id OR by the name somebody gave it — the rule the whole registry keeps. */
-function savedNamed(named: string): UserPostPreset | undefined {
-  return savedPresets().find(preset => preset.id === named || preset.name === named)
-}
+const savedNamed = (named: string): UserPostPreset | undefined =>
+  postPresetNamed(savedPresets(), named)
 
 /** The instance a call names, checked against the stack it claims to be in. */
 function effectIn(stack: PostStack, input: Record<string, unknown>): string | null {
@@ -266,7 +278,7 @@ export const POST_HANDLERS: ActionHandlers = {
         value,
         // A channel name is screen text: one opened from outside must read like one the diamond
         // opened. `i18next` answers nothing before a window has initialised it — a test.
-        postChannelName(key => i18next.t(key) || englishText(key), effect.effect, param),
+        postChannelName(speaksBundle(), effect.effect, param),
       )
     }),
 
@@ -283,28 +295,21 @@ export const POST_HANDLERS: ActionHandlers = {
    * answer without a command and outside the history — forgetting a preset is not an edit ⌘Z
    * could take back.
    */
-  'post.save': input => {
-    const open = mounted()
-    if (!open) return refused('wrongSurface')
-
-    const target = targetOf(input, open.state)
-    if (typeof target === 'string') return lookupRefusal(target)
-
-    const stack = postStackOf(open.state, target)
-    const name = (textOf(input, 'name') ?? '').trim()
-    if (!stack || !name) return refused('badInput')
-
-    return { ok: true, data: { presetId: usePostPresets.getState().savePostPreset(name, stack) } }
-  },
+  'post.save': input =>
+    withStack(input, ({ stack }) => {
+      const saved = usePostPresets.getState().savePostPreset(textOf(input, 'name') ?? '', stack)
+      // The store is what refuses a blank name — see `savePostPreset`, which trims it too.
+      return saved ? { ok: true, data: { presetId: saved } } : refused('badInput')
+    }),
 
   'post.rename': input => {
     const preset = savedNamed(textOf(input, 'preset') ?? '')
-    const name = (textOf(input, 'name') ?? '').trim()
     if (!preset) return refused('notFound', 'no preset of that id or name is saved here')
-    if (!name) return refused('badInput')
 
-    usePostPresets.getState().renamePostPreset(preset.id, name)
-    return { ok: true }
+    const renamed = usePostPresets
+      .getState()
+      .renamePostPreset(preset.id, textOf(input, 'name') ?? '')
+    return renamed ? { ok: true } : refused('badInput')
   },
 
   'post.forget': input => {

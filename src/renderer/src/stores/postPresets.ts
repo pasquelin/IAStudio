@@ -8,8 +8,16 @@ import { newId } from '@/helpers/ids'
 export type PostPresetsState = {
   /** In the order they were saved. What the picker lists under the ones the studio ships. */
   saved: readonly UserPostPreset[]
-  savePostPreset: (name: string, stack: PostStack) => string
-  renamePostPreset: (id: string, name: string) => void
+  /**
+   * The name is TRIMMED here, and a blank one is refused — `null` rather than an id.
+   *
+   * The rule belongs to the store because three surfaces reach it: the panel's field, the MCP
+   * handler and a rename. Written at each of them, the fourth caller misses it and a preset
+   * nobody can name lands in the picker.
+   */
+  savePostPreset: (name: string, stack: PostStack) => string | null
+  /** `false` where the name was blank. Same rule, same place. */
+  renamePostPreset: (id: string, name: string) => boolean
   forgetPostPreset: (id: string) => void
 }
 
@@ -24,15 +32,25 @@ export const usePostPresets = create<PostPresetsState>()(
       saved: [],
 
       savePostPreset: (name, stack) => {
+        const called = name.trim()
+        if (called === '') return null
+
         const id = newId()
-        set(state => ({ saved: [...state.saved, { id, name, stack }] }))
+        set(state => ({ saved: [...state.saved, { id, name: called, stack }] }))
         return id
       },
 
-      renamePostPreset: (id, name) =>
+      renamePostPreset: (id, name) => {
+        const called = name.trim()
+        if (called === '') return false
+
         set(state => ({
-          saved: state.saved.map(preset => (preset.id === id ? { ...preset, name } : preset)),
-        })),
+          saved: state.saved.map(preset =>
+            preset.id === id ? { ...preset, name: called } : preset,
+          ),
+        }))
+        return true
+      },
 
       forgetPostPreset: id =>
         set(state => ({ saved: state.saved.filter(preset => preset.id !== id) })),

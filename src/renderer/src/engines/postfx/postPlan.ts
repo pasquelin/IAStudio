@@ -69,10 +69,13 @@ export function heaviestCost(effects: readonly PostEffect[]): PostCost | null {
  */
 export function wantsFloat(effects: readonly PostEffect[], toneMapped: boolean): boolean {
   if (toneMapped) return true
-  return effects.some(
-    effect =>
-      effect.effect === 'bloom' ||
-      effect.effect === 'dof' ||
-      (effect.effect === 'colorGrading' && Number(effect.params.exposure ?? 0) !== 0),
-  )
+  return effects.some(effect => POST_EFFECTS[effect.effect].hdr === true && opened(effect))
+}
+
+/**
+ * A grade is only HDR while its exposure is OPEN: closed, it neither lifts values above one nor
+ * pulls any back, so the half-float would be bandwidth bought for nothing.
+ */
+function opened(effect: PostEffect): boolean {
+  return effect.effect !== 'colorGrading' || Number(effect.params.exposure ?? 0) !== 0
 }

@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import { isRecord } from '../guards'
 import { en } from './en'
 import { fr } from './fr'
@@ -26,6 +27,16 @@ export type { Translations } from './fr'
  */
 export function englishText(key: string): string {
   return textAt(TRANSLATIONS.en, key)
+}
+
+/**
+ * How a handler names screen text: the window's own language, falling back to English.
+ *
+ * `i18next` answers nothing before a window has initialised it — a test — and a channel opened
+ * from outside must read like one the band's diamond opened, never `undefined` in a document.
+ */
+export function speaksBundle(): (key: string) => string {
+  return key => i18next.t(key) || englishText(key)
 }
 
 /**

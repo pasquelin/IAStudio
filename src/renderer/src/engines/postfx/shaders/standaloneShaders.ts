@@ -262,6 +262,7 @@ export const radialBlurShader = {
     centre: { value: new Vector2(0.5, 0.5) },
     hole: { value: 0.1 },
     taps: { value: 16 },
+    spread: { value: 1 / 15 },
   },
   vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
@@ -270,6 +271,7 @@ export const radialBlurShader = {
     uniform vec2 centre;
     uniform float hole;
     uniform float taps;
+    uniform float spread;
     varying vec2 vUv;
 
     // GLSL ES 1.0 wants a constant bound, so the count is a uniform the loop breaks on.
@@ -282,15 +284,12 @@ export const radialBlurShader = {
       float reach = amount * smoothstep(hole, 1.0, length(towards) * 2.0);
 
       vec3 sum = vec3(0.0);
-      float weight = 0.0;
       for (int i = 0; i < MAX_TAPS; i += 1) {
         if (float(i) >= taps) break;
-        float step = float(i) / max(taps - 1.0, 1.0);
-        sum += texture2D(tDiffuse, clamp(vUv - towards * reach * step, 0.0, 1.0)).rgb;
-        weight += 1.0;
+        sum += texture2D(tDiffuse, clamp(vUv - towards * reach * float(i) * spread, 0.0, 1.0)).rgb;
       }
 
-      gl_FragColor = vec4(sum / max(weight, 1.0), 1.0);
+      gl_FragColor = vec4(sum / max(taps, 1.0), 1.0);
     }
   `,
 }
@@ -307,12 +306,14 @@ export const kuwaharaShader = {
   uniforms: {
     tDiffuse: { value: null },
     radius: { value: 3 },
+    invCount: { value: 1 / 16 },
     texel: { value: new Vector2() },
   },
   vertexShader: QUAD_VERTEX_SHADER,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float radius;
+    uniform float invCount;
     uniform vec2 texel;
     varying vec2 vUv;
 
@@ -321,7 +322,9 @@ export const kuwaharaShader = {
     const int MAX_RADIUS = 6;
 
     void main() {
-      vec3 bestMean = texture2D(tDiffuse, vUv).rgb;
+      // Not a fetch: the spread below starts high enough that the first quadrant always wins,
+      // so reading the centre pixel here would be one texture read of sixty-four thrown away.
+      vec3 bestMean = vec3(0.0);
       float bestSpread = 1.0e9;
 
       for (int quadrant = 0; quadrant < 4; quadrant += 1) {
@@ -330,7 +333,6 @@ export const kuwaharaShader = {
 
         vec3 sum = vec3(0.0);
         vec3 squares = vec3(0.0);
-        float count = 0.0;
 
         for (int y = 0; y <= MAX_RADIUS; y += 1) {
           if (float(y) > radius) break;
@@ -342,14 +344,13 @@ export const kuwaharaShader = {
             ).rgb;
             sum += seen;
             squares += seen * seen;
-            count += 1.0;
           }
         }
 
-        vec3 mean = sum / count;
+        vec3 mean = sum * invCount;
         // The variance of the LUMA rather than of each channel: a quadrant chosen per channel
         // takes three different neighbourhoods and paints the seams between them.
-        float spread = dot(squares / count - mean * mean, LUMA);
+        float spread = dot(squares * invCount - mean * mean, LUMA);
         if (spread < bestSpread) {
           bestSpread = spread;
           bestMean = mean;
