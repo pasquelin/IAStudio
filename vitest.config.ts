@@ -162,7 +162,6 @@ const DOM_BOUND = [
   'src/renderer/src/spaces/three/sceneAddMenu.test.ts',
   'src/renderer/src/spaces/three/sceneNodeMenu.test.ts',
   'src/renderer/src/helpers/modelForCapability.test.ts',
-  'src/renderer/src/helpers/scrollParent.test.ts',
   'src/renderer/src/helpers/toolRegistry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',
   'src/renderer/src/hooks/useAutomaticPulls.test.ts',

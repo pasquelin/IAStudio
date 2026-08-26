@@ -19,7 +19,6 @@ import { geometryFor } from '../scene/threeFactory'
 export type TestObjects = {
   readonly group: Group
   setVisible: (visible: boolean) => void
-  setGroundVisible: (visible: boolean) => void
   /**
    * The picture the floor wears, which this tunes to the floor's size. Freeing it belongs to
    * whoever loaded it — `dispose` here leaves it alone.
@@ -79,10 +78,6 @@ export function createTestObjects({ probeDistance = 0 }: TestObjectsOptions = {}
 
     setVisible: visible => {
       group.visible = visible
-    },
-
-    setGroundVisible: visible => {
-      ground.visible = visible
     },
 
     setGroundMap: map => {

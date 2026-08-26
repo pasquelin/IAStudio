@@ -1,5 +1,5 @@
 import { mdiCircleMedium, mdiFile, mdiFolder } from '@mdi/js'
-import { useState } from 'react'
+import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InlineRename } from '@/design/InlineRename'
 import { MediaTile } from '@/design/MediaTile'
@@ -52,7 +52,7 @@ export type EntryCardProps = {
   foreign?: {
     accepts: boolean
     carries: (event: DragLike) => boolean
-    onDrop: (event: React.DragEvent<HTMLElement>) => void
+    onDrop: (event: DragEvent<HTMLElement>) => void
   }
   onDropInto: (ids: readonly string[]) => void
   /** What this card just picked up, so the panel can answer `accepts` for its neighbours. */

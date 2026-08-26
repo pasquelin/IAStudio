@@ -1,5 +1,13 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { cn } from '@/helpers/cn'
 import type { DragLike } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
@@ -44,7 +52,7 @@ export type ForeignDrop<T> = {
    */
   accepts: (node: T) => boolean
   /** `null` for the blank below the rows, which means the folder being read. */
-  onDrop: (event: React.DragEvent<HTMLElement>, node: T | null) => void
+  onDrop: (event: DragEvent<HTMLElement>, node: T | null) => void
 }
 
 export type TreeRow<T> = {
@@ -198,7 +206,7 @@ export type TreeProps<T extends TreeNode> = {
    * a scene document laid on a montage, say. The tree has already announced its own by then,
    * and neither channel knows about the other.
    */
-  onDragStart?: (node: T, event: React.DragEvent<HTMLElement>) => void
+  onDragStart?: (node: T, event: DragEvent<HTMLElement>) => void
   /**
    * Which rows may receive `dragged`. Refused rows take no outline and no drop, which is why
    * the tree keeps the dragged node rather than reading the drag payload: `getData` answers
@@ -484,10 +492,7 @@ export function Tree<T extends TreeNode>({
    * reads the same answer to report. Two passes would be two chances to disagree, over a row
    * whose thirds the pointer is sitting exactly on the edge of.
    */
-  const dropTargetFor = (
-    row: TreeRow<T>,
-    event: React.DragEvent<HTMLElement>,
-  ): DropTarget | null => {
+  const dropTargetFor = (row: TreeRow<T>, event: DragEvent<HTMLElement>): DropTarget | null => {
     const into = onDrop !== undefined && accepts(row.node)
     // A row a selection cannot hold is not a node either: no siblings, so no place in an
     // ordering. It takes a drop over its whole HEIGHT or none — the scene's synthetic root,
@@ -516,7 +521,7 @@ export function Tree<T extends TreeNode>({
    * another window editing the same document, a ⌘Z arriving mid-gesture — and an index counted on
    * a level that has changed since lands the batch somewhere else, without a word.
    */
-  const release = (event: React.DragEvent<HTMLElement>): void => {
+  const release = (event: DragEvent<HTMLElement>): void => {
     const aim = over
     setOver(null)
     setDragged(null)
@@ -586,7 +591,7 @@ export function Tree<T extends TreeNode>({
   const onRowKeyDown = (
     row: TreeRow<T>,
     index: number,
-    event: React.KeyboardEvent<HTMLElement>,
+    event: KeyboardEvent<HTMLElement>,
   ): void => {
     if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowLeft' && row.expanded) onToggle(row.node.id)

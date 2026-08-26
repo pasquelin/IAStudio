@@ -28,7 +28,6 @@ vi.mock('@/engines/timeline/TimelineEngine', () => ({
     play = play
     pause = pause
     playing = vi.fn(() => false)
-    openSinks = vi.fn(() => 0)
     // Faithful on this one point, because a case below turns on it: the real `dispose` pauses,
     // and pausing reports the time one last time (`TimelineEngine.pause`).
     dispose = vi.fn(() => this.deps.onTime?.(0))

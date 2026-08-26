@@ -5,7 +5,7 @@ import {
   mdiMagnify,
   mdiShapeOutline,
 } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -315,7 +315,7 @@ export function Explorer() {
     !isDomainHeading(node) && node.kind === 'folder' && !isPrivatePath(node.path)
 
   const landAsset = useCallback(
-    (event: React.DragEvent<HTMLElement>, folder: string): void => {
+    (event: DragEvent<HTMLElement>, folder: string): void => {
       void landAssetIn(event, folder).then(outcome => outcome && settled(outcome))
     },
     [settled],

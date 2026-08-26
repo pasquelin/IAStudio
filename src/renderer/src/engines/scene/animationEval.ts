@@ -248,11 +248,6 @@ export function clampPlayhead(time: Us, duration: Us): Us {
   return clamp(time, 0, duration)
 }
 
-/** What a track is called when nobody has named it: what it drives, and what of it. */
-export function keyAt(keys: readonly Keyframe[], time: Us): Keyframe | undefined {
-  return keys.find(key => key.time === time)
-}
-
 export function withKey(keys: readonly Keyframe[], key: Keyframe): Keyframe[] {
   const kept = keys.filter(candidate => candidate.time !== key.time)
   return [...kept, key].sort((left, right) => left.time - right.time)

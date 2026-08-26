@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
-import { ScrollHostProvider } from '@/design/scrollHost'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { HOME_COMPONENTS } from '../homeRegistry'
@@ -10,16 +8,13 @@ import { HomeViewClosing } from './HomeViewClosing'
 /**
  * The studio's entry point: what you were doing, what it can do, and what it is doing now.
  *
- * It owns the only scroll on the screen. That is a decision the sections depend on — a shelf
- * measures itself against this container, and the infinite grid the explore section will bring
- * has to hang off it rather than open a second scrollbar inside the first.
+ * It owns the only scroll on the screen, which the sections lay themselves out against rather
+ * than opening a second scrollbar inside the first.
  */
 export function HomeView() {
   const sections = useHomeSections()
   const projectKnown = useProject(state => state.known)
   const settingsLoaded = useSettings(state => state.loaded)
-  // State and not a ref: what hangs off this scroller has to render again once it exists.
-  const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
 
   // Nothing at all until the main process has said which project is open and which sections this
   // person kept. Half the sections require a project, and the order is a setting: drawing first
@@ -29,25 +24,21 @@ export function HomeView() {
   if (!projectKnown || !settingsLoaded) return <div className="h-full" />
 
   return (
-    // Published rather than left to be found: the grid virtualizes against this scroll and the
-    // sticky headings measure themselves from its top, and neither could say so.
-    <ScrollHostProvider host={scroller}>
-      <div ref={setScroller} className="h-full overflow-x-hidden overflow-y-auto">
-        {/* Bounded by a gauge, and it is the whole page's readability: unbounded, a row's label
-            sat at one edge of a wide display and its value at the other. */}
-        <div className="mx-auto flex w-full max-w-(--sc-home-width) flex-col gap-8 px-6 py-6">
-          {sections.map(id => {
-            const Section = HOME_COMPONENTS[id]
-            return (
-              // Per section: a shelf that throws takes itself off the home, not the home with it.
-              <ErrorBoundary key={id}>
-                <Section />
-              </ErrorBoundary>
-            )
-          })}
-          <HomeViewClosing />
-        </div>
+    <div className="h-full overflow-x-hidden overflow-y-auto">
+      {/* Bounded by a gauge, and it is the whole page's readability: unbounded, a row's label
+          sat at one edge of a wide display and its value at the other. */}
+      <div className="mx-auto flex w-full max-w-(--sc-home-width) flex-col gap-8 px-6 py-6">
+        {sections.map(id => {
+          const Section = HOME_COMPONENTS[id]
+          return (
+            // Per section: a shelf that throws takes itself off the home, not the home with it.
+            <ErrorBoundary key={id}>
+              <Section />
+            </ErrorBoundary>
+          )
+        })}
+        <HomeViewClosing />
       </div>
-    </ScrollHostProvider>
+    </div>
   )
 }

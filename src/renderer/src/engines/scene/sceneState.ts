@@ -307,7 +307,6 @@ export type MaterialNode = Extract<SceneNode, { material: MaterialDescriptor }>
 export function carriesMaterial(node: SceneNode): node is MaterialNode {
   return 'material' in node
 }
-export type GroupNode = Extract<SceneNode, { type: 'group' }>
 export type CameraNode = Extract<SceneNode, { type: 'camera' }>
 export type PathNode = Extract<SceneNode, { type: 'path' }>
 
