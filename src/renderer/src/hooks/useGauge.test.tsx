@@ -5,7 +5,7 @@ import { useGauge } from './useGauge'
 
 const GAUGE = '--sc-control'
 
-function declare(value: string | null): void {
+function setGauge(value: string | null): void {
   const root = document.documentElement
   if (value === null) root.style.removeProperty(GAUGE)
   else root.style.setProperty(GAUGE, value)
@@ -13,11 +13,11 @@ function declare(value: string | null): void {
   refreshPalette()
 }
 
-afterEach(() => declare(null))
+afterEach(() => setGauge(null))
 
 describe('useGauge', () => {
   it('reads the pixels the stylesheet declares', () => {
-    declare('24px')
+    setGauge('24px')
 
     expect(renderHook(() => useGauge(GAUGE, 28)).result.current).toBe(24)
   })
@@ -28,11 +28,11 @@ describe('useGauge', () => {
    * re-read on its parent's next render would keep the height of the density just left.
    */
   it('follows the gauge when the density moves, unprompted', () => {
-    declare('28px')
+    setGauge('28px')
     const { result } = renderHook(() => useGauge(GAUGE, 99))
     expect(result.current).toBe(28)
 
-    act(() => declare('24px'))
+    act(() => setGauge('24px'))
 
     expect(result.current).toBe(24)
   })
@@ -43,7 +43,7 @@ describe('useGauge', () => {
   })
 
   it('falls back on a value that is not a length', () => {
-    declare('inherit')
+    setGauge('inherit')
 
     expect(renderHook(() => useGauge(GAUGE, 28)).result.current).toBe(28)
   })
@@ -55,7 +55,7 @@ describe('useGauge', () => {
    */
   it('falls back on a length that is not in pixels', () => {
     for (const written of ['1.75rem', '50%', '2em', 'calc(28px * 1)']) {
-      declare(written)
+      setGauge(written)
 
       expect(renderHook(() => useGauge(GAUGE, 28)).result.current, written).toBe(28)
     }
@@ -64,7 +64,7 @@ describe('useGauge', () => {
   /** Neither is a height a row can have, and both break the window a virtualizer computes. */
   it('falls back on zero and on a negative length', () => {
     for (const written of ['0px', '-4px']) {
-      declare(written)
+      setGauge(written)
 
       expect(renderHook(() => useGauge(GAUGE, 28)).result.current, written).toBe(28)
     }
