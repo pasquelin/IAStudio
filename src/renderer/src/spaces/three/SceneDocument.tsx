@@ -44,6 +44,7 @@ import {
   canNegate,
   canSeparate,
   carvePlan,
+  carveScene,
   isCarvable,
   isNegative,
 } from '@/engines/csg/carve'
@@ -529,7 +530,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // re-electing on every render of the bar costs one lookup a shape.
   const matterName = useMemo(
     () =>
-      canCarve(foldable) ? carvePlan(foldable, 'subtract', scene.nodes)?.matter.name : undefined,
+      canCarve(foldable)
+        ? carvePlan(carveScene(foldable, scene.nodes), 'subtract')?.matter.name
+        : undefined,
     [foldable, scene.nodes],
   )
   const cannotSeparate = !canSeparate(foldable)

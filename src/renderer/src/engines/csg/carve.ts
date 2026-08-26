@@ -57,6 +57,31 @@ export type CarveTool = { node: CarvableNode; operation: CsgOperation }
 
 export type CarvePlan = { matter: CarvableNode; tools: readonly CarveTool[] }
 
+const EMPTY_INDEX: ReadonlyMap<string, SceneNode> = new Map()
+
+/**
+ * What a fold needs to know of the scene, read ONCE: the shapes picked, in scene order, and the
+ * index `worldOf` walks. The election and the recipe each swept the whole scene for themselves.
+ */
+export type CarveScene = { picked: readonly CarvableNode[]; byId: ReadonlyMap<string, SceneNode> }
+
+export function carveScene(picked: readonly SceneNode[], all: readonly SceneNode[]): CarveScene {
+  // Scene order, and it reaches the STEPS as much as the election: the recipe keeps them and
+  // `separateNode` hands them back, so two hands picking the same shapes write the same document.
+  // The `Set` also DEDUPES — two ids naming one node would otherwise fold a solid cutting nothing.
+  const chosen = new Set<SceneNode>(picked)
+  const inScene: CarvableNode[] = []
+  let hangs = false
+  for (const node of all) {
+    if (!chosen.has(node) || !isCarvable(node)) continue
+    inScene.push(node)
+    hangs = hangs || node.parentId !== null
+  }
+
+  // Only when something hangs: `worldOf` walks parents, and a flat selection needs no index.
+  return { picked: inScene, byId: hangs ? new Map(all.map(one => [one.id, one])) : EMPTY_INDEX }
+}
+
 /**
  * Which shape is the matter, which are the tools, and what each does — read off the shapes, never
  * off the order they were clicked in. `null` when `matterId` names nothing that could be one.
@@ -67,17 +92,11 @@ export type CarvePlan = { matter: CarvableNode; tools: readonly CarveTool[] }
  * signed volume 2.20, the cube taken for the matter a 44-triangle chip of 0.80.
  */
 export function carvePlan(
-  picked: readonly CarvableNode[],
+  scene: CarveScene,
   operation: CsgOperation,
-  all: readonly SceneNode[],
   matterId?: string,
 ): CarvePlan | null {
-  // Scene order, and it reaches the STEPS as much as the election: the recipe keeps them and
-  // `separateNode` hands them back, so two hands picking the same shapes write the same document.
-  // The `Set` also DEDUPES — two ids naming one node would otherwise fold a solid cutting nothing.
-  const chosen = new Set<SceneNode>(picked)
-  const inScene = all.filter(node => chosen.has(node)).filter(isCarvable)
-
+  const inScene = scene.picked
   const plain = inScene.filter(node => !isNegative(node))
   // Everything marked leaves nobody to carve. The marks are dropped rather than folding to an
   // empty solid — Roblox refuses the gesture outright, and a refusal here would be a live-looking
@@ -91,7 +110,7 @@ export function carvePlan(
   const forced = matterId === undefined ? null : inScene.find(node => node.id === matterId)
   if (forced === undefined) return null
 
-  const matter = forced ?? biggest(candidates, indexOf(all, inScene))
+  const matter = forced ?? biggest(candidates, scene.byId)
   if (!matter) return null
 
   const tools = [
@@ -104,20 +123,6 @@ export function carvePlan(
   // replaced would go. `canCarve` cannot see it — it counts ids, and two of them may be one node.
   return tools.length === 0 ? null : { matter, tools }
 }
-
-/**
- * The scene by id, or nothing when no picked shape hangs from anything — `worldOf` walks parents
- * and a flat selection needs no index at all, which is the common case and an O(n) sweep saved.
- */
-function indexOf(
-  all: readonly SceneNode[],
-  picked: readonly CarvableNode[],
-): ReadonlyMap<string, SceneNode> {
-  const hangs = picked.some(node => node.parentId !== null)
-  return hangs ? new Map(all.map(node => [node.id, node])) : EMPTY_INDEX
-}
-
-const EMPTY_INDEX: ReadonlyMap<string, SceneNode> = new Map()
 
 function biggest(
   nodes: readonly CarvableNode[],
@@ -158,11 +163,8 @@ function worldVolume(node: CarvableNode, byId: ReadonlyMap<string, SceneNode>): 
 export function carveGraph(
   matter: CarvableNode,
   tools: readonly CarveTool[],
-  all: readonly SceneNode[],
+  byId: ReadonlyMap<string, SceneNode>,
 ): CsgGraph {
-  // Built once and passed down: `worldOf` walks it per node, and rebuilding it there cost a
-  // full sweep of the scene per tool.
-  const byId = new Map(all.map(node => [node.id, node]))
   // The matter's PLACEMENT, without its scale — and that is what keeps every brush a clean TRS.
   // `Matrix4.decompose` only describes a matrix free of shear, and inverting a non-uniform scale
   // into a turned tool produces exactly that shear: measured at 2.09 units of drift on a wall

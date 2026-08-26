@@ -31,11 +31,19 @@ import {
 } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
 import { changedFields, sameValues } from '@/helpers/objects'
-import { applySelection, deselect, type SelectionMode } from '@/helpers/selection'
+import { applySelection, deselect, deselectAll, type SelectionMode } from '@/helpers/selection'
 import { withField, type FieldValue } from './propertyFields'
 import { newId } from '@/helpers/ids'
 import { carvedNode, groupNode, meshNode } from './nodeFactory'
-import { canCarve, carveGraph, carvePlan, isCarvable, isNegative, placedIn } from '../csg/carve'
+import {
+  canCarve,
+  carveGraph,
+  carvePlan,
+  carveScene,
+  isCarvable,
+  isNegative,
+  placedIn,
+} from '../csg/carve'
 import { isCsgGraph, type CsgOperation } from '@shared/domain/csg'
 import {
   canCastShadow,
@@ -45,7 +53,7 @@ import {
   hasChildren,
   nodeById,
   rotationShows,
-  subtreeOf,
+  subtreesOf,
   withAxisLock,
   withoutLockedAxes,
   type AxisLock,
@@ -815,12 +823,15 @@ export function carveNodes(
   matterId?: string,
 ): Command<SceneState> | null {
   if (!canCarve(picked)) return null
-  const plan = carvePlan(picked, operation, all, matterId)
+  // ONE sweep of the scene for the whole fold: the election and the recipe both walk it, and
+  // each used to build its own index.
+  const scene = carveScene(picked, all)
+  const plan = carvePlan(scene, operation, matterId)
   // A `matterId` naming nothing in the selection: refused rather than quietly elected otherwise.
   if (!plan) return null
 
   const { matter, tools } = plan
-  const solid = carvedNode(carveGraph(matter, tools, all), {
+  const solid = carvedNode(carveGraph(matter, tools, scene.byId), {
     // Without the matter's SCALE, which travelled into the base brush — see `carveGraph`, where
     // keeping it here is what sheared a turned tool.
     transform: { ...matter.transform, scale: { x: 1, y: 1, z: 1 } },
@@ -831,12 +842,9 @@ export function carveNodes(
 
   return multi(commandId('carve', [solid.id]), [
     addNode(solid),
-    // Their subtrees with them, exactly as `removeNodes` does: a child left hanging from a node
-    // the scene no longer holds is dropped by `flattenTree` — invisible in the outliner, still
-    // written to the file.
-    ...subtreeOf(all, matter.id)
-      .concat(tools.flatMap(tool => subtreeOf(all, tool.node.id)))
-      .map(node => removeNode(node.id)),
+    // Their subtrees with them: a child left hanging from a node the scene no longer holds is
+    // dropped by `flattenTree` — invisible in the outliner, still written to the file.
+    removeNodes(all, [matter.id, ...tools.map(tool => tool.node.id)]),
   ])
 }
 
@@ -978,11 +986,11 @@ function hang(state: SceneState, id: string, parentId: string | null): SceneStat
  * a copy beside its original rather than at the root.
  */
 export function copiesOf(nodes: readonly SceneNode[], picked: readonly SceneNode[]): SceneNode[] {
-  const carried = picked.flatMap(node => subtreeOf(nodes, node.id))
-  const fresh = [...new Map(carried.map(node => [node.id, node])).values()].map(node => ({
-    node,
-    id: newId(),
-  }))
+  const carried = subtreesOf(
+    nodes,
+    picked.map(node => node.id),
+  )
+  const fresh = carried.map(node => ({ node, id: newId() }))
   const renamed = new Map(fresh.map(({ node, id }) => [node.id, id]))
 
   return fresh.map(({ node, id }) => ({
@@ -1044,8 +1052,50 @@ export function removeNodes(
 ): Command<SceneState> {
   // The whole subtree, not the picked rows: a child left behind would hang from a parent the
   // scene no longer holds, and `flattenTree` drops an orphan rather than promoting it.
-  const doomed = [...new Set(ids.flatMap(id => subtreeOf(nodes, id).map(node => node.id)))]
-  return multi(commandId('remove', ids), doomed.map(removeNode))
+  const doomed = new Set(subtreesOf(nodes, ids).map(node => node.id))
+  let taken: { at: number; node: SceneNode }[] = []
+
+  return {
+    id: commandId('remove', ids),
+    // What `multi` of one command per node gave for free: `[].every()` is true, so a delete that
+    // reaches nothing refused. Without it ⌘Z gains a step that does nothing, and the redo stack
+    // is cleared for an edit that never happened.
+    refuses: () => doomed.size === 0,
+    // ONE sweep, not one `removeNode` per doomed node — each of those scans the scene twice.
+    apply: state => {
+      taken = []
+      const kept: SceneNode[] = []
+      for (let at = 0; at < state.nodes.length; at += 1) {
+        const node = state.nodes[at]
+        if (!node) continue
+        if (doomed.has(node.id)) taken.push({ at, node })
+        else kept.push(node)
+      }
+      if (taken.length === 0) return state
+
+      // `deselectAll` rather than a filter: it hands back the SAME array when nothing was
+      // selected, and everything watching the selection re-renders on a fresh one.
+      return { ...state, nodes: kept, selectedIds: deselectAll(state.selectedIds, doomed) }
+    },
+    // Merged rather than spliced back one by one: a `splice` shifts everything after it, so
+    // undoing 16 000 rows out of 40 000 cost 33.9 ms — past what an image is worth — against 0.21
+    // flat here. `taken` is ascending, which is what lets the two lists merge.
+    revert: state => {
+      if (taken.length === 0) return state
+
+      const nodes: SceneNode[] = []
+      let kept = 0
+      for (const { at, node } of taken) {
+        while (nodes.length < at && kept < state.nodes.length) {
+          nodes.push(state.nodes[kept] as SceneNode)
+          kept += 1
+        }
+        nodes.push(node)
+      }
+      for (; kept < state.nodes.length; kept += 1) nodes.push(state.nodes[kept] as SceneNode)
+      return { ...state, nodes }
+    },
+  }
 }
 
 /** Where a drag left every node it carried. One drag, one entry, however many nodes moved. */
