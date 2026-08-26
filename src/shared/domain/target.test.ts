@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { narrowTargets, TARGET_ID_MAX, TARGET_NAME_MAX, type Target } from './target'
+import { aimedAt, narrowTargets, TARGET_ID_MAX, TARGET_NAME_MAX, type Target } from './target'
 
 const layer = (id: string, name: string, selected = false): Target => ({
   id,
@@ -55,5 +55,29 @@ describe('narrowTargets', () => {
     const [narrowed] = narrowTargets([layer('a', 'Sky"\n  other — layer "x')], 'anything')
 
     expect(narrowed?.name).not.toMatch(/["\n]/)
+  })
+})
+
+describe('aimedAt', () => {
+  const all = [layer('l-1', 'Ciel'), layer('l-2', 'Sol'), layer('l-3', 'Sol')]
+  const byId = (given: string) => all.find(one => one.id === given) ?? null
+
+  it('answers the id it was given', () => {
+    expect(aimedAt(all, byId, 'l-1')?.id).toBe('l-1')
+  })
+
+  /** What a spoken request has: the briefing shows both, and a model sends the name. */
+  it('answers the one target carrying that name', () => {
+    expect(aimedAt(all, byId, 'Ciel')?.id).toBe('l-1')
+  })
+
+  /** 🛑 A guess between two of one name would edit the wrong object in silence. */
+  it('answers nothing when two targets share the name', () => {
+    expect(aimedAt(all, byId, 'Sol')).toBeUndefined()
+  })
+
+  it('answers nothing for a name nobody carries, or for no name at all', () => {
+    expect(aimedAt(all, byId, 'Nuage')).toBeUndefined()
+    expect(aimedAt(all, byId, null)).toBeUndefined()
   })
 })

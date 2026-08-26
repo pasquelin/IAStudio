@@ -456,6 +456,10 @@ export const refused = (refusal: ActionRefusal, detail?: string): ActionOutcome 
  * A required `text` may not be blank, and a required `repeated` may not be empty — see
  * `validatesInput`. Both were left to the handlers first, which meant one `=== ''` and one
  * `length === 0` per action, and a handler that forgot either had nothing behind it.
+ *
+ * 🛑 A PLACEHOLDER is refused here rather than explained later: `inputProblem` only speaks once
+ * something else has already refused, so a lone `<path_id>` used to reach the handler and come
+ * back as `notFound` — a hunt for a node whose name was never a name.
  */
 function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
@@ -467,6 +471,7 @@ function fits(field: ActionField, value: unknown): boolean {
       return (
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&
+        !PLACEHOLDER.test(value) &&
         (!field.options || field.options.includes(value))
       )
     // Apart from the strings, because every reader of a colour falls back SILENTLY on a value it

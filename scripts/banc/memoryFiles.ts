@@ -2,19 +2,19 @@ import type { FileHistory, FileOutcome, PathChange } from '@shared/domain/fileOp
 import {
   changeOf,
   foldersFor,
-  inverseOf,
   planFiles,
   type FileAct,
   type FileRequest,
   type FolderSnapshot,
 } from '@main/project/filePlan'
+import { inverseBatch, steppedStacks, UNDO_DEPTH, type UndoStacks } from '@main/project/fileStacks'
 import type { MemoryCatalog } from './memoryCatalog'
 import type { MemoryFolder } from './memoryFolder'
 
 /**
- * 🛑 It DECIDES nothing: what may be renamed, moved, copied or thrown away is `planFiles`' answer.
- * What is written here is the order of the writes and the stack of batches — `fileOps`' job,
- * which cannot be shared because there the state is a disk and here it is a Map.
+ * 🛑 It DECIDES nothing: what may be renamed, moved, copied or thrown away is `planFiles`' answer,
+ * and what one step of the stacks MEANS is `steppedStacks`'. What is written here is the writing
+ * itself — the only half where the state is a Map rather than a disk.
  */
 export type MemoryFiles = {
   rename: (path: string, name: string) => Promise<FileOutcome>
@@ -33,8 +33,7 @@ const EMPTY: FileOutcome = { done: [], refused: [], batch: 'batch-none' }
 
 export function createMemoryFiles(folder: MemoryFolder, catalog: MemoryCatalog): MemoryFiles {
   let batches = 0
-  let past: PathChange[][] = []
-  let future: PathChange[][] = []
+  let stacks: UndoStacks = { past: [], future: [] }
 
   /**
    * What the planner reads the project as, asked the way `fileOps` asks it: only the folders the
@@ -78,29 +77,17 @@ export function createMemoryFiles(folder: MemoryFolder, catalog: MemoryCatalog):
   const plan = async (request: FileRequest): Promise<FileOutcome> => {
     const { acts, refused } = planFiles(request, await snapshot(request))
     const done = await answer(acts)
-    if (done.length > 0) {
-      past = [...past, done]
-      future = []
-    }
+    if (done.length > 0) stacks = { past: [...stacks.past, done].slice(-UNDO_DEPTH), future: [] }
 
     return { done, refused, batch: `batch-${(batches += 1)}` }
   }
 
-  const step = async (from: 'past' | 'future'): Promise<FileOutcome> => {
-    const stack = from === 'past' ? past : future
-    const taken = stack.at(-1)
-    if (!taken) return EMPTY
+  const step = async (way: 'undo' | 'redo'): Promise<FileOutcome> => {
+    const stepped = await steppedStacks(stacks, way, batch => answer(inverseBatch(batch)))
+    if (stepped.stacks === stacks) return EMPTY
 
-    if (from === 'past') past = past.slice(0, -1)
-    else future = future.slice(0, -1)
-
-    // The trash has no inverse — see `inverseOf`, which is why undo stops there.
-    const back = taken.map(inverseOf).filter((one): one is FileAct => one !== null)
-    const done = await answer(back)
-    if (from === 'past') future = [...future, done]
-    else past = [...past, done]
-
-    return { done, refused: [], batch: `batch-${(batches += 1)}` }
+    stacks = stepped.stacks
+    return { done: [...stepped.done], refused: [], batch: `batch-${(batches += 1)}` }
   }
 
   return {
@@ -109,12 +96,11 @@ export function createMemoryFiles(folder: MemoryFolder, catalog: MemoryCatalog):
     duplicate: (paths, folder = null) => plan({ op: 'duplicate', paths, folder }),
     createFolder: (parent, name) => plan({ op: 'createFolder', folder: parent, name }),
     trash: paths => plan({ op: 'trash', paths }),
-    undo: () => step('past'),
-    redo: () => step('future'),
-    can: () => ({ undo: past.length > 0, redo: future.length > 0 }),
+    undo: () => step('undo'),
+    redo: () => step('redo'),
+    can: () => ({ undo: stacks.past.length > 0, redo: stacks.future.length > 0 }),
     forget: () => {
-      past = []
-      future = []
+      stacks = { past: [], future: [] }
     },
   }
 }

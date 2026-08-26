@@ -18,6 +18,32 @@ export type Target = {
 }
 
 /**
+ * The one a caller meant: its id, or its NAME when exactly one of them carries it.
+ *
+ * 🛑 A name is what a spoken request has — a briefing lists both, and a model asked to light
+ * « Lumière principale » sent the name as `nodeId` and was refused eight times in one request
+ * (bench pass of 2026-08-25). Two of one name resolve to NEITHER: a guess between them would
+ * edit the wrong object in silence.
+ *
+ * Written here rather than per family because `Target` publishes a name for every kind, so every
+ * family had the same defect the day it published one. It does NOT suit a kind whose `name` IS
+ * its id — a clip, today — where resolving by id already answers everything a name could.
+ */
+export function aimedAt<T extends { name: string }>(
+  all: readonly T[],
+  byId: (given: string) => T | null | undefined,
+  given: string | null,
+): T | undefined {
+  if (given === null) return undefined
+
+  const found = byId(given)
+  if (found) return found
+
+  const named = all.filter(one => one.name === given)
+  return named.length === 1 ? named[0] : undefined
+}
+
+/**
  * How many reach the model, and how long each part may be on the way.
  *
  * Budget rather than taste, and the three multiply: `instruction.test.ts` saturates all of them

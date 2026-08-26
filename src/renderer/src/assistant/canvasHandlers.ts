@@ -1,5 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
-import type { Target } from '@shared/domain/target'
+import { aimedAt, type Target } from '@shared/domain/target'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
@@ -119,8 +119,13 @@ function editLayer(
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
-  const layer = layerById(open.state, textOf(input, 'layerId'))
+  const layer = layerAimed(open.state, textOf(input, 'layerId'))
   return layer ? run(open.documentId, build(layer, open.state)) : refused('notFound')
+}
+
+/** The layer a caller meant, by id or by the name the briefing showed it under. */
+function layerAimed(state: CanvasState, given: string | null): Layer | undefined {
+  return aimedAt(allLayers(state.layers), id => layerById(state, id), given)
 }
 
 function readState(): ActionOutcome {
@@ -466,7 +471,7 @@ export function selectLayer(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface')
 
-  const layer = layerById(open.state, textOf(input, 'layerId'))
+  const layer = layerAimed(open.state, textOf(input, 'layerId'))
   if (!layer) return refused('notFound')
 
   // Not a command: arming a layer is a way of looking at the stack, not an edit of it.

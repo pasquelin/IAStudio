@@ -6,27 +6,13 @@ import { appendMove, clearJournal } from './fileJournal'
 import {
   changeOf,
   foldersFor,
-  inverseOf,
   planFiles,
   type FileAct,
   type FileRequest,
   type FolderSnapshot,
 } from './filePlan'
+import { inverseBatch, steppedStacks, UNDO_DEPTH, type UndoStacks } from './fileStacks'
 import type { FolderReader, FolderWriter } from './folder'
-
-/**
- * How many batches one project may take back. Bounded because the stack outlives every window
- * and holds only strings: thirty-two is far past what a hand undoes in one sitting, and the
- * whole of it costs less than one thumbnail.
- *
- * **A second derivation of a shape this repo already generalised**, and worth saying so:
- * `renderer/engines/core/history.ts` holds the same bounded past/future of reversible batches,
- * and five stores build on it. It cannot be reused here — its `Command.apply/revert` are
- * SYNCHRONOUS over an in-memory state, where these batches are asynchronous and write to a
- * disk, and it lives on the far side of the bridge from the only process that may touch one.
- * The bound and the two arrays are all that is duplicated; a fix to either has to be made twice.
- */
-const UNDO_DEPTH = 32
 
 export type FileOps = {
   rename: (path: string, name: string) => Promise<FileOutcome>
@@ -102,8 +88,7 @@ export function createFileOps({
    * Extracting the intersection would publish an alias for two array expressions, in a module
    * `shared/` would have to hold for a renderer and a worker to both reach it.
    */
-  let undone: PathChange[][] = []
-  let stack: PathChange[][] = []
+  let stacks: UndoStacks = { past: [], future: [] }
   let stackedFor: string | null = null
 
   /**
@@ -117,8 +102,7 @@ export function createFileOps({
   const keepStackFor = (root: string | null): void => {
     if (stackedFor === root) return
     stackedFor = root
-    stack = []
-    undone = []
+    stacks = { past: [], future: [] }
   }
 
   const snapshot = async (folders: readonly string[]): Promise<FolderSnapshot> => {
@@ -214,71 +198,31 @@ export function createFileOps({
     if (request.op === 'trash') {
       // The trash pushes nothing and CLEARS what was taken back: a ⌘Z after a deletion that put
       // an earlier move back would undo something nobody was thinking about.
-      undone = []
+      stacks = { ...stacks, future: [] }
     } else if (done.length > 0) {
-      stack = [...stack, done].slice(-UNDO_DEPTH)
-      undone = []
+      stacks = { past: [...stacks.past, done].slice(-UNDO_DEPTH), future: [] }
     }
 
     return { done, refused: plan.refused, batch }
   }
 
-  /**
-   * Replays a batch backwards, which is the same `apply` over inverted changes.
-   *
-   * Reversed as well as inverted: a batch that moved `a` out of the way and then `b` into its
-   * place has to be taken back in the other order, or the second inverse lands on a name the
-   * first has not freed yet.
-   */
+  /** Replays a batch backwards, which is the same `apply` over the acts `inverseBatch` orders. */
   const replay = async (batch: readonly PathChange[]): Promise<PathChange[]> => {
     const root = rootOf()
     if (!root) return []
 
-    const acts = [...batch].reverse().flatMap(change => inverseOf(change) ?? [])
-    const done = await apply(root, acts)
+    const done = await apply(root, inverseBatch(batch))
     await follow(root, done)
     return done
   }
 
-  /**
-   * One step of the stack, in either direction — they are the same move with the two piles
-   * swapped, and writing it twice was two places for a later bound or shape to drift.
-   *
-   * What was PUT BACK is what the other direction has to undo again, so the round trip stays
-   * exact even where one member of the batch refused to come back.
-   */
   const shift = async (way: 'undo' | 'redo'): Promise<FileOutcome> => {
     keepStackFor(rootOf())
 
-    const from = way === 'undo' ? stack : undone
-    const batch = from.at(-1)
-    const id = newBatchId()
-    if (!batch) return { done: [], refused: [], batch: id }
+    const stepped = await steppedStacks(stacks, way, replay)
+    stacks = stepped.stacks
 
-    const kept = from.slice(0, -1)
-    const done = await replay(batch)
-
-    /**
-     * Taken off the pile it came from whatever happened — a batch that could not be replayed
-     * cannot be replayed on the next press either, and keeping it would be a row that stays lit
-     * for ever.
-     *
-     * Pushed onto the OTHER pile only where something actually moved, exactly as a fresh gesture
-     * is. Undoing a rename whose file somebody deleted outside the studio moves nothing, and an
-     * empty batch pushed across would light « Rétablir » for an action that does not exist —
-     * then light « Annuler » again when it is pressed, for ever.
-     */
-    const back = done.length > 0 ? [done] : []
-
-    if (way === 'undo') {
-      stack = kept
-      undone = [...undone, ...back].slice(-UNDO_DEPTH)
-    } else {
-      undone = kept
-      stack = [...stack, ...back].slice(-UNDO_DEPTH)
-    }
-
-    return { done, refused: [], batch: id }
+    return { done: [...stepped.done], refused: [], batch: newBatchId() }
   }
 
   return {
@@ -293,7 +237,7 @@ export function createFileOps({
 
     can: () => {
       keepStackFor(rootOf())
-      return { undo: stack.length > 0, redo: undone.length > 0 }
+      return { undo: stacks.past.length > 0, redo: stacks.future.length > 0 }
     },
 
     /**
