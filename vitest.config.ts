@@ -187,6 +187,8 @@ const DOM_BOUND = [
   'src/renderer/src/stores/documents.test.ts',
   'src/renderer/src/stores/layouts.test.ts',
   // Reads what a previous session stored back out of `localStorage`, as the layouts do.
+  // The frames a game runs on are `requestAnimationFrame`, which only a browser has.
+  'src/renderer/src/stores/play.test.ts',
   'src/renderer/src/stores/skeletonProfiles.test.ts',
   'src/renderer/src/stores/models.test.ts',
   'src/renderer/src/testSetup.test.ts',

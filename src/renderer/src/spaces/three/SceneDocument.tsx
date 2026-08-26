@@ -38,6 +38,7 @@ import { useSkyRefresh } from '@/hooks/useSkyRefresh'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
 import { useModelFiles } from '@/stores/modelFiles'
+import { usePlay } from '@/stores/play'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
@@ -299,6 +300,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // below, or an engine whose canvas is gone would still be handed out.
     registerSceneEngine(documentId, renderer)
     return () => {
+      // 🛑 Before the engine goes: a running game holds a frame loop and draws through THIS
+      // renderer, so a viewport that unmounted while playing would leave one running against a
+      // disposed context, for the life of the window.
+      usePlay.getState().stop(documentId)
       renderer.dispose()
       engine.current = null
       setLive(null)
