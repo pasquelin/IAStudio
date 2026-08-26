@@ -77,7 +77,10 @@ export default defineConfig(({ command }) => ({
           bundleWorker: resolve('src/main/bundle/bundleWorker.ts'),
           sttWorker: resolve('src/main/dictation/sttWorker.ts'),
         },
-        output: { entryFileNames: '[name].js' },
+        // 🛑 Chunks land BESIDE the entry, never under `chunks/`: eight sites of `src/main`
+        // resolve a path from their own file, and one directory deeper sends every one of them
+        // too far — measured, the studio died on `out/build/icon.png`. `main-chunks-stay-flat`.
+        output: { entryFileNames: '[name].js', chunkFileNames: '[name]-[hash].js' },
       },
     },
   },
