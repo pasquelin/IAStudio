@@ -1,5 +1,5 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
-import { TRACK_PROPERTIES } from './animation'
+import { DIRECT_PROPERTIES } from './animation'
 import { BODY_PARTS, HUMANOID_ROLES } from './humanoid'
 import { CLIP_SOURCES, CLIP_SPEED, MAX_CLIP_FADE, ROOT_MOTIONS } from './scene'
 
@@ -314,7 +314,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.trackProperty',
         required: false,
-        options: TRACK_PROPERTIES,
+        options: DIRECT_PROPERTIES,
       },
     ],
   }),

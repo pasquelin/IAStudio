@@ -16,6 +16,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.texture': 'document',
   'scene.animation': 'document',
   'scene.export': 'document',
+  'scene.post': 'document',
   'scene.render': 'document',
   // With the document although what it writes lands in the project: the subject is the scene
   // that could not be drawn, and the tab is what the user has to act on.

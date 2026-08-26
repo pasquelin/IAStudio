@@ -1,8 +1,13 @@
+import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ColorField } from '@/design/ColorField'
 import { NumberField } from '@/design/NumberField'
 import { SliderField } from '@/design/SliderField'
 import { TextField } from '@/design/TextField'
+import { SelectField } from '@/design/SelectField'
+import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
+import { PictureField } from './PictureField/PictureField'
 import type { GestureProps } from '@/design/styles'
 import { isVector3 } from '@shared/domain/scene'
 import type { FieldValue, PropertyField } from '@/engines/scene/propertyFields'
@@ -14,6 +19,8 @@ export type PropertyControlProps = {
   gesture: GestureProps
   /** What the section is called, in code. The field's own name completes it. */
   section: string
+  /** A button acting on the value, drawn before the reset — the keyframe diamond. */
+  action?: ReactNode
 }
 
 /**
@@ -29,7 +36,9 @@ export function PropertyControl({
   onChange,
   gesture,
   section,
+  action,
 }: PropertyControlProps) {
+  const { t } = useTranslation()
   const { value, spec, fallback } = field
   // `field.name` is the descriptor's own key — never translated, which is exactly what a handle
   // must be. One line here names every parameter of every primitive, light and lens.
@@ -43,6 +52,12 @@ export function PropertyControl({
   const onReset =
     fallback === undefined || fallback === value ? undefined : () => onChange(fallback)
 
+  if (typeof value === 'boolean') {
+    return (
+      <ToggleField label={label} value={value} onChange={onChange} scId={scId} action={action} />
+    )
+  }
+
   if (typeof value === 'number') {
     if (spec?.control === 'slider') {
       return (
@@ -55,6 +70,7 @@ export function PropertyControl({
           onChange={onChange}
           scId={scId}
           onReset={onReset}
+          action={action}
           {...gesture}
         />
       )
@@ -71,6 +87,7 @@ export function PropertyControl({
         onChange={onChange}
         scId={scId}
         onReset={onReset}
+        action={action}
         {...gesture}
       />
     )
@@ -91,6 +108,34 @@ export function PropertyControl({
     )
   }
 
+  if (spec?.control === 'asset') {
+    return (
+      <PictureField
+        label={label}
+        value={value === '' ? null : value}
+        onChange={assetId => onChange(assetId ?? '')}
+        scId={scId}
+      />
+    )
+  }
+
+  if (spec?.control === 'choice') {
+    return (
+      <SelectField
+        label={label}
+        value={value}
+        // The value itself when no translation exists, exactly as the label above falls back.
+        options={spec.options.map(option => ({
+          value: option,
+          label: t(`${spec.labelPrefix}${option}`, option),
+        }))}
+        onChange={onChange}
+        scId={scId}
+        actions={action}
+      />
+    )
+  }
+
   // A hexadecimal is a colour whether or not a table said so — and anything else is text.
   if (spec?.control === 'color' || value.startsWith('#')) {
     return (
@@ -100,6 +145,7 @@ export function PropertyControl({
         onChange={onChange}
         scId={scId}
         onReset={onReset}
+        action={action}
         {...gesture}
       />
     )

@@ -2,12 +2,21 @@ import { Euler, Quaternion } from 'three'
 import {
   ONE,
   ZERO,
+  drivesPost,
   neutralOf,
   type AnimationTimeline,
   type AnimationTrack,
   type Keyframe,
+  type PostTarget,
   type TrackProperty,
 } from '@shared/domain/animation'
+import {
+  boundParam,
+  POST_EFFECTS,
+  type PostEffectId,
+  type PostParamValue,
+  type PostStack,
+} from '@shared/domain/postProcessing'
 import type { CameraDescriptor, Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
@@ -132,6 +141,83 @@ export function lensAt(
 }
 
 /**
+ * The composition a subject FILMS THROUGH at that instant: its own stack, opened by what its
+ * `post` channels add to it.
+ *
+ * The brother of `lensAt`, same rule and same shape — additive over what the document holds, so
+ * a channel standing at +0,8 on a bloom set to 0,2 gives one. Written here and nowhere else, so
+ * the viewport, the preview and the render read the same numbers at the same instant.
+ *
+ * The stack itself is given back untouched when nothing drives it: a scene with no composition
+ * channel allocates nothing on the frame path.
+ */
+export function postAt(
+  rest: PostStack,
+  timeline: AnimationTimeline,
+  nodeId: string,
+  time: Us,
+): PostStack {
+  // Asked before anything is allocated: this runs once per composed SURFACE per image, and a
+  // scene of two hundred animated nodes with no composition channel would otherwise walk them
+  // all and build a `Map` five times a frame.
+  if (!timeline.tracks.some(track => track.target.nodeId === nodeId && drivesPost(track.target))) {
+    return rest
+  }
+
+  const soloed = anySoloed(timeline)
+  const deltas = new Map<string, Map<string, number>>()
+
+  for (const track of timeline.tracks) {
+    if (track.target.nodeId !== nodeId || !drivesPost(track.target)) continue
+    if (!playsThrough(track, soloed)) continue
+    addDelta(deltas, track.target.post, valueAt(track, time).x)
+  }
+
+  if (deltas.size === 0) return rest
+
+  return {
+    ...rest,
+    effects: rest.effects.map(effect => {
+      const moved = deltas.get(effect.id)
+      return moved ? { ...effect, params: openedBy(effect.effect, effect.params, moved) } : effect
+    }),
+  }
+}
+
+function addDelta(
+  deltas: Map<string, Map<string, number>>,
+  target: PostTarget,
+  amount: number,
+): void {
+  const held = deltas.get(target.effectId) ?? new Map<string, number>()
+  // Two channels on one parameter ADD, exactly as two position tracks do.
+  held.set(target.param, (held.get(target.param) ?? 0) + amount)
+  deltas.set(target.effectId, held)
+}
+
+/**
+ * The parameters of one effect, moved by what its channels add — and held to their own spec on
+ * the way, so an animation cannot drive a value somewhere no hand could have put it.
+ */
+function openedBy(
+  effect: PostEffectId,
+  params: Readonly<Record<string, PostParamValue>>,
+  deltas: ReadonlyMap<string, number>,
+): Record<string, PostParamValue> {
+  const opened: Record<string, PostParamValue> = { ...params }
+
+  for (const [name, delta] of deltas) {
+    const spec = POST_EFFECTS[effect].params[name]
+    const base = params[name]
+    // A channel on a switch or a picture means nothing: only what a number can move is moved.
+    if (!spec || !spec.animatable || typeof base !== 'number') continue
+    opened[name] = boundParam(spec, base + delta)
+  }
+
+  return opened
+}
+
+/**
  * What every track driving one target adds at that instant, as one delta per property.
  *
  * `null` where nothing drives it at all — the caller then leaves the object alone rather than
@@ -153,9 +239,10 @@ export function contributionAt(
   let turned = false
 
   for (const track of tracks) {
-    // A lens is not a pose: read by `fovAt` and by nothing else, or a `fov` track would land in
-    // the rotation branch below and turn the camera by its own field of view.
-    if (track.target.property === 'fov') continue
+    // Neither a lens nor a composition is a pose: both are read by their own evaluator, and
+    // either one falling through would land in the rotation branch below and turn the object by
+    // its own field of view or by a bloom strength.
+    if (track.target.property === 'fov' || track.target.property === 'post') continue
 
     const value = valueAt(track, time)
 
@@ -223,9 +310,9 @@ export function deltaOf(rest: Transform, pose: Transform, property: TrackPropert
       z: rest.scale.z === 0 ? 1 : pose.scale.z / rest.scale.z,
     }
   }
-  // A pose says nothing about a lens: answering the rotation delta here is what would put the
-  // angle of a drag into a field of view. Whoever keys a lens writes its own value.
-  if (property === 'fov') return ZERO
+  // A pose says nothing about a lens, nor about a composition: answering the rotation delta here
+  // is what would put the angle of a drag into a field of view. Both write their own value.
+  if (property === 'fov' || property === 'post') return ZERO
 
   angles.set(rest.rotation.x, rest.rotation.y, rest.rotation.z)
   step.setFromEuler(angles).invert()

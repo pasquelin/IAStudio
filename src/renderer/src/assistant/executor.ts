@@ -23,6 +23,7 @@ import { GIT_HANDLERS } from './gitHandlers'
 import { JOB_HANDLERS } from './jobHandlers'
 import { MATERIAL_HANDLERS } from './materialHandlers'
 import { RIG_HANDLERS } from './rigHandlers'
+import { POST_HANDLERS } from './postHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { CONTEXT_HANDLERS } from './contextHandlers'
@@ -51,6 +52,7 @@ const HANDLERS: ActionHandlers = {
   ...SEQUENCE_HANDLERS,
   ...MATERIAL_HANDLERS,
   ...SCENE_HANDLERS,
+  ...POST_HANDLERS,
   ...RIG_HANDLERS,
   ...GIT_HANDLERS,
   ...CONTEXT_HANDLERS,

@@ -9,7 +9,20 @@
  * No three.js here on purpose: this is reached from the door that creates a document, which the
  * rail and the home page both press, and neither may pull a renderer in to open a tab.
  */
-import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import {
+  EMPTY_TIMELINE,
+  SCENE_SUBJECT_ID,
+  sheetFromAnimated,
+  type AnimationTimeline,
+  type AnimationTrack,
+} from '@shared/domain/animation'
+import {
+  postEffect,
+  readParams,
+  type PostEffect,
+  type PostEffectId,
+} from '@shared/domain/postProcessing'
+import { SECOND, type Us } from '@shared/domain/time'
 import {
   DEFAULT_WORLD,
   type MaterialDescriptor,
@@ -130,6 +143,17 @@ const BACKDROP: MaterialDescriptor = {
 }
 
 /**
+ * A mirror-bright surface: what an occlusion pass and a reflection are read on, and what the
+ * demonstration puts at the centre of its frame. Metal because a rough dielectric hides both.
+ */
+const METAL: MaterialDescriptor = {
+  ...BACKDROP,
+  color: '#dfe3ea',
+  roughness: 0.14,
+  metalness: 1,
+}
+
+/**
  * Feet on the ground, walking speed, eyes at 1,70 m — what the character templates share, and
  * the values the player will read the day it exists.
  */
@@ -158,7 +182,45 @@ type Template = {
   nodes: readonly SceneNode[]
   world?: Partial<SceneWorld>
   play?: Partial<ScenePlay>
+  /**
+   * What the band already holds. Only the demonstration template uses it, and it is what makes
+   * that one a DEMONSTRATION rather than a set: the whole chain — a move, a rack focus, a bloom
+   * and an exposure — is already keyed, so pressing Play judges it in one gesture.
+   */
+  animation?: Partial<AnimationTimeline>
 }
+
+/** The three instance ids a channel of the demonstration aims at. The others are named once. */
+const DEMO = { defocus: 'demo-dof', bloom: 'demo-bloom', grade: 'demo-grade' }
+
+/** A parameter of the demonstration stack, set apart from what a fresh effect opens on. */
+const tuned = (
+  id: string,
+  effect: PostEffectId,
+  params: Record<string, number | string | boolean>,
+): PostEffect => {
+  // `readParams` rather than a spread: it fills in from the catalogue AND bounds what is given,
+  // so a value that drifted out of its own slider is caught rather than written.
+  return { ...postEffect(id, effect), params: readParams(effect, params) }
+}
+
+/** One composition channel of the demonstration, on the SCENE's own stack. */
+const demoTrack = (
+  id: string,
+  effectId: string,
+  param: string,
+  keys: readonly { time: Us; value: number }[],
+): AnimationTrack => ({
+  id,
+  name: id,
+  index: 0,
+  muted: false,
+  solo: false,
+  locked: false,
+  target: { nodeId: SCENE_SUBJECT_ID, property: 'post', post: { effectId, param } },
+  // Deltas over what the stack stores, like every other channel — see `postAt`.
+  keys: keys.map(one => ({ time: one.time, value: { x: one.value, y: 0, z: 0 } })),
+})
 
 const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // The studio's own default, unchanged: three lights and nothing else. Lit rather than truly
@@ -233,6 +295,120 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
     play: { ...WALKING, camera: 'firstPerson' },
   }),
 
+  /**
+   * The scene the composition is JUDGED on, and everything in it is there for that.
+   *
+   * A metal sphere for the occlusion and the reflections, a lamp close enough to blow a highlight
+   * past white for the bloom, a near post and a far wall for the defocus to have something to
+   * choose between, and a camera already on a rail. Its own Default Post Processing is set, and
+   * its band already holds § 14 and § 15: a travelling, a rack focus from 15 m to 2 m, a bloom
+   * that flashes and an exposure that closes.
+   */
+  postProcessing: () => {
+    const rail = pathNode()
+    const camera = aimedCamera(1.5, 9, 1)
+
+    return {
+      nodes: [
+        floor(40),
+        meshNode(
+          { kind: 'sphere', radius: 1, widthSegments: 48, heightSegments: 32 },
+          {
+            transform: transformAt({ x: 0, y: 1, z: 0 }),
+            material: METAL,
+            name: 'Metal Sphere',
+          },
+        ),
+        // In FRONT of the sphere and off to one side: a rack focus needs something the near end
+        // of its travel can be sharp on, and the sphere is where the far end lands.
+        meshNode(
+          { kind: 'cylinder', radiusTop: 0.12, radiusBottom: 0.12, height: 2.4, segments: 24 },
+          { transform: transformAt({ x: -1.6, y: 1.2, z: 5 }), name: 'Foreground Post' },
+        ),
+        /*
+         * Behind everything, which is what gives the haze and the occlusion a far end to read.
+         *
+         * Wide enough to FILL the frame, and a mid grey rather than the white cyclorama the photo
+         * set wears: measured at the head, 50.7 % of the top-right third was clipped past 250
+         * while the floor clipped none — the eye read a blown wall and a black void beside it,
+         * and a composition judged against a clipped wall is judged against nothing.
+         */
+        meshNode(
+          { kind: 'plane', width: 60, height: 16 },
+          {
+            transform: transformAt({ x: 0, y: 7, z: -9 }),
+            material: { ...BACKDROP, color: '#8c8c92' },
+            castShadow: false,
+            name: 'Backdrop',
+          },
+        ),
+        sun(1.6, { x: -6, y: 7, z: 5 }),
+        ambient(0.2),
+        // Twelve, not the sixty a spot four metres away carries: a point light falls off as the
+        // square of a distance, and under two metres that is some eighteen times the same lamp.
+        // It still blows the specular past white, which is what a bloom needs to find.
+        pointLight(12, { x: 1.8, y: 2.2, z: 1.6 }),
+        camera,
+        rail,
+      ],
+      world: {
+        ...presetPatch('studio'),
+        post: {
+          enabled: true,
+          effects: [
+            tuned('demo-gtao', 'gtao', { radius: 0.3, blend: 0.85 }),
+            // A small aperture on purpose: the shot OPENS at fifteen metres — § 14 — so the
+            // subject starts out of focus, and a wide one would open the template on a smear.
+            tuned(DEMO.defocus, 'dof', { focusDistance: 15, aperture: 0.004, maxBlur: 0.012 }),
+            tuned(DEMO.bloom, 'bloom', { strength: 0.35, radius: 0.5, threshold: 0.9 }),
+            tuned(DEMO.grade, 'colorGrading', { contrast: 1.15, saturation: 0.98 }),
+            tuned('demo-vignette', 'vignette', { offset: 0.9, darkness: 1.1 }),
+            postEffect('demo-smaa', 'smaa'),
+          ],
+        },
+      },
+      animation: {
+        duration: 5 * SECOND,
+        shots: [
+          {
+            id: 'demo-shot',
+            cameraId: camera.id,
+            start: 0,
+            duration: 5 * SECOND,
+            motion: { pathId: rail.id, easing: 'easeInOut', from: 0, to: 1 },
+            target: { kind: 'point', at: { x: 0, y: 1, z: 0 } },
+          },
+        ],
+        tracks: [
+          // § 14, to the metre: sharp at fifteen at the top of the shot, sharp at two by three
+          // seconds — the rack focus a travelling is judged by.
+          demoTrack('demo-focus', DEMO.defocus, 'focusDistance', [
+            { time: 0, value: 0 },
+            { time: 3 * SECOND, value: -13 },
+          ]),
+          /*
+           * § 15: a flash that opens and closes rather than a level that rises and stays.
+           *
+           * Peaking at 1.5 rather than at 3: looked at, a peak of three drowned the sphere in its
+           * own halo — the subject the rack focus had just brought into view disappeared behind
+           * the effect meant to celebrate it. A flash one cannot see THROUGH is not a flash.
+           */
+          demoTrack('demo-flash', DEMO.bloom, 'strength', [
+            { time: 0, value: 0 },
+            { time: 1.5 * SECOND, value: 1.15 },
+            { time: 3 * SECOND, value: 0 },
+          ]),
+          // The dark passage, in STOPS: one to four tenths of the light is about a stop and a
+          // third, which is what `colorGrading` counts in.
+          demoTrack('demo-exposure', DEMO.grade, 'exposure', [
+            { time: 0, value: 0 },
+            { time: 5 * SECOND, value: -1.32 },
+          ]),
+        ],
+      },
+    }
+  },
+
   // The three below open on the SAME level and differ by where the camera stands — which is what
   // these three views are. A cadrage over an empty floor proved nothing: what makes them worth
   // picking is a set one can climb, fall off and bump into.
@@ -272,6 +448,15 @@ export function sceneFromTemplate(id: SceneTemplateId = DEFAULT_SCENE_TEMPLATE):
       ...template.world,
       play: { ...DEFAULT_WORLD.play, ...template.play },
     },
-    animation: EMPTY_TIMELINE,
+    animation: template.animation
+      ? {
+          ...EMPTY_TIMELINE,
+          ...template.animation,
+          // Derived rather than spelled out beside the tracks: a sheet written by hand drifts
+          // from `readSheet` the day either moves, and an animated scene showing no line is a
+          // state no file can be in.
+          sheet: sheetFromAnimated(template.animation.tracks ?? [], template.animation.shots ?? []),
+        }
+      : EMPTY_TIMELINE,
   }
 }

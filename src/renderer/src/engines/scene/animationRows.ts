@@ -6,7 +6,12 @@
  * to evaluate: what a subject line adds is a way to READ them, which is why it is derived here
  * rather than stored. Folding a subject away must never lose a key.
  */
-import type { AnimationTimeline, AnimationTrack, CameraShot } from '@shared/domain/animation'
+import {
+  SCENE_SUBJECT_ID,
+  type AnimationTimeline,
+  type AnimationTrack,
+  type CameraShot,
+} from '@shared/domain/animation'
 import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
 import { ROW_PADDING } from '../timeline/timelineGeometry'
@@ -174,6 +179,11 @@ export type RowsOptions = {
   lanes?: readonly SheetLane[]
   /** How the user has arranged the lines. Empty leaves the scene's own order — see `orderedSubjects`. */
   order?: readonly string[]
+  /**
+   * What the scene's own composition line is called. Read from a bundle by the caller, because
+   * `SCENE_SUBJECT_ID` names no node and every filter here goes through the node names.
+   */
+  sceneName: string
 }
 
 /**
@@ -195,6 +205,10 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   }
 
   const named = new Map(options.nodes.map(node => [node.id, node.name]))
+  // The scene's composition is a subject with no node behind it. Naming it here rather than
+  // branching everywhere below is what gives it a line at all: `shown`, the bone filter and
+  // `push` all decide through this map.
+  named.set(SCENE_SUBJECT_ID, options.sceneName)
 
   const lanesOfNode = new Map<string, SheetLane[]>()
   for (const lane of options.lanes ?? []) {

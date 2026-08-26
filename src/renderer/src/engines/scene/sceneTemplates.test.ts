@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
+import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
@@ -122,5 +123,50 @@ describe('pitchTowards', () => {
   it('tips a raised camera downward, and leaves one at target height level', () => {
     expect(pitchTowards(12, 8)).toBeLessThan(0)
     expect(pitchTowards(1.7, 6, 1.7)).toBe(0)
+  })
+})
+
+describe('the template the composition is judged on', () => {
+  const demo = sceneFromTemplate('postProcessing')
+
+  /** § 28, as one gesture: open it, press Play, and the whole chain is in front of you. */
+  it('opens with a composition already on the scene', () => {
+    expect(demo.world.post.effects.map(one => one.effect)).toEqual([
+      'gtao',
+      'dof',
+      'bloom',
+      'colorGrading',
+      'vignette',
+      'smaa',
+    ])
+  })
+
+  it('puts the camera on a rail for the length of the shot', () => {
+    const shot = demo.animation.shots[0]
+    const rail = demo.nodes.find(one => one.type === 'path')
+
+    expect(shot?.motion?.pathId).toBe(rail?.id)
+    expect(shot?.duration).toBe(demo.animation.duration)
+  })
+
+  /** The rack focus of § 14: sharp at fifteen metres, sharp at two three seconds later. */
+  it('racks the focus from fifteen metres to two', () => {
+    const focus = demo.animation.tracks.find(one => one.target.post?.param === 'focusDistance')
+    const stack = demo.world.post.effects.find(one => one.effect === 'dof')
+
+    expect(stack?.params.focusDistance).toBe(15)
+    expect(focus?.keys.map(key => key.value.x)).toEqual([0, -13])
+  })
+
+  it('keys the flash and the exposure of § 15 on the scene, not on a camera', () => {
+    const driven = demo.animation.tracks.filter(one => one.target.nodeId === SCENE_SUBJECT_ID)
+
+    expect(driven).toHaveLength(3)
+  })
+
+  /** A band that shows no line for what it drives is a state no saved file can be in. */
+  it('puts everything it animates on the sheet', () => {
+    expect(demo.animation.sheet).toContain(SCENE_SUBJECT_ID)
+    expect(demo.animation.sheet).toContain(demo.animation.shots[0]?.cameraId)
   })
 })

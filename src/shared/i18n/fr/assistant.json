@@ -936,6 +936,74 @@
       "modelWearImage": {
         "title": "Recouvrir un modèle d’une image",
         "description": "Pose une seule image du projet sur tout un modèle importé, comme sa couleur de base — la façon simple de l’habiller. Elle exclut les matières : un modèle recouvert d’une image ne porte plus aucune matière, et l’inverse. Aucun autre canal n’en est déduit. Sans image, l’habillage est retiré et le modèle retrouve ce que son propre fichier porte."
+      },
+      "postState": {
+        "title": "Lire la composition de post-traitement",
+        "description": "Rend la pile d’effets que la scène — ou la caméra nommée — filme à travers, avec l’identifiant de chaque instance, l’effet qu’elle est, ses paramètres, si elle est active, et si la chaîne la laisse de côté."
+      },
+      "postAdd": {
+        "title": "Ajouter un effet de post-traitement",
+        "description": "Pose un effet du catalogue au bout de la pile, sur ses valeurs par défaut. Sans caméra nommée c’est la composition de la scène qui reçoit, celle que le viewport montre déjà."
+      },
+      "postRemove": {
+        "title": "Retirer un effet de post-traitement",
+        "description": "Enlève une instance de la pile, et avec elle les canaux de la timeline qui la pilotaient — laissés là, ils viseraient un effet que plus rien n’atteint."
+      },
+      "postMove": {
+        "title": "Déplacer un effet dans la pile",
+        "description": "Change la place d’une instance dans la chaîne, ce qui change l’image obtenue — un étalonnage avant un halo lumineux ne donne pas la même chose qu’après lui."
+      },
+      "postSet": {
+        "title": "Régler un paramètre d’un effet",
+        "description": "Écrit une valeur sur un paramètre d’une instance, tenue aux bornes que le catalogue déclare pour ce paramètre. Le champ à remplir dépend de sa nature — un nombre, un interrupteur ou un mot."
+      },
+      "postEnable": {
+        "title": "Activer ou désactiver un effet",
+        "description": "Coupe une instance sans la retirer, ce qui la sort du calcul et non seulement de l’image. Ses paramètres restent où ils sont, prêts à être rallumés."
+      },
+      "postSwitch": {
+        "title": "Couper toute la composition",
+        "description": "Éteint ou rallume la pile entière d’un coup, sans rien perdre — le Avant/Après, en une valeur du document que ⌘Z sait reprendre."
+      },
+      "postPreset": {
+        "title": "Appliquer un préréglage de post-traitement",
+        "description": "Remplace la pile par une composition prête — un ensemble d’effets, dans un ordre, sur des valeurs qui vont ensemble. Le document reçoit la pile elle-même, jamais une référence au préréglage."
+      },
+      "postCamera": {
+        "title": "Dire ce qu’une caméra fait du post-traitement",
+        "description": "Choisit si cette caméra suit la composition de la scène, porte la sienne, ou n’en applique aucune. Passer à la sienne la démarre sur ce qu’elle filmait déjà."
+      },
+      "postPresets": {
+        "title": "Lister les préréglages de post-traitement",
+        "description": "Rend les compositions prêtes que le studio fournit et celles enregistrées sur cette machine, avec leur nom. C’est à cette liste que post.preset sait répondre."
+      },
+      "postDuplicate": {
+        "title": "Dupliquer un effet de post-traitement",
+        "description": "Pose une copie de l’effet juste après lui, sur les mêmes valeurs et sous une identité neuve. Refusé pour un effet dont une seconde instance ne veut rien dire — un anticrénelage, une occlusion."
+      },
+      "postReset": {
+        "title": "Réinitialiser un effet de post-traitement",
+        "description": "Ramène tous les paramètres de cet effet à ce que le catalogue déclare, sans le retirer de la pile ni toucher à sa place."
+      },
+      "postKey": {
+        "title": "Poser une clé sur un paramètre de post-traitement",
+        "description": "Ouvre un canal d’animation sur ce paramètre s’il n’en a pas, et y pose une clé à la tête. La valeur donnée est celle qu’on veut VOIR, et l’écart avec la pile est calculé ici."
+      },
+      "postUnkey": {
+        "title": "Retirer une clé de post-traitement",
+        "description": "Retire la clé posée à la tête sur ce paramètre. Le canal reste en place, comme lorsqu’on retire une clé depuis la bande."
+      },
+      "postSave": {
+        "title": "Enregistrer la composition comme préréglage",
+        "description": "Garde la pile en cours sous un nom, sur cette machine. Rien n’est écrit dans le document ni dans le projet."
+      },
+      "postRename": {
+        "title": "Renommer un préréglage enregistré",
+        "description": "Change le nom d’un préréglage de cette machine, désigné par son identifiant ou par son nom actuel. Ce qu’il contient ne bouge pas."
+      },
+      "postForget": {
+        "title": "Oublier un préréglage enregistré",
+        "description": "Retire de cette machine un préréglage enregistré. Les compositions déjà appliquées ne changent pas, un document tenant sa pile plutôt qu’une référence."
       }
     },
     "refusals": {
@@ -1218,7 +1286,19 @@
       "cardActive": "La fiche s’applique",
       "aimId": "Identifiant de la cible",
       "csgOperation": "Ce qu’il faut en faire",
-      "materialSlot": "Emplacement de matière"
+      "materialSlot": "Emplacement de matière",
+      "postCameraId": "Identifiant de la caméra dont on règle la composition — absent vise celle de la scène",
+      "postEffectId": "Identifiant de l’instance dans la pile",
+      "postEffect": "Effet du catalogue à poser",
+      "postBy": "De combien de places déplacer l’effet, négatif pour le remonter",
+      "postParam": "Nom du paramètre à régler",
+      "postValue": "Valeur numérique du paramètre",
+      "postText": "Valeur textuelle du paramètre — un mot d’une liste, une couleur, un identifiant d’asset",
+      "postOn": "Valeur d’un paramètre qui est un interrupteur",
+      "postEnabled": "Actif ou non",
+      "postPreset": "Préréglage à appliquer",
+      "postMode": "Ce que la caméra fait de la composition de la scène",
+      "postPresetName": "Nom à donner au préréglage"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

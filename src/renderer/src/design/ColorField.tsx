@@ -1,5 +1,6 @@
 import { cn } from '@/helpers/cn'
 import { fieldHandle } from './scHandle'
+import type { ReactNode } from 'react'
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { ResetButton } from './ResetButton'
@@ -14,6 +15,8 @@ export type ColorFieldProps = GestureProps & {
   scId?: string
   /** Puts the colour back where it started. Absent while it already stands there. */
   onReset?: () => void
+  /** One more button for the row’s end column, drawn before the reset — a padlock, say. */
+  action?: ReactNode
 }
 
 /** A colour swatch that opens the OS picker — the input itself, which already draws its value. */
@@ -23,6 +26,7 @@ export function ColorField({
   onChange,
   scId,
   onReset,
+  action,
   onGestureStart,
   onGestureEnd,
 }: ColorFieldProps) {
@@ -55,6 +59,7 @@ export function ColorField({
       </span>
 
       <FieldActions>
+        {action}
         <ResetButton onReset={onReset} />
       </FieldActions>
     </label>

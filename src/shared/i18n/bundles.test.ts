@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_MESSAGES, ACTIVITY_TOPICS } from '../domain/activity'
 import { TRACK_PROPERTIES } from '../domain/animation'
+import {
+  CAMERA_POST_MODES,
+  POST_CATEGORIES,
+  POST_COSTS,
+  POST_EFFECT_IDS,
+  POST_EFFECTS,
+} from '../domain/postProcessing'
+import { POST_PRESET_IDS } from '../domain/postPresets'
 import { HOME_SECTION_IDS } from '../domain/home'
 import {
   BACKGROUND_KINDS,
@@ -258,6 +266,8 @@ describe('the translation bundles', () => {
       'materialExportTargets.gltf',
       'materialExportTargets.unity',
       'materialExportTargets.unreal',
+      // A console, and consoles keep their name. `preset_psx` reads as one word to `wordsOf`.
+      'postfx.preset_gameBoy',
     ])
 
     const copied = [...BUNDLES.fr]
@@ -1192,6 +1202,24 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...explained('environment.visibility_', HELPER_VISIBILITIES),
   ...explained('environment.quality_', VIEWPORT_QUALITIES),
   ...explained('environment.unit_', DISPLAY_UNITS),
+  // The composition catalogue, composed on three sides at once — the stack rows, the library and
+  // the inspector's generated controls. An effect added without its two lines would offer the
+  // reader its own identifier as a row of the Add menu.
+  ...explained('postfx.effect_', POST_EFFECT_IDS),
+  ...POST_CATEGORIES.map(category => `postfx.category_${category}`),
+  ...POST_COSTS.map(cost => `postfx.cost_${cost}`),
+  ...explained('postfx.mode_', CAMERA_POST_MODES),
+  ...POST_PRESET_IDS.map(preset => `postfx.preset_${preset}`),
+  // Every parameter of every effect, and every value of every closed list one offers. The panel
+  // is GENERATED from the catalogue, so a knob without a line is a knob labelled by its own key.
+  ...POST_EFFECT_IDS.flatMap(effect =>
+    Object.keys(POST_EFFECTS[effect].params).map(param => `postfx.param_${param}`),
+  ),
+  ...POST_EFFECT_IDS.flatMap(effect =>
+    Object.values(POST_EFFECTS[effect].params).flatMap(spec =>
+      spec.control === 'choice' ? spec.options.map(option => `${spec.labelPrefix}${option}`) : [],
+    ),
+  ),
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),

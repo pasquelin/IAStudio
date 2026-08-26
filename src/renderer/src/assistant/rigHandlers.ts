@@ -1,5 +1,4 @@
-import i18next from 'i18next'
-import { TRACK_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
+import { DIRECT_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
   BODY_PARTS,
@@ -7,7 +6,7 @@ import {
   type BodyPart,
   type HumanoidRole,
 } from '@shared/domain/humanoid'
-import { englishText } from '@shared/i18n'
+import { speaksBundle } from '@/helpers/speaksBundle'
 import { childBone } from '@shared/domain/rig'
 import {
   assetClip,
@@ -328,7 +327,7 @@ function tracksOfSubject(state: SceneState, subject: { nodeId: string; bone?: st
  * line stands in, never `undefined` written into a document.
  */
 function keyPose(input: Record<string, unknown>): ActionOutcome {
-  const only = oneOf(input, 'property', TRACK_PROPERTIES) ?? undefined
+  const only = oneOf(input, 'property', DIRECT_PROPERTIES) ?? undefined
 
   return editKeys(input, ({ state, at }) => {
     const subject = subjectOf(input)
@@ -339,7 +338,7 @@ function keyPose(input: Record<string, unknown>): ActionOutcome {
       state,
       subject,
       at,
-      channelNames(key => i18next.t(key) || englishText(key), subject.bone ?? node.name),
+      channelNames(speaksBundle(), subject.bone ?? node.name),
       () => `track_${newId()}`,
       only,
     )

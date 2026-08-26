@@ -1,7 +1,8 @@
 import { Euler, Quaternion } from 'three'
 import { describe, expect, it } from 'vitest'
-import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
-import { ONE, ZERO } from '@shared/domain/animation'
+import type { AnimationTimeline, AnimationTrack, Keyframe } from '@shared/domain/animation'
+import { EMPTY_TIMELINE, ONE, ZERO } from '@shared/domain/animation'
+import { postEffect, type PostStack } from '@shared/domain/postProcessing'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from './animation-fixtures'
 import { IDENTITY_TRANSFORM } from './sceneState'
@@ -13,6 +14,7 @@ import {
   fovAt,
   playsThrough,
   poseAt,
+  postAt,
   valueAt,
   withKey,
   withoutKey,
@@ -294,5 +296,102 @@ describe('the difference a drag has to be written as', () => {
     expect(back.position).toEqual(pose.position)
     expect(back.scale).toEqual(pose.scale)
     expect(back.rotation.x).toBeCloseTo(quarter, 6)
+  })
+})
+
+describe('the composition a subject films through at that instant', () => {
+  const stack: PostStack = {
+    enabled: true,
+    effects: [
+      {
+        ...postEffect('bloom-1', 'bloom'),
+        params: { strength: 0.2, radius: 0.4, threshold: 0.85 },
+      },
+    ],
+  }
+
+  const driving = (keys: Keyframe[], extra: Partial<AnimationTrack> = {}): AnimationTimeline =>
+    timelineWith([
+      animationTrack('post-1', 'post', keys, {
+        target: {
+          nodeId: 'cube',
+          property: 'post',
+          post: { effectId: 'bloom-1', param: 'strength' },
+        },
+        ...extra,
+      }),
+    ])
+
+  const strengthAt = (timeline: AnimationTimeline, time: number): unknown =>
+    postAt(stack, timeline, 'cube', time).effects[0]?.params.strength
+
+  /** The flash of § 15, and the whole shape of a composition channel: 0,2 → 3 → 0,2. */
+  it('interpolates a parameter between the keys around it', () => {
+    const flash = driving([
+      { time: 0, value: { x: 0, y: 0, z: 0 } },
+      { time: SECOND, value: { x: 2.8, y: 0, z: 0 } },
+    ])
+
+    expect(strengthAt(flash, 0)).toBeCloseTo(0.2, 5)
+    expect(strengthAt(flash, SECOND / 2)).toBeCloseTo(1.6, 5)
+    expect(strengthAt(flash, SECOND)).toBeCloseTo(3, 5)
+  })
+
+  /** Additive over what the DOCUMENT holds, exactly as a lens channel is — see `lensAt`. */
+  it('adds to the value the stack stores rather than replacing it', () => {
+    const raised = driving([{ time: 0, value: { x: 1, y: 0, z: 0 } }])
+
+    expect(strengthAt(raised, 0)).toBeCloseTo(1.2, 5)
+  })
+
+  it('holds the parameter to its own bounds however far a channel reaches', () => {
+    const wild = driving([{ time: 0, value: { x: 100, y: 0, z: 0 } }])
+
+    expect(strengthAt(wild, 0)).toBe(4)
+  })
+
+  it('hands the stack back untouched when nothing drives it', () => {
+    expect(postAt(stack, EMPTY_TIMELINE, 'cube', 0)).toBe(stack)
+  })
+
+  it('hears nothing from a muted channel, and only the soloed ones once anything is', () => {
+    const muted = driving([{ time: 0, value: { x: 1, y: 0, z: 0 } }], { muted: true })
+
+    expect(strengthAt(muted, 0)).toBeCloseTo(0.2, 5)
+  })
+
+  it('leaves alone an instance no channel names', () => {
+    const elsewhere = timelineWith([
+      animationTrack('post-1', 'post', [{ time: 0, value: { x: 1, y: 0, z: 0 } }], {
+        target: {
+          nodeId: 'cube',
+          property: 'post',
+          post: { effectId: 'other', param: 'strength' },
+        },
+      }),
+    ])
+
+    expect(strengthAt(elsewhere, 0)).toBeCloseTo(0.2, 5)
+  })
+
+  /** A camera in `override` hears its OWN channels, and a scene channel never reaches it. */
+  it('answers per subject, so two stacks never hear each other', () => {
+    const onScene = driving([{ time: 0, value: { x: 1, y: 0, z: 0 } }])
+
+    expect(postAt(stack, onScene, 'cam', 0).effects[0]?.params.strength).toBeCloseTo(0.2, 5)
+  })
+
+  /** A `post` channel falling through would turn the object by its own bloom strength. */
+  it('is read by nothing else: a pose ignores a composition channel', () => {
+    const driven = driving([{ time: 0, value: { x: 1, y: 2, z: 3 } }])
+    const pose = poseAt(IDENTITY_TRANSFORM, driven, 'cube', 0)
+
+    // Component by component: recomposing a rotation through quaternions gives back `-0` for a
+    // turn of nothing, which is the same angle and not the same value.
+    expect(pose.position).toEqual(IDENTITY_TRANSFORM.position)
+    expect(pose.scale).toEqual(IDENTITY_TRANSFORM.scale)
+    expect(pose.rotation.x).toBeCloseTo(0, 10)
+    expect(pose.rotation.y).toBeCloseTo(0, 10)
+    expect(pose.rotation.z).toBeCloseTo(0, 10)
   })
 })

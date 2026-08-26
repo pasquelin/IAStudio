@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { FieldActions } from './FieldActions'
 import { PropertyLabel } from './PropertyLabel'
 import { fieldHandle } from './scHandle'
@@ -10,13 +11,15 @@ export type ToggleFieldProps = {
   onChange: (value: boolean) => void
   /** The handle the MCP steers this field by. Never a translated word. */
   scId?: string
+  /** One more button for the row’s end column, drawn before the reset — a padlock, say. */
+  action?: ReactNode
 }
 
 /**
  * A property that is on or off. It carries no gesture props: a checkbox changes once per
  * click, so there is no drag to coalesce into a single history entry.
  */
-export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) {
+export function ToggleField({ label, value, onChange, scId, action }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
       <PropertyLabel label={label} />
@@ -33,7 +36,7 @@ export function ToggleField({ label, value, onChange, scId }: ToggleFieldProps) 
         className={cn(CHECKBOX, 'mr-auto size-4 shrink-0')}
       />
 
-      <FieldActions />
+      <FieldActions>{action}</FieldActions>
     </label>
   )
 }

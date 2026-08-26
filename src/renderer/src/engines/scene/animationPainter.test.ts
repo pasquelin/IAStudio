@@ -83,6 +83,7 @@ const paintOf = (rows: Parameters<typeof paintAnimation>[1]['rows'], playhead = 
 
 const rowsOf = (tracks: Parameters<typeof timelineWith>[0], blocks?: readonly ClipBlock[]) =>
   animationRows(timelineWith(tracks, { sheet: ['cube'] }), {
+    sceneName: 'Scene',
     nodes: [{ id: 'cube', name: 'Circle' }],
     // A lane shows inside its object's track, so the cube has to be unfolded for one to be drawn.
     expanded: new Set(blocks ? ['cube'] : []),
@@ -222,7 +223,7 @@ describe('painting a shot', () => {
       timelineWith([], {
         shots: [cameraShot('s1', { cameraId: 'cam-a', start: 1 * SECOND, duration: 2 * SECOND })],
       }),
-      { nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
+      { sceneName: 'Scene', nodes: [{ id: 'cam-a', name: 'Camera A' }], expanded: new Set() },
     )
 
   const paintShotOf = (selected: readonly string[] = []) => {

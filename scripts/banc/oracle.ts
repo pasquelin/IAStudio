@@ -15,9 +15,16 @@ import { toRadians } from '@shared/domain/angles'
 import { SECOND } from '@shared/domain/time'
 import { matchesWords, searchWords } from '@shared/text'
 import type { SkyboxContent } from '@shared/domain/skybox'
+import {
+  EMPTY_STACK,
+  type CameraPostMode,
+  type PostEffectId,
+  type PostStack,
+} from '@shared/domain/postProcessing'
 import type { MaterialState } from '@/engines/material/materialState'
 import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { usePostPresets } from '@/stores/postPresets'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -215,6 +222,66 @@ export const world = (run: Run) => openScene(run)?.world ?? null
 
 /** How long the open scene's timeline runs, in the microseconds it counts in. */
 export const sceneLasts = (run: Run): number => openScene(run)?.animation.duration ?? 0
+
+/** The scene's own composition — what the viewport draws through, and what a camera inherits. */
+export const post = (run: Run): PostStack => openScene(run)?.world.post ?? EMPTY_STACK
+
+/** The composition a camera OWNS, `null` while it inherits or is switched off. */
+export const cameraPost = (run: Run, name: string): PostStack | null => {
+  const camera = cameraNamed(run, name)
+  return camera?.camera.post?.mode === 'override' ? camera.camera.post.stack : null
+}
+
+/** How a camera answers the scene's composition — `inherit` where it says nothing. */
+export const cameraPostMode = (run: Run, name: string): CameraPostMode | null => {
+  const camera = cameraNamed(run, name)
+  return camera ? (camera.camera.post?.mode ?? 'inherit') : null
+}
+
+const cameraNamed = (
+  run: Run,
+  name: string,
+): Extract<SceneNode, { type: 'camera' }> | undefined => {
+  const found = nodeNamed(run, name)
+  return found?.type === 'camera' ? found : undefined
+}
+
+/** Whether the composition holds an effect of that kind at all, on or off. */
+export const composes = (run: Run, effect: PostEffectId): boolean =>
+  post(run).effects.some(one => one.effect === effect)
+
+/** What one parameter of the first instance of that effect stands at. `null` where there is none. */
+export const postParam = (run: Run, effect: PostEffectId, param: string): number | null => {
+  const found = post(run).effects.find(one => one.effect === effect)
+  const value = found?.params[param]
+  return typeof value === 'number' ? value : null
+}
+
+/**
+ * The composition channels the scene's own band holds, named by what they DRIVE rather than by
+ * the instance id — an id is minted per run, so a scenario could never assert one.
+ */
+export const postChannels = (run: Run): { effect: PostEffectId; param: string }[] => {
+  const stack = post(run)
+  return (openScene(run)?.animation.tracks ?? []).flatMap(track => {
+    const aimed = track.target.post
+    const effect = stack.effects.find(one => one.id === aimed?.effectId)
+    return aimed && effect ? [{ effect: effect.effect, param: aimed.param }] : []
+  })
+}
+
+/** How many keys stand on the channel driving that parameter. Zero where no channel does. */
+export const postKeys = (run: Run, effect: PostEffectId, param: string): number => {
+  const instance = post(run).effects.find(one => one.effect === effect)
+  const track = (openScene(run)?.animation.tracks ?? []).find(
+    one => one.target.post?.effectId === instance?.id && one.target.post?.param === param,
+  )
+  return track?.keys.length ?? 0
+}
+
+/** The looks saved on this MACHINE — no document holds them, so no scene answers for them. */
+export const savedPresets = (): readonly { id: string; name: string }[] =>
+  usePostPresets.getState().saved
 
 /** The sky the open skybox document holds. */
 export const sky = (run: Run): SkyboxContent | null =>

@@ -132,6 +132,10 @@ export const named = (studio: Studio, name: string): string =>
   sceneOf(useScenes.getState(), frontId(studio)).nodes.find(one => one.name.includes(name))?.id ??
   ''
 
+/** The first instance of the composition in front — a decor cannot name an id minted per run. */
+export const effectAt = (studio: Studio, at: number): string =>
+  sceneOf(useScenes.getState(), frontId(studio)).world.post.effects[at]?.id ?? ''
+
 /** The nth layer, row or clip of the document in front — what a decor names one by. */
 
 export const layerAt = (studio: Studio, at: number): string =>

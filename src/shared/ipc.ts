@@ -260,6 +260,8 @@ export type Channels = {
   aiAddOwnModel: 'ai:add-own-model'
 
   sceneExport: 'scene:export'
+  postExport: 'post:export'
+  postImport: 'post:import'
   montageExport: 'montage:export'
   montageImport: 'montage:import'
   renderStart: 'render:start'
@@ -475,6 +477,8 @@ export const CHANNELS: Channels = {
   aiAddOwnModel: 'ai:add-own-model',
 
   sceneExport: 'scene:export',
+  postExport: 'post:export',
+  postImport: 'post:import',
   montageExport: 'montage:export',
   montageImport: 'montage:import',
   renderStart: 'render:start',
@@ -590,6 +594,14 @@ export type RenderFrameRequest = {
   png: Uint8Array
 }
 
+/** A composition on its way to a file. The name is a suggestion; the extension is the writer's. */
+export type PostPresetExportRequest = {
+  /** Suggested file name, without its extension. */
+  name: string
+  /** The preset file, already serialized — see `postPresetFile`. */
+  content: string
+}
+
 /** A scene on its way to a file the studio will never look at again. */
 export type SceneExportRequest = {
   /** Suggested file name, without its extension — the target decides that. */
@@ -700,6 +712,8 @@ export type LogScope =
   /** A boolean cut that would not evaluate. The node goes on drawing its uncut brush. */
   | 'scene.carved'
   | 'scene.export'
+  /** A composition read back from a file another project wrote, or written out to one. */
+  | 'scene.post'
   | 'scene.render'
   /** A still of the view, on its way into the project's pictures. */
   | 'scene.capture'
@@ -789,6 +803,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.texture',
   'scene.animation',
   'scene.export',
+  'scene.post',
   'scene.render',
   'scene.capture',
   'sequence.export',
@@ -1613,6 +1628,22 @@ export type StudioBridge = {
      * two hundred — the same coalescing the ingest bar does with its progress.
      */
     onEntries: (callback: (entries: readonly ActivityEntry[]) => void) => Unsubscribe
+  }
+  post: {
+    /**
+     * Writes a post-processing composition wherever the save dialog lands, and answers the file
+     * NAME — never the path, exactly as a scene export does.
+     */
+    export: (request: PostPresetExportRequest) => Promise<string | null>
+    /**
+     * Opens the picker and hands back what the chosen file HOLDS, as text. `null` when the
+     * dialog was dismissed.
+     *
+     * Text and not a parsed object on purpose: the reader is `readPostPresetFile`, which drops
+     * every effect this build has no code for and names them — a decision about the STUDIO, and
+     * therefore one the window takes. This process only reads bytes off a disk.
+     */
+    import: () => Promise<string | null>
   }
   scene: {
     /**
