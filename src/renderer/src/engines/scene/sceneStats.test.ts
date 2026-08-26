@@ -81,6 +81,19 @@ describe('statsOf', () => {
     expect(statsOf([root]).draws).toBe(2)
   })
 
+  /**
+   * The renderer hands the object of EVERY node, and a node hanging from another is already
+   * inside its parent's — so it arrived twice. The three deduped counts hid it; `draws` did not,
+   * and a cube parented under a group reported two draw calls for one mesh.
+   */
+  it('counts a mesh once, however many ways the caller reaches it', () => {
+    const root = new Object3D()
+    const child = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    root.add(child)
+
+    expect(statsOf([root, child]).draws).toBe(1)
+  })
+
   it('skips what a caller has already counted elsewhere', () => {
     const geometry = new BoxGeometry()
     const seen = { geometries: new Set<unknown>([geometry]), textures: new Set<unknown>() }
