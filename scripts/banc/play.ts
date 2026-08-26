@@ -63,8 +63,10 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
  * What the studio answered, as the model was shown it: a refusal by name, or how much came back.
  * The COUNT and not the rows — "found 0" is the whole finding, and nine paths are three lines.
  */
-function answerShown(step: { refusal: string | null; data?: unknown }): string {
-  if (step.refusal !== null) return `refused ${step.refusal}`
+function answerShown(step: { refusal: string | null; detail?: string; data?: unknown }): string {
+  if (step.refusal !== null) {
+    return `refused ${step.refusal}${step.detail === undefined ? '' : ` (${step.detail})`}`
+  }
   if (Array.isArray(step.data)) return `found ${step.data.length}`
 
   return step.data === undefined ? 'ok' : `ok ${shortly(step.data)}`

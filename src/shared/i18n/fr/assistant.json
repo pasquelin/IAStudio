@@ -1076,6 +1076,7 @@
       "nodeId": "Identifiant de l’objet",
       "nodeIds": "Identifiants des objets",
       "nodeKind": "Ce qu’il faut ajouter",
+      "relative": "À vrai, les valeurs sont des ÉCARTS et non des valeurs finales : position et rotation s’AJOUTENT à ce qui est là, échelle et intensité le MULTIPLIENT. Un mètre plus haut s’écrit positionY 1 avec relative vrai ; de moitié s’écrit scaleX 0,5 avec relative vrai",
       "positionX": "Position en largeur",
       "positionY": "Position en hauteur",
       "positionZ": "Position vers l’observateur",

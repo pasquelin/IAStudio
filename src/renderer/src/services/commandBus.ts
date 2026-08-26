@@ -1,6 +1,7 @@
 import type { CommandId, CommandScope } from '@shared/domain/command'
 
-type Listener = (command: CommandId, to: string | null) => void
+// `false` says the surface took the command and had NOTHING to do — see `publishCommand`.
+type Listener = (command: CommandId, to: string | null) => boolean
 
 const listeners = new Set<Listener>()
 
@@ -23,9 +24,16 @@ const armed = new Map<CommandScope, number>()
  *
  * A bus rather than a store: nothing here is state. A command happens, it is delivered, and a
  * surface that mounts afterwards must not receive it late.
+ *
+ * 🛑 Answers whether anything ACTED, which is not whether anything listened: an undo on an empty
+ * stack is a surface that took the command and did nothing. Told `ok` regardless, a client sends
+ * it again — nine times over, measured on the bench pass of 2026-08-26.
  */
-export function publishCommand(command: CommandId, to: string | null = null): void {
-  for (const listener of [...listeners]) listener(command, to)
+export function publishCommand(command: CommandId, to: string | null = null): boolean {
+  let acted = false
+  for (const listener of [...listeners]) acted = listener(command, to) || acted
+
+  return acted
 }
 
 /** Listens until the returned function is called. */

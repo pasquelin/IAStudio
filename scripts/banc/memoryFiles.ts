@@ -19,7 +19,7 @@ import type { MemoryFolder } from './memoryFolder'
 export type MemoryFiles = {
   rename: (path: string, name: string) => Promise<FileOutcome>
   move: (paths: readonly string[], folder: string) => Promise<FileOutcome>
-  duplicate: (paths: readonly string[]) => Promise<FileOutcome>
+  duplicate: (paths: readonly string[], folder?: string | null) => Promise<FileOutcome>
   createFolder: (folder: string, name: string) => Promise<FileOutcome>
   trash: (paths: readonly string[]) => Promise<FileOutcome>
   undo: () => Promise<FileOutcome>
@@ -106,7 +106,7 @@ export function createMemoryFiles(folder: MemoryFolder, catalog: MemoryCatalog):
   return {
     rename: (path, name) => plan({ op: 'rename', path, name }),
     move: (paths, folder: string) => plan({ op: 'move', paths, folder }),
-    duplicate: paths => plan({ op: 'duplicate', paths, folder: null }),
+    duplicate: (paths, folder = null) => plan({ op: 'duplicate', paths, folder }),
     createFolder: (parent, name) => plan({ op: 'createFolder', folder: parent, name }),
     trash: paths => plan({ op: 'trash', paths }),
     undo: () => step('past'),

@@ -45,8 +45,13 @@ const answersTo = (name: string, wanted: string): boolean => matchesWords(name, 
 export const titled = (run: Run, title: string): DocumentDescriptor | undefined =>
   documents(run).find(one => answersTo(one.title, title))
 
+/**
+ * 🛑 Title OR path, never `path || title`: opening a PICTURE makes an image document, whose path
+ * is `documents/<name>.ora`. Written the other way, `2.1` could not pass — the studio did exactly
+ * what was asked and the path ended in `.ora`. Measured on the bench pass of 2026-08-25.
+ */
 export const openedFile = (run: Run, ending: string): boolean =>
-  documents(run).some(one => (one.path || one.title).endsWith(ending))
+  documents(run).some(one => one.title.endsWith(ending) || (one.path ?? '').endsWith(ending))
 
 export const front = (run: Run): DocumentDescriptor | null => run.studio.front()
 

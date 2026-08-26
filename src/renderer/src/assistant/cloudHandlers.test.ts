@@ -32,7 +32,7 @@ describe('the remote library', () => {
 
     // An order nobody offers is refused rather than dropped, as a kind nobody has is: answering
     // a search the client did not ask for is worse than telling it the word means nothing here.
-    expect(await runAction('cloud.browse', { text: 'stone', order: 'cheapest' })).toEqual({
+    expect(await runAction('cloud.browse', { text: 'stone', order: 'cheapest' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -45,7 +45,7 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    expect(await runAction('cloud.browse', { tags: ['stone'], order: 'relevance' })).toEqual({
+    expect(await runAction('cloud.browse', { tags: ['stone'], order: 'relevance' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -61,7 +61,7 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    expect(await runAction('cloud.browse', { types: ['texture', 'hologram'] })).toEqual({
+    expect(await runAction('cloud.browse', { types: ['texture', 'hologram'] })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -75,7 +75,7 @@ describe('the remote library', () => {
     await runAction('cloud.explore', { type: 'image', cursor: 'page-2' })
     expect(explore).toHaveBeenCalledWith({ type: 'image', cursor: 'page-2' })
 
-    expect(await runAction('cloud.explore', { type: 'hologram' })).toEqual({
+    expect(await runAction('cloud.explore', { type: 'hologram' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

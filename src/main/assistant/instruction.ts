@@ -49,8 +49,26 @@ function actionBlock(action: AssistantAction): string {
   return lines.join('\n')
 }
 
-const cataloguePrinted = (actions: readonly AssistantAction[]): string =>
-  actions.map(actionBlock).join('\n')
+/**
+ * The catalogue, with a heading each time the family changes.
+ *
+ * 🛑 The WIDE share alone: 230 actions read flat is a list a model gives up on — « nomme les
+ * mises de côté » reached `favorites.list` on the bench pass of 2026-08-26. The short share pays
+ * 8 000 characters for eleven actions and can afford no heading at all.
+ */
+function cataloguePrinted(actions: readonly AssistantAction[], grouped = false): string {
+  const lines: string[] = []
+  let family = ''
+
+  for (const action of actions) {
+    const next = action.name.split('.')[0] ?? ''
+    if (grouped && next !== family) lines.push(`  [${next}]`)
+    family = next
+    lines.push(actionBlock(action))
+  }
+
+  return lines.join('\n')
+}
 
 const namesOf = (actions: readonly AssistantAction[]): ReadonlySet<ActionName> =>
   new Set(actions.map(action => action.name))
@@ -61,8 +79,8 @@ type Share = {
   readonly allowed: ReadonlySet<ActionName>
 }
 
-const shareOf = (actions: readonly AssistantAction[]): Share => ({
-  text: cataloguePrinted(actions),
+const shareOf = (actions: readonly AssistantAction[], grouped = false): Share => ({
+  text: cataloguePrinted(actions, grouped),
   allowed: namesOf(actions),
 })
 
@@ -72,7 +90,10 @@ let shortHeld: Share | null = null
 
 const wholeShare = (): Share =>
   // Dropped from the wide list on purpose: a model shown everything has nothing left to find.
-  (wholeHeld ??= shareOf(actionsReaching('mcp').filter(action => action.name !== DISCOVERY_ACTION)))
+  (wholeHeld ??= shareOf(
+    actionsReaching('mcp').filter(action => action.name !== DISCOVERY_ACTION),
+    true,
+  ))
 
 /**
  * The spoken vocabulary, MINUS the discovery action: `FIND_RULE` already spells that call whole,

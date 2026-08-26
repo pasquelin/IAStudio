@@ -16,16 +16,16 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **360 demandes, et le banc en joue 360** — une par case, dans cet ordre.
+La liste ci-dessous compte **364 demandes, et le banc en joue 364** — une par case, dans cet ordre.
 `batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une demande
 ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi. C'est ce qui
 rend « on en est où ? » répondable.
 
 ## Ce que la batterie mesure
 
-Le registre publie **228 actions**, et **toutes** partent sur le fil MCP : `mcpTools()` liste
+Le registre publie **230 actions**, et **toutes** partent sur le fil MCP : `mcpTools()` liste
 `actionsReaching('mcp')`, qui est le registre entier. `coverage.ts` dit, action par action, quelle
-demande l'exerce — **les 228 en ont une**, et il n'y a plus rien à modéliser : le banc appelle
+demande l'exerce — **les 230 en ont une**, et il n'y a plus rien à modéliser : le banc appelle
 `runConfirmedAction`, la porte que la fenêtre ET le serveur MCP franchissent.
 
 🛑 **Un outil qu'aucune phrase n'atteint est un outil que personne n'a vu marcher.** La table est
@@ -34,7 +34,7 @@ répond pas, fût-ce par une liste vide. `coverage.test.ts` tient le reste — u
 nomme aucun scénario, et le rôle de ce qui reste sans mesure, **écrit en toutes lettres plutôt que
 compté** : un compte reste vert le jour où un trou se comble pendant qu'un autre se creuse.
 
-**Déclaré n'est pas mesuré**, et le rapport du banc écrit les deux : `MCP reached: N/228` compte ce
+**Déclaré n'est pas mesuré**, et le rapport du banc écrit les deux : `MCP reached: N/230` compte ce
 qu'une passe a vraiment appelé, et la ligne `declared covered, never reached` nomme les actions que
 `coverage.ts` promettait et qu'aucun run n'a touchées.
 
@@ -53,17 +53,6 @@ le panneau de génération.
 🛑 **Un port n'est pas une règle.** Ce que le banc tient en mémoire, c'est ce que `better-sqlite3`,
 le disque et le réseau répondraient ; ce qu'un geste VEUT DIRE vient toujours du studio.
 
-**Quatre passes complètes ont été lancées le 2026-08-26**, DeepSeek, une passe chacune :
-**58 %, 63 %, 62 %, 61 %**. 🛑 **Ces quatre chiffres ne se comparent PAS entre eux** — une passe
-unique sépare mal 0/1 de 1/1, et le même code a rendu 33 % et 53 % dans la même journée. Ce qui
-se lit d'eux est la liste des scénarios **rouges aux quatre passes** : ils étaient 45, ils sont
-**40**, et c'est la seule ligne du rapport qui bouge pour une raison qu'on peut nommer.
-
-**Ce qui a été mesuré à trois passes, et coché ici** : sections 4, 18, 19 (**70 %**) et sections
-20 à 22 (**53 %**, contre 42 % avant les deux règles de génération). Une case n'est cochée que
-sur un **3/3 à trois passes** du code courant — c'est pour cela qu'il y en a seize et pas
-cent-soixante : le reste n'a qu'une passe derrière lui, ce qui ne coche rien.
-
 **Cinq mensonges du banc ont été trouvés et réparés le 2026-08-26**, et chacun rendait un
 scénario impassable ou récompensait une mauvaise réponse :
 
@@ -71,7 +60,8 @@ scénario impassable ou récompensait une mauvaise réponse :
 - **Les actions fichier répondaient `ok` nu** sur un chemin absent, là où le studio répond un
   `FileOutcome` qui NOMME le refus. Le modèle annonçait un déplacement qui n'avait pas eu lieu.
 - **`command.run` n'était pas modélisée** : `scene.undo` et `scene.duplicate` répondaient `ok` et
-  ne faisaient rien. Huit scénarios étaient scorés sur du vide.
+  ne faisaient rien. Huit scénarios étaient scorés sur du vide. 🛑 **Le remède a créé l'inverse** —
+  la passe du 25/08 le mesure plus haut : le vrai routeur refuse tout, faute de surface armée.
 - **`target.select` lisait `targetId`**, un champ que le registre ne déclare pas — l'appel correct
   (`aimId`) armait donc l'id vide et répondait `ok`.
 - **`model.schema` ne nommait que `prompt`** : « utilise cette image comme référence » était
@@ -82,11 +72,8 @@ publiait que pour l'image ; la scène et le montage n'en nommaient aucune, et le
 `track-1`, `track-2` et la chaîne vide, huit refus sur une seule phrase. C'est l'**app** qui a
 rattrapé : la scène publie ses nœuds, le montage ses pistes et ses clips.
 
-**Ce que les chaînes montrent, et qu'aucun pourcentage ne dit** — les motifs comptés sur une passe
-entière, dans l'ordre du volume : il **demande** ce que le studio répond déjà (douze demandes) · il
-**relit puis s'arrête** sans écrire · il **rejoue** un appel qui a déjà répondu `ok` · il écrit un
-**`<placeholder>`** là où va une valeur (vingt-trois appels sur cinq passes, l'exemple du format
-lui apprenait la forme) · il écrit une valeur **absolue** là où la phrase dit « de plus ».
+**Les motifs comptés sur la passe du 25/08 sont plus haut, avec leurs chiffres.** Ceux d'avant
+sont retirés d'ici : ils venaient des passes contre les `fake*.ts` et ne se comparent à rien.
 
 🛑 **Un pourcentage global de ce banc ne se compare à rien tant qu'il tient sur quinze tirages.**
 Ce qui se lit est la ligne d'UN scénario, et la seule comparaison qui vaut est celle qu'on peut
@@ -125,6 +112,118 @@ désormais, sur le chemin du modèle.
 annoncées comme des succès par le modèle lui-même, et une passe unique a donné 60 % là où trois
 passes donnaient 0 %. Ce qui compte est ce que le studio CONTIENT après coup — et c'est la seule
 chose qu'un oracle lit ici.
+
+## La première passe contre le vrai studio — 2026-08-25
+
+DeepSeek (`deepseek-chat`), `EVAL_RUNS=3`, 364 scénarios : **58 %**. **163 scénarios à 3/3**, 51 à
+2/3, 41 à 1/3, et **109 à 0/3** — ces derniers sont les seuls qui se lisent, un 0/3 étant une panne
+et non un tirage.
+
+**Coût RÉEL, à substituer à toute extrapolation** : **1 h 26** (21 h 51 → 23 h 17), 3 187 rounds,
+583 refus, **19 247 tokens par round dont 90 % servis par le cache**, soit ~61 M de tokens envoyés.
+L'estimation qui annonçait 3 h 20 se trompait d'un facteur deux, et c'est le cache qui l'explique :
+le briefing est identique d'un round à l'autre.
+
+🛑 **Ce 58 % ne se compare à AUCUN chiffre antérieur.** Les quatre passes du 2026-08-26 (58, 63, 62,
+61 %) ont été jouées contre les `fake*.ts`. Les seize cases qu'elles avaient cochées ont toutes été
+remises à `[ ]` avant cette passe, et les 163 cochées ici le sont sur un **3/3 de cette passe-ci**,
+rien d'autre. Un 3/3 est trois tirages, pas trois passes : il sépare 0/1 de 1/1, il ne dit pas
+qu'un scénario tiendra demain.
+
+**`MCP reached: 200/230`.** Les trente actions que `coverage.ts` déclarait couvertes et qu'aucun
+run n'a touchées — chacune est un outil publié sur le fil MCP que personne n'a vu marcher :
+`prompt.describeStyle`, `actions.find`, `files.undo`, `files.redo`, `files.history`,
+`cost.estimate`, `job.cancel`, `asset.reveal`, `layer.shape`, `guide.remove`, `clip.speed`,
+`track.add`, `skybox.source`, `cloud.explore`, `cloud.pull`, `node.geometry`, `model.textures`,
+`bone.remove`, `animation.remove`, `animation.block`, `key.all`, `git.diff`, `git.stage`,
+`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.remove`, `settings.action`,
+`accounts.activate`.
+
+### Ce que les chaînes disent, par volume
+
+Ces comptes portent sur les **runs RATÉS seuls** — le rapport n'imprime la chaîne que d'un run qui
+échoue. 1 440 appels y sont visibles, 769 `ok` et 390 refusés.
+
+- **133 runs ratés n'ont fait AUCUN appel**, répartis sur **80 scénarios**. C'est le premier défaut,
+  et de loin : le modèle répond en prose au lieu d'agir. 18 posent une question, 29 affirment ne pas
+  trouver, le reste affirme autre chose. « Quelle piste audio ? Je vois deux pistes audio dans le
+  document » est la forme pure du motif — il VOIT la réponse et demande quand même.
+- **384 appels sont le rejeu mot pour mot d'un appel déjà REFUSÉ**, soit 27 % des appels visibles.
+  **Zéro** appel est rejoué après un `ok` : des deux moitiés de la règle ajoutée à `WIDE_RULES`,
+  celle qui vise le `ok` a mordu, celle qui vise le refus n'a rien changé.
+- **178 `badInput` et 143 `wrongSurface`** dans les chaînes. Les deux plus gros nids sont écrits
+  ci-dessous : ce sont des défauts du banc et du produit, pas du modèle.
+- **Sept `<placeholder>` entre chevrons** subsistent (`<modelNodeId>`, `<shotId>`…), mais le motif a
+  changé de forme plutôt que de disparaître : le modèle écrit maintenant des noms de VARIABLE nus —
+  `nodeId=rimLightId`, `shotId=shotId`, `assetIds=asset-4`. 🛑 **Non comparable aux 23 d'avant** :
+  cinq passes de 192 scénarios à un run contre une passe de 364 à trois runs.
+- **Non mesuré** : « il écrit une valeur absolue là où la phrase dit *de plus* ». Le compter
+  demande de croiser chaque énoncé avec son état de départ, ce que le log ne porte pas.
+
+### Trois nids de refus, et aucun n'est la faute du modèle
+
+🛑 **`command.run` ne peut PAS marcher au banc, et c'est un mensonge du banc, pas un progrès.**
+86 refus `wrongSurface` sur 13 scénarios, **2 succès sur 88 appels** — et les deux étaient
+`window.fullScreen`. Le fake d'avant répondait `ok` sans rien faire ; le vrai passe par
+`commandRouter`, qui publie sur un bus auquel les **surfaces montées** s'abonnent. Sans fenêtre,
+rien n'est armé : `noSurface` → `wrongSurface`, pour `scene.undo`, `scene.capture`, `scene.snap`,
+`scene.space` comme pour toute commande qu'un document possède. **Toute la section 29 (annuler,
+refaire) est donc impassable au banc.** Qu'elle marche en production, dock monté, est une
+déduction que rien ici ne mesure. Ce qui reste mesurable de ces scénarios est ce que le modèle
+CHOISIT, et il choisit juste.
+
+🛑 **`rigHandlers.model()` dit `wrongSurface` pour « ce nœud n'est pas un modèle » — défaut de
+PRODUCTION.** Le helper rend `null` pour deux causes distinctes : aucune scène devant, ou un nœud
+qui n'est pas un `ModelNode`. Les deux retombent sur le même refus. Mesuré sur `13.5` :
+`scene.state` répond `ok` — la scène EST devant — et `animations.list` refuse `wrongSurface` seize fois de suite
+parce que la cible est une sphère. Le refus envoie le modèle réparer ce qui n'est pas cassé : il
+réactive le document, rouvre l'espace 3D, recommence. `notFound` est le mot juste et il existe
+déjà. 36 refus sur 4 scénarios.
+
+**`camera.target` exige un `shotId` que rien ne publie.** Même motif que celui qui a fait publier
+les nœuds et les pistes : le briefing ne nomme aucun plan de caméra, donc le modèle envoie l'id du
+nœud caméra, ou `shotId=shotId`. 15 `badInput`. Les plans sont restés hors de ce qui a été
+publié avec les nœuds et les clips — à arbitrer.
+
+### Ce que la passe a fait corriger, dans le PRODUIT
+
+Neuf défauts trouvés par ces chaînes, tous côté studio et non côté banc. Ils sont dans le même lot
+que cette mesure, donc **les 163 cases ci-dessous datent d'AVANT eux** : la passe suivante les
+réécrit.
+
+- **Un champ de LISTE refusait une valeur seule** (`readInput`). `assetIds: "asset-4"` valait
+  `badInput`, dix-huit fois dans une seule demande.
+- **`badInput` ne nommait rien** (`inputProblem`). Un refus dit désormais QUEL champ et CE QU'IL
+  PREND, jusqu'au client MCP et jusque dans l'historique que le modèle relit. C'est le remède aux
+  384 rejeux mot pour mot.
+- **Un nœud ne se désignait que par son id** (`nodeAimed`). Il s'atteint maintenant par son NOM
+  quand un seul nœud le porte — deux qui le partagent n'en désignent aucun, un choix silencieux
+  éditant le mauvais objet.
+- **`wrongSurface` disait « ce nœud n'est pas un modèle »** (`rigHandlers`). C'est `notFound`.
+- **`node.addModel` et `world.environment` acceptaient un asset INEXISTANT** — `<skyboxId>`, le
+  placeholder épelé, était écrit dans la scène et le client répondu `ok`. Les deux passent par
+  `withAsset`.
+- **`scene.undo` et `scene.redo` vivaient dans le composant du viewport** : hors de portée du menu
+  natif comme d'un client MCP. Ils sont dans `runSceneCommand`, avec le reste.
+- **Une édition qui n'écrit rien de neuf s'empilait dans l'historique** (`editNode.refuses`) : un
+  transform envoyé trois fois coûtait trois ⌘Z pour reprendre un seul changement.
+- **Le décor ne branchait ni la copie de fichiers ni l'écriture d'un asset** : `files.copy`
+  répondait `ok` avec un lot VIDE — le stub — et taguer un asset ne gardait rien.
+- **`read.openedFile` lisait `path || title`** : ouvrir une image fait un document image, dont le
+  chemin est `documents/<nom>.ora`. Le scénario `2.1` ne pouvait pas passer.
+
+🛑 **Ce qui reste et qui n'a pas été tranché** — chacun est une décision, pas un oubli :
+
+- **`command.run` répond `ok` quand la commande n'a rien à faire.** `scene.undo` sur une pile vide
+  est un `ok`, donc un modèle en envoie neuf et défait le décor. Le faire savoir demande que le
+  BUS de commandes remonte une réponse, ce qu'il ne fait pas : il publie et n'écoute rien.
+- **Les autres scopes du bus restent hors de portée sans fenêtre** — `canvas`, `sequence`,
+  `texture`, `skybox`. Leur logique vit dans des composants, contrairement à `runSceneCommand`.
+- **Les plans de caméra ne sont publiés nulle part**, d'où `camera.target shotId=shotId`.
+- **Une skybox du dossier `Skyboxes/` est indexée `image`** — son extension est `.png`, et
+  `assets.search type=skybox` ne trouve rien. Vrai dans le studio comme au banc.
+- **`activity.read`, `assets.describe` et les canaux `provider.*` ne sont pas modélisés** : les
+  scénarios qui les exercent mesurent un port vide.
 
 ## Quatre unités que le banc a d'abord lues de travers
 
@@ -172,70 +271,70 @@ le résultat : ça se relit à la main, et sept l'avaient fait.
 ## 1. Compréhension du projet — lecture seule
 
 - [ ] « Quel projet est actuellement ouvert et quels documents sont ouverts ? »
-- [ ] « Liste-moi les fichiers présents dans mon projet, classés par type. »
-- [ ] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D, de textures et de skyboxes ? »
-- [ ] « Quel document est actuellement actif ? »
+- [x] « Liste-moi les fichiers présents dans mon projet, classés par type. »
+- [x] « Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D, de textures et de skyboxes ? »
+- [x] « Quel document est actuellement actif ? »
 - [ ] « Quels sont les éléments présents dans la scène 3D actuellement ouverte ? »
 - [ ] « Quelles caméras et quelles lumières sont présentes dans ma scène ? »
-- [ ] « Donne-moi les propriétés de la caméra de la scène. »
-- [ ] « Quelle est la durée actuelle de ma timeline ? »
-- [ ] « Quels éléments sont actuellement sélectionnés ? »
+- [x] « Donne-moi les propriétés de la caméra de la scène. »
+- [x] « Quelle est la durée actuelle de ma timeline ? »
+- [x] « Quels éléments sont actuellement sélectionnés ? »
 
 ## 2. Navigation dans l'application
 
 - [ ] « Ouvre mon image du bateau. »
 - [ ] « Ouvre ma première vidéo. »
-- [ ] « Ouvre mon premier fichier audio. »
+- [x] « Ouvre mon premier fichier audio. »
 - [ ] « Ouvre ma scène 3D. »
 - [ ] « Ouvre la texture utilisée par mon premier modèle 3D. »
 - [ ] « Ouvre ma première skybox. »
-- [ ] « Reviens sur la scène 3D. »
+- [x] « Reviens sur la scène 3D. »
 
 ## 3. Recherche intelligente d'assets
 
-- [ ] « Trouve-moi l'image qui représente un bateau. »
-- [ ] « Trouve-moi tous les modèles 3D de personnages. »
+- [x] « Trouve-moi l'image qui représente un bateau. »
+- [x] « Trouve-moi tous les modèles 3D de personnages. »
 - [ ] « Trouve-moi les fichiers qui pourraient être utilisés comme environnement. »
-- [ ] « Trouve-moi toutes les textures associées à mon modèle 3D actuel. »
-- [ ] « Trouve-moi tous les fichiers audio utilisables dans un montage vidéo. »
-- [ ] « Trouve-moi les assets générés par IA qui concernent une voiture. »
+- [x] « Trouve-moi toutes les textures associées à mon modèle 3D actuel. »
+- [x] « Trouve-moi tous les fichiers audio utilisables dans un montage vidéo. »
+- [x] « Trouve-moi les assets générés par IA qui concernent une voiture. »
 
 ## 4. Gestion des fichiers et dossiers
 
-- [ ] « Crée un dossier Tests Assistant dans mon projet. »
+- [x] « Crée un dossier Tests Assistant dans mon projet. »
 - [x] « Dans Tests Assistant, crée un sous-dossier Images. »
-- [ ] « Duplique l'image du bateau dans ce dossier. »
+- [x] « Duplique l'image du bateau dans ce dossier. »
 - [ ] « Renomme cette copie bateau-test.png. »
 - [ ] « Déplace bateau-test.png dans le sous-dossier Images. »
 - [x] « Vérifie que le fichier existe bien à son nouvel emplacement. »
 - [x] « Supprime bateau-test.png. »
-- [x] « Supprime les dossiers de test que nous venons de créer. »
+- [ ] « Supprime les dossiers de test que nous venons de créer. »
 
 ## 5. Création de documents
 
-- [ ] « Crée une nouvelle scène 3D vide appelée Test MCP. »
-- [ ] « Crée un nouveau montage vidéo appelé Test Video. »
-- [ ] « Crée un nouveau montage audio appelé Test Audio. »
+- [x] « Crée une nouvelle scène 3D vide appelée Test MCP. »
+- [x] « Crée un nouveau montage vidéo appelé Test Video. »
+- [x] « Crée un nouveau montage audio appelé Test Audio. »
 - [ ] « Ferme Test Audio sans supprimer le fichier. »
-- [ ] « Rouvre Test MCP. »
+- [x] « Rouvre Test MCP. »
 
 ## 6. Manipulation simple d'une scène 3D
 
 Dans la scène Test MCP :
 
 - [ ] « Ajoute un cube au centre de la scène. »
-- [ ] « Renomme le cube Cube Test. »
-- [ ] « Place Cube Test à X 2, Y 1, Z -3. »
-- [ ] « Double sa taille. »
-- [ ] « Fais-le pivoter de 45 degrés sur l'axe Y. »
-- [ ] « Ajoute une sphère à droite du cube. »
+- [x] « Renomme le cube Cube Test. »
+- [x] « Place Cube Test à X 2, Y 1, Z -3. »
+- [x] « Double sa taille. »
+- [x] « Fais-le pivoter de 45 degrés sur l'axe Y. »
+- [x] « Ajoute une sphère à droite du cube. »
 - [ ] « Place la sphère exactement 2 mètres à droite du cube. »
 - [ ] « Duplique la sphère et place la copie à gauche du cube. »
-- [ ] « Renomme les deux sphères Sphere Droite et Sphere Gauche. »
-- [ ] « Perce une fenêtre dans le mur avec le cube. »
-- [ ] « Fusionne le mur et le cube en une seule forme. »
-- [ ] « Ne garde que la partie où le mur et le cube se chevauchent. »
-- [ ] « Sépare ce solide et rends-moi les formes d'origine. »
+- [x] « Renomme les deux sphères Sphere Droite et Sphere Gauche. »
+- [x] « Perce une fenêtre dans le mur avec le cube. »
+- [x] « Fusionne le mur et le cube en une seule forme. »
+- [x] « Ne garde que la partie où le mur et le cube se chevauchent. »
+- [x] « Sépare ce solide et rends-moi les formes d'origine. »
 
 ## 7. Manipulation relative — important
 
@@ -250,48 +349,48 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 ## 8. Lumières
 
 - [ ] « Ajoute une lumière directionnelle à la scène. »
-- [ ] « Renomme-la Soleil Test. »
+- [x] « Renomme-la Soleil Test. »
 - [ ] « Augmente son intensité de 25 %. »
 - [ ] « Ajoute une lumière ponctuelle au-dessus du cube. »
 - [ ] « Réduis son intensité de moitié. »
-- [ ] « Désactive Soleil Test. »
+- [x] « Désactive Soleil Test. »
 - [ ] « Réactive Soleil Test. »
 
 ## 9. Caméras
 
-- [ ] « Ajoute une nouvelle caméra appelée Camera Test. »
+- [x] « Ajoute une nouvelle caméra appelée Camera Test. »
 - [ ] « Place Camera Test face au cube. »
 - [ ] « Oriente Camera Test pour qu'elle regarde Cube Test. »
 - [ ] « Éloigne Camera Test de 2 mètres sans changer la cible qu'elle regarde. »
 - [ ] « Fais de Camera Test la caméra active. »
-- [ ] « Donne-moi maintenant sa position et sa rotation. »
+- [x] « Donne-moi maintenant sa position et sa rotation. »
 
 ## 10. Environnement 3D
 
 - [ ] « Active la grille de la scène. »
 - [ ] « Change l'environnement pour utiliser ma première skybox. »
-- [ ] « Réduis l'intensité de l'environnement à 0,7. »
-- [ ] « Active les ombres. »
+- [x] « Réduis l'intensité de l'environnement à 0,7. »
+- [x] « Active les ombres. »
 - [ ] « Mets la qualité des ombres au niveau le plus élevé disponible. »
 - [ ] « Change l'arrière-plan sans changer l'éclairage de la scène. »
 
 ## 11. Import d'assets dans une scène
 
 - [ ] « Ajoute mon premier modèle 3D dans Test MCP. »
-- [ ] « Place-le au centre de la scène. »
-- [ ] « Adapte automatiquement sa taille pour qu'il soit visible correctement. »
-- [ ] « Place Camera Test pour cadrer entièrement ce modèle. »
+- [x] « Place-le au centre de la scène. »
+- [x] « Adapte automatiquement sa taille pour qu'il soit visible correctement. »
+- [x] « Place Camera Test pour cadrer entièrement ce modèle. »
 - [ ] « Ajoute une deuxième instance du même modèle à sa droite. »
 
 ## 12. Textures et matériaux
 
-- [ ] « Sélectionne le modèle 3D que nous venons d'ajouter et donne-moi ses matériaux. »
-- [ ] « Change la couleur de base de son premier matériau en rouge. »
-- [ ] « Mets sa rugosité à 0,25. »
-- [ ] « Mets son métal à 0,8. »
+- [x] « Sélectionne le modèle 3D que nous venons d'ajouter et donne-moi ses matériaux. »
+- [x] « Change la couleur de base de son premier matériau en rouge. »
+- [x] « Mets sa rugosité à 0,25. »
+- [x] « Mets son métal à 0,8. »
 - [ ] « Assigne une texture de mon projet à sa couleur de base. »
 - [ ] « Ajoute une normal map si une texture compatible existe dans le projet. »
-- [ ] « Remets le matériau dans son état précédent. »
+- [x] « Remets le matériau dans son état précédent. »
 - [ ] « Rends ce modèle importé plus mat, sa rugosité à 0,8. »
 
 ## 13. Timeline 3D
@@ -299,16 +398,16 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 - [ ] « Mets la durée de la scène à 10 secondes. »
 - [ ] « Anime Cube Test pour qu'il parte de sa position actuelle à 0 seconde et arrive 5 mètres plus haut à 5 secondes. »
 - [ ] « À 10 secondes, fais-le revenir à sa position initiale. »
-- [ ] « Ajoute une rotation complète du cube entre 0 et 10 secondes. »
+- [x] « Ajoute une rotation complète du cube entre 0 et 10 secondes. »
 - [ ] « Fais commencer l'animation de Sphere Droite à 2 secondes. »
 - [ ] « Supprime uniquement l'animation de rotation du cube sans supprimer son animation de position. »
 
 ## 14. Animation de caméra
 
-- [ ] « Anime Camera Test pour qu'elle se rapproche progressivement du cube entre 0 et 5 secondes. »
+- [x] « Anime Camera Test pour qu'elle se rapproche progressivement du cube entre 0 et 5 secondes. »
 - [ ] « Pendant son déplacement, garde la caméra orientée vers Cube Test. »
 - [ ] « Entre 5 et 10 secondes, fais tourner la caméra autour du cube. »
-- [ ] « Vérifie qu'à aucun moment la caméra ne perd Cube Test de vue. »
+- [x] « Vérifie qu'à aucun moment la caméra ne perd Cube Test de vue. »
 
 ## 15. Montage vidéo
 
@@ -324,10 +423,10 @@ Dans Test Video :
 ## 16. Audio dans le montage vidéo
 
 - [ ] « Ajoute mon premier fichier audio sur A1 au début du montage. »
-- [ ] « Réduis son volume à 50 %. »
-- [ ] « Fais un fondu d'entrée d'une seconde. »
-- [ ] « Fais un fondu de sortie de deux secondes. »
-- [ ] « Coupe l'audio exactement à la durée du montage vidéo. »
+- [x] « Réduis son volume à 50 %. »
+- [x] « Fais un fondu d'entrée d'une seconde. »
+- [x] « Fais un fondu de sortie de deux secondes. »
+- [x] « Coupe l'audio exactement à la durée du montage vidéo. »
 
 ## 17. Montage audio
 
@@ -343,7 +442,7 @@ Dans Test Audio :
 
 Sur une copie de l'image du bateau :
 
-- [ ] « Duplique cette image avant de la modifier. »
+- [x] « Duplique cette image avant de la modifier. »
 - [ ] « Renomme la copie bateau-edition-test. »
 - [x] « Réduis son opacité à 70 %. »
 - [ ] « Déplace-la de 100 pixels vers la droite. »
@@ -363,8 +462,8 @@ Sur une copie de l'image du bateau :
 
 ## 20. Génération IA simple
 
-- [x] « Génère une image photoréaliste d'une voiture rouge dans une rue de Paris. »
-- [x] « Enregistre le résultat dans Images. »
+- [ ] « Génère une image photoréaliste d'une voiture rouge dans une rue de Paris. »
+- [ ] « Enregistre le résultat dans Images. »
 - [ ] « Génère une deuxième variante à partir de cette image. »
 - [ ] « Utilise l'image générée comme référence et transforme la voiture rouge en voiture bleue. »
 - [ ] « Conserve les deux versions dans le projet. »
@@ -373,12 +472,12 @@ Sur une copie de l'image du bateau :
 
 - [ ] « Utilise l'image du bateau de mon projet comme référence et génère une variante de nuit. »
 - [ ] « Utilise cette nouvelle image comme référence pour créer une version sous une tempête. »
-- [x] « Génère une texture inspirée des couleurs du bateau actuellement ouvert. »
+- [ ] « Génère une texture inspirée des couleurs du bateau actuellement ouvert. »
 - [ ] « Génère un environnement cohérent avec l'image du bateau. »
 
 ## 22. Génération 3D
 
-- [x] « Génère un modèle 3D d'un coffre en bois. »
+- [ ] « Génère un modèle 3D d'un coffre en bois. »
 - [x] « Ajoute le résultat dans mon projet. »
 - [ ] « Ouvre le modèle généré. »
 - [ ] « Ajoute-le à Test MCP. »
@@ -397,14 +496,14 @@ Ne rien donner de plus au modèle.
 
 - [ ] « Mets le bateau dans ma vidéo. »
 - [ ] « Mets la voiture dans la scène. »
-- [ ] « Fais le cube un peu plus gros. »
+- [x] « Fais le cube un peu plus gros. »
 - [ ] « Éclaire mieux mon modèle. »
 - [ ] « Cadre correctement le personnage. »
 - [ ] « Fais durer ça deux secondes de plus. »
 - [ ] « Mets le son moins fort. »
 - [ ] « Fais regarder la caméra vers le personnage. »
-- [ ] « Utilise cette image comme texture. »
-- [ ] « Fais une variante de ça. »
+- [x] « Utilise cette image comme texture. »
+- [x] « Fais une variante de ça. »
 
 On vérifie qu'il exploite le contexte, et qu'il ne demande une précision que lorsque
 l'ambiguïté empêche réellement d'agir.
@@ -414,10 +513,10 @@ l'ambiguïté empêche réellement d'agir.
 À la suite, sans repartir de zéro :
 
 - [ ] « Ajoute un cube. »
-- [ ] « Mets-le à droite. »
+- [x] « Mets-le à droite. »
 - [ ] « Duplique-le. »
 - [ ] « Mets la copie à gauche. »
-- [ ] « Agrandis-la. »
+- [x] « Agrandis-la. »
 - [ ] « Fais-les tourner de 45 degrés. »
 - [ ] « Supprime le premier. »
 - [ ] « Centre celui qui reste. »
@@ -426,13 +525,13 @@ l'ambiguïté empêche réellement d'agir.
 
 ## 26. Modification après interrogation
 
-- [ ] « Quelle est la position de Cube Test ? »
+- [x] « Quelle est la position de Cube Test ? »
 - [ ] « Ajoute 2 à sa valeur Y. »
 - [ ] « Quelle est maintenant sa position ? »
 
 Puis :
 
-- [ ] « Quelle est l'intensité de Soleil Test ? »
+- [x] « Quelle est l'intensité de Soleil Test ? »
 - [ ] « Multiplie-la par deux. »
 - [ ] « Vérifie la nouvelle valeur. »
 
@@ -441,24 +540,24 @@ Lecture → calcul → écriture → relecture.
 ## 27. Actions conditionnelles
 
 - [ ] « Si Test MCP contient déjà une caméra appelée Camera Test, ne la recrée pas ; sinon crée-la. »
-- [ ] « Si le cube existe, mets-le à Y = 0 ; sinon crée un cube à Y = 0. »
+- [x] « Si le cube existe, mets-le à Y = 0 ; sinon crée un cube à Y = 0. »
 - [ ] « Si une skybox est déjà utilisée, donne-moi son nom avant de la remplacer par ma deuxième skybox. »
 - [ ] « Ajoute une lumière seulement s'il n'y a actuellement aucune lumière directionnelle. »
 
 ## 28. Actions en masse
 
-- [ ] « Sélectionne tous les objets 3D sauf les caméras et les lumières. »
-- [ ] « Déplace tous ces objets d'un mètre vers le haut. »
+- [x] « Sélectionne tous les objets 3D sauf les caméras et les lumières. »
+- [x] « Déplace tous ces objets d'un mètre vers le haut. »
 - [ ] « Réduis tous les fichiers audio du montage à 60 % de volume. »
 - [ ] « Masque tous les calques image sauf celui du bateau. »
-- [ ] « Donne-moi la liste des éléments que tu viens de modifier. »
+- [x] « Donne-moi la liste des éléments que tu viens de modifier. »
 
 ## 29. Undo / sécurité
 
-- [ ] « Déplace Cube Test à X = 50. »
+- [x] « Déplace Cube Test à X = 50. »
 - [ ] « Annule ma dernière modification. »
 - [ ] « Vérifie que Cube Test est revenu à sa position précédente. »
-- [ ] « Supprime Sphere Droite. »
+- [x] « Supprime Sphere Droite. »
 - [ ] « Annule la suppression. »
 - [ ] « Vérifie que Sphere Droite existe de nouveau. »
 
@@ -488,15 +587,15 @@ En une seule phrase :
 
 ## 34. Compréhension autonome d'une scène
 
-- [ ] « Analyse la scène 3D actuelle et dis-moi ce qui pourrait poser problème avant de modifier quoi que ce soit. »
+- [x] « Analyse la scène 3D actuelle et dis-moi ce qui pourrait poser problème avant de modifier quoi que ce soit. »
 - [ ] « Corrige automatiquement les problèmes simples que tu peux résoudre sans changer l'intention de la scène. »
-- [ ] « Dis-moi précisément ce que tu as changé. »
+- [x] « Dis-moi précisément ce que tu as changé. »
 
 ## 35. Vérification après action
 
 - [ ] « Vérifie que toutes les actions que je t'ai demandé d'effectuer sur Test MCP ont réellement été appliquées. »
-- [ ] « Compare l'état actuel de la scène avec ce que je t'ai demandé. »
-- [ ] « Liste uniquement les actions qui n'ont pas produit le résultat attendu. »
+- [x] « Compare l'état actuel de la scène avec ce que je t'ai demandé. »
+- [x] « Liste uniquement les actions qui n'ont pas produit le résultat attendu. »
 
 ## 36. Final — « directeur de studio »
 
@@ -510,27 +609,27 @@ Puis, sans autre contexte :
 
 Enfin :
 
-- [ ] « Vérifie tout ce que tu viens de faire et indique-moi les éventuelles erreurs ou incohérences restantes. »
+- [x] « Vérifie tout ce que tu viens de faire et indique-moi les éventuelles erreurs ou incohérences restantes. »
 
 ## 37. Le ciel
 
 Un ciel ouvert, `Ciel Test` — **l'espace, jamais le fichier** : un `.png` de `Skyboxes/` s'ouvre en
 document IMAGE, et tout `skybox.*` est alors refusé avant d'atteindre un gestionnaire.
 
-- [ ] « Quelle image sert de ciel en ce moment, et à quelle intensité ? »
+- [x] « Quelle image sert de ciel en ce moment, et à quelle intensité ? »
 - [ ] « Utilise ma première skybox comme image de ce ciel. »
-- [ ] « Monte l'intensité du soleil à 3. »
-- [ ] « Réduis l'intensité de l'environnement du ciel à 0,4. »
-- [ ] « Augmente le contraste et la saturation de ce ciel. »
-- [ ] « Remets les réglages colorimétriques du ciel à zéro. »
-- [ ] « Affiche les sondes de lumière de ce ciel. »
+- [x] « Monte l'intensité du soleil à 3. »
+- [x] « Réduis l'intensité de l'environnement du ciel à 0,4. »
+- [x] « Augmente le contraste et la saturation de ce ciel. »
+- [x] « Remets les réglages colorimétriques du ciel à zéro. »
+- [x] « Affiche les sondes de lumière de ce ciel. »
 
 ## 38. La matière
 
 Une matière ouverte, `Matière Test` — même remarque que pour le ciel : c'est l'espace qui l'ouvre.
 
-- [ ] « De quoi est faite cette matière et quelles images porte-t-elle ? »
-- [ ] « Mets sa couleur de base en bleu. »
+- [x] « De quoi est faite cette matière et quelles images porte-t-elle ? »
+- [x] « Mets sa couleur de base en bleu. »
 - [ ] « Assigne ma texture de planches à son canal de couleur de base. »
 - [ ] « Ajoute la normal map correspondante sur son canal de relief. »
 - [ ] « Fais tourner l'aperçu de la matière et monte l'intensité de son environnement. »
@@ -539,33 +638,33 @@ Une matière ouverte, `Matière Test` — même remarque que pour le ciel : c'es
 
 Sur l'image du bateau ouverte :
 
-- [ ] « Quelle est la taille de ce document et combien de calques porte-t-il ? »
-- [ ] « Passe ce document en 1080 sur 1080. »
-- [ ] « Sélectionne le calque Bateau. »
-- [ ] « Duplique le calque Bateau. »
-- [ ] « Verrouille le calque Bateau pour ne plus y toucher. »
-- [ ] « Ajoute un calque de texte qui dit Bonjour. »
+- [x] « Quelle est la taille de ce document et combien de calques porte-t-il ? »
+- [x] « Passe ce document en 1080 sur 1080. »
+- [x] « Sélectionne le calque Bateau. »
+- [x] « Duplique le calque Bateau. »
+- [x] « Verrouille le calque Bateau pour ne plus y toucher. »
+- [x] « Ajoute un calque de texte qui dit Bonjour. »
 
 ## 40. Les pistes et la tête de lecture
 
 Sur un montage vidéo portant deux plans et un fond sonore :
 
-- [ ] « Place la tête de lecture à 3 secondes. »
+- [x] « Place la tête de lecture à 3 secondes. »
 - [ ] « Coupe le premier plan en deux à 3 secondes. »
-- [ ] « Supprime le deuxième plan du montage. »
+- [x] « Supprime le deuxième plan du montage. »
 - [ ] « Sélectionne le premier plan. »
 - [ ] « Renomme la piste audio Ambiance. »
-- [ ] « Coupe le son de la piste audio. »
+- [x] « Coupe le son de la piste audio. »
 - [ ] « Supprime la piste audio et tout ce qu'elle porte. »
 
 ## 41. Documents et projet
 
-- [ ] « Ouvre le document Scène 1 qui est dans mon dossier documents. »
+- [x] « Ouvre le document Scène 1 qui est dans mon dossier documents. »
 - [ ] « Renomme ce document Scène Finale. »
-- [ ] « Enregistre le document ouvert. »
-- [ ] « Ferme Scène Finale et supprime son fichier du projet. »
+- [x] « Enregistre le document ouvert. »
+- [x] « Ferme Scène Finale et supprime son fichier du projet. »
 - [ ] « Exporte la scène ouverte dans mon dossier documents. »
-- [ ] « Crée un nouveau projet appelé Démo Assistant. »
+- [x] « Crée un nouveau projet appelé Démo Assistant. »
 - [ ] « Rouvre mon projet Démo. »
 - [ ] « Renomme mon projet Démo Assistant. »
 
@@ -573,21 +672,21 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 
 - [ ] « Copie l'image du bateau dans mon dossier Textures sans la déplacer. »
 - [ ] « Montre-moi l'historique de mes dernières opérations sur les fichiers. »
-- [ ] « Qu'est-ce que j'ai ouvert récemment dans ce projet ? »
+- [x] « Qu'est-ce que j'ai ouvert récemment dans ce projet ? »
 - [ ] « Refais l'opération que je viens d'annuler. »
-- [ ] « Montre-moi l'image du bateau dans le Finder. »
-- [ ] « Ouvre la fiche d'informations de l'image du bateau. »
+- [x] « Montre-moi l'image du bateau dans le Finder. »
+- [x] « Ouvre la fiche d'informations de l'image du bateau. »
 
 ## 43. Bibliothèque et compte
 
 - [ ] « Donne-moi les informations que tu as sur l'image du bateau. »
 - [ ] « Supprime de ma bibliothèque l'image que tu viens de générer. »
-- [ ] « Y a-t-il des assets de ma bibliothèque dont le fichier a disparu ? »
+- [x] « Y a-t-il des assets de ma bibliothèque dont le fichier a disparu ? »
 - [ ] « Décris-moi ce que représente l'image du bateau et range-la avec des mots-clés. »
-- [ ] « Montre-moi le fichier de l'image du bateau sur mon disque. »
-- [ ] « Suis-je connecté à mon compte Scenario ? »
+- [x] « Montre-moi le fichier de l'image du bateau sur mon disque. »
+- [x] « Suis-je connecté à mon compte Scenario ? »
 - [ ] « Combien de crédits me reste-t-il ce mois-ci ? »
-- [ ] « Quels comptes ai-je enregistrés ? »
+- [x] « Quels comptes ai-je enregistrés ? »
 - [ ] « Bascule sur mon deuxième compte. »
 - [ ] « Renomme ce compte Studio Perso. »
 
@@ -595,21 +694,21 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 
 Après une génération lancée :
 
-- [ ] « Où en sont mes générations ? »
+- [x] « Où en sont mes générations ? »
 - [ ] « Donne-moi le résultat de ma dernière génération. »
 - [ ] « Annule la génération en cours. »
 - [ ] « Arrête la tâche d'indexation qui tourne. »
-- [ ] « Quels réglages accepte le modèle image que j'ai armé ? »
+- [x] « Quels réglages accepte le modèle image que j'ai armé ? »
 - [ ] « Combien me coûterait cette génération avant que je la lance ? »
 
 ## 45. Le vocabulaire de l'assistant
 
-- [ ] « Ouvre les préférences par le menu, comme si je cliquais dessus. »
+- [x] « Ouvre les préférences par le menu, comme si je cliquais dessus. »
 - [ ] « De quoi es-tu capable au sujet des calques ? »
-- [ ] « Ferme la fenêtre de discussion. »
-- [ ] « Prends le calque Bateau comme cible de mes prochaines demandes. »
+- [x] « Ferme la fenêtre de discussion. »
+- [x] « Prends le calque Bateau comme cible de mes prochaines demandes. »
 - [ ] « Propose-moi trois prompts pour générer un port au coucher du soleil. »
-- [ ] « Traduis ce prompt en anglais avant de le lancer : un bateau en bois sur une mer calme. »
+- [x] « Traduis ce prompt en anglais avant de le lancer : un bateau en bois sur une mer calme. »
 - [ ] « Décris-moi le style de mon image du bateau, en une phrase réutilisable comme prompt. »
 
 ## 46. Formes, chemins et texte 3D
@@ -617,8 +716,8 @@ Après une génération lancée :
 Dans la scène Test MCP :
 
 - [ ] « Change le cube en cylindre. »
-- [ ] « Ajoute un panneau plat qui porte l'image du bateau et qui fait toujours face à la caméra. »
-- [ ] « Ajoute un texte 3D qui dit Studio au-dessus du cube. »
+- [x] « Ajoute un panneau plat qui porte l'image du bateau et qui fait toujours face à la caméra. »
+- [x] « Ajoute un texte 3D qui dit Studio au-dessus du cube. »
 - [ ] « Trace un chemin fermé qui part du cube et va vers la droite. »
 - [ ] « Ajoute un point à ce chemin, deux mètres plus loin. »
 - [ ] « Déplace le deuxième point du chemin d'un mètre vers le haut. »
@@ -629,17 +728,17 @@ Dans la scène Test MCP :
 
 Dans la scène Test MCP, avec Camera Test :
 
-- [ ] « Crée un rail de caméra qui part de la gauche et arrive à droite du cube. »
+- [x] « Crée un rail de caméra qui part de la gauche et arrive à droite du cube. »
 - [ ] « Fais suivre ce rail à Camera Test. »
 - [ ] « Mets Camera Test en premier dans la liste des caméras. »
 - [ ] « Passe la vue en vue de dessus. »
-- [ ] « Affiche la scène en fil de fer. »
+- [x] « Affiche la scène en fil de fer. »
 - [ ] « Prends une capture de la vue actuelle et range-la dans mes images. »
 
 ## 48. Le monde
 
-- [ ] « Applique un préréglage d'éclairage de studio à la scène. »
-- [ ] « Ajoute un brouillard léger. »
+- [x] « Applique un préréglage d'éclairage de studio à la scène. »
+- [x] « Ajoute un brouillard léger. »
 - [ ] « Ajoute un sol sous mes objets. »
 - [ ] « Passe le rendu en qualité maximale. »
 
@@ -649,7 +748,7 @@ Dans la scène Test MCP, avec une animation déjà posée :
 
 - [ ] « Quelles animations porte cette scène ? »
 - [ ] « Découpe cette animation en un bloc de 0 à 5 secondes. »
-- [ ] « Active la pose automatique de clés pendant que je travaille. »
+- [x] « Active la pose automatique de clés pendant que je travaille. »
 - [ ] « Efface la clé posée à 5 secondes. »
 - [ ] « Efface toutes les clés de Cube Test. »
 - [ ] « Décale toutes les clés de Cube Test de 2 secondes vers la droite. »
@@ -659,78 +758,78 @@ Dans la scène Test MCP, avec une animation déjà posée :
 
 Sur mon personnage principal, dans la scène Test MCP :
 
-- [ ] « Ce personnage a-t-il déjà un squelette ? »
-- [ ] « Pose un squelette adapté à sa taille. »
-- [ ] « Ajoute les mains à ce squelette. »
+- [x] « Ce personnage a-t-il déjà un squelette ? »
+- [x] « Pose un squelette adapté à sa taille. »
+- [x] « Ajoute les mains à ce squelette. »
 - [ ] « Ajoute un os supplémentaire au bout de son bras droit. »
 - [ ] « Renomme cet os Main Droite. »
 - [ ] « Dis que cet os est la main droite du personnage. »
 - [ ] « Supprime l'os que je viens d'ajouter. »
 - [ ] « Ajoute une contrainte IK sur sa jambe gauche. »
 - [ ] « Retire cette contrainte IK. »
-- [ ] « Enlève complètement le squelette de ce personnage. »
+- [x] « Enlève complètement le squelette de ce personnage. »
 
 ## 51. Calques avancés et repères
 
 Sur l'image du bateau, avec deux calques :
 
-- [ ] « Regroupe mes deux calques dans un groupe appelé Fond. »
-- [ ] « Dégroupe le groupe Fond. »
-- [ ] « Fusionne le calque du dessus avec celui d'en dessous. »
-- [ ] « Ajoute un rectangle rouge en bas de l'image. »
-- [ ] « Ajoute un calque de réglage qui monte le contraste. »
+- [x] « Regroupe mes deux calques dans un groupe appelé Fond. »
+- [x] « Dégroupe le groupe Fond. »
+- [x] « Fusionne le calque du dessus avec celui d'en dessous. »
+- [x] « Ajoute un rectangle rouge en bas de l'image. »
+- [x] « Ajoute un calque de réglage qui monte le contraste. »
 - [ ] « Ajoute un masque au calque Bateau. »
 - [ ] « Recadre l'image sur un carré centré. »
-- [ ] « Fais pivoter le document de 90 degrés vers la droite. »
-- [ ] « Pose un repère vertical au milieu de l'image. »
+- [x] « Fais pivoter le document de 90 degrés vers la droite. »
+- [x] « Pose un repère vertical au milieu de l'image. »
 - [ ] « Déplace ce repère au tiers de la largeur. »
 - [ ] « Supprime ce repère. »
 
 ## 52. Le montage — liens et ordre des pistes
 
-- [ ] « Détache le son de ma première vidéo pour pouvoir le déplacer seul. »
+- [x] « Détache le son de ma première vidéo pour pouvoir le déplacer seul. »
 - [ ] « Fais passer la piste audio au-dessus de la piste vidéo. »
 
 ## 53. Styles de génération
 
-- [ ] « Quels styles ai-je enregistrés ? »
+- [x] « Quels styles ai-je enregistrés ? »
 - [ ] « Enregistre le style de mon image du bateau sous le nom Marine. »
-- [ ] « Renomme ce style Marine Nuit. »
-- [ ] « Supprime le style Marine Nuit. »
+- [x] « Renomme ce style Marine Nuit. »
+- [x] « Supprime le style Marine Nuit. »
 
 ## 54. Le nuage Scenario
 
-- [ ] « Montre-moi ce que contient ma bibliothèque en ligne. »
+- [x] « Montre-moi ce que contient ma bibliothèque en ligne. »
 - [ ] « Cherche des voitures rouges dans ma bibliothèque en ligne. »
 - [ ] « Trouve-moi en ligne des images qui ressemblent à mon bateau. »
 - [ ] « Dis-moi ce que téléchargerait une synchronisation, avant de la lancer. »
 - [ ] « Télécharge dans mon projet les images en ligne qui manquent ici. »
-- [ ] « Envoie l'image du bateau dans ma bibliothèque en ligne. »
+- [x] « Envoie l'image du bateau dans ma bibliothèque en ligne. »
 
 ## 55. La fenêtre et les panneaux
 
-- [ ] « Dans quel état est ma fenêtre en ce moment ? »
+- [x] « Dans quel état est ma fenêtre en ce moment ? »
 - [ ] « Passe en plein écran. »
-- [ ] « Ouvre les préférences. »
+- [x] « Ouvre les préférences. »
 - [ ] « Quels panneaux puis-je ouvrir ? »
-- [ ] « Ouvre le panneau des calques. »
-- [ ] « Ferme le panneau des calques. »
+- [x] « Ouvre le panneau des calques. »
+- [x] « Ferme le panneau des calques. »
 - [ ] « Ouvre un miroir de la vue sur mon second écran. »
-- [ ] « Ouvre le manuel au chapitre du montage vidéo. »
-- [ ] « Quels sont mes favoris ? »
-- [ ] « Mets l'image du bateau en favori. »
+- [x] « Ouvre le manuel au chapitre du montage vidéo. »
+- [x] « Quels sont mes favoris ? »
+- [x] « Mets l'image du bateau en favori. »
 - [ ] « Retire l'image du bateau de mes favoris. »
 
 ## 56. Le système
 
-- [ ] « Une mise à jour est-elle disponible ? »
+- [x] « Une mise à jour est-elle disponible ? »
 - [ ] « Installe la mise à jour et redémarre. »
-- [ ] « La dictée est-elle prête à être utilisée ? »
-- [ ] « Lance la dictée. »
-- [ ] « Arrête la dictée. »
-- [ ] « Mon ordinateur peut-il encoder de la vidéo en accéléré matériel ? »
+- [x] « La dictée est-elle prête à être utilisée ? »
+- [x] « Lance la dictée. »
+- [x] « Arrête la dictée. »
+- [x] « Mon ordinateur peut-il encoder de la vidéo en accéléré matériel ? »
 - [ ] « Ajoute à mon projet la vidéo que je viens de déposer sur la fenêtre. »
-- [ ] « Quelles polices puis-je utiliser pour un texte ? »
+- [x] « Quelles polices puis-je utiliser pour un texte ? »
 
 ## 57. Réglages et mémoire du projet
 
@@ -748,23 +847,23 @@ Sur un projet suivi par git :
 - [ ] « Montre-moi mes dernières versions enregistrées. »
 - [ ] « Quels fichiers a changé ma dernière version ? »
 - [ ] « Montre-moi ce qui a changé dans l'image du bateau depuis la dernière version. »
-- [ ] « Quelles branches ai-je dans ce projet ? »
-- [ ] « Quelles mises de côté ai-je en attente ? »
-- [ ] « Mets ce projet sous suivi de versions. »
+- [x] « Quelles branches ai-je dans ce projet ? »
+- [x] « Quelles mises de côté ai-je en attente ? »
+- [x] « Mets ce projet sous suivi de versions. »
 - [ ] « Prépare l'image du bateau pour la prochaine version. »
 - [ ] « Retire l'image du bateau de ce qui est préparé. »
 - [ ] « Annule mes modifications sur l'image du bateau et reviens à la dernière version. »
-- [ ] « Enregistre une version appelée Premier jet. »
-- [ ] « Crée une branche appelée essai-couleurs. »
-- [ ] « Bascule sur la branche essai-couleurs. »
-- [ ] « Mets mon travail en cours de côté. »
+- [x] « Enregistre une version appelée Premier jet. »
+- [x] « Crée une branche appelée essai-couleurs. »
+- [x] « Bascule sur la branche essai-couleurs. »
+- [x] « Mets mon travail en cours de côté. »
 - [ ] « Reprends le travail que j'avais mis de côté. »
 - [ ] « Jette la mise de côté que je n'utiliserai pas. »
-- [ ] « Pose une étiquette v1 sur la version actuelle. »
+- [x] « Pose une étiquette v1 sur la version actuelle. »
 - [ ] « J'ai un conflit sur l'image du bateau : garde ma version. »
 - [ ] « Abandonne la fusion en cours. »
-- [ ] « Quels dépôts distants sont configurés ? »
-- [ ] « Ajoute mon dépôt distant origin, sur https://example.com/demo.git. »
-- [ ] « Récupère ce qui a changé sur le dépôt distant. »
-- [ ] « Récupère et applique les changements du dépôt distant. »
+- [x] « Quels dépôts distants sont configurés ? »
+- [x] « Ajoute mon dépôt distant origin, sur https://example.com/demo.git. »
+- [x] « Récupère ce qui a changé sur le dépôt distant. »
+- [x] « Récupère et applique les changements du dépôt distant. »
 - [ ] « Envoie mes versions sur le dépôt distant. »

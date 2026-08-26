@@ -127,6 +127,21 @@ function editNode(
       }
       return patch(state, id, typeof changes === 'function' ? changes(node, state) : changes)
     },
+    /**
+     * 🛑 An edit that writes what the node already carries costs a ⌘Z that moves nothing — the
+     * defect `refuses` exists for. Measured on the bench pass of 2026-08-25: a client sent one
+     * transform three times, then had to undo three times to take one change back.
+     */
+    refuses: state => {
+      const node = nodeById(state, id)
+      if (!node) return true
+
+      const wanted = typeof changes === 'function' ? changes(node, state) : changes
+      return Object.entries(wanted).every(
+        ([key, value]) =>
+          JSON.stringify(value) === JSON.stringify(node[key as keyof SceneNode] as unknown),
+      )
+    },
     revert: state => (previous ? patch(state, id, previous) : state),
   }
 }

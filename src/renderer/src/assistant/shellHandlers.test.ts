@@ -70,7 +70,7 @@ describe('what surrounds the documents', () => {
     expect(await runAction('help.open', { page: 'manual' })).toMatchObject({ ok: true })
     expect(open).toHaveBeenCalledWith('manual')
 
-    expect(await runAction('help.open', { page: 'about' })).toEqual({
+    expect(await runAction('help.open', { page: 'about' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -83,7 +83,7 @@ describe('what surrounds the documents', () => {
     expect(await runAction('settings.open', { section: 'general' })).toMatchObject({ ok: true })
     expect(open).toHaveBeenCalledWith('general')
 
-    expect(await runAction('settings.open', { section: 'colours' })).toEqual({
+    expect(await runAction('settings.open', { section: 'colours' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -108,7 +108,7 @@ describe('what surrounds the documents', () => {
   it('refuses a file the catalogue would not take rather than reporting it adopted', async () => {
     installFakeBridge({ media: { adopt: vi.fn(async () => null) } })
 
-    expect(await runAction('media.adopt', { path: 'Plans/a.raw' })).toEqual({
+    expect(await runAction('media.adopt', { path: 'Plans/a.raw' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

@@ -1,10 +1,21 @@
 import { orElse } from '@shared/promises'
 import { create } from 'zustand'
-import { HISTORY_MAX, type AssistantCall, type AssistantModel } from '@shared/domain/assistant'
+import {
+  HISTORY_MAX,
+  refused,
+  type AssistantCall,
+  type AssistantModel,
+} from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
 import type { ConfirmRequest } from '@/assistant/confirm'
-import { assistantHistory, type AssistantStep, type AssistantTurn } from '@/assistant/conversation'
+import {
+  assistantHistory,
+  repeatedRelative,
+  repeatKeyOf,
+  type AssistantStep,
+  type AssistantTurn,
+} from '@/assistant/conversation'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
 
@@ -347,10 +358,21 @@ async function ranAll(
         return false
       }
 
-      const outcome = await runConfirmedAction(call.action, call.input)
+      /**
+       * 🛑 A relative call run twice in one turn ADDS twice — the one repeat an absolute value
+       * survives. Refused rather than run, and the refusal says so: a model that repeats is
+       * what this whole field was measured against.
+       */
+      const key = repeatKeyOf(call.action, call.input)
+      const outcome = repeatedRelative(steps, key)
+        ? refused('badInput', ALREADY_APPLIED)
+        : await runConfirmedAction(call.action, call.input)
+
       steps.push({
         action: call.action,
         refusal: outcome.ok ? null : outcome.refusal,
+        ...(!outcome.ok && outcome.detail !== undefined ? { detail: outcome.detail } : {}),
+        ...(outcome.ok && key !== null ? { repeatKey: key } : {}),
         ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
       })
       patch(set, id, { steps: [...steps] })
@@ -367,6 +389,11 @@ async function ranAll(
 function lastSeen(state: Pick<AssistantState, 'turns'>): number {
   return state.turns.at(-1)?.id ?? 0
 }
+
+/** What a repeated relative call is told — it names the fix, since the value itself was right. */
+const ALREADY_APPLIED =
+  'that exact relative change already ran in this turn, and running it again would apply it ' +
+  'twice. Read the value that stands before asking for another change.'
 
 /** Rewrites one turn in place, leaving the others as they were. */
 function patch(

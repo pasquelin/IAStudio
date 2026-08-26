@@ -1076,6 +1076,7 @@
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
       "nodeKind": "What to add",
+      "relative": "Set true to give CHANGES rather than final values: position and rotation are ADDED to what stands, scale and intensity MULTIPLY it. One metre up is positionY 1 with relative true; half is scaleX 0.5 with relative true",
       "positionX": "Position in width",
       "positionY": "Position in height",
       "positionZ": "Position towards the viewer",

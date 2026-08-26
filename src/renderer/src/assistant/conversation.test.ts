@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { HISTORY_BLOCK_MAX } from '@shared/domain/assistant'
-import { assistantHistory, type AssistantStep, type AssistantTurn } from './conversation'
+import {
+  assistantHistory,
+  repeatedRelative,
+  repeatKeyOf,
+  type AssistantStep,
+  type AssistantTurn,
+} from './conversation'
 
 const turn = (fields: Partial<AssistantTurn> = {}): AssistantTurn => ({
   id: 1,
@@ -144,5 +150,33 @@ describe('a block long enough to be refused', () => {
     const [block = ''] = assistantHistory([long(1)])
 
     expect(block).not.toContain('earlier steps not shown')
+  })
+})
+
+/**
+ * 🛑 An absolute call repeated writes the same value; a RELATIVE one adds again. Measured on the
+ * bench pass of 2026-08-26: « 20 degrés de plus » was sent twice and turned the cube by 40.
+ */
+describe('a relative call sent twice in one turn', () => {
+  const call = { nodeId: 'n-1', rotationY: 0.35, relative: true }
+
+  it('is keyed only when the change is relative', () => {
+    expect(repeatKeyOf('node.transform', call)).toBeTruthy()
+    expect(repeatKeyOf('node.transform', { nodeId: 'n-1', rotationY: 0.35 })).toBeNull()
+  })
+
+  it('is seen as already run, and only once it has actually run', () => {
+    const key = repeatKeyOf('node.transform', call)
+    const step = (refusal: AssistantStep['refusal']): AssistantStep => ({
+      action: 'node.transform',
+      refusal,
+      repeatKey: key ?? '',
+    })
+    const ran = [step(null)]
+    const missed = [step('badInput')]
+
+    expect(repeatedRelative(ran, key)).toBe(true)
+    expect(repeatedRelative(missed, key)).toBe(false)
+    expect(repeatedRelative([], key)).toBe(false)
   })
 })

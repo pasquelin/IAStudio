@@ -42,8 +42,23 @@ function update(input: Record<string, unknown>): Promise<ActionOutcome> {
   return withBridge(bridge => bridge.assets.update(textOf(input, 'assetId') ?? '', changes))
 }
 
+/**
+ * 🛑 A search that matched nothing answers WHAT THE PROJECT HOLDS, by kind.
+ *
+ * Measured on the bench pass of 2026-08-26: 35 requests died on « je ne trouve pas ». A bare
+ * empty list is a dead end — the counts say whether to look again with another word, or to tell
+ * the person the project has none of it.
+ */
+async function searchAssets(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const found = await withBridge(bridge => bridge.assets.search(queryOf(input)))
+  if (!found.ok || (Array.isArray(found.data) && found.data.length > 0)) return found
+
+  const counts = await withBridge(bridge => bridge.assets.counts())
+  return counts.ok ? { ok: true, data: { found: [], projectHolds: counts.data } } : found
+}
+
 export const ASSET_HANDLERS: ActionHandlers = {
-  'assets.search': input => withBridge(bridge => bridge.assets.search(queryOf(input))),
+  'assets.search': input => searchAssets(input),
   'assets.counts': () => withBridge(bridge => bridge.assets.counts()),
   'asset.update': update,
 

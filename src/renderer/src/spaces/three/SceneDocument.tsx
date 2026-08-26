@@ -408,8 +408,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // see `runSceneCommand`. What is left below is what only this viewport can answer for.
       if (runSceneCommand(documentId, command)) return
 
-      const store = useScenes.getState()
-
       switch (command) {
         // Each of these LEAVES navigation. `useShortcuts` only swallows the motion keys, so `V`,
         // `G` and `R` reach here mid-flight: left alone, the gizmo changed under a captured
@@ -461,10 +459,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         // native menu takes the focus — the keyups then go to it and the boost stays held.
         case 'scene.add':
           return engine.current?.flying ? undefined : openNodeMenu(documentId, null)
-        case 'scene.undo':
-          return store.undo(documentId)
-        case 'scene.redo':
-          return store.redo(documentId)
       }
     },
     [documentId, view, cycleDisplay, armTool],

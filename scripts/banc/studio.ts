@@ -18,6 +18,7 @@ import { describeStudio } from '@main/assistant/studioState'
 import { frontTargets } from '@/assistant/documentTargets'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
+import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { lendPictureMeasure } from '@/spaces/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
@@ -27,6 +28,7 @@ import { frontDocumentIn, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { runSceneCommand } from '@/spaces/three/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
 import { createMemoryCatalog, type MemoryCatalog } from './memoryCatalog'
 import { WHEN } from './project'
@@ -120,6 +122,9 @@ export async function createStudio(
       renameFile: ops.rename,
       moveFiles: ops.move,
       duplicateFiles: paths => ops.duplicate(paths),
+      // Missing until the bench pass of 2026-08-25, where `files.copy` answered `ok` with an
+      // empty batch three times over — the stub's own answer, and nothing had been copied.
+      pasteFiles: (paths, into, cut) => (cut ? ops.move(paths, into) : ops.duplicate(paths, into)),
       trashFiles: ops.trash,
       newFolder: ops.createFolder,
       undoFile: ops.undo,
@@ -137,6 +142,17 @@ export async function createStudio(
     assets: {
       search: query => catalog.search(query),
       counts: () => catalog.countByType(),
+      // Left to the stub until the bench pass of 2026-08-25: tagging an asset was answered by a
+      // channel that kept nothing, so « range-la avec des mots-clés » could not be measured.
+      update: async (assetId, changes) => {
+        const held = await catalog.find(assetId)
+        if (!held) throw new Error(`no asset ${assetId}`)
+
+        return await catalog.add({ ...held, ...changes, tags: [...(changes.tags ?? held.tags)] })
+      },
+      remove: async assetIds => {
+        for (const one of assetIds) await catalog.remove(one)
+      },
     },
     // What `openProjectFile` asks before it decides between a document and an asset.
     media: {
@@ -223,7 +239,26 @@ export async function createStudio(
     }
   }
 
+  /**
+   * 🛑 The one scope a headless run can stand in for, and it delegates rather than reimplements:
+   * `runSceneCommand` is the function the viewport itself calls. The other scopes stay unarmed —
+   * their commands live inside components, so `command.run` still answers `wrongSurface` there.
+   */
+  const followTheCommandBus = (): (() => void) => {
+    const disarm = armCommandScope('scene')
+    const stop = subscribeToCommands(command => {
+      const scene = frontDocumentIn(useDocuments.getState(), '3d')
+      return scene !== null && runSceneCommand(scene, command)
+    })
+
+    return () => {
+      stop()
+      disarm()
+    }
+  }
+
   const leaveTheDock = followTheDock()
+  const leaveTheCommandBus = followTheCommandBus()
 
   const run = async (
     action: ActionName,
@@ -279,6 +314,7 @@ export async function createStudio(
       closeGenerator()
       giveBackMeasure()
       leaveTheDock()
+      leaveTheCommandBus()
       // `installFakeBridge` stubs `window.studio`; left standing it keeps this run's whole decor
       // — folder, catalogue, git, shell — reachable until the next scenario replaces it.
       vi.unstubAllGlobals()

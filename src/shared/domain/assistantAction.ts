@@ -417,7 +417,14 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
  * across the boundary: the MCP server hands this to its client. A refusal carries a key rather
  * than a sentence, for the reason the list above gives — it is read in two languages.
  */
-export type ActionOutcome = { ok: true; data?: unknown } | { ok: false; refusal: ActionRefusal }
+export type ActionOutcome =
+  | { ok: true; data?: unknown }
+  /**
+   * `detail` says WHAT was wrong, in English and for a machine — never for the screen, which
+   * reads `refusalKey`. A refusal that names nothing is one a caller cannot repair: measured on
+   * the bench pass of 2026-08-25, 384 calls were sent again word for word after a refusal.
+   */
+  | { ok: false; refusal: ActionRefusal; detail?: string }
 
 export function refusalKey(refusal: ActionRefusal): string {
   return `assistant.refusals.${refusal}`
@@ -437,7 +444,11 @@ export function needsConfirmation(commitment: ActionCommitment): boolean {
 }
 
 /** A refusal, spelled once for the ten modules that hand one back. */
-export const refused = (refusal: ActionRefusal): ActionOutcome => ({ ok: false, refusal })
+export const refused = (refusal: ActionRefusal, detail?: string): ActionOutcome => ({
+  ok: false,
+  refusal,
+  ...(detail === undefined ? {} : { detail }),
+})
 
 /**
  * What each kind accepts, as a check rather than as a name.
@@ -521,3 +532,82 @@ export function validatesInput(
     )
   })
 }
+
+/**
+ * The input a handler will read, or `null` when it does not fit the registry.
+ *
+ * 🛑 A lone value fills a `repeated` field. Measured on the bench pass of 2026-08-25: a model
+ * writing `assetIds: "asset-4"` was refused `badInput`, learnt nothing from it, and sent the
+ * same call again — 18 refusals in one request, on a value that was right.
+ */
+export function readInput(
+  fields: readonly ActionField[],
+  input: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const listed: Record<string, unknown> = { ...input }
+  for (const field of fields) {
+    const value = listed[field.key]
+    if (field.repeated && value !== undefined && !Array.isArray(value)) listed[field.key] = [value]
+  }
+
+  return validatesInput(fields, listed) ? listed : null
+}
+
+/** How a field is named back to a caller: its key, and what it takes. */
+function wants(field: ActionField): string {
+  const kind = field.repeated ? `a list of ${field.kind}` : field.kind
+  return field.options ? `${kind}, one of: ${field.options.join(', ')}` : kind
+}
+
+/**
+ * Why this input was refused, for the caller that has to repair it — `null` when nothing is wrong.
+ *
+ * 🛑 ONE problem, the first found: a list of five reads as a broken call rather than as a field
+ * to fix, and the model then rewrites the whole thing instead of the one value.
+ */
+export function inputProblem(
+  fields: readonly ActionField[],
+  input: Record<string, unknown>,
+): string | null {
+  for (const key of Object.keys(input)) {
+    if (!fields.some(field => field.key === key)) {
+      return `no field "${key}" — this action takes: ${fields.map(one => one.key).join(', ')}`
+    }
+  }
+
+  for (const field of fields) {
+    const value = input[field.key]
+    if (value === undefined) {
+      if (field.required) return `"${field.key}" is required — ${wants(field)}`
+      continue
+    }
+
+    if (isEmpty(value)) return EMPTY_VALUE(field.key)
+    if (typeof value === 'string' && PLACEHOLDER.test(value))
+      return WROTE_PLACEHOLDER(field.key, value)
+    if (field.repeated && !Array.isArray(value)) return `"${field.key}" wants ${wants(field)}`
+    const items = field.repeated && Array.isArray(value) ? value : [value]
+    if (!items.every(item => fits(field, item))) return `"${field.key}" wants ${wants(field)}`
+  }
+
+  return null
+}
+
+/** `<the id>`, `$ASSET_ID`, `{{path}}` — a shape a caller writes when it has no value to write. */
+const PLACEHOLDER = /^(<.*>|\$[A-Z_]+|\{\{.*\}\}|TODO|xxx+)$/i
+
+const WROTE_PLACEHOLDER = (key: string, value: string): string =>
+  `"${key}" reads ${value}, which is a placeholder and not a value. Nothing here fills one in: ` +
+  `run the call that answers it, then send this one again with what came back.`
+
+const isEmpty = (value: unknown): boolean =>
+  value === null || value === '' || (Array.isArray(value) && value.length === 0)
+
+/**
+ * 🛑 What an EMPTY value is told, and it says what to do rather than what is wrong: measured on
+ * the bench pass of 2026-08-26, 41 calls carried a field the caller had not been answered yet —
+ * a search and the call reading its result, sent in one breath.
+ */
+const EMPTY_VALUE = (key: string): string =>
+  `"${key}" was empty — you do not have that value yet. Run the call that answers it, ` +
+  `then send this one again on the NEXT round with what came back.`

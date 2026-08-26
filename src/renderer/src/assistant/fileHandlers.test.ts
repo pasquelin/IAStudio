@@ -158,7 +158,7 @@ describe('changing the project folder', () => {
     const trashFiles = vi.fn(async () => BATCH)
     withProject({ project: { trashFiles } })
 
-    expect(await runAction('files.trash', { paths: [] })).toEqual({
+    expect(await runAction('files.trash', { paths: [] })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -183,7 +183,7 @@ describe('opening and making a project', () => {
   it('reports a folder that was no project as a refusal', async () => {
     useProject.setState({ open: vi.fn(async () => false) })
 
-    expect(await runAction('project.open', { path: '/tmp/vide' })).toEqual({
+    expect(await runAction('project.open', { path: '/tmp/vide' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -380,7 +380,7 @@ describe('opening a file of the project', () => {
     withProject({ project: { fileFacts: vi.fn(async () => folder) } })
     useDocuments.setState({ stored: [], documents: {} })
 
-    expect(await runAction('file.open', { path: 'Images' })).toEqual({
+    expect(await runAction('file.open', { path: 'Images' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

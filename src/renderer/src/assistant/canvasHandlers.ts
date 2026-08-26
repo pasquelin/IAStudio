@@ -266,17 +266,32 @@ function style(input: Record<string, unknown>): ActionOutcome {
 
 function transform(input: Record<string, unknown>): ActionOutcome {
   const degrees = numberOf(input, 'rotation')
+  const by = boolOf(input, 'relative')
+
+  // A move is ADDED and a scale MULTIPLIED — « 100 pixels à droite » against « de 20 % ».
+  const shifted = (key: string, held: number): number => {
+    const given = numberOf(input, key)
+    if (given === null) return held
+    if (!by) return given
+
+    return key.startsWith('scale') ? held * given : held + given
+  }
 
   return editLayer(input, layer => [
     setLayerTransform(layer.id, {
       ...layer.transform,
-      x: numberOf(input, 'x') ?? layer.transform.x,
-      y: numberOf(input, 'y') ?? layer.transform.y,
-      scaleX: numberOf(input, 'scaleX') ?? layer.transform.scaleX,
-      scaleY: numberOf(input, 'scaleY') ?? layer.transform.scaleY,
+      x: shifted('x', layer.transform.x),
+      y: shifted('y', layer.transform.y),
+      scaleX: shifted('scaleX', layer.transform.scaleX),
+      scaleY: shifted('scaleY', layer.transform.scaleY),
       // Degrees in, radians stored: a client writing 90 for a quarter turn is right more often
       // than one writing 1.5707963.
-      rotation: degrees === null ? layer.transform.rotation : toRadians(degrees),
+      rotation:
+        degrees === null
+          ? layer.transform.rotation
+          : by
+            ? layer.transform.rotation + toRadians(degrees)
+            : toRadians(degrees),
     }),
   ])
 }

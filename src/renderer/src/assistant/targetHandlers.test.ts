@@ -26,7 +26,7 @@ describe('target.select', () => {
   })
 
   it('refuses a call that names nothing, without reaching a space', () => {
-    expect(aim({})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(aim({})).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(aimAt).not.toHaveBeenCalled()
   })
 })

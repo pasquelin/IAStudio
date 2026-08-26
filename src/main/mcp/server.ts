@@ -72,14 +72,21 @@ function protocolServer(run: McpDeps['run'], version: string): Server {
     return outcome.ok
       ? { content: [{ type: 'text', text: JSON.stringify(outcome.data ?? { done: true }) }] }
       : // The refusal in English, from the same bundle line the person read in their own
-        // language a second ago. One reason, two renderings.
+        // language a second ago. One reason, two renderings — plus what was wrong with the
+        // input, without which a client can only send the same call again.
         {
           isError: true,
-          content: [{ type: 'text', text: englishText(refusalKey(outcome.refusal)) }],
+          content: [{ type: 'text', text: refusalText(outcome) }],
         }
   })
 
   return server
+}
+
+/** What a refused call is told, in English: the reason, and the field to repair when there is one. */
+function refusalText(outcome: Extract<ActionOutcome, { ok: false }>): string {
+  const why = englishText(refusalKey(outcome.refusal))
+  return outcome.detail === undefined ? why : `${why} — ${outcome.detail}`
 }
 
 async function serveMcp(

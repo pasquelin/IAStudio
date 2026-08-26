@@ -29,7 +29,8 @@ export type ShortcutsOptions = {
    * `publishCommand`. Those reach it in a background tab too; keys never do.
    */
   documentId?: string
-  onCommand: (command: CommandId) => void
+  /** `false` says the surface had nothing to do with it — an undo on an empty stack. */
+  onCommand: (command: CommandId) => boolean | void
   /** Fires when the held set actually changes — never on a frame tick. */
   onMotionChange?: (held: Set<MotionId>) => void
   /**
@@ -80,9 +81,12 @@ export function useShortcuts({
   useEffect(
     () =>
       subscribeToCommands((command, to) => {
-        if (commandDescriptor(command)?.scope !== scope) return
-        if (to === null ? !listens : to !== documentId) return
-        handlers.current.onCommand(command)
+        if (commandDescriptor(command)?.scope !== scope) return false
+        if (to === null ? !listens : to !== documentId) return false
+
+        // `void` from a surface means it acted: only one that says `false` outright is reported
+        // as having done nothing.
+        return handlers.current.onCommand(command) !== false
       }),
     [scope, listens, documentId, handlers],
   )

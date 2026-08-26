@@ -37,8 +37,11 @@ describe('the command bus', () => {
    * other. Iterating the live set would then skip the listener that follows it.
    */
   it('survives a listener that unsubscribes while being called', () => {
-    const second = vi.fn()
-    const stop = subscribeToCommands(() => stop())
+    const second = vi.fn(() => true)
+    const stop = subscribeToCommands(() => {
+      stop()
+      return true
+    })
     const stopSecond = subscribeToCommands(second)
 
     publishCommand('canvas.flatten')

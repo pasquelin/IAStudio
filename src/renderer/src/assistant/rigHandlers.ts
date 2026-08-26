@@ -26,6 +26,7 @@ import {
   removeAnimationTrack,
   setTimelineSettings,
   unkeySubject,
+  unkeySubjectWholly,
 } from '@/engines/scene/animationCommands'
 import { clampPlayhead } from '@/engines/scene/animationEval'
 import { clipsEdited, clipsMoved, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
@@ -56,6 +57,7 @@ import { clipsOfNode, rigOfNode, useModelClips } from '@/stores/modelClips'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
 import { boolOf, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { nodeAimed } from './nodeAimed'
 
 /**
  * The skeleton of a character, the handles its joints reach for, and the blocks laid on its band.
@@ -67,8 +69,19 @@ function model(input: Record<string, unknown>): { documentId: string; node: Mode
   const documentId = activeSceneId(useDocuments.getState())
   if (documentId === null) return null
 
-  const node = nodeById(sceneOf(useScenes.getState(), documentId), textOf(input, 'nodeId') ?? '')
+  const node = nodeAimed(sceneOf(useScenes.getState(), documentId), textOf(input, 'nodeId') ?? '')
   return node?.type === 'model' ? { documentId, node } : null
+}
+
+/**
+ * Why `model` answered nothing — the scene is not in front, or the node named is not a model.
+ *
+ * 🛑 One refusal for both sent the model repairing what was not broken: measured on the bench
+ * pass of 2026-08-25, `animations.list` aimed at a sphere answered `wrongSurface` sixteen times
+ * while the scene WAS in front, and the model kept re-activating the document.
+ */
+function noModel(): ActionOutcome {
+  return refused(activeSceneId(useDocuments.getState()) === null ? 'wrongSurface' : 'notFound')
 }
 
 /** Runs one command on the model named, refusing before it rather than writing nothing. */
@@ -77,7 +90,7 @@ function editModelOf(
   build: (node: ModelNode, documentId: string) => Command<SceneState> | null,
 ): ActionOutcome {
   const open = model(input)
-  if (!open) return refused('wrongSurface')
+  if (!open) return noModel()
 
   const command = build(open.node, open.documentId)
   if (!command) return refused('notFound')
@@ -97,7 +110,7 @@ function boneOf(node: ModelNode, name: string | null): string | null {
  */
 function fitRig(input: Record<string, unknown>): ActionOutcome {
   const open = model(input)
-  if (!open) return refused('wrongSurface')
+  if (!open) return noModel()
 
   const bounds = rigOfNode(useModelClips.getState(), open.documentId, open.node.id)?.bounds
   if (!bounds) return refused('notFound')
@@ -110,7 +123,7 @@ function fitRig(input: Record<string, unknown>): ActionOutcome {
 /** What the panels read off a character: its bones, their roles, its handles and its blocks. */
 function rigState(input: Record<string, unknown>): ActionOutcome {
   const open = model(input)
-  if (!open) return refused('wrongSurface')
+  if (!open) return noModel()
 
   const rig = open.node.model.rig
   return {
@@ -150,7 +163,7 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
   // Read against what the model can actually play, so a name its file does not spell is a refusal
   // rather than a block that stands on the band and plays nothing.
   const open = model(input)
-  if (!open) return refused('wrongSurface')
+  if (!open) return noModel()
   const playable =
     source === 'embedded'
       ? clipsOfNode(useModelClips.getState(), open.documentId, open.node.id)
@@ -174,7 +187,7 @@ async function bundledNames(): Promise<readonly string[]> {
 
 async function listAnimations(input: Record<string, unknown>): Promise<ActionOutcome> {
   const open = model(input)
-  if (!open) return refused('wrongSurface')
+  if (!open) return noModel()
 
   return {
     ok: true,
@@ -409,10 +422,17 @@ export const RIG_HANDLERS: ActionHandlers = {
 
   'key.pose': keyPose,
 
+  /**
+   * 🛑 No instant named clears them ALL, and that is the difference from the window's own diamond:
+   * a client cannot see the playhead, so « efface toutes les clés » had no call to make.
+   */
   'key.clear': input =>
-    editKeys(input, ({ state, at }) =>
-      unkeySubject(state, tracksOfSubject(state, subjectOf(input)), at),
-    ),
+    editKeys(input, ({ state, at }) => {
+      const tracks = tracksOfSubject(state, subjectOf(input))
+      return numberOf(input, 'timeSeconds') === null
+        ? unkeySubjectWholly(state, tracks)
+        : unkeySubject(state, tracks, at)
+    }),
 
   'key.all': input =>
     editKeys(input, ({ state, at }) =>

@@ -78,7 +78,7 @@ describe('the sky', () => {
     const inCloud: Asset = { ...PICTURE, location: 'cloud' }
     installFakeBridge({ assets: { search: vi.fn(async () => [inCloud]) } })
 
-    expect(await runAction('skybox.source', { assetId: PICTURE.id })).toEqual({
+    expect(await runAction('skybox.source', { assetId: PICTURE.id })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -87,7 +87,7 @@ describe('the sky', () => {
 
   // A call that names no dial at all would be an empty history entry.
   it('refuses a call that changes nothing', async () => {
-    expect(await runAction('skybox.adjust', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('skybox.adjust', {})).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   it('refuses every action of the family while no sky is in front', async () => {
@@ -140,7 +140,7 @@ describe('the material', () => {
   })
 
   it('refuses a channel the material does not have', async () => {
-    expect(await runAction('texture.channel', { channel: 'gloss' })).toEqual({
+    expect(await runAction('texture.channel', { channel: 'gloss' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -197,7 +197,7 @@ describe('how a sky is looked at', () => {
   it('refuses a call that names nothing at all', async () => {
     withSky()
 
-    expect(await runAction('skybox.view', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('skybox.view', {})).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 })
 
@@ -236,7 +236,7 @@ describe('the two halves of a material nothing could write', () => {
   it('refuses a repeat the panel does not offer', async () => {
     withMaterial()
 
-    expect(await runAction('texture.preview', { tilingPreview: 3 })).toEqual({
+    expect(await runAction('texture.preview', { tilingPreview: 3 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

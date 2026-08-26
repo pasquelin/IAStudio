@@ -63,12 +63,16 @@ describe('reading a character', () => {
     expect((outcome as { data: { bones: unknown[] } }).data.bones).toHaveLength(2)
   })
 
-  it('refuses a node that is not a model, and one the scene does not hold', async () => {
+  /**
+   * `notFound` and not `wrongSurface`: the scene IS in front. One refusal for both sent a model
+   * re-activating the document sixteen times over — bench pass of 2026-08-25.
+   */
+  it('refuses a node the scene does not hold as missing, not as the wrong surface', async () => {
     installCharacter()
 
     expect(await runAction('rig.state', { nodeId: 'node-z' })).toEqual({
       ok: false,
-      refusal: 'wrongSurface',
+      refusal: 'notFound',
     })
   })
 })
@@ -190,7 +194,10 @@ describe('the band of a character', () => {
     expect(scene().animation.fps).toBe(before)
     expect(scene().animation.duration).toBeGreaterThan(0)
 
-    expect(await runAction('animation.settings', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await runAction('animation.settings', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 
   it('turns automatic keying on, which nothing saves with the document', async () => {
@@ -255,8 +262,8 @@ describe('the three places a motion comes from', () => {
 
     expect(
       await runAction('animation.add', { nodeId, assetId: 'asset-run', clipName: 'Marche' }),
-    ).toEqual({ ok: false, refusal: 'badInput' })
-    expect(await runAction('animation.add', { nodeId, source: 'embedded' })).toEqual({
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('animation.add', { nodeId, source: 'embedded' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -327,7 +334,7 @@ describe('what one block of the band plays', () => {
   it('refuses a call that names the block and nothing else', async () => {
     const { nodeId, clipId } = await laid()
 
-    expect(await runAction('animation.block', { nodeId, clipId })).toEqual({
+    expect(await runAction('animation.block', { nodeId, clipId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -394,7 +401,7 @@ describe('the keys of the band', () => {
     })
     expect(tracks()[0]?.keys[0]?.time).toBe(secondsToUs(2))
 
-    expect(await runAction('key.move', { trackId, fromSeconds: 0, toSeconds: 3 })).toEqual({
+    expect(await runAction('key.move', { trackId, fromSeconds: 0, toSeconds: 3 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -416,7 +423,7 @@ describe('the keys of the band', () => {
     const trackId = tracks()[0]?.id ?? ''
 
     expect(await runAction('channel.flags', { trackId, locked: true })).toEqual({ ok: true })
-    expect(await runAction('channel.remove', { trackId })).toEqual({
+    expect(await runAction('channel.remove', { trackId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -438,9 +445,26 @@ describe('the keys of the band', () => {
       ok: false,
       refusal: 'notFound',
     })
-    expect(await runAction('channel.flags', { trackId: tracks()[0]?.id ?? '' })).toEqual({
+    expect(await runAction('channel.flags', { trackId: tracks()[0]?.id ?? '' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
+  })
+})
+
+/**
+ * 🛑 A client cannot see the playhead, so « efface toutes les clés » had no call to make: the
+ * same `key.clear` was sent over and over on the bench pass of 2026-08-26, each one clearing at
+ * most the key under the head.
+ */
+describe('clearing the keys of a subject', () => {
+  it('takes them all when no instant is named, and one when there is', async () => {
+    const nodeId = installCharacter()
+    await runAction('key.pose', { nodeId, timeSeconds: 0 })
+    await runAction('key.pose', { nodeId, timeSeconds: 2 })
+
+    expect(await runAction('key.clear', { nodeId, timeSeconds: 0 })).toEqual({ ok: true })
+    expect(await runAction('key.clear', { nodeId })).toEqual({ ok: true })
+    expect(await runAction('key.clear', { nodeId })).toMatchObject({ ok: false })
   })
 })

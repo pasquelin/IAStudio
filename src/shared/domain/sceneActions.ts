@@ -62,6 +62,20 @@ const vector = (
   required: false,
 })
 
+/**
+ * 🛑 What turns « d'un mètre vers le haut » into one call instead of three.
+ *
+ * Without it a caller has to read the pose, do the arithmetic and write the result — measured on
+ * the bench pass of 2026-08-26, section 7 scored 0 on five requests, every one of them written
+ * as an absolute. The field's own label carries the rule, since that is what a model reads.
+ */
+const RELATIVE: ActionField = {
+  key: 'relative',
+  kind: 'boolean',
+  labelKey: 'assistant.fields.relative',
+  required: false,
+}
+
 /** An optional dial, spelled once for the forty-odd that only differ by their bounds. */
 const dial = (key: string, bounds: { min?: number; max?: number } = {}): ActionField => ({
   key,
@@ -254,6 +268,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
       vector('x', 'scale'),
       vector('y', 'scale'),
       vector('z', 'scale'),
+      RELATIVE,
     ],
   }),
   action({
@@ -466,6 +481,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         required: false,
       },
       dial('intensity', { min: 0 }),
+      RELATIVE,
       // Zero means no falloff at all — three.js reads it as "reaches everywhere".
       dial('distance', { min: 0 }),
       dial('decay', { min: 0, max: 4 }),
