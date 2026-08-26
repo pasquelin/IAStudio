@@ -14,7 +14,7 @@ import { ToggleField } from '@/design/ToggleField'
 import { ToolButton } from '@/design/ToolButton'
 import { EmptyState } from '@/design/EmptyState'
 import { postEffectFields } from '@/engines/scene/propertyFields'
-import { keyAt, postAt } from '@/engines/scene/animationEval'
+import { postAt } from '@/engines/scene/animationEval'
 import {
   addPostEffect,
   applyPostStack,
@@ -142,7 +142,7 @@ export function PostProcessingSection({
     if (!effect || !spec?.animatable) return null
 
     const channel = channels.get(name)
-    const keyed = channel !== undefined && keyAt(channel.keys, keying.at) !== undefined
+    const keyed = channel?.keys.some(key => key.time === keying.at) ?? false
     const value = live?.params[name]
 
     return (
