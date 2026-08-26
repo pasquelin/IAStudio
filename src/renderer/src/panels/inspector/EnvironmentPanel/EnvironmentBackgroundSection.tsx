@@ -8,7 +8,7 @@ import { SliderField } from '@/design/SliderField'
 import type { GestureProps } from '@/design/styles'
 import { backgroundOfKind } from '@/engines/scene/sceneWorld'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { choicesOf } from './environmentChoices'
+import { choicesOf } from '../unionChoices'
 
 export type EnvironmentBackgroundSectionProps = {
   world: SceneWorld

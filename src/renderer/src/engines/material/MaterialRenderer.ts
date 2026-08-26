@@ -25,6 +25,8 @@ import {
 } from './materialShader'
 import { previewGeometry } from './previewGeometry'
 import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/material'
+import type { EnvironmentRef } from '@shared/domain/scene'
+import type { EnvironmentDress } from '@shared/domain/skybox'
 import {
   contentOf,
   DEFAULT_PREVIEW,
@@ -44,6 +46,11 @@ export type MaterialRendererOptions = {
   assetVersion?: (assetId: string) => string | undefined
   /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
   livePreview?: (assetId: string) => ImageBitmap | null
+  /**
+   * What the ENVIRONMENT a preview names is worth to it. Synchronous, like `assetVersion`: the
+   * window answers from the open tab or the copy read off disk. Absent, the studio lights it.
+   */
+  environmentDress?: (environment: EnvironmentRef) => EnvironmentDress | null
 }
 
 /** Radians per second of auto spin — slow enough to read a normal map, fast enough to see. */
@@ -92,7 +99,17 @@ export class MaterialRenderer {
   private spinning = false
   private readonly sky: SkyBinding
 
+  /** What the environment a preview names is worth to it — resolved by the window, never here. */
+  private readonly environmentDress: MaterialRendererOptions['environmentDress']
+  /** What the preview was last lit ON. `undefined` until a first apply, so `null` is an answer. */
+  private lit: EnvironmentDress | null | undefined
+  /** What the document NAMES, so a sky edited elsewhere can be resolved again — see `lightAgain`. */
+  private named: EnvironmentRef | null = null
+  /** The preview's own dial, which the sky's strength rides under — see `applyEnvironment`. */
+  private envIntensity = 1
+
   constructor(options: MaterialRendererOptions) {
+    this.environmentDress = options.environmentDress
     this.cache = createTextureCache(
       options.loadTexture,
       (assetId, error) => reportFailure('material.map', assetId, error),
@@ -352,9 +369,15 @@ export class MaterialRenderer {
 
   private async applyEnvironment({ preview }: MaterialState): Promise<void> {
     const environment = this.environment
+    this.named = preview.environment
+    this.envIntensity = preview.envIntensity
     if (!environment) return
 
-    environment.setIntensity(preview.envIntensity)
+    // Held by IDENTITY, which `environmentDressOf` makes stable: this runs on every value a drag
+    // emits, and `sky.apply` allocates a promise before it can decide there is nothing to do.
+    const dress = this.environmentDress?.(preview.environment) ?? null
+    // The sky's own strength rides UNDER the preview's, exactly as it does under a scene's.
+    environment.setIntensity(preview.envIntensity * (dress?.intensity ?? 1))
     environment.setRotation(preview.envRotation)
     environment.setBackgroundVisible(preview.showBackground)
     // On the edge only: `apply` runs on every value a drag emits, and restarting the clock there
@@ -362,7 +385,24 @@ export class MaterialRenderer {
     if (preview.autoSpin && !this.spinning) this.viewport.resetClock()
     this.spinning = preview.autoSpin
 
-    await this.sky.apply(environment, preview.environment)
+    if (dress === this.lit) return
+    this.lit = dress
+
+    await this.sky.apply(environment, dress)
+  }
+
+  /**
+   * The sky it names says the preview is lit again — its picture, its sun or its strength moved,
+   * and what the document names did not.
+   */
+  lightAgain(): void {
+    const environment = this.environment
+    const dress = this.named ? (this.environmentDress?.(this.named) ?? null) : null
+    if (!environment || dress === this.lit) return
+
+    this.lit = dress
+    environment.setIntensity(this.envIntensity * (dress?.intensity ?? 1))
+    void this.sky.apply(environment, dress)
   }
 
   /** The backdrop, unless a sky is hanging behind the subject — in which case the sky is it. */

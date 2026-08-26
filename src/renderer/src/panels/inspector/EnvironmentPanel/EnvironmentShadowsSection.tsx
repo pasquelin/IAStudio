@@ -11,7 +11,7 @@ import {
   shadowsCapped,
 } from '@/engines/scene/shadowLevels'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { choicesOf } from './environmentChoices'
+import { choicesOf } from '../unionChoices'
 
 export type EnvironmentShadowsSectionProps = {
   view: Settings['three']

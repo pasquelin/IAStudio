@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useMaterials } from '@/stores/materials'
-import { useMaterialSources } from '@/stores/materialSources'
+import { onMaterialsRead } from '@/stores/materialSources'
 import { useLatest } from './useLatest'
 
 /**
@@ -29,10 +29,7 @@ export function useMaterialRefresh(refresh: (materialIds: readonly string[]) => 
 
     // And the copies read off DISK: closing a tab hands the model back to its file, and the read
     // that answers lands a beat later with nothing subscribed to it — the model stayed undressed.
-    const files = useMaterialSources.subscribe((state, before) => {
-      const landed = Object.keys(state.copies).filter(id => state.copies[id] !== before.copies[id])
-      if (landed.length > 0) latest.current(landed)
-    })
+    const files = onMaterialsRead(landed => latest.current(landed))
 
     return () => {
       tabs()

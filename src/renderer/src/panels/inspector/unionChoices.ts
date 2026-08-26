@@ -1,9 +1,7 @@
 /**
- * One row per value of a union, labelled from the bundle, for the `SelectField` every section of
- * this panel draws its choices with.
- *
- * A module beside the sections rather than inside one of them: several of them build rows the
- * same way, and importing one section from another closes a cycle.
+ * One row per value of a union, labelled from the bundle, for the `SelectField` an inspector
+ * section draws its choices with. Beside the sections rather than inside one of them: several
+ * build rows the same way, and importing one section from another closes a cycle.
  *
  * The keys are composed at runtime, so a guard is what holds them rather than the compiler: the
  * unions of `domain/scene` in `shared/i18n/bundles.test.ts`, the panel's own two in

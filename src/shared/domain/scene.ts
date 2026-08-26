@@ -405,11 +405,18 @@ export function clipFromAnimation(animation: AnimationRef): ClipRef {
 }
 
 /**
- * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters
- * it — so a brand new document is already lit without the studio shipping an HDRI; anything else
- * is a skybox of the project, named by asset id like every other reference a document stores.
+ * What lights a viewport, and the same three-way choice a model's dress is: nothing of the
+ * project, one PICTURE, or a DOCUMENT the scene follows.
+ *
+ * `studio` is procedural — three builds a small lit room and prefilters it — so a brand new
+ * document is already lit without the studio shipping an HDRI.
+ *
+ * `skybox` is one picture, hung as it is. `sky` names a sky DOCUMENT and takes everything it
+ * says: the graded picture, its sun, its environment intensity. A reference and not a copy, so
+ * turning the sun in that document turns the shadows of every scene naming it.
  */
-export type EnvironmentRef = { kind: 'studio' } | { kind: 'skybox'; assetId: string }
+export type EnvironmentRef =
+  { kind: 'studio' } | { kind: 'skybox'; assetId: string } | { kind: 'sky'; documentId: string }
 
 export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio' })
 
@@ -419,7 +426,7 @@ export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio'
  * The two are EXCLUSIVE, and that is the whole reason a panel names them: a scene is lit by one
  * prefiltered map, so choosing a sky is what puts the procedural studio out.
  */
-export const ENVIRONMENT_KINDS: readonly EnvironmentRef['kind'][] = ['studio', 'skybox']
+export const ENVIRONMENT_KINDS: readonly EnvironmentRef['kind'][] = ['studio', 'skybox', 'sky']
 
 /**
  * The ready-made worlds a scene can be set up as. Only the names live here — what each one WRITES
@@ -442,7 +449,11 @@ export const ENVIRONMENT_PRESETS: readonly EnvironmentPreset[] = [
 export function readEnvironment(value: unknown): EnvironmentRef {
   if (typeof value !== 'object' || value === null) return STUDIO_ENVIRONMENT
 
-  const held: { kind?: unknown; assetId?: unknown } = value
+  const held: { kind?: unknown; assetId?: unknown; documentId?: unknown } = value
+  if (held.kind === 'sky' && typeof held.documentId === 'string' && held.documentId !== '') {
+    return { kind: 'sky', documentId: held.documentId }
+  }
+
   return held.kind === 'skybox' && typeof held.assetId === 'string' && held.assetId !== ''
     ? { kind: 'skybox', assetId: held.assetId }
     : STUDIO_ENVIRONMENT

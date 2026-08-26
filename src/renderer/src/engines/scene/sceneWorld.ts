@@ -147,9 +147,15 @@ export function fogOfKind(kind: FogDescriptor['kind'], previous: FogDescriptor):
   return kind === 'linear' ? { ...DEFAULT_LINEAR_FOG, color } : { ...DEFAULT_EXP2_FOG, color }
 }
 
+/** What the project offers to light a scene with: its equirectangular pictures, and its skies. */
+export type EnvironmentOffer = {
+  pictures: readonly { id: string }[]
+  skies: readonly { id: string }[]
+}
+
 /**
- * What lights a scene, switched to the other source. A sky is a REFERENCE, so « from a sky » is
- * only an answer while the project holds one: with none, this stays on the studio rather than
+ * What lights a scene, switched to another source. Both of the other two are REFERENCES, so each
+ * is only an answer while the project holds one: with none, this stays on the studio rather than
  * writing a reference to nothing.
  *
  * Nothing is carried across, unlike the two below — the studio has no id to remember a sky by,
@@ -157,10 +163,19 @@ export function fogOfKind(kind: FogDescriptor['kind'], previous: FogDescriptor):
  */
 export function environmentOfKind(
   kind: EnvironmentRef['kind'],
-  skies: readonly { id: string }[],
+  offered: EnvironmentOffer,
 ): EnvironmentRef {
-  const first = kind === 'skybox' ? skies[0] : undefined
-  return first ? { kind: 'skybox', assetId: first.id } : STUDIO_ENVIRONMENT
+  if (kind === 'skybox') {
+    const first = offered.pictures[0]
+    return first ? { kind: 'skybox', assetId: first.id } : STUDIO_ENVIRONMENT
+  }
+
+  if (kind === 'sky') {
+    const first = offered.skies[0]
+    return first ? { kind: 'sky', documentId: first.id } : STUDIO_ENVIRONMENT
+  }
+
+  return STUDIO_ENVIRONMENT
 }
 
 /** What a colour backdrop opens on when none was ever chosen — a mid grey, flattering nothing. */

@@ -13,7 +13,11 @@ import { createAdjustPass } from '../gpu/passes/adjust'
 import { reportFailure } from '@/services/diagnostics'
 import { createTextureBinding, type TextureBinding } from '../scene/textureBinding'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/textureCache'
-import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
+import {
+  createEnvironment,
+  PMREM_QUIET_MS,
+  type ViewportEnvironment,
+} from '../viewport/environment'
 import { createTestObjects, type TestObjects } from '../viewport/testObjects'
 import { aimAlong, turnBy } from '../viewport/lookAround'
 import { ViewportEngine } from '../viewport/ViewportEngine'
@@ -33,13 +37,6 @@ export type SkyboxRendererOptions = {
   /** What an open editor is drawing of an asset, ahead of its file — see `livePreviews`. */
   livePreview?: (assetId: string) => ImageBitmap | null
 }
-
-/**
- * Milliseconds of quiet before the prefiltered environment is rebuilt. The background follows
- * a slider at frame rate because it is one shader; prefiltering is a full mip chain, and doing
- * it per frame of a drag drops the viewport to single digits.
- */
-const PMREM_QUIET_MS = 120
 
 /** Eye height, so the ground plane reads as a floor rather than as a wall through the camera. */
 const EYE_HEIGHT = 1.6

@@ -129,6 +129,23 @@ export function faceFileNames(name: string): { face: CubeFace; name: string }[] 
   return CUBE_FACES.map(face => ({ face, name: `${name}_${FACE_LABELS[face]}` }))
 }
 
+/**
+ * What a scene's environment is worth to it, once the document it names has been resolved — the
+ * port every viewport takes, and the sibling of `ModelDress`.
+ *
+ * A picture hung on its own answers one too: neutral grading, no sun, intensity 1. That is what
+ * makes the two references one shape at the point of use.
+ */
+export type EnvironmentDress = {
+  /** The equirectangular picture, or `null` for a sky whose source is not filled in yet. */
+  assetId: string | null
+  adjustments: AdjustmentStack
+  /** The sun the sky describes, or `null` for a picture that describes none. */
+  sun: SunSettings | null
+  /** Multiplies the image-based lighting, UNDER the scene's own `envIntensity`. */
+  intensity: number
+}
+
 export type SkyboxEnvironment = {
   /** Multiplies the image-based lighting the test objects and the ground receive. */
   intensity: number

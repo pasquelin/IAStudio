@@ -192,6 +192,7 @@
     "clearSky": "Back to the studio",
     "clearSkyHint": "Hands the view back to the studio sky — the image stays in the project",
     "missingSky": "Sky not found",
+    "missingSkyDocument": "Sky not found",
     "openSky": "Open the sky",
     "openSkyHint": "Double-click to open this sky in its own space",
     "openTexture": "Open the texture",

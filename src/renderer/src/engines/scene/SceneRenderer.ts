@@ -45,6 +45,7 @@ import {
   type LightDescriptor,
   wornMaterials,
   type ModelDress,
+  type EnvironmentRef,
   type ModelDressRef,
   type SceneWorld,
   type Transform,
@@ -119,7 +120,9 @@ import {
   type MaterialTextures,
   type SpriteTexture,
 } from './materialTextures'
+import type { EnvironmentDress } from '@shared/domain/skybox'
 import { createModelTextures, type ModelTextures } from './modelTextures'
+import { createSkySun, type SkySun } from './skySun'
 import { reportFailure } from '@/services/diagnostics'
 import { studioFonts } from '@/services/fonts'
 import type { FontLibrary } from '../core/fonts'
@@ -335,6 +338,11 @@ export type SceneRendererOptions = {
    * every test.
    */
   wornDress?: (dress: ModelDressRef, slot: number) => ModelDress | null
+  /**
+   * What the ENVIRONMENT this scene names is worth to it. Synchronous, like `wornDress`: the
+   * window answers from the open tab or from the copy read off disk. Absent, the studio lights it.
+   */
+  environmentDress?: (environment: EnvironmentRef) => EnvironmentDress | null
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
   /** And again, for the skinning weights a local rig is bound with. */
@@ -657,6 +665,10 @@ export class SceneRenderer {
   private world: SceneWorld = DEFAULT_WORLD
   /** The document's own ground. Beside the nodes like the grid, and never one of them. */
   private readonly ground = createGroundPlane()
+  /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
+  private readonly sun: SkySun = createSkySun(this.viewport.scene)
+  /** What the scene was last lit ON, so a pass that changes nothing costs nothing. */
+  private lit: { dress: EnvironmentDress | null; intensity: number; rotation: number } | null = null
   /** Boxes, origins and normals. Hung beside the nodes for the reason the ground is not. */
   private readonly aids = createViewportAids()
   /** What the VIEWPORT hides, which is never what the document hides — see `isolation.ts`. */
@@ -884,6 +896,10 @@ export class SceneRenderer {
       // Half strength, unlike the texture preview: image-based light comes from everywhere and
       // is occluded by nothing, so at full intensity it fills the very shadows the lights cast.
       this.environment.setIntensity(STUDIO_INTENSITY)
+      // A document applied before the viewport had a renderer lit none of this: it opened on the
+      // procedural studio whatever sky it names. `SkyboxRenderer.mount` replays its own the same way.
+      this.lit = null
+      this.applyEnvironment(this.world)
     }
 
     this.buildViewHelper()
@@ -2380,6 +2396,7 @@ export class SceneRenderer {
     this.grid?.dispose()
     this.grid = null
     this.ground.dispose()
+    this.sun.dispose()
     this.aids.dispose()
 
     this.viewport.dispose()
@@ -2671,16 +2688,7 @@ export class SceneRenderer {
     const held = this.world
     this.world = wanted
 
-    if (this.environment) {
-      void this.sky.apply(this.environment, wanted.environment)
-      if (wanted.envIntensity !== held.envIntensity) {
-        // A MULTIPLIER over the studio's own strength, never the strength itself: the viewport
-        // has always lit at `STUDIO_INTENSITY`, and a document opening at 1 would relight every
-        // scene ever saved. One means « as before ».
-        this.environment.setIntensity(STUDIO_INTENSITY * wanted.envIntensity)
-      }
-      if (wanted.envRotation !== held.envRotation) this.environment.setRotation(wanted.envRotation)
-    }
+    this.applyEnvironment(wanted)
 
     if (wanted.fog !== held.fog) applyFog(this.viewport.scene, wanted.fog)
 
@@ -2691,6 +2699,47 @@ export class SceneRenderer {
 
     if (wanted.ground !== held.ground) this.applyGround()
     if (wanted.background !== held.background) this.paintBackground()
+  }
+
+  /**
+   * What lights the scene: the sky it names, its sun, and the scene's own two dials OVER them.
+   * Held by IDENTITY, which `environmentDressOf` makes stable — `lightAgain` fires on every edit
+   * of every open sky, and a scene naming none of them must not pay a frame for the news.
+   */
+  private applyEnvironment(wanted: SceneWorld): boolean {
+    const environment = this.environment
+    if (!environment) return false
+
+    const dress = this.options.environmentDress?.(wanted.environment) ?? null
+    const lit = this.lit
+    if (
+      lit &&
+      lit.dress === dress &&
+      lit.intensity === wanted.envIntensity &&
+      lit.rotation === wanted.envRotation
+    ) {
+      return false
+    }
+    if (dress?.sun !== lit?.dress?.sun) this.sun.apply(dress?.sun ?? null)
+    this.lit = { dress, intensity: wanted.envIntensity, rotation: wanted.envRotation }
+
+    void this.sky.apply(environment, dress)
+
+    // A MULTIPLIER over the studio's own strength, never the strength itself: the viewport has
+    // always lit at `STUDIO_INTENSITY`, and a document opening at 1 would relight every scene
+    // ever saved.
+    environment.setIntensity(STUDIO_INTENSITY * wanted.envIntensity * (dress?.intensity ?? 1))
+    environment.setRotation(wanted.envRotation)
+
+    return true
+  }
+
+  /**
+   * The sky it names says the scene is lit again. A pass that changed nothing asks for NO frame:
+   * `redraw` marks the shadow maps stale, measured on this Mac at 0.7 to 2.7 ms.
+   */
+  lightAgain(): void {
+    if (this.applyEnvironment(this.world)) this.redraw()
   }
 
   private applyGround(): void {

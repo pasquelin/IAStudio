@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, RepeatWrapping, Vector3 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
+import type { ViewportEnvironment } from '../viewport/environment'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import { MaterialRenderer } from './MaterialRenderer'
 import { newMaterial, slotFor, type ChannelMap, type MaterialState } from './materialState'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
+import type { EnvironmentRef } from '@shared/domain/scene'
+import type { EnvironmentDress } from '@shared/domain/skybox'
 
 const MAP: Omit<ChannelMap, 'assetId'> = { origin: 'generated', width: 512, height: 512 }
 
@@ -21,18 +25,35 @@ const everyChannel = (): MaterialState => {
   return state
 }
 
+/** The one the engine is handed, so a test can read what it was told. */
+let environment: ViewportEnvironment
+
 /**
  * `mount` builds a real `WebGLRenderer`, which jsdom cannot give (`testSetup` hands back no canvas
  * context). Stubbing the viewport's mount and its `gl` accessor is enough — nothing here
  * dereferences the renderer, so what the engine decides is reachable and what it draws is not.
  */
-vi.mock('../viewport/environment', () => ({ createEnvironment: () => fakeEnvironment() }))
+vi.mock('../viewport/environment', () => ({
+  createEnvironment: () => {
+    environment = fakeEnvironment()
+    return environment
+  },
+}))
 
 const skyOf = (assetId: string): MaterialState => {
   const state = newMaterial()
   state.preview.environment = { kind: 'skybox', assetId }
   return state
 }
+
+/**
+ * What the window resolves an environment to. A preview names a sky the same way a scene does, so
+ * the engine takes the answer as a port rather than reaching for a store.
+ */
+const hung = (named: EnvironmentRef): EnvironmentDress | null =>
+  named.kind === 'skybox'
+    ? { assetId: named.assetId, adjustments: NEUTRAL_ADJUSTMENTS, sun: null, intensity: 0.5 }
+    : null
 
 describe('the texture preview', () => {
   let source: ReturnType<typeof fakeTextureSource>
@@ -48,7 +69,7 @@ describe('the texture preview', () => {
   })
 
   const mounted = (): MaterialRenderer => {
-    const renderer = new MaterialRenderer({ loadTexture: source.load })
+    const renderer = new MaterialRenderer({ loadTexture: source.load, environmentDress: hung })
     renderer.mount(host)
     return renderer
   }
@@ -124,6 +145,20 @@ describe('the texture preview', () => {
     renderer.dispose()
 
     expect(source.freed[0]).toHaveBeenCalled()
+  })
+
+  /**
+   * The two surfaces must agree about the same sky: a scene renders it at `envIntensity` times
+   * what the sky says, and a preview that dropped the second factor read a different world.
+   */
+  it('lights the preview at its own dial TIMES what the sky says', () => {
+    const renderer = mounted()
+    const state = skyOf('sky-1')
+    state.preview.envIntensity = 2
+
+    renderer.apply(state)
+
+    expect(environment.setIntensity).toHaveBeenLastCalledWith(1)
   })
 
   /** Why the edge matters is in `applyEnvironment`; these three hold it to the three cases. */

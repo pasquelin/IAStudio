@@ -1,11 +1,16 @@
 import { SRGBColorSpace } from 'three'
-import type { EnvironmentRef } from '@shared/domain/scene'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
+import type { EnvironmentDress } from '@shared/domain/skybox'
 import type { TextureCache } from '../scene/textureCache'
 import type { ViewportEnvironment } from './environment'
 
 export type SkyBinding = {
-  /** Shows what the document asks for, loading the sky if it is one. Safe to call on every apply. */
-  apply: (environment: ViewportEnvironment, wanted: EnvironmentRef) => Promise<void>
+  /**
+   * Shows what the document asks for, loading the sky if it is one. Safe to call on every apply.
+   * `null` is the procedural studio — a scene naming a sky whose file has not landed asks for it
+   * too, since the studio is what it must be lit by until then.
+   */
+  apply: (environment: ViewportEnvironment, wanted: EnvironmentDress | null) => Promise<void>
   /**
    * Asks again for the sky it shows, and loads it afresh if the catalogue says the file was
    * rewritten since. Nothing at all otherwise, and nothing before the first `apply`.
@@ -48,7 +53,7 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
    */
   let wanted: Held | null = null
   /** What the last `apply` was given, so a refresh can play it again. */
-  let last: { environment: ViewportEnvironment; asked: EnvironmentRef } | null = null
+  let last: { environment: ViewportEnvironment; asked: EnvironmentDress | null } | null = null
   /** What `scene.background` holds, which is not what was last asked for while one decodes. */
   let shown: Held | null = null
   /** Every reference a decode still carries: one name could hold only the last of them. */
@@ -66,10 +71,16 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
     wanted = null
   }
 
-  const apply = async (environment: ViewportEnvironment, asked: EnvironmentRef): Promise<void> => {
+  const apply = async (
+    environment: ViewportEnvironment,
+    asked: EnvironmentDress | null,
+  ): Promise<void> => {
     last = { environment, asked }
-    const assetId = asked.kind === 'skybox' ? asked.assetId : null
+    const assetId = asked?.assetId ?? null
     const version = assetId === null ? undefined : cache.versionOf(assetId)
+    // Before the shortcut below and before the load: the grading of a sky moves while its picture
+    // does not, and the first frame of a sky already graded must not show it raw.
+    environment.setAdjustments(asked?.adjustments ?? NEUTRAL_ADJUSTMENTS)
     // The version too, or a sky whose file was rewritten under the same id would be recognised
     // as « already shown » and the edit would never reach the backdrop.
     if (assetId === (wanted?.assetId ?? null) && version === wanted?.version) return

@@ -9,6 +9,7 @@ import {
   modelScene,
   modelSceneWithMaterial,
   named,
+  opened,
   scene,
   twoSpheres,
   wallAndCube,
@@ -423,6 +424,18 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
         world.environment.assetId === 'asset-1'
       )
     },
+  },
+  {
+    name: '10.7 follows a sky DOCUMENT rather than its picture',
+    said: ['Éclaire ma scène avec mon ciel Ciel Test.'],
+    setup: async studio => {
+      // The sky first, so the scene is the document in front when the request lands.
+      await opened('skyboxes', 'Ciel Test')(studio)
+      await cubeScene(studio)
+    },
+    // The DOCUMENT and not an asset: a scene naming the picture would read `skybox`, and editing
+    // that sky would reach no scene at all — which is what this whole batch is about.
+    passed: run => read.world(run)?.environment.kind === 'sky',
   },
 
   // ——— 11. Import d'assets dans une scène ———

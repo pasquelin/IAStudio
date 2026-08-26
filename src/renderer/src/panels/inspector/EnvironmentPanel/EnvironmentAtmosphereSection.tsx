@@ -9,7 +9,7 @@ import { SliderField } from '@/design/SliderField'
 import type { GestureProps } from '@/design/styles'
 import { fogOfKind } from '@/engines/scene/sceneWorld'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { choicesOf } from './environmentChoices'
+import { choicesOf } from '../unionChoices'
 
 export type EnvironmentAtmosphereSectionProps = {
   world: SceneWorld

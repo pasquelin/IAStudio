@@ -31,8 +31,10 @@ import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { assetVersionOf } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
+import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
 import { wornModelDress } from '@/spaces/materials/modelDress'
 import { useMaterialRefresh } from '@/hooks/useMaterialRefresh'
+import { useSkyRefresh } from '@/hooks/useSkyRefresh'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import type { NodeMove, SceneNode } from '@/engines/scene/sceneState'
 import { useModelFiles } from '@/stores/modelFiles'
@@ -286,6 +288,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       assetVersion: assetVersionOf,
       livePreview: livePreviewOf,
       wornDress: wornModelDress,
+      environmentDress: environmentDressOf,
     })
 
     renderer.mount(element)
@@ -312,6 +315,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useShelfRefresh(() => engine.current?.refreshTextures())
   // The material a model NAMES moved: no asset id changed, so the shelf says nothing.
   useMaterialRefresh(materialIds => engine.current?.dressModels(materialIds))
+  // The sky a scene NAMES moved: no asset id changed, so the shelf says nothing here either.
+  useSkyRefresh(() => engine.current?.lightAgain())
 
   // Same for the viewport settings, which were three constants inside the engine.
   useEffect(() => {

@@ -26,8 +26,10 @@ import { materialExportFiles } from '../materialExportFiles'
 import { MaterialToolbar } from './MaterialToolbar'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
+import { useSkyRefresh } from '@/hooks/useSkyRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
+import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
 
 /**
  * A texture handed to an engine, from the row of the native menu that was picked.
@@ -102,6 +104,7 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
       loadTexture,
       assetVersion: assetVersionOf,
       livePreview: livePreviewOf,
+      environmentDress: environmentDressOf,
     })
     renderer.mount(element)
     engine.current = renderer
@@ -118,6 +121,8 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
   }, [texture])
 
   useShelfRefresh(() => engine.current?.refreshMaps())
+  // The sky the preview NAMES moved: no asset id changed, so the shelf says nothing.
+  useSkyRefresh(() => engine.current?.lightAgain())
 
   /**
    * A picture dropped on the viewport becomes the base colour. It is the one channel a texture

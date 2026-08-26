@@ -166,13 +166,13 @@ describe('MaterialInspector', () => {
     expect(preview().showBackground).toBe(false)
   })
 
-  it('lights the preview with the environment section the 3D space already had', () => {
+  // The same three-way choice a scene has: nothing of the project, one picture, or a sky document.
+  it('lights the preview with the environment choice the 3D space already had', () => {
     show()
 
-    expect(screen.getByText('Environnement')).toBeInTheDocument()
-    expect(screen.getByText('Ciel')).toBeInTheDocument()
-    // Nothing chosen means the procedural studio, exactly as a scene reads before a sky exists.
-    expect(screen.getByText('Studio')).toBeInTheDocument()
+    const section = inSection('Environnement')
+    expect(section.getByLabelText('Source')).toHaveValue('studio')
+    expect(section.getByText('Ciel')).toBeInTheDocument()
   })
 
   it('collapses a whole drag into one history entry', () => {
