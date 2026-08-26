@@ -550,7 +550,7 @@ describe('a material held as MaterialX', () => {
 
   const materialDocument = (over: Partial<DocumentFile> = {}): DocumentFile => ({
     version: DOCUMENT_VERSION,
-    kind: 'texture',
+    kind: 'material',
     title: 'Laiton',
     updatedAt: '2026-08-18T10:00:00.000Z',
     id: 'doc-mat',
@@ -586,7 +586,7 @@ describe('a material held as MaterialX', () => {
   it('reads back the kind and the id it wrote', () => {
     const read = material.read(onDisk(asText(material.write(materialDocument()))))
 
-    expect(read).toMatchObject({ kind: 'texture', id: 'doc-mat', title: '', updatedAt: '' })
+    expect(read).toMatchObject({ kind: 'material', id: 'doc-mat', title: '', updatedAt: '' })
   })
 
   /** The content is the composed structure and never the file's own text, as a picture's is. */
@@ -608,7 +608,7 @@ describe('a material held as MaterialX', () => {
     const enveloped = ENVELOPED.write(materialDocument({ content: '{"channels":{}}' }))
 
     expect(material.read(onDisk(asText(enveloped)))).toMatchObject({
-      kind: 'texture',
+      kind: 'material',
       id: 'doc-mat',
       title: 'Laiton',
     })
@@ -620,7 +620,7 @@ describe('a material held as MaterialX', () => {
       onDisk('<?xml version="1.0"?>\n<materialx version="1.39">\n</materialx>\n'),
     )
 
-    expect(read).toMatchObject({ kind: 'texture', title: '' })
+    expect(read).toMatchObject({ kind: 'material', title: '' })
     expect(read.id).toBeUndefined()
   })
 })

@@ -7,7 +7,7 @@ import { claimImageOnSubmit } from './imageGeneration'
 import { claimModelOnSubmit } from './modelGeneration'
 import { claimSequenceOnSubmit } from './sequenceGeneration'
 import { claimSkyboxOnSubmit } from './skyboxGeneration'
-import { claimTextureOnSubmit } from './textureGeneration'
+import { claimMaterialOnSubmit } from './materialGeneration'
 
 /**
  * 🛑 Every workspace that has somewhere to put a result. A kind missing here is a generation that
@@ -22,7 +22,7 @@ const CLAIMS: Record<DocumentKind, (into?: LandingTarget) => (job: Job | null) =
   scene: claimModelOnSubmit,
   sequence: claimSequenceOnSubmit,
   audio: claimAudioOnSubmit,
-  texture: claimTextureOnSubmit,
+  material: claimMaterialOnSubmit,
 }
 
 /**

@@ -14,7 +14,7 @@ import { ClipInspector } from '../ClipInspector'
 import { LayerInspector } from '../LayerInspector/LayerInspector'
 import { SceneInspector } from '../SceneInspector'
 import { SkyboxInspector } from '../SkyboxInspector/SkyboxInspector'
-import { TextureInspector } from '../TextureInspector/TextureInspector'
+import { MaterialInspector } from '../MaterialInspector/MaterialInspector'
 import { TrackInspector } from '../TrackInspector'
 import { InspectorEmpty } from './InspectorEmpty'
 
@@ -65,5 +65,5 @@ export function InspectorFace() {
   // A sky has no node to pick: everything on it belongs to the document.
   if (skyboxId) return <SkyboxInspector documentId={skyboxId} />
 
-  return textureId ? <TextureInspector documentId={textureId} /> : <InspectorEmpty />
+  return textureId ? <MaterialInspector documentId={textureId} /> : <InspectorEmpty />
 }

@@ -64,12 +64,12 @@ import type { CaptureQuality } from './domain/sceneCapture'
 import type { InstalledCheckerTexture } from './domain/checkerTexture'
 import type { ExportTargetId } from './domain/exportRegistry'
 import type { TaskProgress } from './domain/taskProgress'
-import type { TextureExportTarget } from './domain/textureExport'
+import type { MaterialExportTarget } from './domain/materialExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settingsRegistry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
-import type { PbrChannel } from './domain/texture'
+import type { PbrChannel } from './domain/material'
 import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
@@ -267,7 +267,7 @@ export type Channels = {
   renderFinish: 'render:finish'
   renderCancel: 'render:cancel'
 
-  textureExport: 'texture:export'
+  materialExport: 'material:export'
   skyboxExport: 'skybox:export'
   montageStems: 'montage:stems'
   projectExport: 'project:export'
@@ -482,7 +482,7 @@ export const CHANNELS: Channels = {
   renderFinish: 'render:finish',
   renderCancel: 'render:cancel',
 
-  textureExport: 'texture:export',
+  materialExport: 'material:export',
   skyboxExport: 'skybox:export',
   montageStems: 'montage:stems',
   projectExport: 'project:export',
@@ -708,11 +708,11 @@ export type LogScope =
   | 'sequence.import'
   /** An export asked for from outside, whichever space rendered it. */
   | 'document.export'
-  | 'texture.map'
-  | 'texture.channel'
-  | 'texture.seam'
-  | 'texture.shader'
-  | 'texture.export'
+  | 'material.map'
+  | 'material.channel'
+  | 'material.seam'
+  | 'material.shader'
+  | 'material.export'
   | 'skybox.source'
   /**
    * A working texture shipped beside the app that would not load. Apart from `skybox.source`,
@@ -794,11 +794,11 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'sequence.export',
   'sequence.import',
   'document.export',
-  'texture.map',
-  'texture.channel',
-  'texture.seam',
-  'texture.shader',
-  'texture.export',
+  'material.map',
+  'material.channel',
+  'material.seam',
+  'material.shader',
+  'material.export',
   'skybox.source',
   'skybox.probes',
   'skybox.export',
@@ -908,7 +908,7 @@ export const EVENTS = {
   sceneDisplay: 'evt:scene-display',
   sceneExport: 'evt:scene-export',
   sceneCapture: 'evt:scene-capture',
-  textureExport: 'evt:texture-export',
+  materialExport: 'evt:material-export',
   skyboxExport: 'evt:skybox-export',
   taskProgress: 'evt:task-progress',
   settingsSection: 'evt:settings-section',
@@ -956,7 +956,7 @@ export type AssistantActionRequest = { callId: string; call: AssistantCall }
 export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
-export type TextureExportCommand = { target: TextureExportTarget }
+export type TextureExportCommand = { target: MaterialExportTarget }
 
 /**
  * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
@@ -1659,7 +1659,7 @@ export type StudioBridge = {
     finish: (id: string) => Promise<string | null>
     cancel: (id: string) => Promise<void>
   }
-  texture: {
+  material: {
     /**
      * Writes an exported texture into a folder of its own, inside the one the dialog landed on.
      * Answers the folder's name, or `null` when the dialog was dismissed — the name, never the
@@ -1929,7 +1929,7 @@ export type StudioBridge = {
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe
-    onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
+    onMaterialExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }
   diagnostics: {

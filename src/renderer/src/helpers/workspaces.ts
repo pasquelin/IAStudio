@@ -30,7 +30,7 @@ const ICONS: Record<WorkspaceId, string> = {
   video: mdiVideoOutline,
   '3d': mdiCubeOutline,
   audio: mdiVolumeHigh,
-  textures: mdiTextureBox,
+  materials: mdiTextureBox,
   skyboxes: mdiPanoramaVariantOutline,
 }
 
@@ -82,7 +82,7 @@ const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
   video: ASSET_TYPES,
   '3d': ['mesh', 'animation', 'texture', 'skybox', 'image'],
   audio: ['audio'],
-  textures: ['texture', 'image'],
+  materials: ['texture', 'image'],
   skyboxes: ['skybox', 'image'],
 }
 

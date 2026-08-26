@@ -9,7 +9,7 @@ import { assetOf, opened } from './setups'
 
 const sky = (title = 'Ciel Test') => opened('skyboxes', title)
 
-const material = (title = 'Matière Test') => opened('textures', title)
+const material = (title = 'Matière Test') => opened('materials', title)
 
 export const SKY_SCENARIOS: readonly Scenario[] = [
   {
@@ -68,7 +68,7 @@ export const SKY_SCENARIOS: readonly Scenario[] = [
     name: '38.1 says what the material is made of and which pictures it carries',
     said: ['De quoi est faite cette matière et quelles images porte-t-elle ?'],
     setup: material(),
-    passed: run => read.spoke(run) && read.answeredWith(run, 'texture.state'),
+    passed: run => read.spoke(run) && read.answeredWith(run, 'material.state'),
   },
   {
     name: '38.2 turns its base colour blue',
@@ -89,7 +89,7 @@ export const SKY_SCENARIOS: readonly Scenario[] = [
     // One channel already filled, so « la normal map » is a SECOND one and not the first.
     setup: async studio => {
       await material()(studio)
-      await studio.run('texture.channel', {
+      await studio.run('material.channel', {
         channel: 'baseColor',
         assetId: assetOf(studio, 'weathered oak planks, seamless.png'),
       })

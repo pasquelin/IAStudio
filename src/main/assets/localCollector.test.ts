@@ -125,7 +125,7 @@ describe('filing a generation made on this machine', () => {
     { type: 'video', workspace: 'video' },
     { type: 'audio', workspace: 'audio' },
     { type: 'mesh', workspace: '3d' },
-    { type: 'texture', workspace: 'textures' },
+    { type: 'texture', workspace: 'materials' },
     { type: 'skybox', workspace: 'skyboxes' },
   ]
 

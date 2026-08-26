@@ -65,7 +65,7 @@ describe('the generator', () => {
   // column — the two state rules answer for the generator and for the home's Explorer, and for
   // nothing else.
   it('leaves the right column alone — no model removes anything there', () => {
-    expect(idsOf('right', 'textures')).toEqual(['inspector'])
+    expect(idsOf('right', 'materials')).toEqual(['inspector'])
   })
 })
 
@@ -154,7 +154,7 @@ describe('a half open on no panel in particular', () => {
     // Neither Skyboxes nor Textures declares anything in that half any more: what a sky is, and
     // what a material is made of, are sections of the inspector.
     expect(shownTool(null, 'right', 'primary', 'skyboxes', IN_WORKSPACE)).toBeNull()
-    expect(shownTool(null, 'right', 'primary', 'textures', IN_WORKSPACE)).toBeNull()
+    expect(shownTool(null, 'right', 'primary', 'materials', IN_WORKSPACE)).toBeNull()
   })
 
   // Video and Audio declare NOTHING in that half since the shelf went left, so the half opens

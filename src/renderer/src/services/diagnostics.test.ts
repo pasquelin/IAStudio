@@ -11,7 +11,7 @@ const GESTURES: readonly LogScope[] = [
   'document.close',
   'document.delete',
   'assets.reveal',
-  'texture.channel',
+  'material.channel',
 ]
 
 const SPONTANEOUS: readonly LogScope[] = [

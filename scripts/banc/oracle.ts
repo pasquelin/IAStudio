@@ -15,7 +15,7 @@ import { SECOND } from '@shared/domain/time'
 import { matchesWords, searchWords } from '@shared/text'
 import type { ModelMaterial } from '@shared/domain/scene'
 import type { SkyboxContent } from '@shared/domain/skybox'
-import type { TextureState } from '@/engines/texture/textureState'
+import type { MaterialState } from '@/engines/material/materialState'
 import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -24,7 +24,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { skyboxViewOf, useSkyboxViews } from '@/stores/skyboxViews'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { textureOf, useTextures } from '@/stores/textures'
+import { materialOf, useMaterials } from '@/stores/materials'
 import type { Run } from './run'
 
 export { SECOND }
@@ -98,7 +98,7 @@ export const kindNamed = (run: Run, name: string): string | null => {
  */
 export const lightOf = (node?: SceneNode) => (node?.type === 'light' ? node.light : null)
 
-export const materialOf = (node?: SceneNode) =>
+export const nodeMaterialOf = (node?: SceneNode) =>
   node && (node.type === 'mesh' || node.type === 'text') ? node.material : null
 
 export const pathOf = (node?: SceneNode) => (node?.type === 'path' ? node.path : null)
@@ -217,8 +217,8 @@ export const adjusted = (run: Run): boolean => {
 }
 
 /** The matter the open texture document assembles — its channels and its surface settings. */
-export const surface = (run: Run): TextureState | null =>
-  firstOf(run, 'textures', id => textureOf(useTextures.getState(), id))
+export const surface = (run: Run): MaterialState | null =>
+  firstOf(run, 'materials', id => materialOf(useMaterials.getState(), id))
 
 /** Every layer of every open picture, groups opened out — a stack nests, an oracle does not. */
 export const layers = (run: Run): readonly Layer[] =>

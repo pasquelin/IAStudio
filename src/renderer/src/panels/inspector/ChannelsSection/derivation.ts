@@ -1,4 +1,4 @@
-import type { PbrChannel } from '@shared/domain/texture'
+import type { PbrChannel } from '@shared/domain/material'
 
 /**
  * Where a derivation stands, as one value rather than three booleans that could contradict one
@@ -22,8 +22,8 @@ export type ChannelDerivation = {
 }
 
 export const DERIVE_LABELS: Record<DerivationState, string> = {
-  ready: 'texture.derive',
-  missing: 'texture.deriveMissing',
-  running: 'texture.deriving',
-  blocked: 'texture.deriveBusy',
+  ready: 'material.derive',
+  missing: 'material.deriveMissing',
+  running: 'material.deriving',
+  blocked: 'material.deriveBusy',
 }

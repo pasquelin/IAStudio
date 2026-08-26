@@ -149,7 +149,7 @@ type ChannelMethod = {
   [CHANNELS.renderFinish]: StudioBridge['render']['finish']
   [CHANNELS.renderCancel]: StudioBridge['render']['cancel']
 
-  [CHANNELS.textureExport]: StudioBridge['texture']['export']
+  [CHANNELS.materialExport]: StudioBridge['material']['export']
   [CHANNELS.skyboxExport]: StudioBridge['skybox']['export']
   [CHANNELS.taskCancel]: StudioBridge['tasks']['cancel']
 

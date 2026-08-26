@@ -118,7 +118,7 @@
       "sequence": "Video",
       "audio": "Audio",
       "skybox": "Sky",
-      "texture": "Material"
+      "material": "Material"
     },
     "new": "New document",
     "newByKind": {
@@ -127,7 +127,7 @@
       "sequence": "New video",
       "audio": "New audio",
       "skybox": "New sky",
-      "texture": "New material"
+      "material": "New material"
     },
     "missing": "This document is no longer open.",
     "saveRefusedIncomplete": "This edit opened without the clips whose media are missing. Saving would erase them from the file — import the media into the project, then open the edit again.",

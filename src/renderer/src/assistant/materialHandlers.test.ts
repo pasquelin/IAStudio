@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Asset } from '@shared/domain/asset'
 import { createSkyboxContent } from '@shared/domain/skybox'
-import { newTexture } from '@/engines/texture/textureState'
+import { newMaterial } from '@/engines/material/materialState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installIn } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { skyboxOf, skyboxStore, useSkyboxes } from '@/stores/skyboxes'
-import { textureOf, textureStore, useTextures } from '@/stores/textures'
+import { materialOf, materialStore, useMaterials } from '@/stores/materials'
 import { runAction } from './executor'
 
 const SKY = 'doc-skybox'
@@ -24,14 +24,14 @@ const PICTURE: Asset = {
 }
 
 const sky = () => skyboxOf(useSkyboxes.getState(), SKY)
-const material = () => textureOf(useTextures.getState(), MATERIAL)
+const material = () => materialOf(useMaterials.getState(), MATERIAL)
 
 function withSky(): void {
   installIn(skyboxStore, SKY, createSkyboxContent(), 'skyboxes')
 }
 
 function withMaterial(): void {
-  installIn(textureStore, MATERIAL, newTexture(), 'textures')
+  installIn(materialStore, MATERIAL, newMaterial(), 'materials')
 }
 
 beforeEach(() => {
@@ -103,44 +103,46 @@ describe('the material', () => {
   })
 
   it('answers its channels, its render settings and its preview', async () => {
-    expect(await runAction('texture.state', {})).toMatchObject({
+    expect(await runAction('material.state', {})).toMatchObject({
       ok: true,
       data: { documentId: MATERIAL, channels: {} },
     })
   })
 
   it('changes only the settings it was given', async () => {
-    await runAction('texture.material', { roughness: 0.2, color: '#334455' })
+    await runAction('material.material', { roughness: 0.2, color: '#334455' })
 
     expect(material().material).toMatchObject({ roughness: 0.2, color: '#334455' })
-    expect(material().material.metalness).toBe(newTexture().material.metalness)
+    expect(material().material.metalness).toBe(newMaterial().material.metalness)
   })
 
   /** `tiling` is one vector, so a call naming one axis has to carry the other one through. */
   it('keeps the axis a tiling call did not name', async () => {
-    await runAction('texture.material', { tilingX: 4 })
+    await runAction('material.material', { tilingX: 4 })
 
-    expect(material().material.tiling).toEqual({ x: 4, y: newTexture().material.tiling.y })
+    expect(material().material.tiling).toEqual({ x: 4, y: newMaterial().material.tiling.y })
   })
 
   it('sets how the preview is presented', async () => {
-    await runAction('texture.preview', { envIntensity: 2, showSeam: true, autoSpin: false })
+    await runAction('material.preview', { envIntensity: 2, showSeam: true, autoSpin: false })
 
     expect(material().preview).toMatchObject({ envIntensity: 2, showSeam: true, autoSpin: false })
   })
 
   it('fills a channel from the library and empties it again', async () => {
-    expect(await runAction('texture.channel', { channel: 'normal', assetId: PICTURE.id })).toEqual({
-      ok: true,
-    })
+    expect(await runAction('material.channel', { channel: 'normal', assetId: PICTURE.id })).toEqual(
+      {
+        ok: true,
+      },
+    )
     expect(material().channels.normal).toMatchObject({ assetId: PICTURE.id, width: 4096 })
 
-    await runAction('texture.channel', { channel: 'normal' })
+    await runAction('material.channel', { channel: 'normal' })
     expect(material().channels.normal).toBeUndefined()
   })
 
   it('refuses a channel the material does not have', async () => {
-    expect(await runAction('texture.channel', { channel: 'gloss' })).toMatchObject({
+    expect(await runAction('material.channel', { channel: 'gloss' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -205,10 +207,10 @@ describe('the two halves of a material nothing could write', () => {
   it('remaps a channel one bound at a time, keeping the other', async () => {
     withMaterial()
 
-    expect(await runAction('texture.material', { roughnessMin: 0.2 })).toEqual({ ok: true })
+    expect(await runAction('material.material', { roughnessMin: 0.2 })).toEqual({ ok: true })
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 1 })
 
-    await runAction('texture.material', { roughnessMax: 0.8, metalnessMin: 0.1 })
+    await runAction('material.material', { roughnessMax: 0.8, metalnessMin: 0.1 })
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.8 })
     expect(material().material.metalnessRange).toEqual({ min: 0.1, max: 1 })
   })
@@ -217,8 +219,8 @@ describe('the two halves of a material nothing could write', () => {
   it('keeps the two handles in order when one is pushed past the other', async () => {
     withMaterial()
 
-    await runAction('texture.material', { roughnessMax: 0.2 })
-    await runAction('texture.material', { roughnessMin: 0.9 })
+    await runAction('material.material', { roughnessMax: 0.2 })
+    await runAction('material.material', { roughnessMin: 0.9 })
 
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.9 })
   })
@@ -226,7 +228,7 @@ describe('the two halves of a material nothing could write', () => {
   it('judges the material on another shape, at another repeat', async () => {
     withMaterial()
 
-    expect(await runAction('texture.preview', { shape: 'plane', tilingPreview: 4 })).toEqual({
+    expect(await runAction('material.preview', { shape: 'plane', tilingPreview: 4 })).toEqual({
       ok: true,
     })
     expect(material().preview).toMatchObject({ shape: 'plane', tilingPreview: 4 })
@@ -236,7 +238,7 @@ describe('the two halves of a material nothing could write', () => {
   it('refuses a repeat the panel does not offer', async () => {
     withMaterial()
 
-    expect(await runAction('texture.preview', { tilingPreview: 3 })).toMatchObject({
+    expect(await runAction('material.preview', { tilingPreview: 3 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

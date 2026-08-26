@@ -14,7 +14,7 @@ describe('workspaceOrder', () => {
   })
 
   it('keeps what the user arranged', () => {
-    const stored: WorkspaceId[] = ['image', 'video', '3d', 'audio', 'textures', 'skyboxes']
+    const stored: WorkspaceId[] = ['image', 'video', '3d', 'audio', 'materials', 'skyboxes']
     stored.reverse()
 
     expect(workspaceOrder(stored)).toEqual(stored)
@@ -34,8 +34,8 @@ describe('workspaceOrder', () => {
   it('places a newcomer after the space it follows in the registry, wherever that space was moved', () => {
     // `skyboxes` is declared after `textures`, so it lands there — even when `textures` opens the
     // bar.
-    expect(workspaceOrder(['textures', 'image'])).toEqual([
-      'textures',
+    expect(workspaceOrder(['materials', 'image'])).toEqual([
+      'materials',
       'skyboxes',
       'image',
       'video',

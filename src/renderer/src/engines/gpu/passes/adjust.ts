@@ -1,6 +1,6 @@
 import { ShaderMaterial, type Texture } from 'three'
 import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
-import { LUMA } from '@/engines/texture/derive/glsl'
+import { LUMA } from '@/engines/material/derive/glsl'
 import { QUAD_VERTEX_SHADER } from './quad'
 
 /**

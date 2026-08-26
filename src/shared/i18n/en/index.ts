@@ -11,11 +11,11 @@ import type * as frFileInfo from '../fr/fileInfo.json'
 import type * as frGit from '../fr/git.json'
 import type * as frImage from '../fr/image.json'
 import type * as frInspector from '../fr/inspector.json'
+import type * as frMaterial from '../fr/material.json'
 import type * as frModels from '../fr/models.json'
 import type * as frScene from '../fr/scene.json'
 import type * as frSettings from '../fr/settings.json'
 import type * as frShell from '../fr/shell.json'
-import type * as frTexture from '../fr/texture.json'
 import type * as frUsage from '../fr/usage.json'
 import activity from './activity.json'
 import ai from './ai.json'
@@ -29,11 +29,11 @@ import fileInfo from './fileInfo.json'
 import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
+import material from './material.json'
 import models from './models.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
-import texture from './texture.json'
 import usage from './usage.json'
 
 /** The roots a section is responsible for, read off its French twin rather than listed here. */
@@ -66,6 +66,6 @@ export const en = {
   ...(scene satisfies Section<keyof typeof frScene>),
   ...(settings satisfies Section<keyof typeof frSettings>),
   ...(shell satisfies Section<keyof typeof frShell>),
-  ...(texture satisfies Section<keyof typeof frTexture>),
+  ...(material satisfies Section<keyof typeof frMaterial>),
   ...(usage satisfies Section<keyof typeof frUsage>),
 }

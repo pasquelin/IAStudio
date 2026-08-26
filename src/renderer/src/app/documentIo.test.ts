@@ -27,8 +27,8 @@ import type { SaveLayeredRequest } from '@shared/ipc'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
-import { useTextures } from '@/stores/textures'
-import { newTexture } from '@/engines/texture/textureState'
+import { useMaterials } from '@/stores/materials'
+import { newMaterial } from '@/engines/material/materialState'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isOraSurfacePath } from '@shared/domain/openRaster'
@@ -46,7 +46,7 @@ import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
-import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
+import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import {
   autosaveOpenDocuments,
   closeDocument,
@@ -2054,13 +2054,13 @@ describe('closing a document', () => {
    */
   it('forgets which channel a closed texture was being looked at through', async () => {
     installFakeBridge({})
-    const created = await useDocuments.getState().create('textures')
+    const created = await useDocuments.getState().create('materials')
     if (!created) throw new Error('expected a document')
-    useTextureViews.getState().inspect(created.id, 'normal')
+    useMaterialViews.getState().inspect(created.id, 'normal')
 
     await expect(closeDocument(created.id)).resolves.toBe(true)
 
-    expect(inspectedChannel(useTextureViews.getState(), created.id)).toBeNull()
+    expect(inspectedChannel(useMaterialViews.getState(), created.id)).toBeNull()
   })
 
   /** The same reasoning, on the half a montage tab opens with: hidden is what a tab opens on. */
@@ -2082,14 +2082,14 @@ describe('closing a document', () => {
    */
   it('forgets the session views of documents a project change dropped', async () => {
     installFakeBridge({})
-    const left = await useDocuments.getState().create('textures')
-    const kept = await useDocuments.getState().create('textures')
+    const left = await useDocuments.getState().create('materials')
+    const kept = await useDocuments.getState().create('materials')
     if (!left || !kept) throw new Error('expected two documents')
-    useTextureViews.getState().inspect(left.id, 'normal')
-    useTextureViews.getState().inspect(kept.id, 'roughness')
+    useMaterialViews.getState().inspect(left.id, 'normal')
+    useMaterialViews.getState().inspect(kept.id, 'roughness')
     // The state a `DocumentIo` holds only exists once something has opened the document.
-    useTextures.getState().ensure(left.id, newTexture)
-    useTextures.getState().ensure(kept.id, newTexture)
+    useMaterials.getState().ensure(left.id, newMaterial)
+    useMaterials.getState().ensure(kept.id, newMaterial)
 
     // The folder of the project being opened holds one of the two, and the layout says it is
     // open — which is what makes the other one a tab the refresh drops.
@@ -2098,23 +2098,23 @@ describe('closing a document', () => {
 
     await expect(refreshDocuments()).resolves.toBe(true)
 
-    expect(inspectedChannel(useTextureViews.getState(), left.id)).toBeNull()
-    expect(inspectedChannel(useTextureViews.getState(), kept.id)).toBe('roughness')
+    expect(inspectedChannel(useMaterialViews.getState(), left.id)).toBeNull()
+    expect(inspectedChannel(useMaterialViews.getState(), kept.id)).toBe('roughness')
     // The heavy half: `ioOf` reads the kind from the map the refresh has just emptied, so the
     // engine state was the one thing a project change could not drop.
-    expect(useTextures.getState().states[left.id]).toBeUndefined()
-    expect(useTextures.getState().states[kept.id]).toBeDefined()
+    expect(useMaterials.getState().states[left.id]).toBeUndefined()
+    expect(useMaterials.getState().states[kept.id]).toBeDefined()
   })
 
   it('leaves the flat view of a document it did not close alone', async () => {
     installFakeBridge({})
-    const closing = await useDocuments.getState().create('textures')
+    const closing = await useDocuments.getState().create('materials')
     if (!closing) throw new Error('expected a document')
-    useTextureViews.getState().inspect('elsewhere', 'roughness')
+    useMaterialViews.getState().inspect('elsewhere', 'roughness')
 
     await expect(closeDocument(closing.id)).resolves.toBe(true)
 
-    expect(inspectedChannel(useTextureViews.getState(), 'elsewhere')).toBe('roughness')
+    expect(inspectedChannel(useMaterialViews.getState(), 'elsewhere')).toBe('roughness')
   })
 
   // Cancel is the one answer that leaves everything as it was — including the state and the

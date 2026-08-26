@@ -10,11 +10,11 @@ import fileInfo from './fileInfo.json'
 import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
+import material from './material.json'
 import models from './models.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
-import texture from './texture.json'
 import usage from './usage.json'
 
 /**
@@ -43,7 +43,7 @@ export const fr = {
   ...scene,
   ...settings,
   ...shell,
-  ...texture,
+  ...material,
   ...usage,
 }
 

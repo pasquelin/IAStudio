@@ -15,7 +15,7 @@ import { createRefCache } from '../core/refCache'
  * Which way up a picture is decoded. `flipY` is the studio's convention; `from-image` is what glTF
  * stores its UVs for, `GLTFLoader` decoding through `ImageBitmapLoader` with no orientation set.
  *
- * Decided HERE and nowhere else: `texture.flipY` has no effect at all on an `ImageBitmap`.
+ * Decided HERE and nowhere else: `material.flipY` has no effect at all on an `ImageBitmap`.
  */
 export type PictureOrientation = 'flipY' | 'from-image'
 
@@ -76,7 +76,7 @@ export const loadTexture: TextureSource = async (url, orientation = 'flipY') => 
     }
   }
 
-  // Flipped HERE, at the decode, because `texture.flipY` cannot reach it: `WebGLTextures` skips
+  // Flipped HERE, at the decode, because `material.flipY` cannot reach it: `WebGLTextures` skips
   // `UNPACK_FLIP_Y_WEBGL` entirely when the source is an `ImageBitmap`, so the `true` a `Texture`
   // carries by default is a wish nothing grants. Every other decoder of this module lands upright
   // — an equirectangular sky is simply the first picture legible enough to show it.

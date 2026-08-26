@@ -9,7 +9,7 @@ import {
   type MediaProbe,
 } from '@shared/domain/asset'
 import { POSTERS_FOLDER } from '@shared/domain/project'
-import type { PbrChannel } from '@shared/domain/texture'
+import type { PbrChannel } from '@shared/domain/material'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import { log } from '@main/log'
 import { freeAssetPath } from './assetFile'

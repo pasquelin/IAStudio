@@ -67,17 +67,17 @@ import type { DocumentStore } from '@/stores/documentStore'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { canvasHost } from '@/spaces/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
-import { newTexture } from '@/engines/texture/textureState'
+import { newMaterial } from '@/engines/material/materialState'
 import {
   forgetCarriedMaterial,
   materialRefusesToSave,
-  textureFromPayload,
-  texturePayload,
-} from './textureDocument'
+  materialFromPayload,
+  materialPayload,
+} from './materialDocument'
 import { useMonitorPair } from '@/stores/monitorPair'
 import { useSkyboxViews } from '@/stores/skyboxViews'
-import { useTextureViews } from '@/stores/textureViews'
-import { textureStore } from '@/stores/textures'
+import { useMaterialViews } from '@/stores/materialViews'
+import { materialStore } from '@/stores/materials'
 import { createSkyboxContent } from '@shared/domain/skybox'
 
 /** What an editor produces to be saved. The title is the tab's, not the editor's. */
@@ -615,17 +615,17 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // document, and the dials the standard has no input for ride in the attribute it reserves for
   // applications. The one whose absence is NOT a refusal: a channel is a reference, not pixels,
   // and what does produce pixels — `deriveChannel` — already writes them as an asset.
-  texture: {
-    ...textDocumentIo(textureStore, {
-      toPayload: texturePayload,
-      fromPayload: textureFromPayload,
-      createDefault: newTexture,
+  material: {
+    ...textDocumentIo(materialStore, {
+      toPayload: materialPayload,
+      fromPayload: materialFromPayload,
+      createDefault: newMaterial,
     }),
     // One material is rewritten from one state: a file holding a second one, or a look, cannot be
     // half rewritten. Refused rather than flattened, exactly as a sky holding a scene is.
     incomplete: materialRefusesToSave,
     forget: documentId => {
-      textureStore.use.getState().drop(documentId)
+      materialStore.use.getState().drop(documentId)
       // Dropped with the document, so a reopened id never inherits the paths another file carried.
       forgetCarriedMaterial(documentId)
     },
@@ -1275,7 +1275,7 @@ function forgetDocument(documentId: string, kind?: DocumentKind): void {
   // harmless to inherit; an inspected channel is not, it would reopen the tab on a flat map.
   // A sky's view is of the second kind: it carries a projection and the test objects, and a
   // fresh document opening onto the cross of its predecessor is not what was asked for.
-  useTextureViews.getState().forget(documentId)
+  useMaterialViews.getState().forget(documentId)
   useSkyboxViews.getState().forget(documentId)
   // Of the same kind: a montage reopening with a clip monitor its predecessor had asked for is
   // not what the default says.

@@ -6,7 +6,7 @@ import { reconcileOrder } from './order'
  * `domain/tool.ts`: the document domain needs `WorkspaceId`, and `shared/` cannot import from
  * the renderer. The renderer enriches these ids with icons.
  */
-export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'textures' | 'skyboxes'
+export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'materials' | 'skyboxes'
 
 /** Rail order. */
 export const WORKSPACE_IDS: readonly WorkspaceId[] = [
@@ -14,7 +14,7 @@ export const WORKSPACE_IDS: readonly WorkspaceId[] = [
   'video',
   '3d',
   'audio',
-  'textures',
+  'materials',
   'skyboxes',
 ]
 
@@ -30,7 +30,7 @@ export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily> = {
   video: 'video',
   '3d': '3d',
   audio: 'audio',
-  textures: 'texture',
+  materials: 'texture',
   skyboxes: 'skybox',
 }
 

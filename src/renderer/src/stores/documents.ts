@@ -212,7 +212,7 @@ export const activeSkyboxId = (state: DocumentsSlice): string | null =>
 
 /** The texture in front, as a selector. Same reason again, for the material inspector. */
 export const activeTextureId = (state: DocumentsSlice): string | null =>
-  activeIdOfKind(state, 'texture')
+  activeIdOfKind(state, 'material')
 
 /**
  * Whether this project holds the document an id names — open in a tab or sitting in the folder.

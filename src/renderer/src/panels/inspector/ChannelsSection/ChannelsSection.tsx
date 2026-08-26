@@ -1,15 +1,15 @@
 import { memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
-import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
 import { PropertySection } from '@/design/PropertySection'
-import { setChannel } from '@/engines/texture/commands'
-import { canDerive, sourceFor } from '@/engines/texture/textureState'
+import { setChannel } from '@/engines/material/commands'
+import { canDerive, sourceFor } from '@/engines/material/materialState'
 import { editPixelsOf, type EditPixels } from '@/helpers/openAsset'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
-import { placeTextureChannel } from '@/spaces/textures/placeChannel'
-import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
-import { textureOf, useTextures } from '@/stores/textures'
+import { placeMaterialChannel } from '@/spaces/materials/placeChannel'
+import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
+import { materialOf, useMaterials } from '@/stores/materials'
 import { ChannelsSectionRow } from './ChannelsSectionRow'
 import type { DerivationState } from './derivation'
 
@@ -27,18 +27,18 @@ export type ChannelsSectionProps = { documentId: string }
  */
 export const ChannelsSection = memo(function ChannelsSection({ documentId }: ChannelsSectionProps) {
   const { t } = useTranslation()
-  const channels = useTextures(state => textureOf(state, documentId).channels)
+  const channels = useMaterials(state => materialOf(state, documentId).channels)
 
   /**
    * Asked of the CATALOGUE, never filtered out of `useAssets`: that shelf is the scope the browser
    * is asking for, and the Textures space narrows it to `['texture','image']`. Held as ASSETS
-   * because `placeTextureChannel` keeps what the picture measures.
+   * because `placeMaterialChannel` keeps what the picture measures.
    */
   const pictures = useProjectPictureAssets(PICTURES)
 
-  const run = useTextures(state => state.runCommand)
-  const inspected = useTextureViews(state => inspectedChannel(state, documentId))
-  const inspect = useTextureViews(state => state.inspect)
+  const run = useMaterials(state => state.runCommand)
+  const inspected = useMaterialViews(state => inspectedChannel(state, documentId))
+  const inspect = useMaterialViews(state => state.inspect)
 
   const [deriving, setDeriving] = useState<PbrChannel | null>(null)
 
@@ -50,8 +50,8 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
   const derive = async (channel: PbrChannel): Promise<void> => {
     setDeriving(channel)
     try {
-      const { deriveTextureChannel } = await import('@/spaces/textures/deriveChannel')
-      await deriveTextureChannel(documentId, channel)
+      const { deriveMaterialChannel } = await import('@/spaces/materials/deriveChannel')
+      await deriveMaterialChannel(documentId, channel)
     } finally {
       setDeriving(null)
     }
@@ -84,7 +84,7 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
     if (assetId === null) return run(documentId, setChannel(channel, null))
 
     const asset = pictures.find(candidate => candidate.id === assetId)
-    if (asset) placeTextureChannel(documentId, asset, channel)
+    if (asset) placeMaterialChannel(documentId, asset, channel)
   }
 
   // Derived where both stores are visible, as the document derives it: a channel emptied while it
@@ -92,7 +92,7 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
   const shown = inspected && channels[inspected] ? inspected : null
 
   return (
-    <PropertySection title={t('inspector.channels')} scId="texture.channels">
+    <PropertySection title={t('inspector.channels')} scId="material.channels">
       {PBR_CHANNELS.map(channel => {
         // `sourceFor` alone decides whether a derivation exists: it is the domain's own answer, and
         // a test holds it against the table of shaders so the two cannot drift apart.
@@ -114,7 +114,7 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
             onChange={assetId => pick(channel, assetId)}
             // The drop hands over the ASSET, so the one refusal a channel has — a cloud row with
             // no file to decode yet — is spoken where it holds the name to say which file.
-            onDropAsset={asset => void placeTextureChannel(documentId, asset, channel)}
+            onDropAsset={asset => void placeMaterialChannel(documentId, asset, channel)}
             // Pressing the one already shown flat goes back to the lit material: one gesture in and
             // out, rather than a second control to find.
             onInspect={() => inspect(documentId, shown === channel ? null : channel)}

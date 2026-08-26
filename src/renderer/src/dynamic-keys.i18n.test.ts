@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
-import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
 import { PICTURE_TRAITS } from '@shared/domain/formatCapability'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
@@ -115,7 +115,7 @@ const COMPOSED_KEYS: readonly string[] = [
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
-  ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  ...PBR_CHANNELS.map(channel => `material.channel.${channel}`),
   // Every row of the menu that says where an asset may go.
   ...ASSET_INTENTS.map(intent => `${intent.labelKey}Hint`),
   // Which library a line of the remote browser came from. A source with no word would put a raw

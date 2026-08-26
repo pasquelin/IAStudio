@@ -27,15 +27,15 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // With the PROJECT, unlike its neighbours: this one writes inside the project folder, and what
   // a reader looks for afterwards is the folder that was or was not created.
   'document.export': 'project',
-  'texture.map': 'document',
-  'texture.channel': 'document',
-  'texture.seam': 'document',
+  'material.map': 'document',
+  'material.channel': 'document',
+  'material.seam': 'document',
   // With the document, not the library: an export writes outside the project, and what its
   // failure says something about is the texture that was open.
-  'texture.export': 'document',
+  'material.export': 'document',
   // A chunk three renamed upstream, so a material setting silently stopped applying. Read with
   // the document because that is where it shows — as a slider that moves nothing.
-  'texture.shader': 'document',
+  'material.shader': 'document',
   'skybox.source': 'document',
   'skybox.probes': 'document',
   'skybox.export': 'document',

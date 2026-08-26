@@ -29,7 +29,7 @@ import {
   type ContextCard,
   type ProjectContext,
 } from '@shared/domain/projectContext'
-import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
+import { isPbrChannel, type PbrChannel } from '@shared/domain/material'
 import type {
   SaveAudioRequest,
   SaveLayeredRequest,

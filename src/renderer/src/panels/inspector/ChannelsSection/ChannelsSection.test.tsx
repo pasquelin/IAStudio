@@ -2,18 +2,18 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { PBR_CHANNELS } from '@shared/domain/texture'
-import { setChannel } from '@/engines/texture/commands'
-import type { ChannelOrigin } from '@/engines/texture/textureState'
+import { PBR_CHANNELS } from '@shared/domain/material'
+import { setChannel } from '@/engines/material/commands'
+import type { ChannelOrigin } from '@/engines/material/materialState'
 import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { editPixelsOf } from '@/helpers/openAsset'
 import { useAssets } from '@/stores/assets'
-import { installTexture } from '@/stores/texture-fixtures'
-import { inspectedChannel, useTextureViews } from '@/stores/textureViews'
-import { textureOf, useTextures } from '@/stores/textures'
+import { installTexture } from '@/stores/material-fixtures'
+import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
+import { materialOf, useMaterials } from '@/stores/materials'
 import { ChannelsSection } from './ChannelsSection'
 
 vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
@@ -35,23 +35,23 @@ const picture = (id: string, name: string, location: Asset['location'] = 'local'
 
 const BRICK = picture('img-1', 'Brique')
 
-const channels = () => textureOf(useTextures.getState(), 'doc-1').channels
+const channels = () => materialOf(useMaterials.getState(), 'doc-1').channels
 
 /** The section reaches it through an `import()`, and behind it sit three.js and a WebGL context. */
-const deriveTextureChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
+const deriveMaterialChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 
-vi.mock('@/spaces/textures/deriveChannel', () => ({ deriveTextureChannel }))
+vi.mock('@/spaces/materials/deriveChannel', () => ({ deriveMaterialChannel }))
 
 beforeEach(() => {
   installTexture('doc-1')
   // Session state, shared by every document: a channel left inspected would leak into the next.
-  useTextureViews.setState({ inspected: {} })
+  useMaterialViews.setState({ inspected: {} })
   // The CATALOGUE, not the shelf: `useAssets.items` is the scope the browser is asking for, and
   // the Textures space narrows it — a list built out of it offers what has been browsed.
   installFakeBridge({ assets: { search: () => Promise.resolve([BRICK]) } })
   useAssets.setState({ items: [] })
   // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.
-  deriveTextureChannel.mockClear()
+  deriveMaterialChannel.mockClear()
   vi.mocked(reportFailure).mockClear()
   vi.mocked(editPixelsOf).mockReset()
 })
@@ -78,7 +78,7 @@ const fill = (
   channel: 'height' | 'baseColor' | 'normal' | 'roughness',
   { assetId = 'img-1', origin = 'imported' }: { assetId?: string; origin?: ChannelOrigin } = {},
 ): void =>
-  useTextures
+  useMaterials
     .getState()
     .runCommand('doc-1', setChannel(channel, { assetId, origin, width: 8, height: 8 }))
 
@@ -151,7 +151,7 @@ describe('the channels of a material', () => {
 
   /**
    * A drag announces its TYPE and never where its file is, so a cloud row reaches the line. The
-   * ASSET travels to `placeTextureChannel`, which is what lets the refusal name the file: an id
+   * ASSET travels to `placeMaterialChannel`, which is what lets the refusal name the file: an id
    * would leave the user reading a refusal about something they cannot recognise.
    */
   it('refuses a drop of a picture with no file yet, and says which one', async () => {
@@ -165,7 +165,7 @@ describe('the channels of a material', () => {
 
     await waitFor(() => expect(reportFailure).toHaveBeenCalledOnce())
     const [scope, , failure] = vi.mocked(reportFailure).mock.calls[0] ?? []
-    expect(scope).toBe('texture.channel')
+    expect(scope).toBe('material.channel')
     expect(String(failure)).toContain('Distante')
     expect(channels().normal).toBeUndefined()
   })
@@ -184,7 +184,7 @@ describe('the channels of a material', () => {
 
       await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Normale seul/ }))
 
-      expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBe('normal')
+      expect(inspectedChannel(useMaterialViews.getState(), 'doc-1')).toBe('normal')
     })
 
     it('goes back to the lit material when the same channel is asked again', async () => {
@@ -196,7 +196,7 @@ describe('the channels of a material', () => {
       await openMenu('Normale')
       await userEvent.click(screen.getByRole('menuitem', { name: /Revenir à la matière éclairée/ }))
 
-      expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBeNull()
+      expect(inspectedChannel(useMaterialViews.getState(), 'doc-1')).toBeNull()
     })
 
     it('moves straight from one channel to another', async () => {
@@ -209,7 +209,7 @@ describe('the channels of a material', () => {
       await openMenu('Rugosité')
       await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Rugosité seul/ }))
 
-      expect(inspectedChannel(useTextureViews.getState(), 'doc-1')).toBe('roughness')
+      expect(inspectedChannel(useMaterialViews.getState(), 'doc-1')).toBe('roughness')
     })
 
     /**
@@ -240,7 +240,7 @@ describe('the channels of a material', () => {
       await openMenu('Normale')
       await userEvent.click(screen.getByRole('menuitem', { name: /Regarder Normale seul/ }))
 
-      useTextures.getState().runCommand('doc-1', setChannel('normal', null))
+      useMaterials.getState().runCommand('doc-1', setChannel('normal', null))
 
       await waitFor(() => expect(slotOf('Normale').closest('[data-selected]')).toBeNull())
     })
@@ -277,7 +277,7 @@ describe('the channels of a material', () => {
         await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ }),
       )
 
-      expect(deriveTextureChannel).toHaveBeenCalledWith('doc-1', 'normal')
+      expect(deriveMaterialChannel).toHaveBeenCalledWith('doc-1', 'normal')
     })
 
     /**
@@ -293,7 +293,7 @@ describe('the channels of a material', () => {
         name: /Calculer depuis Hauteur — Hauteur est vide/,
       })
       expect(row).toBeDisabled()
-      expect(deriveTextureChannel).not.toHaveBeenCalled()
+      expect(deriveMaterialChannel).not.toHaveBeenCalled()
     })
 
     /**
@@ -303,7 +303,7 @@ describe('the channels of a material', () => {
      */
     it('closes every other derivation while one is running, and reopens them after', async () => {
       let finish = (): void => {}
-      deriveTextureChannel.mockImplementationOnce(
+      deriveMaterialChannel.mockImplementationOnce(
         () => new Promise<boolean>(resolve => (finish = () => resolve(true))),
       )
       fill('height')
@@ -351,7 +351,7 @@ describe('the channels of a material', () => {
 
     /**
      * The list and the drop have to answer the same question. `accepts` is `PICTURES`, and
-     * `placeTextureChannel` takes any of the three — so listing `image` alone meant a local skybox
+     * `placeMaterialChannel` takes any of the three — so listing `image` alone meant a local skybox
      * dropped onto Roughness fine and was never offered.
      */
     it('offers a generated sky and a generated texture, which a channel can hold', async () => {

@@ -29,7 +29,7 @@ const TARGETS_BY_KIND: Record<DocumentKind, DocumentTargets | null> = {
   sequence: { targets: montageTargets, select: selectInMontage },
   audio: { targets: montageTargets, select: selectInMontage },
   skybox: null,
-  texture: null,
+  material: null,
 }
 
 /**

@@ -75,7 +75,7 @@ export function registerExportHandlers({ pickFolder, projectPath }: ExportHandle
   // The channel PINS the section, so naming a target is not enough to reach another one's
   // extension: the renderer chooses both the target and the file name, and without this a sky
   // could ask for a `.usdz` on the sky channel and be written one.
-  handle(CHANNELS.textureExport, (_event, request) => writeFolder(request, picked, 'material'))
+  handle(CHANNELS.materialExport, (_event, request) => writeFolder(request, picked, 'material'))
   handle(CHANNELS.skyboxExport, (_event, request) => writeFolder(request, picked, 'sky'))
   handle(CHANNELS.montageStems, (_event, request) => writeFolder(request, picked, 'montage'))
   // The outside door serves every section, so it pins none — what holds it is the destination,

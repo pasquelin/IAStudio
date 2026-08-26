@@ -279,7 +279,7 @@ describe('the rail order of the upper right', () => {
    * one document — what it IS, what reads it, and the panel that describes what is selected.
    */
   it('leaves the upper right of Textures to the inspector alone', () => {
-    expect(upperRightIn('textures')).toEqual([])
+    expect(upperRightIn('materials')).toEqual([])
   })
 })
 
@@ -300,7 +300,7 @@ describe('the montage band', () => {
    * that ONE tool is still declared there is worth an assertion rather than a hope.
    */
   it('still offers the history in the spaces that have no montage', () => {
-    const untimed: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
+    const untimed: readonly WorkspaceId[] = ['image', 'materials', 'skyboxes']
     for (const workspace of untimed) {
       expect(placementIn('history', workspace)?.zone).toBe('bottomRight')
     }

@@ -40,7 +40,7 @@ import {
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
-import { PBR_CHANNELS, type PbrChannel } from '../domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '../domain/material'
 import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
@@ -219,7 +219,7 @@ describe('the translation bundles', () => {
    * wrong at exactly the point where the grouping would show.
    */
   it.each(CODES)('hands every count it writes to the number formatter in %s', code => {
-    const factors = new Set(['texture.tilingPreviewTimes'])
+    const factors = new Set(['material.tilingPreviewTimes'])
 
     const raw = [...BUNDLES[code]]
       .filter(([key]) => !factors.has(key.replace(/_(one|other|zero|two|few|many)$/, '')))
@@ -255,9 +255,9 @@ describe('the translation bundles', () => {
       // language, and translating `/usr/bin/git` would be inventing a folder nobody has.
       'settings.gitBinary.placeholder',
       // Two engines and a format. `roblox` and `raw` are one word each, which this already skips.
-      'textureExportTargets.gltf',
-      'textureExportTargets.unity',
-      'textureExportTargets.unreal',
+      'materialExportTargets.gltf',
+      'materialExportTargets.unity',
+      'materialExportTargets.unreal',
     ])
 
     const copied = [...BUNDLES.fr]
@@ -432,7 +432,7 @@ describe('the translation bundles', () => {
         kept: 'clip',
         except: [
           'meshes.plane',
-          'texture.shapePlane',
+          'material.shapePlane',
           'inspector.shot',
           'inspector.addRailHint',
           'objects.pathHint',
@@ -900,7 +900,7 @@ describe('the translation bundles', () => {
    * neither table can reach it. `docs/fr/manuel/12-espace-textures.md` says the panel shortens
    * THREE channel names; only `metalness` ever surfaced, its English having stayed put.
    *
-   * So the channels are read by KEY instead: `texture.channel.<c>` against the 3D inspector's
+   * So the channels are read by KEY instead: `material.channel.<c>` against the 3D inspector's
    * name for the same channel, every language. Four of the five comparable ones diverge.
    */
   const INSPECTOR_FIELD: Record<PbrChannel, string | null> = {
@@ -936,7 +936,7 @@ describe('the translation bundles', () => {
     return field === null
       ? []
       : CODES.map(code => [
-          BUNDLES[code].get(`texture.channel.${channel}`),
+          BUNDLES[code].get(`material.channel.${channel}`),
           BUNDLES[code].get(`inspector.fields.${field}`),
         ])
   }
@@ -1233,7 +1233,7 @@ const DYNAMIC_KEYS: readonly string[] = [
   // Composed from the shared PBR union to name a link row of the texture inspector. This family
   // has no compiler guard, so a ninth channel — and the domain warns the API adds types without
   // notice — would label its row with its own key.
-  ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  ...PBR_CHANNELS.map(channel => `material.channel.${channel}`),
   // The usage report showed what the API called things — `images-generation` sat in a French
   // table, and `video` beside a `Vidéo` the bundle already knew.
   ...USAGE_ACTIONS.map(action => `usage.actionNames.${action}`),

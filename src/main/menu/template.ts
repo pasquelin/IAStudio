@@ -29,7 +29,7 @@ import {
 } from '@shared/domain/command'
 import { acceleratorOf, typesText } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
-import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
+import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
@@ -65,7 +65,7 @@ export type MenuActions = {
   setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
   captureScene: (command: SceneCaptureCommand) => void
-  exportTexture: (command: TextureExportCommand) => void
+  exportMaterial: (command: TextureExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
 }
 
@@ -274,9 +274,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   /** One engine per row, for the same reason a format is one: a dialog has no such control. */
   const textureItems = (): MenuItemConstructorOptions[] =>
-    TEXTURE_EXPORT_TARGETS.map(target => ({
-      label: t.textureExportTargets[target],
-      click: () => actions.exportTexture({ target }),
+    MATERIAL_EXPORT_TARGETS.map(target => ({
+      label: t.materialExportTargets[target],
+      click: () => actions.exportMaterial({ target }),
     }))
 
   /**
@@ -320,7 +320,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
-    if (workspace === 'textures') return [{ label: t.menu.exportTexture, submenu: textureItems() }]
+    if (workspace === 'materials')
+      return [{ label: t.menu.exportMaterial, submenu: textureItems() }]
     if (workspace === 'skyboxes') return [{ label: t.menu.exportSkybox, submenu: skyboxItems() }]
 
     // A command rather than an action of its own, unlike the three above: what a montage exports

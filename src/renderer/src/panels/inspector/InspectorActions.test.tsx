@@ -7,8 +7,8 @@ import { useDocuments } from '@/stores/documents'
 import { useSectionFolds } from '@/stores/sectionFolds'
 import { useSelection } from '@/stores/selection'
 import { useStyles } from '@/stores/styles'
-import { useTextures } from '@/stores/textures'
-import { newTexture } from '@/engines/texture/textureState'
+import { useMaterials } from '@/stores/materials'
+import { newMaterial } from '@/engines/material/materialState'
 import { InspectorActions } from './InspectorActions'
 
 const SAVE = 'Enregistrer comme style'
@@ -19,14 +19,14 @@ function openTexture(): void {
     documents: {
       'tex-1': {
         id: 'tex-1',
-        kind: 'texture',
+        kind: 'material',
         title: 'Roche',
-        workspace: 'textures',
+        workspace: 'materials',
         path: 'documents/Roche.mtlx',
       },
     },
   })
-  useTextures.getState().ensure('tex-1', newTexture)
+  useMaterials.getState().ensure('tex-1', newMaterial)
 }
 
 beforeEach(() => {
@@ -121,7 +121,7 @@ describe('what the inspector title row carries', () => {
     const save = vi.fn((style: MaterialStyle) => Promise.resolve([style]))
     installFakeBridge({ styles: { save } })
     openTexture()
-    useTextures.getState().runCommand('tex-1', {
+    useMaterials.getState().runCommand('tex-1', {
       id: 'test',
       apply: texture => ({ ...texture, material: { ...texture.material, metalness: 0.75 } }),
       revert: texture => texture,

@@ -247,9 +247,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       cancel: () => Promise.resolve(),
       ...overrides.render,
     },
-    texture: {
+    material: {
       export: () => Promise.resolve(null),
-      ...overrides.texture,
+      ...overrides.material,
     },
     skybox: {
       export: () => Promise.resolve(null),
@@ -361,7 +361,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onSceneDisplay: noSubscription,
       onSceneExport: noSubscription,
       onSceneCapture: noSubscription,
-      onTextureExport: noSubscription,
+      onMaterialExport: noSubscription,
       onSkyboxExport: noSubscription,
       ...overrides.menu,
     },

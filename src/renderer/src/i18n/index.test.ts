@@ -50,7 +50,7 @@ describe('the numbers a sentence carries', () => {
   it('leaves the tiling factor alone', async () => {
     await initI18n('fr')
 
-    expect(i18next.t('texture.tilingPreviewTimes', { count: 4 })).toBe('4×')
+    expect(i18next.t('material.tilingPreviewTimes', { count: 4 })).toBe('4×')
   })
 })
 

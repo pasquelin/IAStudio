@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from './asset'
-import type { PbrChannel } from './texture'
+import type { PbrChannel } from './material'
 import { effectiveModelTextures, ownModelTextures } from './ownModelTextures'
 
 const MODEL = 'asset-model'
