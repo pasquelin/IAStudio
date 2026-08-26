@@ -71,6 +71,37 @@ describe('what an object does while the game runs, driven from outside', () => {
     expect(components()).toEqual([newComponent('Health')])
   })
 
+  /**
+   * 🛑 The value travels as text, so `options`, `min` and `max` are read by no client and by no
+   * validator. Written through, an axis of `north` reaches the document, the `.gltf`, and no
+   * system at all.
+   */
+  it('refuses a value outside what the descriptor allows', async () => {
+    await runAction('component.attach', { nodeId: 'Cube Test', type: 'Movement' })
+
+    const offAxis = { nodeId: 'Cube Test', type: 'Movement', field: 'axis', value: 'north' }
+    const belowFloor = { nodeId: 'Cube Test', type: 'Movement', field: 'speed', value: '-2' }
+
+    expect(await runAction('component.set', offAxis)).toMatchObject({ ok: false })
+    expect(await runAction('component.set', belowFloor)).toMatchObject({ ok: false })
+    expect(components()).toEqual([newComponent('Movement')])
+  })
+
+  /**
+   * The refusal has to name the right repair: told « already as asked », a model leaves the
+   * component unattached, which is the one thing that would have made the call work.
+   */
+  it('says the object carries no such component, rather than that it is already as asked', async () => {
+    expect(
+      await runAction('component.set', {
+        nodeId: 'Cube Test',
+        type: 'Health',
+        field: 'max',
+        value: '250',
+      }),
+    ).toMatchObject({ ok: false, refusal: 'notFound' })
+  })
+
   it('detaches one, and refuses to detach one the object has not got', async () => {
     await runAction('component.attach', { nodeId: 'Cube Test', type: 'Health' })
 

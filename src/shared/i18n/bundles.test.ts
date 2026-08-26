@@ -14,6 +14,7 @@ import {
   VIEWPORT_QUALITIES,
 } from '../domain/scene'
 import { CAPTURE_QUALITIES } from '../domain/sceneCapture'
+import { COMPONENTS } from '../domain/componentRegistry'
 import { CONTEXT_TEMPLATES } from '../domain/projectContext'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
@@ -1168,6 +1169,16 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...TRACK_PROPERTIES.map(property => `animation.${property}`),
   ...HOME_SECTION_IDS.map(id => `home.sections.${id}`),
   ...[...new Set(TOOL_PLACEMENTS.map(placement => placement.id))].map(id => `panels.${id}`),
+  // Every word the component registry names, read off the registry itself. A third component,
+  // or a fourth value of a choice, arrives with its lines or this goes red — the descriptor is
+  // read through `t(<variable>)` from the add menu, the section heading and every field label,
+  // so nothing else would see it.
+  ...Object.values(COMPONENTS).flatMap(descriptor => [
+    descriptor.titleKey,
+    descriptor.descriptionKey,
+    ...descriptor.fields.map(field => field.labelKey),
+    ...descriptor.fields.flatMap(field => (field.options ?? []).map(one => `game.values.${one}`)),
+  ]),
   // The ways into a first context card, read off the list rather than off a literal: a model
   // added without its two lines would offer the reader its own key as a menu row.
   ...CONTEXT_TEMPLATES.flatMap(template => [template.titleKey, template.bodyKey]),

@@ -97,6 +97,31 @@ export function newComponent(type: ComponentType): Component {
 }
 
 /**
+ * The word a client sent, read as the field declares it — or nothing when it does not fit.
+ *
+ * 🛑 The bounds are enforced HERE and nowhere else. A component's value travels as text (a schema
+ * naming every field of every type would describe none of them), so `options`, `min` and `max`
+ * are read by no client and by no validator: without this an `axis` of `north` is written into
+ * the document verbatim, saved into the `.gltf`, matched by no system, and refused on reload by
+ * nothing.
+ *
+ * Refused rather than clamped: a caller told its value did not fit corrects it, where a caller
+ * silently given another number believes it wrote the one it asked for.
+ */
+export function componentValueOf(field: ActionField, said: string): JsonValue | null {
+  if (field.kind === 'boolean') return said === 'true' ? true : said === 'false' ? false : null
+  if (field.kind === 'choice') return (field.options ?? []).includes(said) ? said : null
+  if (field.kind !== 'number' && field.kind !== 'integer') return said
+
+  const value = Number(said)
+  if (!Number.isFinite(value)) return null
+  if (field.kind === 'integer' && !Number.isInteger(value)) return null
+  if (field.min !== undefined && value < field.min) return null
+
+  return field.max !== undefined && value > field.max ? null : value
+}
+
+/**
  * A component with one field written, dropping a value the descriptor does not name.
  *
  * The drop is the point: an inspector form and an MCP call both hand over whatever they were

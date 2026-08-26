@@ -28,10 +28,12 @@ export const GAME_SCENARIOS: readonly Scenario[] = [
     passed: run => componentOf(run, 'Cube Test', 'Health')?.max === 250,
   },
   {
-    name: '59.3 makes it travel up and down',
-    said: ['Fais monter et descendre Cube Test.'],
+    name: '59.3 makes it travel from side to side',
+    said: ['Fais aller Cube Test de gauche à droite.'],
     setup: cubeScene,
-    passed: run => componentOf(run, 'Cube Test', 'Movement')?.axis === 'y',
+    // 🛑 Never on a default: `y` and `pingPong` are what `component.attach` alone already writes,
+    // so an oracle reading either would pass without `component.set` being called at all.
+    passed: run => componentOf(run, 'Cube Test', 'Movement')?.axis === 'x',
   },
   {
     name: '59.4 takes its health back off',

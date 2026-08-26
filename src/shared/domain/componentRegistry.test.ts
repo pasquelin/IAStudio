@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { ActionField } from './assistantAction'
 import {
   COMPONENT_TYPES,
   COMPONENTS,
+  componentValueOf,
   descriptorOf,
   isComponentType,
   newComponent,
@@ -42,5 +44,35 @@ describe('what the studio knows about a component', () => {
 
     expect(withComponentField(health, 'current', 3).current).toBe(3)
     expect(withComponentField(health, 'stamina', 3)).toEqual(health)
+  })
+})
+
+describe('the word a client sent, read as the field declares it', () => {
+  const fieldOf = (key: string): ActionField => {
+    const field = [...descriptorOf('Movement').fields, ...descriptorOf('Health').fields].find(
+      one => one.key === key,
+    )
+    if (!field) throw new Error(`no field ${key}`)
+    return field
+  }
+
+  it('reads a number, and refuses one the field would not hold', () => {
+    expect(componentValueOf(fieldOf('speed'), '2.5')).toBe(2.5)
+    expect(componentValueOf(fieldOf('speed'), '-1')).toBeNull()
+    expect(componentValueOf(fieldOf('speed'), 'beaucoup')).toBeNull()
+  })
+
+  /** Without this an axis of `north` reaches the document, the file, and no system at all. */
+  it('reads only a value the choice offers', () => {
+    expect(componentValueOf(fieldOf('axis'), 'x')).toBe('x')
+    expect(componentValueOf(fieldOf('axis'), 'north')).toBeNull()
+  })
+
+  it('reads a switch by its two words, and nothing else', () => {
+    const flag: ActionField = { key: 'on', kind: 'boolean', labelKey: 'x', required: true }
+
+    expect(componentValueOf(flag, 'true')).toBe(true)
+    expect(componentValueOf(flag, 'false')).toBe(false)
+    expect(componentValueOf(flag, 'oui')).toBeNull()
   })
 })

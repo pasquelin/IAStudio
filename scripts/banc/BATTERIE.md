@@ -881,5 +881,5 @@ Sur un projet suivi par git :
 
 - [ ] « Donne de la santé à Cube Test. »
 - [ ] « Monte la santé maximum de Cube Test à 250. »
-- [ ] « Fais monter et descendre Cube Test. »
+- [ ] « Fais aller Cube Test de gauche à droite. »
 - [ ] « Retire la santé de Cube Test. »
