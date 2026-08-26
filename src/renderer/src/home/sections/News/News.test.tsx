@@ -5,7 +5,7 @@ import { NEWS_PAGE_SIZE, type NewsItem, type NewsPage } from '@shared/domain/new
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
-import { settleHome } from '../../home-fixtures'
+import { settleHome, settled } from '../../home-fixtures'
 import { News } from './News'
 
 const item = (over: Partial<NewsItem> = {}): NewsItem => ({
@@ -101,11 +101,17 @@ describe('the news band', () => {
     expect(screen.getByText('black-forest-labs/FLUX.1-dev')).toBeInTheDocument()
   })
 
-  it('says the source refused rather than showing an empty category', async () => {
-    installFakeBridge({ news: { read: () => Promise.reject(new Error('502')) } })
-    render(withQueries(<News />))
+  /**
+   * A heading, five chips and a retry button, all of it saying that somebody else's server is
+   * down. The band goes with the answer it does not have.
+   */
+  it('takes itself off the page when the source refuses', async () => {
+    const read = vi.fn(() => Promise.reject(new Error('502')))
+    installFakeBridge({ news: { read } })
+    const { container } = render(withQueries(<News />))
 
-    expect(await screen.findByText('La source n’a pas répondu.')).toBeInTheDocument()
+    await settled(read)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('says a category is empty once the hub has actually answered', async () => {

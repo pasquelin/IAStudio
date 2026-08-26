@@ -31,14 +31,17 @@ export type Columns = {
 }
 
 /**
- * How many cards of a target width fit across `width`, and what one column then measures.
+ * How many cards of a target width fit across `width`, and what one column then measures. `max`
+ * caps a surface that wants a fixed number across whatever room it has; `aim` is then the floor
+ * under which it shows fewer.
  *
- * At least one column: a surface narrower than a single card still has to draw it, and a count
- * of zero divides the width by nothing.
+ * Whole pixels: a float changed with every pixel of a drag, so callers comparing one reading to
+ * the next never matched and re-laid their cards out twice a frame.
  */
-export function columnsIn(width: number, aim: number): Columns {
-  const columns = Math.max(1, Math.floor((width + GAP) / (Math.max(aim, 1) + GAP)))
-  return { columns, columnWidth: (width - (columns - 1) * GAP) / columns }
+export function columnsIn(width: number, aim: number, max = Infinity): Columns {
+  const fitting = Math.floor((width + GAP) / (Math.max(aim, 1) + GAP))
+  const columns = clampAtLeast(fitting, 1, max)
+  return { columns, columnWidth: Math.floor((width - (columns - 1) * GAP) / columns) }
 }
 
 export type VirtualFocus = {

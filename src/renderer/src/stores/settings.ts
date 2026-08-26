@@ -108,3 +108,12 @@ export const useSettings = create<SettingsState>()((set, get) => ({
 export function activeOwnerId(state: Pick<SettingsState, 'auth'>): string | null {
   return state.auth.authenticated ? (state.auth.ownerId ?? null) : null
 }
+
+/**
+ * Whether a key has been TRIED and answered yes. It says nothing about the other two readings —
+ * a key still being checked and a machine with none both read false, and a surface that must
+ * tell them apart reads `authKnown` itself.
+ */
+export function hasApi(state: Pick<SettingsState, 'auth' | 'authKnown'>): boolean {
+  return state.authKnown && state.auth.authenticated
+}

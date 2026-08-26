@@ -27,6 +27,11 @@ export type HomeSectionEntry = {
    * empty.
    */
   pinned?: boolean
+  /**
+   * Sections a machine with no cloud account cannot fill. They are left out entirely rather than
+   * drawn over an apology — see `visibleHomeSections`.
+   */
+  requiresApi?: boolean
 }
 
 /**
@@ -43,8 +48,9 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   // nobody opens the studio with — see `home/sections/ModelInventory`.
   { id: 'models' },
   // What is moving outside it. Last because it is about somebody else's work: the bands above
-  // are about this machine, and a reader scrolls past them to reach it deliberately.
-  { id: 'news' },
+  // are about this machine, and a reader scrolls past them to reach it deliberately — and off a
+  // machine with no cloud account, not at all.
+  { id: 'news', requiresApi: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
@@ -81,22 +87,35 @@ export function homeSections(stored: readonly HomeSectionSetting[]): HomeSection
   return reconcileOrder(kept, HOME_SECTIONS.map(settingOf), setting => setting.id)
 }
 
+/** Whether this studio can fill the band at all — the condition both readings below share. */
+function drawable(entry: HomeSectionEntry | null, hasApi: boolean): boolean {
+  return hasApi || entry?.requiresApi !== true
+}
+
 /**
  * The sections to draw, in order. This is the whole of the "never an empty home" promise, and
  * the reason it is a pure function rather than a condition inside a component.
  *
- * One rule produces it: a pinned section is drawn whatever the user hid.
+ * Two rules produce it: a pinned section is drawn whatever the user hid, and a section that needs
+ * the cloud is left out of a studio that has no account for it.
  *
- * 🛑 It took a `HomeContext` until the explore feed left, and the flag it carried — `requiresApi`
- * — went with it. No band needs a key now: the models band is at its most useful on a machine
- * that has none, since saying so is half of what it is for. A band that DOES need one must bring
- * the flag back rather than draw itself empty.
+ * `hasApi` is passed rather than read, and is not optional: the caller is the only one that knows
+ * whether the key has been TRIED yet, and a default would have this answer "no account" during
+ * the second the window takes to find out.
+ *
+ * 🛑 The flag went away with the explore feed and came back with the news band. The models band
+ * does NOT carry it: it is at its most useful on a machine with no key, since saying so is half
+ * of what it is for.
  */
 export function visibleHomeSections(
   stored: readonly HomeSectionSetting[],
+  hasApi: boolean,
 ): readonly HomeSectionId[] {
   return homeSections(stored)
-    .filter(setting => homeSectionOf(setting.id)?.pinned === true || setting.visible)
+    .filter(setting => {
+      const entry = homeSectionOf(setting.id)
+      return drawable(entry, hasApi) && (entry?.pinned === true || setting.visible)
+    })
     .map(setting => setting.id)
 }
 
@@ -126,9 +145,20 @@ export function shownHomeSection(
   return patchedHomeSection(stored, id, { visible })
 }
 
-/** Sections the user hid, so the home can offer them back without a trip to the preferences. */
-export function hiddenHomeSections(stored: readonly HomeSectionSetting[]): HomeSectionId[] {
+/**
+ * Sections the user hid, so the home can offer them back without a trip to the preferences.
+ *
+ * `hasApi` for the same reason `visibleHomeSections` takes it: offering back a band this studio
+ * cannot draw is a line that does nothing when clicked.
+ */
+export function hiddenHomeSections(
+  stored: readonly HomeSectionSetting[],
+  hasApi: boolean,
+): HomeSectionId[] {
   return homeSections(stored)
-    .filter(setting => !setting.visible && homeSectionOf(setting.id)?.pinned !== true)
+    .filter(setting => {
+      const entry = homeSectionOf(setting.id)
+      return drawable(entry, hasApi) && !setting.visible && entry?.pinned !== true
+    })
     .map(setting => setting.id)
 }

@@ -33,18 +33,22 @@ describe('the sections and the panels', () => {
 })
 
 describe('the sections a home draws', () => {
-  it('is never empty, whatever the user hid', () => {
+  it('is never empty, whatever the user hid and whether or not a key is connected', () => {
     for (const stored of [DEFAULT_HOME_SECTIONS, ALL_HIDDEN, []]) {
-      expect(visibleHomeSections(stored).length).toBeGreaterThan(0)
+      for (const hasApi of [true, false]) {
+        expect(visibleHomeSections(stored, hasApi).length).toBeGreaterThan(0)
+      }
     }
   })
 
   it('shows every band on a fresh install: what one hides, one hid', () => {
-    expect(visibleHomeSections(DEFAULT_HOME_SECTIONS)).toEqual(HOME_SECTIONS.map(entry => entry.id))
+    expect(visibleHomeSections(DEFAULT_HOME_SECTIONS, true)).toEqual(
+      HOME_SECTIONS.map(entry => entry.id),
+    )
   })
 
   it('hides a section the user hid, and keeps the pinned one they tried to', () => {
-    const sections = visibleHomeSections(ALL_HIDDEN)
+    const sections = visibleHomeSections(ALL_HIDDEN, true)
 
     expect(sections).toContain('spotlight')
     expect(sections).not.toContain('models')
@@ -55,7 +59,17 @@ describe('the sections a home draws', () => {
    * key has ever been entered — an empty machine is a reading, not an absence.
    */
   it('draws the models band with nothing configured at all', () => {
-    expect(visibleHomeSections([])).toContain('models')
+    expect(visibleHomeSections([], false)).toContain('models')
+  })
+
+  /**
+   * The other half of that reading: a band about what is moving OUTSIDE the studio has nothing to
+   * fill itself with on a machine that talks to nobody, and an apology under a heading is worse
+   * than the room it takes.
+   */
+  it('leaves out a band that needs the cloud when there is no account for it', () => {
+    expect(visibleHomeSections(DEFAULT_HOME_SECTIONS, false)).not.toContain('news')
+    expect(visibleHomeSections(DEFAULT_HOME_SECTIONS, true)).toContain('news')
   })
 })
 
@@ -67,7 +81,7 @@ describe('reading back a stored order', () => {
     ]
 
     // `as` because that id no longer exists in the union — which is the case the guard is for.
-    const sections = visibleHomeSections(fromDisk as HomeSectionSetting[])
+    const sections = visibleHomeSections(fromDisk as HomeSectionSetting[], true)
 
     expect(sections).toContain('spotlight')
     expect(sections).not.toContain('gone')
@@ -107,7 +121,7 @@ describe('reading back a stored order', () => {
       setting => setting.id !== 'models',
     )
 
-    expect(visibleHomeSections(withoutModels)).toEqual(HOME_SECTIONS.map(entry => entry.id))
+    expect(visibleHomeSections(withoutModels, true)).toEqual(HOME_SECTIONS.map(entry => entry.id))
   })
 })
 
@@ -115,13 +129,21 @@ describe('hiding a band', () => {
   it('hides and shows a section, and offers the hidden ones back', () => {
     const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'models', false)
 
-    expect(hiddenHomeSections(hidden)).toEqual(['models'])
-    expect(hiddenHomeSections(shownHomeSection(hidden, 'models', true))).toEqual([])
+    expect(hiddenHomeSections(hidden, true)).toEqual(['models'])
+    expect(hiddenHomeSections(shownHomeSection(hidden, 'models', true), true)).toEqual([])
+  })
+
+  /** Offering back a band this studio cannot draw is a line that does nothing when clicked. */
+  it('never offers back a band the cloud account is missing for', () => {
+    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'news', false)
+
+    expect(hiddenHomeSections(hidden, false)).toEqual([])
+    expect(hiddenHomeSections(hidden, true)).toEqual(['news'])
   })
 
   it('never offers a pinned section back, since it was never taken away', () => {
     const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', false)
 
-    expect(hiddenHomeSections(hidden)).toEqual([])
+    expect(hiddenHomeSections(hidden, true)).toEqual([])
   })
 })

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
 import { INLINE_LINK } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { useSettings } from '@/stores/settings'
+import { hasApi, useSettings } from '@/stores/settings'
 import { HINT_TOP } from '@/helpers/tooltip'
 
 /**
@@ -13,8 +13,9 @@ import { HINT_TOP } from '@/helpers/tooltip'
 export function HomeViewHidden() {
   const { t } = useTranslation()
   const stored = useSettings(state => state.settings.home.sections)
+  const api = useSettings(hasApi)
 
-  const hidden = hiddenHomeSections(stored)
+  const hidden = hiddenHomeSections(stored, api)
   if (hidden.length === 0) return null
 
   const restore = (): void => {

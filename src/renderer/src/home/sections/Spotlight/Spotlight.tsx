@@ -14,8 +14,11 @@ import { enterWorkspace } from '../../open'
 import { SpotlightCard, type Slide } from './SpotlightCard'
 import { SpotlightWaiting } from './SpotlightWaiting'
 
-/** Banner-sized, like the reference: two of them fill the band, three make it a shelf. */
-const CARD_WIDTH = 560
+/** Two to a page, dividing the band: a fixed width left the second one sliced by the edge. */
+const PER_VIEW = 2
+
+/** Under this a half-band card no longer holds a heading and a sentence, so one takes the width. */
+const MIN_CARD_WIDTH = 320
 const CARD_HEIGHT = 168
 
 /**
@@ -122,15 +125,16 @@ export function Spotlight() {
   const leading = slides.find(slide => slide.action !== undefined)
   if (leading) leading.leading = true
 
-  // A lone banner has no rail to be scrolled along, and a 560 px card marooned in a 1400 px band
-  // reads as a leftover rather than as the top of the page. It takes the width instead, and lies
-  // down: a full-width card as tall as a stacked one is mostly empty.
+  // A lone banner has no rail to be scrolled along, and a half-width card marooned in a 1400 px
+  // band reads as a leftover rather than as the top of the page. It takes the width instead, and
+  // lies down: a full-width card as tall as a stacked one is mostly empty.
   if (slides.length === 1 && slides[0]) return <SpotlightCard slide={slides[0]} layout="banner" />
 
   return (
     <Carousel
       items={slides}
-      itemWidth={CARD_WIDTH}
+      itemWidth={MIN_CARD_WIDTH}
+      perView={PER_VIEW}
       itemHeight={CARD_HEIGHT}
       label={t('home.sections.spotlight')}
       renderCard={slide => <SpotlightCard slide={slide} layout="stacked" />}

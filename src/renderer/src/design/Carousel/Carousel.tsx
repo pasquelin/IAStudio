@@ -2,6 +2,8 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
+import { useGrid } from '@/hooks/useGrid'
+import { useRemeasure } from '@/hooks/useRemeasure'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { CarouselArrow } from './CarouselArrow'
 import { GAP } from '../virtual'
@@ -18,8 +20,11 @@ const PAGE_OVERLAP = 40
 export type CarouselProps<T extends { id: string }> = {
   items: readonly T[]
   renderCard: (item: T) => ReactNode
+  /** The floor a card is never laid out under, not its width: the cards divide the rail. */
   itemWidth: number
   itemHeight: number
+  /** At most this many cards per page — see `itemWidth`, which is their floor. */
+  perView: number
   /** Names the region for a screen reader. Every carousel on the home says what it holds. */
   label: string
   /** Shown in place of the rail — the caller decides whether it means empty or unmatched. */
@@ -69,18 +74,24 @@ export function Carousel<T extends { id: string }>({
   itemHeight,
   label,
   empty,
+  perView,
 }: CarouselProps<T>) {
   const { t } = useTranslation()
   const rail = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<Position>(START)
 
+  const railed = items.length > 0
+  const { columnWidth } = useGrid(rail, itemWidth, railed, perView)
+
   const virtualizer = useVirtualizer({
     horizontal: true,
     count: items.length,
     getScrollElement: () => rail.current,
-    estimateSize: () => itemWidth + GAP,
+    estimateSize: () => columnWidth + GAP,
     overscan: 3,
   })
+
+  useRemeasure(virtualizer, columnWidth)
 
   // Coalesced to one reading per frame: a trackpad fires scroll a hundred times a second, and
   // `positionOf` reads three layout properties — enough to force a reflow on each of them.
@@ -109,11 +120,9 @@ export function Carousel<T extends { id: string }>({
 
   useEffect(() => () => cancelAnimationFrame(pending.current), [])
 
-  // An empty shelf draws no rail at all, so there is nothing to observe until the first item
-  // arrives — and a list fetched from disk starts empty. Without this dependency the observer
-  // is never installed for such a shelf, and it keeps its arrows and dots for good.
-  const railed = items.length > 0
-
+  // `railed`: an empty shelf draws no rail, so there is nothing to observe until the first item
+  // arrives — and a list fetched from disk starts empty. Without it, such a shelf keeps its
+  // arrows and its dots for good.
   useEffect(() => {
     const element = rail.current
     if (!element) return
@@ -136,7 +145,9 @@ export function Carousel<T extends { id: string }>({
   const scrollByPage = (direction: -1 | 1): void => {
     const element = rail.current
     if (!element) return
-    element.scrollBy({ left: direction * Math.max(itemWidth, element.clientWidth - PAGE_OVERLAP) })
+    element.scrollBy({
+      left: direction * Math.max(columnWidth, element.clientWidth - PAGE_OVERLAP),
+    })
   }
 
   const scrollToPage = (page: number): void => {
@@ -149,8 +160,8 @@ export function Carousel<T extends { id: string }>({
     const element = rail.current
     if (!element) return
 
-    if (event.key === 'ArrowRight') element.scrollBy({ left: itemWidth + GAP })
-    else if (event.key === 'ArrowLeft') element.scrollBy({ left: -(itemWidth + GAP) })
+    if (event.key === 'ArrowRight') element.scrollBy({ left: columnWidth + GAP })
+    else if (event.key === 'ArrowLeft') element.scrollBy({ left: -(columnWidth + GAP) })
     else if (event.key === 'Home') element.scrollTo({ left: 0 })
     else if (event.key === 'End') element.scrollTo({ left: element.scrollWidth })
     else return
@@ -174,7 +185,12 @@ export function Carousel<T extends { id: string }>({
         style={{ height: itemHeight }}
         className="snap-x snap-proximity overflow-x-auto overflow-y-hidden scroll-smooth"
       >
-        <div style={{ width: virtualizer.getTotalSize() }} className="relative h-full">
+        {/* Less the gap the virtualizer leaves after the last card: those few pixels made the
+            rail call itself two pages long, over a band whose cards all fit. */}
+        <div
+          style={{ width: Math.max(0, virtualizer.getTotalSize() - GAP) }}
+          className="relative h-full"
+        >
           {virtualItems.map(virtual => {
             const item = items[virtual.index]
             if (!item) return null
@@ -182,7 +198,7 @@ export function Carousel<T extends { id: string }>({
             return (
               <div
                 key={item.id}
-                style={{ transform: `translateX(${virtual.start}px)`, width: itemWidth }}
+                style={{ transform: `translateX(${virtual.start}px)`, width: columnWidth }}
                 className="absolute top-0 left-0 h-full snap-start"
               >
                 {renderCard(item)}

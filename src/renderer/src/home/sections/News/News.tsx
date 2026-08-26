@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ARTICLES_TOPIC, NEWS_TOPICS, type NewsTopic } from '@shared/domain/news'
 import { Chip } from '@/design/Chip'
+import { useNews } from '@/hooks/useNews'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
 import { Section } from '../../Section'
@@ -22,6 +23,11 @@ export function News() {
   // One topic at a time, and the first family rather than a mixed list: five topics answered at
   // once is five requests for a band nobody has looked at yet.
   const [topic, setTopic] = useState<NewsTopic>(NEWS_TOPICS[0] ?? ARTICLES_TOPIC)
+  const news = useNews(topic, reading)
+
+  // A source that says nothing leaves nothing to head: heading, chips and retry button all stood
+  // over an empty band. An empty CATEGORY keeps it — the chips are the way to a full one.
+  if (news.isError) return null
 
   return (
     <Section
@@ -44,7 +50,7 @@ export function News() {
         )
       }
     >
-      <NewsBody topic={topic} reading={reading} />
+      <NewsBody items={news.data?.items} reading={reading} />
     </Section>
   )
 }
