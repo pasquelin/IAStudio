@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-export type LogLevel = 'info' | 'warn' | 'error'
-
-export type LogEntry = { level: LogLevel; message: string; at: number }
+import type { LogEntry, LogLevel } from '@shared/domain/gameRuntime'
 
 /**
- * What a game says about itself. `recent` is bounded by the implementation: a game left running
- * writes without end, and a log that keeps everything is a leak with a nice name.
+ * What a game says about itself — what a console shows and what a report attaches. The entries
+ * themselves are declared with the report, which the window and the main process also read.
+ *
+ * `recent` is bounded by the implementation: a game left running writes without end, and a log
+ * that keeps everything is a leak with a nice name.
  */
 export type LogPort = {
   write: (level: LogLevel, message: string) => void

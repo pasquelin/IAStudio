@@ -24,6 +24,12 @@ export type GameLoop = {
   advance: (nowSeconds: number) => number
   /** Where the frame sits between two steps, in `[0, 1)`. What interpolation draws from. */
   alpha: () => number
+  /**
+   * Forgets where it was: the next frame is an ORIGIN, not a gap to catch up on. What a game
+   * coming back from a pause calls — a minute paused is not a minute of gameplay owed, and the
+   * clamp alone would still simulate a quarter of a second of it.
+   */
+  reset: () => void
 }
 
 export function createGameLoop(world: World, step: number = world.time.step): GameLoop {
@@ -55,5 +61,10 @@ export function createGameLoop(world: World, step: number = world.time.step): Ga
     },
 
     alpha: () => accumulator / step,
+
+    reset: () => {
+      accumulator = 0
+      last = null
+    },
   }
 }

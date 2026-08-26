@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-import { LOG_KEPT, type LogEntry, type LogLevel, type LogPort } from '../ports/logPort'
+import type { LogEntry, LogLevel } from '@shared/domain/gameRuntime'
+import { LOG_KEPT, type LogPort } from '../ports/logPort'
 
 /**
  * Bounded: the oldest entry falls out when the newest arrives. `echo` is where a line ALSO goes,

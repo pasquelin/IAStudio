@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { GameApi } from '../api/gameApi'
-import type { LogEntry } from '../ports/logPort'
+import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
 import { createBundledAssets } from './bundledAssets'
 import { createDomInput, type DomInputTarget } from './domInput'

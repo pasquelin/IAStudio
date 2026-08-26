@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { createStudioHost } from './studioHost'
-import type { LogEntry } from '../ports/logPort'
+import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
 
 const player: Player = { id: 'p1', name: 'Alba', local: true }
