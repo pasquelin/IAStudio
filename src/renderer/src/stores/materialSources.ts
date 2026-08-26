@@ -51,8 +51,31 @@ export function wornMaterialOf(materialId: string): MaterialState | null {
 /** Reads a material a scene names but no tab holds. Once per document. */
 export const loadMaterialSource = materials.load
 
-/** Every landing of a read, so a viewport can dress again what it had to leave undressed. */
-export const onMaterialsRead = materials.subscribe
+/**
+ * BOTH halves of « a material moved », as `onSkyChange` is for a sky: the open tab, where the
+ * edits land, and the copy read off disk, whose landing nothing else waits for.
+ *
+ * WHICH documents, rather than « some »: a redraw marks the shadows stale, and a scene of twenty
+ * models would pay for a slider dragged in another tab.
+ */
+export function onMaterialChange(listen: (materialIds: readonly string[]) => void): () => void {
+  const tabs = useMaterials.subscribe((state, before) => {
+    if (state.states === before.states) return
+
+    const changed = Object.keys(state.states).filter(id => state.states[id] !== before.states[id])
+    // A document CLOSING is a change too, and its id is gone from the new states — the model
+    // wearing it has to fall back on the file, so what left counts as much as what moved.
+    const closed = Object.keys(before.states).filter(id => !(id in state.states))
+    if (changed.length + closed.length > 0) listen([...changed, ...closed])
+  })
+
+  const files = materials.subscribe(landed => listen(landed))
+
+  return () => {
+    tabs()
+    files()
+  }
+}
 
 /**
  * The material a document id names, as a PANEL reads it: the open tab's, the copy read off disk,

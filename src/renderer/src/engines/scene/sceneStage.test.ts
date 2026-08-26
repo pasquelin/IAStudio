@@ -11,14 +11,14 @@ import { EMPTY_SCENE, type SceneState } from './sceneState'
 const landings = { skies: () => {}, materials: (_ids: readonly string[]) => {} }
 
 vi.mock('@/stores/skyboxSources', () => ({
-  onSkiesRead: (listen: () => void) => {
+  onSkyChange: (listen: () => void) => {
     landings.skies = listen
     return () => {}
   },
 }))
 
 vi.mock('@/stores/materialSources', () => ({
-  onMaterialsRead: (listen: (ids: readonly string[]) => void) => {
+  onMaterialChange: (listen: (ids: readonly string[]) => void) => {
     landings.materials = listen
     return () => {}
   },
@@ -115,11 +115,11 @@ describe('the stage a montage watches a scene through', () => {
   })
 
   /**
-   * The documents a scene NAMES land a beat after the first frame, and nothing here waited for
-   * them: a clip drew at the procedural studio while the same scene, open in the 3D tab, drew lit
-   * by its sky — two surfaces disagreeing about one document for the rest of the session.
+   * BOTH halves of « the document moved »: an edit in its own tab, and a copy landing off disk.
+   * Measured on a real clip with the file half alone — it drew at the procedural studio, followed
+   * the first landing, and then no edit at all for the rest of the session.
    */
-  it('lights and dresses again once a document it names has been read', () => {
+  it('lights and dresses again whenever a document it names moves', () => {
     const { renderer, record } = stubRenderer()
     const stage = createSceneStage({ width: 8, height: 8, createRenderer: () => renderer })
     stage.show(EMPTY_SCENE)

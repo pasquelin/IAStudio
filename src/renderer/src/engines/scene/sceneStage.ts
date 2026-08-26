@@ -5,8 +5,8 @@ import { reportFailure } from '@/services/diagnostics'
 import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
 import { wornModelDress } from '@/spaces/materials/modelDress'
 import { assetVersionOf } from '@/stores/assets'
-import { onMaterialsRead } from '@/stores/materialSources'
-import { onSkiesRead } from '@/stores/skyboxSources'
+import { onMaterialChange } from '@/stores/materialSources'
+import { onSkyChange } from '@/stores/skyboxSources'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './sceneView'
 import { activeCameraAt } from './cameraShots'
@@ -110,14 +110,14 @@ export function createSceneStage({
   }
 
   /**
-   * The documents a scene NAMES — a sky, a material — read off disk a beat after the first frame,
-   * with nothing here waiting for them: a clip drew at the procedural studio while the same scene
-   * on screen drew lit by its sky. `SceneDocument` gets this from `useSkyRefresh`; a stage has no
-   * React to hang a hook on, so it subscribes itself.
+   * The documents a scene NAMES — a sky, a material — moving in their own tab, or landing off
+   * disk a beat after the first frame. Measured on a clip: with the FILE half alone it drew at the
+   * studio, then followed the first landing and no edit after it. `SceneDocument` gets both from
+   * `useSkyRefresh`; a stage has no React to hang a hook on, so it subscribes itself.
    */
   const watchDocuments = (): void => {
-    stopWatching.push(onSkiesRead(() => renderer?.lightAgain()))
-    stopWatching.push(onMaterialsRead(materialIds => renderer?.dressModels(materialIds)))
+    stopWatching.push(onSkyChange(() => renderer?.lightAgain()))
+    stopWatching.push(onMaterialChange(materialIds => renderer?.dressModels(materialIds)))
   }
 
   let shown: SceneState | null = null

@@ -41,8 +41,21 @@ export function litSkyOf(skyId: string): SkyboxContent | null {
 /** Reads a sky a scene names but no tab holds. Once per document. */
 export const loadSkySource = skies.load
 
-/** Every landing of a read, so a viewport can light again what it had to leave in the studio. */
-export const onSkiesRead = skies.subscribe
+/**
+ * BOTH halves of « a sky moved »: the open tab, where the edits land, and the copy read off disk,
+ * whose landing nothing else waits for. One of the two alone is a viewport that follows an edit
+ * but not a file, or a file but not an edit — measured on the montage, which had the second only
+ * and stayed lit by whatever the sky held when its clip was laid down.
+ */
+export function onSkyChange(listen: () => void): () => void {
+  const tabs = useSkyboxes.subscribe((state, before) => state.states !== before.states && listen())
+  const files = skies.subscribe(() => listen())
+
+  return () => {
+    tabs()
+    files()
+  }
+}
 
 /**
  * The sky a document id names, as a PANEL reads it: the open tab's, the copy read off disk, or
