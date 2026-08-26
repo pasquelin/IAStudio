@@ -488,16 +488,19 @@ Ce qui suit ne concerne que le point d’entrée pour un programme extérieur, d
 [chapitre 20](20-piloter-de-l-exterieur.md). Les refus d’action y sont tous listés ; ici, ce sont
 les ennuis de branchement.
 
-### « La case est cochée, mais mon client ne se connecte pas »
+### « Mon client répond que le studio ne répond pas »
 
-**La cause la plus fréquente : la ligne date d’un lancement précédent.** Le port et le jeton
-changent à chaque démarrage du studio. Celle d’hier désigne un port où plus rien n’écoute.
+**Ce que ça veut dire.** Votre client a bien démarré le point d’entrée, et celui-ci n’a trouvé
+aucune adresse à joindre : le studio n’est pas lancé, ou la case ne l’est pas.
 
-**Quoi faire.** **Réglages ▸ Point d’entrée (MCP) ▸ Commande de connexion ▸ Copier**, et recollez la ligne dans
-votre terminal. Un client déjà enregistré sous le même nom est remplacé, il n’y a rien à supprimer
-avant.
+**Quoi faire.** Ouvrez le studio, et vérifiez **Réglages ▸ Point d’entrée (MCP)** — la rubrique dit
+sur quel port il écoute, ou qu’il ne le fait pas. Redemandez ensuite à votre client : **il n’y a
+rien à recoller**, ce que vous lui aviez donné ne portait ni port ni jeton.
 
-### « La case est cochée et la ligne est fraîche, et rien n’écoute quand même »
+> **Si la ligne date d’une installation déplacée**, c’est l’autre cas : elle nomme un chemin vers
+> l’application, et ce chemin a changé. **Commande de connexion ▸ Copier** en donne une à jour.
+
+### « La case est cochée et rien n’écoute quand même »
 
 **Ce que ça veut dire.** Le point d’entrée n’a pas réussi à démarrer — un autre programme occupait
 la place, ou le système a refusé. **La case reste cochée**, parce qu’elle décrit ce que vous avez

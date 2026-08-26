@@ -44,3 +44,7 @@ src/renderer/public/decoders/
 # est ignoré, pas seulement le fichier : ce qui y tombe demain l'est aussi. Une clé commitée reste
 # dans l'historique après le commit qui la retire, et le dépôt part chez qui le clone.
 secret/
+
+# La configuration que lit un client MCP, écrite au lancement d'un run de développement. Elle
+# porte le chemin ABSOLU de cette machine vers l'exécutable — vraie ici, fausse partout ailleurs.
+.mcp.json

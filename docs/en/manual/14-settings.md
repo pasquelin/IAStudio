@@ -699,12 +699,14 @@ had asked for it yourself in the assistant. A program outside cannot give it on 
 Copies the line to paste in a terminal to connect a client:
 
 ```
-claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <name> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-**The port and the token change every time the studio starts**, which is why there is a button
-rather than a value on display: there is nothing to write down, only a line to copy again after
-each launch.
+**It holds no port and no token**: it names the studio as a program to start, not an address to
+reach. Those do change at every start — and it is your client that reads them, at the moment it
+needs them. **So the line is pasted once, and holds for every launch after it.**
+
+The path is the one of **your** installation, hence the button rather than a value printed here.
 
 ### Developer tools
 

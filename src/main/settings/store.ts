@@ -156,13 +156,19 @@ function merge(base: Settings, partial: PartialSettings): Settings {
  */
 export type SettingsStoreOptions = {
   onChange?: (settings: Settings) => void
+  /** What an unwritten profile starts from, and what `reset` goes back to. */
+  defaults?: Settings
   /** Injected so a test can name the accounts it creates. */
   newAccountId?: () => string
 }
 
 export function createSettingsStore(
   adapter: PersistenceAdapter,
-  { onChange, newAccountId = () => `account_${randomUUID()}` }: SettingsStoreOptions = {},
+  {
+    onChange,
+    defaults = DEFAULT_SETTINGS,
+    newAccountId = () => `account_${randomUUID()}`,
+  }: SettingsStoreOptions = {},
 ): SettingsStore {
   /**
    * 🛑 Held between writes, and the config file is no longer re-read for each ask: one edited by
@@ -183,7 +189,7 @@ export function createSettingsStore(
   }
 
   const read = (): Settings => {
-    cached ??= frozen(merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
+    cached ??= frozen(merge(defaults, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
     return cached
   }
 
@@ -307,10 +313,10 @@ export function createSettingsStore(
     },
 
     reset: () => {
-      adapter.write(SETTINGS_KEY, DEFAULT_SETTINGS)
+      adapter.write(SETTINGS_KEY, defaults)
       forgetSettings()
-      announce(DEFAULT_SETTINGS)
-      return DEFAULT_SETTINGS
+      announce(defaults)
+      return defaults
     },
 
     subscribe: listener => {

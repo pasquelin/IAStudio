@@ -467,16 +467,19 @@ What follows concerns only the way in for a program outside, covered in
 [chapter 20](20-driving-from-outside.md). Every action refusal is listed there; these are the
 connection troubles.
 
-### "The box is ticked, but my client will not connect"
+### "My client says the studio is not answering"
 
-**The commonest cause: the line is from an earlier launch.** The port and the token change every
-time the studio starts. Yesterday's points at a port where nothing is listening any more.
+**What it means.** Your client did start the way in, and it found no address to reach: the studio
+is not running, or the box is not ticked.
 
-**What to do.** **Settings ▸ Way in (MCP) ▸ Connection command ▸ Copy**, and paste the line into your
-terminal again. A client already registered under the same name is replaced, so there is nothing to
-remove first.
+**What to do.** Open the studio, and check **Settings ▸ Way in (MCP)** — the section says which port
+it is listening on, or that it is not. Then ask your client again: **there is nothing to paste
+again**, since what you gave it held no port and no token.
 
-### "The box is ticked, the line is fresh, and still nothing is listening"
+> **If the line is from an installation that has moved**, that is the other case: it names a path
+> to the application, and that path has changed. **Connection command ▸ Copy** gives a fresh one.
+
+### "The box is ticked and still nothing is listening"
 
 **What it means.** The way in failed to start — another program held the place, or the system
 refused. **The box stays ticked**, because it describes what you asked for, not what succeeded.

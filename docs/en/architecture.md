@@ -402,6 +402,40 @@ start** — a file left by a crash names a port the next process will inherit.
 some two hundred modules, and this setting is off by default. A static import would put them on the
 launch of every studio that never opens that door.
 
+### A client is given a command, never an address
+
+What the preferences put on the clipboard — and what `.mcp.json` carries — is **the application
+itself, launched with `--mcp-stdio=<path to mcp.json>`** (`mcpLaunch`, `endpoint.ts`). That process
+opens no window and no services, does not take the single-instance lock — a client connecting while
+the studio is up would otherwise be the second instance and quit — and relays stdio ↔ loopback
+(`stdio.ts`).
+
+**It re-reads the address at EVERY message, never once.** That is the whole mechanism: the four
+locks do not move, and a client's configuration stops going stale when the studio restarts. Without
+it the way in was unusable under `electron-vite --watch`, which restarts the main process several
+times an hour — and cost whoever installed the app one paste per launch.
+
+**The path to `mcp.json` travels IN the command** rather than being worked out on the other side: a
+studio started with `--user-data-dir` resolves a different profile, and the process that writes the
+address would never be the one that reads it. And in development there is **one address file per
+CHECKOUT** (`mcp-<digest>.json`), not per profile: two development studios share a `userData`, so
+the second to start took the first's file over — its clients then drove the wrong studio, and its
+quit removed the file from under a studio still listening.
+
+**`.mcp.json` is MERGED, never overwritten** (`mcpConfigWith`): at the root of a repository that
+file is the PROJECT's client configuration and not ours — other servers live in it, and a launch
+that rewrote it deleted them without a word. A malformed one is left exactly as it is.
+
+🛑 **That process silences the log before anything else** (`setLogVerbosity('silent')`): `log.info`
+prints to STDOUT, which here is the client's JSON-RPC stream. One line of ours on it and the client
+can read nothing further; what goes wrong leaves on stderr.
+
+**In development the setting is on by default** (`defaultSettings`, `shared/domain/settings.ts`,
+injected into the store) and the launch leaves a `.mcp.json` at the root of the checkout, which
+Claude Code reads on its own. **`main/mcp/production-unchanged.test.ts` holds the difference**:
+outside development the default is off, the port stays the operating system's, the token stays
+minted, and the four delegation lines stay at zero on both sides.
+
 ---
 
 ## The renderer

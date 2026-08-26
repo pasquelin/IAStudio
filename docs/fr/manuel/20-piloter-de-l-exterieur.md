@@ -158,11 +158,12 @@ Juste en dessous, **Commande de connexion ▸ Copier**. Le studio met dans votre
 ligne de cette forme :
 
 ```
-claude mcp add --transport http <nom> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <nom> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-Le nombre après `127.0.0.1:` et le jeton après `Bearer` **sont les vôtres, et ceux de ce
-lancement-ci**. Ils ne sont pas dans ce manuel parce qu’ils ne peuvent pas y être : ils changent.
+**Ni port, ni jeton, ni adresse.** Ce que vous collez désigne **le studio comme un programme à
+démarrer**, pas un endroit à joindre. C’est ce qui fait que cette ligne reste vraie à tous les
+lancements — voir plus bas.
 
 ### 3. Coller dans un terminal
 
@@ -180,29 +181,32 @@ configuration attend :
 ```json
 {
   "mcpServers": {
-    "ia studio": {
-      "type": "http",
-      "url": "http://127.0.0.1:54321/mcp",
-      "headers": { "Authorization": "Bearer …" }
+    "ia-studio": {
+      "command": "/Applications/IA Studio.app/Contents/MacOS/IA Studio",
+      "args": ["--mcp-stdio=…"]
     }
   }
 }
 ```
 
-Collez-le dans le fichier de configuration MCP de votre client. Le port et le jeton y sont les
-vôtres, et changent au même rythme.
+Collez-le dans le fichier de configuration MCP de votre client. Comme la commande, il ne porte ni
+port ni jeton.
 
-### Ce qu’il faut refaire à chaque lancement
+### Il n’y a rien à refaire
 
-**Le port et le jeton changent à chaque démarrage du studio.** La ligne copiée hier ne vaut plus
-aujourd’hui : le client s’adresse à un port où plus rien n’écoute, ou présente un jeton périmé.
+**Le port et le jeton changent bien à chaque démarrage du studio** : les deux verrous du milieu
+sont intacts, et c’est délibéré — un port fixe et un jeton permanent tiendraient d’une session à
+l’autre, et tiendraient aussi pour n’importe quel programme les ayant lus une fois.
 
-**Le geste est donc à refaire après chaque lancement** : recopier la commande, et la recoller. Un
-client déjà enregistré sous le même nom se remplace ; il n’y a rien à supprimer avant.
+**Mais votre client ne les connaît pas.** Il démarre le studio, et c’est ce programme-là qui va
+lire l’adresse du lancement en cours — à chaque message qu’il porte, jamais une fois pour toutes.
 
-> **C’est le prix des deux verrous du milieu**, et c’est délibéré. Un port fixe et un jeton
-> permanent tiendraient tout seuls d’une session à l’autre — et tiendraient aussi pour n’importe
-> quel programme ayant lu ce fichier une fois.
+**La ligne collée une fois vaut donc pour tous les lancements suivants**, y compris ceux où le port
+et le jeton sont neufs, c’est-à-dire tous. Un client déjà enregistré sous le même nom se
+remplace ; il n’y a rien à supprimer avant.
+
+> **Studio fermé, ou case décochée** : votre client s’entend répondre que le studio ne répond pas,
+> plutôt que d’attendre. Rouvrez-le, et il repart — sans que rien ne soit à recoller.
 
 ### Ce que vous pouvez lui demander
 
@@ -399,7 +403,9 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 - **Il ne dépense jamais de lui-même.** Une seule action dépense — lancer la génération préparée —
   et elle demande, avec son estimation.
 - **Il ne survit pas à la fermeture.** Le studio fermé, le point d’entrée n’existe plus, et le
-  jeton du lancement avec lui.
+  jeton du lancement avec lui. Ce que votre client garde n’est pas une adresse mais une façon de
+  démarrer le studio : rien de ce qu’il détient n’ouvre quoi que ce soit tant que le studio ne
+  tourne pas, la case cochée.
 
 > **Il lit et modifie en revanche le dossier de votre projet**, ce qui n’était pas le cas des
 > premières versions de ce point d’entrée. C’est ce qui permet à un assistant de programmation de

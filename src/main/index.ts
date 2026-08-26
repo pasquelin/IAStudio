@@ -8,7 +8,9 @@ import { registerAssetScheme } from '@main/assets/protocol'
 import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
-import { log, mirrorLogsTo, recordLogsTo } from '@main/log'
+import { log, mirrorLogsTo, recordLogsTo, setLogVerbosity } from '@main/log'
+import { mcpEndpointPath, spawnedAsWayIn, stdioEndpointFrom } from '@main/mcp/endpoint'
+import { runStdioBridge } from '@main/mcp/stdio'
 import { createLogFile } from '@main/logFile'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
@@ -165,6 +167,40 @@ function bootstrap(): void {
   app.on('window-all-closed', () => app.quit())
 }
 
+/**
+ * Spawned to be one client's way in: no window, no services, and no lock — a client connecting
+ * while the studio is up would otherwise be the second instance and quit.
+ *
+ * 🛑 The log is silenced first: `log.info` prints to STDOUT, which here IS the client's JSON-RPC
+ * stream. Trouble goes to stderr instead, which the client shows.
+ */
+async function carryOneClient(): Promise<void> {
+  setLogVerbosity('silent')
+  app.dock?.hide()
+
+  try {
+    await runStdioBridge({
+      input: process.stdin,
+      output: process.stdout,
+      report: line => process.stderr.write(`${APP_NAME} mcp: ${line}\n`),
+      // Named on the command line by whoever wrote it, since a run started with
+      // `--user-data-dir` resolves a profile this one would work out differently.
+      endpointPath:
+        stdioEndpointFrom(process.argv) ?? mcpEndpointPath(app.getPath('userData'), null),
+    })
+  } catch (error) {
+    process.stderr.write(`${APP_NAME} mcp: ${String(error)}\n`)
+  }
+
+  /**
+   * Drained before the exit: `app.exit` truncates a pending write to a PIPE, which is what every
+   * answer here goes down — a client that closed its end after its last call would lose exactly
+   * that answer. `stdio.test.ts` cannot see this: a `PassThrough` takes its writes at once.
+   */
+  await new Promise<void>(resolve => process.stdout.write('', () => resolve()))
+  app.exit(0)
+}
+
 // One studio per machine: two would share one settings file and one WAL catalogue opened
 // without a busy timeout. Must stay below `setName` — the lock file lives under `userData`.
 //
@@ -179,7 +215,8 @@ function bootstrap(): void {
 // invites — overlap for as long as both are up, and they then reopen the same project catalogue.
 // SQLite takes one writer; the loser comes back with no project open, and `services` reduces
 // that to a warning. Without this line nothing anywhere would say why.
-if (app.requestSingleInstanceLock()) bootstrap()
+if (spawnedAsWayIn(process.argv)) void carryOneClient()
+else if (app.requestSingleInstanceLock()) bootstrap()
 else if (isDevelopment) {
   log.warn('startup', 'another studio holds the single-instance lock: starting anyway (dev)')
   bootstrap()

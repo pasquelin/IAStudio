@@ -67,7 +67,7 @@ export function registerIpc(services: Services): void {
       settings: services.settings,
       settingsPath: services.settings.path,
       logFile: () => join(app.getPath('logs'), CURRENT),
-      mcpEndpoint: services.mcp.endpoint,
+      mcpLaunch: services.mcpLaunch,
       onResolveMissing: () => {
         const t = TRANSLATIONS[services.language()].settings.installResolveBridge
         void services.askUser({
