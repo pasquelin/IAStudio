@@ -18,3 +18,23 @@ export type JsonValue =
 export type ComponentType = 'Health' | 'Movement'
 
 export type Component = { type: ComponentType } & { readonly [key: string]: JsonValue }
+
+/**
+ * The list with `component` on it — replacing the one of its type rather than doubling it. One
+ * `Health` per entity: two would leave the winner to whichever a system happened to read first.
+ */
+export function withComponent(
+  components: readonly Component[],
+  component: Component,
+): readonly Component[] {
+  const at = components.findIndex(held => held.type === component.type)
+  if (at < 0) return [...components, component]
+  return components.map((held, index) => (index === at ? component : held))
+}
+
+export function withoutComponent(
+  components: readonly Component[],
+  type: ComponentType,
+): readonly Component[] {
+  return components.filter(component => component.type !== type)
+}

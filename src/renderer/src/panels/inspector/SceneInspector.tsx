@@ -27,6 +27,7 @@ import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
 import { CameraAlignButton } from './CameraAlignButton'
 import { CameraShotSection } from './CameraShotSection/CameraShotSection'
+import { ComponentsSection } from './ComponentsSection/ComponentsSection'
 import { RigSection } from './RigSection'
 import { EnvironmentPanel } from './EnvironmentPanel/EnvironmentPanel'
 import { MaterialSection } from './MaterialSection'
@@ -141,6 +142,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             edit={edit}
           />
           <ShadowSection node={node} selection={selection} edit={edit} />
+          {/* The anchor alone, unlike the sections above: a component carries values of its own,
+              and writing one onto every selected object would overwrite what each was given. */}
+          <ComponentsSection node={node} edit={edit} />
         </>
       )}
 

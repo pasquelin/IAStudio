@@ -560,7 +560,8 @@ describe('the word that names a group in a panel', () => {
 
   // Named rather than counted, and `DiffImages` wears it twice — the two sides of a comparison.
   // **Blind**: raw text, so a file naming the constant in a comment alone would still count.
-  it('is worn by the five files it was extracted from', () => {
+  // A name is added here by REVIEW: the point is that nothing wears a group label without one.
+  it('is worn by the files a review named', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bPANEL_GROUP_LABEL(?:_WIDE)?\b/.test(source),
     ).map(([path]) => path)
@@ -570,6 +571,7 @@ describe('the word that names a group in a panel', () => {
       '../panels/git/GitFileGroup.tsx',
       '../panels/history/CommitFiles.tsx',
       '../panels/history/DiffImages.tsx',
+      '../panels/inspector/ComponentsSection/ComponentsSection.tsx',
       './DynamicForm/DynamicForm.tsx',
     ])
   })

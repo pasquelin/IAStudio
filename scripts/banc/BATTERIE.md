@@ -876,3 +876,10 @@ Sur un projet suivi par git :
 - [x] « Récupère ce qui a changé sur le dépôt distant. »
 - [x] « Récupère et applique les changements du dépôt distant. »
 - [ ] « Envoie mes versions sur le dépôt distant. »
+
+## 59. Ce qu'un objet FAIT pendant la partie
+
+- [ ] « Donne de la santé à Cube Test. »
+- [ ] « Monte la santé maximum de Cube Test à 250. »
+- [ ] « Fais monter et descendre Cube Test. »
+- [ ] « Retire la santé de Cube Test. »

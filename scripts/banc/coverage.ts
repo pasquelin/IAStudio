@@ -285,6 +285,10 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'git.pull': ['58.23'],
   'git.push': ['58.24'],
 
+  'component.attach': ['59.1', '59.2', '59.4'],
+  'component.detach': ['59.4'],
+  'component.set': ['59.2', '59.3'],
+
   'context.read': ['57.3'],
   'context.write': ['57.4'],
   'context.remove': ['57.5'],

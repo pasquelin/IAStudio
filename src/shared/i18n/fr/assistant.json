@@ -936,6 +936,18 @@
       "modelWearImage": {
         "title": "Recouvrir un modèle d’une image",
         "description": "Pose une seule image du projet sur tout un modèle importé, comme sa couleur de base — la façon simple de l’habiller. Elle exclut les matières : un modèle recouvert d’une image ne porte plus aucune matière, et l’inverse. Aucun autre canal n’en est déduit. Sans image, l’habillage est retiré et le modèle retrouve ce que son propre fichier porte."
+      },
+      "componentAttach": {
+        "title": "Attacher un composant",
+        "description": "Donne à un objet de la scène quelque chose à FAIRE pendant la partie — sa santé, son mouvement. Refusé si l’objet en porte déjà un du même type."
+      },
+      "componentDetach": {
+        "title": "Détacher un composant",
+        "description": "Retire d’un objet de la scène le composant du type nommé. Refusé si l’objet ne le porte pas."
+      },
+      "componentSet": {
+        "title": "Régler un composant",
+        "description": "Écrit un champ d’un composant que l’objet porte. Un champ que le composant ne déclare pas est ignoré."
       }
     },
     "refusals": {
@@ -1218,7 +1230,10 @@
       "cardActive": "La fiche s’applique",
       "aimId": "Identifiant de la cible",
       "csgOperation": "Ce qu’il faut en faire",
-      "materialSlot": "Emplacement de matière"
+      "materialSlot": "Emplacement de matière",
+      "componentType": "Type de composant",
+      "componentField": "Champ",
+      "componentValue": "Valeur"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

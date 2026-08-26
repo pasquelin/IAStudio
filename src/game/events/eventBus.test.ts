@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { createEventBus, type EventBus } from './eventBus'
-import type { GameEvent } from './gameEvent'
+import type { GameEvent } from '@shared/domain/gameEvent'
 
 const started = (): GameEvent => ({ name: 'GameStarted', payload: {} })
 
