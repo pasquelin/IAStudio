@@ -644,7 +644,7 @@ occlusion** — take images from the project. The **Choose a texture** button op
 judging a scale, seeing a texture stretch, and telling one face from another. Replace it whenever
 you like — it is a starting point, not a decoration.
 
-Four chequers are copied into the project's **Textures** folder the first time a scene asks for
+Four chequers are copied into the project's **Materials** folder the first time a scene asks for
 one: `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. They are project images like any
 other.
 

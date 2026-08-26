@@ -151,7 +151,7 @@ describe('a half open on no panel in particular', () => {
   it('shows the one this section declares first', () => {
     expect(shownTool(null, 'right', 'primary', 'image', IN_WORKSPACE)).toBe('layers')
     expect(shownTool(null, 'right', 'primary', '3d', IN_WORKSPACE)).toBe('scene')
-    // Neither Skyboxes nor Textures declares anything in that half any more: what a sky is, and
+    // Neither Skyboxes nor Materials declares anything in that half any more: what a sky is, and
     // what a material is made of, are sections of the inspector.
     expect(shownTool(null, 'right', 'primary', 'skyboxes', IN_WORKSPACE)).toBeNull()
     expect(shownTool(null, 'right', 'primary', 'materials', IN_WORKSPACE)).toBeNull()

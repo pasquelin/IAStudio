@@ -92,7 +92,7 @@ famille en tient plusieurs, et un modèle peut en servir plusieurs à la fois.
 
 **Dessous, ce qu’un seul téléchargement couvre.** C’est la lecture que le gestionnaire ne donne
 pas d’un coup d’œil : le catalogue tient vingt-cinq modèles pour dix-neuf opérations, et ce qui les
-sépare n’est pas la qualité. Un modèle d’image qui sait aussi les textures répond à six opérations
+sépare n’est pas la qualité. Un modèle d’image qui sait aussi les matières répond à six opérations
 pour quatre gigaoctets là où un autre en sert un pour cent trente-trois. Les familles qu’il
 traverse sont nommées, pas comptées. Ce que la machine ne peut pas tenir reste affiché, marqué
 **hors de portée** — le cacher ferait paraître le catalogue plus petit qu’il n’est.
@@ -109,7 +109,7 @@ Ce que les autres publient — **les modèles qui montent** sur Hugging Face, et
 parus là-bas. Les puces au-dessus de la bande filtrent : Image, Vidéo, 3D, Audio, ou Articles. Une
 seule catégorie s’affiche à la fois, et c’est une seule requête.
 
-**Pas de puce Texture ni Ciel**, et ce n’est pas un oubli : rien ne publie ces deux-là comme une
+**Pas de puce Matière ni Ciel**, et ce n’est pas un oubli : rien ne publie ces deux-là comme une
 catégorie à part — le studio les sert avec des modèles d’image — donc une puce pour l’une d’elles
 répéterait la liste Image sous un autre nom.
 
@@ -227,7 +227,7 @@ dessus sont **plus sombres**, avec des coins arrondis.
 
 Elle ne porte pas le nom du fichier, mais les **six espaces de travail** :
 
-**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes**
+**Image** · **Vidéo** · **3D** · **Audio** · **Matières** · **Skyboxes**
 
 Un clic change d’espace ; l’espace actif est plus clair que les autres. Changer d’espace fait
 trois choses :
@@ -306,7 +306,7 @@ dessous dans la seconde.
 Les icônes de la colonne de droite — Calques, Scène, Lumières, Mailles, Animations, celles que
 l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
-En **Vidéo**, en **Audio**, en **Textures** et en **Skyboxes**, la moitié haute de cette colonne
+En **Vidéo**, en **Audio**, en **Matières** et en **Skyboxes**, la moitié haute de cette colonne
 est vide : ces quatre espaces n’y déclarent rien, et le rail ne porte alors que l’Inspecteur — ce
 qu’un ciel ou une matière EST y est décrit par l’inspecteur lui-même.
 
@@ -426,7 +426,7 @@ l’**Explorateur**, partout aussi.
 | **Vidéo** | *rien* | Timeline |
 | **3D** | Scène | Timeline |
 | **Audio** | *rien* | Timeline |
-| **Textures** | *rien* | Historique |
+| **Matières** | *rien* | Historique |
 | **Skyboxes** | *rien* | Historique |
 
 > **L’Historique demande un dossier suivi par git.** Tant que le suivi n’est pas en place — pas

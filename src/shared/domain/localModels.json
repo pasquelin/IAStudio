@@ -298,8 +298,8 @@
         "outpaint"
       ],
       "serves": [
-        "texture/txt2img_texture",
-        "texture/img2img_texture"
+        "material/txt2img_texture",
+        "material/img2img_texture"
       ]
     },
     {
@@ -435,7 +435,7 @@
         "txt2img"
       ],
       "serves": [
-        "texture/txt2img_texture"
+        "material/txt2img_texture"
       ]
     },
     {
@@ -587,7 +587,7 @@
         "txt2img"
       ],
       "serves": [
-        "texture/txt2img_texture"
+        "material/txt2img_texture"
       ]
     },
     {
@@ -723,7 +723,7 @@
         "txt2img"
       ],
       "serves": [
-        "texture/txt2img_texture"
+        "material/txt2img_texture"
       ]
     },
     {
@@ -971,7 +971,7 @@
         "txt2img"
       ],
       "serves": [
-        "texture/txt2img_texture"
+        "material/txt2img_texture"
       ]
     }
   ],
@@ -4099,7 +4099,7 @@
         "as": "controlnet"
       },
       "serves": [
-        "texture/controlnet_texture"
+        "material/controlnet_texture"
       ]
     }
   ],
@@ -4155,7 +4155,7 @@
         "weightName": "ip-adapter_sdxl.safetensors"
       },
       "serves": [
-        "texture/reference_texture"
+        "material/reference_texture"
       ]
     }
   ],

@@ -23,7 +23,7 @@ import {
 
 const shellOf = (run: Run) => run.studio.shell
 
-/** A style is a MATERIAL kept aside, so one is saved from a texture document and nowhere else. */
+/** A style is a MATERIAL kept aside, so one is saved from a material document and nowhere else. */
 const styled =
   (name = 'Marine') =>
   async (studio: Studio): Promise<void> => {

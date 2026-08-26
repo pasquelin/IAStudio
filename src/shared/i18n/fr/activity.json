@@ -91,7 +91,7 @@
       "scene.animation": "Une animation n’a pas pu être posée sur le personnage",
       "scene.export": "L’export de la scène a échoué",
       "scene.capture": "La vue 3D n’a pas pu être capturée",
-      "material.map": "Un canal de texture n’a pas pu être chargé",
+      "material.map": "Un canal de matière n’a pas pu être chargé",
       "material.channel": "Une image n’a pas pu entrer dans un canal",
       "material.seam": "Les coutures n’ont pas pu être mesurées",
       "material.shader": "L’aperçu de la matière a perdu l’un de ses réglages",

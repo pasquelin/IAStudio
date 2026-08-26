@@ -190,7 +190,7 @@ export function documentForAsset(
   assetId: string,
   /**
    * Narrows to documents of one kind. One asset can legitimately be edited by two of them — a
-   * texture is a channel in the Textures space and pixels in the Images one — and a gesture
+   * texture is a channel in the Materials space and pixels in the Images one — and a gesture
    * asking for the second must not be handed the first.
    */
   kind?: DocumentKind,

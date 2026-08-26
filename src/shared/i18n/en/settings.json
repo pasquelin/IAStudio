@@ -163,7 +163,7 @@
       "canvas": "In the image",
       "skybox": "In the sky",
       "audio": "In the audio editor",
-      "texture": "In the material"
+      "material": "In the material"
     },
     "spaces": "Workspaces",
     "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",

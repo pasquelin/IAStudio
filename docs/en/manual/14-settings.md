@@ -338,16 +338,12 @@ At **0**, it never tries twice.
 
 ### Default model, per family
 
-Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
-**Background removal**, **Vectorisation**.
+Nine sub-sections: **Image**, **Video**, **3D**, **Audio**, **Materials**, **Skyboxes**,
+**Upscaling**, **Background removal**, **Vectorisation**.
 
 The last three have no workspace of their own: they are the families the canvas edits — Upscale,
 Cut out, Vectorise — reach for. The **Models** panel only shows the open workspace's family, so
 **this is where, and only where, their model is chosen**.
-
-> **The Texture family does not have one yet.** It has nevertheless been a model family in its own
-> right for a short while. The practical consequence: in the Textures workspace you have to pick a
-> model by hand every session — see [What does not exist yet](18-limits.md).
 
 Each holds a single setting: the model the **Generate** panel preselects when you arrive in that
 workspace.

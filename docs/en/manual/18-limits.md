@@ -329,7 +329,7 @@ what you do when the result has to serve elsewhere rather than carry on being ed
 
 ---
 
-## Textures workspace
+## Materials workspace
 
 ### What is missing
 
@@ -451,16 +451,6 @@ ssh agent are kept.
 
 ## Settings and shortcuts
 
-### Two families have no default model
-
-**Settings ▸ Generation** offers seven sub-sections: Image, Video, 3D, Audio, Upscaling, Background
-removal, Vectorisation. **Texture** and **Skybox** are missing, even though both are now model
-families in their own right.
-
-The consequence: in the Textures and Skyboxes workspaces the **Generate** panel only appears once a
-model has been chosen by hand, and it has to be chosen again every session — the other workspaces
-can remember theirs.
-
 ### A project always stays on your disk
 
 The settings file provides for a choice between "on your disk" and "in the cloud" for where a
@@ -538,16 +528,14 @@ cannot leak your account.
 
 ## Summary: in order of importance
 
-If you only remember five things from this chapter:
+If you only remember four things from this chapter:
 
 1. **all six documents save now**, and closing a tab asks before losing anything; what does not
    come back is the undo history;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **the video export comes out silent** — the final file is deliverable, the edit's sound is not in it;
-4. **the Texture and Skybox families have no default model** — both workspaces make you pick one
-   again every session;
-5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
+4. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
 
 Everything else is comfort.
 

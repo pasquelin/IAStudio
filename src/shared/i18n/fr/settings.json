@@ -163,7 +163,7 @@
       "canvas": "Dans l’image",
       "skybox": "Dans le ciel",
       "audio": "Dans l’éditeur audio",
-      "texture": "Dans la matière"
+      "material": "Dans la matière"
     },
     "spaces": "Espaces de travail",
     "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",

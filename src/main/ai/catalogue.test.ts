@@ -293,8 +293,8 @@ describe('one entry, several employments', () => {
     for (const capability of ['txt2img', 'img2img', 'inpaint', 'outpaint']) {
       expect(idsFor(capability), capability).toContain('ssd-1b')
     }
-    // And a texture is an image: the same weights, filed on another shelf.
-    expect(shippedModelsFor(aiRoleId('texture', 'txt2img_texture')).length).toBeGreaterThan(0)
+    // And a material is an image: the same weights, filed on another shelf.
+    expect(shippedModelsFor(aiRoleId('material', 'txt2img_texture')).length).toBeGreaterThan(0)
   })
 
   it('lists a model that serves three employments once, not three times', () => {

@@ -65,7 +65,7 @@ My project/
 ├── Video/                  laid down at creation, and ordinary: rename them,
 ├── Audio/                  empty them, throw them away, arrange them otherwise
 ├── 3D/
-├── Textures/
+├── Materials/
 ├── Sky/
 ├── Animations/
 │                           …and whatever you make beside them
@@ -94,6 +94,11 @@ tools, not your work.
 > **The seven starter folders are only a starting point.** They are laid down at creation and never
 > put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
 > land, where the studio recreates it rather than refusing to work.
+
+> **A project created before 26/08 has a `Textures/` where this one has `Materials/`**, and it
+> keeps it: every asset carries its own path, and nothing reads its role off a folder name. What it
+> takes in from now on lands beside it, in `Materials/`. The two are renamed and merged by hand,
+> like any other folder of your project.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
 > sets it on `.project.json` and on `.index/` itself. **`.ia-studio/` does not get it**: the day it
@@ -320,7 +325,7 @@ wherever you filed it — under an extension that says what it is:
 | video sequence | `.otio` | Video |
 | sound being edited | `.otio` | Audio |
 | sky | `.gltf` | Skyboxes |
-| material | `.mtlx` | Textures |
+| material | `.mtlx` | Materials |
 
 The extension is there so the folder **reads at a glance**. `a3f1.gltf` next to `b204.mtlx` says
 what each one is; `a3f1.json` next to `b204.json` says nothing.

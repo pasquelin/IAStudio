@@ -1,6 +1,6 @@
 # 11. Espace Audio
 
-[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Textures →](12-espace-textures.md)
+[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Matières →](12-espace-matieres.md)
 
 L’espace où l’on met un son en forme — le raccourcir, le faire monter en douceur, égaliser son
 volume — puis où on le pose à côté des autres.
@@ -316,4 +316,4 @@ Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
-[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Textures →](12-espace-textures.md)
+[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Matières →](12-espace-matieres.md)

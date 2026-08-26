@@ -117,7 +117,7 @@ describe('SettingsWindow', () => {
       'Vidéo',
       'Modélisation',
       'Audio',
-      'Texture',
+      'Matières',
       'Skyboxes',
       'Agrandissement',
       'Détourage',

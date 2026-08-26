@@ -16,7 +16,7 @@ import { editorIntent, pixelEditorIntent, type AssetIntent } from './assetIntent
  * "open this asset". A rule with no exception is the only one a hand can learn.
  *
  * `into` names another destination — a texture's PIXELS, which are edited in Images while its
- * channels are assembled in Textures. It is a second gesture with a row of its own, never a
+ * channels are assembled in Materials. It is a second gesture with a row of its own, never a
  * second meaning of the double-click, which stays the one rule a hand can learn.
  *
  * A refusal is said out loud, as it has to be: the same double-click worked over one tab and did

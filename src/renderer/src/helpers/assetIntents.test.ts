@@ -30,7 +30,7 @@ describe('where an asset can be sent', () => {
     const ids = intentsFor('mesh').map(intent => intent.id)
 
     expect(ids).toContain('3d.mesh')
-    expect(ids).not.toContain('textures.channel')
+    expect(ids).not.toContain('materials.channel')
     expect(ids).not.toContain('image.layer')
   })
 
@@ -41,7 +41,7 @@ describe('where an asset can be sent', () => {
     expect(intentsFor('texture').map(intent => intent.id)).toEqual(picture)
     expect(intentsFor('skybox').map(intent => intent.id)).toEqual(picture)
     expect(picture).toContain('skyboxes.source')
-    expect(picture).toContain('textures.channel')
+    expect(picture).toContain('materials.channel')
   })
 
   it('gives every destination a distinct name', () => {
@@ -98,8 +98,8 @@ describe('where an asset is edited', () => {
 
   // The two kinds a plain image shares its destinations with are edited in their own space,
   // which is the whole difference between editing an asset and placing one.
-  it('edits a texture in Textures and a sky in Skyboxes', () => {
-    expect(editorIntent(picture({ type: 'texture' }))?.id).toBe('textures.channel')
+  it('edits a texture in Materials and a sky in Skyboxes', () => {
+    expect(editorIntent(picture({ type: 'texture' }))?.id).toBe('materials.channel')
     expect(editorIntent(picture({ type: 'skybox' }))?.id).toBe('skyboxes.source')
   })
 

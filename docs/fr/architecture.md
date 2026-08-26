@@ -178,7 +178,7 @@ Vingt et un préfixes, dont les plus chargés :
 | `styles:*` | 4 | les réglages de matière, enregistrés et rejoués |
 | `favorites:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 chacun | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 chacun | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `material:*`, `skybox:*` | 1 chacun | — |
 
 **`EVENTS` est l’autre sens** — le main poussant vers le renderer, dix-huit entrées : progression
 des jobs et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre,
@@ -239,9 +239,9 @@ src/main/
 ├── mcp/                     le même catalogue d'actions, offert à un client extérieur
 ├── settings/                le store chiffré, son adaptateur, ses handlers
 ├── favorites/               les recettes épinglées, gardées hors des projets
-├── styles/                  les réglages de matière qu'on rejoue d'une texture à l'autre
+├── styles/                  les réglages de matière qu'on rejoue d'une matière à l'autre
 ├── scene/                   l'export d'une scène, et sa validation
-├── export/                  écrire plusieurs fichiers dans un dossier : un matériau, six faces de ciel
+├── export/                  écrire plusieurs fichiers dans un dossier : une matière, six faces de ciel
 ├── diagnostics/             le canal par lequel le renderer signale un échec
 ├── media/                   importer un fichier : sonde, hachage, proxy, forme d'onde
 ├── fonts/                   les polices embarquées et celles du système
@@ -504,13 +504,13 @@ src/renderer/src/
 │   ├── TitleBar.tsx     espaces de travail, feux natifs
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, gpu, et `core/` — ce que tous les moteurs partagent
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, et `core/` — ce que tous les moteurs partagent
 ├── spaces/       un éditeur par type de document — SIX, autant que d'espaces
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils
 │   ├── video/      la timeline, le moniteur, ses outils
 │   ├── audio/      la forme d'onde, ses outils, le décodeur
-│   ├── textures/   les canaux d'un matériau, et leur aperçu répété
+│   ├── materials/  les canaux d'une matière, et leur aperçu répété
 │   └── skyboxes/   le ciel immersif et ses trois projections à plat
 ├── panels/       les vingt-sept outils ancrables
 ├── home/         l'accueil et ses trois bandes — une page, pas une disposition
@@ -729,7 +729,7 @@ traîner le moteur de rendu avec elle, et se reconstruit depuis cette seule sér
 
 Et une fois l’objet three instancié, **on le mute, on ne le remplace pas** : `.set` plutôt qu’un
 `new`. Ces écritures arrivent à chaque image d’un glissement d’inspecteur, et le coût n’est pas
-théorique — remplacer un matériau expose à une recompilation de son programme de shader, remplacer
+théorique — remplacer une matière expose à une recompilation de son programme de shader, remplacer
 une couleur jette l’instance que three détient. Dix écritures de couleur suivent la règle, et
 `threeSync.ts`, `TextureRenderer.ts` et `SkyboxRenderer.ts` la portent chacun en commentaire, au
 plus près de ce qu’elle garde.
@@ -1044,7 +1044,7 @@ Les primitives, toutes dans `design/` :
 | `MediaTile`, `Thumbnail` | la tuile carrée légendée, et la même image à taille fixe |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | la barre partagée, ses boutons d’icône, ses boutons libellés, l’unique porte des icônes |
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par le résumé des générations, sa liste dépliée et l’import de médias |
-| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — ce dont l’inspecteur est fait |
+| `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `PictureField`, `AssetDropField`, `PropertyRow` — ce dont l’inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
 | `FormHeader` | la ligne qui nomme ce que le formulaire sert — le modèle, dans Génération |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
@@ -1218,7 +1218,7 @@ Sept choses passent par les bundles sans en avoir l’air, et chacune répond à
   insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Le compte
   des clés concernées monte à chaque lot ; `bundles.test.ts` est ce qui fait foi, pas un chiffre
   écrit ici. **L’exception est un facteur, pas un dénombrement** :
-  `texture.tilingPreviewTimes` écrit « 4× », et grouper une répétition serait faux précisément là
+  `material.tilingPreviewTimes` écrit « 4× », et grouper une répétition serait faux précisément là
   où le groupement se verrait — `bundles.test.ts` tient la règle **et son exception**. Une **unité
   créative** ne passe pas non plus par `{{units, number}}` mais par `formatUnits`, qui ne se
   contente pas de grouper : elle garde deux décimales sous dix unités, parce qu’un appel bon

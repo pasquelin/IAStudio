@@ -1,7 +1,11 @@
 import { aiRoleId } from '@shared/domain/aiRole'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ModelFamily } from '@shared/domain/model'
-import { DEFAULT_COLLECTION_STATE, setFacetValue } from '@/helpers/collectionState'
+import {
+  COLLECTION_PERSIST_VERSION,
+  DEFAULT_COLLECTION_STATE,
+  setFacetValue,
+} from '@/helpers/collectionState'
 import { ORIGIN_FACET } from '@/panels/models/modelFilters'
 import { useModels } from './models'
 
@@ -68,5 +72,54 @@ describe('choosing a model', () => {
 
       expect(stored('skybox').selections).toBeUndefined()
     })
+  })
+})
+
+/**
+ * `texture` named the material family until 2026-08-26, and this blob keys BOTH halves of the
+ * browser by it. A key nothing reads reddens nowhere: the generator opens on no model, and
+ * `searchless` drops the browser's own state for that family at the first write.
+ */
+describe('a blob written before the material family was renamed', () => {
+  it('restores the choice and the browser state under the name they have now', async () => {
+    localStorage.setItem(
+      'ia-studio:models',
+      JSON.stringify({
+        version: COLLECTION_PERSIST_VERSION + 1,
+        state: {
+          selected: { 'texture/txt2img_texture': 'model_sdxl' },
+          collections: { texture: DEFAULT_COLLECTION_STATE },
+        },
+      }),
+    )
+
+    await useModels.persist.rehydrate()
+
+    expect(useModels.getState().selected[aiRoleId('material', 'txt2img_texture')]).toBe(
+      'model_sdxl',
+    )
+    expect(useModels.getState().collections.material).toEqual(DEFAULT_COLLECTION_STATE)
+  })
+
+  /**
+   * The older shape still, where `selected` was keyed per FAMILY. `withRoleKeys` walks
+   * `MODEL_FAMILIES` to re-file it per employment, so a family it no longer names is a choice it
+   * cannot see — the rename has to land before it, not after.
+   */
+  it('restores a choice filed per family, under the name that family has now', async () => {
+    localStorage.setItem(
+      'ia-studio:models',
+      JSON.stringify({
+        version: COLLECTION_PERSIST_VERSION,
+        state: { selected: { texture: 'model_sdxl', image: 'model_flux' } },
+      }),
+    )
+
+    await useModels.persist.rehydrate()
+
+    expect(useModels.getState().selected[aiRoleId('material', 'txt2img_texture')]).toBe(
+      'model_sdxl',
+    )
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_flux')
   })
 })

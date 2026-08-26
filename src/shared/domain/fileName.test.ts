@@ -14,7 +14,7 @@ describe('the name a file takes', () => {
    * 2026-08-19, where macOS wrote all four of ASCII, accented, CJK and astral at eighty.
    */
   it('holds a name of astral characters inside what every filesystem takes', () => {
-    const cut = safeFileName('🎬'.repeat(80))
+    const cut = safeFileName('🎬'.repeat(80), 'file')
 
     expect(bytesOf(cut)).toBeLessThanOrEqual(FILE_NAME_MAX_BYTES)
     // And as many as fit, not fewer: a bound that cut to nothing would pass the line above.
@@ -23,8 +23,8 @@ describe('the name a file takes', () => {
 
   /** The bound in bytes must not shorten what already fitted: a Latin title is one byte a letter. */
   it('leaves a name that already fitted exactly as long as it was', () => {
-    expect(safeFileName('é'.repeat(80))).toHaveLength(80)
-    expect(safeFileName('a'.repeat(80))).toHaveLength(80)
+    expect(safeFileName('é'.repeat(80), 'file')).toHaveLength(80)
+    expect(safeFileName('a'.repeat(80), 'file')).toHaveLength(80)
   })
 
   /**
@@ -32,8 +32,8 @@ describe('the name a file takes', () => {
    * and two everywhere else — the second document written would overwrite the first.
    */
   it('drops a trailing dot, which one platform ignores and the others keep', () => {
-    expect(safeFileName('Niveau.')).toBe('Niveau')
-    expect(safeFileName('Niveau ')).toBe('Niveau')
+    expect(safeFileName('Niveau.', 'file')).toBe('Niveau')
+    expect(safeFileName('Niveau ', 'file')).toBe('Niveau')
   })
 
   /**
@@ -41,9 +41,9 @@ describe('the name a file takes', () => {
    * so a title typed on a Mac would travel to a machine that cannot read the document.
    */
   it('keeps a reserved device name from becoming a file name', () => {
-    expect(safeFileName('CON')).toBe('CON_')
-    expect(safeFileName('com1')).toBe('com1_')
-    expect(safeFileName('Console')).toBe('Console')
+    expect(safeFileName('CON', 'file')).toBe('CON_')
+    expect(safeFileName('com1', 'file')).toBe('com1_')
+    expect(safeFileName('Console', 'file')).toBe('Console')
   })
 
   /**
@@ -52,9 +52,9 @@ describe('the name a file takes', () => {
    * one by being pasted from mis-decoded text — CP1252 `’` read as Latin-1 is U+0092.
    */
   it('neutralises every control character, not only those below the space', () => {
-    expect(safeFileName(`Plan${String.fromCodePoint(0x85)}large`)).toBe('Plan large')
-    expect(safeFileName(`Plan${String.fromCodePoint(0x7f)}large`)).toBe('Plan large')
-    expect(safeFileName(`Plan${String.fromCodePoint(0x1f)}large`)).toBe('Plan large')
+    expect(safeFileName(`Plan${String.fromCodePoint(0x85)}large`, 'file')).toBe('Plan large')
+    expect(safeFileName(`Plan${String.fromCodePoint(0x7f)}large`, 'file')).toBe('Plan large')
+    expect(safeFileName(`Plan${String.fromCodePoint(0x1f)}large`, 'file')).toBe('Plan large')
   })
 
   /**
@@ -65,7 +65,7 @@ describe('the name a file takes', () => {
    * of them rather than through one.
    */
   it('cuts between characters rather than through one', () => {
-    const cut = safeFileName('🎬'.repeat(100))
+    const cut = safeFileName('🎬'.repeat(100), 'file')
 
     expect(cut).toBe('🎬'.repeat([...cut].length))
     expect([...cut].length).toBeLessThan(100)

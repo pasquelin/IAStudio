@@ -2,14 +2,14 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import type { TextureExportCommand, FolderExportRequest } from '@shared/ipc'
+import type { MaterialExportCommand, FolderExportRequest } from '@shared/ipc'
 import type { MaterialExportTarget } from '@shared/domain/materialExport'
 import { setChannel } from '@/engines/material/commands'
 import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { useMaterialViews } from '@/stores/materialViews'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { MaterialDocument } from './MaterialDocument'
@@ -53,7 +53,7 @@ const shelved = (overrides: Partial<Asset> = {}): Asset => ({
 })
 
 beforeEach(() => {
-  installTexture(DOCUMENT)
+  installMaterial(DOCUMENT)
   useMaterialViews.setState({ inspected: {} })
   useAssets.setState({ items: [] })
   editPixelsOf.mockReset()
@@ -181,7 +181,7 @@ describe('the export menu row', () => {
   }
 
   const listen = (): Menu => {
-    const callbacks: ((command: TextureExportCommand) => void)[] = []
+    const callbacks: ((command: MaterialExportCommand) => void)[] = []
     const exported: FolderExportRequest[] = []
     let released = 0
 

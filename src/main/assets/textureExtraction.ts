@@ -23,7 +23,7 @@ function extensionOfMime(mimeType: string): string {
  * What a picture taken out of a model is called: the model's name and the role it played.
  *
  * The same shape a derived channel already uses, and the same words — a base colour extracted
- * from a `.glb` and one computed in the texture space are the same thing on the shelf, so they
+ * from a `.glb` and one computed in the materials space are the same thing on the shelf, so they
  * must not read as two different notions. A slot the studio has no channel for keeps its glTF
  * name, which is a fact about the file rather than a phrase anyone has to translate.
  */

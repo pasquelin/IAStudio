@@ -73,7 +73,7 @@ const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   { id: 'ai.video', labelKey: 'workspaces.video', parent: 'ai', family: 'video' },
   { id: 'ai.3d', labelKey: 'workspaces.3d', parent: 'ai', family: '3d' },
   { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai', family: 'audio' },
-  { id: 'ai.texture', labelKey: 'families.texture', parent: 'ai', family: 'texture' },
+  { id: 'ai.material', labelKey: 'workspaces.materials', parent: 'ai', family: 'material' },
   { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai', family: 'skybox' },
   { id: 'ai.upscale', labelKey: 'families.upscale', parent: 'ai', family: 'upscale' },
   {

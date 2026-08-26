@@ -226,7 +226,7 @@ export const adjusted = (run: Run): boolean => {
   return content !== null && !isNeutral(content.adjustments)
 }
 
-/** The matter the open texture document assembles — its channels and its surface settings. */
+/** The matter the open material document assembles — its channels and its surface settings. */
 export const surface = (run: Run): MaterialState | null =>
   firstOf(run, 'materials', id => materialOf(useMaterials.getState(), id))
 

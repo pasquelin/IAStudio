@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setChannel } from '@/engines/material/commands'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import { MaterialToolbar } from './MaterialToolbar'
@@ -26,7 +26,7 @@ const inspected = () => inspectedChannel(useMaterialViews.getState(), DOCUMENT)
 const show = () => render(<MaterialToolbar documentId={DOCUMENT} onFrame={onFrame} />)
 
 beforeEach(() => {
-  installTexture(DOCUMENT)
+  installMaterial(DOCUMENT)
   useMaterialViews.setState({ inspected: {} })
   onFrame.mockClear()
 })

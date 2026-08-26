@@ -35,6 +35,17 @@ function pathOf(id: CheckerTextureId): string {
 }
 
 /**
+ * Where a project created before `Textures` became `Materials` filed it — searched too, since this
+ * folder is a catalogue LOOKUP here and not merely where a new file lands.
+ *
+ * Without it the first 3D open of such a project installs a second set of four under fresh ids,
+ * and its meshes go on wearing the first: eight working textures where there should be four.
+ */
+function formerPathOf(id: CheckerTextureId): string {
+  return pathIn('Textures', checkerTextureFile(id))
+}
+
+/**
  * The working textures the app ships with, put into the open project — once.
  *
  * Copied rather than served from beside the app, and that is the whole design: a document holds
@@ -60,7 +71,9 @@ export function registerBundledTextureHandlers({
   exists,
 }: BundledTextureDeps): void {
   const install = async (id: CheckerTextureId): Promise<Asset> => {
-    const held = (await catalog().search({ path: pathOf(id) }))[0]
+    const held =
+      (await catalog().search({ path: pathOf(id) }))[0] ??
+      (await catalog().search({ path: formerPathOf(id) }))[0]
     // The row alone is not enough: a texture deleted in the Finder leaves it behind, and every
     // primitive of that project would then be born wearing a map that resolves to no file.
     const file = held ? ownFileOf(projectPath(), held) : null
@@ -72,7 +85,7 @@ export function registerBundledTextureHandlers({
     // already point at, and a fresh one would leave every one of them resolving to nothing.
     //
     // Falling back to a fresh import rather than letting it throw: `replaceBytes` writes to the
-    // path the row carries and makes no folder, so a `Textures/` sent to the trash whole would
+    // path the row carries and makes no folder, so a `Materials/` sent to the trash whole would
     // fail on the first of the four and cost the project all of them.
     if (held) {
       const rewritten = await orElse(assets.replaceBytes(held.id, bytes, '.png'), null)

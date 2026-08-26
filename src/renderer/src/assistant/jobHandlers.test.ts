@@ -89,7 +89,7 @@ describe('before a generation', () => {
     const schema: ModelDescriptor = {
       id: 'model-1',
       name: 'Stone',
-      family: 'texture',
+      family: 'material',
       runsOn: SCENARIO_CLOUD,
       source: 'scenario',
       origin: 'official',

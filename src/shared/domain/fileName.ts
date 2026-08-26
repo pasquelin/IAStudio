@@ -71,7 +71,7 @@ function withinBytes(points: readonly string[]): string {
  * title cannot be a file name ask `isSafeFileName` first — the fallback is for the paths where
  * there is nobody to ask.
  */
-export function safeFileName(name: string, fallback = 'texture'): string {
+export function safeFileName(name: string, fallback: string): string {
   // NFC first, and this is one of the two places the studio settles that question — the other is
   // the folder reader, where the disk speaks. `Été` typed here and `Été` pasted from elsewhere
   // are the same six characters on screen and two different strings underneath; left as they

@@ -348,16 +348,12 @@ l’application réessaie toute seule. Ce nombre dit combien de fois avant d’a
 
 ### Modèle par défaut, par famille
 
-Sept sous-sections : **Image**, **Vidéo**, **3D**, **Audio**, **Agrandissement**, **Détourage**,
-**Vectorisation**.
+Neuf sous-sections : **Image**, **Vidéo**, **3D**, **Audio**, **Matières**, **Skyboxes**,
+**Agrandissement**, **Détourage**, **Vectorisation**.
 
 Les trois dernières n’ont pas d’espace de travail à elles : ce sont les familles que les éditions
 du canvas — Agrandir, Détourer, Vectoriser — vont chercher. Le panneau **Modèles** ne montre que
 la famille de l’espace ouvert, donc **c’est ici, et seulement ici, que leur modèle se choisit**.
-
-> **La famille Texture n’a pas encore la sienne.** Elle existe pourtant comme famille de modèles
-> depuis peu. Conséquence concrète : dans l’espace Textures, il faut choisir un modèle à la main à
-> chaque session — voir [Ce qui n’existe pas encore](18-limites.md).
 
 Chacune tient un seul réglage : le modèle que le panneau **Génération** présélectionne quand vous
 arrivez dans cet espace.

@@ -2,7 +2,7 @@ import { Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { newMaterial, type MaterialState } from '../materialState'
 import { exportChannelsOf } from './channels'
-import { createTextureExportPort } from './exportPort'
+import { createMaterialExportPort } from './exportPort'
 
 /**
  * Everything below the pass needs a GPU, and jsdom has none: a run reaches `createPackPass` and
@@ -41,7 +41,7 @@ describe('the texture export port', () => {
 
   it('asks for nothing at all when the texture has no channel', async () => {
     const loadTexture = vi.fn(() => Promise.resolve(decoded(8, 8)))
-    const port = createTextureExportPort({ loadTexture })
+    const port = createMaterialExportPort({ loadTexture })
 
     const files = await port({
       target: 'raw',
@@ -61,7 +61,7 @@ describe('the texture export port', () => {
    */
   it('asks for nothing for glTF either, which writes one file rather than a folder', async () => {
     const loadTexture = vi.fn(() => Promise.resolve(decoded(8, 8)))
-    const port = createTextureExportPort({ loadTexture })
+    const port = createMaterialExportPort({ loadTexture })
 
     const files = await port({
       target: 'gltf',
@@ -85,7 +85,7 @@ describe('the texture export port', () => {
     })
 
     await expect(
-      createTextureExportPort({ loadTexture })({
+      createMaterialExportPort({ loadTexture })({
         target: 'unreal',
         channels: exportChannelsOf(state),
         name: 'mat',
@@ -119,7 +119,7 @@ describe('the size an exported picture is drawn at', () => {
     }
 
     await expect(
-      createTextureExportPort({ loadTexture })({
+      createMaterialExportPort({ loadTexture })({
         target,
         channels: exportChannelsOf(state),
         name: 'mat',
@@ -157,7 +157,7 @@ describe('the size an exported picture is drawn at', () => {
     const loadTexture = vi.fn(() => Promise.resolve(decoded(8, 8)))
 
     await expect(
-      createTextureExportPort({ loadTexture })(
+      createMaterialExportPort({ loadTexture })(
         {
           target: 'unreal',
           channels: exportChannelsOf(state),

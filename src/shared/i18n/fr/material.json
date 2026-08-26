@@ -88,7 +88,7 @@
     "preview": "Aperçu",
     "envRotation": "Rotation du ciel",
     "originGenerated": "Généré par un modèle — figé tel qu’il est arrivé",
-    "originDerived": "Calculé depuis un autre canal de cette texture",
+    "originDerived": "Calculé depuis un autre canal de cette matière",
     "originImported": "Votre propre fichier",
     "derive": "Calculer depuis {{source}}",
     "deriveMissing": "Calculer depuis {{source}} — {{source}} est vide",
@@ -121,11 +121,11 @@
     "showBackgroundHint": "Dessine l’environnement derrière la matière, au lieu de seulement l’éclairer",
     "autoSpinHint": "Fait tourner le support pour juger la matière sous tous ses angles",
     "frame": "Recentrer",
-    "frameHint": "Remet la caméra là où elle était en ouvrant la texture",
-    "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
+    "frameHint": "Remet la caméra là où elle était en ouvrant la matière",
+    "tilingPreviewHint": "Ne change que l’aperçu — la matière exportée n’est pas répétée pour autant",
     "previewShape": "Forme",
-    "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture",
-    "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit",
+    "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la matière",
+    "measureSeamHint": "Compare les bords opposés de la matière pour dire si la couture se voit",
     "deriveHint": "Calcule ce canal à partir d’un autre plutôt que d’une image importée"
   }
 }

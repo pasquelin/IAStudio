@@ -3,7 +3,7 @@ import type { Command } from '../core/history'
 import type { ChannelMap, PreviewSettings, MaterialState } from './materialState'
 
 /**
- * Texture edits. Each captures what it needs to revert **as it is applied** rather than as it is
+ * Material edits. Each captures what it needs to revert **as it is applied** rather than as it is
  * built, so a command survives being redone.
  *
  * The `id` is what the history coalesces on: every frame of one slider drag carries the same id
@@ -42,7 +42,7 @@ export function setMaterialSetting<K extends keyof MaterialSettings>(
  * Keyed on the style rather than on the word "style": two styles applied in a row must leave two
  * undo entries, and one shared id would coalesce them into one that gives back neither.
  *
- * The channels are not touched, which is the whole reason a style applies to any texture: it
+ * The channels are not touched, which is the whole reason a style applies to any material: it
  * says how to read the maps in front of it, never which maps to read.
  */
 export function applyStyle(styleId: string, values: MaterialSettings): Command<MaterialState> {

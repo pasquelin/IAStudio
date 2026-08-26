@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { TRANSLATIONS } from '@shared/i18n'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { materialHistoryOf, materialOf, useMaterials } from '@/stores/materials'
 import { inSection } from '../inspector-fixtures'
 import { MaterialInspector } from './MaterialInspector'
@@ -9,7 +9,7 @@ import { MaterialInspector } from './MaterialInspector'
 const DOCUMENT = 'tex-1'
 
 beforeEach(() => {
-  installTexture(DOCUMENT)
+  installMaterial(DOCUMENT)
 })
 
 const material = () => materialOf(useMaterials.getState(), DOCUMENT).material
@@ -140,7 +140,7 @@ describe('MaterialInspector', () => {
 
     expect(screen.getByRole('combobox', { name: 'Forme' })).toHaveAttribute(
       'data-tooltip-content',
-      'Change la forme sur laquelle l’aperçu est plaqué, pas la texture',
+      'Change la forme sur laquelle l’aperçu est plaqué, pas la matière',
     )
   })
 

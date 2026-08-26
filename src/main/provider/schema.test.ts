@@ -155,13 +155,13 @@ describe('familyOf', () => {
     expect(familyOf(['txt2img', 'inpaint'], [])).toBe('image')
   })
 
-  // The API tells textures apart from images by capability, and the Textures workspace is only
+  // The API tells textures apart from images by capability, and the Materials workspace is only
   // its own section as long as this classification is too.
-  it('files a texture model under its own family, not under image', () => {
-    expect(familyOf(['txt2img_texture'], [])).toBe('texture')
-    expect(familyOf(['img2img_texture'], [])).toBe('texture')
-    expect(familyOf(['reference_texture'], [])).toBe('texture')
-    expect(familyOf(['controlnet_texture'], [])).toBe('texture')
+  it('files a material model under its own family, not under image', () => {
+    expect(familyOf(['txt2img_texture'], [])).toBe('material')
+    expect(familyOf(['img2img_texture'], [])).toBe('material')
+    expect(familyOf(['reference_texture'], [])).toBe('material')
+    expect(familyOf(['controlnet_texture'], [])).toBe('material')
   })
 
   it('falls back to "other" with no usable capability', () => {

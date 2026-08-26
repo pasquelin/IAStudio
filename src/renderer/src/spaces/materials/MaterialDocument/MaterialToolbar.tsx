@@ -16,7 +16,7 @@ import {
 import { materialOf, useMaterials } from '@/stores/materials'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 
-export type TextureToolbarProps = {
+export type MaterialToolbarProps = {
   documentId: string
   /** Puts the camera back where the engine opened it. The engine is the document's, not ours. */
   onFrame: () => void
@@ -27,7 +27,7 @@ export type TextureToolbarProps = {
  * both write through `setPreview`, so ⌘Z takes back a click of this bar as it does a chip there.
  * The inspected channel is the exception, and session state on purpose.
  */
-export function MaterialToolbar({ documentId, onFrame }: TextureToolbarProps) {
+export function MaterialToolbar({ documentId, onFrame }: MaterialToolbarProps) {
   const preview = useMaterials(state => materialOf(state, documentId).preview)
   const channels = useMaterials(state => materialOf(state, documentId).channels)
   const inspected = useMaterialViews(state => inspectedChannel(state, documentId))

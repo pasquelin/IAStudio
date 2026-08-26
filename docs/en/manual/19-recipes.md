@@ -132,10 +132,9 @@ baked into the files. See [Skyboxes workspace](13-skyboxes-workspace.md#taking-t
 
 ## Make a material for a 3D object
 
-A *material* (or *texture*) is not a picture: it is a surface you judge **on a lit object**, not
-flat.
+A *material* is not a picture: it is a surface you judge **on a lit object**, not flat.
 
-1. **Textures** workspace;
+1. **Materials** workspace;
 2. the **+** button on the left rail;
 3. **drag a picture from the project onto the preview** — a blue frame confirms the drop will be
    taken. It becomes the **base colour**;
@@ -244,7 +243,7 @@ asset in a tab of its own.
 |---|---|---|
 | a clip on an edit | drag onto the **timeline** | a sequence tab |
 | a picture as a layer | drag onto the **canvas** | an image tab |
-| a picture as base colour | drag onto the **material preview** | a texture tab |
+| a picture as base colour | drag onto the **material preview** | a material tab |
 | a picture as sky | drag onto the **sky preview** | a sky tab |
 | a 3D object in a scene | drag onto the **3D view** | a scene tab |
 
@@ -357,7 +356,7 @@ All of it is spelled out, with nothing hidden, in
 | a variant of a picture | Image | *Image to image* filter → give the picture |
 | a bigger picture | Image | the **Image ▸ Upscale** menu, once its model is set |
 | a 360° sky | Skyboxes | `+` → Generate, it lands by itself |
-| a material | Textures | `+` → drag a picture onto the preview → `⌘S` |
+| a material | Materials | `+` → drag a picture onto the preview → `⌘S` |
 | an animated shot | Video | *Image to video* filter → Generate |
 | a sound | Audio | Models → Generate, then double-click the sound |
 | a 3D scene | 3D | `+` → a light **first**, then the objects → `⌘S` |

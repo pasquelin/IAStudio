@@ -38,7 +38,7 @@ import type {
   SceneExportCommand,
   SceneViewRequest,
   SkyboxExportCommand,
-  TextureExportCommand,
+  MaterialExportCommand,
   ToolRequest,
 } from '@shared/ipc'
 import {
@@ -65,7 +65,7 @@ export type MenuActions = {
   setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
   captureScene: (command: SceneCaptureCommand) => void
-  exportMaterial: (command: TextureExportCommand) => void
+  exportMaterial: (command: MaterialExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
 }
 

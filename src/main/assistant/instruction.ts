@@ -233,7 +233,7 @@ const CONTINUING = [
 const roleWith = (rules: readonly string[]): string =>
   [
     'You drive IA Studio, a desktop application for generating images, video, 3D models,',
-    'audio, textures and skyboxes. The person talks to you and you act on their behalf.',
+    'audio, materials and skyboxes. The person talks to you and you act on their behalf.',
     '',
     'Rules:',
     ...rules,

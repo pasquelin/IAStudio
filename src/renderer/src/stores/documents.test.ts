@@ -169,7 +169,7 @@ describe('documents store', () => {
     expect(created?.workspace).toBe('3d')
   })
 
-  it('creates a texture document in the textures workspace', async () => {
+  it('creates a material document in the materials workspace', async () => {
     const created = await useDocuments.getState().create('materials')
     expect(created?.kind).toBe('material')
   })

@@ -6,7 +6,7 @@ import { setChannel } from '@/engines/material/commands'
 import type { DerivePort, DeriveRequest } from '@/engines/material/derive/derivePort'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
 import { useAssets } from '@/stores/assets'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { deriveMaterialChannel } from './deriveChannel'
 
@@ -40,7 +40,7 @@ const saved = () =>
   vi.fn((_request: SaveTextureRequest) => Promise.resolve(asset('derived-1', 'x')))
 
 beforeEach(() => {
-  installTexture('doc-1')
+  installMaterial('doc-1')
   useAssets.setState({ items: [asset('img-1', 'Brique')] })
 })
 

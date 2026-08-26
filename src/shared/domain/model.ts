@@ -63,7 +63,7 @@ export type ModelFamily =
   | 'video'
   | '3d'
   | 'audio'
-  | 'texture'
+  | 'material'
   | 'skybox'
   | 'upscale'
   | 'background-removal'
@@ -75,13 +75,27 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
   'video',
   '3d',
   'audio',
-  'texture',
+  'material',
   'skybox',
   'upscale',
   'background-removal',
   'vectorization',
   'other',
 ]
+
+/**
+ * What a family a settings file still spells the old way is called today — `texture` named the
+ * material family until 2026-08-26.
+ *
+ * A family name is half of a key WRITTEN TO DISK (`ai.roles`, `ai.ownModels`, the browser's own
+ * choice), and nothing reddens when one goes unread: the choice comes back as "none made".
+ */
+const RENAMED_FAMILIES: Record<string, ModelFamily> = { texture: 'material' }
+
+/** Left alone when the family never moved, so it may be run over a whole stored record. */
+export function currentModelFamily(stored: string): string {
+  return RENAMED_FAMILIES[stored] ?? stored
+}
 
 /**
  * Who published the model. The API exposes no author name — only an opaque `authorId` — so
@@ -281,7 +295,7 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['txt2video', 'img2video', 'video2video'],
   '3d': ['txt23d', 'img23d', '3d23d', 'rig', 'motion'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
-  texture: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
+  material: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
   skybox: ['txt2skybox', 'img2skybox'],
   upscale: ['upscale'],
   'background-removal': ['cutout'],
@@ -386,8 +400,8 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   '3d': ['Image to 3D', 'Text to 3D', '3D to 3D', 'PBR', 'Multiview', 'Motion'],
   audio: ['Audio', 'TTS', 'Music', 'Text to Music', 'Text to Speech'],
   // Empty until the same count is run over the family: it was split out of `image` on its
-  // capabilities, and borrowing that list would offer tags no texture model may carry.
-  texture: [],
+  // capabilities, and borrowing that list would offer tags no material model may carry.
+  material: [],
   // Empty like its publishers: Scenario's four panoramas leave a facet nothing to narrow.
   skybox: [],
   upscale: [],
@@ -471,7 +485,7 @@ export const PUBLISHERS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['Kling', 'Vidu', 'Alibaba', 'Wan', 'Bytedance', 'Luma', 'Google', 'Grok'],
   '3d': ['Tripo', 'Tencent', 'Meshy', 'Hunyuan', 'Rodin'],
   audio: ['ElevenLabs', 'Google', 'Bytedance'],
-  texture: [],
+  material: [],
   // Empty for the same reason as its tags: Scenario, BFL and Tencent publish one model each.
   skybox: [],
   upscale: [],

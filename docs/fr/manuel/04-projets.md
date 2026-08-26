@@ -68,7 +68,7 @@ Mon projet/
 ├── Video/                  posés à la création, et ordinaires : renommez-les,
 ├── Audio/                  videz-les, jetez-les, rangez-les autrement
 ├── 3D/
-├── Textures/
+├── Materials/
 ├── Sky/
 ├── Animations/
 │                           …et tout ce que vous créez à côté
@@ -97,6 +97,11 @@ les outils du studio, pas votre travail.
 > **Les sept dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
 > jamais remis : si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a
 > besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
+
+> **Un projet créé avant le 26/08 a un `Textures/` là où celui-ci a `Materials/`**, et il le
+> garde : chaque asset porte son propre chemin, rien ne lit son rôle dans le nom du dossier. Ce
+> qu'il reçoit à partir de maintenant atterrit à côté, dans `Materials/`. Les deux se renomment et
+> se fusionnent à la main, comme n'importe quel dossier de votre projet.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
 > Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.ia-studio/` ne le reçoit
@@ -331,7 +336,7 @@ ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il e
 | séquence vidéo | `.otio` | Vidéo |
 | son en cours d’édition | `.otio` | Audio |
 | ciel | `.gltf` | Skyboxes |
-| matière | `.mtlx` | Textures |
+| matière | `.mtlx` | Matières |
 
 Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.gltf` à côté de
 `b204.mtlx` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.

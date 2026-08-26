@@ -239,7 +239,7 @@ describe('createModelTextures', () => {
   })
 
   /**
-   * The finish a material of the Textures space is worth to a model. Absent fields leave what the
+   * The finish a material of the Materials space is worth to a model. Absent fields leave what the
    * glTF put there — a model dressed by half a finish keeps the other half of its file.
    */
   it('wears the finish over the one its file carries', () => {

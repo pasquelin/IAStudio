@@ -234,9 +234,9 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     ),
   },
   {
-    id: 'textures.channel',
+    id: 'materials.channel',
     workspace: 'materials',
-    labelKey: 'intents.textureChannel',
+    labelKey: 'intents.materialChannel',
     accepts: PICTURES,
     // The base colour is what a bare drop fills; a named channel comes from the slot itself.
     ...inDocument('material', placeMaterialChannel, isLocalPicture),

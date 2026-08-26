@@ -83,7 +83,7 @@ export function MenuButton({
         {...button}
         // The anchor, the ARIA pair and the APG chord — `Alt+ArrowDown`, the only way into a mode
         // group, where the click arms the tool rather than opening. All three from the hook, so
-        // the whole-line trigger of `TextureField` cannot get a different set of manners.
+        // the whole-line trigger of `PictureField` cannot get a different set of manners.
         {...flyout.triggerProps}
         // …except the promise itself, which is the one thing that is not the hook's to make: this
         // button also serves a flyout of sliders, and `role="menu"` over anything but menu items

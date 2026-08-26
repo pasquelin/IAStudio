@@ -1,6 +1,6 @@
 # 13. Espace Skyboxes
 
-[← Espace Textures](12-espace-textures.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Tous les réglages →](14-reglages.md)
+[← Espace Matières](12-espace-matieres.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Tous les réglages →](14-reglages.md)
 
 L’espace où l’on fabrique et où l’on règle un **ciel à 360°**.
 
@@ -241,4 +241,4 @@ Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
-[← Espace Textures](12-espace-textures.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Tous les réglages →](14-reglages.md)
+[← Espace Matières](12-espace-matieres.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Tous les réglages →](14-reglages.md)

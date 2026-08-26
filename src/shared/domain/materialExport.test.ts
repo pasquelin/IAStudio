@@ -381,36 +381,36 @@ describe('the size a target accepts', () => {
 
 describe('the name a folder takes', () => {
   it('leaves an ordinary title alone', () => {
-    expect(safeFileName('Brique rouge')).toBe('Brique rouge')
+    expect(safeFileName('Brique rouge', 'material')).toBe('Brique rouge')
   })
 
   it('takes the separators out of a title that reads as a path', () => {
-    expect(safeFileName('Brique 1/2')).toBe('Brique 1 2')
-    expect(safeFileName('..\\..\\etc')).toBe('etc')
+    expect(safeFileName('Brique 1/2', 'material')).toBe('Brique 1 2')
+    expect(safeFileName('..\\..\\etc', 'material')).toBe('etc')
   })
 
   it('drops the leading dots that would hide the folder', () => {
-    expect(safeFileName('.hidden')).toBe('hidden')
+    expect(safeFileName('.hidden', 'material')).toBe('hidden')
   })
 
   it('takes out what Windows refuses in a name', () => {
-    expect(safeFileName('a:b*c?d"e<f>g|h')).toBe('a b c d e f g h')
+    expect(safeFileName('a:b*c?d"e<f>g|h', 'material')).toBe('a b c d e f g h')
   })
 
   it('replaces a control character rather than carrying it to disk', () => {
-    expect(safeFileName('tab\there')).toBe('tab here')
-    expect(safeFileName('null\x00byte')).toBe('null byte')
+    expect(safeFileName('tab\there', 'material')).toBe('tab here')
+    expect(safeFileName('null\x00byte', 'material')).toBe('null byte')
   })
 
   it('falls back when a title holds nothing a name can keep', () => {
-    expect(safeFileName('///')).toBe('texture')
-    expect(safeFileName('   ')).toBe('texture')
+    expect(safeFileName('///', 'material')).toBe('material')
+    expect(safeFileName('   ', 'material')).toBe('material')
     expect(safeFileName('', 'sky')).toBe('sky')
   })
 
   it('cuts a very long title without leaving a trailing space', () => {
     const long = `${'a'.repeat(79)} tail`
 
-    expect(safeFileName(long)).toBe('a'.repeat(79))
+    expect(safeFileName(long, 'material')).toBe('a'.repeat(79))
   })
 })

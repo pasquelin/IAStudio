@@ -37,7 +37,7 @@ according to what you are making. Those six arrangements are called **workspaces
 | **Video** | moving sequences | a ten-second shot, an edit of several takes |
 | **3D** | scenes with volume | a set, an object under a light |
 | **Audio** | sounds and music | an ambience, a sound effect, a musical bed |
-| **Textures** | materials | wood, rusted metal, fabric — to dress a 3D object |
+| **Materials** | materials | wood, rusted metal, fabric — to dress a 3D object |
 | **Skyboxes** | 360° skies | what you see around you when you look up in a scene |
 
 You switch workspace by clicking its name, at the top of the window. The panels rearrange
@@ -84,7 +84,7 @@ There are six kinds of document, one per workspace:
 | Video | a sequence | `.otio` |
 | Audio | a sound being edited | `.otio` |
 | Skyboxes | a sky | `.gltf` |
-| Textures | a material | `.mtlx` |
+| Materials | a material | `.mtlx` |
 
 ### 4. A **model**
 

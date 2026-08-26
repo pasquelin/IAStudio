@@ -1,4 +1,6 @@
+import { currentModelFamily } from '@shared/domain/model'
 import { LANDING_CHOICES } from '@shared/domain/settings'
+import { isRecord } from '@shared/guards'
 import { z } from 'zod'
 import {
   isCloudProviderId,
@@ -6,7 +8,7 @@ import {
   type CloudAuth,
   type CloudProviderId,
 } from '@shared/domain/aiCloud'
-import type { RoleProvider } from '@shared/domain/aiRole'
+import { currentAiRoleKey, type RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { ASSISTANT_STEPS_DEFAULT, assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
@@ -330,22 +332,84 @@ const partialSettingsShape = z.object({
 })
 
 /**
+ * A family renamed since this file was written, brought up to date BEFORE any shape above reads
+ * it — a family name is half of four stored keys, and every one of them fails QUIETLY.
+ *
+ * `ownModels` carries `.catch([])`, so a single stale `family` blanks the whole list; a stale role
+ * key reads as "no choice made"; a stale `defaultModels` entry never reaches `migratedRoleChoices`.
+ * Idempotent, so it runs on what the renderer sends as readily as on what the disk holds.
+ */
+function withCurrentFamilies(value: unknown): unknown {
+  if (!isRecord(value)) return value
+
+  const brought: Record<string, unknown> = { ...value }
+  if (isRecord(value.ai)) brought.ai = currentAi(value.ai)
+  if (isRecord(value.generation) && isRecord(value.generation.defaultModels)) {
+    brought.generation = {
+      ...value.generation,
+      defaultModels: mapKeys(value.generation.defaultModels, currentModelFamily),
+    }
+  }
+
+  return brought
+}
+
+function currentAi(ai: Record<string, unknown>): Record<string, unknown> {
+  const brought: Record<string, unknown> = { ...ai }
+  if (isRecord(ai.roles)) brought.roles = mapKeys(ai.roles, currentAiRoleKey)
+  if (isRecord(ai.projectRoles)) {
+    brought.projectRoles = Object.fromEntries(
+      Object.entries(ai.projectRoles).map(([project, roles]) => [
+        project,
+        isRecord(roles) ? mapKeys(roles, currentAiRoleKey) : roles,
+      ]),
+    )
+  }
+  if (Array.isArray(ai.ownModels)) brought.ownModels = ai.ownModels.map(currentOwnModel)
+
+  return brought
+}
+
+function currentOwnModel(model: unknown): unknown {
+  if (!isRecord(model)) return model
+
+  const brought: Record<string, unknown> = { ...model }
+  if (typeof model.family === 'string') brought.family = currentModelFamily(model.family)
+  if (Array.isArray(model.serves)) {
+    brought.serves = model.serves.map(role =>
+      typeof role === 'string' ? currentAiRoleKey(role) : role,
+    )
+  }
+
+  return brought
+}
+
+function mapKeys(
+  held: Record<string, unknown>,
+  rename: (key: string) => string,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(held).map(([key, value]) => [rename(key), value]))
+}
+
+/**
  * The one place `generation.defaultModels` is still read, and it leaves as `ai.roles` — ADR-23.
  *
  * On the whole object rather than on either branch: the migration needs both at once, and a
  * transform on `generation` alone could not reach the choices already made on the employment
  * side, which have to win.
  */
-const partialSettings = partialSettingsShape.transform(parsed => {
-  const { defaultModels, ...generation } = parsed.generation ?? {}
-  if (defaultModels === undefined) return parsed
+const partialSettings = z
+  .preprocess(withCurrentFamilies, partialSettingsShape)
+  .transform(parsed => {
+    const { defaultModels, ...generation } = parsed.generation ?? {}
+    if (defaultModels === undefined) return parsed
 
-  return {
-    ...parsed,
-    generation,
-    ai: { ...parsed.ai, roles: migratedRoleChoices(defaultModels, parsed.ai?.roles ?? {}) },
-  }
-})
+    return {
+      ...parsed,
+      generation,
+      ai: { ...parsed.ai, roles: migratedRoleChoices(defaultModels, parsed.ai?.roles ?? {}) },
+    }
+  })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */
 export function parsePartialSettings(value: unknown): PartialSettings {

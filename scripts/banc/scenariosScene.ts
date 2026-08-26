@@ -476,7 +476,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     passed: run => read.nodesOfKind(run, 'model').length === 2,
   },
 
-  // ——— 12. Textures et matériaux ———
+  // ——— 12. Matières et matériaux d'un modèle ———
   {
     name: '12.1 selects the model just added and names its materials',
     said: ['Sélectionne le modèle 3D que nous venons d’ajouter et donne-moi ses matériaux.'],

@@ -95,7 +95,7 @@
       },
       "fileOpen": {
         "title": "Open a file of the project",
-        "description": "Opens any file the project folder holds — an image, a 3D model, a texture, a document — in the space that edits it, the way a double-click in the Explorer does. A file no editor here takes is handed to the program that owns it."
+        "description": "Opens any file the project folder holds — an image, a 3D model, a material, a document — in the space that edits it, the way a double-click in the Explorer does. A file no editor here takes is handed to the program that owns it."
       },
       "filesList": {
         "title": "List a folder",
@@ -393,11 +393,11 @@
         "title": "Choose a sky’s image",
         "description": "Hangs an equirectangular image from the library in the sky in front. The asset must have a file on this machine, one still in the cloud having nothing to decode."
       },
-      "textureState": {
+      "materialState": {
         "title": "Read the material being edited",
         "description": "Answers the material in front — the eight channels and what fills them, every render setting such as colour, roughness and tiling, and how the preview is presented."
       },
-      "textureMaterial": {
+      "materialSettings": {
         "title": "Set a material",
         "description": "Changes the tint, roughness, metalness, relief, occlusion, emission, tiling, offset or rotation of the material in front. Every field is optional."
       },
@@ -405,11 +405,11 @@
         "title": "Choose what lights a material preview",
         "description": "Lights the preview by the procedural studio, by an image of the project named by its asset identifier, or by a sky document named by its title — the preview then takes its graded image and its intensity, as a scene does."
       },
-      "texturePreview": {
+      "materialPreview": {
         "title": "Set a material’s preview",
         "description": "Changes the strength and rotation of the environment lighting the preview, whether the background is drawn, the automatic spin and the seam highlight."
       },
-      "textureChannel": {
+      "materialChannel": {
         "title": "Fill or empty a channel",
         "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
       },
@@ -1272,9 +1272,9 @@
       "audioMake": "Generate a sound",
       "audioFromVideo": "Take the sound off a video",
       "audioTrim": "Trim an audio clip",
-      "textureMake": "Generate a material",
-      "textureFromImage": "Make a material from an image",
-      "textureTile": "Make a material seamless",
+      "materialMake": "Generate a material",
+      "materialFromImage": "Make a material from an image",
+      "materialTile": "Make a material seamless",
       "skyboxMake": "Generate a sky",
       "skyboxRelight": "Change the light of a sky",
       "skyboxExport": "Export a sky"

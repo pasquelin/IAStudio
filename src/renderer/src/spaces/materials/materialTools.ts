@@ -84,7 +84,7 @@ export const MATERIAL_MODE = 'material'
  * What the bar reads to draw itself. `filled` is offered greyed rather than hidden, so the bar
  * says what a texture CAN hold and not only what this one does.
  */
-export type TextureToolsInput = {
+export type MaterialToolsInput = {
   preview: Pick<
     PreviewSettings,
     'shape' | 'tilingPreview' | 'showSeam' | 'showBackground' | 'autoSpin'
@@ -133,7 +133,7 @@ const tilingModes = (): readonly ToolMode[] =>
  * Built from the state, unlike the four other spaces: each group wears the choice it is on, so
  * the shape in use is legible without opening anything. Nothing here is a `CommandId`.
  */
-export function materialTools({ preview, inspected, filled }: TextureToolsInput): ToolbarItem[] {
+export function materialTools({ preview, inspected, filled }: MaterialToolsInput): ToolbarItem[] {
   return [
     {
       id: 'shape',

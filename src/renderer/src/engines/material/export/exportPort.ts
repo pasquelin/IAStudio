@@ -34,7 +34,7 @@ export type ExportedFile = {
   bytes: Uint8Array
 }
 
-export type TexturePackRequest = {
+export type MaterialPackRequest = {
   target: MaterialExportTarget
   channels: ExportChannels
   /** What the files are named after, already cleaned of everything a name cannot hold. */
@@ -53,12 +53,12 @@ export type TexturePackRequest = {
  * decoration. Optional because the assistant's door asks for the same bytes without one — that
  * door shows no row and cannot be stopped, which is a gap rather than a decision.
  */
-export type TextureExportPort = (
-  request: TexturePackRequest,
+export type MaterialExportPort = (
+  request: MaterialPackRequest,
   watch?: TaskWatch,
 ) => Promise<ExportedFile[]>
 
-export type TextureExportPortOptions = {
+export type MaterialExportPortOptions = {
   /** Injected for the same reason the renderer's is: jsdom decodes no image. */
   loadTexture: TextureSource
 }
@@ -116,9 +116,9 @@ function drawPicture(
  * built on the source's own decoded size, so an export is at full resolution by construction
  * rather than by a setting somebody has to remember — the one ceiling is a target's own.
  */
-export function createTextureExportPort({
+export function createMaterialExportPort({
   loadTexture,
-}: TextureExportPortOptions): TextureExportPort {
+}: MaterialExportPortOptions): MaterialExportPort {
   return async ({ target, channels, name, material, shape }, watch) => {
     const pictures = resolvePictures(target, channels, name)
     // Before the glTF road as much as the folder one: a texture with no channel resolves to no

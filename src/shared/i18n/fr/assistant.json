@@ -95,7 +95,7 @@
       },
       "fileOpen": {
         "title": "Ouvrir un fichier du projet",
-        "description": "Ouvre n’importe quel fichier du dossier du projet — une image, un modèle 3D, une texture, un document — dans l’espace qui l’édite, comme un double-clic dans l’Explorateur. Un fichier qu’aucun éditeur d’ici ne prend est confié au programme auquel il appartient."
+        "description": "Ouvre n’importe quel fichier du dossier du projet — une image, un modèle 3D, une matière, un document — dans l’espace qui l’édite, comme un double-clic dans l’Explorateur. Un fichier qu’aucun éditeur d’ici ne prend est confié au programme auquel il appartient."
       },
       "filesList": {
         "title": "Lister un dossier",
@@ -393,11 +393,11 @@
         "title": "Choisir l’image d’un ciel",
         "description": "Accroche une image équirectangulaire de la bibliothèque dans le ciel devant. L’asset doit avoir un fichier sur la machine, une image restée dans le nuage n’ayant rien à décoder."
       },
-      "textureState": {
+      "materialState": {
         "title": "Lire la matière en cours d’édition",
         "description": "Rend la matière devant — les huit canaux et ce qui les remplit, tous les réglages de rendu comme la couleur, la rugosité et le pavage, et la façon dont l’aperçu est présenté."
       },
-      "textureMaterial": {
+      "materialSettings": {
         "title": "Régler une matière",
         "description": "Change la teinte, la rugosité, le métal, le relief, l’occlusion, l’émission, le pavage, le décalage ou la rotation de la matière devant. Chaque champ est facultatif."
       },
@@ -405,11 +405,11 @@
         "title": "Choisir ce qui éclaire l’aperçu d’une matière",
         "description": "Éclaire l’aperçu par le studio procédural, par une image du projet nommée par son identifiant d’asset, ou par un document ciel nommé par son titre — l’aperçu prend alors son image étalonnée et son intensité, comme une scène le fait."
       },
-      "texturePreview": {
+      "materialPreview": {
         "title": "Régler l’aperçu d’une matière",
         "description": "Change l’intensité et la rotation de l’environnement qui éclaire l’aperçu, l’affichage du fond, la rotation automatique et la mise en évidence des coutures."
       },
-      "textureChannel": {
+      "materialChannel": {
         "title": "Remplir ou vider un canal",
         "description": "Met une image de la bibliothèque dans un des huit canaux de la matière devant. Sans asset nommé, le canal est vidé plutôt que rempli."
       },
@@ -1272,9 +1272,9 @@
       "audioMake": "Génère un son",
       "audioFromVideo": "Extrais le son d’une vidéo",
       "audioTrim": "Coupe un extrait audio",
-      "textureMake": "Génère une matière",
-      "textureFromImage": "Fais une matière d’après une image",
-      "textureTile": "Rends une matière raccordable",
+      "materialMake": "Génère une matière",
+      "materialFromImage": "Fais une matière d’après une image",
+      "materialTile": "Rends une matière raccordable",
       "skyboxMake": "Génère un ciel",
       "skyboxRelight": "Change la lumière d’un ciel",
       "skyboxExport": "Exporte un ciel"

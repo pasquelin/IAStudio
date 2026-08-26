@@ -218,7 +218,7 @@ réécrit.
   est un `ok`, donc un modèle en envoie neuf et défait le décor. Le faire savoir demande que le
   BUS de commandes remonte une réponse, ce qu'il ne fait pas : il publie et n'écoute rien.
 - **Les autres scopes du bus restent hors de portée sans fenêtre** — `canvas`, `sequence`,
-  `texture`, `skybox`. Leur logique vit dans des composants, contrairement à `runSceneCommand`.
+  `material`, `skybox`. Leur logique vit dans des composants, contrairement à `runSceneCommand`.
 - **Les plans de caméra ne sont publiés nulle part**, d'où `camera.target shotId=shotId`.
 - **Une skybox du dossier `Skyboxes/` est indexée `image`** — son extension est `.png`, et
   `assets.search type=skybox` ne trouve rien. Vrai dans le studio comme au banc.
@@ -386,7 +386,7 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 - [x] « Place Camera Test pour cadrer entièrement ce modèle. »
 - [ ] « Ajoute une deuxième instance du même modèle à sa droite. »
 
-## 12. Textures et matériaux
+## 12. Matières et matériaux d'un modèle
 
 - [x] « Sélectionne le modèle 3D que nous venons d'ajouter et donne-moi ses matériaux. »
 - [x] « Change la couleur de base de son premier matériau en rouge. »

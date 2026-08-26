@@ -107,14 +107,14 @@ This is the most useful filter. The vocabulary is technical but short:
 | **Audio to audio** | a sound is turned into another |
 | **Video to audio** | a video gets a soundtrack |
 
-**In the Textures workspace**
+**In the Materials workspace**
 
 | Capability | In plain words |
 |---|---|
-| **Text to texture** | a sentence becomes a material |
-| **Image to texture** | an image is turned into a material |
-| **Texture guidance** | it follows a structure you impose |
-| **Texture reference** | it takes cues from a material you supply |
+| **Text to material** | a sentence becomes a material |
+| **Image to material** | an image is turned into a material |
+| **Material guidance** | it follows a structure you impose |
+| **Material reference** | it takes cues from a material you supply |
 
 ### Tag — the publishers' keywords
 
@@ -145,7 +145,7 @@ The big names in the field, different per workspace:
 
 Useful for seeing what has just come out.
 
-> **The Skyboxes workspace has no capabilities, tags or publishers to filter on, and the Textures
+> **The Skyboxes workspace has no capabilities, tags or publishers to filter on, and the Materials
 > workspace has no tags or publishers**: those families hold only a handful of models.
 
 ---

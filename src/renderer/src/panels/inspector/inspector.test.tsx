@@ -39,7 +39,7 @@ import { useSettings } from '@/stores/settings'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelFiles } from '@/stores/modelFiles'
 import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { inSection } from './inspector-fixtures'
 import { useMaterialViews } from '@/stores/materialViews'
 import { materialOf, useMaterials } from '@/stores/materials'
@@ -872,7 +872,7 @@ describe('inspector panel', () => {
     })
 
     it('describes the material of a texture', () => {
-      installTexture('doc-1')
+      installMaterial('doc-1')
       render(withQueries(<Content />))
 
       expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()
@@ -886,7 +886,7 @@ describe('inspector panel', () => {
      * ever reaches a scene: written into `material.tiling`, a glance would go out with the file.
      */
     it('multiplies the repeat for the preview without writing it into the material', async () => {
-      installTexture('doc-1')
+      installMaterial('doc-1')
       render(withQueries(<Content />))
       await openTiling()
 
@@ -901,7 +901,7 @@ describe('inspector panel', () => {
     })
 
     it('brings the seams to the middle without writing an offset into the material', async () => {
-      installTexture('doc-1')
+      installMaterial('doc-1')
       render(withQueries(<Content />))
       await openTiling()
 
@@ -914,7 +914,7 @@ describe('inspector panel', () => {
 
     /** A measurement asks the GPU for a context: it is offered where there is nothing to read. */
     it('refuses to measure a seam with no base colour to measure it on', async () => {
-      installTexture('doc-1')
+      installMaterial('doc-1')
       render(withQueries(<Content />))
       await openTiling()
 
@@ -922,7 +922,7 @@ describe('inspector panel', () => {
     })
 
     it('offers the measurement once a base colour is there', async () => {
-      installTexture('doc-1')
+      installMaterial('doc-1')
       useMaterials
         .getState()
         .runCommand(
@@ -937,7 +937,7 @@ describe('inspector panel', () => {
 
     /** The base colour a reading was taken off, so the words on screen can be checked against it. */
     const measured = (assetId: string, ratio: number) => {
-      installTexture('doc-1')
+      installMaterial('doc-1')
       useMaterials
         .getState()
         .runCommand(
@@ -1152,7 +1152,7 @@ describe('the inspector and what is picked in a scene', () => {
   it('describes a texture brought in front after a node was picked', () => {
     install(meshNode('box-1'), false)
     selectIn('doc-1', ['box-1'])
-    installTexture('doc-2')
+    installMaterial('doc-2')
     render(withQueries(<Content />))
 
     expect(inSection('Matière').getByLabelText('Rugosité')).toBeInTheDocument()

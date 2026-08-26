@@ -75,7 +75,7 @@ Nine contexts:
 | **In the image** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
 | **In the take editor** | the waveform of the Audio workspace |
-| **In the material** | the preview and channels of the Textures workspace |
+| **In the material** | the preview and channels of the Materials workspace |
 
 **A surface can listen to a key without being a context, and the guarantee above does not cover it
 then.** The Modelling workspace's animation band is that case, and it listens to **four** keys:
@@ -521,7 +521,7 @@ taken from the bar, under the waveform.
 
 ## In the material
 
-The last context on the list, and the shortest: the Textures workspace listens for undo alone.
+The last context on the list, and the shortest: the Materials workspace listens for undo alone.
 
 | Action | Key | What it does |
 |---|---|---|
@@ -529,7 +529,7 @@ The last context on the list, and the shortest: the Textures workspace listens f
 | **Redo** | `⇧⌘Z` | |
 
 > **An applied style is one undo.** `⌘Z` puts back exactly what was set before, in one go — see
-> [The Textures workspace](12-textures-workspace.md).
+> [The Materials workspace](12-materials-workspace.md).
 
 ---
 

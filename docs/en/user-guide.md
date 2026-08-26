@@ -48,7 +48,7 @@ machine, without sending them anywhere.
 | 9 | [Modelling workspace](manual/09-modelling-workspace.md) | Fly through a scene, place objects and lights, adjust them |
 | 10 | [Video workspace](manual/10-video-workspace.md) | Edit a sequence, cut, adjust tracks |
 | 11 | [Audio workspace](manual/11-audio-workspace.md) | Trim a sound, fade it, normalise it |
-| 12 | [Textures workspace](manual/12-textures-workspace.md) | Judge a material on a lit object |
+| 12 | [Materials workspace](manual/12-materials-workspace.md) | Judge a material on a lit object |
 | 13 | [Skyboxes workspace](manual/13-skyboxes-workspace.md) | Make a 360° sky and adjust it |
 
 ### Appendices
@@ -81,7 +81,7 @@ straight away and puts a green **In use** badge on the row.
 you make will land inside it.
 
 **3. Choose a workspace.**
-At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **Materials**,
 **Skyboxes**. Click **Image**.
 
 **4. Choose a model.**

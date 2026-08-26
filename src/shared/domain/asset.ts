@@ -47,13 +47,17 @@ export function isAssetType(value: unknown): value is AssetType {
  * would point beside the file.
  *
  * `Record<AssetType, string>` still makes a new kind a compile error rather than a surprise.
+ *
+ * A DEFAULT and nothing more, which is what makes renaming one safe: a project created before
+ * `Textures` became `Materials` keeps its folder — every row carries its own path — and only what
+ * it takes in from now on lands beside it.
  */
 export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
   image: 'Images',
   video: 'Video',
   audio: 'Audio',
   mesh: '3D',
-  texture: 'Textures',
+  texture: 'Materials',
   skybox: 'Sky',
   animation: 'Animations',
 }
@@ -204,7 +208,7 @@ export type Asset = {
   /**
    * What ties the outputs of one generation together — the seven channels of a PBR pack above
    * all. The API has no notion of a group: it answers with siblings that share a `parentId`, a
-   * `parentJobId` and nothing else, and dropping a whole material onto the texture space means
+   * `parentJobId` and nothing else, and dropping a whole material onto the materials space means
    * being able to name the set.
    */
   groupId?: string

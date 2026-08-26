@@ -231,7 +231,7 @@ describe('the translation bundles', () => {
 
   /**
    * The sentences that read the same in both bundles because nobody translates them: the brand,
-   * the names of file formats and of the engines a texture is exported to, two paths, a
+   * the names of file formats and of the engines a material is exported to, two paths, a
    * copyright line, and an example someone types over.
    *
    * Anything else arriving here is an English sentence pasted into the French file — the one
@@ -838,8 +838,8 @@ describe('the translation bundles', () => {
     metalness: {
       reads: ['métallicité', 'métal'],
       separates:
-        'the 3D inspector writes the trade word beside `Rugosité`, the textures panel the short ' +
-        'one that fits a tile — `docs/fr/manuel/12-espace-textures.md` says so in as many words. ' +
+        'the 3D inspector writes the trade word beside `Rugosité`, the materials panel the short ' +
+        'one that fits a tile — `docs/fr/manuel/12-espace-matieres.md` says so in as many words. ' +
         'Nothing conceptual separates them: a product call, not a translation one',
     },
     import: {
@@ -854,7 +854,7 @@ describe('the translation bundles', () => {
       reads: ['créer un projet', 'nouveau projet'],
       separates: 'the button that does it, and the menu entry that names it',
     },
-    none: { reads: ['aucune', 'aucun'], separates: 'agreement — a texture, and a model' },
+    none: { reads: ['aucune', 'aucun'], separates: 'agreement — a material, and a model' },
     normal: {
       reads: ['normal', 'normale'],
       separates: 'the blend mode, which carries the CSS name, and the normal map',
@@ -897,7 +897,7 @@ describe('the translation bundles', () => {
   /**
    * The blind spot of both tables above, and it took a manual sentence to see it: `formsOf`
    * groups by the SOURCE term, so a label shortened on BOTH sides at once lands in no group and
-   * neither table can reach it. `docs/fr/manuel/12-espace-textures.md` says the panel shortens
+   * neither table can reach it. `docs/fr/manuel/12-espace-matieres.md` says the panel shortens
    * THREE channel names; only `metalness` ever surfaced, its English having stayed put.
    *
    * So the channels are read by KEY instead: `material.channel.<c>` against the 3D inspector's
@@ -1230,7 +1230,7 @@ const DYNAMIC_KEYS: readonly string[] = [
    * shipped once, with `images-generation` sitting in a French table.
    */
   ...ASSISTANT_MODELS.map(model => `assistant.models.${model}`),
-  // Composed from the shared PBR union to name a link row of the texture inspector. This family
+  // Composed from the shared PBR union to name a link row of the material inspector. This family
   // has no compiler guard, so a ninth channel — and the domain warns the API adds types without
   // notice — would label its row with its own key.
   ...PBR_CHANNELS.map(channel => `material.channel.${channel}`),

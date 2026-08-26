@@ -11,7 +11,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { editPixelsOf } from '@/helpers/openAsset'
 import { useAssets } from '@/stores/assets'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { ChannelsSection } from './ChannelsSection'
@@ -43,11 +43,11 @@ const deriveMaterialChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)
 vi.mock('@/spaces/materials/deriveChannel', () => ({ deriveMaterialChannel }))
 
 beforeEach(() => {
-  installTexture('doc-1')
+  installMaterial('doc-1')
   // Session state, shared by every document: a channel left inspected would leak into the next.
   useMaterialViews.setState({ inspected: {} })
   // The CATALOGUE, not the shelf: `useAssets.items` is the scope the browser is asking for, and
-  // the Textures space narrows it — a list built out of it offers what has been browsed.
+  // the Materials space narrows it — a list built out of it offers what has been browsed.
   installFakeBridge({ assets: { search: () => Promise.resolve([BRICK]) } })
   useAssets.setState({ items: [] })
   // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.

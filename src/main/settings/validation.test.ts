@@ -112,6 +112,79 @@ describe('settings validation', () => {
 })
 
 /**
+ * `texture` named the material family until 2026-08-26, and a family name is half of four stored
+ * keys. Every one of them fails in SILENCE — the choice reads as none made, the own-model list
+ * blanks whole — so nothing but these cases would say the rename cost a person their settings.
+ */
+describe('a family renamed since the file was written', () => {
+  it('brings a role choice up to date rather than reading it as no choice made', () => {
+    const salvaged = salvagePartialSettings({
+      ai: { roles: { 'texture/txt2img_texture': { kind: 'local', modelId: 'ssd-1b' } } },
+    })
+
+    expect(salvaged.ai?.roles).toEqual({
+      'material/txt2img_texture': { kind: 'local', modelId: 'ssd-1b' },
+    })
+  })
+
+  it('brings a per-project choice up to date too', () => {
+    const salvaged = salvagePartialSettings({
+      ai: {
+        projectRoles: {
+          '/Repérages': { 'texture/img2img_texture': { kind: 'cloud', providerId: 'scenario' } },
+        },
+      },
+    })
+
+    expect(salvaged.ai?.projectRoles).toEqual({
+      '/Repérages': { 'material/img2img_texture': { kind: 'cloud', providerId: 'scenario' } },
+    })
+  })
+
+  /** `ownModels` carries `.catch([])`: one stale family used to take the whole list down with it. */
+  it('keeps an imported model whose family moved, and the ones beside it', () => {
+    const own = (id: string, family: string): unknown => ({
+      id,
+      name: id,
+      format: 'gguf',
+      loader: 'llamacpp',
+      rank: 1,
+      licence: 'MIT',
+      licenceUrl: '',
+      source: '',
+      files: [],
+      diskBytes: 1,
+      reservationBytes: 1,
+      family,
+      serves: [`${family}/txt2img_texture`],
+    })
+
+    const salvaged = salvagePartialSettings({
+      ai: { ownModels: [own('one', 'texture'), own('two', 'image')] },
+    })
+
+    expect(salvaged.ai?.ownModels?.map(model => model.family)).toEqual(['material', 'image'])
+    expect(salvaged.ai?.ownModels?.[0]?.serves).toEqual(['material/txt2img_texture'])
+  })
+
+  it('carries the legacy default model of that family into its employment', () => {
+    const salvaged = salvagePartialSettings({
+      generation: { defaultModels: { texture: 'ssd-1b' } },
+    })
+
+    expect(salvaged.ai?.roles).toEqual({
+      'material/txt2img_texture': { kind: 'local', modelId: 'ssd-1b' },
+    })
+  })
+
+  it('leaves a family that never moved alone', () => {
+    const roles = { 'image/txt2img': { kind: 'local', modelId: 'ssd-1b' } }
+
+    expect(salvagePartialSettings({ ai: { roles } }).ai?.roles).toEqual(roles)
+  })
+})
+
+/**
  * The bar order is the one branch a stale or hand-edited file is likely to carry wrong, since
  * it is written by a gesture rather than typed into a screen. Before it existed, an unknown key
  * was simply stripped — it must not become the key that costs the file.

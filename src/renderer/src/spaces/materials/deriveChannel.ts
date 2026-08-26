@@ -14,7 +14,7 @@ import { materialOf, useMaterials } from '@/stores/materials'
 const gpuDerive = createDerivePort({ loadTexture })
 
 /**
- * Computes one channel of a texture from another, and puts the result in the project.
+ * Computes one channel of a material from another, and puts the result in the project.
  *
  * A new asset every time, never an overwrite: a derivation is cheap to run again, and the file
  * a user could have painted over is not the studio's to replace. The channel it lands in is

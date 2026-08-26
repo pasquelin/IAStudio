@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
-import { MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
+import { currentAiRoleKey, primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
+import { currentModelFamily, MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
+import { isRecord } from '@shared/guards'
 import type { FormValues } from '@/helpers/dynamicForm'
 import {
   COLLECTION_PERSIST_VERSION,
@@ -14,7 +15,10 @@ import {
  * Bumped past `COLLECTION_PERSIST_VERSION` because `selected` changed KEY, not shape: entries
  * filed per family have to be re-filed per employment or every space opens on no model at all.
  */
-const MODELS_PERSIST_VERSION = COLLECTION_PERSIST_VERSION + 1
+const ROLE_KEYS_VERSION = COLLECTION_PERSIST_VERSION + 1
+
+/** Bumped again for the family RENAMED — `withCurrentFamilies` says which, and why it is silent. */
+const MODELS_PERSIST_VERSION = ROLE_KEYS_VERSION + 1
 
 type Collections = Partial<Record<ModelFamily, CollectionState>>
 
@@ -51,6 +55,35 @@ function withRoleKeys(persisted: unknown): unknown {
   }
 
   return { ...held, selected }
+}
+
+/**
+ * A family renamed since this blob was written, brought up to date — under either shape, since
+ * `selected` was keyed per family before ADR-23 and per employment after it.
+ *
+ * Reached from `migrate`, so a blob already at the current version never sees it: the next family
+ * added to `RENAMED_FAMILIES` needs `MODELS_PERSIST_VERSION` bumped with it.
+ *
+ * Without it the choice comes back as none made — a key nothing reads reddens nowhere, and
+ * `searchless` quietly drops the browser's own state for that family at the first write.
+ */
+function withCurrentFamilies(persisted: unknown): unknown {
+  if (!isRecord(persisted)) return persisted
+
+  const brought: Record<string, unknown> = { ...persisted }
+  if (isRecord(persisted.selected)) brought.selected = renamed(persisted.selected, currentAiRoleKey)
+  if (isRecord(persisted.collections)) {
+    brought.collections = renamed(persisted.collections, currentModelFamily)
+  }
+
+  return brought
+}
+
+function renamed(
+  held: Record<string, unknown>,
+  rename: (key: string) => string,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(held).map(([key, value]) => [rename(key), value]))
 }
 
 type ModelsState = {
@@ -125,8 +158,13 @@ export const useModels = create<ModelsState>()(
       // empty — every space opens unfiltered once, which is exactly what has to happen to the
       // shared filter this replaces. The orphan entry is gone at the first write.
       version: MODELS_PERSIST_VERSION,
-      migrate: (persisted, version) =>
-        version >= MODELS_PERSIST_VERSION ? persisted : withRoleKeys(persisted),
+      // Renamed FIRST: `withRoleKeys` walks `MODEL_FAMILIES` to find a choice filed per family,
+      // and a family it no longer names is a choice it cannot see.
+      migrate: (persisted, version) => {
+        const brought = withCurrentFamilies(persisted)
+
+        return version >= ROLE_KEYS_VERSION ? brought : withRoleKeys(brought)
+      },
       // The search text is deliberately dropped: restoring it would open the studio on a
       // narrowed catalogue nobody typed, which reads as a catalogue gone missing.
       partialize: state => ({

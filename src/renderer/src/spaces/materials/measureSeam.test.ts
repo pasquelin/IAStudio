@@ -3,7 +3,7 @@ import { assetUrl } from '@shared/domain/asset'
 import { setChannel } from '@/engines/material/commands'
 import type { SeamPort } from '@/engines/material/derive/seamPort'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
-import { installTexture } from '@/stores/material-fixtures'
+import { installMaterial } from '@/stores/material-fixtures'
 import { seamOf, useMaterialViews } from '@/stores/materialViews'
 import { useMaterials } from '@/stores/materials'
 import { measureMaterialSeam } from './measureSeam'
@@ -19,11 +19,11 @@ const fill = () =>
 const reading = () => seamOf(useMaterialViews.getState(), 'doc-1')
 
 beforeEach(() => {
-  installTexture('doc-1')
+  installMaterial('doc-1')
   useMaterialViews.setState({ inspected: {}, seams: {} })
 })
 
-describe('measuring the seam of a texture', () => {
+describe('measuring the seam of a material', () => {
   it('remembers what the GPU answered, for the session', async () => {
     bridgeWatchingLogs()
     fill()
