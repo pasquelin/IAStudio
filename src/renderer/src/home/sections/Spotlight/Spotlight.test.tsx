@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
@@ -7,6 +8,14 @@ import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Spotlight } from './Spotlight'
+
+const DOCUMENT: DocumentDescriptor = {
+  id: 'a',
+  kind: 'image',
+  title: 'Recette lot C',
+  workspace: 'image',
+  path: 'documents/Recette.ora',
+}
 
 const PROJECT = {
   path: '/projects/summer',
@@ -105,6 +114,21 @@ describe('the spotlight while the studio is still opening', () => {
  * read as decoration, and pushed the sentence under it down a card whose height is fixed.
  */
 describe('the card', () => {
+  /**
+   * A stacked card's height is fixed, so a body too long has to stop — mid-word is not a place.
+   * The class is what this can read: jsdom lays nothing out, so no case here sees the ellipsis,
+   * and no SHIPPED body reaches four lines. What does is a project or document name a person
+   * chose, which is why the clamp is on the card rather than on the sentences.
+   */
+  it('carries the clamp on the body of a card that shares the band', () => {
+    useSettings.setState({ authKnown: true })
+    useProject.setState({ project: PROJECT, known: true })
+    useDocuments.setState({ documents: { a: DOCUMENT }, stored: [DOCUMENT], activeId: 'a' })
+    render(<Spotlight />)
+
+    expect(screen.getByText(/Les modèles, la génération/)).toHaveClass('line-clamp-4')
+  })
+
   it('sets the icon on the same line as the title', () => {
     useSettings.setState({ authKnown: true })
     useProject.setState({ known: true })

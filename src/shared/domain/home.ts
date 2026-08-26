@@ -93,8 +93,10 @@ function drawable(entry: HomeSectionEntry | null, hasApi: boolean): boolean {
 }
 
 /**
- * The sections to draw, in order. This is the whole of the "never an empty home" promise, and
- * the reason it is a pure function rather than a condition inside a component.
+ * The sections to draw, in order — the whole of the "never an empty home" promise, and the reason
+ * it is a pure function rather than a condition inside a component. It settles what the SETTINGS
+ * and the account allow; a band may still take itself off the page over what it has READ, which
+ * no pure function of these two arguments can know. `News` is the one that does.
  *
  * Two rules produce it: a pinned section is drawn whatever the user hid, and a section that needs
  * the cloud is left out of a studio that has no account for it.
