@@ -114,20 +114,26 @@ describe('switching the form of a fog', () => {
 })
 
 describe('switching what lights a scene', () => {
-  const skies = [{ id: 'sky-1' }, { id: 'sky-2' }]
+  const offered = { pictures: [{ id: 'asset-1' }, { id: 'asset-2' }], skies: [{ id: 'sky-1' }] }
+  const nothing = { pictures: [], skies: [] }
 
-  it('lights from the first sky of the project when one is asked for', () => {
-    expect(environmentOfKind('skybox', skies)).toEqual({ kind: 'skybox', assetId: 'sky-1' })
+  it('hangs the first picture of the project when one is asked for', () => {
+    expect(environmentOfKind('skybox', offered)).toEqual({ kind: 'skybox', assetId: 'asset-1' })
   })
 
-  // A sky is a REFERENCE: with none to point at, the answer is the studio rather than a link
+  it('follows the first sky DOCUMENT of the project when one is asked for', () => {
+    expect(environmentOfKind('sky', offered)).toEqual({ kind: 'sky', documentId: 'sky-1' })
+  })
+
+  // Both are REFERENCES: with none to point at, the answer is the studio rather than a link
   // to nothing.
-  it('stays on the studio when the project holds no sky at all', () => {
-    expect(environmentOfKind('skybox', [])).toEqual(STUDIO_ENVIRONMENT)
+  it('stays on the studio when the project holds neither', () => {
+    expect(environmentOfKind('skybox', nothing)).toEqual(STUDIO_ENVIRONMENT)
+    expect(environmentOfKind('sky', nothing)).toEqual(STUDIO_ENVIRONMENT)
   })
 
   it('goes back to the studio whatever the project holds', () => {
-    expect(environmentOfKind('studio', skies)).toEqual(STUDIO_ENVIRONMENT)
+    expect(environmentOfKind('studio', offered)).toEqual(STUDIO_ENVIRONMENT)
   })
 })
 

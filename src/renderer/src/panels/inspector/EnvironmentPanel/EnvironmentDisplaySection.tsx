@@ -5,7 +5,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { SelectField } from '@/design/SelectField'
 import { ENVIRONMENT_PRESETS, presetOf, presetPatch } from '@/engines/scene/environmentPresets'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { choicesOf } from './environmentChoices'
+import { choicesOf } from '../unionChoices'
 
 export type EnvironmentDisplaySectionProps = {
   mode: DisplayMode

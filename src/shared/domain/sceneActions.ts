@@ -801,9 +801,12 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         required: false,
         options: ENVIRONMENT_KINDS,
       },
-      // Names the sky, and naming one is enough: a document lit by an asset is `skybox` by that
-      // fact alone, which spares a client two calls to do one thing.
+      // Names the picture, and naming one is enough: a document lit by an asset is `skybox` by
+      // that fact alone, which spares a client two calls to do one thing.
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+      // The sky DOCUMENT, by TITLE — a document id is not something anyone types, and this is how
+      // `model.dress` names a material. Naming one is enough, exactly as above.
+      { key: 'sky', kind: 'text', labelKey: 'assistant.fields.skyDocument', required: false },
       {
         key: 'intensity',
         kind: 'number',

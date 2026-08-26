@@ -376,6 +376,7 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 - [x] « Active les ombres. »
 - [ ] « Mets la qualité des ombres au niveau le plus élevé disponible. »
 - [ ] « Change l'arrière-plan sans changer l'éclairage de la scène. »
+- [ ] « Éclaire ma scène avec mon ciel Ciel Test. »
 
 ## 11. Import d'assets dans une scène
 

@@ -791,7 +791,7 @@
       },
       "worldEnvironment": {
         "title": "Choose what lights the scene",
-        "description": "Lights the scene either by the procedural studio or by a sky of the project, named by its asset identifier, and sets how strong that lighting is and how far it is turned about the vertical."
+        "description": "Lights the scene by the procedural studio, by an image of the project named by its asset identifier, or by a sky document named by its title — the scene then takes its graded image, its sun and its intensity. Also sets how strong that lighting is and how far it is turned about the vertical, laid over what the sky says."
       },
       "worldBackground": {
         "title": "Choose what hangs behind the scene",
@@ -1131,7 +1131,7 @@
       "strokeWidth": "Outline width, in pixels",
       "fontFamily": "Name of the typeface, as the font list gives it",
       "fontSource": "Where the typeface comes from, shipped with the studio or installed on the machine",
-      "environmentKind": "Where the lighting comes from: the studio or a sky",
+      "environmentKind": "Where the lighting comes from: the studio, an image or a sky",
       "backgroundKind": "What hangs behind: the environment, a colour, or nothing",
       "fogKind": "Shape of the haze: none, linear or exponential",
       "fogDensity": "Density of the exponential haze",
@@ -1198,6 +1198,7 @@
       "helpPage": "Which help window to open",
       "captureQuality": "How big the still comes out, or the view’s own pixels when absent",
       "environmentPreset": "Which ready-made world to apply",
+      "skyDocument": "Title of the sky document the scene follows",
       "skyboxView": "Which projection to look at the sky under",
       "fieldOfView": "How wide the lens opens, in degrees",
       "probes": "Show the test objects standing in the sky",

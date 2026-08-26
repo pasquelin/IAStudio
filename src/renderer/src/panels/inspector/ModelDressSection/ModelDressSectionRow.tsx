@@ -4,10 +4,9 @@ import { isWorn } from '@shared/domain/scene'
 import { PICTURES } from '@shared/domain/asset'
 import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
+import { openDocumentById } from '@/helpers/openAsset'
 import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { openDocument } from '@/app/dockviewApi'
-import { documentById, useDocuments } from '@/stores/documents'
 import { useWornMaterial } from '@/stores/materialSources'
 
 export type ModelDressSectionRowProps = {
@@ -59,7 +58,7 @@ export function ModelDressSectionRow({
       open={{
         label: t('inspector.modelDressOpenMaterial'),
         hint: t('inspector.modelDressOpenMaterialHint'),
-        run: () => open(documentId),
+        run: () => openDocumentById(documentId),
       }}
       menuExtra={close => (
         <MenuRow
@@ -74,10 +73,4 @@ export function ModelDressSectionRow({
       )}
     />
   )
-}
-
-/** Read at the press rather than subscribed to: a row has no business re-rendering on a relist. */
-function open(documentId: string): void {
-  const document = documentById(useDocuments.getState(), documentId)
-  if (document) openDocument(document)
 }

@@ -791,7 +791,7 @@
       },
       "worldEnvironment": {
         "title": "Choisir ce qui éclaire la scène",
-        "description": "Éclaire la scène par le studio procédural ou par un ciel du projet, nommé par son identifiant d’asset, et règle l’intensité de cet éclairage ainsi que sa rotation autour de la verticale."
+        "description": "Éclaire la scène par le studio procédural, par une image du projet nommée par son identifiant d’asset, ou par un document ciel nommé par son titre — la scène prend alors son image étalonnée, son soleil et son intensité. Règle aussi l’intensité de cet éclairage et sa rotation autour de la verticale, posées par-dessus."
       },
       "worldBackground": {
         "title": "Choisir ce qui est derrière la scène",
@@ -1131,7 +1131,7 @@
       "strokeWidth": "Épaisseur du contour, en pixels",
       "fontFamily": "Nom de la police, tel que la liste des polices le rend",
       "fontSource": "Provenance de la police, livrée avec le studio ou installée sur la machine",
-      "environmentKind": "Source de l’éclairage, le studio ou un ciel",
+      "environmentKind": "Source de l’éclairage : le studio, une image ou un ciel",
       "backgroundKind": "Ce qui est derrière, l’environnement, une couleur, ou rien",
       "fogKind": "Forme de la brume, aucune, linéaire ou exponentielle",
       "fogDensity": "Densité de la brume exponentielle",
@@ -1198,6 +1198,7 @@
       "helpPage": "Fenêtre d’aide à ouvrir",
       "captureQuality": "Définition de la capture, à défaut celle de la vue elle-même",
       "environmentPreset": "Décor tout prêt à appliquer",
+      "skyDocument": "Titre du document ciel que la scène suit",
       "skyboxView": "Projection sous laquelle regarder le ciel",
       "fieldOfView": "Ouverture de l’objectif, en degrés",
       "probes": "Montrer les objets d’essai dans le ciel",

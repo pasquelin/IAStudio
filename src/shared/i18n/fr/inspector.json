@@ -192,6 +192,7 @@
     "clearSky": "Revenir au studio",
     "clearSkyHint": "Rend la vue au ciel du studio — l’image reste dans le projet",
     "missingSky": "Ciel introuvable",
+    "missingSkyDocument": "Ciel introuvable",
     "openSky": "Ouvrir le ciel",
     "openSkyHint": "Double-cliquer pour ouvrir ce ciel dans son espace",
     "openTexture": "Ouvrir la texture",

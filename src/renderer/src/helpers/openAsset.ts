@@ -2,7 +2,7 @@ import type { Asset } from '@shared/domain/asset'
 import { openDocument } from '@/app/dockviewApi'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
-import { documentForAsset, useDocuments } from '@/stores/documents'
+import { documentById, documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { editorIntent, pixelEditorIntent, type AssetIntent } from './assetIntents'
 
@@ -92,6 +92,16 @@ export function openAssetById(assetId: string | null): void {
 
   const asset = assetsById(useAssets.getState()).get(assetId)
   if (asset) void openAsset(asset)
+}
+
+/**
+ * Bringing another DOCUMENT forward, from the id a slot holds — a material a model wears, a sky a
+ * scene follows. Read at the press rather than subscribed to: a row has no business re-rendering
+ * on every relist of the project.
+ */
+export function openDocumentById(documentId: string): void {
+  const document = documentById(useDocuments.getState(), documentId)
+  if (document) openDocument(document)
 }
 
 /** Painting a picture, and the space it happens in — a menu reads its glyph off the same answer. */

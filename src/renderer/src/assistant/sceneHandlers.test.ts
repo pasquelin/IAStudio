@@ -11,6 +11,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { GEOMETRY_SPECS, type PropertySpec } from '@/engines/scene/propertyFields'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import { installDocuments } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
@@ -606,6 +607,38 @@ describe('the world of the scene', () => {
    */
   it('refuses a sky nobody named', async () => {
     expect(await runAction('world.environment', { kind: 'skybox' })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /**
+   * A scene FOLLOWS a sky document: it takes its graded picture, its sun and its intensity, and
+   * editing that sky edits the scene. Named by TITLE, since a document id is nothing anyone types.
+   */
+  it('follows a sky document named by its title', async () => {
+    installDocuments({ 'sky-doc': 'skyboxes', [DOCUMENT]: '3d' }, DOCUMENT)
+
+    expect(await runAction('world.environment', { sky: 'sky-doc' })).toEqual({ ok: true })
+    expect(scene().world.environment).toEqual({ kind: 'sky', documentId: 'sky-doc' })
+  })
+
+  it('refuses a sky document the project does not hold', async () => {
+    expect(await runAction('world.environment', { sky: 'Nulle part' })).toMatchObject({
+      ok: false,
+      refusal: 'notFound',
+    })
+  })
+
+  // A scene is lit by ONE prefiltered map, so naming both is a request with two answers.
+  it('refuses a picture and a sky document at once', async () => {
+    expect(
+      await runAction('world.environment', { assetId: 'sky-1', sky: 'sky-doc' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  it('refuses a sky document nobody named', async () => {
+    expect(await runAction('world.environment', { kind: 'sky' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

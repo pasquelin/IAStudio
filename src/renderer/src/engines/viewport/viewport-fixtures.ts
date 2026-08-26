@@ -11,6 +11,7 @@ import type { ViewportEnvironment } from './environment'
 export function fakeEnvironment(): ViewportEnvironment {
   return {
     setTexture: vi.fn(),
+    setAdjustments: vi.fn(),
     refresh: vi.fn(),
     setStudio: vi.fn(),
     borrowStudio: vi.fn(),

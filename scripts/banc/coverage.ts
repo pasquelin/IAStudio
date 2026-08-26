@@ -229,7 +229,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'view.display': ['47.5'],
   'scene.capture': ['47.6'],
   'world.preset': ['48.1'],
-  'world.environment': ['10.2', '10.3', '23.2', '27.3', '31.1'],
+  'world.environment': ['10.2', '10.3', '10.7', '23.2', '27.3', '31.1'],
   'world.background': ['10.6'],
   'world.fog': ['48.2'],
   'world.ground': ['48.3'],
