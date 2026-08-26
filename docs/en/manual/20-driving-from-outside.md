@@ -145,14 +145,10 @@ Untick it, it stops and **nothing is listening any more**.
 
 This is the common case, and it takes three gestures.
 
-### 1. Open the door
+### 1. Copy the connection line
 
-**Settings ▸ Way in (MCP)**, tick **Drive the studio from outside**. The section then says which
-port the studio is listening on, what a client can do, and what guards the door.
-
-### 2. Copy the connection line
-
-Just below, **Connection command ▸ Copy**. The studio puts a line of this shape on your clipboard:
+**Settings ▸ Way in (MCP) ▸ Connection command ▸ Copy.** The studio puts a line of this shape on
+your clipboard:
 
 ```
 claude mcp add <name> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
@@ -161,12 +157,22 @@ claude mcp add <name> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" 
 **No port, no token, no address.** What you paste names **the studio as a program to start**, not
 a place to reach. That is what makes this line true for every launch — see below.
 
-### 3. Paste it in a terminal
+### 2. Paste it in a terminal
 
 Open a terminal **in the project folder where you work with Claude Code**, and paste the line.
-That is all: Claude Code now knows the studio, and sees its tools.
+Claude Code now knows the studio.
 
-To check, ask it for its MCP servers — the studio should be there, connected.
+### 3. Open the door
+
+Back in the same section, tick **Drive the studio from outside**. It then says which port the
+studio is listening on, what a client can do, and what guards the door.
+
+**That order is not a requirement** — it is the one on screen, and it only makes sense now that
+what you copy holds no address: the box can be ticked before, after, or already be ticked.
+
+**Ticking is what makes the tools appear**: with the door shut your client finds the studio and
+is told it is not answering. To check, ask it for its MCP servers — the studio should be there,
+connected.
 
 ### A client configured by a file
 

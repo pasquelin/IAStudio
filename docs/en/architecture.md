@@ -430,8 +430,10 @@ that rewrote it deleted them without a word. A malformed one is left exactly as 
 prints to STDOUT, which here is the client's JSON-RPC stream. One line of ours on it and the client
 can read nothing further; what goes wrong leaves on stderr.
 
-**In development the setting is on by default** (`defaultSettings`, `shared/domain/settings.ts`,
-injected into the store) and the launch leaves a `.mcp.json` at the root of the checkout, which
+**In development the setting is on by DEFAULT** (`defaultSettings`, `shared/domain/settings.ts`,
+injected into the store) — which only reaches a profile that never wrote its settings: an existing
+`settings.json` carries `false`, and `merge` lets the stored value win. On a profile already served,
+the box has to be ticked once and the launch leaves a `.mcp.json` at the root of the checkout, which
 Claude Code reads on its own. **`main/mcp/production-unchanged.test.ts` holds the difference**:
 outside development the default is off, the port stays the operating system's, the token stays
 minted, and the four delegation lines stay at zero on both sides.

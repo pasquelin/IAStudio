@@ -803,7 +803,11 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | Médias     | Chemin de ffmpeg                     | vide                      | —                                          |
 | Stockage   | Dossier des projets                  | vide                      | —                                          |
 | Avancé     | Détail du journal                    | Tout                      | Rien → Tout                                |
-| Avancé     | Piloter le studio depuis l’extérieur | décochée                  | —                                          |
+| Point d’entrée | Piloter le studio depuis l’extérieur | décochée              | —                                          |
+| Point d’entrée | Laisser toucher aux fichiers sans demander | décochée        | —                                          |
+| Point d’entrée | Laisser téléverser sans demander     | décochée              | —                                          |
+| Point d’entrée | Laisser publier vers un serveur sans demander | décochée      | —                                          |
+| Point d’entrée | Unités créatives dépensables sans demander | 0               | 0 à 10 000                                 |
 
 ---
 

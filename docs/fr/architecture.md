@@ -482,8 +482,10 @@ lancement qui le réécrivait les supprimait sans un mot. Un fichier malformé e
 `log.info` écrit sur STDOUT, qui est ici le flux JSON-RPC du client. Une ligne de nous dessus et le
 client ne lit plus rien ; ce qui va mal part sur stderr.
 
-**En développement le réglage est allumé par défaut** (`defaultSettings`, `shared/domain/settings.ts`,
-injecté dans le store) et le lancement dépose un `.mcp.json` à la racine du checkout, que Claude
+**En développement le réglage est allumé par DÉFAUT** (`defaultSettings`, `shared/domain/settings.ts`,
+injecté dans le store) — ce qui ne vaut que pour un profil n'ayant jamais écrit ses réglages : un
+`settings.json` existant porte `false`, et `merge` fait gagner le stocké. Sur un profil déjà servi,
+il faut cocher la case une fois et le lancement dépose un `.mcp.json` à la racine du checkout, que Claude
 Code lit seul. **`main/mcp/production-unchanged.test.ts` tient la différence** : hors développement
 le défaut est éteint, le port reste celui du système, le jeton reste minté, et les quatre lignes de
 délégation restent à zéro des deux côtés.

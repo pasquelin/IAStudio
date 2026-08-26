@@ -30,7 +30,7 @@ export function McpSettings() {
           <li>{t('settings.mcpStepPaste')}</li>
           <li>{t('settings.mcpStepOpen')}</li>
         </ol>
-        <p className={cn(WINDOW_HELP, 'mt-2')}>{t('settings.mcpEachLaunch')}</p>
+        <p className={cn(WINDOW_HELP, 'mt-2')}>{t('settings.mcpNothingToRedo')}</p>
       </section>
 
       <section>
