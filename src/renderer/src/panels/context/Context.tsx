@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import {
+  blankCard,
   composedContext,
   CONTEXT_COMPOSED_MAX,
   droppedCards,
@@ -8,6 +9,7 @@ import {
 } from '@shared/domain/projectContext'
 import { EmptyState } from '@/design/EmptyState'
 import { PANEL_SCROLL } from '@/design/styles'
+import { newId } from '@/helpers/ids'
 import { toolIcon } from '@/helpers/toolRegistry'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useProject } from '@/stores/project'
@@ -35,8 +37,21 @@ export function Context() {
     )
   }
 
+  // The `+` of the title row can add one too, and this is not a duplicate of it: the sentence
+  // above tells a first-time reader what a card is FOR, and the way in belongs beside it rather
+  // than in a header glyph they have no reason to have looked at yet.
   if (context.cards.length === 0) {
-    return <EmptyState icon={toolIcon('context')} message={t('context.emptyHint')} />
+    return (
+      <EmptyState
+        icon={toolIcon('context')}
+        message={t('context.emptyHint')}
+        action={{
+          label: t('context.addFirst'),
+          hint: t('context.addFirstHint'),
+          onClick: () => void write([blankCard(newId())]),
+        }}
+      />
+    )
   }
 
   return (

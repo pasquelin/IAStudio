@@ -61,6 +61,16 @@ describe('a panel lying in a band', () => {
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
 
+  /**
+   * The chunk takes a moment, and a dock that stays blank until it lands reads as a bug — which
+   * is what a reader saw of Git and of the context panel, both of which then said their piece.
+   */
+  it('says the panel is on its way rather than showing nothing at all', () => {
+    renderMontage()
+
+    expect(screen.getByText('Chargement…')).toBeInTheDocument()
+  })
+
   // A bar given `flex-1` weighs nothing when the row runs short, so every missing pixel is
   // taken from whatever else can shrink. The panel's name is not what should pay for it.
   it('keeps the panel name off the table when the row runs short', () => {

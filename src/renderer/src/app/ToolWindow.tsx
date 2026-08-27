@@ -2,6 +2,7 @@ import { mdiClose } from '@mdi/js'
 import { memo, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Panel } from '@/design/Panel'
 import { PanelHeader } from '@/design/PanelHeader'
@@ -9,7 +10,7 @@ import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
 import { isKnownTool, toolDefinition } from './toolComponents'
 import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
-import { toolTitleKey } from '@/helpers/toolRegistry'
+import { toolIcon, toolTitleKey } from '@/helpers/toolRegistry'
 
 export type ToolWindowProps = {
   tool: ToolId
@@ -97,7 +98,12 @@ export const ToolWindow = memo(function ToolWindow({
               still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
               and a boundary left standing would hand its failure to the tool that replaced it. */}
         <ErrorBoundary key={tool}>
-          <Suspense fallback={null}>
+          {/* Not `null`: a panel arrives through `import()`, and a dock left blank until the
+              chunk lands reads as a bug — `EmptyState` says as much of itself. The glyph is the
+              one the panel keeps, so only the sentence changes underneath it. */}
+          <Suspense
+            fallback={<EmptyState icon={toolIcon(tool)} message={t('collection.loading')} />}
+          >
             <Content />
           </Suspense>
         </ErrorBoundary>

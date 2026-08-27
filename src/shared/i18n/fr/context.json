@@ -1,5 +1,7 @@
 {
   "context": {
+    "addFirst": "Créer une première fiche",
+    "addFirstHint": "Ajoute une fiche vierge, à écrire de zéro",
     "empty": "Ce projet n’a pas encore de contexte.",
     "emptyHint": "Décrivez une fois l’univers, le style ou les contraintes du projet : chaque génération les portera sans que vous les réécriviez.",
     "add": "Nouvelle fiche",
