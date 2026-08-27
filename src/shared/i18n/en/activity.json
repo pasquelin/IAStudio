@@ -54,6 +54,7 @@
     "filesMissing_many": "{{count, number}} catalogued files are nowhere in the project — their entries are kept",
     "filesMissing_other": "{{count, number}} catalogued files are nowhere in the project — their entries are kept",
     "jobFailed": "Generation “{{name}}” failed",
+    "jobWaitsForProject": "“{{label}}” has finished. Its result is waiting in the {{project}} project: reopen it within seven days to collect it.",
     "jobCancelled": "Generation “{{name}}” cancelled",
     "generated_one": "{{count, number}} asset generated",
     "generated_many": "{{count, number}} assets generated",

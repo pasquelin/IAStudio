@@ -16,6 +16,18 @@ const WALK = 'script:Walk.ts'
 
 const scripted = (body: string): string => `exports.default = defineScript({ ${body} })`
 
+/**
+ * 🛑 A whole frame, which `world.step` alone is NOT: the script budget is four milliseconds of
+ * WALL CLOCK, and `script.ts` refills it in `lateUpdate` — « what the next one spends is a whole
+ * budget again ». Stepping twice without it splits four milliseconds between two frames, and on a
+ * loaded machine the second one never runs: empty intents, no fault, and a suite that goes red
+ * for the machine it ran on. `gameLoop.ts` calls the pair; so does this.
+ */
+const frame = (world: World): void => {
+  world.step(STEP)
+  world.lateUpdate(0)
+}
+
 /** A real sandbox: what this measures is the SYSTEM, and a fake one would prove nothing of it. */
 describe('what a game does with its own code', () => {
   let port: ScriptPort
@@ -53,8 +65,8 @@ describe('what a game does with its own code', () => {
   it('moves what a script tells it to move', () => {
     const world = running('onUpdate(self, ctx, dt) { self.moveBy(0, 0, -4 * dt) }')
 
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     expect(world.entities.get('e1')?.transform.position.z).toBeCloseTo(-8 / 60, 6)
   })
@@ -64,7 +76,7 @@ describe('what a game does with its own code', () => {
       newComponent('Health'),
     ])
 
-    world.step(STEP)
+    frame(world)
 
     expect(world.entities.get('e1')?.components.find(one => one.type === 'Health')?.current).toBe(
       40,
@@ -75,7 +87,7 @@ describe('what a game does with its own code', () => {
   it('refuses to write a component the entity does not carry', () => {
     const world = running('onUpdate(self) { self.set("Weapon", "damage", 9) }')
 
-    world.step(STEP)
+    frame(world)
 
     expect(world.entities.get('e1')?.components.map(one => one.type)).toEqual(['Script'])
   })
@@ -83,7 +95,7 @@ describe('what a game does with its own code', () => {
   it('spawns and destroys through the world, so both land at the end of the step', () => {
     const world = running('onStart(self) { game.spawn("Crate", { x: 1, y: 2, z: 3 }) }')
 
-    world.step(STEP)
+    frame(world)
 
     const born = [...world.entities.all()].find(one => one.name === 'Crate')
     expect(born?.transform.position).toEqual({ x: 1, y: 2, z: 3 })
@@ -97,8 +109,8 @@ describe('what a game does with its own code', () => {
       heard.push(`${String(event.payload.name)}/${String(event.payload.door)}`),
     )
 
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     expect(heard).toContain('DoorOpened/north')
   })
@@ -108,10 +120,10 @@ describe('what a game does with its own code', () => {
       'onCollision(self, ctx, event) { game.log.info("hit " + event.payload.other) }',
     )
 
-    world.step(STEP)
+    frame(world)
     world.events.emit({ name: 'Collided', entity: 'e1', payload: { other: 'wall' } })
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     expect(world.ports.log.recent().map(entry => entry.message)).toContain('hit wall')
   })
@@ -120,8 +132,8 @@ describe('what a game does with its own code', () => {
   it('survives a script that will not stop, and says which one it was', () => {
     const world = running('onUpdate() { while (true) {} }')
 
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     expect(faults[0]?.script).toBe(WALK)
     expect(faults[0]?.entity).toBe('e1')
@@ -131,10 +143,10 @@ describe('what a game does with its own code', () => {
   it('forgets a script with the entity that carried it', () => {
     const world = running('onUpdate(self) { self.moveBy(0, 1, 0) }')
 
-    world.step(STEP)
+    frame(world)
     world.destroy('e1')
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     expect(faults).toEqual([])
     expect(world.entities.count()).toBe(0)
@@ -144,15 +156,15 @@ describe('what a game does with its own code', () => {
   it('opens a script once, however many entities join later', () => {
     const world = running('onCreate(self) { game.log.info("born " + self.id) }')
 
-    world.step(STEP)
+    frame(world)
     world.entities.add({
       id: 'e2',
       name: 'Second',
       transform: restingTransform(),
       components: [withComponentField(newComponent('Script'), 'script', WALK)],
     })
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     const said = world.ports.log.recent().map(entry => entry.message)
     expect(said.filter(one => one === 'born e1')).toHaveLength(1)
@@ -171,10 +183,10 @@ describe('what a game does with its own code', () => {
       components: [withComponentField(newComponent('Script'), 'script', WALK)],
     })
 
-    world.step(STEP)
+    frame(world)
     world.destroy('e2')
-    world.step(STEP)
-    world.step(STEP)
+    frame(world)
+    frame(world)
 
     const said = world.ports.log.recent().map(entry => entry.message)
     expect(said).toContain('gone e2 at 7')
@@ -227,7 +239,7 @@ describe('what a game does with its own code', () => {
   /** What the sandbox is asked is what somebody WROTE: the rest never crosses the bridge. */
   it('asks the sandbox for nothing when no script declares the hook', () => {
     const world = running('onUpdate(self) { self.moveBy(0, 1, 0) }')
-    world.step(STEP)
+    frame(world)
 
     expect(port.declares('onUpdate')).toBe(true)
     expect(port.declares('onLateUpdate')).toBe(false)

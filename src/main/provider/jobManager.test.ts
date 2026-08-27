@@ -87,6 +87,8 @@ function harness({ runner, collect, ...overrides }: HarnessOptions = {}): Harnes
   const manager = createJobManager({
     accounts: { active: () => ({ id: 'fingerprint_studio', account }), of: () => account },
     projectPath: () => '/projects/kingdom',
+    // The manifest's name, which is what the shelf holds — never the folder the project sits in.
+    projectNameOf: path => (path === '/projects/kingdom' ? 'Royaume' : 'Donjon'),
     persist: jobs => void (remembered = [...jobs]),
     concurrency: () => 2,
     maxRetries: () => 3,
@@ -1136,6 +1138,110 @@ describe('a job that outlives the session', () => {
 
     expect(manager.list()).toHaveLength(1)
     expect(manager.list()[0]?.status).toBe('running')
+  })
+
+  /**
+   * The whole promise the closing dialog makes, end to end: a generation that finishes while its
+   * project is closed is not lost, and its outputs land in THAT project when it is opened again.
+   * Each half is guarded on its own above; nothing measured the two together.
+   */
+  it('collects into its own project when that project is opened again', async () => {
+    let open: string | null = '/projects/kingdom'
+    let left = false
+    const collect = vi.fn(() => landing(['asset_local']))
+    const { manager, remembered } = harness({
+      projectPath: () => open,
+      collect,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        // The FIRST poll leaves the project, and only that one: the poll after the reopening has
+        // to find it open, or the decor would be measuring itself rather than the manager.
+        poll: () => {
+          if (!left) {
+            left = true
+            open = null
+          }
+          return Promise.resolve(remote('success', { assetIds: ['r_1'] }))
+        },
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    // Submitted IN the kingdom — the project rides on the entry from that moment — and left
+    // before the poll comes back.
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
+    await settled()
+
+    expect(collect).not.toHaveBeenCalled()
+    const note = remembered()
+    expect(note).toEqual([expect.objectContaining({ projectPath: '/projects/kingdom' })])
+
+    // …and the project is opened again, which is what `resumeJobsOf` does with that note.
+    open = '/projects/kingdom'
+    manager.resume(note)
+    await settled()
+
+    expect(collect).toHaveBeenCalledTimes(1)
+    expect(manager.list()[0]).toMatchObject({ status: 'succeeded', assetIds: ['asset_local'] })
+  })
+
+  /**
+   * The row leaves the bar with no outcome shown, and the note behind it says nothing until its
+   * project is opened again. This line is the only thing that says where the work went — and it
+   * is a TOAST (`ATTENTION_MESSAGES`), because the journal of a project nobody has open holds
+   * nothing anyone will read.
+   */
+  it('says where the work went when it steps aside', async () => {
+    let open = '/projects/kingdom'
+    const { manager, recorded } = harness({
+      projectPath: () => open,
+      collect: () => landing(['asset_local']),
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => {
+          open = '/projects/dungeon'
+          return Promise.resolve(remote('success', { assetIds: ['r_1'] }))
+        },
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
+    await settled()
+
+    expect(recorded).toContainEqual({
+      level: 'info',
+      topic: 'generation',
+      messageKey: 'activity.jobWaitsForProject',
+      // Its MANIFEST name, not the folder: a rename writes one and leaves the other alone.
+      params: { label: 'Veo', project: 'Royaume' },
+    })
+  })
+
+  /**
+   * A discreet job owes its outputs to no project, so the guard above must not see it at all.
+   * Leaving by that exit settled nothing, and `run` awaits the outcome: an assistant whose
+   * project changed mid-thought waited for an answer that never came.
+   */
+  it('settles a discreet job whose project changed, rather than leaving it hanging', async () => {
+    let open = '/projects/kingdom'
+    const { manager, recorded } = harness({
+      projectPath: () => open,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => {
+          open = '/projects/dungeon'
+          return Promise.resolve(remote('success', { assetIds: ['r_1'] }))
+        },
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    const job = await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    expect(job.status).toBe('succeeded')
+    // And nothing is said about it: nobody asked for this one, and nobody is waiting for it.
+    expect(recorded.map(one => one.messageKey)).not.toContain('activity.jobWaitsForProject')
   })
 
   it('picks up a job once, however often it is handed the same note', async () => {

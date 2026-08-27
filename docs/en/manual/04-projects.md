@@ -62,6 +62,11 @@ you open instead**: reopening its own is what brings the result back. **The stud
 first** before letting you leave the project — closing it or swapping it for another — saying how
 many are still running.
 
+And when one of them finishes while its project is not open, **the studio writes it in its
+journal** — the Activity panel — naming the generation and the project its result is waiting in.
+Without that line the generation would leave the bar showing nothing, which looks like lost work:
+it is not, but its project has to be reopened **within seven days** to collect it.
+
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel
 > layout when you change it.

@@ -65,6 +65,12 @@ résultat n’arrivera pas dans le projet que vous ouvrez à la place** : c’es
 que vous le retrouverez. **Le studio vous le demande** avant de vous laisser quitter le projet —
 fermeture comme bascule vers un autre — en disant combien tournent encore.
 
+Et quand l’une d’elles se termine alors que son projet n’est pas ouvert, **le studio l’écrit dans
+son journal** — panneau Activité — en nommant la génération et le projet où son résultat vous
+attend. Sans cette ligne, la génération quitterait la barre sans rien montrer, ce qui ressemble à
+du travail perdu : il ne l’est pas, mais il faut rouvrir son projet **dans les sept jours** pour
+le récupérer.
+
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un
 > document quand vous faites `⌘S`, la disposition des panneaux quand vous la changez.

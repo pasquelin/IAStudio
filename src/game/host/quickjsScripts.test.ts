@@ -72,6 +72,9 @@ describe('the sandbox a game runs its own code in', () => {
     port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: {} }])
 
     const still = port.run('onUpdate', frameOf([walker()]))
+    // Two frames, so two budgets — `script.ts` refills at the end of every rendered one. Sharing
+    // four milliseconds of wall clock between them leaves the second one empty on a busy machine.
+    port.refill()
     const held = port.run('onUpdate', frameOf([walker()], { ...IDLE, held: ['KeyW'] }))
 
     expect(still.intents).toEqual([])
@@ -209,7 +212,11 @@ describe('the sandbox a game runs its own code in', () => {
   /** One bad frame is a bug; three is a script nobody should keep paying for. */
   it('disarms a script that throws over and over', () => {
     running('onUpdate() { throw new Error("no") }')
+    // Three frames, three budgets: the fault count is what disarms, and a frame that never ran
+    // for want of milliseconds does not count towards it.
+    port.refill()
     port.run('onUpdate', frameOf([walker()]))
+    port.refill()
     const third = port.run('onUpdate', frameOf([walker()]))
 
     expect(third.faults[0]?.message).toContain('disarmed')
@@ -239,13 +246,25 @@ describe('the sandbox a game runs its own code in', () => {
     expect(faults[0]?.message).toContain('require')
   })
 
-  /** A game that cannot be replayed cannot be tested, predicted over a network, or reported. */
+  /**
+   * A game that cannot be replayed cannot be tested, predicted over a network, or reported.
+   *
+   * 🛑 `refill()` between the two, as `script.ts` does at the end of every rendered frame: the
+   * frame budget is four milliseconds of WALL CLOCK shared by everything that runs inside one,
+   * so two runs without it split four milliseconds between them. On a loaded machine the first
+   * spent them all and the second answered `NO_OUTCOME` — an empty `intents`, no fault, and a
+   * suite that went red for the machine it ran on rather than for anything in the sandbox.
+   */
   it('draws the same numbers from the same seed', () => {
     port.seed(7)
     const once = running('onUpdate() { game.log.info(String(game.random.int(0, 1000))) }')
+    port.refill()
     port.seed(7)
     const twice = port.run('onUpdate', frameOf([walker()]))
 
+    // Read before the comparison: an overspent budget answers an empty outcome and no fault, so
+    // comparing first reported "these two differ" for a frame that never ran.
+    expect(twice.faults).toEqual([])
     expect(twice.intents).toEqual(once.intents)
     expect(once.intents).toHaveLength(1)
   })

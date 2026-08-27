@@ -163,6 +163,7 @@ describe('the lists that stand for a union', () => {
       imported: true,
       jobCancelled: true,
       jobFailed: true,
+      jobWaitsForProject: true,
       projectAccountMissing: true,
       projectAccountRestored: true,
       projectAccountSwitched: true,

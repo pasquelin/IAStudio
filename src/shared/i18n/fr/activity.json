@@ -54,6 +54,7 @@
     "filesMissing_many": "{{count, number}} fichiers du catalogue sont introuvables dans le projet — leurs fiches sont conservées",
     "filesMissing_other": "{{count, number}} fichiers du catalogue sont introuvables dans le projet — leurs fiches sont conservées",
     "jobFailed": "La génération « {{name}} » a échoué",
+    "jobWaitsForProject": "« {{label}} » est terminée. Son résultat vous attend dans le projet {{project}} : rouvrez-le dans les sept jours pour le récupérer.",
     "jobCancelled": "Génération « {{name}} » annulée",
     "generated_one": "{{count, number}} asset généré",
     "generated_many": "{{count, number}} assets générés",

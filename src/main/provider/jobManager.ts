@@ -97,6 +97,13 @@ export type JobManagerDeps = {
   /** The project a job's outputs belong in, captured at submission like the account is. */
   projectPath: () => string | null
   /**
+   * What a project is CALLED — its manifest's name, which `recentProjects` stores. Never the
+   * folder: a rename writes the manifest and leaves the folder alone, so a project made as
+   * `nouveau-projet-3` and renamed « Chevalier Noir » would be named here by a word that appears
+   * nowhere else in the studio.
+   */
+  projectNameOf: (projectPath: string) => string
+  /**
    * Where unfinished jobs are kept so that closing the studio does not abandon them. `handled`
    * is every job this session is answering for, finished ones included: what the store may
    * replace, as against the entries of a project nobody has reopened.
@@ -312,6 +319,7 @@ type Entry = {
 export function createJobManager({
   accounts,
   projectPath,
+  projectNameOf,
   persist,
   concurrency,
   localConcurrency,
@@ -443,6 +451,22 @@ export function createJobManager({
     })
   }
 
+  /**
+   * A generation that finished with its own project not in front.
+   *
+   * 🛑 The line is PERSISTED into whichever project is open — `activityLog` writes to the
+   * catalogue it holds — so reopening the project it names shows no trace of it. It is written
+   * for the moment it arrives, in the panel of the studio the person is looking at.
+   */
+  const journalWaiting = (label: string, projectPath: string): void => {
+    record({
+      level: 'info',
+      topic: 'generation',
+      messageKey: 'activity.jobWaitsForProject',
+      params: { label, project: projectNameOf(projectPath) },
+    })
+  }
+
   const settle = (
     entry: Entry,
     status: JobStatus,
@@ -551,29 +575,38 @@ export function createJobManager({
       return
     }
 
-    // Where the outputs are owed. The collector writes into whichever project is open, so
-    // collecting under another one would file this generation in the wrong library — the note
-    // stays instead, and the job is picked up again when its own project is next opened.
-    if (entry.projectPath !== null && entry.projectPath !== projectPath()) {
-      entries.delete(entry.job.id)
-      // Said out loud, because it is the one exit that leaves no outcome behind: a replica told
-      // nothing would keep drawing this job as running for the rest of the session, with a
-      // cancel button the manager no longer has an entry for.
-      announceList()
-      return
-    }
-
     /**
      * Nothing is brought down for a discreet job, and the ids kept are the API's own.
      *
      * This is the line that keeps the assistant out of the asset browser: its answers stay
      * where Scenario put them — useful as a history, over there — and the studio's library goes
      * on holding only what the person made.
+     *
+     * BEFORE the project guard below, and that is not tidying: a discreet job owes its outputs
+     * to no project, and leaving by that exit settled nothing — `run` awaits the outcome, so an
+     * assistant whose project changed mid-thought waited for an answer that never came.
      */
     if (entry.discreet) {
       entry.job.assetIds = [...remote.assetIds]
       entry.done = true
       settle(entry, 'succeeded')
+      return
+    }
+
+    // Where the outputs are owed. The collector writes into whichever project is open, so
+    // collecting under another one would file this generation in the wrong library — the note
+    // stays instead, and the job is picked up again when its own project is next opened.
+    if (entry.projectPath !== null && entry.projectPath !== projectPath()) {
+      entries.delete(entry.job.id)
+      // The row leaves the bar with no outcome shown, and the note it leaves behind is silent
+      // until its project is opened again. `ATTENTION_MESSAGES` carries this one so it is a
+      // TOAST: the journal of a project that is not open holds nothing anyone will read, and the
+      // line is broadcast either way (`activityLog.ts`).
+      journalWaiting(entry.job.label, entry.projectPath)
+      // Said out loud, because it is the one exit that leaves no outcome behind: a replica told
+      // nothing would keep drawing this job as running for the rest of the session, with a
+      // cancel button the manager no longer has an entry for.
+      announceList()
       return
     }
 
