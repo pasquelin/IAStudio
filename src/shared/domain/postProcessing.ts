@@ -506,7 +506,7 @@ export type PostStack = {
 export const EMPTY_STACK: PostStack = Object.freeze({ enabled: true, effects: [] })
 
 /**
- * What a camera does about the scene's composition.
+ * What a camera does with the scene's composition.
  *
  * Absent on every camera ever written, and absent means `inherit` — that IS the migration, and
  * `postOf` is the one place that says so.

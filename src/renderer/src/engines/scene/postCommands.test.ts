@@ -180,7 +180,7 @@ describe('what undo gives back', () => {
   })
 })
 
-describe('what a camera does about the composition', () => {
+describe('what a camera does with the composition', () => {
   const held = sceneWith(bloom(), [CAMERA])
 
   it('owns nothing while it inherits — which is what sends a hand to the scene', () => {
