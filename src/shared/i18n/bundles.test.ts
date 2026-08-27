@@ -518,6 +518,20 @@ describe('the translation bundles', () => {
        * spot — the manual keeps `reveals` as a plain English verb.
        */
       { dropped: /\breveals?\b/i, kept: 'show' },
+      /**
+       * The scene registry a model reads: eight `actions.*.description` said `node` under titles
+       * that said `object`, and the French says `objet` at all 38 sites. The lookahead keeps the
+       * TOOL names, the registry calling its scene tools `node.*`, so a drift inside
+       * `nodeCarve` still reddens.
+       * Two blind spots: the model calls `node.add` while reading a description that says
+       * `object`, and the manual glossary still heads an entry `Node`, which no guard here
+       * reaches. `except` is the graph node, the referent `TWO_THINGS.nœud` already separates.
+       */
+      {
+        dropped: /\bnodes?\b(?!\.[a-z])/i,
+        kept: 'object',
+        except: ['inspector.node', 'inspector.expressionHint'],
+      },
     ],
   }
 
@@ -534,12 +548,14 @@ describe('the translation bundles', () => {
     'montage',
     'reveal',
     'texture',
+    'node',
   ]
 
   /**
    * The negative half. Each word matches its reading once the boundary is dropped, which is what
    * makes it worth asserting — a sample no reading could ever touch is green by construction.
-   * `preferences?` has none: no English word carries `preference` inside a longer one. Which is
+   * `preferences?` has none: no English word carries `preference` inside a longer one.
+   * `node.negate` proves the other half — what rejects it is the LOOKAHEAD, not the boundary. Which is
    * the blind spot — a reading added tomorrow without a near miss of its own stays green.
    */
   const ENGLISH_NEAR_MISSES = [
@@ -549,6 +565,8 @@ describe('the translation bundles', () => {
     'remontage',
     'revealed',
     'textured',
+    'anode',
+    'node.negate',
   ]
 
   it.each(CODES)('says one thing one way in %s', code => {
