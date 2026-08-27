@@ -89,6 +89,22 @@ describe('a game written to run with no studio', () => {
     expect(report.assets).toBe(1)
   })
 
+  /**
+   * 🛑 A document id comes from the WINDOW over IPC, and every path here is composed from one.
+   * Written raw, `scenes/../../x.gltf` lands wherever it points.
+   */
+  it('writes a scene whose id would climb out of the folder inside it all the same', async () => {
+    const { ports, written } = writing()
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      entryScene: '../../evil',
+      scenes: [{ id: '../../evil', title: 'Menu', content: SCENE('a') }],
+    })
+
+    expect([...written.keys()].every(path => !path.includes('..'))).toBe(true)
+  })
+
   /** The page is markup and a title is a person's words: one may close a tag inside the other. */
   it('escapes a title that would close the tag it sits in', async () => {
     const { ports, written } = writing()

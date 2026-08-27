@@ -1,5 +1,5 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, relative as relativePath } from 'node:path'
 import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import { safeFileName } from '@shared/domain/fileName'
 import { nameOf } from '@shared/domain/folder'
@@ -78,6 +78,12 @@ function portsFor(deps: GameExportDeps, project: string, root: string): GameExpo
 
     write: async (relative, body) => {
       const file = join(root, relative)
+      // 🛑 The second lock, and the one that does not depend on who composed the name: `join`
+      // resolves `..`, so a path that climbed out of the folder is refused here whatever the
+      // caller thought it was writing.
+      if (relativePath(root, file).startsWith('..')) {
+        throw new Error(`refused to write outside the game folder: ${relative}`)
+      }
       // `recursive`, as `export/folder.ts` does and for the same reason.
       await mkdir(dirname(file), { recursive: true })
       await writeFile(file, body)

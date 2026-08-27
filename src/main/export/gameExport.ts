@@ -85,12 +85,12 @@ export async function writeExportedGame(
     version: EXPORTED_GAME_VERSION,
     title: request.title,
     entryScene: request.entryScene,
-    scenes: scenes.map(one => ({ id: one.id, title: one.title, file: `scenes/${one.id}.gltf` })),
+    scenes: scenes.map(one => ({ id: one.id, title: one.title, file: fileOf(one) })),
     scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
     assets,
   }
 
-  for (const scene of scenes) await ports.write(`scenes/${scene.id}.gltf`, scene.content)
+  for (const scene of scenes) await ports.write(fileOf(scene), scene.content)
   for (const script of scripts)
     await ports.write(`scripts/${named.get(script.script)}`, script.code)
 
@@ -105,6 +105,14 @@ export async function writeExportedGame(
     missing,
   }
 }
+
+/**
+ * Where a scene's glTF lands.
+ *
+ * 🛑 Through `safeFileName`: a document id comes from the WINDOW over IPC, and `scenes/../../x`
+ * would be written wherever it pointed. Nothing composed here rides in raw.
+ */
+const fileOf = (scene: SceneToExport): string => `scenes/${safeFileName(scene.id, 'scene')}.gltf`
 
 /** Every asset a scene names, once, in the order they were met. */
 function assetIdsIn(scenes: readonly SceneToExport[]): readonly string[] {
