@@ -27,7 +27,11 @@ import { POST_HANDLERS } from './postHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { CONTEXT_HANDLERS } from './contextHandlers'
+import { batchCalls } from '@shared/domain/gameActions'
 import { GAME_HANDLERS } from './gameHandlers'
+import { PLAY_HANDLERS } from './playHandlers'
+import { SCRIPT_HANDLERS } from './scriptHandlers'
+import { batchRefusal, STUDIO_HANDLERS } from './studioHandlers'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
@@ -42,8 +46,15 @@ import { TARGET_HANDLERS } from './targetHandlers'
  * believed it, and a handler nothing publishes is code no caller can reach.
  */
 const HANDLERS: ActionHandlers = {
+  // In the TABLE like every other, rather than intercepted before it: `executor.test.ts` holds
+  // the table to the registry, and an action published with nothing in here answers `badInput`
+  // to every client that read `tools/list` and believed it.
+  'studio.batch': input => runBatch(input),
   ...CORE_HANDLERS,
   ...GAME_HANDLERS,
+  ...PLAY_HANDLERS,
+  ...SCRIPT_HANDLERS,
+  ...STUDIO_HANDLERS,
   ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,
@@ -116,6 +127,36 @@ export async function runAction(
 
   const read = readOrRefusal(name, input)
   return 'refusal' in read ? read.refusal : handler(read.listed)
+}
+
+/**
+ * A lot of primitives run as ONE call — the plan's § 16.3 c.
+ *
+ * Here rather than in `studioHandlers.ts`, and for the reason `commitmentOfBatch` sits beside the
+ * registry: what it runs is `runAction`, which is this module.
+ *
+ * 🛑 **What it delivers, and what it does not.** ONE question — `commitmentOfBatch` weighs the
+ * lot at the highest of its calls, so a batch naming `script.write` is asked about as a batch
+ * that writes. And all-or-nothing STOPS at the first refusal rather than undoing what ran: the
+ * calls before it stay. A single undo entry needs every handler to RETURN its command instead of
+ * running it — the store merges on a shared `command.id` and nothing else — which is the
+ * « every handler writes a Command » guard the plan names, and it is not in this lot.
+ */
+async function runBatch(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const shut = batchRefusal(input)
+  if (shut) return shut
+
+  const done: unknown[] = []
+  for (const call of batchCalls(input)) {
+    const outcome = await runAction(call.action as ActionName, call.input)
+    // The rank is what a client repairs from: « call 2 » names which one, where a bare refusal
+    // would have it re-sending the whole lot to find out.
+    if (!outcome.ok) {
+      return { ...outcome, detail: `call ${done.length}: ${outcome.detail ?? outcome.refusal}` }
+    }
+    done.push(outcome.data ?? null)
+  }
+  return { ok: true, data: { ran: done.length, results: done } }
 }
 
 /**

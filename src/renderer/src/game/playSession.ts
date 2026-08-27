@@ -21,6 +21,12 @@ const REPORT_MS = 160
 const ERRORS_KEPT = 200
 
 /**
+ * How many steps ONE call may run. Two seconds of game at sixty a second — enough to watch a
+ * fall land, short enough that a client cannot freeze the window by asking for a million.
+ */
+const MAX_STEPPED = 120
+
+/**
  * The fault as something a reader can OPEN — the script by its own reference, the entity by the
  * one naming the document it lives in, which a node id alone does not.
  */
@@ -45,6 +51,14 @@ export type PlaySession = {
   state: () => PlayState
   pause: () => void
   resume: () => void
+  /**
+   * Runs that many FIXED steps and draws once, whatever the clock says.
+   *
+   * 🛑 For whoever watches from outside — a model, a test — rather than for the game: a reading
+   * taken while sixty frames a second run is a reading of a different world each time. Only
+   * while PAUSED, so it never races the loop that is already stepping.
+   */
+  step: (steps: number) => number
   /** Drops the world and puts the viewport back on the edit state. Nothing to restore. */
   stop: () => void
 }
@@ -199,6 +213,17 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       // The clock restarts on the next play: a game paused for a minute must not catch up on it.
       last = null
       publish()
+    },
+
+    step: steps => {
+      if (state !== 'paused') return 0
+
+      const ran = Math.max(1, Math.min(Math.trunc(steps), MAX_STEPPED))
+      for (let at = 0; at < ran; at++) world.step(world.time.step)
+      world.lateUpdate(0)
+      draw()
+      publish()
+      return ran
     },
 
     resume: () => {

@@ -18,9 +18,16 @@ import { sceneOf, useScenes } from './scenes'
 export type PlayStoreState = {
   /** What each document's game says about itself. A document that is not playing has none. */
   reports: Record<string, RuntimeReport>
-  start: (documentId: string, input: DomInputTarget) => void
+  /**
+   * `input` is what the keyboard and pointer are read off. Optional, and its absence is not a
+   * degraded mode but a DIFFERENT caller: a model driving the game from outside the window has
+   * no element to hand over, and a game nobody presses a key in still runs.
+   */
+  start: (documentId: string, input?: DomInputTarget) => void
   pause: (documentId: string) => void
   resume: (documentId: string) => void
+  /** Runs that many fixed steps on a PAUSED game and answers how many ran. */
+  step: (documentId: string, steps: number) => number
   stop: (documentId: string) => void
 }
 
@@ -50,13 +57,16 @@ export const usePlay = create<PlayStoreState>()(set => ({
 
     generation += 1
     starting.set(documentId, generation)
-    void begin(documentId, generation, input, report =>
+    // A target of its own when none was handed over: `createDomInput` attaches listeners, and
+    // one that nothing dispatches to is a game where no key is ever down.
+    void begin(documentId, generation, input ?? new EventTarget(), report =>
       set(state => ({ reports: { ...state.reports, [documentId]: report } })),
     )
   },
 
   pause: documentId => sessions.get(documentId)?.pause(),
   resume: documentId => sessions.get(documentId)?.resume(),
+  step: (documentId, steps) => sessions.get(documentId)?.step(steps) ?? 0,
 
   stop: documentId => {
     // Dropped from the waiting list too: a stop while the engine loads must not be overtaken by

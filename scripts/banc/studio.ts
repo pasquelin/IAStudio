@@ -17,7 +17,9 @@ import { describeStudio } from '@main/assistant/studioState'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
+import { drawing } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { lendPictureMeasure } from '@/spaces/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
 import { useJobs } from '@/stores/jobs'
@@ -106,11 +108,25 @@ export async function createStudio(
   const cloud = createMemoryCloud(folder, catalog)
   const documentsOnDisk = new Map(descriptorsOf(folder).map(one => [one.id, one]))
   const git = createMemoryGit()
+  /**
+   * 🛑 A PORT, not a rule: the scripts of a project live on a disk this run has not got. What a
+   * write MEANS — the refusal of a path that leaves the project, the transpile that must pass —
+   * stays where it is, in the main process and in the handler.
+   */
+  const scripts = new Map<string, string>()
   const shell = createMemoryShell(assetId => catalog.rows().find(one => one.id === assetId) ?? null)
 
   installFakeBridge({
     ...shell.channels,
     git,
+    game: {
+      ...shell.channels.game,
+      scripts: () => Promise.resolve([...scripts].map(([path, source]) => ({ path, source }))),
+      writeScript: (path, source) => {
+        scripts.set(path, source)
+        return Promise.resolve(true)
+      },
+    },
     project: {
       ...shell.channels.project,
       listFolder: (relative, hidden) => folder.list(relative, hidden),
@@ -253,8 +269,32 @@ export async function createStudio(
     }
   }
 
+  /**
+   * 🛑 The SURFACE a headless run has not got: a game draws through the engine a viewport owns,
+   * and with none `play.start` refuses `wrongSurface` — which is not what a bench measures.
+   *
+   * What it draws is nothing, and that is all a bench needs: the WORLD is what a scenario reads,
+   * and the renderer is only what the runtime hands its placements to.
+   */
+  const followTheViewport = (): (() => void) => {
+    const held = new Set<string>()
+    const stop = useDocuments.subscribe(state => {
+      for (const documentId of Object.keys(state.documents)) {
+        if (held.has(documentId)) continue
+        held.add(documentId)
+        registerSceneEngine(documentId, drawing())
+      }
+    })
+
+    return () => {
+      stop()
+      for (const documentId of held) forgetSceneEngine(documentId)
+    }
+  }
+
   const leaveTheDock = followTheDock()
   const leaveTheCommandBus = followTheCommandBus()
+  const leaveTheViewport = followTheViewport()
 
   const run = async (
     action: ActionName,
@@ -310,6 +350,7 @@ export async function createStudio(
       giveBackMeasure()
       leaveTheDock()
       leaveTheCommandBus()
+      leaveTheViewport()
       // `installFakeBridge` stubs `window.studio`; left standing it keeps this run's whole decor
       // — folder, catalogue, git, shell — reachable until the next scenario replaces it.
       vi.unstubAllGlobals()

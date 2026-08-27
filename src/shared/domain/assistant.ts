@@ -2,6 +2,7 @@ import { englishText } from '../i18n'
 import type { Target } from './target'
 import { searchWords } from '../text'
 import {
+  ACTION_COMMITMENTS,
   type ActionCommitment,
   type ActionName,
   type AssistantAction,
@@ -20,7 +21,13 @@ import { POST_ACTIONS } from './postActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
-import { GAME_ACTIONS } from './gameActions'
+import {
+  batchCalls,
+  GAME_ACTIONS,
+  PLAY_ACTIONS,
+  SCRIPT_ACTIONS,
+  STUDIO_ACTIONS,
+} from './gameActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
 import { SHELL_ACTIONS } from './shellActions'
 import { TARGET_ACTIONS } from './targetActions'
@@ -67,6 +74,9 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'rig', actions: RIG_ACTIONS },
   { name: 'git', actions: GIT_ACTIONS },
   { name: 'game', actions: GAME_ACTIONS },
+  { name: 'play', actions: PLAY_ACTIONS },
+  { name: 'script', actions: SCRIPT_ACTIONS },
+  { name: 'studio', actions: STUDIO_ACTIONS },
   { name: 'context', actions: CONTEXT_ACTIONS },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },
@@ -226,6 +236,21 @@ export function commitmentOfCall(
 ): ActionCommitment {
   const action = assistantAction(name)
   if (!action) return 'none'
+  if (name === 'studio.batch') return commitmentOfBatch(input)
 
   return action.raises?.(input) ?? action.commitment
+}
+
+/**
+ * 🛑 What a batch really engages: the HIGHEST commitment of the calls it holds.
+ *
+ * Read off the calls rather than declared: a lot naming `script.write` writes a file, and asking
+ * about it as though it engaged nothing is exactly the confirmation a person would have wanted.
+ * Here rather than as a `raises` of the descriptor, which would close a cycle on the registry.
+ */
+function commitmentOfBatch(input: Record<string, unknown>): ActionCommitment {
+  return batchCalls(input).reduce<ActionCommitment>((worst, call) => {
+    const one = commitmentOfCall(call.action as ActionName, call.input)
+    return ACTION_COMMITMENTS.indexOf(one) > ACTION_COMMITMENTS.indexOf(worst) ? one : worst
+  }, 'none')
 }

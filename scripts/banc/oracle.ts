@@ -438,3 +438,13 @@ export const searched = (run: Run, word: string): boolean =>
 /** Whether an action ran at all, refused or not — what an undo scenario has to see happen. */
 export const tried = (run: Run, name: ActionName): boolean =>
   run.called.some(one => one.action === name)
+
+/**
+ * What one action ANSWERED, or nothing at all when the model never called it.
+ *
+ * 🛑 For the reading actions alone — `runtime.report`, `script.list`, `studio.docs`. Their whole
+ * effect IS the answer: a report changes nothing in the studio, so an oracle reading the state
+ * would pass on a model that said the right sentence and called nothing at all.
+ */
+export const answeredBy = (run: Run, action: string): string | undefined =>
+  run.called.find(one => one.action === action)?.answer

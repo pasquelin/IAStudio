@@ -1020,6 +1020,58 @@
       "componentSet": {
         "title": "Set a component",
         "description": "Writes one field of a component the object carries. A field the component does not declare is ignored."
+      },
+      "playStart": {
+        "title": "Start the game",
+        "description": "Starts the game on the scene in front. Answers at once, so read the state with runtime.report."
+      },
+      "playStop": {
+        "title": "Stop the game",
+        "description": "Stops the game and puts the scene back as it was being edited."
+      },
+      "playPause": {
+        "title": "Pause the game",
+        "description": "Suspends the game without leaving it. Required before play.step."
+      },
+      "playResume": {
+        "title": "Resume the game",
+        "description": "Carries on from where the pause left the game, without catching up on the time it stood still."
+      },
+      "playStep": {
+        "title": "Step the game",
+        "description": "Runs one or more fixed steps of a PAUSED game and answers its state. This is how a reading is taken without racing."
+      },
+      "runtimeReport": {
+        "title": "Read the state of the game",
+        "description": "Answers the tick, the rate, the entity count, how many errors there are and the last lines the game wrote."
+      },
+      "runtimeErrors": {
+        "title": "Read the faults of the game",
+        "description": "Answers ADDRESSABLE faults — the script reference, the entity reference, the line and the column."
+      },
+      "scriptList": {
+        "title": "List the scripts",
+        "description": "Answers every script of the project, with its reference and its length."
+      },
+      "scriptRead": {
+        "title": "Read a script",
+        "description": "Answers the text of a script, including what has not been saved yet."
+      },
+      "scriptWrite": {
+        "title": "Write a script",
+        "description": "Writes a script into the project. Refused, with the line, when the file will not compile."
+      },
+      "studioDescribe": {
+        "title": "Describe what is in front",
+        "description": "Answers the scene, an object, its components with their schema, its relations and what may still be added to it."
+      },
+      "studioDocs": {
+        "title": "Read the documentation",
+        "description": "Answers the slice of documentation that answers one question — a component, or the surface a script sees."
+      },
+      "studioBatch": {
+        "title": "Run a lot of calls",
+        "description": "Runs a run of calls as one, with a single question. Stops at the first refusal."
       }
     },
     "refusals": {
@@ -1317,7 +1369,13 @@
       "postPresetName": "Name to give the preset",
       "componentType": "Component type",
       "componentField": "Field",
-      "componentValue": "Value"
+      "componentValue": "Value",
+      "scriptPath": "Script path",
+      "scriptSource": "Script source",
+      "describeRef": "Reference to describe",
+      "docsTopic": "Topic",
+      "batchCalls": "Calls (JSON)",
+      "fixedSteps": "Fixed steps"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",
