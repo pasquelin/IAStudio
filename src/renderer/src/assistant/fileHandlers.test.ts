@@ -190,7 +190,7 @@ describe('opening and making a project', () => {
   })
 
   it('closes the open project through the store the title bar closes it with', async () => {
-    const close = vi.fn(async () => {})
+    const close = vi.fn(async () => true)
     useProject.setState({ close })
 
     expect(await runAction('project.close', {})).toEqual({ ok: true })
@@ -200,11 +200,19 @@ describe('opening and making a project', () => {
   // Answered rather than done in silence: « ferme le projet » with none open is a person who
   // believes one is, and `ok` would leave them believing it.
   it('refuses to close when no project is open', async () => {
-    const close = vi.fn(async () => {})
+    const close = vi.fn(async () => true)
     useProject.setState({ project: null, close })
 
     expect(await runAction('project.close', {})).toMatchObject({ ok: false, refusal: 'noProject' })
     expect(close).not.toHaveBeenCalled()
+  })
+
+  // The store asked about a document holding unsaved work and was told no. `badInput` would send
+  // a client back to check parameters it got right.
+  it('reports a cancelled question as a refusal by a person', async () => {
+    useProject.setState({ close: vi.fn(async () => false) })
+
+    expect(await runAction('project.close', {})).toMatchObject({ ok: false, refusal: 'declined' })
   })
 
   // Created and then opened: a project nobody is in is a folder, and every other action of this

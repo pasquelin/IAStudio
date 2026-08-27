@@ -442,6 +442,41 @@ describe('project store', () => {
   })
 
   /**
+   * `touch` replaces the project with a new object carrying a fresh stamp on every document
+   * saved, and `autosaveOpenDocuments` fires on a timer from any window. Read by identity, the
+   * guard below then took an autosave for another project and left the catalogue open while the
+   * window that asked had already gone back to the home.
+   */
+  it('closes all the same when a save stamped the manifest while it settled', async () => {
+    let stamping: (() => void) | null = null
+    const stamped = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+      settle: async () => {
+        stamping?.()
+      },
+    })
+
+    await stamped.create(join(root, 'stamped'), 'Stamped')
+    clock = '2026-08-06T11:00:00.000Z'
+    stamping = stamped.touch
+
+    await stamped.close()
+
+    expect(stamped.current()).toBeNull()
+    expect(onChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('announces nothing when there was no project to close', async () => {
+    vi.mocked(onChange).mockClear()
+
+    await store.close()
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  /**
    * `projectOpen` and `projectClose` are independent handlers: a closing that settles slowly —
    * a journal flush on a network volume — must not tear down whatever opened meanwhile.
    */

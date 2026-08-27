@@ -58,9 +58,19 @@ une ligne d’une liste de raccourcis, fermer rend le studio à l’accueil. Ret
 ouvert laisse donc l’Explorateur, la timeline et les onglets exactement où ils étaient — c’est
 **Fermer le projet**, dans le menu du projet de la barre de titre, qui les vide.
 
+**Une génération en cours n’est pas perdue par la fermeture.** Elle continue là où elle tourne, et
+son résultat est rangé dans ce projet-ci — jamais dans un autre, même si vous en ouvrez un autre
+entre-temps. Elle quitte en revanche la barre des générations le temps que le projet est fermé :
+c’est en le rouvrant que vous la retrouverez, avec ce qu’elle a produit.
+
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un
 > document quand vous faites `⌘S`, la disposition des panneaux quand vous la changez.
+
+**Quitter un projet vous demande d’abord ce qu’il faut faire du travail non enregistré**, document
+par document — enregistrer, abandonner, ou renoncer à partir. C’est vrai des trois façons de le
+quitter : le fermer, en ouvrir un autre depuis la liste, en choisir un dans le sélecteur. Renoncer
+laisse tout exactement où c’était.
 
 ---
 

@@ -7,7 +7,7 @@ import {
   type Project,
 } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
-import { refreshDocuments } from '@/app/documentIo'
+import { refreshDocuments, settleUnsavedWorkForProjectChange } from '@/app/documentIo'
 import { closeOrphanTabs } from '@/app/orphanTabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures, reportFailure } from '@/services/diagnostics'
@@ -48,8 +48,10 @@ type ProjectState = {
   /**
    * Leaves the open project with none in its place — the row stays on the shelf, unlike
    * forgetting one. `lastProject` goes with it, or the next launch reopens what was just closed.
+   *
+   * `false` when a document held unsaved work and the question about it was cancelled.
    */
-  close: () => Promise<void>
+  close: () => Promise<boolean>
   /**
    * Drops a folder from the shelf of recent projects. The folder itself is untouched: this is a
    * list of shortcuts, and forgetting one is not a gesture on someone's disk.
@@ -138,6 +140,13 @@ async function pickedProject(
   )
   if (!bridge || !folder) return null
 
+  // After the folder is chosen and before anything is torn down: a cancelled picker must not put
+  // a question about documents in front of someone who changed their mind about the picker. And
+  // never for the folder already open — `open` refuses that one outright, where this cannot: the
+  // main process answers a folder that is already a project by opening it, whichever it is.
+  const again = folder === useProject.getState().project?.path
+  if (!again && !(await settleUnsavedWorkForProjectChange())) return null
+
   try {
     return await from(bridge, folder)
   } catch {
@@ -202,6 +211,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // Already in front: the tick on the row said so, and choosing it means "yes, still".
     if (path === get().project?.path) return true
 
+    // `refreshDocuments` drops every open document a beat from here, and no `beforeunload` sees
+    // a project change — `guardUnsavedWork` says so itself. This is the only place that can ask.
+    if (!(await settleUnsavedWorkForProjectChange())) return false
+
     try {
       set({ project: await bridge.project.open(path), known: true })
       return true
@@ -225,9 +238,20 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const leaving = get().project
     // Nothing to leave, and the settings below would then clear a `lastProject` this window has
     // no business clearing — a second window closing the same project reaches here too.
-    if (!bridge || !leaving) return
+    if (!bridge || !leaving) return false
 
-    await bridge.project.close()
+    if (!(await settleUnsavedWorkForProjectChange())) return false
+
+    try {
+      await bridge.project.close()
+    } catch (error) {
+      // `settle` writes to the disk and to the catalogue, so this can genuinely fail — and every
+      // caller does `void close()`. Left to travel it was an unhandled rejection, after the user
+      // had already been asked about their unsaved work.
+      reportFailure('project.close', leaving.path, error)
+      return false
+    }
+
     // The broadcast has in fact already emptied every panel — the main process fires `onChange`
     // on its way past. Set here all the same, as `open` sets what it opened.
     set({ project: null })
@@ -240,6 +264,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // journal is the only place that can say why.
       reportFailure('project.close', leaving.path, error)
     }
+
+    return true
   },
 
   forget: async path => {

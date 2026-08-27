@@ -504,11 +504,18 @@ export function createProjectStore({
     settled: writes.settled,
 
     close: async () => {
-      // Captured across the settling: `projectOpen` is an independent handler, so a project
-      // opened while this awaited would be the one torn down here.
-      const leaving = project
+      // The PATH, not the object: `touch` replaces the project with a new one carrying a fresh
+      // stamp on every document saved, and an autosave landing during the settling below would
+      // make an identity check read as "another project opened" on the very same folder.
+      const leaving = project?.path
+      // Nothing open: a second window asking, or a direct call on the channel. Announcing a
+      // change nobody made re-arms the folder watch and republishes the machine for nothing.
+      if (leaving === undefined) return
+
       await Promise.all([settle?.(), writes.settled()])
-      if (project !== leaving) return
+      // `projectOpen` is an independent handler, so a project opened while this awaited would
+      // otherwise be the one torn down here.
+      if (project?.path !== leaving) return
 
       close()
       onChange(null)

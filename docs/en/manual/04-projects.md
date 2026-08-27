@@ -55,9 +55,18 @@ erases a row from a list of shortcuts, closing hands the studio back to the home
 of the OPEN project therefore leaves the Explorer, the timeline and the tabs exactly where they
 were — it is **Close the project**, in the title bar's project menu, that empties them.
 
+**A running generation is not lost by closing.** It carries on where it runs, and its result is
+filed in this project — never in another one, even if you open another in the meantime. It does
+leave the generations bar while the project is closed: reopening the project is what brings it
+back, with whatever it produced.
+
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel
 > layout when you change it.
+
+**Leaving a project asks first what to do with unsaved work**, document by document — save it,
+drop it, or give up leaving. That holds for all three ways of leaving one: closing it, opening
+another from the list, picking one in the dialogue. Giving up leaves everything exactly where it was.
 
 ---
 
