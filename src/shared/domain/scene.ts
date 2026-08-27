@@ -38,7 +38,7 @@ export type CameraDescriptor = {
   near: number
   far: number
   /**
-   * What this camera does about the scene's composition. Absent on every camera ever written,
+   * What this camera does with the scene's composition. Absent on every camera ever written,
    * and absent means `inherit` — see `postOf`, the one place that says so.
    */
   post?: CameraPost

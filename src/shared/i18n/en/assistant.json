@@ -974,12 +974,12 @@
         "description": "Replaces the stack with a ready-made composition — a set of effects, in an order, on values that agree with one another. The document receives the stack itself, never a reference to the preset."
       },
       "postCamera": {
-        "title": "Say what a camera does about post-processing",
+        "title": "Say what a camera does with post-processing",
         "description": "Chooses whether this camera follows the scene’s composition, carries its own, or applies none at all. Moving it to its own starts it from what it was already filming."
       },
       "postPresets": {
         "title": "List the post-processing presets",
-        "description": "Answers the ready-made compositions the studio ships and the ones saved on this machine, by name. This is the list post.preset knows how to answer to."
+        "description": "Answers the ready-made compositions the studio ships and the ones saved on this machine, by name. This is the list post.preset accepts."
       },
       "postDuplicate": {
         "title": "Duplicate a post-processing effect",
@@ -1313,7 +1313,7 @@
       "postOn": "Value of a parameter that is a switch",
       "postEnabled": "On or off",
       "postPreset": "Preset to apply",
-      "postMode": "What the camera does about the scene’s composition",
+      "postMode": "What the camera does with the scene’s composition",
       "postPresetName": "Name to give the preset",
       "componentType": "Component type",
       "componentField": "Field",
