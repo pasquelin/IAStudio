@@ -575,11 +575,11 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every node of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the whole setting of the scene."
+        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the whole setting of the scene."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",
-        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the node was born with."
+        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the object was born with."
       },
       "nodeAddModel": {
         "title": "Place a model from the library",
@@ -587,19 +587,19 @@
       },
       "nodeRemove": {
         "title": "Remove an object",
-        "description": "Takes one node out of the scene in front, with whatever hangs from it. Undoes like any other edit of that document."
+        "description": "Takes one object out of the scene in front, with whatever hangs from it. Undoes like any other edit of that document."
       },
       "nodeRename": {
         "title": "Rename an object",
-        "description": "Calls one node of the scene in front something else. The id does not change, so nothing that pointed at it is lost."
+        "description": "Calls one object of the scene in front something else. The id does not change, so nothing that pointed at it is lost."
       },
       "nodeTransform": {
         "title": "Place an object",
-        "description": "Moves, turns or scales one node. Rotations are Euler angles in radians, and every axis left out keeps the value the node already had."
+        "description": "Moves, turns or scales one object. Rotations are Euler angles in radians, and every axis left out keeps the value the object already had."
       },
       "nodeVisible": {
         "title": "Show or hide an object",
-        "description": "Takes one node out of what is drawn, or puts it back. It stays in the scene either way, which is what tells hiding from removing."
+        "description": "Takes one object out of what is drawn, or puts it back. It stays in the scene either way, which is what tells hiding from removing."
       },
       "nodeMaterial": {
         "title": "Set an object’s material",
@@ -671,11 +671,11 @@
       },
       "nodeReparent": {
         "title": "Reparent an object",
-        "description": "Hangs one node under another, or under the scene itself when no parent is given, and puts it where asked among its new neighbours. Giving a place without a parent therefore lifts the node up to the scene: repeat the parent to change nothing but the place. The node keeps its own transform, which is then read relative to its new parent."
+        "description": "Hangs one object under another, or under the scene itself when no parent is given, and puts it where asked among its new neighbours. Giving a place without a parent therefore lifts the object up to the scene: repeat the parent to change nothing but the place. The object keeps its own transform, which is then read relative to its new parent."
       },
       "nodeSelect": {
         "title": "Select objects",
-        "description": "Makes these nodes the selection the inspector reads and the gizmo moves. Selection is not an edit, so it adds nothing to the history."
+        "description": "Makes these objects the selection the inspector reads and the gizmo moves. Selection is not an edit, so it adds nothing to the history."
       },
       "viewDirection": {
         "title": "Look at the scene from one side",
