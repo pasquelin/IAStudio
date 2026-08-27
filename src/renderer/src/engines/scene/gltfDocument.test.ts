@@ -197,6 +197,32 @@ describe('sceneHoldsMore', () => {
     expect(sceneHoldsMore(held).sort()).toEqual(['animation.template', 'animation.transitions'])
   })
 
+  /** 🛑 The quietest loss of all: `readList` answers empty and nothing counts a difference. */
+  it('names a list a later build wrote as something other than an array', () => {
+    const held = withTimeline({ events: { e1: { id: 'e1', at: 0, name: 'Opened' } } })
+
+    expect(sceneHoldsMore(held)).toEqual(['animation.events'])
+  })
+
+  /** A member COMPOSED from something narrower has to be looked INTO — the repository's own rule. */
+  it('names a timeline member this build has no name for', () => {
+    const held = withTimeline({ markers: [{ id: 'm1', at: 0 }] })
+
+    expect(sceneHoldsMore(held)).toEqual(['animation.markers'])
+  })
+
+  /** The system fires by id: a second row under a taken one would be swallowed at PLAY. */
+  it('names a list holding two rows under one id', () => {
+    const held = withTimeline({
+      events: [
+        { id: 'e1', at: 0, name: 'First' },
+        { id: 'e1', at: 1, name: 'Second' },
+      ],
+    })
+
+    expect(sceneHoldsMore(held)).toEqual(['animation.events'])
+  })
+
   it('says nothing about a timeline whose rows it reads whole', () => {
     const held = withTimeline({ events: [{ id: 'e1', at: 0, name: 'Opened' }] })
 

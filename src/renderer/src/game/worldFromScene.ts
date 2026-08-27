@@ -115,8 +115,8 @@ function systemsFor(
 
   return [
     createScriptSystem(scripts),
-    // Before the movement systems: what a timeline puts on the bus this step is what a script
-    // and a trigger read in it, and a row cued after them would be heard one step late.
+    // 🛑 Where it runs is decided by `SYSTEM_ORDER`, not by this list — and a row is heard one
+    // step LATE whatever the order: `emit` queues, and the bus drains at the end of a step.
     createTimelineSystem({
       timeline: state.animation,
       assetRef: id => ({ kind: 'asset', id }),

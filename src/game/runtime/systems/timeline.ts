@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-import type { AnimationTimeline, TimelineMedia } from '@shared/domain/animation'
+import type { AnimationTimeline, TimelineMedia, TimelineTransition } from '@shared/domain/animation'
 import type { Ref } from '@shared/domain/ref'
 import type { AudioVoice } from '../../ports/audioPort'
+import { sayCustom } from '../sayCustom'
 import type { System, World } from '../world'
 
 export type TimelineSystemOptions = {
@@ -13,20 +14,19 @@ export type TimelineSystemOptions = {
 }
 
 /**
- * What a timeline DOES while a game runs: its events on the bus, its sounds playing, its veil.
+ * What a timeline DOES while a game runs: its events on the bus, its sounds, its veil.
  *
- * 🛑 The playhead is the WORLD's clock, never a value of its own: a timeline with a head of its
- * own would drift from the physics the moment a frame was late, and a cinematic that drifts from
- * what it cues is a cinematic nobody can cut.
- *
- * 🛑 What is NOT played here, written rather than discovered: `video`, which needs a surface no
- * port offers yet, and the `scene` of a transition, which is the multi-scene lot. Both are READ
- * back from the document and survive a save — see `sceneDocument`.
+ * 🛑 NOT played here, and read back all the same: `video`, which no port offers a surface for,
+ * the `scene` of a transition, which is the multi-scene lot, and the fades of a sound.
  */
 export function createTimelineSystem(options: TimelineSystemOptions): System {
+  // Resolved ONCE: a `?? []` in a fixed update is a fresh array 240 times a second, for every
+  // scene written before this lot — which is all of them.
+  const events = options.timeline.events ?? []
+  const audio = options.timeline.audio ?? []
+  const transitions = (options.timeline.transitions ?? []).filter(playable)
   const fired = new Set<string>()
   const playing = new Map<string, AudioVoice>()
-  let last = -1
 
   return {
     name: 'timeline',
@@ -34,25 +34,20 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
     writes: [],
 
     fixedUpdate: (world: World) => {
-      const now = world.time.elapsed * MICROSECONDS
-      // Backwards is a game that started again: everything is due once more.
-      if (now < last) {
-        fired.clear()
-        stopAll(playing)
-      }
-      last = now
+      // 🛑 The world's clock, never one of its own: a timeline that counted separately would
+      // drift from the physics at the first late frame. It also never goes backwards — a STOP
+      // builds a new world and a new system — so nothing here has to be undone.
+      const now = world.time.elapsed * MICROSECONDS_A_SECOND
 
-      for (const event of options.timeline.events ?? []) {
-        if (event.at > now || fired.has(event.id)) continue
+      for (const event of events) {
+        // 🛑 `at > now` is FALSE for a `NaN`, so the row would fire on the first step. What is
+        // not a finite instant is not an instant, and it never comes due.
+        if (!Number.isFinite(event.at) || event.at > now || fired.has(event.id)) continue
         fired.add(event.id)
-        world.events.emit({
-          name: 'Custom',
-          entity: event.entity,
-          payload: { ...event.payload, name: event.name },
-        })
+        sayCustom(world, event.name, event.entity, event.payload)
       }
 
-      for (const sound of options.timeline.audio ?? []) {
+      for (const sound of audio) {
         const on = within(sound, now)
         if (on && !playing.has(sound.id)) {
           const voice = world.ports.audio.play(options.assetRef(sound.assetId), {
@@ -66,37 +61,40 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
         }
       }
 
-      world.ports.render.veil(veilAt(options.timeline, now))
+      world.ports.render.veil(veilAt(transitions, now))
     },
   }
 }
 
-/** A microsecond is what a timeline counts in; the world counts seconds. */
-const MICROSECONDS = 1_000_000
+/** A timeline counts in microseconds; the world counts seconds. */
+const MICROSECONDS_A_SECOND = 1_000_000
 
 const within = (media: TimelineMedia, now: number): boolean =>
   now >= media.start && now < media.start + media.duration
 
-const stopAll = (playing: Map<string, AudioVoice>): void => {
-  for (const voice of playing.values()) voice.stop()
-  playing.clear()
-}
+/** A `cut` is a change, not a fade: it veils nothing. An instant that is not one veils nothing. */
+const playable = (transition: TimelineTransition): boolean =>
+  transition.kind !== 'cut' &&
+  Number.isFinite(transition.at) &&
+  Number.isFinite(transition.duration) &&
+  transition.duration > 0
 
 /**
- * How far the picture is veiled at that instant.
+ * 🛑 ONE transition at a time — the LAST of the list that is running.
  *
- * A `cut` is instant and veils nothing — it is a change, not a fade. The others rise to full and
- * come back, which is what a transition between two moments looks like from the inside.
+ * The same rule a montage settles an overlap by, and the one `activeShotAt` already applies to
+ * the camera shots: the line drawn highest wins, read off the order of the list. Combining two
+ * that overlap made the picture go dark, open back up between them, and go dark again.
  */
-function veilAt(timeline: AnimationTimeline, now: number): number {
-  let veil = 0
-  for (const transition of timeline.transitions ?? []) {
-    if (transition.kind === 'cut' || transition.duration <= 0) continue
+function veilAt(transitions: readonly TimelineTransition[], now: number): number {
+  for (let at = transitions.length - 1; at >= 0; at--) {
+    const transition = transitions[at]
+    if (!transition) continue
 
     const through = (now - transition.at) / transition.duration
     if (through < 0 || through > 1) continue
-    // Up to full at the halfway mark, back down after: one row is one whole transition.
-    veil = Math.max(veil, through <= 0.5 ? through * 2 : (1 - through) * 2)
+    // Full at its halfway mark, back down after: one row is one whole transition.
+    return through <= 0.5 ? through * 2 : (1 - through) * 2
   }
-  return veil
+  return 0
 }

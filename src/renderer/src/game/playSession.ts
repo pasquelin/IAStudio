@@ -3,6 +3,7 @@ import type { PlayState, RuntimeError, RuntimeReport } from '@shared/domain/game
 import type { DomInputTarget } from '@game/host/domInput'
 import { createStudioHost } from '@game/host/studioHost'
 import { refToString } from '@shared/domain/ref'
+import type { AudioPort } from '@game/ports/audioPort'
 import type { PhysicsPort } from '@game/ports/physicsPort'
 import type { ScriptModule, ScriptPort } from '@game/ports/scriptPort'
 import type { ScriptFault } from '@game/script/frame'
@@ -79,6 +80,8 @@ export type PlaySessionDeps = {
   modules?: readonly ScriptModule[]
   /** What would not compile at all, said the way a fault is: the reader can OPEN it. */
   troubles?: readonly ScriptTrouble[]
+  /** What sounds. Absent leaves a game silent — no mixer is wired to a Play yet. */
+  audio?: AudioPort
 }
 
 /**
@@ -88,7 +91,10 @@ export type PlaySessionDeps = {
  * being edited. STOP therefore restores nothing — it redraws what was never touched.
  */
 export function startPlay(deps: PlaySessionDeps): PlaySession {
-  const render = createStudioRender(deps.renderer, deps.editState)
+  let veiled = 0
+  const render = createStudioRender(deps.renderer, deps.editState, amount => {
+    veiled = amount
+  })
   const ports = createStudioHost({
     input: deps.input,
     player: { id: 'local', name: 'Player', local: true },
@@ -96,6 +102,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     render,
     physics: deps.physics,
     script: deps.script,
+    audio: deps.audio,
   })
   if (!deps.physics) {
     ports.log.write('warn', 'no physics engine: nothing falls, nothing blocks, nobody walks')
@@ -145,6 +152,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       entities: world.entities.count(),
       logs: ports.log.recent(),
       errors: [...errors],
+      veil: veiled,
     })
 
   /**
@@ -241,6 +249,11 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       deps.frames.stop()
       world.events.clear()
       ports.input.detach()
+      // 🛑 The sounds first, and the veil down: a STOP in the middle of a fade would otherwise
+      // leave the picture dark — `apply` puts the document back, not the veil — and a sound
+      // started by a row would play on until the window closed.
+      ports.audio.stopAll()
+      veiled = 0
       // Both hold WebAssembly memory no collector reaches, and both are built per PLAY: a
       // sandbox left open keeps every compiled module of the session it belonged to.
       ports.physics.dispose()

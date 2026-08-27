@@ -77,15 +77,32 @@ describe('a timeline playing inside a game', () => {
     expect(stopped).toEqual(['music'])
   })
 
-  /** 🛑 A game started again is a timeline due all over: nothing may stay fired from last time. */
-  it('plays everything again when the clock goes back', () => {
-    const { world, heard } = running({ events: [{ id: 'e1', at: 0, name: 'Opened' }] })
+  /**
+   * 🛑 ONE at a time, the last of the list that runs — the rule a montage settles an overlap by.
+   * Combined, two fades that overlap made the picture go dark, open back up, and go dark again.
+   */
+  it('lets the last transition of the list decide while two overlap', () => {
+    const { world, veiled } = running({
+      transitions: [
+        { id: 't1', at: 0, kind: 'fade', duration: 100_000 },
+        { id: 't2', at: 50_000, kind: 'fade', duration: 100_000 },
+      ],
+    })
 
-    for (let at = 0; at < 3; at++) world.step(STEP)
-    world.time.elapsed = 0
-    world.step(STEP)
+    for (let at = 0; at < 10; at++) world.step(STEP)
 
-    expect(heard.filter(one => one.payload.name === 'Opened')).toHaveLength(2)
+    // At the fifth step both run: the first is two thirds of the way in, the second a sixth.
+    // The second one owns the instant, so the picture is barely veiled rather than nearly dark.
+    expect(veiled[4]).toBeCloseTo(0.333, 2)
+  })
+
+  /** An instant that is not a finite number is not an instant: it never comes due. */
+  it('never fires a row whose instant is not a number', () => {
+    const { world, heard } = running({ events: [{ id: 'e1', at: Number.NaN, name: 'Never' }] })
+
+    for (let at = 0; at < 5; at++) world.step(STEP)
+
+    expect(heard.filter(one => one.payload.name === 'Never')).toEqual([])
   })
 
   it('veils the picture through a fade, and not at all through a cut', () => {

@@ -553,16 +553,48 @@ export function timelineRowsLost(written: unknown): string[] {
   const lost = lists
     .filter(([name, holds]) => {
       const rows = written[name]
-      return Array.isArray(rows) && rows.some(one => !holds(one))
+      if (rows === undefined) return false
+      // 🛑 Not an ARRAY at all — a later build keying its rows by id for an O(1) reach — is the
+      // whole list lost, and the quietest way to lose one: `readList` answers empty and the
+      // first ⌘S writes a timeline without it.
+      if (!Array.isArray(rows)) return true
+      // A row this build cannot read, or a second one under an id already taken: `readList`
+      // keeps the first of each, so the others are lost the same silent way.
+      const ids = new Set<unknown>()
+      return rows.some(one => {
+        if (!holds(one)) return true
+        const id = (one as { id: unknown }).id
+        if (ids.has(id)) return true
+        ids.add(id)
+        return false
+      })
     })
     .map(([name]) => name)
 
   // A template a later build named decides what a panel offers, and this one would drop it.
-  if (typeof written.template === 'string' && !isTimelineTemplate(written.template)) {
+  if (written.template !== undefined && !isTimelineTemplate(written.template)) {
     lost.push('template')
   }
+  // 🛑 A MEMBER this build has no name for — `markers`, `subtitles` — is lost the same way, and
+  // the rule is the repository's own: a member COMPOSED from something narrower has to be looked
+  // INTO. `readTimeline` recomposes the whole object from the names below, so anything else goes.
+  lost.push(...Object.keys(written).filter(key => !TIMELINE_MEMBERS.has(key)))
   return lost
 }
+
+/** Every member `readTimeline` gives back. What is not here is what a save would drop. */
+const TIMELINE_MEMBERS = new Set([
+  'duration',
+  'fps',
+  'tracks',
+  'shots',
+  'sheet',
+  'events',
+  'audio',
+  'video',
+  'transitions',
+  'template',
+])
 
 /** Whatever of a list this build can read, in order. Anything else is dropped, and SAID. */
 const readList = <T>(value: unknown, holds: (one: unknown) => one is T): T[] =>

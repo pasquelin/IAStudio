@@ -68,6 +68,7 @@ describe('a game driven from outside the window', () => {
           fps: 60,
           frameMs: 16,
           entities: 1,
+          veil: 0,
           logs: [],
           errors: [
             { script: 'script:Walk.ts', entity: null, message: 'no', line: 7, column: 3, at: 1 },

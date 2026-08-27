@@ -38,6 +38,13 @@ export type RuntimeReport = {
   logs: readonly LogEntry[]
   /** Bounded the same way, and kept apart from the log: these are what a reader can OPEN. */
   errors: readonly RuntimeError[]
+  /**
+   * How far the picture is veiled, from 0 to 1 — what a transition of the timeline puts there.
+   *
+   * On the REPORT rather than in the document: a veil is how a game is being watched at this
+   * instant, and one written into the scene would put an undo entry per frame of a fade.
+   */
+  veil: number
 }
 
 export const NOT_PLAYING: RuntimeReport = {
@@ -48,4 +55,5 @@ export const NOT_PLAYING: RuntimeReport = {
   entities: 0,
   logs: [],
   errors: [],
+  veil: 0,
 }

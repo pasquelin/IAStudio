@@ -3,6 +3,7 @@
 import type { GameApi } from '../api/gameApi'
 import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
+import type { AudioPort } from '../ports/audioPort'
 import type { PhysicsPort } from '../ports/physicsPort'
 import type { ScriptPort } from '../ports/scriptPort'
 import type { RenderPort } from '../ports/renderPort'
@@ -25,6 +26,8 @@ export type StudioHostDeps = {
   physics?: PhysicsPort
   /** Where a game's own code runs. Absent leaves every script silent — see `loadQuickjsScripts`. */
   script?: ScriptPort
+  /** What sounds. Absent leaves a game silent — named rather than hidden, like the others. */
+  audio?: AudioPort
   /** How the studio spells an asset URL — `assetUrl` from `@shared/domain/asset`. */
   urlForAsset: (id: string) => string
   /**
@@ -44,7 +47,7 @@ export function createStudioHost(deps: StudioHostDeps): GameApi {
     render: deps.render ?? createInertRender(),
     physics: deps.physics ?? createInertPhysics(),
     script: deps.script ?? createInertScripts(),
-    audio: createInertAudio(),
+    audio: deps.audio ?? createInertAudio(),
     log,
     ai: createRefusedAi(log),
     net: createSoloNet(deps.player),
