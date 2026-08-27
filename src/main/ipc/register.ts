@@ -32,6 +32,7 @@ import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
 import { registerPostPresetHandlers } from '@main/scene/postPreset'
 import { registerExportHandlers } from '@main/export/folder'
+import { registerGameExportHandler } from '@main/export/game'
 import { registerMontageHandlers } from '@main/export/montage'
 import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 import { registerMontageImportHandlers } from '@main/import/montageImport'
@@ -145,6 +146,7 @@ export function registerIpc(services: Services): void {
   registerSceneHandlers(services)
   registerPostPresetHandlers(services)
   registerExportHandlers(services)
+  registerGameExportHandler(services)
   // One table for both: the window names a task, this side runs it under that name, and the stop
   // button reaches it by the same name. Built here so neither handler owns the other's door.
   const running = createRunningTasks()

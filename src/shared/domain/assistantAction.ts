@@ -284,6 +284,7 @@ export type ActionName =
   | 'timeline.template'
   | 'game.template'
   | 'prefab.instantiate'
+  | 'game.export'
   | 'context.read'
   | 'context.write'
   | 'context.remove'

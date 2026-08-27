@@ -64,6 +64,7 @@ import type {
 import type { CaptureQuality } from './domain/sceneCapture'
 import type { InstalledCheckerTexture } from './domain/checkerTexture'
 import type { ExportTargetId } from './domain/exportRegistry'
+import type { GameExportOutcome, GameExportRequest } from './domain/gameExport'
 import type { TaskProgress } from './domain/taskProgress'
 import type { MaterialExportTarget } from './domain/materialExport'
 import type { Language } from './i18n/languages'
@@ -281,6 +282,7 @@ export type Channels = {
   skyboxExport: 'skybox:export'
   montageStems: 'montage:stems'
   projectExport: 'project:export'
+  gameExport: 'game:export'
   taskCancel: 'task:cancel'
 
   fontsList: 'fonts:list'
@@ -505,6 +507,7 @@ export const CHANNELS: Channels = {
   skyboxExport: 'skybox:export',
   montageStems: 'montage:stems',
   projectExport: 'project:export',
+  gameExport: 'game:export',
   taskCancel: 'task:cancel',
 
   fontsList: 'fonts:list',
@@ -1424,6 +1427,17 @@ export type StudioBridge = {
     scripts: () => Promise<readonly GameScriptFile[]>
     /** Whether it was written. Refused for a path that is not a script of THIS project. */
     writeScript: (path: string, source: string) => Promise<boolean>
+    /**
+     * Writes a game that runs with no studio, into a folder the person picks.
+     *
+     * 🛑 The WINDOW composes what goes in — the glTF of each scene and the JavaScript of each
+     * script — and this side writes the files and resolves what the catalogue holds. The same
+     * split every document format follows: the window makes the structure, the main the syntax.
+     *
+     * `null` when nobody picked a folder. Otherwise a report, whose `missing` names every asset
+     * a scene points at and the catalogue no longer holds.
+     */
+    export: (request: GameExportRequest) => Promise<GameExportOutcome | null>
   }
   documents: {
     /** Every document the open project holds, read off its folder — the one source of truth. */

@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 import type { GameApi } from '../api/gameApi'
+import type { AssetPort } from '../ports/assetPort'
 import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
 import type { PhysicsPort } from '../ports/physicsPort'
+import type { RenderPort } from '../ports/renderPort'
+import type { ScenePort } from '../ports/scenePort'
 import type { ScriptPort } from '../ports/scriptPort'
 import { createBundledAssets } from './bundledAssets'
 import { createDomInput, type DomInputTarget } from './domInput'
@@ -25,6 +28,12 @@ export type ExportHostDeps = {
   physics?: PhysicsPort
   /** Where a game's own code runs. Absent leaves every script silent — see `loadQuickjsScripts`. */
   script?: ScriptPort
+  /** What draws. Absent draws nothing at all — see `createInertRender`. */
+  render?: RenderPort
+  /** The same table as `files`, when a caller already built one and draws through it. */
+  assets?: AssetPort
+  /** Where the game's other scenes come from. Absent holds it to the one it opened on. */
+  scenes?: ScenePort
 }
 
 /** Every port with no studio, no protocol and no account. Two of them differ from the studio's. */
@@ -32,12 +41,12 @@ export function createExportHost(deps: ExportHostDeps): GameApi {
   const log = createRingLog(printed)
 
   return {
-    assets: createBundledAssets(deps.files),
+    assets: deps.assets ?? createBundledAssets(deps.files),
     input: createDomInput(deps.input),
-    render: createInertRender(),
+    render: deps.render ?? createInertRender(),
     physics: deps.physics ?? createInertPhysics(),
     script: deps.script ?? createInertScripts(),
-    scenes: createSingleScene(log),
+    scenes: deps.scenes ?? createSingleScene(log),
     audio: createInertAudio(),
     log,
     ai: createRefusedAi(log),

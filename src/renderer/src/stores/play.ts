@@ -10,7 +10,8 @@ import {
   type ScriptCompiler,
   type ScriptTrouble,
 } from '@/engines/code/scriptCompiler'
-import { animationFrames, startPlay, type PlaySession, type SceneLookup } from '@/game/playSession'
+import { animationFrames } from '@/game/frameDriver'
+import { startPlay, type PlaySession, type SceneLookup } from '@/game/playSession'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { codeFilesOf, useCode } from './code'
 import { documentById, sceneDocumentNamed, useDocuments } from './documents'
@@ -116,7 +117,7 @@ async function begin(
     orElse(loadQuickjsScripts(), undefined),
     // 🛑 Guarded like the other two: a rejection here left `starting` holding the document, and
     // the Play button then did NOTHING until its viewport unmounted.
-    orElse(scriptsOfProject(), NO_SCRIPTS),
+    orElse(compiledScripts(), NO_SCRIPTS),
   ])
 
   // 🛑 The scenes this one goes TO, read while the engines are still landing: a fade that has to
@@ -172,7 +173,11 @@ export async function scriptTrouble(script: string, source: string): Promise<Scr
   return (await compiler.compile([{ script, source }])).troubles[0] ?? null
 }
 
-async function scriptsOfProject(): Promise<CompiledScripts> {
+/**
+ * Every script of the project, transpiled once. Shared with the EXPORT, which needs the same
+ * thing: a compiler built per call leaks a worker and repays nine megabytes of parsing.
+ */
+export async function compiledScripts(): Promise<CompiledScripts> {
   // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles
   // has to be what the screen shows, or an author watches the script from before their last
   // keystroke run — without a word.

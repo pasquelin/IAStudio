@@ -332,6 +332,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
 
   'play.loadScene': ['64.1'],
 
+  'game.export': ['65.1'],
+
   'context.read': ['57.3'],
   'context.write': ['57.4'],
   'context.remove': ['57.5'],

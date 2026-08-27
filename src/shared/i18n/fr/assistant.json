@@ -1093,6 +1093,10 @@
         "title": "Poser un modèle de jeu",
         "description": "Pose dans la scène ouverte le sol, le personnage et les objets d’un genre de jeu, et règle la caméra et la pesanteur avec. Une seule annulation défait tout."
       },
+      "gameExport": {
+        "title": "Exporter le jeu",
+        "description": "Écrit dans un dossier un jeu qui tourne dans un navigateur sans le studio, avec la page, le runtime, les scènes, les scripts transpilés et les seuls assets qu’ils atteignent."
+      },
       "prefabInstantiate": {
         "title": "Instancier un prefab",
         "description": "Pose dans la scène ouverte les objets d’un autre document de scène du projet, avec des identifiants neufs, à l’endroit demandé."
@@ -1409,7 +1413,9 @@
       "timelineRowId": "Identifiant de la ligne",
       "timelineTemplate": "Ce que la timeline offre",
       "gameTemplate": "Modèle de jeu",
-      "prefabRef": "Prefab à instancier"
+      "prefabRef": "Prefab à instancier",
+      "entryScene": "Scène de départ",
+      "gameTitle": "Titre du jeu"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

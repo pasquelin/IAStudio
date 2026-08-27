@@ -15,6 +15,7 @@
     "src/preload/**/*.ts",
     "src/shared/**/*.ts",
     "electron.vite.config.ts",
+    "vite.game.config.ts",
     "vitest.config.ts"
   ]
 }
