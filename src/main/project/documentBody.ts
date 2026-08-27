@@ -369,12 +369,31 @@ const OPEN_MATERIALX: DocumentBodyFormat = {
   },
 }
 
+/** The one kind with NOTHING of the studio in its file, so the envelope is composed rather than
+ * read: the file NAME is the id — a renamed script is a different document — and `readHead`
+ * touches no disk, so listing a hundred scripts opens none of them. */
+const PLAIN_TEXT: DocumentBodyFormat = {
+  read: body => ({ ...plainEnvelope(), content: body.toString('utf8') }),
+  write: document => document.content,
+  readHead: () => Promise.resolve(plainEnvelope()),
+}
+
+const plainEnvelope = (): DocumentEnvelope => ({
+  version: DOCUMENT_VERSION,
+  kind: 'script',
+  // Both left to the file: the stem is the title AND the id, and a value invented here would be
+  // one the folder disagrees with at the next rename.
+  title: '',
+  updatedAt: '',
+})
+
 // `.gltf` twice over — the scene and the sky wear the same extension, so one entry serves both.
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
   [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
   [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
   [EXTENSIONS_BY_KIND.material]: OPEN_MATERIALX,
+  [EXTENSIONS_BY_KIND.script]: PLAIN_TEXT,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

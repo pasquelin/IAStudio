@@ -1,3 +1,4 @@
+import { primaryRoleOf, type AiRoleId } from './aiRole'
 import type { ModelFamily } from './model'
 import { reconcileOrder } from './order'
 
@@ -6,13 +7,14 @@ import { reconcileOrder } from './order'
  * `domain/tool.ts`: the document domain needs `WorkspaceId`, and `shared/` cannot import from
  * the renderer. The renderer enriches these ids with icons.
  */
-export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'materials' | 'skyboxes'
+export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'materials' | 'skyboxes' | 'code'
 
-/** Rail order. */
+/** Rail order. Code sits after 3D: a game is written for the scene one has just been shaping. */
 export const WORKSPACE_IDS: readonly WorkspaceId[] = [
   'image',
   'video',
   '3d',
+  'code',
   'audio',
   'materials',
   'skyboxes',
@@ -21,17 +23,42 @@ export const WORKSPACE_IDS: readonly WorkspaceId[] = [
 export const DEFAULT_WORKSPACE: WorkspaceId = 'image'
 
 /**
- * What a space generates with. Shared rather than kept beside the icons: the window draws a model
- * browser per space and the assistant names the spaces nothing can generate in — two tables would
- * drift the day one moves.
+ * What a space generates with, or `null` where it generates nothing. Shared rather than kept
+ * beside the icons: the window draws a model browser per space and the assistant names the spaces
+ * nothing can generate in — two tables would drift the day one moves.
+ *
+ * Code is the one `null`, and it is not a gap to fill: Scenario serves images, meshes and sounds,
+ * and a script is none of those. Its space therefore draws no generator and no remote library.
  */
-export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily> = {
+export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily | null> = {
   image: 'image',
   video: 'video',
   '3d': '3d',
+  code: null,
   audio: 'audio',
   materials: 'material',
   skyboxes: 'skybox',
+}
+
+/**
+ * The spaces a model can be run in — every one but Code. What the two Scenario panels stand on,
+ * and it is derived rather than listed: a space added without a family would otherwise get an
+ * icon opening onto a picker with nothing to pick.
+ */
+export const GENERATIVE_WORKSPACE_IDS: readonly WorkspaceId[] = WORKSPACE_IDS.filter(
+  id => FAMILY_BY_WORKSPACE[id] !== null,
+)
+
+/**
+ * The employment a generation in this space would run under, or `null` where none would — Code,
+ * and any space whose family declares no primary employment.
+ *
+ * Written once because three readers ask it: the briefing that names the armed model, the list of
+ * spaces nothing serves, and the panel that arms one. Each carried its own `family === null`.
+ */
+export function roleOfWorkspace(workspace: WorkspaceId): AiRoleId | null {
+  const family = FAMILY_BY_WORKSPACE[workspace]
+  return family === null ? null : primaryRoleOf(family)
 }
 
 /**

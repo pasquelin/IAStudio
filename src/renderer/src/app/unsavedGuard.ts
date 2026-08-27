@@ -1,12 +1,5 @@
 import { reportFailure } from '@/services/diagnostics'
-import { settleUnsavedScripts, unsavedScripts } from '@/stores/code'
 import { settleUnsavedWork, unsavedDocumentIds } from './documentIo'
-
-/** The scripts first, which no dialog interrupts, then the documents, which ask. */
-async function settleEverything(): Promise<boolean> {
-  await settleUnsavedScripts()
-  return await settleUnsavedWork()
-}
 
 /**
  * Keeps the window from going while a document still holds unsaved work, and says so instead of
@@ -21,20 +14,20 @@ async function settleEverything(): Promise<boolean> {
  * developer reload. It does not cover `refreshDocuments`, which drops documents on a project
  * change without unloading anything, and which no `beforeunload` can see.
  *
- * The SCRIPTS go with it, and they are written rather than asked about — see
- * `settleUnsavedScripts` for why a `.ts` is not a document.
+ * A script goes with the rest: it is a document since Code became a space, so `SCRIPT_IO` is what
+ * writes it — one channel per file, where a second one left `heads` stale and asked to overwrite.
  */
 export function guardUnsavedWork(target: Window): () => void {
   // A second ⌘Q while the first question is still on screen would stack a dialog per press.
   let asking = false
 
   const refuse = (event: BeforeUnloadEvent): void => {
-    if (unsavedDocumentIds().length === 0 && unsavedScripts().length === 0) return
+    if (unsavedDocumentIds().length === 0) return
     event.preventDefault()
     if (asking) return
 
     asking = true
-    void settleEverything()
+    void settleUnsavedWork()
       // A write that throws — a project on a volume that went away — would otherwise close the
       // dialog and say nothing, leaving every attempt to leave to replay the same silent scene.
       .catch(error => reportFailure('document.close', '', error))

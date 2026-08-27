@@ -1,9 +1,9 @@
-import { primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
-import { FAMILY_BY_WORKSPACE, WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import type { AiRoleId } from '@shared/domain/aiRole'
+import { roleOfWorkspace, WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 
-/** What the six spaces generate with, asked of the manager in one go rather than one per turn. */
+/** What the generating spaces run on, asked of the manager in one go rather than one per turn. */
 export const SPACE_ROLES: readonly AiRoleId[] = WORKSPACE_IDS.flatMap(workspace => {
-  const role = primaryRoleOf(FAMILY_BY_WORKSPACE[workspace])
+  const role = roleOfWorkspace(workspace)
   return role === null ? [] : [role]
 })
 
@@ -16,7 +16,7 @@ export const SPACE_ROLES: readonly AiRoleId[] = WORKSPACE_IDS.flatMap(workspace 
  */
 export function spacesWithNoModel(unserved: readonly AiRoleId[]): readonly WorkspaceId[] {
   return WORKSPACE_IDS.filter(workspace => {
-    const role = primaryRoleOf(FAMILY_BY_WORKSPACE[workspace])
+    const role = roleOfWorkspace(workspace)
     return role !== null && unserved.includes(role)
   })
 }

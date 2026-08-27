@@ -118,7 +118,8 @@
       "sequence": "Vidéo",
       "audio": "Audio",
       "skybox": "Ciel",
-      "material": "Matière"
+      "material": "Matière",
+      "script": "Script"
     },
     "new": "Nouveau document",
     "newByKind": {
@@ -127,7 +128,8 @@
       "sequence": "Nouvelle vidéo",
       "audio": "Nouvel audio",
       "skybox": "Nouveau ciel",
-      "material": "Nouvelle matière"
+      "material": "Nouvelle matière",
+      "script": "Nouveau script"
     },
     "missing": "Ce document n’est plus ouvert.",
     "saveRefusedIncomplete": "Ce montage s’est ouvert sans les clips dont le média manque. Enregistrer les effacerait du fichier — importez les médias dans le projet, puis rouvrez le montage.",

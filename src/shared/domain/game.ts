@@ -32,6 +32,22 @@ export type GameScript = { id: string; path: string }
 /** What a script IS on disk, and the only extension the studio runs. */
 export const SCRIPT_EXTENSION = '.ts'
 
+/**
+ * What a new script holds before anyone types in it. A working behaviour rather than an empty
+ * file: the shape of a script — the import, the default export, `props` read by the inspector —
+ * is what nobody can guess, and an empty buffer teaches none of it.
+ */
+export const SCRIPT_STARTER = `import { defineScript } from '@studio'
+
+export default defineScript({
+  props: { speed: 4 },
+
+  onUpdate(self, ctx, dt) {
+    if (ctx.input.down('KeyW')) self.moveBy(0, 0, -self.props.speed * dt)
+  },
+})
+`
+
 /** One script's file and its text — what a PLAY compiles, and what an editor opens. */
 export type GameScriptFile = { path: string; source: string }
 

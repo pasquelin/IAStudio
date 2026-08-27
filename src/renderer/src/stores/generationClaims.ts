@@ -16,13 +16,16 @@ import { claimMaterialOnSubmit } from './materialGeneration'
  * `Record<DocumentKind, …>` so the compiler asks for the seventh workspace's line rather than a
  * test noticing it later. The generator serves all of them and knows none.
  */
-const CLAIMS: Record<DocumentKind, (into?: LandingTarget) => (job: Job | null) => void> = {
+const CLAIMS: Record<DocumentKind, ((into?: LandingTarget) => (job: Job | null) => void) | null> = {
   skybox: claimSkyboxOnSubmit,
   image: claimImageOnSubmit,
   scene: claimModelOnSubmit,
   sequence: claimSequenceOnSubmit,
   audio: claimAudioOnSubmit,
   material: claimMaterialOnSubmit,
+  // `null` rather than a claim that does nothing: no model Scenario serves writes a script, so
+  // there is no result for the Code space to land — see `FAMILY_BY_WORKSPACE`.
+  script: null,
 }
 
 /**
@@ -30,7 +33,9 @@ const CLAIMS: Record<DocumentKind, (into?: LandingTarget) => (job: Job | null) =
  * one space and settled by another would drop the result in the wrong tab.
  */
 export function claimOnSubmit(into?: LandingTarget): (job: Job | null) => void {
-  const claims = Object.values(CLAIMS).map(claim => claim(into))
+  const claims = Object.values(CLAIMS)
+    .filter(claim => claim !== null)
+    .map(claim => claim(into))
 
   return job => {
     for (const claim of claims) claim(job)

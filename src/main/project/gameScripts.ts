@@ -1,5 +1,5 @@
-import { readFile, realpath } from 'node:fs/promises'
-import { isAbsolute, relative, resolve, sep } from 'node:path'
+import { mkdir, readFile, realpath } from 'node:fs/promises'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { SCRIPT_EXTENSION, type GameScriptFile } from '@shared/domain/game'
 import { extensionOf } from '@shared/domain/fileName'
 import { isPrivatePath, type FolderEntry } from '@shared/domain/folder'
@@ -42,6 +42,9 @@ export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
       const file = root === null ? null : await insideProject(root, path)
       if (file === null) return false
 
+      // The folder first: scripts land in `scripts/`, which a project made before this build —
+      // or a project that has never held one — simply does not have. `writeAtomic` would ENOENT.
+      await mkdir(dirname(file), { recursive: true })
       await writes.next(() => writeAtomic(file, source))
       return true
     },

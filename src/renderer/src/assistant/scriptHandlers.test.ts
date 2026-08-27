@@ -15,7 +15,7 @@ describe('the scripts of a project, written from outside the window', () => {
         manifest: { version: 1, name: 'P', createdAt: WHEN, updatedAt: WHEN },
       },
     })
-    useCode.setState({ files: {}, open: [], active: null, problems: [], goto: null })
+    useCode.setState({ files: {}, problems: [], goto: null })
     installFakeBridge({
       game: {
         scripts: () => Promise.resolve([]),

@@ -8,6 +8,7 @@ import {
 } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments, settleUnsavedWorkForProjectChange } from '@/app/documentIo'
+import { readProjectScripts } from './code'
 import { closeOrphanTabs } from '@/app/orphanTabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures, reportFailure } from '@/services/diagnostics'
@@ -110,6 +111,9 @@ async function followProject(project: Project | null): Promise<void> {
   const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
     refreshDocuments(),
+    // The scripts belong to the folder, like the context below: nothing else re-reads them now
+    // that the editor is a document rather than a panel with an effect on the open project.
+    readProjectScripts(),
     useActivity.getState().reload(),
     // The context belongs to the folder: one left behind would be previewed under the next
     // project, and added to everything generated in it.

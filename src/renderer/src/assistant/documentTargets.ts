@@ -30,6 +30,9 @@ const TARGETS_BY_KIND: Record<DocumentKind, DocumentTargets | null> = {
   audio: { targets: montageTargets, select: selectInMontage },
   skybox: null,
   material: null,
+  // A `Target` names a thing of a document — a layer, a node, a clip — and a text has none. A
+  // line of a script is reached by `openScriptAt` instead.
+  script: null,
 }
 
 /**

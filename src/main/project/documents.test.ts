@@ -100,6 +100,42 @@ describe('createDocumentFiles', () => {
     expect(await readdir(join(root, 'documents'))).toEqual(['Untitled.gltf'])
   })
 
+  /**
+   * 🛑 The whole of what a script is on disk — the text, and nothing around it. And the ID that
+   * comes back is the file's STEM, not the one it was written under: nothing in a `.ts` can
+   * carry an id, so a renamed script is a different document to the layout and the recent list.
+   */
+  it('writes a script as the text it is, and lists it under Code by its file name', async () => {
+    // The folder the window hands it, which is `documentFolderOf('script')` — this side's own
+    // fallback is `documents/` for every kind, and it always was.
+    await documents.write(
+      'doc-1',
+      'script',
+      { title: 'Walk', content: 'export default 1\n' },
+      false,
+      'scripts',
+    )
+
+    expect(await readFile(join(root, 'scripts', 'Walk.ts'), 'utf8')).toBe('export default 1\n')
+    expect(await documents.list()).toEqual([
+      { id: 'Walk', kind: 'script', title: 'Walk', workspace: 'code', path: 'scripts/Walk.ts' },
+    ])
+  })
+
+  /**
+   * 🛑 Under the id the DISK gives it — its stem — and that is why the window writes a script
+   * before it opens a tab on it. Under a fresh uuid, `locate` could never find this file again
+   * and every save would lay a `Walk 2.ts`, `Walk 3.ts` beside it, autosave included.
+   */
+  it('writes a script twice into the one file, its path being its identity', async () => {
+    const draft = (content: string) => ({ title: 'Walk', content })
+    await documents.write('Walk', 'script', draft('a\n'), false, 'scripts')
+    await documents.write('Walk', 'script', draft('b\n'), false, 'scripts')
+
+    expect(await readdir(join(root, 'scripts'))).toEqual(['Walk.ts'])
+    expect((await documents.read('Walk', 'script'))?.content).toBe('b\n')
+  })
+
   // The envelope on the first line, the content under it: listing a project then reads a short
   // head per file instead of parsing every document in it, and the folder still reads by eye.
   it('writes the envelope on a line of its own', async () => {

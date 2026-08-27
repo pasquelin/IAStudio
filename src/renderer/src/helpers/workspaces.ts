@@ -1,4 +1,5 @@
 import {
+  mdiCodeBraces,
   mdiCubeOutline,
   mdiImageOutline,
   mdiPanoramaVariantOutline,
@@ -21,14 +22,18 @@ import {
 export type Workspace = {
   id: WorkspaceId
   icon: string
-  /** Scenario model family the generator offers in this workspace, and files its choice under. */
-  family: ModelFamily
+  /**
+   * Scenario model family the generator offers in this workspace, and files its choice under.
+   * `null` in Code, which runs no model — see `FAMILY_BY_WORKSPACE`.
+   */
+  family: ModelFamily | null
 }
 
 const ICONS: Record<WorkspaceId, string> = {
   image: mdiImageOutline,
   video: mdiVideoOutline,
   '3d': mdiCubeOutline,
+  code: mdiCodeBraces,
   audio: mdiVolumeHigh,
   materials: mdiTextureBox,
   skyboxes: mdiPanoramaVariantOutline,
@@ -80,6 +85,8 @@ const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
   image: ['image', 'skybox'],
   video: ASSET_TYPES,
   '3d': ['mesh', 'animation', 'skybox', 'image'],
+  // Nothing: a script takes no asset, and it names the ones it wants by id in its own text.
+  code: [],
   audio: ['audio'],
   materials: ['image'],
   skyboxes: ['skybox', 'image'],
@@ -139,8 +146,8 @@ export function workspaceById(id: string): Workspace {
 }
 
 /**
- * What a surface browses models by. The home generates nothing: it opens documents, it makes
- * none — and that is the ONE surface with no family at all.
+ * What a surface browses models by, or `null` where nothing generates — the home, which opens
+ * documents and makes none, and Code, which runs no model at all.
  *
  * Written once because two readers ask it — the rail deciding whether to draw the generator, and
  * the edit that sends the user off to pick a model — and a second spelling is a second answer.

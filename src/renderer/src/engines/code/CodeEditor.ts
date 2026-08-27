@@ -25,7 +25,6 @@ export class CodeEditor {
   private readonly editor: Monaco.editor.IStandaloneCodeEditor
   private readonly models = new Map<string, Monaco.editor.ITextModel>()
   private readonly watching: Monaco.IDisposable[] = []
-  private project: Monaco.IDisposable | null = null
   private open: string | null = null
 
   constructor(
@@ -95,15 +94,19 @@ export class CodeEditor {
   /**
    * What the project itself declares — the names of its assets, its scenes, its prefabs.
    *
-   * Replaced whole rather than added to: a second `addExtraLib` under the same path is what makes
-   * a deleted asset keep completing for the rest of the session.
+   * 🛑 Held per MODULE and skipped when unchanged, because the lib is: `typescriptDefaults` is
+   * process-wide, so an editor per tab re-registering the same string bumps its version and makes
+   * the worker re-typecheck every model of the project at each tab that opens.
    */
   declareProject(types: string): void {
-    this.project?.dispose()
-    this.project = this.monaco.languages.typescript.typescriptDefaults.addExtraLib(
+    if (types === declaredProject) return
+
+    projectLib?.dispose()
+    projectLib = this.monaco.languages.typescript.typescriptDefaults.addExtraLib(
       types,
       PROJECT_TYPES,
     )
+    declaredProject = types
   }
 
   /** Everything the type worker has to say, over every open script. */
@@ -124,13 +127,16 @@ export class CodeEditor {
     for (const held of this.watching) held.dispose()
     for (const model of this.models.values()) model.dispose()
     this.models.clear()
-    this.project?.dispose()
     this.editor.dispose()
   }
 }
 
 const STUDIO_TYPES_PATH = 'file:///node_modules/@studio/index.d.ts'
 const PROJECT_TYPES = 'file:///node_modules/@studio/project.d.ts'
+
+// Module-wide, like the registration it holds — see `declareProject`.
+let projectLib: Monaco.IDisposable | null = null
+let declaredProject: string | null = null
 
 const uriOf = (monaco: typeof Monaco, script: string): Monaco.Uri =>
   monaco.Uri.parse(`file:///${script.replace(/^script:/, '')}`)

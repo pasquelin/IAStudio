@@ -505,11 +505,12 @@ src/renderer/src/
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
 ├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, et `core/` — ce que tous les moteurs partagent
-├── spaces/       un éditeur par type de document — SIX, autant que d'espaces
+├── spaces/       un éditeur par type de document — SEPT, autant que d'espaces
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils
 │   ├── video/      la timeline, le moniteur, ses outils
 │   ├── audio/      la forme d'onde, ses outils, le décodeur
+│   ├── code/       Monaco, monté sur un script du projet
 │   ├── materials/  les canaux d'une matière, et leur aperçu répété
 │   └── skyboxes/   le ciel immersif et ses trois projections à plat
 ├── panels/       les vingt-sept outils ancrables
@@ -659,7 +660,7 @@ l’espace, quand `shared/` n’a aucune dépendance runtime. D’où une couche
 - le générateur n’est offert que là où un modèle est choisi ou préféré ;
 - une moitié que personne n’a choisie affiche le **premier panneau que l’espace y déclare**. Elle
   vaut `null` dans le store — clé absente, la moitié est fermée ; un identifiant, c’est un choix de
-  l’utilisateur. La disposition est retenue une fois pour les six espaces alors que ce premier
+  l’utilisateur. La disposition est retenue une fois pour les sept espaces alors que ce premier
   panneau diffère dans chacun : y inscrire un identifiant imposerait la réponse d’un espace aux
   cinq autres. `shownTool` distingue les trois cas, et la migration vers la version 8 repose au
   défaut toute disposition antérieure, moitié par moitié.

@@ -5,8 +5,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import { revealTool } from '@/helpers/revealPanel'
-import { useCode } from '@/stores/code'
+import { openScriptAt } from '@/helpers/openScript'
 import { playReportOf, usePlay } from '@/stores/play'
 
 export type PlayBarProps = {
@@ -110,10 +109,9 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
             if (!addressable) return
             // Paused first: a game still running scrolls its own errors past the reader.
             usePlay.getState().pause(documentId)
-            useCode.getState().openAt(addressable.script, addressable.line, addressable.column || 1)
-            // 🛑 And BROUGHT FORWARD: the code panel shares the band with the timeline, so
-            // without this a click pauses the game and shows nothing at all.
-            revealTool('code')
+            // Opens the script's own tab, which is what brings the Code space up with it: the
+            // section follows the document in front — see `DocumentArea.followFront`.
+            openScriptAt(addressable.script, addressable.line, addressable.column || 1)
           }}
         >
           {t('game.play.faults', { count: faults.length })}

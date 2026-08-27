@@ -13,7 +13,7 @@ import {
   type ToolSurface,
   type ToolZone,
 } from './tool'
-import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
+import { GENERATIVE_WORKSPACE_IDS, WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 const TOOL_IDS: ToolId[] = [...new Set(TOOL_PLACEMENTS.map(placement => placement.id))]
 
@@ -46,15 +46,32 @@ describe('the placements of one tool', () => {
 describe('resolving where a tool sits', () => {
   // One placement for all six, where there used to be two: the shelf reads the same question
   // in every space — what can I get from Scenario — so it has no reason to move with the space.
-  it('puts the asset shelf in the left column of every workspace', () => {
-    for (const workspace of WORKSPACE_IDS) {
+  it('puts the asset shelf in the left column of every generating workspace', () => {
+    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
       expect(placementIn('assets', workspace)?.zone).toBe('left')
       expect(placementIn('assets', workspace)?.slot).toBe('primary')
     }
   })
 
-  it('serves the shelf in every workspace — it is never simply absent', () => {
-    for (const workspace of WORKSPACE_IDS) expect(placementIn('assets', workspace)).not.toBeNull()
+  it('serves the shelf wherever a model runs — it is never simply absent', () => {
+    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
+      expect(placementIn('assets', workspace)).not.toBeNull()
+    }
+  })
+
+  /** 🛑 The one space the two Scenario panels skip, and the compiler cannot say it: `surfaces`
+   * is derived, so a family added to Code would put them back with nothing to report it. */
+  it('offers neither Scenario panel in Code, which runs no model', () => {
+    expect(placementIn('generator', 'code')).toBeNull()
+    expect(placementIn('assets', 'code')).toBeNull()
+  })
+
+  /** The band of the Code space, and of no other: nothing else holds text a compiler reads. */
+  it('puts the problems in Code’s band alone', () => {
+    expect(placementIn('problems', 'code')).toMatchObject({ zone: 'bottomRight' })
+    for (const workspace of WORKSPACE_IDS.filter(one => one !== 'code')) {
+      expect(placementIn('problems', workspace), workspace).toBeNull()
+    }
   })
 
   it('answers null for a workspace a tool does not serve', () => {
@@ -69,8 +86,8 @@ describe('resolving where a tool sits', () => {
 })
 
 describe('every workspace', () => {
-  it('has somewhere to generate from', () => {
-    for (const workspace of WORKSPACE_IDS) {
+  it('has somewhere to generate from, wherever a model runs', () => {
+    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
       expect(placementIn('generator', workspace)).not.toBeNull()
     }
   })
@@ -198,8 +215,8 @@ describe('a horizontal band', () => {
 })
 
 describe('the left column', () => {
-  it('holds the Scenario panels, and only them, in the upper half of every workspace', () => {
-    for (const workspace of WORKSPACE_IDS) {
+  it('holds the Scenario panels, and only them, in the upper half of a generating workspace', () => {
+    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
       const upper = TOOL_PLACEMENTS.filter(
         placement =>
           placement.zone === 'left' && placement.slot === 'primary' && serves(placement, workspace),

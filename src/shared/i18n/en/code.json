@@ -1,17 +1,8 @@
 {
   "code": {
-    "noProject": "Open a project to write its code.",
-    "emptyHint": "Create a script to give an entity a behaviour.",
     "unavailable": "The editor could not load.",
-    "new": "New script",
-    "newHint": "Creates a TypeScript file and opens it.",
-    "save": "Save",
-    "saveHint": "Writes the script into the project.",
-    "close": "Close tab",
     "noProblems": "No problem",
     "openProblem": "Open at this line",
-    "at": "line {{line, number}}, column {{column, number}}",
-    "openScript": "Open a script",
-    "openScriptHint": "Picks a script of the project."
+    "at": "line {{line, number}}, column {{column, number}}"
   }
 }

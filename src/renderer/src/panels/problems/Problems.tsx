@@ -1,23 +1,20 @@
 import { useTranslation } from 'react-i18next'
-import type { CodeProblem } from '@/engines/code/CodeEditor'
 import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { openScriptAt } from '@/helpers/openScript'
 import { useCode } from '@/stores/code'
 
-export type CodeProblemsProps = { problems: readonly CodeProblem[] }
-
-/** What the type worker has to say, over every open script. One click opens the line. */
-export function CodeProblems({ problems }: CodeProblemsProps) {
+/** What the type worker has to say, over every script of the project. One click opens the line. */
+export function Problems() {
   const { t } = useTranslation()
+  const problems = useCode(state => state.problems)
 
   if (problems.length === 0) {
-    return (
-      <p className="text-muted text-tiny border-line border-t px-2 py-1">{t('code.noProblems')}</p>
-    )
+    return <p className="text-muted text-tiny px-2 py-1">{t('code.noProblems')}</p>
   }
 
   return (
-    <ul className="border-line max-h-40 shrink-0 overflow-y-auto border-t">
+    <ul className="h-full overflow-y-auto">
       {problems.map(problem => (
         <li key={`${problem.script}:${problem.line}:${problem.column}:${problem.message}`}>
           <button
@@ -25,7 +22,7 @@ export function CodeProblems({ problems }: CodeProblemsProps) {
             className={cn(rowSkin(false), 'flex w-full items-baseline gap-2 px-2 py-1 text-left')}
             data-sc="field:code.problem"
             title={t('code.openProblem')}
-            onClick={() => useCode.getState().openAt(problem.script, problem.line, problem.column)}
+            onClick={() => openScriptAt(problem.script, problem.line, problem.column)}
           >
             <span
               className={cn(

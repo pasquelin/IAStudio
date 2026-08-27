@@ -7,6 +7,7 @@
     "image": "Image",
     "video": "Vidéo",
     "3d": "Modélisation",
+    "code": "Code",
     "audio": "Audio",
     "materials": "Matières",
     "skyboxes": "Skyboxes",
@@ -33,7 +34,7 @@
     "animations": "Animations",
     "text": "Texte",
     "context": "Contexte",
-    "code": "Code"
+    "problems": "Problèmes"
   },
   "view": {
     "projection": "Projection",
@@ -197,6 +198,7 @@
       "image": "Générer et retoucher des images sur un canevas à calques.",
       "video": "Monter, enchaîner et exporter des images animées.",
       "3d": "Construire une scène, l’éclairer, exporter le modèle.",
+      "code": "Écrire le comportement d’un jeu, script par script.",
       "audio": "Composer et monter du son sur plusieurs pistes.",
       "materials": "Produire les canaux d’une matière sans raccord.",
       "skyboxes": "Générer des ciels et éclairer une scène avec.",

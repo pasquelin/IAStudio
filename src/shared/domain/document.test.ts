@@ -88,6 +88,8 @@ describe('kindForExtension', () => {
       '.otio',
       '.gltf',
       '.mtlx',
+      // TypeScript's own, and the one file the studio writes with nothing of its own in it.
+      '.ts',
     ])
     for (const gone of ['.img', '.scene', '.seq', '.aud', '.sky', '.tex']) {
       expect(kindForExtension(gone)).toBeNull()
