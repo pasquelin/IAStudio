@@ -617,15 +617,16 @@ Six of them, no React inside any one.
 | `TimelineEngine` | mediabunny + Canvas + Web Audio | the sequence: clips, playback of picture AND sound, waveforms, filmstrips |
 | `engines/audio` | plain sample arrays | the sound edit: crop, fades, gain, normalise, trim silence |
 | `SkyboxRenderer` | `ViewportEngine` | the sky from the inside: sun, grading, probes |
-| `TextureRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
+| `MaterialRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
 
 The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resizing, on-demand
 loop, image-based lighting. Each writing its own was three chances to disagree about a resize
 or a disposal.
 
-**Six engines, ten folders under `engines/`: the other four are not engines.** `core/` carries
+**Six engines, twelve folders under `engines/`: the other six are not engines.** `core/` carries
 the shared history, `viewport/` the base of the three 3D views, `gpu/` the shader passes and
-the frame counter, and `csg/` boolean carving.
+the frame counter, `postfx/` the post-processing chains and their LUTs, `code/` script
+compilation off the UI thread, and `csg/` boolean carving.
 
 **`csg/` is a layer, not an engine, and that is deliberate**: it holds no scene, knows neither
 document nor selection, and that is what will make it reusable outside the studio — to run a game,
@@ -667,7 +668,7 @@ And once the three object exists, **it is mutated, never replaced**: `.set` rath
 Those writes arrive on every frame of an inspector drag, and the cost is not theoretical —
 replacing a material risks recompiling its shader program, replacing a colour throws away the
 instance three is holding. Ten colour writes follow the rule, and `threeSync.ts`,
-`TextureRenderer.ts` and `SkyboxRenderer.ts` each carry it as a comment, next to what it guards.
+`MaterialRenderer.ts` and `SkyboxRenderer.ts` each carry it as a comment, next to what it guards.
 
 **One exception, and it is deliberate**: `ViewportEngine` does replace the scene background object,
 because that field accepts `null` — a `.set` could not clear it, and the background is only
