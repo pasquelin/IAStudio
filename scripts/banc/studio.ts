@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
 import type { Asset } from '@shared/domain/asset'
 import {
+  DOCUMENT_VERSION,
   isDocumentExtension,
   kindForExtension,
   workspaceForKind,
@@ -35,7 +36,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/spaces/three/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
 import { createMemoryCatalog } from './memoryCatalog'
-import { WHEN } from './project'
+import { DOCUMENT_SOURCES, WHEN } from './project'
 import { createMemoryCloud } from './memoryCloud'
 import { createMemoryFiles } from './memoryFiles'
 import { createMemoryGit, type MemoryGit } from './memoryGit'
@@ -116,6 +117,8 @@ export async function createStudio(
   think?: Think,
 ): Promise<Studio> {
   const folder = createMemoryFolder(seed)
+  // What the seeded documents really hold. A path alone reads back as a document with no content.
+  await Promise.all(DOCUMENT_SOURCES.map(one => folder.write(one.path, one.source)))
   const catalog = createMemoryCatalog(seed)
   const ops = createMemoryFiles(folder, catalog)
   const cloud = createMemoryCloud(folder, catalog)
@@ -193,6 +196,17 @@ export async function createStudio(
     },
     documents: {
       list: () => Promise.resolve([...documentsOnDisk.values()]),
+      // 🛑 A PORT: the envelope the main process stamps, around the TEXT on disk. `null` for a
+      // document nothing was ever written under, which is what a fresh one is.
+      read: async (documentId, kind) => {
+        const held = documentsOnDisk.get(documentId)
+        const content = held ? folder.textOf(held.path) : null
+        // The KIND too, as the real port locates a file by the `(id, kind)` pair: answering with
+        // the kind the caller asked for would let a montage read back as a scene.
+        if (!held || held.kind !== kind || content === null) return null
+
+        return { version: DOCUMENT_VERSION, kind, title: held.title, updatedAt: WHEN, content }
+      },
       // The file moves and the descriptor keeps its id: a document's identity survives a rename,
       // which is the whole reason `DocumentDescriptor.id` is not its path.
       rename: async (documentId, kind, title) => {

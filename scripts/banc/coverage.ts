@@ -327,6 +327,9 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'timeline.remove': ['62.3'],
   'timeline.template': ['62.4'],
 
+  'game.template': ['63.1', '63.2'],
+  'prefab.instantiate': ['63.3', '63.4'],
+
   'context.read': ['57.3'],
   'context.write': ['57.4'],
   'context.remove': ['57.5'],

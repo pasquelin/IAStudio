@@ -16,6 +16,7 @@ import {
   type AnimationTimeline,
   type AnimationTrack,
 } from '@shared/domain/animation'
+import { newComponent } from '@shared/domain/componentRegistry'
 import {
   postEffect,
   readParams,
@@ -80,16 +81,20 @@ function floor(size: number): SceneNode {
 }
 
 /**
- * A stand-in the size of a person — what the three character templates frame.
+ * Whoever is PLAYED — a body the size of a person, carrying what walks it. Its capsule is the
+ * controller's own default to the millimetre, so what is felt is what is seen.
  *
  * Off the origin, which the playground turned into an eight-metre hole: framed there, the two
  * templates that show a silhouette opened on one standing over a void.
  */
 function standIn(): SceneNode {
-  return meshNode(
-    { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
-    { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }), name: 'Character' },
-  )
+  return {
+    ...meshNode(
+      { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
+      { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }), name: 'Character' },
+    ),
+    components: [newComponent('CharacterController'), newComponent('Health')],
+  }
 }
 
 /** Clear of the pit, on the floor band the two framed views open on. */
@@ -415,7 +420,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // On the start pad, at eye height and facing down the set — where the walk begins the day a
   // controller reads `play`, rather than somewhere on the floor with the court behind it.
   firstPerson: () =>
-    characterView([cameraNode(transformAt({ x: 0, y: EYE_HEIGHT, z: STAND_IN_Z }))], {
+    characterView([standIn(), cameraNode(transformAt({ x: 0, y: EYE_HEIGHT, z: STAND_IN_Z }))], {
       camera: 'firstPerson',
     }),
 

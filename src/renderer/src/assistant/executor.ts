@@ -13,6 +13,7 @@ import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
+import { ASSEMBLY_HANDLERS } from './assemblyHandlers'
 import { ASSET_HANDLERS } from './assetHandlers'
 import { CANVAS_HANDLERS } from './canvasHandlers'
 import { CLOUD_HANDLERS } from './cloudHandlers'
@@ -53,6 +54,7 @@ const HANDLERS: ActionHandlers = {
   ...SCRIPT_HANDLERS,
   ...STUDIO_HANDLERS,
   ...TIMELINE_HANDLERS,
+  ...ASSEMBLY_HANDLERS,
   ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,

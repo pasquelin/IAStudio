@@ -69,7 +69,7 @@ export function worldFromScene(
       // world, and a system writing into one would edit the scene being edited — with no store
       // action, so `isSceneDirty` stays false and a ⌘S saves it. Safe because a component is pure
       // JSON by contract.
-      components: JSON.parse(JSON.stringify(node.components ?? [])),
+      components: node.components?.length ? JSON.parse(JSON.stringify(node.components)) : [],
     })
   }
 
@@ -89,7 +89,9 @@ function systemsFor(
    * 🛑 Nothing for a node hanging from another, and that is a HOLE rather than a decision: an
    * entity's transform is LOCAL, the renderer composes the parents and the physics does not, so
    * a body under a group would stand somewhere the mesh is not. Refused and named, because a
-   * collider in the wrong place is worse than none. For the lot that brings prefabs.
+   * collider in the wrong place is worse than none. 🛑 STILL OPEN after the prefab lot, which
+   * keeps a prefab's hierarchy: a child carrying a collider is refused, and one carrying none is
+   * never even looked at. Closing it means composing the parents here — a lot of its own.
    */
   const shapeOf = (entity: Entity): ColliderShape | null => {
     const node = byId.get(entity.id)

@@ -1090,11 +1090,16 @@ export function addNodes(copies: readonly SceneNode[]): Command<SceneState> {
             nodes: [...state.nodes, ...copies],
             selectedIds: copies.map(copy => copy.id),
           },
-    revert: state => ({
-      ...state,
-      nodes: state.nodes.filter(node => !copies.some(copy => copy.id === node.id)),
-      selectedIds: copies.reduce((ids, copy) => deselect(ids, copy.id), state.selectedIds),
-    }),
+    revert: state => {
+      // A Set rather than a scan per node: a prefab of 200 put down in a scene of 1 000 made ⌘Z
+      // walk 200 000 comparisons.
+      const added = new Set(copies.map(copy => copy.id))
+      return {
+        ...state,
+        nodes: state.nodes.filter(node => !added.has(node.id)),
+        selectedIds: copies.reduce((ids, copy) => deselect(ids, copy.id), state.selectedIds),
+      }
+    },
   }
 }
 

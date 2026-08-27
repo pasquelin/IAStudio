@@ -1,0 +1,105 @@
+import { refused } from '@shared/domain/assistant'
+import { refFromString } from '@shared/domain/ref'
+import { isSceneTemplateId } from '@shared/domain/sceneTemplate'
+import { addNodes } from '@/engines/scene/commands'
+import { instancedNodes, prefabNodes } from '@/engines/scene/prefab'
+import { layOutTemplate } from '@/engines/scene/templateCommands'
+import type { SceneNode } from '@/engines/scene/sceneState'
+import { getBridge } from '@/services/bridge'
+import { documentNamedOfKind, useDocuments } from '@/stores/documents'
+import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
+import type { ActionHandlers } from './actionHandler'
+import { numberOf, textOf } from './actionInputs'
+import { mounted } from './sceneHandlers'
+
+/** What puts a whole game together in one gesture — a template, or a prefab of the project. */
+export const ASSEMBLY_HANDLERS: ActionHandlers = {
+  'game.template': input => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+
+    // The choice field has already refused anything else, and names the three in doing so; this
+    // is the narrowing TypeScript asks for, not a second gate.
+    const wanted = textOf(input, 'template') ?? ''
+    if (!isSceneTemplateId(wanted)) return refused('badInput')
+
+    const before = open.state.nodes.length
+    useScenes.getState().runCommand(open.documentId, layOutTemplate(wanted))
+    // What was ADDED, as `prefab.instantiate` answers too: a scene's own total would have a
+    // client reading « 52 objects » where 38 were laid down.
+    return {
+      ok: true,
+      data: { template: wanted, nodes: (mounted()?.state.nodes.length ?? before) - before },
+    }
+  },
+
+  'prefab.instantiate': async input => {
+    if (!mounted()) return refused('wrongSurface')
+
+    const named = textOf(input, 'prefab') ?? ''
+    const documentId = prefabDocument(named)
+
+    const read = await prefabRead(documentId)
+    if ('refusal' in read) return read.refusal
+
+    // Read AGAIN after the await: an MCP call is not user-driven, and a tab switched while the
+    // disk answered would have the nodes land in the document that WAS in front.
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
+    if (open.documentId === documentId) {
+      return refused('badInput', `"${named}" is the scene in front: it cannot instance itself`)
+    }
+
+    const nodes = instancedNodes(read.nodes, {
+      x: numberOf(input, 'positionX') ?? 0,
+      y: numberOf(input, 'positionY') ?? 0,
+      z: numberOf(input, 'positionZ') ?? 0,
+    })
+    if (nodes.length === 0) return refused('badInput', `"${named}" holds nothing to instance`)
+
+    useScenes.getState().runCommand(open.documentId, addNodes(nodes))
+    return { ok: true, data: { nodes: nodes.length } }
+  },
+}
+
+/**
+ * The nodes of a prefab: the OPEN tab's when there is one, the file otherwise.
+ *
+ * The tab is where edits land — reading the disk instead brings back a piece the author has just
+ * deleted, and answers `notFound` for a document that is visibly open and never saved.
+ */
+async function prefabRead(
+  documentId: string,
+): Promise<{ nodes: readonly SceneNode[] } | { refusal: ReturnType<typeof refused> }> {
+  if (sceneStore.hasState(useScenes.getState(), documentId)) {
+    return { nodes: sceneOf(useScenes.getState(), documentId).nodes }
+  }
+
+  const bridge = getBridge()
+  if (!bridge) return { refusal: refused('noBridge') }
+
+  try {
+    const file = await bridge.documents.read(documentId, 'scene')
+    // `notFound` and not `badInput`: the caller's word was fine, the project holds no such file.
+    return file ? { nodes: prefabNodes(file) } : { refusal: refused('notFound', documentId) }
+  } catch (error) {
+    // `failed`, never `badInput`: told its INPUT is wrong, a model rewrites the name and retries.
+    return { refusal: refused('failed', `reading ${documentId}: ${String(error)}`) }
+  }
+}
+
+/**
+ * Which document a prefab names — a `prefab:` or `document:` reference, a title, or an id.
+ *
+ * 🛑 `ref.ts` says `game.prefabs` is what resolves a `prefab:` id, and this does NOT consult it:
+ * no action fills that table, so the lookup would be an IPC round trip that can only answer
+ * nothing. Until one does, a `prefab:` id is read as a document id. The port is `bridge.game`.
+ */
+function prefabDocument(named: string): string {
+  const ref = refFromString(named)
+  // A reference that already declared an ID skips the title lookup: a scene TITLED with that
+  // string would otherwise be instanced in its place.
+  if (ref?.kind === 'prefab' || ref?.kind === 'document') return ref.id
+
+  return documentNamedOfKind(useDocuments.getState(), 'scene', named) ?? named
+}

@@ -932,3 +932,10 @@ Dans la scène Test MCP :
 - [ ] « Mets un fondu d’une seconde à trois secondes. »
 - [ ] « Retire le fondu que tu viens de poser. »
 - [ ] « Cette timeline est une intro : ne me propose que ce qu’il faut. »
+
+## 63. Monter un jeu d'un seul geste
+
+- [ ] « Fais-moi un jeu à la troisième personne. »
+- [ ] « Fais-moi un jeu vu de dessus. »
+- [ ] « Pose le prefab Scène 1 dans cette scène. »
+- [ ] « Pose le prefab Scène 1 à trois mètres sur la droite. »

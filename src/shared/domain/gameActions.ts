@@ -1,5 +1,6 @@
 import { TIMELINE_TEMPLATES } from './animation'
-import { action, type AssistantAction } from './assistantAction'
+import { TEMPLATES_BY_GROUP } from './sceneTemplate'
+import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { COMPONENT_TYPES } from './componentRegistry'
 
 /**
@@ -312,6 +313,57 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
         required: true,
         options: TIMELINE_TEMPLATES,
       },
+    ],
+  }),
+]
+
+/**
+ * One axis of a position, spelled `positionX` as the rest of the registry spells it: a model
+ * that learned the name on another tool would otherwise place every prefab at the origin.
+ */
+const axisField = (axis: 'X' | 'Y' | 'Z'): ActionField => ({
+  key: `position${axis}`,
+  kind: 'number',
+  labelKey: `assistant.fields.position${axis}`,
+  required: false,
+})
+
+/**
+ * What puts a whole game together in one gesture.
+ *
+ * 🛑 An ASSEMBLY, never an engine: a template lays down nodes carrying components the runtime
+ * already has systems for, and a prefab is a document of the project instanced into the scene.
+ * Neither adds a way of playing — that is what keeps them from becoming a second runtime.
+ */
+export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'game.template',
+    titleKey: 'assistant.actions.gameTemplate.title',
+    descriptionKey: 'assistant.actions.gameTemplate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'template',
+        kind: 'choice',
+        labelKey: 'assistant.fields.gameTemplate',
+        required: true,
+        options: TEMPLATES_BY_GROUP.character,
+      },
+    ],
+  }),
+  action({
+    /** A document of the project, instanced where it is asked for — its nodes, its components. */
+    name: 'prefab.instantiate',
+    titleKey: 'assistant.actions.prefabInstantiate.title',
+    descriptionKey: 'assistant.actions.prefabInstantiate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'prefab', kind: 'text', labelKey: 'assistant.fields.prefabRef', required: true },
+      axisField('X'),
+      axisField('Y'),
+      axisField('Z'),
     ],
   }),
 ]
