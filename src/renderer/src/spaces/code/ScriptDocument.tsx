@@ -80,7 +80,7 @@ export function ScriptDocument({ documentId }: ScriptDocumentProps) {
   if (failed) {
     return <EmptyState icon={workspaceById('code').icon} message={t('code.unavailable')} />
   }
-  return <div ref={host} className="h-full min-h-0 w-full" data-sc="section:code.editor" />
+  return <div ref={host} className="relative h-full min-h-0 w-full" data-sc="section:code.editor" />
 }
 
 /** Computed once: the names come from the component registry, which is a constant of the build. */
