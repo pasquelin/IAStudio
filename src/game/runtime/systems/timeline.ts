@@ -17,8 +17,9 @@ export type TimelineSystemOptions = {
  * What a timeline DOES while a game runs: its events on the bus, its sounds, its veil, and the
  * scene a transition goes to.
  *
- * 🛑 NOT played here, and read back all the same: `video`, which no port offers a surface for,
- * and the fades of a sound.
+ * 🛑 NOT played here, and read back all the same: `video`, which no port offers a surface for.
+ * A sound's fades ARE computed — see `levelOf` — but no `AudioPort` implements a voice to hear
+ * them on.
  */
 export function createTimelineSystem(options: TimelineSystemOptions): System {
   // Resolved ONCE: a `?? []` in a fixed update is a fresh array 240 times a second, for every
@@ -33,6 +34,9 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
   // 🛑 Its own set: an event row and a transition sharing an id would cancel each other out.
   const swapped = new Set<string>()
   const playing = new Map<string, AudioVoice>()
+  // 🛑 The level last written, per row: a loop with no fade would otherwise cross the port sixty
+  // times a second for a number that never moves.
+  const level = new Map<string, number>()
 
   return {
     name: 'timeline',
@@ -56,14 +60,25 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
       for (const sound of audio) {
         const on = within(sound, now)
         if (on && !playing.has(sound.id)) {
+          const opening = levelOf(sound, now)
           const voice = world.ports.audio.play(options.assetRef(sound.assetId), {
-            volume: sound.gain ?? 1,
+            volume: opening,
             loop: sound.loop === true,
           })
-          if (voice) playing.set(sound.id, voice)
-        } else if (!on && playing.has(sound.id)) {
+          if (voice) {
+            playing.set(sound.id, voice)
+            level.set(sound.id, opening)
+          }
+        } else if (on) {
+          const wanted = levelOf(sound, now)
+          if (level.get(sound.id) !== wanted) {
+            playing.get(sound.id)?.gain(wanted)
+            level.set(sound.id, wanted)
+          }
+        } else if (playing.has(sound.id)) {
           playing.get(sound.id)?.stop()
           playing.delete(sound.id)
+          level.delete(sound.id)
         }
       }
 
@@ -87,6 +102,7 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
     dispose: () => {
       for (const voice of playing.values()) voice.stop()
       playing.clear()
+      level.clear()
     },
   }
 }
@@ -117,6 +133,24 @@ const changesScene = (
 /** Half a fade, which is where the veil is full. A cut has none, and swaps on its instant. */
 const halfOf = (transition: TimelineTransition): number =>
   transition.kind === 'cut' ? 0 : transition.duration / 2
+
+/**
+ * How loud a row is at that instant — its own gain, taken down by whichever fade it is inside.
+ *
+ * 🛑 The two were declared and read by nobody: a row saved with a one-second fade came out full
+ * from the first sample. The shorter of the two wins where they overlap, as a mixer does.
+ */
+function levelOf(sound: TimelineMedia, now: number): number {
+  const gain = Number.isFinite(sound.gain) ? Math.min(Math.max(sound.gain ?? 1, 0), 1) : 1
+  const since = now - sound.start
+  const until = sound.start + sound.duration - now
+
+  return gain * Math.min(rampOf(since, sound.fadeIn), rampOf(until, sound.fadeOut))
+}
+
+/** A ramp in `[0, 1]`: full when there is no fade to speak of, or once it is through. */
+const rampOf = (elapsed: number, over: number | undefined): number =>
+  over === undefined || !Number.isFinite(over) || over <= 0 ? 1 : Math.min(elapsed / over, 1)
 
 /**
  * 🛑 ONE transition at a time — the LAST of the list that is running.

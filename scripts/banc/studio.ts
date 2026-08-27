@@ -18,7 +18,7 @@ import { describeStudio } from '@main/assistant/studioState'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
-import { SCRIPT_EXTENSION } from '@shared/domain/game'
+import { emptyGame, SCRIPT_EXTENSION, type GameManifest } from '@shared/domain/game'
 import { standInForWorkers } from './codeWorker'
 import { drawing } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -55,6 +55,8 @@ export type Studio = {
   documents: () => readonly DocumentDescriptor[]
   front: () => DocumentDescriptor | null
   files: () => readonly string[]
+  /** What `game.json` holds — the manifest a prefab or a script is named in. */
+  game: () => GameManifest
   assets: () => readonly Asset[]
   jobs: () => readonly Job[]
   /** The repository, as this run left it — section 58 reads nothing else. */
@@ -124,6 +126,7 @@ export async function createStudio(
   const cloud = createMemoryCloud(folder, catalog)
   const documentsOnDisk = new Map(descriptorsOf(folder).map(one => [one.id, one]))
   const git = createMemoryGit()
+  let manifest = emptyGame()
   const shell = createMemoryShell(assetId => catalog.rows().find(one => one.id === assetId) ?? null)
 
   installFakeBridge({
@@ -169,6 +172,13 @@ export async function createStudio(
       writeScript: async (path, source) => {
         await folder.write(path, source)
         return true
+      },
+      // 🛑 A PORT: `game.json`, held in memory. The default REFUSES a write, so a manifest was
+      // one more thing no scenario could ever see change.
+      read: () => Promise.resolve({ game: manifest, trouble: null }),
+      write: written => {
+        manifest = written
+        return Promise.resolve({ game: manifest, trouble: null })
       },
     },
     project: {
@@ -376,6 +386,7 @@ export async function createStudio(
     documents: () => Object.values(useDocuments.getState().documents),
     front,
     files: () => folder.paths(),
+    game: () => manifest,
     assets: () => catalog.rows(),
     jobs: () => useJobs.getState().jobs,
     references: () => references,

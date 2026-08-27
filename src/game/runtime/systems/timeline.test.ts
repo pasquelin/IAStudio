@@ -16,17 +16,21 @@ const assetRef = (id: string): Ref => ({ kind: 'asset', id })
 function listening() {
   const played: string[] = []
   const stopped: string[] = []
+  /** Every level a row was set to, in order: what a fade IS, read back. */
+  const levels: number[] = []
   const audio: AudioPort = {
-    play: ref => {
+    play: (ref, how) => {
       played.push(ref.kind === 'asset' ? ref.id : '')
+      levels.push(how.volume)
       const voice: AudioVoice = {
         stop: () => void stopped.push(ref.kind === 'asset' ? ref.id : ''),
+        gain: level => void levels.push(level),
       }
       return voice
     },
     stopAll: () => {},
   }
-  return { audio, played, stopped }
+  return { audio, played, stopped, levels }
 }
 
 function running(timeline: Partial<AnimationTimeline>, over: Partial<AudioPort> = {}) {
@@ -175,5 +179,55 @@ describe('a transition that goes somewhere', () => {
     for (let at = 0; at < 60; at++) world.step(STEP)
 
     expect(wanted).toEqual([])
+  })
+})
+
+/** 🛑 Declared since the timeline arrived, saved on every write, and heard by nobody. */
+describe('a sound that fades', () => {
+  const SOUND = { id: 's1', assetId: 'asset-1', start: 0, duration: 2 * SECOND }
+
+  it('comes up over its fade rather than at full from the first sample', () => {
+    const { world, levels } = running({ audio: [{ ...SOUND, fadeIn: SECOND }] })
+
+    world.step(STEP)
+    const opening = levels[0] ?? 1
+    for (let at = 0; at < 30; at++) world.step(STEP)
+
+    expect(opening).toBeLessThan(0.1)
+    expect(levels.at(-1) ?? 0).toBeCloseTo(0.5, 1)
+  })
+
+  it('goes down over its fade out, and its own gain caps the lot', () => {
+    const { world, levels } = running({ audio: [{ ...SOUND, gain: 0.4, fadeOut: SECOND }] })
+
+    for (let at = 0; at < 90; at++) world.step(STEP)
+
+    expect(levels[0]).toBeCloseTo(0.4, 2)
+    expect(levels.at(-1) ?? 1).toBeLessThan(0.3)
+  })
+
+  /** 🛑 Both ramps run past 1 in the middle of a row, and multiplied they would DOUBLE the gain. */
+  it('never plays a row louder than its own gain, whatever its fades', () => {
+    const { world, levels } = running({
+      audio: [{ ...SOUND, gain: 0.5, fadeIn: SECOND / 2, fadeOut: SECOND / 2 }],
+    })
+
+    for (let at = 0; at < 110; at++) world.step(STEP)
+
+    expect(Math.max(...levels)).toBeLessThanOrEqual(0.5)
+    // And it DOES reach it: a bound that clamped everything to nothing would pass the line above.
+    expect(Math.max(...levels)).toBeCloseTo(0.5, 2)
+  })
+
+  /**
+   * 🛑 Written once and left alone: a loop with no fade crossing the port sixty times a second
+   * for a number that never moves is what the plan's budget is spent on.
+   */
+  it('plays a row with no fade at its own gain, and writes it once', () => {
+    const { world, levels } = running({ audio: [{ ...SOUND, gain: 0.6 }] })
+
+    for (let at = 0; at < 30; at++) world.step(STEP)
+
+    expect(levels).toEqual([0.6])
   })
 })

@@ -645,6 +645,7 @@ describe('the lists that stand for a union', () => {
       'timeline.remove': true,
       'timeline.template': true,
       'game.template': true,
+      'prefab.define': true,
       'prefab.instantiate': true,
       'game.export': true,
       'context.read': true,

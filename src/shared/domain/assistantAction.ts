@@ -283,6 +283,7 @@ export type ActionName =
   | 'timeline.remove'
   | 'timeline.template'
   | 'game.template'
+  | 'prefab.define'
   | 'prefab.instantiate'
   | 'game.export'
   | 'context.read'

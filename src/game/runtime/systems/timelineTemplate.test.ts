@@ -32,7 +32,7 @@ function played(timeline: AnimationTimeline) {
   const audio: AudioPort = {
     play: ref => {
       sounds.push(ref.kind === 'asset' ? ref.id : '')
-      return { stop: () => {} }
+      return { stop: () => {}, gain: () => {} }
     },
     stopAll: () => {},
   }

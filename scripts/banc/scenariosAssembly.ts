@@ -24,16 +24,25 @@ export const ASSEMBLY_SCENARIOS: readonly Scenario[] = [
     passed: run => read.world(run)?.play.camera === 'topDown' && read.nodes(run).length > 0,
   },
   {
+    /** 🛑 What fills `game.prefabs`, which `ref.ts` names as the resolver and nothing wrote. */
+    name: '63.3 names the open scene as a prefab',
+    said: ['Appelle cette scène un prefab nommé Caisse.'],
+    setup: scene(),
+    // The DOCUMENT as well as the name: a model that hallucinated one would otherwise score.
+    passed: run =>
+      run.studio.game().prefabs.some(one => one.name === 'Caisse' && one.document.length > 0),
+  },
+  {
     /** The front document as well as the barrel: OPENING the prefab would leave both readable. */
-    name: '63.3 instances the Scène 1 prefab into the open scene',
+    name: '63.4 instances the Scène 1 prefab into the open scene',
     said: ['Pose le prefab Scène 1 dans cette scène.'],
     setup: scene(),
     passed: run =>
       read.front(run)?.title === 'Test MCP' && read.nodeNamed(run, 'BarrelLid') !== undefined,
   },
   {
-    /** The front document as well, like 63.3: opening the prefab and dragging its barrel scores. */
-    name: '63.4 instances it three metres to the right',
+    /** The front document as well, like 63.4: opening the prefab and dragging its barrel scores. */
+    name: '63.5 instances it three metres to the right',
     said: ['Pose le prefab Scène 1 à trois mètres sur la droite.'],
     setup: scene(),
     passed: run =>

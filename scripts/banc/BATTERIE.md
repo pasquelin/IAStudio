@@ -937,6 +937,7 @@ Dans la scène Test MCP :
 
 - [ ] « Fais-moi un jeu à la troisième personne. »
 - [ ] « Fais-moi un jeu vu de dessus. »
+- [ ] « Appelle cette scène un prefab nommé Caisse. »
 - [ ] « Pose le prefab Scène 1 dans cette scène. »
 - [ ] « Pose le prefab Scène 1 à trois mètres sur la droite. »
 

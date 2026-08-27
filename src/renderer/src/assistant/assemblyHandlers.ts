@@ -1,11 +1,14 @@
 import { refused } from '@shared/domain/assistant'
+import { prefabDocumentOf, prefabIdFor, withPrefab } from '@shared/domain/game'
+import { refFromString, refToString } from '@shared/domain/ref'
 import { isSceneTemplateId } from '@shared/domain/sceneTemplate'
 import { addNodes } from '@/engines/scene/commands'
 import { instancedNodes, prefabNodes } from '@/engines/scene/prefab'
 import { layOutTemplate } from '@/engines/scene/templateCommands'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { getBridge } from '@/services/bridge'
-import { sceneDocumentNamed } from '@/stores/documents'
+import { newId } from '@/helpers/ids'
+import { documentById, sceneDocumentNamed, useDocuments } from '@/stores/documents'
 import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
@@ -32,11 +35,46 @@ export const ASSEMBLY_HANDLERS: ActionHandlers = {
     }
   },
 
+  'prefab.define': async input => {
+    const named = textOf(input, 'name') ?? ''
+    if (named.length === 0) return refused('badInput', 'a prefab needs a name')
+
+    // The scene in FRONT when none is named: « fais un prefab de ça » is what a person says.
+    const wanted = textOf(input, 'document') ?? ''
+    const documentId = wanted.length === 0 ? mounted()?.documentId : sceneDocumentNamed(wanted)
+    if (!documentId) return refused('wrongSurface', 'no scene to name as a prefab')
+    // 🛑 That the project HOLDS it: `sceneDocumentNamed` falls back on the word itself, so any
+    // string named a prefab — and every instantiation of it answered `notFound` for ever after.
+    if (documentById(useDocuments.getState(), documentId)?.kind !== 'scene') {
+      return refused('notFound', `no scene named "${wanted}"`)
+    }
+
+    const bridge = getBridge()
+    if (!bridge) return refused('noBridge')
+
+    // 🛑 Read, changed and written whole, and nothing serialises it: two calls in flight, or a
+    // script renamed at the same moment (`main/project/scriptPaths.ts` writes the same file),
+    // and the last one wins. The same loss `main/project/game.ts` already declares.
+    try {
+      const held = await bridge.game.read()
+      if (held.trouble !== null) return refused('failed', `game.json is ${held.trouble}`)
+
+      // 🛑 The id it already had: a reference written into a component or a script must survive
+      // its piece being renamed or rebound, which a fresh id every time made impossible.
+      const id = prefabIdFor(held.game, named, documentId) ?? newId()
+      const prefab = { id, name: named, document: documentId }
+      await bridge.game.write(withPrefab(held.game, prefab))
+      return { ok: true, data: { ...prefab, ref: refToString({ kind: 'prefab', id: prefab.id }) } }
+    } catch (error) {
+      return refused('failed', String(error))
+    }
+  },
+
   'prefab.instantiate': async input => {
     if (!mounted()) return refused('wrongSurface')
 
     const named = textOf(input, 'prefab') ?? ''
-    const documentId = sceneDocumentNamed(named)
+    const documentId = await prefabDocument(named)
 
     const read = await prefabRead(documentId)
     if ('refusal' in read) return read.refusal
@@ -84,5 +122,25 @@ async function prefabRead(
   } catch (error) {
     // `failed`, never `badInput`: told its INPUT is wrong, a model rewrites the name and retries.
     return { refusal: refused('failed', `reading ${documentId}: ${String(error)}`) }
+  }
+}
+
+/**
+ * Which document a prefab names — a `prefab:` reference through the manifest, or a title or id.
+ *
+ * 🛑 `ref.ts` says `game.prefabs` resolves a `prefab:` id, and `prefab.define` now fills it. A
+ * reference the manifest does not hold falls back to a document id, which is what one written by
+ * hand usually is.
+ */
+async function prefabDocument(named: string): Promise<string> {
+  const ref = refFromString(named)
+  if (ref?.kind !== 'prefab') return sceneDocumentNamed(named)
+
+  try {
+    const held = await getBridge()?.game.read()
+    return (held && prefabDocumentOf(held.game, ref.id)) ?? ref.id
+  } catch {
+    // An unreadable manifest is the author's to repair; a prefab named by its id still resolves.
+    return ref.id
   }
 }

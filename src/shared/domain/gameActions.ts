@@ -367,6 +367,23 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /**
+     * Names a document of the project as a reusable piece, in `game.json`.
+     *
+     * 🛑 What fills `game.prefabs`, which `ref.ts` declares as the resolver of a `prefab:` id and
+     * which nothing wrote until now — so no such reference could ever resolve.
+     */
+    name: 'prefab.define',
+    titleKey: 'assistant.actions.prefabDefine.title',
+    descriptionKey: 'assistant.actions.prefabDefine.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.prefabName', required: true },
+      { key: 'document', kind: 'text', labelKey: 'assistant.fields.prefabSource', required: false },
+    ],
+  }),
+  action({
     /** A document of the project, instanced where it is asked for — its nodes, its components. */
     name: 'prefab.instantiate',
     titleKey: 'assistant.actions.prefabInstantiate.title',
