@@ -81,6 +81,7 @@ describe('a game whose systems are failing', () => {
           fps: 60,
           frameMs: 16,
           entities: 1,
+          errors: [],
           logs: [
             { level: 'info', message: 'started', at: 0 },
             { level: 'error', message: 'system script threw: broken', at: 1 },

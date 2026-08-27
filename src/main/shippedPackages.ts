@@ -15,6 +15,7 @@
 export const SHIPPED: string[] = [
   // Runtime dependencies, loaded from `node_modules` by the main process.
   '@dimforge/rapier3d-compat',
+  '@jitl/quickjs-singlefile-browser-release-sync',
   '@mdi/js',
   '@mdi/react',
   '@modelcontextprotocol/sdk',
@@ -28,6 +29,7 @@ export const SHIPPED: string[] = [
   'node-llama-cpp',
   'opentype.js',
   'pixi.js',
+  'quickjs-emscripten-core',
   'sherpa-onnx-node',
   'simple-git',
   'three',
@@ -55,6 +57,9 @@ export const SHIPPED: string[] = [
   'remark-gfm',
   'tailwind-merge',
   'tailwindcss',
+  // Shipped since the scripts lot: `transpileModule` turns an author's TypeScript into what the
+  // sandbox runs, in a worker of the renderer. It is a build tool everywhere else.
+  'typescript',
   'wavesurfer.js',
   'zod',
   'zustand',
@@ -96,7 +101,6 @@ export const BUILD_ONLY: string[] = [
   'knip',
   'prettier',
   'prettier-plugin-tailwindcss',
-  'typescript',
   'typescript-eslint',
   'vite',
   'vitest',

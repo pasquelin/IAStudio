@@ -47,6 +47,11 @@ export type FileOpsDeps = {
    * shelf over a `.pdf` of storyboard notes is a folder walk for nothing.
    */
   assetsChanged: () => void
+  /**
+   * Told what actually moved, so what the studio references BY PATH can follow. Only `game.json`
+   * does — a script is an ordinary `.ts` file, and every other reference carries an identifier.
+   */
+  pathsChanged?: (changes: readonly PathChange[]) => void
 }
 
 /**
@@ -72,6 +77,7 @@ export function createFileOps({
   catalog,
   newBatchId,
   assetsChanged,
+  pathsChanged,
 }: FileOpsDeps): FileOps {
   /**
    * The batches this project can take back, oldest first, and the ones taken back.
@@ -174,6 +180,9 @@ export function createFileOps({
 
     if (done.some(({ from, to }) => from && to)) await clearJournal(root)
     if (forgotten > 0) assetsChanged()
+    // Last, and after the catalogue: what references a file BY PATH — `game.json` alone — has
+    // to be told, and it is told about what actually happened rather than about what was asked.
+    if (done.length > 0) pathsChanged?.(done)
   }
 
   const run = async (request: FileRequest): Promise<FileOutcome> => {

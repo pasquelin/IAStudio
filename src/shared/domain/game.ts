@@ -28,6 +28,12 @@ export const GAME_FILE = 'game.json'
  */
 export type GameScript = { id: string; path: string }
 
+/** What a script IS on disk, and the only extension the studio runs. */
+export const SCRIPT_EXTENSION = '.ts'
+
+/** One script's file and its text — what a PLAY compiles, and what an editor opens. */
+export type GameScriptFile = { path: string; source: string }
+
 /** A reusable piece, named, defined by the document it lives in. */
 export type GamePrefab = { id: string; name: string; document: string }
 

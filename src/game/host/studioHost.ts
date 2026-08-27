@@ -4,11 +4,13 @@ import type { GameApi } from '../api/gameApi'
 import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
 import type { PhysicsPort } from '../ports/physicsPort'
+import type { ScriptPort } from '../ports/scriptPort'
 import type { RenderPort } from '../ports/renderPort'
 import { createDomInput, type DomInputTarget } from './domInput'
 import { createHostedAssets } from './hostedAssets'
 import { createInertAudio } from './inertAudio'
 import { createInertPhysics } from './inertPhysics'
+import { createInertScripts } from './inertScripts'
 import { createInertRender } from './inertRender'
 import { createRefusedAi } from './refusedAi'
 import { createRingLog } from './ringLog'
@@ -21,6 +23,8 @@ export type StudioHostDeps = {
   render?: RenderPort
   /** What simulates. Absent until the engine's WebAssembly has landed — see `loadRapierPhysics`. */
   physics?: PhysicsPort
+  /** Where a game's own code runs. Absent leaves every script silent — see `loadQuickjsScripts`. */
+  script?: ScriptPort
   /** How the studio spells an asset URL — `assetUrl` from `@shared/domain/asset`. */
   urlForAsset: (id: string) => string
   /**
@@ -39,6 +43,7 @@ export function createStudioHost(deps: StudioHostDeps): GameApi {
     input: createDomInput(deps.input),
     render: deps.render ?? createInertRender(),
     physics: deps.physics ?? createInertPhysics(),
+    script: deps.script ?? createInertScripts(),
     audio: createInertAudio(),
     log,
     ai: createRefusedAi(log),

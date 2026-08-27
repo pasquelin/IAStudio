@@ -159,6 +159,9 @@ import { runnerOf } from './provider/runner'
 import type { AskUser } from './project/documentDialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createFileOps, type FileOps } from './project/fileOps'
+import { createProjectGame, type ProjectGameStore } from './project/game'
+import { createGameScripts, type GameScriptStore } from './project/gameScripts'
+import { keepScriptPaths } from './project/scriptPaths'
 import {
   createFolderReader,
   createFolderWriter,
@@ -338,6 +341,8 @@ export type Services = {
    * about — which is why the two asset renames live in there rather than here.
    */
   files: FileOps
+  game: ProjectGameStore
+  scripts: GameScriptStore
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
@@ -1125,6 +1130,13 @@ export function createServices(settings: SettingsStore): Services {
     folderNames: relative => folder.names(relative),
   })
 
+  const game = createProjectGame({ rootOf: () => project.current()?.path ?? null })
+
+  const scripts = createGameScripts({
+    rootOf: () => project.current()?.path ?? null,
+    walk: () => folder.walk(),
+  })
+
   const files = createFileOps({
     // `null` rather than `''`: with no project open there is no folder to write in, and every
     // gesture answers an empty outcome instead of resolving a path against nothing.
@@ -1134,6 +1146,9 @@ export function createServices(settings: SettingsStore): Services {
     newBatchId: () => randomUUID(),
     // Copies, moves and deletions, which name folders rather than rows — see `fileOps`.
     assetsChanged: () => broadcast(EVENTS.assetsChanged, []),
+    // 🛑 The one reference the studio holds by PATH: a script moved in the explorer would
+    // otherwise leave `game.json` pointing where the file no longer is, and nothing would rougir.
+    pathsChanged: changes => void keepScriptPaths(game, changes),
   })
 
   const ffmpeg = createFfmpegResolver(() => ({
@@ -2078,6 +2093,8 @@ export function createServices(settings: SettingsStore): Services {
     exists: existsSync,
     folder,
     files,
+    game,
+    scripts,
     reconciler,
     context,
     promptContext,

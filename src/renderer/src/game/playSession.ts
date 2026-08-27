@@ -1,8 +1,11 @@
 import { assetUrl } from '@shared/domain/asset'
-import type { PlayState, RuntimeReport } from '@shared/domain/gameRuntime'
+import type { PlayState, RuntimeError, RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
 import { createStudioHost } from '@game/host/studioHost'
+import { refToString } from '@shared/domain/ref'
 import type { PhysicsPort } from '@game/ports/physicsPort'
+import type { ScriptModule, ScriptPort } from '@game/ports/scriptPort'
+import type { ScriptFault } from '@game/script/frame'
 import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -12,6 +15,24 @@ import { worldFromScene } from './worldFromScene'
 /** How often the game says what it is doing. Six times a second, and that is a decision — see
  * `publish`. */
 const REPORT_MS = 160
+
+/** As many faults as the log keeps lines: enough to read one back, short enough to hold. */
+const ERRORS_KEPT = 200
+
+/**
+ * The fault as something a reader can OPEN — the script by its own reference, the entity by the
+ * one naming the document it lives in, which a node id alone does not.
+ */
+const addressed = (fault: ScriptFault, documentId: string): RuntimeError => ({
+  script: fault.script,
+  entity: fault.entity
+    ? refToString({ kind: 'entity', document: documentId, id: fault.entity })
+    : null,
+  message: fault.message,
+  line: fault.line,
+  column: fault.column,
+  at: Date.now(),
+})
 
 /** What drives the frames. Injected so a test can step them rather than wait for a browser. */
 export type FrameDriver = {
@@ -37,6 +58,10 @@ export type PlaySessionDeps = {
   frames: FrameDriver
   /** What simulates. Absent leaves the game inert — nothing falls and nothing blocks. */
   physics?: PhysicsPort
+  /** Where a game's own code runs. Absent leaves every script silent. */
+  script?: ScriptPort
+  /** Already transpiled by the studio: the sandbox runs JavaScript, an author writes TypeScript. */
+  modules?: readonly ScriptModule[]
 }
 
 /**
@@ -53,12 +78,23 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     urlForAsset: assetUrl,
     render,
     physics: deps.physics,
+    script: deps.script,
   })
   if (!deps.physics) {
     ports.log.write('warn', 'no physics engine: nothing falls, nothing blocks, nobody walks')
   }
 
-  const world = worldFromScene(deps.documentId, deps.editState(), ports)
+  // Bounded like the log, and for the same reason: a script failing every step writes without end.
+  const errors: RuntimeError[] = []
+  const noted = (fault: ScriptFault): void => {
+    errors.push(addressed(fault, deps.documentId))
+    if (errors.length > ERRORS_KEPT) errors.shift()
+  }
+
+  const world = worldFromScene(deps.documentId, deps.editState(), ports, {
+    modules: deps.modules ?? [],
+    onFault: noted,
+  })
   const loop = createGameLoop(world)
   // The one piece of studio state a game DOES write, and only when the set is not flown by hand:
   // in `orbit` the runtime never touches the camera, so a STOP must not undo what a hand orbited.
@@ -80,6 +116,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       frameMs,
       entities: world.entities.count(),
       logs: ports.log.recent(),
+      errors: [...errors],
     })
 
   /**

@@ -1,8 +1,13 @@
 import { create } from 'zustand'
 import { NOT_PLAYING, type RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
+import { refToString } from '@shared/domain/ref'
 import { loadRapierPhysics } from '@game/host/rapierPhysics'
+import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import type { PhysicsPort } from '@game/ports/physicsPort'
+import type { ScriptModule, ScriptPort } from '@game/ports/scriptPort'
+import { createScriptCompiler } from '@/engines/code/scriptCompiler'
+import { getBridge } from '@/services/bridge'
 import { animationFrames, startPlay, type PlaySession } from '@/game/playSession'
 import { sceneEngineOf } from './sceneEngines'
 import { sceneOf, useScenes } from './scenes'
@@ -75,17 +80,21 @@ async function begin(
   onReport: (report: RuntimeReport) => void,
 ): Promise<void> {
   let physics: PhysicsPort | undefined
+  let script: ScriptPort | undefined
   try {
-    physics = await loadRapierPhysics()
+    // Together: the two machines are independent, and one after the other would double the wait
+    // before anything moves.
+    ;[physics, script] = await Promise.all([loadRapierPhysics(), loadQuickjsScripts()])
   } catch {
-    // Said by the session itself, on the game's own log: a game with no engine still runs, it
-    // just has nothing to fall onto.
+    // Said by the session itself, on the game's own log: a game missing an engine still runs.
   }
 
+  const modules = await compiled()
   const renderer = sceneEngineOf(documentId)
-  // Stopped, overtaken by a later Play, or its viewport closed while the engine was loading.
+  // Stopped, overtaken by a later Play, or its viewport closed while the engines were loading.
   if (starting.get(documentId) !== token || !renderer) {
     physics?.dispose()
+    script?.dispose()
     return
   }
   starting.delete(documentId)
@@ -99,10 +108,49 @@ async function begin(
       input,
       frames: animationFrames(),
       physics,
+      script,
+      modules,
       onReport,
     }),
   )
 }
+
+/**
+ * Every script the project holds, compiled.
+ *
+ * 🛑 The COMPILER is kept for the window, not the modules: what a Play must not do is parse nine
+ * megabytes of TypeScript again for a file nobody touched — and a file that WAS touched has to
+ * be read again, which is why the sources are asked for every time and the cache is keyed on
+ * their digest.
+ */
+async function compiled(): Promise<readonly ScriptModule[]> {
+  const files = (await getBridge()?.game.scripts()) ?? []
+  if (files.length === 0) return []
+
+  compiler ??= createScriptCompiler()
+  const { modules, troubles } = await compiler.compile(
+    files.map(file => ({
+      script: refToString({ kind: 'script', path: file.path }),
+      source: file.source,
+    })),
+  )
+  for (const trouble of troubles) {
+    // Refused at compile, and named: what the sandbox would otherwise throw halfway through.
+    modules.push({ script: trouble.script, code: refusal(trouble.script, trouble) })
+  }
+  return modules
+}
+
+/**
+ * A module that does nothing but SAY why it is not there, so an author sees the refusal on the
+ * game's own log rather than a script that silently never ran.
+ */
+const refusal = (script: string, trouble: { message: string; line: number }): string =>
+  `exports.default = defineScript({ onCreate() { game.log.error(${JSON.stringify(
+    `${script}:${trouble.line} — cannot import ${trouble.message}`,
+  )}) } })`
+
+let compiler: ReturnType<typeof createScriptCompiler> | null = null
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */
 export function playReportOf(state: PlayStoreState, documentId: string): RuntimeReport {

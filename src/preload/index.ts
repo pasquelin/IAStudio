@@ -157,6 +157,12 @@ const bridge: StudioBridge = {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
     exportPicture: (name, image) => ipcRenderer.invoke(CHANNELS.dialogExportPicture, name, image),
   },
+  game: {
+    read: () => ipcRenderer.invoke(CHANNELS.gameRead),
+    write: game => ipcRenderer.invoke(CHANNELS.gameWrite, game),
+    scripts: () => ipcRenderer.invoke(CHANNELS.gameScripts),
+    writeScript: (path, source) => ipcRenderer.invoke(CHANNELS.gameWriteScript, path, source),
+  },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),

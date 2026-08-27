@@ -96,6 +96,11 @@ type ChannelMethod = {
   [CHANNELS.dialogPickPath]: StudioBridge['dialog']['pickPath']
   [CHANNELS.dialogExportPicture]: StudioBridge['dialog']['exportPicture']
 
+  [CHANNELS.gameRead]: StudioBridge['game']['read']
+  [CHANNELS.gameWrite]: StudioBridge['game']['write']
+  [CHANNELS.gameScripts]: StudioBridge['game']['scripts']
+  [CHANNELS.gameWriteScript]: StudioBridge['game']['writeScript']
+
   [CHANNELS.documentList]: StudioBridge['documents']['list']
   [CHANNELS.documentRead]: StudioBridge['documents']['read']
   [CHANNELS.documentWrite]: StudioBridge['documents']['write']

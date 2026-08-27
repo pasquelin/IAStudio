@@ -8,6 +8,7 @@ import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asse
 import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
+import type { GameManifest, GameScriptFile, GameState } from './domain/game'
 import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
 import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
@@ -181,6 +182,11 @@ export type Channels = {
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
+
+  gameRead: 'game:read'
+  gameWrite: 'game:write'
+  gameScripts: 'game:scripts'
+  gameWriteScript: 'game:write-script'
 
   documentList: 'document:list'
   documentRead: 'document:read'
@@ -398,6 +404,11 @@ export const CHANNELS: Channels = {
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
+
+  gameRead: 'game:read',
+  gameWrite: 'game:write',
+  gameScripts: 'game:scripts',
+  gameWriteScript: 'game:write-script',
 
   documentList: 'document:list',
   documentRead: 'document:read',
@@ -1380,6 +1391,19 @@ export type StudioBridge = {
      * no filesystem, and the bytes are what it has.
      */
     exportPicture: (name: string, image: string) => Promise<string | null>
+  }
+  /**
+   * What makes a project a GAME — the manifest beside the documents, and the `.ts` files a Play
+   * compiles. One project, one game: there is no document kind for either.
+   */
+  game: {
+    read: () => Promise<GameState>
+    /** The whole manifest in, the whole truth back. Refuses a file the studio cannot read. */
+    write: (game: GameManifest) => Promise<GameState>
+    /** Every script of the project, with its text. What a PLAY hands the sandbox. */
+    scripts: () => Promise<readonly GameScriptFile[]>
+    /** Whether it was written. Refused for a path that is not a script of THIS project. */
+    writeScript: (path: string, source: string) => Promise<boolean>
   }
   documents: {
     /** Every document the open project holds, read off its folder — the one source of truth. */

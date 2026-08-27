@@ -8,6 +8,7 @@ import type { LogPort } from '../ports/logPort'
 import type { NetPort } from '../ports/netPort'
 import type { PhysicsPort } from '../ports/physicsPort'
 import type { RenderPort } from '../ports/renderPort'
+import type { ScriptPort } from '../ports/scriptPort'
 
 /**
  * What a script sees as `game`. A runtime inside the studio and one inside an exported game
@@ -18,6 +19,7 @@ export type GameApi = {
   input: InputPort
   render: RenderPort
   physics: PhysicsPort
+  script: ScriptPort
   audio: AudioPort
   log: LogPort
   ai: AiPort
