@@ -112,7 +112,6 @@ In other words: an armed tool never needs the menu to be taken up again.
 |---|---|---|
 | **Move** | `V` | drags the active layer's content |
 | **Hand** | `H` | pans the view |
-| **Scale** | `K` | shows eight grips and a rotation handle around the armed layer |
 
 > **This is the group armed on opening.** A document opens on **Move**, never on the brush: the
 > first click on a picture you have just opened must not be able to leave a mark on it. The

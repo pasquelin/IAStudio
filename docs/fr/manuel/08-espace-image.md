@@ -118,7 +118,6 @@ Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 |---|---|---|
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
-| **Échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
 
 > **C’est le groupe armé à l’ouverture.** Un document s’ouvre sur **Déplacement**, jamais sur le
 > pinceau : le premier clic sur une image que vous venez d’ouvrir ne doit pas pouvoir y laisser
