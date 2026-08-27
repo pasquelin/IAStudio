@@ -23,6 +23,15 @@ export const IDENTITY_TRANSFORM: Transform = {
   scale: { x: 1, y: 1, z: 1 },
 }
 
+/** A transform nothing else holds a reference into — what a runtime copies out of a document. */
+export function copyTransform(transform: Transform): Transform {
+  return {
+    position: { ...transform.position },
+    rotation: { ...transform.rotation },
+    scale: { ...transform.scale },
+  }
+}
+
 export function isVector3(value: unknown): value is Vector3 {
   if (!isRecord(value)) return false
   return ['x', 'y', 'z'].every(axis => typeof value[axis] === 'number')

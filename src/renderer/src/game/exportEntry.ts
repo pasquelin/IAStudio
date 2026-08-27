@@ -10,6 +10,7 @@ import { loadRapierPhysics } from '@game/host/rapierPhysics'
 import type { EntityPlacement } from '@game/ports/renderPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
+import { placementsOf } from '@game/runtime/placements'
 import { sceneFromGltf } from '@/engines/scene/gltfDocument'
 import { animationFrames } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
@@ -102,8 +103,6 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     }
   }
 
-  // Reused across frames: one object per entity per frame is the only allocation a still game
-  // would otherwise make.
   const placements: EntityPlacement[] = []
   const frames = animationFrames()
 
@@ -114,22 +113,11 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       loop.reset()
     }
     // 🛑 Named and caught: a `game.json` pointing at a file nothing serves would otherwise kill
-    // the page by `unhandledRejection`, and a game has no console anybody watches.
-    void asked()
+    // the page by `unhandledRejection`, and a game has no console anybody watches. Asked only
+    // when there IS one: two promises a frame, for a request that is almost never there.
+    if (swap.pending()) void asked()
 
-    let count = 0
-    for (const entity of world.entities.all()) {
-      const held = placements[count]
-      if (held) {
-        held.entity = entity.id
-        held.transform = entity.transform
-      } else {
-        placements.push({ entity: entity.id, transform: entity.transform })
-      }
-      count += 1
-    }
-    placements.length = count
-    render.place(placements)
+    render.place(placementsOf(world, placements))
     // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
     if (fading > 0) {
       const left = 1 - world.time.elapsed / fading

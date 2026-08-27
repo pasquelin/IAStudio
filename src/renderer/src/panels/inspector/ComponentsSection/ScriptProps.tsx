@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { Component, JsonValue } from '@shared/domain/component'
+import { isRecord } from '@shared/guards'
 import type { GestureProps } from '@/design/styles'
 import { scriptProps } from '@/engines/code/scriptProps'
 import { useCode } from '@/stores/code'
@@ -23,11 +24,8 @@ export function ScriptProps({ component, gesture, onChange }: ScriptPropsProps) 
 
   // Read as it stands, never filtered: rewriting a filtered bag would drop, in silence, whatever
   // a script or an import put there that this panel does not draw.
-  const held = component.props
   const settings: Record<string, JsonValue> =
-    typeof held === 'object' && held !== null && !Array.isArray(held)
-      ? Object.fromEntries(Object.entries(held))
-      : {}
+    isRecord(component.props) && !Array.isArray(component.props) ? component.props : {}
 
   return (
     <>

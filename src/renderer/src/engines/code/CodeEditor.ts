@@ -2,6 +2,7 @@ import type * as Monaco from 'monaco-editor'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
+import { loadOnce } from '@game/host/loadOnce'
 import { cachedToken, onPaletteChange } from '@/engines/core/palette'
 
 /** One thing wrong with a script, where an editor opens it. The shape a problems list reads. */
@@ -89,19 +90,17 @@ export class CodeEditor {
 
   /** The shared model for that script, made on first ask, counted once per editor. */
   private hold(script: string, source: string): Monaco.editor.ITextModel {
-    const uri = uriOf(this.monaco, script)
-    const held =
-      SHARED.get(script) ??
+    let held = SHARED.get(script)
+    if (!held) {
       // `getModel` before `createModel`: the latter THROWS on a URI already taken, and a model
       // outliving this map is what a hot reload leaves behind.
-      (() => {
-        const model =
-          this.monaco.editor.getModel(uri) ??
-          this.monaco.editor.createModel(source, 'typescript', uri)
-        const made = { model, holders: 0 }
-        SHARED.set(script, made)
-        return made
-      })()
+      const uri = uriOf(this.monaco, script)
+      const model =
+        this.monaco.editor.getModel(uri) ??
+        this.monaco.editor.createModel(source, 'typescript', uri)
+      held = { model, holders: 0 }
+      SHARED.set(script, held)
+    }
 
     if (!this.holding.has(script)) {
       this.holding.add(script)
@@ -232,18 +231,10 @@ const severityOf = (worst: boolean): CodeProblem['severity'] => (worst ? 'error'
  * eighteen megabytes, more than twice what the spike suggested. The entry chunk is unchanged at
  * 1,78 Mo, which is the whole point of asking for it here.
  */
-let loading: Promise<typeof Monaco> | null = null
+const loadMonaco = loadOnce(start)
 
 export async function loadCodeEditor(deps: CodeEditorDeps): Promise<CodeEditor> {
-  loading ??= start()
-  let monaco: typeof Monaco
-  try {
-    monaco = await loading
-  } catch (trouble) {
-    loading = null
-    throw trouble
-  }
-  return new CodeEditor(monaco, deps)
+  return new CodeEditor(await loadMonaco(), deps)
 }
 
 async function start(): Promise<typeof Monaco> {

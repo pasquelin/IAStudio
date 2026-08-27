@@ -15,6 +15,7 @@ import { createGroundPlane } from '@/engines/scene/groundPlane'
 import { applyFog } from '@/engines/scene/worldBinding'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
+import { applyTransform } from '@/engines/scene/pivot'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 
 /**
@@ -85,7 +86,7 @@ export function buildGameScene(state: SceneState, assets: AssetPort): GameScene 
 
     object.name = node.name
     object.visible = node.visible
-    place(object, node)
+    applyTransform(object, node.transform)
     byEntity.set(node.id, object)
   }
 
@@ -116,7 +117,7 @@ export function buildGameScene(state: SceneState, assets: AssetPort): GameScene 
     byEntity,
     dispose: () => {
       ground.dispose()
-      for (const held of textures.values()) void held.then(texture => texture.dispose())
+      for (const held of textures.values()) void disposeWhenLoaded(held)
       scene.traverse(one => {
         if (!(one instanceof Mesh)) return
         // 🛑 RELEASED, never disposed: the same buffers are drawn by every node of that shape.
@@ -124,6 +125,15 @@ export function buildGameScene(state: SceneState, assets: AssetPort): GameScene 
         if (one.material instanceof MeshStandardMaterial) one.material.dispose()
       })
     },
+  }
+}
+
+/** A texture still in flight when the scene went: awaited, then dropped. Never rejects. */
+async function disposeWhenLoaded(held: Promise<Texture>): Promise<void> {
+  try {
+    ;(await held).dispose()
+  } catch {
+    // Never loaded, so there is nothing to release — and its failure was already reported.
   }
 }
 
@@ -154,11 +164,4 @@ const materialOf = (
   applyMaterial(material, descriptor, MESH_COLOUR)
   if (descriptor.map) dress(material, descriptor.map.assetId)
   return material
-}
-
-const place = (object: Object3D, node: SceneNode): void => {
-  const { position, rotation, scale } = node.transform
-  object.position.set(position.x, position.y, position.z)
-  object.rotation.set(rotation.x, rotation.y, rotation.z)
-  object.scale.set(scale.x, scale.y, scale.z)
 }

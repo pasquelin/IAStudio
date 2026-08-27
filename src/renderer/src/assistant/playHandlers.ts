@@ -2,7 +2,7 @@ import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { playReportOf, usePlay } from '@/stores/play'
 import { sceneEngineOf } from '@/stores/sceneEngines'
-import type { ActionHandlers } from './actionHandler'
+import type { ActionHandler, ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
 
 /**
@@ -22,13 +22,19 @@ function playing(): string | ActionOutcome {
   return documentId
 }
 
-const missed = (held: string | ActionOutcome): held is ActionOutcome => typeof held !== 'string'
+/**
+ * Runs against the scene in front, or hands back the refusal that says why there is none. The
+ * guard opened all eight handlers before this existed.
+ */
+const onPlaying =
+  (run: (documentId: string, input: Record<string, unknown>) => ActionOutcome): ActionHandler =>
+  input => {
+    const held = playing()
+    return typeof held === 'string' ? run(held, input) : held
+  }
 
 export const PLAY_HANDLERS: ActionHandlers = {
-  'play.start': () => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'play.start': onPlaying(documentId => {
     usePlay.getState().start(documentId)
     // The state as it is NOW, which is `edit` until the engines land: said rather than waited
     // for, and `runtime.report` is what a client reads a moment later.
@@ -36,38 +42,26 @@ export const PLAY_HANDLERS: ActionHandlers = {
       ok: true,
       data: { documentId, state: playReportOf(usePlay.getState(), documentId).state },
     }
-  },
+  }),
 
-  'play.stop': () => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'play.stop': onPlaying(documentId => {
     usePlay.getState().stop(documentId)
     return { ok: true }
-  },
+  }),
 
-  'play.pause': () => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'play.pause': onPlaying(documentId => {
     // 🛑 A start answers before its engines land, so there is a window where no session exists.
     // Said rather than swallowed: a model told « paused » would step a world still running.
     if (!usePlay.getState().pause(documentId)) return refused('badInput', 'no game is running yet')
     return { ok: true, data: { state: playReportOf(usePlay.getState(), documentId).state } }
-  },
+  }),
 
-  'play.resume': () => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'play.resume': onPlaying(documentId => {
     if (!usePlay.getState().resume(documentId)) return refused('badInput', 'no game is running')
     return { ok: true, data: { state: playReportOf(usePlay.getState(), documentId).state } }
-  },
+  }),
 
-  'play.step': input => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'play.step': onPlaying((documentId, input) => {
     const ran = usePlay.getState().step(documentId, numberOf(input, 'steps') ?? 1)
     // Nothing ran is not nothing happened: only a PAUSED game steps, and a game whose engines
     // are still landing is not one at all. Both are said, because they are repaired differently.
@@ -76,12 +70,9 @@ export const PLAY_HANDLERS: ActionHandlers = {
       return refused('badInput', state === 'edit' ? 'no game is running' : 'the game is not paused')
     }
     return { ok: true, data: { steps: ran, ...readingOf(documentId) } }
-  },
+  }),
 
-  'play.loadScene': input => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'play.loadScene': onPlaying((documentId, input) => {
     // Refused rather than asked for: an empty name takes the frame's one request slot, and would
     // swallow the one a script made on the same step.
     const scene = textOf(input, 'scene') ?? ''
@@ -93,23 +84,15 @@ export const PLAY_HANDLERS: ActionHandlers = {
     // 🛑 Asked for, never done here: the swap happens between two steps, and a scene the project
     // does not hold is said in the game's own log. `runtime.report` is what a client reads next.
     return { ok: true, data: { asked: scene } }
-  },
+  }),
 
-  'runtime.report': () => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
+  'runtime.report': onPlaying(documentId => ({ ok: true, data: readingOf(documentId) })),
 
-    return { ok: true, data: readingOf(documentId) }
-  },
-
-  'runtime.errors': () => {
-    const documentId = playing()
-    if (missed(documentId)) return documentId
-
+  'runtime.errors': onPlaying(documentId => {
     // 🛑 ADDRESSABLE, which is what closes the loop: the script's own reference and the line an
     // editor opens. A message alone would send a model reading every file it wrote.
     return { ok: true, data: { errors: playReportOf(usePlay.getState(), documentId).errors } }
-  },
+  }),
 }
 
 /** What a game says about itself, without the two lists a reader asks for separately. */

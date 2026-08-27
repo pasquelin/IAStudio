@@ -1,4 +1,5 @@
-import type { Transform, Vector3 } from '@shared/domain/transform'
+import { clamp } from '@shared/numeric'
+import { copyTransform, type Transform, type Vector3 } from '@shared/domain/transform'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
@@ -68,7 +69,7 @@ export function createStudioRender(
         const shown = shadow.get(placement.entity) ?? node
         if (sameTransform(shown.transform, placement.transform)) continue
 
-        shadow.set(placement.entity, { ...node, transform: copyOf(placement.transform) })
+        shadow.set(placement.entity, { ...node, transform: copyTransform(placement.transform) })
         changed = true
       }
 
@@ -95,7 +96,7 @@ export function createStudioRender(
      * of a fade — the very reason the playhead is not in the document either.
      */
     veil: amount => {
-      const wanted = Math.max(0, Math.min(amount, 1))
+      const wanted = clamp(amount, 0, 1)
       if (wanted === veiled) return
       veiled = wanted
       onVeil(wanted)
@@ -111,12 +112,6 @@ const sameView = (one: CameraView, other: CameraView): boolean =>
 
 const samePoint = (one: Vector3, other: Vector3): boolean =>
   one.x === other.x && one.y === other.y && one.z === other.z
-
-const copyOf = (transform: Transform): Transform => ({
-  position: { ...transform.position },
-  rotation: { ...transform.rotation },
-  scale: { ...transform.scale },
-})
 
 const sameTransform = (one: Transform, other: Transform): boolean =>
   one.position.x === other.position.x &&

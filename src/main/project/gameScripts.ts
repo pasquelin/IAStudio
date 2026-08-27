@@ -27,11 +27,12 @@ export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
   return {
     list: async () => {
       const root = deps.rootOf()
-      if (root === null) return []
+      const base = root === null ? null : await resolvedRoot(root)
+      if (base === null) return []
 
       // Read together rather than one after the other: a project of thirty scripts would
       // otherwise add thirty disk latencies to every Play.
-      const found = await Promise.all((await deps.walk()).map(entry => read(root, entry.path)))
+      const found = await Promise.all((await deps.walk()).map(entry => read(base, entry.path)))
       return found
         .filter((one): one is GameScriptFile => one !== null)
         .sort((one, other) => byCodeUnit(one.path, other.path))
@@ -39,7 +40,8 @@ export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
 
     write: async (path, source) => {
       const root = deps.rootOf()
-      const file = root === null ? null : await insideProject(root, path)
+      const base = root === null ? null : await resolvedRoot(root)
+      const file = base === null ? null : await insideProject(base, path)
       if (file === null) return false
 
       // The folder first: scripts land in `scripts/`, which a project made before this build —
@@ -51,8 +53,8 @@ export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
   }
 }
 
-async function read(root: string, path: string): Promise<GameScriptFile | null> {
-  const file = await insideProject(root, path)
+async function read(base: string, path: string): Promise<GameScriptFile | null> {
+  const file = await insideProject(base, path)
   if (file === null) return null
 
   try {
@@ -64,11 +66,17 @@ async function read(root: string, path: string): Promise<GameScriptFile | null> 
   }
 }
 
+/** The project root as the disk names it, or nothing when it is not there any more. */
+async function resolvedRoot(root: string): Promise<string | null> {
+  return orElse(realpath(root), null)
+}
+
 /**
  * 🛑 Both ends go through `realpath`, as `folderInsideProject` does and for its reason: a link
- * already sitting in the project names nothing suspicious and walks straight out.
+ * already sitting in the project names nothing suspicious and walks straight out. The root
+ * arrives RESOLVED: a project of thirty scripts paid thirty identical `realpath` calls a Play.
  */
-async function insideProject(root: string, path: string): Promise<string | null> {
+async function insideProject(base: string, path: string): Promise<string | null> {
   // A window names what it wants RELATIVE to the project; an absolute path is one it invented.
   if (isAbsolute(path)) return null
   if (extensionOf(path).toLowerCase() !== SCRIPT_EXTENSION) return null
@@ -76,7 +84,6 @@ async function insideProject(root: string, path: string): Promise<string | null>
   if (isPrivatePath(path)) return null
 
   try {
-    const base = await realpath(root)
     const target = resolve(base, path)
     const resolved = await orElse(realpath(target), target)
     const within = relative(base, resolved)

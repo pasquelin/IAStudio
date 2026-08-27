@@ -1,5 +1,5 @@
 import { COMPONENTS } from '@shared/domain/componentRegistry'
-import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
+import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
@@ -65,16 +65,12 @@ export function worldFromScene(
     world.entities.add({
       id: node.id,
       name: node.name,
-      transform: {
-        position: { ...node.transform.position },
-        rotation: { ...node.transform.rotation },
-        scale: { ...node.transform.scale },
-      },
+      transform: copyTransform(node.transform),
       // 🛑 Deep, not a spread: a shallow copy leaves the DOCUMENT'S own component objects in the
       // world, and a system writing into one would edit the scene being edited — with no store
       // action, so `isSceneDirty` stays false and a ⌘S saves it. Safe because a component is pure
       // JSON by contract.
-      components: node.components?.length ? JSON.parse(JSON.stringify(node.components)) : [],
+      components: structuredClone([...(node.components ?? [])]),
     })
   }
 

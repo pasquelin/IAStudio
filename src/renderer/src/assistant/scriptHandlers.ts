@@ -74,9 +74,7 @@ export const SCRIPT_HANDLERS: ActionHandlers = {
     if (!(await useCode.getState().save(script))) {
       // Taken back out: a file the project refused must not sit in the list as one it holds,
       // where the window's own guard would retry writing it on the way out.
-      useCode.setState(state => ({
-        files: Object.fromEntries(Object.entries(state.files).filter(([one]) => one !== script)),
-      }))
+      useCode.getState().forget(script)
       return refused('badInput', `"${path}" is not a script of this project`)
     }
     return { ok: true, data: { ref: script } }

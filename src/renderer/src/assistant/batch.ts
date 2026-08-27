@@ -4,6 +4,7 @@ import {
   type ActionName,
   type ActionOutcome,
 } from '@shared/domain/assistant'
+import { isRecord } from '@shared/guards'
 import type { BatchCall } from '@shared/domain/gameActions'
 
 /** What a lot holds, read ONCE — or the refusal that says why it holds nothing runnable. */
@@ -58,8 +59,4 @@ export function readBatch(input: Record<string, unknown>): BatchRead {
 const MOST_CALLS = 50
 
 const isBatchCall = (value: unknown): value is BatchCall =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as { action?: unknown }).action === 'string' &&
-  typeof (value as { input?: unknown }).input === 'object' &&
-  (value as { input?: unknown }).input !== null
+  isRecord(value) && typeof value.action === 'string' && isRecord(value.input)

@@ -10,6 +10,7 @@ import { compiledScripts } from '@/stores/play'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
+import { messageOf } from '@shared/guards'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
@@ -23,7 +24,7 @@ export const EXPORT_HANDLERS: ActionHandlers = {
     try {
       scenes = await scenesOfProject()
     } catch (error) {
-      return refused('failed', String(error))
+      return refused('failed', messageOf(error))
     }
     if (scenes.length === 0) return refused('badInput', 'this project holds no scene to export')
 

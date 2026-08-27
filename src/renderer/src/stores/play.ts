@@ -10,6 +10,7 @@ import {
   type ScriptCompiler,
   type ScriptTrouble,
 } from '@/engines/code/scriptCompiler'
+import { withoutKey } from '@/helpers/objects'
 import { animationFrames } from '@/game/frameDriver'
 import { startPlay, type PlaySession, type SceneLookup } from '@/game/playSession'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -95,7 +96,7 @@ export const usePlay = create<PlayStoreState>()(set => ({
     // Guarded: every viewport teardown calls this, playing or not, and an unconditional write
     // would re-render every subscriber for a document that was never played.
     set(state =>
-      documentId in state.reports ? { reports: withoutReport(state.reports, documentId) } : state,
+      documentId in state.reports ? { reports: withoutKey(state.reports, documentId) } : state,
     )
   },
 }))
@@ -193,12 +194,6 @@ export async function compiledScripts(): Promise<CompiledScripts> {
 export function playReportOf(state: PlayStoreState, documentId: string): RuntimeReport {
   return state.reports[documentId] ?? NOT_PLAYING
 }
-
-const withoutReport = (
-  reports: Record<string, RuntimeReport>,
-  documentId: string,
-): Record<string, RuntimeReport> =>
-  Object.fromEntries(Object.entries(reports).filter(([id]) => id !== documentId))
 
 /**
  * Another scene of the project, by the title a game names it with or by its id.
