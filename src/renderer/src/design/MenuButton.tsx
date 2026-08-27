@@ -34,6 +34,12 @@ export type MenuButtonProps = Pick<
   rows: (close: () => void) => ReactNode
   /** Fired on click, before the menu opens. Absent for a button that only opens its menu. */
   onClick?: () => void
+  /**
+   * What the click does when there is NO menu to open — `useHoverFlyout` treats a single row as
+   * none. `TitleBarSelect` published this first; without it every caller re-derived the threshold
+   * from its own arithmetic, in units the hook never uses.
+   */
+  onAct?: () => void
   /** Fired each time the menu shows, however it was opened. For rows read from somewhere that
    * changes without the app being told. Not `onOpen`, which `Collection` spends on opening an
    * item — a user's intent, where this one is a lifecycle. */
@@ -63,6 +69,7 @@ export function MenuButton({
   rowCount,
   rows,
   onClick,
+  onAct,
   onShow,
   opensOnClick,
   menu = true,
@@ -95,7 +102,8 @@ export function MenuButton({
         tipHidden={flyout.showing}
         onClick={() => {
           onClick?.()
-          if (opensOnClick) flyout.open()
+          if (!flyout.hasFlyout) onAct?.()
+          else if (opensOnClick) flyout.open()
         }}
       />
 

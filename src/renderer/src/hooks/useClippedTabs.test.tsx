@@ -7,11 +7,17 @@ const TAB = 30
 
 const ids = new Map<Element, string>()
 
-/** A strip with room for `ROOM`, holding tabs of `TAB` laid end to end from `offset`. */
+/**
+ * A strip with room for `ROOM`, holding tabs of `TAB` laid end to end from `offset`. The scroll
+ * extent follows the children, as a real strip's does: a tab cannot leave by the left unless the
+ * row is longer than the box, and a fixture that let it would prove nothing.
+ */
 function strip(count: number, offset = 0): HTMLElement {
   ids.clear()
   const element = document.createElement('div')
   element.getBoundingClientRect = () => new DOMRect(0, 0, ROOM, 0)
+  Object.defineProperty(element, 'clientWidth', { value: ROOM })
+  Object.defineProperty(element, 'scrollWidth', { get: () => element.children.length * TAB })
 
   for (let index = 0; index < count; index += 1) add(element, index, offset)
 
@@ -35,14 +41,14 @@ describe('useClippedTabs', () => {
   })
 
   it('reports a tab the strip has cut, whole or half', () => {
-    // Three fit exactly; the fourth starts inside and ends past the edge.
+    // Three fit exactly; the fourth starts inside and ends past the edge, the fifth is gone.
     expect(clipped(strip(5)).result.current).toEqual(['doc-4', 'doc-5'])
   })
 
   // The strip scrolls, so a tab can leave by the left as well — one asked for by name, and the
   // one the pointer is on, are on opposite sides of the same measurement.
   it('reports a tab that has scrolled off the left', () => {
-    expect(clipped(strip(3, -TAB)).result.current).toEqual(['doc-1'])
+    expect(clipped(strip(5, -TAB)).result.current).toEqual(['doc-1', 'doc-5'])
   })
 
   it('measures again when a tab is opened', async () => {

@@ -10,6 +10,8 @@ import { connectThroughBridge, getBridge } from '@/services/bridge'
 
 type ProjectContextState = {
   context: ContextState
+  /** Whether the file has answered. `noContext()` cannot say it — see its own doc. */
+  loaded: boolean
   /** Follows what any window writes, and reads the file once. Returns the unsubscribe. */
   connect: () => Promise<() => void>
   /** Re-reads it from scratch. The file belongs to a project, so opening one replaces it. */
@@ -21,6 +23,7 @@ type ProjectContextState = {
 /** Owned by the main process, replicated here, refreshed by the event every write pushes. */
 export const useProjectContext = create<ProjectContextState>()((set, get) => ({
   context: noContext(),
+  loaded: false,
 
   connect: connectThroughBridge(async bridge => {
     const stop = bridge.project.onContextChanged(context => set({ context }))
@@ -29,7 +32,8 @@ export const useProjectContext = create<ProjectContextState>()((set, get) => ({
   }),
 
   reload: async () => {
-    set({ context: (await getBridge()?.project.readContext()) ?? noContext() })
+    set({ loaded: false })
+    set({ context: (await getBridge()?.project.readContext()) ?? noContext(), loaded: true })
   },
 
   /**

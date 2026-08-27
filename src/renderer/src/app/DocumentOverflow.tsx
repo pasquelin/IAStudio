@@ -8,10 +8,8 @@ import { workspaceById } from '@/helpers/workspaces'
 import { useClippedTabs } from '@/hooks/useClippedTabs'
 import { useDocuments } from '@/stores/documents'
 
-/**
- * The way to a document the tab strip has run out of room for. Dockview's own dropdown is off —
- * it drew outside the studio's tokens — and the measurement it keeps private is redone here.
- */
+/** Dockview's own dropdown is off — it drew outside the studio's tokens — and the measurement it
+ * keeps private is redone here. */
 export function DocumentOverflow({ group, panels }: IDockviewHeaderActionsProps) {
   const { t } = useTranslation()
   const documents = useDocuments(state => state.documents)
@@ -21,20 +19,26 @@ export function DocumentOverflow({ group, panels }: IDockviewHeaderActionsProps)
     tab => group.model.getPanelForTab(tab)?.id,
   )
 
+  // Named by the studio when it knows the document, by the tab itself when it does not: a panel
+  // the restored layout outlived is exactly the one to reach and close, and dropping it from the
+  // list left it cut on screen, out of the count, and reachable by no gesture at all.
   const hidden = clipped.flatMap(id => {
-    const document = documents[id]
-    return document
-      ? [{ id, title: document.title, icon: workspaceById(document.workspace).icon }]
-      : []
+    const panel = panels.find(one => one.id === id)
+    if (!panel) return []
+    const open = documents[id]
+    // `?? ''` because Dockview types a title it always carries here — `ensurePanel` sets one.
+    return [
+      {
+        panel,
+        title: open?.title ?? panel.title ?? '',
+        icon: open ? workspaceById(open.workspace).icon : undefined,
+      },
+    ]
   })
 
   // Nothing hidden, no button — and it cannot flicker: taking the button back only ever gives the
   // strip room, so a strip that fits without it fits again once it is gone.
   if (hidden.length === 0) return null
-
-  const activate = (id: string): void => {
-    panels.find(panel => panel.id === id)?.api.setActive()
-  }
 
   return (
     <MenuButton
@@ -49,22 +53,20 @@ export function DocumentOverflow({ group, panels }: IDockviewHeaderActionsProps)
       className="w-auto gap-1.5 px-1.5"
       rowCount={hidden.length}
       opensOnClick
-      // A single row is no menu — `useHoverFlyout` says so and the button acts outright, so the
-      // one hidden tab has to be reachable from the click itself.
-      onClick={() => {
-        const [only] = hidden
-        if (hidden.length === 1 && only) activate(only.id)
+      // Reached when a single tab is hidden, which `useHoverFlyout` refuses to call a menu.
+      onAct={() => {
+        hidden[0]?.panel.api.setActive()
       }}
       rows={close =>
         hidden.map(entry => (
           <MenuRow
-            key={entry.id}
+            key={entry.panel.id}
             label={entry.title}
             icon={entry.icon}
             tip={HINT_LEFT(t('documents.hiddenTabHint'))}
             onSelect={() => {
               close()
-              activate(entry.id)
+              entry.panel.api.setActive()
             }}
           />
         ))

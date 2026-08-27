@@ -7,6 +7,7 @@ import {
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
+import { sameOrder } from '@shared/collections'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { frontWindow, sendToFront } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
@@ -96,11 +97,6 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-/** Generic, so a call cannot quietly compare the tools of one window to the ticks of another. */
-function sameList<T extends string>(next: readonly T[], shownList: readonly T[]): boolean {
-  return next.length === shownList.length && next.every((id, index) => id === shownList[index])
-}
-
 /**
  * Rebuilt only when something the menu draws has actually changed.
  *
@@ -117,9 +113,9 @@ function sameMenu(next: WindowMenu | null, drawn: WindowMenu | null): boolean {
 
   return (
     next.surface === drawn.surface &&
-    sameList(next.tools, drawn.tools) &&
-    sameList(next.checked, drawn.checked) &&
-    sameList(next.abilities, drawn.abilities)
+    sameOrder(next.tools, drawn.tools) &&
+    sameOrder(next.checked, drawn.checked) &&
+    sameOrder(next.abilities, drawn.abilities)
   )
 }
 

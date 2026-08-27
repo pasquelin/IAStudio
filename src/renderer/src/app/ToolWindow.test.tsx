@@ -61,10 +61,6 @@ describe('a panel lying in a band', () => {
     expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
 
-  /**
-   * The chunk takes a moment, and a dock that stays blank until it lands reads as a bug — which
-   * is what a reader saw of Git and of the context panel, both of which then said their piece.
-   */
   it('says the panel is on its way rather than showing nothing at all', () => {
     renderMontage()
 

@@ -64,7 +64,10 @@ export type ContextState = {
   trouble: ContextTrouble | null
 }
 
-/** A project with no file of its own, and a window that has not asked yet. */
+/**
+ * A project with no file of its own, and a window that has not asked yet — the two are the same
+ * value, so anything OFFERING to write the file whole must read `loaded` before it is drawn.
+ */
 export function noContext(): ContextState {
   return { cards: [], trouble: null }
 }
