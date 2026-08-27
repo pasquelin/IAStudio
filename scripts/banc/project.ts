@@ -1,4 +1,5 @@
 import type { FileKind } from '@shared/domain/folder'
+import { barrelDocument } from '@/engines/scene/prefab-fixtures'
 
 /** One stamp for everything the bench dates: nothing in it reads a clock. */
 export const WHEN = '2026-01-01T00:00:00.000Z'
@@ -34,4 +35,14 @@ export const PROJECT: readonly { path: string; kind: FileKind }[] = [
   { path: 'documents/Charge 2000 blocs.gltf', kind: 'file' },
   { path: 'documents/Scène 1.gltf', kind: 'file' },
   { path: 'documents/demo image.ora', kind: 'file' },
+]
+
+/**
+ * What one document of the project really HOLDS. Every other seeded file is a name on the disk.
+ *
+ * 🛑 Section 63 instances this one as a prefab, and no oracle could tell the gesture from a
+ * refusal if the file carried nothing: a scene with no nodes instances no nodes.
+ */
+export const DOCUMENT_SOURCES: readonly { path: string; source: string }[] = [
+  { path: 'documents/Scène 1.gltf', source: barrelDocument().content },
 ]

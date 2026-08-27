@@ -1,6 +1,6 @@
 import { TIMELINE_TEMPLATES } from './animation'
-import { GAME_TEMPLATE_IDS } from './gameTemplate'
-import { action, type AssistantAction } from './assistantAction'
+import { TEMPLATES_BY_GROUP } from './sceneTemplate'
+import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { COMPONENT_TYPES } from './componentRegistry'
 
 /**
@@ -318,6 +318,17 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
 ]
 
 /**
+ * One axis of a position, spelled `positionX` as the rest of the registry spells it: a model
+ * that learned the name on another tool would otherwise place every prefab at the origin.
+ */
+const axisField = (axis: 'X' | 'Y' | 'Z'): ActionField => ({
+  key: `position${axis}`,
+  kind: 'number',
+  labelKey: `assistant.fields.position${axis}`,
+  required: false,
+})
+
+/**
  * What puts a whole game together in one gesture.
  *
  * 🛑 An ASSEMBLY, never an engine: a template lays down nodes carrying components the runtime
@@ -337,7 +348,7 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.gameTemplate',
         required: true,
-        options: GAME_TEMPLATE_IDS,
+        options: TEMPLATES_BY_GROUP.character,
       },
     ],
   }),
@@ -350,9 +361,9 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
     reach: 'mcp',
     fields: [
       { key: 'prefab', kind: 'text', labelKey: 'assistant.fields.prefabRef', required: true },
-      { key: 'x', kind: 'number', labelKey: 'assistant.fields.positionX', required: false },
-      { key: 'y', kind: 'number', labelKey: 'assistant.fields.positionY', required: false },
-      { key: 'z', kind: 'number', labelKey: 'assistant.fields.positionZ', required: false },
+      axisField('X'),
+      axisField('Y'),
+      axisField('Z'),
     ],
   }),
 ]

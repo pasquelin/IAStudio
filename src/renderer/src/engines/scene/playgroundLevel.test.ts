@@ -171,12 +171,22 @@ describe('the playground level', () => {
     expect(new Set(names).size).toBe(names.length)
   })
 
-  it('hangs every part under a group, so the outliner stays readable', () => {
+  it('hangs every part of the course under a group, so the outliner stays readable', () => {
     const nodes = playgroundNodes()
     const groups = nodes.filter(node => node.type === 'group')
 
-    expect(groups.map(group => group.name)).toEqual(['Ground', 'Enclosure', 'Course'])
-    expect(nodes.filter(node => node.parentId === null)).toEqual(groups)
+    expect(groups.map(group => group.name)).toEqual(['Enclosure', 'Course'])
+  })
+
+  /**
+   * 🛑 What one STANDS on is the exception to the grouping: the physics refuses a body hanging
+   * from a group, so a floor tidied into one is a floor the character falls straight through.
+   */
+  it('stands the walked ground at the root, carrying a collider', () => {
+    const walked = playgroundNodes().filter(node => node.parentId === null && node.type !== 'group')
+
+    expect(walked.length).toBeGreaterThan(0)
+    expect(walked.every(node => node.components?.some(one => one.type === 'Collider'))).toBe(true)
   })
 
   /** No shape is born bare — see `checkerTextures`. A grey set says nothing about its own scale. */
