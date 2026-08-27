@@ -116,19 +116,10 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
     if (fresh.length > 0) refuse(world, world.ports.physics.add(fresh))
   }
 
-  /**
-   * Where the game has put its kinematic bodies — a `Movement` platform is the ordinary case.
-   *
-   * 🛑 Through `worldOf` like `bodyOf`, and this was the third traversal: placed raw, a platform
-   * under a group was built at its composed place and then sent to its LOCAL one on the first
-   * step — and `poses` skips a kinematic, so nothing ever brought it back.
-   */
+  /** Where the game has put its kinematic bodies — a `Movement` platform is the ordinary case. */
   const drive = (world: World): void => {
     poses.length = 0
-    for (let index = 0; index < driven.length; index++) {
-      const entity = driven[index]
-      if (!entity) continue
-
+    for (const entity of driven) {
       let pose = pool[poses.length]
       if (!pose) {
         pose = {
@@ -240,11 +231,9 @@ function settle(world: World, localOf: PhysicsSystemOptions['localOf']): void {
 }
 
 /**
- * Reused: a world with no hierarchy allocates nothing at all in `settle`.
- *
- * 🛑 One WITH a hierarchy does — `localOf` builds a matrix and decomposes it, some thirteen
- * objects a body a step. Measured on three 0.185: 0,23 µs a call, so 0,05 ms at 200 bodies,
- * against a 16,7 ms budget. Said rather than hidden; it is churn, not time.
+ * Reused: a world with no hierarchy allocates nothing at all in `settle`. One WITH a hierarchy
+ * does — `localOf` builds a matrix and decomposes it, some thirteen objects a body a step.
+ * Churn, not time: see the measure on `Hierarchy`.
  */
 const TURNED: Vector3 = { x: 0, y: 0, z: 0 }
 

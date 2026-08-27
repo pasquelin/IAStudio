@@ -13,6 +13,7 @@ import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
 import { mounted } from './sceneHandlers'
+import { messageOf } from '@shared/guards'
 
 /** What puts a whole game together in one gesture — a template, or a prefab of the project. */
 export const ASSEMBLY_HANDLERS: ActionHandlers = {
@@ -66,7 +67,7 @@ export const ASSEMBLY_HANDLERS: ActionHandlers = {
       await bridge.game.write(withPrefab(held.game, prefab))
       return { ok: true, data: { ...prefab, ref: refToString({ kind: 'prefab', id: prefab.id }) } }
     } catch (error) {
-      return refused('failed', String(error))
+      return refused('failed', messageOf(error))
     }
   },
 
@@ -121,7 +122,7 @@ async function prefabRead(
     return file ? { nodes: prefabNodes(file) } : { refusal: refused('notFound', documentId) }
   } catch (error) {
     // `failed`, never `badInput`: told its INPUT is wrong, a model rewrites the name and retries.
-    return { refusal: refused('failed', `reading ${documentId}: ${String(error)}`) }
+    return { refusal: refused('failed', `reading ${documentId}: ${messageOf(error)}`) }
   }
 }
 

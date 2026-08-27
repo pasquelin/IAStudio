@@ -6,16 +6,10 @@ import type { SceneNode } from '@/engines/scene/sceneState'
 /**
  * Where a node stands in the WORLD, and how to write a world pose back into its own frame.
  *
- * 🛑 What closes the hole `worldFromScene` carried since the physics arrived: an entity's
- * transform is LOCAL, the renderer composes its parents and the physics does not, so a collider
- * under a group stood where the mesh was not.
- *
- * 🛑 Nothing is CACHED, and that is the point: a parent moves during a game — a `Movement` on a
- * group, a dynamic body settling — and a matrix remembered at build made a child's mesh fall
- * twice as fast as its collider. Measured at 0,23 µs a call, which 200 bodies pay in 0,05 ms.
- *
- * 🛑 A parent scaled UNEVENLY shears the matrix, and `decompose` cannot describe shear: the
- * rotation this hands back is then wrong. The same reserve `csgMatrix` writes, and ADR-25.
+ * 🛑 Nothing is CACHED: a parent moves during a game, and a matrix remembered at build made a
+ * child's mesh fall twice as fast as its collider. 0,23 µs a call, 0,05 ms at 200 bodies.
+ * 🛑 A parent scaled UNEVENLY shears, and `decompose` cannot describe shear — the rotation this
+ * hands back is then wrong. The reserve `csgMatrix` already writes, and ADR-25.
  */
 export type Hierarchy = {
   /** The node's place with every parent composed in. Its own transform when the scene lost it. */

@@ -6,16 +6,24 @@ import { COMPONENT_TYPES } from './componentRegistry'
 /**
  * What an object DOES while the game runs, driven from outside the window.
  *
- * Its own family and its own file from the first action, rather than three more entries in the
- * scene's 41,9 Ko: the game families are what would turn that file into the one nobody opens.
- *
- * The `type` field offers the registry's own list, so a component added to the registry is
- * offered to a model here without a line being written.
- *
- * `reach: 'mcp'` for all three, and it is measured rather than timid: the briefing the window's
- * own assistant reads is already at its width, and three more entries push it past — the same
- * wall `context.*` met. The inspector is how the window does this.
+ * `reach: 'mcp'` for all three: the briefing the window's own assistant reads is already at its
+ * width, and three more entries push it past. The inspector is how the window does this.
  */
+const nodeIdField: ActionField = {
+  key: 'nodeId',
+  kind: 'text',
+  labelKey: 'assistant.fields.nodeId',
+  required: true,
+}
+
+const componentTypeField: ActionField = {
+  key: 'type',
+  kind: 'choice',
+  labelKey: 'assistant.fields.componentType',
+  required: true,
+  options: COMPONENT_TYPES,
+}
+
 export const GAME_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'component.attach',
@@ -23,16 +31,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.componentAttach.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [
-      { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
-      {
-        key: 'type',
-        kind: 'choice',
-        labelKey: 'assistant.fields.componentType',
-        required: true,
-        options: COMPONENT_TYPES,
-      },
-    ],
+    fields: [nodeIdField, componentTypeField],
   }),
   action({
     name: 'component.detach',
@@ -40,16 +39,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.componentDetach.description',
     commitment: 'none',
     reach: 'mcp',
-    fields: [
-      { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
-      {
-        key: 'type',
-        kind: 'choice',
-        labelKey: 'assistant.fields.componentType',
-        required: true,
-        options: COMPONENT_TYPES,
-      },
-    ],
+    fields: [nodeIdField, componentTypeField],
   }),
   action({
     /**
@@ -63,14 +53,8 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [
-      { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
-      {
-        key: 'type',
-        kind: 'choice',
-        labelKey: 'assistant.fields.componentType',
-        required: true,
-        options: COMPONENT_TYPES,
-      },
+      nodeIdField,
+      componentTypeField,
       { key: 'field', kind: 'text', labelKey: 'assistant.fields.componentField', required: true },
       { key: 'value', kind: 'text', labelKey: 'assistant.fields.componentValue', required: true },
     ],
@@ -204,11 +188,9 @@ export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
 ]
 
 /**
- * The three that keep a model from having to GUESS — the plan's § 16.3.
- *
- * 🛑 They are the answer to the tool count, not a convenience: describing what is in front of a
- * model, serving the slice of documentation that answers ONE question, and running a lot of
- * primitives as a single undo entry are what a hundred narrow actions would otherwise be.
+ * The three that keep a model from having to GUESS: what is in front of it, the slice of
+ * documentation that answers ONE question, and a lot run as a single undo entry. They are the
+ * answer to the tool COUNT — a hundred narrow actions is what they replace.
  */
 export const STUDIO_ACTIONS: readonly AssistantAction[] = [
   action({
@@ -258,6 +240,14 @@ export type BatchCall = { action: string; input: Record<string, unknown> }
 /** The four lists a game writes into, offered as a closed set rather than typed by hand. */
 export const TIMELINE_LISTS: readonly string[] = ['events', 'audio', 'video', 'transitions']
 
+const timelineListField: ActionField = {
+  key: 'list',
+  kind: 'choice',
+  labelKey: 'assistant.fields.timelineList',
+  required: true,
+  options: TIMELINE_LISTS,
+}
+
 /**
  * What a timeline CUES, put there from outside the window.
  *
@@ -274,13 +264,7 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [
-      {
-        key: 'list',
-        kind: 'choice',
-        labelKey: 'assistant.fields.timelineList',
-        required: true,
-        options: TIMELINE_LISTS,
-      },
+      timelineListField,
       { key: 'at', kind: 'number', labelKey: 'assistant.fields.timelineAt', required: true },
       /** What the row IS: an event's name, an asset's id, a transition's kind. */
       { key: 'what', kind: 'text', labelKey: 'assistant.fields.timelineWhat', required: true },
@@ -302,13 +286,7 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'mcp',
     fields: [
-      {
-        key: 'list',
-        kind: 'choice',
-        labelKey: 'assistant.fields.timelineList',
-        required: true,
-        options: TIMELINE_LISTS,
-      },
+      timelineListField,
       { key: 'id', kind: 'text', labelKey: 'assistant.fields.timelineRowId', required: true },
     ],
   }),

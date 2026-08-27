@@ -12,14 +12,9 @@ import { GameLockedError, type ProjectGameStore } from './game'
 /**
  * A script is referenced by PATH, so moving or trashing a `.ts` has to reach `game.json`.
  *
- * 🛑 **What this does NOT hold, and it is half of the reference**: the `Script` component carries
- * the path itself, in the `.gltf` of its scene, and no rename reaches THERE — a renamed script
- * comes back as « script never loaded » on the next Play. Nothing goes red. Closing it means the
- * component naming the manifest's ID instead, and nothing fills `scripts[]` yet — that is the
- * Monaco lot, which is where a script is created and picked in the first place.
- *
- * 🛑 Never rejects: it is called for its effect from a batch that has already finished, and an
- * unhandled rejection has killed the process since Node 15.
+ * 🛑 Blind spot, and it is half the reference: the `Script` component carries the path in the
+ * `.gltf` of its scene and no rename reaches there — a renamed script comes back as « script
+ * never loaded », with nothing red. 🛑 Never rejects: called for its effect from a finished lot.
  */
 export async function keepScriptPaths(
   game: ProjectGameStore,

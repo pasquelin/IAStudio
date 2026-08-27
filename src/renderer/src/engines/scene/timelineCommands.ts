@@ -4,6 +4,7 @@ import type {
   TimelineTemplate,
   TimelineTransition,
 } from '@shared/domain/animation'
+import { sameValues } from '@/helpers/objects'
 import type { Command } from '@/engines/core/history'
 import type { SceneState } from './sceneState'
 
@@ -47,8 +48,10 @@ export function addTimelineRow<List extends GameRow>(
     revert: state => written(state, list, rows => rows.filter(held => held.id !== row.id)),
     // A row already there under the same id and the same content is a call that does nothing.
     refuses: state =>
-      JSON.stringify((state.animation[list] ?? []).find(held => held.id === row.id)) ===
-      JSON.stringify(row),
+      sameValues(
+        (state.animation[list] ?? []).find(held => held.id === row.id),
+        row,
+      ),
   }
 }
 

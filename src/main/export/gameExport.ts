@@ -1,4 +1,4 @@
-import { safeFileName } from '@shared/domain/fileName'
+import { pathBaseNameOf, safeFileName, stemOf } from '@shared/domain/fileName'
 import { escapeXml } from '@shared/domain/xmlText'
 import { freeName } from '@shared/domain/otioz'
 import {
@@ -39,13 +39,9 @@ export type GameExportReport = Omit<GameExportOutcome, 'folder'>
 /**
  * Writes a game that runs with no studio: the page, the bundle, the manifest and what they reach.
  *
- * 🛑 Only what is REACHED is copied. The sweep is textual — every `"assetId": "…"` of every scene
- * — rather than a walk of typed fields: a document is JSON, the field name is the same wherever
- * it sits, and a field added tomorrow is swept without anybody remembering to add it here.
- *
- * 🛑 Two known edges. It copies a scene's SKYBOX, which `buildGameScene` does not draw, so an
- * `.exr` ships for nothing. And it does not read a SCRIPT: an asset a script names by id in its
- * own source is not copied, and 404s in the game.
+ * 🛑 Two known edges of the textual `"assetId"` sweep. It copies a scene's SKYBOX, which
+ * `buildGameScene` does not draw, so an `.exr` ships for nothing. And it does not read a SCRIPT:
+ * an asset a script names by id in its own source is not copied, and 404s in the game.
  */
 export async function writeExportedGame(
   ports: GameExportPorts,
@@ -58,8 +54,10 @@ export async function writeExportedGame(
   // overwrite the first without a word. The same rule a montage bundle already follows.
   const taken = new Set<string>()
 
-  const found = await ports.assetFiles(assetIdsIn(scenes))
-  for (const id of assetIdsIn(scenes)) {
+  const ids = assetIdsIn(scenes)
+  const found = await ports.assetFiles(ids)
+  const assetWrites: Promise<void>[] = []
+  for (const id of ids) {
     const file = found.get(id)
     if (!file) {
       missing.push(id)
@@ -69,14 +67,12 @@ export async function writeExportedGame(
     const name = freeName(safeFileName(file.name, 'asset'), taken)
     taken.add(name)
     assets[id] = `assets/${name}`
-    await ports.write(assets[id], file.bytes)
+    assetWrites.push(ports.write(assets[id], file.bytes))
   }
 
-  // 🛑 `taken` grows INSIDE the loop: `freeName` is pure, so adding afterwards leaves two
-  // `Walk.ts` from two folders both named `Walk.js`, one file overwriting the other.
-  // 🛑 Through `safeFileName`, and deduplicated like the rest: an id comes from the WINDOW over
-  // IPC, so `../../x` would be written wherever it pointed — and two ids that clean to one name
-  // would overwrite each other in silence.
+  // 🛑 Through `safeFileName` and deduplicated: an id comes from the WINDOW over IPC, so `../../x`
+  // would be written wherever it pointed, and two ids cleaning to one name would overwrite each
+  // other in silence.
   const files = new Map<string, string>()
   for (const scene of scenes) {
     const name = freeName(`${safeFileName(scene.id, 'scene')}.gltf`, taken)
@@ -100,13 +96,17 @@ export async function writeExportedGame(
     assets,
   }
 
-  for (const scene of scenes) await ports.write(files.get(scene.id) ?? '', scene.content)
-  for (const script of scripts)
-    await ports.write(`scripts/${named.get(script.script)}`, script.code)
-
-  for (const file of await ports.runtime()) await ports.write(file.name, file.body)
-  await ports.write(EXPORTED_GAME_FILE, `${JSON.stringify(game, null, 2)}\n`)
-  await ports.write('index.html', pageFor(request.title))
+  // Names are allocated above, in order, because `freeName` is pure; only the writing is
+  // independent, and a hundred assets paid two syscalls each strictly one after another.
+  const runtime = await ports.runtime()
+  await Promise.all([
+    ...assetWrites,
+    ...scenes.map(scene => ports.write(files.get(scene.id) ?? '', scene.content)),
+    ...scripts.map(script => ports.write(`scripts/${named.get(script.script)}`, script.code)),
+    ...runtime.map(file => ports.write(file.name, file.body)),
+    ports.write(EXPORTED_GAME_FILE, `${JSON.stringify(game, null, 2)}\n`),
+    ports.write('index.html', pageFor(request.title)),
+  ])
 
   return {
     scenes: scenes.length,
@@ -128,8 +128,7 @@ function assetIdsIn(scenes: readonly SceneToExport[]): readonly string[] {
 }
 
 /** A script is named by its path; the file beside the page keeps the name and loses the folders. */
-const fileNameOf = (script: ScriptToExport): string =>
-  `${(script.script.split('/').at(-1) ?? script.script).replace(/\.ts$/, '')}.js`
+const fileNameOf = (script: ScriptToExport): string => `${stemOf(pathBaseNameOf(script.script))}.js`
 
 /**
  * The page. Plain and self-contained — a stylesheet beside it is one more file to lose.

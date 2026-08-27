@@ -1,4 +1,5 @@
 import { assetUrl } from '@shared/domain/asset'
+import { clamp } from '@shared/numeric'
 import type { PlayState, RuntimeError, RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
 import { createStudioHost } from '@game/host/studioHost'
@@ -10,6 +11,7 @@ import type { ScriptFault } from '@game/script/frame'
 import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
 import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
+import { placementsOf } from '@game/runtime/placements'
 import type { World } from '@game/runtime/world'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { FrameDriver } from './frameDriver'
@@ -168,8 +170,6 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   // 🛑 Read ALWAYS, put back only if the runtime aimed the camera: a scene loaded mid-game may
   // walk where the one played first orbited, and reading it later would read what a game wrote.
   const watching = deps.renderer.viewPlacement()
-  // Reused across frames: one object per entity per frame is the only allocation a still game
-  // would otherwise make.
   const placements: EntityPlacement[] = []
   let state: PlayState = 'playing'
   /** Seconds of veil a scene that has just arrived still owes. Zero when nothing is fading. */
@@ -211,24 +211,8 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     publish()
   }
 
-  /**
-   * Every entity, every frame — the port is what decides whether anything has to be redrawn, and
-   * it holds the shadow that answers that. One comparison there beats one here and one there.
-   */
   const draw = (): void => {
-    let count = 0
-    for (const entity of world.entities.all()) {
-      const held = placements[count]
-      if (held) {
-        held.entity = entity.id
-        held.transform = entity.transform
-      } else {
-        placements.push({ entity: entity.id, transform: entity.transform })
-      }
-      count += 1
-    }
-    placements.length = count
-    world.ports.render.place(placements)
+    world.ports.render.place(placementsOf(world, placements))
   }
 
   /**
@@ -366,7 +350,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     step: steps => {
       if (state !== 'paused') return 0
 
-      const ran = Math.max(1, Math.min(Math.trunc(steps), MAX_STEPPED))
+      const ran = clamp(Math.trunc(steps), 1, MAX_STEPPED)
       for (let at = 0; at < ran; at++) {
         world.step(world.time.step)
         // Taken here too: a game stepped from outside the window is the one a model drives, and

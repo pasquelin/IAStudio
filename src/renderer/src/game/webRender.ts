@@ -9,9 +9,11 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
+import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
+import { applyTransform } from '@/engines/scene/pivot'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { buildGameScene, type GameScene } from './gameScene'
 
@@ -56,10 +58,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
         const object = held?.byEntity.get(placement.entity)
         if (!object) continue
 
-        const { position, rotation, scale } = placement.transform
-        object.position.set(position.x, position.y, position.z)
-        object.rotation.set(rotation.x, rotation.y, rotation.z)
-        object.scale.set(scale.x, scale.y, scale.z)
+        applyTransform(object, placement.transform)
       }
     },
 
@@ -72,7 +71,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
     },
 
     veil: amount => {
-      veil.material.opacity = Math.min(Math.max(amount, 0), 1)
+      veil.material.opacity = clamp(amount, 0, 1)
     },
 
     // 🛑 Only when it CHANGED: `setSize` reassigns `canvas.width`, which reallocates and clears

@@ -9,14 +9,7 @@ import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
 
-/**
- * The three that keep a model from having to GUESS — the plan's § 16.3.
- *
- * 🛑 They are the answer to the tool COUNT, not a convenience: one action that describes what is
- * in front, one that serves the slice of documentation answering a question, and one that runs a
- * lot of primitives as a single undo entry replace the hundred narrow actions a game would
- * otherwise need. Measured in the same lot — see the token delta.
- */
+/** The handlers of `STUDIO_ACTIONS`, which says why there are three of them. */
 export const STUDIO_HANDLERS: ActionHandlers = {
   'studio.describe': input => {
     const open = mounted()

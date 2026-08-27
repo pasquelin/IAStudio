@@ -149,8 +149,9 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       for (const fault of port.attach(fresh)) onFault(fault)
       // Composed over `freshIds` alone: the ones that were already running have had their turn.
       if (port.declares('onCreate')) took(world, port.run('onCreate', compose(world, 0, freshIds)))
-      // A newcomer may be the first to declare `onDestroy` — its own position is not lost.
-      if (port.declares('onDestroy'))
+      // A newcomer may be the FIRST to declare `onDestroy`, and the sweep above then remembered
+      // nobody. Already remembering means every entity above went through `remember`.
+      if (!remembering && port.declares('onDestroy'))
         for (const entity of world.entities.withComponent('Script')) remember(entity)
     }
   }
