@@ -158,7 +158,13 @@ export const KERNEL = String.raw`
         refusals.push({ script: one.script, entity: one.entity, message: 'script never loaded', line: 0, column: 0 })
         continue
       }
-      instances.set(one.entity, { script: one.script, definition: definition, props: one.props })
+      // The instance's settings LAYERED over what the script declares: a prop the inspector
+      // never touched still answers what its author wrote as the default.
+      var settings = {}
+      var declared = definition.props || {}
+      for (var key in declared) settings[key] = declared[key]
+      for (var given in one.props || {}) settings[given] = one.props[given]
+      instances.set(one.entity, { script: one.script, definition: definition, props: settings })
     }
     return JSON.stringify({ intents: [], faults: refusals, hooks: hookNames() })
   }

@@ -5,6 +5,8 @@ import { ToolButton } from '@/design/ToolButton'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { revealTool } from '@/helpers/revealPanel'
+import { useCode } from '@/stores/code'
 import { playReportOf, usePlay } from '@/stores/play'
 
 export type PlayBarProps = {
@@ -32,6 +34,8 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
     ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
     ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
   ]
+  // The last one an editor can OPEN. A log line names no line, so it opens nothing.
+  const addressable = report.errors.findLast(one => one.line > 0) ?? null
 
   const play = (): void => {
     if (report.state === 'paused') return usePlay.getState().resume(documentId)
@@ -90,11 +94,27 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
       )}
 
       {/* A system or a handler that threw is reported and the tick carries on, so without a word
-          here the game would simply appear to do nothing. The last one is named in full. */}
+          here the game would simply appear to do nothing. The last one is named in full, and it
+          OPENS when it is addressable — `RuntimeError` carries the script, the line and column. */}
       {faults.length > 0 && (
-        <span className="text-warning" title={faults.at(-1)}>
+        <button
+          type="button"
+          className="text-warning enabled:underline enabled:decoration-dotted"
+          data-sc="field:play.faults"
+          disabled={!addressable}
+          title={faults.at(-1)}
+          onClick={() => {
+            if (!addressable) return
+            // Paused first: a game still running scrolls its own errors past the reader.
+            usePlay.getState().pause(documentId)
+            useCode.getState().openAt(addressable.script, addressable.line, addressable.column || 1)
+            // 🛑 And BROUGHT FORWARD: the code panel shares the band with the timeline, so
+            // without this a click pauses the game and shows nothing at all.
+            revealTool('code')
+          }}
+        >
           {t('game.play.faults', { count: faults.length })}
-        </span>
+        </button>
       )}
     </div>
   )

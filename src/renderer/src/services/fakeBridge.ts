@@ -172,6 +172,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       write: () => Promise.reject(new Error('no game manifest stubbed')),
       scripts: () => Promise.resolve([]),
       writeScript: () => Promise.resolve(false),
+      ...overrides.game,
     },
     documents: {
       list: () => Promise.resolve([]),

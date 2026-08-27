@@ -1,0 +1,17 @@
+{
+  "code": {
+    "noProject": "Ouvrez un projet pour écrire son code.",
+    "emptyHint": "Créez un script pour donner un comportement à une entité.",
+    "unavailable": "L’éditeur n’a pas pu se charger.",
+    "new": "Nouveau script",
+    "newHint": "Crée un fichier TypeScript et l’ouvre.",
+    "save": "Enregistrer",
+    "saveHint": "Écrit le script dans le projet.",
+    "close": "Fermer l’onglet",
+    "noProblems": "Aucun problème",
+    "openProblem": "Ouvrir à cette ligne",
+    "at": "ligne {{line, number}}, colonne {{column, number}}",
+    "openScript": "Ouvrir un script",
+    "openScriptHint": "Choisit un script du projet."
+  }
+}

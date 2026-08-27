@@ -32,7 +32,8 @@
     "projects": "Your projects",
     "animations": "Animations",
     "text": "Text",
-    "context": "Context"
+    "context": "Context",
+    "code": "Code"
   },
   "view": {
     "projection": "Projection",

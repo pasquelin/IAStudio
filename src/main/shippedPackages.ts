@@ -46,6 +46,8 @@ export const SHIPPED: string[] = [
   'dockview-react',
   'i18next',
   'immer',
+  // The code editor and its TypeScript worker, in a chunk of their own — loaded on first open.
+  'monaco-editor',
   'react',
   'react-dom',
   'react-hook-form',

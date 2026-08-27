@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { NOT_PLAYING, type RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
-import { refToString } from '@shared/domain/ref'
 import { orElse } from '@shared/promises'
 import { loadRapierPhysics } from '@game/host/rapierPhysics'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
@@ -11,8 +10,8 @@ import {
   type ScriptCompiler,
   type ScriptTrouble,
 } from '@/engines/code/scriptCompiler'
-import { getBridge } from '@/services/bridge'
 import { animationFrames, startPlay, type PlaySession } from '@/game/playSession'
+import { codeFilesOf, useCode } from './code'
 import { sceneEngineOf } from './sceneEngines'
 import { sceneOf, useScenes } from './scenes'
 
@@ -130,16 +129,15 @@ type CompiledScripts = { modules: readonly ScriptModule[]; troubles: readonly Sc
 const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [] }
 
 async function scriptsOfProject(): Promise<CompiledScripts> {
-  const files = (await getBridge()?.game.scripts()) ?? []
+  // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles
+  // has to be what the screen shows, or an author watches the script from before their last
+  // keystroke run — without a word.
+  await useCode.getState().reload()
+  const files = codeFilesOf(useCode.getState())
   if (files.length === 0) return NO_SCRIPTS
 
   compiler ??= createScriptCompiler()
-  return await compiler.compile(
-    files.map(file => ({
-      script: refToString({ kind: 'script', path: file.path }),
-      source: file.source,
-    })),
-  )
+  return await compiler.compile(files.map(file => ({ script: file.script, source: file.source })))
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

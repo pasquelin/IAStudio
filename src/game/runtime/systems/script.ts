@@ -10,7 +10,7 @@ import type {
   ScriptIntent,
   ScriptOutcome,
 } from '../../script/frame'
-import { textOf } from '../componentFields'
+import { settingsOf, textOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
 import type { System, World } from '../world'
 
@@ -109,10 +109,11 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 
       // Added only once it NAMES one: a `Script` component dropped and not yet filled in would
       // otherwise be serialized into every frame and handed to `detach` on its way out.
-      const script = textOf(componentOf(entity, 'Script'), 'script', '')
+      const held = componentOf(entity, 'Script')
+      const script = textOf(held, 'script', '')
       if (script.length === 0) continue
       known.add(entity.id)
-      fresh.push({ entity: entity.id, script, props: {} })
+      fresh.push({ entity: entity.id, script, props: settingsOf(held, 'props') })
       freshIds.add(entity.id)
     }
 

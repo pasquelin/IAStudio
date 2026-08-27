@@ -67,6 +67,7 @@ The terms below govern these components. They are not affected by the licence of
 | MMAudio Medium | shipped with the application | CC-BY-NC-4.0 |
 | MMAudio Small | shipped with the application | CC-BY-NC-4.0 |
 | Mochi 1 | shipped with the application | Apache-2.0 |
+| monaco-editor | 0.52.2 | MIT |
 | mpmath | 1.3.0 | BSD |
 | MVDiffusion | shipped with the application | other |
 | networkx | 3.6.1 | BSD-3-Clause |
@@ -2281,6 +2282,34 @@ against a published digest, and removed from the model manager.
 Copyright Genmo.
 
 Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## monaco-editor
+
+Version: 0.52.2  
+Licence: MIT
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2016 - present Microsoft Corporation
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 ## mpmath
 

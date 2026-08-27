@@ -91,7 +91,8 @@
       "start": "Run",
       "startHint": "Plays the scene as a game, without touching the document",
       "stop": "Stop",
-      "stopHint": "Throws the game away and puts the scene back as it was"
+      "stopHint": "Throws the game away and puts the scene back as it was",
+      "openFault": "Opens the script at the line of the fault"
     }
   }
 }
