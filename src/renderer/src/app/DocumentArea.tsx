@@ -5,6 +5,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
+import { DocumentOverflow } from './DocumentOverflow'
 import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents/documents'
 import { DocumentsIdle } from './documents/DocumentsIdle/DocumentsIdle'
@@ -122,6 +123,11 @@ export function DocumentArea() {
         // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
         // whichever space opened it.
         defaultTabComponent={DocumentTab}
+        // Dockview's own overflow dropdown, off: it mounts outside `.dv-dockview`, where the
+        // studio's tokens are scoped, so it drew in the library's default navy. `DocumentOverflow`
+        // replaces it with the studio's own menu.
+        disableTabsOverflowList
+        rightHeaderActionsComponent={DocumentOverflow}
         // What Dockview shows while no group is visible, and takes down on the first one. The
         // middle of the window was a bare `dv-watermark` div until this — the largest surface of
         // the studio, saying nothing.
