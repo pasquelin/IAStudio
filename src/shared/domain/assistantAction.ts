@@ -270,6 +270,7 @@ export type ActionName =
   | 'play.pause'
   | 'play.resume'
   | 'play.step'
+  | 'play.loadScene'
   | 'runtime.report'
   | 'runtime.errors'
   | 'script.list'

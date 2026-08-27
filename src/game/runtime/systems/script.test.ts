@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Component } from '@shared/domain/component'
+import type { Component, JsonValue } from '@shared/domain/component'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import { loadQuickjsScripts } from '../../host/quickjsScripts'
 import type { ScriptFault } from '../../script/frame'
@@ -244,5 +244,75 @@ describe('what a game does with its own code', () => {
     expect(port.declares('onUpdate')).toBe(true)
     expect(port.declares('onLateUpdate')).toBe(false)
     expect(port.declares('onMessage')).toBe(false)
+  })
+})
+
+/** 🛑 The multi-scene lot's own surface: a script sends the game somewhere, and puts a key aside. */
+describe('what a script asks about its scenes', () => {
+  let port: ScriptPort
+  const wanted: { scene: string; fade: number }[] = []
+  const held: Record<string, JsonValue> = {}
+
+  beforeEach(async () => {
+    port = await loadQuickjsScripts()
+    wanted.length = 0
+    for (const key of Object.keys(held)) delete held[key]
+  })
+
+  afterEach(() => {
+    port.dispose()
+  })
+
+  const walking = (body: string, extra: Component[] = []): World => {
+    const world = testWorld({
+      ports: testPorts({
+        script: port,
+        scenes: {
+          load: (scene, fade) => void wanted.push({ scene, fade }),
+          keep: (key, value) => {
+            held[key] = value
+          },
+          kept: () => held,
+        },
+      }),
+      systems: [
+        createScriptSystem({
+          modules: [{ script: WALK, code: scripted(body) }],
+          onFault: () => {},
+        }),
+      ],
+    })
+    world.entities.add({
+      id: 'e1',
+      name: 'Walker',
+      transform: restingTransform(),
+      components: [withComponentField(newComponent('Script'), 'script', WALK), ...extra],
+    })
+    return world
+  }
+
+  it('sends the game to another scene, with the fade it asked for', () => {
+    const world = walking("onUpdate() { game.scene.load('World01', { fade: 0.5 }) }")
+
+    frame(world)
+
+    expect(wanted[0]).toEqual({ scene: 'World01', fade: 0.5 })
+  })
+
+  /**
+   * 🛑 The whole round trip: the intent reaches the host, the store rides back in the next frame,
+   * and the kernel reads it there. Asserting the store alone would miss the half that costs.
+   */
+  it('puts a value aside and reads it back on the next step', () => {
+    const world = walking(
+      "onUpdate(self) { game.scene.keep('coins', 7); self.set('Health', 'current', game.scene.kept('coins') || 0) }",
+      [newComponent('Health')],
+    )
+
+    frame(world)
+    frame(world)
+
+    expect(held.coins).toBe(7)
+    expect(world.entities.get('e1')?.components[1]?.current).toBe(7)
   })
 })

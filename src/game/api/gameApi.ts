@@ -8,6 +8,7 @@ import type { LogPort } from '../ports/logPort'
 import type { NetPort } from '../ports/netPort'
 import type { PhysicsPort } from '../ports/physicsPort'
 import type { RenderPort } from '../ports/renderPort'
+import type { ScenePort } from '../ports/scenePort'
 import type { ScriptPort } from '../ports/scriptPort'
 
 /**
@@ -20,6 +21,7 @@ export type GameApi = {
   render: RenderPort
   physics: PhysicsPort
   script: ScriptPort
+  scenes: ScenePort
   audio: AudioPort
   log: LogPort
   ai: AiPort

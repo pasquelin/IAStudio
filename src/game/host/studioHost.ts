@@ -7,6 +7,7 @@ import type { AudioPort } from '../ports/audioPort'
 import type { PhysicsPort } from '../ports/physicsPort'
 import type { ScriptPort } from '../ports/scriptPort'
 import type { RenderPort } from '../ports/renderPort'
+import type { ScenePort } from '../ports/scenePort'
 import { createDomInput, type DomInputTarget } from './domInput'
 import { createHostedAssets } from './hostedAssets'
 import { createInertAudio } from './inertAudio'
@@ -15,6 +16,7 @@ import { createInertScripts } from './inertScripts'
 import { createInertRender } from './inertRender'
 import { createRefusedAi } from './refusedAi'
 import { createRingLog } from './ringLog'
+import { createSingleScene } from './singleScene'
 import { createSoloNet } from './soloNet'
 
 export type StudioHostDeps = {
@@ -28,6 +30,8 @@ export type StudioHostDeps = {
   script?: ScriptPort
   /** What sounds. Absent leaves a game silent — named rather than hidden, like the others. */
   audio?: AudioPort
+  /** Where the project's other scenes are read from. Absent holds the game to the one it opened. */
+  scenes?: ScenePort
   /** How the studio spells an asset URL — `assetUrl` from `@shared/domain/asset`. */
   urlForAsset: (id: string) => string
   /**
@@ -37,7 +41,7 @@ export type StudioHostDeps = {
   journal?: (entry: LogEntry) => void
 }
 
-/** The seven ports as the studio fills them. What is inert here says so where it is written. */
+/** Every port as the studio fills them. What is inert here says so where it is written. */
 export function createStudioHost(deps: StudioHostDeps): GameApi {
   const log = createRingLog(deps.journal)
 
@@ -47,6 +51,7 @@ export function createStudioHost(deps: StudioHostDeps): GameApi {
     render: deps.render ?? createInertRender(),
     physics: deps.physics ?? createInertPhysics(),
     script: deps.script ?? createInertScripts(),
+    scenes: deps.scenes ?? createSingleScene(log),
     audio: deps.audio ?? createInertAudio(),
     log,
     ai: createRefusedAi(log),

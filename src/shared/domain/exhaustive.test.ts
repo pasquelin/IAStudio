@@ -632,6 +632,7 @@ describe('the lists that stand for a union', () => {
       'play.pause': true,
       'play.resume': true,
       'play.step': true,
+      'play.loadScene': true,
       'runtime.report': true,
       'runtime.errors': true,
       'script.list': true,

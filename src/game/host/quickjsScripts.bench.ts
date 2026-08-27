@@ -68,7 +68,7 @@ async function scripted(
     })),
   )
   const entities = Array.from({ length: count }, (_, index) => entity(index, carrying))
-  return [port, { tick: 1, dt: 1 / 60, input: IDLE, entities }]
+  return [port, { tick: 1, dt: 1 / 60, input: IDLE, entities, kept: {} }]
 }
 
 /** One rendered frame's worth, as the SYSTEM drives it: the mask first, then the hook. */

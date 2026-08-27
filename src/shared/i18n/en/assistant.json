@@ -1037,6 +1037,10 @@
         "title": "Resume the game",
         "description": "Carries on from where the pause left the game, without catching up on the time it stood still."
       },
+      "playLoadScene": {
+        "title": "Send the game to another scene",
+        "description": "Loads another scene of the project into the running game, with an optional fade. The scene is named by its title or its id."
+      },
       "playStep": {
         "title": "Step the game",
         "description": "Runs one or more fixed steps of a PAUSED game and answers its state. This is how a reading is taken without racing."
@@ -1396,6 +1400,8 @@
       "docsTopic": "Topic",
       "batchCalls": "Calls (JSON)",
       "fixedSteps": "Fixed steps",
+      "sceneToLoad": "Scene to load",
+      "fadeSeconds": "Fade, in seconds",
       "timelineList": "List",
       "timelineAt": "Instant, in microseconds",
       "timelineWhat": "What",

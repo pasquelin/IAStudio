@@ -35,6 +35,8 @@ export const KERNEL = String.raw`
     return { ok: false, refused: 'notGranted' }
   }
 
+  var kept = {}
+
   globalThis.defineScript = function (definition) { return definition }
 
   globalThis.game = {
@@ -50,6 +52,20 @@ export const KERNEL = String.raw`
     },
     spawn: function (name, at) {
       push({ act: 'spawn', name: String(name), at: at ? vector(at.x, at.y, at.z) : null })
+    },
+    scene: {
+      // Asked for, never awaited: a world cannot replace itself mid-step, so the host swaps
+      // between two. What answers is a SceneLoaded event, on the bus of the scene that arrives.
+      load: function (scene, options) {
+        push({ act: 'scene', scene: String(scene), fade: Number(options && options.fade) || 0 })
+      },
+      keep: function (key, value) {
+        push({ act: 'keep', key: String(key), value: value === undefined ? null : value })
+      },
+      // Read off the FRAME, never across the bridge: a call costs nine times the work it does.
+      kept: function (key) {
+        return Object.prototype.hasOwnProperty.call(kept, key) ? kept[key] : null
+      },
     },
     random: {
       float: draw,
@@ -97,6 +113,7 @@ export const KERNEL = String.raw`
   }
 
   function contextOf(frame) {
+    kept = frame.kept || {}
     return {
       tick: frame.tick,
       dt: frame.dt,

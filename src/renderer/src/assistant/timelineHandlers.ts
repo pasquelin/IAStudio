@@ -55,12 +55,22 @@ export const TIMELINE_HANDLERS: ActionHandlers = {
       if (!TRANSITION_KINDS.includes(what as TransitionKind)) {
         return refused('badInput', `no transition "${what}" — ${TRANSITION_KINDS.join(', ')}`)
       }
-      useScenes
-        .getState()
-        .runCommand(
-          open.documentId,
-          addTimelineRow('transitions', { id, at, kind: what as TransitionKind, duration }),
-        )
+      // A fade with no length is a CUT nobody asked for — said, as a sound with none is.
+      if (what !== 'cut' && duration <= 0) {
+        return refused('badInput', `a ${what} needs a duration`)
+      }
+      // The scene it goes to, when it goes anywhere: a row with none stays in this one.
+      const scene = textOf(input, 'scene') ?? ''
+      useScenes.getState().runCommand(
+        open.documentId,
+        addTimelineRow('transitions', {
+          id,
+          at,
+          kind: what as TransitionKind,
+          duration,
+          ...(scene.length > 0 ? { scene } : {}),
+        }),
+      )
       return { ok: true, data: { id } }
     }
 

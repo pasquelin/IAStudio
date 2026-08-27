@@ -5,6 +5,7 @@ import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation
 import type { GameEvent } from '@shared/domain/gameEvent'
 import type { Ref } from '@shared/domain/ref'
 import type { AudioPort, AudioVoice } from '../../ports/audioPort'
+import { notedScenes } from '../scene-fixtures'
 import { testPorts, testWorld } from '../world-fixtures'
 import { createTimelineSystem } from './timeline'
 
@@ -31,16 +32,18 @@ function listening() {
 function running(timeline: Partial<AnimationTimeline>, over: Partial<AudioPort> = {}) {
   const heard: GameEvent[] = []
   const veiled: number[] = []
+  const scenes = notedScenes()
   const sound = listening()
   const world = testWorld({
     ports: testPorts({
       audio: { ...sound.audio, ...over },
       render: { place: () => {}, view: () => {}, veil: amount => veiled.push(amount) },
+      scenes,
     }),
     systems: [createTimelineSystem({ timeline: { ...EMPTY_TIMELINE, ...timeline }, assetRef })],
   })
   world.events.onAny(event => heard.push(event))
-  return { world, heard, veiled, ...sound }
+  return { world, heard, veiled, wanted: scenes.wanted, ...sound }
 }
 
 /** What a timeline DOES while a game runs, as opposed to what it moves. */
@@ -133,5 +136,44 @@ describe('a timeline playing inside a game', () => {
 
     expect(played).toEqual([])
     expect(heard.filter(one => one.name === 'Custom')).toEqual([])
+  })
+})
+
+const SECOND = 1_000_000
+
+/** 🛑 The multi-scene lot: the row that was read back and never played. */
+describe('a transition that goes somewhere', () => {
+  it('asks for its scene at the HALFWAY mark, where the veil is full, and once only', () => {
+    const { world, wanted } = running({
+      transitions: [{ id: 't', at: 0, kind: 'fade', duration: SECOND, scene: 'World01' }],
+    })
+
+    for (let at = 0; at < 20; at++) world.step(STEP)
+    expect(wanted).toEqual([])
+
+    for (let at = 0; at < 20; at++) world.step(STEP)
+    expect(wanted).toEqual([{ scene: 'World01', fade: 0.5 }])
+  })
+
+  /** A cut veils nothing and goes at once — « couper vers World02 » means exactly that. */
+  it('goes at its own instant for a cut, with no fade to lift', () => {
+    const { world, wanted, veiled } = running({
+      transitions: [{ id: 't', at: 0, kind: 'cut', duration: 0, scene: 'World02' }],
+    })
+
+    world.step(STEP)
+
+    expect(wanted).toEqual([{ scene: 'World02', fade: 0 }])
+    expect(veiled.filter(one => one > 0)).toEqual([])
+  })
+
+  it('leaves a transition that names no scene where it is', () => {
+    const { world, wanted } = running({
+      transitions: [{ id: 't', at: 0, kind: 'fade', duration: SECOND }],
+    })
+
+    for (let at = 0; at < 60; at++) world.step(STEP)
+
+    expect(wanted).toEqual([])
   })
 })

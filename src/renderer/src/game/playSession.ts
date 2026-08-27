@@ -10,7 +10,9 @@ import type { ScriptFault } from '@game/script/frame'
 import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
 import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
+import type { World } from '@game/runtime/world'
 import type { SceneState } from '@/engines/scene/sceneState'
+import { createSceneSwap } from './sceneSwap'
 import { createStudioRender, type SceneDraw } from './studioRender'
 import { worldFromScene } from './worldFromScene'
 
@@ -26,6 +28,9 @@ const ERRORS_KEPT = 200
  * fall land, short enough that a client cannot freeze the window by asking for a million.
  */
 const MAX_STEPPED = 120
+
+/** How long a scene may be « on its way » before the request is given up on. Five seconds. */
+const GIVE_UP_FRAMES = 300
 
 /**
  * The fault as something a reader can OPEN — the script by its own reference, the entity by the
@@ -62,6 +67,10 @@ export type PlaySession = {
   step: (steps: number) => number
   /** Drops the world and puts the viewport back on the edit state. Nothing to restore. */
   stop: () => void
+  /** Which scene the game is IN — the document's until a load, another one after. */
+  sceneNow: () => SceneState
+  /** Asks for another scene, as a script would. Taken between two steps, like every request. */
+  loadScene: (scene: string, fade: number) => void
 }
 
 export type PlaySessionDeps = {
@@ -82,7 +91,21 @@ export type PlaySessionDeps = {
   troubles?: readonly ScriptTrouble[]
   /** What sounds. Absent leaves a game silent — no mixer is wired to a Play yet. */
   audio?: AudioPort
+  /**
+   * Another scene of the project, by the title or the id a game names it with.
+   *
+   * Three answers rather than two: a scene the project HOLDS but has not read yet is not a scene
+   * it does not have. Absent holds the game to the scene it opened on.
+   */
+  sceneNamed?: (scene: string) => SceneLookup
 }
+
+/**
+ * What a project answers about a scene a game asked for.
+ *
+ * `document` is the id the name RESOLVED to: two names for one level must not read as two levels.
+ */
+export type SceneLookup = { state: SceneState; document: string } | 'reading' | 'unknown'
 
 /**
  * A game running inside the studio.
@@ -92,9 +115,24 @@ export type PlaySessionDeps = {
  */
 export function startPlay(deps: PlaySessionDeps): PlaySession {
   let veiled = 0
-  const render = createStudioRender(deps.renderer, deps.editState, amount => {
+  // 🛑 The scene the GAME is in, which is the document's only until a load. Read per frame, so
+  // the viewport follows a swap by the same path it follows an edit.
+  let loaded: SceneState | null = null
+  const sceneNow = (): SceneState => loaded ?? deps.editState()
+  // Wrapped so the session knows whether the runtime ever aimed the camera: a scene loaded in
+  // first person aims it even when the one played first was orbited by hand.
+  const drawn: SceneDraw = {
+    apply: state => deps.renderer.apply(state),
+    viewPlacement: () => deps.renderer.viewPlacement(),
+    placeView: view => {
+      steered = true
+      deps.renderer.placeView(view)
+    },
+  }
+  const render = createStudioRender(drawn, sceneNow, amount => {
     veiled = amount
   })
+  const swap = createSceneSwap()
   const ports = createStudioHost({
     input: deps.input,
     player: { id: 'local', name: 'Player', local: true },
@@ -102,6 +140,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     render,
     physics: deps.physics,
     script: deps.script,
+    scenes: swap.port,
     audio: deps.audio,
   })
   if (!deps.physics) {
@@ -126,18 +165,28 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     })
   }
 
-  const world = worldFromScene(deps.documentId, deps.editState(), ports, {
-    modules: deps.modules ?? [],
-    onFault: noted,
-  })
-  const loop = createGameLoop(world)
-  // The one piece of studio state a game DOES write, and only when the set is not flown by hand:
-  // in `orbit` the runtime never touches the camera, so a STOP must not undo what a hand orbited.
-  const watching = world.play.camera === 'orbit' ? null : deps.renderer.viewPlacement()
+  const build = (state: SceneState): World =>
+    worldFromScene(deps.documentId, state, ports, { modules: deps.modules ?? [], onFault: noted })
+
+  let world = build(deps.editState())
+  let loop = createGameLoop(world)
+  // 🛑 Read ALWAYS, put back only if the runtime aimed the camera: a scene loaded mid-game may
+  // walk where the one played first orbited, and reading it later would read what a game wrote.
+  const watching = deps.renderer.viewPlacement()
   // Reused across frames: one object per entity per frame is the only allocation a still game
   // would otherwise make.
   const placements: EntityPlacement[] = []
   let state: PlayState = 'playing'
+  /** Seconds of veil a scene that has just arrived still owes. Zero when nothing is fading. */
+  let fadeSpan = 0
+  /** The edit state as of the last repaint, so an edit of the document under a loaded scene shows. */
+  let shown = deps.editState()
+  /** Whether the runtime has ever written the viewport's camera — see the restore in `stop`. */
+  let steered = false
+  /** Frames a request has waited on a file. Five seconds at sixty a second. */
+  let waited = 0
+  /** Which document the game is playing. Its own until a load takes it somewhere else. */
+  let playingDocument = deps.documentId
   let frameMs = 0
   let last: number | null = null
   let warmed = false
@@ -187,6 +236,96 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     world.ports.render.place(placements)
   }
 
+  /**
+   * The scene a running game asked for, put on between two steps.
+   *
+   * 🛑 The old world's systems give back what they took from the engines — bodies, voices,
+   * sandbox instances — which a STOP throws away with the engines and a swap must not.
+   */
+  const swapIfAsked = (): void => {
+    const request = swap.pending()
+    if (!request) return
+
+    const found = deps.sceneNamed?.(request.scene) ?? 'unknown'
+    // Left pending while the file is on its way — giving up at once would make « charge World01 »
+    // work only for a level somebody had already opened. 🛑 But BOUNDED: a read that never
+    // answers would hold the port for ever, and every later request with it.
+    if (found === 'reading' && waited < GIVE_UP_FRAMES) {
+      waited += 1
+      return
+    }
+
+    waited = 0
+    if (found === 'reading') {
+      swap.settled()
+      ports.log.write('warn', `scene "${request.scene}" is taking too long to read`)
+      return
+    }
+
+    swap.settled()
+    if (found === 'unknown') {
+      ports.log.write('warn', `no scene named "${request.scene}" in this project`)
+      return
+    }
+    // 🛑 A scene naming itself would rebuild a world every other frame, for ever. A chain of two
+    // still can, and nothing here catches that — it needs a budget, not a comparison.
+    if (found.document === playingDocument) {
+      ports.log.write('warn', `"${request.scene}" is already the scene being played`)
+      return
+    }
+
+    // 🛑 Heard by a native subscriber, NEVER by a script of the scene that is leaving: the script
+    // system queues an event and delivers it on the next step, which this world will not run.
+    world.events.emit({ name: 'SceneLoading', payload: { scene: request.scene } })
+    world.events.drain()
+    world.dispose()
+
+    playingDocument = found.document
+    loaded = found.state
+    // 🛑 Applied by hand: `studioRender` only repaints what MOVED, and a scene where nothing has
+    // moved yet is every scene on its first frame — measured, the viewport kept the old one.
+    deps.renderer.apply(found.state)
+    shown = deps.editState()
+    world = build(found.state)
+    loop = createGameLoop(world)
+    // The first step of the arrived scene derives every collider, and that hundred milliseconds
+    // must not land in the accumulator as six catch-up steps nobody played.
+    warmed = false
+    world.events.emit({ name: 'SceneLoaded', payload: { scene: request.scene } })
+    // Lifted over the fade the request asked for. Zero puts the picture back at once — a `cut`.
+    fadeSpan = request.fade
+    if (fadeSpan > 0) liftVeil()
+    else render.veil(0)
+  }
+
+  /**
+   * 🛑 The viewport applies the DOCUMENT on any change of it — a click on a node is one — which
+   * over a game playing ANOTHER scene wipes it off the screen for good: nothing of the loaded
+   * scene changes, so nothing asks for a repaint.
+   */
+  const redrawIfEdited = (): void => {
+    if (loaded === null || deps.editState() === shown) return
+
+    shown = deps.editState()
+    deps.renderer.apply(loaded)
+  }
+
+  /**
+   * The veil coming back up on the scene that has just arrived.
+   *
+   * On the WORLD's clock, which a swap restarts at zero. Written AFTER the step, so a scene
+   * arriving under a fade owns the picture over its own timeline until it is through.
+   */
+  const liftVeil = (): void => {
+    if (fadeSpan <= 0) return
+
+    const left = 1 - world.time.elapsed / fadeSpan
+    // The DEEPER of the two: the arriving scene's own timeline has already written its veil this
+    // step, and taking the lift alone made the picture jump back to half dark when the lift ended.
+    render.veil(Math.max(left, veiled))
+    if (left <= 0) fadeSpan = 0
+  }
+
   deps.frames.start(nowMs => {
     if (state === 'playing') {
       // Smoothed rather than read raw: a figure that jumps every frame is one nobody can read.
@@ -201,6 +340,10 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
         warmed = true
         loop.reset()
       }
+      // BETWEEN two steps, never inside one: a world cannot replace itself while it is stepping.
+      swapIfAsked()
+      redrawIfEdited()
+      liftVeil()
     }
 
     // 🛑 Drawn even while PAUSED, and the frames keep coming for it: the viewport re-applies the
@@ -214,6 +357,8 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
 
   return {
     state: () => state,
+    sceneNow,
+    loadScene: (scene, fade) => swap.port.load(scene, fade),
 
     pause: () => {
       if (state !== 'playing') return
@@ -227,7 +372,13 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       if (state !== 'paused') return 0
 
       const ran = Math.max(1, Math.min(Math.trunc(steps), MAX_STEPPED))
-      for (let at = 0; at < ran; at++) world.step(world.time.step)
+      for (let at = 0; at < ran; at++) {
+        world.step(world.time.step)
+        // Taken here too: a game stepped from outside the window is the one a model drives, and
+        // a load asked for on step 3 of 120 would otherwise sleep until somebody pressed Play.
+        swapIfAsked()
+        liftVeil()
+      }
       world.lateUpdate(0)
       draw()
       publish()
@@ -247,6 +398,8 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       said = Number.NEGATIVE_INFINITY
       state = 'edit'
       deps.frames.stop()
+      // 🛑 `clear`, not `dispose`: the engines are thrown away three lines below, so a STOP has
+      // nothing to give back — and a `dispose` would run every `onDestroy` on the way out.
       world.events.clear()
       ports.input.detach()
       // 🛑 The sounds first, and the veil down: a STOP in the middle of a fade would otherwise
@@ -259,8 +412,9 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       ports.physics.dispose()
       ports.script.dispose()
       deps.renderer.apply(deps.editState())
-      // The camera is the only studio state a game touches, so it is the only one STOP restores.
-      if (watching) deps.renderer.placeView(watching)
+      // The camera is the only studio state a game touches, so it is the only one STOP restores —
+      // and only when it was touched, or a STOP would undo an orbit made by hand during the game.
+      if (steered) deps.renderer.placeView(watching)
       publish()
     },
   }

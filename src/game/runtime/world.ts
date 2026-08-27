@@ -15,6 +15,8 @@ import { orderedByDeclaration, writeConflicts, type SystemShape } from './system
 export type System = SystemShape & {
   fixedUpdate?: (world: World, dt: number) => void
   lateUpdate?: (world: World, alpha: number) => void
+  /** Gives back what the system took from a PORT it does not own — bodies, voices, handles. */
+  dispose?: (world: World) => void
 }
 
 /**
@@ -56,6 +58,8 @@ export type World = {
   /** One fixed step: input snapshot, systems in order, births and deaths, then the events. */
   step: (dt: number) => void
   lateUpdate: (alpha: number) => void
+  /** Drops every subscription and gives every system's port holdings back. Idempotent. */
+  dispose: () => void
 }
 
 export type WorldOptions = {
@@ -191,6 +195,18 @@ export function createWorld(options: WorldOptions): World {
           world.ports.log.write('error', `system ${system.name} threw: ${said(error)}`)
         }
       }
+    },
+
+    dispose: () => {
+      // Guarded like every other system call: one that throws must not keep the rest holding on.
+      for (const system of systems) {
+        try {
+          system.dispose?.(world)
+        } catch (error) {
+          world.ports.log.write('error', `system ${system.name} threw on dispose: ${said(error)}`)
+        }
+      }
+      world.events.clear()
     },
   }
 

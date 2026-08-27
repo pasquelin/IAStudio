@@ -14,6 +14,7 @@ import {
 } from '@shared/domain/documentName'
 import { foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
 import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
+import { refFromString } from '@shared/domain/ref'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -187,6 +188,20 @@ export function documentNamedOfKind(
   title: string,
 ): string | null {
   return documentsOfKind(state, kind).find(one => one.title === title)?.id ?? null
+}
+
+/**
+ * Which scene document a spoken name stands for — a `scene:`/`document:` reference, a title, or
+ * an id. Falls back to the word itself, which a reader then answers `null` for.
+ *
+ * Shared because two doors take the same word: a prefab a model names, and a scene a running
+ * game loads. Written twice, the two drifted the day one of them learned to read a reference.
+ */
+export function sceneDocumentNamed(named: string): string {
+  const ref = refFromString(named)
+  if (ref?.kind === 'prefab' || ref?.kind === 'document') return ref.id
+
+  return documentNamedOfKind(useDocuments.getState(), 'scene', named) ?? named
 }
 
 /**

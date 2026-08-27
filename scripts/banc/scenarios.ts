@@ -16,6 +16,7 @@ import { GAME_SCENARIOS } from './scenariosGame'
 import { PLAY_SCENARIOS } from './scenariosPlay'
 import { TIMELINE_SCENARIOS } from './scenariosTimeline'
 import { ASSEMBLY_SCENARIOS } from './scenariosAssembly'
+import { SCENES_SCENARIOS } from './scenariosScenes'
 
 /**
  * The batterie, as something the bench can run — one scenario per request of `BATTERIE.md`, in
@@ -40,4 +41,5 @@ export const SCENARIOS: readonly Scenario[] = [
   ...PLAY_SCENARIOS,
   ...TIMELINE_SCENARIOS,
   ...ASSEMBLY_SCENARIOS,
+  ...SCENES_SCENARIOS,
 ]

@@ -10,9 +10,12 @@ import {
   type ScriptCompiler,
   type ScriptTrouble,
 } from '@/engines/code/scriptCompiler'
-import { animationFrames, startPlay, type PlaySession } from '@/game/playSession'
+import { animationFrames, startPlay, type PlaySession, type SceneLookup } from '@/game/playSession'
+import type { SceneState } from '@/engines/scene/sceneState'
 import { codeFilesOf, useCode } from './code'
+import { documentById, sceneDocumentNamed, useDocuments } from './documents'
 import { sceneEngineOf } from './sceneEngines'
+import { loadSceneSource, montageSceneOf } from './sceneSources'
 import { sceneOf, useScenes } from './scenes'
 
 export type PlayStoreState = {
@@ -29,6 +32,8 @@ export type PlayStoreState = {
   resume: (documentId: string) => boolean
   /** Runs that many fixed steps on a PAUSED game and answers how many ran. */
   step: (documentId: string, steps: number) => number
+  /** Sends a running game to another scene. Whether there WAS one to send. */
+  loadScene: (documentId: string, scene: string, fade: number) => boolean
   stop: (documentId: string) => void
 }
 
@@ -77,6 +82,8 @@ export const usePlay = create<PlayStoreState>()(set => ({
   pause: documentId => held(sessions.get(documentId), one => one.pause()),
   resume: documentId => held(sessions.get(documentId), one => one.resume()),
   step: (documentId, steps) => sessions.get(documentId)?.step(steps) ?? 0,
+  loadScene: (documentId, scene, fade) =>
+    held(sessions.get(documentId), one => one.loadScene(scene, fade)),
 
   stop: documentId => {
     // Dropped from the waiting list too: a stop while the engine loads must not be overtaken by
@@ -112,6 +119,10 @@ async function begin(
     orElse(scriptsOfProject(), NO_SCRIPTS),
   ])
 
+  // 🛑 The scenes this one goes TO, read while the engines are still landing: a fade that has to
+  // wait for a file is a fade that stalls on black, and the timeline names them in advance.
+  for (const scene of scenesAhead(sceneOf(useScenes.getState(), documentId))) sceneNamed(scene)
+
   const renderer = sceneEngineOf(documentId)
   // Stopped, overtaken by a later Play, or its viewport closed while the engines were loading.
   if (starting.get(documentId) !== token || !renderer) {
@@ -133,6 +144,7 @@ async function begin(
       script,
       modules: compiled.modules,
       troubles: compiled.troubles,
+      sceneNamed,
       onReport,
     }),
   )
@@ -182,3 +194,27 @@ const withoutReport = (
   documentId: string,
 ): Record<string, RuntimeReport> =>
   Object.fromEntries(Object.entries(reports).filter(([id]) => id !== documentId))
+
+/**
+ * Another scene of the project, by the title a game names it with or by its id.
+ *
+ * 🛑 The open TAB wins when there is one: reading the disk alone would load the level as it was
+ * before the author's last save.
+ */
+function sceneNamed(scene: string): SceneLookup {
+  const documentId = sceneDocumentNamed(scene)
+  const copy = montageSceneOf(documentId)
+  if (copy) return { state: copy, document: documentId }
+
+  // The project holds no SCENE under that name: a name to repair, not a file to wait for.
+  if (documentById(useDocuments.getState(), documentId)?.kind !== 'scene') return 'unknown'
+
+  void loadSceneSource(documentId)
+  return 'reading'
+}
+
+/** Which other scenes this one's timeline goes to. What a Play reads ahead of being asked. */
+function scenesAhead(state: SceneState): readonly string[] {
+  const named = (state.animation.transitions ?? []).flatMap(one => one.scene ?? [])
+  return [...new Set(named)]
+}

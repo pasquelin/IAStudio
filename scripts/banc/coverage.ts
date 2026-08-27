@@ -323,12 +323,14 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'studio.describe': ['61.11'],
   'studio.docs': ['61.12'],
   'studio.batch': ['61.13'],
-  'timeline.cue': ['62.1', '62.2'],
+  'timeline.cue': ['62.1', '62.2', '64.2'],
   'timeline.remove': ['62.3'],
   'timeline.template': ['62.4'],
 
   'game.template': ['63.1', '63.2'],
   'prefab.instantiate': ['63.3', '63.4'],
+
+  'play.loadScene': ['64.1'],
 
   'context.read': ['57.3'],
   'context.write': ['57.4'],

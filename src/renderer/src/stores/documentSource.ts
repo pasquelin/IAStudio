@@ -103,7 +103,12 @@ export function createDocumentSource<S, A = never>({
 
       try {
         const file = await bridge.documents.read(documentId, kind)
-        if (!file) return
+        // 🛑 The flag goes back here too: a document nothing was ever written under would other-
+        // wise stay « being read » for the life of the window, and every later ask return at once.
+        if (!file) {
+          use.getState().reading.delete(documentId)
+          return
+        }
 
         // Parsed ONCE and handed to both: `DocumentFile.content` is serialized TEXT, and a reader
         // given the string finds nothing in it — the defect this family was hit by twice.

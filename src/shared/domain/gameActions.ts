@@ -131,6 +131,18 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /** What a running game GOES TO. Refused when nothing is playing — there is no game to move. */
+    name: 'play.loadScene',
+    titleKey: 'assistant.actions.playLoadScene.title',
+    descriptionKey: 'assistant.actions.playLoadScene.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'scene', kind: 'text', labelKey: 'assistant.fields.sceneToLoad', required: true },
+      { key: 'fade', kind: 'number', labelKey: 'assistant.fields.fadeSeconds', required: false },
+    ],
+  }),
+  action({
     name: 'runtime.report',
     titleKey: 'assistant.actions.runtimeReport.title',
     descriptionKey: 'assistant.actions.runtimeReport.description',
@@ -279,6 +291,8 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
         required: false,
       },
       { key: 'entity', kind: 'text', labelKey: 'assistant.fields.nodeId', required: false },
+      /** Where a TRANSITION goes. Read by nothing on the other lists — a sound goes nowhere. */
+      { key: 'scene', kind: 'text', labelKey: 'assistant.fields.sceneToLoad', required: false },
     ],
   }),
   action({

@@ -14,18 +14,24 @@ export type TimelineSystemOptions = {
 }
 
 /**
- * What a timeline DOES while a game runs: its events on the bus, its sounds, its veil.
+ * What a timeline DOES while a game runs: its events on the bus, its sounds, its veil, and the
+ * scene a transition goes to.
  *
  * 🛑 NOT played here, and read back all the same: `video`, which no port offers a surface for,
- * the `scene` of a transition, which is the multi-scene lot, and the fades of a sound.
+ * and the fades of a sound.
  */
 export function createTimelineSystem(options: TimelineSystemOptions): System {
   // Resolved ONCE: a `?? []` in a fixed update is a fresh array 240 times a second, for every
   // scene written before this lot — which is all of them.
   const events = options.timeline.events ?? []
   const audio = options.timeline.audio ?? []
-  const transitions = (options.timeline.transitions ?? []).filter(playable)
+  const rows = options.timeline.transitions ?? []
+  const transitions = rows.filter(playable)
+  // 🛑 A separate list, and a CUT belongs to it: a cut veils nothing and still changes scene.
+  const changes = rows.filter(changesScene)
   const fired = new Set<string>()
+  // 🛑 Its own set: an event row and a transition sharing an id would cancel each other out.
+  const swapped = new Set<string>()
   const playing = new Map<string, AudioVoice>()
 
   return {
@@ -62,6 +68,25 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
       }
 
       world.ports.render.veil(veilAt(transitions, now))
+
+      // 🛑 At its HALFWAY mark, where the veil is full: a scene swapped at the top of a fade is
+      // a cut with a fade painted after it.
+      for (const transition of changes) {
+        if (swapped.has(transition.id)) continue
+
+        const half = halfOf(transition)
+        if (now < transition.at + half) continue
+        swapped.add(transition.id)
+        // What is LEFT of the fade: the veil is already full, and the new scene lifts it.
+        world.ports.scenes.load(transition.scene, half / MICROSECONDS_A_SECOND)
+      }
+    },
+
+    // 🛑 The voices this row started: the mixer outlives a scene swap, and a loop left playing
+    // would go on under the next scene until the window closed.
+    dispose: () => {
+      for (const voice of playing.values()) voice.stop()
+      playing.clear()
     },
   }
 }
@@ -78,6 +103,20 @@ const playable = (transition: TimelineTransition): boolean =>
   Number.isFinite(transition.at) &&
   Number.isFinite(transition.duration) &&
   transition.duration > 0
+
+/** A row that goes somewhere. A `cut` does too, at once. */
+const changesScene = (
+  transition: TimelineTransition,
+): transition is TimelineTransition & { scene: string } =>
+  transition.scene !== undefined &&
+  transition.scene.length > 0 &&
+  Number.isFinite(transition.at) &&
+  // A length that is not one would put the swap BEFORE the row's own instant.
+  (transition.kind === 'cut' || (Number.isFinite(transition.duration) && transition.duration > 0))
+
+/** Half a fade, which is where the veil is full. A cut has none, and swaps on its instant. */
+const halfOf = (transition: TimelineTransition): number =>
+  transition.kind === 'cut' ? 0 : transition.duration / 2
 
 /**
  * 🛑 ONE transition at a time — the LAST of the list that is running.

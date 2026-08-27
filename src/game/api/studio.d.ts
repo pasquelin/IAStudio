@@ -100,6 +100,19 @@ declare module '@studio' {
     }
     /** Asks for an entity of that name, at that place. Born at the end of the step. */
     spawn(name: string, at?: Vector3): void
+    scene: {
+      /**
+       * Asks for another scene of the project — its document, by title or by id.
+       *
+       * 🛑 It does not wait, and nothing after it runs in the new scene: a world cannot replace
+       * itself mid-step. Listen for `SceneLoaded`, which arrives on the new scene's own bus.
+       */
+      load(scene: string, options?: { fade?: number }): void
+      /** Puts a value aside for the scene AFTER this one. Pure JSON, like every payload. */
+      keep(key: string, value: unknown): void
+      /** What a former scene put aside, or `null`. Read off the step, so it costs nothing. */
+      kept(key: string): unknown
+    }
     random: {
       /** In `[0, 1)`, from the world's own seed: the same session replays the same numbers. */
       float(): number
