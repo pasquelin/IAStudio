@@ -281,6 +281,8 @@ export type ActionName =
   | 'timeline.cue'
   | 'timeline.remove'
   | 'timeline.template'
+  | 'game.template'
+  | 'prefab.instantiate'
   | 'context.read'
   | 'context.write'
   | 'context.remove'

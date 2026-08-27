@@ -67,17 +67,15 @@ export const TIMELINE_HANDLERS: ActionHandlers = {
     // A sound or a picture: `what` is the asset, and a row with no length plays nothing at all.
     if (what.length === 0) return refused('badInput', `${list} needs an asset`)
     if (duration <= 0) return refused('badInput', `${list} needs a duration`)
-    useScenes
-      .getState()
-      .runCommand(
-        open.documentId,
-        addTimelineRow(list === 'audio' ? 'audio' : 'video', {
-          id,
-          assetId: what,
-          start: at,
-          duration,
-        }),
-      )
+    useScenes.getState().runCommand(
+      open.documentId,
+      addTimelineRow(list === 'audio' ? 'audio' : 'video', {
+        id,
+        assetId: what,
+        start: at,
+        duration,
+      }),
+    )
     return { ok: true, data: { id } }
   },
 
