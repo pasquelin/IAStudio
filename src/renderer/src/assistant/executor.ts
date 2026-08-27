@@ -27,11 +27,11 @@ import { POST_HANDLERS } from './postHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { CONTEXT_HANDLERS } from './contextHandlers'
-import { batchCalls } from '@shared/domain/gameActions'
 import { GAME_HANDLERS } from './gameHandlers'
 import { PLAY_HANDLERS } from './playHandlers'
 import { SCRIPT_HANDLERS } from './scriptHandlers'
-import { batchRefusal, STUDIO_HANDLERS } from './studioHandlers'
+import { STUDIO_HANDLERS } from './studioHandlers'
+import { readBatch } from './batch'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
@@ -46,10 +46,6 @@ import { TARGET_HANDLERS } from './targetHandlers'
  * believed it, and a handler nothing publishes is code no caller can reach.
  */
 const HANDLERS: ActionHandlers = {
-  // In the TABLE like every other, rather than intercepted before it: `executor.test.ts` holds
-  // the table to the registry, and an action published with nothing in here answers `badInput`
-  // to every client that read `tools/list` and believed it.
-  'studio.batch': input => runBatch(input),
   ...CORE_HANDLERS,
   ...GAME_HANDLERS,
   ...PLAY_HANDLERS,
@@ -71,6 +67,9 @@ const HANDLERS: ActionHandlers = {
   ...CONTEXT_HANDLERS,
   ...SETTINGS_HANDLERS,
   ...SHELL_HANDLERS,
+  // Last, and in the table like every other: a family declaring this name would otherwise
+  // overwrite it in silence, and `executor.test.ts` holds the table to the registry.
+  'studio.batch': runBatch,
 }
 
 /** Every name the table answers, so a test can compare it with the registry. */
@@ -132,27 +131,29 @@ export async function runAction(
 /**
  * A lot of primitives run as ONE call — the plan's § 16.3 c.
  *
- * Here rather than in `studioHandlers.ts`, and for the reason `commitmentOfBatch` sits beside the
- * registry: what it runs is `runAction`, which is this module.
+ * Here rather than beside the other handlers: what it runs is `runAction`, and this is that
+ * module. `import-cycles.test.ts` holds a ratchet at zero.
  *
- * 🛑 **What it delivers, and what it does not.** ONE question — `commitmentOfBatch` weighs the
- * lot at the highest of its calls, so a batch naming `script.write` is asked about as a batch
- * that writes. And all-or-nothing STOPS at the first refusal rather than undoing what ran: the
- * calls before it stay. A single undo entry needs every handler to RETURN its command instead of
- * running it — the store merges on a shared `command.id` and nothing else — which is the
- * « every handler writes a Command » guard the plan names, and it is not in this lot.
+ * 🛑 **Each call is confirmed on its OWN terms**, and that is a correction of what this lot first
+ * wrote. Weighing the lot at the worst of what it holds, then asking once, collapsed the five
+ * delegation switches into one: a batch mixing a generation with a `files.trash` weighed
+ * `credits`, and a person who had delegated a credits BUDGET — and nothing else — had the
+ * deletion carried out without being asked. Twenty generations were quoted as one, too.
+ *
+ * The price is a question per engaging call rather than one for the lot; what is kept is one MCP
+ * round trip, the order, and the stop at the first refusal. A single question for a whole lot
+ * needs the question itself to LIST what it holds, which `ConfirmRequest` does not carry.
  */
 async function runBatch(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const shut = batchRefusal(input)
-  if (shut) return shut
+  const read = readBatch(input)
+  if ('refusal' in read) return read.refusal
 
   const done: unknown[] = []
-  for (const call of batchCalls(input)) {
-    const outcome = await runAction(call.action as ActionName, call.input)
-    // The rank is what a client repairs from: « call 2 » names which one, where a bare refusal
-    // would have it re-sending the whole lot to find out.
+  for (const call of read.calls) {
+    const outcome = await runConfirmedAction(call.action, call.input)
+    // The RANK is what a client repairs from — one-based, as a person counts a list.
     if (!outcome.ok) {
-      return { ...outcome, detail: `call ${done.length}: ${outcome.detail ?? outcome.refusal}` }
+      return { ...outcome, detail: `call ${done.length + 1}: ${outcome.detail ?? outcome.refusal}` }
     }
     done.push(outcome.data ?? null)
   }

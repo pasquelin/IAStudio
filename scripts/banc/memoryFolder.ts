@@ -19,10 +19,16 @@ import { matchesWords, searchWords } from '@shared/text'
 export type MemoryFolder = FolderReader &
   FolderWriter & {
     paths: () => readonly string[]
-    /** A file put there by something other than a gesture — what a generation lands as. */
-    write: (path: string) => Promise<void>
+    /**
+     * A file put there by something other than a gesture — what a generation lands as, and what
+     * a script written from outside the window lands as. The TEXT is optional: most of what a
+     * bench seeds is a name and a kind, and only what is read back needs contents.
+     */
+    write: (path: string, source?: string) => Promise<void>
     /** What the disk holds at this path, without listing anything around it. */
     kindOf: (path: string) => FileKind | null
+    /** What was written there, for the one family a bench reads back: the scripts. */
+    textOf: (path: string) => string | null
   }
 
 const entryOf = (path: string, kind: FileKind): FolderEntry => ({
@@ -35,6 +41,7 @@ export function createMemoryFolder(
   seed: readonly { path: string; kind: FileKind }[],
 ): MemoryFolder {
   const held = new Map(seed.map(one => [one.path, one.kind]))
+  const texts = new Map<string, string>()
 
   const under = (path: string): string[] =>
     [...held.keys()].filter(one => one === path || isUnder(one, path))
@@ -107,12 +114,15 @@ export function createMemoryFolder(
 
     paths: () => [...held.keys()],
 
-    write: path => {
+    write: (path, source) => {
       held.set(path, 'file')
+      if (source !== undefined) texts.set(path, source)
       return Promise.resolve()
     },
 
     kindOf: path => held.get(path) ?? null,
+
+    textOf: path => texts.get(path) ?? null,
   }
 
   return folder

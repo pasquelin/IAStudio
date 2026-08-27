@@ -24,11 +24,19 @@ export type PlayStoreState = {
    * no element to hand over, and a game nobody presses a key in still runs.
    */
   start: (documentId: string, input?: DomInputTarget) => void
-  pause: (documentId: string) => void
-  resume: (documentId: string) => void
+  /** Whether there WAS a game to pause: one whose engines are still landing has no session. */
+  pause: (documentId: string) => boolean
+  resume: (documentId: string) => boolean
   /** Runs that many fixed steps on a PAUSED game and answers how many ran. */
   step: (documentId: string, steps: number) => number
   stop: (documentId: string) => void
+}
+
+/** Ran on the session when there is one, and says whether there WAS one. */
+const held = (session: PlaySession | undefined, run: (one: PlaySession) => void): boolean => {
+  if (!session) return false
+  run(session)
+  return true
 }
 
 /**
@@ -64,8 +72,10 @@ export const usePlay = create<PlayStoreState>()(set => ({
     )
   },
 
-  pause: documentId => sessions.get(documentId)?.pause(),
-  resume: documentId => sessions.get(documentId)?.resume(),
+  // 🛑 Answered rather than swallowed: a game whose engines are still landing has no session,
+  // and a caller told « paused » that was not is one that steps a world running under it.
+  pause: documentId => held(sessions.get(documentId), one => one.pause()),
+  resume: documentId => held(sessions.get(documentId), one => one.resume()),
   step: (documentId, steps) => sessions.get(documentId)?.step(steps) ?? 0,
 
   stop: documentId => {
@@ -137,6 +147,18 @@ let compiler: ScriptCompiler | null = null
 type CompiledScripts = { modules: readonly ScriptModule[]; troubles: readonly ScriptTrouble[] }
 
 const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [] }
+
+/**
+ * Whether that text would compile, said the way a fault is — or nothing when it would.
+ *
+ * 🛑 Through the WORKER, never `transpile` in place: the compiler is nine megabytes of parsing
+ * and the thread it runs on is the one that draws — invariant 6. The digest cache is the same
+ * one a Play reads, so what is checked here is not parsed again a moment later.
+ */
+export async function scriptTrouble(script: string, source: string): Promise<ScriptTrouble | null> {
+  compiler ??= createScriptCompiler()
+  return (await compiler.compile([{ script, source }])).troubles[0] ?? null
+}
 
 async function scriptsOfProject(): Promise<CompiledScripts> {
   // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles

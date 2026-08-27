@@ -227,9 +227,10 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
     name: 'studio.batch',
     titleKey: 'assistant.actions.studioBatch.title',
     descriptionKey: 'assistant.actions.studioBatch.description',
+    // 🛑 `none` for the LOT, and every call inside asked about on its own terms. Weighing the lot
+    // at the worst of what it holds, then asking once, collapsed five independent delegation
+    // switches into one — see `runBatch`, which carries the whole reasoning.
     commitment: 'none',
-    // 🛑 The `raises` of a batch reads the REGISTRY to weigh what it holds, and the registry is
-    // built from this file — so it is posed in `assistant.ts`, where both already are.
     reach: 'mcp',
     fields: [
       { key: 'calls', kind: 'longText', labelKey: 'assistant.fields.batchCalls', required: true },
@@ -239,28 +240,3 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
 
 /** One call of a batch: the action to run and what to run it with. */
 export type BatchCall = { action: string; input: Record<string, unknown> }
-
-/**
- * The calls a batch was handed, or none at all — never a throw: what parses this is a string a
- * model composed, so malformed is the ordinary case.
- */
-export function batchCalls(input: Record<string, unknown>): readonly BatchCall[] {
-  const said = input.calls
-  if (typeof said !== 'string') return []
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(said)
-  } catch {
-    return []
-  }
-  const list = Array.isArray(parsed) ? parsed : []
-  return list.filter(isBatchCall)
-}
-
-const isBatchCall = (value: unknown): value is BatchCall =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as { action?: unknown }).action === 'string' &&
-  typeof (value as { input?: unknown }).input === 'object' &&
-  (value as { input?: unknown }).input !== null

@@ -1,11 +1,10 @@
-import { assistantAction, refused, type ActionOutcome } from '@shared/domain/assistant'
-import { batchCalls } from '@shared/domain/gameActions'
+import { englishText } from '@shared/i18n'
+import { refused, type ActionField } from '@shared/domain/assistant'
 import { COMPONENTS, COMPONENT_TYPES, descriptorOf } from '@shared/domain/componentRegistry'
 import { isComponentType } from '@shared/domain/componentRegistry'
 import { refFromString } from '@shared/domain/ref'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
-import { activeSceneId, useDocuments } from '@/stores/documents'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { mounted } from './sceneHandlers'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
@@ -20,23 +19,29 @@ import { nodeAimed } from './nodeAimed'
  */
 export const STUDIO_HANDLERS: ActionHandlers = {
   'studio.describe': input => {
-    const documentId = activeSceneId(useDocuments.getState())
-    if (documentId === null) return refused('wrongSurface')
+    const open = mounted()
+    if (!open) return refused('wrongSurface')
 
     const named = textOf(input, 'ref') ?? ''
-    const scene = sceneOf(useScenes.getState(), documentId)
+    const scene = open.state
     if (named.length === 0) {
       return {
         ok: true,
         data: {
-          scene: documentId,
+          scene: open.documentId,
           nodes: scene.nodes.map(node => ({ id: node.id, name: node.name, type: node.type })),
           available: { components: COMPONENT_TYPES },
         },
       }
     }
 
-    const node = nodeAimed(scene, refFromString(named)?.kind === 'entity' ? idOf(named) : named)
+    // 🛑 A reference naming ANOTHER document is refused rather than answered off the scene in
+    // front: a confident answer about the wrong object is worse than no answer.
+    const ref = refFromString(named)
+    if (ref?.kind === 'entity' && ref.document !== open.documentId) {
+      return refused('notFound', `"${named}" belongs to another document`)
+    }
+    const node = nodeAimed(scene, ref?.kind === 'entity' ? ref.id : named)
     if (!node) return refused('notFound', `no node "${named}" in the scene in front, by id or name`)
 
     return {
@@ -50,7 +55,9 @@ export const STUDIO_HANDLERS: ActionHandlers = {
           type: component.type,
           properties: component,
           // The descriptor, so a model knows what it may WRITE without a second call.
-          schema: isComponentType(component.type) ? descriptorOf(component.type).fields : [],
+          fields: isComponentType(component.type)
+            ? descriptorOf(component.type).fields.map(describeField)
+            : [],
         })),
         relations: {
           parent: node.parentId ?? null,
@@ -77,30 +84,28 @@ export const STUDIO_HANDLERS: ActionHandlers = {
     if (!isComponentType(topic)) {
       return refused('notFound', `no topic "${topic}" — ask with no topic for the list`)
     }
+    // 🛑 Resolved, never the KEYS: an action whose trade is to document serves sentences, and
+    // `mcpTools` already puts every description through `englishText` for the same reason.
     const held = COMPONENTS[topic]
     return {
       ok: true,
       data: {
         topic,
-        titleKey: held.titleKey,
-        descriptionKey: held.descriptionKey,
-        schema: held.fields,
+        title: englishText(held.titleKey),
+        description: englishText(held.descriptionKey),
+        fields: held.fields.map(describeField),
       },
     }
   },
 }
 
-/** The id inside an `entity:<document>/<id>` reference — `nodeAimed` takes a bare one. */
-const idOf = (named: string): string => named.split('/').at(-1) ?? named
-
-/** What a batch was handed, refused before anything runs rather than halfway through it. */
-export function batchRefusal(input: Record<string, unknown>): ActionOutcome | null {
-  const calls = batchCalls(input)
-  if (calls.length === 0) return refused('badInput', 'calls must be a JSON array of {action,input}')
-
-  for (const call of calls) {
-    if (!assistantAction(call.action)) return refused('badInput', `no action "${call.action}"`)
-    if (call.action === 'studio.batch') return refused('badInput', 'a batch may not hold a batch')
-  }
-  return null
-}
+/** One field as a model reads it: the label resolved, and the bounds it must respect. */
+const describeField = (field: ActionField): Record<string, unknown> => ({
+  key: field.key,
+  kind: field.kind,
+  label: englishText(field.labelKey),
+  required: field.required,
+  ...(field.options ? { options: field.options } : {}),
+  ...(field.min === undefined ? {} : { min: field.min }),
+  ...(field.max === undefined ? {} : { max: field.max }),
+})

@@ -22,10 +22,12 @@ describe('what keeps a model from guessing', () => {
 
     expect(outcome.ok && outcome.data).toMatchObject({ name: 'Hero' })
     const data = outcome.ok
-      ? (outcome.data as { components: { type: string; schema: unknown[] }[] })
+      ? (outcome.data as { components: { type: string; fields: { label: string }[] }[] })
       : null
     expect(data?.components[0]?.type).toBe('Health')
-    expect(data?.components[0]?.schema.length).toBeGreaterThan(0)
+    // 🛑 Resolved sentences, never i18n keys: an action whose trade is documenting must not
+    // answer identifiers to a model that cannot look them up.
+    expect(data?.components[0]?.fields[0]?.label).not.toContain('game.fields')
   })
 
   it('says what may still be added, which is what a repair reads', async () => {
@@ -34,6 +36,13 @@ describe('what keeps a model from guessing', () => {
     const data = outcome.ok ? (outcome.data as { available: { components: string[] } }) : null
     expect(data?.available.components).toContain('Movement')
     expect(data?.available.components).not.toContain('Health')
+  })
+
+  /** 🛑 A confident answer about the WRONG object is worse than no answer at all. */
+  it('refuses a reference that belongs to another document', async () => {
+    const outcome = await runAction('studio.describe', { ref: 'entity:other-doc/n1' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 
   it('answers the whole scene when nothing is named', async () => {
@@ -88,7 +97,7 @@ describe('what keeps a model from guessing', () => {
       })
 
       expect(outcome.ok).toBe(false)
-      expect(!outcome.ok && outcome.detail).toContain('call 1')
+      expect(!outcome.ok && outcome.detail).toContain('call 2')
     })
 
     it('refuses a batch holding a batch, and one naming an action nothing publishes', async () => {
@@ -105,6 +114,36 @@ describe('what keeps a model from guessing', () => {
 
     it('refuses calls that are not a JSON array of calls', async () => {
       expect(await runAction('studio.batch', { calls: 'not json' })).toMatchObject({ ok: false })
+      expect(await runAction('studio.batch', { calls: '[]' })).toMatchObject({ ok: false })
+    })
+
+    /**
+     * 🛑 A malformed entry REFUSES rather than being dropped. Filtered out, a lot of five where
+     * four had vanished answered `ok` — a model told everything went well having got one thing.
+     */
+    it('refuses a malformed entry rather than running the rest', async () => {
+      const outcome = await runAction('studio.batch', {
+        calls: JSON.stringify([
+          { action: 'component.attach', input: { nodeId: 'Hero', type: 'Movement' } },
+          'garbage',
+        ]),
+      })
+
+      expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+      expect(!outcome.ok && outcome.detail).toContain('call 2')
+    })
+
+    /** The thread runs them one after another with nothing to cancel it — invariant 6. */
+    it('refuses a lot too long to run without a word', async () => {
+      const many = Array.from({ length: 51 }, () => ({
+        action: 'component.attach',
+        input: { nodeId: 'Hero', type: 'Movement' },
+      }))
+
+      expect(await runAction('studio.batch', { calls: JSON.stringify(many) })).toMatchObject({
+        ok: false,
+        refusal: 'badInput',
+      })
     })
   })
 })

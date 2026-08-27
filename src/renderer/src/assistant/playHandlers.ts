@@ -50,7 +50,9 @@ export const PLAY_HANDLERS: ActionHandlers = {
     const documentId = playing()
     if (missed(documentId)) return documentId
 
-    usePlay.getState().pause(documentId)
+    // 🛑 A start answers before its engines land, so there is a window where no session exists.
+    // Said rather than swallowed: a model told « paused » would step a world still running.
+    if (!usePlay.getState().pause(documentId)) return refused('badInput', 'no game is running yet')
     return { ok: true, data: { state: playReportOf(usePlay.getState(), documentId).state } }
   },
 
@@ -58,7 +60,7 @@ export const PLAY_HANDLERS: ActionHandlers = {
     const documentId = playing()
     if (missed(documentId)) return documentId
 
-    usePlay.getState().resume(documentId)
+    if (!usePlay.getState().resume(documentId)) return refused('badInput', 'no game is running')
     return { ok: true, data: { state: playReportOf(usePlay.getState(), documentId).state } }
   },
 
@@ -67,9 +69,12 @@ export const PLAY_HANDLERS: ActionHandlers = {
     if (missed(documentId)) return documentId
 
     const ran = usePlay.getState().step(documentId, numberOf(input, 'steps') ?? 1)
-    // Nothing ran is not nothing happened: a game that is not PAUSED cannot be stepped, and a
-    // client told `ok` would take its next reading of a world moving under it.
-    if (ran === 0) return refused('badInput', 'the game is not paused')
+    // Nothing ran is not nothing happened: only a PAUSED game steps, and a game whose engines
+    // are still landing is not one at all. Both are said, because they are repaired differently.
+    if (ran === 0) {
+      const state = playReportOf(usePlay.getState(), documentId).state
+      return refused('badInput', state === 'edit' ? 'no game is running' : 'the game is not paused')
+    }
     return { ok: true, data: { steps: ran, ...readingOf(documentId) } }
   },
 

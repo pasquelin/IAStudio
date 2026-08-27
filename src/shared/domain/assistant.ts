@@ -2,7 +2,6 @@ import { englishText } from '../i18n'
 import type { Target } from './target'
 import { searchWords } from '../text'
 import {
-  ACTION_COMMITMENTS,
   type ActionCommitment,
   type ActionName,
   type AssistantAction,
@@ -21,13 +20,7 @@ import { POST_ACTIONS } from './postActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
-import {
-  batchCalls,
-  GAME_ACTIONS,
-  PLAY_ACTIONS,
-  SCRIPT_ACTIONS,
-  STUDIO_ACTIONS,
-} from './gameActions'
+import { GAME_ACTIONS, PLAY_ACTIONS, SCRIPT_ACTIONS, STUDIO_ACTIONS } from './gameActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
 import { SHELL_ACTIONS } from './shellActions'
 import { TARGET_ACTIONS } from './targetActions'
@@ -236,21 +229,6 @@ export function commitmentOfCall(
 ): ActionCommitment {
   const action = assistantAction(name)
   if (!action) return 'none'
-  if (name === 'studio.batch') return commitmentOfBatch(input)
 
   return action.raises?.(input) ?? action.commitment
-}
-
-/**
- * 🛑 What a batch really engages: the HIGHEST commitment of the calls it holds.
- *
- * Read off the calls rather than declared: a lot naming `script.write` writes a file, and asking
- * about it as though it engaged nothing is exactly the confirmation a person would have wanted.
- * Here rather than as a `raises` of the descriptor, which would close a cycle on the registry.
- */
-function commitmentOfBatch(input: Record<string, unknown>): ActionCommitment {
-  return batchCalls(input).reduce<ActionCommitment>((worst, call) => {
-    const one = commitmentOfCall(call.action as ActionName, call.input)
-    return ACTION_COMMITMENTS.indexOf(one) > ACTION_COMMITMENTS.indexOf(worst) ? one : worst
-  }, 'none')
 }

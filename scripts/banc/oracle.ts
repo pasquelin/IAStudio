@@ -440,11 +440,13 @@ export const tried = (run: Run, name: ActionName): boolean =>
   run.called.some(one => one.action === name)
 
 /**
- * What one action ANSWERED, or nothing at all when the model never called it.
+ * What one action answered, for the readings whose whole EFFECT is their answer.
  *
- * 🛑 For the reading actions alone — `runtime.report`, `script.list`, `studio.docs`. Their whole
- * effect IS the answer: a report changes nothing in the studio, so an oracle reading the state
- * would pass on a model that said the right sentence and called nothing at all.
+ * 🛑 A refusal answers too — `answerShown` writes « refused wrongSurface » — so this rends only
+ * what came back from a call that WORKED. Written the other way round first, and twelve of the
+ * thirteen § 61 scenarios then passed on a studio that had refused every one of them.
  */
-export const answeredBy = (run: Run, action: string): string | undefined =>
-  run.called.find(one => one.action === action)?.answer
+export const answerOf = (run: Run, name: ActionName): string | null => {
+  const held = run.called.find(one => one.action === name)?.answer
+  return held === undefined || held.startsWith('refused') ? null : held
+}

@@ -38,6 +38,20 @@ describe('a game driven from outside the window', () => {
     expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
+  /**
+   * 🛑 A start answers before its engines land, so there is a window with no session at all.
+   * Told `ok`, a model then steps a world running under it — and the bench's own decor paused
+   * nothing while both its guards stayed green.
+   */
+  it('says so when there is no game to pause yet, rather than answering ok', async () => {
+    await runAction('play.start', {})
+
+    const paused = await runAction('play.pause', {})
+
+    expect(paused).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(!paused.ok && paused.detail).toContain('no game')
+  })
+
   it('answers what the game says about itself', async () => {
     const outcome = await runAction('runtime.report', {})
 

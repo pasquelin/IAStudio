@@ -17,6 +17,8 @@ import { describeStudio } from '@main/assistant/studioState'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
+import { SCRIPT_EXTENSION } from '@shared/domain/game'
+import { standInForWorkers } from './codeWorker'
 import { drawing } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
@@ -24,7 +26,9 @@ import { lendPictureMeasure } from '@/spaces/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
 import { useJobs } from '@/stores/jobs'
 import { unsavedDocumentIds } from '@/app/documentIo'
+import type { PlayState } from '@shared/domain/gameRuntime'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
+import { playReportOf, usePlay } from '@/stores/play'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -66,6 +70,15 @@ export type Studio = {
   changed: () => boolean
   /** Every call it refused, named — a DECOR that hits one has laid out nothing. */
   refusals: () => readonly string[]
+  /** What the game of the document in front is doing, read off the store the window writes. */
+  playState: () => PlayState
+  /**
+   * Waits for a game to be RUNNING, or gives up.
+   *
+   * 🛑 `play.start` answers before its engines land — deliberately, so an MCP client is not held
+   * — so a decor that played and paused in the same breath paused nothing at all, and said `ok`.
+   */
+  playing: () => Promise<boolean>
   /** Called once the decor is laid out, so what the DECOR did is not scored as the MODEL's. */
   settle: () => void
   /**
@@ -108,23 +121,27 @@ export async function createStudio(
   const cloud = createMemoryCloud(folder, catalog)
   const documentsOnDisk = new Map(descriptorsOf(folder).map(one => [one.id, one]))
   const git = createMemoryGit()
-  /**
-   * 🛑 A PORT, not a rule: the scripts of a project live on a disk this run has not got. What a
-   * write MEANS — the refusal of a path that leaves the project, the transpile that must pass —
-   * stays where it is, in the main process and in the handler.
-   */
-  const scripts = new Map<string, string>()
   const shell = createMemoryShell(assetId => catalog.rows().find(one => one.id === assetId) ?? null)
 
   installFakeBridge({
     ...shell.channels,
     git,
+    /**
+     * 🛑 A PORT, not a rule, and the SAME disk as everything else: a script written from outside
+     * the window has to turn up in `studio.files()`, or no oracle can read it back. What a write
+     * MEANS — the refusal of a path that leaves the project — stays in the main process.
+     */
     game: {
-      ...shell.channels.game,
-      scripts: () => Promise.resolve([...scripts].map(([path, source]) => ({ path, source }))),
-      writeScript: (path, source) => {
-        scripts.set(path, source)
-        return Promise.resolve(true)
+      scripts: () =>
+        Promise.resolve(
+          folder
+            .paths()
+            .filter(path => path.endsWith(SCRIPT_EXTENSION))
+            .map(path => ({ path, source: folder.textOf(path) ?? '' })),
+        ),
+      writeScript: async (path, source) => {
+        await folder.write(path, source)
+        return true
       },
     },
     project: {
@@ -295,6 +312,7 @@ export async function createStudio(
   const leaveTheDock = followTheDock()
   const leaveTheCommandBus = followTheCommandBus()
   const leaveTheViewport = followTheViewport()
+  const leaveTheWorkers = standInForWorkers()
 
   const run = async (
     action: ActionName,
@@ -311,7 +329,7 @@ export async function createStudio(
     return activeId === null ? null : (documents[activeId] ?? null)
   }
 
-  return {
+  const studio: Studio = {
     run,
     state: async () => {
       const read = await runAction('studio.state', {})
@@ -329,6 +347,19 @@ export async function createStudio(
     familyOf: cloud.familyOf,
     changed: () => unsavedDocumentIds().some(one => !settled.has(one)) || ops.can().undo,
     refusals: () => refusals,
+
+    playing: async () => {
+      for (let tries = 0; tries < 200; tries++) {
+        if (studio.playState() !== 'edit') return true
+        await new Promise(settle => setTimeout(settle, 10))
+      }
+      return false
+    },
+
+    playState: () => {
+      const documentId = frontDocumentIn(useDocuments.getState(), '3d')
+      return documentId === null ? 'edit' : playReportOf(usePlay.getState(), documentId).state
+    },
     wasAt: nodeId => poses.get(nodeId) ?? null,
     settle: () => {
       // A snapshot, like the poses below — never a write into the studio's own save marks.
@@ -345,15 +376,24 @@ export async function createStudio(
       }
     },
     close: () => {
+      // 🛑 Every game STOPPED first: sessions live at module scope, so one left running keeps a
+      // frame loop, a physics world and a sandbox alive into the next scenario — and its own
+      // `begin()` resolves after the bridge has been unstubbed, reading the NEXT run's decor.
+      for (const documentId of Object.keys(useDocuments.getState().documents)) {
+        usePlay.getState().stop(documentId)
+      }
       closeConfirmer()
       closeGenerator()
       giveBackMeasure()
       leaveTheDock()
       leaveTheCommandBus()
       leaveTheViewport()
+      leaveTheWorkers()
       // `installFakeBridge` stubs `window.studio`; left standing it keeps this run's whole decor
       // — folder, catalogue, git, shell — reachable until the next scenario replaces it.
       vi.unstubAllGlobals()
     },
   }
+
+  return studio
 }

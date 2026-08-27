@@ -1,8 +1,8 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { SCRIPT_EXTENSION } from '@shared/domain/game'
-import { refToString } from '@shared/domain/ref'
-import { transpile } from '@/engines/code/transpile'
+import { refFromString, refToString } from '@shared/domain/ref'
 import { codeFilesOf, useCode } from '@/stores/code'
+import { scriptTrouble } from '@/stores/play'
 import { useProject } from '@/stores/project'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
@@ -16,7 +16,7 @@ import { textOf } from './actionInputs'
  */
 
 const noProject = (): ActionOutcome | null =>
-  useProject.getState().project === null ? refused('wrongSurface', 'no project open') : null
+  useProject.getState().project === null ? refused('noProject') : null
 
 export const SCRIPT_HANDLERS: ActionHandlers = {
   'script.list': async () => {
@@ -29,7 +29,7 @@ export const SCRIPT_HANDLERS: ActionHandlers = {
       data: {
         scripts: codeFilesOf(useCode.getState()).map(file => ({
           ref: file.script,
-          path: file.script.replace(/^script:/, ''),
+          path: pathOfScript(file.script),
           lines: file.source.split('\n').length,
         })),
       },
@@ -58,23 +58,33 @@ export const SCRIPT_HANDLERS: ActionHandlers = {
     }
     const source = textOf(input, 'source') ?? ''
 
-    // 🛑 Refused BEFORE it lands, with the line: a file that will not compile is one the next
-    // Play would refuse anyway, and a model told `ok` has no reason to look at it again.
-    const held = transpile(source)
-    if ('trouble' in held) {
-      return refused('badInput', `line ${held.line}: cannot import ${held.trouble}`)
+    const script = refToString({ kind: 'script', path })
+    // 🛑 Refused BEFORE it lands, with the line: a file that names a module the sandbox does not
+    // hold is one the next Play would refuse anyway, and a model told `ok` never looks again.
+    const trouble = await scriptTrouble(script, source)
+    if (trouble) {
+      return refused('badInput', `line ${trouble.line}: cannot import ${trouble.message}`)
     }
 
-    const script = refToString({ kind: 'script', path })
-    useCode.setState(state => ({
-      files: {
-        ...state.files,
-        [script]: { script, saved: state.files[script]?.saved ?? '', source },
-      },
-    }))
+    // 🛑 Refused rather than written over: an author typing in that very file would otherwise
+    // lose it, with no word and no undo — `⌘Z` does not reach into the code editor.
+    if (!useCode.getState().wrote(script, source)) {
+      return refused('badInput', `"${path}" is open with unsaved changes`)
+    }
     if (!(await useCode.getState().save(script))) {
+      // Taken back out: a file the project refused must not sit in the list as one it holds,
+      // where the window's own guard would retry writing it on the way out.
+      useCode.setState(state => ({
+        files: Object.fromEntries(Object.entries(state.files).filter(([one]) => one !== script)),
+      }))
       return refused('badInput', `"${path}" is not a script of this project`)
     }
     return { ok: true, data: { ref: script } }
   },
+}
+
+/** The file a script reference names — the one reading of it, for whoever answers a path. */
+function pathOfScript(script: string): string {
+  const ref = refFromString(script)
+  return ref?.kind === 'script' ? ref.path : script
 }
