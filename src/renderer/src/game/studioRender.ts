@@ -25,11 +25,17 @@ export type SceneDraw = Pick<SceneRenderer, 'apply' | 'placeView' | 'viewPlaceme
  * 🛑 It never writes to the store. That is the whole of why STOP restores nothing: one `apply` of
  * the untouched edit state puts the viewport back where it was.
  */
-export function createStudioRender(renderer: SceneDraw, editState: () => SceneState): RenderPort {
+export function createStudioRender(
+  renderer: SceneDraw,
+  editState: () => SceneState,
+  /** Told how far the picture is veiled, for a host that has something to veil it with. */
+  onVeil: (amount: number) => void = () => {},
+): RenderPort {
   const shadow = new Map<string, SceneNode>()
   const watched: CameraView = { position: NOWHERE, target: NOWHERE }
   let byId = new Map<string, SceneNode>()
   let source: SceneState | null = null
+  let veiled = 0
 
   return {
     place: (placements: readonly EntityPlacement[]) => {
@@ -81,6 +87,18 @@ export function createStudioRender(renderer: SceneDraw, editState: () => SceneSt
       watched.position = { ...wanted.position }
       watched.target = { ...wanted.target }
       renderer.placeView(wanted)
+    },
+
+    /**
+     * 🛑 Written on the SESSION rather than into the document: a veil is how a game is being
+     * watched at this instant, and one written into the scene would put an undo entry per frame
+     * of a fade — the very reason the playhead is not in the document either.
+     */
+    veil: amount => {
+      const wanted = Math.max(0, Math.min(amount, 1))
+      if (wanted === veiled) return
+      veiled = wanted
+      onVeil(wanted)
     },
   }
 }

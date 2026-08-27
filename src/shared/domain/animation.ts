@@ -1,3 +1,4 @@
+import type { JsonValue } from './component'
 import type { Transform, Vector3 } from './scene'
 import { SECOND, type Us } from './time'
 
@@ -140,6 +141,72 @@ export type CameraShot = {
 }
 
 /**
+ * What a timeline DOES at an instant, beyond moving something.
+ *
+ * 🛑 A call into the game, never a behaviour of its own: the row says WHEN, and what happens is
+ * a script's or the bus's. A timeline that could act would be a second runtime.
+ */
+export type TimelineEvent = {
+  id: string
+  at: Us
+  /** The event's own name, put on the bus — what a script hears through `onMessage`. */
+  name: string
+  /** Which entity it happened to, or nothing when it happened to the scene. */
+  entity?: string
+  payload?: Readonly<Record<string, JsonValue>>
+}
+
+/**
+ * A sound or a picture on air from `start`, by the reference the catalogue answers.
+ *
+ * One list per medium rather than one with a `kind`: what a row OFFERS differs — a sound fades,
+ * a video does not loop under a dialogue — and a union would have every reader test the kind.
+ */
+export type TimelineMedia = {
+  id: string
+  assetId: string
+  start: Us
+  duration: Us
+  /** Linear, in `[0, 1]`. Absent is full. */
+  gain?: number
+  fadeIn?: Us
+  fadeOut?: Us
+  loop?: boolean
+}
+
+/** What a transition DOES between two moments. `cut` is instant; the others take their time. */
+export type TransitionKind = 'fade' | 'cut' | 'dissolve'
+
+export const TRANSITION_KINDS: readonly TransitionKind[] = ['fade', 'cut', 'dissolve']
+
+export type TimelineTransition = {
+  id: string
+  at: Us
+  kind: TransitionKind
+  duration: Us
+  /** Which scene it goes TO, for a transition that changes one. Absent stays here. */
+  scene?: string
+}
+
+/**
+ * 🛑 A FILTER OF VIEW, never a capability.
+ *
+ * It decides which rows the panel OFFERS and nothing else — the engine plays every row of a
+ * timeline whatever this says, and `timelineTemplate.test.ts` holds that in both directions. The
+ * precedent is `sheet`, taken for a measured reason: a panel that offers everything is a panel
+ * nobody can read.
+ */
+export type TimelineTemplate = 'cinematic' | 'dialogue' | 'intro' | 'gameplay' | 'custom'
+
+export const TIMELINE_TEMPLATES: readonly TimelineTemplate[] = [
+  'cinematic',
+  'dialogue',
+  'intro',
+  'gameplay',
+  'custom',
+]
+
+/**
  * What a document holds of its animation. The playhead is NOT here: where the head stands is
  * how a scene is being looked at, like the projection and the display mode — and a head written
  * into the document would put one undo entry per frame of playback.
@@ -160,6 +227,16 @@ export type AnimationTimeline = {
    * 99,2 % of the window's DOM, measured 20/08.
    */
   sheet: readonly string[]
+  /**
+   * What the timeline does BESIDES moving something. All optional, and absent on every document
+   * written before games: a scene that carries none plays exactly as it did.
+   */
+  events?: readonly TimelineEvent[]
+  audio?: readonly TimelineMedia[]
+  video?: readonly TimelineMedia[]
+  transitions?: readonly TimelineTransition[]
+  /** Which rows the panel offers. Never what the engine can do — see `TimelineTemplate`. */
+  template?: TimelineTemplate
 }
 
 /**

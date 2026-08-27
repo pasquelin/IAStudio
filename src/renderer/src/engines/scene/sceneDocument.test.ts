@@ -1036,3 +1036,64 @@ describe('the composition, written and read back', () => {
     expect(sceneFromPayload(payload).animation.tracks).toEqual([])
   })
 })
+
+/**
+ * 🛑 R4 of the plan, and the one that would break everything quietly: a save recomposes the
+ * timeline WHOLE from the state, so a row this build does not read back is a row the next `⌘S`
+ * drops without a word. What a game puts on a timeline has to survive a round trip.
+ */
+describe('what a timeline carries beyond moving something', () => {
+  const timed = (over: Partial<SceneState['animation']>): SceneState => ({
+    ...EMPTY_SCENE,
+    animation: { ...EMPTY_TIMELINE, ...over },
+  })
+
+  it('gives back every row a game put on it', () => {
+    const state = timed({
+      events: [
+        { id: 'e1', at: 1_000, name: 'DoorOpened', entity: 'n1', payload: { side: 'north' } },
+      ],
+      audio: [{ id: 'a1', assetId: 'asset-1', start: 0, duration: 5_000, gain: 0.5, fadeIn: 200 }],
+      video: [{ id: 'v1', assetId: 'asset-2', start: 0, duration: 3_000 }],
+      transitions: [{ id: 't1', at: 3_000, kind: 'fade', duration: 500, scene: 'doc-2' }],
+      template: 'intro',
+    })
+
+    expect(reread(state).animation).toEqual(state.animation)
+  })
+
+  /** A scene that carries none must come back exactly as it was written — absent, not empty. */
+  it('leaves a timeline that never had one alone', () => {
+    const held = reread(timed({})).animation
+
+    expect(held).toEqual(EMPTY_TIMELINE)
+    expect('events' in held).toBe(false)
+    expect('template' in held).toBe(false)
+  })
+
+  it('drops a row it cannot read rather than carrying half of one', () => {
+    const state = timed({
+      events: [{ id: 'e1', at: 1_000, name: 'Fine' }],
+      transitions: [{ id: 't1', at: 0, kind: 'fade', duration: 100 }],
+    })
+    const written = JSON.parse(JSON.stringify(scenePayload(state))) as {
+      animation: { events: unknown[]; transitions: unknown[] }
+    }
+    written.animation.events.push({ id: 'e2', at: 'soon' })
+    written.animation.transitions.push({ id: 't2', at: 0, kind: 'wipe', duration: 1 })
+
+    const held = sceneFromPayload(written).animation
+
+    expect(held.events).toEqual(state.animation.events)
+    expect(held.transitions).toEqual(state.animation.transitions)
+  })
+
+  it('refuses a template nothing declares rather than carrying it through', () => {
+    const written = JSON.parse(JSON.stringify(scenePayload(timed({})))) as {
+      animation: Record<string, unknown>
+    }
+    written.animation.template = 'whatever'
+
+    expect('template' in sceneFromPayload(written).animation).toBe(false)
+  })
+})

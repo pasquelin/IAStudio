@@ -7,5 +7,5 @@ import type { RenderPort } from '../ports/renderPort'
  * none yet. Named rather than hidden — a port quietly doing half the job would be worse.
  */
 export function createInertRender(): RenderPort {
-  return { place: () => {}, view: () => {} }
+  return { place: () => {}, view: () => {}, veil: () => {} }
 }

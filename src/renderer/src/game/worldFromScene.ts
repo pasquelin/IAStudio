@@ -9,6 +9,7 @@ import { createMovementSystem } from '@game/runtime/systems/movement'
 import { createPhysicsSystem } from '@game/runtime/systems/physics'
 import { createPlayCameraSystem } from '@game/runtime/systems/playCamera'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
+import { createTimelineSystem } from '@game/runtime/systems/timeline'
 import { createWorld, type System, type World } from '@game/runtime/world'
 import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -114,6 +115,12 @@ function systemsFor(
 
   return [
     createScriptSystem(scripts),
+    // Before the movement systems: what a timeline puts on the bus this step is what a script
+    // and a trigger read in it, and a row cued after them would be heard one step late.
+    createTimelineSystem({
+      timeline: state.animation,
+      assetRef: id => ({ kind: 'asset', id }),
+    }),
     createMovementSystem(),
     createPhysicsSystem({ shapeOf, characters, statics: groundOf(state) }),
     createPlayCameraSystem(characters),
