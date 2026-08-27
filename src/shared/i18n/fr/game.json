@@ -91,7 +91,8 @@
       "start": "Jouer",
       "startHint": "Lance la scène comme une partie, sans toucher au document",
       "stop": "Arrêter",
-      "stopHint": "Jette la partie et remet la scène telle qu’elle était"
+      "stopHint": "Jette la partie et remet la scène telle qu’elle était",
+      "openFault": "Ouvre le script à la ligne de la faute"
     }
   }
 }

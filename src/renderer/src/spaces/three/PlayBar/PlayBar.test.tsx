@@ -8,6 +8,7 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { drawing } from '@/game/game-fixtures'
+import { useCode } from '@/stores/code'
 import { usePlay } from '@/stores/play'
 import { PlayBar } from './PlayBar'
 
@@ -122,5 +123,37 @@ describe('a game whose systems are failing', () => {
     render(<PlayBar documentId={DOCUMENT} viewport={() => null} />)
 
     expect(screen.getByText('2 erreurs')).toBeInTheDocument()
+  })
+
+  /** 🛑 The whole point of an ADDRESSABLE fault: one click and the cursor is on the line. */
+  it('opens the editor on the line of the last fault a reader can open', async () => {
+    usePlay.setState({
+      reports: {
+        [DOCUMENT]: {
+          state: 'playing',
+          tick: 12,
+          fps: 60,
+          frameMs: 16,
+          entities: 1,
+          errors: [
+            {
+              script: 'script:Walk.ts',
+              entity: null,
+              message: 'no',
+              line: 7,
+              column: 3,
+              at: 1,
+            },
+          ],
+          logs: [],
+        },
+      },
+    })
+    render(<PlayBar documentId={DOCUMENT} viewport={() => null} />)
+
+    await userEvent.click(screen.getByText('1 erreur'))
+
+    expect(useCode.getState().goto).toEqual({ script: 'script:Walk.ts', line: 7, column: 3 })
+    expect(useCode.getState().active).toBe('script:Walk.ts')
   })
 })

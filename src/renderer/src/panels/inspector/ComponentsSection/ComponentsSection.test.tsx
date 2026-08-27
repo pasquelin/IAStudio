@@ -7,6 +7,7 @@ import type { Command } from '@/engines/core/history'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, nodeById, type SceneState } from '@/engines/scene/sceneState'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
+import { useCode } from '@/stores/code'
 import { ComponentsSection } from './ComponentsSection'
 
 const sceneWith = (components?: SceneState['nodes'][number]['components']): SceneState => ({
@@ -68,5 +69,42 @@ describe('what the selected object does while the game runs', () => {
     expect(nodeById(command.apply(sceneWith([newComponent('Health')])), 'a')?.components).toEqual(
       [],
     )
+  })
+
+  /**
+   * 🛑 The rows come from the FILE, not from the component: a script that gained a setting shows
+   * it the moment it is saved, and the component carries only the value.
+   */
+  it('shows a row per setting the script declares', () => {
+    useCode.setState({
+      files: {
+        'script:Walk.ts': {
+          script: 'script:Walk.ts',
+          saved: '',
+          source: 'export default defineScript({ props: { speed: 4 }, onUpdate() {} })',
+        },
+      },
+    })
+
+    show(sceneWith([{ type: 'Script', script: 'script:Walk.ts', props: { speed: 9 } }]))
+
+    expect(screen.getByLabelText('speed')).toHaveValue('9')
+  })
+
+  /** A setting the inspector never touched answers the author's own default. */
+  it('falls back to what the author wrote when the component carries nothing', () => {
+    useCode.setState({
+      files: {
+        'script:Walk.ts': {
+          script: 'script:Walk.ts',
+          saved: '',
+          source: 'export default defineScript({ props: { speed: 4 }, onUpdate() {} })',
+        },
+      },
+    })
+
+    show(sceneWith([{ type: 'Script', script: 'script:Walk.ts' }]))
+
+    expect(screen.getByLabelText('speed')).toHaveValue('4')
   })
 })

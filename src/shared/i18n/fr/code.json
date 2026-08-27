@@ -1,0 +1,23 @@
+{
+  "code": {
+    "noProject": "Ouvrez un projet pour écrire son code.",
+    "empty": "Aucun script dans ce projet.",
+    "emptyHint": "Créez un script pour donner un comportement à une entité.",
+    "loading": "Chargement de l’éditeur…",
+    "unavailable": "L’éditeur n’a pas pu se charger.",
+    "new": "Nouveau script",
+    "newHint": "Crée un fichier TypeScript et l’ouvre.",
+    "save": "Enregistrer",
+    "saveHint": "Écrit le script dans le projet.",
+    "close": "Fermer l’onglet",
+    "unsaved": "Modifications non enregistrées",
+    "problems_one": "{{count, number}} problème",
+    "problems_many": "{{count, number}} problèmes",
+    "problems_other": "{{count, number}} problèmes",
+    "noProblems": "Aucun problème",
+    "showProblems": "Afficher les problèmes",
+    "hideProblems": "Masquer les problèmes",
+    "openProblem": "Ouvrir à cette ligne",
+    "at": "ligne {{line, number}}, colonne {{column, number}}"
+  }
+}

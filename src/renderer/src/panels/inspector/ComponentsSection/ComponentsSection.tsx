@@ -16,6 +16,7 @@ import { FIELD_ROW, PANEL_GROUP_LABEL_WIDE } from '@/design/styles'
 import { HINT_RIGHT, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { ComponentField } from './ComponentField'
+import { ScriptProps } from './ScriptProps'
 
 export type ComponentsSectionProps = {
   node: SceneNode
@@ -106,6 +107,14 @@ export function ComponentsSection({ node, edit }: ComponentsSectionProps) {
               }
             />
           ))}
+
+          {component.type === 'Script' && (
+            <ScriptProps
+              component={component}
+              gesture={edit.gesture}
+              onChange={props => edit.run(setComponentField(node.id, 'Script', 'props', props))}
+            />
+          )}
         </Fragment>
       ))}
     </PropertySection>

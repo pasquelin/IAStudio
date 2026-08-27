@@ -1,0 +1,23 @@
+{
+  "code": {
+    "noProject": "Open a project to write its code.",
+    "empty": "No script in this project.",
+    "emptyHint": "Create a script to give an entity a behaviour.",
+    "loading": "Loading the editor…",
+    "unavailable": "The editor could not load.",
+    "new": "New script",
+    "newHint": "Creates a TypeScript file and opens it.",
+    "save": "Save",
+    "saveHint": "Writes the script into the project.",
+    "close": "Close tab",
+    "unsaved": "Unsaved changes",
+    "problems_one": "{{count, number}} problem",
+    "problems_many": "{{count, number}} problems",
+    "problems_other": "{{count, number}} problems",
+    "noProblems": "No problem",
+    "showProblems": "Show problems",
+    "hideProblems": "Hide problems",
+    "openProblem": "Open at this line",
+    "at": "line {{line, number}}, column {{column, number}}"
+  }
+}

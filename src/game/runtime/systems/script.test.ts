@@ -181,6 +181,49 @@ describe('what a game does with its own code', () => {
     expect(said.some(one => one.startsWith('gone e1'))).toBe(false)
   })
 
+  /** 🛑 The whole point of the inspector rows: one script, two entities, two settings. */
+  it('hands each entity the settings its own component carries', () => {
+    const world = testWorld({
+      ports: testPorts({ script: port }),
+      systems: [
+        createScriptSystem({
+          modules: [
+            {
+              script: WALK,
+              code: scripted(
+                'props: { speed: 1 }, onUpdate(self) { game.log.info(self.id + " at " + self.props.speed) }',
+              ),
+            },
+          ],
+          onFault: fault => faults.push(fault),
+        }),
+      ],
+    })
+    const carrying: readonly [string, number | undefined][] = [
+      ['e1', 7],
+      ['e2', undefined],
+    ]
+    for (const [id, speed] of carrying) {
+      world.entities.add({
+        id,
+        name: id,
+        transform: restingTransform(),
+        components: [
+          {
+            ...withComponentField(newComponent('Script'), 'script', WALK),
+            ...(speed === undefined ? {} : { props: { speed } }),
+          },
+        ],
+      })
+    }
+
+    world.step(STEP)
+
+    const said = world.ports.log.recent().map(entry => entry.message)
+    expect(said).toContain('e1 at 7')
+    expect(said).toContain('e2 at 1')
+  })
+
   /** What the sandbox is asked is what somebody WROTE: the rest never crosses the bridge. */
   it('asks the sandbox for nothing when no script declares the hook', () => {
     const world = running('onUpdate(self) { self.moveBy(0, 1, 0) }')

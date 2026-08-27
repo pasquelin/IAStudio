@@ -164,6 +164,23 @@ describe('the sandbox a game runs its own code in', () => {
     expect(port.declares('onDestroy')).toBe(false)
   })
 
+  /** 🛑 What the inspector set, over what the author wrote — and the author's word when it did not. */
+  it("layers an instance's settings over the ones its script declares", () => {
+    port.load([
+      {
+        script: 'script:Walk.ts',
+        code: compiled(
+          'props: { speed: 3, jump: 2 }, onUpdate(self) { game.log.info(self.props.speed + "/" + self.props.jump) }',
+        ),
+      },
+    ])
+    port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: { speed: 9 } }])
+
+    const outcome = port.run('onUpdate', frameOf([walker()]))
+
+    expect(outcome.intents).toEqual([{ act: 'log', level: 'info', message: '9/2' }])
+  })
+
   it('says which hooks are written, so a caller can skip a crossing whole', () => {
     port.load([{ script: 'script:Walk.ts', code: compiled('onUpdate() {}') }])
     port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: {} }])

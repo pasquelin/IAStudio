@@ -5,6 +5,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { useCode } from '@/stores/code'
 import { playReportOf, usePlay } from '@/stores/play'
 
 export type PlayBarProps = {
@@ -32,6 +33,8 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
     ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
     ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
   ]
+  // The last one an editor can OPEN. A log line names no line, so it opens nothing.
+  const addressable = report.errors.findLast(one => one.line > 0) ?? null
 
   const play = (): void => {
     if (report.state === 'paused') return usePlay.getState().resume(documentId)
@@ -90,12 +93,32 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
       )}
 
       {/* A system or a handler that threw is reported and the tick carries on, so without a word
-          here the game would simply appear to do nothing. The last one is named in full. */}
-      {faults.length > 0 && (
-        <span className="text-warning" title={faults.at(-1)}>
-          {t('game.play.faults', { count: faults.length })}
-        </span>
-      )}
+          here the game would simply appear to do nothing. The last one is named in full.
+
+          🛑 A BUTTON when the last fault is addressable: `RuntimeError` carries the script, the
+          line and the column, which is the same datum an editor opens on. */}
+      {faults.length > 0 &&
+        (addressable ? (
+          <button
+            type="button"
+            className="text-warning underline decoration-dotted"
+            data-sc="field:play.faults"
+            title={t('game.play.openFault')}
+            onClick={() => {
+              // Paused first: a game still running would scroll its own errors past the reader.
+              usePlay.getState().pause(documentId)
+              useCode
+                .getState()
+                .openAt(addressable.script, addressable.line, addressable.column || 1)
+            }}
+          >
+            {t('game.play.faults', { count: faults.length })}
+          </button>
+        ) : (
+          <span className="text-warning" title={faults.at(-1)}>
+            {t('game.play.faults', { count: faults.length })}
+          </span>
+        ))}
     </div>
   )
 }

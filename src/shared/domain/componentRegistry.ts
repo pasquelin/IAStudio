@@ -160,8 +160,9 @@ const SCRIPT: ComponentDescriptor = {
   titleKey: 'game.components.Script.title',
   descriptionKey: 'game.components.Script.description',
   category: 'gameplay',
-  // One field, and the settings a script declares are NOT here yet: reading them means reading
-  // the file's own `props`, which is what the editor lot brings. Until then `self.props` is empty.
+  // 🛑 ONE declared field. What a script exposes differs per script, so those rows are read off
+  // the file's own `props` and written beside this one — see `scriptProps`. Absent by default:
+  // a component nobody has set carries nothing, and `settingsOf` answers the author's own words.
   fields: [{ key: 'script', kind: 'text', labelKey: 'game.fields.script', required: true }],
   defaults: { script: '' },
 }

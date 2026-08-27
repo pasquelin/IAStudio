@@ -57,6 +57,7 @@ export type ToolId =
   | 'animations'
   | 'text'
   | 'context'
+  | 'code'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
@@ -165,6 +166,15 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The band is the timeline's, across the whole width — that is how time is read, in Audio and
   // Video as in 3D, where an animation runs along the same line a montage does.
   { id: 'timeline', zone: 'bottomRight', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
+  // Beside the timeline and taking its turn with it: the band is where a wide surface goes, and
+  // a game is written while its scene is watched. Needs a project — the scripts are its files.
+  {
+    id: 'code',
+    zone: 'bottomRight',
+    slot: 'primary',
+    surfaces: ['3d'],
+    requires: 'project',
+  },
 
   // The home's own, and they serve it ALONE — a column beside an editor is for what acts on what
   // is in front of you, and each of these reads the studio rather than a document.

@@ -17,12 +17,14 @@ import type * as frModels from '../fr/models.json'
 import type * as frPostfx from '../fr/postfx.json'
 import type * as frScene from '../fr/scene.json'
 import type * as frSettings from '../fr/settings.json'
+import type * as frCode from '../fr/code.json'
 import type * as frShell from '../fr/shell.json'
 import type * as frUsage from '../fr/usage.json'
 import activity from './activity.json'
 import ai from './ai.json'
 import assets from './assets.json'
 import assistant from './assistant.json'
+import code from './code.json'
 import commands from './commands.json'
 import common from './common.json'
 import context from './context.json'
@@ -58,6 +60,7 @@ export const en = {
   ...(ai satisfies Section<keyof typeof frAi>),
   ...(assets satisfies Section<keyof typeof frAssets>),
   ...(assistant satisfies Section<keyof typeof frAssistant>),
+  ...(code satisfies Section<keyof typeof frCode>),
   ...(commands satisfies Section<keyof typeof frCommands>),
   ...(common satisfies Section<keyof typeof frCommon>),
   ...(context satisfies Section<keyof typeof frContext>),
