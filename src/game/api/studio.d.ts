@@ -10,6 +10,21 @@
  */
 
 declare module '@studio' {
+  /**
+   * 🛑 What the PROJECT declares, layered in by its own `.d.ts` — see `projectTypes`.
+   *
+   * An interface so the project's declaration MERGES into it; empty here so a script still types
+   * with no project loaded, and every name below then widens back to `string`.
+   */
+  /* eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions -- an INTERFACE and empty on purpose: only an interface merges with the project's own declaration, and a member here would be one the project cannot override */
+  export interface StudioNames {}
+
+  /** A family of the project, or a plain string while nothing declared it. */
+  type Named<Family extends string> = StudioNames extends Record<Family, infer Held> ? Held : string
+
+  /** A component type the studio has a descriptor for. Refused if the project has no such one. */
+  export type ComponentName = Named<'components'>
+
   export type Vector3 = { x: number; y: number; z: number }
 
   /** One of the components an entity carries, as plain JSON. `type` names which. */
@@ -26,8 +41,8 @@ declare module '@studio' {
     readonly position: Readonly<Vector3>
     readonly rotation: Readonly<Vector3>
     /** The component of that type, or `null` when the entity does not carry one. */
-    get(type: string): Component | null
-    has(type: string): boolean
+    get(type: ComponentName): Component | null
+    has(type: ComponentName): boolean
     /** Moves BY that much, in metres. Applied at the end of the step. */
     moveBy(x: number, y: number, z: number): void
     /** Moves TO that place, in metres. */
@@ -35,7 +50,7 @@ declare module '@studio' {
     /** Turns to that rotation, in radians. */
     turnTo(x: number, y: number, z: number): void
     /** Writes one field of one component the entity ALREADY carries. */
-    set(type: string, key: string, value: unknown): void
+    set(type: ComponentName, key: string, value: unknown): void
     /** Puts a named event on the bus, carrying this entity. Heard by every `onMessage`. */
     say(name: string, payload?: Record<string, unknown>): void
     /** Asks for this entity to be destroyed at the end of the step. */

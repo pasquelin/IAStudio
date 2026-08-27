@@ -6,13 +6,8 @@ import type { ActionField } from '@shared/domain/assistantAction'
 export type ScriptProp = { field: ActionField; fallback: JsonValue }
 
 /**
- * The settings a script declares, read off its `props`.
- *
- * 🛑 Read from the SOURCE and never from the sandbox: a script has to be inspectable before it
- * has ever run, and running one to find out what it exposes is how an editor freezes.
- *
- * The kind comes from the DEFAULT's own type, which is why a default is required: `speed: 3` is a
- * number field, `friendly: true` a switch, and `name: 'Bob'` a text one. Anything else — an
+ * 🛑 Read from the SOURCE, never from the sandbox: a script is inspectable before it has run.
+ * The kind comes from the DEFAULT's own type, and anything that is not a plain value — an
  * expression, a call, an object — is left out rather than guessed at.
  */
 export function scriptProps(source: string): readonly ScriptProp[] {

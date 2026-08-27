@@ -1,34 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { projectTypes, type ProjectNames } from './projectTypes'
-
-const nothing = (): ProjectNames => ({
-  scenes: [],
-  prefabs: [],
-  entities: [],
-  components: [],
-  events: [],
-})
+import { projectTypes } from './projectTypes'
 
 describe('what a project tells an editor about itself', () => {
-  it('spells each family as the literal union of what the project holds', () => {
-    const held = projectTypes({ ...nothing(), scenes: ['World01', 'Menu'] })
+  it('augments the studio module with the literal union of what the project holds', () => {
+    const held = projectTypes({ components: ['Health', 'Movement'] })
 
-    expect(held).toContain('export type SceneName = "Menu" | "World01"')
+    expect(held).toContain("declare module '@studio'")
+    expect(held).toContain('components: "Health" | "Movement"')
   })
 
-  /** 🛑 A project with no prefab yet must not make every spawn an error. */
-  it('widens an empty family back to a plain string', () => {
-    expect(projectTypes(nothing())).toContain('export type PrefabName = string')
+  /**
+   * 🛑 Nothing at all rather than an empty union: `StudioNames` stays un-augmented, so every name
+   * of `studio.d.ts` widens back to `string` on its own — a project holding none must not make
+   * every use of the name an error. Proved end to end by `redBeforePlay.test.ts`.
+   */
+  it('declares nothing while the project holds nothing', () => {
+    expect(projectTypes({ components: [] })).not.toContain('interface StudioNames')
   })
 
   it('says a name once, in one order, whatever the project handed over', () => {
-    const held = projectTypes({ ...nothing(), entities: ['b', 'a', 'b', ''] })
-
-    expect(held).toContain('export type EntityName = "a" | "b"')
-  })
-
-  /** The declaration layers onto `@studio`, or an editor resolves none of it. */
-  it('declares into the module a script imports', () => {
-    expect(projectTypes(nothing())).toContain("declare module '@studio'")
+    expect(projectTypes({ components: ['b', 'a', 'b', ''] })).toContain('components: "a" | "b"')
   })
 })

@@ -98,7 +98,8 @@ export function ComponentsSection({ node, edit }: ComponentsSectionProps) {
           {descriptorOf(component.type).fields.map(field => (
             <ComponentField
               key={field.key}
-              component={component}
+              value={component[field.key]}
+              label={t(field.labelKey)}
               field={field}
               gesture={edit.gesture}
               scId={`components.${component.type}.${field.key}`}

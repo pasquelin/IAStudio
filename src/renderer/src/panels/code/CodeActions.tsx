@@ -48,12 +48,19 @@ export function CodeActions() {
 
 /** A file on disk before a tab on screen: an editor showing what the project does not hold lies. */
 async function makeScript(): Promise<void> {
-  const code = useCode.getState()
-  const script = freeScriptPath(code, 'Script')
-
-  code.edited(script, STARTER)
+  const script = freeScriptPath(useCode.getState(), 'Script')
   useCode.setState(state => ({
     files: { ...state.files, [script]: { script, saved: '', source: STARTER } },
   }))
-  if (await code.save(script)) code.show(script)
+
+  try {
+    if (await useCode.getState().save(script)) return useCode.getState().show(script)
+  } catch {
+    // Falls through to the same cleanup: a refusal and a broken bridge leave the same ghost.
+  }
+  // 🛑 Taken back out: a file the project refused must not sit in the list as one it holds — the
+  // next walk would drop it, and the author's starter with it, without a word.
+  useCode.setState(state => ({
+    files: Object.fromEntries(Object.entries(state.files).filter(([one]) => one !== script)),
+  }))
 }

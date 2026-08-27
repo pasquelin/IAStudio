@@ -1,21 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import type { CodeProblem } from '@/engines/code/CodeEditor'
+import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useCode } from '@/stores/code'
 
-export type CodeProblemsProps = {
-  problems: readonly CodeProblem[]
-  /** Told where to go. The editor is what actually moves the cursor. */
-  onOpen: (problem: CodeProblem) => void
-}
+export type CodeProblemsProps = { problems: readonly CodeProblem[] }
 
-/**
- * What the type worker has to say, over every open script.
- *
- * 🛑 This is the whole promise of the lot: a wrong asset name is RED here before anything runs,
- * and one click puts the cursor on it.
- */
-export function CodeProblems({ problems, onOpen }: CodeProblemsProps) {
+/** What the type worker has to say, over every open script. One click opens the line. */
+export function CodeProblems({ problems }: CodeProblemsProps) {
   const { t } = useTranslation()
 
   if (problems.length === 0) {
@@ -30,13 +22,10 @@ export function CodeProblems({ problems, onOpen }: CodeProblemsProps) {
         <li key={`${problem.script}:${problem.line}:${problem.column}:${problem.message}`}>
           <button
             type="button"
-            className="hover:bg-elevated flex w-full items-baseline gap-2 px-2 py-1 text-left"
+            className={cn(rowSkin(false), 'flex w-full items-baseline gap-2 px-2 py-1 text-left')}
             data-sc="field:code.problem"
             title={t('code.openProblem')}
-            onClick={() => {
-              useCode.getState().show(problem.script)
-              onOpen(problem)
-            }}
+            onClick={() => useCode.getState().openAt(problem.script, problem.line, problem.column)}
           >
             <span
               className={cn(

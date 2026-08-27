@@ -5,6 +5,8 @@ import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { ToolButton } from '@/design/ToolButton'
 import { isCodeDirty, useCode } from '@/stores/code'
+import { CodeOpener } from './CodeOpener'
+import { scriptName } from './scriptName'
 
 export type CodeTabsProps = {
   open: readonly string[]
@@ -33,6 +35,7 @@ export function CodeTabs({ open, active }: CodeTabsProps) {
 
   return (
     <div className="border-line flex min-h-0 shrink-0 items-stretch gap-px overflow-x-auto border-b">
+      <CodeOpener active={active} />
       {open.map(script => (
         <div
           key={script}
@@ -47,7 +50,9 @@ export function CodeTabs({ open, active }: CodeTabsProps) {
             data-sc={`field:code.tab.${script}`}
             onClick={() => useCode.getState().show(script)}
           >
-            <span className={wrong.has(script) ? 'text-danger' : undefined}>{nameOf(script)}</span>
+            <span className={wrong.has(script) ? 'text-danger' : undefined}>
+              {scriptName(script)}
+            </span>
             {dirty.has(script) && <span className="text-accent-ink ml-1">•</span>}
           </button>
           <ToolButton
@@ -61,10 +66,3 @@ export function CodeTabs({ open, active }: CodeTabsProps) {
     </div>
   )
 }
-
-/** The file, not its folder: a tab is read at a glance and the path is on the breadcrumb. */
-const nameOf = (script: string): string =>
-  script
-    .replace(/^script:/, '')
-    .split('/')
-    .at(-1) ?? script

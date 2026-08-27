@@ -12,23 +12,16 @@ export type CodeHostProps = {
   /** The script shown right now. Its text comes from the store, never from the editor. */
   script: string
   source: string
-  /** Handed the way to move the cursor, so a problems row can open its own line. */
-  reveal: (open: (at: { line: number; column: number }) => void) => void
 }
 
-/**
- * Where Monaco is mounted, and the only place React touches it — invariant 4.
- *
- * 🛑 Built ONCE per panel and fed from the store afterwards. Rebuilding it on every change would
- * cost eight megabytes of worker and an author's undo history along with it.
- */
-export function CodeHost({ script, source, reveal }: CodeHostProps) {
+/** Where Monaco is mounted — invariant 4. Built ONCE: rebuilding it costs eighteen megabytes. */
+export function CodeHost({ script, source }: CodeHostProps) {
   const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const editor = useRef<CodeEditor | null>(null)
   const [failed, setFailed] = useState(false)
+  const [ready, setReady] = useState(false)
   const shown = useLatest({ script, source })
-  const told = useLatest(reveal)
   const goto = useCode(state => state.goto)
 
   useEffect(() => {
@@ -47,7 +40,7 @@ export function CodeHost({ script, source, reveal }: CodeHostProps) {
         editor.current = held
         held.declareProject(projectTypes(namesOfProject()))
         held.show(shown.current.script, shown.current.source)
-        told.current(at => held.reveal(at.line, at.column))
+        setReady(true)
       } catch {
         // Said on screen rather than swallowed: an editor that never appears is the one failure
         // an author cannot work around.
@@ -60,18 +53,21 @@ export function CodeHost({ script, source, reveal }: CodeHostProps) {
       dropped = true
       editor.current?.dispose()
       editor.current = null
+      setReady(false)
     }
-  }, [shown, told])
+  }, [shown])
 
   useEffect(() => {
     editor.current?.show(script, source)
   }, [script, source])
 
+  // 🛑 Kept until Monaco is THERE: the first open loads eighteen megabytes, and a `goto` cleared
+  // while the editor is still null is a cursor that never goes to the line somebody clicked.
   useEffect(() => {
-    if (!goto || goto.script !== script) return
+    if (!goto || goto.script !== script || !ready) return
     editor.current?.reveal(goto.line, goto.column)
     useCode.getState().arrived()
-  }, [goto, script])
+  }, [goto, script, ready])
 
   if (failed) {
     return <EmptyState icon={toolIcon('code')} message={t('code.unavailable')} />
@@ -79,11 +75,5 @@ export function CodeHost({ script, source, reveal }: CodeHostProps) {
   return <div ref={host} className="h-full min-h-0 w-full" data-sc="section:code.editor" />
 }
 
-/** What the project declares, for the completion. Widened until the lot that fills it in. */
-const namesOfProject = () => ({
-  scenes: [],
-  prefabs: [],
-  entities: [],
-  components: COMPONENT_TYPES,
-  events: [],
-})
+/** What the project declares, for the completion. One family until a lot fills another. */
+const namesOfProject = () => ({ components: COMPONENT_TYPES })

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { SCRIPT_EXTENSION } from '@shared/domain/game'
+import { freeName } from '@shared/domain/otioz'
 import { refFromString, refToString } from '@shared/domain/ref'
 import { byCodeUnit } from '@shared/text'
 import type { CodeProblem } from '@/engines/code/CodeEditor'
@@ -61,8 +62,21 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
         source: editing && editing.source !== editing.saved ? editing.source : file.source,
       }
     }
-    set(state => ({ files, open: state.open.filter(script => script in files) }))
-    set(state => ({ active: state.active && state.active in files ? state.active : null }))
+    set(state => {
+      const open = state.open.filter(script => script in files)
+      const first = Object.keys(files).sort(byCodeUnit)[0] ?? null
+      // Opened on something rather than on nothing: a panel showing a tab bar with no tab, and a
+      // parent inventing a fallback list on every render, is what a stable `open` spares both.
+      const held = state.active && state.active in files ? state.active : (open[0] ?? first)
+      return {
+        files,
+        open: open.length > 0 || held === null ? open : [held],
+        active: held,
+        // Dropped with the walk: a problem of the project before this one names a script that is
+        // no longer there, and clicking it would open a tab on a file nothing holds.
+        problems: state.problems.filter(problem => problem.script in files),
+      }
+    })
   },
 
   show: script => {
@@ -127,9 +141,28 @@ export function isCodeDirty(file: CodeFile | undefined): boolean {
 
 /** A path a new script can take, never one the project already holds. */
 export function freeScriptPath(state: CodeStoreState, stem: string): string {
-  for (let index = 0; ; index++) {
-    const path = index === 0 ? `${stem}${SCRIPT_EXTENSION}` : `${stem}${index}${SCRIPT_EXTENSION}`
-    const script = refToString({ kind: 'script', path })
-    if (!(script in state.files)) return script
+  const taken = new Set(Object.values(state.files).map(file => file.script.replace(/^script:/, '')))
+  return refToString({ kind: 'script', path: freeName(`${stem}${SCRIPT_EXTENSION}`, taken) })
+}
+
+/** Every script holding something the disk does not. What a window must not leave behind. */
+export function unsavedScripts(): readonly string[] {
+  const state = useCode.getState()
+  return Object.keys(state.files).filter(script => isCodeDirty(state.files[script]))
+}
+
+/**
+ * Writes every script that has work in it.
+ *
+ * 🛑 Written rather than ASKED about, unlike a document: a `.ts` is an ordinary text file of the
+ * project, git holds its history, and every editor in the world saves one without a dialog.
+ */
+export async function settleUnsavedScripts(): Promise<void> {
+  for (const script of unsavedScripts()) {
+    try {
+      await useCode.getState().save(script)
+    } catch {
+      // Left dirty rather than reported: the guard refuses the gesture again, and ⌘S says why.
+    }
   }
 }

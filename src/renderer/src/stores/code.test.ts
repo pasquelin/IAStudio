@@ -80,6 +80,6 @@ describe('the scripts an editor holds', () => {
     })
     await useCode.getState().reload()
 
-    expect(freeScriptPath(useCode.getState(), 'Script')).toBe('script:Script1.ts')
+    expect(freeScriptPath(useCode.getState(), 'Script')).toBe('script:Script-2.ts')
   })
 })

@@ -20,13 +20,7 @@ export type CodeEditorDeps = {
   onProblems: (problems: readonly CodeProblem[]) => void
 }
 
-/**
- * Monaco, behind a façade with no React in it — CLAUDE.md invariant 4.
- *
- * 🛑 The worker does the typing, and it is the whole point: what makes a wrong asset name RED
- * before a Play is the same TypeScript that compiles it, reading `studio.d.ts` and the project's
- * own declaration. Nothing here re-implements a diagnostic.
- */
+/** Monaco behind a façade with no React — invariant 4. The type WORKER makes every diagnostic. */
 export class CodeEditor {
   private readonly editor: Monaco.editor.IStandaloneCodeEditor
   private readonly models = new Map<string, Monaco.editor.ITextModel>()
@@ -39,7 +33,8 @@ export class CodeEditor {
     deps: CodeEditorDeps,
   ) {
     this.editor = monaco.editor.create(deps.host, {
-      // Read off the studio's own theme rather than Monaco's: `paintTheme` follows the setting.
+      // 🛑 Monaco's own dark theme, and it does NOT follow the studio's: its colours come from a
+      // theme registry of its own, and mapping forty of them onto the tokens is its own lot.
       theme: 'vs-dark',
       automaticLayout: true,
       minimap: { enabled: false },
@@ -66,9 +61,14 @@ export class CodeEditor {
       model = this.monaco.editor.createModel(source, 'typescript', uriOf(this.monaco, script))
       this.models.set(script, model)
     } else if (model.getValue() !== source) {
-      // Set rather than replaced: `setValue` drops undo, and a file re-read on every Play would
-      // otherwise cost an author their history.
-      model.setValue(source)
+      // 🛑 Pushed as an EDIT, never `setValue`: the latter clears the command manager and every
+      // decoration (`textModel.js`, `_setValueFromTextBuffer`), so a re-read after a Play would
+      // cost an author their undo history and put the cursor back on 1,1.
+      model.pushEditOperations(
+        null,
+        [{ range: model.getFullModelRange(), text: source }],
+        () => null,
+      )
     }
     this.open = script
     this.editor.setModel(model)
@@ -81,14 +81,15 @@ export class CodeEditor {
     this.editor.focus()
   }
 
+  /**
+   * 🛑 Drops the model, and it MUST be called when a tab closes: a model left alive stays
+   * synchronised with the type worker, and its markers keep feeding `problems()` — which reads
+   * every model of the page, not the open one.
+   */
   forget(script: string): void {
     this.models.get(script)?.dispose()
     this.models.delete(script)
     if (this.open === script) this.open = null
-  }
-
-  sourceOf(script: string): string | null {
-    return this.models.get(script)?.getValue() ?? null
   }
 
   /**
