@@ -1072,6 +1072,18 @@
       "studioBatch": {
         "title": "Run a lot of calls",
         "description": "Runs a run of calls as one, with a single question. Stops at the first refusal."
+      },
+      "timelineCue": {
+        "title": "Cue something on the timeline",
+        "description": "Adds an event, a sound, a video or a transition to the timeline of the scene. What the third field names depends on the list — an event name, an asset id, or a kind of transition."
+      },
+      "timelineRemove": {
+        "title": "Take a cue off the timeline",
+        "description": "Removes the row of that list carrying that id."
+      },
+      "timelineTemplate": {
+        "title": "Choose what the timeline offers",
+        "description": "Decides which rows the panel proposes. It never takes anything away from the engine, which plays the whole timeline regardless."
       }
     },
     "refusals": {
@@ -1375,7 +1387,13 @@
       "describeRef": "Reference to describe",
       "docsTopic": "Topic",
       "batchCalls": "Calls (JSON)",
-      "fixedSteps": "Fixed steps"
+      "fixedSteps": "Fixed steps",
+      "timelineList": "List",
+      "timelineAt": "Instant, in microseconds",
+      "timelineWhat": "What",
+      "timelineDuration": "Length, in microseconds",
+      "timelineRowId": "Row identifier",
+      "timelineTemplate": "What the timeline offers"
     },
     "title": "Assistant",
     "writeHint": "Opens the assistant so you can write what you want done",

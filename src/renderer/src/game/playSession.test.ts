@@ -172,4 +172,28 @@ describe('the camera a game borrows', () => {
     expect(physics.dispose).toHaveBeenCalledTimes(1)
     expect(script.dispose).toHaveBeenCalledTimes(1)
   })
+
+  /**
+   * 🛑 A STOP in the middle of a fade left the picture dark: `apply` puts the document back, not
+   * the veil. And a sound a timeline row started played on until the window closed.
+   */
+  it('lifts the veil and silences the sounds when the game stops', () => {
+    const stopAll = vi.fn()
+    const frames = handDriven()
+    const reports: RuntimeReport[] = []
+    const session = startPlay({
+      documentId: 'doc-1',
+      renderer: drawnBy({}),
+      editState: () => scene(),
+      input: new EventTarget(),
+      frames: frames.driver,
+      audio: { play: () => null, stopAll },
+      onReport: report => reports.push(report),
+    })
+
+    session.stop()
+
+    expect(stopAll).toHaveBeenCalled()
+    expect(reports.at(-1)?.veil).toBe(0)
+  })
 })

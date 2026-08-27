@@ -9,6 +9,7 @@ import { createMovementSystem } from '@game/runtime/systems/movement'
 import { createPhysicsSystem } from '@game/runtime/systems/physics'
 import { createPlayCameraSystem } from '@game/runtime/systems/playCamera'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
+import { createTimelineSystem } from '@game/runtime/systems/timeline'
 import { createWorld, type System, type World } from '@game/runtime/world'
 import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -114,6 +115,12 @@ function systemsFor(
 
   return [
     createScriptSystem(scripts),
+    // 🛑 Where it runs is decided by `SYSTEM_ORDER`, not by this list — and a row is heard one
+    // step LATE whatever the order: `emit` queues, and the bus drains at the end of a step.
+    createTimelineSystem({
+      timeline: state.animation,
+      assetRef: id => ({ kind: 'asset', id }),
+    }),
     createMovementSystem(),
     createPhysicsSystem({ shapeOf, characters, statics: groundOf(state) }),
     createPlayCameraSystem(characters),

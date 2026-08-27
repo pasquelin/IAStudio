@@ -37,11 +37,18 @@ import {
   EMPTY_TIMELINE,
   SCENE_SUBJECT_ID,
   sheetFromAnimated,
+  TIMELINE_TEMPLATES,
   TRACK_PROPERTIES,
+  TRANSITION_KINDS,
   type AnimationTimeline,
   type AnimationTrack,
   type CameraShot,
   type Keyframe,
+  type TimelineEvent,
+  type TimelineMedia,
+  type TimelineTemplate,
+  type TimelineTransition,
+  type TransitionKind,
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
 import { readCameraPost } from '@shared/domain/postProcessing'
@@ -502,14 +509,119 @@ function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTim
   const duration = readNumber(value, 'duration', DEFAULT_DURATION)
   const fps = readNumber(value, 'fps', DEFAULT_FPS)
 
+  // 🛑 Read back or LOST: a save recomposes the timeline whole from the state, so a row this
+  // build does not read is a row the next `⌘S` drops without a word — see `sceneHoldsMore`,
+  // which is what tells a reader before it happens.
+  const events = readList(value.events, isTimelineEvent)
+  const audio = readList(value.audio, isTimelineMedia)
+  const video = readList(value.video, isTimelineMedia)
+  const transitions = readList(value.transitions, isTimelineTransition)
+
   return {
     duration: duration > 0 ? duration : DEFAULT_DURATION,
     fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
     shots,
     sheet: readSheet(value.sheet, tracks, shots, playingModels(nodes)),
+    // Absent rather than empty: a document that never had one must come back as it was written,
+    // and `document.test.ts` compares what a round trip gives back.
+    ...(events.length > 0 ? { events } : {}),
+    ...(audio.length > 0 ? { audio } : {}),
+    ...(video.length > 0 ? { video } : {}),
+    ...(transitions.length > 0 ? { transitions } : {}),
+    ...(isTimelineTemplate(value.template) ? { template: value.template } : {}),
   }
 }
+
+/**
+ * Which timeline rows of a WRITTEN animation this build cannot read back, named `events`,
+ * `audio`, `video`, `transitions` or `template`.
+ *
+ * 🛑 Beside the reading rather than beside the guard that reports it: what a build keeps is
+ * decided here, so a predicate that grows a case must not leave a second copy elsewhere saying
+ * something else. Counted, because what is lost is the DIFFERENCE.
+ */
+export function timelineRowsLost(written: unknown): string[] {
+  if (!isRecord(written)) return []
+
+  const lists: readonly [string, (one: unknown) => boolean][] = [
+    ['events', isTimelineEvent],
+    ['audio', isTimelineMedia],
+    ['video', isTimelineMedia],
+    ['transitions', isTimelineTransition],
+  ]
+  const lost = lists
+    .filter(([name, holds]) => {
+      const rows = written[name]
+      if (rows === undefined) return false
+      // 🛑 Not an ARRAY at all — a later build keying its rows by id for an O(1) reach — is the
+      // whole list lost, and the quietest way to lose one: `readList` answers empty and the
+      // first ⌘S writes a timeline without it.
+      if (!Array.isArray(rows)) return true
+      // A row this build cannot read, or a second one under an id already taken: `readList`
+      // keeps the first of each, so the others are lost the same silent way.
+      const ids = new Set<unknown>()
+      return rows.some(one => {
+        if (!holds(one)) return true
+        const id = (one as { id: unknown }).id
+        if (ids.has(id)) return true
+        ids.add(id)
+        return false
+      })
+    })
+    .map(([name]) => name)
+
+  // A template a later build named decides what a panel offers, and this one would drop it.
+  if (written.template !== undefined && !isTimelineTemplate(written.template)) {
+    lost.push('template')
+  }
+  // 🛑 A MEMBER this build has no name for — `markers`, `subtitles` — is lost the same way, and
+  // the rule is the repository's own: a member COMPOSED from something narrower has to be looked
+  // INTO. `readTimeline` recomposes the whole object from the names below, so anything else goes.
+  lost.push(...Object.keys(written).filter(key => !TIMELINE_MEMBERS.has(key)))
+  return lost
+}
+
+/** Every member `readTimeline` gives back. What is not here is what a save would drop. */
+const TIMELINE_MEMBERS = new Set([
+  'duration',
+  'fps',
+  'tracks',
+  'shots',
+  'sheet',
+  'events',
+  'audio',
+  'video',
+  'transitions',
+  'template',
+])
+
+/** Whatever of a list this build can read, in order. Anything else is dropped, and SAID. */
+const readList = <T>(value: unknown, holds: (one: unknown) => one is T): T[] =>
+  Array.isArray(value) ? value.filter(holds) : []
+
+const isTimelineEvent = (value: unknown): value is TimelineEvent =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.at === 'number' &&
+  typeof value.name === 'string'
+
+const isTimelineMedia = (value: unknown): value is TimelineMedia =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.assetId === 'string' &&
+  typeof value.start === 'number' &&
+  typeof value.duration === 'number'
+
+const isTimelineTransition = (value: unknown): value is TimelineTransition =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.at === 'number' &&
+  typeof value.duration === 'number' &&
+  TRANSITION_KINDS.includes(value.kind as TransitionKind)
+
+const isTimelineTemplate = (value: unknown): value is TimelineTemplate =>
+  typeof value === 'string' && TIMELINE_TEMPLATES.includes(value as TimelineTemplate)
 
 /**
  * Which objects the band shows. Without one, rebuilt ONCE from what is animated — a file written

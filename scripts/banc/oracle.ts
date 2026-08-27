@@ -33,6 +33,7 @@ import { skyboxViewOf, useSkyboxViews } from '@/stores/skyboxViews'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { materialOf, useMaterials } from '@/stores/materials'
+import type { AnimationTimeline } from '@shared/domain/animation'
 import type { Run } from './run'
 
 export { SECOND }
@@ -450,3 +451,6 @@ export const answerOf = (run: Run, name: ActionName): string | null => {
   const held = run.called.find(one => one.action === name)?.answer
   return held === undefined || held.startsWith('refused') ? null : held
 }
+
+/** The timeline of the scene in front — what a game CUES, as the document holds it. */
+export const animation = (run: Run): AnimationTimeline | null => openScene(run)?.animation ?? null

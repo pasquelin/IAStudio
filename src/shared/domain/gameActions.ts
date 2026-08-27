@@ -1,3 +1,4 @@
+import { TIMELINE_TEMPLATES } from './animation'
 import { action, type AssistantAction } from './assistantAction'
 import { COMPONENT_TYPES } from './componentRegistry'
 
@@ -240,3 +241,77 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
 
 /** One call of a batch: the action to run and what to run it with. */
 export type BatchCall = { action: string; input: Record<string, unknown> }
+
+/** The four lists a game writes into, offered as a closed set rather than typed by hand. */
+export const TIMELINE_LISTS: readonly string[] = ['events', 'audio', 'video', 'transitions']
+
+/**
+ * What a timeline CUES, put there from outside the window.
+ *
+ * 🛑 ONE action for the four lists rather than four: what changes between them is the shape of
+ * the row, and `component.set` already settled that question here — the value travels as TEXT
+ * and the handler reads it by what the list declares. Four narrow actions would be four schemas
+ * a model has to tell apart before it can ask for anything.
+ */
+export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'timeline.cue',
+    titleKey: 'assistant.actions.timelineCue.title',
+    descriptionKey: 'assistant.actions.timelineCue.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'list',
+        kind: 'choice',
+        labelKey: 'assistant.fields.timelineList',
+        required: true,
+        options: TIMELINE_LISTS,
+      },
+      { key: 'at', kind: 'number', labelKey: 'assistant.fields.timelineAt', required: true },
+      /** What the row IS: an event's name, an asset's id, a transition's kind. */
+      { key: 'what', kind: 'text', labelKey: 'assistant.fields.timelineWhat', required: true },
+      {
+        key: 'duration',
+        kind: 'number',
+        labelKey: 'assistant.fields.timelineDuration',
+        required: false,
+      },
+      { key: 'entity', kind: 'text', labelKey: 'assistant.fields.nodeId', required: false },
+    ],
+  }),
+  action({
+    name: 'timeline.remove',
+    titleKey: 'assistant.actions.timelineRemove.title',
+    descriptionKey: 'assistant.actions.timelineRemove.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'list',
+        kind: 'choice',
+        labelKey: 'assistant.fields.timelineList',
+        required: true,
+        options: TIMELINE_LISTS,
+      },
+      { key: 'id', kind: 'text', labelKey: 'assistant.fields.timelineRowId', required: true },
+    ],
+  }),
+  action({
+    /** 🛑 A filter of VIEW: it decides what the panel offers, never what the engine can do. */
+    name: 'timeline.template',
+    titleKey: 'assistant.actions.timelineTemplate.title',
+    descriptionKey: 'assistant.actions.timelineTemplate.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'template',
+        kind: 'choice',
+        labelKey: 'assistant.fields.timelineTemplate',
+        required: true,
+        options: TIMELINE_TEMPLATES,
+      },
+    ],
+  }),
+]

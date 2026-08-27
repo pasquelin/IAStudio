@@ -12,6 +12,7 @@ import type {
 } from '../../script/frame'
 import { settingsOf, textOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
+import { sayCustom } from '../sayCustom'
 import type { System, World } from '../world'
 
 export type ScriptSystemOptions = {
@@ -208,13 +209,7 @@ function apply(world: World, intents: readonly ScriptIntent[]): void {
       continue
     }
     if (intent.act === 'emit') {
-      // 🛑 `Custom`, always, carrying the name the script chose as DATA: the closed union of
-      // `GameEventName` is a value of `@shared/`, which this tree may not read.
-      world.events.emit({
-        name: 'Custom',
-        entity: intent.entity ?? undefined,
-        payload: { ...intent.payload, name: intent.name },
-      })
+      sayCustom(world, intent.name, intent.entity ?? undefined, intent.payload)
       continue
     }
 

@@ -82,6 +82,7 @@ describe('a game whose systems are failing', () => {
           fps: 60,
           frameMs: 16,
           entities: 1,
+          veil: 0,
           errors: [],
           logs: [
             { level: 'info', message: 'started', at: 0 },
@@ -106,6 +107,7 @@ describe('a game whose systems are failing', () => {
           fps: 60,
           frameMs: 16,
           entities: 1,
+          veil: 0,
           errors: [
             {
               script: 'script:Walk.ts',
@@ -135,6 +137,7 @@ describe('a game whose systems are failing', () => {
           fps: 60,
           frameMs: 16,
           entities: 1,
+          veil: 0,
           errors: [
             {
               script: 'script:Walk.ts',

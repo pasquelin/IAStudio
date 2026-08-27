@@ -14,7 +14,9 @@ function watching(camera: PlayCamera, controlled = true) {
   const characters = createCharacters()
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera },
-    ports: testPorts({ render: { place: () => {}, view: view => views.push(view) } }),
+    ports: testPorts({
+      render: { place: () => {}, view: view => views.push(view), veil: () => {} },
+    }),
     systems: [createPlayCameraSystem(characters)],
   })
   if (controlled) {
