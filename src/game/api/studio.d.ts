@@ -30,13 +30,24 @@ declare module '@studio' {
   /** One of the components an entity carries, as plain JSON. `type` names which. */
   export type Component = { type: string; [field: string]: unknown }
 
-  /** The entity a hook is running for. Every gesture is DEFERRED — see `defineScript`. */
-  export type Self = {
+  /**
+   * The entity a hook is running for. Every gesture is DEFERRED — see `defineScript`.
+   *
+   * `P` is what THIS script declared in `props`, so `self.props.speed` is a number rather than
+   * an `unknown` the author has to widen — the default is what a hook typed by hand still gets.
+   */
+  export type Self<P = Record<string, unknown>> = {
     /** The entity's own id, stable for as long as it lives. */
     readonly id: string
     readonly name: string
-    /** What the inspector set on THIS instance of the script. */
-    readonly props: Readonly<Record<string, unknown>>
+    /**
+     * What the inspector set on THIS instance of the script, over what `props` declared.
+     *
+     * The index stays open beside the declared keys: `kernel.ts` layers EVERY key an instance
+     * carries, declared or not — a prop taken out of the block but left in the scene is still
+     * there at runtime, and reading it must not be a compile error.
+     */
+    readonly props: Readonly<P & Record<string, unknown>>
     /** Where it is at the start of the step. Moving it is `moveBy` or `placeAt`. */
     readonly position: Readonly<Vector3>
     readonly rotation: Readonly<Vector3>
@@ -139,7 +150,10 @@ declare module '@studio' {
    * })
    * ```
    */
-  export function defineScript(definition: {
+  // 🛑 NO default on `P`: `Record<string, never>` was tried, and `never` is assignable to
+  // everything — a script reading a prop it never declared compiled clean and multiplied an
+  // `undefined` at runtime. With none, `P` falls back on the constraint, which stays red.
+  export function defineScript<P extends Record<string, string | number | boolean>>(definition: {
     /**
      * What this script exposes to the inspector, with the default each one takes.
      *
@@ -147,22 +161,22 @@ declare module '@studio' {
      * script has ever run, so an expression is left out rather than guessed at, and what the
      * inspector set on an instance is layered over it in `self.props`.
      */
-    props?: Record<string, string | number | boolean>
+    props?: P
     /** Once, when the entity joins — before its first step. */
-    onCreate?(self: Self, ctx: Context): void
+    onCreate?(self: Self<P>, ctx: Context): void
     /** Once, on the world's first step, after everything exists. */
-    onStart?(self: Self, ctx: Context, dt: number): void
+    onStart?(self: Self<P>, ctx: Context, dt: number): void
     /** Every fixed step. `dt` is `ctx.dt`, handed over for what a movement is written against. */
-    onUpdate?(self: Self, ctx: Context, dt: number): void
+    onUpdate?(self: Self<P>, ctx: Context, dt: number): void
     /** Once per RENDERED frame, after every step of it. */
-    onLateUpdate?(self: Self, ctx: Context, dt: number): void
+    onLateUpdate?(self: Self<P>, ctx: Context, dt: number): void
     /** Once, on its way out. The entity has already left the world. */
-    onDestroy?(self: Self, ctx: Context): void
+    onDestroy?(self: Self<P>, ctx: Context): void
     /** Every event on the bus, whoever it happened to. */
-    onMessage?(self: Self, ctx: Context, event: GameEvent): void
+    onMessage?(self: Self<P>, ctx: Context, event: GameEvent): void
     /** When something hit THIS entity. */
-    onCollision?(self: Self, ctx: Context, event: GameEvent): void
-    onTriggerEnter?(self: Self, ctx: Context, event: GameEvent): void
-    onTriggerExit?(self: Self, ctx: Context, event: GameEvent): void
+    onCollision?(self: Self<P>, ctx: Context, event: GameEvent): void
+    onTriggerEnter?(self: Self<P>, ctx: Context, event: GameEvent): void
+    onTriggerExit?(self: Self<P>, ctx: Context, event: GameEvent): void
   }): unknown
 }
