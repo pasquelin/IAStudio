@@ -10,7 +10,7 @@ import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments } from '@/app/documentIo'
 import { closeOrphanTabs } from '@/app/orphanTabs'
 import { getBridge } from '@/services/bridge'
-import { forgetReportedFailures } from '@/services/diagnostics'
+import { forgetReportedFailures, reportFailure } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
 import { useProjectContext } from './projectContext'
@@ -45,6 +45,11 @@ type ProjectState = {
    * catalogue to land on the folder already in front.
    */
   open: (path: string) => Promise<boolean>
+  /**
+   * Leaves the open project with none in its place — the row stays on the shelf, unlike
+   * forgetting one. `lastProject` goes with it, or the next launch reopens what was just closed.
+   */
+  close: () => Promise<void>
   /**
    * Drops a folder from the shelf of recent projects. The folder itself is untouched: this is a
    * list of shortcuts, and forgetting one is not a gesture on someone's disk.
@@ -212,6 +217,28 @@ export const useProject = create<ProjectState>()((set, get) => ({
       }
 
       return false
+    }
+  },
+
+  close: async () => {
+    const bridge = getBridge()
+    const leaving = get().project
+    // Nothing to leave, and the settings below would then clear a `lastProject` this window has
+    // no business clearing — a second window closing the same project reaches here too.
+    if (!bridge || !leaving) return
+
+    await bridge.project.close()
+    // The broadcast has in fact already emptied every panel — the main process fires `onChange`
+    // on its way past. Set here all the same, as `open` sets what it opened.
+    set({ project: null })
+
+    try {
+      await useSettings.getState().write({ storage: { lastProject: undefined } })
+    } catch (error) {
+      // The project IS closed, so rejecting into the `void` of every caller would say nothing.
+      // What is lost is the pointer: the next launch reopens what was just closed, and the
+      // journal is the only place that can say why.
+      reportFailure('project.close', leaving.path, error)
     }
   },
 

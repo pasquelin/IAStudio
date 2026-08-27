@@ -175,6 +175,10 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.projectCurrent, () => project.current())
 
+  // `lastProject` is the renderer's own write, as forgetting a project already is — the settings
+  // are replicated, so writing them here would be the same write twice. See `projectRename`.
+  handle(CHANNELS.projectClose, () => project.close())
+
   handle(CHANNELS.projectRevealFile, async (_event, relative) => {
     reveal(join(project.path(), parseFolderPath(relative)))
   })

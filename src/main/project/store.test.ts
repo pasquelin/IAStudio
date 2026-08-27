@@ -61,7 +61,7 @@ describe('project store', () => {
   })
 
   afterEach(async () => {
-    store.close()
+    await store.close()
     await rm(root, { recursive: true, force: true })
     execFileMock.mockClear()
   })
@@ -111,7 +111,7 @@ describe('project store', () => {
 
     await rm(join(project.path, 'Images'), { recursive: true, force: true })
     await rm(join(project.path, '.index/peaks'), { recursive: true, force: true })
-    store.close()
+    await store.close()
 
     await store.open(project.path)
 
@@ -214,7 +214,7 @@ describe('project store', () => {
     )
     // Writable but unreadable, which is what a restore tool or a syncing service can leave.
     await chmod(hidden, 0o200)
-    store.close()
+    await store.close()
 
     await expect(store.open(created.path)).rejects.toThrow()
 
@@ -411,6 +411,74 @@ describe('project store', () => {
     expect(store.current()).toEqual(project)
   })
 
+  it('announces that no project is open once it is closed', async () => {
+    await store.create(root, 'My project')
+    await store.close()
+
+    expect(onChange).toHaveBeenLastCalledWith(null)
+    expect(store.current()).toBeNull()
+  })
+
+  /**
+   * The same order `activate` keeps before a swap: what is still queued belongs to the project
+   * being left, and its catalogue is about to stop answering.
+   */
+  it('settles what belongs to the project before its catalogue goes', async () => {
+    let settled = false
+    const settling = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+      // Read INSIDE the settling: the project still being there is the order this exists for.
+      settle: async () => {
+        settled = settling.current() !== null
+      },
+    })
+
+    await settling.create(join(root, 'settling'), 'Settling')
+    await settling.close()
+
+    expect(settled).toBe(true)
+  })
+
+  /**
+   * `projectOpen` and `projectClose` are independent handlers: a closing that settles slowly —
+   * a journal flush on a network volume — must not tear down whatever opened meanwhile.
+   */
+  it('leaves alone a project opened while it was settling', async () => {
+    // Held for the closing alone: `activate` settles too, so a hold that outlived the first
+    // await would block the very opening this case has to let through.
+    let hold: Promise<void> | null = null
+    const racing = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+      settle: async () => {
+        if (hold) await hold
+      },
+    })
+
+    const first = await racing.create(join(root, 'first'), 'First')
+    const second = await racing.create(join(root, 'second'), 'Second')
+    await racing.open(first.path)
+
+    let release = (): void => {}
+    hold = new Promise<void>(resolve => {
+      release = resolve
+    })
+
+    const closing = racing.close()
+    hold = null
+    await racing.open(second.path)
+    release()
+    await closing
+
+    expect(racing.current()).toEqual(second)
+    expect(onChange).toHaveBeenLastCalledWith(second)
+
+    await racing.close()
+  })
+
   describe('inspecting a folder before creating in it', () => {
     it('calls an empty folder blank, and one with files of its own occupied', async () => {
       expect(await store.inspect(root)).toBe('blank')
@@ -452,7 +520,7 @@ describe('project store', () => {
      */
     it('refuses a folder that already holds projects', async () => {
       await store.create(join(root, 'Reel'), 'Reel')
-      store.close()
+      await store.close()
 
       await expect(store.inspect(root)).rejects.toMatchObject({ reason: 'holds-projects' })
     })
@@ -494,7 +562,7 @@ describe('project store', () => {
 
   it('reopens a project it created', async () => {
     const created = await store.create(root, 'My project')
-    store.close()
+    await store.close()
 
     expect(store.current()).toBeNull()
     expect(await store.open(created.path)).toEqual(created)
@@ -503,7 +571,7 @@ describe('project store', () => {
   it('refuses a manifest it cannot make sense of', async () => {
     const created = await store.create(root, 'My project')
     await writeFile(join(created.path, '.project.json'), '{"name":42}', 'utf8')
-    store.close()
+    await store.close()
 
     await expect(store.open(created.path)).rejects.toThrow()
   })
@@ -517,7 +585,7 @@ describe('project store', () => {
       JSON.stringify({ ...created.manifest, name: 'Stale name' }),
       'utf8',
     )
-    store.close()
+    await store.close()
 
     expect((await store.open(created.path)).manifest.name).toBe('My project')
   })
@@ -544,7 +612,7 @@ describe('project store', () => {
     expect(fragile.current()).toEqual(first)
     expect(() => fragile.catalog()).not.toThrow()
 
-    fragile.close()
+    await fragile.close()
   })
 
   it('refuses to hand out a catalogue or a path with no project open', () => {
@@ -590,7 +658,7 @@ describe('renaming a project', () => {
   })
 
   afterEach(async () => {
-    store.close()
+    await store.close()
     await rm(root, { recursive: true, force: true })
     execFileMock.mockClear()
   })

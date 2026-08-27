@@ -46,6 +46,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'activity.recent': ['42.3'],
   'project.open': ['41.7'],
   'project.create': ['41.6'],
+  'project.close': ['41.9'],
 
   'file.open': ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '22.3'],
   'files.list': ['1.2'],

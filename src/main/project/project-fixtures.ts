@@ -68,7 +68,7 @@ export async function withTempProject(
   })
 
   onTestFinished(async () => {
-    store.close()
+    await store.close()
     await rm(root, { recursive: true, force: true })
   })
 

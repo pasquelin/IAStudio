@@ -152,7 +152,11 @@ export type ProjectStore = {
    * quit right after a save does not leave the write it started behind.
    */
   settled: () => Promise<void>
-  close: () => void
+  /**
+   * Leaves no project open. Settles first, as `activate` does before a swap: what is still
+   * queued belongs to the project being left, and its catalogue is about to stop answering.
+   */
+  close: () => Promise<void>
 }
 
 /**
@@ -499,7 +503,13 @@ export function createProjectStore({
 
     settled: writes.settled,
 
-    close: () => {
+    close: async () => {
+      // Captured across the settling: `projectOpen` is an independent handler, so a project
+      // opened while this awaited would be the one torn down here.
+      const leaving = project
+      await Promise.all([settle?.(), writes.settled()])
+      if (project !== leaving) return
+
       close()
       onChange(null)
     },

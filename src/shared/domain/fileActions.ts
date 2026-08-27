@@ -44,6 +44,18 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /**
+     * No field: there is one open project, and naming it would let a caller close a project that
+     * is not in front of anyone.
+     */
+    name: 'project.close',
+    titleKey: 'assistant.actions.projectClose.title',
+    descriptionKey: 'assistant.actions.projectClose.description',
+    commitment: 'studio',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
     name: 'project.create',
     titleKey: 'assistant.actions.projectCreate.title',
     descriptionKey: 'assistant.actions.projectCreate.description',

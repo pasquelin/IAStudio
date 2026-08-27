@@ -675,6 +675,7 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 - [x] « Crée un nouveau projet appelé Démo Assistant. »
 - [ ] « Rouvre mon projet Démo. »
 - [ ] « Renomme mon projet Démo Assistant. »
+- [ ] « Ferme le projet ouvert. »
 
 ## 42. Fichiers — le reste
 

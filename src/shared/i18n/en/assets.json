@@ -249,6 +249,8 @@
     "useHint": "Closes the open project and opens this one in its place",
     "currentHint": "This project is already open",
     "createHint": "Pick a folder on disk: everything the studio produces is written there",
+    "close": "Close the project",
+    "closeHint": "Closes every tab and hands the studio back to the home. The folder stays where it is, and the project on the shelf",
     "context": "The project’s context",
     "contextHint": "Open the panel where what this project is about is written"
   },

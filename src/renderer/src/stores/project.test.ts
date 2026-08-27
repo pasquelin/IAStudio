@@ -286,6 +286,73 @@ describe('picking a folder in the dialog', () => {
 })
 
 /**
+ * Leaving the project with none in its place — a different gesture from dropping its row, which
+ * the section below covers: the shelf keeps the project, and the studio lands back on the home.
+ */
+describe('closing the open project', () => {
+  const OPEN: RecentProject = {
+    path: '/projects/summer',
+    name: 'Summer',
+    openedAt: '2026-08-10T09:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    useProject.setState({ project: { path: OPEN.path, manifest: MANIFEST }, known: true })
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: {
+          ...state.settings.storage,
+          recentProjects: [OPEN],
+          lastProject: OPEN.path,
+        },
+      },
+    }))
+  })
+
+  it('asks the main process and leaves the studio with no project', async () => {
+    const close = vi.fn(() => Promise.resolve())
+    installFakeBridge({ project: { close } })
+
+    await useProject.getState().close()
+
+    expect(close).toHaveBeenCalled()
+    expect(useProject.getState().project).toBeNull()
+  })
+
+  /**
+   * `startup: 'lastProject'` is the default, so a closing that left the pointer behind would be
+   * undone by the next launch: the project reopens, and nothing says why. The shelf is NOT
+   * touched with it — the row is what the project is reopened from, and that is the whole
+   * difference with forgetting one.
+   */
+  it('clears the startup pointer and leaves the shelf alone', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().close()
+
+    expect(write).toHaveBeenCalledWith({ storage: { lastProject: undefined } })
+  })
+
+  /**
+   * A second window reaches here on the same gesture, after the first one has already closed.
+   * Writing the settings then would clear a pointer another project has since claimed.
+   */
+  it('writes nothing when no project is open', async () => {
+    const close = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    useProject.setState({ project: null, known: true })
+    installFakeBridge({ project: { close }, settings: { write } })
+
+    await useProject.getState().close()
+
+    expect(close).not.toHaveBeenCalled()
+    expect(write).not.toHaveBeenCalled()
+  })
+})
+
+/**
  * The shelf is a list of shortcuts, and dropping one is not a gesture on anyone's disk: the
  * folder stays, and reopening the project puts the row back. That is what makes the home's menu
  * safe to offer with no confirmation behind it.

@@ -116,6 +116,7 @@ export type Channels = {
   projectCreate: 'project:create'
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
+  projectClose: 'project:close'
   projectListFolder: 'project:list-folder'
   projectSearchFolder: 'project:search-folder'
   projectWalkFolder: 'project:walk-folder'
@@ -345,6 +346,7 @@ export const CHANNELS: Channels = {
   projectCreate: 'project:create',
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
+  projectClose: 'project:close',
   projectListFolder: 'project:list-folder',
   projectSearchFolder: 'project:search-folder',
   projectWalkFolder: 'project:walk-folder',
@@ -790,6 +792,7 @@ export type LogScope =
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
   | 'project.forget'
+  | 'project.close'
   | 'project.rename'
   | 'font.face'
   // Not a document's: a render that threw and a stored layout React refused belong to the shell
@@ -848,6 +851,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'document.rename',
   'project.reveal',
   'project.forget',
+  'project.close',
   'project.rename',
   'font.face',
   'shell.render',
@@ -1149,6 +1153,11 @@ export type StudioBridge = {
     create: (path: string) => Promise<Project | null>
     open: (path: string) => Promise<Project>
     current: () => Promise<Project | null>
+    /**
+     * Leaves the open project with none in its place: the catalogue is closed and every window is
+     * told through `onChange`, exactly as opening another one tells them. The folder is untouched.
+     */
+    close: () => Promise<void>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
     /**
      * One level of the project folder, `''` being the root. The explorer walks it a folder at a

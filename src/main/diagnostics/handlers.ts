@@ -79,6 +79,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // already writes there.
   'project.reveal': 'project',
   'project.forget': 'project',
+  'project.close': 'project',
   'project.rename': 'project',
   // A face that will not open is read where the document it was set in is read: the caption is
   // still there, drawn in the fallback, and this is what says why it does not look right.

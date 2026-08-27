@@ -85,6 +85,12 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     said: ['Renomme mon projet Démo Assistant.'],
     passed: run => run.studio.projectName().includes('Démo Assistant'),
   },
+  {
+    name: '41.9 closes the open project',
+    said: ['Ferme le projet ouvert.'],
+    // The decor holds one open, so the empty name is the model's doing and not the bench's.
+    passed: run => run.studio.projectName() === '',
+  },
 
   {
     name: '42.1 copies the boat picture into Materials without moving it',
