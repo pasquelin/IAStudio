@@ -2,6 +2,7 @@ import { extname } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
 import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf, type UploadKind } from '@shared/domain/assetMime'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
+import { channelFromProviderType } from '@shared/domain/material'
 import { defined } from '@shared/guards'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { DownloadFormat, RemoteAssetCatalog } from '@main/provider/assetCatalog'
@@ -107,6 +108,7 @@ export function createCloudBackend({
       // A twin already in the project is refreshed in place, not doubled: pulling twice must not
       // leave two rows pointing at one library asset, which is what `findByRemoteId` guards.
       const existing = await catalog().findByRemoteId(cloudAsset.id)
+      const pulledChannel = channelFromProviderType(cloudAsset.remoteType)
 
       return await local.importFromUrl({
         id: existing?.id ?? newId(),
@@ -116,6 +118,13 @@ export function createCloudBackend({
         remoteAssetId: cloudAsset.id,
         // What the library tile was already showing. Without it a mesh that was a picture in the
         // browser becomes an icon the moment it lands on disk.
+        // The channel it holds, read off the provenance the library tile already carried. Without
+        // it a picture pulled from the Library lands beside the photographs while its twin
+        // generated in the app lands with the materials — one picture, two folders, on the door
+        // it came through alone.
+        ...(pulledChannel
+          ? { map: pulledChannel.channel, mapInverted: pulledChannel.inverted }
+          : {}),
         ...(cloudAsset.thumbnailUrl ? { thumbnailUrl: cloudAsset.thumbnailUrl } : {}),
         ...(cloudAsset.ownerId ? { remoteOwnerId: cloudAsset.ownerId } : {}),
         ...(cloudAsset.updatedAt ? { remoteUpdatedAt: cloudAsset.updatedAt } : {}),

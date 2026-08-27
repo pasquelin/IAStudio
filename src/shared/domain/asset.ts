@@ -61,6 +61,37 @@ export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
 }
 
 /**
+ * Where the materials go — the `.mtlx` documents, and the pictures that serve one.
+ *
+ * Beside `DEFAULT_ASSET_FOLDERS` rather than in it: `material` is not an asset TYPE, and this
+ * folder is the one place the two vocabularies meet. A document lands here because it IS one; a
+ * picture lands here because of what it is FOR, which its channel is what says.
+ */
+export const MATERIALS_FOLDER = 'Materials'
+
+/**
+ * Where an asset of this shape lands when nothing else says otherwise.
+ *
+ * A picture that serves a MATERIAL is filed with the materials rather than with the pictures. It
+ * is still a picture — the kind says so, and every shelf that draws one draws this — but what a
+ * person looks for it under is what it serves, and seven channels of one surface loose among the
+ * photographs is a folder nobody can read.
+ *
+ * `packedSlot` answers beside `map` and must: a `metallicRoughnessTexture` packs two channels
+ * into one image and claims neither, and it is the very picture the unpack gesture starts from —
+ * leaving it behind files a model's maps over two folders.
+ */
+export function defaultAssetFolder(asset: {
+  type: AssetType
+  map?: PbrChannel
+  packedSlot?: string
+}): string {
+  const servesAMaterial = asset.map !== undefined || asset.packedSlot !== undefined
+
+  return servesAMaterial ? MATERIALS_FOLDER : DEFAULT_ASSET_FOLDERS[asset.type]
+}
+
+/**
  * What every asset id starts with, ours and Scenario's alike — the two vocabularies share the
  * spelling and nothing else. Written down because the main process reads it to tell a value that
  * may name an asset from one that cannot, before asking the catalogue about it.

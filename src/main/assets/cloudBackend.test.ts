@@ -136,6 +136,26 @@ describe('bringing an asset down', () => {
   })
 
   /**
+   * The channel is what files a picture with the materials rather than with the photographs, and
+   * the provenance is the only thing that carries it. Dropped here, a channel pulled from the
+   * Library lands beside the photographs while its twin generated in the app lands with the
+   * materials — one picture, two folders, on the door it came through alone.
+   */
+  it('carries the channel a pulled picture serves, read off its provenance', async () => {
+    const { backend, imported } = harness()
+    await backend.pull(cloudAsset({ remoteType: 'texture-smoothness' }))
+
+    expect(imported[0]).toMatchObject({ map: 'roughness', mapInverted: true })
+  })
+
+  it('claims no channel for a picture no material asked for', async () => {
+    const { backend, imported } = harness()
+    await backend.pull(cloudAsset({ remoteType: 'txt2img' }))
+
+    expect(imported[0]?.map).toBeUndefined()
+  })
+
+  /**
    * The tile the user was looking at one gesture earlier. Dropped here, a mesh downloaded from
    * the library turns into an icon on arrival, with the picture still sitting on the CDN.
    */

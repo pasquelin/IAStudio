@@ -1,3 +1,4 @@
+import { MATERIALS_FOLDER } from './asset'
 import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
@@ -90,6 +91,18 @@ export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
 export const DOCUMENT_VERSION = 3
 
 export const DOCUMENTS_FOLDER = 'documents'
+
+/**
+ * Where a document of this kind lands when its author names no folder — the shelf for what has
+ * none of its own, or `Materials` for the one kind that does.
+ *
+ * Read by the STORE and not by the naming window alone: a caller that supplies a title opens no
+ * window at all — the assistant and the MCP wire both do — and a second answer written there
+ * would file the same gesture in two folders.
+ */
+export function documentFolderOf(kind: DocumentKind): string {
+  return kind === 'material' ? MATERIALS_FOLDER : DOCUMENTS_FOLDER
+}
 
 export { STUDIO_METADATA_KEY } from './studioMetadata'
 

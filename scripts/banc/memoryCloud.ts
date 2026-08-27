@@ -1,7 +1,8 @@
-import { DEFAULT_ASSET_FOLDERS, type Asset, type AssetType } from '@shared/domain/asset'
+import { defaultAssetFolder, type Asset, type AssetType } from '@shared/domain/asset'
 import { assetFileName, generatedAssetName } from '@shared/domain/assetName'
 import { pathIn } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
+import type { PbrChannel } from '@shared/domain/material'
 import {
   CAPABILITIES_BY_FAMILY,
   type FieldDescriptor,
@@ -31,12 +32,19 @@ export type MemoryCloud = {
 }
 
 /** What each family's output is filed as, and the suffix its file carries. */
-const OUTPUT: Partial<Record<ModelFamily, { type: AssetType; extension: string }>> = {
+/**
+ * `map` on the material line and nowhere else: a whole surface IS the base colour, which is what
+ * `channelFromProviderType` answers for the API's own `texture` — and it is the only thing that
+ * files the picture with the materials rather than with the photographs.
+ */
+const OUTPUT: Partial<
+  Record<ModelFamily, { type: AssetType; extension: string; map?: PbrChannel }>
+> = {
   image: { type: 'image', extension: 'png' },
   video: { type: 'video', extension: 'mp4' },
   '3d': { type: 'mesh', extension: 'glb' },
   audio: { type: 'audio', extension: 'wav' },
-  material: { type: 'image', extension: 'png' },
+  material: { type: 'image', extension: 'png', map: 'baseColor' },
   skybox: { type: 'skybox', extension: 'png' },
 }
 
@@ -119,11 +127,12 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
       const id = `job-${runs}`
       const label = nameOfRun(model.name, body)
       const name = assetFileName(label, `.${output.extension}`)
-      const path = pathIn(DEFAULT_ASSET_FOLDERS[output.type], name)
+      const path = pathIn(defaultAssetFolder(output), name)
       const asset: Asset = {
         id: `generated-${runs}`,
         name,
         type: output.type,
+        ...(output.map ? { map: output.map } : {}),
         location: 'local',
         path,
         tags: [],
@@ -131,7 +140,7 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
         jobId: id,
       }
 
-      await folder.createFolder(DEFAULT_ASSET_FOLDERS[output.type])
+      await folder.createFolder(defaultAssetFolder(output))
       await folder.write(path)
       await catalog.add(asset)
 

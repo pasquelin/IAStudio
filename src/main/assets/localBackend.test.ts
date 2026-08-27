@@ -377,6 +377,23 @@ describe('local backend', () => {
     expect(asset.outputIndex).toBeUndefined()
   })
 
+  /**
+   * The channel is what files it there, and it is all that is left to: a picture of a surface has
+   * been an ordinary `image` since the studio stopped giving one a kind of its own, so nothing
+   * else tells seven channels of one material from seven photographs.
+   */
+  it('lands a picture that holds a channel with the materials', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_map',
+      url: 'https://cdn.example/normal.png',
+      name: 'Rouille',
+      type: 'image',
+      map: 'normal',
+    })
+
+    expect(asset.path).toBe('Materials/Rouille.png')
+  })
+
   it('writes the file to disk and indexes it', async () => {
     const asset = await backend.importFromUrl({
       id: 'asset_1',

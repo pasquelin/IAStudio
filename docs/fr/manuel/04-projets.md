@@ -64,12 +64,13 @@ C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 ```
 Mon projet/
 │
-├── Images/               SIX DOSSIERS POUR COMMENCER
+├── Images/               SEPT DOSSIERS POUR COMMENCER
 ├── Video/                  posés à la création, et ordinaires : renommez-les,
 ├── Audio/                  videz-les, jetez-les, rangez-les autrement
 ├── 3D/
 ├── Sky/
 ├── Animations/
+├── Materials/            vos matières, et les images qui les servent
 │                           …et tout ce que vous créez à côté
 │
 ├── .project.json         la carte d'identité — CACHÉ
@@ -93,14 +94,19 @@ règle. Vos fichiers restent visibles et vous les rangez comme vous l’entendez
 les regarder, les copier, les réparer. La carte d’identité, l’index et la sauvegarde, non : ce sont
 les outils du studio, pas votre travail.
 
-> **Les six dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
+> **Les sept dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
 > jamais remis : si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a
 > besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
 
+> **`Materials/` est le seul qui ne corresponde pas à un type de fichier.** Il tient vos
+> **matières** — les documents `.mtlx` — et les **images qui en servent une** : une couleur de
+> base, un relief, une rugosité y atterrissent, quand une photo va dans `Images/`. Ce qui les
+> sépare n'est pas leur nature, les deux sont des images, mais **le canal** que la seconde porte.
+
 > **Un projet créé avant le 26/08 a un `Textures/` de plus**, et il le garde : chaque asset porte
-> son propre chemin, rien ne lit son rôle dans le nom du dossier. Les images qui y sont restent
-> lisibles et modifiables ; celles qui arrivent désormais atterrissent dans `Images/`, avec les
-> autres. Le dossier se renomme, se vide ou se fusionne à la main, comme n'importe quel autre.
+> son propre chemin, rien ne lit son rôle dans le nom du dossier. Ce qui y est reste lisible et
+> modifiable ; le dossier se renomme, se vide ou se fusionne à la main, comme n'importe quel
+> autre.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
 > Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.ia-studio/` ne le reçoit
@@ -321,8 +327,8 @@ suivante. **Le dernier dossier choisi est celui où le document ira** — il n�
 suivre. Le chemin complet est écrit au-dessus des colonnes. On ne sort jamais du projet : rien
 d’autre n’est proposé.
 
-Les colonnes s’ouvrent sur le dossier que l’Explorateur montre, ou sur `documents/` si rien n’y
-est sélectionné. En dessous, **Nouveau dossier** en crée un dans le dossier choisi, sans quitter
+Les colonnes s’ouvrent sur le dossier que l’Explorateur montre, ou, si rien n’y est sélectionné,
+sur `Materials/` pour une matière et sur `documents/` pour tout le reste. En dessous, **Nouveau dossier** en crée un dans le dossier choisi, sans quitter
 la fenêtre.
 
 Il est enregistré avec `⌘S` / `Ctrl+S` — dans le dossier que vous avez choisi en le créant, et
@@ -346,7 +352,7 @@ Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.gltf`
 
 ### Parcourir le projet — le panneau Explorateur
 
-Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : les six dossiers de
+Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : les sept dossiers de
 départ, et tout ce que vous y avez créé ou déposé vous-même. Les dossiers se déplient, les fichiers
 sont dedans, exactement comme dans l’explorateur de votre système.
 
@@ -484,7 +490,7 @@ répertoire, mais ce qu’il contient est l’écriture du studio : un fichier q
 serait effacé par la prochaine sauvegarde, qui reconstruit ce dossier. Le document lui-même se
 déplace comme n’importe quel fichier — c’est son intérieur qui ne s’ouvre pas.
 
-**Tout le reste vous obéit**, les six dossiers de départ compris : renommez-les, videz-les,
+**Tout le reste vous obéit**, les sept dossiers de départ compris : renommez-les, videz-les,
 jetez-les, sortez-en un asset pour le ranger ailleurs, coupez, copiez, dupliquez. Le studio suit —
 c’est ce que la passe de réconciliation fait à l’ouverture et au retour dans la fenêtre.
 

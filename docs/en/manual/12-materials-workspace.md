@@ -322,7 +322,7 @@ project's catalogue, a knack belongs to none.
 ## Saving
 
 Everything is saved **automatically**, moments after your last gesture, into a `.mtlx` file in your
-project's `documents/` folder.
+project's `Materials/` folder — the very one the pictures that serve a material land in.
 
 **Nothing is baked into the pixels.** Reopen the document in six months: every setting is still
 there, and still adjustable. What is written are your decisions, not their result.

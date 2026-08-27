@@ -8,7 +8,7 @@ import {
   type CheckerTextureId,
   type InstalledCheckerTexture,
 } from '@shared/domain/checkerTexture'
-import { DEFAULT_ASSET_FOLDERS, withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { MATERIALS_FOLDER, withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { pathIn } from '@shared/domain/folder'
 import { CHANNELS } from '@shared/ipc'
 import { ownFileOf } from './protocol'
@@ -31,19 +31,24 @@ type BundledTextureDeps = {
 
 /** Where one lands in the project, and where it is looked for before being copied again. */
 function pathOf(id: CheckerTextureId): string {
-  return pathIn(DEFAULT_ASSET_FOLDERS.image, checkerTextureFile(id))
+  return pathIn(MATERIALS_FOLDER, checkerTextureFile(id))
 }
 
 /**
  * Where a project filed one before the folder settled — searched too, since this folder is a
  * catalogue LOOKUP here and not merely where a new file lands.
  *
- * BOTH earlier spellings, and the second is easy to forget: `Textures` became `Materials` and
- * then `Images` within a day. Miss either and the first 3D open of such a project installs a
- * second set of four under fresh ids, while its meshes go on wearing the first.
+ * Miss one and the first 3D open of such a project installs a second set of four under fresh
+ * ids, while its meshes go on wearing the first.
+ *
+ * 🛑 LITERALS on purpose, where the line above reads a constant: these name where a file WAS, and
+ * a past cannot be spelled by a value the studio still reserves the right to change. `Images` is
+ * here for that reason and not because it is today's picture folder.
  */
+const FORMER_FOLDERS: readonly string[] = ['Images', 'Textures']
+
 function formerPathsOf(id: CheckerTextureId): readonly string[] {
-  return ['Materials', 'Textures'].map(folder => pathIn(folder, checkerTextureFile(id)))
+  return FORMER_FOLDERS.map(folder => pathIn(folder, checkerTextureFile(id)))
 }
 
 /**

@@ -326,7 +326,8 @@ une carte appartient au catalogue d’un projet, un tour de main n’appartient 
 ## Enregistrer
 
 Tout est enregistré **automatiquement**, quelques instants après votre dernier geste, dans un
-fichier `.mtlx` du dossier `documents/` de votre projet.
+fichier `.mtlx` du dossier `Materials/` de votre projet — celui-là même où atterrissent les
+images qui servent une matière.
 
 **Rien n’est cuit dans les pixels.** Rouvrez le document dans six mois : chaque réglage est
 encore là, et se règle encore. Ce qui est écrit, ce sont vos décisions, pas leur résultat.

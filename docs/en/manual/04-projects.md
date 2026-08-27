@@ -61,12 +61,13 @@ back. It is the gesture that cleans up a list where a moved folder lingers.
 ```
 My project/
 │
-├── Images/               SIX FOLDERS TO START FROM
+├── Images/               SEVEN FOLDERS TO START FROM
 ├── Video/                  laid down at creation, and ordinary: rename them,
 ├── Audio/                  empty them, throw them away, arrange them otherwise
 ├── 3D/
 ├── Sky/
 ├── Animations/
+├── Materials/            your materials, and the pictures that serve one
 │                           …and whatever you make beside them
 │
 ├── .project.json         the identity card — HIDDEN
@@ -90,14 +91,18 @@ Your files stay visible and you arrange them as you see fit — you must be able
 copy them, repair them. The identity card, the index and the backup do not: they are the studio's
 tools, not your work.
 
-> **The six starter folders are only a starting point.** They are laid down at creation and never
+> **The seven starter folders are only a starting point.** They are laid down at creation and never
 > put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
 > land, where the studio recreates it rather than refusing to work.
 
+> **`Materials/` is the only one that answers to no kind of file.** It holds your **materials**
+> — the `.mtlx` documents — and the **pictures that serve one**: a base colour, a normal, a
+> roughness land there, where a photograph lands in `Images/`. What tells them apart is not their
+> nature, both being pictures, but **the channel** the second one carries.
+
 > **A project created before 26/08 has one `Textures/` more**, and it keeps it: every asset
-> carries its own path, and nothing reads its role off a folder name. The pictures already there
-> stay readable and editable; the ones that arrive from now on land in `Images/`, with the rest.
-> The folder is renamed, emptied or merged by hand, like any other.
+> carries its own path, and nothing reads its role off a folder name. What is there stays
+> readable and editable; the folder is renamed, emptied or merged by hand, like any other.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
 > sets it on `.project.json` and on `.index/` itself. **`.ia-studio/` does not get it**: the day it
@@ -311,8 +316,8 @@ what one folder holds, and choosing a folder opens its contents in the next colu
 folder chosen is where the document goes** — there are not two things to keep track of. The whole
 path is written above the columns. You never leave the project: nothing else is offered.
 
-The columns open on the folder the Explorer is showing, or on `documents/` when nothing is picked
-there. Below them, **New folder** makes one in the chosen folder without leaving the window.
+The columns open on the folder the Explorer is showing, or, when nothing is picked there, on
+`Materials/` for a material and on `documents/` for everything else. Below them, **New folder** makes one in the chosen folder without leaving the window.
 
 It is saved with `⌘S` / `Ctrl+S` — into the folder you chose when you made it, and afterwards
 wherever you filed it — under an extension that says what it is:
@@ -334,7 +339,7 @@ what each one is; `a3f1.json` next to `b204.json` says nothing.
 
 ### Walking the project — the Explorer panel
 
-The **Explorer** panel shows **the project folder**, as a tree: the six starter folders, and
+The **Explorer** panel shows **the project folder**, as a tree: the seven starter folders, and
 whatever you made or dropped in there yourself. Folders unfold, files are inside them, as in your
 system's own file browser.
 
@@ -469,7 +474,7 @@ but what it holds is the studio's own writing: a file dropped in there would be 
 save, which rebuilds that folder. The document itself moves like any other file — it is its inside
 that does not open.
 
-**Everything else obeys you**, the six starter folders included: rename them, empty them, throw
+**Everything else obeys you**, the seven starter folders included: rename them, empty them, throw
 them away, take an asset out of one and file it elsewhere, cut, copy, duplicate. The studio
 follows — that is what the reconciliation pass does when a project opens and when you come back to
 the window.
