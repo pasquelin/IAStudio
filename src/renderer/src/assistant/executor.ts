@@ -31,6 +31,7 @@ import { GAME_HANDLERS } from './gameHandlers'
 import { PLAY_HANDLERS } from './playHandlers'
 import { SCRIPT_HANDLERS } from './scriptHandlers'
 import { STUDIO_HANDLERS } from './studioHandlers'
+import { TIMELINE_HANDLERS } from './timelineHandlers'
 import { readBatch } from './batch'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
@@ -51,6 +52,7 @@ const HANDLERS: ActionHandlers = {
   ...PLAY_HANDLERS,
   ...SCRIPT_HANDLERS,
   ...STUDIO_HANDLERS,
+  ...TIMELINE_HANDLERS,
   ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,

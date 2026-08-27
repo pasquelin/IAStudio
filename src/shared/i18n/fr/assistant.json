@@ -1072,6 +1072,18 @@
       "studioBatch": {
         "title": "Enchaîner des appels",
         "description": "Exécute une suite d’appels comme un seul, avec une seule question. S’arrête au premier refus."
+      },
+      "timelineCue": {
+        "title": "Poser un repère sur la timeline",
+        "description": "Ajoute un événement, un son, une vidéo ou une transition à la timeline de la scène. Ce que le troisième champ désigne dépend de la liste — un nom d’événement, un identifiant d’asset, ou un genre de transition."
+      },
+      "timelineRemove": {
+        "title": "Retirer un repère de la timeline",
+        "description": "Enlève le repère de cette liste qui porte cet identifiant."
+      },
+      "timelineTemplate": {
+        "title": "Choisir ce que la timeline offre",
+        "description": "Décide quelles rangées le panneau propose. Ne retire jamais rien au moteur, qui joue toute la timeline quoi qu’il arrive."
       }
     },
     "refusals": {
@@ -1375,7 +1387,13 @@
       "describeRef": "Référence à décrire",
       "docsTopic": "Sujet",
       "batchCalls": "Appels (JSON)",
-      "fixedSteps": "Nombre de pas fixes"
+      "fixedSteps": "Nombre de pas fixes",
+      "timelineList": "Liste",
+      "timelineAt": "Instant, en microsecondes",
+      "timelineWhat": "Quoi",
+      "timelineDuration": "Durée, en microsecondes",
+      "timelineRowId": "Identifiant de la ligne",
+      "timelineTemplate": "Ce que la timeline offre"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

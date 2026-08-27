@@ -925,3 +925,10 @@ Dans la scène Test MCP :
 - [ ] « Décris-moi Cube Test. »
 - [ ] « Qu’est-ce que je peux régler sur un composant Santé ? »
 - [ ] « Donne de la santé à Cube Test et monte son maximum à 250, en une seule fois. »
+
+## 62. Ce qu'une timeline fait pendant la partie
+
+- [ ] « Fais s’ouvrir la porte à deux secondes de cinématique. »
+- [ ] « Mets un fondu d’une seconde à trois secondes. »
+- [ ] « Retire le fondu que tu viens de poser. »
+- [ ] « Cette timeline est une intro : ne me propose que ce qu’il faut. »
