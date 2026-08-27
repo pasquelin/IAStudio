@@ -60,7 +60,7 @@ describe('what the model is told', () => {
   // The values a field closes over are the difference between a workspace that opens and one the
   // model invented. Left out, `workspace.open` is a name with no idea what to put in it.
   it('spells out the values a closed field accepts', () => {
-    expect(shortBriefing()).toContain('one of: image, video, 3d, audio, materials, skyboxes')
+    expect(shortBriefing()).toContain('one of: image, video, 3d, code, audio, materials, skyboxes')
   })
 
   it('says what each action is for, in English, from the bundle', () => {

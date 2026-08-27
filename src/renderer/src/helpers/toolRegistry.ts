@@ -1,5 +1,5 @@
 import {
-  mdiCodeBraces,
+  mdiAlertCircleOutline,
   mdiRunFast,
   mdiBookOpenPageVariantOutline,
   mdiCreationOutline,
@@ -61,8 +61,8 @@ const ICONS: Record<ToolId, string> = {
   // An open book: what the project SAYS about itself, beside the folder that holds it and
   // the fork that tracks it. Neither of those two, and neither the sparkle of a generation.
   context: mdiBookOpenPageVariantOutline,
-  // Braces: what every editor draws for code, and a glyph no other rail button wears.
-  code: mdiCodeBraces,
+  // What the compiler had to say, and the rail already spends its braces on the Code space.
+  problems: mdiAlertCircleOutline,
 }
 
 /**

@@ -24,6 +24,7 @@ const PNG = Uint8Array.from(
 
 const scene = bodyFormatOf('.gltf')
 const otio = bodyFormatOf('.otio')
+const script = bodyFormatOf('.ts')
 
 /** What `readFile` hands a format: a format reads bytes, whatever the shape of what it wrote. */
 const onDisk = (body: string | Uint8Array): Buffer => Buffer.from(body)
@@ -76,6 +77,31 @@ describe('a document of the studio’s own spelling', () => {
   // kind that does not exist yet reading the same way.
   it('is what an unlisted extension is spelt in', () => {
     expect(bodyFormatOf('.whatever')).toBe(ENVELOPED)
+  })
+})
+
+describe('a script held as plain TypeScript', () => {
+  const SOURCE = "import { defineScript } from '@studio'\nexport default defineScript({})\n"
+
+  /** 🛑 The bytes and nothing else: an envelope written here would be code that does not compile. */
+  it('writes the text alone, with nothing of the studio around it', () => {
+    expect(asText(script.write({ ...ENVELOPE, kind: 'script', content: SOURCE }))).toBe(SOURCE)
+  })
+
+  it('reads a file no studio ever wrote, as the script it is', () => {
+    expect(script.read(onDisk(SOURCE))).toMatchObject({ kind: 'script', content: SOURCE })
+  })
+
+  /**
+   * The head is COMPOSED, never read: `foundAt` falls back on the file name for a document whose
+   * envelope carries no id, which is what names a script. Listing a project of a hundred scripts
+   * therefore opens none of them.
+   */
+  it('answers a head without going near the disk', async () => {
+    expect(await script.readHead('/nowhere/at/all/Walk.ts')).toMatchObject({
+      kind: 'script',
+      title: '',
+    })
   })
 })
 

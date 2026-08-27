@@ -221,7 +221,6 @@ describe('Rail', () => {
       // At the FOOT of this rail since the band was split: its right half is the one this side
       // carries, and every panel of the band declares that half.
       'Timeline',
-      'Code',
       'Historique',
     ])
   })

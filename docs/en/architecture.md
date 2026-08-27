@@ -453,11 +453,12 @@ src/renderer/src/
 │   └── documents.tsx    which editor renders which document kind
 ├── design/       the in-house design system — see below
 ├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, and `core/` — what every engine shares
-├── spaces/       one editor per document kind — SIX, as many as there are workspaces
+├── spaces/       one editor per document kind — SEVEN, as many as there are workspaces
 │   ├── image/      Pixi-backed canvas and its tools
 │   ├── three/      the three.js viewport and its tools
 │   ├── video/      the timeline canvas, the monitor, its tools
 │   ├── audio/      the waveform, its tools, the decoder
+│   ├── code/       Monaco, mounted on a script of the project
 │   ├── materials/  a material's channels, and their tiled preview
 │   └── skyboxes/   the immersive sky and its three flat projections
 ├── panels/       the twenty-seven dockable tools
@@ -599,7 +600,7 @@ where `shared/` holds no runtime dependency. Hence a layer above it, in
 - the generator is offered only where a model is chosen or preferred;
 - a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
   `null` in the store — an absent key means the half is closed, an id means the user chose. The
-  layout is remembered once for all six workspaces while that first panel differs in each:
+  layout is remembered once for all seven workspaces while that first panel differs in each:
   writing an id there would impose one workspace's answer on the other five. `shownTool` tells the
   three cases apart, and migrating to version 8 puts every earlier layout back to its default,
   half by half.

@@ -4,7 +4,7 @@
  * enriches it with icons and components. Duplicating it in the main process would degrade
  * `ToolId` to `string` and force a cast back on the other side.
  */
-import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
+import { GENERATIVE_WORKSPACE_IDS, WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
 /**
  * A surface panels can stand on: one of the workspaces, or the home screen.
@@ -57,7 +57,7 @@ export type ToolId =
   | 'animations'
   | 'text'
   | 'context'
-  | 'code'
+  | 'problems'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: what the Scenario API
@@ -127,7 +127,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // 🛑 No `requires: 'model'` since ADR-23. It made the rail DROP the generator's icon whenever
   // nothing served the space's family — the one moment a person needs the panel most, and the
   // panel is what would have offered them a model. It now says which of the five refusals it is.
-  { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
+  //
+  // `GENERATIVE_WORKSPACE_IDS` and not every space since Code joined the rail: nothing Scenario
+  // serves writes a script, so an icon here would open on a picker with nothing in it.
+  { id: 'generator', zone: 'left', slot: 'primary', surfaces: GENERATIVE_WORKSPACE_IDS },
   // Second, so entering a space lands on the generator: a half with nothing chosen opens on the
   // first tool it declares, and generating is where every space starts.
   //
@@ -136,7 +139,13 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // says which of the five refusals it is, while a remote library with no account to open has
   // nothing at all — not one row, no local half since 25 August. An icon opening onto a panel
   // that can only ever say « configure a key » is an icon that lies about what it does.
-  { id: 'assets', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS, requires: 'cloud' },
+  {
+    id: 'assets',
+    zone: 'left',
+    slot: 'primary',
+    surfaces: GENERATIVE_WORKSPACE_IDS,
+    requires: 'cloud',
+  },
 
   // The lower half: the documents to produce into. Its own half rather than a third turn in the
   // upper one, so the generator stays visible WHILE the Explorer is read.
@@ -166,15 +175,14 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The band is the timeline's, across the whole width — that is how time is read, in Audio and
   // Video as in 3D, where an animation runs along the same line a montage does.
   { id: 'timeline', zone: 'bottomRight', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
-  // Beside the timeline and taking its turn with it: the band is where a wide surface goes, and
-  // a game is written while its scene is watched. Needs a project — the scripts are its files.
-  {
-    id: 'code',
-    zone: 'bottomRight',
-    slot: 'primary',
-    surfaces: ['3d'],
-    requires: 'project',
-  },
+  // What the compiler said about the script in front, under the script in front — the band, where
+  // a list read one row at a time across a whole width belongs. Code's alone: the other spaces
+  // hold no text a compiler reads.
+  //
+  // 🛑 The editor itself is NOT here, and that is the whole of the 27 August lot: it was a panel
+  // of this band in the 3D space, where nothing on the rail said it existed. A script is a
+  // DOCUMENT now, so it opens in the centre like every other one and Code is a space of its own.
+  { id: 'problems', zone: 'bottomRight', slot: 'primary', surfaces: ['code'] },
 
   // The home's own, and they serve it ALONE — a column beside an editor is for what acts on what
   // is in front of you, and each of these reads the studio rather than a document.

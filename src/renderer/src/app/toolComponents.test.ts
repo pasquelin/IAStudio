@@ -6,13 +6,13 @@ import { definition as explorer } from '@/panels/explorer'
 import { definition as git } from '@/panels/git'
 import { definition as history } from '@/panels/history'
 import { definition as animations } from '@/panels/animations'
-import { definition as code } from '@/panels/code'
 import { definition as context } from '@/panels/context'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
 import { definition as layers } from '@/panels/layers'
 import { definition as lights } from '@/panels/lights'
 import { definition as meshes } from '@/panels/meshes'
+import { definition as problems } from '@/panels/problems'
 import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
 import { definition as text } from '@/panels/text'
@@ -43,7 +43,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   animations,
   text,
   context,
-  code,
+  problems,
 }
 
 const IDS = Object.keys(PANELS).filter(isKnownTool)

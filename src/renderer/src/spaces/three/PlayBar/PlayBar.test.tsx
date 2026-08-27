@@ -9,6 +9,7 @@ import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { drawing } from '@/game/game-fixtures'
 import { useCode } from '@/stores/code'
+import { installDocument } from '@/stores/document-fixtures'
 import { usePlay } from '@/stores/play'
 import { PlayBar } from './PlayBar'
 
@@ -110,7 +111,7 @@ describe('a game whose systems are failing', () => {
           veil: 0,
           errors: [
             {
-              script: 'script:Walk.ts',
+              script: 'script:scripts/Walk.ts',
               entity: null,
               message: 'cannot import node:fs',
               line: 3,
@@ -140,7 +141,7 @@ describe('a game whose systems are failing', () => {
           veil: 0,
           errors: [
             {
-              script: 'script:Walk.ts',
+              script: 'script:scripts/Walk.ts',
               entity: null,
               message: 'no',
               line: 7,
@@ -152,11 +153,17 @@ describe('a game whose systems are failing', () => {
         },
       },
     })
+    // The script has to BE a document of the project: a fault naming one the project does not
+    // hold opens nothing at all, which `openScript.test.ts` states from the other side.
+    installDocument('Walk', 'code')
     render(<PlayBar documentId={DOCUMENT} viewport={() => null} />)
 
     await userEvent.click(screen.getByText('1 erreur'))
 
-    expect(useCode.getState().goto).toEqual({ script: 'script:Walk.ts', line: 7, column: 3 })
-    expect(useCode.getState().active).toBe('script:Walk.ts')
+    expect(useCode.getState().goto).toEqual({
+      script: 'script:scripts/Walk.ts',
+      line: 7,
+      column: 3,
+    })
   })
 })

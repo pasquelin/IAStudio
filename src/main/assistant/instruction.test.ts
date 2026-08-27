@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ACTION_FAMILIES, ACTION_REGISTRY } from '@shared/domain/assistant'
-import { WORKSPACE_IDS } from '@shared/domain/workspace'
+import { GENERATIVE_WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
 import { studioBriefing } from './instruction'
@@ -144,7 +144,9 @@ describe('how much of the catalogue the model is shown', () => {
     continuing => {
       const briefing = studioBriefing({
         continuing,
-        notReady: WORKSPACE_IDS,
+        // The widest this list can ever be: `spacesWithNoModel` names spaces whose PRIMARY
+        // employment nothing serves, and Code has no employment at all to be unserved.
+        notReady: GENERATIVE_WORKSPACE_IDS,
         context: 'x'.repeat(CONTEXT_COMPOSED_MAX),
         state: [...Array(20).keys()]
           .map(at => `  line ${at} `.padEnd(STATE_MAX / 20, 'z'))

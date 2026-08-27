@@ -14,7 +14,7 @@ describe('workspaceOrder', () => {
   })
 
   it('keeps what the user arranged', () => {
-    const stored: WorkspaceId[] = ['image', 'video', '3d', 'audio', 'materials', 'skyboxes']
+    const stored: WorkspaceId[] = ['image', 'video', '3d', 'code', 'audio', 'materials', 'skyboxes']
     stored.reverse()
 
     expect(workspaceOrder(stored)).toEqual(stored)
@@ -40,6 +40,7 @@ describe('workspaceOrder', () => {
       'image',
       'video',
       '3d',
+      'code',
       'audio',
     ])
   })

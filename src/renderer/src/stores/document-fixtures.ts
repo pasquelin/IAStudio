@@ -1,5 +1,5 @@
 import {
-  DOCUMENTS_FOLDER,
+  documentFolderOf,
   kindForWorkspace,
   type DocumentDescriptor,
 } from '@shared/domain/document'
@@ -69,7 +69,7 @@ export function installDocuments(tabs: Record<string, WorkspaceId>, activeId: st
       kind,
       workspace,
       title: documentId,
-      path: `${DOCUMENTS_FOLDER}/${documentFileName(documentId, kind)}`,
+      path: `${documentFolderOf(kind)}/${documentFileName(documentId, kind)}`,
     }
   }
 

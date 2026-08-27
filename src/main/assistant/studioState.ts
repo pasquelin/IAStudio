@@ -97,6 +97,9 @@ function armedLine(state: StudioSnapshot): string[] {
   if (!isWorkspaceId(state.workspace)) return []
 
   const family = FAMILY_BY_WORKSPACE[state.workspace]
+  // Code arms nothing — no family, so no sentence about a model that would never be run.
+  if (family === null) return []
+
   const role = primaryRoleOf(family)
   const modelId = role === null ? undefined : state.armedModels[role]
 

@@ -1,4 +1,5 @@
 import { MATERIALS_FOLDER } from './asset'
+import { SCRIPT_EXTENSION } from './game'
 import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
@@ -6,7 +7,8 @@ import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
  * Document registry, shared by both processes: the native menu will need it for
  * "File ▸ New", and duplicating the type would degrade `DocumentKind` to `string`.
  */
-export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'material'
+export type DocumentKind =
+  'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'material' | 'script'
 
 /** The values beside the type: a file read back off disk has to be checked against them. */
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
@@ -16,6 +18,7 @@ export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   'audio',
   'skybox',
   'material',
+  'script',
 ]
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
@@ -63,6 +66,7 @@ const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
   audio: 'audio',
   materials: 'material',
   skyboxes: 'skybox',
+  code: 'script',
 }
 
 /** `null` for a workspace whose editor does not exist yet — the new-document button disables. */
@@ -93,6 +97,13 @@ export const DOCUMENT_VERSION = 3
 export const DOCUMENTS_FOLDER = 'documents'
 
 /**
+ * Where a script lands. Its own shelf rather than `documents/`, because a script is read by the
+ * GAME as well as by the editor: `game.scripts()` walks the project for `.ts`, and a folder
+ * named for what it holds is what makes an exported game's tree read by eye.
+ */
+export const SCRIPTS_FOLDER = 'scripts'
+
+/**
  * Where a document of this kind lands when its author names no folder — the shelf for what has
  * none of its own, or `Materials` for the one kind that does.
  *
@@ -101,7 +112,19 @@ export const DOCUMENTS_FOLDER = 'documents'
  * would file the same gesture in two folders.
  */
 export function documentFolderOf(kind: DocumentKind): string {
-  return kind === 'material' ? MATERIALS_FOLDER : DOCUMENTS_FOLDER
+  return FOLDER_BY_KIND[kind]
+}
+
+/** A `Record` rather than a chain of tests: an eighth kind does not compile until it has answered
+ * where it lands, where a fallback would file it under `documents/` without a word. */
+const FOLDER_BY_KIND: Record<DocumentKind, string> = {
+  image: DOCUMENTS_FOLDER,
+  scene: DOCUMENTS_FOLDER,
+  sequence: DOCUMENTS_FOLDER,
+  audio: DOCUMENTS_FOLDER,
+  skybox: DOCUMENTS_FOLDER,
+  material: MATERIALS_FOLDER,
+  script: SCRIPTS_FOLDER,
 }
 
 export { STUDIO_METADATA_KEY } from './studioMetadata'
@@ -133,6 +156,10 @@ export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
   // glTF is what carries one. The file says which of the two it is.
   skybox: '.gltf',
   material: '.mtlx',
+  // The one kind whose file the studio does not spell: a script IS its text, so the envelope has
+  // no line to sit on. `PLAIN_TEXT` in `documentBody.ts` is the format, and the file NAME is the
+  // id — a renamed script is therefore a different document, which is the price of that.
+  script: SCRIPT_EXTENSION,
 }
 
 /**

@@ -356,8 +356,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
-    // Unreachable by any of the six since the image gained its rows, and kept for the compiler
-    // alone: `menu/template.test.ts` names that rather than leaving it read as a case forgotten.
+    // Code alone reaches this, and by design: a script is already a `.ts` of the project, so the
+    // Export row is absent rather than empty — `menu/template.test.ts` asserts both halves.
     return []
   }
 

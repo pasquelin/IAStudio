@@ -5,6 +5,7 @@ export const ASSISTANT_STARTERS: Readonly<Record<WorkspaceId, readonly string[]>
   image: ['imageMake', 'imageRework', 'imageUpscale'],
   video: ['videoMake', 'videoFromImage', 'videoCut'],
   '3d': ['meshMake', 'meshFromImage', 'meshRig'],
+  code: ['scriptMake', 'scriptExplain', 'scriptFix'],
   audio: ['audioMake', 'audioFromVideo', 'audioTrim'],
   materials: ['materialMake', 'materialFromImage', 'materialTile'],
   skyboxes: ['skyboxMake', 'skyboxRelight', 'skyboxExport'],

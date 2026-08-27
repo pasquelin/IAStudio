@@ -7,14 +7,35 @@ import {
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { parentOf } from '@shared/domain/folder'
+import { SCRIPT_EXTENSION, SCRIPT_STARTER } from '@shared/domain/game'
 import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
 import { seedSceneTemplate } from '@/stores/scenes'
-import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
+import {
+  documentAtPath,
+  takenDocumentNames,
+  untitledDocumentName,
+  useDocuments,
+} from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { getBridge } from '@/services/bridge'
 import { openDocument } from './dockviewApi'
+
+/** The file first, then the tab: `relist` is what gives the document the id its path spells. */
+async function createScript(of: NamedCreation | undefined): Promise<DocumentDescriptor | null> {
+  if (!of) return null
+
+  const path = `${of.folder ?? documentFolderOf('script')}/${of.title}${SCRIPT_EXTENSION}`
+  // Refused rather than overwritten: this path names a file somebody already has work in.
+  if (documentAtPath(useDocuments.getState(), path)) return null
+  if (!(await orElse(getBridge()?.game.writeScript(path, SCRIPT_STARTER), false))) return null
+
+  await useDocuments.getState().relist()
+  const created = documentAtPath(useDocuments.getState(), path)
+  if (created) openDocument(created)
+  return created
+}
 
 /**
  * Where the field opens: the folder the Explorer is pointing at, or this kind's own when it
@@ -106,6 +127,11 @@ async function named(
 
     of = place
   }
+
+  // 🛑 A script is written BEFORE it has a tab, and no other kind is: nothing in a `.ts` can
+  // carry an id, so the file's own path IS the document's identity — a tab opened under a fresh
+  // uuid would never find its file again, and every save would write a new one beside it.
+  if (kind === 'script') return await createScript(of)
 
   const created = await useDocuments.getState().create(workspace, of)
   if (!created) return null

@@ -7,6 +7,7 @@
     "image": "Image",
     "video": "Video",
     "3d": "Modelling",
+    "code": "Code",
     "audio": "Audio",
     "materials": "Materials",
     "skyboxes": "Skyboxes",
@@ -33,7 +34,7 @@
     "animations": "Animations",
     "text": "Text",
     "context": "Context",
-    "code": "Code"
+    "problems": "Problems"
   },
   "view": {
     "projection": "Projection",
@@ -197,6 +198,7 @@
       "image": "Generate and retouch images on a layered canvas.",
       "video": "Cut, sequence and export moving images.",
       "3d": "Build a scene, light it, export the model.",
+      "code": "Write a game’s behaviour, one script at a time.",
       "audio": "Compose and edit sound across tracks.",
       "materials": "Produce seamless material channels.",
       "skyboxes": "Generate skies and light a scene with them.",

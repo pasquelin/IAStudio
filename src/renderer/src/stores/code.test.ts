@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { codeFilesOf, freeScriptPath, isCodeDirty, useCode } from './code'
+import { codeFilesOf, isCodeDirty, useCode } from './code'
+import { useDocuments } from './documents'
 
 const WALK = 'script:Scripts/Walk.ts'
 
 describe('the scripts an editor holds', () => {
   beforeEach(() => {
-    useCode.setState({ files: {}, open: [], active: null, problems: [] })
+    useCode.setState({ files: {}, problems: [] })
+    useDocuments.setState({ documents: {}, activeId: null })
   })
 
   it('reads every script of the project, keyed by its reference', async () => {
@@ -65,21 +67,24 @@ describe('the scripts an editor holds', () => {
     expect(isCodeDirty(useCode.getState().files[WALK])).toBe(true)
   })
 
-  it('closes a tab onto the one beside it rather than onto nothing', () => {
-    useCode.getState().show('script:A.ts')
-    useCode.getState().show('script:B.ts')
+  it('marks a script clean at the text a save wrote, and forgets a closed one', () => {
+    useCode.getState().installed('script:A.ts', 'one')
+    useCode.getState().edited('script:A.ts', 'two')
+    useCode.getState().committed('script:A.ts', 'two')
+    expect(isCodeDirty(useCode.getState().files['script:A.ts'])).toBe(false)
 
-    useCode.getState().close('script:B.ts')
-
-    expect(useCode.getState().active).toBe('script:A.ts')
+    useCode.getState().forget('script:A.ts')
+    expect(useCode.getState().files['script:A.ts']).toBeUndefined()
   })
 
-  it('never offers a path the project already holds', async () => {
-    installFakeBridge({
-      game: { scripts: () => Promise.resolve([{ path: 'Script.ts', source: '' }]) },
-    })
+  /** 🛑 A script born in a tab has no file for the walk to find, and a Play re-reads them all. */
+  it('keeps a script that has never been written when the project is read again', async () => {
+    installFakeBridge({ game: { scripts: () => Promise.resolve([]) } })
+    useCode.getState().installed('script:A.ts', '')
+    useCode.getState().edited('script:A.ts', 'one')
+
     await useCode.getState().reload()
 
-    expect(freeScriptPath(useCode.getState(), 'Script')).toBe('script:Script-2.ts')
+    expect(useCode.getState().files['script:A.ts']?.source).toBe('one')
   })
 })

@@ -37,7 +37,10 @@ export function AssetInspectorGeneration({
   useEffect(() => void useFavorites.getState().load(), [])
 
   const regenerate = (): void => {
-    openGeneratorOn(workspaceById(workspace).family, generation.modelId, generation.params)
+    const family = workspaceById(workspace).family
+    // An asset always came out of a generating space, so this cannot be Code — read rather than
+    // asserted, the compiler having no way to know it.
+    if (family !== null) openGeneratorOn(family, generation.modelId, generation.params)
   }
 
   return (

@@ -43,6 +43,7 @@ import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
+import { codeFileOf, isCodeDirty, scriptRefOf, useCode } from '@/stores/code'
 import {
   forgetCarriedMetadata,
   montageIsIncomplete,
@@ -548,6 +549,49 @@ const IMAGE_IO: DocumentIo = {
 }
 
 /**
+ * A script IS its text, held by `useCode` under the `script:` reference the game, the `Script`
+ * component and the assistant all name — this adapts the one to the other.
+ *
+ * No history and no `markSaved` of a command: Monaco holds the undo a cursor in a text expects,
+ * which is why Code answers `null` in `SCOPE_BY_WORKSPACE`.
+ */
+const SCRIPT_IO: DocumentIo = {
+  capture: documentId => {
+    const script = scriptRefOf(documentId)
+    const held = codeFileOf(documentId)
+    // Read before the first `await`, like every other kind: what is written is this text, and a
+    // keystroke landing while it is on its way to disk must not be counted as saved.
+    const source = held?.source ?? ''
+
+    return Promise.resolve({
+      draft: { content: source },
+      commit: () => {
+        if (script !== null) useCode.getState().committed(script, source)
+      },
+      wasEdited: isCodeDirty(held),
+    })
+  },
+  install: (documentId, content) => {
+    const script = scriptRefOf(documentId)
+    if (script !== null) useCode.getState().installed(script, content)
+  },
+  // Empty, and NOT the starter: a script exists on disk before it has a tab, so reaching here
+  // means a file that could not be read — a starter would offer to overwrite it.
+  createDefault: documentId => {
+    const script = scriptRefOf(documentId)
+    if (script !== null && codeFileOf(documentId) === undefined) {
+      useCode.getState().installed(script, '')
+    }
+  },
+  holds: documentId => codeFileOf(documentId) !== undefined,
+  dirty: documentId => isCodeDirty(codeFileOf(documentId)),
+  forget: documentId => {
+    const script = scriptRefOf(documentId)
+    if (script !== null) useCode.getState().forget(script)
+  },
+}
+
+/**
  * Every kind the studio can write, and the only place a kind is declared savable. A kind absent
  * here has a Save that does nothing rather than one that writes an empty body.
  */
@@ -615,6 +659,7 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // document, and the dials the standard has no input for ride in the attribute it reserves for
   // applications. The one whose absence is NOT a refusal: a channel is a reference, not pixels,
   // and what does produce pixels — `deriveChannel` — already writes them as an asset.
+  script: SCRIPT_IO,
   material: {
     ...textDocumentIo(materialStore, {
       toPayload: materialPayload,

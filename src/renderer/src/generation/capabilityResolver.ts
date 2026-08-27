@@ -31,10 +31,15 @@ function depth(contract: CapabilityContract, available: readonly AvailableInput[
  * through another is a pipeline nobody implemented, and ADR-23 forbids inventing it.
  */
 export function resolveCapability(
-  family: ModelFamily,
+  family: ModelFamily | null,
   available: readonly AvailableInput[],
   forced?: AiRoleId | null,
 ): CapabilityChoice {
+  // Code is the space with no family, and the generator does not stand in it — the panel that
+  // would read this choice is not on that surface at all. Answered rather than thrown: the hook
+  // runs off the ACTIVE workspace, which passes through Code whenever the rail does.
+  if (family === null) return { chosen: null, reachable: [], forced: false }
+
   const offered = CAPABILITIES_BY_FAMILY[family].flatMap(capability => {
     const role = aiRoleId(family, capability)
     const contract = contractOf(role)

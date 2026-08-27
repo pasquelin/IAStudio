@@ -29,6 +29,9 @@ const AudioDocument = lazy(async () => ({
 const SkyboxDocument = lazy(async () => ({
   default: (await import('@/spaces/skyboxes/SkyboxDocument')).SkyboxDocument,
 }))
+const ScriptDocument = lazy(async () => ({
+  default: (await import('@/spaces/code/ScriptDocument')).ScriptDocument,
+}))
 const MaterialDocument = lazy(async () => ({
   default: (await import('@/spaces/materials/MaterialDocument/MaterialDocument')).MaterialDocument,
 }))
@@ -68,6 +71,7 @@ export const DOCUMENT_COMPONENTS: Record<
   scene: panelFor(SceneDocument),
   sequence: panelFor(SequenceDocument),
   audio: panelFor(AudioDocument),
+  script: panelFor(ScriptDocument),
   skybox: panelFor(SkyboxDocument),
   material: panelFor(MaterialDocument),
 }

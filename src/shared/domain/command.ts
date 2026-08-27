@@ -1275,6 +1275,9 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   skyboxes: 'skybox',
   audio: 'audio',
   materials: 'material',
+  // Monaco holds its own undo stack, and it is the one a cursor in a script expects: routing ⌘Z
+  // through the studio's history would give back a whole file where a keystroke was undone.
+  code: null,
 }
 
 /**

@@ -634,16 +634,13 @@ describe('the export menu', () => {
     ])
   })
 
-  /**
-   * Every one of the six sends something out since the image gained its two rows, so the empty
-   * fallback below `exportSubmenu` is now unreachable by any workspace — kept for the compiler,
-   * and named here rather than left looking like a case somebody forgot to cover.
-   */
-  it('shows the row in every space, each space sending something out', () => {
+  /** Every space that MAKES something sends it out; Code does not, and the row is absent rather
+   * than empty. Both halves asserted, so a Code export would be named here. */
+  it('shows the row in every space that makes a file of its own, and in no other', () => {
     for (const workspace of WORKSPACE_IDS) {
-      expect(
-        submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label),
-      ).toContain('Exporter')
+      const file = submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(one => one.label)
+
+      expect(file.includes('Exporter'), workspace).toBe(workspace !== 'code')
     }
   })
 

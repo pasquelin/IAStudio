@@ -269,13 +269,13 @@ async function remove(input: Record<string, unknown>): Promise<ActionOutcome> {
  * through a session the viewport drives and no outside client can hold, while the `.otio` is one
  * encoding of plain data. The two audio-and-video kinds share it — they share the montage.
  *
- * **All six kinds answer now, so there is no `default`** — the compiler is what keeps a seventh
- * from being forgotten, where a fallback would have silently refused it.
+ * **Every kind answers, so there is no `default`** — the compiler is what keeps the next one from
+ * being forgotten. `null` is an answer: the kind sends nothing out.
  */
 async function exportOf(
   document: DocumentDescriptor,
   input: Record<string, unknown>,
-): Promise<FolderExportRequest> {
+): Promise<FolderExportRequest | null> {
   switch (document.kind) {
     case 'image': {
       const { imageExportFiles } = await import('@/spaces/image/imageExportFiles')
@@ -310,6 +310,10 @@ async function exportOf(
       const { otioExportFiles } = await import('@/app/otioExport')
       return otioExportFiles(document.id)
     }
+    // `null`, not a throw: a script is already a `.ts` of the project, so there is nothing to
+    // render — routing that through the failure path would journal an error and blame a rendering.
+    case 'script':
+      return null
   }
 }
 
@@ -336,6 +340,8 @@ async function exportDocument(input: Record<string, unknown>): Promise<ActionOut
     reportFailure('document.export', document.id, error)
     return refused('notRenderable')
   }
+  // A kind that sends nothing out, which is Code alone — told apart from a rendering that failed.
+  if (request === null) return refused('wrongSurface')
 
   const folder = textOf(input, 'folder')
   return withBridge(bridge =>

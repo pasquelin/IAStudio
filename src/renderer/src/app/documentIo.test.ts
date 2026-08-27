@@ -25,6 +25,7 @@ import { getBridge } from '@/services/bridge'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import type { SaveLayeredRequest } from '@shared/ipc'
 import { useAssets } from '@/stores/assets'
+import { isCodeDirty, scriptRefOf, useCode } from '@/stores/code'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
 import { useMaterials } from '@/stores/materials'
@@ -1730,12 +1731,47 @@ describe('the kinds a string holds', () => {
     return written
   }
 
-  const open = async (workspace: 'video' | 'audio' | 'skyboxes'): Promise<string> => {
+  const open = async (workspace: 'video' | 'audio' | 'skyboxes' | 'code'): Promise<string> => {
     const created = await useDocuments.getState().create(workspace)
     if (!created) throw new Error('expected a document')
     await restoreDocument(created.id)
     return created.id
   }
+
+  /**
+   * The one kind whose state lives in no document store: `useCode` holds it, keyed by the path
+   * the game and the components name, and `SCRIPT_IO` is the whole of the crossing.
+   */
+  it('carries a script to disk and back, as the text it is', async () => {
+    const written = diskBackedBridge('script')
+    const documentId = await open('code')
+    const script = scriptRefOf(documentId)
+    if (script === null) throw new Error('expected a script reference')
+
+    useCode.getState().edited(script, 'export default 1\n')
+    await saveDocument(documentId)
+
+    // The BYTES, and it is what tells this kind from every other: nothing of the studio is
+    // around the text — a `.ts` carrying an envelope is a file that does not compile.
+    expect(written.get(documentId)).toBe('export default 1\n')
+
+    useCode.getState().forget(script)
+    await restoreDocument(documentId)
+    expect(useCode.getState().files[script]?.source).toBe('export default 1\n')
+  })
+
+  it('holds a script clean once it has been written', async () => {
+    diskBackedBridge('script')
+    const documentId = await open('code')
+    const script = scriptRefOf(documentId)
+    if (script === null) throw new Error('expected a script reference')
+
+    useCode.getState().edited(script, 'export default 2\n')
+    expect(isCodeDirty(useCode.getState().files[script])).toBe(true)
+
+    await saveDocument(documentId)
+    expect(isCodeDirty(useCode.getState().files[script])).toBe(false)
+  })
 
   it('carries a sequence to disk and back', async () => {
     diskBackedBridge('sequence')
