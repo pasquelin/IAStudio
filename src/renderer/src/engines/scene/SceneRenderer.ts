@@ -2037,6 +2037,19 @@ export class SceneRenderer {
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
 
+  /**
+   * Where a running game puts the free camera. Moved directly rather than through the orbit, for
+   * the reason `frameContents` gives — and asking for a frame through `repaint`, since what a
+   * camera OF THE SCENE films has not changed.
+   */
+  placeView(placement: CameraPlacement): void {
+    const camera = this.viewport.perspective
+    camera.position.set(placement.position.x, placement.position.y, placement.position.z)
+    camera.lookAt(placement.target.x, placement.target.y, placement.target.z)
+    this.viewport.orbit?.target.set(placement.target.x, placement.target.y, placement.target.z)
+    this.repaint()
+  }
+
   /** What a framing and a shadow frustum are both measured against — see `UNFRAMED_NODES`. */
   private framedObjects(): Object3D[] {
     const objects: Object3D[] = []

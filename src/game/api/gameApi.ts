@@ -6,6 +6,7 @@ import type { AudioPort } from '../ports/audioPort'
 import type { InputPort } from '../ports/inputPort'
 import type { LogPort } from '../ports/logPort'
 import type { NetPort } from '../ports/netPort'
+import type { PhysicsPort } from '../ports/physicsPort'
 import type { RenderPort } from '../ports/renderPort'
 
 /**
@@ -16,6 +17,7 @@ export type GameApi = {
   assets: AssetPort
   input: InputPort
   render: RenderPort
+  physics: PhysicsPort
   audio: AudioPort
   log: LogPort
   ai: AiPort

@@ -13,9 +13,10 @@ export type JsonValue =
  *
  * 🛑 **A type is declared by the lot that gives it a SYSTEM.** A component nothing simulates is a
  * form field that does nothing, and thirty of them written ahead of their behaviour would be
- * thirty guesses. The physics ones arrive with Rapier, the script one with the sandbox.
+ * thirty guesses. The four physics ones arrived with Rapier; the script one waits for the sandbox.
  */
-export type ComponentType = 'Health' | 'Movement'
+export type ComponentType =
+  'Health' | 'Movement' | 'Collider' | 'RigidBody' | 'Trigger' | 'CharacterController'
 
 export type Component = { type: ComponentType } & { readonly [key: string]: JsonValue }
 

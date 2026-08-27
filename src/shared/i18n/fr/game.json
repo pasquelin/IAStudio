@@ -1,22 +1,51 @@
 {
   "game": {
     "components": {
+      "CharacterController": {
+        "description": "Fait de l’objet celui qu’on dirige : il marche, il saute, il monte les marches.",
+        "title": "Personnage"
+      },
+      "Collider": {
+        "description": "Donne à l’objet un volume que les autres ne peuvent pas traverser.",
+        "title": "Volume"
+      },
       "Health": {
-        "title": "Santé",
-        "description": "Des points de vie, qui descendent quand l’entité est touchée et la font mourir à zéro."
+        "description": "Des points de vie, qui descendent quand l’entité est touchée et la font mourir à zéro.",
+        "title": "Santé"
       },
       "Movement": {
-        "title": "Mouvement",
-        "description": "Fait aller et venir l’entité toute seule, le long d’un axe — une plate-forme, un ascenseur, un piège."
+        "description": "Fait aller et venir l’entité toute seule, le long d’un axe — une plate-forme, un ascenseur, un piège.",
+        "title": "Mouvement"
+      },
+      "RigidBody": {
+        "description": "Confie l’objet à la simulation : il tombe, il glisse, il se fait pousser.",
+        "title": "Physique"
+      },
+      "Trigger": {
+        "description": "Ne bloque rien et prévient quand quelque chose entre dans son volume ou en sort.",
+        "title": "Détecteur"
       }
     },
     "fields": {
       "axis": "Axe",
       "current": "Actuelle",
       "distance": "Distance",
+      "fidelity": "Précision",
+      "friction": "Frottement",
+      "gravityScale": "Pesanteur",
+      "height": "Hauteur",
+      "jumpSpeed": "Saut",
+      "kind": "Simulation",
+      "lockRotation": "Bloquer la rotation",
+      "mass": "Masse",
       "max": "Maximum",
       "mode": "Parcours",
-      "speed": "Vitesse"
+      "radius": "Rayon",
+      "restitution": "Rebond",
+      "slopeLimit": "Pente",
+      "snapDistance": "Accroche",
+      "speed": "Vitesse",
+      "stepHeight": "Marche"
     },
     "section": {
       "title": "Composants",
@@ -28,13 +57,21 @@
       "emptyHint": "Un composant dit ce que l’objet FAIT, quand son type dit ce qu’il dessine."
     },
     "values": {
+      "auto": "Automatique",
+      "box": "Cube",
+      "convexes": "Convexes",
+      "dynamic": "Dynamique",
+      "fixed": "Fixe",
+      "hull": "Enveloppe",
+      "kinematic": "Pilotée",
+      "loop": "En boucle",
+      "once": "Une fois",
+      "pingPong": "Aller-retour",
+      "trimesh": "Triangles",
+      "unknown": "Valeur inconnue",
       "x": "X",
       "y": "Y",
-      "z": "Z",
-      "once": "Une fois",
-      "loop": "En boucle",
-      "pingPong": "Aller-retour",
-      "unknown": "Valeur inconnue"
+      "z": "Z"
     },
     "play": {
       "faults_many": "{{count, number}} erreurs",

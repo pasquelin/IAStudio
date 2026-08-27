@@ -1,22 +1,51 @@
 {
   "game": {
     "components": {
+      "CharacterController": {
+        "description": "Makes the object the one being driven: it walks, it jumps, it climbs steps.",
+        "title": "Character"
+      },
+      "Collider": {
+        "description": "Gives the object a volume the others cannot pass through.",
+        "title": "Volume"
+      },
       "Health": {
-        "title": "Health",
-        "description": "Hit points, which fall as the entity is hurt and kill it at zero."
+        "description": "Hit points, which fall as the entity is hurt and kill it at zero.",
+        "title": "Health"
       },
       "Movement": {
-        "title": "Motion",
-        "description": "Makes the entity travel on its own along one axis — a platform, a lift, a hazard."
+        "description": "Makes the entity travel on its own along one axis — a platform, a lift, a hazard.",
+        "title": "Motion"
+      },
+      "RigidBody": {
+        "description": "Hands the object to the simulation: it falls, it slides, it gets pushed.",
+        "title": "Physics"
+      },
+      "Trigger": {
+        "description": "Blocks nothing, and says so when something enters its volume or leaves it.",
+        "title": "Sensor"
       }
     },
     "fields": {
       "axis": "Axis",
       "current": "Current",
       "distance": "Distance",
+      "fidelity": "Fidelity",
+      "friction": "Friction",
+      "gravityScale": "Gravity",
+      "height": "Height",
+      "jumpSpeed": "Jump",
+      "kind": "Simulation",
+      "lockRotation": "Lock turning",
+      "mass": "Mass",
       "max": "Maximum",
       "mode": "Course",
-      "speed": "Speed"
+      "radius": "Radius",
+      "restitution": "Bounce",
+      "slopeLimit": "Slope",
+      "snapDistance": "Grip",
+      "speed": "Speed",
+      "stepHeight": "Step"
     },
     "section": {
       "title": "Components",
@@ -28,13 +57,21 @@
       "emptyHint": "A component says what the object DOES, where its type says what it draws."
     },
     "values": {
+      "auto": "Automatic",
+      "box": "Box",
+      "convexes": "Convexes",
+      "dynamic": "Dynamic",
+      "fixed": "Fixed",
+      "hull": "Hull",
+      "kinematic": "Driven",
+      "loop": "Loop",
+      "once": "Once",
+      "pingPong": "Back and forth",
+      "trimesh": "Triangles",
+      "unknown": "Unknown value",
       "x": "X",
       "y": "Y",
-      "z": "Z",
-      "once": "Once",
-      "loop": "Loop",
-      "pingPong": "Back and forth",
-      "unknown": "Unknown value"
+      "z": "Z"
     },
     "play": {
       "faults_many": "{{count, number}} errors",

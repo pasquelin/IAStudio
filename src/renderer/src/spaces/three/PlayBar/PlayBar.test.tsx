@@ -1,23 +1,22 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { createInertPhysics } from '@game/host/inertPhysics'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
-import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
+import { drawing } from '@/game/game-fixtures'
 import { usePlay } from '@/stores/play'
 import { PlayBar } from './PlayBar'
 
-const DOCUMENT = 'doc-scene'
+/** 2,7 Mo of WebAssembly for a bar that draws four buttons — see `play.test.ts`. */
+vi.mock('@game/host/rapierPhysics', () => ({
+  loadRapierPhysics: () => Promise.resolve(createInertPhysics()),
+}))
 
-const drawing = (): SceneRenderer => {
-  const engine = { apply: () => {} }
-  // The registry holds a whole `SceneRenderer`, and a running game asks it for one method — see
-  // `SceneDraw`. Standing in for the rest would mean a WebGL context this suite has not got.
-  return engine as unknown as SceneRenderer
-}
+const DOCUMENT = 'doc-scene'
 
 function show() {
   installScene(DOCUMENT, {
@@ -49,7 +48,8 @@ describe('the transport of a scene played as a game', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Jouer' }))
 
-    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
+    // Awaited: the engine lands a microtask later, so the transport draws Play once more first.
+    expect(await screen.findByRole('button', { name: 'Pause' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Arrêter' })).toBeEnabled()
     expect(screen.getByText(/1 objet ·/)).toBeInTheDocument()
   })
@@ -58,7 +58,7 @@ describe('the transport of a scene played as a game', () => {
     show()
 
     await userEvent.click(screen.getByRole('button', { name: 'Jouer' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Pause' }))
     expect(screen.getByRole('button', { name: 'Jouer' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Arrêter' }))

@@ -29,7 +29,14 @@ export function restingTransform(): Transform {
   }
 }
 
-/** The one component of that type an entity carries, or nothing. */
+/**
+ * The one component of that type an entity carries, or nothing. Indexed rather than `find`: it is
+ * read several times per entity per step, and a closure an allocation each would be the bulk of it.
+ */
 export function componentOf(entity: Entity, type: ComponentType): Component | null {
-  return entity.components.find(component => component.type === type) ?? null
+  for (let index = 0; index < entity.components.length; index++) {
+    const held = entity.components[index]
+    if (held?.type === type) return held
+  }
+  return null
 }

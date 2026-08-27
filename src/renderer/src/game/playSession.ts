@@ -2,6 +2,7 @@ import { assetUrl } from '@shared/domain/asset'
 import type { PlayState, RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
 import { createStudioHost } from '@game/host/studioHost'
+import type { PhysicsPort } from '@game/ports/physicsPort'
 import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -34,6 +35,8 @@ export type PlaySessionDeps = {
   input: DomInputTarget
   onReport: (report: RuntimeReport) => void
   frames: FrameDriver
+  /** What simulates. Absent leaves the game inert — nothing falls and nothing blocks. */
+  physics?: PhysicsPort
 }
 
 /**
@@ -49,16 +52,24 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     player: { id: 'local', name: 'Player', local: true },
     urlForAsset: assetUrl,
     render,
+    physics: deps.physics,
   })
+  if (!deps.physics) {
+    ports.log.write('warn', 'no physics engine: nothing falls, nothing blocks, nobody walks')
+  }
 
   const world = worldFromScene(deps.documentId, deps.editState(), ports)
   const loop = createGameLoop(world)
+  // The one piece of studio state a game DOES write, and only when the set is not flown by hand:
+  // in `orbit` the runtime never touches the camera, so a STOP must not undo what a hand orbited.
+  const watching = world.play.camera === 'orbit' ? null : deps.renderer.viewPlacement()
   // Reused across frames: one object per entity per frame is the only allocation a still game
   // would otherwise make.
   const placements: EntityPlacement[] = []
   let state: PlayState = 'playing'
   let frameMs = 0
   let last: number | null = null
+  let warmed = false
   let said = Number.NEGATIVE_INFINITY
 
   const publish = (): void =>
@@ -110,7 +121,13 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
         frameMs = frameMs === 0 ? nowMs - last : frameMs * 0.9 + (nowMs - last) * 0.1
       last = nowMs
 
-      loop.advance(nowMs / 1000)
+      // 🛑 Forgotten after the first step ran: that step derives every collider, and a hundred
+      // milliseconds of it lands in the accumulator, which then owes six catch-up steps nobody
+      // played.
+      if (loop.advance(nowMs / 1000) > 0 && !warmed) {
+        warmed = true
+        loop.reset()
+      }
     }
 
     // 🛑 Drawn even while PAUSED, and the frames keep coming for it: the viewport re-applies the
@@ -148,7 +165,11 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       deps.frames.stop()
       world.events.clear()
       ports.input.detach()
+      // The engine holds its bodies in WebAssembly memory, which no collector reaches.
+      ports.physics.dispose()
       deps.renderer.apply(deps.editState())
+      // The camera is the only studio state a game touches, so it is the only one STOP restores.
+      if (watching) deps.renderer.placeView(watching)
       publish()
     },
   }

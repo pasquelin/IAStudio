@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { NOT_PLAYING, type RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
+import { loadRapierPhysics } from '@game/host/rapierPhysics'
+import type { PhysicsPort } from '@game/ports/physicsPort'
 import { animationFrames, startPlay, type PlaySession } from '@/game/playSession'
 import { sceneEngineOf } from './sceneEngines'
 import { sceneOf, useScenes } from './scenes'
@@ -23,24 +25,25 @@ export type PlayStoreState = {
  */
 const sessions = new Map<string, PlaySession>()
 
+/**
+ * 🛑 Documents whose engine is still loading, by GENERATION rather than by name. A stop followed
+ * by a play, both while the WebAssembly is in flight, left the FIRST call installing the session
+ * — bound to a viewport element the remount had already detached, so nothing answered a key.
+ */
+const starting = new Map<string, number>()
+let generation = 0
+
 export const usePlay = create<PlayStoreState>()(set => ({
   reports: {},
 
   start: (documentId, input) => {
-    const renderer = sceneEngineOf(documentId)
     // No viewport, no game: the runtime draws through the engine that viewport owns.
-    if (!renderer || sessions.has(documentId)) return
+    if (sessions.has(documentId) || starting.has(documentId) || !sceneEngineOf(documentId)) return
 
-    sessions.set(
-      documentId,
-      startPlay({
-        documentId,
-        renderer,
-        editState: () => sceneOf(useScenes.getState(), documentId),
-        input,
-        frames: animationFrames(),
-        onReport: report => set(state => ({ reports: { ...state.reports, [documentId]: report } })),
-      }),
+    generation += 1
+    starting.set(documentId, generation)
+    void begin(documentId, generation, input, report =>
+      set(state => ({ reports: { ...state.reports, [documentId]: report } })),
     )
   },
 
@@ -48,6 +51,9 @@ export const usePlay = create<PlayStoreState>()(set => ({
   resume: documentId => sessions.get(documentId)?.resume(),
 
   stop: documentId => {
+    // Dropped from the waiting list too: a stop while the engine loads must not be overtaken by
+    // the session it was cancelling.
+    starting.delete(documentId)
     sessions.get(documentId)?.stop()
     sessions.delete(documentId)
     // Guarded: every viewport teardown calls this, playing or not, and an unconditional write
@@ -57,6 +63,46 @@ export const usePlay = create<PlayStoreState>()(set => ({
     )
   },
 }))
+
+/**
+ * The engine first, the world second — the WebAssembly weighs 2,7 Mo and lands in 27 ms, which
+ * is a frame nobody sees but not a wait a Play button may take synchronously.
+ */
+async function begin(
+  documentId: string,
+  token: number,
+  input: DomInputTarget,
+  onReport: (report: RuntimeReport) => void,
+): Promise<void> {
+  let physics: PhysicsPort | undefined
+  try {
+    physics = await loadRapierPhysics()
+  } catch {
+    // Said by the session itself, on the game's own log: a game with no engine still runs, it
+    // just has nothing to fall onto.
+  }
+
+  const renderer = sceneEngineOf(documentId)
+  // Stopped, overtaken by a later Play, or its viewport closed while the engine was loading.
+  if (starting.get(documentId) !== token || !renderer) {
+    physics?.dispose()
+    return
+  }
+  starting.delete(documentId)
+
+  sessions.set(
+    documentId,
+    startPlay({
+      documentId,
+      renderer,
+      editState: () => sceneOf(useScenes.getState(), documentId),
+      input,
+      frames: animationFrames(),
+      physics,
+      onReport,
+    }),
+  )
+}
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */
 export function playReportOf(state: PlayStoreState, documentId: string): RuntimeReport {
