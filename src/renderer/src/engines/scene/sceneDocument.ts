@@ -533,6 +533,37 @@ function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTim
   }
 }
 
+/**
+ * Which timeline rows of a WRITTEN animation this build cannot read back, named `events`,
+ * `audio`, `video`, `transitions` or `template`.
+ *
+ * 🛑 Beside the reading rather than beside the guard that reports it: what a build keeps is
+ * decided here, so a predicate that grows a case must not leave a second copy elsewhere saying
+ * something else. Counted, because what is lost is the DIFFERENCE.
+ */
+export function timelineRowsLost(written: unknown): string[] {
+  if (!isRecord(written)) return []
+
+  const lists: readonly [string, (one: unknown) => boolean][] = [
+    ['events', isTimelineEvent],
+    ['audio', isTimelineMedia],
+    ['video', isTimelineMedia],
+    ['transitions', isTimelineTransition],
+  ]
+  const lost = lists
+    .filter(([name, holds]) => {
+      const rows = written[name]
+      return Array.isArray(rows) && rows.some(one => !holds(one))
+    })
+    .map(([name]) => name)
+
+  // A template a later build named decides what a panel offers, and this one would drop it.
+  if (typeof written.template === 'string' && !isTimelineTemplate(written.template)) {
+    lost.push('template')
+  }
+  return lost
+}
+
 /** Whatever of a list this build can read, in order. Anything else is dropped, and SAID. */
 const readList = <T>(value: unknown, holds: (one: unknown) => one is T): T[] =>
   Array.isArray(value) ? value.filter(holds) : []

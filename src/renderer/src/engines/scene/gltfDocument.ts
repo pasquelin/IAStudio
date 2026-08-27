@@ -32,7 +32,7 @@ import { isRecord } from '@shared/guards'
 import { isComponentType } from '@shared/domain/componentRegistry'
 import { byCodeUnit } from '@shared/text'
 import type { LightDescriptor, Transform } from '@shared/domain/scene'
-import { scenePayload, sceneFromPayload } from './sceneDocument'
+import { scenePayload, sceneFromPayload, timelineRowsLost } from './sceneDocument'
 import type { SceneState } from './sceneState'
 
 type GltfNode = {
@@ -201,10 +201,18 @@ export function sceneHoldsMore(document: unknown): string[] {
     ...gltfForeignExtras(gltfDefaultScene(document)?.extras).map(key => `scene.extras.${key}`),
   )
   held.push(...unknownComponents(document))
+  held.push(...unknownTimelineRows(document))
   held.push(...gltfForeignAsset(document))
   held.push(...gltfForeignExtensions(document, KHR_LIGHTS_PUNCTUAL))
 
   return held
+}
+
+/** The timeline rows this build would drop, named `animation.<list>` — see `timelineRowsLost`. */
+function unknownTimelineRows(document: Record<string, unknown>): string[] {
+  const held3d = gltfStudioMetadata(document)[GLTF_SCENE_STATE]
+  const animation = isRecord(held3d) ? held3d.animation : null
+  return timelineRowsLost(animation).map(list => `animation.${list}`)
 }
 
 /**

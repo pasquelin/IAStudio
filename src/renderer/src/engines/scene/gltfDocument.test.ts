@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_ID_KEY, DOCUMENT_KIND_KEY, STUDIO_METADATA_KEY } from '@shared/domain/document'
-import { gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import { GLTF_SCENE_STATE, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import {
   gltfDocumentOf,
@@ -139,6 +139,15 @@ describe('sceneFromGltf', () => {
   })
 })
 
+/** This build's own file with its animation replaced — a later build's rows, in this file. */
+function withTimeline(over: Record<string, unknown>): Record<string, unknown> {
+  const held = JSON.parse(JSON.stringify(write({ ...EMPTY_SCENE, nodes: [meshNode('a')] })))
+  const state = gltfStudioMetadata(held)[GLTF_SCENE_STATE]
+  if (!isRecord(state) || !isRecord(state.animation)) throw new Error('no animation written')
+  Object.assign(state.animation, over)
+  return held
+}
+
 /**
  * Each case asserts WHICH member was found, never that something was.
  *
@@ -173,6 +182,25 @@ describe('sceneHoldsMore', () => {
     const more = enriched({ nodes: [...(Array.isArray(nodes) ? nodes : []), { name: 'Empty' }] })
 
     expect(sceneHoldsMore(more)).toEqual(['nodes'])
+  })
+
+  /**
+   * 🛑 The same loss as an unknown component, one member deeper: a save recomposes the timeline
+   * whole, so a row a later build wrote and this one cannot read is one the first ⌘S takes away.
+   */
+  it('names a timeline row a later build wrote and this one cannot read', () => {
+    const held = withTimeline({
+      transitions: [{ id: 't1', at: 0, kind: 'iris', duration: 100 }],
+      template: 'documentary',
+    })
+
+    expect(sceneHoldsMore(held).sort()).toEqual(['animation.template', 'animation.transitions'])
+  })
+
+  it('says nothing about a timeline whose rows it reads whole', () => {
+    const held = withTimeline({ events: [{ id: 'e1', at: 0, name: 'Opened' }] })
+
+    expect(sceneHoldsMore(held)).toEqual([])
   })
 
   it('names an asset field beyond the ones a save writes back', () => {
