@@ -677,15 +677,16 @@ Six, aucun React à l’intérieur d’aucun.
 | `TimelineEngine` | mediabunny + Canvas + Web Audio | la séquence : clips, lecture image ET son, formes d’onde, vignettes |
 | `engines/audio` | tableaux d’échantillons | l’édition sonore : rogner, fondus, gain, normaliser, silences |
 | `SkyboxRenderer` | `ViewportEngine` | le ciel vu de l’intérieur : soleil, étalonnage, sondes |
-| `TextureRenderer` | `ViewportEngine` | la matière posée sur une forme : canaux PBR, environnement, tiling |
+| `MaterialRenderer` | `ViewportEngine` | la matière posée sur une forme : canaux PBR, environnement, tiling |
 
 Les trois qui montrent de la 3D partagent `engines/viewport/` — canevas, caméra, orbite,
 redimensionnement, boucle à la demande, éclairage par image. Chacun écrivant le sien, c’était
 trois chances de ne pas être d’accord sur un redimensionnement ou une libération.
 
-**Six moteurs, dix dossiers sous `engines/` : les quatre autres ne sont pas des moteurs.**
+**Six moteurs, douze dossiers sous `engines/` : les six autres ne sont pas des moteurs.**
 `core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, `gpu/` les passes
-de shader et le compteur de frame, et `csg/` la découpe booléenne.
+de shader et le compteur de frame, `postfx/` les chaînes de post-traitement et leurs LUT,
+`code/` la compilation des scripts hors du thread UI, et `csg/` la découpe booléenne.
 
 **`csg/` est une couche, pas un moteur, et c’est délibéré** : elle ne détient aucune scène, ne
 connaît ni document ni sélection, et c’est ce qui la rendra réutilisable hors du studio — pour
@@ -731,7 +732,7 @@ Et une fois l’objet three instancié, **on le mute, on ne le remplace pas** : 
 `new`. Ces écritures arrivent à chaque image d’un glissement d’inspecteur, et le coût n’est pas
 théorique — remplacer une matière expose à une recompilation de son programme de shader, remplacer
 une couleur jette l’instance que three détient. Dix écritures de couleur suivent la règle, et
-`threeSync.ts`, `TextureRenderer.ts` et `SkyboxRenderer.ts` la portent chacun en commentaire, au
+`threeSync.ts`, `MaterialRenderer.ts` et `SkyboxRenderer.ts` la portent chacun en commentaire, au
 plus près de ce qu’elle garde.
 
 **Une exception, et elle est délibérée** : `ViewportEngine` remplace bien l’objet du fond de scène,
