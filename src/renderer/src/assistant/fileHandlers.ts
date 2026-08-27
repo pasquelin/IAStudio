@@ -115,15 +115,17 @@ async function closeProject(): Promise<ActionOutcome> {
 }
 
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const bridge = getBridge()
   const path = textOf(input, 'path')
-  if (!bridge) return refused('noBridge')
   if (path === null) return refused('badInput')
 
-  const created = await bridge.project.create(path)
-  // Created and then opened, because a project nobody is in is a folder: every other action of
-  // this family reads `useProject`, and would refuse on the very thing that was just made.
-  if (!created || !(await useProject.getState().open(created.path))) return refused('badInput')
+  // Through the store, which is what makes this the FOURTH way out of a project rather than the
+  // one that slipped past its questions: it left the open project without asking about the
+  // generations running in it, nor about any document holding unsaved work.
+  const created = await useProject.getState().createAt(path)
+  // `declined` rather than `badInput`, and it covers both nos: the question on the way out, and
+  // the main process asking about a folder that already holds files. A client told its input was
+  // wrong would retry a path that was never the problem.
+  if (!created) return refused('declined')
 
   return { ok: true, data: created }
 }

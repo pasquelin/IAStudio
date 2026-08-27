@@ -1059,6 +1059,85 @@ describe('a job that outlives the session', () => {
     expect(remembered()).toEqual([expect.objectContaining({ projectPath: '/projects/kingdom' })])
   })
 
+  /**
+   * What the question before leaving a project counts. Off the ENTRIES and not off `list()`,
+   * because a job whose own project was closed earlier is still being polled — counted there, it
+   * would put a stranger's generation in a sentence about this project.
+   */
+  describe('counting what is still running in a project', () => {
+    it('counts only the unfinished jobs of the project it is asked about', async () => {
+      let open = '/projects/kingdom'
+      const { manager } = harness({
+        projectPath: () => open,
+        runner: {
+          submit: () => Promise.resolve(remote('in-progress')),
+          poll: () => new Promise(() => {}),
+          cancel: () => Promise.resolve(),
+        },
+      })
+
+      manager.submit({ id: 'model_flux' }, 'Kingdom', {})
+      open = '/projects/dungeon'
+      manager.submit({ id: 'model_flux' }, 'Dungeon', {})
+      await settled()
+
+      expect(manager.runningIn('/projects/kingdom')).toBe(1)
+      expect(manager.runningIn('/projects/dungeon')).toBe(1)
+      expect(manager.runningIn('/projects/nowhere')).toBe(0)
+    })
+
+    // A reasoning step nobody asked for is machinery: counting it would put a number in front of
+    // someone for work they never started.
+    it('never counts a discreet job', async () => {
+      const { manager } = harness({
+        runner: {
+          submit: () => Promise.resolve(remote('in-progress')),
+          poll: () => new Promise(() => {}),
+          cancel: () => Promise.resolve(),
+        },
+      })
+
+      void manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+      await settled()
+
+      expect(manager.runningIn('/projects/kingdom')).toBe(0)
+    })
+
+    it('stops counting a job once it has settled', async () => {
+      const { manager } = harness({ collect: () => landing(['asset_1']) })
+
+      manager.submit({ id: 'model_flux' }, 'Flux', {})
+      await settled()
+
+      expect(manager.runningIn('/projects/kingdom')).toBe(0)
+    })
+  })
+
+  /**
+   * What the dialog before leaving a project is allowed to promise. A job is taken out of the
+   * list only once it SUCCEEDS under another project (`collect`) or ages out of the finished
+   * ones — never on the closing itself. So the bar goes on showing it, and any sentence about it
+   * "leaving the bar" would be the opposite of what the person sees.
+   */
+  it('keeps showing a running job after its project was closed', async () => {
+    let open: string | null = '/projects/kingdom'
+    const { manager } = harness({
+      projectPath: () => open,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => new Promise(() => {}),
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    await settled()
+    open = null
+
+    expect(manager.list()).toHaveLength(1)
+    expect(manager.list()[0]?.status).toBe('running')
+  })
+
   it('picks up a job once, however often it is handed the same note', async () => {
     const { manager } = harness()
 

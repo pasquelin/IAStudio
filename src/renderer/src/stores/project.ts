@@ -46,10 +46,20 @@ type ProjectState = {
    */
   open: (path: string) => Promise<boolean>
   /**
+   * Makes a project at an absolute path and opens it — what an outside client reaches for, where
+   * a person gets the picker. Here rather than in the handler so that it leaves the open project
+   * the way every other gesture does: the questions first, then the folder.
+   *
+   * `null` when a question was answered no, when the folder would not serve, or when the main
+   * process asked about an occupied folder and was turned down.
+   */
+  createAt: (path: string) => Promise<Project | null>
+  /**
    * Leaves the open project with none in its place — the row stays on the shelf, unlike
    * forgetting one. `lastProject` goes with it, or the next launch reopens what was just closed.
    *
-   * `false` when a document held unsaved work and the question about it was cancelled.
+   * `false` when one of the two questions on the way out was answered no — the generations still
+   * running, then the documents holding unsaved work, in that order.
    */
   close: () => Promise<boolean>
   /**
@@ -121,6 +131,18 @@ async function followProject(project: Project | null): Promise<void> {
 }
 
 /**
+ * The two questions every way of leaving a project owes the person taking it, in the order they
+ * have to be asked: the generations that will drop out of the bar, then the documents holding
+ * unsaved work. Reversed, three documents would be answered for and the gesture then called off.
+ *
+ * `false` is a no to either. Neither raises anything in the ordinary case — no generation
+ * running, no document to answer for.
+ */
+async function settleLeaving(bridge: StudioBridge): Promise<boolean> {
+  return (await bridge.project.askLeave()) && (await settleUnsavedWorkForProjectChange())
+}
+
+/**
  * A folder chosen in the dialog, turned into a project — or `null` for each of the three ways
  * that does not happen: no bridge, a cancelled dialog, a folder the main process refused.
  *
@@ -145,7 +167,7 @@ async function pickedProject(
   // never for the folder already open — `open` refuses that one outright, where this cannot: the
   // main process answers a folder that is already a project by opening it, whichever it is.
   const again = folder === useProject.getState().project?.path
-  if (!again && !(await settleUnsavedWorkForProjectChange())) return null
+  if (!again && !(await settleLeaving(bridge))) return null
 
   try {
     return await from(bridge, folder)
@@ -212,8 +234,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
     if (path === get().project?.path) return true
 
     // `refreshDocuments` drops every open document a beat from here, and no `beforeunload` sees
-    // a project change — `guardUnsavedWork` says so itself. This is the only place that can ask.
-    if (!(await settleUnsavedWorkForProjectChange())) return false
+    // a project change — `guardUnsavedWork` says so itself, which is why this asks at all.
+    if (!(await settleLeaving(bridge))) return false
 
     try {
       set({ project: await bridge.project.open(path), known: true })
@@ -240,7 +262,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // no business clearing — a second window closing the same project reaches here too.
     if (!bridge || !leaving) return false
 
-    if (!(await settleUnsavedWorkForProjectChange())) return false
+    if (!(await settleLeaving(bridge))) return false
 
     try {
       await bridge.project.close()
@@ -266,6 +288,20 @@ export const useProject = create<ProjectState>()((set, get) => ({
     }
 
     return true
+  },
+
+  createAt: async path => {
+    const bridge = getBridge()
+    if (!bridge) return null
+    if (!(await settleLeaving(bridge))) return null
+
+    const created = await bridge.project.create(path)
+    // Created and then opened, because a project nobody is in is a folder. `open` asks nothing a
+    // second time: the folder it is handed is the one the main process has already switched to.
+    if (!created) return null
+
+    set({ project: created, known: true })
+    return created
   },
 
   forget: async path => {

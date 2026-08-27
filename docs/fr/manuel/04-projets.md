@@ -60,8 +60,10 @@ ouvert laisse donc l’Explorateur, la timeline et les onglets exactement où il
 
 **Une génération en cours n’est pas perdue par la fermeture.** Elle continue là où elle tourne, et
 son résultat est rangé dans ce projet-ci — jamais dans un autre, même si vous en ouvrez un autre
-entre-temps. Elle quitte en revanche la barre des générations le temps que le projet est fermé :
-c’est en le rouvrant que vous la retrouverez, avec ce qu’elle a produit.
+entre-temps. Elle reste visible dans la barre des générations tant qu’elle tourne, mais **son
+résultat n’arrivera pas dans le projet que vous ouvrez à la place** : c’est en rouvrant le sien
+que vous le retrouverez. **Le studio vous le demande** avant de vous laisser quitter le projet —
+fermeture comme bascule vers un autre — en disant combien tournent encore.
 
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un

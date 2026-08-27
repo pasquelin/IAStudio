@@ -30,7 +30,7 @@ import {
   type AskUser,
 } from './documentDialogs'
 import type { DocumentFiles } from './documents'
-import { askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
+import { askLeaveWithJobs, askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
 import type { ProjectContextStore } from './context'
 import { openFailureKey, type ProjectStore } from './store'
 import {
@@ -105,6 +105,12 @@ export type ProjectHandlerDeps = {
   openInSystem: (file: string) => Promise<string>
   /** `dialog.showMessageBox`, injected for the same reason — see `documentDialogs`. */
   askUser: AskUser
+  /**
+   * How many generations are still running. Counted here rather than sent by the window: the
+   * manager holds them, and a replica a beat behind would put a number in a dialog nobody could
+   * check.
+   */
+  runningJobCount: () => number
 }
 
 export function registerProjectHandlers({
@@ -124,6 +130,7 @@ export function registerProjectHandlers({
   scripts,
   openInSystem,
   askUser,
+  runningJobCount,
 }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, async (_event, path) => {
     // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
@@ -178,6 +185,14 @@ export function registerProjectHandlers({
   // `lastProject` is the renderer's own write, as forgetting a project already is — the settings
   // are replicated, so writing them here would be the same write twice. See `projectRename`.
   handle(CHANNELS.projectClose, () => project.close())
+
+  // Its own channel because it has to be answerable BEFORE the window asks about unsaved
+  // documents: answering for three documents and then being asked whether to leave at all is the
+  // wrong order to put two questions in. Reached by all four ways out of a project.
+  handle(CHANNELS.projectAskLeave, async () => {
+    const running = runningJobCount()
+    return running === 0 || (await askLeaveWithJobs(askUser, running))
+  })
 
   handle(CHANNELS.projectRevealFile, async (_event, relative) => {
     reveal(join(project.path(), parseFolderPath(relative)))

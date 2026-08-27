@@ -222,15 +222,30 @@ describe('opening and making a project', () => {
       path: '/tmp/Neuf',
       manifest: { version: 1, name: 'Neuf', createdAt: WHEN, updatedAt: WHEN },
     }
-    withProject({ project: { create: vi.fn(async () => created) } })
-    const open = vi.fn(async () => true)
-    useProject.setState({ open })
+    const createAt = vi.fn(async () => created)
+    withProject()
+    useProject.setState({ createAt })
 
     expect(await runAction('project.create', { path: '/tmp/Neuf' })).toEqual({
       ok: true,
       data: created,
     })
-    expect(open).toHaveBeenCalledWith('/tmp/Neuf')
+    expect(createAt).toHaveBeenCalledWith('/tmp/Neuf')
+    expect(useProject.getState().project?.path).toBe('/tmp/Film')
+  })
+
+  /**
+   * The fourth way out of a project, and the one that used to slip past its questions: it called
+   * the channel straight and left the open project without asking about anything.
+   */
+  it('reports a creation someone turned down as a refusal by a person', async () => {
+    withProject()
+    useProject.setState({ createAt: vi.fn(async () => null) })
+
+    expect(await runAction('project.create', { path: '/tmp/Neuf' })).toMatchObject({
+      ok: false,
+      refusal: 'declined',
+    })
   })
 
   /**

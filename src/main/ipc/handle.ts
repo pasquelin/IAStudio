@@ -42,6 +42,7 @@ type ChannelMethod = {
   [CHANNELS.projectOpen]: StudioBridge['project']['open']
   [CHANNELS.projectCurrent]: StudioBridge['project']['current']
   [CHANNELS.projectClose]: StudioBridge['project']['close']
+  [CHANNELS.projectAskLeave]: StudioBridge['project']['askLeave']
   [CHANNELS.projectListFolder]: StudioBridge['project']['listFolder']
   [CHANNELS.projectSearchFolder]: StudioBridge['project']['searchFolder']
   [CHANNELS.projectWalkFolder]: StudioBridge['project']['walkFolder']

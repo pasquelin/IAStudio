@@ -216,6 +216,20 @@ describe('opening a folder the studio already knows', () => {
     expect(open).toHaveBeenCalledWith('/projects/winter')
   })
 
+  // Switching takes the generations out of the bar exactly as closing does, so it owes the same
+  // question — and in the same order, before anything is asked about documents.
+  it('asks about the generations first, and stays put on a no', async () => {
+    const askLeave = vi.fn(() => Promise.resolve(false))
+    const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
+    installFakeBridge({ project: { askLeave, open } })
+
+    await expect(useProject.getState().open('/projects/winter')).resolves.toBe(false)
+
+    expect(askLeave).toHaveBeenCalled()
+    expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
+    expect(open).not.toHaveBeenCalled()
+  })
+
   it('stays where it is when that question is cancelled', async () => {
     const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
     installFakeBridge({ project: { open } })
@@ -232,6 +246,49 @@ describe('opening a folder the studio already knows', () => {
     await expect(useProject.getState().open('/projects/summer')).resolves.toBe(true)
 
     expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * Making a project at a named path — what an outside client reaches for, where a person gets the
+ * picker. It leaves the open project like everything else here, and used to be the one gesture
+ * that did it without asking anything.
+ */
+describe('making a project at a path', () => {
+  const made = { path: '/projects/neuf', manifest: MANIFEST }
+
+  beforeEach(() => {
+    useProject.setState({ project: { path: '/projects/summer', manifest: MANIFEST }, known: true })
+  })
+
+  it('asks on the way out, then makes the folder into a project', async () => {
+    const create = vi.fn(() => Promise.resolve(made))
+    installFakeBridge({ project: { create } })
+
+    await expect(useProject.getState().createAt('/projects/neuf')).resolves.toEqual(made)
+
+    expect(settleUnsavedWorkForProjectChange).toHaveBeenCalled()
+    expect(useProject.getState().project?.path).toBe('/projects/neuf')
+  })
+
+  it('makes nothing when the question on the way out is answered no', async () => {
+    const create = vi.fn(() => Promise.resolve(made))
+    installFakeBridge({ project: { create } })
+    settleUnsavedWorkForProjectChange.mockResolvedValue(false)
+
+    await expect(useProject.getState().createAt('/projects/neuf')).resolves.toBeNull()
+
+    expect(create).not.toHaveBeenCalled()
+    expect(useProject.getState().project?.path).toBe('/projects/summer')
+  })
+
+  // The main process asks about a folder that already holds files, and `null` is that no.
+  it('stays where it is when the main process was turned down', async () => {
+    installFakeBridge({ project: { create: () => Promise.resolve(null) } })
+
+    await expect(useProject.getState().createAt('/projects/neuf')).resolves.toBeNull()
+
+    expect(useProject.getState().project?.path).toBe('/projects/summer')
   })
 })
 
@@ -266,6 +323,18 @@ describe('picking a folder in the dialog', () => {
     await useProject.getState().openPicked()
 
     expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  // The third door, and the last one that was silent about it.
+  it('opens nothing when the generations question is turned down', async () => {
+    const askLeave = vi.fn(() => Promise.resolve(false))
+    const open = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
+    installFakeBridge({ ...picking('/p'), project: { askLeave, open } })
+
+    await useProject.getState().openPicked()
+
+    expect(askLeave).toHaveBeenCalled()
     expect(open).not.toHaveBeenCalled()
   })
 
@@ -378,6 +447,23 @@ describe('closing the open project', () => {
         },
       },
     }))
+  })
+
+  /**
+   * The two questions in order. Reversed, someone answering for three documents would then be
+   * asked whether to close at all — and their three answers would have been for nothing.
+   */
+  it('asks about the generations before asking about the documents', async () => {
+    const askLeave = vi.fn(() => Promise.resolve(false))
+    const close = vi.fn(() => Promise.resolve())
+    installFakeBridge({ project: { askLeave, close } })
+
+    await expect(useProject.getState().close()).resolves.toBe(false)
+
+    expect(askLeave).toHaveBeenCalled()
+    expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
+    expect(close).not.toHaveBeenCalled()
+    expect(useProject.getState().project).not.toBeNull()
   })
 
   /**
