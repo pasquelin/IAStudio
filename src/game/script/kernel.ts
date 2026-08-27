@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * 🛑 The only JavaScript this repository ships as TEXT, and it is deliberate: it is evaluated
- * INSIDE the sandbox, where no module of the studio can be imported and no bundler reaches. It is
- * therefore plain ES2020, and it is proved by what the port does rather than by a unit test.
- *
- * What it holds is the whole surface a script sees — `defineScript`, `game`, `self`, `ctx` — and
- * the dispatcher that lets one frame cross the bridge in a single call.
+ * 🛑 The only JavaScript this repository ships as TEXT: it is evaluated INSIDE the sandbox, where
+ * no module is importable and no bundler reaches. Plain ES2020, and proved by what the port does
+ * rather than by a unit test.
  */
 export const KERNEL = String.raw`
 ;(function () {
@@ -15,6 +12,7 @@ export const KERNEL = String.raw`
   var intents = []
   var faults = []
   var current = null
+  var context = null
   var seed = 1
 
   function push(intent) { intents.push(intent) }
@@ -124,6 +122,27 @@ export const KERNEL = String.raw`
     }
   }
 
+  // Which hooks at least one LIVING instance declares. The host skips a crossing entirely for a
+  // hook nobody wrote — the frame would otherwise be serialized to find that out per entity.
+  function hookNames() {
+    var named = {}
+    instances.forEach(function (held) {
+      for (var key in held.definition) if (typeof held.definition[key] === 'function') named[key] = true
+    })
+    return Object.keys(named)
+  }
+
+  var INERT_CONTEXT = {
+    tick: 0,
+    dt: 0,
+    input: {
+      down: function () { return false },
+      pressed: function () { return false },
+      released: function () { return false },
+      pointer: { x: 0, y: 0, down: false },
+    },
+  }
+
   globalThis.__register = function (script, definition) {
     scripts.set(script, definition || null)
   }
@@ -140,27 +159,43 @@ export const KERNEL = String.raw`
       }
       instances.set(one.entity, { script: one.script, definition: definition, props: one.props })
     }
-    return JSON.stringify(refusals)
+    return JSON.stringify({ intents: [], faults: refusals, hooks: hookNames() })
   }
 
+  // 🛑 onDestroy belongs HERE and not to a swept frame: by the time the system notices, the
+  // entity has left the store, so a frame composed from the world holds the survivors instead.
   globalThis.__detach = function (payload) {
     var gone = JSON.parse(payload)
-    for (var i = 0; i < gone.length; i++) instances.delete(gone[i])
+    intents = []
+    faults = []
+    for (var i = 0; i < gone.length; i++) {
+      var one = gone[i]
+      var held = instances.get(one.entity)
+      if (!held) continue
+      call('onDestroy', one.entity, held, one, context || INERT_CONTEXT, 0)
+      instances.delete(one.entity)
+    }
+    return JSON.stringify({ intents: intents, faults: faults, hooks: hookNames() })
   }
 
-  globalThis.__disarm = function (entity) { instances.delete(entity) }
+  globalThis.__disarm = function (entity) {
+    instances.delete(entity)
+    return JSON.stringify(hookNames())
+  }
 
   globalThis.__seed = function (value) { seed = Number(value) >>> 0 }
 
   /** Who was running when the machine was interrupted — read AFTER the deadline was pushed back. */
   globalThis.__current = function () { return current ? JSON.stringify(current) : '' }
 
-  function call(hook, entity, held, self, ctx, dt, extra) {
+  // The self is built INSIDE, after the hook was found: it is nine allocations, and the common
+  // case is a script that does not declare the hook being driven.
+  function call(hook, entity, held, seen, ctx, arg) {
     var fn = held.definition[hook]
     if (typeof fn !== 'function') return
     current = { script: held.script, entity: entity }
     try {
-      fn(self, ctx, extra === undefined ? dt : extra)
+      fn(selfOf(seen, held), ctx, arg)
     } catch (error) {
       faults.push(faultOf(error, held.script, entity))
     }
@@ -171,12 +206,12 @@ export const KERNEL = String.raw`
     var frame = JSON.parse(payload)
     intents = []
     faults = []
-    var ctx = contextOf(frame)
+    context = contextOf(frame)
     for (var i = 0; i < frame.entities.length; i++) {
       var entity = frame.entities[i]
       var held = instances.get(entity.entity)
       if (!held) continue
-      call(hook, entity.entity, held, selfOf(entity, held), ctx, frame.dt)
+      call(hook, entity.entity, held, entity, context, frame.dt)
     }
     return JSON.stringify({ intents: intents, faults: faults })
   }
@@ -192,9 +227,17 @@ export const KERNEL = String.raw`
     var delivered = JSON.parse(events)
     intents = []
     faults = []
-    var ctx = contextOf(frame)
+    context = contextOf(frame)
     var byId = new Map()
-    for (var i = 0; i < frame.entities.length; i++) byId.set(frame.entities[i].entity, frame.entities[i])
+    // Walked ONCE for every event rather than once per event: who hears onMessage is a property
+    // of the instances, not of what happened.
+    var hearing = []
+    for (var i = 0; i < frame.entities.length; i++) {
+      var one = frame.entities[i]
+      byId.set(one.entity, one)
+      var mine = instances.get(one.entity)
+      if (mine && typeof mine.definition.onMessage === 'function') hearing.push(one)
+    }
 
     for (var e = 0; e < delivered.length; e++) {
       var event = delivered[e]
@@ -202,13 +245,11 @@ export const KERNEL = String.raw`
       var subject = event.entity ? byId.get(event.entity) : null
       var held = event.entity ? instances.get(event.entity) : null
       var named = HOOKS[event.name]
-      if (subject && held && named) call(named, event.entity, held, selfOf(subject, held), ctx, 0, event)
+      if (subject && held && named) call(named, event.entity, held, subject, context, event)
 
-      for (var k = 0; k < frame.entities.length; k++) {
-        var listener = frame.entities[k]
-        var heard = instances.get(listener.entity)
-        if (!heard) continue
-        call('onMessage', listener.entity, heard, selfOf(listener, heard), ctx, 0, event)
+      for (var k = 0; k < hearing.length; k++) {
+        var listener = hearing[k]
+        call('onMessage', listener.entity, instances.get(listener.entity), listener, context, event)
       }
     }
     return JSON.stringify({ intents: intents, faults: faults })

@@ -19,7 +19,6 @@ const walker = (over: Partial<ScriptEntity> = {}): ScriptEntity => ({
   position: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0 },
   components: [],
-  props: {},
   ...over,
 })
 
@@ -115,7 +114,46 @@ describe('the sandbox a game runs its own code in', () => {
     expect(took).toBeLessThan(200)
 
     // And the frame after it is clean: the loop is out of the world, not retried.
+    port.refill()
     expect(port.run('onUpdate', frameOf([walker()]))).toEqual({ intents: [], faults: [] })
+  })
+
+  /** 🛑 A frame, not a call: a late frame carries up to fifteen steps, each driving its hooks. */
+  it('spends one budget for the whole frame, and says so rather than going quiet', () => {
+    running('onUpdate() { while (true) {} }')
+
+    const after = port.run('onUpdate', frameOf([walker()]))
+    expect(after.faults[0]?.message).toContain('did not run')
+    // Said once, then silence — a frame that ran out must not write a line per hook.
+    expect(port.run('onUpdate', frameOf([walker()])).faults).toEqual([])
+
+    port.refill()
+    expect(port.run('onUpdate', frameOf([walker()])).faults).toEqual([])
+  })
+
+  /** 🛑 The entity has left the world by then, so the hook cannot be driven off a swept frame. */
+  it('runs onDestroy on its way out, for the one leaving', () => {
+    port.load([
+      {
+        script: 'script:Walk.ts',
+        code: compiled(
+          'onDestroy(self) { game.log.info("bye " + self.id + " at " + self.position.y) }',
+        ),
+      },
+    ])
+    port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: {} }])
+    const outcome = port.detach([walker({ position: { x: 0, y: 7, z: 0 } })])
+
+    expect(outcome.intents).toEqual([{ act: 'log', level: 'info', message: 'bye e1 at 7' }])
+    expect(port.declares('onDestroy')).toBe(false)
+  })
+
+  it('says which hooks are written, so a caller can skip a crossing whole', () => {
+    port.load([{ script: 'script:Walk.ts', code: compiled('onUpdate() {}') }])
+    port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: {} }])
+
+    expect(port.declares('onUpdate')).toBe(true)
+    expect(port.declares('onLateUpdate')).toBe(false)
   })
 
   it('says where a script threw, with the line an editor would open', () => {

@@ -573,7 +573,7 @@ export function registerProjectHandlers({
   handle(CHANNELS.gameScripts, () => scripts.list())
 
   handle(CHANNELS.gameWriteScript, (_event, path, source) =>
-    scripts.write(String(path), String(source)),
+    scripts.write(parseFolderPath(path), String(source)),
   )
 
   handle(CHANNELS.documentList, () => documents.list())

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+import { NO_OUTCOME } from '../script/frame'
 import type { ScriptPort } from '../ports/scriptPort'
-
-const NOTHING = { intents: [], faults: [] }
 
 /** What a host installs while it has no sandbox. Named rather than hidden: no script runs. */
 export function createInertScripts(): ScriptPort {
@@ -10,9 +9,11 @@ export function createInertScripts(): ScriptPort {
     seed: () => {},
     load: () => [],
     attach: () => [],
-    detach: () => {},
-    run: () => NOTHING,
-    deliver: () => NOTHING,
+    detach: () => NO_OUTCOME,
+    declares: () => false,
+    run: () => NO_OUTCOME,
+    deliver: () => NO_OUTCOME,
+    refill: () => {},
     disarmed: () => [],
     dispose: () => {},
   }

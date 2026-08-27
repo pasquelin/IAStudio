@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -59,6 +59,22 @@ describe('the scripts a project holds', () => {
   it('refuses what is not a script, and what the studio keeps for itself', async () => {
     expect(await scripts.write('notes.txt', 'no')).toBe(false)
     expect(await scripts.write('.index/secret.ts', 'no')).toBe(false)
+  })
+
+  /**
+   * 🛑 What the name alone cannot answer: a link already sitting in the project spells nothing
+   * suspicious and walks straight out — which is why both ends go through `realpath`.
+   */
+  it('refuses a link inside the project that lands outside it', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'ia-outside-'))
+    await writeFile(join(outside, 'stolen.ts'), 'secret', 'utf8')
+    await symlink(join(outside, 'stolen.ts'), join(root, 'Link.ts'))
+    walked = [entry('Link.ts')]
+
+    expect(await scripts.list()).toEqual([])
+    expect(await scripts.write('Link.ts', 'no')).toBe(false)
+    expect(await readFile(join(outside, 'stolen.ts'), 'utf8')).toBe('secret')
+    await rm(outside, { recursive: true, force: true })
   })
 
   it('answers nothing at all with no project open', async () => {

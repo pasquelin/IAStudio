@@ -1,8 +1,11 @@
-import { readFile } from 'node:fs/promises'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { readFile, realpath } from 'node:fs/promises'
+import { isAbsolute, relative, resolve, sep } from 'node:path'
 import { SCRIPT_EXTENSION, type GameScriptFile } from '@shared/domain/game'
-import type { FolderEntry } from '@shared/domain/folder'
+import { extensionOf } from '@shared/domain/fileName'
+import { isPrivatePath, type FolderEntry } from '@shared/domain/folder'
+import { byCodeUnit } from '@shared/text'
 import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
+import { orElse } from '@shared/promises'
 
 export type GameScriptStore = {
   /** Every script the project holds, read whole: a PLAY compiles the lot. */
@@ -17,12 +20,7 @@ export type GameScriptDeps = {
   walk: () => Promise<FolderEntry[]>
 }
 
-/**
- * The `.ts` files a game runs.
- *
- * 🛑 Every path comes from the WINDOW, which invariant 1 does not trust with the disk: it is
- * resolved against the project root and refused if it lands outside it, whatever `..` it holds.
- */
+/** The `.ts` files a game runs. Every path comes from the WINDOW — see `insideProject`. */
 export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
   const writes = writeQueue()
 
@@ -31,26 +29,17 @@ export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
       const root = deps.rootOf()
       if (root === null) return []
 
-      const found: GameScriptFile[] = []
-      for (const entry of await deps.walk()) {
-        const file = insideProject(root, entry.path)
-        if (file === null) continue
-        try {
-          found.push({ path: entry.path, source: await readFile(file, 'utf8') })
-        } catch (error) {
-          // A file the walk saw and the read cannot: renamed underneath, or gone. Not a fault.
-          if (!isMissing(error)) throw error
-        }
-      }
-      // A plain comparison: these are paths, not words, and no reader's language orders them.
-      return found.sort((one, other) =>
-        one.path < other.path ? -1 : one.path > other.path ? 1 : 0,
-      )
+      // Read together rather than one after the other: a project of thirty scripts would
+      // otherwise add thirty disk latencies to every Play.
+      const found = await Promise.all((await deps.walk()).map(entry => read(root, entry.path)))
+      return found
+        .filter((one): one is GameScriptFile => one !== null)
+        .sort((one, other) => byCodeUnit(one.path, other.path))
     },
 
     write: async (path, source) => {
       const root = deps.rootOf()
-      const file = root === null ? null : insideProject(root, path)
+      const file = root === null ? null : await insideProject(root, path)
       if (file === null) return false
 
       await writes.next(() => writeAtomic(file, source))
@@ -59,14 +48,40 @@ export function createGameScripts(deps: GameScriptDeps): GameScriptStore {
   }
 }
 
-/** Where the path lands, or nothing at all for anything that is not a script of this project. */
-function insideProject(root: string, path: string): string | null {
-  if (!path.endsWith(SCRIPT_EXTENSION)) return null
+async function read(root: string, path: string): Promise<GameScriptFile | null> {
+  const file = await insideProject(root, path)
+  if (file === null) return null
 
-  const full = resolve(root, path)
-  const held = relative(root, full)
-  // Empty is the root itself; a leading `..` or an absolute answer is a path that left.
-  if (held.length === 0 || held.startsWith('..') || isAbsolute(held)) return null
-  // Under a dot is the studio's own bookkeeping, which `isStudioPrivate` refuses everywhere else.
-  return held.split(/[\\/]/).some(part => part.startsWith('.')) ? null : full
+  try {
+    return { path, source: await readFile(file, 'utf8') }
+  } catch (error) {
+    // A file the walk saw and the read cannot: renamed underneath, or gone. Not a fault.
+    if (!isMissing(error)) throw error
+    return null
+  }
+}
+
+/**
+ * 🛑 Both ends go through `realpath`, as `folderInsideProject` does and for its reason: a link
+ * already sitting in the project names nothing suspicious and walks straight out.
+ */
+async function insideProject(root: string, path: string): Promise<string | null> {
+  // A window names what it wants RELATIVE to the project; an absolute path is one it invented.
+  if (isAbsolute(path)) return null
+  if (extensionOf(path).toLowerCase() !== SCRIPT_EXTENSION) return null
+  // Under a dot is the studio's own bookkeeping — the ONE spelling of that question.
+  if (isPrivatePath(path)) return null
+
+  try {
+    const base = await realpath(root)
+    const target = resolve(base, path)
+    const resolved = await orElse(realpath(target), target)
+    const within = relative(base, resolved)
+
+    // Empty is the root itself; a leading `..` or an absolute answer is a path that left.
+    if (within.length === 0 || within.startsWith('..') || isAbsolute(within)) return null
+    return isPrivatePath(within.split(sep).join('/')) ? null : target
+  } catch {
+    return null
+  }
 }

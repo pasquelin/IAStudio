@@ -31,4 +31,15 @@ describe('an author’s TypeScript, turned into what the sandbox runs', () => {
     expect('code' in held).toBe(true)
     expect('code' in held && held.code).not.toContain('@studio')
   })
+
+  /** 🛑 Ordinary TypeScript, and what a line scanner reads as three lines of nothing. */
+  it('reads an import spread over several lines, on both counts', () => {
+    const refused = transpile("import {\n  readFile,\n} from 'node:fs'\nexport default {}")
+    const taken = transpile(
+      "import {\n  defineScript,\n} from '@studio'\nexport default defineScript({})",
+    )
+
+    expect(refused).toEqual({ trouble: 'node:fs', line: 1 })
+    expect('code' in taken && taken.code).not.toContain('@studio')
+  })
 })

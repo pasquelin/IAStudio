@@ -50,6 +50,22 @@ describe('an author’s scripts, compiled once', () => {
     expect(asked).toEqual(['same', 'other'])
   })
 
+  /** Twice in ONE batch, where the cache has nothing to say yet — the batch answers for itself. */
+  it('compiles one text once inside a single batch', async () => {
+    const { asked, compiler } = counting(source => ({ code: source }))
+
+    const held = await compiler.compile([
+      { script: 'script:A.ts', source: 'same' },
+      { script: 'script:B.ts', source: 'same' },
+    ])
+
+    expect(asked).toEqual(['same'])
+    expect(held.modules).toEqual([
+      { script: 'script:A.ts', code: 'same' },
+      { script: 'script:B.ts', code: 'same' },
+    ])
+  })
+
   it('names what would not compile, and leaves it out of the modules', async () => {
     const { compiler } = counting(() => ({ trouble: 'node:fs', line: 2 }))
 

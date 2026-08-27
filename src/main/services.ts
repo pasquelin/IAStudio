@@ -1130,12 +1130,9 @@ export function createServices(settings: SettingsStore): Services {
     folderNames: relative => folder.names(relative),
   })
 
-  const game = createProjectGame({ rootOf: () => project.current()?.path ?? null })
-
-  const scripts = createGameScripts({
-    rootOf: () => project.current()?.path ?? null,
-    walk: () => folder.walk(),
-  })
+  const projectRoot = (): string | null => project.current()?.path ?? null
+  const game = createProjectGame({ rootOf: projectRoot })
+  const scripts = createGameScripts({ rootOf: projectRoot, walk: () => folder.walk() })
 
   const files = createFileOps({
     // `null` rather than `''`: with no project open there is no folder to write in, and every
@@ -1147,7 +1144,7 @@ export function createServices(settings: SettingsStore): Services {
     // Copies, moves and deletions, which name folders rather than rows — see `fileOps`.
     assetsChanged: () => broadcast(EVENTS.assetsChanged, []),
     // 🛑 The one reference the studio holds by PATH: a script moved in the explorer would
-    // otherwise leave `game.json` pointing where the file no longer is, and nothing would rougir.
+    // otherwise leave `game.json` pointing where the file no longer is, and nothing goes red.
     pathsChanged: changes => void keepScriptPaths(game, changes),
   })
 

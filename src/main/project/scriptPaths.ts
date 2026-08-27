@@ -1,16 +1,22 @@
 import { messageOf } from '@shared/guards'
 import type { PathChange } from '@shared/domain/fileOp'
-import { withScriptForgotten, withScriptMoved, type GameManifest } from '@shared/domain/game'
+import {
+  withScriptForgotten,
+  withScriptMoved,
+  type GameManifest,
+  type GameState,
+} from '@shared/domain/game'
 import { log } from '@main/log'
 import { GameLockedError, type ProjectGameStore } from './game'
 
 /**
- * 🛑 The one fragile point of the whole reference strategy, finally held.
+ * A script is referenced by PATH, so moving or trashing a `.ts` has to reach `game.json`.
  *
- * Everything else the studio references carries an identifier a rename cannot break; a script is
- * a PATH. Moving or trashing a `.ts` in the explorer therefore has to reach `game.json`, or the
- * manifest keeps pointing where the file is not — and nothing goes red, because nothing reads it
- * until a Play.
+ * 🛑 **What this does NOT hold, and it is half of the reference**: the `Script` component carries
+ * the path itself, in the `.gltf` of its scene, and no rename reaches THERE — a renamed script
+ * comes back as « script never loaded » on the next Play. Nothing goes red. Closing it means the
+ * component naming the manifest's ID instead, and nothing fills `scripts[]` yet — that is the
+ * Monaco lot, which is where a script is created and picked in the first place.
  *
  * 🛑 Never rejects: it is called for its effect from a batch that has already finished, and an
  * unhandled rejection has killed the process since Node 15.
@@ -19,9 +25,7 @@ export async function keepScriptPaths(
   game: ProjectGameStore,
   changes: readonly PathChange[],
 ): Promise<void> {
-  // 🛑 Every change, not just the ones NAMING a `.ts`: renaming a folder moves every script
-  // under it at once, and neither side of that change carries an extension.
-  let held: Awaited<ReturnType<ProjectGameStore['read']>>
+  let held: GameState
   try {
     held = await game.read()
   } catch {
@@ -31,6 +35,8 @@ export async function keepScriptPaths(
   if (held.trouble !== null || held.game.scripts.length === 0) return
 
   let manifest = held.game
+  // 🛑 Every change, not just the ones NAMING a `.ts`: renaming a folder moves every script under
+  // it at once, and neither side of that change carries an extension.
   for (const change of changes) {
     // `to` empty is the trash, which has no inverse — the script is forgotten rather than moved.
     manifest = change.to

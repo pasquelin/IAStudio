@@ -1395,6 +1395,9 @@ export type StudioBridge = {
   /**
    * What makes a project a GAME — the manifest beside the documents, and the `.ts` files a Play
    * compiles. One project, one game: there is no document kind for either.
+   *
+   * 🛑 Only `scripts` has a caller in the window today; the three others are the editor's, and
+   * nothing in `src/main` is what knip watches — so nothing would report them as unreached.
    */
   game: {
     read: () => Promise<GameState>

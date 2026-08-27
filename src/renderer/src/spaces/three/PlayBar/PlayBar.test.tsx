@@ -94,4 +94,33 @@ describe('a game whose systems are failing', () => {
     expect(screen.getByText('1 erreur')).toBeInTheDocument()
     expect(screen.getByTitle('system script threw: broken')).toBeInTheDocument()
   })
+
+  /** 🛑 Two things wrong is two things: counting one family hid the other entirely. */
+  it('counts the addressable faults and the engine errors together', () => {
+    usePlay.setState({
+      reports: {
+        [DOCUMENT]: {
+          state: 'playing',
+          tick: 12,
+          fps: 60,
+          frameMs: 16,
+          entities: 1,
+          errors: [
+            {
+              script: 'script:Walk.ts',
+              entity: null,
+              message: 'cannot import node:fs',
+              line: 3,
+              column: 0,
+              at: 1,
+            },
+          ],
+          logs: [{ level: 'error', message: 'system script threw: broken', at: 2 }],
+        },
+      },
+    })
+    render(<PlayBar documentId={DOCUMENT} viewport={() => null} />)
+
+    expect(screen.getByText('2 erreurs')).toBeInTheDocument()
+  })
 })

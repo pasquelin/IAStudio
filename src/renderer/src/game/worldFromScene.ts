@@ -38,7 +38,12 @@ export function worldFromScene(
   documentId: string,
   state: SceneState,
   ports: GameApi,
-  scripts: ScriptSystemOptions = { modules: [], onFault: () => {} },
+  scripts: ScriptSystemOptions = {
+    modules: [],
+    // The game's own log rather than nothing: without a studio listening, a fault that goes
+    // nowhere is a script that silently never ran.
+    onFault: fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`),
+  },
   seed = 1,
 ): World {
   const world = createWorld({

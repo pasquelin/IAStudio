@@ -5,7 +5,6 @@ import { ToolButton } from '@/design/ToolButton'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-import type { LogEntry, RuntimeError } from '@shared/domain/gameRuntime'
 import { playReportOf, usePlay } from '@/stores/play'
 
 export type PlayBarProps = {
@@ -27,10 +26,12 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
   const { t, i18n } = useTranslation()
   const report = usePlay(state => playReportOf(state, documentId))
   const running = report.state !== 'edit'
-  // The addressable ones first: an author can be taken to the line of a script fault, where a
-  // log line is only ever a sentence.
-  const faults =
-    report.errors.length > 0 ? report.errors : report.logs.filter(entry => entry.level === 'error')
+  // Both, never one OR the other: a game that has a script fault and an engine error has two
+  // things wrong with it, and showing the first count hid the second.
+  const faults = [
+    ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
+    ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
+  ]
 
   const play = (): void => {
     if (report.state === 'paused') return usePlay.getState().resume(documentId)
@@ -91,16 +92,10 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
       {/* A system or a handler that threw is reported and the tick carries on, so without a word
           here the game would simply appear to do nothing. The last one is named in full. */}
       {faults.length > 0 && (
-        <span className="text-warning" title={said(faults.at(-1))}>
+        <span className="text-warning" title={faults.at(-1)}>
           {t('game.play.faults', { count: faults.length })}
         </span>
       )}
     </div>
   )
-}
-
-/** What the tooltip shows: a script fault names its line, a log line is only its sentence. */
-const said = (fault: RuntimeError | LogEntry | undefined): string | undefined => {
-  if (!fault) return undefined
-  return 'script' in fault ? `${fault.script}:${fault.line} — ${fault.message}` : fault.message
 }

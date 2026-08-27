@@ -48,10 +48,10 @@ export type FileOpsDeps = {
    */
   assetsChanged: () => void
   /**
-   * Told what actually moved, so what the studio references BY PATH can follow. Only `game.json`
-   * does — a script is an ordinary `.ts` file, and every other reference carries an identifier.
+   * Told what actually moved, so what the studio references BY PATH can follow. Required, like
+   * `assetsChanged`: a site that forgets it leaves a rename unfollowed, and nothing goes red.
    */
-  pathsChanged?: (changes: readonly PathChange[]) => void
+  pathsChanged: (changes: readonly PathChange[]) => void
 }
 
 /**
@@ -182,7 +182,7 @@ export function createFileOps({
     if (forgotten > 0) assetsChanged()
     // Last, and after the catalogue: what references a file BY PATH — `game.json` alone — has
     // to be told, and it is told about what actually happened rather than about what was asked.
-    if (done.length > 0) pathsChanged?.(done)
+    if (done.length > 0) pathsChanged(done)
   }
 
   const run = async (request: FileRequest): Promise<FileOutcome> => {

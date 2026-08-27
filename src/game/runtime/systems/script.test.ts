@@ -125,7 +125,7 @@ describe('what a game does with its own code', () => {
 
     expect(faults[0]?.script).toBe(WALK)
     expect(faults[0]?.entity).toBe('e1')
-    expect(world.ports.log.recent().some(entry => entry.level === 'error')).toBe(true)
+    expect(world.entities.count()).toBe(1)
   })
 
   it('forgets a script with the entity that carried it', () => {
@@ -138,5 +138,56 @@ describe('what a game does with its own code', () => {
 
     expect(faults).toEqual([])
     expect(world.entities.count()).toBe(0)
+  })
+
+  /** 🛑 Once per entity, for the entity that JOINED — not for everyone already running. */
+  it('opens a script once, however many entities join later', () => {
+    const world = running('onCreate(self) { game.log.info("born " + self.id) }')
+
+    world.step(STEP)
+    world.entities.add({
+      id: 'e2',
+      name: 'Second',
+      transform: restingTransform(),
+      components: [withComponentField(newComponent('Script'), 'script', WALK)],
+    })
+    world.step(STEP)
+    world.step(STEP)
+
+    const said = world.ports.log.recent().map(entry => entry.message)
+    expect(said.filter(one => one === 'born e1')).toHaveLength(1)
+    expect(said.filter(one => one === 'born e2')).toHaveLength(1)
+  })
+
+  /** 🛑 For the one that DIED, and where it died — a frame swept from the world holds neither. */
+  it('closes a script for the entity that left, not for the ones that stayed', () => {
+    const world = running(
+      'onDestroy(self) { game.log.info("gone " + self.id + " at " + self.position.y) }',
+    )
+    world.entities.add({
+      id: 'e2',
+      name: 'Second',
+      transform: { ...restingTransform(), position: { x: 0, y: 7, z: 0 } },
+      components: [withComponentField(newComponent('Script'), 'script', WALK)],
+    })
+
+    world.step(STEP)
+    world.destroy('e2')
+    world.step(STEP)
+    world.step(STEP)
+
+    const said = world.ports.log.recent().map(entry => entry.message)
+    expect(said).toContain('gone e2 at 7')
+    expect(said.some(one => one.startsWith('gone e1'))).toBe(false)
+  })
+
+  /** What the sandbox is asked is what somebody WROTE: the rest never crosses the bridge. */
+  it('asks the sandbox for nothing when no script declares the hook', () => {
+    const world = running('onUpdate(self) { self.moveBy(0, 1, 0) }')
+    world.step(STEP)
+
+    expect(port.declares('onUpdate')).toBe(true)
+    expect(port.declares('onLateUpdate')).toBe(false)
+    expect(port.declares('onMessage')).toBe(false)
   })
 })

@@ -17,10 +17,7 @@ export type EventTrouble = (error: unknown, event: GameEvent) => void
  */
 export type EventBus = {
   on: (name: GameEventName, handler: (event: GameEvent) => void) => () => void
-  /**
-   * Everything, whatever its name. What a SCRIPT needs — `onMessage` hears the whole bus — and
-   * what naming twenty-six subscriptions would have written instead.
-   */
+  /** Everything, whatever its name. What a SCRIPT needs: `onMessage` hears the whole bus. */
   onAny: (handler: (event: GameEvent) => void) => () => void
   emit: (event: GameEvent) => void
   /** Delivers what was queued. What a handler emits waits for the NEXT drain, never this one. */
@@ -78,20 +75,14 @@ export function createEventBus(report: EventTrouble): EventBus {
           if (!event) continue
 
           const listed = handlers.get(event.name)
-          if ((!listed || listed.length === 0) && anyone.length === 0) continue
+          if (!listed?.length && anyone.length === 0) continue
 
           // 🛑 Walked over a COPY. A handler that drops its own subscription — the one-shot, the
           // obvious way to write `on('Died', …)` — splices the live array, and the walk would then
           // step over whichever handler moved into its place.
           walking.length = 0
-          for (let at = 0; at < (listed?.length ?? 0); at++) {
-            const handler = listed?.[at]
-            if (handler) walking.push(handler)
-          }
-          for (let at = 0; at < anyone.length; at++) {
-            const handler = anyone[at]
-            if (handler) walking.push(handler)
-          }
+          if (listed) for (const handler of listed) walking.push(handler)
+          for (const handler of anyone) walking.push(handler)
 
           for (let at = 0; at < walking.length && !stopped; at++) {
             try {

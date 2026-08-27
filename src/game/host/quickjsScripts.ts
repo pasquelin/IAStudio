@@ -3,7 +3,15 @@
 import type * as QuickJS from 'quickjs-emscripten-core'
 import type { GameEvent } from '@shared/domain/gameEvent'
 import { KERNEL } from '../script/kernel'
-import type { ScriptFault, ScriptFrame, ScriptHook, ScriptOutcome } from '../script/frame'
+import {
+  NO_OUTCOME,
+  type ScriptFault,
+  type ScriptIntent,
+  type ScriptFrame,
+  type ScriptHook,
+  type ScriptOutcome,
+} from '../script/frame'
+import { loadOnce } from './loadOnce'
 import {
   FAULTS_BEFORE_DISARM,
   SCRIPT_BUDGET_MS,
@@ -13,29 +21,14 @@ import {
 
 type Engine = QuickJS.QuickJSWASMModule
 
-const NOTHING: ScriptOutcome = { intents: [], faults: [] }
-
-/**
- * 🛑 Held for the life of the window: the module instantiates its own WebAssembly, and a second
- * one would hand back a machine sharing nothing with the contexts already running.
- */
-let engine: Promise<Engine> | null = null
+const engine = loadOnce(startEngine)
 
 /**
  * The sandbox, loaded on FIRST PLAY. Imported dynamically for the reason Rapier is: the machine
  * carries its WebAssembly inlined and weighs some 3 Mo, which no window that only draws needs.
  */
 export async function loadQuickjsScripts(): Promise<ScriptPort> {
-  engine ??= startEngine()
-
-  let held: Engine
-  try {
-    held = await engine
-  } catch (trouble) {
-    engine = null
-    throw trouble
-  }
-  return createQuickjsScripts(held)
+  return createQuickjsScripts(await engine())
 }
 
 async function startEngine(): Promise<Engine> {
@@ -52,32 +45,49 @@ function createQuickjsScripts(machine: Engine): ScriptPort {
   const context = runtime.newContext()
   const disarmed = new Set<string>()
   const faultCount = new Map<string, number>()
+  const declared = new Set<string>()
   let deadline = Number.POSITIVE_INFINITY
+  let left = SCRIPT_BUDGET_MS
+  let overspent = false
   runtime.setInterruptHandler(() => Date.now() > deadline)
 
-  const evaluate = (code: string, file: string): string | ScriptFault => {
+  const evaluate = (code: string, file: string): ScriptFault | null => {
     const held = context.evalCode(code, file)
     if (held.error) {
       const said = context.dump(held.error)
       held.error.dispose()
       return faultOf(said, file)
     }
-    const value = context.typeof(held.value) === 'string' ? context.getString(held.value) : ''
     held.value.dispose()
-    return value
+    return null
   }
 
-  const invoke = (name: string, args: readonly string[]): string | ScriptFault => {
-    const fn = context.getProp(context.global, name)
-    const held = args.map(one => context.newString(one))
-    const answer = context.callFunction(fn, context.undefined, ...held)
-    for (const one of held) one.dispose()
-    fn.dispose()
+  const fault = evaluate(KERNEL, 'kernel.js')
+  if (fault) throw new Error(`the sandbox kernel did not load: ${fault.message}`)
+
+  /**
+   * 🛑 Resolved ONCE. A handle costs a crossing to fetch and another to release, and these seven
+   * names never move — paying it per hook is two of the frame's crossings spent on nothing.
+   */
+  const held = {
+    run: context.getProp(context.global, '__run'),
+    deliver: context.getProp(context.global, '__deliver'),
+    attach: context.getProp(context.global, '__attach'),
+    detach: context.getProp(context.global, '__detach'),
+    disarm: context.getProp(context.global, '__disarm'),
+    seed: context.getProp(context.global, '__seed'),
+    current: context.getProp(context.global, '__current'),
+  }
+
+  const invoke = (fn: QuickJS.QuickJSHandle, args: readonly string[]): string | ScriptFault => {
+    const passed = args.map(one => context.newString(one))
+    const answer = context.callFunction(fn, context.undefined, ...passed)
+    for (const one of passed) one.dispose()
 
     if (answer.error) {
       const said = context.dump(answer.error)
       answer.error.dispose()
-      return faultOf(said, name)
+      return faultOf(said, 'sandbox')
     }
     const value = context.getString(answer.value)
     answer.value.dispose()
@@ -87,93 +97,127 @@ function createQuickjsScripts(machine: Engine): ScriptPort {
   /** Whoever was running when the machine was stopped — asked with the deadline pushed back. */
   const culprit = (): { script: string; entity: string } | null => {
     deadline = Number.POSITIVE_INFINITY
-    const said = invoke('__current', [])
+    const said = invoke(held.current, [])
     if (typeof said !== 'string' || said.length === 0) return null
     const parsed: unknown = JSON.parse(said)
     return isCulprit(parsed) ? parsed : null
   }
 
-  const blame = (fault: ScriptFault): ScriptFault => {
-    const key = fault.entity ?? fault.script
-    const count = (faultCount.get(key) ?? 0) + 1
-    faultCount.set(key, count)
-    if (count < FAULTS_BEFORE_DISARM || !fault.entity) return fault
-
-    disarmed.add(fault.entity)
-    invoke('__disarm', [fault.entity])
-    return { ...fault, message: `${fault.message} — disarmed after ${count} faults` }
+  const learn = (hooks: unknown): void => {
+    if (!Array.isArray(hooks)) return
+    declared.clear()
+    for (const hook of hooks) if (typeof hook === 'string') declared.add(hook)
   }
 
-  /** One hook over the whole frame, inside one budget. An overrun names its script and is out. */
-  const drive = (name: string, args: readonly string[]): ScriptOutcome => {
-    deadline = Date.now() + SCRIPT_BUDGET_MS
-    const said = invoke(name, args)
+  /** Out of the sandbox for the rest of the session, and out of the hooks it was declaring. */
+  const disarm = (entity: string): void => {
+    disarmed.add(entity)
+    const said = invoke(held.disarm, [entity])
+    if (typeof said === 'string') learn(JSON.parse(said))
+  }
+
+  const blame = (one: ScriptFault): ScriptFault => {
+    if (!one.entity) return one
+    const count = (faultCount.get(one.entity) ?? 0) + 1
+    faultCount.set(one.entity, count)
+    if (count < FAULTS_BEFORE_DISARM) return one
+
+    disarm(one.entity)
+    return { ...one, message: `${one.message} — disarmed after ${count} faults` }
+  }
+
+  /** One hook over the whole frame, inside what is LEFT of the frame's budget. */
+  const drive = (fn: QuickJS.QuickJSHandle, args: readonly string[]): ScriptOutcome => {
+    if (left <= 0) {
+      if (overspent) return NO_OUTCOME
+      overspent = true
+      return { intents: [], faults: [spent()] }
+    }
+
+    const from = Date.now()
+    deadline = from + left
+    const said = invoke(fn, args)
     if (typeof said !== 'string') {
       const at = culprit()
-      const fault: ScriptFault = at ? { ...said, script: at.script, entity: at.entity } : said
+      const blamed: ScriptFault = at ? { ...said, script: at.script, entity: at.entity } : said
+      left = 0
       // Straight out, without waiting for a third: a script that overran once will overrun again,
       // and it is the whole frame it takes with it.
-      if (fault.entity) {
-        disarmed.add(fault.entity)
-        invoke('__disarm', [fault.entity])
-      }
-      return { intents: [], faults: [fault] }
+      if (blamed.entity) disarm(blamed.entity)
+      return { intents: [], faults: [blamed] }
     }
     deadline = Number.POSITIVE_INFINITY
+    left -= Date.now() - from
 
     const outcome: unknown = JSON.parse(said)
-    if (!isOutcome(outcome)) return NOTHING
+    if (!isOutcome(outcome)) return NO_OUTCOME
+    learn(outcome.hooks)
     return { intents: outcome.intents, faults: outcome.faults.map(blame) }
   }
 
-  const kernel = evaluate(KERNEL, 'kernel.js')
-  if (typeof kernel !== 'string')
-    throw new Error(`the sandbox kernel did not load: ${kernel.message}`)
-
   return {
     seed: value => {
-      invoke('__seed', [String(value)])
+      invoke(held.seed, [String(value)])
     },
 
     load: modules => {
       const faults: ScriptFault[] = []
       for (const one of modules) {
-        const held = evaluate(wrapped(one), fileOf(one.script))
-        if (typeof held !== 'string') faults.push({ ...held, script: one.script })
+        const trouble = evaluate(wrapped(one), fileOf(one.script))
+        if (trouble) faults.push({ ...trouble, script: one.script })
       }
       return faults
     },
 
     attach: instances => {
-      const said = invoke('__attach', [JSON.stringify(instances)])
+      const said = invoke(held.attach, [JSON.stringify(instances)])
       if (typeof said !== 'string') return [said]
       const parsed: unknown = JSON.parse(said)
-      return Array.isArray(parsed) ? (parsed as ScriptFault[]) : []
+      if (!isOutcome(parsed)) return []
+      learn(parsed.hooks)
+      return parsed.faults
     },
 
-    detach: entities => {
-      for (const entity of entities) {
-        disarmed.delete(entity)
-        faultCount.delete(entity)
+    detach: leaving => {
+      for (const one of leaving) {
+        disarmed.delete(one.entity)
+        faultCount.delete(one.entity)
       }
-      invoke('__detach', [JSON.stringify(entities)])
+      return drive(held.detach, [JSON.stringify(leaving)])
     },
 
-    run: (hook: ScriptHook, frame: ScriptFrame) => drive('__run', [hook, JSON.stringify(frame)]),
+    declares: hook => declared.has(hook),
+
+    run: (hook: ScriptHook, frame: ScriptFrame) => drive(held.run, [hook, JSON.stringify(frame)]),
 
     deliver: (frame: ScriptFrame, events: readonly GameEvent[]) =>
       events.length === 0
-        ? NOTHING
-        : drive('__deliver', [JSON.stringify(frame), JSON.stringify(events)]),
+        ? NO_OUTCOME
+        : drive(held.deliver, [JSON.stringify(frame), JSON.stringify(events)]),
+
+    refill: () => {
+      left = SCRIPT_BUDGET_MS
+      overspent = false
+    },
 
     disarmed: () => [...disarmed],
 
     dispose: () => {
+      for (const one of Object.values(held)) one.dispose()
       context.dispose()
       runtime.dispose()
     },
   }
 }
+
+/** Said once per frame, never per hook: a frame that ran out says so, it does not go quiet. */
+const spent = (): ScriptFault => ({
+  script: 'sandbox',
+  entity: null,
+  message: `the frame's ${SCRIPT_BUDGET_MS} ms of scripts were spent — the rest of it did not run`,
+  line: 0,
+  column: 0,
+})
 
 /**
  * The module, run for its `export default`. Transpiled to CommonJS by the studio, so what it
@@ -208,5 +252,8 @@ const isRecordLike = (value: unknown): value is Record<string, unknown> =>
 const isCulprit = (value: unknown): value is { script: string; entity: string } =>
   isRecordLike(value) && typeof value.script === 'string' && typeof value.entity === 'string'
 
-const isOutcome = (value: unknown): value is { intents: never[]; faults: ScriptFault[] } =>
+/** Not re-read intent by intent: `apply` reaches the world through gestures that refuse. */
+const isOutcome = (
+  value: unknown,
+): value is { intents: ScriptIntent[]; faults: ScriptFault[]; hooks?: unknown } =>
   isRecordLike(value) && Array.isArray(value.intents) && Array.isArray(value.faults)

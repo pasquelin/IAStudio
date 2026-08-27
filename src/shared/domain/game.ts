@@ -21,10 +21,11 @@ export const GAME_FILE = 'game.json'
 /**
  * A script identifier bound to the path of its file.
  *
- * 🛑 **The one fragile point of the whole reference strategy**, and it is fragile because a
- * script is a PATH: everything else the studio references carries an identifier of its own,
- * which renaming cannot break. Moving or deleting a `.ts` file has to come here — see
- * `withScriptMoved` and `withScriptForgotten`.
+ * 🛑 **The one fragile point of the whole reference strategy**: everything else the studio
+ * references carries an identifier renaming cannot break, and a script is a PATH.
+ *
+ * 🛑 Nothing FILLS this list yet, and the `Script` component holds the path rather than the id —
+ * so `scriptPathOf` has no caller and a rename does not reach a scene. See `keepScriptPaths`.
  */
 export type GameScript = { id: string; path: string }
 

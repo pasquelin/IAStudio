@@ -6,6 +6,7 @@ import { refToString } from '@shared/domain/ref'
 import type { PhysicsPort } from '@game/ports/physicsPort'
 import type { ScriptModule, ScriptPort } from '@game/ports/scriptPort'
 import type { ScriptFault } from '@game/script/frame'
+import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
 import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -62,6 +63,8 @@ export type PlaySessionDeps = {
   script?: ScriptPort
   /** Already transpiled by the studio: the sandbox runs JavaScript, an author writes TypeScript. */
   modules?: readonly ScriptModule[]
+  /** What would not compile at all, said the way a fault is: the reader can OPEN it. */
+  troubles?: readonly ScriptTrouble[]
 }
 
 /**
@@ -89,6 +92,17 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   const noted = (fault: ScriptFault): void => {
     errors.push(addressed(fault, deps.documentId))
     if (errors.length > ERRORS_KEPT) errors.shift()
+  }
+  // 🛑 Said on the SAME channel as a fault, rather than as a module that logs its own refusal: a
+  // file nothing references would otherwise never say a word.
+  for (const trouble of deps.troubles ?? []) {
+    noted({
+      script: trouble.script,
+      entity: null,
+      message: trouble.message,
+      line: trouble.line,
+      column: 0,
+    })
   }
 
   const world = worldFromScene(deps.documentId, deps.editState(), ports, {
