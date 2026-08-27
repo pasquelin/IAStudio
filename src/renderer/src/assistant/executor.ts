@@ -28,6 +28,10 @@ import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { CONTEXT_HANDLERS } from './contextHandlers'
 import { GAME_HANDLERS } from './gameHandlers'
+import { PLAY_HANDLERS } from './playHandlers'
+import { SCRIPT_HANDLERS } from './scriptHandlers'
+import { STUDIO_HANDLERS } from './studioHandlers'
+import { readBatch } from './batch'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
@@ -44,6 +48,9 @@ import { TARGET_HANDLERS } from './targetHandlers'
 const HANDLERS: ActionHandlers = {
   ...CORE_HANDLERS,
   ...GAME_HANDLERS,
+  ...PLAY_HANDLERS,
+  ...SCRIPT_HANDLERS,
+  ...STUDIO_HANDLERS,
   ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,
@@ -60,6 +67,9 @@ const HANDLERS: ActionHandlers = {
   ...CONTEXT_HANDLERS,
   ...SETTINGS_HANDLERS,
   ...SHELL_HANDLERS,
+  // Last, and in the table like every other: a family declaring this name would otherwise
+  // overwrite it in silence, and `executor.test.ts` holds the table to the registry.
+  'studio.batch': runBatch,
 }
 
 /** Every name the table answers, so a test can compare it with the registry. */
@@ -116,6 +126,38 @@ export async function runAction(
 
   const read = readOrRefusal(name, input)
   return 'refusal' in read ? read.refusal : handler(read.listed)
+}
+
+/**
+ * A lot of primitives run as ONE call — the plan's § 16.3 c.
+ *
+ * Here rather than beside the other handlers: what it runs is `runAction`, and this is that
+ * module. `import-cycles.test.ts` holds a ratchet at zero.
+ *
+ * 🛑 **Each call is confirmed on its OWN terms**, and that is a correction of what this lot first
+ * wrote. Weighing the lot at the worst of what it holds, then asking once, collapsed the five
+ * delegation switches into one: a batch mixing a generation with a `files.trash` weighed
+ * `credits`, and a person who had delegated a credits BUDGET — and nothing else — had the
+ * deletion carried out without being asked. Twenty generations were quoted as one, too.
+ *
+ * The price is a question per engaging call rather than one for the lot; what is kept is one MCP
+ * round trip, the order, and the stop at the first refusal. A single question for a whole lot
+ * needs the question itself to LIST what it holds, which `ConfirmRequest` does not carry.
+ */
+async function runBatch(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const read = readBatch(input)
+  if ('refusal' in read) return read.refusal
+
+  const done: unknown[] = []
+  for (const call of read.calls) {
+    const outcome = await runConfirmedAction(call.action, call.input)
+    // The RANK is what a client repairs from — one-based, as a person counts a list.
+    if (!outcome.ok) {
+      return { ...outcome, detail: `call ${done.length + 1}: ${outcome.detail ?? outcome.refusal}` }
+    }
+    done.push(outcome.data ?? null)
+  }
+  return { ok: true, data: { ran: done.length, results: done } }
 }
 
 /**

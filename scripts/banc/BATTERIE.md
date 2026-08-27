@@ -909,3 +909,19 @@ Dans la scène Test MCP :
 - [ ] « Monte la santé maximum de Cube Test à 250. »
 - [ ] « Fais aller Cube Test de gauche à droite. »
 - [ ] « Retire la santé de Cube Test. »
+
+## 61. Jouer, lire ce qui ne va pas, réparer
+
+- [ ] « Lance la partie. »
+- [ ] « Où en est la partie ? »
+- [ ] « Mets la partie en pause. »
+- [ ] « Avance de dix pas. »
+- [ ] « Reprends la partie. »
+- [ ] « Y a-t-il des erreurs dans la partie ? »
+- [ ] « Arrête la partie. »
+- [ ] « Quels scripts ce projet contient-il ? »
+- [ ] « Montre-moi le script Walk.ts. »
+- [ ] « Écris un script Patrol.ts qui fait avancer l’objet. »
+- [ ] « Décris-moi Cube Test. »
+- [ ] « Qu’est-ce que je peux régler sur un composant Santé ? »
+- [ ] « Donne de la santé à Cube Test et monte son maximum à 250, en une seule fois. »

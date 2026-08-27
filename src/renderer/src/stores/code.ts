@@ -33,6 +33,13 @@ export type CodeStoreState = {
   close: (script: string) => void
   edited: (script: string, source: string) => void
   noted: (problems: readonly CodeProblem[]) => void
+  /**
+   * Puts a whole text into a script, whether or not the editor already held it.
+   *
+   * 🛑 Answers FALSE rather than overwriting work an author has not saved: the text comes from
+   * outside the window — a model — and `⌘Z` does not reach into the code editor.
+   */
+  wrote: (script: string, source: string) => boolean
   /** Opens that script and puts the cursor there — what a fault of a Play is clicked into. */
   openAt: (script: string, line: number, column: number) => void
   /** Said by the editor once the cursor moved, so the same place is not jumped to twice. */
@@ -102,6 +109,16 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
   },
 
   noted: problems => set({ problems }),
+
+  wrote: (script, source) => {
+    const held = get().files[script]
+    if (held && held.source !== held.saved) return false
+
+    set(state => ({
+      files: { ...state.files, [script]: { script, saved: held?.saved ?? '', source } },
+    }))
+    return true
+  },
 
   openAt: (script, line, column) => {
     set(state => ({

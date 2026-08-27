@@ -38,7 +38,10 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
   const addressable = report.errors.findLast(one => one.line > 0) ?? null
 
   const play = (): void => {
-    if (report.state === 'paused') return usePlay.getState().resume(documentId)
+    if (report.state === 'paused') {
+      usePlay.getState().resume(documentId)
+      return
+    }
 
     const host = viewport()
     // No viewport, no game: the runtime draws through the engine that viewport owns.

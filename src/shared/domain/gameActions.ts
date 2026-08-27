@@ -74,3 +74,169 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
 ]
+
+/**
+ * A game being PLAYED, driven from outside the window.
+ *
+ * 🛑 What closes the loop of the plan's § 16.4 — `play.start` → `runtime.errors` → `script.write`
+ * → `play.stop` → `play.start`. Four things make it close, and each is a decision:
+ * `play.start` answers at once rather than waiting for a frame; `runtime.errors` answers
+ * ADDRESSABLE faults, script and line; a script that throws is disarmed rather than stopping the
+ * game; and `play.step` runs ONE fixed step, so a reading is taken without racing the clock.
+ */
+export const PLAY_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'play.start',
+    titleKey: 'assistant.actions.playStart.title',
+    descriptionKey: 'assistant.actions.playStart.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'play.stop',
+    titleKey: 'assistant.actions.playStop.title',
+    descriptionKey: 'assistant.actions.playStop.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'play.pause',
+    titleKey: 'assistant.actions.playPause.title',
+    descriptionKey: 'assistant.actions.playPause.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'play.resume',
+    titleKey: 'assistant.actions.playResume.title',
+    descriptionKey: 'assistant.actions.playResume.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    /** One fixed step, so a reading is taken without racing sixty frames a second. */
+    name: 'play.step',
+    titleKey: 'assistant.actions.playStep.title',
+    descriptionKey: 'assistant.actions.playStep.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'steps', kind: 'integer', labelKey: 'assistant.fields.fixedSteps', required: false },
+    ],
+  }),
+  action({
+    name: 'runtime.report',
+    titleKey: 'assistant.actions.runtimeReport.title',
+    descriptionKey: 'assistant.actions.runtimeReport.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    /** 🛑 ADDRESSABLE: the script's reference and the line, which is what a repair needs. */
+    name: 'runtime.errors',
+    titleKey: 'assistant.actions.runtimeErrors.title',
+    descriptionKey: 'assistant.actions.runtimeErrors.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+]
+
+/** The `.ts` files a game runs, read and written from outside the window. */
+export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'script.list',
+    titleKey: 'assistant.actions.scriptList.title',
+    descriptionKey: 'assistant.actions.scriptList.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
+    name: 'script.read',
+    titleKey: 'assistant.actions.scriptRead.title',
+    descriptionKey: 'assistant.actions.scriptRead.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'path', kind: 'text', labelKey: 'assistant.fields.scriptPath', required: true },
+    ],
+  }),
+  action({
+    /**
+     * Writes a file of the project, which `commitment: 'file'` is what says: it lands on disk and
+     * no undo of the studio takes it back — git does.
+     */
+    name: 'script.write',
+    titleKey: 'assistant.actions.scriptWrite.title',
+    descriptionKey: 'assistant.actions.scriptWrite.description',
+    commitment: 'files',
+    reach: 'mcp',
+    fields: [
+      { key: 'path', kind: 'text', labelKey: 'assistant.fields.scriptPath', required: true },
+      {
+        key: 'source',
+        kind: 'longText',
+        labelKey: 'assistant.fields.scriptSource',
+        required: true,
+      },
+    ],
+  }),
+]
+
+/**
+ * The three that keep a model from having to GUESS — the plan's § 16.3.
+ *
+ * 🛑 They are the answer to the tool count, not a convenience: describing what is in front of a
+ * model, serving the slice of documentation that answers ONE question, and running a lot of
+ * primitives as a single undo entry are what a hundred narrow actions would otherwise be.
+ */
+export const STUDIO_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'studio.describe',
+    titleKey: 'assistant.actions.studioDescribe.title',
+    descriptionKey: 'assistant.actions.studioDescribe.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'ref', kind: 'text', labelKey: 'assistant.fields.describeRef', required: false },
+    ],
+  }),
+  action({
+    /** The same source the editor types against — `studio.d.ts`, sliced by topic. */
+    name: 'studio.docs',
+    titleKey: 'assistant.actions.studioDocs.title',
+    descriptionKey: 'assistant.actions.studioDocs.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'topic', kind: 'text', labelKey: 'assistant.fields.docsTopic', required: false },
+    ],
+  }),
+  action({
+    /**
+     * 🛑 ONE undo entry and ONE confirmation for a lot of calls — `composed()` of `history.ts`.
+     * The commitment of the lot is the MAXIMUM of the calls', so a batch never engages less than
+     * what it holds.
+     */
+    name: 'studio.batch',
+    titleKey: 'assistant.actions.studioBatch.title',
+    descriptionKey: 'assistant.actions.studioBatch.description',
+    // 🛑 `none` for the LOT, and every call inside asked about on its own terms. Weighing the lot
+    // at the worst of what it holds, then asking once, collapsed five independent delegation
+    // switches into one — see `runBatch`, which carries the whole reasoning.
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'calls', kind: 'longText', labelKey: 'assistant.fields.batchCalls', required: true },
+    ],
+  }),
+]
+
+/** One call of a batch: the action to run and what to run it with. */
+export type BatchCall = { action: string; input: Record<string, unknown> }

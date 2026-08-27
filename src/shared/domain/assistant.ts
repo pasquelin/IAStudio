@@ -20,7 +20,7 @@ import { POST_ACTIONS } from './postActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
-import { GAME_ACTIONS } from './gameActions'
+import { GAME_ACTIONS, PLAY_ACTIONS, SCRIPT_ACTIONS, STUDIO_ACTIONS } from './gameActions'
 import { SETTINGS_ACTIONS } from './settingsActions'
 import { SHELL_ACTIONS } from './shellActions'
 import { TARGET_ACTIONS } from './targetActions'
@@ -67,6 +67,9 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'rig', actions: RIG_ACTIONS },
   { name: 'git', actions: GIT_ACTIONS },
   { name: 'game', actions: GAME_ACTIONS },
+  { name: 'play', actions: PLAY_ACTIONS },
+  { name: 'script', actions: SCRIPT_ACTIONS },
+  { name: 'studio', actions: STUDIO_ACTIONS },
   { name: 'context', actions: CONTEXT_ACTIONS },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },

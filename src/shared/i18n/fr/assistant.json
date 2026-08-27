@@ -1020,6 +1020,58 @@
       "componentSet": {
         "title": "Régler un composant",
         "description": "Écrit un champ d’un composant que l’objet porte. Un champ que le composant ne déclare pas est ignoré."
+      },
+      "playStart": {
+        "title": "Lancer la partie",
+        "description": "Démarre le jeu sur la scène affichée. Rend la main aussitôt, et l’état se lit avec runtime.report."
+      },
+      "playStop": {
+        "title": "Arrêter la partie",
+        "description": "Arrête le jeu et remet la scène telle qu’elle était éditée."
+      },
+      "playPause": {
+        "title": "Mettre la partie en pause",
+        "description": "Suspend le jeu sans le quitter. Requis avant play.step."
+      },
+      "playResume": {
+        "title": "Reprendre la partie",
+        "description": "Repart d’où la pause a laissé le jeu, sans rattraper le temps arrêté."
+      },
+      "playStep": {
+        "title": "Avancer d’un pas",
+        "description": "Fait avancer une partie EN PAUSE d’un ou plusieurs pas fixes, puis rend l’état. C’est ainsi qu’on observe sans course."
+      },
+      "runtimeReport": {
+        "title": "Lire l’état de la partie",
+        "description": "Rend le tick, la cadence, le nombre d’entités, le compte d’erreurs et les dernières lignes du journal."
+      },
+      "runtimeErrors": {
+        "title": "Lire les fautes de la partie",
+        "description": "Rend les fautes ADRESSABLES — la référence du script, celle de l’entité, la ligne et la colonne."
+      },
+      "scriptList": {
+        "title": "Lister les scripts",
+        "description": "Rend tous les scripts du projet, avec leur référence et leur longueur."
+      },
+      "scriptRead": {
+        "title": "Lire un script",
+        "description": "Rend le texte d’un script du projet, y compris ce qui n’est pas encore enregistré."
+      },
+      "scriptWrite": {
+        "title": "Écrire un script",
+        "description": "Écrit un script dans le projet. Refusé, avec la ligne, si le fichier ne compile pas."
+      },
+      "studioDescribe": {
+        "title": "Décrire ce qui est en face",
+        "description": "Rend la scène, un objet, ses composants avec leur schéma, ses relations et ce qu’on peut encore lui ajouter."
+      },
+      "studioDocs": {
+        "title": "Lire la documentation",
+        "description": "Rend la tranche de documentation qui répond à une question — un composant, ou la surface qu’un script voit."
+      },
+      "studioBatch": {
+        "title": "Enchaîner des appels",
+        "description": "Exécute une suite d’appels comme un seul, avec une seule question. S’arrête au premier refus."
       }
     },
     "refusals": {
@@ -1317,7 +1369,13 @@
       "postPresetName": "Nom à donner au préréglage",
       "componentType": "Type de composant",
       "componentField": "Champ",
-      "componentValue": "Valeur"
+      "componentValue": "Valeur",
+      "scriptPath": "Chemin du script",
+      "scriptSource": "Texte du script",
+      "describeRef": "Référence à décrire",
+      "docsTopic": "Sujet",
+      "batchCalls": "Appels (JSON)",
+      "fixedSteps": "Nombre de pas fixes"
     },
     "title": "Assistant",
     "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",

@@ -438,3 +438,15 @@ export const searched = (run: Run, word: string): boolean =>
 /** Whether an action ran at all, refused or not — what an undo scenario has to see happen. */
 export const tried = (run: Run, name: ActionName): boolean =>
   run.called.some(one => one.action === name)
+
+/**
+ * What one action answered, for the readings whose whole EFFECT is their answer.
+ *
+ * 🛑 A refusal answers too — `answerShown` writes « refused wrongSurface » — so this rends only
+ * what came back from a call that WORKED. Written the other way round first, and twelve of the
+ * thirteen § 61 scenarios then passed on a studio that had refused every one of them.
+ */
+export const answerOf = (run: Run, name: ActionName): string | null => {
+  const held = run.called.find(one => one.action === name)?.answer
+  return held === undefined || held.startsWith('refused') ? null : held
+}

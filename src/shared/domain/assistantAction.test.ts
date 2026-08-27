@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type ActionField, inputProblem, readInput, validatesInput } from './assistantAction'
+import { inputProblem, readInput, validatesInput, type ActionField } from './assistantAction'
 
 const field = (partial: Partial<ActionField> & Pick<ActionField, 'key' | 'kind'>): ActionField => ({
   labelKey: 'assistant.fields.query',
