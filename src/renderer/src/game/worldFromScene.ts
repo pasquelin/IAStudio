@@ -8,6 +8,7 @@ import { STEP_SECONDS } from '@game/runtime/gameLoop'
 import { createMovementSystem } from '@game/runtime/systems/movement'
 import { createPhysicsSystem } from '@game/runtime/systems/physics'
 import { createPlayCameraSystem } from '@game/runtime/systems/playCamera'
+import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
 import { createWorld, type System, type World } from '@game/runtime/world'
 import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
@@ -37,12 +38,18 @@ export function worldFromScene(
   documentId: string,
   state: SceneState,
   ports: GameApi,
+  scripts: ScriptSystemOptions = {
+    modules: [],
+    // The game's own log rather than nothing: without a studio listening, a fault that goes
+    // nowhere is a script that silently never ran.
+    onFault: fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`),
+  },
   seed = 1,
 ): World {
   const world = createWorld({
     scene: { kind: 'document', id: documentId },
     ports,
-    systems: systemsFor(state, ports),
+    systems: systemsFor(state, ports, scripts),
     seed,
     step: STEP_SECONDS,
     play: state.world.play,
@@ -69,7 +76,11 @@ export function worldFromScene(
 }
 
 /** Every system the studio runs today. A component gains its behaviour by joining this list. */
-function systemsFor(state: SceneState, ports: GameApi): readonly System[] {
+function systemsFor(
+  state: SceneState,
+  ports: GameApi,
+  scripts: ScriptSystemOptions,
+): readonly System[] {
   const byId = new Map(state.nodes.map(node => [node.id, node]))
   const characters = createCharacters()
 
@@ -102,6 +113,7 @@ function systemsFor(state: SceneState, ports: GameApi): readonly System[] {
   }
 
   return [
+    createScriptSystem(scripts),
     createMovementSystem(),
     createPhysicsSystem({ shapeOf, characters, statics: groundOf(state) }),
     createPlayCameraSystem(characters),

@@ -6,6 +6,7 @@ import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor, DocumentKind, DocumentWrite } from '@shared/domain/document'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { IDLE_RESCAN } from '@shared/domain/project'
+import { noGame } from '@shared/domain/game'
 import { noContext } from '@shared/domain/projectContext'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
@@ -138,6 +139,9 @@ function base(catalog: AsyncCatalog) {
     // Empty: a project carrying no context is the ordinary one, and `context.test.ts` is where
     // the file itself is settled.
     context: { read: vi.fn(async () => noContext()), write: vi.fn(async () => noContext()) },
+    // A project declaring no game is the ordinary one, and `game.test.ts` settles the file.
+    game: { read: vi.fn(async () => noGame()), write: vi.fn(async () => noGame()) },
+    scripts: { list: vi.fn(async () => []), write: vi.fn(async () => true) },
     // An empty string is what `shell.openPath` answers when the system took the file.
     openInSystem: vi.fn(async () => ''),
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy

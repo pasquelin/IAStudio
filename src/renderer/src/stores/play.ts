@@ -1,8 +1,17 @@
 import { create } from 'zustand'
 import { NOT_PLAYING, type RuntimeReport } from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
+import { refToString } from '@shared/domain/ref'
+import { orElse } from '@shared/promises'
 import { loadRapierPhysics } from '@game/host/rapierPhysics'
-import type { PhysicsPort } from '@game/ports/physicsPort'
+import { loadQuickjsScripts } from '@game/host/quickjsScripts'
+import type { ScriptModule } from '@game/ports/scriptPort'
+import {
+  createScriptCompiler,
+  type ScriptCompiler,
+  type ScriptTrouble,
+} from '@/engines/code/scriptCompiler'
+import { getBridge } from '@/services/bridge'
 import { animationFrames, startPlay, type PlaySession } from '@/game/playSession'
 import { sceneEngineOf } from './sceneEngines'
 import { sceneOf, useScenes } from './scenes'
@@ -65,8 +74,8 @@ export const usePlay = create<PlayStoreState>()(set => ({
 }))
 
 /**
- * The engine first, the world second — the WebAssembly weighs 2,7 Mo and lands in 27 ms, which
- * is a frame nobody sees but not a wait a Play button may take synchronously.
+ * The engines first, the world second — the WebAssembly weighs 2,7 Mo and lands in 27 ms, which is
+ * a frame nobody sees but not a wait a Play button may take synchronously.
  */
 async function begin(
   documentId: string,
@@ -74,18 +83,21 @@ async function begin(
   input: DomInputTarget,
   onReport: (report: RuntimeReport) => void,
 ): Promise<void> {
-  let physics: PhysicsPort | undefined
-  try {
-    physics = await loadRapierPhysics()
-  } catch {
-    // Said by the session itself, on the game's own log: a game with no engine still runs, it
-    // just has nothing to fall onto.
-  }
+  // All three together, and each failing on its own: the machines are independent, and reading
+  // the project's scripts off the disk fits entirely under the time a WebAssembly takes to land.
+  const [physics, script, compiled] = await Promise.all([
+    orElse(loadRapierPhysics(), undefined),
+    orElse(loadQuickjsScripts(), undefined),
+    // 🛑 Guarded like the other two: a rejection here left `starting` holding the document, and
+    // the Play button then did NOTHING until its viewport unmounted.
+    orElse(scriptsOfProject(), NO_SCRIPTS),
+  ])
 
   const renderer = sceneEngineOf(documentId)
-  // Stopped, overtaken by a later Play, or its viewport closed while the engine was loading.
+  // Stopped, overtaken by a later Play, or its viewport closed while the engines were loading.
   if (starting.get(documentId) !== token || !renderer) {
     physics?.dispose()
+    script?.dispose()
     return
   }
   starting.delete(documentId)
@@ -99,8 +111,34 @@ async function begin(
       input,
       frames: animationFrames(),
       physics,
+      script,
+      modules: compiled.modules,
+      troubles: compiled.troubles,
       onReport,
     }),
+  )
+}
+
+/**
+ * 🛑 The COMPILER is kept for the window, not the modules: a Play must not parse nine megabytes of
+ * TypeScript again for a file nobody touched, and a file that WAS touched has to be read again.
+ */
+let compiler: ScriptCompiler | null = null
+
+type CompiledScripts = { modules: readonly ScriptModule[]; troubles: readonly ScriptTrouble[] }
+
+const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [] }
+
+async function scriptsOfProject(): Promise<CompiledScripts> {
+  const files = (await getBridge()?.game.scripts()) ?? []
+  if (files.length === 0) return NO_SCRIPTS
+
+  compiler ??= createScriptCompiler()
+  return await compiler.compile(
+    files.map(file => ({
+      script: refToString({ kind: 'script', path: file.path }),
+      source: file.source,
+    })),
   )
 }
 

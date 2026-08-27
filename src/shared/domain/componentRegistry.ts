@@ -155,6 +155,17 @@ const CHARACTER_CONTROLLER: ComponentDescriptor = {
   events: ['Collided'],
 }
 
+const SCRIPT: ComponentDescriptor = {
+  type: 'Script',
+  titleKey: 'game.components.Script.title',
+  descriptionKey: 'game.components.Script.description',
+  category: 'gameplay',
+  // One field, and the settings a script declares are NOT here yet: reading them means reading
+  // the file's own `props`, which is what the editor lot brings. Until then `self.props` is empty.
+  fields: [{ key: 'script', kind: 'text', labelKey: 'game.fields.script', required: true }],
+  defaults: { script: '' },
+}
+
 /**
  * 🛑 A `Record<ComponentType, …>`, so the COMPILER refuses a type declared without a descriptor.
  * A component nothing describes has no form, no schema and no documentation — it is a name in a
@@ -167,6 +178,7 @@ export const COMPONENTS: Record<ComponentType, ComponentDescriptor> = {
   RigidBody: RIGID_BODY,
   Trigger: TRIGGER,
   CharacterController: CHARACTER_CONTROLLER,
+  Script: SCRIPT,
 }
 
 export const COMPONENT_TYPES: readonly ComponentType[] =

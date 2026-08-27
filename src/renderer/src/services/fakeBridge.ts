@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
+import { noGame } from '@shared/domain/game'
 import { IDLE_RESCAN } from '@shared/domain/project'
 import { noContext } from '@shared/domain/projectContext'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -161,6 +162,13 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       exportPicture: () => Promise.resolve(null),
       pickPath: () => Promise.resolve(null),
       ...overrides.dialog,
+    },
+    game: {
+      read: () => Promise.resolve(noGame()),
+      // Refuses by default: a manifest nobody stubbed must not read as one that was written.
+      write: () => Promise.reject(new Error('no game manifest stubbed')),
+      scripts: () => Promise.resolve([]),
+      writeScript: () => Promise.resolve(false),
     },
     documents: {
       list: () => Promise.resolve([]),

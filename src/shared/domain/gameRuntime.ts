@@ -10,6 +10,23 @@ export type LogLevel = 'info' | 'warn' | 'error'
 
 export type LogEntry = { level: LogLevel; message: string; at: number }
 
+/**
+ * What a script did wrong, ADDRESSABLE: the reference of the script and of the entity, and the
+ * line an editor opens. It is the same datum a console row, a click-to-open and an MCP answer
+ * all read — which is what keeps them from drifting into three descriptions of one fault.
+ */
+export type RuntimeError = {
+  /** `refToString` of the script — `script:<path>`. */
+  script: string
+  /** `refToString` of the entity, when the fault happened to one. */
+  entity: string | null
+  message: string
+  /** One-based, as an editor counts. Zero when the engine could not say. */
+  line: number
+  column: number
+  at: number
+}
+
 export type RuntimeReport = {
   state: PlayState
   /** The unit the network counts in, and what a bug report is anchored on. */
@@ -19,6 +36,8 @@ export type RuntimeReport = {
   entities: number
   /** Bounded by whoever fills it: a game left running writes without end. */
   logs: readonly LogEntry[]
+  /** Bounded the same way, and kept apart from the log: these are what a reader can OPEN. */
+  errors: readonly RuntimeError[]
 }
 
 export const NOT_PLAYING: RuntimeReport = {
@@ -28,4 +47,5 @@ export const NOT_PLAYING: RuntimeReport = {
   frameMs: 0,
   entities: 0,
   logs: [],
+  errors: [],
 }

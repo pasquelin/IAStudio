@@ -21,6 +21,10 @@
         "description": "Hands the object to the simulation: it falls, it slides, it gets pushed.",
         "title": "Physics"
       },
+      "Script": {
+        "title": "Script",
+        "description": "Hands the object to code: what its author wrote runs on every step."
+      },
       "Trigger": {
         "description": "Blocks nothing, and says so when something enters its volume or leaves it.",
         "title": "Sensor"
@@ -42,6 +46,7 @@
       "mode": "Course",
       "radius": "Radius",
       "restitution": "Bounce",
+      "script": "File",
       "slopeLimit": "Slope",
       "snapDistance": "Grip",
       "speed": "Speed",

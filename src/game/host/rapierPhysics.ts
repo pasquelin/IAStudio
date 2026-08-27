@@ -2,6 +2,7 @@
 
 import type * as RapierModule from '@dimforge/rapier3d-compat'
 import { quaternionFromEuler } from '../physics/quaternion'
+import { loadOnce } from './loadOnce'
 import { HULL_FLOOR, type ColliderShape } from '../physics/shape'
 import type {
   BodyDescriptor,
@@ -28,30 +29,14 @@ const DEGREES = Math.PI / 180
 /** Rewritten in place: a character's next placement is read by the engine and never kept. */
 const NEXT = { x: 0, y: 0, z: 0 }
 
-/**
- * 🛑 Held for the life of the window, and it MUST be: `init` instantiates the WebAssembly with a
- * memory of its own, so a second call hands back an engine whose worlds share nothing with the
- * ones already running. Held as the PROMISE, so two games starting at once wait on one load.
- */
-let engine: Promise<Rapier> | null = null
+const engine = loadOnce(startEngine)
 
 /**
  * 🛑 Imported dynamically: `rapier3d-compat` inlines its WebAssembly as base64 and weighs 2,7 Mo,
  * which a static import would put in every window that draws a document. 27,3 ms to initialise.
  */
 export async function loadRapierPhysics(): Promise<PhysicsPort> {
-  engine ??= startEngine()
-
-  let rapier: Rapier
-  // 🛑 The LOAD alone: a world that failed to build must not clear the memo, or the next Play
-  // would call `init` a second time and orphan every world already running in this window.
-  try {
-    rapier = await engine
-  } catch (trouble) {
-    engine = null
-    throw trouble
-  }
-  return createRapierPhysics(rapier)
+  return createRapierPhysics(await engine())
 }
 
 async function startEngine(): Promise<Rapier> {

@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",
+    "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -58,6 +59,7 @@
     "node-llama-cpp": "^3.20.0",
     "opentype.js": "^2.0.0",
     "pixi.js": "8.19.0",
+    "quickjs-emscripten-core": "^0.32.0",
     "react-is": "^19.2.8",
     "recharts": "^3.10.1",
     "sherpa-onnx-node": "1.13.5",

@@ -17,6 +17,8 @@ import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/localBackend'
 import { fileFactsOf } from './fileFacts'
 import type { FileOps } from './fileOps'
+import type { GameScriptStore } from './gameScripts'
+import type { ProjectGameStore } from './game'
 import type { FolderReader } from './folder'
 import type { Reconciler } from './reconcile'
 import type { ActivityReport } from './activityLog'
@@ -49,6 +51,7 @@ import {
   parseSaveAudio,
   parseSaveLayered,
   parseSavePicture,
+  parseGame,
   parseSaveTexture,
   parseSearchTerm,
 } from './validation'
@@ -91,6 +94,9 @@ export type ProjectHandlerDeps = {
   reconciler: Reconciler
   /** The project's own context. Read straight off the disk, so no window holds a stale copy. */
   context: ProjectContextStore
+  /** What makes the project a GAME — its manifest, and the scripts a Play compiles. */
+  game: ProjectGameStore
+  scripts: GameScriptStore
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
@@ -114,6 +120,8 @@ export function registerProjectHandlers({
   files,
   reconciler,
   context,
+  game,
+  scripts,
   openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
@@ -557,6 +565,16 @@ export function registerProjectHandlers({
     // on its own — and answers with what is already there for the ones that do not need it.
     return (await extractTextures(source)).map(withoutSourcePath)
   })
+
+  handle(CHANNELS.gameRead, () => game.read())
+
+  handle(CHANNELS.gameWrite, (_event, manifest) => game.write(parseGame(manifest)))
+
+  handle(CHANNELS.gameScripts, () => scripts.list())
+
+  handle(CHANNELS.gameWriteScript, (_event, path, source) =>
+    scripts.write(parseFolderPath(path), String(source)),
+  )
 
   handle(CHANNELS.documentList, () => documents.list())
 

@@ -21,6 +21,10 @@
         "description": "Confie l’objet à la simulation : il tombe, il glisse, il se fait pousser.",
         "title": "Physique"
       },
+      "Script": {
+        "title": "Script",
+        "description": "Confie l’objet à du code : ce que l’auteur a écrit s’exécute à chaque pas."
+      },
       "Trigger": {
         "description": "Ne bloque rien et prévient quand quelque chose entre dans son volume ou en sort.",
         "title": "Détecteur"
@@ -42,6 +46,7 @@
       "mode": "Parcours",
       "radius": "Rayon",
       "restitution": "Rebond",
+      "script": "Fichier",
       "slopeLimit": "Pente",
       "snapDistance": "Accroche",
       "speed": "Vitesse",

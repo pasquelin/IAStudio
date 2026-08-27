@@ -26,7 +26,12 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
   const { t, i18n } = useTranslation()
   const report = usePlay(state => playReportOf(state, documentId))
   const running = report.state !== 'edit'
-  const faults = report.logs.filter(entry => entry.level === 'error')
+  // Both, never one OR the other: a game that has a script fault and an engine error has two
+  // things wrong with it, and showing the first count hid the second.
+  const faults = [
+    ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
+    ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
+  ]
 
   const play = (): void => {
     if (report.state === 'paused') return usePlay.getState().resume(documentId)
@@ -87,7 +92,7 @@ export function PlayBar({ documentId, viewport }: PlayBarProps) {
       {/* A system or a handler that threw is reported and the tick carries on, so without a word
           here the game would simply appear to do nothing. The last one is named in full. */}
       {faults.length > 0 && (
-        <span className="text-warning" title={faults.at(-1)?.message}>
+        <span className="text-warning" title={faults.at(-1)}>
           {t('game.play.faults', { count: faults.length })}
         </span>
       )}
