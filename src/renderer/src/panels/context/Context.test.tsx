@@ -50,6 +50,24 @@ describe('the context panel', () => {
     expect(screen.getByText(/Décrivez une fois/)).toBeTruthy()
   })
 
+  // The `+` of the title row is a glyph a first-time reader has no reason to have looked at, and
+  // the sentence above is where they are: the way in belongs beside it.
+  it('makes the first card from the empty screen itself', async () => {
+    const writeContext = panelOn(noContext())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Créer une première fiche' }))
+
+    expect(writeContext).toHaveBeenCalledWith([
+      { id: expect.any(String), title: '', body: '', active: true, pictures: [] },
+    ])
+  })
+
+  it('offers no way in while the file is one this build will not touch', () => {
+    panelOn({ cards: [], trouble: 'unreadable' })
+
+    expect(screen.queryByRole('button', { name: 'Créer une première fiche' })).toBeNull()
+  })
+
   it('turning a card off takes it out of what is sent, and keeps its text', async () => {
     const writeContext = panelOn({ cards: [card()], trouble: null })
 

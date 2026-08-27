@@ -1,5 +1,7 @@
 {
   "context": {
+    "addFirst": "Create a first card",
+    "addFirstHint": "Adds a blank card, to write from scratch",
     "empty": "This project has no context yet.",
     "emptyHint": "Describe the project’s world, look or limits once: every generation will carry them without you writing them again.",
     "add": "New card",
