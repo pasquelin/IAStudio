@@ -74,6 +74,16 @@ export async function writeExportedGame(
 
   // 🛑 `taken` grows INSIDE the loop: `freeName` is pure, so adding afterwards leaves two
   // `Walk.ts` from two folders both named `Walk.js`, one file overwriting the other.
+  // 🛑 Through `safeFileName`, and deduplicated like the rest: an id comes from the WINDOW over
+  // IPC, so `../../x` would be written wherever it pointed — and two ids that clean to one name
+  // would overwrite each other in silence.
+  const files = new Map<string, string>()
+  for (const scene of scenes) {
+    const name = freeName(`${safeFileName(scene.id, 'scene')}.gltf`, taken)
+    taken.add(name)
+    files.set(scene.id, `scenes/${name}`)
+  }
+
   const named = new Map<string, string>()
   for (const script of scripts) {
     const name = freeName(fileNameOf(script), taken)
@@ -85,12 +95,12 @@ export async function writeExportedGame(
     version: EXPORTED_GAME_VERSION,
     title: request.title,
     entryScene: request.entryScene,
-    scenes: scenes.map(one => ({ id: one.id, title: one.title, file: fileOf(one) })),
+    scenes: scenes.map(one => ({ id: one.id, title: one.title, file: files.get(one.id) ?? '' })),
     scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
     assets,
   }
 
-  for (const scene of scenes) await ports.write(fileOf(scene), scene.content)
+  for (const scene of scenes) await ports.write(files.get(scene.id) ?? '', scene.content)
   for (const script of scripts)
     await ports.write(`scripts/${named.get(script.script)}`, script.code)
 
@@ -105,14 +115,6 @@ export async function writeExportedGame(
     missing,
   }
 }
-
-/**
- * Where a scene's glTF lands.
- *
- * 🛑 Through `safeFileName`: a document id comes from the WINDOW over IPC, and `scenes/../../x`
- * would be written wherever it pointed. Nothing composed here rides in raw.
- */
-const fileOf = (scene: SceneToExport): string => `scenes/${safeFileName(scene.id, 'scene')}.gltf`
 
 /** Every asset a scene names, once, in the order they were met. */
 function assetIdsIn(scenes: readonly SceneToExport[]): readonly string[] {

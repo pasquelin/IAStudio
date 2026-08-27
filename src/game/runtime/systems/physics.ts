@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { ComponentType } from '@shared/domain/component'
+import type { Transform, Vector3 } from '@shared/domain/transform'
 import { eulerFromQuaternion, quaternionFromEuler } from '../../physics/quaternion'
 import type { ColliderShape } from '../../physics/shape'
 import type { BodyDescriptor, BodyKind, BodyPose } from '../../ports/physicsPort'
@@ -36,6 +37,19 @@ export type PhysicsSystemOptions = {
   characters: Characters
   /** Bodies belonging to no entity: the scene's own floor, which is not a node. */
   statics?: readonly BodyDescriptor[]
+  /**
+   * Where an entity stands in the WORLD, when its transform is not already that.
+   *
+   * 🛑 The physics knows no hierarchy: a body is placed in world space, and an entity hanging
+   * from a group carries a LOCAL transform. Absent, the two are the same thing.
+   */
+  worldOf?: (entity: Entity) => Transform
+  /**
+   * A world pose written back into the entity's own frame — the other half of `worldOf`.
+   *
+   * `null` when the two are the same thing, which spares an object per body per step.
+   */
+  localOf?: (entity: Entity, position: Vector3, rotation: Vector3) => Transform | null
 }
 
 /**
@@ -82,7 +96,7 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
         // either, and retrying would rebuild a geometry sixty times a second. Why it could not is
         // the STUDIO's to say — `shapeOf` is the only thing here that ever answers nothing.
         known.add(entity.id)
-        const descriptor = bodyOf(entity, options.shapeOf, characters)
+        const descriptor = bodyOf(entity, options, characters)
         if (descriptor) fresh.push(descriptor)
       }
     }
@@ -102,7 +116,13 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
     if (fresh.length > 0) refuse(world, world.ports.physics.add(fresh))
   }
 
-  /** Where the game has put its kinematic bodies — a `Movement` platform is the ordinary case. */
+  /**
+   * Where the game has put its kinematic bodies — a `Movement` platform is the ordinary case.
+   *
+   * 🛑 Through `worldOf` like `bodyOf`, and this was the third traversal: placed raw, a platform
+   * under a group was built at its composed place and then sent to its LOCAL one on the first
+   * step — and `poses` skips a kinematic, so nothing ever brought it back.
+   */
   const drive = (world: World): void => {
     poses.length = 0
     for (let index = 0; index < driven.length; index++) {
@@ -118,9 +138,13 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
         }
         pool.push(pose)
       }
+      // 🛑 Through `worldOf` like `bodyOf`, and this is the THIRD traversal: placed raw, a
+      // platform under a group was built at its composed place and sent to its LOCAL one on the
+      // first step — and `poses` skips a kinematic, so nothing ever brought it back.
+      const at = options.worldOf ? options.worldOf(entity) : entity.transform
       pose.body = entity.id
-      pose.position = entity.transform.position
-      quaternionFromEuler(entity.transform.rotation, pose.rotation)
+      pose.position = at.position
+      quaternionFromEuler(at.rotation, pose.rotation)
       poses.push(pose)
     }
     world.ports.physics.place(poses)
@@ -144,7 +168,7 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
       drive(world)
       characters.settle(port.moveCharacters(characters.intents(world, dt)))
       port.step(dt)
-      settle(world)
+      settle(world, options.localOf)
       announce(world, triggered)
     },
 
@@ -167,7 +191,7 @@ const kinematic = (entity: Entity): boolean =>
 
 function bodyOf(
   entity: Entity,
-  shapeOf: PhysicsSystemOptions['shapeOf'],
+  options: PhysicsSystemOptions,
   characters: Characters,
 ): BodyDescriptor | null {
   const walker = componentOf(entity, 'CharacterController')
@@ -175,7 +199,7 @@ function bodyOf(
   const rigid = componentOf(entity, 'RigidBody')
   const shape: ColliderShape | null = walker
     ? { kind: 'capsule', ...characters.capsuleOf(entity) }
-    : shapeOf(entity)
+    : options.shapeOf(entity)
   if (!shape) return null
 
   // 🛑 `fixed` with no `RigidBody` beside it: a `Collider` alone is how an author says SOLID —
@@ -185,7 +209,7 @@ function bodyOf(
     body: entity.id,
     kind: walker ? 'kinematic' : (BODY_KINDS.find(one => one === said) ?? 'fixed'),
     shape,
-    transform: entity.transform,
+    transform: options.worldOf ? options.worldOf(entity) : entity.transform,
     friction: numberOf(collider, 'friction', COLLIDER.friction),
     restitution: numberOf(collider, 'restitution', COLLIDER.restitution),
     mass: numberOf(rigid, 'mass', BODY.mass),
@@ -196,17 +220,33 @@ function bodyOf(
   }
 }
 
-/** What the step moved, written back into the entity it belongs to. */
-function settle(world: World): void {
+/** What the step moved, written back into the entity it belongs to — in ITS own frame. */
+function settle(world: World, localOf: PhysicsSystemOptions['localOf']): void {
   for (const pose of world.ports.physics.poses()) {
     const entity = world.entities.get(pose.body)
     if (!entity) continue
-    entity.transform.position.x = pose.position.x
-    entity.transform.position.y = pose.position.y
-    entity.transform.position.z = pose.position.z
-    eulerFromQuaternion(pose.rotation, entity.transform.rotation)
+
+    const turned = eulerFromQuaternion(pose.rotation, TURNED)
+    const local = localOf ? localOf(entity, pose.position, turned) : null
+    const position = local?.position ?? pose.position
+    const rotation = local?.rotation ?? turned
+    entity.transform.position.x = position.x
+    entity.transform.position.y = position.y
+    entity.transform.position.z = position.z
+    entity.transform.rotation.x = rotation.x
+    entity.transform.rotation.y = rotation.y
+    entity.transform.rotation.z = rotation.z
   }
 }
+
+/**
+ * Reused: a world with no hierarchy allocates nothing at all in `settle`.
+ *
+ * 🛑 One WITH a hierarchy does — `localOf` builds a matrix and decomposes it, some thirteen
+ * objects a body a step. Measured on three 0.185: 0,23 µs a call, so 0,05 ms at 200 bodies,
+ * against a 16,7 ms budget. Said rather than hidden; it is churn, not time.
+ */
+const TURNED: Vector3 = { x: 0, y: 0, z: 0 }
 
 /** What touched what, said on the bus. A body that is no entity has nothing to say it OF. */
 function announce(world: World, triggered: Set<string>): void {

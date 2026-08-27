@@ -1,5 +1,5 @@
 import { COMPONENTS } from '@shared/domain/componentRegistry'
-import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
+import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
@@ -14,6 +14,7 @@ import { createWorld, type System, type World } from '@game/runtime/world'
 import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
+import { createHierarchy } from './hierarchy'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -87,24 +88,21 @@ function systemsFor(
   scripts: ScriptSystemOptions,
 ): readonly System[] {
   const byId = new Map(state.nodes.map(node => [node.id, node]))
+  const hierarchy = createHierarchy(byId)
+  const placed = (entity: Entity): Transform => hierarchy.worldOf(entity.id, entity.transform)
   const characters = createCharacters()
 
   /**
-   * 🛑 Nothing for a node hanging from another, and that is a HOLE rather than a decision: an
-   * entity's transform is LOCAL, the renderer composes the parents and the physics does not, so
-   * a body under a group would stand somewhere the mesh is not. Refused and named, because a
-   * collider in the wrong place is worse than none. 🛑 STILL OPEN after the prefab lot, which
-   * keeps a prefab's hierarchy: a child carrying a collider is refused, and one carrying none is
-   * never even looked at. Closing it means composing the parents here — a lot of its own.
+   * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
+   * physics arrived: the body goes in at its composed place — see `hierarchy` — and what the step
+   * moves is written back into the frame the node hangs in.
+   *
+   * What stays true: the SHAPE is the node's own, so a scaled parent stretches the mesh and not
+   * the collider. Named here rather than discovered.
    */
   const shapeOf = (entity: Entity): ColliderShape | null => {
     const node = byId.get(entity.id)
     if (!node) return null
-
-    if (node.parentId !== null) {
-      ports.log.write('warn', `${node.name} hangs from another object: physics leaves it alone`)
-      return null
-    }
 
     const collider = colliderFromNode(node)
     if (!collider) {
@@ -128,8 +126,14 @@ function systemsFor(
       assetRef: id => ({ kind: 'asset', id }),
     }),
     createMovementSystem(),
-    createPhysicsSystem({ shapeOf, characters, statics: groundOf(state) }),
-    createPlayCameraSystem(characters),
+    createPhysicsSystem({
+      shapeOf,
+      characters,
+      statics: groundOf(state),
+      worldOf: placed,
+      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
+    }),
+    createPlayCameraSystem(characters, placed),
   ]
 }
 

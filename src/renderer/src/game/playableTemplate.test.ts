@@ -39,9 +39,10 @@ describe('what « Nouveau document ▸ Third Person » opens on', () => {
 
     expect(views).toHaveLength(1)
     expect(views[0]).not.toBeNull()
-    // 🛑 And something to stand ON: the camera system answers for anyone carrying a controller,
-    // floor or no floor — measured, the three templates handed the physics one body, the walker.
-    expect(bodies.filter(one => one.kind === 'fixed').length).toBeGreaterThan(0)
+    // 🛑 And a SET to stand on: the camera system answers for anyone carrying a controller, floor
+    // or no floor. Measured — one body when the physics refused a parented node, 31 once it
+    // composed them, so a number that low again means the whole set went back to being a picture.
+    expect(bodies.filter(one => one.kind === 'fixed').length).toBeGreaterThan(20)
   })
 
   it('pulls whoever walks it down, which is what makes a floor mean anything', () => {

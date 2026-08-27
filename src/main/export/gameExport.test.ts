@@ -103,6 +103,25 @@ describe('a game written to run with no studio', () => {
     })
 
     expect([...written.keys()].every(path => !path.includes('..'))).toBe(true)
+    expect([...written.keys()]).toContain('scenes/evil.gltf')
+  })
+
+  /** 🛑 Two ids that clean to one name would otherwise overwrite each other, in silence. */
+  it('gives two scenes that clean to one name a file each', async () => {
+    const { ports, written } = writing()
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: [
+        { id: '../a', title: 'A', content: SCENE('a') },
+        { id: '..\\a', title: 'B', content: SCENE('b') },
+      ],
+    })
+
+    expect([...written.keys()].filter(path => path.startsWith('scenes/')).sort()).toEqual([
+      'scenes/a-2.gltf',
+      'scenes/a.gltf',
+    ])
   })
 
   /** The page is markup and a title is a person's words: one may close a tag inside the other. */

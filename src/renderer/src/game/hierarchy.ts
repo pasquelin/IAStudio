@@ -1,5 +1,6 @@
-import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
-import type { Transform, Vector3 as Plain } from '@shared/domain/transform'
+import { Matrix4 } from 'three'
+import type { Transform, Vector3 } from '@shared/domain/transform'
+import { matrixOfTransform, transformOfMatrix } from '@/engines/csg/csgMatrix'
 import type { SceneNode } from '@/engines/scene/sceneState'
 
 /**
@@ -7,74 +8,59 @@ import type { SceneNode } from '@/engines/scene/sceneState'
  *
  * 🛑 What closes the hole `worldFromScene` carried since the physics arrived: an entity's
  * transform is LOCAL, the renderer composes its parents and the physics does not, so a collider
- * under a group stood where the mesh was not. Composed here, once per build, rather than refused.
+ * under a group stood where the mesh was not.
+ *
+ * 🛑 Nothing is CACHED, and that is the point: a parent moves during a game — a `Movement` on a
+ * group, a dynamic body settling — and a matrix remembered at build made a child's mesh fall
+ * twice as fast as its collider. Measured at 0,23 µs a call, which 200 bodies pay in 0,05 ms.
+ *
+ * 🛑 A parent scaled UNEVENLY shears the matrix, and `decompose` cannot describe shear: the
+ * rotation this hands back is then wrong. The same reserve `csgMatrix` writes, and ADR-25.
  */
 export type Hierarchy = {
-  /** The node's place with every parent composed in. Its own transform when it has none. */
-  worldOf: (nodeId: string) => Transform
+  /** The node's place with every parent composed in. Its own transform when the scene lost it. */
+  worldOf: (nodeId: string, own: Transform) => Transform
   /**
-   * A world position and rotation, written back into the node's own frame.
+   * A world pose written back into the node's own frame, or `null` when the node has no parent
+   * and the two are the same thing — which spares an entity per body per step.
    *
    * The inverse of the PARENT's matrix, never of the node's own: what the physics moved is the
    * body, and what the document holds is where it sits inside whatever it hangs from.
    */
-  localOf: (nodeId: string, position: Plain, rotation: Plain) => Transform
+  localOf: (nodeId: string, position: Vector3, rotation: Vector3) => Transform | null
 }
 
-export function createHierarchy(nodes: readonly SceneNode[]): Hierarchy {
-  const byId = new Map(nodes.map(node => [node.id, node]))
-  const worlds = new Map<string, Matrix4>()
-
-  const matrixOf = (nodeId: string): Matrix4 => {
-    const held = worlds.get(nodeId)
-    if (held) return held
-
-    const node = byId.get(nodeId)
-    // A parent the scene does not hold: the node stands where its own transform says.
-    const own = node ? matrixFrom(node.transform) : new Matrix4()
-    const composed =
-      node?.parentId == null ? own : new Matrix4().multiplyMatrices(matrixOf(node.parentId), own)
-    worlds.set(nodeId, composed)
-    return composed
+export function createHierarchy(byId: ReadonlyMap<string, SceneNode>): Hierarchy {
+  /** The chain above a node, composed. Identity for one that hangs from nothing the scene holds. */
+  const above = (parentId: string | null): Matrix4 => {
+    const world = new Matrix4()
+    // No visited set, as `carve.ts` walks this same chain without one: `canReparent` refuses a
+    // circular parent, and a cycle would be a document no gesture of the studio can write.
+    let walker = parentId === null ? undefined : byId.get(parentId)
+    while (walker) {
+      world.premultiply(matrixOfTransform(walker.transform))
+      walker = walker.parentId === null ? undefined : byId.get(walker.parentId)
+    }
+    return world
   }
 
+  const parentOf = (nodeId: string): string | null => byId.get(nodeId)?.parentId ?? null
+
   return {
-    worldOf: nodeId => transformFrom(matrixOf(nodeId)),
+    worldOf: (nodeId, own) => {
+      const parentId = parentOf(nodeId)
+      if (parentId === null) return own
+
+      return transformOfMatrix(above(parentId).multiply(matrixOfTransform(own)))
+    },
 
     localOf: (nodeId, position, rotation) => {
-      const node = byId.get(nodeId)
-      const world = matrixFrom({
-        position,
-        rotation,
-        scale: node?.transform.scale ?? { x: 1, y: 1, z: 1 },
-      })
-      if (node?.parentId == null) return transformFrom(world)
+      const parentId = parentOf(nodeId)
+      if (parentId === null) return null
 
-      const parent = new Matrix4().copy(matrixOf(node.parentId)).invert()
-      return transformFrom(new Matrix4().multiplyMatrices(parent, world))
+      const held = byId.get(nodeId)?.transform.scale ?? { x: 1, y: 1, z: 1 }
+      const world = matrixOfTransform({ position, rotation, scale: held })
+      return transformOfMatrix(above(parentId).invert().multiply(world))
     },
-  }
-}
-
-const matrixFrom = (transform: Transform): Matrix4 =>
-  new Matrix4().compose(
-    new Vector3(transform.position.x, transform.position.y, transform.position.z),
-    new Quaternion().setFromEuler(
-      new Euler(transform.rotation.x, transform.rotation.y, transform.rotation.z),
-    ),
-    new Vector3(transform.scale.x, transform.scale.y, transform.scale.z),
-  )
-
-function transformFrom(matrix: Matrix4): Transform {
-  const position = new Vector3()
-  const rotation = new Quaternion()
-  const scale = new Vector3()
-  matrix.decompose(position, rotation, scale)
-  const euler = new Euler().setFromQuaternion(rotation)
-
-  return {
-    position: { x: position.x, y: position.y, z: position.z },
-    rotation: { x: euler.x, y: euler.y, z: euler.z },
-    scale: { x: scale.x, y: scale.y, z: scale.z },
   }
 }
