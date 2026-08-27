@@ -147,6 +147,8 @@ function base(catalog: AsyncCatalog) {
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
     // anything by not caring.
     askUser: vi.fn(async () => 2),
+    // None running unless a case says so: no question is raised, which is the ordinary studio.
+    runningJobCount: () => 0,
   }
 }
 
@@ -202,6 +204,44 @@ describe('project handlers', () => {
       await expect(invoke(CHANNELS.projectCreate, PROJECT)).resolves.toBeDefined()
 
       expect(injected.record).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * The one decision this channel makes, and the reason it is not folded into `project:close`:
+   * it must be answerable BEFORE the window asks about unsaved documents.
+   */
+  describe('asking whether the project may close', () => {
+    const closing = (running: number, answer = 0): ProjectHandlerDeps => {
+      const injected = deps(catalog)
+      injected.runningJobCount = () => running
+      injected.askUser = vi.fn(async () => answer)
+      registerProjectHandlers(injected)
+      return injected
+    }
+
+    // The ordinary close, and it must cost nothing: a dialog on every close would be a question
+    // about a situation that is not happening.
+    it('says yes without a word when nothing is running', async () => {
+      const injected = closing(0)
+
+      await expect(invoke(CHANNELS.projectAskLeave)).resolves.toBe(true)
+
+      expect(injected.askUser).not.toHaveBeenCalled()
+    })
+
+    it('asks when a generation is still running, and answers what was pressed', async () => {
+      const injected = closing(2, 1)
+
+      await expect(invoke(CHANNELS.projectAskLeave)).resolves.toBe(true)
+
+      expect(injected.askUser).toHaveBeenCalled()
+    })
+
+    it('refuses the closing when the question is turned down', async () => {
+      closing(2, 0)
+
+      await expect(invoke(CHANNELS.projectAskLeave)).resolves.toBe(false)
     })
   })
 

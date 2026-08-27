@@ -57,8 +57,10 @@ were — it is **Close the project**, in the title bar's project menu, that empt
 
 **A running generation is not lost by closing.** It carries on where it runs, and its result is
 filed in this project — never in another one, even if you open another in the meantime. It does
-leave the generations bar while the project is closed: reopening the project is what brings it
-back, with whatever it produced.
+stay in the generations bar while it runs, but **what it produces will not land in the project
+you open instead**: reopening its own is what brings the result back. **The studio asks you
+first** before letting you leave the project — closing it or swapping it for another — saying how
+many are still running.
 
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel

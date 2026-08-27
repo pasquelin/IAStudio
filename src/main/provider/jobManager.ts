@@ -155,6 +155,14 @@ export type JobManager = {
   cancel: (jobId: string) => Promise<void>
   list: () => Job[]
   /**
+   * How many unfinished generations belong to a project — what the studio asks about before
+   * leaving it. Counted by `projectPath` and not off `list()`: a job whose own project was
+   * closed earlier is still being polled, and would put a stranger in that count.
+   *
+   * A discreet job is machinery and never counts: nobody asked for it and nobody is waiting.
+   */
+  runningIn: (projectPath: string) => number
+  /**
    * Picks up jobs left running by a previous session: polling starts again, and one that
    * finished while the studio was closed is collected into the project it was meant for.
    */
@@ -834,5 +842,11 @@ export function createJobManager({
     },
 
     list: listed,
+
+    runningIn: projectPath =>
+      [...entries.values()].filter(
+        entry =>
+          entry.projectPath === projectPath && !entry.discreet && !isFinished(entry.job.status),
+      ).length,
   }
 }

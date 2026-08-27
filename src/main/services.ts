@@ -347,6 +347,8 @@ export type Services = {
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
   askUser: AskUser
+  /** How many generations have not settled — what closing the project asks about. */
+  runningJobCount: () => number
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
@@ -2097,6 +2099,13 @@ export function createServices(settings: SettingsStore): Services {
     promptContext,
     openInSystem: file => shell.openPath(file),
     askUser,
+    // Nothing to leave means nothing to ask about: `pickedProject` reaches the question on a
+    // studio that has never opened a project, where a job of a project closed earlier would
+    // otherwise be counted.
+    runningJobCount: () => {
+      const current = project.current()
+      return current ? jobs.runningIn(current.path) : 0
+    },
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's
     // contents under the new one. And the open project remembers the switch, so reopening it

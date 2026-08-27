@@ -255,6 +255,10 @@
     "currentHint": "Ce projet est déjà ouvert",
     "createHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit",
     "close": "Fermer le projet",
+    "leaveRunningTitle": "Quitter ce projet pendant que des générations tournent ?",
+    "leaveRunningBody": "Générations en cours : {{count, number}}. Elles continuent, et ce qu’elles produisent sera rangé dans ce projet — vous le retrouverez en le rouvrant. Rien n’en arrivera ailleurs entre-temps.",
+    "leaveRunningConfirm": "Quitter quand même",
+    "leaveRunningCancel": "Rester ici",
     "closeHint": "Ferme les onglets et rend le studio à l’accueil. Le dossier reste où il est, et le projet dans la liste",
     "context": "Contexte du projet",
     "contextHint": "Ouvrir le panneau où s’écrit ce que ce projet raconte"

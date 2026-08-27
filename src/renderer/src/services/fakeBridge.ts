@@ -91,6 +91,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       open: () => Promise.reject(new Error('no project')),
       current: () => Promise.resolve(null),
       close: () => Promise.resolve(),
+      // No generation is running in a test unless it says so, and that is the answer with none.
+      askLeave: () => Promise.resolve(true),
       onChange: noSubscription,
       listFolder: () => Promise.resolve([]),
       searchFolder: () => Promise.resolve([]),

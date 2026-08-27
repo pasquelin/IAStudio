@@ -117,6 +117,7 @@ export type Channels = {
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
   projectClose: 'project:close'
+  projectAskLeave: 'project:ask-leave'
   projectListFolder: 'project:list-folder'
   projectSearchFolder: 'project:search-folder'
   projectWalkFolder: 'project:walk-folder'
@@ -347,6 +348,7 @@ export const CHANNELS: Channels = {
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
   projectClose: 'project:close',
+  projectAskLeave: 'project:ask-leave',
   projectListFolder: 'project:list-folder',
   projectSearchFolder: 'project:search-folder',
   projectWalkFolder: 'project:walk-folder',
@@ -1158,6 +1160,12 @@ export type StudioBridge = {
      * told through `onChange`, exactly as opening another one tells them. The folder is untouched.
      */
     close: () => Promise<void>
+    /**
+     * Whether leaving this project may go ahead, asked when generations are still running: they
+     * survive it, but they leave the bar until this project is opened again, and nothing else in
+     * the studio would say so. `true` with none running — no question is raised.
+     */
+    askLeave: () => Promise<boolean>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
     /**
      * One level of the project folder, `''` being the root. The explorer walks it a folder at a

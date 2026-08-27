@@ -40,6 +40,7 @@ const jobs: JobManager = {
   },
   run: () => Promise.reject(new Error('unused')),
   cancel: () => Promise.resolve(),
+  runningIn: () => 0,
   list: () => [],
   resume: () => {},
 }
