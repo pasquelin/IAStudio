@@ -21,7 +21,7 @@ export function ScriptDocument({ documentId }: ScriptDocumentProps) {
   const [ready, setReady] = useState(false)
   useRestoredDocument(documentId)
   const script = scriptRefOf(documentId)
-  const source = useCode(state => (script === null ? '' : (state.files[script]?.source ?? '')))
+  const revision = useCode(state => state.revision)
   useDocumentTitle(
     documentId,
     useCode(state => (script === null ? false : isCodeDirty(state.files[script]))),
@@ -63,11 +63,13 @@ export function ScriptDocument({ documentId }: ScriptDocumentProps) {
     }
   }, [])
 
-  // 🛑 Guarded on `ready` rather than shown twice: the first open loads eighteen megabytes, and a
-  // text pushed — or a `goto` cleared — while the editor is still null goes nowhere.
+  // 🛑 On `revision`, never on the text: the store is written by every keystroke, and pushing it
+  // back sends the editor a version one gesture behind — which undoes what was just typed, drops
+  // the selection and moves the caret. Only a write from OUTSIDE bumps this.
   useEffect(() => {
-    if (ready && script !== null) editor.current?.show(script, source)
-  }, [ready, script, source])
+    if (!ready || script === null) return
+    editor.current?.show(script, useCode.getState().files[script]?.source ?? '')
+  }, [ready, script, revision])
 
   useEffect(() => {
     if (!goto || goto.script !== script || !ready) return
