@@ -17,6 +17,13 @@ export type CodeFile = {
 
 export type CodeStoreState = {
   files: Record<string, CodeFile>
+  /**
+   * 🛑 Bumped by what writes a script from OUTSIDE the editor — a read off disk, a model — and
+   * never by a keystroke. It is what the editor watches: pushing the store's text back on every
+   * letter typed sends a version that is one gesture behind, which undoes the gesture, drops the
+   * selection and moves the caret.
+   */
+  revision: number
   problems: readonly CodeProblem[]
   /**
    * Where the cursor is wanted next, put there by whoever names a place — a problems row, or a
@@ -50,6 +57,7 @@ export type CodeStoreState = {
 
 export const useCode = create<CodeStoreState>()((set, get) => ({
   files: {},
+  revision: 0,
   problems: [],
   goto: null,
 
@@ -76,6 +84,7 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
 
       return {
         files,
+        revision: state.revision + 1,
         // Dropped with the walk: a problem of the project before this one names a script that is
         // no longer there, and clicking it would open a tab on a file nothing holds.
         problems: state.problems.filter(problem => problem.script in files),
@@ -102,6 +111,7 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
 
     set(state => ({
       files: { ...state.files, [script]: { script, saved: held?.saved ?? '', source } },
+      revision: state.revision + 1,
     }))
     return true
   },
@@ -111,7 +121,10 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
   arrived: () => set({ goto: null }),
 
   installed: (script, source) => {
-    set(state => ({ files: { ...state.files, [script]: { script, saved: source, source } } }))
+    set(state => ({
+      files: { ...state.files, [script]: { script, saved: source, source } },
+      revision: state.revision + 1,
+    }))
   },
 
   committed: (script, source) => {

@@ -7,7 +7,7 @@ const WALK = 'script:Scripts/Walk.ts'
 
 describe('the scripts an editor holds', () => {
   beforeEach(() => {
-    useCode.setState({ files: {}, problems: [] })
+    useCode.setState({ files: {}, problems: [], revision: 0 })
     useDocuments.setState({ documents: {}, activeId: null })
   })
 
@@ -87,6 +87,23 @@ describe('the scripts an editor holds', () => {
     useCode.getState().edited('script:A.ts', 'one')
 
     expect(useCode.getState().files['script:A.ts']).toBeUndefined()
+  })
+
+  /**
+   * 🛑 A keystroke must NOT bump the revision: the editor pushes the store's text back whenever
+   * it does, and the text it gets is one gesture behind — the letter typed comes back undone,
+   * the selection is dropped and the caret moves. Only a write from outside may.
+   */
+  it('bumps its revision for a write from outside, and never for a keystroke', () => {
+    useCode.getState().installed('script:A.ts', 'one')
+    const installed = useCode.getState().revision
+
+    useCode.getState().edited('script:A.ts', 'two')
+    expect(useCode.getState().revision).toBe(installed)
+
+    // A read off disk is the other half: that one must reach the editor.
+    useCode.getState().installed('script:A.ts', 'three')
+    expect(useCode.getState().revision).toBeGreaterThan(installed)
   })
 
   /** 🛑 A script born in a tab has no file for the walk to find, and a Play re-reads them all. */
