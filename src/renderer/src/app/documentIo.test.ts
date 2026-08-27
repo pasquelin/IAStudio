@@ -56,6 +56,8 @@ import {
   restoreDocument,
   saveDocument,
   saveDocumentAs,
+  settleUnsavedWork,
+  settleUnsavedWorkForProjectChange,
   unsavedDocumentIds,
 } from './documentIo'
 import { sceneFromPayloadFile } from './sceneDocument'
@@ -2044,6 +2046,51 @@ describe('closing a document', () => {
 
     await expect(closeDocument(documentId)).resolves.toBe(true)
     expect(write).not.toHaveBeenCalled()
+    expect(useDocuments.getState().documents[documentId]).toBeUndefined()
+  })
+
+  /**
+   * Leaving a project may still not happen — a folder that has gone, a creation turned down at
+   * the second dialog — and the questions are asked before it is tried. Forgetting on "discard"
+   * threw the work away for a switch that never took place; `refreshDocuments` is what drops
+   * these tabs, and it only runs once the change has landed.
+   */
+  it('keeps a discarded document until the project change it was asked for happens', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({
+      documents: { confirmClose: () => Promise.resolve<CloseChoice>('discard') },
+    })
+
+    await expect(settleUnsavedWorkForProjectChange()).resolves.toBe(true)
+
+    expect(useDocuments.getState().documents[documentId]).toBeDefined()
+    expect(unsavedDocumentIds()).toEqual([documentId])
+  })
+
+  // Saving is the one answer that stands whether or not the change goes through: it is what was
+  // asked for, and the work is on disk either way.
+  it('writes a document it was told to save, and keeps its tab', async () => {
+    const documentId = await openDirtyScene()
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+    installFakeBridge({
+      documents: { write, confirmClose: () => Promise.resolve<CloseChoice>('save') },
+    })
+
+    await expect(settleUnsavedWorkForProjectChange()).resolves.toBe(true)
+
+    expect(write).toHaveBeenCalledTimes(1)
+    expect(useDocuments.getState().documents[documentId]).toBeDefined()
+  })
+
+  // The window IS going, so the other one still forgets — `guardUnsavedWork` has nothing after it.
+  it('still forgets what it was told to discard when the window is leaving', async () => {
+    const documentId = await openDirtyScene()
+    installFakeBridge({
+      documents: { confirmClose: () => Promise.resolve<CloseChoice>('discard') },
+    })
+
+    await expect(settleUnsavedWork()).resolves.toBe(true)
+
     expect(useDocuments.getState().documents[documentId]).toBeUndefined()
   })
 

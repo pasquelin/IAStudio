@@ -89,6 +89,10 @@
         "title": "Ouvrir un dossier de projet",
         "description": "Ouvre un projet depuis un chemin absolu de cette machine, sans lever le dialogue système qu’une personne utiliserait. Répond si le dossier était bien un projet."
       },
+      "projectClose": {
+        "title": "Fermer le projet ouvert",
+        "description": "Referme le projet ouvert et laisse le studio sans projet : les panneaux se vident et le catalogue cesse de répondre. Le dossier n’est pas touché et reste dans les projets récents."
+      },
       "projectCreate": {
         "title": "Créer un dossier de projet",
         "description": "Crée un projet à un chemin absolu de cette machine et l’ouvre, sans lever le dialogue système qu’une personne utiliserait."

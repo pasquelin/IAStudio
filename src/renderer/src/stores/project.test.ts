@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Project, RecentProject } from '@shared/domain/project'
+import type * as DocumentIo from '@/app/documentIo'
 import { installFakeBridge } from '@/services/fakeBridge'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { FileOutcome } from '@shared/domain/fileOp'
@@ -11,6 +12,14 @@ import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
 vi.mock('@/app/orphanTabs', () => ({ closeOrphanTabs }))
+
+// Only the question: `refreshDocuments` on the same module is what every case below leans on,
+// and a whole fake of it would leave `followProject` asserting nothing.
+const settleUnsavedWorkForProjectChange = vi.hoisted(() => vi.fn(async () => true))
+vi.mock('@/app/documentIo', async importOriginal => ({
+  ...(await importOriginal<typeof DocumentIo>()),
+  settleUnsavedWorkForProjectChange,
+}))
 
 const MANIFEST = { version: 1, name: 'demo', createdAt: '', updatedAt: '' }
 
@@ -30,6 +39,8 @@ const TOAST: ActivityEntry = {
 beforeEach(() => {
   useProject.setState({ project: null, known: false })
   closeOrphanTabs.mockClear()
+  settleUnsavedWorkForProjectChange.mockClear()
+  settleUnsavedWorkForProjectChange.mockResolvedValue(true)
   installFakeBridge()
 })
 
@@ -190,6 +201,40 @@ describe('settling the tabs of a project being followed', () => {
   })
 })
 
+/** Switching to a project the shelf already holds — the menu's rows and the home's list. */
+describe('opening a folder the studio already knows', () => {
+  beforeEach(() => {
+    useProject.setState({ project: { path: '/projects/summer', manifest: MANIFEST }, known: true })
+  })
+
+  it('switches to it once the unsaved work has been answered for', async () => {
+    const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
+    installFakeBridge({ project: { open } })
+
+    await expect(useProject.getState().open('/projects/winter')).resolves.toBe(true)
+
+    expect(open).toHaveBeenCalledWith('/projects/winter')
+  })
+
+  it('stays where it is when that question is cancelled', async () => {
+    const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
+    installFakeBridge({ project: { open } })
+    settleUnsavedWorkForProjectChange.mockResolvedValue(false)
+
+    await expect(useProject.getState().open('/projects/winter')).resolves.toBe(false)
+
+    expect(open).not.toHaveBeenCalled()
+    expect(useProject.getState().project?.path).toBe('/projects/summer')
+  })
+
+  // Choosing the row already ticked means "yes, still" — there is nothing to answer for.
+  it('asks nothing at all for the project already in front', async () => {
+    await expect(useProject.getState().open('/projects/summer')).resolves.toBe(true)
+
+    expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
+  })
+})
+
 /**
  * Every caller does `void openPicked()` — the home's tools, the rail, the native menu and now
  * the explorer's empty state. A refusal left to throw was therefore an unhandled rejection,
@@ -208,6 +253,31 @@ describe('picking a folder in the dialog', () => {
 
     expect(open).toHaveBeenCalledWith('/p')
     expect(useProject.getState().project?.path).toBe('/p')
+  })
+
+  /**
+   * After the folder is chosen and before anything is torn down. The other order put a question
+   * about documents in front of someone who had just changed their mind about the picker.
+   */
+  it('asks about unsaved work only once a folder has been chosen', async () => {
+    const open = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
+    installFakeBridge({ ...picking(null), project: { open } })
+
+    await useProject.getState().openPicked()
+
+    expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('opens nothing when that question is cancelled', async () => {
+    const open = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
+    installFakeBridge({ ...picking('/p'), project: { open } })
+    settleUnsavedWorkForProjectChange.mockResolvedValue(false)
+
+    await useProject.getState().openPicked()
+
+    expect(open).not.toHaveBeenCalled()
+    expect(useProject.getState().project).toBeNull()
   })
 
   it('survives a folder that will not open', async () => {
@@ -282,6 +352,89 @@ describe('picking a folder in the dialog', () => {
     await useProject.getState().createPicked()
 
     expect(pickPath).toHaveBeenCalledWith('folder', '/Users/someone/Projets')
+  })
+})
+
+/**
+ * Leaving the project with none in its place — a different gesture from dropping its row, which
+ * the section below covers: the shelf keeps the project, and the studio lands back on the home.
+ */
+describe('closing the open project', () => {
+  const OPEN: RecentProject = {
+    path: '/projects/summer',
+    name: 'Summer',
+    openedAt: '2026-08-10T09:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    useProject.setState({ project: { path: OPEN.path, manifest: MANIFEST }, known: true })
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: {
+          ...state.settings.storage,
+          recentProjects: [OPEN],
+          lastProject: OPEN.path,
+        },
+      },
+    }))
+  })
+
+  /**
+   * `refreshDocuments` drops every open document without unloading anything, so no
+   * `beforeunload` ever sees a project leave — `guardUnsavedWork` writes that trou in clear.
+   * The question therefore belongs to the gesture, and a no has to leave everything standing.
+   */
+  it('leaves the project open when the question about unsaved work is cancelled', async () => {
+    const close = vi.fn(() => Promise.resolve())
+    installFakeBridge({ project: { close } })
+    settleUnsavedWorkForProjectChange.mockResolvedValue(false)
+
+    await expect(useProject.getState().close()).resolves.toBe(false)
+
+    expect(close).not.toHaveBeenCalled()
+    expect(useProject.getState().project).not.toBeNull()
+  })
+
+  it('asks the main process and leaves the studio with no project', async () => {
+    const close = vi.fn(() => Promise.resolve())
+    installFakeBridge({ project: { close } })
+
+    await useProject.getState().close()
+
+    expect(close).toHaveBeenCalled()
+    expect(useProject.getState().project).toBeNull()
+  })
+
+  /**
+   * `startup: 'lastProject'` is the default, so a closing that left the pointer behind would be
+   * undone by the next launch: the project reopens, and nothing says why. The shelf is NOT
+   * touched with it — the row is what the project is reopened from, and that is the whole
+   * difference with forgetting one.
+   */
+  it('clears the startup pointer and leaves the shelf alone', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().close()
+
+    expect(write).toHaveBeenCalledWith({ storage: { lastProject: undefined } })
+  })
+
+  /**
+   * A second window reaches here on the same gesture, after the first one has already closed.
+   * Writing the settings then would clear a pointer another project has since claimed.
+   */
+  it('writes nothing when no project is open', async () => {
+    const close = vi.fn(() => Promise.resolve())
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    useProject.setState({ project: null, known: true })
+    installFakeBridge({ project: { close }, settings: { write } })
+
+    await useProject.getState().close()
+
+    expect(close).not.toHaveBeenCalled()
+    expect(write).not.toHaveBeenCalled()
   })
 })
 

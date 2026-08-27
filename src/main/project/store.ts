@@ -152,7 +152,11 @@ export type ProjectStore = {
    * quit right after a save does not leave the write it started behind.
    */
   settled: () => Promise<void>
-  close: () => void
+  /**
+   * Leaves no project open. Settles first, as `activate` does before a swap: what is still
+   * queued belongs to the project being left, and its catalogue is about to stop answering.
+   */
+  close: () => Promise<void>
 }
 
 /**
@@ -499,7 +503,20 @@ export function createProjectStore({
 
     settled: writes.settled,
 
-    close: () => {
+    close: async () => {
+      // The PATH, not the object: `touch` replaces the project with a new one carrying a fresh
+      // stamp on every document saved, and an autosave landing during the settling below would
+      // make an identity check read as "another project opened" on the very same folder.
+      const leaving = project?.path
+      // Nothing open: a second window asking, or a direct call on the channel. Announcing a
+      // change nobody made re-arms the folder watch and republishes the machine for nothing.
+      if (leaving === undefined) return
+
+      await Promise.all([settle?.(), writes.settled()])
+      // `projectOpen` is an independent handler, so a project opened while this awaited would
+      // otherwise be the one torn down here.
+      if (project?.path !== leaving) return
+
       close()
       onChange(null)
     },

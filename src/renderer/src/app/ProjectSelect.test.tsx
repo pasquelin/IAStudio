@@ -134,6 +134,30 @@ describe('ProjectSelect', () => {
     expect(revealTool).toHaveBeenCalledWith('context')
   })
 
+  /**
+   * The gesture the shelf's « retirer de la liste » is NOT: that one drops a row and leaves the
+   * project open, which is what made the explorer go on showing a project no longer on the shelf.
+   * What the closing writes to the settings is held in the store's own tests.
+   */
+  it('closes the project in front', async () => {
+    const close = vi.fn(() => Promise.resolve())
+    installFakeBridge({ project: { close } })
+    given(summer, recent('Summer', 'Winter'))
+    render(<ProjectSelect />)
+    await openMenu('Summer')
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Fermer le projet' }))
+
+    await waitFor(() => expect(close).toHaveBeenCalled())
+  })
+
+  it('offers nothing to close while no project is open', async () => {
+    render(<ProjectSelect />)
+    await openMenu('Aucun projet ouvert')
+
+    expect(screen.queryByRole('menuitem', { name: 'Fermer le projet' })).toBeNull()
+  })
+
   it('offers no context to edit while no project is open', async () => {
     render(<ProjectSelect />)
     await openMenu('Aucun projet ouvert')

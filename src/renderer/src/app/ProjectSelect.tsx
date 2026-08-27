@@ -1,4 +1,9 @@
-import { mdiFolderOpenOutline, mdiFolderOutline, mdiFolderPlusOutline } from '@mdi/js'
+import {
+  mdiFolderOpenOutline,
+  mdiFolderOutline,
+  mdiFolderPlusOutline,
+  mdiFolderRemoveOutline,
+} from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
@@ -51,10 +56,10 @@ export function ProjectSelect() {
       // a name of "Project" alone would answer to a word nowhere on the button.
       name={t('project.switch', { name })}
       hint={t('project.switchHint')}
-      // The folders, plus the two ways to a project that is not among them, plus the one row that
-      // acts on the OPEN one. Never fewer than two, so this button always has a menu — which is
+      // The folders, plus the two ways to a project that is not among them, plus the two rows that
+      // act on the OPEN one. Never fewer than two, so this button always has a menu — which is
       // why it hands `TitleBarSelect` no `onAct`.
-      rowCount={recent.length + (project ? 3 : 2)}
+      rowCount={recent.length + (project ? 4 : 2)}
       width="max-w-52"
       rows={close => (
         <>
@@ -94,6 +99,17 @@ export function ProjectSelect() {
                 onSelect={() => {
                   close()
                   revealTool('context')
+                }}
+              />
+              {/* The shelf's « forget » is the other gesture: it drops a row and leaves the
+                  project open. This one leaves the studio on the home, with the row where it was. */}
+              <MenuRow
+                label={t('project.close')}
+                icon={mdiFolderRemoveOutline}
+                tip={HINT_RIGHT(t('project.closeHint'))}
+                onSelect={() => {
+                  close()
+                  void useProject.getState().close()
                 }}
               />
               <Separator orientation="horizontal" className="self-center" />

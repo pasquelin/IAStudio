@@ -1030,6 +1030,35 @@ describe('a job that outlives the session', () => {
     expect(remembered()).toEqual([expect.objectContaining({ projectPath: '/projects/kingdom' })])
   })
 
+  /**
+   * The same step aside, for the case « Fermer le projet » made reachable: there is no library
+   * to file into at all. The note is what carries the generation to the next opening — settling
+   * it `failed` would announce a loss for work that is paid for and still on the API.
+   */
+  it('leaves its outputs uncollected when no project is open at all', async () => {
+    let open: string | null = '/projects/kingdom'
+    const collect = vi.fn(() => landing(['asset_local']))
+    const { manager, remembered } = harness({
+      projectPath: () => open,
+      collect,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => {
+          open = null
+          return Promise.resolve(remote('success', { assetIds: ['r_1'] }))
+        },
+        cancel: () => Promise.resolve(),
+      },
+    })
+
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
+    await settled()
+
+    expect(collect).not.toHaveBeenCalled()
+    expect(manager.list()).toEqual([])
+    expect(remembered()).toEqual([expect.objectContaining({ projectPath: '/projects/kingdom' })])
+  })
+
   it('picks up a job once, however often it is handed the same note', async () => {
     const { manager } = harness()
 

@@ -105,6 +105,15 @@ async function openProject(input: Record<string, unknown>): Promise<ActionOutcom
   return (await useProject.getState().open(path)) ? { ok: true } : refused('badInput')
 }
 
+async function closeProject(): Promise<ActionOutcome> {
+  const { project, close } = useProject.getState()
+  if (!project) return refused('noProject')
+
+  // Same shape as `document.close`, and for the same reason: the store raises the only question
+  // that knows whether any work is at stake, so this action commits `none` and answers its no.
+  return (await close()) ? { ok: true } : refused('declined')
+}
+
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
   const bridge = getBridge()
   const path = textOf(input, 'path')
@@ -121,6 +130,7 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
 
 export const FILE_HANDLERS: ActionHandlers = {
   'project.open': openProject,
+  'project.close': closeProject,
   'project.create': createProject,
   'file.facts': facts,
   'file.open': openFile,

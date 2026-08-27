@@ -44,6 +44,25 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /**
+     * No field: there is one open project, and naming it would let a caller close a project that
+     * is not in front of anyone.
+     *
+     * `none` with `asksItself`, as `document.close` is: the store raises the question about
+     * unsaved work, and it is the only one that knows whether there is any. A `studio` level
+     * here asked twice for one gesture, the first time without being able to say what was at
+     * stake. `project.open` deliberately keeps its own level — it reloads a whole catalogue,
+     * which is more than the documents this question is about.
+     */
+    name: 'project.close',
+    titleKey: 'assistant.actions.projectClose.title',
+    descriptionKey: 'assistant.actions.projectClose.description',
+    commitment: 'none',
+    asksItself: true,
+    reach: 'mcp',
+    fields: [],
+  }),
+  action({
     name: 'project.create',
     titleKey: 'assistant.actions.projectCreate.title',
     descriptionKey: 'assistant.actions.projectCreate.description',

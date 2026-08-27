@@ -89,6 +89,10 @@
         "title": "Open a project folder",
         "description": "Opens a project from an absolute path on this machine, without raising the system dialogue a person would use. Answers whether the folder was a project."
       },
+      "projectClose": {
+        "title": "Close the open project",
+        "description": "Closes the open project and leaves the studio with none: every panel empties and the catalogue stops answering. The folder is untouched and stays among the recent projects."
+      },
       "projectCreate": {
         "title": "Create a project folder",
         "description": "Makes a new project at an absolute path on this machine and opens it, without raising the system dialogue a person would use."

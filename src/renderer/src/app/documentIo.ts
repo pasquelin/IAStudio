@@ -1170,6 +1170,21 @@ export async function autosaveOpenDocuments(): Promise<void> {
  * `false` when the user cancelled, or when a save refused — either way the window stays.
  */
 export async function settleUnsavedWork(): Promise<boolean> {
+  return await settleUnsaved(true)
+}
+
+/**
+ * The same questions, for a gesture that may still not happen: a folder that has gone, a
+ * creation the user turns down at the second dialog. Nothing is forgotten here — `refreshDocuments`
+ * drops what the new project does not hold, and it only runs once the change actually landed.
+ *
+ * Forgetting here instead threw the work away for a switch that never took place.
+ */
+export async function settleUnsavedWorkForProjectChange(): Promise<boolean> {
+  return await settleUnsaved(false)
+}
+
+async function settleUnsaved(andForget: boolean): Promise<boolean> {
   return await whileSettling(async () => {
     const answers: Array<{ documentId: string; choice: CloseChoice }> = []
 
@@ -1185,7 +1200,7 @@ export async function settleUnsavedWork(): Promise<boolean> {
       // Same order as `closeDocument`: the file is written before anything is forgotten, so a
       // save that fails leaves the work where it was rather than having already dropped it.
       if (choice === 'save' && !(await saveDocument(documentId))) return false
-      forgetDocument(documentId)
+      if (andForget) forgetDocument(documentId)
     }
 
     return true

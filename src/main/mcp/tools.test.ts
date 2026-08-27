@@ -85,7 +85,11 @@ describe('the registry, published as tools', () => {
   it('says so when the handler raises the studio’s own question', () => {
     const marked = ACTION_REGISTRY.filter(entry => entry.asksItself)
 
-    expect(marked.map(action => action.name).sort()).toEqual(['document.close', 'workspace.open'])
+    expect(marked.map(action => action.name).sort()).toEqual([
+      'document.close',
+      'project.close',
+      'workspace.open',
+    ])
     for (const action of marked) {
       const tool = mcpTools().find(one => one.name === toolName(action.name))
 

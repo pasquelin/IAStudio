@@ -50,9 +50,23 @@ tooltip, along with the whole path, which a narrow panel truncates.
 **Removing asks for no confirmation**: nothing is lost, and reopening the project puts its row
 back. It is the gesture that cleans up a list where a moved folder lingers.
 
+**Removing a project from the list does not close it.** The two gestures are distinct: removing
+erases a row from a list of shortcuts, closing hands the studio back to the home. Removing the row
+of the OPEN project therefore leaves the Explorer, the timeline and the tabs exactly where they
+were — it is **Close the project**, in the title bar's project menu, that empties them.
+
+**A running generation is not lost by closing.** It carries on where it runs, and its result is
+filed in this project — never in another one, even if you open another in the meantime. It does
+leave the generations bar while the project is closed: reopening the project is what brings it
+back, with whatever it produced.
+
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel
 > layout when you change it.
+
+**Leaving a project asks first what to do with unsaved work**, document by document — save it,
+drop it, or give up leaving. That holds for all three ways of leaving one: closing it, opening
+another from the list, picking one in the dialogue. Giving up leaves everything exactly where it was.
 
 ---
 
@@ -205,8 +219,8 @@ lower half of the left column beside the Explorer and Git: all three speak about
 its tree, its history, and what it is about.
 
 The project menu in the title bar leads there too: **The project's context**, between the list of
-projects and the two ways to open another. It is the only one of its rows that acts on the open
-project rather than leaving it.
+projects and the two ways to open another. It is one of the two rows that act on the open project
+rather than leaving it — the other is **Close the project**.
 
 ### Cards, and nothing imposed
 

@@ -53,9 +53,24 @@ tronque.
 **Retirer ne demande pas confirmation** : rien n’est perdu, et rouvrir le projet remet sa ligne.
 C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 
+**Retirer un projet de la liste ne le ferme pas.** Les deux gestes sont distincts : retirer efface
+une ligne d’une liste de raccourcis, fermer rend le studio à l’accueil. Retirer la ligne du projet
+ouvert laisse donc l’Explorateur, la timeline et les onglets exactement où ils étaient — c’est
+**Fermer le projet**, dans le menu du projet de la barre de titre, qui les vide.
+
+**Une génération en cours n’est pas perdue par la fermeture.** Elle continue là où elle tourne, et
+son résultat est rangé dans ce projet-ci — jamais dans un autre, même si vous en ouvrez un autre
+entre-temps. Elle quitte en revanche la barre des générations le temps que le projet est fermé :
+c’est en le rouvrant que vous la retrouverez, avec ce qu’elle a produit.
+
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un
 > document quand vous faites `⌘S`, la disposition des panneaux quand vous la changez.
+
+**Quitter un projet vous demande d’abord ce qu’il faut faire du travail non enregistré**, document
+par document — enregistrer, abandonner, ou renoncer à partir. C’est vrai des trois façons de le
+quitter : le fermer, en ouvrir un autre depuis la liste, en choisir un dans le sélecteur. Renoncer
+laisse tout exactement où c’était.
 
 ---
 
@@ -212,8 +227,8 @@ l'huile » — et vous le récrivez à chaque génération, toute la journée.
 parlent du projet ouvert — son arbre, son histoire, et ce qu'il raconte.
 
 Le menu du projet, dans la barre de titre, y mène aussi : **Contexte du projet**, entre la liste
-des projets et les deux façons d'en ouvrir un autre. C'est la seule de ses lignes qui agit sur le
-projet ouvert au lieu d'en changer.
+des projets et les deux façons d'en ouvrir un autre. C'est l'une des deux lignes qui agissent sur
+le projet ouvert au lieu d'en changer — l'autre est **Fermer le projet**.
 
 ### Des fiches, et rien d'imposé
 

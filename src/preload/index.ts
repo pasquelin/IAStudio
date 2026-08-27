@@ -92,6 +92,7 @@ const bridge: StudioBridge = {
     create: path => ipcRenderer.invoke(CHANNELS.projectCreate, path),
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
     current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
+    close: () => ipcRenderer.invoke(CHANNELS.projectClose),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
     listFolder: (relative, hidden) =>
       ipcRenderer.invoke(CHANNELS.projectListFolder, relative, hidden),
