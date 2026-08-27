@@ -107,9 +107,11 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       if (remembering) remember(entity)
       if (known.has(entity.id)) continue
 
+      // Added only once it NAMES one: a `Script` component dropped and not yet filled in would
+      // otherwise be serialized into every frame and handed to `detach` on its way out.
       const script = textOf(componentOf(entity, 'Script'), 'script', '')
-      known.add(entity.id)
       if (script.length === 0) continue
+      known.add(entity.id)
       fresh.push({ entity: entity.id, script, props: {} })
       freshIds.add(entity.id)
     }

@@ -56,10 +56,20 @@ export type ScriptPort = {
 
 /**
  * How long every script of one RENDERED frame gets, together — spent across however many fixed
- * steps that frame carries, which the clamp of `MAX_FRAME_SECONDS` puts at fifteen. The spike of
- * 2026-08-26 read 200 scripted entities at 0,571 ms, so this is some seven times a full sweep.
+ * steps that frame carries, which the clamp of `MAX_FRAME_SECONDS` puts at fifteen.
+ *
+ * 🛑 Measured 2026-08-27 by `quickjsScripts.bench.ts`: 200 scripted entities carrying components
+ * cost 2,16 ms a frame, so this is spent by some 370 of them — not by the 1 400 the earlier spike
+ * of 0,571 ms suggested, which does not reproduce. A protection, never a target.
  */
 export const SCRIPT_BUDGET_MS = 4
+
+/**
+ * 🛑 What ONE module gets while it is being loaded, which is its top level RUNNING. Separate from
+ * the frame, and it must exist: `while (true) {}` written outside a hook is caught by nothing
+ * else, and a synchronous WebAssembly call is not something a window recovers from.
+ */
+export const SCRIPT_LOAD_BUDGET_MS = 100
 
 /** How many times an instance may throw before it stops being run at all. */
 export const FAULTS_BEFORE_DISARM = 3

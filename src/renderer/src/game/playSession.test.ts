@@ -4,6 +4,8 @@ import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { drawnBy } from './game-fixtures'
+import { createInertPhysics as inertPhysics } from '@game/host/inertPhysics'
+import { createInertScripts } from '@game/host/inertScripts'
 import { startPlay, type FrameDriver } from './playSession'
 
 const scene = (): SceneState => ({
@@ -144,5 +146,30 @@ describe('the camera a game borrows', () => {
     flown.session.stop()
 
     expect(flown.placeView).not.toHaveBeenCalled()
+  })
+
+  /**
+   * 🛑 Both engines are built per PLAY and hold WebAssembly memory no collector reaches: fifty
+   * plays and stops in a session would otherwise leave fifty runtimes alive.
+   */
+  it('closes both engines when the game stops', () => {
+    const physics = { ...inertPhysics(), dispose: vi.fn() }
+    const script = { ...createInertScripts(), dispose: vi.fn() }
+    const frames = handDriven()
+    const session = startPlay({
+      documentId: 'doc-1',
+      renderer: drawnBy({}),
+      editState: () => scene(),
+      input: new EventTarget(),
+      frames: frames.driver,
+      physics,
+      script,
+      onReport: () => {},
+    })
+
+    session.stop()
+
+    expect(physics.dispose).toHaveBeenCalledTimes(1)
+    expect(script.dispose).toHaveBeenCalledTimes(1)
   })
 })

@@ -15,6 +15,7 @@ import { loadOnce } from './loadOnce'
 import {
   FAULTS_BEFORE_DISARM,
   SCRIPT_BUDGET_MS,
+  SCRIPT_LOAD_BUDGET_MS,
   type ScriptModule,
   type ScriptPort,
 } from '../ports/scriptPort'
@@ -51,8 +52,11 @@ function createQuickjsScripts(machine: Engine): ScriptPort {
   let overspent = false
   runtime.setInterruptHandler(() => Date.now() > deadline)
 
+  /** 🛑 Under a deadline of its own: evaluating a module RUNS its top level. */
   const evaluate = (code: string, file: string): ScriptFault | null => {
+    deadline = Date.now() + SCRIPT_LOAD_BUDGET_MS
     const held = context.evalCode(code, file)
+    deadline = Number.POSITIVE_INFINITY
     if (held.error) {
       const said = context.dump(held.error)
       held.error.dispose()
@@ -183,7 +187,13 @@ function createQuickjsScripts(machine: Engine): ScriptPort {
         disarmed.delete(one.entity)
         faultCount.delete(one.entity)
       }
-      return drive(held.detach, [JSON.stringify(leaving)])
+      // 🛑 Outside the frame's budget, and on purpose: a spent frame that skipped this would
+      // leave the instance in the sandbox for ever, still declaring hooks nobody owns.
+      const spare = left
+      left = SCRIPT_LOAD_BUDGET_MS
+      const outcome = drive(held.detach, [JSON.stringify(leaving)])
+      left = spare
+      return outcome
     },
 
     declares: hook => declared.has(hook),

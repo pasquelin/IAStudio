@@ -1,7 +1,7 @@
 /**
  * The npm packages that reach a user's disk: bundled by Vite, loaded at runtime, or shipped
- * beside. Not here on purpose: eslint, prettier, vitest, typescript, electron-builder and the
- * `@types` — a build tool never leaves the machine that ran it.
+ * beside. Not here on purpose: eslint, prettier, vitest, electron-builder and the `@types` — a
+ * build tool never leaves the machine that ran it. `typescript` is the exception, see below.
  *
  * Spelled out rather than derived from `dependencies`: this project bundles React, zustand,
  * dockview and the rest with Vite, so they sit in `devDependencies` while shipping in the binary
@@ -13,7 +13,7 @@
  * `licences.test.ts`, so the list the tests check is the one the collector reads.
  */
 export const SHIPPED: string[] = [
-  // Runtime dependencies, loaded from `node_modules` by the main process.
+  // Runtime dependencies, loaded from `node_modules` rather than bundled.
   '@dimforge/rapier3d-compat',
   '@jitl/quickjs-singlefile-browser-release-sync',
   '@mdi/js',

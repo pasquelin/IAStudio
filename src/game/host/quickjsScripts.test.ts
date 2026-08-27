@@ -148,6 +148,22 @@ describe('the sandbox a game runs its own code in', () => {
     expect(port.declares('onDestroy')).toBe(false)
   })
 
+  /** 🛑 A death that lands on a spent frame still leaves the sandbox, or it stays for ever. */
+  it('lets an entity go even when the frame budget is gone', () => {
+    // The loop burns the frame's budget whole, and e2 is a bystander that outlives it.
+    running('onUpdate() { while (true) {} }')
+    port.load([
+      { script: 'script:Bye.ts', code: compiled('onDestroy(self) { game.log.info("bye") }') },
+    ])
+    port.attach([{ entity: 'e2', script: 'script:Bye.ts', props: {} }])
+    expect(port.declares('onDestroy')).toBe(true)
+
+    const outcome = port.detach([walker({ entity: 'e2' })])
+
+    expect(outcome.intents).toEqual([{ act: 'log', level: 'info', message: 'bye' }])
+    expect(port.declares('onDestroy')).toBe(false)
+  })
+
   it('says which hooks are written, so a caller can skip a crossing whole', () => {
     port.load([{ script: 'script:Walk.ts', code: compiled('onUpdate() {}') }])
     port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: {} }])
@@ -156,12 +172,21 @@ describe('the sandbox a game runs its own code in', () => {
     expect(port.declares('onLateUpdate')).toBe(false)
   })
 
+  /** 🛑 The line the AUTHOR wrote, not the one the host's wrapper shifted it to. */
   it('says where a script threw, with the line an editor would open', () => {
-    const outcome = running('onUpdate() { throw new Error("no") }')
+    port.load([
+      {
+        script: 'script:Walk.ts',
+        code: 'exports.default = defineScript({\n  onUpdate() {\n    throw new Error("no")\n  },\n})',
+      },
+    ])
+    port.attach([{ entity: 'e1', script: 'script:Walk.ts', props: {} }])
+
+    const outcome = port.run('onUpdate', frameOf([walker()]))
 
     expect(outcome.faults[0]?.message).toBe('no')
     expect(outcome.faults[0]?.entity).toBe('e1')
-    expect(outcome.faults[0]?.line).toBeGreaterThan(0)
+    expect(outcome.faults[0]?.line).toBe(3)
   })
 
   /** One bad frame is a bug; three is a script nobody should keep paying for. */
@@ -172,6 +197,20 @@ describe('the sandbox a game runs its own code in', () => {
 
     expect(third.faults[0]?.message).toContain('disarmed')
     expect(port.disarmed()).toEqual(['e1'])
+  })
+
+  /**
+   * 🛑 The load path is a script RUNNING: a loop written outside any hook is caught by nothing
+   * else, and a synchronous WebAssembly call is not something a window comes back from.
+   */
+  it('interrupts a module that will not finish loading', () => {
+    const started = Date.now()
+    const faults = port.load([{ script: 'script:Bad.ts', code: 'while (true) {}' }])
+
+    expect(Date.now() - started).toBeLessThan(2000)
+    expect(faults[0]?.script).toBe('script:Bad.ts')
+    // And the machine is still usable afterwards: one bad module is not the whole sandbox.
+    expect(port.load([{ script: 'script:Walk.ts', code: compiled('onUpdate() {}') }])).toEqual([])
   })
 
   it('refuses a script that names a module, rather than running half of it', () => {

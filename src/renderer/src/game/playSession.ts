@@ -216,8 +216,10 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       deps.frames.stop()
       world.events.clear()
       ports.input.detach()
-      // The engine holds its bodies in WebAssembly memory, which no collector reaches.
+      // Both hold WebAssembly memory no collector reaches, and both are built per PLAY: a
+      // sandbox left open keeps every compiled module of the session it belonged to.
       ports.physics.dispose()
+      ports.script.dispose()
       deps.renderer.apply(deps.editState())
       // The camera is the only studio state a game touches, so it is the only one STOP restores.
       if (watching) deps.renderer.placeView(watching)

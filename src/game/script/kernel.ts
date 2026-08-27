@@ -109,7 +109,8 @@ export const KERNEL = String.raw`
     }
   }
 
-  // The line an editor would open, read off the stack QuickJS writes.
+  // The line an editor would open, read off the stack QuickJS writes. One LESS: the host wraps
+  // every module in a line of its own before evaluating it — see wrapped().
   function faultOf(error, script, entity) {
     var stack = (error && error.stack) || ''
     var at = /\(([^()]*):(\d+):(\d+)\)/.exec(stack)
@@ -117,7 +118,7 @@ export const KERNEL = String.raw`
       script: script,
       entity: entity,
       message: (error && error.message) || String(error),
-      line: at ? Number(at[2]) : 0,
+      line: at ? Math.max(1, Number(at[2]) - 1) : 0,
       column: at ? Number(at[3]) : 0,
     }
   }

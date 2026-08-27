@@ -88,7 +88,9 @@ async function begin(
   const [physics, script, compiled] = await Promise.all([
     orElse(loadRapierPhysics(), undefined),
     orElse(loadQuickjsScripts(), undefined),
-    scriptsOfProject(),
+    // 🛑 Guarded like the other two: a rejection here left `starting` holding the document, and
+    // the Play button then did NOTHING until its viewport unmounted.
+    orElse(scriptsOfProject(), NO_SCRIPTS),
   ])
 
   const renderer = sceneEngineOf(documentId)
@@ -123,12 +125,13 @@ async function begin(
  */
 let compiler: ScriptCompiler | null = null
 
-async function scriptsOfProject(): Promise<{
-  modules: readonly ScriptModule[]
-  troubles: readonly ScriptTrouble[]
-}> {
+type CompiledScripts = { modules: readonly ScriptModule[]; troubles: readonly ScriptTrouble[] }
+
+const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [] }
+
+async function scriptsOfProject(): Promise<CompiledScripts> {
   const files = (await getBridge()?.game.scripts()) ?? []
-  if (files.length === 0) return { modules: [], troubles: [] }
+  if (files.length === 0) return NO_SCRIPTS
 
   compiler ??= createScriptCompiler()
   return await compiler.compile(
