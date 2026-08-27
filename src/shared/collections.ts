@@ -14,3 +14,11 @@ export function chunk<T>(items: readonly T[], size: number): T[][] {
   }
   return batches
 }
+
+/**
+ * Whether two lists name the same things in the same order — the identity guard a store or a hook
+ * needs before replacing what it holds with an answer equal to it. Four copies had been written.
+ */
+export function sameOrder<T>(one: readonly T[], other: readonly T[]): boolean {
+  return one.length === other.length && one.every((item, index) => item === other[index])
+}

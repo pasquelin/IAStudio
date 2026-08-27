@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { sameOrder } from '@shared/collections'
 import { assetRevisionOf, rememberAssetRevisions } from './assetRevisions'
 import { livePreviewVersionOf } from './livePreviews'
 import { persist } from 'zustand/middleware'
@@ -140,7 +141,7 @@ function sameScope(
   next: readonly AssetType[] | null,
 ): boolean {
   if (current === null || next === null) return current === next
-  return current.length === next.length && current.every((type, index) => type === next[index])
+  return sameOrder(current, next)
 }
 
 /**

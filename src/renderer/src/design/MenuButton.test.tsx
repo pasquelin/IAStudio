@@ -54,6 +54,24 @@ describe('MenuButton', () => {
     expect(row('Pinceau')).toBeInTheDocument()
   })
 
+  // A single row is no menu, so the click has the one thing left to do. Callers used to re-derive
+  // that threshold from their own arithmetic, in units this component never hands them.
+  it('acts instead of opening when there is no menu to open', async () => {
+    const act = vi.fn()
+    await userEvent.click(bar({ rowCount: 1, onAct: act }))
+
+    expect(act).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
+  })
+
+  it('leaves the act alone once the rows are a menu', async () => {
+    const act = vi.fn()
+    await userEvent.click(bar({ onAct: act }))
+
+    expect(act).not.toHaveBeenCalled()
+    expect(row('Pinceau')).toBeInTheDocument()
+  })
+
   /**
    * For rows read from somewhere the app is not told about — a branch made in a terminal. Hover
    * counts as an opening: it is how the menu opens on the toolbar, and rows reached that way

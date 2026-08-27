@@ -1,3 +1,4 @@
+import { sameOrder } from '@shared/collections'
 /**
  * A selection as an ordered list of ids, and what a click does to one.
  *
@@ -68,7 +69,7 @@ function toggled(current: readonly string[], ids: readonly string[]): readonly s
 
 /** Whether two picks name the same rows, in the same order. */
 export function samePicks(current: readonly string[], next: readonly string[]): boolean {
-  return current.length === next.length && current.every((id, at) => id === next[at])
+  return sameOrder(current, next)
 }
 
 /**

@@ -21,10 +21,18 @@ export function Context() {
   const { t } = useTranslation()
   const project = useProject(state => state.project)
   const context = useProjectContext(state => state.context)
+  const loaded = useProjectContext(state => state.loaded)
   const write = useProjectContext(state => state.write)
   const dropped = useProjectContext(state => droppedCards(state.context.cards))
 
   if (!project) return <NoProject icon={toolIcon('context')} message={t('context.noProject')} />
+
+  // Before the file has answered, and NOT belt and braces: an unread context is `noContext()`,
+  // which is also an empty one, and the way in below rewrites the file whole — offered a moment
+  // too early, one click replaces a project's real cards with a blank one, with no undo.
+  if (!loaded) {
+    return <EmptyState icon={toolIcon('context')} message={t('collection.loading')} />
+  }
 
   // Said rather than shown empty: the file is there, this build will not touch it, and which of
   // the two troubles it is decides what the reader does next.
@@ -37,9 +45,6 @@ export function Context() {
     )
   }
 
-  // The `+` of the title row can add one too, and this is not a duplicate of it: the sentence
-  // above tells a first-time reader what a card is FOR, and the way in belongs beside it rather
-  // than in a header glyph they have no reason to have looked at yet.
   if (context.cards.length === 0) {
     return (
       <EmptyState
@@ -48,7 +53,7 @@ export function Context() {
         action={{
           label: t('context.addFirst'),
           hint: t('context.addFirstHint'),
-          onClick: () => void write([blankCard(newId())]),
+          onClick: () => void write(withCard(context.cards, blankCard(newId()))),
         }}
       />
     )

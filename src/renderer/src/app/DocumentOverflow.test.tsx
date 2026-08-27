@@ -11,14 +11,14 @@ const TAB = 40
 
 const setActive = vi.fn()
 
-/**
- * A strip with room for two tabs, holding one per id: those named in `cut` start past the edge.
- * Geometry rather than a stub of the measurement — what this file is about is the menu, but the
- * button only exists because a tab was cut, and a mock would let that stop being true.
- */
+/** A strip with room for two tabs, holding one per id: those in `cut` start past the edge. */
 function headerProps(ids: string[], cut: string[]): IDockviewHeaderActionsProps {
   const strip = document.createElement('div')
   strip.getBoundingClientRect = () => new DOMRect(0, 0, ROOM, 0)
+  Object.defineProperty(strip, 'clientWidth', { value: ROOM })
+  // The scroll extent follows the children, as a real strip's does — the hook reads it before it
+  // reads a single box, and a strip that never overflows never cuts anything.
+  Object.defineProperty(strip, 'scrollWidth', { get: () => ROOM + cut.length * TAB })
   const panelOf = new Map<Element, { id: string }>()
 
   ids.forEach((id, index) => {
@@ -38,7 +38,7 @@ function headerProps(ids: string[], cut: string[]): IDockviewHeaderActionsProps 
         getPanelForTab: (tab: Element) => panelOf.get(tab),
       },
     },
-    panels: ids.map(id => ({ id, api: { setActive: () => setActive(id) } })),
+    panels: ids.map(id => ({ id, title: `Onglet ${id}`, api: { setActive: () => setActive(id) } })),
   } as unknown as IDockviewHeaderActionsProps
 }
 
@@ -113,11 +113,18 @@ describe('the tab strip’s overflow menu', () => {
     expect(setActive).toHaveBeenCalledWith('doc-2')
   })
 
-  // A panel Dockview restored before the folder listing came back has no descriptor yet, and a
-  // row named after nothing is a row nobody can choose.
-  it('ignores a hidden tab the window has not heard of', () => {
-    render(<DocumentOverflow {...headerProps(['doc-1', 'doc-2'], ['doc-2'])} />)
+  /**
+   * A panel the restored layout outlived is precisely the one to reach and close, so it keeps its
+   * place in the count and in the list — under the name the tab itself carries.
+   */
+  it('still lists a hidden tab whose document the window has not heard of', async () => {
+    render(<DocumentOverflow {...headerProps(['doc-1', 'doc-2', 'doc-3'], ['doc-2', 'doc-3'])} />)
 
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '2 onglets masqués' }))
+
+    expect(screen.getAllByRole('menuitem').map(row => row.textContent)).toEqual([
+      'Onglet doc-2',
+      'Onglet doc-3',
+    ])
   })
 })

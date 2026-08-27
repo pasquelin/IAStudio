@@ -99,8 +99,7 @@ export const ToolWindow = memo(function ToolWindow({
               and a boundary left standing would hand its failure to the tool that replaced it. */}
         <ErrorBoundary key={tool}>
           {/* Not `null`: a panel arrives through `import()`, and a dock left blank until the
-              chunk lands reads as a bug — `EmptyState` says as much of itself. The glyph is the
-              one the panel keeps, so only the sentence changes underneath it. */}
+              chunk lands reads as a bug — `EmptyState` says as much of itself. */}
           <Suspense
             fallback={<EmptyState icon={toolIcon(tool)} message={t('collection.loading')} />}
           >

@@ -26,14 +26,14 @@ function panelOn(context: ContextState) {
     Promise.resolve({ cards, trouble: null }),
   )
   installFakeBridge({ project: { writeContext } })
-  useProjectContext.setState({ context })
+  useProjectContext.setState({ context, loaded: true })
   render(<Context />)
   return writeContext
 }
 
 beforeEach(() => {
   useProject.setState({ project: OPEN, known: true })
-  useProjectContext.setState({ context: noContext() })
+  useProjectContext.setState({ context: noContext(), loaded: true })
 })
 
 describe('the context panel', () => {
@@ -60,6 +60,17 @@ describe('the context panel', () => {
     expect(writeContext).toHaveBeenCalledWith([
       { id: expect.any(String), title: '', body: '', active: true, pictures: [] },
     ])
+  })
+
+  /**
+   * An unread context and an empty one are the same value, and the button rewrites the file
+   * whole: offered a moment too early, one click replaces a project's real cards with a blank.
+   */
+  it('offers nothing to click before the file has answered', () => {
+    useProjectContext.setState({ context: noContext(), loaded: false })
+    render(<Context />)
+
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('offers no way in while the file is one this build will not touch', () => {
