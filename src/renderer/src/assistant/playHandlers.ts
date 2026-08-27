@@ -3,7 +3,7 @@ import { activeSceneId, useDocuments } from '@/stores/documents'
 import { playReportOf, usePlay } from '@/stores/play'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import type { ActionHandlers } from './actionHandler'
-import { numberOf } from './actionInputs'
+import { numberOf, textOf } from './actionInputs'
 
 /**
  * A game being PLAYED, driven from outside the window — the loop of the plan's § 16.4.
@@ -76,6 +76,23 @@ export const PLAY_HANDLERS: ActionHandlers = {
       return refused('badInput', state === 'edit' ? 'no game is running' : 'the game is not paused')
     }
     return { ok: true, data: { steps: ran, ...readingOf(documentId) } }
+  },
+
+  'play.loadScene': input => {
+    const documentId = playing()
+    if (missed(documentId)) return documentId
+
+    // Refused rather than asked for: an empty name takes the frame's one request slot, and would
+    // swallow the one a script made on the same step.
+    const scene = textOf(input, 'scene') ?? ''
+    if (scene.length === 0) return refused('badInput', 'no scene named')
+
+    if (!usePlay.getState().loadScene(documentId, scene, numberOf(input, 'fade') ?? 0)) {
+      return refused('badInput', 'no game is running')
+    }
+    // 🛑 Asked for, never done here: the swap happens between two steps, and a scene the project
+    // does not hold is said in the game's own log. `runtime.report` is what a client reads next.
+    return { ok: true, data: { asked: scene } }
   },
 
   'runtime.report': () => {

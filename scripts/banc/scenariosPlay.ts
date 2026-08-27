@@ -1,7 +1,7 @@
 import type { Scenario } from './run'
 import type { Studio } from './studio'
 import * as read from './oracle'
-import { cubeScene } from './setups'
+import { cubeScene, playedScene as played } from './setups'
 
 /**
  * Section 61: the loop the whole MCP lot exists for — start, read what went wrong, repair, start
@@ -11,13 +11,6 @@ import { cubeScene } from './setups'
  * was made. Written the other way round first, and every one of them passed on a studio that had
  * refused the call: `answerShown` writes « refused … », which is a defined string.
  */
-
-/** A scene with a cube, played: every reading below is taken on a game that is running. */
-const played = async (studio: Studio): Promise<void> => {
-  await cubeScene(studio)
-  await studio.run('play.start', {})
-  await studio.playing()
-}
 
 /** The same, paused — what `play.step` needs, and what a reading without a race needs. */
 const paused = async (studio: Studio): Promise<void> => {

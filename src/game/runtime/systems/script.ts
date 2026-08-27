@@ -22,6 +22,18 @@ export type ScriptSystemOptions = {
   onFault: (fault: ScriptFault) => void
 }
 
+/** Shared and empty: a frame with nothing kept must not allocate an object per hook. */
+const NOTHING_KEPT: Readonly<Record<string, JsonValue>> = Object.freeze({})
+
+/** An entity as the sandbox hears of one it can no longer see: a name, and nowhere to be. */
+const blank = (entity: string): ScriptEntity => ({
+  entity,
+  name: '',
+  position: ZERO(),
+  rotation: ZERO(),
+  components: [],
+})
+
 /** 🛑 A script never touches the world: it is handed a COPY — see `ScriptIntent` for why. */
 export function createScriptSystem(options: ScriptSystemOptions): System {
   const known = new Set<string>()
@@ -39,6 +51,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     dt: 0,
     input: { held: [], pressed: [], released: [], pointer: { x: 0, y: 0, down: false } },
     entities,
+    kept: {},
   }
   const waiting: GameEvent[] = []
   // Read once, on the first step, and let go of afterwards: it is the JavaScript of every script
@@ -80,13 +93,17 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     frame.tick = world.time.tick
     frame.dt = dt
     frame.input = world.input
+    // Only when there IS something kept: the frame is serialized whole for every hook of every
+    // step, and an inventory put aside at the menu would be paid for twice a step for ever.
+    const kept = world.ports.scenes.kept()
+    frame.kept = Object.keys(kept).length > 0 ? kept : NOTHING_KEPT
     return frame
   }
 
   const remember = (entity: Entity): void => {
     let held = closing.get(entity.id)
     if (!held) {
-      held = { entity: entity.id, name: '', position: ZERO(), rotation: ZERO(), components: [] }
+      held = blank(entity.id)
       closing.set(entity.id, held)
     }
     held.name = entity.name
@@ -120,15 +137,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 
     for (const name of known) {
       if (seen.has(name)) continue
-      gone.push(
-        closing.get(name) ?? {
-          entity: name,
-          name: '',
-          position: ZERO(),
-          rotation: ZERO(),
-          components: [],
-        },
-      )
+      gone.push(closing.get(name) ?? blank(name))
     }
     for (const one of gone) {
       known.delete(one.entity)
@@ -191,6 +200,24 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       // Last word of the rendered frame: what the next one spends is a whole budget again.
       port.refill()
     },
+
+    /** 🛑 The sandbox outlives a swap; instances left in it tick for entities nobody holds. */
+    dispose: (world: World) => {
+      if (known.size === 0) return
+
+      const port = world.ports.script
+      // 🛑 What was queued for the NEXT step, delivered now: there will be no next step, and
+      // `SceneLoading` — the « save before leaving » idiom — is exactly what waits here.
+      if (waiting.length > 0 && EVENT_HOOKS.some(hook => port.declares(hook))) {
+        took(world, port.deliver(compose(world, 0), waiting))
+        waiting.length = 0
+      }
+      // 🛑 What `onDestroy` asked for, applied like any other outcome: a hook putting a key aside
+      // on the way out had its intent dropped, and its faults with it.
+      took(world, port.detach([...known].map(name => closing.get(name) ?? blank(name))))
+      known.clear()
+      closing.clear()
+    },
   }
 }
 
@@ -210,6 +237,14 @@ function apply(world: World, intents: readonly ScriptIntent[]): void {
     }
     if (intent.act === 'emit') {
       sayCustom(world, intent.name, intent.entity ?? undefined, intent.payload)
+      continue
+    }
+    if (intent.act === 'scene') {
+      world.ports.scenes.load(intent.scene, intent.fade)
+      continue
+    }
+    if (intent.act === 'keep') {
+      world.ports.scenes.keep(intent.key, intent.value)
       continue
     }
 

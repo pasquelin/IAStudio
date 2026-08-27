@@ -13,6 +13,7 @@ import { createInertScripts } from './inertScripts'
 import { createInertRender } from './inertRender'
 import { createRefusedAi } from './refusedAi'
 import { createRingLog } from './ringLog'
+import { createSingleScene } from './singleScene'
 import { createSoloNet } from './soloNet'
 
 export type ExportHostDeps = {
@@ -26,7 +27,7 @@ export type ExportHostDeps = {
   script?: ScriptPort
 }
 
-/** The seven ports with no studio, no protocol and no account. Two ports differ from the studio's. */
+/** Every port with no studio, no protocol and no account. Two of them differ from the studio's. */
 export function createExportHost(deps: ExportHostDeps): GameApi {
   const log = createRingLog(printed)
 
@@ -36,6 +37,7 @@ export function createExportHost(deps: ExportHostDeps): GameApi {
     render: createInertRender(),
     physics: deps.physics ?? createInertPhysics(),
     script: deps.script ?? createInertScripts(),
+    scenes: createSingleScene(log),
     audio: createInertAudio(),
     log,
     ai: createRefusedAi(log),

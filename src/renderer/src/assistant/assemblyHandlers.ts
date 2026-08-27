@@ -1,12 +1,11 @@
 import { refused } from '@shared/domain/assistant'
-import { refFromString } from '@shared/domain/ref'
 import { isSceneTemplateId } from '@shared/domain/sceneTemplate'
 import { addNodes } from '@/engines/scene/commands'
 import { instancedNodes, prefabNodes } from '@/engines/scene/prefab'
 import { layOutTemplate } from '@/engines/scene/templateCommands'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { getBridge } from '@/services/bridge'
-import { documentNamedOfKind, useDocuments } from '@/stores/documents'
+import { sceneDocumentNamed } from '@/stores/documents'
 import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
@@ -37,7 +36,7 @@ export const ASSEMBLY_HANDLERS: ActionHandlers = {
     if (!mounted()) return refused('wrongSurface')
 
     const named = textOf(input, 'prefab') ?? ''
-    const documentId = prefabDocument(named)
+    const documentId = sceneDocumentNamed(named)
 
     const read = await prefabRead(documentId)
     if ('refusal' in read) return read.refusal
@@ -86,20 +85,4 @@ async function prefabRead(
     // `failed`, never `badInput`: told its INPUT is wrong, a model rewrites the name and retries.
     return { refusal: refused('failed', `reading ${documentId}: ${String(error)}`) }
   }
-}
-
-/**
- * Which document a prefab names — a `prefab:` or `document:` reference, a title, or an id.
- *
- * 🛑 `ref.ts` says `game.prefabs` is what resolves a `prefab:` id, and this does NOT consult it:
- * no action fills that table, so the lookup would be an IPC round trip that can only answer
- * nothing. Until one does, a `prefab:` id is read as a document id. The port is `bridge.game`.
- */
-function prefabDocument(named: string): string {
-  const ref = refFromString(named)
-  // A reference that already declared an ID skips the title lookup: a scene TITLED with that
-  // string would otherwise be instanced in its place.
-  if (ref?.kind === 'prefab' || ref?.kind === 'document') return ref.id
-
-  return documentNamedOfKind(useDocuments.getState(), 'scene', named) ?? named
 }

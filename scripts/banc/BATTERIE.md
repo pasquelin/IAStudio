@@ -939,3 +939,8 @@ Dans la scène Test MCP :
 - [ ] « Fais-moi un jeu vu de dessus. »
 - [ ] « Pose le prefab Scène 1 dans cette scène. »
 - [ ] « Pose le prefab Scène 1 à trois mètres sur la droite. »
+
+## 64. Passer d'une scène à l'autre
+
+- [ ] « Envoie la partie dans la scène Scène 1. »
+- [ ] « À deux secondes, fais un fondu d’une seconde vers Scène 1. »

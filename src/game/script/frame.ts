@@ -27,6 +27,8 @@ export type ScriptFrame = {
   dt: number
   input: InputState
   entities: readonly ScriptEntity[]
+  /** What survived the last scene load. In the FRAME rather than behind a call: see the kernel. */
+  kept: Readonly<Record<string, JsonValue>>
 }
 
 /**
@@ -45,6 +47,8 @@ export type ScriptIntent =
   | { act: 'destroy'; entity: string }
   | { act: 'emit'; name: string; entity: string | null; payload: Record<string, JsonValue> }
   | { act: 'log'; level: 'info' | 'warn' | 'error'; message: string }
+  | { act: 'scene'; scene: string; fade: number }
+  | { act: 'keep'; key: string; value: JsonValue }
 
 /** What a script did wrong, where an editor could open it. */
 export type ScriptFault = {

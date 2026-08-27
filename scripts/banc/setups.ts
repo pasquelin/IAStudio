@@ -245,3 +245,10 @@ export const namedSun = async (studio: Studio): Promise<void> => {
   await litScene(studio)
   await studio.run('node.light', { nodeId: named(studio, 'Soleil Test'), intensity: 3 })
 }
+
+/** A scene with a cube, PLAYED: every reading taken on it is taken on a game that is running. */
+export const playedScene = async (studio: Studio): Promise<void> => {
+  await cubeScene(studio)
+  await studio.run('play.start', {})
+  await studio.playing()
+}

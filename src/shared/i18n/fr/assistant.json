@@ -1037,6 +1037,10 @@
         "title": "Reprendre la partie",
         "description": "Repart d’où la pause a laissé le jeu, sans rattraper le temps arrêté."
       },
+      "playLoadScene": {
+        "title": "Envoyer la partie dans une autre scène",
+        "description": "Charge une autre scène du projet dans la partie en cours, avec un fondu facultatif. La scène se nomme par son titre ou son identifiant."
+      },
       "playStep": {
         "title": "Avancer d’un pas",
         "description": "Fait avancer une partie EN PAUSE d’un ou plusieurs pas fixes, puis rend l’état. C’est ainsi qu’on observe sans course."
@@ -1396,6 +1400,8 @@
       "docsTopic": "Sujet",
       "batchCalls": "Appels (JSON)",
       "fixedSteps": "Nombre de pas fixes",
+      "sceneToLoad": "Scène à charger",
+      "fadeSeconds": "Fondu, en secondes",
       "timelineList": "Liste",
       "timelineAt": "Instant, en microsecondes",
       "timelineWhat": "Quoi",

@@ -186,3 +186,53 @@ describe('what a system may ask the world for', () => {
     ])
   })
 })
+
+/**
+ * 🛑 What makes a scene swap safe: the engines outlive a world, so what a world took from them
+ * has to go back with it. A STOP throws the engines away and never needed this.
+ */
+describe('a world taken down', () => {
+  it('gives every system back what it took, and hears nothing more', () => {
+    const given: string[] = []
+    const heard: string[] = []
+    const world = testWorld({
+      systems: [
+        { name: 'physics', reads: [], writes: [], dispose: () => given.push('physics') },
+        { name: 'timeline', reads: [], writes: [], dispose: () => given.push('timeline') },
+      ],
+    })
+    world.events.on('Custom', () => heard.push('one'))
+
+    world.dispose()
+    world.events.emit({ name: 'Custom', payload: {} })
+    world.events.drain()
+
+    expect(given).toEqual(['physics', 'timeline'])
+    expect(heard).toEqual([])
+  })
+
+  /** One that throws must not keep the rest holding on — the same rule a step follows. */
+  it('takes the rest down when one system throws, and says which', () => {
+    const given: string[] = []
+    const world = testWorld({
+      systems: [
+        {
+          name: 'physics',
+          reads: [],
+          writes: [],
+          dispose: () => {
+            throw new Error('broken')
+          },
+        },
+        { name: 'timeline', reads: [], writes: [], dispose: () => given.push('timeline') },
+      ],
+    })
+
+    world.dispose()
+
+    expect(given).toEqual(['timeline'])
+    expect(world.ports.log.recent().map(entry => entry.message)).toEqual([
+      'system physics threw on dispose: broken',
+    ])
+  })
+})

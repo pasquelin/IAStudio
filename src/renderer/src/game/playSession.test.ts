@@ -3,36 +3,15 @@ import { newComponent } from '@shared/domain/componentRegistry'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
-import { drawnBy } from './game-fixtures'
+import { drawnBy, handDriven } from './game-fixtures'
 import { createInertPhysics as inertPhysics } from '@game/host/inertPhysics'
 import { createInertScripts } from '@game/host/inertScripts'
-import { startPlay, type FrameDriver } from './playSession'
+import { startPlay } from './playSession'
 
 const scene = (): SceneState => ({
   ...EMPTY_SCENE,
   nodes: [{ ...meshNode('a'), components: [newComponent('Movement')] }, meshNode('b')],
 })
-
-/** The frames a test drives by hand, in place of the browser's. */
-function handDriven() {
-  let frame: ((nowMs: number) => void) | null = null
-  let stopped = false
-
-  const driver: FrameDriver = {
-    start: given => {
-      frame = given
-    },
-    stop: () => {
-      stopped = true
-    },
-  }
-
-  return {
-    driver,
-    stopped: () => stopped,
-    advance: (seconds: number) => frame?.(seconds * 1000),
-  }
-}
 
 function playing(state: SceneState = scene()) {
   const frames = handDriven()

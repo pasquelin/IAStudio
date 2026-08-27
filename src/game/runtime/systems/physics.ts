@@ -147,6 +147,18 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
       settle(world)
       announce(world, triggered)
     },
+
+    /** 🛑 Every body this put in, the floor included: the engine outlives a scene swap. */
+    dispose: (world: World) => {
+      // Nothing was added before the first step, and nothing is added twice: `world.dispose` is
+      // promised idempotent, and a second pass would remove a floor the NEXT world had just laid.
+      if (!started) return
+
+      started = false
+      world.ports.physics.remove([...known, ...(options.statics ?? []).map(one => one.body)])
+      known.clear()
+      triggered.clear()
+    },
   }
 }
 

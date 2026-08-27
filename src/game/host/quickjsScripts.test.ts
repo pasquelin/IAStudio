@@ -27,6 +27,7 @@ const frameOf = (entities: readonly ScriptEntity[], input = IDLE): ScriptFrame =
   dt: 1 / 60,
   input,
   entities,
+  kept: {},
 })
 
 /** What the studio's transpiler hands over: CommonJS, one `export default`. */
