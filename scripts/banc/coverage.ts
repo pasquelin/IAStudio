@@ -328,7 +328,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'timeline.template': ['62.4'],
 
   'game.template': ['63.1', '63.2'],
-  'prefab.instantiate': ['63.3', '63.4'],
+  'prefab.define': ['63.3'],
+  'prefab.instantiate': ['63.4', '63.5'],
 
   'play.loadScene': ['64.1'],
 

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   emptyGame,
+  prefabDocumentOf,
+  prefabIdFor,
   scriptPathOf,
+  withPrefab,
   withScriptForgotten,
   withScriptMoved,
   type GameManifest,
+  type GamePrefab,
 } from './game'
 
 const withScripts = (): GameManifest => ({
@@ -58,5 +62,44 @@ describe('the table a script reference resolves through', () => {
 
     expect(withScriptMoved(game, 'scripts', 'logic').scripts[0]?.path).toBe('scripts2/player.ts')
     expect(withScriptForgotten(game, 'scripts').scripts).toHaveLength(1)
+  })
+})
+
+/**
+ * 🛑 What resolves a `prefab:` reference. Nothing filled this table until `prefab.define`, so
+ * `ref.ts` published a kind no code could resolve.
+ */
+describe('the pieces a game names', () => {
+  const CAISSE = { id: 'p1', name: 'Caisse', document: 'doc-1' }
+
+  const holding = (...prefabs: readonly GamePrefab[]): GameManifest => ({
+    ...emptyGame(),
+    prefabs: [...prefabs],
+  })
+
+  it('answers the document a reference lands on, and nothing for one it never held', () => {
+    expect(prefabDocumentOf(holding(CAISSE), 'p1')).toBe('doc-1')
+    expect(prefabDocumentOf(holding(CAISSE), 'p2')).toBeNull()
+  })
+
+  /** Naming a document that already has an entry is a RENAME, not a second piece. */
+  it('renames a piece rather than listing it twice', () => {
+    const renamed = withPrefab(holding(CAISSE), { ...CAISSE, name: 'Tonneau' })
+
+    expect(renamed.prefabs).toEqual([{ id: 'p1', name: 'Tonneau', document: 'doc-1' }])
+  })
+
+  /** Giving a name that is taken to another document is a REBIND — still one entry. */
+  it('rebinds a name to another document rather than listing it twice', () => {
+    const bound = withPrefab(holding(CAISSE), { ...CAISSE, document: 'doc-2' })
+
+    expect(bound.prefabs).toEqual([{ id: 'p1', name: 'Caisse', document: 'doc-2' }])
+  })
+
+  /** 🛑 A reference already written into a component or a script must survive both gestures. */
+  it('hands back the id a piece already had, under either its name or its document', () => {
+    expect(prefabIdFor(holding(CAISSE), 'Tonneau', 'doc-1')).toBe('p1')
+    expect(prefabIdFor(holding(CAISSE), 'Caisse', 'doc-2')).toBe('p1')
+    expect(prefabIdFor(holding(CAISSE), 'Autre', 'doc-9')).toBeNull()
   })
 })

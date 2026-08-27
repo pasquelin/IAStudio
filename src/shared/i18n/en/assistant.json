@@ -1097,6 +1097,10 @@
         "title": "Export the game",
         "description": "Writes into a folder a game that runs in a browser with no studio, with the page, the runtime, the scenes, the transpiled scripts and only the assets they reach."
       },
+      "prefabDefine": {
+        "title": "Name a prefab",
+        "description": "Writes a scene of the project into game.json as a reusable piece, under the given name. With no document named, it is the scene in front."
+      },
       "prefabInstantiate": {
         "title": "Instance a prefab",
         "description": "Lays the objects of another scene document of the project into the open scene, with fresh ids, where it is asked for."
@@ -1414,6 +1418,8 @@
       "timelineTemplate": "What the timeline offers",
       "gameTemplate": "Game template",
       "prefabRef": "Prefab to instance",
+      "prefabName": "Prefab name",
+      "prefabSource": "Scene to make a prefab of",
       "entryScene": "Opening scene",
       "gameTitle": "Game title"
     },

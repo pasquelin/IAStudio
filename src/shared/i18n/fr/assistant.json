@@ -1097,6 +1097,10 @@
         "title": "Exporter le jeu",
         "description": "Écrit dans un dossier un jeu qui tourne dans un navigateur sans le studio, avec la page, le runtime, les scènes, les scripts transpilés et les seuls assets qu’ils atteignent."
       },
+      "prefabDefine": {
+        "title": "Nommer un prefab",
+        "description": "Inscrit une scène du projet dans game.json comme pièce réutilisable, sous le nom donné. Sans document, c\u2019est la scène en face."
+      },
       "prefabInstantiate": {
         "title": "Instancier un prefab",
         "description": "Pose dans la scène ouverte les objets d’un autre document de scène du projet, avec des identifiants neufs, à l’endroit demandé."
@@ -1414,6 +1418,8 @@
       "timelineTemplate": "Ce que la timeline offre",
       "gameTemplate": "Modèle de jeu",
       "prefabRef": "Prefab à instancier",
+      "prefabName": "Nom du prefab",
+      "prefabSource": "Scène à ériger en prefab",
       "entryScene": "Scène de départ",
       "gameTitle": "Titre du jeu"
     },

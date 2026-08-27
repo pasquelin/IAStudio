@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { emptyGame, type GameManifest } from '@shared/domain/game'
 import { barrelDocument, barrelNodes } from '@/engines/scene/prefab-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -10,6 +11,7 @@ import { runAction } from './executor'
 const DOCUMENT = 'doc-1'
 const PREFAB = 'doc-barrel'
 const scene = () => sceneOf(useScenes.getState(), DOCUMENT)
+const written: GameManifest[] = []
 
 describe('a game put together in one gesture', () => {
   beforeEach(() => {
@@ -25,8 +27,18 @@ describe('a game put together in one gesture', () => {
         },
       ],
     })
+    written.length = 0
+    let manifest = emptyGame()
     installFakeBridge({
       documents: { read: id => Promise.resolve(id === PREFAB ? barrelDocument(PREFAB) : null) },
+      game: {
+        read: () => Promise.resolve({ game: manifest, trouble: null }),
+        write: given => {
+          manifest = given
+          written.push(given)
+          return Promise.resolve({ game: manifest, trouble: null })
+        },
+      },
     })
   })
 
@@ -81,6 +93,44 @@ describe('a game put together in one gesture', () => {
     expect(await runAction('prefab.instantiate', { prefab: DOCUMENT })).toMatchObject({
       ok: false,
       refusal: 'badInput',
+    })
+  })
+
+  /** 🛑 `ref.ts` names `game.prefabs` as the resolver of a `prefab:` id, and nothing wrote it. */
+  it('names the scene in front as a prefab, and answers the reference to it', async () => {
+    const outcome = await runAction('prefab.define', { name: 'Caisse' })
+
+    expect(outcome).toMatchObject({ ok: true, data: { name: 'Caisse', document: DOCUMENT } })
+    expect(written[0]?.prefabs).toMatchObject([{ name: 'Caisse', document: DOCUMENT }])
+  })
+
+  /** 🛑 A reference already written into a component or a script must survive a rename. */
+  it('keeps the id a piece already had when it is renamed', async () => {
+    await runAction('prefab.define', { name: 'Caisse' })
+    const first = written[0]?.prefabs[0]?.id
+
+    await runAction('prefab.define', { name: 'Tonneau' })
+
+    expect(written.at(-1)?.prefabs).toHaveLength(1)
+    expect(written.at(-1)?.prefabs[0]).toMatchObject({ id: first, name: 'Tonneau' })
+  })
+
+  /** 🛑 `sceneDocumentNamed` falls back on the word itself: any string was named a prefab. */
+  it('refuses to name a document the project does not hold', async () => {
+    expect(await runAction('prefab.define', { name: 'Caisse', document: 'Nowhere' })).toMatchObject(
+      { ok: false, refusal: 'notFound' },
+    )
+    expect(written).toEqual([])
+  })
+
+  it('instances a prefab named by the reference the manifest holds', async () => {
+    const defined = await runAction('prefab.define', { name: 'Barrel', document: PREFAB })
+    // The reference the action answers with, which is the whole point of it — see `refToString`.
+    const reference = defined.ok ? String(Object(defined.data).ref) : ''
+
+    expect(await runAction('prefab.instantiate', { prefab: reference })).toMatchObject({
+      ok: true,
+      data: { nodes: 2 },
     })
   })
 

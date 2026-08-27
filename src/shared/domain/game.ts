@@ -35,8 +35,41 @@ export const SCRIPT_EXTENSION = '.ts'
 /** One script's file and its text — what a PLAY compiles, and what an editor opens. */
 export type GameScriptFile = { path: string; source: string }
 
-/** A reusable piece, named, defined by the document it lives in. */
+/**
+ * A reusable piece, named, defined by the document it lives in.
+ *
+ * 🛑 A DOCUMENT id, not a path, unlike `GameScript`: a document keeps its id across a rename, so
+ * nothing has to follow one here — which is the whole reason `DocumentDescriptor.id` exists.
+ */
 export type GamePrefab = { id: string; name: string; document: string }
+
+/** Which document a `prefab:` reference lands on, or nothing when the manifest does not hold it. */
+export function prefabDocumentOf(game: GameManifest, id: string): string | null {
+  return game.prefabs.find(prefab => prefab.id === id)?.document ?? null
+}
+
+/**
+ * The manifest with that piece named.
+ *
+ * 🛑 One entry per NAME and one per DOCUMENT: naming a document that already has an entry is a
+ * RENAME, and giving a name that is taken to another document is a REBIND. Filtering on the name
+ * alone left a renamed prefab listed twice, and the manifest could only ever grow.
+ */
+export function withPrefab(game: GameManifest, prefab: GamePrefab): GameManifest {
+  const kept = game.prefabs.filter(
+    one => one.name !== prefab.name && one.document !== prefab.document,
+  )
+  return { ...game, prefabs: [...kept, prefab] }
+}
+
+/**
+ * The id that piece already had under that name or that document, so a reference already written
+ * into a component or a script survives a rename. `null` for one the manifest has never held.
+ */
+export function prefabIdFor(game: GameManifest, name: string, document: string): string | null {
+  const held = game.prefabs.find(one => one.name === name || one.document === document)
+  return held?.id ?? null
+}
 
 /** What the author sets for the game as a whole rather than for one scene. */
 export type GameSettings = { title: string }
