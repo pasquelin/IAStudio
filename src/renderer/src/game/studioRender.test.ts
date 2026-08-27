@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
+import { drawnBy } from './game-fixtures'
 import { createStudioRender } from './studioRender'
 
 const scene = (): SceneState => ({ ...EMPTY_SCENE, nodes: [meshNode('a'), meshNode('b')] })
@@ -10,7 +11,13 @@ const raised = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 3, z: 0 } }
 
 function drawing(state: SceneState = scene()) {
   const apply = vi.fn()
-  return { apply, render: createStudioRender({ apply }, () => state), state }
+  const placeView = vi.fn()
+  return {
+    apply,
+    placeView,
+    render: createStudioRender(drawnBy({ apply, placeView }), () => state),
+    state,
+  }
 }
 
 describe('what draws a running game inside the studio', () => {
@@ -48,7 +55,7 @@ describe('what draws a running game inside the studio', () => {
   it('forgets where it had put things when the document itself changed', () => {
     let state = scene()
     const apply = vi.fn()
-    const render = createStudioRender({ apply }, () => state)
+    const render = createStudioRender(drawnBy({ apply }), () => state)
 
     render.place([{ entity: 'a', transform: raised }])
     state = scene()
@@ -75,7 +82,7 @@ describe('a game whose document changed under it', () => {
   it('puts back where it had drawn, on the nodes the document now holds', () => {
     let state = scene()
     const apply = vi.fn()
-    const render = createStudioRender({ apply }, () => state)
+    const render = createStudioRender(drawnBy({ apply }), () => state)
 
     render.place([{ entity: 'a', transform: raised }])
     apply.mockClear()
@@ -91,7 +98,7 @@ describe('a game whose document changed under it', () => {
   it('forgets an object the document no longer holds', () => {
     let state = scene()
     const apply = vi.fn()
-    const render = createStudioRender({ apply }, () => state)
+    const render = createStudioRender(drawnBy({ apply }), () => state)
 
     render.place([{ entity: 'a', transform: raised }])
     apply.mockClear()

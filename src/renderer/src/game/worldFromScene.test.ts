@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { DEFAULT_PLAY } from '@shared/domain/scene'
 import { createExportHost } from '@game/host/exportHost'
+import { notedPhysics, type NotedPhysics } from '@game/physics/physics-fixtures'
 import type { GameApi } from '@game/api/gameApi'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { worldFromScene } from './worldFromScene'
 
-const ports = (): GameApi =>
-  createExportHost({
+const ports = (physics?: NotedPhysics): GameApi => ({
+  ...createExportHost({
     input: new EventTarget(),
     player: { id: 'p1', name: 'Alba', local: true },
     files: {},
-  })
+  }),
+  ...(physics ? { physics } : {}),
+})
 
 const scene = (): SceneState => ({
   ...EMPTY_SCENE,
@@ -49,6 +53,63 @@ describe('the edit state, translated into something that runs', () => {
     // The components too, and not by a spread: a shallow copy leaves the document's own objects
     // in the world, where a system writing into one edits the scene with no store action at all.
     expect(state.nodes[0]?.components).toEqual([newComponent('Movement')])
+  })
+
+  /** Written into documents since 20/08 and read by nothing until the controller arrived. */
+  it('carries how the scene says it is walked', () => {
+    const state = {
+      ...scene(),
+      world: { ...EMPTY_SCENE.world, play: { ...DEFAULT_PLAY, gravity: 9.81 } },
+    }
+
+    expect(worldFromScene('doc-1', state, ports()).play.gravity).toBe(9.81)
+  })
+
+  /**
+   * The scene's floor is not a node, so it is no entity — and a game whose ground nobody stands
+   * on is the first thing anybody tries.
+   */
+  it('gives the scene ground a body of its own when it is shown', () => {
+    const physics = notedPhysics()
+    const ground = { ...EMPTY_SCENE.world.ground, visible: true, size: 40 }
+    const state = { ...scene(), world: { ...EMPTY_SCENE.world, ground } }
+
+    worldFromScene('doc-1', state, ports(physics)).step(1 / 60)
+
+    const floor = physics.added.find(body => body.body === 'world.ground')
+    expect(floor?.kind).toBe('fixed')
+    expect(floor?.shape.kind === 'cuboid' ? floor.shape.hx : 0).toBe(20)
+  })
+
+  it('gives no ground to a scene that shows none', () => {
+    const physics = notedPhysics()
+
+    worldFromScene('doc-1', scene(), ports(physics)).step(1 / 60)
+
+    expect(physics.added).toEqual([])
+  })
+
+  /**
+   * 🛑 An entity's transform is LOCAL and the physics composes no parent, so a body under a group
+   * would stand where its mesh is not. Refused and named rather than placed wrong.
+   */
+  it('leaves a node hanging from another out of the physics, and says which', () => {
+    const physics = notedPhysics()
+    const held = ports(physics)
+    const state = {
+      ...scene(),
+      nodes: [
+        { ...meshNode('parent'), components: [newComponent('Collider')] },
+        { ...meshNode('child', 'parent'), name: 'Caisse', components: [newComponent('Collider')] },
+      ],
+    }
+
+    worldFromScene('doc-1', state, held).step(1 / 60)
+
+    expect(physics.added.map(body => body.body)).toEqual(['parent'])
+    expect(held.log.recent().map(entry => entry.message)).toEqual([
+      'Caisse hangs from another object: physics leaves it alone',
+    ])
   })
 
   it('names the document it came from, so an entity can be referenced in full', () => {

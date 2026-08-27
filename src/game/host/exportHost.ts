@@ -3,9 +3,11 @@
 import type { GameApi } from '../api/gameApi'
 import type { LogEntry } from '@shared/domain/gameRuntime'
 import type { Player } from '../ports/netPort'
+import type { PhysicsPort } from '../ports/physicsPort'
 import { createBundledAssets } from './bundledAssets'
 import { createDomInput, type DomInputTarget } from './domInput'
 import { createInertAudio } from './inertAudio'
+import { createInertPhysics } from './inertPhysics'
 import { createInertRender } from './inertRender'
 import { createRefusedAi } from './refusedAi'
 import { createRingLog } from './ringLog'
@@ -16,6 +18,8 @@ export type ExportHostDeps = {
   player: Player
   /** Asset identifier → the file shipped beside the page. Written when the game is exported. */
   files: Readonly<Record<string, string>>
+  /** What simulates. Absent until the engine's WebAssembly has landed — see `loadRapierPhysics`. */
+  physics?: PhysicsPort
 }
 
 /** The seven ports with no studio, no protocol and no account. Two ports differ from the studio's. */
@@ -26,6 +30,7 @@ export function createExportHost(deps: ExportHostDeps): GameApi {
     assets: createBundledAssets(deps.files),
     input: createDomInput(deps.input),
     render: createInertRender(),
+    physics: deps.physics ?? createInertPhysics(),
     audio: createInertAudio(),
     log,
     ai: createRefusedAi(log),

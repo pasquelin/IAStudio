@@ -21,9 +21,9 @@ export type CsgOperation = 'subtract' | 'unite' | 'intersect'
 export const CSG_OPERATIONS: readonly CsgOperation[] = ['subtract', 'unite', 'intersect']
 
 /**
- * How much of a solid the physics is allowed to feel. Written now, read by nothing yet: ADR-25
- * takes the field while it is free, because adding it later would mean migrating every document
- * already saved.
+ * How much of a solid the physics is allowed to feel. Taken by ADR-25 while the field was free,
+ * on documents nothing simulated; read since the physics arrived, by `colliderFromNode` — where
+ * `convexes` is the exact decomposition and the others are what an author settles for.
  */
 export type CollisionFidelity = 'box' | 'hull' | 'convexes' | 'trimesh'
 

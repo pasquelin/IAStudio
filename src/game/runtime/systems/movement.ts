@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Component } from '@shared/domain/component'
+import { numberOf } from '../componentFields'
 import type { Entity } from '../entity'
 import type { System, World } from '../world'
 
@@ -35,11 +36,6 @@ export function createMovementSystem(): System {
 const axisOf = (component: Component): 'x' | 'y' | 'z' => {
   const axis = component.axis
   return axis === 'x' || axis === 'z' ? axis : 'y'
-}
-
-const numberOf = (component: Component, key: string, fallback: number): number => {
-  const value = component[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
 function move(

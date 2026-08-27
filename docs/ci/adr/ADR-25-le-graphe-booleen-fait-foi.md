@@ -81,9 +81,12 @@ qui permet le *Separate*, et c'est surtout ce qui rend les collisions calculable
 suivante. Un graphe qui ne garderait que le maillage résultant condamnerait la physique à la
 décomposition approchée.
 
-`[M]` **Deux champs sont pris tant qu'ils sont libres, pour la même raison.** La **fidélité de
-collision** par solide — `box` / `hull` / `convexes` / `trimesh`, comme le `CollisionFidelity` de
-Roblox — qu'aucune physique ne lit encore. Et la **matière de chaque brosse** dans le graphe : sans
+`[M]` **Deux champs ont été pris tant qu'ils étaient libres, pour la même raison.** La **fidélité
+de collision** par solide — `box` / `hull` / `convexes` / `trimesh`, comme le `CollisionFidelity`
+de Roblox. **Elle est lue depuis le 27/08**, par `colliderFromNode` : `convexes` déclenche la
+soustraction par demi-espaces décrite plus bas, et `trimesh` retombe sur l'enveloppe en le
+DISANT — le maillage évalué est calculé par un Worker et n'existe pas à l'instant où une partie
+démarre. Et la **matière de chaque brosse** dans le graphe : sans
 elle, souder un cube rouge à une sphère bleue puis séparer rendait les deux dans la couleur du
 solide. Les ajouter plus tard voudrait dire migrer tous les documents déjà écrits ; aujourd'hui le
 coût est nul.

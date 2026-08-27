@@ -3,6 +3,7 @@ import { newComponent } from '@shared/domain/componentRegistry'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
+import { drawnBy } from './game-fixtures'
 import { startPlay, type FrameDriver } from './playSession'
 
 const scene = (): SceneState => ({
@@ -34,18 +35,19 @@ function handDriven() {
 function playing(state: SceneState = scene()) {
   const frames = handDriven()
   const apply = vi.fn()
+  const placeView = vi.fn()
   const reports: RuntimeReport[] = []
 
   const session = startPlay({
     documentId: 'doc-1',
-    renderer: { apply },
+    renderer: drawnBy({ apply, placeView }),
     editState: () => state,
     input: new EventTarget(),
     frames: frames.driver,
     onReport: report => reports.push(report),
   })
 
-  return { session, frames, apply, reports, state }
+  return { session, frames, apply, placeView, reports, state }
 }
 
 const lastDrawn = (apply: ReturnType<typeof vi.fn>): SceneState | null =>
@@ -132,5 +134,15 @@ describe('a game running inside the studio', () => {
     frames.advance(60.2)
 
     expect(reports.at(-1)?.tick).toBe(played + 12)
+  })
+})
+
+describe('the camera a game borrows', () => {
+  /** In `orbit` the runtime never writes the camera, so STOP must not undo what a hand orbited. */
+  it('gives the view back only when the game took it', () => {
+    const flown = playing()
+    flown.session.stop()
+
+    expect(flown.placeView).not.toHaveBeenCalled()
   })
 })

@@ -2,6 +2,7 @@
 
 import type { Component, ComponentType } from '@shared/domain/component'
 import type { Ref } from '@shared/domain/ref'
+import type { ScenePlay } from '@shared/domain/scene'
 import type { Transform } from '@shared/domain/transform'
 import type { GameApi } from '../api/gameApi'
 import { createEventBus, type EventBus } from '../events/eventBus'
@@ -28,6 +29,11 @@ export type World = {
   readonly events: EventBus
   readonly random: Random
   readonly ports: GameApi
+  /**
+   * How the scene is WALKED rather than watched — the camera, the eye height, the pace and the
+   * pull. Written into documents since 20/08 and read by nothing until the controller arrived.
+   */
+  readonly play: ScenePlay
   /** The clock, in TICKS first: a tick is the unit the network counts in. */
   readonly time: { tick: number; elapsed: number; readonly step: number }
   /** The input as of the step being run — DATA of the tick, never a live read. */
@@ -59,6 +65,7 @@ export type WorldOptions = {
   /** Same seed, same world — what a replay, a test and network prediction all rest on. */
   seed: number
   step: number
+  play: ScenePlay
 }
 
 export function createWorld(options: WorldOptions): World {
@@ -84,6 +91,7 @@ export function createWorld(options: WorldOptions): World {
     ),
     random: createRandom(options.seed),
     ports: options.ports,
+    play: options.play,
     time: { tick: 0, elapsed: 0, step: options.step },
     input: options.ports.input.state(),
 

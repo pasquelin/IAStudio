@@ -44,6 +44,7 @@
     "models:thumbnails": "node scripts/make-model-thumbnails.mjs"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.20.0",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
     "@modelcontextprotocol/sdk": "^1.30.0",

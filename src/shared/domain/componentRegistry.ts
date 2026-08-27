@@ -31,15 +31,40 @@ export type ComponentDescriptor = {
   events?: readonly GameEventName[]
 }
 
+/**
+ * A field and its label, which is its key: written out, twelve of them repeated
+ * `labelKey: 'game.fields.<key>'` and each was a chance for the two to drift.
+ */
+const numberField = (key: string, min: number, max?: number): ActionField => ({
+  key,
+  kind: 'number',
+  labelKey: `game.fields.${key}`,
+  required: true,
+  min,
+  ...(max === undefined ? {} : { max }),
+})
+
+const choiceField = (key: string, options: readonly string[]): ActionField => ({
+  key,
+  kind: 'choice',
+  labelKey: `game.fields.${key}`,
+  required: true,
+  options,
+})
+
+const flagField = (key: string): ActionField => ({
+  key,
+  kind: 'boolean',
+  labelKey: `game.fields.${key}`,
+  required: true,
+})
+
 const HEALTH: ComponentDescriptor = {
   type: 'Health',
   titleKey: 'game.components.Health.title',
   descriptionKey: 'game.components.Health.description',
   category: 'gameplay',
-  fields: [
-    { key: 'max', kind: 'number', labelKey: 'game.fields.max', required: true, min: 1 },
-    { key: 'current', kind: 'number', labelKey: 'game.fields.current', required: true, min: 0 },
-  ],
+  fields: [numberField('max', 1), numberField('current', 0)],
   defaults: { max: 100, current: 100 },
   events: ['HealthChanged', 'Died'],
 }
@@ -50,24 +75,84 @@ const MOVEMENT: ComponentDescriptor = {
   descriptionKey: 'game.components.Movement.description',
   category: 'gameplay',
   fields: [
-    {
-      key: 'axis',
-      kind: 'choice',
-      labelKey: 'game.fields.axis',
-      required: true,
-      options: ['x', 'y', 'z'],
-    },
-    { key: 'speed', kind: 'number', labelKey: 'game.fields.speed', required: true, min: 0 },
-    { key: 'distance', kind: 'number', labelKey: 'game.fields.distance', required: true, min: 0 },
-    {
-      key: 'mode',
-      kind: 'choice',
-      labelKey: 'game.fields.mode',
-      required: true,
-      options: ['once', 'loop', 'pingPong'],
-    },
+    choiceField('axis', ['x', 'y', 'z']),
+    numberField('speed', 0),
+    numberField('distance', 0),
+    choiceField('mode', ['once', 'loop', 'pingPong']),
   ],
   defaults: { axis: 'y', speed: 1, distance: 2, mode: 'pingPong' },
+}
+
+const COLLIDER: ComponentDescriptor = {
+  type: 'Collider',
+  titleKey: 'game.components.Collider.title',
+  descriptionKey: 'game.components.Collider.description',
+  category: 'physics',
+  fields: [
+    choiceField('fidelity', ['auto', 'box', 'hull', 'convexes', 'trimesh']),
+    numberField('friction', 0, 2),
+    numberField('restitution', 0, 1),
+  ],
+  // `auto` reads the fidelity ADR-25 already writes into a carved solid, and takes the exact
+  // primitive for anything else. The four other words are the author overruling that.
+  defaults: { fidelity: 'auto', friction: 0.6, restitution: 0 },
+}
+
+const RIGID_BODY: ComponentDescriptor = {
+  type: 'RigidBody',
+  titleKey: 'game.components.RigidBody.title',
+  descriptionKey: 'game.components.RigidBody.description',
+  category: 'physics',
+  fields: [
+    choiceField('kind', ['dynamic', 'fixed', 'kinematic']),
+    numberField('mass', 0, 10_000),
+    numberField('gravityScale', -5, 5),
+    flagField('lockRotation'),
+  ],
+  // A mass of zero is the engine weighing the shape itself, which is what an author means by
+  // « a crate » — a number here is for the crate that has to feel heavier than it looks.
+  defaults: { kind: 'dynamic', mass: 0, gravityScale: 1, lockRotation: false },
+  // No `requires`, and it was written and taken back out: a body with no `Collider` beside it
+  // still falls — the volume comes from what the node DRAWS, and the component only tunes it.
+  events: ['Collided'],
+}
+
+const TRIGGER: ComponentDescriptor = {
+  type: 'Trigger',
+  titleKey: 'game.components.Trigger.title',
+  descriptionKey: 'game.components.Trigger.description',
+  category: 'physics',
+  // No field, and not an oversight: a trigger is a MARK on a volume the `Collider` already
+  // describes. What it does when something enters belongs to a script, which is the next lot.
+  fields: [],
+  defaults: {},
+  events: ['TriggerEntered', 'TriggerExited'],
+}
+
+const CHARACTER_CONTROLLER: ComponentDescriptor = {
+  type: 'CharacterController',
+  titleKey: 'game.components.CharacterController.title',
+  descriptionKey: 'game.components.CharacterController.description',
+  category: 'physics',
+  // The pace, the pull and the eye height are NOT here: they are the scene's, in `world.play`,
+  // so that a template meaning « first person, feet on the ground » says it once for the set.
+  fields: [
+    numberField('height', 0.2, 10),
+    numberField('radius', 0.05, 5),
+    numberField('jumpSpeed', 0, 50),
+    numberField('stepHeight', 0, 2),
+    numberField('slopeLimit', 0, 89),
+    numberField('snapDistance', 0, 2),
+  ],
+  defaults: {
+    height: 1.8,
+    radius: 0.3,
+    jumpSpeed: 5,
+    stepHeight: 0.5,
+    slopeLimit: 45,
+    snapDistance: 0.5,
+  },
+  events: ['Collided'],
 }
 
 /**
@@ -78,6 +163,10 @@ const MOVEMENT: ComponentDescriptor = {
 export const COMPONENTS: Record<ComponentType, ComponentDescriptor> = {
   Health: HEALTH,
   Movement: MOVEMENT,
+  Collider: COLLIDER,
+  RigidBody: RIGID_BODY,
+  Trigger: TRIGGER,
+  CharacterController: CHARACTER_CONTROLLER,
 }
 
 export const COMPONENT_TYPES: readonly ComponentType[] =

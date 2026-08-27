@@ -14,6 +14,7 @@
  */
 export const SHIPPED: string[] = [
   // Runtime dependencies, loaded from `node_modules` by the main process.
+  '@dimforge/rapier3d-compat',
   '@mdi/js',
   '@mdi/react',
   '@modelcontextprotocol/sdk',
