@@ -24,6 +24,7 @@ export type CodeEditorDeps = {
 /** Monaco behind a façade with no React — invariant 4. The type WORKER makes every diagnostic. */
 export class CodeEditor {
   private readonly editor: Monaco.editor.IStandaloneCodeEditor
+  private readonly mounted: HTMLElement
   private readonly holding = new Set<string>()
   private readonly watching: Monaco.IDisposable[] = []
   private open: string | null = null
@@ -34,7 +35,15 @@ export class CodeEditor {
   ) {
     defineStudioTheme(monaco)
 
-    this.editor = monaco.editor.create(deps.host, {
+    // 🛑 Its OWN node under the host, never the host itself: Monaco marks the element it is given
+    // with `data-keybinding-context` and STRIPS it on dispose, so two editors sharing one host —
+    // what a remount makes — leave the survivor unmarked, and no key reaches a command again.
+    this.mounted = deps.host.ownerDocument.createElement('div')
+    this.mounted.style.position = 'absolute'
+    this.mounted.style.inset = '0'
+    deps.host.appendChild(this.mounted)
+
+    this.editor = monaco.editor.create(this.mounted, {
       // 🛑 Monaco's own dark theme with FOUR studio colours over it — see `defineStudioTheme`.
       // The forty syntax tokens stay Monaco's: mapping those is a lot of its own.
       theme: STUDIO_THEME,
@@ -168,6 +177,7 @@ export class CodeEditor {
     for (const held of this.watching) held.dispose()
     for (const script of [...this.holding]) this.release(script)
     this.editor.dispose()
+    this.mounted.remove()
   }
 }
 

@@ -2,6 +2,9 @@ import type * as Monaco from 'monaco-editor'
 import { describe, expect, it } from 'vitest'
 import { CodeEditor } from './CodeEditor'
 
+/** What Monaco marks the element it is given with, and STRIPS on dispose — its own contract. */
+const CONTEXT_ATTR = 'data-keybinding-context'
+
 type FakeModel = {
   uri: string
   value: string
@@ -19,6 +22,7 @@ type FakeModel = {
  */
 function fakeMonaco() {
   const models = new Map<string, FakeModel>()
+  const mounted: HTMLElement[] = []
 
   const monaco = {
     Uri: { parse: (uri: string) => ({ toString: () => uri, path: uri.replace('file://', '') }) },
@@ -28,15 +32,19 @@ function fakeMonaco() {
       setTheme: () => undefined,
       getModelMarkers: () => [],
       onDidChangeMarkers: () => ({ dispose: () => undefined }),
-      create: () => ({
-        onDidChangeModelContent: () => ({ dispose: () => undefined }),
-        getModel: () => null,
-        setModel: () => undefined,
-        revealPositionInCenter: () => undefined,
-        setPosition: () => undefined,
-        focus: () => undefined,
-        dispose: () => undefined,
-      }),
+      create: (where: HTMLElement) => {
+        mounted.push(where)
+        where.setAttribute(CONTEXT_ATTR, '')
+        return {
+          onDidChangeModelContent: () => ({ dispose: () => undefined }),
+          getModel: () => null,
+          setModel: () => undefined,
+          revealPositionInCenter: () => undefined,
+          setPosition: () => undefined,
+          focus: () => undefined,
+          dispose: () => where.removeAttribute(CONTEXT_ATTR),
+        }
+      },
       getModel: (uri: { toString: () => string }) => models.get(uri.toString()) ?? null,
       createModel: (value: string, _language: string, uri: { toString: () => string }) => {
         const key = uri.toString()
@@ -61,12 +69,12 @@ function fakeMonaco() {
     },
   }
 
-  return { models, monaco: monaco as unknown as typeof Monaco }
+  return { models, mounted, monaco: monaco as unknown as typeof Monaco }
 }
 
-const editorOn = (monaco: typeof Monaco): CodeEditor =>
+const editorOn = (monaco: typeof Monaco, host = document.createElement('div')): CodeEditor =>
   new CodeEditor(monaco, {
-    host: {} as HTMLElement,
+    host,
     onChanged: () => undefined,
     onProblems: () => undefined,
   })
@@ -102,6 +110,31 @@ describe('an editor showing a script', () => {
     first.dispose()
 
     expect([...models.values()][0]?.disposed).toBe(false)
+  })
+
+  /**
+   * 🛑 Measured on 28 August over CDP: on a shared host the survivor kept no
+   * `data-keybinding-context`, and ⌫ on a selection did nothing.
+   */
+  it('leaves the editor a remount left behind able to reach a command', () => {
+    const { monaco, mounted } = fakeMonaco()
+    const host = document.createElement('div')
+    const first = editorOn(monaco, host)
+    editorOn(monaco, host)
+
+    first.dispose()
+
+    expect(host.querySelector(`[${CONTEXT_ATTR}]`)).toBe(mounted[1])
+  })
+
+  /** Its own node goes with it: a host outliving an editor must not keep its markup. */
+  it('takes its node out of the host when it goes', () => {
+    const { monaco } = fakeMonaco()
+    const host = document.createElement('div')
+
+    editorOn(monaco, host).dispose()
+
+    expect(host.children).toHaveLength(0)
   })
 
   /** And goes with the last of them — a model left behind keeps feeding `problems()`. */
