@@ -4,8 +4,10 @@ import { COMPONENT_TYPES } from '@shared/domain/componentRegistry'
 import { EmptyState } from '@/design/EmptyState'
 import { loadCodeEditor, type CodeEditor } from '@/engines/code/CodeEditor'
 import { projectTypes } from '@/engines/code/projectTypes'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { workspaceById } from '@/helpers/workspaces'
-import { scriptRefOf, useCode } from '@/stores/code'
+import { isCodeDirty, scriptRefOf, useCode } from '@/stores/code'
 
 export type ScriptDocumentProps = { documentId: string }
 
@@ -17,8 +19,13 @@ export function ScriptDocument({ documentId }: ScriptDocumentProps) {
   const editor = useRef<CodeEditor | null>(null)
   const [failed, setFailed] = useState(false)
   const [ready, setReady] = useState(false)
+  useRestoredDocument(documentId)
   const script = scriptRefOf(documentId)
   const source = useCode(state => (script === null ? '' : (state.files[script]?.source ?? '')))
+  useDocumentTitle(
+    documentId,
+    useCode(state => (script === null ? false : isCodeDirty(state.files[script]))),
+  )
   const goto = useCode(state => state.goto)
 
   useEffect(() => {

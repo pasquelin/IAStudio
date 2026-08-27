@@ -77,6 +77,18 @@ describe('the scripts an editor holds', () => {
     expect(useCode.getState().files['script:A.ts']).toBeUndefined()
   })
 
+  /**
+   * 🛑 `holds` is read off this map, and `restoreDocument` asks it again AFTER its await: an
+   * entry made by a keystroke that landed during the read would make it skip the install, and
+   * the file's own text would be lost under the one letter typed. A tab always has its entry —
+   * `install` or `createDefault` puts it there before anyone can type.
+   */
+  it('refuses a script it has never read, so a read in flight still installs', () => {
+    useCode.getState().edited('script:A.ts', 'one')
+
+    expect(useCode.getState().files['script:A.ts']).toBeUndefined()
+  })
+
   /** 🛑 A script born in a tab has no file for the walk to find, and a Play re-reads them all. */
   it('keeps a script that has never been written when the project is read again', async () => {
     installFakeBridge({ game: { scripts: () => Promise.resolve([]) } })

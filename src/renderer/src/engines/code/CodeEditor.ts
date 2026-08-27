@@ -2,6 +2,7 @@ import type * as Monaco from 'monaco-editor'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
+import { cachedToken, onPaletteChange } from '@/engines/core/palette'
 
 /** One thing wrong with a script, where an editor opens it. The shape a problems list reads. */
 export type CodeProblem = {
@@ -23,7 +24,7 @@ export type CodeEditorDeps = {
 /** Monaco behind a façade with no React — invariant 4. The type WORKER makes every diagnostic. */
 export class CodeEditor {
   private readonly editor: Monaco.editor.IStandaloneCodeEditor
-  private readonly models = new Map<string, Monaco.editor.ITextModel>()
+  private readonly holding = new Set<string>()
   private readonly watching: Monaco.IDisposable[] = []
   private open: string | null = null
 
@@ -31,12 +32,18 @@ export class CodeEditor {
     private readonly monaco: typeof Monaco,
     deps: CodeEditorDeps,
   ) {
+    defineStudioTheme(monaco)
+
     this.editor = monaco.editor.create(deps.host, {
-      // 🛑 Monaco's own dark theme, and it does NOT follow the studio's: its colours come from a
-      // theme registry of its own, and mapping forty of them onto the tokens is its own lot.
-      theme: 'vs-dark',
+      // 🛑 Monaco's own dark theme with FOUR studio colours over it — see `defineStudioTheme`.
+      // The forty syntax tokens stay Monaco's: mapping those is a lot of its own.
+      theme: STUDIO_THEME,
       automaticLayout: true,
       minimap: { enabled: false },
+      // The bar minimap would have filled: empty, it reads as a second border down the side.
+      overviewRulerLanes: 0,
+      overviewRulerBorder: false,
+      hideCursorInOverviewRuler: true,
       scrollBeyondLastLine: false,
       fontLigatures: true,
       tabSize: 2,
@@ -44,6 +51,7 @@ export class CodeEditor {
     })
 
     this.watching.push(
+      { dispose: onPaletteChange(() => defineStudioTheme(monaco)) },
       monaco.editor.onDidChangeMarkers(() => deps.onProblems(this.problems())),
       this.editor.onDidChangeModelContent(() => {
         const script = this.open
@@ -53,13 +61,10 @@ export class CodeEditor {
     )
   }
 
-  /** Shows that script, making its model the first time it is asked for. */
+  /** Shows that script, taking a hold on the one model its URI may have — see `SHARED`. */
   show(script: string, source: string): void {
-    let model = this.models.get(script)
-    if (!model) {
-      model = this.monaco.editor.createModel(source, 'typescript', uriOf(this.monaco, script))
-      this.models.set(script, model)
-    } else if (model.getValue() !== source) {
+    const model = this.hold(script, source)
+    if (model.getValue() !== source) {
       // 🛑 Pushed as an EDIT, never `setValue`: the latter clears the command manager and every
       // decoration (`textModel.js`, `_setValueFromTextBuffer`), so a re-read after a Play would
       // cost an author their undo history and put the cursor back on 1,1.
@@ -71,6 +76,43 @@ export class CodeEditor {
     }
     this.open = script
     this.editor.setModel(model)
+  }
+
+  /** The shared model for that script, made on first ask, counted once per editor. */
+  private hold(script: string, source: string): Monaco.editor.ITextModel {
+    const uri = uriOf(this.monaco, script)
+    const held =
+      SHARED.get(script) ??
+      // `getModel` before `createModel`: the latter THROWS on a URI already taken, and a model
+      // outliving this map is what a hot reload leaves behind.
+      (() => {
+        const model =
+          this.monaco.editor.getModel(uri) ??
+          this.monaco.editor.createModel(source, 'typescript', uri)
+        const made = { model, holders: 0 }
+        SHARED.set(script, made)
+        return made
+      })()
+
+    if (!this.holding.has(script)) {
+      this.holding.add(script)
+      held.holders += 1
+    }
+    return held.model
+  }
+
+  /** Lets that script go, and disposes its model once no editor is showing it any more. */
+  private release(script: string): void {
+    if (!this.holding.delete(script)) return
+
+    const held = SHARED.get(script)
+    if (!held) return
+
+    held.holders -= 1
+    if (held.holders > 0) return
+
+    held.model.dispose()
+    SHARED.delete(script)
   }
 
   /** Puts the cursor on that line and scrolls to it — what a console error opens. */
@@ -86,8 +128,7 @@ export class CodeEditor {
    * every model of the page, not the open one.
    */
   forget(script: string): void {
-    this.models.get(script)?.dispose()
-    this.models.delete(script)
+    this.release(script)
     if (this.open === script) this.open = null
   }
 
@@ -125,14 +166,44 @@ export class CodeEditor {
 
   dispose(): void {
     for (const held of this.watching) held.dispose()
-    for (const model of this.models.values()) model.dispose()
-    this.models.clear()
+    for (const script of [...this.holding]) this.release(script)
     this.editor.dispose()
   }
 }
 
 const STUDIO_TYPES_PATH = 'file:///node_modules/@studio/index.d.ts'
 const PROJECT_TYPES = 'file:///node_modules/@studio/project.d.ts'
+
+const STUDIO_THEME = 'ia-studio'
+
+/** 🛑 The caret line is a FILL whose BORDER takes the same colour: Monaco's dark theme draws that
+ * one as a rule above and below, which reads as a rectangle around the line. `chassis` and not
+ * `elevated` — the latter is the hover tone, and reads as a band across the width. */
+function defineStudioTheme(monaco: typeof Monaco): void {
+  const line = cachedToken('--color-chassis')
+
+  monaco.editor.defineTheme(STUDIO_THEME, {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': cachedToken('--color-surface'),
+      'editor.foreground': cachedToken('--color-text'),
+      'editorLineNumber.foreground': cachedToken('--color-muted'),
+      'editorLineNumber.activeForeground': cachedToken('--color-text'),
+      'editor.lineHighlightBackground': line,
+      'editor.lineHighlightBorder': line,
+    },
+  })
+  monaco.editor.setTheme(STUDIO_THEME)
+}
+
+/**
+ * 🛑 One model per URI, COUNTED, because a model belongs to the path and not to the editor that
+ * happened to make it: a tab is one editor, a remount makes a second before the first has gone,
+ * and Monaco throws on a URI already taken — then blanks the survivor when the maker disposes.
+ */
+const SHARED = new Map<string, { model: Monaco.editor.ITextModel; holders: number }>()
 
 // Module-wide, like the registration it holds — see `declareProject`.
 let projectLib: Monaco.IDisposable | null = null

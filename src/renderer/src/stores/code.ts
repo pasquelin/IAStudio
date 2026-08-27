@@ -86,6 +86,9 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
   edited: (script, source) => {
     set(state => {
       const held = state.files[script]
+      // 🛑 Refused for a script the store has not read, and it is NOT an oversight: `holds` is
+      // read off this map, and `restoreDocument` re-reads it after its await — an entry made
+      // here would make it skip the install and lose what the file held.
       if (!held || held.source === source) return state
       return { files: { ...state.files, [script]: { ...held, source } } }
     })

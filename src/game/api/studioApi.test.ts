@@ -5,6 +5,9 @@ import STUDIO_TYPES from './studio.d.ts?raw'
 import { KERNEL } from '../script/kernel'
 import type { ScriptHook } from '../script/frame'
 
+/** Generic since a script's `props` are typed by what it declares — the marker follows. */
+const SELF_OPENS = 'export type Self<P = Record<string, unknown>> = {'
+
 /** What a fixed step drives, spelled out so the declaration is compared against something. */
 const STEP_HOOKS: readonly ScriptHook[] = ['onCreate', 'onStart', 'onUpdate', 'onLateUpdate']
 
@@ -71,8 +74,7 @@ describe('what a script is told it may call', () => {
       surface: 'self',
       inside: () =>
         built(between(KERNEL, 'function selfOf(entity, held) {', '\n  }\n\n  function has')),
-      written: () =>
-        declared(between(STUDIO_TYPES, 'export type Self = {', '\n  }\n\n  /** The step')),
+      written: () => declared(between(STUDIO_TYPES, SELF_OPENS, '\n  }\n\n  /** The step')),
     },
     {
       surface: 'ctx',
