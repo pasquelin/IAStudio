@@ -97,3 +97,6 @@ export function bundledEngine(
     sources: join(home, 'src'),
   }
 }
+
+/** The runtime an exported game embeds, built by `pnpm game:runtime` and shipped beside the app. */
+export const bundledGameRuntime = (root: string): string => join(root, 'gameRuntime')

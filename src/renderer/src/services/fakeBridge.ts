@@ -172,6 +172,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       write: () => Promise.reject(new Error('no game manifest stubbed')),
       scripts: () => Promise.resolve([]),
       writeScript: () => Promise.resolve(false),
+      // `null` is « nobody picked a folder », which is what a suite that stubbed nothing means.
+      export: () => Promise.resolve(null),
       ...overrides.game,
     },
     documents: {

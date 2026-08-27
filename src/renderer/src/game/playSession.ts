@@ -12,6 +12,7 @@ import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import type { World } from '@game/runtime/world'
 import type { SceneState } from '@/engines/scene/sceneState'
+import type { FrameDriver } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
 import { createStudioRender, type SceneDraw } from './studioRender'
 import { worldFromScene } from './worldFromScene'
@@ -46,12 +47,6 @@ const addressed = (fault: ScriptFault, documentId: string): RuntimeError => ({
   column: fault.column,
   at: Date.now(),
 })
-
-/** What drives the frames. Injected so a test can step them rather than wait for a browser. */
-export type FrameDriver = {
-  start: (frame: (nowMs: number) => void) => void
-  stop: () => void
-}
 
 export type PlaySession = {
   state: () => PlayState
@@ -416,25 +411,6 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       // and only when it was touched, or a STOP would undo an orbit made by hand during the game.
       if (steered) deps.renderer.placeView(watching)
       publish()
-    },
-  }
-}
-
-/** The browser's own frames. Named apart so nothing but the studio's own start depends on one. */
-export function animationFrames(): FrameDriver {
-  let handle: number | null = null
-
-  return {
-    start: frame => {
-      const tick = (nowMs: number): void => {
-        handle = requestAnimationFrame(tick)
-        frame(nowMs)
-      }
-      handle = requestAnimationFrame(tick)
-    },
-    stop: () => {
-      if (handle !== null) cancelAnimationFrame(handle)
-      handle = null
     },
   }
 }

@@ -135,6 +135,30 @@ export async function createStudio(
      * MEANS — the refusal of a path that leaves the project — stays in the main process.
      */
     game: {
+      /**
+       * 🛑 A PORT: the disk an export writes onto. Every file lands in the memory folder under
+       * the game's own name, so an oracle can read back what was written — and 65.1 could not
+       * pass at all against the default, which answers « nobody picked a folder ».
+       */
+      export: async request => {
+        const root = `exports/${request.title}`
+        const missing: string[] = []
+        for (const scene of request.scenes) {
+          await folder.write(`${root}/scenes/${scene.id}.gltf`, scene.content)
+        }
+        for (const script of request.scripts) {
+          await folder.write(`${root}/scripts/${stemOf(nameOf(script.script))}.js`, script.code)
+        }
+        await folder.write(`${root}/index.html`, '<!doctype html>')
+        await folder.write(`${root}/runtime.js`, '// bundle')
+        return {
+          folder: request.title,
+          scenes: request.scenes.length,
+          scripts: request.scripts.length,
+          assets: 0,
+          missing,
+        }
+      },
       scripts: () =>
         Promise.resolve(
           folder

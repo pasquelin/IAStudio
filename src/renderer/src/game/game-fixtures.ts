@@ -1,5 +1,5 @@
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
-import type { FrameDriver } from './playSession'
+import type { FrameDriver } from './frameDriver'
 import type { SceneDraw } from './studioRender'
 
 const AT_REST = { position: { x: 5, y: 5, z: 5 }, target: { x: 0, y: 0, z: 0 } }

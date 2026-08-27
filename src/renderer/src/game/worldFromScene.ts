@@ -39,18 +39,22 @@ export function worldFromScene(
   documentId: string,
   state: SceneState,
   ports: GameApi,
-  scripts: ScriptSystemOptions = {
-    modules: [],
-    // The game's own log rather than nothing: without a studio listening, a fault that goes
-    // nowhere is a script that silently never ran.
-    onFault: fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`),
-  },
+  scripts: Partial<ScriptSystemOptions> = {},
   seed = 1,
 ): World {
+  const told: ScriptSystemOptions = {
+    modules: scripts.modules ?? [],
+    // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
+    // nowhere is a script that silently never ran — and a caller passing an empty one is how
+    // that happened in the exported game.
+    onFault:
+      scripts.onFault ??
+      (fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`)),
+  }
   const world = createWorld({
     scene: { kind: 'document', id: documentId },
     ports,
-    systems: systemsFor(state, ports, scripts),
+    systems: systemsFor(state, ports, told),
     seed,
     step: STEP_SECONDS,
     play: state.world.play,

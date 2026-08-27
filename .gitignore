@@ -48,3 +48,4 @@ secret/
 # La configuration que lit un client MCP, écrite au lancement d'un run de développement. Elle
 # porte le chemin ABSOLU de cette machine vers l'exécutable — vraie ici, fausse partout ailleurs.
 .mcp.json
+resources/gameRuntime/

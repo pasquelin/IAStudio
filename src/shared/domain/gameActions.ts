@@ -381,3 +381,18 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
 ]
+
+/** Writing a game that runs with no studio — the plan's § 19. */
+export const EXPORT_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'game.export',
+    titleKey: 'assistant.actions.gameExport.title',
+    descriptionKey: 'assistant.actions.gameExport.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [
+      { key: 'entryScene', kind: 'text', labelKey: 'assistant.fields.entryScene', required: false },
+      { key: 'title', kind: 'text', labelKey: 'assistant.fields.gameTitle', required: false },
+    ],
+  }),
+]

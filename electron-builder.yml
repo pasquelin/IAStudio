@@ -64,6 +64,11 @@ asarUnpack:
 beforePack: scripts/before-pack.mjs
 
 extraResources:
+  # Le runtime qu'un jeu exporté embarque — un module ES bâti par `pnpm game:runtime`. Hors de
+  # l'asar parce qu'il est COPIÉ dans le dossier du jeu, et qu'on ne copie pas depuis une archive.
+  - from: resources/gameRuntime
+    to: gameRuntime
+    filter: ['**/*']
   - from: resources/ffmpeg
     to: ffmpeg
     filter: ['**/*']

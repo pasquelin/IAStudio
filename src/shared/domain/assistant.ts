@@ -22,6 +22,7 @@ import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
 import {
   ASSEMBLY_ACTIONS,
+  EXPORT_ACTIONS,
   GAME_ACTIONS,
   PLAY_ACTIONS,
   SCRIPT_ACTIONS,
@@ -79,6 +80,7 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'studio', actions: STUDIO_ACTIONS },
   { name: 'timeline', actions: TIMELINE_ACTIONS },
   { name: 'assembly', actions: ASSEMBLY_ACTIONS },
+  { name: 'export', actions: EXPORT_ACTIONS },
   { name: 'context', actions: CONTEXT_ACTIONS },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },

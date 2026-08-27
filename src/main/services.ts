@@ -50,6 +50,7 @@ import { createFfmpegResolver } from './media/ffmpeg'
 import {
   bundledAnimations,
   bundledEngine,
+  bundledGameRuntime,
   bundledFfmpeg,
   bundledModels,
   bundledTemplates,
@@ -317,6 +318,10 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
+  /** The catalogue's rows for those ids — what an export follows to find an asset's file. */
+  assetsById: (ids: readonly string[]) => Promise<readonly Asset[]>
+  /** Where the runtime an exported game embeds sits, beside the app. */
+  runtimeFolder: () => string
   /** The process that packs and unpacks a montage bundle, forked on the first one asked for. */
   bundles: () => BundleClient
   /** Where a bundle is read FROM. A file the user pointed at, so nothing confines it. */
@@ -2085,6 +2090,8 @@ export function createServices(settings: SettingsStore): Services {
     // The same picker the settings use for a folder: a second dialog with slightly different
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
+    assetsById: ids => project.catalog().search({ ids, limit: ids.length }),
+    runtimeFolder: () => bundledGameRuntime(resourcesRoot()),
     // Forked on the first bundle asked for, then kept — most sessions export none. Forgotten
     // when it exits, so a crash costs the export it was writing and not the session.
     bundles: () =>

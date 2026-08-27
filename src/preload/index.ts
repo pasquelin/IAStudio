@@ -164,6 +164,7 @@ const bridge: StudioBridge = {
     write: game => ipcRenderer.invoke(CHANNELS.gameWrite, game),
     scripts: () => ipcRenderer.invoke(CHANNELS.gameScripts),
     writeScript: (path, source) => ipcRenderer.invoke(CHANNELS.gameWriteScript, path, source),
+    export: request => ipcRenderer.invoke(CHANNELS.gameExport, request),
   },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),

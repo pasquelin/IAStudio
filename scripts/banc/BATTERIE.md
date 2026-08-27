@@ -944,3 +944,7 @@ Dans la scène Test MCP :
 
 - [ ] « Envoie la partie dans la scène Scène 1. »
 - [ ] « À deux secondes, fais un fondu d’une seconde vers Scène 1. »
+
+## 65. Sortir le jeu du studio
+
+- [ ] « Exporte le jeu. »

@@ -14,6 +14,7 @@ import { useSettings } from '@/stores/settings'
 import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
 import { ASSEMBLY_HANDLERS } from './assemblyHandlers'
+import { EXPORT_HANDLERS } from './exportHandlers'
 import { ASSET_HANDLERS } from './assetHandlers'
 import { CANVAS_HANDLERS } from './canvasHandlers'
 import { CLOUD_HANDLERS } from './cloudHandlers'
@@ -55,6 +56,7 @@ const HANDLERS: ActionHandlers = {
   ...STUDIO_HANDLERS,
   ...TIMELINE_HANDLERS,
   ...ASSEMBLY_HANDLERS,
+  ...EXPORT_HANDLERS,
   ...TARGET_HANDLERS,
   ...STATE_HANDLERS,
   ...FILE_HANDLERS,

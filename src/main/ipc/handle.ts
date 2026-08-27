@@ -51,6 +51,7 @@ type ChannelMethod = {
   [CHANNELS.projectReadContext]: StudioBridge['project']['readContext']
   [CHANNELS.projectWriteContext]: StudioBridge['project']['writeContext']
   [CHANNELS.projectExport]: StudioBridge['project']['exportInto']
+  [CHANNELS.gameExport]: StudioBridge['game']['export']
   [CHANNELS.projectRevealFile]: StudioBridge['project']['revealFile']
   [CHANNELS.projectRevealFolder]: StudioBridge['project']['revealFolder']
   [CHANNELS.projectRename]: StudioBridge['project']['rename']
