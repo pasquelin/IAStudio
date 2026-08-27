@@ -36,7 +36,7 @@
     "projectNotCreated": "The project could not be created in this folder",
     "projectNested": "This folder is already inside a project: pick one outside it",
     "projectHoldsProjects": "This folder already holds projects: open the one you want, or pick a fresh folder beside it",
-    "projectLegacyAssetsFolder": "This project keeps an {{legacy}} folder from an earlier version. The files in it have not moved; the one that just arrived is filed under {{folder}}, and the next ones go to the folder for their kind. You can bring them all together yourself.",
+    "projectLegacyAssetsFolder": "This project keeps an {{legacy}} folder from an earlier version. The files in it have not moved; the one that just arrived is filed under {{folder}}, and the next ones go to the one that answers for them. You can bring them all together yourself.",
     "projectNotRenamed": "The project could not be renamed: its folder is missing or unreadable",
     "projectNotRevealed": "The project folder cannot be found",
     "projectAccountRestored": "Project reopened on the “{{name}}” account",

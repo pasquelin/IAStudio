@@ -1,6 +1,6 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
-import { DEFAULT_ASSET_FOLDERS } from './asset'
+import { DEFAULT_ASSET_FOLDERS, MATERIALS_FOLDER } from './asset'
 import { parentOf } from './folder'
 
 export const MANIFEST_VERSION = 1
@@ -294,11 +294,15 @@ export const MACHINE_FOLDERS: readonly string[] = [
  * anything back from.
  *
  * Derived from `DEFAULT_ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the
- * writer pointing at a folder this never created. `assets/` and `documents/` are no longer among
+ * writer pointing at a folder this never created — plus the ONE entry no kind derives,
+ * `MATERIALS_FOLDER`, which holds the `.mtlx` documents and the pictures that serve one. `assets/` and `documents/` are no longer among
  * them: a document lands in `documents/` when nothing says otherwise and the folder appears with
  * the first save, exactly as an import recreates `Images/`.
  */
-export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FOLDERS)
+export const STARTER_FOLDERS: readonly string[] = [
+  ...Object.values(DEFAULT_ASSET_FOLDERS),
+  MATERIALS_FOLDER,
+]
 
 /**
  * The one folder every asset used to be filed under, back when the tree was the studio's.

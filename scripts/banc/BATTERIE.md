@@ -678,7 +678,7 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 
 ## 42. Fichiers — le reste
 
-- [ ] « Copie l'image du bateau dans mon dossier Textures sans la déplacer. »
+- [ ] « Copie l'image du bateau dans mon dossier Materials sans la déplacer. »
 - [ ] « Montre-moi l'historique de mes dernières opérations sur les fichiers. »
 - [x] « Qu'est-ce que j'ai ouvert récemment dans ce projet ? »
 - [ ] « Refais l'opération que je viens d'annuler. »

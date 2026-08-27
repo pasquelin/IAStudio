@@ -1,8 +1,9 @@
 import { orElse } from '@shared/promises'
 import {
+  documentFolderOf,
   kindForWorkspace,
-  DOCUMENTS_FOLDER,
   type DocumentDescriptor,
+  type DocumentKind,
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { parentOf } from '@shared/domain/folder'
@@ -16,21 +17,23 @@ import { getBridge } from '@/services/bridge'
 import { openDocument } from './dockviewApi'
 
 /**
- * Where the field opens: the folder the Explorer is pointing at, or `DOCUMENTS_FOLDER` when it
+ * Where the field opens: the folder the Explorer is pointing at, or this kind's own when it
  * points at nothing. A row that is a FILE means the folder holding it — what is on screen around
  * the selection is what the user is looking at, whichever row carries the highlight.
  *
  * The disk is asked which of the two it is: a path alone cannot say, and a folder mistaken for a
  * file would open the field one level too high.
  */
-async function startingFolder(): Promise<string> {
+async function startingFolder(kind: DocumentKind): Promise<string> {
+  const fallback = documentFolderOf(kind)
+
   const picked = selectedFilePaths(useSelection.getState()).at(-1)
-  if (picked === undefined) return DOCUMENTS_FOLDER
+  if (picked === undefined) return fallback
 
   const facts = await orElse(getBridge()?.project.fileFacts(picked), null)
-  if (!facts) return DOCUMENTS_FOLDER
+  if (!facts) return fallback
 
-  return facts.kind === 'folder' ? picked : (parentOf(picked) ?? DOCUMENTS_FOLDER)
+  return facts.kind === 'folder' ? picked : (parentOf(picked) ?? fallback)
 }
 
 /**
@@ -85,7 +88,7 @@ async function named(
     // The folders first: what they hold is what the suggested name has to step over.
     await useDocuments.getState().relist()
 
-    const folder = await startingFolder()
+    const folder = await startingFolder(kind)
     const state = useDocuments.getState()
 
     const place = await namer.ask({

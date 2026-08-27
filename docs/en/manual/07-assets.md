@@ -37,17 +37,17 @@ Six asset types:
 
 | Type | What it is | Where it lands |
 |---|---|---|
-| **Image** | a still image | `Images/` |
+| **Image** | a still image | `Images/`, or `Materials/` when it serves a material |
 | **Video** | a moving shot | `Video/` |
 | **Audio** | a sound, a piece of music | `Audio/` |
 | **Mesh** | a 3D object | `3D/` |
 | **Skybox** | a 360° sky | `Sky/` |
 | **Animation** | a motion, to be replayed on a character | `Animations/` |
 
-**Where it lands, not where it lives.** These six folders are laid down when the project is
-created and are only a starting point: move an asset wherever you like, rename the folder, empty
-it. What a file IS does not depend on where it sits — the studio finds it again, and its entry
-follows.
+**Where it lands, not where it lives.** These folders are laid down when the project is created,
+alongside `Materials/` which answers to no kind, and are only a starting point: move an asset
+wherever you like, rename the folder, empty it. What a file IS does not depend on where it sits —
+the studio finds it again, and its entry follows.
 
 ---
 
@@ -530,7 +530,7 @@ without having run `pnpm ffmpeg:fetch`.
 
 ## Where your files really are
 
-**Wherever you put them.** A generated asset lands in one of the six starter folders — see
+**Wherever you put them.** A generated asset lands in one of the seven starter folders — see
 [What you find there](#what-you-find-there) — and nothing holds it there: move it, file it in a
 tree of your own, the Explorer keeps showing it and its entry follows. The layout of the project
 folder is described in [Projects](04-projects.md#what-is-inside).

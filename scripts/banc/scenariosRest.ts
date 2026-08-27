@@ -87,10 +87,10 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   },
 
   {
-    name: '42.1 copies the boat picture into Textures without moving it',
-    said: ["Copie l'image du bateau dans mon dossier Textures sans la déplacer."],
+    name: '42.1 copies the boat picture into Materials without moving it',
+    said: ["Copie l'image du bateau dans mon dossier Materials sans la déplacer."],
     passed: run =>
-      read.holds(run, 'Textures/fais moi un bateau.png') &&
+      read.holds(run, 'Materials/fais moi un bateau.png') &&
       read.holds(run, 'Images/fais moi un bateau.png'),
   },
   {

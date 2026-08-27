@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   assetBadgeOf,
   assetIdFromUrl,
+  DEFAULT_ASSET_FOLDERS,
+  defaultAssetFolder,
+  MATERIALS_FOLDER,
   assetMasterUrl,
   assetUrl,
   hostedParts,
@@ -235,5 +238,33 @@ describe('the badge an asset wears', () => {
       syncStatus: 'synced',
     })
     expect(assetBadgeOf(twin, null)).toBe('synced')
+  })
+})
+
+/**
+ * The one folder that is not an asset TYPE's. A material is a document, and the pictures that
+ * serve one are still pictures — what files them apart is what they are FOR, which their channel
+ * is the only thing left to say since the studio stopped filing a channel under a kind.
+ */
+describe('where an asset lands by default', () => {
+  it('files a picture that holds a channel with the materials', () => {
+    expect(defaultAssetFolder({ type: 'image', map: 'normal' })).toBe(MATERIALS_FOLDER)
+    expect(defaultAssetFolder({ type: 'image', map: 'baseColor' })).toBe(MATERIALS_FOLDER)
+  })
+
+  /** An ORM packs two channels and claims neither — and it is what the unpack gesture reads. */
+  it('files a picture out of a packed glTF slot with the materials', () => {
+    expect(defaultAssetFolder({ type: 'image', packedSlot: 'metallicRoughnessTexture' })).toBe(
+      MATERIALS_FOLDER,
+    )
+  })
+
+  it('files a picture that holds none with the pictures', () => {
+    expect(defaultAssetFolder({ type: 'image' })).toBe(DEFAULT_ASSET_FOLDERS.image)
+  })
+
+  it('leaves every other kind on its own shelf', () => {
+    expect(defaultAssetFolder({ type: 'mesh' })).toBe(DEFAULT_ASSET_FOLDERS.mesh)
+    expect(defaultAssetFolder({ type: 'skybox' })).toBe(DEFAULT_ASSET_FOLDERS.skybox)
   })
 })

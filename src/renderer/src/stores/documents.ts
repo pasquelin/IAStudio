@@ -1,5 +1,6 @@
 import {
   DOCUMENTS_FOLDER,
+  documentFolderOf,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -76,7 +77,7 @@ type DocumentsState = {
    * plus button raises hands over. Without `of` the document is numbered, for a caller with
    * nobody to ask.
    *
-   * `folder` is where its author filed it — `DOCUMENTS_FOLDER` for a caller who did not ask.
+   * `folder` is where its author filed it — `documentFolderOf` for a caller who did not ask.
    */
   create: (
     workspace: WorkspaceId,
@@ -400,7 +401,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // (there is no file to disagree with), and the first save answers for good: it may land on
       // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
       // folder holds.
-      path: pathIn(of?.folder ?? DOCUMENTS_FOLDER, documentFileName(title, kind)),
+      path: pathIn(of?.folder ?? documentFolderOf(kind), documentFileName(title, kind)),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 

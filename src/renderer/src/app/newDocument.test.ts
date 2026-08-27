@@ -133,6 +133,31 @@ describe('createDocumentIn', () => {
     expect(asks[0]?.folder).toBe('documents')
   })
 
+  /**
+   * The one kind with a folder of its own: a material is a DOCUMENT, and the pictures that serve
+   * one land beside it. Every other kind falls back to `documents/`, which is the shelf for what
+   * has no folder to be looked for under.
+   */
+  it('falls back to the materials folder for a material', async () => {
+    answering(null)
+
+    createDocumentIn('materials')
+
+    await vi.waitFor(() => expect(asks).toHaveLength(1))
+    expect(asks[0]?.folder).toBe('Materials')
+  })
+
+  /**
+   * The window is not the only door: a caller that supplies a title opens none — the assistant
+   * and the MCP wire both do — and the fallback has to be the same one on both.
+   */
+  it('files a named material in the materials folder, no window opened', async () => {
+    const created = await createDocumentIn('materials', { title: 'Rouille' })
+
+    expect(created?.path).toBe('Materials/Rouille.mtlx')
+    expect(asks).toHaveLength(0)
+  })
+
   it('files the document in the folder the window answers', async () => {
     answering({ title: 'Niveau', folder: 'Images/Croquis' })
 
