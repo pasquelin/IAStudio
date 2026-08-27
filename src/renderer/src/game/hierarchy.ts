@@ -1,0 +1,66 @@
+import { Matrix4 } from 'three'
+import type { Transform, Vector3 } from '@shared/domain/transform'
+import { matrixOfTransform, transformOfMatrix } from '@/engines/csg/csgMatrix'
+import type { SceneNode } from '@/engines/scene/sceneState'
+
+/**
+ * Where a node stands in the WORLD, and how to write a world pose back into its own frame.
+ *
+ * 🛑 What closes the hole `worldFromScene` carried since the physics arrived: an entity's
+ * transform is LOCAL, the renderer composes its parents and the physics does not, so a collider
+ * under a group stood where the mesh was not.
+ *
+ * 🛑 Nothing is CACHED, and that is the point: a parent moves during a game — a `Movement` on a
+ * group, a dynamic body settling — and a matrix remembered at build made a child's mesh fall
+ * twice as fast as its collider. Measured at 0,23 µs a call, which 200 bodies pay in 0,05 ms.
+ *
+ * 🛑 A parent scaled UNEVENLY shears the matrix, and `decompose` cannot describe shear: the
+ * rotation this hands back is then wrong. The same reserve `csgMatrix` writes, and ADR-25.
+ */
+export type Hierarchy = {
+  /** The node's place with every parent composed in. Its own transform when the scene lost it. */
+  worldOf: (nodeId: string, own: Transform) => Transform
+  /**
+   * A world pose written back into the node's own frame, or `null` when the node has no parent
+   * and the two are the same thing — which spares an entity per body per step.
+   *
+   * The inverse of the PARENT's matrix, never of the node's own: what the physics moved is the
+   * body, and what the document holds is where it sits inside whatever it hangs from.
+   */
+  localOf: (nodeId: string, position: Vector3, rotation: Vector3) => Transform | null
+}
+
+export function createHierarchy(byId: ReadonlyMap<string, SceneNode>): Hierarchy {
+  /** The chain above a node, composed. Identity for one that hangs from nothing the scene holds. */
+  const above = (parentId: string | null): Matrix4 => {
+    const world = new Matrix4()
+    // No visited set, as `carve.ts` walks this same chain without one: `canReparent` refuses a
+    // circular parent, and a cycle would be a document no gesture of the studio can write.
+    let walker = parentId === null ? undefined : byId.get(parentId)
+    while (walker) {
+      world.premultiply(matrixOfTransform(walker.transform))
+      walker = walker.parentId === null ? undefined : byId.get(walker.parentId)
+    }
+    return world
+  }
+
+  const parentOf = (nodeId: string): string | null => byId.get(nodeId)?.parentId ?? null
+
+  return {
+    worldOf: (nodeId, own) => {
+      const parentId = parentOf(nodeId)
+      if (parentId === null) return own
+
+      return transformOfMatrix(above(parentId).multiply(matrixOfTransform(own)))
+    },
+
+    localOf: (nodeId, position, rotation) => {
+      const parentId = parentOf(nodeId)
+      if (parentId === null) return null
+
+      const held = byId.get(nodeId)?.transform.scale ?? { x: 1, y: 1, z: 1 }
+      const world = matrixOfTransform({ position, rotation, scale: held })
+      return transformOfMatrix(above(parentId).invert().multiply(world))
+    },
+  }
+}

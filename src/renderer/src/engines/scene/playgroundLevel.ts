@@ -45,7 +45,7 @@ function slab(
   bounds: Bounds,
   name: string,
   material: MaterialDescriptor,
-  parentId: string | null,
+  parentId: string,
 ): SceneNode {
   return meshNode(
     {
@@ -93,7 +93,7 @@ function ring(
   span: { inner: Extent; outer: Extent; y0: number; y1: number },
   name: string,
   material: () => MaterialDescriptor,
-  parentId: string | null,
+  parentId: string,
 ): SceneNode[] {
   const { inner, outer } = span
   const height = { y0: span.y0, y1: span.y1 }
@@ -115,7 +115,7 @@ const COURT_WALL = 0.4
  * one — never through it, which would leave two faces fighting for the same depth all round the
  * opening. Outside the court's rectangle, so the opening stays exactly the size it claims.
  */
-function courtWalls(parentId: string | null): SceneNode[] {
+function courtWalls(parentId: string): SceneNode[] {
   return ring(
     {
       inner: { x: COURT_HALF_X, z: COURT_HALF_Z },
@@ -133,7 +133,7 @@ function courtWalls(parentId: string | null): SceneNode[] {
  * The floor, as four slabs around the court — a solid cannot be pierced, and the court is the
  * whole point: what a fall, a jump and the plank across it are all tested against.
  */
-function floorSlabs(parentId: string | null): SceneNode[] {
+function floorSlabs(parentId: string): SceneNode[] {
   return [
     ...ring(
       {
@@ -328,23 +328,29 @@ function obstacles(parentId: string): SceneNode[] {
 /**
  * One group per family: thirty parts flat in the outliner is a list nobody reads.
  *
- * 🛑 What one STANDS on is the exception, and stands at the root: the physics refuses a body
- * hanging from a group (`worldFromScene`), so a floor tidied away is a floor nobody stands on.
+ * 🛑 Every part is SOLID, groups included in the tidying: the physics composes a parent's place
+ * now (`game/hierarchy.ts`), so a set can be both readable and something one bumps into. It was
+ * the other way round for one lot — the floor at the root, the rest walked through.
  */
 export function playgroundNodes(): SceneNode[] {
+  const ground = groupNode(IDENTITY_TRANSFORM, 'Ground')
   const enclosure = groupNode(IDENTITY_TRANSFORM, 'Enclosure')
   const course = groupNode(IDENTITY_TRANSFORM, 'Course')
 
   return [
-    ...[...floorSlabs(null), ...courtWalls(null)].map(solid),
+    ground,
     enclosure,
-    ...walls(enclosure.id),
     course,
-    ...courtStair(course.id),
-    ...terrace(course.id),
-    ...walkway(course.id),
-    ...jumps(course.id),
-    ...obstacles(course.id),
+    ...[
+      ...floorSlabs(ground.id),
+      ...courtWalls(ground.id),
+      ...walls(enclosure.id),
+      ...courtStair(course.id),
+      ...terrace(course.id),
+      ...walkway(course.id),
+      ...jumps(course.id),
+      ...obstacles(course.id),
+    ].map(solid),
   ]
 }
 

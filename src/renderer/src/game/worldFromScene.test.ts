@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { newComponent } from '@shared/domain/componentRegistry'
+import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
+import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createExportHost } from '@game/host/exportHost'
 import { notedPhysics, type NotedPhysics } from '@game/physics/physics-fixtures'
 import type { GameApi } from '@game/api/gameApi'
@@ -90,26 +91,55 @@ describe('the edit state, translated into something that runs', () => {
   })
 
   /**
-   * 🛑 An entity's transform is LOCAL and the physics composes no parent, so a body under a group
-   * would stand where its mesh is not. Refused and named rather than placed wrong.
+   * 🛑 An entity's transform is LOCAL and the physics composes no parent — so the body goes in at
+   * its COMPOSED place. Left out, a whole set tidied under a group was solid to nobody.
    */
-  it('leaves a node hanging from another out of the physics, and says which', () => {
+  it('puts a node hanging from another into the physics, at its composed place', () => {
     const physics = notedPhysics()
     const held = ports(physics)
-    const state = {
-      ...scene(),
-      nodes: [
-        { ...meshNode('parent'), components: [newComponent('Collider')] },
-        { ...meshNode('child', 'parent'), name: 'Caisse', components: [newComponent('Collider')] },
+    const parent = {
+      ...meshNode('parent'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 10, y: 0, z: 0 } },
+      components: [newComponent('Collider')],
+    }
+    const child = {
+      ...meshNode('child', 'parent'),
+      name: 'Caisse',
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 2, z: 0 } },
+      components: [newComponent('Collider')],
+    }
+
+    worldFromScene('doc-1', { ...scene(), nodes: [parent, child] }, held).step(1 / 60)
+
+    expect(physics.added.map(body => body.body)).toEqual(['parent', 'child'])
+    expect(physics.added[1]?.transform.position).toMatchObject({ x: 10, y: 2, z: 0 })
+    expect(held.log.recent()).toEqual([])
+  })
+
+  /**
+   * 🛑 The THIRD traversal, and the one a first pass missed: a kinematic body is built at its
+   * composed place and then PLACED every step. Placed raw, a platform under a group jumped to its
+   * local place on the first step — and `poses` skips a kinematic, so nothing brought it back.
+   */
+  it('places a kinematic body under a group at its composed place, every step', () => {
+    const physics = notedPhysics()
+    const held = ports(physics)
+    const group = {
+      ...meshNode('group'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 5, y: 0, z: 0 } },
+    }
+    const platform = {
+      ...meshNode('lift', 'group'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 1, z: 0 } },
+      components: [
+        newComponent('Collider'),
+        withComponentField(newComponent('RigidBody'), 'kind', 'kinematic'),
       ],
     }
 
-    worldFromScene('doc-1', state, held).step(1 / 60)
+    worldFromScene('doc-1', { ...scene(), nodes: [group, platform] }, held).step(1 / 60)
 
-    expect(physics.added.map(body => body.body)).toEqual(['parent'])
-    expect(held.log.recent().map(entry => entry.message)).toEqual([
-      'Caisse hangs from another object: physics leaves it alone',
-    ])
+    expect(physics.placed.map(pose => pose.position)).toMatchObject([{ x: 5, y: 1, z: 0 }])
   })
 
   it('names the document it came from, so an entity can be referenced in full', () => {
