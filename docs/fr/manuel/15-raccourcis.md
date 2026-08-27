@@ -379,12 +379,12 @@ Chaque outil de la barre est une commande : sa touche l’arme, et se remappe co
 |---|---|---|---|---|
 | `V` | Déplacement | | `U` | Rectangle |
 | `H` | Main | | `⇧U` | Trait |
-| `K` | Échelle | | `A` | Flèche |
-| `C` | Recadrage | | `O` | Ellipse |
-| `M` | Sélection rectangulaire | | `B` | Pinceau |
-| `L` | Lasso | | `⇧B` | Crayon |
-| `T` | Texte | | `E` | Gomme |
-| `G` | Pot de peinture | | `I` | Pipette |
+| `C` | Recadrage | | `A` | Flèche |
+| `M` | Sélection rectangulaire | | `O` | Ellipse |
+| `L` | Lasso | | `B` | Pinceau |
+| `T` | Texte | | `⇧B` | Crayon |
+| `G` | Pot de peinture | | `E` | Gomme |
+|  |  | | `I` | Pipette |
 
 **Quatre outils n’ont pas de touche par défaut** — sélection elliptique, polygone, étoile, gomme
 sélective — et vous pouvez leur en donner une dans les réglages.
@@ -678,7 +678,6 @@ laisserait croire que `⌘D` ou `⌘Z` y font ce qu’ils font dans l’espace d
 | `H` |  |  |  |  | Outil Main |  |  |  |
 | `C` |  |  |  |  | Outil Recadrage |  |  |  |
 | `U` |  |  |  |  | Forme Rectangle |  |  |  |
-| `K` |  |  |  |  | Outil Échelle |  |  |  |
 | `A` |  |  |  |  | Forme Flèche |  |  |  |
 | `T` |  |  |  |  | Outil Texte |  |  |  |
 | `I` |  |  |  |  | Outil Pipette |  |  |  |

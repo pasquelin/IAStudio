@@ -370,12 +370,12 @@ Every tool in the bar is a command: its key arms it, and remaps like the rest.
 |---|---|---|---|---|
 | `V` | Move | | `U` | Rectangle |
 | `H` | Hand | | `⇧U` | Line |
-| `K` | Scale | | `A` | Arrow |
-| `C` | Crop | | `O` | Ellipse |
-| `M` | Rectangular selection | | `B` | Brush |
-| `L` | Lasso | | `⇧B` | Pencil |
-| `T` | Text | | `E` | Eraser |
-| `G` | Paint bucket | | `I` | Eyedropper |
+| `C` | Crop | | `A` | Arrow |
+| `M` | Rectangular selection | | `O` | Ellipse |
+| `L` | Lasso | | `B` | Brush |
+| `T` | Text | | `⇧B` | Pencil |
+| `G` | Paint bucket | | `E` | Eraser |
+|  |  | | `I` | Eyedropper |
 
 **Four tools have no default key** — elliptical selection, polygon, star, selection eraser — and you can
 give them one in the settings.
@@ -662,7 +662,6 @@ that is not a workspace — it is open in all of them at once — and one more c
 | `H` |  |  |  |  | Hand tool |  |  |  |
 | `C` |  |  |  |  | Crop tool |  |  |  |
 | `U` |  |  |  |  | Rectangle shape |  |  |  |
-| `K` |  |  |  |  | Scale tool |  |  |  |
 | `A` |  |  |  |  | Arrow shape |  |  |  |
 | `T` |  |  |  |  | Text tool |  |  |  |
 | `I` |  |  |  |  | Eyedropper tool |  |  |  |
