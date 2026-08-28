@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Memory } from './assistantMemory'
-import { openedBy, relationsOf } from './memoryGraph'
+import { neighboursOf } from './memoryGraph'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
   id: 'm_root',
@@ -17,21 +17,11 @@ const memory = (fields: Partial<Memory> = {}): Memory => ({
 })
 
 describe('what a memory sits among', () => {
-  it('roots the tree on the chosen memory', () => {
-    const rows = relationsOf(memory(), [])
-
-    expect(rows).toEqual([
-      {
-        id: 'm_root',
-        parentId: null,
-        label: 'Les caméras suivent le rail',
-        relation: null,
-        memoryId: 'm_root',
-      },
-    ])
+  it('says nothing at all about a memory that touches nothing', () => {
+    expect(neighboursOf(memory(), [])).toEqual([])
   })
 
-  it('hangs what it points at under it, and what else points there under that', () => {
+  it('gathers what it is about, and what else is about the same thing', () => {
     const root = memory({ refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
     const other = memory({
       id: 'm_other',
@@ -39,19 +29,25 @@ describe('what a memory sits among', () => {
       refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }],
     })
 
-    const rows = relationsOf(root, [root, other])
-    const ref = rows.find(one => one.label === 'Scripts/Cam.ts')
-
-    expect(ref?.parentId).toBe('m_root')
-    expect(rows.find(one => one.memoryId === 'm_other')?.parentId).toBe(ref?.id)
+    expect(neighboursOf(root, [root, other])).toEqual([
+      {
+        tie: 'about',
+        rows: [
+          {
+            label: 'Scripts/Cam.ts',
+            memoryId: null,
+            alsoAbout: [{ label: 'le rig pilote le rail', memoryId: 'm_other', alsoAbout: [] }],
+          },
+        ],
+      },
+    ])
   })
 
   /** 🛑 A memory listed among its own neighbours reads as a cycle. */
-  it('never puts the root under its own reference', () => {
+  it('never lists the chosen memory among what else is about the same thing', () => {
     const root = memory({ refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
-    const rows = relationsOf(root, [root])
 
-    expect(rows.filter(one => one.memoryId === 'm_root')).toHaveLength(1)
+    expect(neighboursOf(root, [root])[0]?.rows[0]?.alsoAbout).toEqual([])
   })
 
   it('shows what it links to and what it replaced, by their own words', () => {
@@ -59,42 +55,30 @@ describe('what a memory sits among', () => {
     const linked = memory({ id: 'm_two', summary: 'le script du rail' })
     const root = memory({ links: ['m_two'], supersedes: 'm_old' })
 
-    const rows = relationsOf(root, [root, linked, replaced])
+    const sections = neighboursOf(root, [root, linked, replaced])
 
-    expect(rows.find(one => one.relation === 'link')?.label).toBe('le script du rail')
-    expect(rows.find(one => one.relation === 'supersedes')?.label).toBe('ce qui était cru avant')
+    expect(sections.find(one => one.tie === 'links')?.rows[0]?.label).toBe('le script du rail')
+    expect(sections.find(one => one.tie === 'replaces')?.rows[0]?.label).toBe(
+      'ce qui était cru avant',
+    )
   })
 
   /** A link may outlive its target — the id is all that is left of one that is gone. */
-  it('shows the id alone for a memory the link no longer finds', () => {
-    const rows = relationsOf(memory({ links: ['m_gone'] }), [])
-    const link = rows.find(one => one.relation === 'link')
+  it('shows the id alone for a memory the link no longer finds, and opens nothing', () => {
+    const row = neighboursOf(memory({ links: ['m_gone'] }), [])[0]?.rows[0]
 
-    expect(link?.label).toBe('m_gone')
-    expect(link?.memoryId).toBeNull()
-  })
-})
-
-describe('what a row opens onto', () => {
-  /**
-   * 🛑 `memoryId` was documented as « what selecting it opens » and read by nobody:
-   * `selectedIds={[]}` and `onSelect={() => {}}`. Walking one hop without leaving the panel is
-   * the whole point of drawing the relations at all.
-   */
-  it('opens the memory a row stands for', () => {
-    const other = memory({ id: 'm_two', summary: 'Le rail est posé au sol' })
-    const rows = relationsOf(memory({ links: ['m_two'] }), [other])
-
-    expect(openedBy(rows, 'm_root link m_two', 'm_root')).toBe('m_two')
+    expect(row).toEqual({ label: 'm_gone', memoryId: null, alsoAbout: [] })
   })
 
-  /** A row standing for a FILE stands for no memory, and the root is already the one open. */
-  it('opens nothing for a reference, and nothing for the memory already open', () => {
-    const root = memory({ refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
-    const rows = relationsOf(root, [])
+  // The whole point of sections: a title is a sentence, so no row has to carry the relation, and
+  // the second level cannot inherit the first one's word the way the tree made it.
+  it('keeps each tie in its own section rather than naming it on every row', () => {
+    const root = memory({
+      refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }],
+      links: ['m_two'],
+      supersedes: 'm_old',
+    })
 
-    expect(openedBy(rows, 'm_root file Scripts/Cam.ts', 'm_root')).toBeNull()
-    expect(openedBy(rows, 'm_root', 'm_root')).toBeNull()
-    expect(openedBy(rows, 'nothing of the kind', 'm_root')).toBeNull()
+    expect(neighboursOf(root, []).map(one => one.tie)).toEqual(['about', 'links', 'replaces'])
   })
 })

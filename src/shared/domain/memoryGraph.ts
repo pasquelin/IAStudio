@@ -1,95 +1,69 @@
 import type { Memory } from './assistantMemory'
 
 /**
- * What one memory sits among, as rows a `Tree` draws.
+ * What one memory sits among, as SECTIONS a panel reads out — never as edges of a graph.
  *
- * A tree and not a free node-and-link graph, and the plan states the compromise: a free layout
- * needs a placement module, and the studio's one precedent is lanes drawn by hand for a much
- * simpler case. One hop from the chosen memory is what makes it understood.
+ * 🛑 It was a tree, and the tree is why nobody could read it: a row said `«relation» · «label»`,
+ * so the second level inherited its parent's word. « désigne · Scripts/Cam.ts » meant « this
+ * memory is about that file », and « désigne · <another summary> » one line below meant « another
+ * memory is about the same file » — the same word for two different things, which reads as though
+ * the file designated the memory. Alban's verdict on 2026-08-28: « ça veut rien dire pour moi ».
+ *
+ * A section has a title that is a whole sentence, so a row never has to carry the relation.
  */
 
-export type MemoryRelation = 'ref' | 'link' | 'supersedes'
+/** Which sentence titles a section. The panel owns the words; this owns the shape. */
+export type MemoryTie = 'about' | 'links' | 'replaces'
 
-/**
- * One row. `parentId` is what `Tree` walks; `memoryId` is what selecting it opens — the row
- * detail moves to that memory, which is how one hop is walked without leaving the panel.
- */
-export type MemoryRelationNode = {
-  id: string
-  parentId: string | null
+export type MemoryNeighbour = {
+  /** What the row reads: a reference as written, or another memory's own summary. */
   label: string
-  relation: MemoryRelation | null
-  /** The memory this row stands for, or nothing for a row standing for a reference. */
+  /** The memory this row opens onto, or nothing for a row standing for a reference. */
   memoryId: string | null
+  /**
+   * Other memories about the SAME reference, which is the one nesting worth drawing: it is what
+   * answers « what else does the assistant know about this file ». Empty everywhere else.
+   */
+  alsoAbout: readonly MemoryNeighbour[]
+}
+
+export type MemorySection = {
+  tie: MemoryTie
+  rows: readonly MemoryNeighbour[]
 }
 
 /**
- * The chosen memory, then what it points at, then what else points at the same thing.
+ * One hop around the chosen memory, gathered by what ties it to each neighbour.
  *
- * 🛑 One hop, and the root never appears under itself: a memory listed among its own neighbours
- * reads as a cycle to whoever is trying to see what it touches.
+ * 🛑 A section with no row is left out entirely rather than drawn empty: « Elle remplace » over
+ * nothing tells a reader there is something to look for.
  */
-export function relationsOf(root: Memory, among: readonly Memory[]): readonly MemoryRelationNode[] {
-  const held = new Map(among.map(one => [one.id, one]))
-  const rows: MemoryRelationNode[] = [
-    { id: root.id, parentId: null, label: root.summary, relation: null, memoryId: root.id },
-  ]
+export function neighboursOf(root: Memory, among: readonly Memory[]): readonly MemorySection[] {
+  const sections: MemorySection[] = []
 
-  for (const ref of root.refs) {
-    const refId = `${root.id} ${ref.kind} ${ref.ref}`
-    rows.push({ id: refId, parentId: root.id, label: ref.ref, relation: 'ref', memoryId: null })
+  const about = root.refs.map(ref => ({
+    label: ref.ref,
+    memoryId: null,
+    alsoAbout: among
+      .filter(
+        one =>
+          one.id !== root.id &&
+          one.refs.some(held => held.kind === ref.kind && held.ref === ref.ref),
+      )
+      .map(one => ({ label: one.summary, memoryId: one.id, alsoAbout: [] })),
+  }))
+  if (about.length > 0) sections.push({ tie: 'about', rows: about })
 
-    for (const other of among) {
-      if (other.id === root.id) continue
-      if (!other.refs.some(one => one.kind === ref.kind && one.ref === ref.ref)) continue
+  // A link may outlive its target — the id is all that is left of one that is gone.
+  const links = root.links.map(id => byId(among, id))
+  if (links.length > 0) sections.push({ tie: 'links', rows: links })
 
-      rows.push({
-        id: `${refId} ${other.id}`,
-        parentId: refId,
-        label: other.summary,
-        relation: 'ref',
-        memoryId: other.id,
-      })
-    }
-  }
+  if (root.supersedes) sections.push({ tie: 'replaces', rows: [byId(among, root.supersedes)] })
 
-  for (const linked of root.links) {
-    const other = held.get(linked)
-    rows.push({
-      id: `${root.id} link ${linked}`,
-      parentId: root.id,
-      // A link may outlive its target — the id is all that is left of one that is gone.
-      label: other?.summary ?? linked,
-      relation: 'link',
-      memoryId: other ? other.id : null,
-    })
-  }
-
-  if (root.supersedes) {
-    const replaced = held.get(root.supersedes)
-    rows.push({
-      id: `${root.id} was ${root.supersedes}`,
-      parentId: root.id,
-      label: replaced?.summary ?? root.supersedes,
-      relation: 'supersedes',
-      memoryId: replaced ? replaced.id : null,
-    })
-  }
-
-  return rows
+  return sections
 }
 
-/**
- * The memory a row opens onto — nothing for a row standing for a file, nothing for the root.
- *
- * 🛑 Here and not in the panel: its `Tree` is virtualised, and jsdom measures every row at zero,
- * so a decision left in there is one no test can reach.
- */
-export function openedBy(
-  rows: readonly MemoryRelationNode[],
-  rowId: string,
-  rootId: string,
-): string | null {
-  const opens = rows.find(one => one.id === rowId)?.memoryId ?? null
-  return opens === rootId ? null : opens
+function byId(among: readonly Memory[], id: string): MemoryNeighbour {
+  const held = among.find(one => one.id === id)
+  return { label: held?.summary ?? id, memoryId: held ? held.id : null, alsoAbout: [] }
 }
