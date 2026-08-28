@@ -1,16 +1,19 @@
 import {
   MEMORY_PAGE,
+  MEMORY_REF_KINDS,
+  MEMORY_SOURCE_KINDS,
+  MEMORY_STATES,
+  MEMORY_TYPES,
   type Memory,
   type MemoryQuery,
   type MemoryRef,
   type MemoryRefKind,
-  type MemorySourceKind,
-  type MemoryState,
-  type MemoryType,
 } from '@shared/domain/assistantMemory'
+import { oneOf } from '@shared/guards'
 import { matchExpression } from '@main/project/ftsMatch'
 import type { SqliteDriver, SqlRow, SqlValue } from '@main/project/sqlite'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
+import { escapeLike, holes } from '@main/project/sqlText'
 import { number, optionalText, text } from '@main/project/sqlRow'
 
 /**
@@ -105,7 +108,7 @@ const MIGRATIONS: readonly string[] = [
  * millisecond is not seen. The file only ever grows between compactions, and a compaction changes
  * its size, so nothing the studio itself does can land there.
  */
-type MemoryStamp = {
+export type MemoryStamp = {
   bytes: number
   modifiedAt: number
 }
@@ -117,6 +120,8 @@ export type MemoryIndex = {
   /** Takes one out. The file still says it was there — this only stops it being answered. */
   remove: (id: string) => void
   read: (id: string) => Memory | null
+  /** How many it holds, without reading a single one of them back. */
+  count: () => number
   list: (query: MemoryQuery) => readonly Memory[]
   /** Stamps what a retrieval served, which is what later makes an unused memory age. */
   markUsed: (ids: readonly string[], at: string) => void
@@ -144,77 +149,68 @@ const COLUMN_NAMES: readonly string[] = [
 const COLUMNS = COLUMN_NAMES.join(', ')
 const ALIASED = COLUMN_NAMES.map(column => `m.${column}`).join(', ')
 
-const TYPES: readonly MemoryType[] = [
-  'decision',
-  'architecture',
-  'feature',
-  'entity',
-  'script',
-  'problem',
-  'intent',
-  'convention',
-]
-const STATES: readonly MemoryState[] = ['live', 'pinned', 'archived', 'dropped']
-const SOURCE_KINDS: readonly MemorySourceKind[] = ['action', 'person', 'assistant', 'import']
-const REF_KINDS: readonly MemoryRefKind[] = ['file', 'scene', 'node', 'asset', 'document']
-
-function isOneOf<T extends string>(values: readonly T[], value: string): value is T {
-  return (values as readonly string[]).includes(value)
-}
+const isRefKind = (value: string): value is MemoryRefKind =>
+  MEMORY_REF_KINDS.some(kind => kind === value)
 
 /**
  * A row back as a memory. Every closed union is checked rather than cast: a column is a free
  * string in SQLite, and a value written by a newer studio must not become a type this one denies.
  */
 function memoryOf(row: SqlRow, refs: readonly MemoryRef[], links: readonly string[]): Memory {
-  const type = text(row, 'type')
-  const state = text(row, 'state')
-  const sourceKind = text(row, 'source_kind')
   const sourceRef = optionalText(row, 'source_ref')
   const usedAt = optionalText(row, 'used_at')
   const supersedes = optionalText(row, 'supersedes')
 
   return {
     id: text(row, 'id'),
-    type: isOneOf(TYPES, type) ? type : 'decision',
+    type: oneOf(MEMORY_TYPES, text(row, 'type'), 'decision'),
     summary: text(row, 'summary'),
     body: text(row, 'body'),
     importance: number(row, 'importance'),
     createdAt: text(row, 'created_at'),
     ...(usedAt === undefined ? {} : { usedAt }),
     source: {
-      kind: isOneOf(SOURCE_KINDS, sourceKind) ? sourceKind : 'import',
+      kind: oneOf(MEMORY_SOURCE_KINDS, text(row, 'source_kind'), 'import'),
       ...(sourceRef === undefined ? {} : { ref: sourceRef }),
     },
     refs,
     links,
-    state: isOneOf(STATES, state) ? state : 'live',
+    state: oneOf(MEMORY_STATES, text(row, 'state'), 'live'),
     ...(supersedes === undefined ? {} : { supersedes }),
   }
 }
-
-/** `?, ?, ?` for a list of values. Written out because SQLite binds no arrays. */
-const holes = (count: number): string => Array.from({ length: count }, () => '?').join(', ')
-
-const escapedLike = (wanted: string): string =>
-  `%${wanted.replace(/[\\%_]/g, character => `\\${character}`)}%`
 
 export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
   migrateTo(driver, MIGRATIONS)
 
   const insertMemory = driver.prepare(
-    `INSERT OR REPLACE INTO memories (${COLUMNS}) VALUES (${holes(COLUMN_NAMES.length)})`,
+    `INSERT INTO memories (${COLUMNS}) VALUES (${holes(COLUMN_NAMES.length)})`,
   )
-  const deleteRefs = driver.prepare('DELETE FROM memory_refs WHERE memory_id = ?')
-  const deleteLinks = driver.prepare('DELETE FROM memory_links WHERE from_id = ?')
+  const deleteMemory = driver.prepare('DELETE FROM memories WHERE id = ?')
   const insertRef = driver.prepare(
     'INSERT OR IGNORE INTO memory_refs (memory_id, kind, ref) VALUES (?, ?, ?)',
   )
   const insertLink = driver.prepare(
     'INSERT OR IGNORE INTO memory_links (from_id, to_id) VALUES (?, ?)',
   )
+  // Held like the five above: the SQL of all of them is fixed, and `catalog.ts` draws the line
+  // in the same place — only a query whose number of `?` varies is compiled per call.
+  const countMemories = driver.prepare('SELECT count(*) AS held FROM memories')
+  const readMemory = driver.prepare(`SELECT ${COLUMNS} FROM memories WHERE id = ?`)
+  const readStamp = driver.prepare('SELECT bytes, modified_at FROM memory_source')
+  const dropStamp = driver.prepare('DELETE FROM memory_source')
+  const writeStamp = driver.prepare('INSERT INTO memory_source (bytes, modified_at) VALUES (?, ?)')
+  const dropAll = driver.prepare('DELETE FROM memories')
 
   const write = (memory: Memory): void => {
+    /**
+     * 🛑 Deleted then inserted, never `INSERT OR REPLACE`: a REPLACE does not fire the `AFTER
+     * DELETE` trigger unless `recursive_triggers` is on, so the OLD words stayed in the fts5
+     * table for ever. Measured — the replaced word still matched at its dead rowid, the corpus
+     * grew by one on every amend, and `integrity-check` reported nothing. bm25 scores against a
+     * corpus of ghosts. The cascade takes the refs and the links with the row.
+     */
+    deleteMemory.run(memory.id)
     insertMemory.run(
       memory.id,
       memory.type,
@@ -228,10 +224,6 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
       memory.state,
       memory.supersedes ?? null,
     )
-    // Replaced rather than merged: one line of the file is the whole truth about one memory, so
-    // a ref dropped from it must leave the index too.
-    deleteRefs.run(memory.id)
-    deleteLinks.run(memory.id)
     for (const ref of memory.refs) insertRef.run(memory.id, ref.kind, ref.ref)
     for (const link of memory.links) insertLink.run(memory.id, link)
   }
@@ -259,7 +251,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
 
     for (const row of refRows) {
       const kind = text(row, 'kind')
-      if (!isOneOf(REF_KINDS, kind)) continue
+      if (!isRefKind(kind)) continue
 
       const id = text(row, 'memory_id')
       const held = refs.get(id) ?? []
@@ -293,11 +285,13 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
 
     remove: id => {
       // The cascade takes the refs and the links, and the fts5 trigger takes the words.
-      driver.prepare('DELETE FROM memories WHERE id = ?').run(id)
+      deleteMemory.run(id)
     },
 
+    count: () => number(countMemories.get() ?? {}, 'held'),
+
     read: id => {
-      const row = driver.prepare(`SELECT ${COLUMNS} FROM memories WHERE id = ?`).get(id)
+      const row = readMemory.get(id)
       return row ? (attach([row])[0] ?? null) : null
     },
 
@@ -328,7 +322,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
         // Punctuation alone tokenises to nothing, and fts5 cannot look for what it never indexed
         // — searching "%" and finding "100%" is what this keeps.
         conditions.push(`(m.summary LIKE ? ESCAPE '\\' OR m.body LIKE ? ESCAPE '\\')`)
-        params.push(escapedLike(wanted), escapedLike(wanted))
+        params.push(`%${escapeLike(wanted)}%`, `%${escapeLike(wanted)}%`)
       }
 
       const filters = conditions.join(' AND ')
@@ -359,25 +353,22 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     },
 
     stamp: () => {
-      const row = driver.prepare('SELECT bytes, modified_at FROM memory_source').get()
+      const row = readStamp.get()
       return row ? { bytes: number(row, 'bytes'), modifiedAt: number(row, 'modified_at') } : null
     },
 
     restamp: ({ bytes, modifiedAt }) =>
       transaction(driver, () => {
-        driver.prepare('DELETE FROM memory_source').run()
-        driver
-          .prepare('INSERT INTO memory_source (bytes, modified_at) VALUES (?, ?)')
-          .run(bytes, modifiedAt)
+        dropStamp.run()
+        writeStamp.run(bytes, modifiedAt)
       }),
 
-    // The rows go through `memories` rather than being dropped table by table, so the fts5
-    // triggers fire: an index emptied around them would keep every word it ever read.
+    // Through `memories` alone: the fts5 triggers fire on the delete, and the cascade takes the
+    // refs and the links. An index emptied table by table would keep every word it ever read.
     clear: () =>
       transaction(driver, () => {
-        driver.prepare('DELETE FROM memories').run()
-        driver.prepare('DELETE FROM memory_links').run()
-        driver.prepare('DELETE FROM memory_source').run()
+        dropAll.run()
+        dropStamp.run()
       }),
 
     close: () => driver.close(),

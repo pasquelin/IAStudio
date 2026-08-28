@@ -36,6 +36,8 @@ const TEARDOWNS = ['onTestFinished', 'afterEach']
 const OWNED_ELSEWHERE: Record<string, string> = {
   'main/project/store.test.ts':
     'three catalogues handed to `openCatalog`, given back by `store.ts` when the store closes',
+  'main/memory/memoryClient.test.ts':
+    'the database goes to the index, then to the store, and comes back through `memory.close()` — which is what the suite is there to exercise',
 }
 
 /**

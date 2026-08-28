@@ -29,8 +29,10 @@ export type AsyncMemory = {
   read: (id: string) => Promise<Memory | null>
   list: (query: MemoryQuery) => Promise<readonly Memory[]>
   markUsed: (ids: readonly string[]) => Promise<void>
-  /** Reads the file into the index. Answers how many memories stand once it has. */
+  /** Reads the file into the index, whatever it already holds. */
   rebuild: () => Promise<number>
+  /** Reads it only if it has changed since the index was built — what an opening runs. */
+  refresh: () => Promise<number>
   reset: () => Promise<void>
   trouble: () => Promise<MemoryTrouble | null>
   close: () => Promise<void>
@@ -89,10 +91,23 @@ export function createMemoryClient(port: MemoryPort): AsyncMemory {
     list: query => ask<'list'>({ op: 'list', query }),
     markUsed: ids => ask<'markUsed'>({ op: 'markUsed', ids }),
     rebuild: () => ask<'rebuild'>({ op: 'rebuild' }),
+    refresh: () => ask<'refresh'>({ op: 'refresh' }),
     reset: () => ask<'reset'>({ op: 'reset' }),
     trouble: () => ask<'trouble'>({ op: 'trouble' }),
 
+    /**
+     * 🛑 The thread is TOLD before it is terminated, and the answer is waited for: what it still
+     * has queued is an append to the file the next launch reads back, and `terminate` is a kill.
+     * Rejecting the callers and killing it — which is what this did — lost those writes silently.
+     */
     close: async () => {
+      try {
+        if (!shut) await ask<'close'>({ op: 'close' })
+      } catch {
+        // A thread that will not settle must not stop the studio from quitting; it is killed
+        // below either way, and what it failed to write is what a rebuild reads back.
+      }
+
       shut ??= new Error(MEMORY_CLOSED)
       for (const held of waiting.values()) held.reject(shut)
       waiting.clear()

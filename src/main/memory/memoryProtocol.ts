@@ -23,8 +23,11 @@ export type MemoryRequest =
   | { id: number; op: 'list'; query: MemoryQuery }
   | { id: number; op: 'markUsed'; ids: readonly string[] }
   | { id: number; op: 'rebuild' }
+  | { id: number; op: 'refresh' }
   | { id: number; op: 'reset' }
   | { id: number; op: 'trouble' }
+  /** Settles what is queued and shuts the database. Answered BEFORE the thread is terminated. */
+  | { id: number; op: 'close' }
 
 /** What each operation answers, so the client types its promise without a cast. */
 export type MemoryResults = {
@@ -35,8 +38,10 @@ export type MemoryResults = {
   list: readonly Memory[]
   markUsed: void
   rebuild: number
+  refresh: number
   reset: void
   trouble: MemoryTrouble | null
+  close: void
 }
 
 export type MemoryOp = MemoryRequest['op']

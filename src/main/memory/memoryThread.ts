@@ -1,4 +1,5 @@
 import { Worker } from 'node:worker_threads'
+import { threadReady } from '@main/threadReady'
 import { createMemoryClient, type AsyncMemory, type MemoryPort } from './memoryClient'
 import { isMemoryReady, type MemoryResponse } from './memoryProtocol'
 
@@ -15,7 +16,7 @@ export async function openMemoryThread(file: string, database: string): Promise<
     workerData: { file, database },
   })
 
-  await ready(worker)
+  await threadReady(worker, 'memory', isMemoryReady)
 
   const port: MemoryPort = {
     postMessage: request => worker.postMessage(request),
@@ -37,34 +38,4 @@ export async function openMemoryThread(file: string, database: string): Promise<
   }
 
   return createMemoryClient(port)
-}
-
-/**
- * Waits for the thread to say the file has been read. Without it, a memory whose database cannot
- * be opened would look open until the first query came back.
- */
-function ready(worker: Worker): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const settle = (error?: Error): void => {
-      worker.off('message', onMessage)
-      worker.off('error', onError)
-      worker.off('exit', onExit)
-      if (error) {
-        void worker.terminate()
-        reject(error)
-      } else resolve()
-    }
-
-    const onMessage = (message: unknown): void => {
-      if (!isMemoryReady(message)) return
-      settle(message.ready ? undefined : new Error(message.error))
-    }
-    const onError = (error: Error): void => settle(error)
-    const onExit = (code: number): void =>
-      settle(new Error(`memory worker stopped before it opened (code ${code})`))
-
-    worker.on('message', onMessage)
-    worker.on('error', onError)
-    worker.on('exit', onExit)
-  })
 }

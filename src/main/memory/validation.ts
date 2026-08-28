@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { defined } from '@shared/guards'
 import {
   MEMORY_BODY_MAX,
   MEMORY_PAGE,
@@ -90,26 +91,40 @@ export function parseMemoryDraft(value: unknown): MemoryDraft {
   return memoryDraft.parse(value)
 }
 
+/**
+ * 🛑 `defined` and not the parsed object: zod KEEPS a key that arrived as an explicit
+ * `undefined`, and structured clone carries it across the boundary. Measured — a patch of
+ * `{summary: undefined, state: 'archived'}` wrote a summary-less line to the append-only file,
+ * THEN threw on binding it, so the amendment was lost and every later read of that project
+ * answered `trouble: 'unreadable'` for good.
+ */
 export function parseMemoryPatch(value: unknown): MemoryPatch {
-  return memoryPatch.parse(value)
+  return defined(memoryPatch.parse(value))
 }
 
 export function parseMemoryQuery(value: unknown): MemoryQuery {
   return memoryQuery.parse(value)
 }
 
+const memoryScope = z.enum(MEMORY_SCOPES)
+
 export function parseMemoryScope(value: unknown): MemoryScope {
-  return z.enum(MEMORY_SCOPES).parse(value)
+  return memoryScope.parse(value)
 }
 
 /**
- * The version a line declares, or nothing when it declares none.
- *
- * A line with no version is not a line of this file: every one the studio writes carries it, so
- * its absence means the file was written by something else.
+ * 🛑 Built once, at the module. Inside the function it was rebuilt per LINE, and reading a file
+ * of ten thousand took 1 177 ms against 60,6 — nineteen times, measured, on the one path that
+ * stands between opening a project and answering its first question.
+ */
+const declaredVersion = z.object({ v: z.number().int().min(1) })
+
+/**
+ * The version a line declares, or nothing. A line with no version is not a line of this file:
+ * every one the studio writes carries it.
  */
 export function versionOf(value: unknown): number | null {
-  const version = z.object({ v: z.number().int().min(1) }).safeParse(value)
+  const version = declaredVersion.safeParse(value)
   return version.success ? version.data.v : null
 }
 

@@ -68,7 +68,9 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  database.close()
+  // Through the client: `close` now settles the store and shuts the database, so closing the
+  // driver here as well would be closing it twice.
+  await memory.close()
   await rm(root, { recursive: true, force: true })
 })
 

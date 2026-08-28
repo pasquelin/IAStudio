@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Memory, MemoryScope } from '@shared/domain/assistantMemory'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { hasPinnedMemory, memoriesOfType, useAssistantMemory } from './assistantMemory'
+import { useAssistantMemory } from './assistantMemory'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
   id: 'm_one',
@@ -117,18 +117,5 @@ describe('writing from the window', () => {
     installFakeBridge({ memory: { amend: () => Promise.resolve(null) } })
 
     expect(await state().amend('m_gone', { summary: 'x' })).toBe(false)
-  })
-})
-
-describe('reading a listing', () => {
-  it('keeps only one type', () => {
-    const memories = [memory({ id: 'm_a' }), memory({ id: 'm_b', type: 'script' })]
-
-    expect(memoriesOfType({ memories }, 'script').map(one => one.id)).toEqual(['m_b'])
-  })
-
-  it('says whether anything is pinned', () => {
-    expect(hasPinnedMemory({ memories: [memory()] })).toBe(false)
-    expect(hasPinnedMemory({ memories: [memory({ state: 'pinned' })] })).toBe(true)
   })
 })

@@ -10,6 +10,7 @@ const fakeMemory = (): AsyncMemory => ({
   list: vi.fn(),
   markUsed: vi.fn(),
   rebuild: vi.fn(),
+  refresh: vi.fn(),
   reset: vi.fn(),
   trouble: vi.fn(),
   close: vi.fn(async () => {}),

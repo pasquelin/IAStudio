@@ -24,9 +24,13 @@ export async function dispatchMemoryRequest(
       return await store.markUsed(request.ids)
     case 'rebuild':
       return await store.rebuild()
+    case 'refresh':
+      return await store.refresh()
     case 'reset':
       return await store.reset()
     case 'trouble':
       return store.trouble()
+    case 'close':
+      return await store.close()
   }
 }

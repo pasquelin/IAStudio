@@ -83,9 +83,9 @@ export const MEMORY_IMPORTANCE_MIN = 1
 export const MEMORY_IMPORTANCE_MAX = 5
 
 /**
- * 🛑 One sentence, and the bound is what keeps a briefing affordable: the summary is the ONLY half
- * that travels. Ten recalled memories at this ceiling cost 2 000 characters against a short
- * briefing that already runs over its room — see `MEMORY_ROOM`.
+ * 🛑 One sentence, and the bound is what keeps a briefing affordable: only the summary travels.
+ * Ten memories at this ceiling cost 2 000 characters, against a short briefing measured at
+ * 8 232 for a room of 7 116 — see `main/assistant/instruction.ts`.
  */
 export const MEMORY_SUMMARY_MAX = 200
 
@@ -105,7 +105,13 @@ export type Memory = {
   body: string
   importance: number
   createdAt: string
-  /** When the retrieval last served it. Absent until it has been of use — that is what ages. */
+  /**
+   * When THIS machine last served it. Absent until it has been of use — that is what ages.
+   *
+   * 🛑 Held in the index and never written to the file, by ADR-24's own criterion: what one
+   * machine's retrieval served says nothing about the project, so it does not travel. A rebuild
+   * carries it across rather than reading it back.
+   */
   usedAt?: string
   source: MemorySource
   refs: readonly MemoryRef[]
@@ -184,69 +190,4 @@ export type MemoryTrouble = 'unreadable' | 'too-new'
 /** A memory is live unless it says otherwise. `dropped` is the one state that answers nothing. */
 export function isReadable(memory: Memory): boolean {
   return memory.state !== 'dropped'
-}
-
-/** Whether a memory always travels, whatever a query found. */
-export function isPinned(memory: Memory): boolean {
-  return memory.state === 'pinned'
-}
-
-/**
- * Whether a memory may be found by a search at all. An archived one is kept and shown, but a
- * briefing never carries it: that is the whole difference between archiving and dropping.
- */
-export function isRecallable(memory: Memory): boolean {
-  return memory.state === 'live' || memory.state === 'pinned'
-}
-
-/** One memory, as the model reads it. The id first, because `memory.read` is what takes it back. */
-export function memoryLine(memory: Memory): string {
-  return `- ${memory.id} [${memory.type}] ${memory.summary}`
-}
-
-/**
- * 🛑 A function and not a `const`, however single its use: `no-hardcoded-text.test.ts` reads a
- * sentence BOUND to a name as a line bound for a screen, and this one is bound for a model.
- */
-const recallHeading = (): string => 'What you have learned about this project —'
-
-/**
- * The block a briefing carries, cut to `room` by WHOLE memories.
- *
- * Never by characters: half a decision reads as a different decision, and the model has no way to
- * see that it was truncated. Memories are taken in the order they arrive — the ranking is the
- * caller's, and stepping over a long one to reach a short one would serve a list nobody ranked.
- *
- * The heading is English and literal, as the rest of a briefing is: a prompt is code, and one put
- * in a translation bundle invites someone to translate the one thing that must not move.
- */
-export function composedRecall(memories: readonly Memory[], room: number): string {
-  const heading = recallHeading()
-  const lines: string[] = []
-  let length = heading.length
-
-  for (const memory of memories) {
-    const line = memoryLine(memory)
-    if (length + line.length + 1 > room) break
-
-    length += line.length + 1
-    lines.push(line)
-  }
-
-  return lines.length === 0 ? '' : [heading, ...lines].join('\n')
-}
-
-/**
- * What `composedRecall` would cost, without composing it — for a caller budgeting ahead.
- *
- * Zero for an empty list, and not the heading's length: a block with no memory under it is not
- * composed at all, so a caller reserving room for one would reserve room for nothing.
- */
-export function recallLength(memories: readonly Memory[]): number {
-  if (memories.length === 0) return 0
-
-  return memories.reduce(
-    (total, memory) => total + memoryLine(memory).length + 1,
-    recallHeading().length,
-  )
 }

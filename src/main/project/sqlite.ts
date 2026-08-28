@@ -1,5 +1,5 @@
 /**
- * The database, reduced to what the catalogue uses.
+ * The database, reduced to what the catalogue and the memory use.
  *
  * Not an ABI concern: `better-sqlite3` v13 ships N-API prebuilds, so the same binary loads
  * under both Electron and Vitest. The port exists so the test suite stays free of a native
@@ -11,7 +11,7 @@
  * since every method here is synchronous. The whole catalogue runs on its own thread instead —
  * see `catalogThread.ts`.
  */
-/** What the catalogue binds. Deliberately narrower than what SQLite accepts. */
+/** What its readers bind. Deliberately narrower than what SQLite accepts. */
 export type SqlValue = string | number | null
 
 /**

@@ -6,6 +6,7 @@ import type {
   MemoryQuery,
   MemoryScope,
 } from '@shared/domain/assistantMemory'
+import { orElse } from '@shared/promises'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
 
 /**
@@ -51,27 +52,28 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
 
   reload: async () => {
     const { scope, query } = get()
-    set({ memories: (await getBridge()?.memory.list(scope, query)) ?? [], loaded: true })
+    // Cleared first: a scope just changed leaves the OTHER scope's rows on screen, and `loaded`
+    // saying true about them is a panel claiming they are the answer.
+    set({ loaded: false })
+
+    const memories = await orElse(getBridge()?.memory.list(scope, query), [])
+
+    // 🛑 Dropped when the question moved on: two reads in flight — a scope switch, or a write
+    // announced mid-switch — can settle out of order, and the slower one would paint the other
+    // scope's rows and call them loaded.
+    if (get().scope !== scope || get().query !== query) return
+
+    set({ memories, loaded: true })
   },
 
   // No optimistic write, unlike the context panel: the id and the date come from the main
   // process, so there is nothing truthful to draw before the answer arrives.
-  remember: async draft => (await getBridge()?.memory.remember(get().scope, draft)) ?? null,
+  remember: async draft => await orElse(getBridge()?.memory.remember(get().scope, draft), null),
 
-  amend: async (id, patch) => (await getBridge()?.memory.amend(get().scope, id, patch)) !== null,
+  // 🛑 `orElse` and not `!== null`: with no bridge the call answers `undefined`, and a window
+  // was told its amendment had gone through.
+  amend: async (id, patch) =>
+    (await orElse(getBridge()?.memory.amend(get().scope, id, patch), null)) !== null,
 
-  forget: async id => (await getBridge()?.memory.forget(get().scope, id)) ?? false,
+  forget: async id => await orElse(getBridge()?.memory.forget(get().scope, id), false),
 }))
-
-/** The memories of one type, for a panel that groups them. Named for its domain — see CLAUDE.md. */
-export function memoriesOfType(
-  state: Pick<AssistantMemoryState, 'memories'>,
-  type: Memory['type'],
-): readonly Memory[] {
-  return state.memories.filter(memory => memory.type === type)
-}
-
-/** Whether anything is pinned, which is what a panel says before it draws a « pinned » group. */
-export function hasPinnedMemory(state: Pick<AssistantMemoryState, 'memories'>): boolean {
-  return state.memories.some(memory => memory.state === 'pinned')
-}

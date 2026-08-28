@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile, rm, stat } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import {
+  isReadable,
   MEMORY_VERSION,
   type Memory,
   type MemoryDraft,
@@ -8,8 +9,10 @@ import {
   type MemoryQuery,
   type MemoryTrouble,
 } from '@shared/domain/assistantMemory'
+import { defined } from '@shared/guards'
+import { orElse } from '@shared/promises'
 import { isMissing, writeQueue } from '@main/persistence'
-import type { MemoryIndex } from './memoryIndex'
+import type { MemoryIndex, MemoryStamp } from './memoryIndex'
 import { parseMemory, versionOf } from './validation'
 
 /**
@@ -33,13 +36,22 @@ export type MemoryStore = {
   read: (id: string) => Promise<Memory | null>
   list: (query: MemoryQuery) => Promise<readonly Memory[]>
   markUsed: (ids: readonly string[]) => Promise<void>
-  /** Reads the file back into the index. Answers how many memories stand once it has. */
+  /** Reads the file back into the index, whatever the index already holds. */
   rebuild: () => Promise<number>
+  /**
+   * Reads it only if it has CHANGED since the index was built — what an opening runs.
+   *
+   * The comparison is a `stat` against a stored stamp: 15 µs against the 400 ms a rebuild of ten
+   * thousand memories costs, both measured. Without it every first question of every session
+   * pays a full read of a file nothing has touched.
+   */
+  refresh: () => Promise<number>
   /** Everything forgotten, the file included. What « reset this project's memory » runs. */
   reset: () => Promise<void>
   /** Why the file answered nothing when it should have. Read after `rebuild`. */
   trouble: () => MemoryTrouble | null
-  close: () => void
+  /** Settles what is queued, then shuts the database. What a quit and a project change await. */
+  close: () => Promise<void>
 }
 
 export type MemoryStoreDeps = {
@@ -51,25 +63,55 @@ export type MemoryStoreDeps = {
   newId: () => string
 }
 
-const lineOf = (memory: Memory): string => `${JSON.stringify({ v: MEMORY_VERSION, ...memory })}\n`
+/**
+ * `usedAt` is dropped — `JSON.stringify` omits an undefined key — because it belongs to THIS
+ * machine and the file travels with the project. See `Memory`.
+ */
+const lineOf = (memory: Memory): string =>
+  `${JSON.stringify({ v: MEMORY_VERSION, ...memory, usedAt: undefined })}\n`
 
-/** What a `stat` of the file says, or nothing when there is no file yet. */
+/**
+ * What a `stat` says, or nothing. Nothing for a file that is not there yet AND for one that will
+ * not stat: the stamp is bookkeeping, and a write already on disk must not fail over it.
+ */
 async function stampOf(file: string): Promise<{ bytes: number; modifiedAt: number } | null> {
-  try {
-    const stats = await stat(file)
-    return { bytes: stats.size, modifiedAt: Math.trunc(stats.mtimeMs) }
-  } catch (error) {
-    if (isMissing(error)) return null
-    throw error
-  }
+  const stats = await orElse(stat(file), null)
+  return stats && { bytes: stats.size, modifiedAt: Math.trunc(stats.mtimeMs) }
+}
+
+/**
+ * Whether the file has moved since the index was built.
+ *
+ * A function of its own because it is the whole of what `refresh` decides, and the alternative
+ * was a test that rewrites a file and puts its mtime back — which APFS does not allow: `utimes`
+ * rounds a fractional `mtimeMs` and the stamp moves by one, measured, in both directions.
+ *
+ * No stamp means an index that has never read this file. No file means one that is gone, and
+ * both are stale: the first has everything to read, the second has everything to forget.
+ */
+export function hasMoved(held: MemoryStamp | null, now: MemoryStamp | null): boolean {
+  if (held === null || now === null) return true
+
+  return held.bytes !== now.bytes || held.modifiedAt !== now.modifiedAt
 }
 
 export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps): MemoryStore {
   const writes = writeQueue()
   let trouble: MemoryTrouble | null = null
+  // Made once rather than on every append: a recursive `mkdir` on a folder that is already there
+  // measured 61 µs against the 140 µs the append itself costs.
+  let folder: Promise<unknown> | null = null
 
   const append = async (memory: Memory): Promise<void> => {
-    await mkdir(dirname(file), { recursive: true })
+    try {
+      folder ??= mkdir(dirname(file), { recursive: true })
+      await folder
+    } catch (error) {
+      // Forgotten so the next write tries again: a folder removed under a running studio, or a
+      // volume that blinked, must not stop this memory persisting for the rest of the session.
+      folder = null
+      throw error
+    }
     await appendFile(file, lineOf(memory), 'utf8')
 
     const stamp = await stampOf(file)
@@ -92,7 +134,10 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
         index.clear()
         return 0
       }
+      // Emptied as well: answering `0` to the window while `list` still served the old rows had
+      // the panel told « nothing » and showing something.
       trouble = 'unreadable'
+      index.clear()
       return 0
     }
 
@@ -132,7 +177,15 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
       held.set(memory.id, memory)
     }
 
-    const standing = [...held.values()].filter(memory => memory.state !== 'dropped')
+    // The file has no `usedAt` to give back, so it is taken from the index before it is emptied:
+    // what this machine served is the one thing a rebuild would otherwise destroy.
+    const served = new Map(
+      index.list({ limit: Number.MAX_SAFE_INTEGER }).map(one => [one.id, one.usedAt]),
+    )
+    const standing = [...held.values()]
+      .filter(isReadable)
+      .map(memory => ({ ...memory, ...defined({ usedAt: served.get(memory.id) }) }))
+
     index.clear()
     index.putAll(standing)
 
@@ -146,13 +199,10 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
     remember: draft =>
       writes.next(async () => {
         const memory: Memory = {
+          ...draft,
           id: newId(),
-          type: draft.type,
-          summary: draft.summary,
           body: draft.body ?? '',
-          importance: draft.importance,
           createdAt: now(),
-          source: draft.source,
           refs: draft.refs ?? [],
           links: draft.links ?? [],
           state: draft.state ?? 'live',
@@ -161,7 +211,9 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
         // The file first, always: an index holding what the file does not is an index that
         // answers a memory a restart makes vanish.
         await append(memory)
-        index.put(memory)
+        // `isReadable`, as a rebuild filters: a memory written as dropped must not be listed
+        // until a restart and vanish afterwards.
+        if (isReadable(memory)) index.put(memory)
         return memory
       }),
 
@@ -172,7 +224,8 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
         const amended: Memory = { ...held, ...patch }
         await append(amended)
-        index.put(amended)
+        if (isReadable(amended)) index.put(amended)
+        else index.remove(amended.id)
         return amended
       }),
 
@@ -196,6 +249,11 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
     rebuild: () => writes.next(readFileInto),
 
+    refresh: () =>
+      writes.next(async () =>
+        hasMoved(index.stamp(), await stampOf(file)) ? await readFileInto() : index.count(),
+      ),
+
     reset: () =>
       writes.next(async () => {
         index.clear()
@@ -205,6 +263,11 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
     trouble: () => trouble,
 
-    close: () => index.close(),
+    // Settled BEFORE the database shuts: what is queued is an append to the file the next launch
+    // reads back, and a driver closed under it loses the line without a word.
+    close: async () => {
+      await writes.settled()
+      index.close()
+    },
   }
 }

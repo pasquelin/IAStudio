@@ -28,6 +28,7 @@ import { isPbrChannel } from '@shared/domain/material'
 import { LOG_SCOPES } from '@shared/ipc'
 import { byCodeUnit } from '@shared/text'
 import { matchExpression } from './ftsMatch'
+import { escapeLike, holes } from './sqlText'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 import { migrateTo, transaction } from './sqlMigrate'
 import { optionalNumber, optionalText, text } from './sqlRow'
@@ -354,11 +355,6 @@ function isUnder(path: string, folder: string): boolean {
   return path.startsWith(`${folder}/`)
 }
 
-/** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, character => `\\${character}`)
-}
-
 /**
  * The interpolations of a message key, back from the JSON they were stored as.
  *
@@ -679,7 +675,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     const grouped = new Map<string, string[]>()
     if (assetIds.length === 0) return grouped
 
-    const placeholders = assetIds.map(() => '?').join(', ')
+    const placeholders = holes(assetIds.length)
     const rows = driver
       .prepare(`SELECT asset_id, tag FROM asset_tags WHERE asset_id IN (${placeholders})`)
       .all(...assetIds)
@@ -858,9 +854,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
        * rows would be answered with all of them.
        */
       const narrowTo = (column: string, values: readonly string[]): void => {
-        conditions.push(
-          values.length > 0 ? `${column} IN (${values.map(() => '?').join(', ')})` : '0',
-        )
+        conditions.push(values.length > 0 ? `${column} IN (${holes(values.length)})` : '0')
         params.push(...values)
       }
 
@@ -873,7 +867,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // nothing else. An empty list is not "no filter", it is "nothing" — and it must stay so,
       // or opening a space that accepts no asset would show every asset.
       if (query.types) {
-        const placeholders = query.types.map(() => '?').join(', ')
+        const placeholders = holes(query.types.length)
         conditions.push(query.types.length > 0 ? `type IN (${placeholders})` : '0')
         params.push(...query.types)
       }
@@ -942,7 +936,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
       // Every tag must match, not any: filters narrow, they do not widen.
       if (query.tags?.length) {
-        const placeholders = query.tags.map(() => '?').join(', ')
+        const placeholders = holes(query.tags.length)
         conditions.push(`id IN (
           SELECT asset_id FROM asset_tags WHERE tag IN (${placeholders})
           GROUP BY asset_id HAVING COUNT(DISTINCT tag) = ?

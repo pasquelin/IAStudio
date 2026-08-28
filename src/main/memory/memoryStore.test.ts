@@ -6,7 +6,8 @@ import { MEMORY_VERSION, type MemoryDraft } from '@shared/domain/assistantMemory
 import type { SqliteDriver } from '@main/project/sqlite'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMemoryIndex } from './memoryIndex'
-import { createMemoryStore, type MemoryStore } from './memoryStore'
+import { createMemoryStore, hasMoved, type MemoryStore } from './memoryStore'
+import { parseMemoryPatch } from './validation'
 
 const draft = (fields: Partial<MemoryDraft> = {}): MemoryDraft => ({
   type: 'decision',
@@ -92,13 +93,22 @@ describe('surviving a restart', () => {
   it('reads back what a previous session wrote, index and all', async () => {
     await store.remember(draft({ summary: 'first' }))
     await store.remember(draft({ summary: 'second' }))
-    store.close()
+    await store.close()
 
     store = open()
     expect(await store.rebuild()).toBe(2)
     expect((await store.list({})).map(one => one.summary)).toEqual(
       expect.arrayContaining(['first', 'second']),
     )
+  })
+
+  it('reads the file again once it has moved', async () => {
+    await store.remember(draft({ summary: 'first' }))
+    expect(await store.refresh()).toBe(1)
+
+    await store.remember(draft({ summary: 'second' }))
+
+    expect(await store.refresh()).toBe(2)
   })
 
   it('opens a project that never remembered anything', async () => {
@@ -113,7 +123,7 @@ describe('surviving a restart', () => {
   it('lets the last line about a memory win', async () => {
     await store.remember(draft({ summary: 'the first thing said' }))
     await store.amend('m_1', { summary: 'what it really was' })
-    store.close()
+    await store.close()
 
     store = open()
     expect(await store.rebuild()).toBe(1)
@@ -123,7 +133,7 @@ describe('surviving a restart', () => {
   it('leaves out what was dropped', async () => {
     await store.remember(draft())
     await store.forget('m_1')
-    store.close()
+    await store.close()
 
     store = open()
     expect(await store.rebuild()).toBe(0)
@@ -137,7 +147,7 @@ describe('surviving a restart', () => {
     await store.remember(draft({ summary: 'before' }))
     await appendFile(file, '{ this is not json\n', 'utf8')
     await store.remember(draft({ summary: 'after' }))
-    store.close()
+    await store.close()
 
     store = open()
     expect(await store.rebuild()).toBe(2)
@@ -151,7 +161,7 @@ describe('surviving a restart', () => {
   it('leaves a line from a later studio in the file and says so', async () => {
     await store.remember(draft({ summary: 'ours' }))
     await appendFile(file, `${JSON.stringify({ v: MEMORY_VERSION + 1, id: 'm_future' })}\n`, 'utf8')
-    store.close()
+    await store.close()
 
     store = open()
     expect(await store.rebuild()).toBe(1)
@@ -168,9 +178,57 @@ describe('surviving a restart', () => {
   })
 })
 
+describe('deciding whether the file has moved', () => {
+  const stamp = { bytes: 120, modifiedAt: 1000 }
+
+  /**
+   * 🛑 Tested as a decision rather than through a rewritten file: putting an mtime back is not
+   * something APFS allows — `utimes` rounds the fractional `mtimeMs` a `stat` hands out, and the
+   * stamp moved by one, measured, in both directions from one run to the next.
+   */
+  it('has moved when the index has never read it', () => {
+    expect(hasMoved(null, stamp)).toBe(true)
+  })
+
+  it('has moved when the file is gone', () => {
+    expect(hasMoved(stamp, null)).toBe(true)
+  })
+
+  it('has moved on another size, and on another moment', () => {
+    expect(hasMoved(stamp, { ...stamp, bytes: 121 })).toBe(true)
+    expect(hasMoved(stamp, { ...stamp, modifiedAt: 1001 })).toBe(true)
+  })
+
+  /**
+   * 🛑 The blind spot, written rather than hidden: a rewrite of the same size within the same
+   * millisecond reads as untouched. Nothing the studio does lands there — the file only grows
+   * between compactions, and a compaction changes its size.
+   */
+  it('reads a same-size rewrite of the same moment as untouched', () => {
+    expect(hasMoved(stamp, { ...stamp })).toBe(false)
+  })
+})
+
 describe('changing what a memory says', () => {
   it('answers nothing for a memory it does not hold', async () => {
     expect(await store.amend('m_gone', { summary: 'x' })).toBeNull()
+  })
+
+  /**
+   * 🛑 Measured before it was fixed: zod KEEPS a key sent as an explicit `undefined`, and
+   * structured clone carries it over the boundary. The spread then wrote a summary-less line to
+   * the append-only file and threw on binding it — the amendment lost, and every later read of
+   * that project answering `trouble: 'unreadable'` for good. `parseMemoryPatch` strips them now.
+   */
+  it('ignores a field sent as an explicit nothing rather than writing it', async () => {
+    await store.remember(draft({ summary: 'held' }))
+    await store.amend('m_1', parseMemoryPatch({ summary: undefined, state: 'archived' }))
+
+    expect(await store.read('m_1')).toEqual(
+      expect.objectContaining({ summary: 'held', state: 'archived' }),
+    )
+    expect(await store.rebuild()).toBe(1)
+    expect(store.trouble()).toBeNull()
   })
 
   it('writes the whole memory again rather than a difference', async () => {
@@ -194,6 +252,24 @@ describe('changing what a memory says', () => {
         summary: 'reworded',
       }),
     )
+  })
+})
+
+describe('what this machine served', () => {
+  /**
+   * 🛑 `usedAt` says when THIS machine last answered with a memory, so it stays out of a file
+   * that travels — and a rebuild has to carry it across, or the next write by any window would
+   * throw away every reading the retrieval had made.
+   */
+  it('never travels in the file, and survives a rebuild all the same', async () => {
+    await store.remember(draft())
+    await store.markUsed(['m_1'])
+
+    expect((await lines())[0]).not.toHaveProperty('usedAt')
+    expect((await store.read('m_1'))?.usedAt).toBe('2026-08-28T10:00:00.000Z')
+
+    await store.rebuild()
+    expect((await store.read('m_1'))?.usedAt).toBe('2026-08-28T10:00:00.000Z')
   })
 })
 

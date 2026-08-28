@@ -63,6 +63,22 @@ describe('holding a memory', () => {
     expect(index.read('m_one')?.refs).toEqual([{ kind: 'file', ref: 'Scripts/Cam.ts' }])
   })
 
+  /**
+   * 🛑 Read through the fts5 table itself, and it has to be: `list` joins on `memories`, so a
+   * dead row answers nothing and every other case here stayed green on the defect. Measured —
+   * `INSERT OR REPLACE` fires no `AFTER DELETE` trigger, so the corpus grew by one on every
+   * amend and bm25 came to rank against ghosts. `integrity-check` reported nothing either.
+   */
+  it('forgets the words of the version it replaced', () => {
+    index.put(memory({ summary: 'zebra crossing' }))
+    index.put(memory({ summary: 'giraffe walking' }))
+
+    expect(database.prepare('SELECT count(*) AS held FROM memories_fts').get()?.held).toBe(1)
+    expect(
+      database.prepare("SELECT rowid FROM memories_fts WHERE memories_fts MATCH 'zebra'").all(),
+    ).toEqual([])
+  })
+
   it('keeps a link to a memory it has never read', () => {
     index.put(memory({ links: ['m_not_here_yet'] }))
 

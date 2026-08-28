@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { parentPort, workerData } from 'node:worker_threads'
+import { messageOf } from '@shared/guards'
 import { openNativeDatabase } from '@main/project/sqliteNative'
 import { createMemoryIndex } from './memoryIndex'
 import { dispatchMemoryRequest } from './memoryDispatch'
@@ -40,7 +41,7 @@ try {
   // built from an older file never answers a single query.
   void start(store)
 } catch (error) {
-  port.postMessage({ ready: false, error: error instanceof Error ? error.message : String(error) })
+  port.postMessage({ ready: false, error: messageOf(error) })
 }
 
 type Served = Parameters<typeof dispatchMemoryRequest>[0]
@@ -57,19 +58,19 @@ async function answer(store: Served, request: MemoryRequest): Promise<void> {
     port?.postMessage({
       id: request.id,
       ok: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: messageOf(error),
     })
   }
 }
 
 async function start(store: Served): Promise<void> {
   try {
-    await store.rebuild()
+    await store.refresh()
     port?.postMessage({ ready: true })
   } catch (error) {
     port?.postMessage({
       ready: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: messageOf(error),
     })
   }
 }

@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import { messageOf } from '@shared/guards'
 import { MEMORY_FILE, MEMORY_INDEX_FILE } from '@shared/domain/project'
 import type { AsyncMemory } from './memoryClient'
 
@@ -14,11 +15,15 @@ import type { AsyncMemory } from './memoryClient'
  * writes a new one.
  */
 
+/** Flat in `userData`, where the machine's own files live — not under a project's two folders. */
+const GLOBAL_MEMORY_FILE = 'memory.ndjson'
+const GLOBAL_MEMORY_INDEX = 'memory.db'
+
 export type MemoryHost = {
   /** The open project's memory. Nothing when no project is open. */
   project: () => Promise<AsyncMemory | null>
-  /** The machine's own. Always there, whatever is open. */
-  global: () => Promise<AsyncMemory>
+  /** The machine's own. Nothing when it will not open, which is said in the journal. */
+  global: () => Promise<AsyncMemory | null>
   /** Follows what the project store publishes. Closes what the previous project held. */
   follow: (root: string | null) => void
   close: () => Promise<void>
@@ -37,15 +42,19 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
   // The PROMISE is held, never the memory: two turns asking at once must not open two threads on
   // one database, which is two writers on a file SQLite gives to one.
   let opening: Promise<AsyncMemory | null> | null = null
-  let openingGlobal: Promise<AsyncMemory> | null = null
+  let openingGlobal: Promise<AsyncMemory | null> | null = null
 
-  const openAt = async (at: string): Promise<AsyncMemory | null> => {
+  const openAt = async (
+    at: string,
+    held = MEMORY_FILE,
+    index = MEMORY_INDEX_FILE,
+  ): Promise<AsyncMemory | null> => {
     try {
-      return await open(join(at, MEMORY_FILE), join(at, MEMORY_INDEX_FILE))
+      return await open(join(at, held), join(at, index))
     } catch (error) {
       // A memory that will not open costs the memory, never the project: the studio has worked
       // without one until now and goes on doing so.
-      onTrouble(error instanceof Error ? error.message : String(error))
+      onTrouble(messageOf(error))
       return null
     }
   }
@@ -59,7 +68,10 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
     },
 
     global: async () => {
-      openingGlobal ??= open(join(userData, 'memory.ndjson'), join(userData, 'memory.db'))
+      openingGlobal ??= open(
+        join(userData, GLOBAL_MEMORY_FILE),
+        join(userData, GLOBAL_MEMORY_INDEX),
+      )
       return await openingGlobal
     },
 
@@ -92,6 +104,6 @@ async function closeQuietly(
   try {
     await (await opening)?.close()
   } catch (error) {
-    onTrouble(error instanceof Error ? error.message : String(error))
+    onTrouble(messageOf(error))
   }
 }
