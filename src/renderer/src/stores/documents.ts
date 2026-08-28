@@ -22,6 +22,7 @@ import { create as createStore } from 'zustand'
 import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
 import { useLayouts } from './layouts'
+import { folderRoles } from './folderRoles'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -409,7 +410,10 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     const title =
       of?.title ??
       untitledDocumentName(
-        takenDocumentNames({ documents: get().documents, stored }, documentFolderOf(kind)),
+        takenDocumentNames(
+          { documents: get().documents, stored },
+          documentFolderOf(kind, folderRoles()),
+        ),
         kind,
       )
 
@@ -423,7 +427,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // (there is no file to disagree with), and the first save answers for good: it may land on
       // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
       // folder holds.
-      path: documentPathFor(title, kind, of?.folder),
+      path: documentPathFor(title, kind, of?.folder, folderRoles()),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 

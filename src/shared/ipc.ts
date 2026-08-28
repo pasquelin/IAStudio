@@ -12,6 +12,7 @@ import type { GameManifest, GameScriptFile, GameState } from './domain/game'
 import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
 import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
+import type { RoleFolders } from './domain/folderRole'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
@@ -137,6 +138,7 @@ export type Channels = {
   projectFileHistory: 'project:file-history'
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
+  projectFolderRoles: 'project:folder-roles'
   projectFileFacts: 'project:file-facts'
   projectReadContext: 'project:read-context'
   projectWriteContext: 'project:write-context'
@@ -369,6 +371,7 @@ export const CHANNELS: Channels = {
   projectFileHistory: 'project:file-history',
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
+  projectFolderRoles: 'project:folder-roles',
   projectFileFacts: 'project:file-facts',
   projectReadContext: 'project:read-context',
   projectWriteContext: 'project:write-context',
@@ -935,6 +938,7 @@ export const EVENTS = {
   projectFolderChanged: 'evt:project-folder-changed',
   filesChanged: 'evt:files-changed',
   projectRescan: 'evt:project-rescan',
+  projectFolderRoles: 'evt:project-folder-roles',
   projectContext: 'evt:project-context',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
@@ -1225,6 +1229,25 @@ export type StudioBridge = {
     rescanState: () => Promise<RescanState>
     /** Calls off the pass that is running. What it had already written stays written. */
     stopRescan: () => Promise<void>
+    /**
+     * Where each role's folder sits in the open project — PARTIAL, a role whose folder is gone
+     * being absent rather than pointed at its default. `{}` while no project is open.
+     *
+     * A window needs it for two things it cannot work out from a path: which folder a new
+     * document should be offered, and which folder in the tree serves which section. Neither can
+     * be read off a NAME — the folders are the user's to rename, and what binds one to a role is
+     * the marker it carries, which only the main process reads.
+     */
+    folderRoles: () => Promise<RoleFolders>
+    /**
+     * The map again, whenever it changes: another project opened, or a write that had to lay a
+     * missing folder back down.
+     *
+     * Its own event rather than a field of `Project`: `onChange` means "another project is in
+     * front now" and resumes jobs, re-arms the folder watch and refetches three lists. A folder
+     * appearing must not cost that.
+     */
+    onFolderRoles: (callback: (roles: RoleFolders) => void) => Unsubscribe
     /**
      * What the disk says about one entry — size and stamps, for a folder as much as for a file.
      *

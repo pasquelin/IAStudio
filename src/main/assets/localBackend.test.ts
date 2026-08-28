@@ -8,6 +8,8 @@ import type { AsyncCatalog } from '@main/project/catalogClient'
 // the first is what production injects, the second is the same answer without the `null` arm.
 import { hashOrNull, hashSource } from '@main/media/runner'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
+import { isHiddenEntry } from '@shared/domain/folder'
+import { ensureRoleFolder } from '@main/project/folderRoles'
 import {
   createLocalBackend,
   extensionFromUrl,
@@ -43,15 +45,16 @@ describe('local backend', () => {
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'scenario-assets-'))
-    // No landing folder is laid down: `DEFAULT_ASSET_FOLDERS` is a default now, not a layout, and
-    // every import below writes into a folder that has to be created on the way. A user who threw
-    // `Images/` away gets it back rather than an import that fails.
+    // No landing folder is laid down: a role's folder is a default, not a layout, and every
+    // import below writes into one that has to be created on the way. A user who threw `Images/`
+    // away gets it back rather than an import that fails.
     await mkdir(join(root, '.index/posters'), { recursive: true })
 
     catalog = memoryCatalog()
     backend = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -80,6 +83,7 @@ describe('local backend', () => {
     const probing = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -104,6 +108,7 @@ describe('local backend', () => {
     const probing = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -168,7 +173,11 @@ describe('local backend', () => {
     })
 
     expect(second.path).toBe(first.path)
-    expect(await readdir(join(root, 'Images'))).toEqual(['Boulder.png'])
+    // The role marker left out, exactly as the explorer leaves it out: `readdir` shows it,
+    // nothing in the studio does.
+    expect((await readdir(join(root, 'Images'))).filter(name => !isHiddenEntry(name))).toEqual([
+      'Boulder.png',
+    ])
   })
 
   /**
@@ -453,6 +462,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -480,6 +490,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -502,6 +513,7 @@ describe('local backend', () => {
     const failing = createLocalBackend({
       download: vi.fn(() => Promise.reject(new Error('offline'))),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -668,6 +680,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -728,6 +741,7 @@ describe('the still brought down beside the bytes', () => {
     backend = createLocalBackend({
       download,
       projectPath: () => root,
+      folderFor: role => ensureRoleFolder(root, {}, role),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,

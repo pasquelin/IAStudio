@@ -331,6 +331,8 @@ export function registerProjectHandlers({
   // A window never asks FOR a pass — opening a project and coming back to the front are what do.
   // What it may do is watch one and call it off.
   handle(CHANNELS.projectRescanState, async () => reconciler.state())
+  // `async` for the same reason the listing above is: the other side awaits an invoke.
+  handle(CHANNELS.projectFolderRoles, async () => project.roles())
   handle(CHANNELS.projectStopRescan, async () => reconciler.stop())
 
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,

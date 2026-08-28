@@ -828,6 +828,7 @@ export function createServices(settings: SettingsStore): Services {
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
+    onRoles: roles => broadcast(EVENTS.projectFolderRoles, roles),
     onChange: current => {
       if (current) settleOpenedProject(current)
       broadcast(EVENTS.projectChanged, current)
@@ -1110,6 +1111,7 @@ export function createServices(settings: SettingsStore): Services {
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
+    folderFor: role => project.folderFor(role),
     catalog: () => project.catalog(),
     now: timestamp,
     // The same function the rescan hashes with (`projectDisk` passes the very same one), which
@@ -1152,6 +1154,7 @@ export function createServices(settings: SettingsStore): Services {
     // one depth bound, rather than a second one free to disagree about how deep a project goes.
     walkFiles: () => folder.walk(),
     folderNames: relative => folder.names(relative),
+    folderFor: role => project.folderFor(role),
   })
 
   const projectRoot = (): string | null => project.current()?.path ?? null

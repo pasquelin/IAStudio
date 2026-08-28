@@ -1,13 +1,14 @@
 import { copyFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
-  defaultAssetFolder,
+  roleForAsset,
   wantsPoster,
   type Asset,
   type AssetGeneration,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import type { FolderRole } from '@shared/domain/folderRole'
 import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/material'
 import type { AsyncCatalog } from '@main/project/catalogClient'
@@ -28,6 +29,14 @@ export type Download = (url: string) => Promise<Uint8Array>
 export type LocalBackendDeps = {
   download: Download
   projectPath: () => string
+  /**
+   * The folder a role names, laid down with its marker if the project has none —
+   * `ProjectStore.folderFor`.
+   *
+   * Asked rather than composed: where a role sits is what the marker in the folder says, so a
+   * project whose `Modelling/Models` was renamed in the Finder goes on filing meshes there.
+   */
+  folderFor: (role: FolderRole) => Promise<string>
   catalog: () => AsyncCatalog
   now: () => string
   /**
@@ -180,6 +189,7 @@ export function twinOf(
 export function createLocalBackend({
   download,
   projectPath,
+  folderFor,
   catalog,
   now,
   hash,
@@ -275,7 +285,7 @@ export function createLocalBackend({
 
     const relativePath = existing?.path
       ? withExtension(existing.path, extension)
-      : await freeAssetPath(projectPath(), defaultAssetFolder(request), name, extension)
+      : await freeAssetPath(projectPath(), await folderFor(roleForAsset(request)), name, extension)
 
     // The probe spawns ffprobe, so it runs beside the still rather than after it.
     const absolute = join(projectPath(), relativePath)
@@ -381,7 +391,7 @@ export function createLocalBackend({
         ? withExtension(existing.path, safeExtension(extension, existing.type))
         : await freeAssetPath(
             projectPath(),
-            defaultAssetFolder(existing),
+            await folderFor(roleForAsset(existing)),
             existing.name,
             safeExtension(extension, existing.type),
           )

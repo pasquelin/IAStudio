@@ -69,6 +69,16 @@ export const DEFAULT_ROLE_PATHS: Record<FolderRole, string> = {
 }
 
 /**
+ * The file that says a folder's role, holding the role and nothing else.
+ *
+ * Inside the folder rather than in a table elsewhere, which is the whole mechanism: a table keyed
+ * by path is stale the moment the Finder renames anything, where a file the folder CARRIES is
+ * never wrong. Dotted so every platform hides it, and `hideFromExplorer` gives Windows the
+ * attribute it wants on top.
+ */
+export const ROLE_MARKER = '.ia-studio-role'
+
+/**
  * Where the roles were last found, by role. Partial on purpose: a role whose folder was thrown
  * away has no path until something needs to write one, and an entry that lied would be worse than
  * an entry that is absent.

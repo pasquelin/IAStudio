@@ -9,6 +9,7 @@ import {
   MACHINE_FOLDERS,
   STARTER_FOLDERS,
 } from '@shared/domain/project'
+import { ROLE_MARKER } from '@shared/domain/folderRole'
 import { isRecord } from '@shared/guards'
 import {
   createProjectStore,
@@ -57,6 +58,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
     })
   })
 
@@ -94,6 +96,14 @@ describe('project store', () => {
 
   // The rule the entry states: what the folder holds for the user stays in the open, what the
   // machine keeps goes under a dot. `layouts/` was neither — nothing has ever written to it.
+  it('says what each folder it laid down is for, so a rename cannot lose one', async () => {
+    const project = await store.create(root, 'My project')
+
+    expect(await readFile(join(project.path, 'Modelling/Models', ROLE_MARKER), 'utf8')).toBe(
+      'models\n',
+    )
+  })
+
   it('leaves no folder behind that nothing writes to', () => {
     expect([...MACHINE_FOLDERS, ...STARTER_FOLDERS]).not.toContain('layouts')
   })
@@ -429,6 +439,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
       // Read INSIDE the settling: the project still being there is the order this exists for.
       settle: async () => {
         settled = settling.current() !== null
@@ -453,6 +464,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
       settle: async () => {
         stamping?.()
       },
@@ -488,6 +500,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
       settle: async () => {
         if (hold) await hold
       },
@@ -634,6 +647,7 @@ describe('project store', () => {
       },
       now: () => '2026-08-06T10:00:00.000Z',
       onChange,
+      onRoles: () => {},
     })
 
     const first = await fragile.create(join(root, 'first'), 'First')
@@ -689,6 +703,7 @@ describe('renaming a project', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
     })
   })
 

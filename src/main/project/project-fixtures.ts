@@ -8,6 +8,7 @@ import type { AsyncCatalog } from './catalogClient'
 import { memoryCatalog } from './catalog-fixtures'
 import { createDocumentFiles, type DocumentFiles } from './documents'
 import { createFolderReader } from './folder'
+import { ensureRoleFolder } from './folderRoles'
 import { createProjectStore, type ProjectStore } from './store'
 
 /** A real project on a real folder, and the pieces a test needs to reach into it. */
@@ -29,6 +30,7 @@ export function documentFilesAt(root: string, now: string): DocumentFiles {
     now: () => now,
     walkFiles: () => reader.walk(),
     folderNames: relative => reader.names(relative),
+    folderFor: role => ensureRoleFolder(root, {}, role),
   })
 }
 
@@ -65,6 +67,7 @@ export async function withTempProject(
     openCatalog: async () => catalog,
     now: () => now,
     onChange: () => {},
+    onRoles: () => {},
   })
 
   onTestFinished(async () => {

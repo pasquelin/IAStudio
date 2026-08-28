@@ -18,6 +18,7 @@ import {
   untitledDocumentName,
   useDocuments,
 } from '@/stores/documents'
+import { folderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { getBridge } from '@/services/bridge'
@@ -38,7 +39,7 @@ export async function createScript(
   // Composed like every other kind: from the RAW title, a separator named a file in another
   // folder, and a name the main process refuses made `writeScript` answer `false` — nothing on
   // screen, no word.
-  const path = documentPathFor(of.title, 'script', of.folder)
+  const path = documentPathFor(of.title, 'script', of.folder, folderRoles())
   // Refused rather than overwritten: this path names a file somebody already has work in.
   if (documentAtPath(useDocuments.getState(), path)) return null
   if (!(await orElse(getBridge()?.game.writeScript(path, source), false))) return null
@@ -58,7 +59,7 @@ export async function createScript(
  * file would open the field one level too high.
  */
 async function startingFolder(kind: DocumentKind): Promise<string> {
-  const fallback = documentFolderOf(kind)
+  const fallback = documentFolderOf(kind, folderRoles())
 
   const picked = selectedFilePaths(useSelection.getState()).at(-1)
   if (picked === undefined) return fallback

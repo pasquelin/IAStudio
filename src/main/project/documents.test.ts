@@ -18,6 +18,7 @@ import {
   LEGACY_DOCUMENTS_FOLDER,
   type DocumentDescriptor,
 } from '@shared/domain/document'
+import { isHiddenEntry } from '@shared/domain/folder'
 import type { OraSurface } from '@shared/domain/openRaster'
 import { exists } from '@main/persistence'
 import { orphanStagingCopies, type DocumentFiles } from './documents'
@@ -87,6 +88,13 @@ describe('createDocumentFiles', () => {
   let root = ''
   let documents: DocumentFiles
 
+  /**
+   * What a folder holds as a reader SEES it — the role marker left out, exactly as the explorer
+   * leaves it out. `readdir` shows it; nothing in the studio does.
+   */
+  const held = async (folder: string): Promise<string[]> =>
+    (await readdir(join(root, folder))).filter(name => !isHiddenEntry(name))
+
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ia-studio-documents-'))
     documents = documentFilesAt(root, NOW)
@@ -112,7 +120,7 @@ describe('createDocumentFiles', () => {
   // the user beside a tab bearing the title, two names for one document.
   it('creates the landing folder, names the file after the document, and leaves no staging file', async () => {
     await documents.write('doc-1', 'scene', { title: 'Untitled', content: '{}' })
-    expect(await readdir(join(root, SCENES))).toEqual(['Untitled.gltf'])
+    expect(await held(SCENES)).toEqual(['Untitled.gltf'])
   })
 
   /**
@@ -373,7 +381,7 @@ describe('createDocumentFiles', () => {
 
     await documents.rename('doc-sky', 'skybox', 'Aube')
     expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"iastudio"')
-    expect(await readdir(join(root, SKIES))).toEqual(['Aube.gltf'])
+    expect(await held(SKIES)).toEqual(['Aube.gltf'])
   })
 
   /**
@@ -406,7 +414,7 @@ describe('createDocumentFiles', () => {
     expect(onDisk).toContain('<standard_surface name="SR_iastudio" type="surfaceshader">')
 
     await documents.rename('doc-mat', 'material', 'Bronze')
-    expect(await readdir(join(root, MATERIALS))).toEqual(['Bronze.mtlx'])
+    expect(await held(MATERIALS)).toEqual(['Bronze.mtlx'])
     // The dial no MaterialX input can carry survived the rewrite the rename does.
     expect((await documents.read('doc-mat', 'material'))?.content).toContain('edgeIntensity')
     expect(await documents.list()).toMatchObject([{ id: 'doc-mat', title: 'Bronze' }])
@@ -423,7 +431,7 @@ describe('createDocumentFiles', () => {
 
     await documents.remove('twin', 'skybox')
 
-    expect(await readdir(join(root, SCENES))).toEqual(['twin.gltf'])
+    expect(await held(SCENES)).toEqual(['twin.gltf'])
   })
 
   /**
@@ -438,7 +446,7 @@ describe('createDocumentFiles', () => {
 
     await documents.remove('doc-1', 'scene')
 
-    expect(await readdir(join(root, SCENES))).toEqual(['Level.gltf'])
+    expect(await held(SCENES)).toEqual(['Level.gltf'])
   })
 
   // Two windows on one document is a case the studio already lives with; a shared staging name
@@ -453,7 +461,7 @@ describe('createDocumentFiles', () => {
     expect(file?.content).toMatch(/^(a+|b+)$/)
     // One file, and it is the one the first write named: a document already on disk keeps the
     // file it is in, so a second write cannot leave a copy under another name beside it.
-    expect(await readdir(join(root, SCENES))).toEqual(['A.gltf'])
+    expect(await held(SCENES)).toEqual(['A.gltf'])
   })
 
   // An autosave still staging its copy would otherwise rename it back over a document the
@@ -467,7 +475,7 @@ describe('createDocumentFiles', () => {
     await Promise.all([writing, removing])
 
     expect(await documents.read('doc-1', 'scene')).toBeNull()
-    expect(await readdir(join(root, SCENES))).toEqual([])
+    expect(await held(SCENES)).toEqual([])
   })
 
   /**
@@ -640,7 +648,7 @@ describe('createDocumentFiles', () => {
 
       await documents.rename('doc-2', 'scene', 'Niveau')
 
-      expect(await readdir(join(root, SCENES))).toEqual(['Niveau.gltf'])
+      expect(await held(SCENES)).toEqual(['Niveau.gltf'])
       expect(await readdir(join(root, 'Acte 1'))).toEqual(['Niveau.gltf'])
     })
   })
@@ -668,10 +676,7 @@ describe('createDocumentFiles', () => {
 
     expect((await documents.read('doc-1', 'scene'))?.content).toBe('first')
     expect((await documents.read('doc-2', 'scene'))?.content).toBe('second')
-    expect([...(await readdir(join(root, SCENES)))].sort()).toEqual([
-      'Niveau 2.gltf',
-      'Niveau.gltf',
-    ])
+    expect([...(await held(SCENES))].sort()).toEqual(['Niveau 2.gltf', 'Niveau.gltf'])
   })
 
   /**
@@ -697,7 +702,7 @@ describe('createDocumentFiles', () => {
   it('writes a title the disk cannot hold under a name it can', async () => {
     await documents.write('doc-1', 'scene', { title: 'Brique 1/2', content: '{}' })
 
-    expect(await readdir(join(root, SCENES))).toEqual(['Brique 1 2.gltf'])
+    expect(await held(SCENES)).toEqual(['Brique 1 2.gltf'])
   })
 
   /**
@@ -757,7 +762,7 @@ describe('createDocumentFiles', () => {
 
       await documents.remove(second.id, 'scene')
 
-      expect(await readdir(join(root, SCENES))).toEqual([
+      expect(await held(SCENES)).toEqual([
         basename(second.path) === 'Level.gltf' ? 'Level copie.gltf' : 'Level.gltf',
       ])
     })
@@ -847,7 +852,7 @@ describe('createDocumentFiles', () => {
         workspace: '3d',
         path: `${SCENES}/Décor.gltf`,
       })
-      expect(await readdir(join(root, SCENES))).toEqual(['Décor.gltf'])
+      expect(await held(SCENES)).toEqual(['Décor.gltf'])
       expect(await documents.read('doc-1', 'scene')).toMatchObject({
         title: 'Décor',
         content: '{"nodes":[]}',
@@ -879,7 +884,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-2', 'scene', { title: 'Décor', content: 'second' })
 
       await expect(documents.rename('doc-2', 'scene', 'Niveau')).rejects.toThrow(/duplicate/)
-      expect([...(await readdir(join(root, SCENES)))].sort()).toEqual(['Décor.gltf', 'Niveau.gltf'])
+      expect([...(await held(SCENES))].sort()).toEqual(['Décor.gltf', 'Niveau.gltf'])
     })
 
     it('says which refusal it is, rather than calling every one a duplicate', async () => {
@@ -911,7 +916,7 @@ describe('createDocumentFiles', () => {
 
       await documents.rename('doc-1', 'image', 'Affiche')
 
-      expect(await readdir(join(root, IMAGES))).toEqual(['Affiche.ora'])
+      expect(await held(IMAGES)).toEqual(['Affiche.ora'])
       expect((await documents.read('doc-1', 'image'))?.parts).toEqual(oraParts(['data/p_a.png']))
     })
 
@@ -940,7 +945,7 @@ describe('createDocumentFiles', () => {
       await expect(documents.rename('doc-1', 'scene', 'niveau')).resolves.toMatchObject({
         path: `${SCENES}/niveau.gltf`,
       })
-      expect(await readdir(join(root, SCENES))).toEqual(['niveau.gltf'])
+      expect(await held(SCENES)).toEqual(['niveau.gltf'])
     })
 
     /**
@@ -982,7 +987,7 @@ describe('createDocumentFiles', () => {
         documents.rename('doc-1', 'scene', 'Décor'),
       ])
 
-      expect(await readdir(join(root, SCENES))).toEqual(['Décor.gltf'])
+      expect(await held(SCENES)).toEqual(['Décor.gltf'])
     })
   })
 
@@ -1064,7 +1069,7 @@ describe('createDocumentFiles', () => {
       )
 
       await documents.list()
-      expect(await readdir(join(root, SCENES))).toEqual(['Level.gltf'])
+      expect(await held(SCENES)).toEqual(['Level.gltf'])
     })
 
     /**
@@ -1086,7 +1091,7 @@ describe('createDocumentFiles', () => {
       const listed = await documents.list()
 
       expect(listed.map(entry => entry.id)).toEqual(['doc-1'])
-      expect(await readdir(join(root, IMAGES))).toEqual(['Planche.ora'])
+      expect(await held(IMAGES)).toEqual(['Planche.ora'])
     })
   })
 
@@ -1123,7 +1128,7 @@ describe('createDocumentFiles', () => {
         parts: oraParts(['data/p_a.png']),
       })
 
-      expect(await readdir(join(root, IMAGES))).toEqual(['Poster.ora'])
+      expect(await held(IMAGES)).toEqual(['Poster.ora'])
       const bytes = await readFile(join(root, IMAGES, 'Poster.ora'))
       expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b])
       expect(bytes.subarray(30, 38).toString('utf8')).toBe('mimetype')
@@ -1185,7 +1190,7 @@ describe('createDocumentFiles', () => {
       })
       await documents.write('doc-1', 'image', { title: 'Poster', content: oraContent() })
 
-      expect(await readdir(join(root, IMAGES))).toEqual(['Poster.ora'])
+      expect(await held(IMAGES)).toEqual(['Poster.ora'])
     })
 
     it('takes the container away on remove', async () => {
@@ -1197,7 +1202,7 @@ describe('createDocumentFiles', () => {
       await documents.remove('doc-1', 'image')
 
       expect(await documents.list()).toEqual([])
-      expect(await readdir(join(root, IMAGES))).toEqual([])
+      expect(await held(IMAGES)).toEqual([])
     })
 
     /**

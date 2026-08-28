@@ -102,6 +102,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onRescan: noSubscription,
       rescanState: () => Promise.resolve(IDLE_RESCAN),
       stopRescan: () => Promise.resolve(),
+      folderRoles: () => Promise.resolve({}),
+      onFolderRoles: noSubscription,
       // Nothing on disk unless a suite says otherwise, which is what the window under test then
       // reads as « this entry is no longer there » rather than as a blank pane.
       fileFacts: () => Promise.resolve(null),

@@ -14,6 +14,7 @@ import { useTasks } from '@/stores/tasks'
 import { useJobs } from '@/stores/jobs'
 import { useDictation } from '@/stores/dictation'
 import { useMedia } from '@/stores/media'
+import { useFolderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
 import { useProjectContext } from '@/stores/projectContext'
 import { useSettings } from '@/stores/settings'
@@ -39,6 +40,7 @@ export function Application() {
   const connectAccounts = useAccounts(state => state.connect)
   const connectAiModels = useAiModels(state => state.connect)
   const connectProject = useProject(state => state.connect)
+  const connectFolderRoles = useFolderRoles(state => state.connect)
   const connectJobs = useJobs(state => state.connect)
   const connectMedia = useMedia(state => state.connect)
   const connectDictation = useDictation(state => state.connect)
@@ -54,6 +56,7 @@ export function Application() {
       connectAccounts(),
       connectAiModels(),
       connectProject(),
+      connectFolderRoles(),
       connectJobs(),
       connectMedia(),
       connectDictation(),
@@ -70,6 +73,7 @@ export function Application() {
     connectAccounts,
     connectAiModels,
     connectProject,
+    connectFolderRoles,
     connectJobs,
     connectMedia,
     connectDictation,

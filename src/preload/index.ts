@@ -7,6 +7,7 @@ import type { CommandId } from '@shared/domain/command'
 import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
 import type { FileOutcome } from '@shared/domain/fileOp'
+import type { RoleFolders } from '@shared/domain/folderRole'
 import type { Project, RescanState } from '@shared/domain/project'
 import type { ContextState } from '@shared/domain/projectContext'
 import type { Job, JobProgress } from '@shared/domain/job'
@@ -104,6 +105,8 @@ const bridge: StudioBridge = {
     onRescan: callback => subscribe<RescanState>(EVENTS.projectRescan, callback),
     rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
     stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
+    folderRoles: () => ipcRenderer.invoke(CHANNELS.projectFolderRoles),
+    onFolderRoles: callback => subscribe<RoleFolders>(EVENTS.projectFolderRoles, callback),
     fileFacts: relative => ipcRenderer.invoke(CHANNELS.projectFileFacts, relative),
     readContext: () => ipcRenderer.invoke(CHANNELS.projectReadContext),
     writeContext: cards => ipcRenderer.invoke(CHANNELS.projectWriteContext, cards),

@@ -3,8 +3,8 @@ import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   documentPath,
-  documentFolderOf,
   LEGACY_DOCUMENTS_FOLDER,
+  roleForKind,
   DOCUMENT_VERSION,
   isStagingName,
   isDocumentExtension,
@@ -23,6 +23,7 @@ import {
   nextFreeDocumentName,
   type NamedDocument,
 } from '@shared/domain/documentName'
+import type { FolderRole } from '@shared/domain/folderRole'
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
@@ -113,6 +114,14 @@ export type DocumentFilesDeps = {
    * folders documents were actually found in, which is the only place a staging copy can be.
    */
   folderNames: (relative: string) => Promise<readonly string[] | null>
+  /**
+   * The folder a role names, laid down with its marker if the project has none —
+   * `ProjectStore.folderFor`.
+   *
+   * Where a first save goes when its caller names no folder. Asked rather than composed: a
+   * project whose `Modelling/Scenes` was renamed in the Finder goes on filing scenes there.
+   */
+  folderFor: (role: FolderRole) => Promise<string>
 }
 
 /**
@@ -200,6 +209,7 @@ export function createDocumentFiles({
   now,
   walkFiles,
   folderNames,
+  folderFor,
 }: DocumentFilesDeps): DocumentFiles {
   /**
    * In-flight work per DOCUMENT, so writing, renaming and removing one cannot interleave.
@@ -546,11 +556,8 @@ export function createDocumentFiles({
    * answer worth having: this path is handed straight to a write that overwrites what it lands
    * on, and nothing else stands between the two.
    */
-  const freshFile = async (
-    kind: DocumentKind,
-    title: string,
-    folder = documentFolderOf(kind),
-  ): Promise<string> => {
+  const freshFile = async (kind: DocumentKind, title: string, named?: string): Promise<string> => {
+    const folder = named ?? (await folderFor(roleForKind(kind)))
     const taken = await namesIn(folder)
     return join(
       absoluteOf(folder),
