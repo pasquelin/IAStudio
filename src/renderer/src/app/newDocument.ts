@@ -1,13 +1,14 @@
 import { orElse } from '@shared/promises'
 import {
-  documentFolderOf,
   kindForWorkspace,
+  roleForKind,
   type DocumentDescriptor,
   type DocumentKind,
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { documentPathFor } from '@shared/domain/documentName'
 import { parentOf } from '@shared/domain/folder'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { SCRIPT_STARTER } from '@shared/domain/game'
 import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
@@ -18,7 +19,6 @@ import {
   untitledDocumentName,
   useDocuments,
 } from '@/stores/documents'
-import { folderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { getBridge } from '@/services/bridge'
@@ -39,7 +39,7 @@ export async function createScript(
   // Composed like every other kind: from the RAW title, a separator named a file in another
   // folder, and a name the main process refuses made `writeScript` answer `false` — nothing on
   // screen, no word.
-  const path = documentPathFor(of.title, 'script', of.folder, folderRoles())
+  const path = documentPathFor(of.title, 'script', of.folder)
   // Refused rather than overwritten: this path names a file somebody already has work in.
   if (documentAtPath(useDocuments.getState(), path)) return null
   if (!(await orElse(getBridge()?.game.writeScript(path, source), false))) return null
@@ -59,15 +59,20 @@ export async function createScript(
  * file would open the field one level too high.
  */
 async function startingFolder(kind: DocumentKind): Promise<string> {
-  const fallback = documentFolderOf(kind, folderRoles())
+  // ASKED, never composed: only the main process reads the markers, so only it knows where a
+  // role went after a rename in the Finder — and asking is what lays the folder back down.
+  const own = await orElse(
+    getBridge()?.project.folderFor(roleForKind(kind)),
+    DEFAULT_ROLE_PATHS[roleForKind(kind)],
+  )
 
   const picked = selectedFilePaths(useSelection.getState()).at(-1)
-  if (picked === undefined) return fallback
+  if (picked === undefined) return own
 
   const facts = await orElse(getBridge()?.project.fileFacts(picked), null)
-  if (!facts) return fallback
+  if (!facts) return own
 
-  return facts.kind === 'folder' ? picked : (parentOf(picked) ?? fallback)
+  return facts.kind === 'folder' ? picked : (parentOf(picked) ?? own)
 }
 
 /**

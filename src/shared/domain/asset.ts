@@ -1,5 +1,5 @@
 import { FILE_NAME_MAX_LENGTH } from './fileName'
-import { folderForRole, type FolderRole, type RoleFolders } from './folderRole'
+import type { FolderRole } from './folderRole'
 import type { PbrChannel } from './material'
 
 export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'skybox' | 'animation'
@@ -75,14 +75,6 @@ export function roleForAsset(asset: {
   const servesAMaterial = asset.map !== undefined || asset.packedSlot !== undefined
 
   return servesAMaterial ? 'materials' : ROLE_BY_ASSET_TYPE[asset.type]
-}
-
-/** Where an asset of this shape lands, in the project as it stands. */
-export function defaultAssetFolder(
-  asset: { type: AssetType; map?: PbrChannel; packedSlot?: string },
-  roles?: RoleFolders,
-): string {
-  return folderForRole(roleForAsset(asset), roles)
 }
 
 /**

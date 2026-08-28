@@ -12,7 +12,7 @@ import type { GameManifest, GameScriptFile, GameState } from './domain/game'
 import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
 import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
-import type { RoleFolders } from './domain/folderRole'
+import type { FolderRole, RoleFolders } from './domain/folderRole'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
@@ -139,6 +139,7 @@ export type Channels = {
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
   projectFolderRoles: 'project:folder-roles'
+  projectFolderFor: 'project:folder-for'
   projectFileFacts: 'project:file-facts'
   projectReadContext: 'project:read-context'
   projectWriteContext: 'project:write-context'
@@ -372,6 +373,7 @@ export const CHANNELS: Channels = {
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
   projectFolderRoles: 'project:folder-roles',
+  projectFolderFor: 'project:folder-for',
   projectFileFacts: 'project:file-facts',
   projectReadContext: 'project:read-context',
   projectWriteContext: 'project:write-context',
@@ -1233,20 +1235,19 @@ export type StudioBridge = {
      * Where each role's folder sits in the open project — PARTIAL, a role whose folder is gone
      * being absent rather than pointed at its default. `{}` while no project is open.
      *
-     * A window needs it for two things it cannot work out from a path: which folder a new
-     * document should be offered, and which folder in the tree serves which section. Neither can
-     * be read off a NAME — the folders are the user's to rename, and what binds one to a role is
-     * the marker it carries, which only the main process reads.
+     * For DRAWING, never for deciding where to write: `folderFor` is what a write asks, and it
+     * lays the folder down. A window that composed a landing path from this map would file into
+     * a folder nothing marked — and a map replicated over an event is empty for a few frames.
      */
     folderRoles: () => Promise<RoleFolders>
     /**
-     * The map again, whenever it changes: another project opened, or a write that had to lay a
-     * missing folder back down.
+     * The folder a role names, laid down with its marker if the project has none.
      *
-     * Its own event rather than a field of `Project`: `onChange` means "another project is in
-     * front now" and resumes jobs, re-arms the folder watch and refetches three lists. A folder
-     * appearing must not cost that.
+     * Asked rather than composed, and that is the whole mechanism: only the main process reads
+     * the markers, so only it can say where a role went after a rename in the Finder — and
+     * laying the folder down is what keeps the role resolvable at the next open.
      */
+    folderFor: (role: FolderRole) => Promise<string>
     onFolderRoles: (callback: (roles: RoleFolders) => void) => Unsubscribe
     /**
      * What the disk says about one entry — size and stamps, for a folder as much as for a file.

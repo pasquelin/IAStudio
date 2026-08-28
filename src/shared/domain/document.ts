@@ -1,4 +1,4 @@
-import { folderForRole, type FolderRole, type RoleFolders } from './folderRole'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from './folderRole'
 import { SCRIPT_EXTENSION } from './game'
 import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
@@ -128,9 +128,10 @@ export function roleForKind(kind: DocumentKind): FolderRole {
   return ROLE_BY_KIND[kind]
 }
 
-/** Where a document of this kind lands, in the project as it stands. */
-export function documentFolderOf(kind: DocumentKind, roles?: RoleFolders): string {
-  return folderForRole(roleForKind(kind), roles)
+/** Where a document of this kind STARTS. Where it lands is `ProjectStore.folderFor`, which reads
+ * the markers and lays the folder down. */
+export function documentFolderOf(kind: DocumentKind): string {
+  return DEFAULT_ROLE_PATHS[roleForKind(kind)]
 }
 
 export { STUDIO_METADATA_KEY } from './studioMetadata'

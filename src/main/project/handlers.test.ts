@@ -130,6 +130,7 @@ function base(catalog: AsyncCatalog) {
       search: vi.fn(async () => []),
       walk: vi.fn(async () => []),
       names: vi.fn(async () => []),
+      named: vi.fn(async () => []),
     },
     // Answers an empty batch by default: what a channel DOES with an outcome is what these
     // suites are about, and `fileOps.test.ts` is where the outcome itself is settled.

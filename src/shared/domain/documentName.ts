@@ -1,5 +1,4 @@
 import { documentFolderOf, EXTENSIONS_BY_KIND, type DocumentKind } from './document'
-import type { RoleFolders } from './folderRole'
 import { pathIn } from './folder'
 import {
   foldForFileName,
@@ -57,13 +56,8 @@ export function documentFileName(name: string, kind: DocumentKind): string {
  * skipped `documentFileName` altogether, which let a title carrying a separator name a file
  * elsewhere.
  */
-export function documentPathFor(
-  name: string,
-  kind: DocumentKind,
-  folder?: string,
-  roles?: RoleFolders,
-): string {
-  return pathIn(folder ?? documentFolderOf(kind, roles), documentFileName(name, kind))
+export function documentPathFor(name: string, kind: DocumentKind, folder?: string): string {
+  return pathIn(folder ?? documentFolderOf(kind), documentFileName(name, kind))
 }
 
 /**

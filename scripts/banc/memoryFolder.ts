@@ -95,6 +95,8 @@ export function createMemoryFolder(
           : null,
       ),
 
+    named: name => Promise.resolve(entries().filter(one => one.name === name)),
+
     move: (from, to) => Promise.resolve(carry(from, to, false)),
     copy: (from, to) => Promise.resolve(carry(from, to, true)),
 

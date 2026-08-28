@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { ASSET_TYPES } from './asset'
+import { ASSET_TYPES, roleForAsset } from './asset'
 import { DOCUMENT_KINDS, roleForKind } from './document'
-import { roleForAsset } from './asset'
 import {
   DEFAULT_ROLE_PATHS,
   FOLDER_ROLES,
@@ -52,7 +51,7 @@ describe('the folder a role names', () => {
 
   it('starts where the role starts when nothing resolved it', () => {
     expect(folderForRole('models', { image: 'Photos' })).toBe('Modelling/Models')
-    expect(folderForRole('models')).toBe('Modelling/Models')
+    expect(folderForRole('models', {})).toBe('Modelling/Models')
   })
 })
 

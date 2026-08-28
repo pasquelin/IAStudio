@@ -1,3 +1,5 @@
+import { byCodeUnit } from '../text'
+
 /**
  * What a folder is FOR, told by a marker inside it rather than by its name.
  *
@@ -85,9 +87,14 @@ export const ROLE_MARKER = '.ia-studio-role'
  */
 export type RoleFolders = Partial<Record<FolderRole, string>>
 
-/** The folder a role names, or where it starts when nothing has been resolved for it. */
-export function folderForRole(role: FolderRole, roles?: RoleFolders): string {
-  return roles?.[role] ?? DEFAULT_ROLE_PATHS[role]
+/**
+ * The folder a role names in THIS project, falling back to where the role starts.
+ *
+ * The map is required: an optional one lets a caller forget it and get the default silently,
+ * which is a document filed beside the folder the user renamed rather than in it.
+ */
+export function folderForRole(role: FolderRole, roles: RoleFolders): string {
+  return roles[role] ?? DEFAULT_ROLE_PATHS[role]
 }
 
 /**
@@ -102,12 +109,12 @@ export function roleOfFolder(path: string, roles: RoleFolders): FolderRole | nul
  * Which of two folders claiming one role wins: the shallower, then the earlier by code unit.
  *
  * A copied folder brings its marker, so two claims is an ordinary accident rather than a corrupt
- * project. Deciding by depth puts the original ahead of a copy filed under it, and the tie-break
- * is by code unit rather than by locale — a project must resolve the same way on every machine.
+ * project. Depth puts the original ahead of a copy filed under it; `byCodeUnit` settles the tie,
+ * and it is what keeps a project resolving the same way on every machine.
  */
 export function preferredRoleFolder(one: string, other: string): string {
   const depth = one.split('/').length - other.split('/').length
   if (depth !== 0) return depth < 0 ? one : other
 
-  return one < other ? one : other
+  return byCodeUnit(one, other) <= 0 ? one : other
 }

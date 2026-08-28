@@ -18,6 +18,7 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { isPrivatePath } from '@shared/domain/folder'
+import { isFolderRole, type FolderRole } from '@shared/domain/folderRole'
 import { GAME_VERSION, type GameManifest } from '@shared/domain/game'
 import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
@@ -120,6 +121,12 @@ export function parseProjectPath(value: unknown): string {
 
 export function parseProjectName(value: unknown): string {
   return pathSegment.parse(value)
+}
+
+/** A role a window may ask the folder of — refused rather than trusted, it crosses the frontier. */
+export function parseFolderRole(value: unknown): FolderRole {
+  if (!isFolderRole(value)) throw new Error('invalid-folder-role')
+  return value
 }
 
 // In code points, and generous rather than exact: `mkdirSync` takes an absolute path of 1 023

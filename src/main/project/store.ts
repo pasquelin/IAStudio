@@ -375,6 +375,11 @@ export function createProjectStore({
     const file = join(opened.path, CATALOG_FILE)
     await mkdir(dirname(file), { recursive: true })
 
+    // Started here and awaited below: it depends on the folder alone, so it runs under the
+    // catalogue opening and the journal replay rather than after them — and the four lines that
+    // publish the project must stay free of any `await`, see below.
+    const resolving = readRoles(opened.path)
+
     const opening = await openCatalog(file)
 
     /**
@@ -396,14 +401,15 @@ export function createProjectStore({
     // Whatever is still queued belongs to the project that is closing, and its catalogue is
     // about to stop answering. The stamp goes with it: it is being written into the folder the
     // studio is about to leave.
+    const resolved = await resolving
     await Promise.all([settle?.(), writes.settled()])
 
     close()
     catalog = opening
     project = opened
-    roleFolders = await readRoles(opened.path)
+    roleFolders = resolved
     onChange(opened)
-    onRoles(roleFolders)
+    onRoles(resolved)
     return opened
   }
 

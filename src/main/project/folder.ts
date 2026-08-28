@@ -56,6 +56,14 @@ export type FolderReader = {
    * a destination that has gone is told apart from an empty one.
    */
   names: (relative: string) => Promise<readonly string[] | null>
+  /**
+   * Every entry of the WHOLE project folder called exactly `name`, hidden ones included.
+   *
+   * Beside `walk` rather than a filter over it: `walk` materialises a `FolderEntry` per file of
+   * the project — a hundred thousand of them — and the role markers are ten. The predicate goes
+   * DOWN into the one traversal instead of the array coming back up.
+   */
+  named: (name: string) => Promise<FolderEntry[]>
 }
 
 /**
@@ -161,6 +169,9 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       await walkAll(hidden, entry => entry.kind === 'file', false),
 
     names: async relative => await orElse(readdir(join(rootOf(), relative)), null),
+
+    // Unsorted, and hidden shown: what this answers is the studio's own bookkeeping.
+    named: async name => await walkAll(true, entry => entry.name === name, false),
   }
 }
 

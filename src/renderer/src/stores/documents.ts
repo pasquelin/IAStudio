@@ -1,5 +1,5 @@
 import {
-  documentFolderOf,
+  roleForKind,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -14,6 +14,7 @@ import {
 } from '@shared/domain/documentName'
 import { foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
 import { nameOf, parentOf } from '@shared/domain/folder'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { refFromString } from '@shared/domain/ref'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
@@ -22,7 +23,6 @@ import { create as createStore } from 'zustand'
 import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
 import { useLayouts } from './layouts'
-import { folderRoles } from './folderRoles'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -412,7 +412,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       untitledDocumentName(
         takenDocumentNames(
           { documents: get().documents, stored },
-          documentFolderOf(kind, folderRoles()),
+          DEFAULT_ROLE_PATHS[roleForKind(kind)],
         ),
         kind,
       )
@@ -427,7 +427,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // (there is no file to disagree with), and the first save answers for good: it may land on
       // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
       // folder holds.
-      path: documentPathFor(title, kind, of?.folder, folderRoles()),
+      path: documentPathFor(title, kind, of?.folder),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 

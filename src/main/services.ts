@@ -15,11 +15,12 @@ import type { LocalModel } from '@shared/domain/localModel'
 import { needsOwnFolder } from '@shared/domain/localModel'
 import {
   ASSET_ID_PREFIX,
-  defaultAssetFolder,
+  roleForAsset,
   type Asset,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import { folderForRole } from '@shared/domain/folderRole'
 import type { MediaCapabilities } from '@shared/domain/media'
 import {
   LEGACY_ASSETS_FOLDER,
@@ -1013,7 +1014,7 @@ export function createServices(settings: SettingsStore): Services {
     // `onImported` does, and `announce` swallows what that listener raises: a project closed while
     // the catalogue was answering would have cost a mesh its textures, silently.
     const root = project.current()?.path
-    const folder = defaultAssetFolder(asset)
+    const folder = folderForRole(roleForAsset(asset), project.roles())
 
     if (!root || legacyLayoutSettled.has(root)) return
     if (!landedInDefaultFolder(asset.path, folder)) return

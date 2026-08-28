@@ -39,6 +39,16 @@ export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
  */
 export const PENDING_FILES_FILE = `${INDEX_FOLDER}/pending-files.ndjson`
 
+/**
+ * Where the last folder-role resolution was written down — a CACHE, never the answer. What binds
+ * a role to a folder is the marker the folder carries; this only spares the walk.
+ *
+ * Declared beside the other `.index/` paths rather than in the resolver, for the reason
+ * `INDEX_FOLDER` gives: three spellings of one folder is how one ends up pointing at a folder
+ * nothing creates.
+ */
+export const ROLE_CACHE_FILE = `${INDEX_FOLDER}/folder-roles.json`
+
 export type Manifest = {
   version: number
   name: string

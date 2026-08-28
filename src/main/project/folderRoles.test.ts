@@ -3,13 +3,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ROLE_PATHS, FOLDER_ROLES, ROLE_MARKER } from '@shared/domain/folderRole'
+import { ROLE_CACHE_FILE } from '@shared/domain/project'
 import { exists } from '@main/persistence'
 import {
   ensureRoleFolder,
   layRoleFolders,
   markRoleFolder,
   resolveRoleFolders,
-  ROLE_CACHE_FILE,
   writeRoleCache,
 } from './folderRoles'
 
@@ -78,6 +78,29 @@ describe('a folder the user moved behind the studio', () => {
     await resolved()
 
     expect(await resolveRoleFolders(root)).toMatchObject({ walked: false })
+  })
+})
+
+/**
+ * 🛑 What keeps the walk rare. An absence has to be REMEMBERED, or a project made before the
+ * roles — no marker anywhere — pays a full traversal on every opening, for ever.
+ */
+describe('a project no folder of which carries a role', () => {
+  it('walks once, and never again', async () => {
+    await mkdir(join(root, 'Anciennes images'), { recursive: true })
+
+    expect((await resolveRoleFolders(root)).walked).toBe(true)
+    await resolved()
+
+    expect(await resolveRoleFolders(root)).toEqual({ roles: {}, walked: false })
+  })
+
+  /** The price of remembering: a shelf copied in from elsewhere waits for the next walk. */
+  it('does not see a marker that appeared without the studio writing it', async () => {
+    await resolved()
+    await markRoleFolder(root, 'Venu dailleurs', 'image')
+
+    expect((await resolveRoleFolders(root)).roles.image).toBeUndefined()
   })
 })
 

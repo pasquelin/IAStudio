@@ -106,6 +106,7 @@ const bridge: StudioBridge = {
     rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
     stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
     folderRoles: () => ipcRenderer.invoke(CHANNELS.projectFolderRoles),
+    folderFor: role => ipcRenderer.invoke(CHANNELS.projectFolderFor, role),
     onFolderRoles: callback => subscribe<RoleFolders>(EVENTS.projectFolderRoles, callback),
     fileFacts: relative => ipcRenderer.invoke(CHANNELS.projectFileFacts, relative),
     readContext: () => ipcRenderer.invoke(CHANNELS.projectReadContext),

@@ -49,6 +49,7 @@ type ChannelMethod = {
   [CHANNELS.projectOpenFile]: StudioBridge['project']['openFile']
   [CHANNELS.projectFileFacts]: StudioBridge['project']['fileFacts']
   [CHANNELS.projectFolderRoles]: StudioBridge['project']['folderRoles']
+  [CHANNELS.projectFolderFor]: StudioBridge['project']['folderFor']
   [CHANNELS.projectReadContext]: StudioBridge['project']['readContext']
   [CHANNELS.projectWriteContext]: StudioBridge['project']['writeContext']
   [CHANNELS.projectExport]: StudioBridge['project']['exportInto']

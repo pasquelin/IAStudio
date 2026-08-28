@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   assetBadgeOf,
   assetIdFromUrl,
-  defaultAssetFolder,
   assetMasterUrl,
   assetUrl,
   hostedParts,
@@ -18,7 +17,6 @@ import {
   POSTER_HOST,
   type Asset,
 } from './asset'
-import { DEFAULT_ROLE_PATHS } from './folderRole'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -266,18 +264,5 @@ describe('the role an asset is filed under', () => {
   it('tells a mesh from the motion that drives it', () => {
     expect(roleForAsset({ type: 'mesh' })).toBe('models')
     expect(roleForAsset({ type: 'animation' })).toBe('animations')
-  })
-})
-
-describe('where an asset lands', () => {
-  it('takes the folder the role was resolved to, wherever the user moved it', () => {
-    expect(defaultAssetFolder({ type: 'mesh' }, { models: 'Mes modèles/Maillages' })).toBe(
-      'Mes modèles/Maillages',
-    )
-  })
-
-  it('falls back to where the role starts when nothing has been resolved', () => {
-    expect(defaultAssetFolder({ type: 'mesh' })).toBe(DEFAULT_ROLE_PATHS.models)
-    expect(defaultAssetFolder({ type: 'skybox' })).toBe(DEFAULT_ROLE_PATHS.skyboxes)
   })
 })
