@@ -72,6 +72,21 @@ export async function layRoleFolders(root: string): Promise<void> {
  */
 type RoleCache = { roles: RoleFolders; absent: readonly FolderRole[] }
 
+/**
+ * 🛑 A path this cache names is WRITTEN INTO, and the cache arrives off a disk anyone may edit —
+ * a project received from someone else, a zip, a corrupted file. `../../Desktop` is refused here
+ * rather than handed to `freeAssetPath`, the same shape `parseFolderPath` demands of a window.
+ */
+function isInsideProject(folder: string): boolean {
+  return (
+    folder.length > 0 &&
+    !folder.startsWith('/') &&
+    !folder.includes('\\') &&
+    !/(^|\/)\.\.(\/|$)/.test(folder) &&
+    !/^[A-Za-z]:/.test(folder)
+  )
+}
+
 function parseCache(body: string): RoleCache {
   const read: unknown = JSON.parse(body)
   if (!isRecord(read)) return { roles: {}, absent: [] }
@@ -79,7 +94,9 @@ function parseCache(body: string): RoleCache {
   const roles: RoleFolders = {}
   if (isRecord(read.roles)) {
     for (const [role, folder] of Object.entries(read.roles)) {
-      if (isFolderRole(role) && typeof folder === 'string') roles[role] = folder
+      if (isFolderRole(role) && typeof folder === 'string' && isInsideProject(folder)) {
+        roles[role] = folder
+      }
     }
   }
 

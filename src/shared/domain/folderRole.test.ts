@@ -7,7 +7,6 @@ import {
   folderForRole,
   isFolderRole,
   preferredRoleFolder,
-  roleOfFolder,
 } from './folderRole'
 
 describe('the role vocabulary', () => {
@@ -52,17 +51,6 @@ describe('the folder a role names', () => {
   it('starts where the role starts when nothing resolved it', () => {
     expect(folderForRole('models', { image: 'Photos' })).toBe('Modelling/Models')
     expect(folderForRole('models', {})).toBe('Modelling/Models')
-  })
-})
-
-describe('reading a role off a folder', () => {
-  it('answers for the folder the role was resolved to, renamed or not', () => {
-    expect(roleOfFolder('Mes modèles', { models: 'Mes modèles' })).toBe('models')
-  })
-
-  /** A fresh folder wearing the old default name is an ordinary folder, not the role's. */
-  it('answers nothing for a folder no role was resolved to', () => {
-    expect(roleOfFolder('Modelling/Models', { models: 'Mes modèles' })).toBe(null)
   })
 })
 

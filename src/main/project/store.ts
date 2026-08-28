@@ -403,6 +403,16 @@ export function createProjectStore({
     return opened
   }
 
+  /** Whether the map points a role at a folder the disk no longer holds — a rename, a deletion. */
+  const roleFolderMissing = async (
+    root: string,
+    held: RoleFolders,
+    role: FolderRole,
+  ): Promise<boolean> => {
+    const folder = held[role]
+    return folder !== undefined && !(await exists(join(root, folder)))
+  }
+
   /** Never fatal: a project whose roles cannot be read opens with none, and the first write lays
    * the folder it needs back down. Losing a role costs a folder, never a project. */
   const readRoles = async (root: string): Promise<RoleFolders> => {
@@ -514,11 +524,23 @@ export function createProjectStore({
     folderFor: async role => {
       if (!project) throw new NoProjectError()
 
-      const folder = await ensureRoleFolder(project.path, roleFolders, role)
-      if (roleFolders[role] !== folder) {
-        roleFolders = { ...roleFolders, [role]: folder }
-        await writeRoleCache(project.path, roleFolders)
-        onRoles(roleFolders)
+      // Captured BEFORE the awaits: `close()` nulls `project`, and an opening that landed during
+      // one of them would otherwise write this project's roles into the next one's cache.
+      const root = project.path
+
+      // A folder renamed while the project is OPEN leaves the map naming where it used to be —
+      // and laying the default back down would orphan the folder the user just renamed, marker
+      // and all. Re-resolved instead: the marker travelled with it, so the walk finds it.
+      const held = (await roleFolderMissing(root, roleFolders, role))
+        ? await readRoles(root)
+        : roleFolders
+
+      const folder = await ensureRoleFolder(root, held, role)
+      const settled = { ...held, [role]: folder }
+      if (roleFolders[role] !== folder || held !== roleFolders) {
+        roleFolders = settled
+        await writeRoleCache(root, settled)
+        onRoles(settled)
       }
 
       return folder
@@ -557,7 +579,12 @@ export function createProjectStore({
       if (project?.path !== leaving) return
 
       close()
+      // Emptied with the project, as the field's own line promises: `bundledTextures` and the
+      // legacy-layout note both read this, and the paths of a folder nobody has open answer for
+      // a project that is no longer there.
+      roleFolders = {}
       onChange(null)
+      onRoles(roleFolders)
     },
   }
 }

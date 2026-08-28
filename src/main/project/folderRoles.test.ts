@@ -143,6 +143,14 @@ describe('two folders claiming one role', () => {
 })
 
 describe('what the studio refuses to believe', () => {
+  /** 🛑 A path this cache names is WRITTEN INTO, and a project can arrive from anyone. */
+  it('refuses a cached folder that would write outside the project', async () => {
+    await layRoleFolders(root)
+    await writeRoleCache(root, { image: '../../Ailleurs' })
+
+    expect((await resolved()).image).toBe('Images')
+  })
+
   it('ignores a cache naming a folder that no longer carries the role', async () => {
     await layRoleFolders(root)
     await mkdir(join(root, 'Ailleurs'), { recursive: true })

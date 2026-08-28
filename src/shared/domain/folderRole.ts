@@ -119,14 +119,6 @@ export function folderForRole(role: FolderRole, roles: RoleFolders): string {
 }
 
 /**
- * The role a folder plays, or `null` for an ordinary folder — read against the RESOLVED map, so a
- * renamed folder answers and a fresh one wearing the old default name does not.
- */
-export function roleOfFolder(path: string, roles: RoleFolders): FolderRole | null {
-  return FOLDER_ROLES.find(role => roles[role] === path) ?? null
-}
-
-/**
  * Which of two folders claiming one role wins: the shallower, then the earlier by code unit.
  *
  * A copied folder brings its marker, so two claims is an ordinary accident rather than a corrupt
