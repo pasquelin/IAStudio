@@ -4,6 +4,15 @@ import type { AiOverview, ChoiceScope } from './domain/aiOverview'
 import type { AiRoleId, RoleProvider } from './domain/aiRole'
 import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
+import type {
+  Memory,
+  MemoryDraft,
+  MemoryPatch,
+  MemoryQuery,
+  MemoryRecallAsk,
+  MemoryIndexing,
+  MemoryScope,
+} from './domain/assistantMemory'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
@@ -143,6 +152,18 @@ export type Channels = {
   projectFileFacts: 'project:file-facts'
   projectReadContext: 'project:read-context'
   projectWriteContext: 'project:write-context'
+  memoryList: 'memory:list'
+  memoryRecall: 'memory:recall'
+  memoryRead: 'memory:read'
+  memoryRemember: 'memory:remember'
+  memoryAmend: 'memory:amend'
+  memoryForget: 'memory:forget'
+  memoryRebuild: 'memory:rebuild'
+  memoryReset: 'memory:reset'
+  memoryPending: 'memory:pending'
+  memoryIndex: 'memory:index'
+  memoryStopIndex: 'memory:stop-index'
+  memoryCompact: 'memory:compact'
 
   /**
    * Opens one file's information window, or reveals the one that path already has.
@@ -377,6 +398,18 @@ export const CHANNELS: Channels = {
   projectFileFacts: 'project:file-facts',
   projectReadContext: 'project:read-context',
   projectWriteContext: 'project:write-context',
+  memoryList: 'memory:list',
+  memoryRecall: 'memory:recall',
+  memoryRead: 'memory:read',
+  memoryRemember: 'memory:remember',
+  memoryAmend: 'memory:amend',
+  memoryForget: 'memory:forget',
+  memoryRebuild: 'memory:rebuild',
+  memoryReset: 'memory:reset',
+  memoryPending: 'memory:pending',
+  memoryIndex: 'memory:index',
+  memoryStopIndex: 'memory:stop-index',
+  memoryCompact: 'memory:compact',
 
   fileInfoOpen: 'window:file-info',
 
@@ -929,6 +962,8 @@ export type TraceEntry = { scope: TraceScope; message: string }
 
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
+  memoryChanged: 'evt:memory-changed',
+  memoryIndexed: 'evt:memory-indexed',
   jobProgress: 'evt:job-progress',
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
@@ -1055,6 +1090,54 @@ export type StudioBridge = {
     onChange: (callback: (settings: Settings) => void) => Unsubscribe
     /** Section the settings window is asked to show while it is already open. */
     onSection: (callback: (section: SettingsSectionId) => void) => Unsubscribe
+  }
+  /**
+   * What the assistant has learned — the project's, and the machine's own.
+   *
+   * `scope` is on every call rather than implied by a second namespace: the two behave alike in
+   * every respect but which file they land in, and a window that filters a list by one of them
+   * would be a window that could get it wrong.
+   *
+   * A project scope answers nothing at all when no project is open. That is not a failure and
+   * is not reported as one — it is a studio on its home screen.
+   */
+  memory: {
+    list: (scope: MemoryScope, query: MemoryQuery) => Promise<readonly Memory[]>
+    /**
+     * What ANSWERS a question, best first — never the same call as `list`, which filters.
+     *
+     * 🛑 The one door the question is embedded behind: the model lives in the main process and a
+     * window that scored its own would be a window holding ten thousand vectors. Empty for a
+     * studio with no project open, and never a refusal.
+     */
+    recall: (scope: MemoryScope, ask: MemoryRecallAsk) => Promise<readonly Memory[]>
+    read: (scope: MemoryScope, id: string) => Promise<Memory | null>
+    remember: (scope: MemoryScope, draft: MemoryDraft) => Promise<Memory | null>
+    /** Nothing when no such memory is held, which a window tells from a refusal by asking again. */
+    amend: (scope: MemoryScope, id: string, patch: MemoryPatch) => Promise<Memory | null>
+    forget: (scope: MemoryScope, id: string) => Promise<boolean>
+    /** Reads the file back into the index. Answers how many memories stand once it has. */
+    rebuild: (scope: MemoryScope) => Promise<number>
+    /** Everything forgotten, the file included. What « reset this project's memory » runs. */
+    reset: (scope: MemoryScope) => Promise<void>
+    /**
+     * How many memories have no embedding yet for the model that is chosen. `0` where none is —
+     * a studio with no embedding model has nothing pending, it has nothing to compute.
+     */
+    pending: (scope: MemoryScope) => Promise<number>
+    /**
+     * Rewrites the file with one line per standing memory, dropping what was forgotten.
+     * Answers how many lines it saved. `0` where there was nothing to save.
+     */
+    compact: (scope: MemoryScope) => Promise<number>
+    /** Starts computing what is missing, in the background. Answers as soon as it has started. */
+    index: (scope: MemoryScope) => Promise<void>
+    /** Stops the run in flight. What it already wrote is kept — see `MemoryVectors`. */
+    stopIndex: (scope: MemoryScope) => Promise<void>
+    /** Fires for every window when any of them writes: two replicas of one file is one too many. */
+    onChanged: (callback: (scope: MemoryScope) => void) => Unsubscribe
+    /** How far the embedding of a scope has got. Silent while nothing is being computed. */
+    onIndexed: (callback: (progress: MemoryIndexing) => void) => Unsubscribe
   }
   /**
    * The door onto this machine — its own pair, like `window` and `updates`, because the SETTING

@@ -913,6 +913,12 @@ describe('the translation bundles', () => {
       reads: ['échec', 'échouée'],
       separates: "an ingest status, and a job's, which agrees with `tâche`",
     },
+    forget: {
+      reads: ['retirer', 'oublier'],
+      separates:
+        'a post preset taken off the list, and a memory the assistant lets go of — which is ' +
+        'written down rather than erased, so « retirer » would say the opposite of what happens',
+    },
     free: {
       reads: ['libre', 'gratuit'],
       separates: 'a camera aiming at nothing, and what a generation costs',
@@ -1356,7 +1362,7 @@ const DYNAMIC_KEYS: readonly string[] = [
   // What the microphone answered, said in the language of whoever is reading. The detail of a
   // failure never reaches the screen — it names a file path — so the code is all there is.
   ...STT_ERROR_CODES.map(code => `dictation.errors.${code}`),
-  // The two employments no space holds. The generation ones are named by `families` and
+  // The employments no space holds. The generation ones are named by `families` and
   // `capabilities` above, which the manager reuses rather than opening a second vocabulary.
   ...STANDALONE_ROLES.map(role => `aiRoles.${role}`),
   // The verdict the machine returns on a model. A value without its word would put a raw key on

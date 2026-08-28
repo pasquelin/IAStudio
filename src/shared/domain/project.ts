@@ -28,6 +28,20 @@ export const INDEX_FOLDER = '.index'
 export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
 
 /**
+ * The studio's own folder inside a project — for what it keeps that no rescan could rebuild.
+ *
+ * NOT `.index/`, and the difference is the whole reason both exist: `.index/` is a cache the
+ * studio's `.gitignore` excludes, this travels with the project and is meant to be committed.
+ */
+export const STUDIO_FOLDER = '.ia-studio'
+
+/** What the assistant has learned about this project. One JSON object per line, appended. */
+export const MEMORY_FILE = `${STUDIO_FOLDER}/memory.ndjson`
+
+/** Its searchable half, under the cache: thrown away and rebuilt from the file above. */
+export const MEMORY_INDEX_FILE = `${INDEX_FOLDER}/memory.db`
+
+/**
  * Where a move that is under way writes down what it has already done.
  *
  * Moving three hundred files is not one operation the filesystem can undo: it is three hundred,

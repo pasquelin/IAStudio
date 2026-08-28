@@ -27,7 +27,11 @@ import {
 import { isPbrChannel } from '@shared/domain/material'
 import { LOG_SCOPES } from '@shared/ipc'
 import { byCodeUnit } from '@shared/text'
+import { matchExpression } from './ftsMatch'
+import { escapeLike, holes } from './sqlText'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
+import { migrateTo, transaction } from './sqlMigrate'
+import { optionalNumber, optionalText, text } from './sqlRow'
 
 /**
  * Schema history. Append only: an existing project carries its version in `user_version`, and
@@ -226,31 +230,7 @@ const MIGRATIONS: readonly string[] = [
 const DEFAULT_LIMIT = 200
 
 export function migrate(driver: SqliteDriver): void {
-  for (let version = currentVersion(driver); version < MIGRATIONS.length; version++) {
-    driver.exec(MIGRATIONS[version] ?? '')
-    driver.exec(`PRAGMA user_version = ${version + 1}`)
-  }
-}
-
-function text(row: SqlRow, column: string): string {
-  const value = row[column]
-  return typeof value === 'string' ? value : ''
-}
-
-function optionalText(row: SqlRow, column: string): string | undefined {
-  const value = row[column]
-  return typeof value === 'string' ? value : undefined
-}
-
-function optionalNumber(row: SqlRow, column: string): number | undefined {
-  const value = row[column]
-  if (typeof value === 'number') return value
-  return typeof value === 'bigint' ? Number(value) : undefined
-}
-
-function currentVersion(driver: SqliteDriver): number {
-  const row = driver.prepare('PRAGMA user_version').get()
-  return row ? (optionalNumber(row, 'user_version') ?? 0) : 0
+  migrateTo(driver, MIGRATIONS)
 }
 
 /** The column is a closed union in the domain but a free string in SQLite. */
@@ -373,41 +353,6 @@ function withoutTrailingSlash(path: string): string {
 /** Whether `path` sits strictly inside `folder` — the shape `shared/domain/folder.ts` uses. */
 function isUnder(path: string, folder: string): boolean {
   return path.startsWith(`${folder}/`)
-}
-
-/** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, character => `\\${character}`)
-}
-
-/**
- * What the user typed, as an fts5 expression — or `null` when nothing they typed is a word.
- *
- * Words only, and quoted: `-`, `*`, `AND` and `(` are operators in that grammar, and a name is
- * not a query. The trailing star is what makes the row appear while the word is still being
- * typed, which is the only reason a search runs on every keystroke at all.
- *
- * Every term must match, as the tag filter does: filters narrow, they do not widen.
- */
-function matchExpression(text: string): string | null {
-  const terms = text.match(/[\p{L}\p{N}_]+/gu)
-  return terms ? terms.map(term => `"${term}"*`).join(' AND ') : null
-}
-
-/**
- * All or nothing, on a driver where forgetting the `ROLLBACK` leaves a transaction open for the
- * rest of the session — and every window behind it.
- */
-function transaction<T>(driver: SqliteDriver, body: () => T): T {
-  driver.exec('BEGIN')
-  try {
-    const result = body()
-    driver.exec('COMMIT')
-    return result
-  } catch (error) {
-    driver.exec('ROLLBACK')
-    throw error
-  }
 }
 
 /**
@@ -730,7 +675,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
     const grouped = new Map<string, string[]>()
     if (assetIds.length === 0) return grouped
 
-    const placeholders = assetIds.map(() => '?').join(', ')
+    const placeholders = holes(assetIds.length)
     const rows = driver
       .prepare(`SELECT asset_id, tag FROM asset_tags WHERE asset_id IN (${placeholders})`)
       .all(...assetIds)
@@ -909,9 +854,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
        * rows would be answered with all of them.
        */
       const narrowTo = (column: string, values: readonly string[]): void => {
-        conditions.push(
-          values.length > 0 ? `${column} IN (${values.map(() => '?').join(', ')})` : '0',
-        )
+        conditions.push(values.length > 0 ? `${column} IN (${holes(values.length)})` : '0')
         params.push(...values)
       }
 
@@ -924,7 +867,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       // nothing else. An empty list is not "no filter", it is "nothing" — and it must stay so,
       // or opening a space that accepts no asset would show every asset.
       if (query.types) {
-        const placeholders = query.types.map(() => '?').join(', ')
+        const placeholders = holes(query.types.length)
         conditions.push(query.types.length > 0 ? `type IN (${placeholders})` : '0')
         params.push(...query.types)
       }
@@ -993,7 +936,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
       // Every tag must match, not any: filters narrow, they do not widen.
       if (query.tags?.length) {
-        const placeholders = query.tags.map(() => '?').join(', ')
+        const placeholders = holes(query.tags.length)
         conditions.push(`id IN (
           SELECT asset_id FROM asset_tags WHERE tag IN (${placeholders})
           GROUP BY asset_id HAVING COUNT(DISTINCT tag) = ?

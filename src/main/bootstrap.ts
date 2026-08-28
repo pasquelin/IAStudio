@@ -83,6 +83,12 @@ function startUp(splash: Splash, settings: SettingsStore): void {
       services.flushJobs(),
       services.project.settled(),
       services.mcp.stop(),
+      // Awaited among them: what is still queued is an append to a file the next launch reads
+      // back, and a thread killed mid-write leaves a line nothing can parse.
+      services.memory.close(),
+      // Before the memories themselves have to be, and for a plainer reason: it holds a forked
+      // process, and a `utilityProcess` nobody kills outlives the studio that forked it.
+      services.memoryVectors.close(),
     ])
   }
 

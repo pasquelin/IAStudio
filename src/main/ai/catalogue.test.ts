@@ -43,6 +43,15 @@ describe('the shipped catalogue', () => {
     }
   })
 
+  /**
+   * 🛑 The JSON's keys are cast to `AiRoleId` and trusted. A key nobody declared — a typo, or an
+   * employment added to the data and not to `aiRole.ts` — files a model under a role no screen
+   * ever offers, and NOTHING else would say so.
+   */
+  it('files every shipped model under a role the studio actually has', () => {
+    expect(rolesWithLocalOption().filter(role => !allRoles().includes(role))).toEqual([])
+  })
+
   it('serves the recognition model to the dictation role', () => {
     expect(shippedModelsFor(DICTATION_ROLE)).toEqual([STT_MODEL])
   })

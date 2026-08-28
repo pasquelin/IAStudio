@@ -38,7 +38,7 @@ export function ModelInventoryEmployments({
           const label = labelOf(group, t)
 
           return (
-            // The two roles no family holds close the list, and a rule says so: read straight on,
+            // The roles no family holds close the list, and a rule says so: read straight on,
             // « Assistant » looked like a seventh workspace.
             <Fragment key={group.key}>
               {group.family === null && groups[rank - 1]?.family !== null && (

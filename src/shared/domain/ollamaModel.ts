@@ -9,7 +9,18 @@ export type OllamaTag = {
   readonly name: string
   readonly size: number
   readonly capabilities?: readonly string[]
+  /**
+   * The window the weights were built with, as `/api/tags` publishes it under `details`.
+   *
+   * 🛑 Asked for WHOLE, never capped. Measured on 2026-08-28 against `qwen3.8:latest` (27,3 B,
+   * Q4_K_M): 18,0 Go loaded at `num_ctx` 4 096 against 18,6 Go at 262 144 — sixty-four times the
+   * window for 0,6 Go, so a ceiling would cost the catalogue and save nothing.
+   */
+  readonly contextTokens?: number
 }
+
+/** What a tag that publishes no window is asked for — the figure Ollama itself defaults to. */
+const OLLAMA_FALLBACK_TOKENS = 4096
 
 /**
  * Names that are not a conversation. A tag matching this is skipped rather than filed under the
@@ -40,7 +51,9 @@ function baseOf(tag: OllamaTag): Omit<LocalModel, 'modality'> {
     files: [],
     diskBytes: tag.size,
     reservationBytes: tag.size,
-    contextTokens: 4096,
+    // 🛑 4 096 was written here for EVERY discovered model, and Ollama publishes the true figure:
+    // qwen3.8 answers 262 144, so the assistant was shown fourteen actions of the whole registry.
+    contextTokens: tag.contextTokens ?? OLLAMA_FALLBACK_TOKENS,
     licenceStatus: 'restricted',
   }
 }

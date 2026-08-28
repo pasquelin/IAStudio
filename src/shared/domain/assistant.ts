@@ -20,6 +20,7 @@ import { POST_ACTIONS } from './postActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
+import { MEMORY_ACTIONS } from './memoryActions'
 import {
   ASSEMBLY_ACTIONS,
   EXPORT_ACTIONS,
@@ -82,6 +83,7 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'assembly', actions: ASSEMBLY_ACTIONS },
   { name: 'export', actions: EXPORT_ACTIONS },
   { name: 'context', actions: CONTEXT_ACTIONS },
+  { name: 'memory', actions: MEMORY_ACTIONS },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },
 ]
@@ -200,6 +202,15 @@ export type AssistantThought = {
    * than taken from whatever a renderer chose to send.
    */
   state?: string
+  /**
+   * How many memories this project holds — see `assistantMemory.ts`.
+   *
+   * 🛑 A COUNT and not the memories: what a briefing says is that a memory EXISTS and how to ask
+   * it, never what it holds. Filled in the MAIN process, by the same route and for the same
+   * reason as `context` and `state`: `parseThought` does not declare it, so zod strips one that
+   * arrived over the boundary.
+   */
+  memories?: number
   /**
    * What the open document can be aimed at, narrowed by the window — see `target.ts`.
    *

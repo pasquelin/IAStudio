@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { STUDIO_FOLDER } from '@shared/domain/project'
 import { writeAtomic } from '@main/persistence'
 import type { BackedUpItem } from './catalog'
 import type { RescanReport } from './catalogRescan'
@@ -8,7 +9,7 @@ import type { RescanReport } from './catalogRescan'
  * Where the backup sits. Under a dot, so it is the studio's own by the one rule that says so —
  * shown to a reader who asks, refused by every gesture, and never walked into by a listing.
  */
-export const ITEMS_BACKUP = '.ia-studio/items.json'
+export const ITEMS_BACKUP = `${STUDIO_FOLDER}/items.json`
 
 const ITEMS_BACKUP_VERSION = 1
 

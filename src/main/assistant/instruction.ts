@@ -9,6 +9,7 @@ import {
   type AssistantAction,
   HISTORY_MAX,
 } from '@shared/domain/assistant'
+import { MEMORY_RECALL_ACTION } from '@shared/domain/memoryActions'
 import type { Target } from '@shared/domain/target'
 import { englishText } from '@shared/i18n'
 import { linesWithin } from './studioState'
@@ -211,6 +212,18 @@ const WIDE_RULES = [
   '    refused again on the same arguments: change them, or do something else.',
 ]
 
+/**
+ * 🛑 The whole of what a briefing says about the memory, and it says it only when there is
+ * something to find — a project that has learned nothing pays not one character.
+ *
+ * A SIGNAL rather than the memories themselves: pushing summaries cost an embedding and a scan of
+ * every vector on every turn, for a block the room threw away whole on four doors of five.
+ */
+const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTION} answers it. Ask before guessing.`
+
+/** The same, for a door shown a catalogue that does not hold it — `FIND_RULE` is how it gets it. */
+const MEMORY_FIND = '  - This project has a memory: search "memory" to reach what reads it.'
+
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */
 const FIND_RULE =
   `  - Nothing in the catalogue fits? Answer with that ONE call and nothing else: ` +
@@ -258,6 +271,15 @@ export type BriefingParts = {
   context?: string
   /** What the studio is right now, already in sentences — see `describeStudio`. */
   state?: string
+  /**
+   * How many memories this project holds. What the briefing pays instead of the memories.
+   *
+   * 🛑 A COUNT, never a recall — see `memorySignal`. Injecting summaries paid an embedding and a
+   * vector scan on every single turn for a block that four doors of five threw away whole: the
+   * short briefing runs 7 008 characters against a room of 7 116, and the memory was the first
+   * thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
+   */
+  memories?: number
   /** What the open document can be aimed at, narrowed by the window — see `target.ts`. */
   targets?: readonly Target[]
   /**
@@ -298,12 +320,12 @@ export type Briefing = {
 }
 
 /**
- * 🛑 The state block is what GIVES GROUND when the room runs out — not the sentence, which
- * `instructionFor` guarantees, and not the catalogue, without which nothing can be named.
+ * 🛑 What GIVES GROUND when the room runs out, in order: the state, then the targets, then the
+ * project context. Never the sentence, which `instructionFor` guarantees, and never the
+ * catalogue, without which nothing can be named.
  *
- * It has to: `instruction.test.ts` saturates the project context and the target list at once and
- * holds two thousand characters for the sentence, and the state is the one part composed from
- * names a person chose. Composed twice only when it overruns, which is not the ordinary turn.
+ * The memory is not on this list any more, and that is the point: it is one line naming a way to
+ * ask, not a block of summaries to be cut down.
  */
 function briefingText(
   parts: BriefingParts,
@@ -401,6 +423,55 @@ function composed(
 }
 
 /**
+ * The signal, in the form the door can ACT on — and nothing at all where it can act on neither.
+ *
+ * 🛑 A briefing naming an action the model was neither shown nor told how to ask for costs the
+ * WHOLE turn: `parseReply` refuses a reply the moment one call names an unlisted action. The wide
+ * share holds `memory.recall`, so it is named; the short share reaches it through `FIND_RULE`, so
+ * the word is named instead; an EXPANSION has neither, and gets nothing.
+ */
+function memorySignal(
+  parts: BriefingParts,
+  allowed: ReadonlySet<ActionName>,
+  canFind: boolean,
+): readonly string[] {
+  if ((parts.memories ?? 0) === 0) return []
+  if (allowed.has(MEMORY_RECALL_ACTION)) return [MEMORY_CALL]
+
+  return canFind ? [MEMORY_FIND] : []
+}
+
+/**
+ * The briefing with the signal, or without it when it does not FIT.
+ *
+ * 🛑 The LAST thing to give ground — after the state, the targets and the project context, and
+ * before the catalogue, which never does: on the wide door those characters would otherwise take
+ * the whole registry down to the spoken vocabulary. Measured, the short share alone runs 7 078
+ * against `roomFor(4096)` = 7 116, so one `both` action added upstream takes the room this line
+ * needs. Overrunning is not the milder failure — a runtime truncates from the HEAD, where the
+ * preamble sits (ADR-18).
+ */
+function composedWithSignal(
+  parts: BriefingParts,
+  catalogue: string,
+  base: readonly string[],
+  signal: readonly string[],
+): string {
+  const text = briefingText(parts, catalogue, [...base, ...signal], '')
+  if (signal.length === 0 || text.length <= parts.room) return text
+
+  // 🛑 Retried only where the signal is what tipped it over: a briefing that overruns by tens of
+  // thousands is heading for `narrowBriefing` anyway, and composing a 69 000-character catalogue
+  // a second time to learn that is the very waste this file's history records having removed.
+  const over = text.length - parts.room
+  return over > signalCost(signal) ? text : briefingText(parts, catalogue, base, '')
+}
+
+/** What the signal adds to a briefing: its own line, and the newline that joins it. */
+const signalCost = (signal: readonly string[]): number =>
+  signal.reduce((sum, line) => sum + line.length + 1, 0)
+
+/**
  * Everything but the person's sentence, sized to the room the brain has: the whole registry when
  * it fits, and the spoken vocabulary plus the way to ask for the rest when it does not. Nothing
  * here names a cloud or a runtime.
@@ -411,18 +482,37 @@ export function studioBriefing(parts: BriefingParts): Briefing {
   // and every 4 096-token model would otherwise join 69 000 characters on every sentence typed.
   if (parts.room < whole.text.length) return narrowBriefing(parts)
 
-  const wide = briefingText(parts, whole.text, [...RULES, ...WIDE_RULES], '')
+  // `canFind` is false: `DISCOVERY_ACTION` is dropped from the wide share, so nothing to find with.
+  const wide = composedWithSignal(
+    parts,
+    whole.text,
+    WIDE_ALL,
+    memorySignal(parts, whole.allowed, false),
+  )
   if (wide.length > parts.room) return narrowBriefing(parts)
 
-  return { text: wide, allowed: whole.allowed, expand: null, narrow: () => narrowBriefing(parts) }
+  return {
+    text: wide,
+    allowed: whole.allowed,
+    expand: null,
+    narrow: () => narrowBriefing(parts),
+  }
 }
+
+const WIDE_ALL: readonly string[] = [...RULES, ...WIDE_RULES]
+const NARROW_RULES: readonly string[] = [...RULES, FIND_RULE]
 
 function narrowBriefing(declared: BriefingParts): Briefing {
   const parts = { ...declared, room: declared.fallbackRoom ?? declared.room }
   const short = shortShare()
 
   return {
-    text: briefingText(parts, short.text, [...RULES, FIND_RULE], ''),
+    text: composedWithSignal(
+      parts,
+      short.text,
+      NARROW_RULES,
+      memorySignal(parts, short.allowed, true),
+    ),
     allowed: short.allowed,
     // Offered once, and only from here: an expansion of an expansion is a conversation with
     // itself, paid for by the person waiting — see `expandedWith`.
@@ -447,6 +537,7 @@ export async function briefingFor(
     continuing: request.continuing === true,
     notReady: await notReady?.(),
     context: request.context,
+    memories: request.memories,
     state: request.state,
     targets: request.targets,
     room,
@@ -491,6 +582,11 @@ function expandedWith(parts: BriefingParts, query: string): Briefing {
   const hits = findActions(query).filter(action => !short.allowed.has(action.name))
   // Composed once: measuring by joining a second copy of the same 6 500 characters is the very
   // waste this file's own history records having removed.
+  /**
+   * 🛑 Neither `FIND_RULE` nor the memory signal, and neither is an omission: this briefing IS the
+   * answer to a find, so there is no second one to offer — and a signal naming an action that is
+   * in neither `short.allowed` nor `kept` would cost the whole turn.
+   */
   const fixed = briefingText(parts, short.text, RULES, '').length + footerRoom(query, hits.length)
   let left = parts.room - fixed
 

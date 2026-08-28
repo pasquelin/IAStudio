@@ -192,6 +192,35 @@ describe('an action’s inputs, as JSON Schema', () => {
     expect(schema.properties['settings']).not.toHaveProperty('enum')
   })
 
+  /**
+   * 🛑 `maximum`/`minimum` are NUMERIC keywords: emitted on a `{type: 'string'}` they are ignored
+   * by every validator, so the contract announced a bound nobody applied — for every text field
+   * of the 282 actions. A string is bounded by `maxLength`.
+   */
+  it('bounds a string by its length and a number by its value', () => {
+    const schema = schemaOfFields([
+      {
+        key: 'summary',
+        kind: 'text',
+        labelKey: 'assistant.fields.memorySummary',
+        required: true,
+        max: 200,
+      },
+      {
+        key: 'importance',
+        kind: 'integer',
+        labelKey: 'assistant.fields.memoryImportance',
+        required: false,
+        max: 5,
+      },
+    ])
+
+    expect(schema.properties['summary']).toMatchObject({ maxLength: 200 })
+    expect(schema.properties['summary']).not.toHaveProperty('maximum')
+    expect(schema.properties['importance']).toMatchObject({ maximum: 5 })
+    expect(schema.properties['importance']).not.toHaveProperty('maxLength')
+  })
+
   it('leaves no required parameter without a type a client can build from', () => {
     const untyped = mcpTools().flatMap(tool =>
       tool.inputSchema.required

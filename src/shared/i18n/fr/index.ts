@@ -13,6 +13,7 @@ import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
 import material from './material.json'
+import memory from './memory.json'
 import models from './models.json'
 import postfx from './postfx.json'
 import scene from './scene.json'
@@ -45,6 +46,7 @@ export const fr = {
   ...git,
   ...image,
   ...inspector,
+  ...memory,
   ...models,
   ...postfx,
   ...scene,

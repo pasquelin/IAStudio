@@ -10,6 +10,7 @@ import { AccountSettings } from './AccountSettings/AccountSettings'
 import { AiSettings } from './AiSettings/AiSettings'
 import { DictationSettings } from './DictationSettings'
 import { McpSettings } from './McpSettings/McpSettings'
+import { MemorySettings } from './MemorySettings/MemorySettings'
 import { MediaSettings } from './MediaSettings'
 import { ShortcutsSettings } from './ShortcutsSettings/ShortcutsSettings'
 
@@ -33,6 +34,7 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   shortcuts: ShortcutsSettings,
   media: MediaSettings,
   mcp: McpSettings,
+  memory: MemorySettings,
   dictation: DictationSettings,
   'ai.image': () => <AiSettings family="image" />,
   'ai.video': () => <AiSettings family="video" />,

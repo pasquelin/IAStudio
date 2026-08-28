@@ -501,6 +501,7 @@ export type SettingsSectionId =
   | 'media'
   | 'git'
   | 'mcp'
+  | 'memory'
   | 'storage'
   | 'advanced'
 
@@ -527,6 +528,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'media',
   'git',
   'mcp',
+  'memory',
   'storage',
   'advanced',
 ]

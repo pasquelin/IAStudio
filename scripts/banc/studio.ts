@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
+import type { Memory } from '@shared/domain/assistantMemory'
 import type { Asset } from '@shared/domain/asset'
 import {
   DOCUMENT_VERSION,
@@ -35,6 +36,7 @@ import { useProject } from '@/stores/project'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/spaces/three/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
+import { createBenchMemory } from './memoryStore'
 import { createMemoryCatalog } from './memoryCatalog'
 import { DOCUMENT_SOURCES, WHEN } from './project'
 import { createMemoryCloud } from './memoryCloud'
@@ -75,6 +77,8 @@ export type Studio = {
   changed: () => boolean
   /** Every call it refused, named — a DECOR that hits one has laid out nothing. */
   refusals: () => readonly string[]
+  /** What the project's memory holds — the REAL store, on a temporary file. */
+  memories: () => readonly Memory[]
   /** What the game of the document in front is doing, read off the store the window writes. */
   playState: () => PlayState
   /**
@@ -130,10 +134,12 @@ export async function createStudio(
   const git = createMemoryGit()
   let manifest = emptyGame()
   const shell = createMemoryShell(assetId => catalog.rows().find(one => one.id === assetId) ?? null)
+  const memory = createBenchMemory()
 
   installFakeBridge({
     ...shell.channels,
     git,
+    memory: memory.channels,
     /**
      * 🛑 A PORT, not a rule, and the SAME disk as everything else: a script written from outside
      * the window has to turn up in `studio.files()`, or no oracle can read it back. What a write
@@ -399,6 +405,7 @@ export async function createStudio(
     sentBodies: () => useJobs.getState().bodies,
     changed: () => unsavedDocumentIds().some(one => !settled.has(one)) || ops.can().undo,
     refusals: () => refusals,
+    memories: memory.held,
 
     playing: async () => {
       for (let tries = 0; tries < 200; tries++) {
@@ -441,6 +448,8 @@ export async function createStudio(
       leaveTheCommandBus()
       leaveTheViewport()
       leaveTheWorkers()
+      // The database and the temporary file of this run's memory, which nothing else closes.
+      memory.close()
       // `installFakeBridge` stubs `window.studio`; left standing it keeps this run's whole decor
       // — folder, catalogue, git, shell — reachable until the next scenario replaces it.
       vi.unstubAllGlobals()

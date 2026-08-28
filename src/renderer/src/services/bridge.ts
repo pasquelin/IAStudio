@@ -39,3 +39,13 @@ export function connectThroughBridge(
 export function gitBridge(): StudioBridge['git'] | undefined {
   return getBridge()?.git
 }
+
+/**
+ * The memory half of the bridge, for the reason `gitBridge` exists — and the reason is the same
+ * one: `getBridge()?.memory.remember(…)` guards the BRIDGE and not the half, so a window whose
+ * preload predates this branch throws `Cannot read properties of undefined` instead of answering
+ * nothing. `rememberOutcome` is called on a `void`, so that throw is an unhandled rejection.
+ */
+export function memoryBridge(): StudioBridge['memory'] | undefined {
+  return getBridge()?.memory
+}

@@ -49,4 +49,13 @@ describe('ollamaModel', () => {
   it('does not file a llama as an image model', () => {
     expect(ollamaModel(tag('llama3.2:3b', 2_000_000_000, ['completion']))?.family).toBeUndefined()
   })
+
+  it('asks for the window the weights were built with, not the one the studio assumed', () => {
+    const model = ollamaModel({ ...tag('qwen3.8:latest'), contextTokens: 262_144 })
+    expect(model?.contextTokens).toBe(262_144)
+  })
+
+  it('falls back to 4 096 for a tag that publishes no window', () => {
+    expect(ollamaModel(tag('qwen3:8b'))?.contextTokens).toBe(4096)
+  })
 })

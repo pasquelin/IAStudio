@@ -5371,5 +5371,39 @@
       "reservationBytes": 7500000000,
       "thumbnail": "qwen2.5-coder-7b-instruct-q4.png"
     }
+  ],
+  "embedding": [
+    {
+      "id": "embeddinggemma-300m-q8",
+      "name": "EmbeddingGemma 300M",
+      "summary": "EmbeddingGemma 300M, Q8_0 — 768 dimensions, multilingual",
+      "releasedAt": "2025-09-04",
+      "format": "gguf",
+      "loader": "llamacpp",
+      "modality": "text",
+      "rank": 1,
+      "licence": "other",
+      "licenceUrl": "https://ai.google.dev/gemma/terms",
+      "licenceStatus": "restricted",
+      "source": "https://huggingface.co/google/embeddinggemma-300m",
+      "files": [
+        {
+          "role": "weights",
+          "name": "embeddinggemma-300M-Q8_0.gguf",
+          "url": "https://huggingface.co/ggml-org/embeddinggemma-300M-GGUF/resolve/0f741b5a6585bd53aeb15cd1372c56f2a0f65e12/embeddinggemma-300M-Q8_0.gguf",
+          "bytes": 333590944,
+          "sha256": "b5ce9d77a3fc4b3b39ccb5643c36777911cc4eb46a66962eadfa3f5f60490d63",
+          "upstream": "https://huggingface.co/google/embeddinggemma-300m",
+          "revision": "0f741b5a6585bd53aeb15cd1372c56f2a0f65e12"
+        }
+      ],
+      "diskBytes": 333590944,
+      "contextTokens": 2048,
+      "reservationBytes": 700000000,
+      "embedPrompts": {
+        "document": "title: none | text: ",
+        "query": "task: search result | query: "
+      }
+    }
   ]
 }

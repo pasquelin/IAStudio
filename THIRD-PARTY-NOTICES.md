@@ -38,6 +38,7 @@ The terms below govern these components. They are not affected by the licence of
 | electron | 43.4.0 | MIT |
 | electron-store | 11.0.2 | MIT |
 | electron-updater | 6.8.9 | MIT |
+| EmbeddingGemma 300M | Q8_0 | other |
 | fflate | 0.8.3 | MIT |
 | FFmpeg | 7.1.1 / 7.1.5 | GPL-3.0-or-later / LGPL-2.1-or-later |
 | filelock | 3.32.3 | MIT |
@@ -1054,6 +1055,28 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+## EmbeddingGemma 300M
+
+Version: Q8_0  
+Licence: other
+
+Corresponding sources:
+
+```
+https://huggingface.co/google/embeddinggemma-300m
+```
+
+```
+The model the assistant turns a memory into a vector with, so a question can find what was
+learned about a project without naming it exactly.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+The GGUF conversion is published by ggml-org; the weights are google/embeddinggemma-300m.
+Copyright Google LLC. Governed by the Gemma Terms of Use, which are NOT an open-source
+licence: use is subject to the Gemma Prohibited Use Policy.
+Full terms: https://ai.google.dev/gemma/terms
 ```
 ## fflate
 

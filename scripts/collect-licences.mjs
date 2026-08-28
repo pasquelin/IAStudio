@@ -365,6 +365,7 @@ function modelLicences() {
       sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
     },
     ...qwenLicences(),
+    embeddingGemmaLicence(),
     ...pythonLicences(),
     ...catalogueLicences(),
   ]
@@ -461,6 +462,31 @@ function qwenLicences() {
       sources: `https://huggingface.co/${one.repo(size)}`,
     })),
   )
+}
+
+/**
+ * The model that turns a memory into a vector. Its own block rather than a line in `qwenLicences`
+ * for the reason its `licenceStatus` names: the Gemma Terms are not Apache, and a notice that
+ * said Apache over them would be worse than no notice at all.
+ */
+function embeddingGemmaLicence() {
+  return {
+    name: 'EmbeddingGemma 300M',
+    version: 'Q8_0',
+    spdx: 'other',
+    text: [
+      'The model the assistant turns a memory into a vector with, so a question can find what was',
+      'learned about a project without naming it exactly.',
+      'It is NOT shipped with the application: it is fetched on request into the user data folder,',
+      'against a published digest, and removed from the model manager.',
+      '',
+      'The GGUF conversion is published by ggml-org; the weights are google/embeddinggemma-300m.',
+      'Copyright Google LLC. Governed by the Gemma Terms of Use, which are NOT an open-source',
+      'licence: use is subject to the Gemma Prohibited Use Policy.',
+      'Full terms: https://ai.google.dev/gemma/terms',
+    ].join('\n'),
+    sources: 'https://huggingface.co/google/embeddinggemma-300m',
+  }
 }
 
 /**

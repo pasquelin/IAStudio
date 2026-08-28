@@ -209,4 +209,28 @@ describe('ollamaHttpPort', () => {
 
     expect(images).toEqual(['aGVsbG8='])
   })
+
+  /**
+   * The body is what this machine's Ollama answered on 2026-08-28, cut to what is read: the
+   * window travels under `details`, so no second call to `/api/show` is worth its round trip.
+   */
+  it('reads the window a tag was built with, and leaves it out when nothing says', async () => {
+    const answering = (body: unknown): typeof fetch =>
+      vi.fn(() => Promise.resolve(Response.json(body))) as unknown as typeof fetch
+
+    const tags = await ollamaHttpPort(
+      'http://x',
+      answering({
+        models: [
+          { name: 'qwen3.8:latest', size: 17_741_872_154, details: { context_length: 262_144 } },
+          { name: 'old:7b', size: 4_000_000_000, details: { format: 'gguf' } },
+        ],
+      }),
+    ).tags()
+
+    expect(tags).toEqual([
+      { name: 'qwen3.8:latest', size: 17_741_872_154, contextTokens: 262_144 },
+      { name: 'old:7b', size: 4_000_000_000 },
+    ])
+  })
 })

@@ -1108,6 +1108,26 @@
       "prefabInstantiate": {
         "title": "Instance a prefab",
         "description": "Lays the objects of another scene document of the project into the open scene, with fresh ids, where it is asked for."
+      },
+      "memoryRecall": {
+        "title": "Recall what was learned",
+        "description": "Searches what the assistant learned about the project and answers the summaries it found, with their ids."
+      },
+      "memoryRead": {
+        "title": "Read one memory whole",
+        "description": "Answers the detail of one memory, what it refers to and where it came from, from its id."
+      },
+      "memoryWrite": {
+        "title": "Remember something about the project",
+        "description": "Writes a memory into the open project. It replaces the one already standing on the same reference."
+      },
+      "memoryForget": {
+        "title": "Forget a memory",
+        "description": "Marks a memory as forgotten. Nothing is erased from the file: what was learned stays traceable."
+      },
+      "memoryLink": {
+        "title": "Link two memories",
+        "description": "Adds a link from one memory to another, to say that one sheds light on the other."
       }
     },
     "refusals": {
@@ -1428,7 +1448,16 @@
       "prefabName": "Prefab name",
       "prefabSource": "Scene to make a prefab of",
       "entryScene": "Opening scene",
-      "gameTitle": "Game title"
+      "gameTitle": "Game title",
+      "memoryQuery": "What is being looked for",
+      "memoryLimit": "How many at most",
+      "memoryId": "Memory id",
+      "memoryType": "What the memory is about",
+      "memorySummary": "One-sentence summary",
+      "memoryBody": "The detail",
+      "memoryImportance": "Importance, from 1 to 5",
+      "memoryFile": "Project file this is about",
+      "memoryTo": "Id of the memory pointed at"
     },
     "listening": "The assistant is listening",
     "done": "The assistant has answered",

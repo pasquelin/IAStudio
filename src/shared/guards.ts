@@ -66,6 +66,18 @@ export function readString(source: Record<string, unknown>, key: string, fallbac
 }
 
 /**
+ * A field held as WORDS, or nothing — blank counts as nothing.
+ *
+ * Distinct from `readString`, which answers a fallback: a caller that has to tell « absent » from
+ * « empty » wrote `readString(…, '').trim() === '' ? null : readString(…, '')`, reading the same
+ * key twice. Both sides of the boundary ask, which is why it lives here.
+ */
+export function readText(source: Record<string, unknown>, key: string): string | null {
+  const value = source[key]
+  return typeof value === 'string' && value.trim() !== '' ? value : null
+}
+
+/**
  * A number that cannot be negative — a length, an intensity, a point in time. Twelve call sites
  * across four engines wrote `Math.max(0, readNumber(…))` before this existed.
  */

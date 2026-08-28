@@ -13,6 +13,7 @@ import type * as frGit from '../fr/git.json'
 import type * as frImage from '../fr/image.json'
 import type * as frInspector from '../fr/inspector.json'
 import type * as frMaterial from '../fr/material.json'
+import type * as frMemory from '../fr/memory.json'
 import type * as frModels from '../fr/models.json'
 import type * as frPostfx from '../fr/postfx.json'
 import type * as frScene from '../fr/scene.json'
@@ -36,6 +37,7 @@ import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
 import material from './material.json'
+import memory from './memory.json'
 import models from './models.json'
 import postfx from './postfx.json'
 import scene from './scene.json'
@@ -72,6 +74,7 @@ export const en = {
   ...(git satisfies Section<keyof typeof frGit>),
   ...(image satisfies Section<keyof typeof frImage>),
   ...(inspector satisfies Section<keyof typeof frInspector>),
+  ...(memory satisfies Section<keyof typeof frMemory>),
   ...(models satisfies Section<keyof typeof frModels>),
   ...(postfx satisfies Section<keyof typeof frPostfx>),
   ...(scene satisfies Section<keyof typeof frScene>),

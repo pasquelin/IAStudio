@@ -1108,6 +1108,26 @@
       "prefabInstantiate": {
         "title": "Instancier un prefab",
         "description": "Pose dans la scène ouverte les objets d’un autre document de scène du projet, avec des identifiants neufs, à l’endroit demandé."
+      },
+      "memoryRecall": {
+        "title": "Retrouver ce qui a été appris",
+        "description": "Cherche dans ce que l’assistant a appris du projet et rend les résumés trouvés avec leur identifiant."
+      },
+      "memoryRead": {
+        "title": "Lire une mémoire en entier",
+        "description": "Rend le détail d’une mémoire, ce qu’elle référence et d’où elle vient, à partir de son identifiant."
+      },
+      "memoryWrite": {
+        "title": "Retenir quelque chose du projet",
+        "description": "Écrit une mémoire dans le projet ouvert. Elle remplace celle qui se tient déjà sur la même référence."
+      },
+      "memoryForget": {
+        "title": "Oublier une mémoire",
+        "description": "Marque une mémoire comme oubliée. Rien n’est effacé du fichier : ce qui a été appris reste traçable."
+      },
+      "memoryLink": {
+        "title": "Relier deux mémoires",
+        "description": "Ajoute un lien d’une mémoire vers une autre, pour dire que l’une éclaire l’autre."
       }
     },
     "refusals": {
@@ -1428,7 +1448,16 @@
       "prefabName": "Nom du prefab",
       "prefabSource": "Scène à ériger en prefab",
       "entryScene": "Scène de départ",
-      "gameTitle": "Titre du jeu"
+      "gameTitle": "Titre du jeu",
+      "memoryQuery": "Ce qu’on cherche",
+      "memoryLimit": "Combien au plus",
+      "memoryId": "Identifiant de la mémoire",
+      "memoryType": "Nature de la mémoire",
+      "memorySummary": "Résumé en une phrase",
+      "memoryBody": "Le détail",
+      "memoryImportance": "Importance, de 1 à 5",
+      "memoryFile": "Fichier du projet que cela concerne",
+      "memoryTo": "Identifiant de la mémoire visée"
     },
     "listening": "L’assistant vous écoute",
     "done": "L’assistant a répondu",

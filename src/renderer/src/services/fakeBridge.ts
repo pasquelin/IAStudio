@@ -50,6 +50,25 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onSection: noSubscription,
       ...overrides.settings,
     },
+    // Nothing remembered unless a suite says otherwise: a fresh project is the ordinary one, and
+    // a memory nobody stubbed must not have a window drawing rows nothing wrote.
+    memory: {
+      list: () => Promise.resolve([]),
+      recall: () => Promise.resolve([]),
+      read: () => Promise.resolve(null),
+      remember: () => Promise.resolve(null),
+      amend: () => Promise.resolve(null),
+      forget: () => Promise.resolve(false),
+      rebuild: () => Promise.resolve(0),
+      reset: () => Promise.resolve(),
+      pending: () => Promise.resolve(0),
+      index: () => Promise.resolve(),
+      stopIndex: () => Promise.resolve(),
+      compact: () => Promise.resolve(0),
+      onChanged: noSubscription,
+      onIndexed: noSubscription,
+      ...overrides.memory,
+    },
     mcp: {
       state: () => Promise.resolve({ port: null }),
       onState: noSubscription,

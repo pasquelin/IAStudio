@@ -67,7 +67,7 @@ function rowsOf(roles: readonly RoleRow[], family: ModelFamily | undefined): rea
 }
 
 export type AiSettingsProps = {
-  /** Absent on the overview: Ollama, the machine, and the two roles no space holds. */
+  /** Absent on the overview: Ollama, the machine, and the roles no space holds. */
   family?: ModelFamily
 }
 

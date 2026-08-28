@@ -1,4 +1,5 @@
 import { Worker } from 'node:worker_threads'
+import { threadReady } from '@main/threadReady'
 import { createCatalogClient, type AsyncCatalog, type CatalogPort } from './catalogClient'
 import { isCatalogReady, type CatalogResponse } from './catalogProtocol'
 
@@ -14,7 +15,7 @@ export async function openCatalogThread(file: string): Promise<AsyncCatalog> {
   // `electron.vite.config.ts`. This name is not an import: nothing but a build proves it resolves.
   const worker = new Worker(new URL('./catalogWorker.js', import.meta.url), { workerData: file })
 
-  await ready(worker)
+  await threadReady(worker, 'catalogue', isCatalogReady)
 
   const port: CatalogPort = {
     postMessage: request => worker.postMessage(request),
@@ -36,35 +37,4 @@ export async function openCatalogThread(file: string): Promise<AsyncCatalog> {
   }
 
   return createCatalogClient(port)
-}
-
-/**
- * Waits for the thread to say the database is open. Without it, a project whose catalogue
- * cannot be opened would look opened until the first query came back — and `ProjectStore`
- * swaps the current project on the strength of this promise.
- */
-function ready(worker: Worker): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const settle = (error?: Error): void => {
-      worker.off('message', onMessage)
-      worker.off('error', onError)
-      worker.off('exit', onExit)
-      if (error) {
-        void worker.terminate()
-        reject(error)
-      } else resolve()
-    }
-
-    const onMessage = (message: unknown): void => {
-      if (!isCatalogReady(message)) return
-      settle(message.ready ? undefined : new Error(message.error))
-    }
-    const onError = (error: Error): void => settle(error)
-    const onExit = (code: number): void =>
-      settle(new Error(`catalog worker stopped before it opened (code ${code})`))
-
-    worker.on('message', onMessage)
-    worker.on('error', onError)
-    worker.on('exit', onExit)
-  })
 }

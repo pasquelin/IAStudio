@@ -180,6 +180,12 @@ import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } fro
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
 import { openCatalogThread } from './project/catalogThread'
+import { createEmbedder, EMBEDDER_IDLE_MS } from './memory/embedder'
+import { embedModelId, embedWeightsOf, type EmbedChoiceDeps } from './memory/embedChoice'
+import { openEmbedProcess } from './memory/embedProcess'
+import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
+import { createMemoryVectors, type MemoryVectors } from './memory/memoryVectors'
+import { openMemoryThread } from './memory/memoryThread'
 import { catalogOf } from './provider/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
 import { createAssetInputResolver } from './provider/assetInputs'
@@ -261,6 +267,10 @@ export type Services = {
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
+  /** What the assistant has learned — the open project's, and the machine's own. */
+  memory: MemoryHost
+  /** The embeddings of both memories, and the one process that computes them. */
+  memoryVectors: MemoryVectors
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
@@ -560,6 +570,12 @@ export function createSettings(): SettingsStore {
   return settings
 }
 
+/** The clock these two ports are injected with — written twice in this file, forty lines apart. */
+const afterDelay = (run: () => void, delayMs: number): (() => void) => {
+  const timer = setTimeout(run, delayMs)
+  return () => clearTimeout(timer)
+}
+
 /**
  * Composition root of the main process. Everything stateful is built here, once, so no module
  * reaches for a singleton and every collaborator stays injectable in tests.
@@ -826,6 +842,16 @@ export function createServices(settings: SettingsStore): Services {
     applyProjectAccount(plan, active, current.path)
   }
 
+  /**
+   * Declared before the store because its `onChange` names it, and it needs nothing of the store:
+   * a memory is opened from a PATH, and the path is what `onChange` hands over.
+   */
+  const memory = createMemoryHost({
+    userData: app.getPath('userData'),
+    open: openMemoryThread,
+    onTrouble: why => log.warn('memory', why),
+  })
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
@@ -843,6 +869,11 @@ export function createServices(settings: SettingsStore): Services {
       // waveform and no proxy, and nothing else would ever go back for them. A project opened
       // after the fix would otherwise show exactly what it showed before it.
       if (current) void catchUpProject()
+
+      // Told which project it belongs to; it opens nothing until something asks it a question.
+      memory.follow(current?.path ?? null)
+      // And the vectors let go of the queue that was serving the previous one — see `release`.
+      memoryVectors.release()
 
       // One watch at a time, and it belongs to the project that is open: left running, the
       // previous project's folder would go on announcing changes the explorer would answer by
@@ -1556,6 +1587,33 @@ export function createServices(settings: SettingsStore): Services {
     discovered: () => ai.discovered(),
   } satisfies typeof fromManager)
 
+  /**
+   * What the person chose for the embedding role, and where its weights sit. Split in two on
+   * purpose: `chosenId` is asked on every recall, and resolving a `.gguf` path is what it must
+   * not pay for.
+   */
+  const embedDeps: EmbedChoiceDeps = {
+    choices: () => settings.read().ai.roles,
+    byProject: () => settings.read().ai.projectRoles,
+    projectPath: () => project.current()?.path ?? null,
+    installedIds: () => ai.installedIds(),
+    modelOf,
+  }
+
+  const memoryVectors = createMemoryVectors({
+    host: memory,
+    embedder: createEmbedder({
+      chosenId: () => embedModelId(embedDeps),
+      weightsFor: modelId => embedWeightsOf(embedDeps, modelId, weightsOf),
+      open: openEmbedProcess,
+      onTrouble: why => log.warn('memory', why),
+      idleMs: EMBEDDER_IDLE_MS,
+      schedule: afterDelay,
+    }),
+    onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
+    onTrouble: why => log.warn('memory', why),
+  })
+
   /** The whole of rank 3's gesture: a picker, a header, an entry. */
   const addOwnAiModel = async (): Promise<AiOverview> => {
     const picked = await pickWeights(language())
@@ -1590,10 +1648,7 @@ export function createServices(settings: SettingsStore): Services {
     emit: event => broadcast(EVENTS.dictation, event),
     log: (level, message) => log[level]('dictation', message),
     join,
-    schedule: (run, delayMs) => {
-      const timer = setTimeout(run, delayMs)
-      return () => clearTimeout(timer)
-    },
+    schedule: afterDelay,
   })
 
   const collectorOf = (scenario: Scenario): AssetCollector =>
@@ -1972,6 +2027,9 @@ export function createServices(settings: SettingsStore): Services {
       const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
       return outcome.ok ? describeStudio(outcome.data) : ''
     },
+    // A count and never a recall: the briefing says a memory EXISTS, the model asks it if it
+    // wants to. `held` opens nothing when no project is open.
+    memoriesOf: () => memoryVectors.held('project'),
   })
 
   const checkout = checkoutOf(app.getAppPath())
@@ -2087,6 +2145,8 @@ export function createServices(settings: SettingsStore): Services {
     ownerScope,
     removeAssetFile,
     project,
+    memory,
+    memoryVectors,
     // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
     // here, and an export named against nothing is a refusal rather than a failure.
     projectPath: () => project.current()?.path ?? null,

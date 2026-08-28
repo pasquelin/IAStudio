@@ -6,10 +6,8 @@ import { isRecord, readBoolean } from '@shared/guards'
  * would cross the boundary as a bare `badInput` and tell the client nothing.
  */
 
-export function textOf(input: Record<string, unknown>, key: string): string | null {
-  const value = input[key]
-  return typeof value === 'string' && value.trim() !== '' ? value : null
-}
+/** The same reader both sides of the boundary use — named here for the handlers that call it. */
+export { readText as textOf } from '@shared/guards'
 
 export function numberOf(input: Record<string, unknown>, key: string): number | null {
   const value = input[key]

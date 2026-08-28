@@ -72,4 +72,5 @@ export const localModelSchema: z.ZodType<LocalModel> = z.object({
   releasedAt: z.iso.date().optional(),
   featured: z.boolean().optional(),
   weightsPath: z.string().min(1).optional(),
+  embedPrompts: z.object({ document: z.string(), query: z.string() }).optional(),
 })
