@@ -20,9 +20,11 @@ export function suggestionId(listId: string, index: number): string {
 }
 
 /**
- * What one can ask, filtered as it is typed. In flow under the field and never over it, as the
- * model picker is: a floating panel does not follow the form it belongs to. Bounded, so a run of
- * matches does not push the send button away from the pointer while one writes.
+ * What one can ask, filtered as it is typed. In flow and never floating, as the model picker is:
+ * a floating panel does not follow the form it belongs to.
+ *
+ * 🛑 ABOVE the field, in a composer the column pins to its foot: listed under it, every match
+ * arriving pushed the field, the picker and Send up from under the hand that was typing.
  */
 export function AssistantConversationSuggestions({
   matches,

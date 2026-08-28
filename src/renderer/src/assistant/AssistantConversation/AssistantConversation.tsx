@@ -350,12 +350,20 @@ export function AssistantConversation() {
               send()
             }}
           >
-            {/* A textarea rather than a line: one SPEAKS to this window, and a spoken request runs
-              long — dictated into a single line it scrolled sideways under the caret, with the
-              beginning of one's own sentence out of sight. No field chrome of its own, since the
-              block around it is the field. */}
-            {/* The mirror behind the field, and the field over it: a textarea paints no text of
-              its own, and both must be positioned for the writing to stay on top. */}
+            {listed.length > 0 && (
+              <AssistantConversationSuggestions
+                matches={listed}
+                active={rank}
+                label={t('assistant.suggestions')}
+                hint={t('assistant.starterHint')}
+                id={listId}
+                onChoose={take}
+              />
+            )}
+
+            {/* A textarea rather than a line: one SPEAKS to this window, and a spoken request
+              runs long — dictated into a single line it scrolled sideways under the caret. The
+              mirror sits behind it, and both are positioned for the writing to stay on top. */}
             <div className="relative">
               {ghost !== undefined && (
                 <AssistantConversationGhost
@@ -423,17 +431,6 @@ export function AssistantConversation() {
                 )}
               />
             </div>
-
-            {listed.length > 0 && (
-              <AssistantConversationSuggestions
-                matches={listed}
-                active={rank}
-                label={t('assistant.suggestions')}
-                hint={t('assistant.starterHint')}
-                id={listId}
-                onChoose={take}
-              />
-            )}
 
             {/* The list appears, renumbers and goes under the fingers without a word otherwise —
                 the same reason the title bar announces a reordered tab. */}
