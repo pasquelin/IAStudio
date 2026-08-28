@@ -1,22 +1,21 @@
-import type { RefObject } from 'react'
+import type { Ref } from 'react'
+import { cn } from '@/helpers/cn'
+import { CONVERSATION_FIELD_TYPE } from './conversationStyles'
 
 export type AssistantConversationGhostProps = {
   /** What the hand has written, painted invisible so the tail starts where the caret is. */
   typed: string
   /** What is left of the sentence, in grey ahead of the caret. */
   tail: string
-  /** The key that takes it, already translated. */
+  /** The key that takes it, already spelled in the reader's language. */
   accept: string
-  ref: RefObject<HTMLDivElement | null>
+  ref?: Ref<HTMLDivElement>
 }
 
 /**
- * The grey rest of a sentence, behind the field rather than in it.
+ * The grey rest of a sentence, painted behind the field a textarea cannot paint into.
  *
- * 🛑 A textarea paints no text of its own, so the tail CANNOT live in its value: put there it
- * would be what Enter sends and what the store holds, and the assistant would answer a sentence
- * nobody wrote. This layer mirrors the field's own type and gutters instead — change one and this
- * one moves with it, or the tail lands a character off.
+ * 🛑 Never in the value: put there the tail is what the store holds and what Enter sends.
  */
 export function AssistantConversationGhost({
   typed,
@@ -27,18 +26,19 @@ export function AssistantConversationGhost({
   return (
     <div
       ref={ref}
-      // Spoken by the live region beside the field, not read from here: a mirror announced twice
-      // reads the sentence one is writing back at whoever is writing it.
+      // Said by the live region beside the field: read from here too, a reader hears the sentence
+      // it is already spelling out twice.
       aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden px-1 text-xs break-words whitespace-pre-wrap"
+      className={cn(
+        CONVERSATION_FIELD_TYPE,
+        'pointer-events-none absolute inset-0 overflow-hidden break-words whitespace-pre-wrap',
+      )}
     >
       <span className="invisible">{typed}</span>
       <span className="text-muted">{tail}</span>
-      {/* Nobody presses a key they were never shown: the tail alone reads as text that is already
-        there, and the hand types over it. */}
-      <span className="text-muted border-border ml-1 rounded-(--radius-sc-sm) border px-1">
-        {accept}
-      </span>
+      {/* Nobody presses a key they were never shown, and the tail alone reads as text already
+        written. */}
+      <kbd className="text-muted ml-1">{accept}</kbd>
     </div>
   )
 }

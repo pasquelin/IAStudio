@@ -57,7 +57,7 @@ beforeEach(() => {
  * What the live region spells of the tail, which is the only place it is written out in full: the
  * mirror behind the field is `aria-hidden`, so no role query reaches into it.
  */
-const completing = (): string => screen.queryByText(/Tab ou flèche droite/)?.textContent ?? ''
+const completing = (): string => screen.queryByText(/Tab ou →/)?.textContent ?? ''
 
 describe('the assistant conversation', () => {
   it('sends what was typed, and clears the field', async () => {
@@ -238,27 +238,77 @@ describe('the assistant conversation', () => {
   })
 
   /**
-   * The tail is painted BEHIND the field, never written into it: put in the value it would be
-   * what the store holds and what Enter sends, and the assistant would answer its own suggestion.
+   * Shift+Tab means « go back », and it took the tail instead — the draft rewritten by a keystroke
+   * that asked to leave, with no way out of the composer while a tail was painted.
    */
-  it('never lets the tail into the value it sends', async () => {
+  it('leaves a Tab held with Shift to the focus it walks', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
     await userEvent.type(field, 'genere une im')
+    await userEvent.tab({ shift: true })
 
-    expect(completing()).toContain('Génère une image')
+    expect(field).toHaveValue('genere une im')
+    expect(field).not.toHaveFocus()
+  })
+
+  /**
+   * 🛑 A focus given by ⌘K fires neither `change` nor `select`, so the state saying where the
+   * caret is answered for the last hand that typed. The tail was painted over a draft the caret
+   * sat at the START of, and the right arrow could not move at all.
+   */
+  it('reads where the caret is from the key itself, not from the last thing typed', () => {
+    useAssistant.setState({ draft: 'genere une im' })
+    render(<AssistantConversation />)
+    const field = screen.getByRole<HTMLTextAreaElement>('textbox')
+
+    field.setSelectionRange(0, 0)
+    act(() => focusChat())
+    expect(field.selectionStart).toBe(0)
+
+    fireEvent.keyDown(field, { key: 'ArrowRight' })
+
     expect(field).toHaveValue('genere une im')
   })
 
-  // The other half of Tab: it must still walk out of the field when there is nothing to take.
-  it('leaves Tab alone when nothing completes what is typed', async () => {
+  /**
+   * The tail advertises a key that only takes it while one writes HERE. 🛑 Left by the pointer and
+   * not by Tab, which the tail takes for itself and would end this test by accepting.
+   */
+  it('takes the tail off the screen once the caret leaves the field', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
-    await userEvent.type(field, 'projet{Tab}')
+    await userEvent.type(field, 'genere une im')
+    expect(completing()).toContain('Génère une image')
 
-    expect(field).toHaveValue('projet')
+    fireEvent.blur(field)
+
+    expect(completing()).toBe('')
+  })
+
+  // A field nothing answers announces no completion either: a reader was told of one that was not.
+  it('announces no inline completion when nothing completes', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'zzzzzz')
+
+    expect(field).not.toHaveAttribute('aria-autocomplete')
+  })
+
+  /**
+   * The other half of Tab. 🛑 Typed with matches ON SCREEN, since a field matching nothing leaves
+   * `steer` at its first guard and never reaches the branch this is about.
+   */
+  it('leaves Tab alone when no match spells forward', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'variante{Tab}')
+
+    expect(screen.getByRole('option', { name: /variante/ })).toBeInTheDocument()
+    expect(field).toHaveValue('variante')
     expect(field).not.toHaveFocus()
   })
 
@@ -560,15 +610,15 @@ describe('walking the suggestions', () => {
     )
   })
 
-  it('keeps the caret in the field, so what follows it stays reachable', async () => {
+  it('keeps the caret in the field while the arrows walk', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
-    await userEvent.type(field, 'genere')
+    await userEvent.type(field, 'genere{ArrowDown}')
 
     expect(field).toHaveFocus()
     expect(field.getAttribute('aria-activedescendant')).toBe(
-      screen.getAllByRole('option')[0]?.getAttribute('id'),
+      screen.getAllByRole('option')[1]?.getAttribute('id'),
     )
   })
 })

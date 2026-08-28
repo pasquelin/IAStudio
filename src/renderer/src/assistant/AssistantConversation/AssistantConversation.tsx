@@ -13,6 +13,7 @@ import { completionFor, foldForSearch, matchesWords, searchWords } from '@shared
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
 import { HINT_TOP, TIP_TOP } from '@/helpers/tooltip'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useToolSurface } from '@/stores/layouts'
@@ -27,15 +28,12 @@ import { AssistantConversationSuggestions, suggestionId } from './AssistantConve
 import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
-import { CONVERSATION_CARD } from './conversationStyles'
+import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
 
-/**
- * The sentence a grey tail would spell out, and the tail itself — nothing when the sentence does
- * not begin the way the field does.
- *
- * 🛑 The two travel TOGETHER: taking the tail writes the sentence in its own spelling, accents
- * included, so a caller holding one without the other wrote back what the hand had mistyped.
- */
+/** Whether the caret sits past the last character, which is the only place a tail is painted. */
+const atEnd = (field: HTMLTextAreaElement): boolean => field.selectionStart === field.value.length
+
+/** The two travel together: taking the tail writes the studio's spelling, not the hand's. */
 function tailOf(
   sentence: string | undefined,
   draft: string,
@@ -71,6 +69,7 @@ export function AssistantConversation() {
   const surface = useToolSurface()
   const offer = useAssistantOffer()
   const openSection = useSettings(state => state.openSection)
+  const keyLabel = useShortcutLabel()
 
   // Focus IN the block, not on the field: the microphone button is one of its children, and
   // pressing it must not hand the spoken word back to whatever the caret was in before.
@@ -105,6 +104,9 @@ export function AssistantConversation() {
   const [walked, setWalked] = useState(matches)
   /** The tail is painted after what is written, so it is only offered from there. */
   const [caretAtEnd, setCaretAtEnd] = useState(true)
+  // 🛑 The FIELD's focus, not the block's: `inside` stays true for the model picker below, and a
+  // tail advertising Tab there is a key that no longer takes it.
+  const [writing, setWriting] = useState(false)
 
   /**
    * 🛑 A rebuilt list gives the rank back, whatever rebuilt it — a keystroke, a change of space,
@@ -118,12 +120,11 @@ export function AssistantConversation() {
   }
 
   const shown = !given && !busy ? matches : []
-  const ghost = caretAtEnd ? tailOf(shown[rank], draft) : undefined
+  // `matches` trims and the tail cannot: the mirror paints `draft` verbatim, so a leading space
+  // kills the tail and keeps the rows.
+  const ghost = writing && caretAtEnd ? tailOf(shown[rank], draft) : undefined
 
-  /**
-   * The one match a tail already spells out needs no row under the field: that lone bordered line
-   * read as a button one was meant to press, which is the whole reason for the tail.
-   */
+  // A tail already spells this one out: the lone bordered row read as a button to press.
   const listed = ghost !== undefined && shown.length === 1 ? [] : shown
 
   // Taken means WRITTEN, never sent: the sentence is a start, and what one adds to it — a name,
@@ -135,18 +136,21 @@ export function AssistantConversation() {
   }
 
   /**
-   * Tab and the right arrow take the tail, the arrows change which sentence it spells, Escape
-   * gives it up. 🛑 Enter is none of them: a match is held from the first keystroke now, and an
-   * Enter that took it would send the assistant a sentence the hand never finished.
+   * 🛑 Enter takes nothing: a match is held from the first keystroke, and an Enter that took it
+   * would send a sentence the hand never finished. Escape is the way OUT — Tab is taken here.
    */
   const steer = (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if (shown.length === 0 || isComposing(event)) return false
 
-    // A tail is only ever painted at the end of what is written, so both keys that take it are
-    // already where they had nowhere left to go.
-    if (ghost !== undefined && (event.key === 'Tab' || event.key === 'ArrowRight')) {
-      take(ghost.sentence)
-      return true
+    // 🛑 Read from the event, never from `caretAtEnd`: a focus given by ⌘K refreshes neither of
+    // the two handlers that fill it, and a stale one let the right arrow overwrite a draft from
+    // its first character. A BARE Tab, too — Shift+Tab means "go back", and took the tail.
+    const bare = !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
+    if (ghost !== undefined && bare && atEnd(event.currentTarget)) {
+      if (event.key === 'Tab' || event.key === 'ArrowRight') {
+        take(ghost.sentence)
+        return true
+      }
     }
 
     if (event.key === 'Escape') {
@@ -194,6 +198,12 @@ export function AssistantConversation() {
     // arithmetic often enough that an exact comparison answers "not at the end" for good.
     following.current = list.scrollHeight - list.scrollTop - list.clientHeight < SCROLL_SLACK
   }
+
+  // A mirror mounts at its top, and the field it copies may already be scrolled: without this the
+  // grey tail is drawn against the wrong line until the next scroll event.
+  useEffect(() => {
+    if (mirror.current && field.current) mirror.current.scrollTop = field.current.scrollTop
+  }, [ghost?.tail])
 
   useEffect(() => useAssistant.getState().stage(), [])
 
@@ -352,7 +362,7 @@ export function AssistantConversation() {
                   ref={mirror}
                   typed={draft}
                   tail={ghost.tail}
-                  accept={t('assistant.acceptKey')}
+                  accept={keyLabel('Tab')}
                 />
               )}
               <textarea
@@ -365,8 +375,10 @@ export function AssistantConversation() {
                 // 🛑 No `role="combobox"`: it REPLACES the field's own role, and ARIA 1.2 drops
                 // `aria-multiline` with it — what one writes here is a paragraph. These three ARE
                 // allowed on a textbox, where `aria-expanded` is not and was read by nobody.
-                aria-autocomplete="both"
-                aria-haspopup="listbox"
+                aria-autocomplete={
+                  listed.length > 0 ? 'both' : ghost === undefined ? undefined : 'inline'
+                }
+                aria-haspopup={listed.length > 0 ? 'listbox' : undefined}
                 // `aria-owns` beside it: ARIA asks that the held row be a descendant of the focused
                 // element, and a textarea can hold none. Without it the walk is announced by nobody.
                 aria-controls={listed.length > 0 ? listId : undefined}
@@ -378,15 +390,16 @@ export function AssistantConversation() {
                 disabled={busy}
                 onChange={event => {
                   setDraft(event.target.value)
-                  setCaretAtEnd(event.target.selectionStart === event.target.value.length)
+                  setCaretAtEnd(atEnd(event.currentTarget))
                 }}
                 // Where the caret lands by click or by arrow. Read on change TOO, and not instead:
                 // a field typed into fires one of the two on some engines and both on others.
-                onSelect={event =>
-                  setCaretAtEnd(
-                    event.currentTarget.selectionStart === event.currentTarget.value.length,
-                  )
-                }
+                onSelect={event => setCaretAtEnd(atEnd(event.currentTarget))}
+                onFocus={event => {
+                  setWriting(true)
+                  setCaretAtEnd(atEnd(event.currentTarget))
+                }}
+                onBlur={() => setWriting(false)}
                 onScroll={event => {
                   if (mirror.current) mirror.current.scrollTop = event.currentTarget.scrollTop
                 }}
@@ -404,7 +417,10 @@ export function AssistantConversation() {
                   event.preventDefault()
                   send()
                 }}
-                className="text-text relative w-full resize-none border-none bg-transparent px-1 text-xs"
+                className={cn(
+                  CONVERSATION_FIELD_TYPE,
+                  'text-text relative w-full resize-none border-none bg-transparent',
+                )}
               />
             </div>
 
@@ -423,10 +439,12 @@ export function AssistantConversation() {
                 the same reason the title bar announces a reordered tab. */}
             <p role="status" aria-live="polite" className="sr-only">
               {ghost !== undefined
-                ? t('assistant.completing', { sentence: ghost.sentence })
-                : listed.length > 0
-                  ? t('assistant.suggested', { count: listed.length })
-                  : ''}
+                ? t('assistant.completing', {
+                    sentence: ghost.sentence,
+                    accept: keyLabel('Tab'),
+                    arrow: keyLabel('ArrowRight'),
+                  })
+                : listed.length > 0 && t('assistant.suggested', { count: listed.length })}
             </p>
 
             {/* Wrapping: the picker and the pair sit side by side wherever there is room and
