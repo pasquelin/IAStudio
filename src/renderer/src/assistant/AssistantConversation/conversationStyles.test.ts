@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { spellsOut, WRITTEN_SOURCES } from '@/design/testHarness'
-import { CONVERSATION_CARD } from './conversationStyles'
+import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
 
 /** As `WRITTEN_SOURCES` keys it: the glob resolves against `design/testHarness.ts`. */
 const GUARDED = '../assistant/AssistantConversation/conversationStyles.ts'
@@ -32,6 +32,31 @@ describe('the card of the assistant conversation', () => {
 
 /** The conversation and its parts, as `WRITTEN_SOURCES` keys them. */
 const CONVERSATION = '../assistant/AssistantConversation/'
+
+/**
+ * 🛑 The mirror behind the field wears the field's own type and gutters. Written out on either
+ * side rather than worn, the two drift and the grey tail lands a character off the writing it
+ * continues — the invariant its JSDoc could only ask for.
+ *
+ * Scoped to the folder: `px-1 text-xs` is a pairing half the studio reaches for, and a rule read
+ * across `WRITTEN_SOURCES` would name dozens of files that owe this constant nothing.
+ */
+describe('the type of the field one writes in', () => {
+  const spellsOutType = spellsOut(CONVERSATION_FIELD_TYPE.split(' '))
+
+  it('finds the constant at all, so the rule below cannot pass on nothing', () => {
+    expect(spellsOutType(`className="${CONVERSATION_FIELD_TYPE}"`)).toBe(true)
+  })
+
+  it('is worn by the field and its mirror, never written out beside them', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) =>
+        path !== GUARDED && path.startsWith(CONVERSATION) && spellsOutType(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+})
 
 /** A reading width, in the two spellings a caller reaches for. Never `max-w-56`, a control's cap. */
 const PAGE_WIDTHS = ['mx-auto', 'max-w-prose', 'max-w-2xl', 'max-w-3xl', 'max-w-(--sc-chat-width)']

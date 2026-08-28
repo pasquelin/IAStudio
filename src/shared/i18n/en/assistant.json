@@ -1525,6 +1525,7 @@
     "groupStudio": "The studio",
     "suggestions": "What you can ask",
     "starterHint": "Writes the sentence into the field. Nothing is sent until you send it.",
+    "completing": "{{sentence}} — {{accept}} or {{arrow}} to complete",
     "suggested_one": "{{count, number}} request suggested",
     "suggested_many": "{{count, number}} requests suggested",
     "suggested_other": "{{count, number}} requests suggested"

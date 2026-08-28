@@ -46,6 +46,24 @@ export function matchesWords(name: string, words: readonly string[]): boolean {
 }
 
 /**
+ * What is left of `sentence` once `typed` has been written, or nothing when the sentence does not
+ * begin that way — the grey tail an inline completion paints ahead of the caret.
+ *
+ * The cut is SEARCHED for rather than taken at `typed.length`: folding drops characters, so a
+ * decomposed `é` typed as two makes the two lengths disagree, and the tail came out a letter short.
+ */
+export function completionFor(sentence: string, typed: string): string | undefined {
+  if (typed.trim() === '') return undefined
+
+  const written = foldForSearch(typed)
+  for (let cut = 0; cut < sentence.length; cut++) {
+    if (foldForSearch(sentence.slice(0, cut)) === written) return sentence.slice(cut)
+  }
+
+  return undefined
+}
+
+/**
  * The order of two strings nothing DISPLAYS in that order — an ISO stamp, a schema key, an id.
  *
  * `localeCompare` is the wrong tool twice over here. It answers in the locale the OS happens to

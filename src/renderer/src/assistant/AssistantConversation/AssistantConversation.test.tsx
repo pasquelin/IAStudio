@@ -53,6 +53,12 @@ beforeEach(() => {
   installFakeBridge()
 })
 
+/**
+ * What the live region spells of the tail, which is the only place it is written out in full: the
+ * mirror behind the field is `aria-hidden`, so no role query reaches into it.
+ */
+const completing = (): string => screen.queryByText(/Tab ou →/)?.textContent ?? ''
+
 describe('the assistant conversation', () => {
   it('sends what was typed, and clears the field', async () => {
     render(<AssistantConversation />)
@@ -194,7 +200,8 @@ describe('the assistant conversation', () => {
 
     await userEvent.type(screen.getByRole('textbox'), 'genere un')
 
-    expect(screen.getByRole('option', { name: 'Génère un son' })).toBeInTheDocument()
+    // The only match here completes what is typed, so it is spelled by the tail and by no row.
+    expect(completing()).toContain('Génère un son')
     expect(screen.queryByRole('option', { name: 'Génère une image' })).not.toBeInTheDocument()
   })
 
@@ -213,20 +220,135 @@ describe('the assistant conversation', () => {
   })
 
   /**
-   * The arrows walk the list and Enter takes what they hold; Enter with nothing held still sends,
-   * which is what it has always done. A list that put a step between a finished sentence and its
-   * going would be paid on every message.
+   * 🛑 The whole reason Enter was taken off the tail: a match is held from the first keystroke
+   * now, so an Enter that took it would send a sentence the hand never finished writing. Enter
+   * sends WHAT IS TYPED, always — and Tab is what turns the grey into one's own words.
    */
-  it('takes the line the arrows hold, and sends when they hold none', async () => {
+  it('takes the tail on Tab, and sends what is typed on Enter', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
-    await userEvent.type(field, 'genere une im{ArrowDown}{Enter}')
+    await userEvent.type(field, 'genere une im{Enter}')
+    expect(say).toHaveBeenCalledWith('genere une im')
+
+    say.mockClear()
+    await userEvent.type(field, 'genere une im{Tab}')
     expect(field).toHaveValue('Génère une image')
     expect(say).not.toHaveBeenCalled()
+  })
 
-    await userEvent.type(field, '{Enter}')
-    expect(say).toHaveBeenCalledWith('Génère une image')
+  /**
+   * Shift+Tab means « go back », and it took the tail instead — the draft rewritten by a keystroke
+   * that asked to leave, with no way out of the composer while a tail was painted.
+   */
+  it('leaves a Tab held with Shift to the focus it walks', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere une im')
+    await userEvent.tab({ shift: true })
+
+    expect(field).toHaveValue('genere une im')
+    expect(field).not.toHaveFocus()
+  })
+
+  /**
+   * 🛑 A focus given by ⌘K fires neither `change` nor `select`, so the state saying where the
+   * caret is answered for the last hand that typed. The tail was painted over a draft the caret
+   * sat at the START of, and the right arrow could not move at all.
+   */
+  it('reads where the caret is from the key itself, not from the last thing typed', () => {
+    useAssistant.setState({ draft: 'genere une im' })
+    render(<AssistantConversation />)
+    const field = screen.getByRole<HTMLTextAreaElement>('textbox')
+
+    field.setSelectionRange(0, 0)
+    act(() => focusChat())
+    expect(field.selectionStart).toBe(0)
+
+    fireEvent.keyDown(field, { key: 'ArrowRight' })
+
+    expect(field).toHaveValue('genere une im')
+  })
+
+  /**
+   * The tail advertises a key that only takes it while one writes HERE. 🛑 Left by the pointer and
+   * not by Tab, which the tail takes for itself and would end this test by accepting.
+   */
+  it('takes the tail off the screen once the caret leaves the field', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere une im')
+    expect(completing()).toContain('Génère une image')
+
+    fireEvent.blur(field)
+
+    expect(completing()).toBe('')
+  })
+
+  // A field nothing answers announces no completion either: a reader was told of one that was not.
+  it('announces no inline completion when nothing completes', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'zzzzzz')
+
+    expect(field).not.toHaveAttribute('aria-autocomplete')
+  })
+
+  /**
+   * The other half of Tab. 🛑 Typed with matches ON SCREEN, since a field matching nothing leaves
+   * `steer` at its first guard and never reaches the branch this is about.
+   */
+  it('leaves Tab alone when no match spells forward', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'variante{Tab}')
+
+    expect(screen.getByRole('option', { name: /variante/ })).toBeInTheDocument()
+    expect(field).toHaveValue('variante')
+    expect(field).not.toHaveFocus()
+  })
+
+  /**
+   * A sentence matched by a word of its middle cannot be spelled ahead of the caret — there is no
+   * tail to paint. It keeps the row it always had, which is why both mechanics stay.
+   */
+  it('keeps a row for a match no tail can spell', async () => {
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'variante')
+
+    expect(completing()).toBe('')
+    expect(screen.getByRole('option', { name: /variante/ })).toBeInTheDocument()
+  })
+
+  // The tail belongs where the caret is: offered from the middle of a sentence, Tab would write
+  // the rest of a phrase onto words the hand had gone back to fix.
+  it('offers no tail once the caret has gone back into the sentence', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere une im')
+    expect(completing()).toContain('Génère une image')
+
+    fireEvent.select(field, { target: { selectionStart: 2, selectionEnd: 2 } })
+
+    expect(completing()).toBe('')
+  })
+
+  it('changes which sentence the tail spells as the arrows walk', async () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'a')
+    const first = completing()
+
+    await userEvent.type(screen.getByRole('textbox'), '{ArrowDown}')
+
+    expect(completing()).not.toBe(first)
   })
 
   /**
@@ -461,13 +583,15 @@ describe('walking the suggestions', () => {
     const field = screen.getByRole('textbox')
 
     await userEvent.type(field, 'une{ArrowDown}')
-    expect(document.getElementById(field.getAttribute('aria-activedescendant') ?? '')) //
-      .toBeInTheDocument()
+    expect(field.getAttribute('aria-activedescendant')) //
+      .not.toBe(screen.getAllByRole('option')[0]?.getAttribute('id'))
 
     // A space keeps every match — `searchWords` drops it — so only the RANK can have changed.
     await userEvent.type(field, ' ')
 
-    expect(field).not.toHaveAttribute('aria-activedescendant')
+    expect(field.getAttribute('aria-activedescendant')).toBe(
+      screen.getAllByRole('option')[0]?.getAttribute('id'),
+    )
   })
 
   /**
@@ -480,10 +604,13 @@ describe('walking the suggestions', () => {
 
     await userEvent.type(field, 'genere{Shift>}{Enter}{/Shift}une image{ArrowUp}')
 
-    expect(field).not.toHaveAttribute('aria-activedescendant')
+    // The caret has a line above it to reach, so the rank stands where it was rather than wrapping.
+    expect(field.getAttribute('aria-activedescendant')).toBe(
+      screen.getAllByRole('option')[0]?.getAttribute('id'),
+    )
   })
 
-  it('keeps the caret in the field, so Tab still reaches what follows it', async () => {
+  it('keeps the caret in the field while the arrows walk', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
@@ -491,7 +618,7 @@ describe('walking the suggestions', () => {
 
     expect(field).toHaveFocus()
     expect(field.getAttribute('aria-activedescendant')).toBe(
-      screen.getAllByRole('option')[0]?.getAttribute('id'),
+      screen.getAllByRole('option')[1]?.getAttribute('id'),
     )
   })
 })

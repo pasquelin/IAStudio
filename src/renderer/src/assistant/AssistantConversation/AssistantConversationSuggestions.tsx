@@ -5,7 +5,7 @@ import { HINT_TOP } from '@/helpers/tooltip'
 export type AssistantConversationSuggestionsProps = {
   /** The sentences that match what is being typed, already translated. */
   matches: readonly string[]
-  /** Which one the keyboard holds, or `-1` while the hand is still writing its own sentence. */
+  /** Which one the keyboard holds. Never `-1`: the first is held from the first keystroke. */
   active: number
   /** Names the list for a reader — one with no name is announced as "list box". */
   label: string
@@ -50,7 +50,8 @@ export function AssistantConversationSuggestions({
           // is what lifts a row's own words out of `muted` on the picked fill.
           data-selected={index === active ? '' : undefined}
           // The caret never leaves the field — that is what `aria-activedescendant` means — so
-          // these are not tab stops, and Tab goes on to the model picker as it did before.
+          // these are not tab stops. 🛑 Tab itself is taken by the tail when there is one, and
+          // Escape is what gives the composer back to the keyboard.
           tabIndex={-1}
           // What a visible imperative cannot say on its own: it WRITES, and sends nothing.
           {...HINT_TOP(hint)}

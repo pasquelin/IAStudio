@@ -1525,6 +1525,7 @@
     "groupStudio": "Le studio",
     "suggestions": "Ce que vous pouvez demander",
     "starterHint": "Écrit la phrase dans le champ. Rien n’est envoyé tant que vous n’avez pas validé.",
+    "completing": "{{sentence}} — {{accept}} ou {{arrow}} pour compléter",
     "suggested_one": "{{count, number}} demande proposée",
     "suggested_many": "{{count, number}} demandes proposées",
     "suggested_other": "{{count, number}} demandes proposées"

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { NO_BREAK_SPACE } from './i18n/typography'
-import { byCodeUnit, foldForSearch } from './text'
+import { byCodeUnit, completionFor, foldForSearch } from './text'
 
 describe('the shape a text is searched by', () => {
   it('drops the accents a hand skips when it is looking rather than spelling', () => {
@@ -66,5 +66,32 @@ describe('the order of two strings nobody reads as words', () => {
     expect(byCodeUnit('a', 'a')).toBe(0)
     expect(byCodeUnit('a', 'b')).toBe(-1)
     expect(byCodeUnit('b', 'a')).toBe(1)
+  })
+})
+
+describe('the rest of a sentence one has begun to type', () => {
+  it('gives what is left to write, spelled as the sentence spells it', () => {
+    expect(completionFor('Crée un nouveau projet', 'cr')).toBe('ée un nouveau projet')
+  })
+
+  /**
+   * The point of folding both sides: a hand that types `cree` is offered the accents back rather
+   * than being told the sentence starts otherwise.
+   */
+  it('answers a hand that skips the accents', () => {
+    expect(completionFor('Crée un nouveau projet', 'cree un')).toBe(' nouveau projet')
+  })
+
+  it('gives nothing when the sentence begins otherwise, however well a word of it matches', () => {
+    expect(completionFor('Crée un nouveau projet', 'projet')).toBeUndefined()
+  })
+
+  it('gives nothing when the sentence is already written out', () => {
+    expect(completionFor('Crée un nouveau projet', 'Crée un nouveau projet')).toBeUndefined()
+  })
+
+  // Nothing is typed, so everything would complete it — six sentences flashing under one caret.
+  it('gives nothing for a field holding only spaces', () => {
+    expect(completionFor('Crée un nouveau projet', '  ')).toBeUndefined()
   })
 })
