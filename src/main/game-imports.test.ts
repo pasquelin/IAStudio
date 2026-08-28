@@ -178,3 +178,85 @@ describe('what the game runtime may reach', () => {
     ).toEqual([])
   })
 })
+
+/** The interface core, which is held to more than the tree around it. */
+const GAME_UI = join(GAME, 'ui')
+
+/**
+ * 🛑 The names a browser hands out, refused under `src/game/ui`.
+ *
+ * The core computes a layout and holds a runtime; what DRAWS one lives in `host/`, beside
+ * `domInput.ts`. Reading the DOM here would tie the model to one renderer and make a Pixi or a
+ * world-space one impossible without rewriting it — the frontier `uiRenderPort` exists to keep.
+ *
+ * The names are refused as identifiers, DECLARATIONS included: a parameter called `document` is
+ * turned away too. A shadow is legal TypeScript and this costs a rename, where telling one from
+ * the global needs a checker — and a rule nobody can read is a rule nothing holds.
+ *
+ * 🛑 **Its blind spot, in clear: an element reached by a STRING passes.** `globalThis['document']`
+ * is a literal, not an identifier, so nothing here sees it. The roots are refused instead —
+ * `globalThis` and `self` are on the list — which leaves only a host object handed IN as a
+ * parameter, and that is the frontier `uiRenderPort` draws rather than a leak.
+ */
+const BROWSER_NAMES = new Set([
+  'document',
+  'window',
+  'navigator',
+  'globalThis',
+  'self',
+  'HTMLElement',
+  'CanvasRenderingContext2D',
+])
+
+/** Identifiers off the AST, so a name inside a comment or a string counts for nothing. */
+function browserNamesIn(file: string, code: string): string[] {
+  const parsed = ts.createSourceFile(file, code, ts.ScriptTarget.ESNext, true)
+  const found = new Set<string>()
+
+  const walk = (node: ts.Node): void => {
+    // A property is somebody else's name — `style.document` says nothing about the browser.
+    // `parent` is undefined on the source file itself, which `isPropertyAccessExpression` reads.
+    const isProperty =
+      node.parent !== undefined &&
+      ts.isPropertyAccessExpression(node.parent) &&
+      node.parent.name === node
+
+    if (ts.isIdentifier(node) && BROWSER_NAMES.has(node.text) && !isProperty) found.add(node.text)
+    ts.forEachChild(node, walk)
+  }
+  walk(parsed)
+
+  return [...found].map(name => `${relative(SOURCE_ROOT, file)} -> ${name}`)
+}
+
+describe('what the interface core may reach', () => {
+  it('names nothing a browser hands out', () => {
+    const found = testFilesUnder(GAME_UI, /\.tsx?$/).flatMap(file =>
+      browserNamesIn(file, readFileSync(file, 'utf8')),
+    )
+
+    expect(found.sort()).toEqual([])
+  })
+
+  it('opened the core to say so', () => {
+    expect(testFilesUnder(GAME_UI, /\.tsx?$/).length).toBeGreaterThan(0)
+  })
+
+  /** And it can fail — three spellings that name the browser, and three that do not. */
+  it('would see the browser named, however it was spelt', () => {
+    const from = join(GAME_UI, 'uiLayout.ts')
+    const said = (name: string): string[] => [`game/ui/uiLayout.ts -> ${name}`]
+
+    expect(browserNamesIn(from, 'const host = document.body')).toEqual(said('document'))
+    expect(browserNamesIn(from, 'export function measure(host: HTMLElement) {}')).toEqual(
+      said('HTMLElement'),
+    )
+    expect(browserNamesIn(from, 'const wide = window.innerWidth')).toEqual(said('window'))
+
+    expect(browserNamesIn(from, "const host = globalThis['document']")).toEqual(said('globalThis'))
+
+    expect(browserNamesIn(from, '// the document this reads')).toEqual([])
+    expect(browserNamesIn(from, "const said = 'window'")).toEqual([])
+    expect(browserNamesIn(from, 'const held = state.document')).toEqual([])
+  })
+})
