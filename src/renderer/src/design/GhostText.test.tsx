@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { AssistantConversationGhost } from './AssistantConversationGhost'
+import { GhostText } from './GhostText'
 
 describe('the grey rest of a sentence', () => {
   /**
@@ -9,12 +9,19 @@ describe('the grey rest of a sentence', () => {
    */
   it('holds the written half invisible, and says none of it to a reader', () => {
     const { container } = render(
-      <AssistantConversationGhost typed="genere une im" tail="age" accept="Tab" />,
+      <GhostText typed="genere une im" tail="age" className="px-1 text-xs" />,
     )
 
-    expect(container).toHaveTextContent('genere une imageTab')
+    expect(container).toHaveTextContent('genere une image')
     expect(screen.getByText('genere une im')).toHaveClass('invisible')
-    // The field's own text is what a reader hears; this layer would say the sentence twice.
+    // The field beneath is what a reader hears; this layer would say the sentence twice.
     expect(container.firstElementChild).toHaveAttribute('aria-hidden')
+  })
+
+  // The host owns the metrics: a mirror with type of its own drifts from the field it copies.
+  it('wears the type its host gives it', () => {
+    const { container } = render(<GhostText typed="a" tail="bc" className="px-1 text-xs" />)
+
+    expect(container.firstElementChild).toHaveClass('px-1', 'text-xs')
   })
 })
