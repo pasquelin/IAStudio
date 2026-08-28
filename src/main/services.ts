@@ -606,14 +606,26 @@ export function createServices(settings: SettingsStore): Services {
   const NOTHING_DISCOVERED: readonly LocalModel[] = []
 
   /**
-   * What a runtime listed, answered by the manager — which is built AFTER the registry that asks.
-   * Empty until then, like `installedLocally` beside it.
+   * What the MANAGER knows and the registry asks for — built after it, so the answers arrive
+   * through a box the registry keeps for the life of the process.
+   *
+   * 🛑 ONE box for both, written in ONE place: two boxes filled at two sites meant one could be
+   * forgotten, and one WAS — the discovered tags never reached the registry, so a model chosen in
+   * the settings had its id asked of Scenario, which answers 404. Nothing reddened; the `satisfies`
+   * at the filling site is what makes a forgotten half fail to compile.
    */
-  const discoveredLocally = { models: (): readonly LocalModel[] => NOTHING_DISCOVERED }
+  const fromManager: {
+    installedIds: () => ReadonlySet<string>
+    discovered: () => readonly LocalModel[]
+  } = {
+    installedIds: () => new Set<string>(),
+    // "Not here yet", which is the honest answer before the manager has composed once.
+    discovered: () => NOTHING_DISCOVERED,
+  }
 
   const mergedCatalogue = (): readonly LocalModel[] => {
     const own = settings.read().ai.ownModels
-    const found = discoveredLocally.models()
+    const found = fromManager.discovered()
     // 🛑 Keyed by the IDS and not by the array: `settings.read()` re-parses, and zod 4 hands back
     // a fresh array every time — measured — so an identity check never held and the merge was
     // rebuilt on every keystroke of the panel's search field, which is what it was written to stop.
@@ -625,15 +637,6 @@ export function createServices(settings: SettingsStore): Services {
     return merged.all
   }
 
-  /**
-   * What is on the disk, answered by the manager — which is built AFTER the registry that asks.
-   *
-   * A box rather than a forward `let`: the registry keeps this function for the life of the
-   * process and asks it per summary, so what it reads has to be able to change under it. Empty
-   * until the manager fills it, which reads as "not here yet" — the honest answer meanwhile.
-   */
-  const installedLocally = { ids: (): ReadonlySet<string> => new Set<string>() }
-
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
@@ -642,7 +645,7 @@ export function createServices(settings: SettingsStore): Services {
     localModels: mergedCatalogue,
     // Deferred: the registry is built before the manager, and what is installed changes
     // under it — a download landing must ungrey the card it was greying.
-    isInstalled: modelId => installedLocally.ids().has(modelId),
+    isInstalled: modelId => fromManager.installedIds().has(modelId),
     translate: key => textAt(TRANSLATIONS[language()], key),
   })
 
@@ -1543,7 +1546,11 @@ export function createServices(settings: SettingsStore): Services {
   forgetDiscovered = () => ai.forgetDiscovered()
   refreshOverview = () => ai.refresh()
   // Filled here rather than captured above: the registry was built first and asks per summary.
-  installedLocally.ids = () => ai.installedIds()
+  // 🛑 Both members at once — `fromManager` says what forgetting one costs.
+  Object.assign(fromManager, {
+    installedIds: () => ai.installedIds(),
+    discovered: () => ai.discovered(),
+  } satisfies typeof fromManager)
 
   /** The whole of rank 3's gesture: a picker, a header, an entry. */
   const addOwnAiModel = async (): Promise<AiOverview> => {
