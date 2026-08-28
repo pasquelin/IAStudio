@@ -21,6 +21,9 @@ import {
   type UiDocument,
   type UiElement,
   type UiElementType,
+  type UiImage,
+  type UiStack,
+  type UiText,
   type UiFit,
   type UiJustify,
   type UiMode,
@@ -41,23 +44,23 @@ function reread(document: UiDocument): UiDocument {
   return state.document
 }
 
-const TEXT = {
+const TEXT: UiText = {
   value: '',
-  font: { source: 'embedded' as const, family: 'Lato' },
+  font: { source: 'embedded', family: 'Lato' },
   size: 24,
   weight: 700,
-  align: 'center' as const,
+  align: 'center',
   color: '#00ff00',
   wrap: false,
 }
 
-const IMAGE = { assetId: '', fit: 'cover' as const, tint: '#ff00ff' }
+const IMAGE: UiImage = { assetId: '', fit: 'cover', tint: '#ff00ff' }
 
-const STACK = {
-  direction: 'row' as const,
+const STACK: UiStack = {
+  direction: 'row',
   gap: 16,
-  align: 'center' as const,
-  justify: 'between' as const,
+  align: 'center',
+  justify: 'between',
   wrap: true,
 }
 

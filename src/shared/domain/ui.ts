@@ -75,11 +75,27 @@ export const HOLDS_CHILDREN: Record<UiElementType, boolean> = {
 
 export type UiSize = { width: number; height: number }
 
+/** Where one element landed, in the space the layout was solved against. Absolute, never nested. */
+export type UiBox = { x: number; y: number; width: number; height: number }
+
+/**
+ * Every element of a document, by id — what a renderer paints and what a pick reads.
+ *
+ * 🛑 The ONLY geometry of an interface. A renderer poses these boxes; it computes none of its
+ * own, which is what lets a second renderer draw the same document the same way.
+ */
+export type UiBoxes = ReadonlyMap<string, UiBox>
+
 export type UiPoint = { x: number; y: number }
 
 export type UiEdges = { top: number; right: number; bottom: number; left: number }
 
-/** Pixels of the DESIGN resolution, or a share of the parent — never of the actual screen. */
+/**
+ * Pixels of the space the layout is solved against, or a share of the parent.
+ *
+ * 🛑 NOT scaled by `design`: nothing divides by that resolution, and a second renderer that
+ * believed otherwise would disagree with `layoutOf` on every fixed size.
+ */
 export type UiLength = { unit: 'px' | 'percent'; value: number }
 
 /**
@@ -290,7 +306,11 @@ export type UiState = { document: UiDocument; trouble: UiTrouble | null }
 export type UiDocument = {
   version: number
   mode: UiMode
-  /** The resolution every length is expressed against. A screen scales from it, never to it. */
+  /**
+   * The resolution the author draws at. A layout is solved against whatever viewport it is
+   * handed and the anchors absorb the difference, so this is the editor's canvas and what a
+   * preset names — never a factor anything divides by.
+   */
   design: UiSize
   root: UiScreen
   bindings: readonly UiBinding[]
