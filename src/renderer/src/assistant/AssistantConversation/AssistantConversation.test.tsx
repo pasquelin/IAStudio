@@ -59,6 +59,15 @@ beforeEach(() => {
  */
 const completing = (): string => screen.queryByText(/Tab ou →/)?.textContent ?? ''
 
+/**
+ * 🛑 Scoped to the listbox: the model picker below is a `<select>`, so its own `<option>`s answer
+ * `getAllByRole('option')` too — a query over the screen reads the last brain, not the last row.
+ */
+const rowsOf = (): Element[] => within(screen.getByRole('listbox')).getAllByRole('option')
+
+/** The row against the field, which is the one held: the list opens upward. */
+const nearest = (): Element | undefined => rowsOf().at(-1)
+
 describe('the assistant conversation', () => {
   it('sends what was typed, and clears the field', async () => {
     render(<AssistantConversation />)
@@ -317,8 +326,22 @@ describe('the assistant conversation', () => {
 
     await userEvent.type(screen.getByRole('textbox'), 'genere une')
 
-    expect(screen.getAllByRole('option')[0]).toHaveClass('bg-accent-soft')
-    expect(screen.getAllByRole('option')[1]).not.toHaveClass('bg-accent-soft')
+    expect(nearest()).toHaveClass('bg-accent-soft')
+    expect(rowsOf()[0]).not.toHaveClass('bg-accent-soft')
+  })
+
+  /**
+   * The list grows upward, so the best match — the one the tail spells out — is the row AGAINST
+   * the field. Held at the top it would be the row furthest from the caret, and the first one
+   * `max-h-40` pushes out of sight.
+   */
+  it('holds the row nearest the field, and spells that one ahead of the caret', async () => {
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'genere une im')
+
+    expect(nearest()).toHaveTextContent('Génère une image')
+    expect(completing()).toContain('Génère une image')
   })
 
   // The list said what the caret was doing: leaving the field opened one under the hand that left.
@@ -635,16 +658,13 @@ describe('walking the suggestions', () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
-    await userEvent.type(field, 'une{ArrowDown}')
-    expect(field.getAttribute('aria-activedescendant')) //
-      .not.toBe(screen.getAllByRole('option')[0]?.getAttribute('id'))
+    await userEvent.type(field, 'une{ArrowUp}')
+    expect(field.getAttribute('aria-activedescendant')).not.toBe(nearest()?.getAttribute('id'))
 
     // A space keeps every match — `searchWords` drops it — so only the RANK can have changed.
     await userEvent.type(field, ' ')
 
-    expect(field.getAttribute('aria-activedescendant')).toBe(
-      screen.getAllByRole('option')[0]?.getAttribute('id'),
-    )
+    expect(field.getAttribute('aria-activedescendant')).toBe(nearest()?.getAttribute('id'))
   })
 
   /**
@@ -657,22 +677,19 @@ describe('walking the suggestions', () => {
 
     await userEvent.type(field, 'genere{Shift>}{Enter}{/Shift}une image{ArrowUp}')
 
-    // The caret has a line above it to reach, so the rank stands where it was rather than wrapping.
-    expect(field.getAttribute('aria-activedescendant')).toBe(
-      screen.getAllByRole('option')[0]?.getAttribute('id'),
-    )
+    // The caret has a line above it to reach, so the rank stands where it was rather than walking.
+    expect(field.getAttribute('aria-activedescendant')).toBe(nearest()?.getAttribute('id'))
   })
 
-  it('keeps the caret in the field while the arrows walk', async () => {
+  // Up is INTO the list, which is above: the keys mean what the eye sees.
+  it('walks up into the list, and keeps the caret in the field', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
-    await userEvent.type(field, 'genere{ArrowDown}')
+    await userEvent.type(field, 'genere{ArrowUp}')
 
     expect(field).toHaveFocus()
-    expect(field.getAttribute('aria-activedescendant')).toBe(
-      screen.getAllByRole('option')[1]?.getAttribute('id'),
-    )
+    expect(field.getAttribute('aria-activedescendant')).toBe(rowsOf().at(-2)?.getAttribute('id'))
   })
 })
 
