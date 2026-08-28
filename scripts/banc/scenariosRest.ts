@@ -57,7 +57,8 @@ export const REST_SCENARIOS: readonly Scenario[] = [
       })
     },
     passed: run =>
-      read.titled(run, 'Scène Finale') === undefined && !read.holds(run, 'Modelling/Scenes/Scène 1.gltf'),
+      read.titled(run, 'Scène Finale') === undefined &&
+      !read.holds(run, 'Modelling/Scenes/Scène 1.gltf'),
   },
   {
     name: '41.5 exports the open scene into the documents folder',

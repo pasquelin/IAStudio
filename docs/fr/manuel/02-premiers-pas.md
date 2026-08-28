@@ -131,8 +131,13 @@ Ce qu’il installe dedans :
 
 ```
 Mon premier projet/        ← le dossier que VOUS avez choisi
-├── assets/           tout ce que vous fabriquez et importez
-├── documents/        vos travaux en cours
+├── Images/           un dossier par section du studio : ce que vous y créez
+├── Video/              et ce que vous y générez y atterrit ensemble
+├── Audio/
+├── Materials/
+├── Skyboxes/
+├── Scripts/
+├── Modelling/        scènes, modèles et animations, dans trois sous-dossiers
 ├── .project.json     la carte d'identité du projet — caché
 └── .index/           le catalogue et ses caches — à garder, caché
 ```

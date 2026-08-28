@@ -10,8 +10,12 @@ export const WHEN = '2026-01-01T00:00:00.000Z'
  * the prompt that made them. A bench built on tidy names passes on what the studio gets wrong,
  * and a tree spelt out by hand drifts from the one `create` lays down — it had, twice.
  */
-export const PROJECT: readonly { path: string; kind: FileKind }[] = [
-  ...STARTER_FOLDERS.map(path => ({ path, kind: 'folder' as const })),
+type Seeded = { path: string; kind: FileKind }
+
+const seededFolder = (path: string): Seeded => ({ path, kind: 'folder' })
+
+export const PROJECT: readonly Seeded[] = [
+  ...STARTER_FOLDERS.map(seededFolder),
   { path: 'Images/a beautiful sailing ship, sailboat, on the open sea, green.png', kind: 'file' },
   { path: 'Images/a beautiful sailing ship, sailboat, on the open sea.png', kind: 'file' },
   { path: 'Images/fais moi un chateau.png', kind: 'file' },

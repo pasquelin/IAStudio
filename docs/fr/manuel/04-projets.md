@@ -87,14 +87,19 @@ laisse tout exactement où c’était.
 ```
 Mon projet/
 │
-├── Images/               SEPT DOSSIERS POUR COMMENCER
+├── Images/               UN DOSSIER PAR SECTION DU STUDIO
 ├── Video/                  posés à la création, et ordinaires : renommez-les,
-├── Audio/                  videz-les, jetez-les, rangez-les autrement
-├── 3D/
-├── Sky/
-├── Animations/
+├── Audio/                  déplacez-les, videz-les, rangez-les autrement
 ├── Materials/            vos matières, et les images qui les servent
+├── Skyboxes/
+├── Scripts/
+├── Modelling/            la section Modélisation range trois choses
+│   ├── Scenes/             vos scènes
+│   ├── Models/             vos maillages
+│   └── Animations/         vos mouvements
 │                           …et tout ce que vous créez à côté
+│
+│   Chacun porte un .ia-studio-role — CACHÉ — qui dit à quelle section il sert
 │
 ├── .project.json         la carte d'identité — CACHÉ
 │
@@ -117,19 +122,39 @@ règle. Vos fichiers restent visibles et vous les rangez comme vous l’entendez
 les regarder, les copier, les réparer. La carte d’identité, l’index et la sauvegarde, non : ce sont
 les outils du studio, pas votre travail.
 
-> **Les sept dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
-> jamais remis : si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a
-> besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
+> **Ces dossiers ne sont qu’un point de départ.** Ils sont posés à la création et jamais remis :
+> si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a besoin d’un
+> endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
+
+> **Renommez-les, déplacez-les : ils continuent de servir leur section.** Ce qui lie un dossier à
+> une section n’est pas son nom mais un petit fichier caché qu’il porte, `.ia-studio-role`. Il
+> voyage avec le dossier — un renommage dans le Finder ou l’Explorateur de Windows, un
+> déplacement, une copie, un zip. Renommez `Modelling/` en « Mes modèles » et le prochain maillage
+> y atterrit quand même.
+>
+> Dans l’explorateur du studio, un dossier qui sert une section porte l’icône de cette section, et
+> **son nom reste celui du disque** — ce que vous lisez dans le studio est ce que vous lisez dans
+> le Finder. C’est l’icône et l’infobulle qui disent la section, dans votre langue ; le dossier,
+> lui, ne change jamais de nom parce que vous changez de langue.
+>
+> Un dossier neuf portant le nom d’origine — vous avez renommé `Images/`, puis créé un `Images/` à
+> la main — est un dossier ordinaire : c’est le marqueur qui décide, pas le mot.
+
+> **Les noms sur le disque sont en anglais, et c’est délibéré.** Un dossier qui suivrait la langue
+> de l’interface serait renommé à chaque changement de langue, et tout ce que le catalogue sait de
+> ce qu’il contient pointerait à côté. Le studio traduit ce que le dossier SERT, jamais son nom.
 
 > **`Materials/` est le seul qui ne corresponde pas à un type de fichier.** Il tient vos
 > **matières** — les documents `.mtlx` — et les **images qui en servent une** : une couleur de
 > base, un relief, une rugosité y atterrissent, quand une photo va dans `Images/`. Ce qui les
 > sépare n'est pas leur nature, les deux sont des images, mais **le canal** que la seconde porte.
 
-> **Un projet créé avant le 26/08 a un `Textures/` de plus**, et il le garde : chaque asset porte
-> son propre chemin, rien ne lit son rôle dans le nom du dossier. Ce qui y est reste lisible et
-> modifiable ; le dossier se renomme, se vide ou se fusionne à la main, comme n'importe quel
-> autre.
+> **Un projet créé avant cette arborescence garde la sienne, à l’identique.** `3D/`, `Sky/`,
+> `documents/`, `scripts/`, `Textures/` : rien n’est déplacé, rien n’est renommé, et tout ce qui
+> s’y trouve reste lisible et modifiable. Chaque fichier porte son propre chemin, et rien ne lit
+> son rôle dans le nom du dossier qui le tient. Seuls les fichiers CRÉÉS à partir de maintenant
+> atterrissent dans la nouvelle arborescence, qui apparaît à côté de l’ancienne. Vous pouvez tout
+> ranger à la main, à votre rythme, ou ne rien ranger du tout.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
 > Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.ia-studio/` ne le reçoit
@@ -351,8 +376,9 @@ suivre. Le chemin complet est écrit au-dessus des colonnes. On ne sort jamais d
 d’autre n’est proposé.
 
 Les colonnes s’ouvrent sur le dossier que l’Explorateur montre, ou, si rien n’y est sélectionné,
-sur `Materials/` pour une matière et sur `documents/` pour tout le reste. En dessous, **Nouveau dossier** en crée un dans le dossier choisi, sans quitter
-la fenêtre.
+sur le dossier de la section — `Modelling/Scenes/` pour une scène, `Images/` pour une image,
+`Materials/` pour une matière. En dessous, **Nouveau dossier** en crée un dans le dossier choisi,
+sans quitter la fenêtre.
 
 Il est enregistré avec `⌘S` / `Ctrl+S` — dans le dossier que vous avez choisi en le créant, et
 ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il est :
