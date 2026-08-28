@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Memory } from './assistantMemory'
-import { neighboursOf } from './memoryGraph'
+import { memoryEdgesOf, neighboursOf } from './memoryGraph'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
   id: 'm_root',
@@ -80,5 +80,50 @@ describe('what a memory sits among', () => {
     })
 
     expect(neighboursOf(root, []).map(one => one.tie)).toEqual(['about', 'links', 'replaces'])
+  })
+})
+
+describe('what ties the memories of a whole project', () => {
+  it('ties two memories that are about the same reference', () => {
+    const one = memory({ id: 'm_one', refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
+    const two = memory({ id: 'm_two', refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
+
+    expect(memoryEdgesOf([one, two])).toEqual([{ from: 'm_one', to: 'm_two', kind: 'about' }])
+  })
+
+  /** 🛑 A chain, not every pair: five memories on one file are four lines rather than ten. */
+  it('chains a crowd on one reference rather than joining every pair', () => {
+    const held = ['a', 'b', 'c', 'd', 'e'].map(id =>
+      memory({ id, refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] }),
+    )
+
+    expect(memoryEdgesOf(held)).toHaveLength(4)
+  })
+
+  it('says nothing about a reference only one memory names', () => {
+    expect(memoryEdgesOf([memory({ refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })])).toEqual([])
+  })
+
+  it('ties what one links to and what it replaced', () => {
+    const root = memory({ id: 'm_root', links: ['m_two'], supersedes: 'm_old' })
+    const kinds = memoryEdgesOf([root, memory({ id: 'm_two' }), memory({ id: 'm_old' })])
+
+    expect(kinds.map(one => one.kind).sort((a, b) => a.localeCompare(b, 'en'))).toEqual([
+      'link',
+      'replaces',
+    ])
+  })
+
+  /** A link may outlive its target: a tie to a memory nobody holds would place a ghost. */
+  it('drops a tie whose other end is not among the memories drawn', () => {
+    expect(memoryEdgesOf([memory({ links: ['m_gone'] })])).toEqual([])
+  })
+
+  // Two memories tied both ways round is ONE line, or the graph draws it twice on itself.
+  it('draws a pair tied twice as one line', () => {
+    const one = memory({ id: 'm_one', links: ['m_two'] })
+    const two = memory({ id: 'm_two', links: ['m_one'] })
+
+    expect(memoryEdgesOf([one, two])).toHaveLength(1)
   })
 })
