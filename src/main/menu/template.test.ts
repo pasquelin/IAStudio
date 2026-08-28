@@ -13,6 +13,7 @@ import {
 import { CAPTURE_QUALITIES } from '@shared/domain/sceneCapture'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import type { DocumentKind } from '@shared/domain/document'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
@@ -36,6 +37,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
 const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
+  kind: 'scene',
   tools: ['meshes', 'lights', 'explorer', 'generator', 'inspector', 'assets'],
   checked: [],
   abilities: [],
@@ -983,5 +985,26 @@ describe('the keys the menu leaves to a field', () => {
 
   it('keeps the chords a field would never write', () => {
     expect(macRows.find(row => row.id === 'scene.group')?.accelerator).toBe('CmdOrCtrl+G')
+  })
+})
+
+/**
+ * The 3D space opens a scene AND the interfaces shown over it. What the Edit menu offers has to
+ * follow the tab in front: Group, Carve or Weld over an interface act on a scene nobody is
+ * looking at, and Undo has to pop the history the tab actually holds.
+ */
+describe('the edit menu of a space that opens two kinds', () => {
+  const editRows = (kind: DocumentKind): string =>
+    labels(submenuOf(menuTemplate(options({ workspace: '3d', kind })), 'Édition')).join(' ')
+
+  it('offers what acts on a scene over a scene, and none of it over an interface', () => {
+    expect(editRows('scene')).toContain('Grouper')
+    expect(editRows('gui')).not.toContain('Grouper')
+  })
+
+  /** Both keep an Undo — what changes is WHOSE history it pops, which the scope decides. */
+  it('keeps an undo over either kind', () => {
+    expect(editRows('scene')).toContain('Annuler')
+    expect(editRows('gui')).toContain('Annuler')
   })
 })

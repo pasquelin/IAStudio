@@ -119,7 +119,8 @@
       "audio": "Audio",
       "skybox": "Ciel",
       "material": "Matière",
-      "script": "Script"
+      "script": "Script",
+      "gui": "Interface"
     },
     "new": "Nouveau document",
     "newByKind": {
@@ -129,9 +130,15 @@
       "audio": "Nouvel audio",
       "skybox": "Nouveau ciel",
       "material": "Nouvelle matière",
-      "script": "Nouveau script"
+      "script": "Nouveau script",
+      "gui": "Nouvelle interface"
     },
     "missing": "Ce document n’est plus ouvert.",
+    "saveRefusedGuiTooNew": "Cette interface vient d’un fichier écrit par une version plus récente du studio. L’enregistrer effacerait ce que cette version ne sait pas lire — mettez le studio à jour, ou repartez d’une interface neuve.",
+    "saveRefusedGuiUnreadable": "Cette interface n’a pas pu être lue : le fichier est incomplet ou abîmé. L’enregistrer écrirait un écran vide par-dessus — réparez le fichier, ou repartez d’une interface neuve.",
+    "guiTooNew": "Cette interface a été écrite par une version plus récente du studio. Elle s’ouvre vide et l’enregistrement est refusé.",
+    "guiUnreadable": "Cette interface n’a pas pu être lue. Elle s’ouvre vide et l’enregistrement est refusé, pour ne pas écraser le fichier.",
+    "guiEmpty": "Cette interface est vide. Le prochain lot y pose les composants.",
     "saveRefusedIncomplete": "Ce montage s’est ouvert sans les clips dont le média manque. Enregistrer les effacerait du fichier — importez les médias dans le projet, puis rouvrez le montage.",
     "saveRefusedMontageHoldsMore": "Ce montage vient d’un fichier OpenTimelineIO qui contient plus que ce que le studio compose — un marqueur, un effet, une transition. Le montage est réécrit en entier, donc enregistrer effacerait ces parties. Passez par l’export du montage, dans le menu Fichier, ou repartez d’un montage neuf.",
     "montageHoldsMore": "Ce montage contient des parties que le studio ne sait pas réécrire — {{parts}}. Il s’ouvre en lecture seule, et l’enregistrement est refusé tant qu’elles sont là.",

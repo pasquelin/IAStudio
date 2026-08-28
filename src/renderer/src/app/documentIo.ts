@@ -75,9 +75,17 @@ import {
   materialFromPayload,
   materialPayload,
 } from './materialDocument'
+import {
+  createDefaultGui,
+  forgetTroubledGui,
+  guiFromPayload,
+  guiPayload,
+  guiRefusesToSave,
+} from './guiDocument'
 import { useMonitorPair } from '@/stores/monitorPair'
 import { useSkyboxViews } from '@/stores/skyboxViews'
 import { useMaterialViews } from '@/stores/materialViews'
+import { guiStore } from '@/stores/gui'
 import { materialStore } from '@/stores/materials'
 import { createSkyboxContent } from '@shared/domain/skybox'
 
@@ -671,6 +679,23 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
       materialStore.use.getState().drop(id)
       // Dropped with the document, so a reopened id never inherits the paths another file carried.
       forgetCarriedMaterial(id)
+    },
+  },
+  gui: {
+    ...textDocumentIo(guiStore, {
+      toPayload: guiPayload,
+      fromPayload: guiFromPayload,
+      createDefault: createDefaultGui,
+      // Indented: a `.ui.json` is meant to be read by eye and diffed in a commit, which is the
+      // whole reason the format is a nested tree rather than a flat list.
+      serialize: payload => `${JSON.stringify(payload, null, 2)}\n`,
+    }),
+    // A file this build could not read is refused rather than written back blank — the two
+    // troubles say different things, and `guiRefusesToSave` carries which.
+    incomplete: guiRefusesToSave,
+    forget: ({ id }) => {
+      guiStore.use.getState().drop(id)
+      forgetTroubledGui(id)
     },
   },
 }

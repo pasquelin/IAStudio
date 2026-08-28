@@ -16,6 +16,7 @@ import {
   type DocumentFile,
   type DocumentKind,
   type DocumentWrite,
+  documentExtensionOf,
 } from '@shared/domain/document'
 import {
   checkDocumentName,
@@ -24,7 +25,7 @@ import {
   type NamedDocument,
 } from '@shared/domain/documentName'
 import type { FolderRole } from '@shared/domain/folderRole'
-import { extensionOf, foldForFileName } from '@shared/domain/fileName'
+import { foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
 import { bodyFormatOf, type DocumentHead } from './documentBody'
@@ -134,7 +135,7 @@ function claimsDocument(path: string): boolean {
   // `extensionOf` and not `extname`: the studio has one spelling of "what is this file's
   // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
   // Over the NAME, since it reads back to the last dot and a folder may hold one.
-  const extension = extensionOf(basename(path))
+  const extension = documentExtensionOf(basename(path))
   // A Set rather than `kindsForExtension`, which allocates: this runs once per file of the
   // project, and a hundred thousand of them is a hundred thousand arrays thrown away.
   return extension === '' || isDocumentExtension(extension)
@@ -180,7 +181,7 @@ export async function pooledHeads<T>(
  * reason: timing a copy of it would time something else.
  */
 export async function headOf(file: string): Promise<DocumentHead> {
-  return await bodyFormatOf(extensionOf(basename(file))).readHead(file)
+  return await bodyFormatOf(documentExtensionOf(basename(file))).readHead(file)
 }
 
 /**
@@ -340,7 +341,7 @@ export function createDocumentFiles({
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      const body = bodyFormatOf(extensionOf(basename(file))).write(document)
+      const body = bodyFormatOf(documentExtensionOf(basename(file))).write(document)
       await writeAtomic(file, body, { staging: copy })
       heads.forget(file)
     } finally {
@@ -367,7 +368,7 @@ export function createDocumentFiles({
    */
   const foundAt = async (path: string): Promise<FoundDocument | null> => {
     const entry = basename(path)
-    const extension = extensionOf(entry)
+    const extension = documentExtensionOf(entry)
     const claimed = kindsForExtension(extension)
     // An entry with no extension at all claims nothing, so there is nothing for the envelope to
     // contradict — and one that lost its extension is a document the studio would otherwise stop
@@ -570,7 +571,7 @@ export function createDocumentFiles({
   ): Promise<DocumentFile | null> => {
     let document: DocumentFile
     try {
-      document = bodyFormatOf(extensionOf(basename(file))).read(await readFile(file))
+      document = bodyFormatOf(documentExtensionOf(basename(file))).read(await readFile(file))
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -704,7 +705,7 @@ export function createDocumentFiles({
         // every other rename, `descriptorOf` refusing a file whose head its name denies, and
         // there the envelope-then-move order stands: a crash leaves the right title under the
         // old name, which renaming again repairs.
-        if (extensionOf(basename(from)) !== extensionOf(entry)) {
+        if (documentExtensionOf(basename(from)) !== documentExtensionOf(entry)) {
           await store(to, renamed)
           await rm(from, { force: true })
         } else {

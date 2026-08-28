@@ -14,6 +14,7 @@ import {
   platformDefaults,
   scopeOfWorkspace,
 } from './command'
+import { HOME_SURFACE } from './tool'
 import { WORKSPACE_IDS } from './workspace'
 
 function resolve(bundle: unknown, key: string): unknown {
@@ -231,5 +232,31 @@ describe('what a system other than macOS ships', () => {
   /** Two commands of one scope sharing a key is a clash wherever it happens. */
   it('clashes with nothing it ships alongside', () => {
     expect(conflicts(platformDefaults(false))).toEqual([])
+  })
+})
+
+/**
+ * One space now opens two kinds, so ⌘Z has to follow the DOCUMENT. What the native menu offers
+ * is built from this answer alone, in the main process, from a surface and a kind.
+ */
+describe('the scope a document edits through', () => {
+  it('answers the kind before the space, where the two disagree', () => {
+    expect(scopeOfWorkspace('3d', 'scene')).toBe('scene')
+    expect(scopeOfWorkspace('3d', 'gui')).toBe('gui')
+  })
+
+  it('answers the space where the kind names no scope of its own', () => {
+    expect(scopeOfWorkspace('image', 'image')).toBe('canvas')
+    expect(scopeOfWorkspace('3d', null)).toBe('scene')
+  })
+
+  /**
+   * 🛑 The home edits nothing, and `activeId` is NOT cleared on the way there — so the last
+   * interface opened would otherwise arm ⌘Z over a screen holding no editor at all, and the
+   * Edit menu would show an enabled Undo doing nothing.
+   */
+  it('answers nothing over the home, whatever tab was left active behind it', () => {
+    expect(scopeOfWorkspace(HOME_SURFACE, 'gui')).toBeNull()
+    expect(scopeOfWorkspace(null, 'gui')).toBeNull()
   })
 })

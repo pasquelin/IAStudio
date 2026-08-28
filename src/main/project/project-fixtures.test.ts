@@ -31,7 +31,22 @@ const bodyOf = (kind: DocumentKind): string =>
       ? // An image IS its OpenRaster container, so its content is the stack that container
         // holds — anything else is refused at the write, like a montage that is not a timeline.
         JSON.stringify({ width: 64, height: 32, nodes: [], studio: '{"layers":[]}' })
-      : `{"of":"${kind}"}`
+      : kind === 'gui'
+        ? // Same family: an interface IS its JSON, and a body that is not one is refused. The
+          // stamp is written here too, so what comes back equals what went in.
+          JSON.stringify(
+            {
+              iastudio: { documentId: `doc-${kind}`, documentKind: kind },
+              version: 1,
+              mode: 'screen',
+              design: { width: 1920, height: 1080 },
+              root: { type: 'screen', id: 'root', children: [] },
+              bindings: [],
+            },
+            null,
+            2,
+          )
+        : `{"of":"${kind}"}`
 
 /** The surfaces beside it: the flatten the spec demands, and nothing else for an empty stack. */
 const PIXELS = Uint8Array.from(

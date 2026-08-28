@@ -1995,6 +1995,12 @@ export type StudioBridge = {
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
       abilities: readonly MenuAbility[],
+      /**
+       * What the tab in front IS, `null` where none is. Carried beside the surface because one
+       * space now opens two kinds: the Undo row of a 3D space showing an interface must pop the
+       * interface's history, not the scene's.
+       */
+      kind: DocumentKind | null,
     ) => Promise<void>
   }
   /**

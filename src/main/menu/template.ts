@@ -27,6 +27,7 @@ import {
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
+import type { DocumentKind } from '@shared/domain/document'
 import { acceleratorOf, typesText } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
@@ -82,6 +83,8 @@ export type MenuOptions = {
    * drops, which is the whole point of naming the surface rather than the workspace.
    */
   workspace: ToolSurface | null
+  /** The kind of the tab in front, which is what says whose history Undo pops. */
+  kind: DocumentKind | null
   /**
    * The panels the focused window can currently open, as it reported them. Not derived from the
    * registry here: whether the generator exists depends on a model being chosen, which only the
@@ -150,6 +153,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const {
     language,
     workspace,
+    kind,
     tools,
     checked,
     abilities,
@@ -422,7 +426,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     { role: 'undo', label: t.commands.undo.title },
     { role: 'redo', label: t.commands.redo.title },
   ]
-  const surface = scopeOfWorkspace(workspace)
+  const surface = scopeOfWorkspace(workspace, kind)
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
 
@@ -435,8 +439,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * act on the scene even with the caret in a field: the menu path carries no `isTyping` guard,
    * unlike the keyboard one, which is what makes a key safe here where a row would not be.
    */
+  // The KIND and not the space alone: the 3D space also opens interfaces, and Group, Carve or
+  // Weld over one are rows acting on a scene nobody is looking at.
   const sceneEditItems: MenuItemConstructorOptions[] =
-    workspace === '3d'
+    workspace === '3d' && kind !== 'gui'
       ? [
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),

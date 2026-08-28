@@ -21,7 +21,8 @@
     "section": "Dossier de la section {{label}}",
     "scenes": "Scènes de la section {{label}}",
     "models": "Modèles de la section {{label}}",
-    "animations": "Animations de la section {{label}}"
+    "animations": "Animations de la section {{label}}",
+    "gui": "Interfaces du jeu"
   },
   "panels": {
     "assistant": "Assistant",

@@ -112,13 +112,16 @@ function publishMenuContext(): void {
   const canvas = canvasAbilities()
   const abilities = [...scene.abilities, ...canvas]
 
-  const signature = JSON.stringify([surface, tools, scene.checked, abilities])
+  const front = useDocuments.getState()
+  const kind = (front.activeId ? front.documents[front.activeId] : undefined)?.kind ?? null
+
+  const signature = JSON.stringify([surface, tools, scene.checked, abilities, kind])
   if (signature === published) return
   published = signature
   publishedScene = sceneSignature(scene)
   publishedCanvas = canvas.join('|')
 
-  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities)
+  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities, kind)
 }
 
 /** The listener of the two image stores — a layer drag writes one on every pointer move. */

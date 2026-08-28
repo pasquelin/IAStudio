@@ -33,6 +33,8 @@ const TARGETS_BY_KIND: Record<DocumentKind, DocumentTargets | null> = {
   // A `Target` names a thing of a document — a layer, a node, a clip — and a text has none. A
   // line of a script is reached by `openScriptAt` instead.
   script: null,
+  // Nothing aimable YET: elements become targets with the editor, in the lot that draws them.
+  gui: null,
 }
 
 /**
