@@ -101,9 +101,9 @@ export type DocumentFilesDeps = {
    * than walked again here.
    *
    * That walk already carries what a listing needs and what a second one would have to be kept
-   * in step with: the depth bound, the refusal to descend into a document written as a folder,
-   * and the exclusion of everything under a dot. What is left for this file is which of those
-   * entries is a document, which is the only part it knows about.
+   * in step with — its depth bound and its refusals, `FolderReader.walk` being where they are
+   * written. What is left for this file is which of those entries is a document, which is the
+   * only part it knows about.
    */
   walkFiles: () => Promise<readonly FolderEntry[]>
   /**
@@ -417,10 +417,10 @@ export function createDocumentFiles({
   /**
    * The PROJECT, read once: every document it holds, wherever the user put it.
    *
-   * One walk, then the heads. The walk is the folder reader's — depth bound, no descent into a
-   * document written as a folder, nothing under a dot — and what it answers is filtered by
-   * extension BEFORE a single file is opened, which is what makes reading a whole project cost
-   * one open per document rather than one per file.
+   * One walk, then the heads. The walk is the folder reader's, with its own depth bound and its
+   * own refusals, and what it answers is filtered by extension BEFORE a single file is opened —
+   * which is what makes reading a whole project cost one open per document rather than one per
+   * file.
    *
    * Two files can claim the same id — a document duplicated in the Finder carries the id of the
    * one it was copied from. The first in path order keeps it and the second is called after its
