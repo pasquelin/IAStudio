@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { useToolSurface } from '@/stores/layouts'
-import { DEFAULT_SIZES, sizeKeyOf, useTools } from '@/stores/tools'
+import { defaultSizeOf, sizeKeyOf, useTools } from '@/stores/tools'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { isHorizontal, isLeading, type ToolZone } from '@shared/domain/tool'
 import { useShownTools } from '@/hooks/useShownTools'
@@ -25,13 +25,17 @@ export function ShellEdge({ zone }: { zone: ToolZone }) {
     [surface, zone],
   )
 
-  const size = useTools(state => state.lengths.sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone])
+  const stored = useTools(state => state.lengths.sizes[sizeKeyOf(zone)])
   // Undefined until dragged, and that IS the default: neither half is given a length, so the
   // two divide the zone evenly — and keep dividing it when the window changes.
   const split = useTools(state => state.lengths.splits[zone])
 
   const { primary, secondary } = useShownTools(zone)
   if (!primary && !secondary) return null
+
+  // The tool's own width until the reader drags one, and the drag then serves the whole zone:
+  // a length somebody chose is an answer about the COLUMN, not about the panel that was in it.
+  const size = stored ?? defaultSizeOf(zone, primary)
 
   // Actions are stable for the store's lifetime: subscribing to them would only add
   // selectors re-run on every write.

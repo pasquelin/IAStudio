@@ -16,6 +16,7 @@ import {
   DEFAULT_LENGTHS,
   DEFAULT_OPEN,
   DEFAULT_SIZES,
+  defaultSizeOf,
   migrateTools,
   fitZoneSize,
   fitSplit,
@@ -303,6 +304,35 @@ describe('tools store', () => {
     })
     useTools.getState().resplit('right', 900, 400)
     expect(useTools.getState().lengths.splits.right).toBe(400 - MIN_SPLIT)
+  })
+})
+
+/**
+ * A conversation at 260 wraps every sentence onto three lines, and the layer stack at 460 is
+ * mostly gutter — so the width belongs to the TOOL, until somebody drags one.
+ */
+describe('a tool that opens its zone wider than the zone would', () => {
+  it('opens at its own width, where its neighbours keep the zone width', () => {
+    expect(defaultSizeOf('right', 'assistant')).toBe(460)
+    expect(defaultSizeOf('right', 'layers')).toBe(DEFAULT_SIZES.right)
+    expect(defaultSizeOf('right', null)).toBe(DEFAULT_SIZES.right)
+  })
+
+  /**
+   * 🛑 The clamp reads the same number, or the opposite column may be dragged over room this one
+   * is already drawing in — and the centre goes under its floor with nothing on screen saying so.
+   */
+  it('is the room the opposite column is bounded against', () => {
+    useTools.setState({
+      arrangements: arrangedFor('home', {
+        open: { left: { primary: 'projects' }, right: { primary: 'assistant' } },
+      }),
+      lengths: { sizes: {}, splits: {} },
+    })
+
+    useTools.getState().resize('left', 900, 1400)
+
+    expect(useTools.getState().lengths.sizes.left).toBe(1400 - 460 - MIN_CENTER)
   })
 })
 

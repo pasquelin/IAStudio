@@ -111,6 +111,31 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
 }
 
 /**
+ * What a TOOL opens its zone at, where the zone's own width does not suit it.
+ *
+ * The assistant alone today, and the two numbers say why one table was not enough: a conversation
+ * at 260 wraps every sentence onto three lines, and the layer stack at 460 is mostly gutter.
+ * Read only while nothing has been dragged — a width the reader chose wins over both.
+ */
+const TOOL_SIZES: Partial<Record<ToolId, number>> = { assistant: 460 }
+
+/** What a zone opens at, the tool it is showing first. */
+export function defaultSizeOf(zone: ToolZone, shown: ToolId | null): number {
+  return (shown === null ? undefined : TOOL_SIZES[shown]) ?? DEFAULT_SIZES[zone]
+}
+
+/**
+ * The room a zone takes when nothing has been dragged — the WIDEST any family has it open at.
+ *
+ * Read while clamping the opposite column: under-report it and the other side may be dragged over
+ * room this one is already drawing in, squeezing the centre past its floor.
+ */
+function undraggedSizeOf(zone: ToolZone, arrangements: Record<SurfaceFamily, Arrangement>): number {
+  const held = SURFACE_FAMILIES.map(family => arrangements[family].open[zone]?.primary ?? null)
+  return Math.max(DEFAULT_SIZES[zone], ...held.map(tool => defaultSizeOf(zone, tool)))
+}
+
+/**
  * The half that carries what the single `bottom` zone used to: the strip's height, stored once
  * because two halves lying at two heights would leave the frame above them in a step, and
  * whatever a layout written before the split still holds.
@@ -318,7 +343,7 @@ function sizeOf(
   arrangements: Record<SurfaceFamily, Arrangement>,
 ): number {
   return isOpenAnywhere(arrangements, zone)
-    ? (lengths.sizes[sizeKeyOf(zone)] ?? DEFAULT_SIZES[zone])
+    ? (lengths.sizes[sizeKeyOf(zone)] ?? undraggedSizeOf(zone, arrangements))
     : 0
 }
 
