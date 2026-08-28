@@ -56,6 +56,7 @@ export type ToolId =
   | 'git'
   | 'history'
   | 'scene'
+  | 'guiTree'
   | 'generator'
   | 'inspector'
   | 'assets'
@@ -201,6 +202,9 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
+  // The outliner of an interface, beside the scene's rather than folded into it: the 3D
+  // space opens two kinds now, and one panel answering for both would answer for neither.
+  { id: 'guiTree', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   // What a character can be made to play, on the right where the panels that steer a document

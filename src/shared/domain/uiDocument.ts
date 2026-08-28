@@ -28,6 +28,7 @@ import {
   UI_VERSION,
   holdsChildren,
   isUiElementType,
+  type UiElementType,
   isUiMode,
   type UiAnchor,
   type UiBinding,
@@ -122,6 +123,18 @@ export function emptyScreen(newId: () => string): UiScreen {
     interaction: DEFAULT_INTERACTION,
     children: [],
   }
+}
+
+/**
+ * A brand new element of a type, defaults everywhere.
+ *
+ * Through the same reader a file goes through rather than a second table of what an element is:
+ * a field added to the format would otherwise arrive on read and be missing on create.
+ */
+export function newUiElement(type: UiElementType, newId: () => string): UiElement {
+  // `element` answers null only for something that is not an element at all, which a bare type
+  // of the closed list never is. The screen is a fallback the compiler asks for, not a case.
+  return element({ type }, newId) ?? emptyScreen(newId)
 }
 
 /**

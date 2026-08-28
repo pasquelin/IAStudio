@@ -42,7 +42,8 @@
     "animations": "Animations",
     "text": "Texte",
     "context": "Contexte",
-    "problems": "Problèmes"
+    "problems": "Problèmes",
+    "guiTree": "Interface"
   },
   "view": {
     "projection": "Projection",

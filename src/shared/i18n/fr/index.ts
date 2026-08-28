@@ -18,6 +18,7 @@ import postfx from './postfx.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
+import ui from './ui.json'
 import usage from './usage.json'
 
 /**
@@ -50,6 +51,7 @@ export const fr = {
   ...settings,
   ...shell,
   ...material,
+  ...ui,
   ...usage,
 }
 

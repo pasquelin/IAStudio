@@ -35,6 +35,7 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   git: { load: () => import('@/panels/git'), role: 'actions' },
   history: { load: () => import('@/panels/history'), role: 'actions' },
   scene: { load: () => import('@/panels/scene'), role: null },
+  guiTree: { load: () => import('@/panels/guiTree'), role: null },
   generator: { load: () => import('@/panels/generator'), role: null },
   inspector: { load: () => import('@/panels/inspector'), role: 'actions' },
   assets: { load: () => import('@/panels/assets'), role: 'actions' },

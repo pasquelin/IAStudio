@@ -1,0 +1,76 @@
+{
+  "gui": {
+    "stage": "Page de l’interface",
+    "tools": "Outils de l’interface",
+    "tree": "Éléments de l’interface",
+    "noDocument": "Ouvrez une interface pour en voir les éléments.",
+    "visible": "Visible",
+    "locked": "Verrouillé — le pointeur ne l’attrape pas"
+  },
+  "guiTools": {
+    "add": "Ajouter",
+    "addHint": "Pose un élément dans ce qui est sélectionné",
+    "duplicate": "Dupliquer",
+    "duplicateHint": "Copie ce qui est sélectionné juste à côté",
+    "group": "Grouper",
+    "groupHint": "Range la sélection dans un panneau",
+    "delete": "Supprimer",
+    "deleteHint": "Retire ce qui est sélectionné de l’interface",
+    "lock": "Verrouiller",
+    "lockHint": "Met la sélection hors de portée du pointeur",
+    "zoomIn": "Zoom avant",
+    "zoomInHint": "Rapproche la page",
+    "zoomOut": "Zoom arrière",
+    "zoomOutHint": "Éloigne la page",
+    "fit": "Ajuster",
+    "fitHint": "Cadre la page entière dans le panneau",
+    "actual": "Taille réelle",
+    "actualHint": "Un pixel de la page pour un pixel de l’écran",
+    "resolution": "Résolution",
+    "resolutionHint": "La toile sur laquelle l’interface est composée",
+    "types": {
+      "panel": "Panneau",
+      "stack": "Pile",
+      "grid": "Grille",
+      "scroll": "Zone défilante",
+      "spacer": "Écart",
+      "text": "Texte",
+      "image": "Image",
+      "button": "Bouton",
+      "progress": "Jauge",
+      "slider": "Glissière",
+      "input": "Saisie",
+      "checkbox": "Case à cocher",
+      "screen": "Écran de l’interface"
+    },
+    "typeHints": {
+      "panel": "Un cadre qui en contient d’autres",
+      "stack": "Range ses enfants en ligne ou en colonne",
+      "grid": "Range ses enfants en colonnes régulières",
+      "scroll": "Un cadre dont le contenu défile",
+      "spacer": "Pousse ses voisins dans une pile",
+      "text": "Des mots à l’écran",
+      "image": "Une image du projet",
+      "button": "Ce qu’on actionne, avec ou sans icône",
+      "progress": "Une barre remplie d’une valeur",
+      "slider": "Une valeur qu’on fait glisser",
+      "input": "Du texte à saisir",
+      "checkbox": "Une case qu’on coche",
+      "screen": "La racine de l’interface"
+    },
+    "resolutions": {
+      "desktopHd": "1920 × 1080",
+      "desktop720": "1280 × 720",
+      "phonePortrait": "Téléphone, portrait",
+      "phoneLandscape": "Téléphone, paysage",
+      "free": "Libre"
+    },
+    "resolutionHints": {
+      "desktopHd": "Bureau, seize neuvièmes",
+      "desktop720": "Bureau, seize neuvièmes, moitié moins de pixels",
+      "phonePortrait": "390 × 844",
+      "phoneLandscape": "844 × 390",
+      "free": "La taille que le document porte déjà"
+    }
+  }
+}
