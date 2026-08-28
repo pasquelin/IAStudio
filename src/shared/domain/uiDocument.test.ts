@@ -25,12 +25,9 @@ import {
   type UiStack,
   type UiText,
   type UiFit,
-  type UiImage,
   type UiJustify,
   type UiMode,
   type UiScrollAxis,
-  type UiStack,
-  type UiText,
   type UiTextAlign,
 } from './ui'
 
