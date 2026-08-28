@@ -20,55 +20,7 @@
       "$ref": "#/$defs/UiSize"
     },
     "root": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "visible": {
-          "type": "boolean"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "locked": {
-          "type": "boolean"
-        },
-        "place": {
-          "$ref": "#/$defs/UiPlacement"
-        },
-        "style": {
-          "$ref": "#/$defs/UiStyle"
-        },
-        "interaction": {
-          "$ref": "#/$defs/UiInteraction"
-        },
-        "type": {
-          "type": "string",
-          "const": "screen"
-        },
-        "children": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/UiElement"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "visible",
-        "enabled",
-        "locked",
-        "place",
-        "style",
-        "interaction",
-        "type",
-        "children"
-      ]
+      "$ref": "#/$defs/__schema0"
     },
     "bindings": {
       "type": "array",
@@ -172,6 +124,57 @@
       "required": [
         "width",
         "height"
+      ]
+    },
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "place": {
+          "$ref": "#/$defs/UiPlacement"
+        },
+        "style": {
+          "$ref": "#/$defs/UiStyle"
+        },
+        "interaction": {
+          "$ref": "#/$defs/UiInteraction"
+        },
+        "type": {
+          "type": "string",
+          "const": "screen"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UiElement"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "visible",
+        "enabled",
+        "locked",
+        "place",
+        "style",
+        "interaction",
+        "type",
+        "children"
       ]
     },
     "UiPlacement": {
@@ -525,55 +528,7 @@
     "UiElement": {
       "oneOf": [
         {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string"
-            },
-            "visible": {
-              "type": "boolean"
-            },
-            "enabled": {
-              "type": "boolean"
-            },
-            "locked": {
-              "type": "boolean"
-            },
-            "place": {
-              "$ref": "#/$defs/UiPlacement"
-            },
-            "style": {
-              "$ref": "#/$defs/UiStyle"
-            },
-            "interaction": {
-              "$ref": "#/$defs/UiInteraction"
-            },
-            "type": {
-              "type": "string",
-              "const": "screen"
-            },
-            "children": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/UiElement"
-              }
-            }
-          },
-          "required": [
-            "id",
-            "name",
-            "visible",
-            "enabled",
-            "locked",
-            "place",
-            "style",
-            "interaction",
-            "type",
-            "children"
-          ]
+          "$ref": "#/$defs/__schema0"
         },
         {
           "type": "object",

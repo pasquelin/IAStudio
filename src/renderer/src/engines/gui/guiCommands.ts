@@ -1,12 +1,5 @@
-import {
-  DEFAULT_INTERACTION,
-  DEFAULT_PLACEMENT,
-  DEFAULT_STYLE,
-  holdsChildren,
-  type UiElement,
-  type UiScreen,
-  type UiSize,
-} from '@shared/domain/ui'
+import { holdsChildren, type UiElement, type UiScreen, type UiSize } from '@shared/domain/ui'
+import { newUiElement } from '@shared/domain/uiDocument'
 import {
   childrenOf,
   contains,
@@ -19,16 +12,16 @@ import {
   withoutElement,
 } from '@game/ui/uiTree'
 import { applySelection, type SelectionMode } from '@/helpers/selection'
-import type { Command } from '../core/history'
+import { commandId, composed, type Command } from '../core/history'
 import type { GuiState } from './guiState'
 
 /**
- * What editing an interface does to it. Every one of them is a `Command<GuiState>`, so the
- * window, a shortcut and the MCP all reach the document through the same door and one ⌘Z takes
- * any of them back.
+ * What editing an interface does to it. Every one is a `Command<GuiState>`, so the window, a
+ * shortcut and the MCP reach the document through one door and one ⌘Z takes any of them back.
  *
- * A command captures what it needs to revert AS IT IS APPLIED — redo replays it, and a closure
- * holding what the tree looked like when the command was built would restore a stale one.
+ * 🛑 What a command needs to REVERT is captured as it is applied — redo replays it — but what it
+ * needs to IDENTIFY is frozen when it is built: an id minted inside `apply` would differ between
+ * the first run and the redo, and any later command naming it would go inert.
  */
 export function addUiElement(
   parentId: string,
@@ -36,18 +29,13 @@ export function addUiElement(
   index?: number,
 ): Command<GuiState> {
   return {
-    id: `ui.add:${element.id}`,
+    id: commandId('ui.add', [element.id]),
     apply: state => ({
       ...withRoot(state, withElement(state.document.root, parentId, element, index)),
       selectedIds: [element.id],
     }),
     revert: state => withRoot(state, withoutElement(state.document.root, element.id)),
-    // The root is the screen: an element hung off nothing would leave the document holding it
-    // nowhere, and nothing on screen would say where it went.
-    refuses: state => {
-      const parent = elementById(state.document.root, parentId)
-      return !parent || !holdsChildren(parent.type)
-    },
+    refuses: state => !canHoldUi(state.document.root, element.id, parentId),
   }
 }
 
@@ -56,7 +44,7 @@ export function removeUiElements(ids: readonly string[]): Command<GuiState> {
   let taken: { element: UiElement; parentId: string; index: number }[] = []
 
   return {
-    id: `ui.remove:${ids.join(',')}`,
+    id: commandId('ui.remove', ids),
     apply: state => {
       taken = []
       let root = state.document.root
@@ -79,13 +67,34 @@ export function removeUiElements(ids: readonly string[]): Command<GuiState> {
       }
       return withRoot(state, root)
     },
-    // The screen is the document: removing it would leave a file nothing can open.
-    refuses: state => ids.every(id => id === state.document.root.id || !holds(state, id)),
+    refuses: refusesEvery(ids),
   }
 }
 
 /**
- * Elements hung from another, at a place in it. One entry for the whole batch — six rows filed
+ * One element hung from another, at a place in it — capturing where it CAME FROM rather than
+ * photographing the tree, which is what lets two of these coalesce into one drag later on.
+ */
+export function reparentUiElement(id: string, parentId: string, index?: number): Command<GuiState> {
+  let from: { parentId: string; index: number } | null = null
+
+  return {
+    id: commandId('ui.reparent', [id]),
+    apply: state => {
+      const parent = parentOf(state.document.root, id)
+      from = parent ? { parentId: parent.id, index: indexIn(parent, id) } : null
+      return withRoot(state, reparented(state.document.root, id, parentId, index))
+    },
+    revert: state =>
+      from
+        ? withRoot(state, reparented(state.document.root, id, from.parentId, from.index))
+        : state,
+    refuses: state => !canHoldUi(state.document.root, id, parentId),
+  }
+}
+
+/**
+ * A batch hung from another element. ONE entry in the history for all of them — six rows filed
  * into a panel cost one ⌘Z, which is why anyone selects six.
  */
 export function reparentUiElements(
@@ -93,21 +102,12 @@ export function reparentUiElements(
   parentId: string,
   index?: number,
 ): Command<GuiState> {
-  let before: UiScreen | null = null
-
-  return {
-    id: `ui.reparent:${ids.join(',')}`,
-    apply: state => {
-      before = state.document.root
-      let root = state.document.root
-      ids.forEach((id, rank) => {
-        root = reparented(root, id, parentId, index === undefined ? undefined : index + rank)
-      })
-      return withRoot(state, root)
-    },
-    revert: state => (before ? withRoot(state, before) : state),
-    refuses: state => ids.every(id => !canHoldUi(state.document.root, id, parentId)),
-  }
+  return composed(
+    commandId('ui.reparent', ids),
+    ids.map((id, rank) =>
+      reparentUiElement(id, parentId, index === undefined ? undefined : index + rank),
+    ),
+  )
 }
 
 /** Whether an element may be hung from another — never from itself, never from its own subtree. */
@@ -119,7 +119,7 @@ export function canHoldUi(root: UiScreen, id: string, parentId: string): boolean
 }
 
 export function renameUiElement(id: string, name: string): Command<GuiState> {
-  return editUiElement(`ui.rename:${id}`, id, element => ({ ...element, name }), {
+  return editUiElement(commandId('ui.rename', [id]), id, element => ({ ...element, name }), {
     unchanged: element => element.name === name,
   })
 }
@@ -128,34 +128,77 @@ export function renameUiElement(id: string, name: string): Command<GuiState> {
 export type UiFlag = 'visible' | 'enabled' | 'locked'
 
 export function setUiFlag(id: string, flag: UiFlag, value: boolean): Command<GuiState> {
-  return editUiElement(`ui.${flag}:${id}`, id, element => ({ ...element, [flag]: value }), {
-    unchanged: element => element[flag] === value,
-  })
+  return editUiElement(
+    commandId(`ui.${flag}`, [id]),
+    id,
+    element => ({ ...element, [flag]: value }),
+    { unchanged: element => element[flag] === value },
+  )
+}
+
+/**
+ * A flag written across a batch, in ONE entry. What the FIRST of them is not settles a mixed
+ * selection — here rather than in whichever surface asked, so the toolbar, a shortcut and the
+ * MCP all flip a batch the same way.
+ */
+export function setUiFlags(ids: readonly string[], flag: UiFlag): Command<GuiState> {
+  let before: Map<string, boolean> = new Map()
+
+  return {
+    id: commandId(`ui.${flag}`, ids),
+    apply: state => {
+      before = new Map(ids.map(id => [id, elementById(state.document.root, id)?.[flag] === true]))
+      // What the FIRST of them is NOT: a mixed batch has to settle on one answer.
+      const wanted = before.get(ids[0] ?? '') !== true
+
+      let root = state.document.root
+      for (const id of ids) root = mapped(root, id, element => ({ ...element, [flag]: wanted }))
+      return withRoot(state, root)
+    },
+    revert: state => {
+      let root = state.document.root
+      for (const [id, worn] of before) root = mapped(root, id, one => ({ ...one, [flag]: worn }))
+      return withRoot(state, root)
+    },
+    refuses: state => ids.every(id => !holds(state, id)),
+  }
 }
 
 /**
  * Copies of what is selected, laid beside their originals and selected in their place.
  *
- * Fresh ids all the way down: two elements sharing one id would give the layout and the picking
- * two answers to the same question, and a save would write a document nothing could read back.
+ * Fresh ids all the way down, minted ONCE: two elements sharing one id would give the layout and
+ * the picking two answers, and ids minted inside `apply` would differ on a redo.
  */
 export function duplicateUiElements(
   ids: readonly string[],
   newId: () => string,
 ): Command<GuiState> {
-  let made: string[] = []
+  /**
+   * Source id → copy id, filled on the first apply and REUSED by a redo. Minted again, the whole
+   * subtree would come back under other ids and any later command naming one would go inert.
+   */
+  const minted = new Map<string, string>()
+  const idFor = (source: string): string => {
+    const held = minted.get(source)
+    if (held !== undefined) return held
+
+    const made = newId()
+    minted.set(source, made)
+    return made
+  }
 
   return {
-    id: `ui.duplicate:${ids.join(',')}`,
+    id: commandId('ui.duplicate', ids),
     apply: state => {
-      made = []
       let root = state.document.root
+      const made: string[] = []
       for (const id of ids) {
         const element = elementById(root, id)
         const parent = parentOf(root, id)
         if (!element || !parent) continue
 
-        const copy = renumbered(element, newId)
+        const copy = renumbered(element, idFor)
         made.push(copy.id)
         root = withElement(root, parent.id, copy, indexIn(parent, id) + 1)
       }
@@ -164,59 +207,58 @@ export function duplicateUiElements(
     },
     revert: state => {
       let root = state.document.root
-      for (const id of made) root = withoutElement(root, id)
+      for (const id of ids) {
+        const copy = minted.get(id)
+        if (copy !== undefined) root = withoutElement(root, copy)
+      }
       return withRoot(state, root)
     },
-    refuses: state => ids.every(id => id === state.document.root.id || !holds(state, id)),
+    refuses: refusesEvery(ids),
   }
 }
 
 /**
- * A panel laid where the FIRST of the batch stood, holding all of them in the order the tree
- * has them — grouping six rows must not shuffle them.
- *
- * Only siblings: elements from two levels put under one parent would be moved as well as
- * grouped, and no gesture asked for that.
+ * A panel laid where the FIRST of the batch stands in the TREE — grouping six rows must not
+ * shuffle them — holding all of them. Only siblings: elements from two levels put under one
+ * parent would be moved as well as grouped, and no gesture asked for that.
  */
 export function groupUiElements(ids: readonly string[], newId: () => string): Command<GuiState> {
-  const group: UiElement = {
-    id: newId(),
-    type: 'panel',
-    name: '',
-    visible: true,
-    enabled: true,
-    locked: false,
-    place: DEFAULT_PLACEMENT,
-    style: DEFAULT_STYLE,
-    interaction: DEFAULT_INTERACTION,
-    children: [],
-  }
-  let before: UiScreen | null = null
+  const group: UiElement = { ...newUiElement('panel', newId), name: '' }
 
   return {
-    id: `ui.group:${group.id}`,
+    id: commandId('ui.group', [group.id]),
     apply: state => {
-      before = state.document.root
       const parent = parentOf(state.document.root, ids[0] ?? '')
       const ordered = parent ? childrenOf(parent).filter(child => ids.includes(child.id)) : []
       const opening = ordered[0]
       if (!parent || !opening) return state
 
-      // Where the FIRST of them stood in the tree, not the first the caller happened to name.
       let root = withElement(state.document.root, parent.id, group, indexIn(parent, opening.id))
       for (const child of ordered) root = reparented(root, child.id, group.id)
 
       return { ...withRoot(state, root), selectedIds: [group.id] }
     },
-    revert: state => (before ? withRoot(state, before) : state),
+    revert: state => {
+      // The panel out, its children back where the tree already holds them: the group was laid
+      // at the first one's place, so removing it drops them at that level in their own order.
+      let root = state.document.root
+      const held = elementById(root, group.id)
+      const parent = parentOf(root, group.id)
+      if (!held || !parent) return state
+
+      const at = indexIn(parent, group.id)
+      for (const [rank, child] of childrenOf(held).entries()) {
+        root = reparented(root, child.id, parent.id, at + rank)
+      }
+      return withRoot(state, withoutElement(root, group.id))
+    },
     refuses: state => !sameParent(state.document.root, ids),
   }
 }
 
 /**
  * The canvas the author draws at. An edit of the DOCUMENT, not of the view: anchors absorb a
- * screen of another shape, so this says what the interface was composed FOR — and a ⌘Z has to
- * take it back like any other change.
+ * screen of another shape, so this says what the interface was composed FOR.
  */
 export function setUiDesign(design: UiSize): Command<GuiState> {
   let before: UiSize | null = null
@@ -281,14 +323,18 @@ function editUiElement(
  * where that happens, not only removing.
  */
 function withRoot(state: GuiState, root: UiScreen): GuiState {
-  const held = new Set(flattened(root).map(element => element.id))
+  const document = { ...state.document, root }
+  if (state.selectedIds.length === 0) return { ...state, document }
 
-  return {
-    ...state,
-    document: { ...state.document, root },
-    selectedIds: state.selectedIds.filter(id => held.has(id)),
-  }
+  const held = new Set(flattened(root).map(element => element.id))
+  return { ...state, document, selectedIds: state.selectedIds.filter(id => held.has(id)) }
 }
+
+/** The screen IS the document: taking it away would leave a file nothing can open. */
+const refusesEvery =
+  (ids: readonly string[]) =>
+  (state: GuiState): boolean =>
+    ids.every(id => id === state.document.root.id || !holds(state, id))
 
 const holds = (state: GuiState, id: string): boolean =>
   elementById(state.document.root, id) !== null
@@ -304,9 +350,9 @@ function sameParent(root: UiScreen, ids: readonly string[]): boolean {
   return first !== null && ids.every(id => parentOf(root, id)?.id === first.id)
 }
 
-function renumbered(element: UiElement, newId: () => string): UiElement {
-  const copy = { ...element, id: newId() }
+function renumbered(element: UiElement, idFor: (source: string) => string): UiElement {
+  const copy = { ...element, id: idFor(element.id) }
   return 'children' in copy
-    ? { ...copy, children: copy.children.map(child => renumbered(child, newId)) }
+    ? { ...copy, children: copy.children.map(child => renumbered(child, idFor)) }
     : copy
 }

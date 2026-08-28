@@ -46,16 +46,15 @@ export function zoomGuiOut(documentId: string): void {
 }
 
 export function fitGuiToPanel(documentId: string): void {
-  frame(documentId, (design, host) => fitTo(design, host, FIT_INSET))
+  // No inset: that argument is what a RULER band eats off the top and left, and this editor has
+  // none — passing one pushed the page off centre while ⌘1 beside it centred properly.
+  frame(documentId, (design, host) => fitTo(design, host))
 }
 
 /** One design pixel per screen pixel, centred — what ⌘1 means in every editor. */
 export function guiToActualSize(documentId: string): void {
   frame(documentId, (design, host) => centerOn(design, host, 1))
 }
-
-/** Enough air around the page that its edge does not sit against the panel's. */
-const FIT_INSET = 24
 
 function frame(documentId: string, place: (design: Size, host: Size) => Viewport): void {
   const host = panel(documentId)

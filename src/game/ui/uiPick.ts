@@ -12,33 +12,39 @@ export type UiPickOptions = {
 /**
  * What a point landed on, read from the boxes and from nothing else.
  *
- * 🛑 One implementation for every surface. A DOM overlay and a world-space texture differ in how
- * they turn a gesture into a `UiPoint`; once they have one, the answer must be the same, and two
- * hit-tests written a month apart are two answers that drift.
+ * 🛑 One implementation for every surface: a world-space renderer turns its ray into a `UiPoint`
+ * and asks this, rather than growing a second hit-test that drifts.
  *
- * The pile first — the last opened is on top — then, inside an interface, the order a renderer
- * paints in: a child covers its parent, and a later sibling covers an earlier one.
- *
- * A child is tested even when it falls OUTSIDE its parent's box: nothing clips yet, so what is
- * on screen is what answers. An invisible element hides its children with it; a locked one does
- * not — the cadenas is a row of the tree, not a property a subtree inherits.
+ * A child is tested even when it falls OUTSIDE its parent's box — nothing clips yet — and a
+ * locked element does not lock its subtree: the cadenas is a row of the tree, not an inheritance.
  */
 export function pickAt(
   frames: readonly UiFrame[],
   point: UiPoint,
   options: UiPickOptions = {},
 ): UiHit | null {
-  const piled = [...frames].sort((one, other) => one.order - other.order)
-
-  for (let index = piled.length - 1; index >= 0; index -= 1) {
-    const frame = piled[index]
-    if (!frame) continue
-
+  // Topmost first, which is the reverse of the paint order.
+  for (const frame of piled(frames, 'down')) {
     const found = hitIn(frame.document.root, frame.boxes, point, options.skipLocked === true)
     if (found !== null) return { ui: frame.ui, element: found }
   }
 
   return null
+}
+
+/**
+ * The pile, and it is `order` that says it — never the order the frames were handed over in.
+ *
+ * One implementation for both halves: what paints last is what a point hits first, so a renderer
+ * sorting on its own would eventually disagree with the pick about which interface is on top.
+ */
+export function piled(frames: readonly UiFrame[], way: 'up' | 'down' = 'up'): readonly UiFrame[] {
+  // One frame is the ordinary case in an editor, and it needs neither copy nor sort.
+  if (frames.length < 2) return frames
+
+  return [...frames].sort((one, other) =>
+    way === 'up' ? one.order - other.order : other.order - one.order,
+  )
 }
 
 function hitIn(

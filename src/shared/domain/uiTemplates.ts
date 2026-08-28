@@ -1,17 +1,14 @@
 import {
   DEFAULT_INTERACTION,
   DEFAULT_PLACEMENT,
-  DEFAULT_PROGRESS,
   DEFAULT_STACK,
   DEFAULT_STYLE,
   DEFAULT_TEXT,
-  DESIGN_RESOLUTION,
   SCREEN_PLACEMENT,
-  UI_VERSION,
   type UiDocument,
   type UiElement,
-  type UiScreen,
 } from './ui'
+import { newUiDocument, newUiElement } from './uiDocument'
 
 /**
  * What a new interface opens on. CODE and never a file to fetch, exactly as a scene template is:
@@ -43,32 +40,17 @@ const BUILDERS: Record<UiTemplateId, (newId: () => string) => readonly UiElement
   pause: pauseElements,
 }
 
+/** Through `newUiDocument` and `newUiElement`: what an element IS is described once, by the
+ * reader a file goes through. A second table here would gain a field on read and lose it here. */
 export function uiFromTemplate(id: UiTemplateId, newId: () => string): UiDocument {
-  return {
-    version: UI_VERSION,
-    mode: 'screen',
-    design: DESIGN_RESOLUTION,
-    root: { ...screenBase(newId), children: BUILDERS[id](newId) },
-    bindings: [],
-  }
+  const document = newUiDocument(newId)
+
+  return { ...document, root: { ...document.root, children: BUILDERS[id](newId) } }
 }
 
-const screenBase = (newId: () => string): UiScreen => ({
-  ...base(newId, 'Screen'),
-  type: 'screen',
-  place: SCREEN_PLACEMENT,
-  children: [],
-})
-
-const base = (newId: () => string, name: string) => ({
-  id: newId(),
+const named = <T extends UiElement['type']>(type: T, newId: () => string, name: string) => ({
+  ...newUiElement(type, newId),
   name,
-  visible: true,
-  enabled: true,
-  locked: false,
-  place: DEFAULT_PLACEMENT,
-  style: DEFAULT_STYLE,
-  interaction: DEFAULT_INTERACTION,
 })
 
 const MARGIN = 32
@@ -77,14 +59,12 @@ const MARGIN = 32
 function hudElements(newId: () => string): readonly UiElement[] {
   return [
     {
-      ...base(newId, 'Score'),
-      type: 'text',
+      ...named('text', newId, 'Score'),
       place: { ...DEFAULT_PLACEMENT, offset: { x: MARGIN, y: MARGIN } },
       text: { ...DEFAULT_TEXT, value: 'Score', size: 32 },
     },
     {
-      ...base(newId, 'Health'),
-      type: 'progress',
+      ...named('progress', newId, 'Health'),
       place: {
         ...DEFAULT_PLACEMENT,
         anchor: 'bottomLeft',
@@ -95,7 +75,6 @@ function hudElements(newId: () => string): readonly UiElement[] {
           height: { mode: 'fixed', length: { unit: 'px', value: 16 } },
         },
       },
-      progress: DEFAULT_PROGRESS,
     },
   ]
 }
@@ -112,8 +91,7 @@ function menuElements(newId: () => string): readonly UiElement[] {
 function pauseElements(newId: () => string): readonly UiElement[] {
   return [
     {
-      ...base(newId, 'Veil'),
-      type: 'panel',
+      ...named('panel', newId, 'Veil'),
       place: SCREEN_PLACEMENT,
       style: { ...DEFAULT_STYLE, background: { kind: 'color', color: '#000000' }, opacity: 0.6 },
       children: [],
@@ -128,8 +106,7 @@ function centredStack(
   children: readonly UiElement[],
 ): UiElement {
   return {
-    ...base(newId, name),
-    type: 'stack',
+    ...named('stack', newId, name),
     place: { ...DEFAULT_PLACEMENT, anchor: 'center', pivot: 'center' },
     stack: { ...DEFAULT_STACK, gap: 16, align: 'center' },
     children,
@@ -137,16 +114,14 @@ function centredStack(
 }
 
 const title = (newId: () => string, value: string): UiElement => ({
-  ...base(newId, value),
-  type: 'text',
+  ...named('text', newId, value),
   text: { ...DEFAULT_TEXT, value, size: 64, align: 'center' },
 })
 
 /** The `action` is what a script answers in `onUiAction`, so a template names one per button. */
 const buttons = (newId: () => string, labels: readonly string[]): readonly UiElement[] =>
   labels.map(label => ({
-    ...base(newId, label),
-    type: 'button',
+    ...named('button', newId, label),
     interaction: { ...DEFAULT_INTERACTION, action: label.toLowerCase(), cursor: 'pointer' },
     style: {
       ...DEFAULT_STYLE,

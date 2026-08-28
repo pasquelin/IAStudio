@@ -4,17 +4,22 @@ import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import type { UiBoxes } from '@shared/domain/ui'
 import { createCanvasUiMeasure } from '@game/host/canvasUiMeasure'
 import { createDomUiRenderer } from '@game/host/domUiRenderer'
+import { createUiRuler } from '@game/host/uiRuler'
 import type { UiRenderPort } from '@game/ports/uiRenderPort'
 import { layoutOf } from '@game/ui/uiLayout'
+import { flattened } from '@game/ui/uiTree'
 import { clampCanvasScale, toDocument, zoomCanvasAt } from '@/engines/canvas/viewport'
+import { pickFrom } from '@/helpers/selection'
 import { assetVersionOf } from '@/stores/assets'
 import { guiOf, selectInGui, useGuis } from '@/stores/gui'
 import { guiViewportOf, useGuiViews } from '@/stores/guiViews'
-import { createUiRuler } from '../uiRuler'
 import { GuiSelectionFrame } from './GuiSelectionFrame'
 
-/** How much wheel travel doubles the zoom. A trackpad pinch arrives here as a ctrl-wheel. */
-const WHEEL_PER_DOUBLING = 500
+/**
+ * How much wheel travel doubles the zoom. The image editor's own number (`CanvasEngine.onWheel`):
+ * a pinch has to move both canvases of this studio by the same amount.
+ */
+const WHEEL_PER_DOUBLING = 250
 
 /**
  * The page an interface is drawn on, and the one place a pointer meets it.
@@ -35,8 +40,20 @@ export function GuiStage({ documentId }: { documentId: string }) {
   const viewport = useGuiViews(state => guiViewportOf(state, documentId))
 
   // One ruler per stage: a 2D context is cheap to hold and dear to make on every layout.
-  const measure = useMemo(() => createCanvasUiMeasure(createUiRuler(), () => null), [])
-  const boxes: UiBoxes = useMemo(() => layoutOf(ui.root, ui.design, measure), [ui, measure])
+  //
+  // 🛑 The picture sizes are `null`, so an `image` sized `auto` lays out at nothing — nothing in
+  // the window publishes a decoded picture's natural size yet, and a guessed box would shove its
+  // neighbours twice. The inspector lot is where that source arrives.
+  const measure = useMemo(
+    () => createCanvasUiMeasure(createUiRuler(window.document), () => null),
+    [],
+  )
+  // On `root` and `design` rather than on the document: a binding edited tomorrow would
+  // otherwise re-solve the whole layout for nothing.
+  const boxes: UiBoxes = useMemo(
+    () => layoutOf(ui.root, ui.design, measure),
+    [ui.root, ui.design, measure],
+  )
 
   useEffect(() => {
     const observed = host.current
@@ -92,8 +109,17 @@ export function GuiStage({ documentId }: { documentId: string }) {
       y: event.clientY - frame.top,
     })
     const hit = renderer.current?.pick(point) ?? null
-    const mode = event.metaKey || event.ctrlKey ? 'toggle' : 'replace'
-    selectInGui(documentId, hit ? [hit.element] : [], mode)
+    if (!hit) return selectInGui(documentId, [])
+
+    // Through `pickFrom`, so ⇧ and ⌘ mean here exactly what they mean in the outliner — the
+    // order it extends over is the paint order, which is what the eye reads on the page.
+    const picked = pickFrom(
+      flattened(ui.root).map(element => element.id),
+      selectedIds.at(-1),
+      hit.element,
+      event,
+    )
+    selectInGui(documentId, picked.ids, picked.mode)
   }
 
   const onWheel = (event: WheelEvent<HTMLDivElement>): void => {

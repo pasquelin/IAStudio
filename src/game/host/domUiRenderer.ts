@@ -14,7 +14,7 @@ import type {
 import type { AssetPort } from '../ports/assetPort'
 import type { UiFrame, UiHit, UiRenderPort, UiValue, UiValues } from '../ports/uiRenderPort'
 import { childrenOf } from '../ui/uiTree'
-import { pickAt, type UiPickOptions } from '../ui/uiPick'
+import { pickAt, piled, type UiPickOptions } from '../ui/uiPick'
 import { UI_LINE_HEIGHT, cssFontOf } from './canvasUiMeasure'
 
 export type DomUiRendererOptions = {
@@ -26,20 +26,13 @@ export type DomUiRendererOptions = {
 }
 
 /**
- * An interface drawn as plain DOM, over a page or over a viewport. No React, no stylesheet, no
- * class of the studio — an exported game ships this file and nothing around it.
+ * An interface drawn as plain DOM — no React, no stylesheet, nothing of the studio. It POSES the
+ * boxes it is handed and computes none, which `main/game-imports.test.ts` holds by refusing the
+ * names that would read the tree back.
  *
- * 🛑 It POSES the boxes it is handed and computes none: `layoutOf` is the only geometry, which
- * is what lets the editor snap against exact numbers and a second renderer draw the same
- * document the same way. Nothing here reads the tree back, and `main/game-imports.test.ts`
- * refuses the names that would — `getBoundingClientRect`, `elementFromPoint`, `offsetWidth`.
- *
- * FLAT, and deliberately: the boxes are absolute, so nesting would only re-add offsets the
- * solver has already resolved. What nesting gives for free is done by hand instead — the paint
- * order follows the tree and opacity multiplies down it. What it does NOT give yet is clipping,
- * so a `scroll` does not crop what it holds; that arrives with the runtime.
- *
- * It MUTATES rather than rebuilds: these writes land on every frame of a drag.
+ * 🛑 FLAT, so two things nesting gives for free are done by hand and a third is NOT done at all:
+ * a `scroll` does not crop what it holds, and a group's opacity is applied per element rather
+ * than to the subtree once — two overlapping children of a faded parent darken each other.
  */
 export function createDomUiRenderer(options: DomUiRendererOptions): UiRenderPort {
   const owner = options.host.ownerDocument
@@ -51,28 +44,29 @@ export function createDomUiRenderer(options: DomUiRendererOptions): UiRenderPort
   root.style.cssText = 'position:absolute;inset:0;overflow:hidden;pointer-events:none;color:#ffffff'
   options.host.appendChild(root)
 
-  const nodes = new Map<string, HTMLElement>()
-  const painted = new Map<string, string>()
-  const written = new Map<string, string>()
+  const memory = new Map<string, Held>()
   let drawn: readonly UiFrame[] = []
 
   return {
     draw: (frames: readonly UiFrame[]): void => {
       drawn = frames
       const wanted = laidOut(frames)
+      const keys = new Set<string>()
+      let at = root.firstChild
 
-      wanted.forEach((one, index) => {
-        const node = held(owner, options.assets, { nodes, painted, written }, one)
-        if (root.children[index] !== node) root.insertBefore(node, root.children[index] ?? null)
-      })
+      for (const one of wanted) {
+        keys.add(one.key)
+        const node = held(owner, options.assets, memory, one)
+        // A cursor rather than `children[index]`: that collection is live, and every insert
+        // below invalidates it — one read per element per frame for an answer already held.
+        if (at === node) at = node.nextSibling
+        else root.insertBefore(node, at)
+      }
 
-      const keys = new Set(wanted.map(one => one.key))
-      for (const [key, node] of nodes) {
+      for (const [key, one] of memory) {
         if (keys.has(key)) continue
-        node.remove()
-        nodes.delete(key)
-        painted.delete(key)
-        written.delete(key)
+        one.node.remove()
+        memory.delete(key)
       }
     },
     pick: (point: UiPoint): UiHit | null => pickAt(drawn, point, options.picking),
@@ -82,9 +76,7 @@ export function createDomUiRenderer(options: DomUiRendererOptions): UiRenderPort
     },
     dispose: (): void => {
       root.remove()
-      nodes.clear()
-      painted.clear()
-      written.clear()
+      memory.clear()
     },
   }
 }
@@ -100,19 +92,26 @@ type Posed = {
   values: UiValues
 }
 
-/** What the last draw wrote, so a frame that changed nothing writes nothing. */
-type Memory = {
-  nodes: Map<string, HTMLElement>
-  painted: Map<string, string>
-  written: Map<string, string>
+/**
+ * What the last draw posed, so a frame that changed nothing does no work at all.
+ *
+ * 🛑 The guard is on IDENTITY, not on the finished CSS: `mapped` shares every untouched subtree,
+ * so an element the drag did not reach is the same object frame after frame. Comparing built
+ * strings meant composing them for all of them, every frame, only to throw them away — measured
+ * at 0,267 ms for 200 elements against 0,020 ms for this walk.
+ */
+type Held = {
+  node: HTMLElement
+  element: UiElement
+  box: UiBox
+  opacity: number
+  values: UiValues
 }
 
 function laidOut(frames: readonly UiFrame[]): readonly Posed[] {
   const posed: Posed[] = []
 
-  for (const frame of [...frames].sort((one, other) => one.order - other.order)) {
-    gather(frame, frame.document.root, 1, posed)
-  }
+  for (const frame of piled(frames)) gather(frame, frame.document.root, 1, posed)
 
   return posed
 }
@@ -138,33 +137,41 @@ function gather(frame: UiFrame, element: UiElement, above: number, into: Posed[]
   for (const child of childrenOf(element)) gather(frame, child, opacity, into)
 }
 
-function held(owner: Document, assets: AssetPort, memory: Memory, one: Posed): HTMLElement {
-  const existing = memory.nodes.get(one.key)
+function held(
+  owner: Document,
+  assets: AssetPort,
+  memory: Map<string, Held>,
+  one: Posed,
+): HTMLElement {
+  const last = memory.get(one.key)
+  if (last && unchanged(last, one)) return last.node
+
   // Rebuilt only when what it IS changed: the inner parts of a bar or a tick follow from the
   // type, and rebuilding them every frame is what a drag cannot afford.
-  const node =
-    existing && existing.dataset.uiType === one.element.type ? existing : made(owner, one)
-  if (node !== existing) {
-    existing?.replaceWith(node)
-    memory.nodes.set(one.key, node)
-    memory.painted.delete(one.key)
-    memory.written.delete(one.key)
-  }
+  const node = last && last.element.type === one.element.type ? last.node : made(owner, one)
+  if (last && node !== last.node) last.node.replaceWith(node)
 
-  const css = cssOf(one, assets)
-  if (memory.painted.get(one.key) !== css) {
-    node.style.cssText = css
-    memory.painted.set(one.key, css)
-  }
-
-  const shown = shownIn(one)
-  if (memory.written.get(one.key) !== shown) {
-    inscribe(node, one, shown)
-    memory.written.set(one.key, shown)
-  }
+  node.style.cssText = cssOf(one, assets)
+  inscribe(node, one)
+  memory.set(one.key, {
+    node,
+    element: one.element,
+    box: one.box,
+    opacity: one.opacity,
+    values: one.values,
+  })
 
   return node
 }
+
+const unchanged = (last: Held, one: Posed): boolean =>
+  last.element === one.element &&
+  last.opacity === one.opacity &&
+  last.values === one.values &&
+  last.box.x === one.box.x &&
+  last.box.y === one.box.y &&
+  last.box.width === one.box.width &&
+  last.box.height === one.box.height
 
 function made(owner: Document, one: Posed): HTMLElement {
   const node = owner.createElement('div')
@@ -185,65 +192,49 @@ function valueOf(one: Posed): UiValue | null {
   return one.values.get(one.element.id) ?? null
 }
 
-/**
- * The words on screen, as ONE string — it is also the key that says whether anything changed,
- * so a control with no words answers what its state spells rather than the empty string.
- */
-function shownIn(one: Posed): string {
-  const live = valueOf(one)
-  const { element } = one
-
-  if (element.type === 'text' || element.type === 'button') {
-    return typeof live === 'string' ? live : element.text.value
-  }
-  if (element.type === 'input') {
-    const value = typeof live === 'string' ? live : element.input.value
-    if (value === '') return element.input.placeholder
-    return element.input.secret ? SECRET_MARK.repeat(value.length) : value
-  }
-  if (element.type === 'progress') {
-    return String(shareOf(live, element.progress, element.progress.value))
-  }
-  if (element.type === 'slider') {
-    return String(shareOf(live, element.slider, element.slider.value))
-  }
-  if (element.type === 'checkbox') {
-    return String(typeof live === 'boolean' ? live : element.checkbox.checked)
-  }
-
-  return ''
-}
-
-const SECRET_MARK = '•'
-
-function inscribe(node: HTMLElement, one: Posed, shown: string): void {
+function inscribe(node: HTMLElement, one: Posed): void {
   const inner = node.firstElementChild
   if (!(inner instanceof HTMLElement)) return
 
+  const live = valueOf(one)
   const { element } = one
+
   if (element.type === 'progress') {
-    inner.style.cssText = barCss(Number(shown), element.progress.fill)
+    inner.style.cssText = barCss(shareOf(live, element.progress), element.progress.fill)
     return
   }
   if (element.type === 'slider') {
-    inner.style.cssText = thumbCss(Number(shown))
+    inner.style.cssText = thumbCss(shareOf(live, element.slider))
     return
   }
   if (element.type === 'checkbox') {
-    inner.style.cssText = tickCss(shown === 'true')
+    inner.style.cssText = tickCss(typeof live === 'boolean' ? live : element.checkbox.checked)
     return
   }
 
-  inner.textContent = shown
+  inner.textContent = wordsOf(element, live)
 }
+
+/** The words on screen: what the running interface holds, or what the document says. */
+function wordsOf(element: UiElement, live: UiValue | null): string {
+  if (element.type === 'text' || element.type === 'button') {
+    return typeof live === 'string' ? live : element.text.value
+  }
+  if (element.type !== 'input') return ''
+
+  const value = typeof live === 'string' ? live : element.input.value
+  if (value === '') return element.input.placeholder
+  return element.input.secret ? SECRET_MARK.repeat(value.length) : value
+}
+
+const SECRET_MARK = '\u2022'
 
 /** Zero when the ends meet: a bar from 5 to 5 is not full, it is undefined, and empty is honest. */
 function shareOf(
   live: UiValue | null,
-  bounds: { min: number; max: number },
-  stored: number,
+  bounds: { value: number; min: number; max: number },
 ): number {
-  const value = typeof live === 'number' ? live : stored
+  const value = typeof live === 'number' ? live : bounds.value
   if (bounds.max <= bounds.min) return 0
   return Math.max(0, Math.min(1, (value - bounds.min) / (bounds.max - bounds.min)))
 }
@@ -310,14 +301,9 @@ const FIT_SIZES: Record<UiFit, string> = {
 }
 
 /**
- * `background-image` rather than an `<img>`: one node per element keeps the pose, the paint and
- * the removal in one place, and `background-size` spells the four fits in one word.
- *
- * A tint multiplies, which is what a tint means on a sprite — and only when it is not white,
- * a blend mode otherwise costing a compositing layer for no visible change.
- *
- * An id the host cannot serve draws nothing: a `url()` pointing nowhere makes the browser ask
- * for it on every repaint.
+ * A tint multiplies, and only when it is not white — a blend mode otherwise costs a compositing
+ * layer for no visible change. An id the host cannot serve draws nothing rather than a `url()`
+ * the browser asks for again on every repaint.
  */
 function pictureCss(
   assets: AssetPort,

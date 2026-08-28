@@ -12,8 +12,8 @@ import {
 } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
-import type { Command } from '../core/history'
-import { addNode, commandId, moveNodes, multi, setCamera, setCameraOn } from './commands'
+import { commandId, type Command } from '../core/history'
+import { addNode, moveNodes, multi, setCamera, setCameraOn } from './commands'
 import type { FieldValue } from './propertyFields'
 import { pathNode } from './nodeFactory'
 import {

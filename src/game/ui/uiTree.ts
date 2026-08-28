@@ -52,6 +52,22 @@ export function flattened(root: UiElement): readonly UiElement[] {
   return [root, ...childrenOf(root).flatMap(flattened)]
 }
 
+/**
+ * Every element with the id of the one holding it — `null` for the root.
+ *
+ * One descent rather than a `parentOf` per element: `parentOf` re-walks the whole tree, so the
+ * pair costs O(n²) on a list an outliner rebuilds after every edit.
+ */
+export function flattenedWithParents(
+  root: UiElement,
+  parentId: string | null = null,
+): readonly { element: UiElement; parentId: string | null }[] {
+  return [
+    { element: root, parentId },
+    ...childrenOf(root).flatMap(child => flattenedWithParents(child, root.id)),
+  ]
+}
+
 /** Whether `id` sits at or under `ancestorId` — what refuses a drop into one's own subtree. */
 export function contains(root: UiElement, ancestorId: string, id: string): boolean {
   const ancestor = elementById(root, ancestorId)

@@ -4,15 +4,12 @@ import { URL, fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 
 /**
- * Lets a script under `scripts/` import the project's TypeScript the way the project writes it.
+ * Lets a script import the project's TypeScript the way the project writes it: Node strips types
+ * but resolves like ESM, so a bare `./font` and an `@shared/…` alias both fail.
  *
- * Node strips types on the way in, but it resolves like ESM: a bare `./font` and an `@shared/…`
- * alias both fail. `collect-manual.ts` got away without this because everything it imports is a
- * TYPE, erased before resolution ever runs; a script needing a VALUE — a Zod schema, a table —
- * does not.
- *
- * 🛑 It fails LOUDLY: a specifier it cannot place is handed on untouched, so Node reports the
- * missing module rather than this silently resolving to something else.
+ * 🛑 A specifier it cannot place is handed on untouched, so Node reports the missing module
+ * rather than this resolving to something else. The alias table is the SEVENTH copy in the
+ * repository, and the only one no config derives — `pnpm ui:schema` breaks if one moves.
  */
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 

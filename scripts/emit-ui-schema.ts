@@ -1,13 +1,9 @@
 /**
- * Writes `docs/schema/ui-<version>.schema.json`, the JSON Schema a `.ui.json` points at.
+ * Writes the JSON Schema a `.ui.json` points at, from the Zod of `main/project/uiSchema.ts`.
  *
- * Derived from the Zod schema of `src/main/project/uiSchema.ts` rather than written by hand: a
- * published schema disagreeing with what the studio accepts is worse than none, since an editor
- * would then refuse a file that opens perfectly well.
- *
- * `--import ./scripts/tsResolve.mjs` is what lets this reach the project's TypeScript at all;
- * `pnpm ui:schema` carries it, and `main/project/uiSchema.test.ts` recomputes the file so a
- * forgotten run is a red gate rather than a quiet drift.
+ * Run it through `pnpm ui:schema`, which carries the `--import` that lets a script reach the
+ * project's TypeScript; `main/project/uiSchema.test.ts` recomputes the file, so a forgotten run
+ * is a red gate rather than a quiet drift.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'

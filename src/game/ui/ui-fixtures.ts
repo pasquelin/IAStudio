@@ -1,72 +1,51 @@
 // SPDX-License-Identifier: MIT
 
 import {
-  DESIGN_RESOLUTION,
-  DEFAULT_INTERACTION,
-  DEFAULT_PLACEMENT,
-  DEFAULT_IMAGE,
-  DEFAULT_PROGRESS,
-  DEFAULT_STYLE,
   DEFAULT_TEXT,
   SCREEN_PLACEMENT,
-  UI_VERSION,
   type UiDocument,
   type UiElement,
   type UiFit,
   type UiScreen,
 } from '@shared/domain/ui'
+import { newUiDocument, newUiElement } from '@shared/domain/uiDocument'
 
-/** What every element carries. Spread first, so a case overrides only what it is about. */
-export const UI_ELEMENT_BASE = {
+/**
+ * Elements for a suite to assert on, built by the reader a file goes through: a field gained by
+ * the format arrives here too, rather than leaving every case describing an element of last week.
+ */
+const of = <T extends UiElement['type']>(type: T, id: string) => ({
+  ...newUiElement(type, () => id),
   name: '',
-  visible: true,
-  enabled: true,
-  locked: false,
-  place: DEFAULT_PLACEMENT,
-  style: DEFAULT_STYLE,
-  interaction: DEFAULT_INTERACTION,
-}
+})
 
 export const uiPanel = (id: string, children: readonly UiElement[] = []): UiElement => ({
-  ...UI_ELEMENT_BASE,
-  id,
-  type: 'panel',
+  ...of('panel', id),
   children,
 })
 
 export const uiText = (id: string, value = ''): UiElement => ({
-  ...UI_ELEMENT_BASE,
-  id,
-  type: 'text',
+  ...of('text', id),
   text: { ...DEFAULT_TEXT, value },
 })
 
 export const uiImage = (id: string, assetId: string, fit: UiFit = 'contain'): UiElement => ({
-  ...UI_ELEMENT_BASE,
-  id,
-  type: 'image',
-  image: { ...DEFAULT_IMAGE, assetId, fit },
+  ...of('image', id),
+  image: { ...of('image', id).image, assetId, fit },
 })
 
 export const uiProgress = (id: string, value = 1): UiElement => ({
-  ...UI_ELEMENT_BASE,
-  id,
-  type: 'progress',
-  progress: { ...DEFAULT_PROGRESS, value },
+  ...of('progress', id),
+  progress: { ...of('progress', id).progress, value },
 })
 
 export const uiScreen = (children: readonly UiElement[] = [], id = 'root'): UiScreen => ({
-  ...UI_ELEMENT_BASE,
-  id,
-  type: 'screen',
+  ...of('screen', id),
   place: SCREEN_PLACEMENT,
   children,
 })
 
 export const uiDocumentOf = (root: UiScreen): UiDocument => ({
-  version: UI_VERSION,
-  mode: 'screen',
-  design: DESIGN_RESOLUTION,
+  ...newUiDocument(() => root.id),
   root,
-  bindings: [],
 })

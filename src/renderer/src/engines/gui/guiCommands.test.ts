@@ -12,6 +12,7 @@ import {
   renameUiElement,
   reparentUiElements,
   setUiFlag,
+  setUiFlags,
   setUiSelection,
 } from './guiCommands'
 import type { GuiState } from './guiState'
@@ -150,6 +151,30 @@ describe('editing an interface', () => {
     expect(groupUiElements(['a', 'a1'], newId).refuses?.(stateOf())).toBe(true)
     expect(groupUiElements([], newId).refuses?.(stateOf())).toBe(true)
     expect(groupUiElements(['b', 'c'], newId).refuses?.(stateOf())).toBe(false)
+  })
+
+  /**
+   * 🛑 The ids are minted ONCE and reused by the redo: minted again, the whole subtree would come
+   * back under other ids and any later command naming one would go inert.
+   */
+  it('gives a redone duplicate the same ids as the first time', () => {
+    const command = duplicateUiElements(['a'], newId)
+    const first = command.apply(stateOf())
+    const again = command.apply(command.revert(first))
+
+    expect(idsOf(again)).toEqual(idsOf(first))
+  })
+
+  it('flips a batch to what the first of it is not, and puts each one back as it was', () => {
+    const mixed = stateOf()
+    const locked = setUiFlag('b', 'locked', true).apply(mixed)
+    const [after, back] = ran(locked, setUiFlags(['c', 'b'], 'locked'))
+
+    // `c` is not locked, so the batch locks — `b`, already locked, goes with it.
+    expect(elementById(after.document.root, 'c')?.locked).toBe(true)
+    expect(elementById(after.document.root, 'b')?.locked).toBe(true)
+    expect(elementById(back.document.root, 'c')?.locked).toBe(false)
+    expect(elementById(back.document.root, 'b')?.locked).toBe(true)
   })
 
   it('designates elements without touching the document', () => {

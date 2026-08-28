@@ -13,17 +13,13 @@ import {
   UI_VERSION,
   type UiDocument,
   type UiElement,
+  type UiElementType,
 } from '@shared/domain/ui'
 
 /**
- * The whole of what a `.ui.json` may hold, PUBLISHED — `docs/schema/ui-1.schema.json`, which
- * the files themselves point at through `$schema`.
- *
- * 🛑 Not the same schema as `uiValidation.ts`, and the difference is deliberate. That one is
- * shallow because it runs on the file layer, where a deep parse per document at listing time is
- * a freeze; this one never runs in the studio at all. It is the third description of the format
- * after the types and the tolerant reader, and what stops the three from drifting is the
- * `satisfies` below: a field added to `UiDocument` and forgotten here does not compile.
+ * The whole of what a `.ui.json` may hold, PUBLISHED. Deep where `uiValidation.ts` is shallow —
+ * that one runs on the file layer, where a parse per document at listing time is a freeze, and
+ * this one never runs in the studio at all.
  */
 const size = z.object({ width: z.number(), height: z.number() }).meta({ id: 'UiSize' })
 
@@ -110,85 +106,139 @@ const shared = {
   interaction,
 }
 
-/** The tree is recursive, so every container reads its children through this one lazy hole. */
+/**
+ * Every variant, by the type that discriminates it.
+ *
+ * 🛑 A `Record` over the closed list and not a bare array: `ZodType<Output>` is COVARIANT, so an
+ * annotated union of thirteen is assignable to one of fourteen — a type added to `UiElement`
+ * would compile here and vanish from the published schema in silence. The table is the same
+ * device `HOLDS_CHILDREN` and `INTRINSIC_SIZES` use, and it is what makes the omission a
+ * compile error.
+ */
+const VARIANTS = {
+  screen: z.object({
+    ...shared,
+    type: z.literal('screen'),
+    get children() {
+      return z.array(element)
+    },
+  }),
+  panel: z.object({
+    ...shared,
+    type: z.literal('panel'),
+    get children() {
+      return z.array(element)
+    },
+  }),
+  stack: z.object({
+    ...shared,
+    type: z.literal('stack'),
+    stack: z.object({
+      direction: z.enum(['row', 'column']),
+      gap: z.number(),
+      align: z.enum(UI_ALIGNS),
+      justify: z.enum(UI_JUSTIFIES),
+      wrap: z.boolean(),
+    }),
+    get children() {
+      return z.array(element)
+    },
+  }),
+  grid: z.object({
+    ...shared,
+    type: z.literal('grid'),
+    grid: z.object({ columns: z.number(), gap: z.number(), align: z.enum(UI_ALIGNS) }),
+    get children() {
+      return z.array(element)
+    },
+  }),
+  scroll: z.object({
+    ...shared,
+    type: z.literal('scroll'),
+    scroll: z.object({ axis: z.enum(UI_SCROLL_AXES) }),
+    get children() {
+      return z.array(element)
+    },
+  }),
+  spacer: z.object({ ...shared, type: z.literal('spacer') }),
+  text: z.object({ ...shared, type: z.literal('text'), text }),
+  image: z.object({
+    ...shared,
+    type: z.literal('image'),
+    image: z.object({ assetId: z.string(), fit, tint: z.string() }),
+  }),
+  button: z.object({
+    ...shared,
+    type: z.literal('button'),
+    text,
+    get children() {
+      return z.array(element)
+    },
+  }),
+  progress: z.object({
+    ...shared,
+    type: z.literal('progress'),
+    progress: z.object({
+      value: z.number(),
+      min: z.number(),
+      max: z.number(),
+      fill: z.string(),
+      track: z.string(),
+    }),
+  }),
+  slider: z.object({
+    ...shared,
+    type: z.literal('slider'),
+    slider: z.object({ value: z.number(), min: z.number(), max: z.number(), step: z.number() }),
+  }),
+  input: z.object({
+    ...shared,
+    type: z.literal('input'),
+    input: z.object({
+      value: z.string(),
+      placeholder: z.string(),
+      maxLength: z.number(),
+      secret: z.boolean(),
+    }),
+  }),
+  checkbox: z.object({
+    ...shared,
+    type: z.literal('checkbox'),
+    checkbox: z.object({ checked: z.boolean() }),
+  }),
+  // `satisfies` and not an annotation: it holds the coverage while leaving each variant its own
+  // inferred shape, which the union needs to discriminate on.
+} satisfies Record<UiElementType, z.ZodType>
+
+/**
+ * The tree is recursive, so every container reads its children through this one lazy hole.
+ *
+ * The members are named one by one: `Object.values` widens to an array where the union asks for
+ * a non-empty tuple. What holds the coverage is the `satisfies` above plus
+ * `uiSchema.test.ts`, which parses one element of EVERY type — a fourteenth left out of either
+ * place turns that red rather than quietly narrowing what the published schema accepts.
+ */
 const element: z.ZodType<UiElement> = z
   .lazy(() =>
     z.discriminatedUnion('type', [
-      z.object({ ...shared, type: z.literal('screen'), children: z.array(element) }),
-      z.object({ ...shared, type: z.literal('panel'), children: z.array(element) }),
-      z.object({
-        ...shared,
-        type: z.literal('stack'),
-        stack: z.object({
-          direction: z.enum(['row', 'column']),
-          gap: z.number(),
-          align: z.enum(UI_ALIGNS),
-          justify: z.enum(UI_JUSTIFIES),
-          wrap: z.boolean(),
-        }),
-        children: z.array(element),
-      }),
-      z.object({
-        ...shared,
-        type: z.literal('grid'),
-        grid: z.object({ columns: z.number(), gap: z.number(), align: z.enum(UI_ALIGNS) }),
-        children: z.array(element),
-      }),
-      z.object({
-        ...shared,
-        type: z.literal('scroll'),
-        scroll: z.object({ axis: z.enum(UI_SCROLL_AXES) }),
-        children: z.array(element),
-      }),
-      z.object({ ...shared, type: z.literal('spacer') }),
-      z.object({ ...shared, type: z.literal('text'), text }),
-      z.object({
-        ...shared,
-        type: z.literal('image'),
-        image: z.object({ assetId: z.string(), fit, tint: z.string() }),
-      }),
-      z.object({ ...shared, type: z.literal('button'), text, children: z.array(element) }),
-      z.object({
-        ...shared,
-        type: z.literal('progress'),
-        progress: z.object({
-          value: z.number(),
-          min: z.number(),
-          max: z.number(),
-          fill: z.string(),
-          track: z.string(),
-        }),
-      }),
-      z.object({
-        ...shared,
-        type: z.literal('slider'),
-        slider: z.object({
-          value: z.number(),
-          min: z.number(),
-          max: z.number(),
-          step: z.number(),
-        }),
-      }),
-      z.object({
-        ...shared,
-        type: z.literal('input'),
-        input: z.object({
-          value: z.string(),
-          placeholder: z.string(),
-          maxLength: z.number(),
-          secret: z.boolean(),
-        }),
-      }),
-      z.object({
-        ...shared,
-        type: z.literal('checkbox'),
-        checkbox: z.object({ checked: z.boolean() }),
-      }),
+      VARIANTS.screen,
+      VARIANTS.panel,
+      VARIANTS.stack,
+      VARIANTS.grid,
+      VARIANTS.scroll,
+      VARIANTS.spacer,
+      VARIANTS.text,
+      VARIANTS.image,
+      VARIANTS.button,
+      VARIANTS.progress,
+      VARIANTS.slider,
+      VARIANTS.input,
+      VARIANTS.checkbox,
     ]),
   )
   .meta({ id: 'UiElement' })
 
-const screen = z.object({ ...shared, type: z.literal('screen'), children: z.array(element) })
+const screen = VARIANTS.screen
 
 const binding = z.object({
   element: z.string(),

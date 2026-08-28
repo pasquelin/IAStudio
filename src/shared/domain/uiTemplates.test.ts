@@ -6,13 +6,6 @@ import { DEFAULT_UI_TEMPLATE, UI_TEMPLATE_IDS, isUiTemplateId, uiFromTemplate } 
 let counter = 0
 const newId = (): string => `made-${(counter += 1)}`
 
-const flatten = (element: { id: string; children?: readonly unknown[] }): string[] => [
-  element.id,
-  ...(element.children ?? []).flatMap(child =>
-    flatten(child as { id: string; children?: readonly unknown[] }),
-  ),
-]
-
 describe('what a new interface opens on', () => {
   /** 🛑 A template writing a file the studio then refuses is a document nobody can save. */
   it.each(UI_TEMPLATE_IDS)('makes a document that reads back whole: %s', id => {
@@ -26,7 +19,7 @@ describe('what a new interface opens on', () => {
 
   /** Two elements under one id would give the layout and the picking two answers. */
   it.each(UI_TEMPLATE_IDS)('gives every element an id of its own: %s', id => {
-    const ids = flatten(uiFromTemplate(id, newId).root)
+    const ids = flattenElements(uiFromTemplate(id, newId).root).map(one => one.id)
 
     expect(new Set(ids).size).toBe(ids.length)
   })
@@ -54,7 +47,12 @@ describe('what a new interface opens on', () => {
   })
 })
 
-type Walked = { type: string; interaction: { action: string }; children?: readonly Walked[] }
+type Walked = {
+  id: string
+  type: string
+  interaction: { action: string }
+  children?: readonly Walked[]
+}
 
 const flattenElements = (element: Walked): Walked[] => [
   element,

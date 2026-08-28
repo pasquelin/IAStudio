@@ -34,6 +34,21 @@ export const GUI_ADD_TOOL = 'gui.add'
 
 export const GUI_RESOLUTION_TOOL = 'gui.resolution'
 
+/**
+ * The buttons that ACT when pressed — everything but the two whose whole action is their flyout.
+ * Published so the space's dispatch is a `Record` over it: a button added to the bar and left
+ * unwired does not compile.
+ */
+export type GuiActionId =
+  | 'gui.duplicate'
+  | 'gui.group'
+  | 'gui.delete'
+  | 'gui.lock'
+  | 'gui.zoomIn'
+  | 'gui.zoomOut'
+  | 'gui.fit'
+  | 'gui.actual'
+
 /** A `Record` over the closed list, so a fourteenth type does not compile until it has a glyph. */
 const TYPE_ICONS: Record<UiElementType, string> = {
   screen: mdiMonitorScreenshot,
@@ -54,16 +69,14 @@ const TYPE_ICONS: Record<UiElementType, string> = {
 export const uiTypeIcon = (type: UiElementType): string => TYPE_ICONS[type]
 
 /** Everything but the screen: a document holds exactly one, and it is the document. */
-export const ADDABLE_UI_TYPES: readonly UiElementType[] = UI_ELEMENT_TYPES.filter(
-  type => type !== 'screen',
+const ADD_MODES: readonly ToolMode[] = UI_ELEMENT_TYPES.filter(type => type !== 'screen').map(
+  type => ({
+    id: type,
+    labelKey: `guiTools.types.${type}`,
+    descriptionKey: `guiTools.typeHints.${type}`,
+    icon: TYPE_ICONS[type],
+  }),
 )
-
-const ADD_MODES: readonly ToolMode[] = ADDABLE_UI_TYPES.map(type => ({
-  id: type,
-  labelKey: `guiTools.types.${type}`,
-  descriptionKey: `guiTools.typeHints.${type}`,
-  icon: TYPE_ICONS[type],
-}))
 
 const RESOLUTION_MODES: readonly ToolMode[] = UI_RESOLUTION_IDS.map(id => ({
   id,

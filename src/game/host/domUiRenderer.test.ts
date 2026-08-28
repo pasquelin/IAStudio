@@ -150,19 +150,17 @@ describe('an interface drawn as DOM', () => {
 
   /** 🛑 Answered from the boxes, which is what a world-space renderer will hand a point in. */
   it('answers a pick from the boxes rather than from the tree it drew', () => {
+    const locked = uiScreen([{ ...uiPanel('a'), locked: true }])
     const renderer = createDomUiRenderer({ host, assets: NO_ASSETS })
     renderer.draw([framed(uiScreen([uiPanel('a')]))])
 
     expect(renderer.pick({ x: 10, y: 10 })).toEqual({ ui: 'hud', element: 'a' })
     expect(renderer.pick({ x: 90, y: 90 })).toEqual({ ui: 'hud', element: 'root' })
-  })
 
-  it('lets its host ask for a locked element to be skipped', () => {
-    const locked = uiScreen([{ ...uiPanel('a'), locked: true }])
-    const renderer = createDomUiRenderer({ host, assets: NO_ASSETS, picking: { skipLocked: true } })
-    renderer.draw([framed(locked)])
-
-    expect(renderer.pick({ x: 10, y: 10 })?.element).toBe('root')
+    // What the renderer owes on top of `pickAt`: its host's options reach it.
+    const skipping = createDomUiRenderer({ host, assets: NO_ASSETS, picking: { skipLocked: true } })
+    skipping.draw([framed(locked)])
+    expect(skipping.pick({ x: 10, y: 10 })?.element).toBe('root')
   })
 
   /** The overlay is not what reads a gesture: the host does, and answers through `pick`. */

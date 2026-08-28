@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_IMAGE, DEFAULT_TEXT, type UiElement, type UiSize } from '@shared/domain/ui'
-import { UI_ELEMENT_BASE, uiPanel, uiText } from '../ui/ui-fixtures'
+import { DEFAULT_TEXT, type UiElement, type UiSize } from '@shared/domain/ui'
+import { newUiElement } from '@shared/domain/uiDocument'
+import { uiImage, uiPanel, uiText } from '../ui/ui-fixtures'
 import { createCanvasUiMeasure, cssFontOf, type UiTextRuler } from './canvasUiMeasure'
 
 /** Ten pixels a character, so a width in the assertions reads as a count of letters. */
@@ -13,13 +14,6 @@ function ruler(): UiTextRuler {
 }
 
 const ROOM: UiSize = { width: 100, height: 100 }
-
-const image = (assetId: string): UiElement => ({
-  ...UI_ELEMENT_BASE,
-  id: 'picture',
-  type: 'image',
-  image: { ...DEFAULT_IMAGE, assetId },
-})
 
 describe('measuring what a layout cannot work out alone', () => {
   it('measures a caption at the face it is set in', () => {
@@ -44,9 +38,7 @@ describe('measuring what a layout cannot work out alone', () => {
 
   it('keeps a caption on one line when it is not to be wrapped', () => {
     const unwrapped: UiElement = {
-      ...UI_ELEMENT_BASE,
-      id: 't',
-      type: 'text',
+      ...newUiElement('text', () => 't'),
       text: { ...DEFAULT_TEXT, value: 'abcd efgh ijkl', wrap: false },
     }
 
@@ -64,25 +56,26 @@ describe('measuring what a layout cannot work out alone', () => {
 
   it('gives a control the box the core says it covers', () => {
     const measure = createCanvasUiMeasure(ruler(), () => null)
-    const box: UiElement = {
-      ...UI_ELEMENT_BASE,
-      id: 'c',
-      type: 'checkbox',
-      checkbox: { checked: false },
-    }
 
-    expect(measure(box, ROOM)).toEqual({ width: 16, height: 16 })
+    expect(
+      measure(
+        newUiElement('checkbox', () => 'c'),
+        ROOM,
+      ),
+    ).toEqual({ width: 16, height: 16 })
   })
 
   /** Nothing rather than a guess: a picture claiming a box would shove its neighbours twice. */
   it('gives a picture its natural size, and nothing at all while it is loading', () => {
     const known = createCanvasUiMeasure(ruler(), () => ({ width: 32, height: 48 }))
 
-    expect(known(image('asset_1'), ROOM)).toEqual({ width: 32, height: 48 })
-    expect(createCanvasUiMeasure(ruler(), () => null)(image('asset_1'), ROOM)).toEqual({
-      width: 0,
-      height: 0,
-    })
+    expect(known(uiImage('picture', 'asset_1'), ROOM)).toEqual({ width: 32, height: 48 })
+    expect(createCanvasUiMeasure(ruler(), () => null)(uiImage('picture', 'asset_1'), ROOM)).toEqual(
+      {
+        width: 0,
+        height: 0,
+      },
+    )
   })
 
   it('gives an empty container nothing to cover', () => {

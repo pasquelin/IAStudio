@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { UI_ELEMENT_TYPES, UI_SCHEMA_URL } from '@shared/domain/ui'
+import { newUiElement, uiPayload } from '@shared/domain/uiDocument'
 import { UI_TEMPLATE_IDS, uiFromTemplate } from '@shared/domain/uiTemplates'
 import { UI_SCHEMA_FILE, uiDocumentSchema, uiJsonSchema } from './uiSchema'
 
@@ -29,6 +31,29 @@ describe('the published interface schema', () => {
    */
   it.each(UI_TEMPLATE_IDS)('accepts the document a new %s interface opens on', id => {
     expect(uiDocumentSchema.safeParse(uiFromTemplate(id, newId)).success).toBe(true)
+  })
+
+  /**
+   * 🛑 The guard that closes the covariance hole: `ZodType<Output>` is covariant, so a
+   * fourteenth type left out of the union would compile and simply stop being accepted. Parsing
+   * one element of every type is what says so.
+   */
+  it.each(UI_ELEMENT_TYPES)('accepts an element of every type the format holds: %s', type => {
+    const whole = uiFromTemplate('empty', newId)
+    const root = { ...whole.root, children: [newUiElement(type, newId)] }
+
+    expect(uiDocumentSchema.safeParse({ ...whole, root }).success).toBe(true)
+  })
+
+  /** What a file holds is the document PLUS the studio's block and the schema pointer. */
+  it('accepts the file the studio writes, envelope and all', () => {
+    const file = {
+      studio: { documentId: 'doc-1', documentKind: 'gui' },
+      ...uiPayload(uiFromTemplate('hud', newId)),
+    }
+
+    expect(file.$schema).toBe(UI_SCHEMA_URL)
+    expect(uiDocumentSchema.safeParse(file).success).toBe(true)
   })
 
   it('turns away a document that is not one', () => {

@@ -136,10 +136,14 @@ export function emptyScreen(newId: () => string): UiScreen {
  * Through the same reader a file goes through rather than a second table of what an element is:
  * a field added to the format would otherwise arrive on read and be missing on create.
  */
-export function newUiElement(type: UiElementType, newId: () => string): UiElement {
-  // `element` answers null only for something that is not an element at all, which a bare type
-  // of the closed list never is. The screen is a fallback the compiler asks for, not a case.
-  return element({ type }, newId) ?? emptyScreen(newId)
+export function newUiElement<T extends UiElementType>(
+  type: T,
+  newId: () => string,
+): Extract<UiElement, { type: T }> {
+  // `as`: the reader answers the whole union — it is asked what a FILE holds — where the type
+  // named here settles which variant. `element` answers null only for something that is not an
+  // element at all, which a bare type of the closed list never is.
+  return (element({ type }, newId) ?? emptyScreen(newId)) as Extract<UiElement, { type: T }>
 }
 
 /**

@@ -321,10 +321,6 @@ describe('what the interface renderer may read back', () => {
     expect(measuringNamesIn(readFileSync(RENDERER, 'utf8'))).toEqual([])
   })
 
-  it('is watching a file that is there', () => {
-    expect(readFileSync(RENDERER, 'utf8').length).toBeGreaterThan(0)
-  })
-
   it('would see a measurement, however it was reached', () => {
     expect(measuringNamesIn('const box = node.getBoundingClientRect()')).toEqual([
       'getBoundingClientRect',

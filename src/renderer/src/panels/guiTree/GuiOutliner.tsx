@@ -2,7 +2,7 @@ import { mdiLockOutline } from '@mdi/js'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { UiElement } from '@shared/domain/ui'
-import { flattened, parentOf } from '@game/ui/uiTree'
+import { flattenedWithParents } from '@game/ui/uiTree'
 import { Row } from '@/design/Row'
 import { Tree, type TreeNode } from '@/design/Tree'
 import { UiIcon } from '@/design/UiIcon'
@@ -26,12 +26,7 @@ export function GuiOutliner({ documentId }: { documentId: string }) {
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set([root.id]))
 
   const items = useMemo<GuiItem[]>(
-    () =>
-      flattened(root).map(element => ({
-        id: element.id,
-        parentId: parentOf(root, element.id)?.id ?? null,
-        element,
-      })),
+    () => flattenedWithParents(root).map(one => ({ id: one.element.id, ...one })),
     [root],
   )
 
