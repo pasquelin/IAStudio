@@ -40,6 +40,7 @@ const CONTENT: Partial<Record<SettingsSectionId, FC>> = {
   'ai.audio': () => <AiSettings family="audio" />,
   'ai.material': () => <AiSettings family="material" />,
   'ai.skybox': () => <AiSettings family="skybox" />,
+  'ai.code': () => <AiSettings family="code" />,
   'ai.upscale': () => <AiSettings family="upscale" />,
   'ai.background-removal': () => <AiSettings family="background-removal" />,
   'ai.vectorization': () => <AiSettings family="vectorization" />,

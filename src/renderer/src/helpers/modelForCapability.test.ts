@@ -103,6 +103,29 @@ it('does not send a local leftover when the employment is a cloud', () => {
   expect(modelForCapability(TXT2IMG)).toBeUndefined()
 })
 
+it('names a cloud with no catalogue as the model itself', () => {
+  const role = aiRoleId('code', 'txt2code')
+  useAiModels.setState({
+    overview: overviewOf(
+      imageRow({ role, provider: { kind: 'cloud', providerId: 'anthropic' }, clouds: [] }),
+    ),
+  })
+
+  expect(modelForCapability(role)).toBe('cloud:anthropic')
+})
+
+/** A code model of THIS machine is named by its own id, like every other local employment. */
+it('names a code model of this machine by its manifest id', () => {
+  const role = aiRoleId('code', 'txt2code')
+  useAiModels.setState({
+    overview: overviewOf(
+      imageRow({ role, provider: { kind: 'local', modelId: 'qwen2.5-coder-7b-instruct-q4' } }),
+    ),
+  })
+
+  expect(modelForCapability(role)).toBe('qwen2.5-coder-7b-instruct-q4')
+})
+
 /** Only the subscribed form takes one: the rail asks about the home, which generates nothing. */
 it('answers nothing for no employment at all', () => {
   chooseModels({ [TXT2IMG]: 'flux' })

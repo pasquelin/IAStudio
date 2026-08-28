@@ -1,14 +1,9 @@
 import type { AssistantAnswer } from '@shared/domain/assistant'
+import { OversizedRequest } from '@main/ai/cloudChat'
 import { log } from '@main/log'
 import type { Briefing } from './instruction'
 import { recentHistory } from './instruction'
 import { parseReply, type Reply } from './reply'
-
-/**
- * A door that refused the request for its SIZE, which is the only refusal a shorter briefing can
- * answer. Raised by whoever can tell — for a chat cloud, a 400, 413 or 422.
- */
-export class OversizedRequest extends Error {}
 
 /** What one round trip came back with, and what it cost. Zero for a model on this machine. */
 export type BrainAttempt = { answer: string; cost: number }

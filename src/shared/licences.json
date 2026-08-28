@@ -536,6 +536,20 @@
     "sources": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF"
   },
   {
+    "name": "Qwen2.5-Coder 1.5B Instruct",
+    "version": "Q4_K_M",
+    "spdx": "Apache-2.0",
+    "text": "The model the Code space writes scripts with on this machine, in its 1.5B size.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.\nFull terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF"
+  },
+  {
+    "name": "Qwen2.5-Coder 7B Instruct",
+    "version": "Q4_K_M",
+    "spdx": "Apache-2.0",
+    "text": "The model the Code space writes scripts with on this machine, in its 7B size.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.\nFull terms: https://www.apache.org/licenses/LICENSE-2.0",
+    "sources": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF"
+  },
+  {
     "name": "react",
     "version": "19.2.8",
     "spdx": "MIT",

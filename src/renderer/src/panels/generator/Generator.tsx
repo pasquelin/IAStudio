@@ -2,6 +2,8 @@ import { mdiCreationOutline } from '@mdi/js'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
+import { partsOfRole } from '@shared/domain/aiRole'
+import { CATALOGUE_FAMILIES } from '@shared/domain/model'
 import type { ContextUse } from '@shared/domain/projectContext'
 import { useDescriptor } from '@/hooks/useDescriptor'
 import { useGenerationContext } from '@/hooks/useGenerationContext'
@@ -11,6 +13,7 @@ import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
 import { fillSourceFields } from '@/spaces/image/aiFields'
+import { withBodyExtras } from '@/generation/bodyExtras'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
@@ -61,6 +64,7 @@ export function Generator() {
     capability.chosen ? state.preset[capability.chosen] : undefined,
   )
   const modelId = useModelForCapability(capability.chosen)
+  const family = (capability.chosen && partsOfRole(capability.chosen)?.family) ?? null
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const landing = useSettings(state => state.settings.generation.landing)
@@ -136,20 +140,22 @@ export function Generator() {
    * settled at the click, and a second path that skipped it would land generations nowhere.
    */
   const runGeneration = useCallback(
-    (values: FormValues, into?: LandingTarget): Promise<Job | null> => {
-      if (!modelId) return Promise.resolve(null)
+    async (values: FormValues, into?: LandingTarget): Promise<Job | null> => {
+      if (!modelId) return null
       const claim = claimOnSubmit(into)
       setSubmitting(true)
 
-      return submit({ id: modelId }, values, contextUse)
-        .then(job => {
-          claim(job)
-          setRunningId(job?.id ?? null)
-          return job
-        })
-        .finally(() => setSubmitting(false))
+      try {
+        // What the workspace holds and no model schema publishes — `bodyExtras` owns the table.
+        const job = await submit({ id: modelId }, withBodyExtras(family, values), contextUse)
+        claim(job)
+        setRunningId(job?.id ?? null)
+        return job
+      } finally {
+        setSubmitting(false)
+      }
     },
-    [modelId, submit, contextUse],
+    [modelId, submit, contextUse, family],
   )
 
   useEffect(
@@ -181,9 +187,12 @@ export function Generator() {
    */
   const refusal = refusalFor(descriptor.data?.requiredPlanLevel)
 
-  // A model of this machine needs no account. Asking for a key first hid the local catalogue
-  // behind a Scenario form, and sent people out of the studio to fetch one.
-  if (!authenticated && !onThisMachine) {
+  /**
+   * 🛑 The SCENARIO key, and only where Scenario can serve: a model of this machine needs no
+   * account, and neither does a family no catalogue publishes — a person holding an Anthropic key
+   * alone was shown the Scenario form in Code, with no way past it.
+   */
+  if (!authenticated && !onThisMachine && family !== null && CATALOGUE_FAMILIES.includes(family)) {
     if (!catalogueRead) {
       return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
     }

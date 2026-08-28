@@ -335,6 +335,14 @@ export const generated = (run: Run, family?: ModelFamily): boolean =>
       (family === undefined || run.studio.familyOf(one.targetId) === family),
   )
 
+/** Whether a generation of that family was SENT a field — read off the body, never off the call. */
+export const sentWith = (run: Run, family: ModelFamily, key: string): boolean =>
+  jobs(run).some(
+    one =>
+      run.studio.familyOf(one.targetId) === family &&
+      typeof run.studio.sentBodies()[one.id]?.[key] === 'string',
+  )
+
 /**
  * Read off what the generator SENT, never off the call's text: an id quoted in a prompt is not a
  * reference, and which fields hold a picture is the model's schema to say.

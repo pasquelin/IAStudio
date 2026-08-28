@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ASSET_CLOUDS,
   chatModelOf,
   CLOUD_IDS,
   CLOUD_PROVIDERS,
   cloudsServing,
   defaultChatModel,
   isCloudProviderId,
+  SCENARIO_CLOUD,
 } from './aiCloud'
 import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from './aiRole'
 
@@ -19,6 +21,17 @@ describe('the cloud registry', () => {
     expect(cloudsServing(aiRoleId('image', 'inpaint'))).toEqual(['scenario'])
     expect(cloudsServing(ASSISTANT_ROLE)).toEqual(CLOUD_IDS)
     expect(cloudsServing(DICTATION_ROLE)).toEqual([])
+  })
+
+  it('serves a script from every chat cloud, and from Scenario nowhere', () => {
+    const writing = cloudsServing(aiRoleId('code', 'txt2code'))
+
+    expect(writing).not.toContain(SCENARIO_CLOUD)
+    expect(writing).toEqual(CLOUD_IDS.filter(id => id !== SCENARIO_CLOUD))
+  })
+
+  it('holds a library only where a catalogue of assets is published', () => {
+    expect(ASSET_CLOUDS).toEqual([SCENARIO_CLOUD])
   })
 
   // The registry decides, never a string that arrived from a stored file or an IPC payload.

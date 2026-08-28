@@ -1,5 +1,7 @@
 import type { FieldDescriptor } from '@shared/domain/model'
+import { partsOfRole } from '@shared/domain/aiRole'
 import { registerGenerator, type GeneratorBridge } from '@/assistant/generatorBridge'
+import { withBodyExtras } from '@/generation/bodyExtras'
 import { referencePictures } from '@/helpers/dynamicForm'
 import { resolveModelForCapability } from '@/helpers/modelForCapability'
 import { useAiModels } from '@/stores/aiModels'
@@ -27,7 +29,10 @@ export function installGeneratorPanel(
       models.selected[role],
       useAiModels.getState().overview,
     )
-    return modelId ? { modelId, values: models.preset[role] ?? {} } : null
+    // 🛑 Through `withBodyExtras`, as the real panel does: what the WORKSPACE adds is not in the
+    // preset, and a stand-in that skipped it would score a generation the studio never sends.
+    const values = withBodyExtras(partsOfRole(role)?.family ?? null, models.preset[role] ?? {})
+    return modelId ? { modelId, values } : null
   }
 
   const references = (): string[] => {

@@ -32,6 +32,11 @@ export type RemoteJob = {
   cost?: number
   /** A local runner names why it failed. Absent on the cloud, which has no code of its own. */
   error?: JobFailure
+  /**
+   * What a generation that writes NO FILE answered — a script, today, and nothing else. Carried
+   * here rather than fetched after: there is no asset to read it back off.
+   */
+  text?: string
 }
 
 export type JobRunner = {
@@ -574,6 +579,9 @@ export function createJobManager({
       settle(entry, status, status === 'failed' ? (remote.error ?? 'rejected') : undefined)
       return
     }
+
+    // Before the collection, since there is nothing to collect: the window reads it off the job.
+    if (remote.text !== undefined) entry.job.text = remote.text
 
     /**
      * Nothing is brought down for a discreet job, and the ids kept are the API's own.

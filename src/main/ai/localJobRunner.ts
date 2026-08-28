@@ -6,9 +6,16 @@ import {
   PROMPT_FIELD_KEY,
   type ProducingModality,
 } from '@shared/domain/localFields'
-import type { LocalModel } from '@shared/domain/localModel'
+import {
+  CODE_API_FIELD,
+  CODE_SOURCE_FIELD,
+  codeChatPrompt,
+  unfencedCode,
+} from '@shared/domain/codeGeneration'
+import { capabilitiesIn, type LocalModel } from '@shared/domain/localModel'
+import { CODE_FAMILY } from '@shared/domain/model'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
-import type { ChatRequest, GenerateResult } from './localRuntimes'
+import type { ChatRequest, ChatTurn, GenerateResult } from './localRuntimes'
 import { NetworkInterrupted, isNetworkError } from './modelInstall'
 
 /**
@@ -68,10 +75,22 @@ type LocalGenerateRequest = {
 }
 
 /**
- * How many finished jobs are remembered. `owns` reads this map, so a job cannot simply be dropped
- * when it settles — the poll that follows would then be routed to the cloud.
+ * How many finished jobs are remembered. `owns` reads these maps, so a job cannot simply be
+ * dropped when it settles — the poll that follows would then be routed to a runner that never
+ * ran it. Shared with the code runner, which answers `owns` the same way.
  */
 const REMEMBERED = 64
+
+/**
+ * Drops the OLDEST settled jobs down to the ceiling — oldest first, which is what a `Map`
+ * iterates. Settled only: evicting a running job makes `owns` answer no.
+ */
+export function forgetSettled(jobs: Map<string, { status: string }>): void {
+  for (const [jobId, job] of jobs) {
+    if (jobs.size <= REMEMBERED) return
+    if (job.status !== 'in-progress') jobs.delete(jobId)
+  }
+}
 
 export type LocalJobRunner = JobRunner & {
   /** What a finished job answered, or nothing — for whoever files it. */
@@ -84,8 +103,13 @@ export type LocalJobRunner = JobRunner & {
 
 /** The prompt a body carries, under the key `localFields.ts` gives every modality. */
 function promptOf(body: Record<string, unknown>): string {
-  const prompt = body[PROMPT_FIELD_KEY]
-  return typeof prompt === 'string' ? prompt : ''
+  return textIn(body, PROMPT_FIELD_KEY) ?? ''
+}
+
+/** A text a body carries, or nothing — an absent field and an empty one say the same thing. */
+export function textIn(body: Record<string, unknown>, key: string): string | null {
+  const held = body[key]
+  return typeof held === 'string' && held.length > 0 ? held : null
 }
 
 function jobFailureOf(error: unknown): JobFailure {
@@ -97,28 +121,65 @@ function jobFailureOf(error: unknown): JobFailure {
   return 'rejected'
 }
 
+/**
+ * The three knobs `localFieldsOf('text', …)` publishes, as the form filled them. Absent stays
+ * absent, so a door keeps its own default rather than one written here.
+ */
+function knobsIn(body: Record<string, unknown>): {
+  maxTokens?: number
+  temperature?: number
+  topP?: number
+} {
+  const maxTokens = body['maxTokens']
+  const temperature = body['temperature']
+  const topP = body['topP']
+
+  return {
+    ...(typeof maxTokens === 'number' ? { maxTokens } : {}),
+    ...(typeof temperature === 'number' ? { temperature } : {}),
+    ...(typeof topP === 'number' ? { topP } : {}),
+  }
+}
+
+/** The system turn, when there is one, then the sentence. */
+function turnsOf(prompt: { system: string | null; user: string }): readonly ChatTurn[] {
+  const system: ChatTurn = { role: 'system', content: prompt.system ?? '' }
+  const user: ChatTurn = { role: 'user', content: prompt.user }
+
+  return prompt.system === null ? [user] : [system, user]
+}
+
 export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
   const jobs = new Map<string, LocalJob>()
 
-  /**
-   * Oldest first, which is what a `Map` iterates — and SETTLED only: evicting a running job makes
-   * `owns` answer no, and the poll that follows is routed to a cloud that never heard of it.
-   */
-  const forget = (): void => {
-    for (const [jobId, job] of jobs) {
-      if (jobs.size <= REMEMBERED) return
-      if (job.status !== 'in-progress') jobs.delete(jobId)
-    }
-  }
+  const converse = async (
+    job: LocalJob,
+    model: LocalModel,
+    body: Record<string, unknown>,
+  ): Promise<void> => {
+    // Read off the MANIFEST: an Ollama tag declares the code employments it serves, so the same
+    // weights answer a conversation and write a script without a marker in the body to say which.
+    const writesCode = capabilitiesIn(model, CODE_FAMILY) !== null
+    const prompt = writesCode
+      ? codeChatPrompt({
+          prompt: promptOf(body),
+          source: textIn(body, CODE_SOURCE_FIELD),
+          api: textIn(body, CODE_API_FIELD) ?? '',
+        })
+      : { system: null, user: promptOf(body) }
 
-  const converse = async (job: LocalJob, model: LocalModel, prompt: string): Promise<void> => {
-    job.answer = await deps.chat({
+    const answer = await deps.chat({
       model: model.id,
       contextTokens: model.contextTokens ?? 0,
-      messages: [{ role: 'user', content: prompt }],
+      messages: turnsOf(prompt),
       json: false,
+      ...knobsIn(body),
       signal: job.abort.signal,
     })
+
+    // The fence comes off a script and never off a sentence: an assistant answer is prose, and
+    // stripping its backticks would eat a code block the person asked for.
+    job.answer = writesCode ? unfencedCode(answer) : answer
   }
 
   const produce = async (
@@ -160,7 +221,7 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
       if (model.modality && producesFile(model.modality)) {
         await produce(job, model, jobId, body)
       } else {
-        await converse(job, model, promptOf(body))
+        await converse(job, model, body)
       }
 
       job.status = 'success'
@@ -177,6 +238,8 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
     status: job.status,
     progress: job.progress,
     assetIds: [],
+    // What a model that writes no file answered — a script. The window lands it in an editor.
+    ...(job.answer === '' ? {} : { text: job.answer }),
     error: job.error ?? undefined,
     // Nothing was billed, and saying zero is what keeps a local run out of the usage report as a
     // figure rather than as a hole.
@@ -202,7 +265,7 @@ export function createLocalJobRunner(deps: LocalJobDeps): LocalJobRunner {
       }
 
       jobs.set(jobId, job)
-      forget()
+      forgetSettled(jobs)
       if (model !== null) void run(job, model, jobId, body)
 
       return Promise.resolve(answerFor(jobId, job))

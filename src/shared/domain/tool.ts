@@ -4,7 +4,12 @@
  * enriches it with icons and components. Duplicating it in the main process would degrade
  * `ToolId` to `string` and force a cast back on the other side.
  */
-import { GENERATIVE_WORKSPACE_IDS, WORKSPACE_IDS, type WorkspaceId } from './workspace'
+import {
+  GENERATIVE_WORKSPACE_IDS,
+  LIBRARY_WORKSPACE_IDS,
+  WORKSPACE_IDS,
+  type WorkspaceId,
+} from './workspace'
 
 /**
  * A surface panels can stand on: one of the workspaces, or the home screen.
@@ -128,8 +133,8 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // nothing served the space's family — the one moment a person needs the panel most, and the
   // panel is what would have offered them a model. It now says which of the five refusals it is.
   //
-  // `GENERATIVE_WORKSPACE_IDS` and not every space since Code joined the rail: nothing Scenario
-  // serves writes a script, so an icon here would open on a picker with nothing in it.
+  // `GENERATIVE_WORKSPACE_IDS`, which is every space since Code gained the `code` family: a chat
+  // cloud or a text model on this machine writes the script the way a diffusion model draws.
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: GENERATIVE_WORKSPACE_IDS },
   // Second, so entering a space lands on the generator: a half with nothing chosen opens on the
   // first tool it declares, and generating is where every space starts.
@@ -139,11 +144,15 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // says which of the five refusals it is, while a remote library with no account to open has
   // nothing at all — not one row, no local half since 25 August. An icon opening onto a panel
   // that can only ever say « configure a key » is an icon that lies about what it does.
+  //
+  // 🛑 `LIBRARY_WORKSPACE_IDS` and not the generator's own list, since Code gained a family: what
+  // serves a script is a chat, which publishes no assets, so this shelf would have stood beside
+  // the editor listing pictures.
   {
     id: 'assets',
     zone: 'left',
     slot: 'primary',
-    surfaces: GENERATIVE_WORKSPACE_IDS,
+    surfaces: LIBRARY_WORKSPACE_IDS,
     requires: 'cloud',
   },
 

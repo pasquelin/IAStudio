@@ -1,4 +1,4 @@
-import { MODEL_FAMILIES, type ModelFamily } from './model'
+import { CATALOGUE_FAMILIES, CODE_FAMILY, type ModelFamily } from './model'
 import { ASSISTANT_ROLE, partsOfRole, type AiRoleId } from './aiRole'
 
 /**
@@ -32,41 +32,54 @@ export type CloudProvider = {
 /** The one cloud the studio was built on: a stored key written before clouds were a list is one. */
 export const SCENARIO_CLOUD: CloudProviderId = 'scenario'
 
-function assistantCloud(id: CloudProviderId, chat: HttpChat): CloudProvider {
-  return { id, families: [], standalone: [ASSISTANT_ROLE], auth: 'key', chat }
+/**
+ * A cloud reached over HTTP chat: it answers the assistant, and it writes code.
+ *
+ * The two go together because they are ONE round trip — a chat that can hold a conversation can
+ * be asked for a function, and refusing it the code family would have meant a second key, for the
+ * same account, on the same endpoint. Its families are `code` alone: none of them publishes an
+ * image, so none of them holds a library to browse.
+ */
+function chatCloud(id: CloudProviderId, chat: HttpChat): CloudProvider {
+  return { id, families: [CODE_FAMILY], standalone: [ASSISTANT_ROLE], auth: 'key', chat }
 }
 
 /**
- * The registry, and the ONE place a cloud is named. Scenario serves generation and the assistant;
- * the others hold a chat key for the assistant only. Dictation is absent.
+ * The registry, and the ONE place a cloud is named. Scenario serves asset generation and the
+ * assistant; the others answer over chat, which is what serves the assistant and the code family.
+ * Dictation is absent.
+ *
+ * 🛑 Scenario does NOT declare `code`, and it is not an oversight to correct: its catalogue
+ * publishes no code model and its capability enum holds no code value, so the family would open a
+ * picker with nothing in it.
  */
 export const CLOUD_PROVIDERS: readonly CloudProvider[] = [
   {
     id: SCENARIO_CLOUD,
-    families: MODEL_FAMILIES,
+    families: CATALOGUE_FAMILIES,
     standalone: [ASSISTANT_ROLE],
     auth: 'key-secret',
     chat: { kind: 'scenario' },
   },
-  assistantCloud('openai', {
+  chatCloud('openai', {
     kind: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
   }),
-  assistantCloud('anthropic', { kind: 'anthropic', model: 'claude-sonnet-4-5' }),
-  assistantCloud('google', { kind: 'gemini', model: 'gemini-2.0-flash' }),
-  assistantCloud('deepseek', {
+  chatCloud('anthropic', { kind: 'anthropic', model: 'claude-sonnet-4-5' }),
+  chatCloud('google', { kind: 'gemini', model: 'gemini-2.0-flash' }),
+  chatCloud('deepseek', {
     kind: 'openai',
     baseUrl: 'https://api.deepseek.com',
     model: 'deepseek-chat',
   }),
-  assistantCloud('xai', { kind: 'openai', baseUrl: 'https://api.x.ai/v1', model: 'grok-3-mini' }),
-  assistantCloud('mistral', {
+  chatCloud('xai', { kind: 'openai', baseUrl: 'https://api.x.ai/v1', model: 'grok-3-mini' }),
+  chatCloud('mistral', {
     kind: 'openai',
     baseUrl: 'https://api.mistral.ai/v1',
     model: 'mistral-small-latest',
   }),
-  assistantCloud('openrouter', {
+  chatCloud('openrouter', {
     kind: 'openai',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'openai/gpt-4o-mini',
@@ -76,13 +89,13 @@ export const CLOUD_PROVIDERS: readonly CloudProvider[] = [
 export const CLOUD_IDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.map(one => one.id)
 
 /**
- * The clouds that hold a LIBRARY of assets, rather than only a key the assistant talks through.
+ * The clouds that hold a LIBRARY of assets, rather than only a key a chat talks through.
  *
- * Read off `families` rather than named: a cloud that publishes no generation family has no
- * assets to browse, and a ninth provider joins this list by declaring one.
+ * 🛑 `families.length > 0` is not the test since the chat clouds gained `code`: it would have put
+ * eight browsers of nothing beside the one that lists something.
  */
-export const ASSET_CLOUDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.filter(
-  cloud => cloud.families.length > 0,
+export const ASSET_CLOUDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.filter(cloud =>
+  cloud.families.some(family => CATALOGUE_FAMILIES.includes(family)),
 ).map(cloud => cloud.id)
 
 /** Whether a cloud publishes what this role asks for, read off its declaration. */

@@ -75,6 +75,7 @@ const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
   { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai', family: 'audio' },
   { id: 'ai.material', labelKey: 'workspaces.materials', parent: 'ai', family: 'material' },
   { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai', family: 'skybox' },
+  { id: 'ai.code', labelKey: 'workspaces.code', parent: 'ai', family: 'code' },
   { id: 'ai.upscale', labelKey: 'families.upscale', parent: 'ai', family: 'upscale' },
   {
     id: 'ai.background-removal',

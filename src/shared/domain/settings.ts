@@ -489,6 +489,7 @@ export type SettingsSectionId =
   | 'ai.audio'
   | 'ai.material'
   | 'ai.skybox'
+  | 'ai.code'
   | 'ai.upscale'
   | 'ai.background-removal'
   | 'ai.vectorization'
@@ -514,6 +515,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'ai.audio',
   'ai.material',
   'ai.skybox',
+  'ai.code',
   'ai.upscale',
   'ai.background-removal',
   'ai.vectorization',

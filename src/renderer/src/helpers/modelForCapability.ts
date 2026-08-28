@@ -1,5 +1,7 @@
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { AiRoleId } from '@shared/domain/aiRole'
+import { ASSET_CLOUDS } from '@shared/domain/aiCloud'
+import { cloudModelId } from '@shared/domain/codeGeneration'
 import { useAiModels } from '@/stores/aiModels'
 import { useModels } from '@/stores/models'
 
@@ -17,6 +19,11 @@ export function resolveModelForCapability(
   const provider = row?.provider ?? null
 
   if (provider?.kind === 'local') return provider.modelId
+
+  // 🛑 A cloud with no catalogue IS the model: there is no row for the browser to have picked.
+  if (provider?.kind === 'cloud' && !ASSET_CLOUDS.includes(provider.providerId)) {
+    return cloudModelId(provider.providerId)
+  }
 
   // 🛑 A model of THIS machine is never sent to a cloud: the employment is served by an account,
   // and a leftover local id would be asked of a catalogue that has never heard of it.

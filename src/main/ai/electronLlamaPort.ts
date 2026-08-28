@@ -145,7 +145,11 @@ export function electronLlamaPort(): LlamaPort {
         }
 
         return await session.prompt(spoken.at(-1)?.content ?? '', {
-          temperature: 0,
+          // Zero where nothing asks otherwise: the assistant's answers are parsed, and a door
+          // that wandered would fail that parse rather than read as creative.
+          temperature: request.temperature ?? 0,
+          ...(request.topP === undefined ? {} : { topP: request.topP }),
+          ...(request.maxTokens === undefined ? {} : { maxTokens: request.maxTokens }),
           ...(request.signal ? { signal: request.signal } : {}),
           // A grammar for JSON at large, never the assistant's own shape: a port that knew what
           // `say` and `calls` are would be a port that only one caller could use.

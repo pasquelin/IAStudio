@@ -113,7 +113,9 @@ import { pythonRuntime } from './ai/pythonRuntime'
 import { createPythonSupervisor } from './ai/pythonSupervisor'
 import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
 import { ownModelFrom } from './ai/ownModel'
+import { createCodeJobRunner, isRetryableCloudChat } from './ai/codeJobRunner'
 import { createRoutedJobRunner } from './ai/routedJobRunner'
+import { createRetry } from './provider/retry'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
 import {
   createDownloadHost,
@@ -1790,9 +1792,33 @@ export function createServices(settings: SettingsStore): Services {
     log: (level, message) => log[level]('ai', message),
   })
 
+  /**
+   * Scripts written by a chat cloud. Held outside `accountOn` because it belongs to no account of
+   * Scenario's: its key is the cloud's own, and a switch of Scenario account leaves it alone.
+   */
+  const codeJobs = createCodeJobRunner({
+    chatOf: cloud => {
+      const chat = CLOUD_PROVIDERS.find(one => one.id === cloud)?.chat
+      return chat === undefined || chat.kind === 'scenario' ? null : chat
+    },
+    keyOf: cloud => settings.readCredentialsFor(cloud)?.key ?? null,
+    modelOf: cloud => settings.read().assistant.cloudModels[cloud],
+    post: (input, init) => fetch(input, init),
+    // The studio's own backoff, told what a CHAT cloud can recover from: `isRetryable` reads a
+    // Scenario SDK error, and a chat refusal is neither.
+    retry: createRetry({
+      maxRetries: () => settings.read().generation.maxRetries,
+      sleep: delay,
+      retryable: isRetryableCloudChat,
+    }),
+    newId: () => randomUUID(),
+    log: (level, message) => log[level]('ai', message),
+  })
+
   const accountOn = (scenario: Scenario | null): JobAccount => ({
     runner: createRoutedJobRunner({
       local: localJobs,
+      code: codeJobs,
       cloud: () => (scenario ? runnerOf(scenario) : null),
       isLocalTarget,
     }),
@@ -1802,6 +1828,7 @@ export function createServices(settings: SettingsStore): Services {
       local: collectLocal,
       cloud: () => (scenario ? collectorOf(scenario) : null),
       owns: jobId => localJobs.owns(jobId),
+      wroteText: jobId => codeJobs.owns(jobId),
     }),
   })
 

@@ -23,8 +23,10 @@ export type Workspace = {
   id: WorkspaceId
   icon: string
   /**
-   * Scenario model family the generator offers in this workspace, and files its choice under.
-   * `null` in Code, which runs no model — see `FAMILY_BY_WORKSPACE`.
+   * The model family the generator offers in this workspace, and files its choice under.
+   *
+   * `null` for a space that generates nothing — none does today, Code having gained `code`. The
+   * shape stays sayable: see `FAMILY_BY_WORKSPACE`, which owns the table.
    */
   family: ModelFamily | null
 }

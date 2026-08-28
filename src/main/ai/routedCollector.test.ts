@@ -21,7 +21,12 @@ describe('routing a collection to whoever owns the job', () => {
   it('files what this machine produced', async () => {
     const local = answering('local')
     const cloud = answering('cloud')
-    const collect = createRoutedCollector({ local, cloud: () => cloud, owns: () => true })
+    const collect = createRoutedCollector({
+      local,
+      cloud: () => cloud,
+      owns: () => true,
+      wroteText: () => false,
+    })
 
     expect(await collect(JOB, [], null)).toEqual({ ids: ['local'], workspaces: [] })
     expect(cloud).not.toHaveBeenCalled()
@@ -31,7 +36,12 @@ describe('routing a collection to whoever owns the job', () => {
     const owns = vi.fn((id: string) => id === 'local_abc')
     const local = answering('local')
     const cloud = answering('cloud')
-    const collect = createRoutedCollector({ local, cloud: () => cloud, owns })
+    const collect = createRoutedCollector({
+      local,
+      cloud: () => cloud,
+      owns,
+      wroteText: () => false,
+    })
 
     await collect({ ...JOB, remoteId: 'local_abc' }, [], null)
 
@@ -46,6 +56,7 @@ describe('routing a collection to whoever owns the job', () => {
       local: answering('local'),
       cloud: () => cloud,
       owns: () => false,
+      wroteText: () => false,
     })
 
     await collect(JOB, ['remote_1'], null)
@@ -58,9 +69,27 @@ describe('routing a collection to whoever owns the job', () => {
       local: answering('local'),
       cloud: () => null,
       owns: () => true,
+      wroteText: () => false,
     })
 
     expect(await collect(JOB, [], null)).toEqual({ ids: ['local'], workspaces: [] })
+  })
+
+  /** 🛑 A script writer files NOTHING: what it produced is text on the job, and it lands in an
+   * editor. Routed to either collector, an empty batch would still have gone through a shelf. */
+  it('files nothing for a job that wrote a script', async () => {
+    const local = answering('local')
+    const cloud = answering('cloud')
+    const collect = createRoutedCollector({
+      local,
+      cloud: () => cloud,
+      owns: () => true,
+      wroteText: () => true,
+    })
+
+    expect(await collect(JOB, [], null)).toEqual({ ids: [], workspaces: [] })
+    expect(local).not.toHaveBeenCalled()
+    expect(cloud).not.toHaveBeenCalled()
   })
 
   it('fails rather than reporting a cloud job with nothing behind it', async () => {
@@ -68,6 +97,7 @@ describe('routing a collection to whoever owns the job', () => {
       local: answering('local'),
       cloud: () => null,
       owns: () => false,
+      wroteText: () => false,
     })
 
     await expect(collect(JOB, ['remote_1'], null)).rejects.toThrow(/no account/)

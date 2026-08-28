@@ -9,13 +9,17 @@ const tag = (name: string, size = 4_000_000_000, capabilities?: readonly string[
 })
 
 describe('ollamaModel', () => {
-  it('files a chat model under the assistant', () => {
+  it('files a chat model under the assistant, and under writing a script', () => {
     const model = ollamaModel(tag('qwen3:8b'))
     expect(model?.id).toBe('qwen3:8b')
     expect(model?.loader).toBe('ollama')
     expect(model?.family).toBeUndefined()
     expect(model?.modality).toBe('text')
-    expect(rolesOfOllamaModel(model!)).toEqual([ASSISTANT_ROLE])
+    expect(rolesOfOllamaModel(model!)).toEqual([
+      ASSISTANT_ROLE,
+      aiRoleId('code', 'txt2code'),
+      aiRoleId('code', 'code2code'),
+    ])
   })
 
   it('keeps a vision-language model on the assistant — there is no image-analysis employment', () => {

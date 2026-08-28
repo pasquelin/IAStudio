@@ -508,6 +508,20 @@ describe('the generator on this machine', () => {
     expect(await screen.findByText('SSD-1B')).toBeInTheDocument()
     expect(screen.queryByText(/identifiants/i)).toBeNull()
   })
+
+  /**
+   * 🛑 The Scenario key, asked for where Scenario can serve and nowhere else: a person holding an
+   * Anthropic key alone was shown the Scenario form in Code, with no way past it.
+   */
+  it('asks for no Scenario key in a space its catalogue does not serve', () => {
+    useLayouts.setState({ activeWorkspace: 'code' })
+    useGeneration.setState({ forcedCapability: aiRoleId('code', 'txt2code') })
+    useAiModels.setState({ overview: null })
+
+    renderPanel()
+
+    expect(screen.queryByText(/identifiants/i)).toBeNull()
+  })
 })
 
 describe('a generation in flight', () => {

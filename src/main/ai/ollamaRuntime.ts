@@ -119,7 +119,12 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
           messages: request.messages,
           stream: false,
           keep_alive: '5m',
-          options: { num_ctx: request.contextTokens },
+          options: {
+            num_ctx: request.contextTokens,
+            ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+            ...(request.topP === undefined ? {} : { top_p: request.topP }),
+            ...(request.maxTokens === undefined ? {} : { num_predict: request.maxTokens }),
+          },
           ...(request.json ? { format: 'json' } : {}),
         }),
         signal: request.signal,

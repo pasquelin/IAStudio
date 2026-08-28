@@ -19,12 +19,17 @@ import type { ModelFamily } from './model'
 export type CapabilityInputRole = 'prompt' | 'source' | 'mask' | 'reference'
 
 /**
- * What an input is MADE of: words, or a kind of asset the project already knows how to recognise.
+ * What a generation is made of and lands as: an asset the catalogue files, or source text.
  *
  * `AssetType` rather than a second vocabulary — `assetKind.ts` and `fileRole.ts` already answer
- * what a file is, and a parallel table would be free to disagree with them.
+ * what a file is, and a parallel table would be free to disagree with them. `code` is the one
+ * value beside them, and it is NOT an `AssetType`: a script is a document of the project, never
+ * a row of the shelf, so widening `AssetType` would have put it in every catalogue query.
  */
-export type CapabilityInputKind = 'text' | AssetType
+export type CapabilityMedium = AssetType | 'code'
+
+/** What an input is MADE of: words, or one of the media above. */
+export type CapabilityInputKind = 'text' | CapabilityMedium
 
 export type CapabilityInput = {
   role: CapabilityInputRole
@@ -37,7 +42,7 @@ export type CapabilityInput = {
 
 export type CapabilityContract = {
   inputs: readonly CapabilityInput[]
-  output: AssetType
+  output: CapabilityMedium
 }
 
 const PROMPT: CapabilityInput = { role: 'prompt', kind: 'text', required: true }
@@ -180,6 +185,11 @@ const ENTRIES: readonly ContractEntry[] = [
     output: 'skybox',
   },
 
+  // Code. The prompt is required in both: a chat is told what to write, and rewriting a script
+  // without saying what to change is a request no model can answer.
+  { family: 'code', capability: 'txt2code', inputs: [PROMPT], output: 'code' },
+  { family: 'code', capability: 'code2code', inputs: [PROMPT, source('code')], output: 'code' },
+
   // The three the canvas edits reach for. No prompt at all: none of them is told what to make,
   // and offering an empty box would read as a parameter that does nothing.
   { family: 'upscale', capability: 'upscale', inputs: [source('image')], output: 'image' },
@@ -234,7 +244,7 @@ function requiredInputsOf(contract: CapabilityContract): readonly CapabilityInpu
  * `outpaint` are never DETECTED and are reached only by forcing the operation. The panel names a
  * catalogue row, and a canvas has no asset until it is flattened, which is not this panel's.
  */
-export type AvailableInput = { role: 'source' | 'mask'; kind: AssetType }
+export type AvailableInput = { role: 'source' | 'mask'; kind: CapabilityMedium }
 
 /**
  * Whether what is at hand answers this one input.

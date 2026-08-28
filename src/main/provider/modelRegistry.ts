@@ -1,4 +1,6 @@
 import {
+  CAPABILITIES_BY_FAMILY,
+  CATALOGUE_FAMILIES,
   FEATURED_TAG,
   LOCAL_RUNTIME,
   PERIOD_DAYS,
@@ -15,8 +17,9 @@ import {
   type ModelSort,
   type ModelSummary,
 } from '@shared/domain/model'
-import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
-import { localFieldsOf } from '@shared/domain/localFields'
+import { CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { CODE_MAX_TOKENS, cloudOfModelId } from '@shared/domain/codeGeneration'
+import { localFieldsOf, SEED_FIELD_KEY } from '@shared/domain/localFields'
 import {
   catalogueLineOf,
   capabilitiesIn,
@@ -354,6 +357,11 @@ function serves(summary: ModelSummary, capability: string): boolean {
   )
 }
 
+/** Whether a remote catalogue publishes this family at all. No family asked for means every one. */
+function servedByCatalogue(family: ModelFamily | undefined): boolean {
+  return family === undefined || CATALOGUE_FAMILIES.includes(family)
+}
+
 /**
  * The whole narrowing, applied to every model whichever pass it came from.
  *
@@ -511,6 +519,32 @@ export function createModelRegistry({
     }
   }
 
+  // 🛑 The seed is dropped: of the three wire formats a cloud is asked over, only some take one.
+  const describedAsCloudItself = (modelId: string): ModelDescriptor | null => {
+    const cloud = cloudOfModelId(modelId)
+    const family = CLOUD_PROVIDERS.find(one => one.id === cloud)?.families[0]
+    if (cloud === null || family === undefined) return null
+
+    return {
+      id: modelId,
+      name: cloud,
+      family,
+      runsOn: cloud,
+      source: '',
+      origin: 'community',
+      installed: false,
+      downloadable: false,
+      diskBytes: 0,
+      featured: false,
+      capabilities: [...CAPABILITIES_BY_FAMILY[family]],
+      tags: [],
+      thumbnail: '',
+      fields: localFieldsOf('text', { maxTokens: { default: CODE_MAX_TOKENS } }, translate).filter(
+        field => field.key !== SEED_FIELD_KEY,
+      ),
+    }
+  }
+
   const localSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] =>
     localModels().flatMap(model => localSummaryOf(model, isInstalled(model.id), asFamily) ?? [])
 
@@ -630,10 +664,12 @@ export function createModelRegistry({
         }
       }
 
-      // Nothing remote is walked when the person asked for this machine alone: the pages could
-      // only be discarded, and each of them is a round trip.
+      // Nothing remote is walked for this machine alone, nor for a family no catalogue publishes:
+      // the pages could only be discarded, and each of them is a round trip on a quota.
       let cursor: Cursor | null =
-        query.runsOn === LOCAL_RUNTIME ? null : (deserialize(query.cursor) ?? startOf(query))
+        query.runsOn === LOCAL_RUNTIME || !servedByCatalogue(query.family)
+          ? null
+          : (deserialize(query.cursor) ?? startOf(query))
       let walked = 0
       let refused = false
 
@@ -696,7 +732,8 @@ export function createModelRegistry({
       return value
     },
 
-    describe: async modelId => describedLocally(modelId) ?? (await described(modelId)),
+    describe: async modelId =>
+      describedAsCloudItself(modelId) ?? describedLocally(modelId) ?? (await described(modelId)),
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]

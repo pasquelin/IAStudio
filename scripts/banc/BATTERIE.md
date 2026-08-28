@@ -16,7 +16,7 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **364 demandes, et le banc en joue 364** — une par case, dans cet ordre.
+La liste ci-dessous compte **366 demandes, et le banc en joue 366** — une par case, dans cet ordre.
 `batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une demande
 ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi. C'est ce qui
 rend « on en est où ? » répondable.
@@ -949,3 +949,12 @@ Dans la scène Test MCP :
 ## 65. Sortir le jeu du studio
 
 - [ ] « Exporte le jeu. »
+
+## 66. Faire écrire un script par un modèle
+
+Là où la section 61 fait écrire le script par l'assistant lui-même (`script.write`), celle-ci le
+fait écrire par un **modèle** — un cloud de discussion ou un modèle de code de cette machine —
+à travers le générateur, comme toute autre section du studio.
+
+- [ ] « Fais écrire par un modèle un script qui fait tourner l'objet. »
+- [ ] « Demande au modèle de réécrire ce script pour qu'il aille deux fois plus vite. »

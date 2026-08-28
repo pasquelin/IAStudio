@@ -103,6 +103,7 @@
       "skybox.export": "L’export du ciel a échoué",
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "canvas.place": "Cette image n’a pas pu être posée sur le document",
+      "code.land": "Le script généré n’a pas pu être écrit dans l’éditeur",
       "canvas.size": "Cette image n’a pas pu garder sa taille",
       "canvas.edit": "L’image n’a pas pu être envoyée au modèle",
       "image.export": "L’export de l’image a échoué",

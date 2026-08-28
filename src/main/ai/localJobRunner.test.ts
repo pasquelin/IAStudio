@@ -5,13 +5,22 @@ import type { ChatRequest } from './localRuntimes'
 
 const MODEL = localModel({ id: 'local_one', loader: 'llamacpp', contextTokens: 4_096 })
 
+/** A manifest that declares the code employments — what tells the runner which prompt to compose. */
+const CODER = localModel({
+  id: 'local_coder',
+  loader: 'llamacpp',
+  contextTokens: 4_096,
+  family: 'code',
+  capabilities: ['txt2code', 'code2code'],
+})
+
 const runnerWith = (over: Partial<LocalJobDeps> = {}) => {
   let count = 0
 
   return createLocalJobRunner({
     chat: () => Promise.resolve('a picture of a cat'),
     generate: () => Promise.resolve({ path: '/tmp/out.png', device: 'mps', backend: 'pytorch' }),
-    modelOf: id => (id === MODEL.id ? MODEL : null),
+    modelOf: id => [MODEL, CODER].find(one => one.id === id) ?? null,
     newId: () => `${(count += 1)}`,
     log: () => {},
     ...over,
@@ -19,6 +28,69 @@ const runnerWith = (over: Partial<LocalJobDeps> = {}) => {
 }
 
 const settled = () => new Promise(resolve => setTimeout(resolve, 0))
+
+describe('a script written on this machine', () => {
+  /** 🛑 Read off the MANIFEST: an Ollama tag declares the code employments it serves. */
+  it('shows the model what a script may reach, and answers the script on the job', async () => {
+    const asked: ChatRequest[] = []
+    const runner = runnerWith({
+      chat: request => {
+        asked.push(request)
+        return Promise.resolve('```ts\nexport const x = 1\n```')
+      },
+    })
+
+    const submitted = await runner.submit(
+      { id: CODER.id },
+      { prompt: 'a spin', source: 'export const x = 0', api: 'declare module "@studio"' },
+    )
+    await settled()
+
+    expect(asked[0]?.messages[0]?.content).toContain('declare module')
+    expect(asked[0]?.messages[1]?.content).toContain('export const x = 0')
+    // The fence off, and on the JOB — there is no asset to read a script back off.
+    expect((await runner.poll(submitted.jobId)).text).toBe('export const x = 1')
+  })
+
+  /**
+   * 🛑 The form publishes a temperature, a nucleus and a ceiling — a panel showing a control that
+   * changes nothing is a control that lies, and the cloud runner honours all three.
+   */
+  it('sends the knobs the form filled', async () => {
+    const asked: ChatRequest[] = []
+    const runner = runnerWith({
+      chat: request => {
+        asked.push(request)
+        return Promise.resolve('export const x = 1')
+      },
+    })
+
+    await runner.submit(
+      { id: CODER.id },
+      { prompt: 'a spin', api: 'declare module', temperature: 0.1, topP: 0.5, maxTokens: 4096 },
+    )
+    await settled()
+
+    expect(asked[0]).toMatchObject({ temperature: 0.1, topP: 0.5, maxTokens: 4096 })
+  })
+
+  /** A conversation is prose: its backticks are the person's, and nothing strips them. */
+  it('leaves an ordinary conversation alone', async () => {
+    const asked: ChatRequest[] = []
+    const runner = runnerWith({
+      chat: request => {
+        asked.push(request)
+        return Promise.resolve('```\nsome prose\n```')
+      },
+    })
+
+    const submitted = await runner.submit({ id: MODEL.id }, { prompt: 'a cat' })
+    await settled()
+
+    expect(asked[0]?.messages).toHaveLength(1)
+    expect((await runner.poll(submitted.jobId)).text).toBe('```\nsome prose\n```')
+  })
+})
 
 describe('the local job runner', () => {
   /**
