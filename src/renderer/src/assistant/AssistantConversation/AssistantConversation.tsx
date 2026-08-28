@@ -1,5 +1,13 @@
 import { mdiChatOutline } from '@mdi/js'
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
@@ -122,10 +130,13 @@ export function AssistantConversation() {
   const shown = !given && !busy ? matches : []
   // `matches` trims and the tail cannot: the mirror paints `draft` verbatim, so a leading space
   // kills the tail and keeps the rows.
-  const ghost = writing && caretAtEnd ? tailOf(shown[rank], draft) : undefined
+  const spelled = caretAtEnd ? tailOf(shown[rank], draft) : undefined
+  // Painted only while one writes HERE — but `listed` reads `spelled`, or clicking the picker
+  // below opened a one-row list under the hand that had just left.
+  const ghost = writing ? spelled : undefined
 
   // A tail already spells this one out: the lone bordered row read as a button to press.
-  const listed = ghost !== undefined && shown.length === 1 ? [] : shown
+  const listed = spelled !== undefined && shown.length === 1 ? [] : shown
 
   // Taken means WRITTEN, never sent: the sentence is a start, and what one adds to it — a name,
   // a size, a folder — is the half the studio cannot guess.
@@ -161,12 +172,18 @@ export function AssistantConversation() {
     // 🛑 Only where the caret has nowhere left to go: the field takes three lines and holds
     // dictated paragraphs, which wrap without ever carrying a newline to test for. Read from the
     // event and not from `caretAtEnd`, which answers for one end and this needs both.
-    const caret = event.currentTarget.selectionStart
+    const field = event.currentTarget
     const spare =
-      event.key === 'ArrowDown' ? caret === draft.length : event.key === 'ArrowUp' && caret === 0
+      event.key === 'ArrowDown'
+        ? atEnd(field)
+        : // The END too, or an ArrowUp collapsing a selection that starts at 0 walked the list
+          // instead of moving the caret, which is what the key means with something selected.
+          event.key === 'ArrowUp' && field.selectionStart === 0 && field.selectionEnd === 0
 
-    if (spare) {
-      setRank(at => (at + (event.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length)
+    // `listed`, not `shown`: a lone match the tail spells out draws no rows, and an arrow that
+    // walked it moved nothing anyone could see.
+    if (spare && listed.length > 1) {
+      setRank(at => (at + (event.key === 'ArrowDown' ? 1 : -1) + listed.length) % listed.length)
       return true
     }
 
@@ -199,9 +216,9 @@ export function AssistantConversation() {
     following.current = list.scrollHeight - list.scrollTop - list.clientHeight < SCROLL_SLACK
   }
 
-  // A mirror mounts at its top, and the field it copies may already be scrolled: without this the
-  // grey tail is drawn against the wrong line until the next scroll event.
-  useEffect(() => {
+  // Before paint: a tail appearing over a scrolled field is drawn against the wrong line for the
+  // frame an effect would take to fix it.
+  useLayoutEffect(() => {
     if (mirror.current && field.current) mirror.current.scrollTop = field.current.scrollTop
   }, [ghost?.tail])
 
@@ -361,18 +378,15 @@ export function AssistantConversation() {
               />
             )}
 
-            {/* A textarea rather than a line: one SPEAKS to this window, and a spoken request
-              runs long — dictated into a single line it scrolled sideways under the caret. The
-              mirror sits behind it, and both are positioned for the writing to stay on top. */}
+            {/* A textarea rather than a line: one SPEAKS here, and a dictated request runs long.
+              The mirror sits behind it, and both are positioned for the writing to stay on top. */}
             <div className="relative">
-              {ghost !== undefined && (
-                <GhostText
-                  ref={mirror}
-                  typed={draft}
-                  tail={ghost.tail}
-                  className={CONVERSATION_FIELD_TYPE}
-                />
-              )}
+              <GhostText
+                ref={mirror}
+                typed={draft}
+                tail={ghost?.tail ?? ''}
+                metrics={CONVERSATION_FIELD_TYPE}
+              />
               <textarea
                 ref={field}
                 // The one field of the studio a client most wants to fill, and it had no name a
@@ -384,7 +398,13 @@ export function AssistantConversation() {
                 // `aria-multiline` with it — what one writes here is a paragraph. These three ARE
                 // allowed on a textbox, where `aria-expanded` is not and was read by nobody.
                 aria-autocomplete={
-                  listed.length > 0 ? 'both' : ghost === undefined ? undefined : 'inline'
+                  ghost === undefined
+                    ? listed.length > 0
+                      ? 'list'
+                      : undefined
+                    : listed.length > 0
+                      ? 'both'
+                      : 'inline'
                 }
                 aria-haspopup={listed.length > 0 ? 'listbox' : undefined}
                 // `aria-owns` beside it: ARIA asks that the held row be a descendant of the focused
@@ -393,6 +413,9 @@ export function AssistantConversation() {
                 aria-owns={listed.length > 0 ? listId : undefined}
                 aria-activedescendant={listed.length === 0 ? undefined : suggestionId(listId, rank)}
                 placeholder={t('assistant.placeholder')}
+                // The only place the gesture is named to someone who does not read with an ear:
+                // a grey tail reads as text already written until one is told what takes it.
+                {...HINT_TOP(t('assistant.completeHint', { accept: keyLabel('Tab') }))}
                 // While a plan is running: a second sentence would interleave two plans over one
                 // generator form, and the question on screen belongs to the first of them.
                 disabled={busy}
@@ -435,13 +458,18 @@ export function AssistantConversation() {
             {/* The list appears, renumbers and goes under the fingers without a word otherwise —
                 the same reason the title bar announces a reordered tab. */}
             <p role="status" aria-live="polite" className="sr-only">
-              {ghost !== undefined
-                ? t('assistant.completing', {
-                    sentence: ghost.sentence,
-                    accept: keyLabel('Tab'),
-                    arrow: keyLabel('ArrowRight'),
-                  })
-                : listed.length > 0 && t('assistant.suggested', { count: listed.length })}
+              {[
+                ghost === undefined
+                  ? ''
+                  : t('assistant.completing', {
+                      sentence: ghost.sentence,
+                      accept: keyLabel('Tab'),
+                      arrow: keyLabel('ArrowRight'),
+                    }),
+                listed.length > 0 ? t('assistant.suggested', { count: listed.length }) : '',
+              ]
+                .filter(one => one !== '')
+                .join(' ')}
             </p>
 
             {/* Wrapping: the picker and the pair sit side by side wherever there is room and
