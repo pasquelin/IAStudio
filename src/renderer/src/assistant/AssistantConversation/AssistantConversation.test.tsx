@@ -297,19 +297,57 @@ describe('the assistant conversation', () => {
     expect(field).not.toHaveAttribute('aria-autocomplete')
   })
 
-  /**
-   * The composer is pinned to the foot of its column, so a list under the field lifts the field,
-   * the picker and Send out from under the hand that is typing. It grows upward instead.
-   */
   it('opens above the field, so nothing under the fingers moves', async () => {
     render(<AssistantConversation />)
     const field = screen.getByRole('textbox')
 
     await userEvent.type(field, 'genere une')
 
-    expect(screen.getByRole('listbox').compareDocumentPosition(field)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
+    expect(field.compareDocumentPosition(screen.getByRole('listbox'))).toBe(
+      Node.DOCUMENT_POSITION_PRECEDING,
     )
+  })
+
+  /**
+   * 🛑 `cn` is tailwind-merge: a `bg-transparent` written after `rowSkin` cancelled the very fill
+   * it paints, and the walk was invisible while `aria-activedescendant` moved correctly.
+   */
+  it('paints the row it holds, so the walk can be seen and not only heard', async () => {
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'genere une')
+
+    expect(screen.getAllByRole('option')[0]).toHaveClass('bg-accent-soft')
+    expect(screen.getAllByRole('option')[1]).not.toHaveClass('bg-accent-soft')
+  })
+
+  // The list said what the caret was doing: leaving the field opened one under the hand that left.
+  it('opens no list because the caret left the field', async () => {
+    useLayouts.setState({ activeWorkspace: 'audio' })
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    // The one match of this space, spelled by the tail — so no rows, before or after.
+    await userEvent.type(field, 'genere un')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+
+    fireEvent.blur(field)
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  // ArrowUp with something selected means « collapse and move », not « walk the list ».
+  it('leaves the arrows to a selection the hand is holding', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole<HTMLTextAreaElement>('textbox')
+
+    await userEvent.type(field, 'genere une')
+    const held = field.getAttribute('aria-activedescendant')
+
+    field.setSelectionRange(0, 6)
+    fireEvent.keyDown(field, { key: 'ArrowUp' })
+
+    expect(field.getAttribute('aria-activedescendant')).toBe(held)
   })
 
   /**

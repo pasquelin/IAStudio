@@ -1,31 +1,29 @@
-import type { Ref } from 'react'
+import type { RefObject } from 'react'
 import { cn } from '@/helpers/cn'
 
 export type GhostTextProps = {
   /** What the hand has written, painted invisible so the tail starts where the caret is. */
   typed: string
-  /** What is left of the sentence, in grey ahead of the caret. */
+  /** What is left of the sentence, in grey ahead of the caret. Empty while nothing completes. */
   tail: string
-  /** The host field's own type and gutters — read from one place, or the tail lands a character off. */
-  className: string
-  ref?: Ref<HTMLDivElement>
+  /** The host field's own type and gutters. */
+  metrics: string
+  /** 🛑 Required: a mirror the host cannot scroll draws its tail against the wrong line. */
+  ref: RefObject<HTMLDivElement | null>
+  className?: string
 }
 
-/**
- * The grey rest of a sentence, painted behind a field that cannot paint text of its own.
- *
- * 🛑 Never in the field's value: put there the tail is what the form submits and what a store
- * holds. The host stays the only owner of what was typed, and of the key that takes the rest.
- */
-export function GhostText({ typed, tail, className, ref }: GhostTextProps) {
+/** 🛑 The tail never enters the field's value: put there it is what the form submits. */
+export function GhostText({ typed, tail, metrics, ref, className }: GhostTextProps) {
   return (
     <div
       ref={ref}
       // The field beneath already carries these words; a mirror read on top says them twice.
       aria-hidden
       className={cn(
-        className,
+        metrics,
         'pointer-events-none absolute inset-0 overflow-hidden break-words whitespace-pre-wrap',
+        className,
       )}
     >
       <span className="invisible">{typed}</span>

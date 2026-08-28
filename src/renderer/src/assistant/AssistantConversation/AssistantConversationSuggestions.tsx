@@ -20,11 +20,10 @@ export function suggestionId(listId: string, index: number): string {
 }
 
 /**
- * What one can ask, filtered as it is typed. In flow and never floating, as the model picker is:
- * a floating panel does not follow the form it belongs to.
+ * What one can ask, filtered as it is typed. In flow and never floating, as the model picker is.
  *
- * 🛑 ABOVE the field, in a composer the column pins to its foot: listed under it, every match
- * arriving pushed the field, the picker and Send up from under the hand that was typing.
+ * 🛑 ABOVE the field, whose column pins to its foot: listed under it, every match arriving pushed
+ * the field, the picker and Send up from under the hand that was typing.
  */
 export function AssistantConversationSuggestions({
   matches,
@@ -39,6 +38,8 @@ export function AssistantConversationSuggestions({
       id={id}
       role="listbox"
       aria-label={label}
+      // Bounded because it opens UPWARD now: unbounded, a run of matches would cover the thread
+      // it grows into, and one writes to an answer one can still read.
       className={cn(MENU_SURFACE, 'max-h-40 shrink-0 overflow-y-auto rounded-(--radius-sc-sm)')}
     >
       {matches.map((sentence, index) => (
@@ -64,8 +65,10 @@ export function AssistantConversationSuggestions({
           className={cn(
             // A row, so no fill under the pointer — the studio keeps that for tiles. What answers
             // the hand here is the caret walking the list, and the pointer shape.
+            // 🛑 No `bg-transparent` after it: `cn` is tailwind-merge, and it cancelled the very
+            // fill `rowSkin` paints on the held row. A button is transparent by preflight anyway.
             rowSkin(index === active),
-            'w-full cursor-pointer border-none bg-transparent px-2 py-1 text-left text-xs',
+            'w-full cursor-pointer border-none px-2 py-1 text-left text-xs',
           )}
         >
           {sentence}

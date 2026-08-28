@@ -34,18 +34,22 @@ describe('the card of the assistant conversation', () => {
 const CONVERSATION = '../assistant/AssistantConversation/'
 
 /**
- * 🛑 The mirror behind the field wears the field's own type and gutters. Written out on either
- * side rather than worn, the two drift and the grey tail lands a character off the writing it
- * continues — the invariant its JSDoc could only ask for.
+ * 🛑 The field and whatever mirrors it wear ONE constant: written out on either side they drift,
+ * and the grey tail lands a character off the writing it continues.
  *
- * Scoped to the folder: `px-1 text-xs` is a pairing half the studio reaches for, and a rule read
- * across `WRITTEN_SOURCES` would name dozens of files that owe this constant nothing.
+ * `design/GhostText.tsx` is named beside the folder because the mirror moved there — a rule left
+ * on the folder alone would have gone on passing while half of what it guards lived elsewhere. Not
+ * read across all of `WRITTEN_SOURCES`: `px-1 text-xs` is a pairing half the studio reaches for.
  */
 describe('the type of the field one writes in', () => {
+  /** `design/` is where the glob is anchored, so its own files key from `./` and not from `../`. */
+  const MIRROR = './GhostText.tsx'
+
   const spellsOutType = spellsOut(CONVERSATION_FIELD_TYPE.split(' '))
 
-  it('finds the constant at all, so the rule below cannot pass on nothing', () => {
+  it('finds the constant and the mirror, so the rule below cannot pass on nothing', () => {
     expect(spellsOutType(`className="${CONVERSATION_FIELD_TYPE}"`)).toBe(true)
+    expect(WRITTEN_SOURCES.map(([path]) => path)).toContain(MIRROR)
   })
 
   it('is worn by the field and its mirror, never written out beside them', () => {
