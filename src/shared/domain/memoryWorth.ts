@@ -70,6 +70,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'models.select': null,
   'generator.prepare': null,
   'generator.submit': null,
+  'generator.armed': null,
   'jobs.list': null,
   'prompt.suggest': null,
   'prompt.translate': null,

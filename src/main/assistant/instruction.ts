@@ -428,6 +428,28 @@ const memoryRuleOf = (parts: BriefingParts): readonly string[] =>
   (parts.memories ?? 0) > 0 ? [MEMORY_RULE] : []
 
 /**
+ * The same rules with the signal, or without it when it does not FIT.
+ *
+ * 🛑 The LAST thing to give ground — after the state, the targets and the project context, and
+ * before the catalogue, which never does. Measured: the short share alone runs 7 078 characters
+ * against `roomFor(4096)` = 7 116, so one `both` action added upstream takes the 78 this line
+ * costs. Overrunning is not the milder failure — a runtime truncates from the HEAD, where the
+ * preamble sits (ADR-18).
+ */
+function rulesWithSignal(
+  parts: BriefingParts,
+  short: string,
+  found: string,
+  base: readonly string[],
+): readonly string[] {
+  const signal = memoryRuleOf(parts)
+  if (signal.length === 0) return base
+
+  const wanted = [...base, ...signal]
+  return briefingText(parts, short, wanted, found).length <= parts.room ? wanted : base
+}
+
+/**
  * Everything but the person's sentence, sized to the room the brain has: the whole registry when
  * it fits, and the spoken vocabulary plus the way to ask for the rest when it does not. Nothing
  * here names a cloud or a runtime.
@@ -449,12 +471,14 @@ export function studioBriefing(parts: BriefingParts): Briefing {
   return { text: wide, allowed: whole.allowed, expand: null, narrow: () => narrowBriefing(parts) }
 }
 
+const NARROW_RULES: readonly string[] = [...RULES, FIND_RULE]
+
 function narrowBriefing(declared: BriefingParts): Briefing {
   const parts = { ...declared, room: declared.fallbackRoom ?? declared.room }
   const short = shortShare()
 
   return {
-    text: briefingText(parts, short.text, [...RULES, ...memoryRuleOf(parts), FIND_RULE], ''),
+    text: briefingText(parts, short.text, rulesWithSignal(parts, short.text, '', NARROW_RULES), ''),
     allowed: short.allowed,
     // Offered once, and only from here: an expansion of an expansion is a conversation with
     // itself, paid for by the person waiting — see `expandedWith`.
@@ -524,7 +548,8 @@ function expandedWith(parts: BriefingParts, query: string): Briefing {
   const hits = findActions(query).filter(action => !short.allowed.has(action.name))
   // Composed once: measuring by joining a second copy of the same 6 500 characters is the very
   // waste this file's own history records having removed.
-  const rules = [...RULES, ...memoryRuleOf(parts)]
+  // 🛑 No `FIND_RULE` here, and that is not an omission: this briefing IS the answer to a find.
+  const rules = rulesWithSignal(parts, short.text, '', RULES)
   const fixed = briefingText(parts, short.text, rules, '').length + footerRoom(query, hits.length)
   let left = parts.room - fixed
 

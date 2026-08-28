@@ -248,6 +248,12 @@ describe('a door that refused the whole catalogue', () => {
   })
 })
 
+/**
+ * The short briefing with nothing else in it — measured rather than written down, because it
+ * moves whenever a `both` action's description does.
+ */
+const bareShort = (): number => studioBriefing({ room: roomFor(4096), memories: 0 }).text.length
+
 describe('what a briefing says about the memory', () => {
   /**
    * 🛑 A SIGNAL and not the memories. Injecting summaries paid an embedding and a scan of every
@@ -268,6 +274,20 @@ describe('what a briefing says about the memory', () => {
     expect(studioBriefing({ room: NARROW }).text).not.toContain('memory.recall answers it')
   })
 
+  /**
+   * 🛑 The signal is the LAST thing to give ground, and it does give ground: the short share is
+   * 7 078 characters against a room of 7 116, so one `both` action added upstream takes the 78
+   * this line costs. Overrunning is not the milder failure — a runtime truncates from the HEAD,
+   * where the preamble sits (ADR-18). Measured when `generator.armed` joined the spoken catalogue.
+   */
+  it('gives the signal up rather than overrun a door that has no room for it', () => {
+    const room = bareShort() + 10
+    const text = studioBriefing({ memories: 12, room }).text
+
+    expect(text.length).toBeLessThanOrEqual(room)
+    expect(text).not.toContain('memory.recall answers it')
+  })
+
   /** The whole registry holds `memory.recall`; a narrow door reaches it through `actions.find`. */
   it('signals the memory on the wide door as well as on the narrow one', () => {
     expect(studioBriefing({ memories: 3, room: WIDE }).text).toContain('memory.recall answers it')
@@ -275,18 +295,17 @@ describe('what a briefing says about the memory', () => {
 
   /**
    * 🛑 The budget the signal was WRITTEN against, and nothing else would notice it moving: the
-   * narrowest door has 108 characters left, one action block is three hundred, and a signal over
-   * that ceiling pushes the briefing past the window — which the runtime then truncates from the
-   * HEAD, where the preamble sits (ADR-18). Measured at 78; a longer sentence costs the studio a
-   * silently cut briefing on every 4 096-token model.
+   * short share had 108 characters left against `roomFor(4096)` when this was measured, and one
+   * action block is three hundred. A signal over that ceiling is a signal that gives ground on
+   * every narrow door — which is the one thing it exists not to do.
    */
-  it('costs the narrowest door less than the room it has left', () => {
-    const room = roomFor(4096)
+  it('costs a narrow door less than the room a short catalogue leaves', () => {
+    const room = bareShort() + 200
     const without = studioBriefing({ room, memories: 0 }).text
     const with_ = studioBriefing({ room, memories: 12 }).text
 
     expect(with_.length - without.length).toBeLessThanOrEqual(108)
-    expect(with_.length).toBeLessThanOrEqual(room)
+    expect(with_).toContain('memory.recall answers it')
   })
 
   /**
