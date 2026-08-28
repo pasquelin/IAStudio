@@ -296,3 +296,70 @@ describe('resetting a project memory', () => {
     await expect(readFile(file, 'utf8')).rejects.toThrow()
   })
 })
+
+describe('what a memory replaces', () => {
+  const scriptDraft = (summary: string): MemoryDraft => ({
+    type: 'script',
+    summary,
+    importance: 4,
+    source: { kind: 'action', ref: 'script.write' },
+    refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }],
+  })
+
+  /**
+   * 🛑 A rule fires again on the same script. Two memories saying different things about one
+   * file, with nothing to tell which is now, would both be recalled.
+   */
+  it('supersedes the one standing on the same reference, and archives it', async () => {
+    const first = await store.remember(scriptDraft('the rig drives the rail'))
+    const second = await store.remember(scriptDraft('the rig drives the rail and the target'))
+
+    expect(second.supersedes).toBe(first.id)
+    expect((await store.read(first.id))?.state).toBe('archived')
+    expect((await store.list({ states: ['live'] })).map(one => one.summary)).toEqual([
+      'the rig drives the rail and the target',
+    ])
+  })
+
+  it('survives a restart, with the replaced one still archived', async () => {
+    const first = await store.remember(scriptDraft('one'))
+    await store.remember(scriptDraft('two'))
+    await store.rebuild()
+
+    expect((await store.read(first.id))?.state).toBe('archived')
+    expect((await store.list({ states: ['live'] })).map(one => one.summary)).toEqual(['two'])
+  })
+
+  it('replaces nothing when it is about another file', async () => {
+    await store.remember(scriptDraft('one'))
+    const other = await store.remember({
+      ...scriptDraft('two'),
+      refs: [{ kind: 'file', ref: 'Scripts/Other.ts' }],
+    })
+
+    expect(other.supersedes).toBeUndefined()
+    expect(await store.list({ states: ['live'] })).toHaveLength(2)
+  })
+
+  /** A memory anchored on nothing has nothing to be the same as: it is simply another one. */
+  it('replaces nothing when the draft names no reference', async () => {
+    const draft: MemoryDraft = {
+      type: 'decision',
+      summary: 'a decision recorded in git',
+      importance: 3,
+      source: { kind: 'action', ref: 'git.commit' },
+    }
+    await store.remember(draft)
+    const second = await store.remember(draft)
+
+    expect(second.supersedes).toBeUndefined()
+    expect(await store.list({ states: ['live'] })).toHaveLength(2)
+  })
+
+  it('replaces nothing of another type on the same file', async () => {
+    await store.remember(scriptDraft('one'))
+    const other = await store.remember({ ...scriptDraft('two'), type: 'problem' })
+
+    expect(other.supersedes).toBeUndefined()
+  })
+})

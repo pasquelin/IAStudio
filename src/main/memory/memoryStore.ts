@@ -112,6 +112,17 @@ export function hasMoved(held: MemoryStamp | null, now: MemoryStamp | null): boo
   return held.bytes !== now.bytes || held.modifiedAt !== now.modifiedAt
 }
 
+/**
+ * What this draft replaces: a memory of the same TYPE anchored on the same first reference.
+ *
+ * The first reference and not any of them: a script memory is about its file, and a memory
+ * naming a scene as well must not be superseded by every other memory of that scene.
+ */
+function supersededBy(index: MemoryIndex, draft: MemoryDraft): Memory | null {
+  const anchor = draft.refs?.[0]
+  return anchor ? index.standingOn(draft.type, anchor) : null
+}
+
 export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps): MemoryStore {
   const writes = writeQueue()
   let trouble: MemoryTrouble | null = null
@@ -220,6 +231,13 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
   return {
     remember: draft =>
       writes.next(async () => {
+        /**
+         * 🛑 What a memory REPLACES, rather than what it adds beside. A rule that fires twice on
+         * one script would otherwise leave two memories contradicting each other, with nothing
+         * saying which is now — and both would be recalled.
+         */
+        const replaced = supersededBy(index, draft)
+
         const memory: Memory = {
           ...draft,
           id: newId(),
@@ -228,10 +246,18 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
           refs: draft.refs ?? [],
           links: draft.links ?? [],
           state: draft.state ?? 'live',
+          ...defined({ supersedes: replaced?.id }),
         }
 
         // The file first, always: an index holding what the file does not is an index that
         // answers a memory a restart makes vanish.
+        // The replaced one is written down as archived BEFORE its replacement, so a file read
+        // back line by line, latest wins, never has the two standing at once.
+        if (replaced) {
+          await append({ ...replaced, state: 'archived' })
+          index.put({ ...replaced, state: 'archived' })
+        }
+
         await append(memory)
         // `isReadable`, as a rebuild filters: a memory written as dropped must not be listed
         // until a restart and vanish afterwards.

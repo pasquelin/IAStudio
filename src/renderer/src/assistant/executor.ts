@@ -35,6 +35,7 @@ import { SCRIPT_HANDLERS } from './scriptHandlers'
 import { STUDIO_HANDLERS } from './studioHandlers'
 import { TIMELINE_HANDLERS } from './timelineHandlers'
 import { readBatch } from './batch'
+import { rememberOutcome } from './rememberOutcome'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
 import { STATE_HANDLERS } from './stateHandlers'
@@ -131,7 +132,14 @@ export async function runAction(
   if (!handler) return refused('badInput')
 
   const read = readOrRefusal(name, input)
-  return 'refusal' in read ? read.refusal : handler(read.listed)
+  if ('refusal' in read) return read.refusal
+
+  const outcome = await handler(read.listed)
+  // Not awaited, and the input READ rather than the one sent: what a memory anchors on must be
+  // what the action actually acted on. A memory that will not persist must not turn a call that
+  // changed the studio into a refusal.
+  void rememberOutcome(name, read.listed, outcome)
+  return outcome
 }
 
 /**

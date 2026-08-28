@@ -8,6 +8,7 @@ import {
   type MemoryQuery,
   type MemoryRef,
   type MemoryRefKind,
+  type MemoryType,
 } from '@shared/domain/assistantMemory'
 import { oneOf } from '@shared/guards'
 import { matchExpression } from '@main/project/ftsMatch'
@@ -158,6 +159,13 @@ export type MemoryIndex = {
   read: (id: string) => Memory | null
   /** How many it holds, without reading a single one of them back. */
   count: () => number
+  /**
+   * The live memory of this type anchored on this very reference, if one stands.
+   *
+   * What `supersedes` is drawn from: a rule that fires twice on the same script must AMEND what
+   * it said, not leave two memories that contradict each other with no way to tell which is now.
+   */
+  standingOn: (type: MemoryType, ref: MemoryRef) => Memory | null
   list: (query: MemoryQuery) => readonly Memory[]
   /** Stamps what a retrieval served, which is what later makes an unused memory age. */
   markUsed: (ids: readonly string[], at: string) => void
@@ -308,6 +316,12 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
      LEFT JOIN memory_vectors v
        ON v.memory_id = m.id AND v.model = ? AND v.text_digest = m.text_digest
      WHERE v.memory_id IS NULL ORDER BY m.created_at, m.id LIMIT ?`,
+  )
+  const readStanding = driver.prepare(
+    `SELECT ${ALIASED} FROM memories m
+     JOIN memory_refs r ON r.memory_id = m.id AND r.kind = ? AND r.ref = ?
+     WHERE m.type = ? AND m.state <> 'archived'
+     ORDER BY m.created_at DESC, m.id DESC LIMIT 1`,
   )
   const dropOther = driver.prepare('DELETE FROM memory_vectors WHERE model <> ?')
   // The blob and the id alone: building a `MemoryVector` per row cost `[M]` 78 ms at 10 000
@@ -526,6 +540,11 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     },
 
     count: () => number(countMemories.get() ?? {}, 'held'),
+
+    standingOn: (type, ref) => {
+      const row = readStanding.get(ref.kind, ref.ref, type)
+      return row ? (attach([row])[0] ?? null) : null
+    },
 
     read: id => {
       const row = readMemory.get(id)
