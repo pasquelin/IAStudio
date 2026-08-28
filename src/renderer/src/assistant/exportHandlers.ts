@@ -43,7 +43,15 @@ export const EXPORT_HANDLERS: ActionHandlers = {
       scripts: compiled.modules.map(one => ({ script: one.script, code: one.code })),
     }
 
-    const outcome = await bridge.game.export(request)
+    // 🛑 Caught like the listing above: the main process THROWS `no game runtime is built` — the
+    // ordinary state of a checkout, `resources/gameRuntime` being git-ignored — and an assistant
+    // is a caller that has to be answered, never one a rejection may reach.
+    let outcome: Awaited<ReturnType<typeof bridge.game.export>>
+    try {
+      outcome = await bridge.game.export(request)
+    } catch (error) {
+      return refused('failed', messageOf(error))
+    }
     if (!outcome) return refused('declined', 'no folder was picked')
 
     // 🛑 What would NOT compile, said: a script missing from a game with no word about why is

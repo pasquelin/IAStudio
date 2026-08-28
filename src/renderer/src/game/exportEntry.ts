@@ -7,13 +7,14 @@ import { createBundledAssets } from '@game/host/bundledAssets'
 import { createExportHost } from '@game/host/exportHost'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import { loadRapierPhysics } from '@game/host/rapierPhysics'
-import type { EntityPlacement } from '@game/ports/renderPort'
+import type { EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import { placementsOf } from '@game/runtime/placements'
 import { sceneFromGltf } from '@/engines/scene/gltfDocument'
 import { animationFrames } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
+import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
 import { worldFromScene } from './worldFromScene'
 
@@ -27,6 +28,18 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   const game = await fetched<ExportedGame>(EXPORTED_GAME_FILE)
   const assets = createBundledAssets(game.assets)
   const render = createWebRender(canvas, assets)
+  /** How far the running scene's own TIMELINE has veiled the picture, as of the last step. */
+  let veiled = 0
+  // 🛑 The host's port and not the renderer's own: read back off the renderer, the arrival fade
+  // would hear its own writes and lift itself against them.
+  const drawn: RenderPort = {
+    place: render.place,
+    view: render.view,
+    veil: amount => {
+      veiled = amount
+      render.veil(amount)
+    },
+  }
   const swap = createSceneSwap()
 
   const [physics, script, modules] = await Promise.all([
@@ -42,7 +55,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     assets,
     physics,
     script,
-    render,
+    render: drawn,
     scenes: swap.port,
   })
 
@@ -60,7 +73,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   let stopped = false
   /** Seconds of veil the scene that has just arrived still owes. */
   let fading = 0
-  render.show(opening)
+  await render.show(opening)
 
   /**
    * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -94,9 +107,15 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       loop = createGameLoop(world)
       // The first step of the arrived scene derives every collider — not a gap to catch up on.
       warmed = false
-      render.show(found)
-      world.events.emit({ name: 'SceneLoaded', payload: { scene: wanted.id } })
+      // 🛑 BEFORE the build, which suspends for a scene that carves: frames run in that window,
+      // stepping the arrived world over the picture of the one just left — and the veil would
+      // lift onto it.
       fading = request.fade
+      await render.show(found)
+      // A second suspension point, so a second look: the stop above threw this world away.
+      if (stopped) return
+
+      world.events.emit({ name: 'SceneLoaded', payload: { scene: wanted.id } })
     } finally {
       reading = false
       swap.settled()
@@ -120,9 +139,9 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     render.place(placementsOf(world, placements))
     // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
     if (fading > 0) {
-      const left = 1 - world.time.elapsed / fading
-      render.veil(Math.max(left, 0))
-      if (left <= 0) fading = 0
+      const lift = veilLift(world.time.elapsed, fading, veiled)
+      render.veil(lift.veil)
+      if (lift.through) fading = 0
     }
     render.draw()
   })

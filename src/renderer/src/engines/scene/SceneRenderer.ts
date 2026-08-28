@@ -95,7 +95,6 @@ import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
   cameraBody,
-  geometryFor,
   helperFor,
   knobIndexOf,
   knobName,
@@ -201,11 +200,10 @@ import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
-import { primitiveOf } from '@shared/domain/csg'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
-import { bakedGeometry } from '../csg/bakedGeometry'
+import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
 import { exportObjects } from './sceneExport'
@@ -3304,11 +3302,7 @@ export class SceneRenderer {
 
     // The base brush AS THE RECIPE PLACES IT: its transform carries the matter's scale, so a
     // wall shown uncut while the worker runs is the size it will be once pierced.
-    const raw = bakedGeometry(
-      geometryFor(primitiveOf(node.carved.base)),
-      node.carved.base.transform,
-    )
-    const mesh = new Mesh(raw, material)
+    const mesh = new Mesh(uncutGeometry(node.carved), material)
     // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps
     // are named by the document and loaded by nobody.
     const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())

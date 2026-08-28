@@ -74,4 +74,21 @@ describe('an author’s scripts, compiled once', () => {
     expect(held.modules).toEqual([])
     expect(held.troubles).toEqual([{ script: 'script:A.ts', message: 'node:fs', line: 2 }])
   })
+
+  /** 🛑 The refusal belongs to the TEXT, not to the one script that was sent. */
+  it('names every script carrying a text that would not compile', async () => {
+    const { asked, compiler } = counting(() => ({ trouble: 'node:fs', line: 2 }))
+
+    const held = await compiler.compile([
+      { script: 'script:A.ts', source: 'same' },
+      { script: 'script:B.ts', source: 'same' },
+    ])
+
+    expect(asked).toEqual(['same'])
+    expect(held.modules).toEqual([])
+    expect(held.troubles).toEqual([
+      { script: 'script:A.ts', message: 'node:fs', line: 2 },
+      { script: 'script:B.ts', message: 'node:fs', line: 2 },
+    ])
+  })
 })

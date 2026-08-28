@@ -17,6 +17,7 @@ import type { SceneState } from '@/engines/scene/sceneState'
 import type { FrameDriver } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
 import { createStudioRender, type SceneDraw } from './studioRender'
+import { veilLift } from './veilLift'
 import { worldFromScene } from './worldFromScene'
 
 /** How often the game says what it is doing. Six times a second, and that is a decision — see
@@ -298,11 +299,9 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   const liftVeil = (): void => {
     if (fadeSpan <= 0) return
 
-    const left = 1 - world.time.elapsed / fadeSpan
-    // The DEEPER of the two: the arriving scene's own timeline has already written its veil this
-    // step, and taking the lift alone made the picture jump back to half dark when the lift ended.
-    render.veil(Math.max(left, veiled))
-    if (left <= 0) fadeSpan = 0
+    const lift = veilLift(world.time.elapsed, fadeSpan, veiled)
+    render.veil(lift.veil)
+    if (lift.through) fadeSpan = 0
   }
 
   deps.frames.start(nowMs => {

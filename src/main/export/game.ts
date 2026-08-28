@@ -1,5 +1,5 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { basename, dirname, isAbsolute, join, relative as relativePath, sep } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import { safeFileName } from '@shared/domain/fileName'
 import { nameOf } from '@shared/domain/folder'
@@ -7,6 +7,7 @@ import type { GameExportOutcome, GameExportRequest } from '@shared/domain/gameEx
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { writeExportedGame, type ExportedAsset, type GameExportPorts } from './gameExport'
+import { pathIsInside } from './pathIsInside'
 
 export type GameExportDeps = {
   /** Injected, like every dialog: `dialog` needs a live app, which no test has. */
@@ -81,10 +82,7 @@ function portsFor(deps: GameExportDeps, project: string, root: string): GameExpo
       // 🛑 The second lock, and the one that does not depend on who composed the name: `join`
       // resolves `..`, so a path that climbed out of the folder is refused here whatever the
       // caller thought it was writing.
-      // `..` as a SEGMENT, never as a prefix: a file legitimately named `..notes` is not one
-      // that climbed out. The same shape `folderInsideProject` settles this question with.
-      const within = relativePath(root, file)
-      if (within === '' || within.startsWith(`..${sep}`) || isAbsolute(within)) {
+      if (!pathIsInside(root, file)) {
         throw new Error(`refused to write outside the game folder: ${relative}`)
       }
       // `recursive`, as `export/folder.ts` does and for the same reason.

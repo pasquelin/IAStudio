@@ -233,6 +233,40 @@ describe('createDocumentIn', () => {
     })
   })
 
+  /** 🛑 The one kind whose file this module composes itself, and it composed it from the RAW
+   * title — a separator in it named a file in another folder. */
+  describe('the file a script lands on', () => {
+    /** The paths `writeScript` was handed — a script is written before it has a tab. */
+    const writing = (): string[] => {
+      const asked: string[] = []
+      installFakeBridge({
+        game: {
+          writeScript: (path: string) => {
+            asked.push(path)
+            return Promise.resolve(true)
+          },
+        },
+      })
+      return asked
+    }
+
+    it('cleans a title the disk would refuse, in the folder scripts belong to', async () => {
+      const asked = writing()
+
+      await createDocumentIn('code', { title: 'Niveau/../secret' })
+
+      expect(asked).toEqual(['scripts/Niveau .. secret.ts'])
+    })
+
+    it('files a plain title where its author asked for it', async () => {
+      const asked = writing()
+
+      await createDocumentIn('code', { title: 'Porte', folder: 'Repérages' })
+
+      expect(asked).toEqual(['Repérages/Porte.ts'])
+    })
+  })
+
   // Filled before the tab opens: a scene that held nothing would be given the studio default by
   // `restoreDocument`, and the template would be lost between the window and the viewport.
   describe('what a new scene opens on', () => {

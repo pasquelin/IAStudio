@@ -43,7 +43,7 @@ import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockviewApi'
-import { codeFileOf, isCodeDirty, scriptRefOf, useCode } from '@/stores/code'
+import { codeFileOf, isCodeDirty, scriptRefAt, scriptRefOf, useCode } from '@/stores/code'
 import {
   forgetCarriedMetadata,
   montageIsIncomplete,
@@ -171,8 +171,9 @@ type DocumentIo = AssetWriting & {
   incomplete?: (documentId: string) => string | null
   /** Whether closing the document would throw work away — never true for an untouched tab. */
   dirty: (documentId: string) => boolean
-  /** Drops the state and the history a closed document was holding. */
-  forget: (documentId: string) => void
+  /** Drops the state and the history a closed document was holding. The DESCRIPTOR, because a
+   * script is keyed by its path, which no lookup answers once the document has left the store. */
+  forget: (document: DocumentDescriptor) => void
 }
 
 /**
@@ -264,7 +265,7 @@ function textDocumentIo<S>(
     createDefault: documentId => store.use.getState().ensure(documentId, createDefault),
     holds: documentId => store.hasState(store.use.getState(), documentId),
     dirty: documentId => store.hasUnsavedWork(store.use.getState(), documentId),
-    forget: documentId => store.use.getState().drop(documentId),
+    forget: document => store.use.getState().drop(document.id),
   }
 }
 
@@ -373,10 +374,10 @@ const AUDIO_IO: DocumentIo = {
   // none of opens shorter than its file, and writing it back would delete those clips for good.
   incomplete: montageIsIncomplete,
 
-  forget: documentId => {
-    audioEditStore.use.getState().drop(documentId)
-    sequenceStore.use.getState().drop(documentId)
-    forgetCarriedMetadata(documentId)
+  forget: ({ id }) => {
+    audioEditStore.use.getState().drop(id)
+    sequenceStore.use.getState().drop(id)
+    forgetCarriedMetadata(id)
   },
 }
 
@@ -545,7 +546,7 @@ const IMAGE_IO: DocumentIo = {
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
   dirty: documentId => canvasStore.hasUnsavedWork(useCanvases.getState(), documentId),
-  forget: documentId => useCanvases.getState().drop(documentId),
+  forget: document => useCanvases.getState().drop(document.id),
 }
 
 /**
@@ -585,10 +586,7 @@ const SCRIPT_IO: DocumentIo = {
   },
   holds: documentId => codeFileOf(documentId) !== undefined,
   dirty: documentId => isCodeDirty(codeFileOf(documentId)),
-  forget: documentId => {
-    const script = scriptRefOf(documentId)
-    if (script !== null) useCode.getState().forget(script)
-  },
+  forget: document => useCode.getState().forget(scriptRefAt(document.path)),
 }
 
 /**
@@ -609,9 +607,9 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
     // a save recomposes the whole document from the state. glTF links by INDEX, so the meshes and
     // buffers it gained cannot be carried across half way. Refused rather than silently dropped.
     incomplete: sceneRefusesToSave,
-    forget: documentId => {
-      sceneStore.use.getState().drop(documentId)
-      forgetCarriedScene(documentId)
+    forget: ({ id }) => {
+      sceneStore.use.getState().drop(id)
+      forgetCarriedScene(id)
     },
   },
   // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
@@ -623,9 +621,9 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
       serialize: serializeSequencePayload,
     }),
     incomplete: montageIsIncomplete,
-    forget: documentId => {
-      sequenceStore.use.getState().drop(documentId)
-      forgetCarriedMetadata(documentId)
+    forget: ({ id }) => {
+      sequenceStore.use.getState().drop(id)
+      forgetCarriedMetadata(id)
     },
   },
   // No `writeAsset`, for the reason the editor states itself: a take is a REPLAYABLE chain over
@@ -649,10 +647,10 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
     // glTF is an index-linked graph: a file holding a mesh or a camera cannot be half rewritten,
     // and the nodes are recomposed from two. Refused rather than flattened.
     incomplete: skyRefusesToSave,
-    forget: documentId => {
-      skyboxStore.use.getState().drop(documentId)
+    forget: ({ id }) => {
+      skyboxStore.use.getState().drop(id)
       // Dropped with the document, so a reopened id never inherits the link another file carried.
-      forgetCarriedSky(documentId)
+      forgetCarriedSky(id)
     },
   },
   // A material IS its MaterialX: each channel is a `tiledimage` reading a file beside the
@@ -669,10 +667,10 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
     // One material is rewritten from one state: a file holding a second one, or a look, cannot be
     // half rewritten. Refused rather than flattened, exactly as a sky holding a scene is.
     incomplete: materialRefusesToSave,
-    forget: documentId => {
-      materialStore.use.getState().drop(documentId)
+    forget: ({ id }) => {
+      materialStore.use.getState().drop(id)
       // Dropped with the document, so a reopened id never inherits the paths another file carried.
-      forgetCarriedMaterial(documentId)
+      forgetCarriedMaterial(id)
     },
   },
 }
@@ -1305,7 +1303,7 @@ export async function refreshDocuments(): Promise<boolean> {
 
   const { documents } = useDocuments.getState()
   for (const document of wereOpen) {
-    if (!documents[document.id]) forgetDocument(document.id, document.kind)
+    if (!documents[document.id]) forgetDocument(document.id, document)
   }
 
   return answered
@@ -1317,13 +1315,15 @@ export async function refreshDocuments(): Promise<boolean> {
  * Its refusal to save is dropped too: the id is the project folder's to hand out again, and a
  * document reopened later must not inherit the verdict passed on the one before it.
  *
- * `kind` is for the one caller whose document is already out of the store — without it `ioOf`
- * finds no descriptor, and the engine state of every document a project change closed would be
- * kept for the rest of the session.
+ * `gone` is for the one caller whose document is already out of the store: without it nothing
+ * names the kind that says which `DocumentIo` holds the state, nor the path a script is held by.
+ *
+ * 🛑 The id-only bookkeeping below runs either way — a document the store has lost still owes
+ * its refusal, its asset and its session views.
  */
-function forgetDocument(documentId: string, kind?: DocumentKind): void {
-  const io = kind ? IO_BY_KIND[kind] : ioOf(documentId)
-  io?.forget(documentId)
+function forgetDocument(documentId: string, gone?: DocumentDescriptor): void {
+  const document = gone ?? useDocuments.getState().documents[documentId]
+  if (document) IO_BY_KIND[document.kind].forget(document)
   unreadable.delete(documentId)
   // Same reason: the id goes back to the folder, and a document reopened later must not inherit
   // a debt owed by the one before it.

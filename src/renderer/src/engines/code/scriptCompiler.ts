@@ -40,22 +40,28 @@ export function createScriptCompiler(open: () => Worker = spawn): ScriptCompiler
           })),
       )
 
-      const troubles: ScriptTrouble[] = []
-      const refused = new Set<string>()
+      // 🛑 Keyed by the DIGEST, like the request: two scripts of identical source are one round
+      // trip, and a refusal recorded under the one SENT dropped the other from the modules with
+      // nothing said about it — missing from the Play and from the export.
+      const refused = new Map<string, { message: string; line: number }>()
       for (const one of fresh) {
         if ('trouble' in one.answer) {
-          troubles.push({ script: one.script, message: one.answer.trouble, line: one.answer.line })
-          refused.add(one.script)
+          refused.set(one.key, { message: one.answer.trouble, line: one.answer.line })
           continue
         }
         compiled.set(one.key, one.answer.code)
       }
 
       const modules: ScriptModule[] = []
+      const troubles: ScriptTrouble[] = []
       for (const one of keyed) {
+        const failed = refused.get(one.key)
+        if (failed) {
+          troubles.push({ script: one.script, ...failed })
+          continue
+        }
         const held = compiled.get(one.key)
-        if (held !== undefined && !refused.has(one.script))
-          modules.push({ script: one.script, code: held })
+        if (held !== undefined) modules.push({ script: one.script, code: held })
       }
       return { modules, troubles }
     },

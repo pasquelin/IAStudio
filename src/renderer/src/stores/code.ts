@@ -65,7 +65,7 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
     const held = (await getBridge()?.game.scripts()) ?? []
     const files: Record<string, CodeFile> = {}
     for (const file of held) {
-      const script = refToString({ kind: 'script', path: file.path })
+      const script = scriptRefAt(file.path)
       // What is being TYPED wins over what the disk answered: a Play re-reads every script, and
       // an author who has not saved must not watch their work replaced under the cursor.
       const editing = get().files[script]
@@ -147,11 +147,14 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
   },
 }))
 
-/** The `script:` reference of an open document. The centre keys tabs by document id where the
- * game, the components and the assistant all name a script by PATH — one spelling of that. */
+/** The `script:` reference a path spells, for a caller holding the descriptor rather than an id. */
+export const scriptRefAt = (path: string): string => refToString({ kind: 'script', path })
+
+/** The `script:` reference of an OPEN document — `null` once the descriptor has left the store.
+ * The centre keys tabs by document id where everything else names a script by PATH. */
 export function scriptRefOf(documentId: string): string | null {
   const path = documentById(useDocuments.getState(), documentId)?.path
-  return path === undefined ? null : refToString({ kind: 'script', path })
+  return path === undefined ? null : scriptRefAt(path)
 }
 
 /**

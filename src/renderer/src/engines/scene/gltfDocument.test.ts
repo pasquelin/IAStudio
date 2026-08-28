@@ -211,8 +211,12 @@ describe('sceneHoldsMore', () => {
     expect(sceneHoldsMore(held)).toEqual(['animation.markers'])
   })
 
-  /** The system fires by id: a second row under a taken one would be swallowed at PLAY. */
-  it('names a list holding two rows under one id', () => {
+  /**
+   * 🛑 `readList` FILTERS, it does not key by id: both rows come back and both are written back.
+   * Counted as a loss, a repeat opened the document read-only and refused every ⌘S over a round
+   * trip that was faithful. What it really costs is a row swallowed at PLAY.
+   */
+  it('says nothing about two rows under one id, and gives both back', () => {
     const held = withTimeline({
       events: [
         { id: 'e1', at: 0, name: 'First' },
@@ -220,7 +224,8 @@ describe('sceneHoldsMore', () => {
       ],
     })
 
-    expect(sceneHoldsMore(held)).toEqual(['animation.events'])
+    expect(sceneHoldsMore(held)).toEqual([])
+    expect(sceneFromGltf(held).animation.events).toHaveLength(2)
   })
 
   it('says nothing about a timeline whose rows it reads whole', () => {
