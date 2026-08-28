@@ -448,16 +448,40 @@ function fillFailures(sources: readonly (readonly [string, string])[]): string[]
  */
 describe('the hue each section is inked in', () => {
   const SECTIONS = ['image', 'video', '3d', 'code', 'audio', 'skyboxes', 'materials']
-  const GROUNDS = ['panel', 'surface']
+  const GROUNDS = ['panel', 'surface', 'chassis']
+
+  /**
+   * 🛑 The SELECTED row is a ground too, and it is the one that was missed: `rowSkin` fills a
+   * chosen row `bg-accent-soft`, the accent thinned over whatever is beneath, and the glyph goes
+   * on wearing its section's hue on top. Every ground therefore counts twice.
+   *
+   * The share is READ per theme, never written here: the dark theme thins to 55 % and the light
+   * to 22 %, so one number would measure a colour neither theme paints.
+   */
+  const softShareIn = (from: number): number =>
+    Number(
+      /--color-accent-soft:\s*color-mix\(in srgb, var\(--color-accent\) (\d+)%/.exec(
+        stylesheet.slice(from),
+      )?.[1] ?? 0,
+    ) / 100
 
   for (const theme of THEMES) {
     it(`clears what a glyph owes, on every ground, ${theme.name}`, () => {
       const tokens = palette(theme.from)
+      const share = softShareIn(theme.from)
+      expect(share).toBeGreaterThan(0)
+
+      const grounds = GROUNDS.flatMap((ground): [string, string][] => [
+        [ground, tokens[ground] ?? ''],
+        [`a chosen row over ${ground}`, blend(tokens.accent ?? '', tokens[ground] ?? '', share)],
+      ])
+
       const under = SECTIONS.flatMap(section =>
-        GROUNDS.filter(
-          ground =>
-            contrastRatio(tokens[`domain-${section}`] ?? '', tokens[ground] ?? '') < AA_NON_TEXT,
-        ).map(ground => `domain-${section} on ${ground}`),
+        grounds
+          .filter(
+            ([, ground]) => contrastRatio(tokens[`domain-${section}`] ?? '', ground) < AA_NON_TEXT,
+          )
+          .map(([name]) => `domain-${section} on ${name}`),
       )
 
       expect(under).toEqual([])
