@@ -20,6 +20,7 @@ import {
   openSettingsWindow,
   openUsageWindow,
 } from '@main/window/windows'
+import { isDocumentKind, type DocumentKind } from '@shared/domain/document'
 import { menuTemplate } from './template'
 
 /** Everything one window reported about itself, which is everything the menu draws from it. */
@@ -28,6 +29,7 @@ type WindowMenu = {
   tools: readonly ToolId[]
   checked: readonly MenuCheck[]
   abilities: readonly MenuAbility[]
+  kind: DocumentKind | null
 }
 
 /**
@@ -68,6 +70,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
   const template = menuTemplate({
     language: windowLanguage(),
     workspace: shown?.surface ?? null,
+    kind: shown?.kind ?? null,
     tools: shown?.tools ?? [],
     checked: shown?.checked ?? [],
     abilities: shown?.abilities ?? [],
@@ -131,7 +134,7 @@ function rebuildInNewLanguage(): void {
 export function registerMenuHandlers(): void {
   followWindowLanguage(rebuildInNewLanguage)
 
-  handle(CHANNELS.windowWorkspace, (event, next, tools, checked, abilities) => {
+  handle(CHANNELS.windowWorkspace, (event, next, tools, checked, abilities, kind) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a surface this one has dropped.
     if (next !== HOME_SURFACE && !WORKSPACE_IDS.includes(next)) return
@@ -143,6 +146,8 @@ export function registerMenuHandlers(): void {
       tools: (tools ?? []).filter(id => placementOf(id) !== null),
       checked: checked ?? [],
       abilities: abilities ?? [],
+      // Same defaulting, same reason: an older preload sends nothing here.
+      kind: kind && isDocumentKind(kind) ? kind : null,
     })
     rebuildIfStale()
   })

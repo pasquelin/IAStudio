@@ -1,3 +1,4 @@
+import type { DocumentKind } from './document'
 import type { DisplayMode } from './scene'
 import { reservedByPlatform, type Signature } from './shortcut'
 import { HOME_SURFACE, type ToolSurface } from './tool'
@@ -28,6 +29,7 @@ export type CommandScope =
   | 'skybox'
   | 'audio'
   | 'material'
+  | 'gui'
 
 export type CommandId =
   | 'project.new'
@@ -159,6 +161,8 @@ export type CommandId =
   | 'audio.redo'
   | 'material.undo'
   | 'material.redo'
+  | 'gui.undo'
+  | 'gui.redo'
 
 /**
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
@@ -1237,6 +1241,23 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+
+  // The 3D space holds two kinds, so ⌘Z has to follow the DOCUMENT in front rather than the
+  // space — `scopeOfDocument` below is what tells a scene's history from an interface's.
+  command({
+    id: 'gui.undo',
+    scope: 'gui',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'gui.redo',
+    scope: 'gui',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
 ]
 
 export const COMMAND_SCOPES: readonly CommandScope[] = [
@@ -1249,6 +1270,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'skybox',
   'audio',
   'material',
+  'gui',
 ]
 
 /**
@@ -1281,11 +1303,29 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
 }
 
 /**
+ * 🛑 The scope a KIND edits through, read before the space.
+ *
+ * A space named one scope while it opened one kind. The 3D space now opens a scene and the
+ * interfaces shown over it: ⌘Z on an interface would otherwise pop the scene's history, and the
+ * native menu would offer the scene's Undo over a GUI.
+ */
+const SCOPE_BY_KIND: Partial<Record<DocumentKind, CommandScope>> = { gui: 'gui' }
+
+/**
  * The surface a workspace edits through, or `null` where nothing is undoable — which the home
  * is: it covers the spaces rather than editing one, so it holds no history of its own.
  */
-export function scopeOfWorkspace(surface: ToolSurface | null): CommandScope | null {
-  return surface && surface !== HOME_SURFACE ? SCOPE_BY_WORKSPACE[surface] : null
+
+export function scopeOfWorkspace(
+  surface: ToolSurface | null,
+  kind?: DocumentKind | null,
+): CommandScope | null {
+  // The surface FIRST: the home covers the spaces and edits nothing, and `activeId` is not
+  // cleared on the way there — so the last interface opened would otherwise arm ⌘Z over a
+  // screen holding no editor at all.
+  if (!surface || surface === HOME_SURFACE) return null
+
+  return (kind && SCOPE_BY_KIND[kind]) ?? SCOPE_BY_WORKSPACE[surface]
 }
 
 /** The command of that scope, when it declares one. Every editing scope declares undo and redo. */

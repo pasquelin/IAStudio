@@ -119,7 +119,8 @@
       "audio": "Audio",
       "skybox": "Sky",
       "material": "Material",
-      "script": "Script"
+      "script": "Script",
+      "gui": "Interface"
     },
     "new": "New document",
     "newByKind": {
@@ -129,9 +130,15 @@
       "audio": "New audio",
       "skybox": "New sky",
       "material": "New material",
-      "script": "New script"
+      "script": "New script",
+      "gui": "New interface"
     },
     "missing": "This document is no longer open.",
+    "saveRefusedGuiTooNew": "This interface comes from a file written by a newer build of the studio. Saving would erase what this build cannot read — update the studio, or start from a new interface.",
+    "saveRefusedGuiUnreadable": "This interface could not be read: the file is incomplete or damaged. Saving would write a blank screen over it — repair the file, or start from a new interface.",
+    "guiTooNew": "This interface was written by a newer build of the studio. It opens empty and saving is refused.",
+    "guiUnreadable": "This interface could not be read. It opens empty and saving is refused, so the file is not overwritten.",
+    "guiEmpty": "This interface is empty. The next lot lays its components down.",
     "saveRefusedIncomplete": "This edit opened without the clips whose media are missing. Saving would erase them from the file — import the media into the project, then open the edit again.",
     "saveRefusedMontageHoldsMore": "This edit comes from an OpenTimelineIO file holding more than the studio composes — a marker, an effect, a transition. The edit is written back whole, so saving would erase those parts. Use the edit’s own export, in the File menu, or start from a new edit.",
     "montageHoldsMore": "This edit holds parts the studio cannot write back — {{parts}}. It opens read-only: saving is refused while they are there.",

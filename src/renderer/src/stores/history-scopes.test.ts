@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { commandIn, scopeOfWorkspace } from '@shared/domain/command'
-import type { WorkspaceId } from '@shared/domain/workspace'
+import { workspaceForKind, type DocumentKind } from '@shared/domain/document'
 import { WRITTEN_SOURCES } from '@/design/testHarness'
 
 /**
@@ -15,13 +15,14 @@ import { WRITTEN_SOURCES } from '@/design/testHarness'
  * `command.test.ts` holds the other half — a scope named in the table declares both commands —
  * but no test there can reach this one: which stores hold a history is a fact of `renderer/`.
  */
-const HISTORY_STORES: Readonly<Record<string, WorkspaceId>> = {
+const HISTORY_STORES: Readonly<Record<string, DocumentKind>> = {
   'audioEdits.ts': 'audio',
   'canvases.ts': 'image',
-  'scenes.ts': '3d',
-  'sequences.ts': 'video',
-  'skyboxes.ts': 'skyboxes',
-  'materials.ts': 'materials',
+  'scenes.ts': 'scene',
+  'sequences.ts': 'sequence',
+  'skyboxes.ts': 'skybox',
+  'materials.ts': 'material',
+  'gui.ts': 'gui',
 }
 
 /**
@@ -47,13 +48,15 @@ describe('every store that records a history', () => {
   })
 
   /**
-   * The guard proper. It would have failed on `textures.ts` the day it was written: the store
-   * has held a history since § 8.3, and its workspace named no scope until the toolbars were
-   * asked to stop drawing their own undo.
+   * The guard proper, keyed by KIND rather than by workspace — which is what it is worth: the
+   * 3D space opens a scene AND an interface, so asking the space alone would answer the scene's
+   * scope for both, green while ⌘Z on an interface pops the wrong history. It would have failed
+   * on `textures.ts` the day it was written, for the older reason: a store held a history and
+   * its workspace named no scope at all.
    */
-  it('serves a workspace whose scope declares undo and redo', () => {
-    const unreachable = Object.entries(HISTORY_STORES).filter(([, workspace]) => {
-      const scope = scopeOfWorkspace(workspace)
+  it('serves a document whose scope declares undo and redo', () => {
+    const unreachable = Object.entries(HISTORY_STORES).filter(([, kind]) => {
+      const scope = scopeOfWorkspace(workspaceForKind(kind), kind)
       return !scope || !commandIn(scope, 'undo') || !commandIn(scope, 'redo')
     })
 

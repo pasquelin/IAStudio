@@ -15,6 +15,7 @@ import { layerById } from '@/engines/canvas/canvasState'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { designatedIn } from '@/engines/timeline/timelineState'
 import { reportFailure } from '@/services/diagnostics'
+import type { DocumentKind } from '@shared/domain/document'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import {
   activeImageId,
@@ -102,6 +103,10 @@ function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
   return { kind: designated.kind, items: [{ id, name }] }
 }
 
+/** What the tab in front IS — what puts ⌘Z in one history rather than another. */
+const frontKind = (documents: DocumentsSlice): DocumentKind | null =>
+  (documents.activeId ? documents.documents[documents.activeId] : undefined)?.kind ?? null
+
 /**
  * 🛑 Typed as `StudioSnapshot` rather than composed loose: this leaves the window as `unknown`
  * and is read key by key in the main process. Untyped, a field renamed here left `describeStudio`
@@ -130,7 +135,7 @@ function studioState(): ActionOutcome {
      * it here rather than leaving it to be looked up is what makes the refusal actionable.
      */
     surface,
-    commandScope: scopeOfWorkspace(surface),
+    commandScope: scopeOfWorkspace(surface, frontKind(documents)),
     documents: Object.values(documents.documents).map(one => summaryOf(one, documents.activeId)),
     // What the person has designated, which is what a spoken request most often means by "it".
     selection: selectionNow(documents),
@@ -281,6 +286,9 @@ async function exportOf(
       const { imageExportFiles } = await import('@/spaces/image/imageExportFiles')
       return imageExportFiles(document.id)
     }
+    // Nothing goes out yet: what an interface would export is the game that shows it.
+    case 'gui':
+      return null
     case 'scene': {
       const { sceneExportFiles } = await import('@/spaces/three/sceneExportFiles')
       return sceneExportFiles(

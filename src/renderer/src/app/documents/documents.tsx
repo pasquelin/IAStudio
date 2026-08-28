@@ -32,6 +32,9 @@ const SkyboxDocument = lazy(async () => ({
 const ScriptDocument = lazy(async () => ({
   default: (await import('@/spaces/code/ScriptDocument')).ScriptDocument,
 }))
+const GuiDocument = lazy(async () => ({
+  default: (await import('@/spaces/gui/GuiDocument')).GuiDocument,
+}))
 const MaterialDocument = lazy(async () => ({
   default: (await import('@/spaces/materials/MaterialDocument/MaterialDocument')).MaterialDocument,
 }))
@@ -74,4 +77,5 @@ export const DOCUMENT_COMPONENTS: Record<
   script: panelFor(ScriptDocument),
   skybox: panelFor(SkyboxDocument),
   material: panelFor(MaterialDocument),
+  gui: panelFor(GuiDocument),
 }

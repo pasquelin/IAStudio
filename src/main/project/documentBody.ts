@@ -30,6 +30,7 @@ import {
   type OraHead,
 } from '@main/assets/openRasterFile'
 import { parseDocumentEnvelope, parseOraStack } from './validation'
+import { isUiFile } from './uiValidation'
 
 /**
  * How a document's bytes are spelt. A kind of the studio's own is an envelope on its first line
@@ -369,6 +370,65 @@ const OPEN_MATERIALX: DocumentBodyFormat = {
   },
 }
 
+/**
+ * An interface IS its JSON — one object, opening on the studio's own key so a listing reads a
+ * bounded head whatever the tree weighs. The shape MaterialX has, and better than glTF's, whose
+ * mark can fall past the read behind a long list of root nodes.
+ */
+const OPEN_UI: DocumentBodyFormat = {
+  read: body => uiDocument(body.toString('utf8')),
+  write: document => {
+    const parsed = jsonOrNull(document.content)
+    // 🛑 Refused, never wrapped in the envelope — the way a montage that is not one is. The two
+    // formats that DO fall back have a legacy enveloped form on people's disks; this one has
+    // none, so the fallback could only ever turn a valid `.ui.json` into something no other
+    // tool parses. A rename reaches this writer without passing the window's own refusal.
+    if (!isRecord(parsed) || !isUiFile(parsed)) {
+      throw new Error('Refusing to write an interface that is not one')
+    }
+
+    // The stamp FIRST, and the document after it: written last it would sit behind the tree,
+    // outside the bounded head, and the file would drop out of every listing.
+    const { [STUDIO_METADATA_KEY]: held, ...rest } = parsed
+    return `${JSON.stringify(
+      { [STUDIO_METADATA_KEY]: studioStamp(isRecord(held) ? held : {}, document), ...rest },
+      null,
+      2,
+    )}\n`
+  },
+  readHead: async file => {
+    const head = (await firstBytes(file, ENVELOPE_LIMIT)).toString('utf8')
+    const cut = head.indexOf('\n')
+    // A first line that PARSES as an envelope is a document written before this format; an
+    // indented interface has one too — it reads `{` — so the parse is what tells them apart.
+    const first = cut === -1 ? null : jsonOrNull(head.slice(0, cut))
+    if (isRecord(first) && !(STUDIO_METADATA_KEY in first)) return parseDocumentEnvelope(first)
+
+    // A `.ui.json` somebody else wrote carries nothing of ours: turned away rather than listed,
+    // which is the rule every open format here follows.
+    if (!head.includes(STUDIO_MARK)) throw new Error('Nothing of the studio where this file begins')
+    return shortHeadIn(head, 'gui') ?? uiDocument(await readFile(file, 'utf8'))
+  },
+}
+
+function uiDocument(body: string): DocumentFile {
+  const parsed = jsonOrNull(body)
+  if (!isRecord(parsed) || !(STUDIO_METADATA_KEY in parsed)) return envelopedDocument(body)
+
+  return openDocument(
+    body,
+    parsed,
+    value => (isRecord(value) ? studioMetadataOf(value) : {}),
+    'gui',
+  )
+}
+
+/** The studio's own block of a `.ui.json`, which is a member of the object rather than an extra. */
+const studioMetadataOf = (value: Record<string, unknown>): Record<string, unknown> => {
+  const held = value[STUDIO_METADATA_KEY]
+  return isRecord(held) ? held : {}
+}
+
 /** The one kind with NOTHING of the studio in its file, so the envelope is composed rather than
  * read: the file NAME is the id — a renamed script is a different document — and `readHead`
  * touches no disk, so listing a hundred scripts opens none of them. */
@@ -394,6 +454,7 @@ const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
   [EXTENSIONS_BY_KIND.material]: OPEN_MATERIALX,
   [EXTENSIONS_BY_KIND.script]: PLAIN_TEXT,
+  [EXTENSIONS_BY_KIND.gui]: OPEN_UI,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

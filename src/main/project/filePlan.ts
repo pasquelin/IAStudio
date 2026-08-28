@@ -1,5 +1,6 @@
+import { documentExtensionOf, documentStemOf } from '@shared/domain/document'
 import type { PathChange, Refusal } from '@shared/domain/fileOp'
-import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/fileName'
+import { foldForFileName, stemForSuffix } from '@shared/domain/fileName'
 import { isPrivatePath, moveRefusal, nameOf, parentOf, pathIn } from '@shared/domain/folder'
 
 /**
@@ -85,8 +86,8 @@ export function freeName(taken: ReadonlySet<string>, fileName: string): string {
   const held = (candidate: string): boolean => taken.has(foldForFileName(candidate))
   if (!held(fileName)) return fileName
 
-  const extension = extensionOf(fileName)
-  const stem = stemForSuffix(stemOf(fileName))
+  const extension = documentExtensionOf(fileName)
+  const stem = stemForSuffix(documentStemOf(fileName))
 
   for (let n = 2; ; n += 1) {
     const candidate = `${stem} ${n}${extension}`

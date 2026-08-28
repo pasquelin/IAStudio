@@ -1,6 +1,5 @@
 import { refused, type ActionOutcome, type ActionRefusal } from '@shared/domain/assistant'
-import { isDocumentExtension } from '@shared/domain/document'
-import { extensionOf } from '@shared/domain/fileName'
+import { documentExtensionOf, isDocumentExtension } from '@shared/domain/document'
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
@@ -88,7 +87,10 @@ async function openFile(input: Record<string, unknown>): Promise<ActionOutcome> 
    * has since arrived — but only where the answer could change: a listing holds documents alone,
    * so re-walking the project for a `.png` costs one head per document and can find nothing.
    */
-  if (isDocumentExtension(extensionOf(path)) && !documentAtPath(useDocuments.getState(), path)) {
+  if (
+    isDocumentExtension(documentExtensionOf(path)) &&
+    !documentAtPath(useDocuments.getState(), path)
+  ) {
     await useDocuments.getState().relist('own-write')
   }
 

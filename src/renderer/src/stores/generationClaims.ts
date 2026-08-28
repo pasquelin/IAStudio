@@ -32,6 +32,9 @@ const CLAIMS: Record<DocumentKind, Claim | null> = {
   audio: claimAudioOnSubmit,
   material: claimMaterialOnSubmit,
   script: claimScriptOnSubmit,
+  // Nothing generates an interface: it is drawn, and what it SHOWS is claimed by the space the
+  // picture belongs to.
+  gui: null,
 }
 
 /**

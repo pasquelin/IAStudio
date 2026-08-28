@@ -22,6 +22,7 @@ export type FolderRole =
   | 'scenes'
   | 'models'
   | 'animations'
+  | 'gui'
 
 /**
  * The values beside the type: a marker read off disk has to be checked against them.
@@ -40,6 +41,7 @@ export const FOLDER_ROLES: readonly FolderRole[] = [
   'scenes',
   'models',
   'animations',
+  'gui',
 ]
 
 export function isFolderRole(value: unknown): value is FolderRole {
@@ -69,6 +71,9 @@ export const DEFAULT_ROLE_PATHS: Record<FolderRole, string> = {
   scenes: 'Modelling/Scenes',
   models: 'Modelling/Models',
   animations: 'Modelling/Animations',
+  // At the TOP of the project, never under Modelling: an interface belongs to the game rather
+  // than to what is modelled, and several scenes share one.
+  gui: 'GUI',
 }
 
 /**
@@ -106,6 +111,7 @@ export const WORKSPACE_BY_ROLE: Record<FolderRole, WorkspaceId> = {
   scenes: '3d',
   models: '3d',
   animations: '3d',
+  gui: '3d',
 }
 
 /**

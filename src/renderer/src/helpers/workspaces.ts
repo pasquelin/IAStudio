@@ -8,6 +8,7 @@ import {
   mdiTextureBox,
   mdiVectorTriangle,
   mdiVideoOutline,
+  mdiViewDashboardOutline,
   mdiVolumeHigh,
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
@@ -94,6 +95,9 @@ const OWN_ROLE_ICON: Record<FolderRole, string | null> = {
   // The same runner an animation ASSET wears: two glyphs for one idea, in one panel, is what
   // relisting the table produced the first time.
   animations: assetIcon('animation'),
+  // A glyph of its own though it serves 3D: an interface sits at the TOP of the project, and
+  // wearing the section's cube would file it under what is modelled.
+  gui: mdiViewDashboardOutline,
 }
 
 /**
@@ -140,7 +144,7 @@ export function roleIcon(role: FolderRole): string {
  * section's label. Total rather than a test on the id: a role with no answer would compose a key
  * nothing translates, and a raw key on screen is this repository's costliest defect.
  */
-const ROLE_LABEL: Record<FolderRole, 'section' | 'scenes' | 'models' | 'animations'> = {
+const ROLE_LABEL: Record<FolderRole, 'section' | 'scenes' | 'models' | 'animations' | 'gui'> = {
   image: 'section',
   video: 'section',
   audio: 'section',
@@ -151,6 +155,9 @@ const ROLE_LABEL: Record<FolderRole, 'section' | 'scenes' | 'models' | 'animatio
   scenes: 'scenes',
   models: 'models',
   animations: 'animations',
+  // Its own line rather than the section's: this folder is not under Modelling, so « folder of
+  // the 3D section » would send whoever reads it looking in the wrong place.
+  gui: 'gui',
 }
 
 export function roleLabelKey(role: FolderRole): string {

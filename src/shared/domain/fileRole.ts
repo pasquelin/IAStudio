@@ -1,7 +1,6 @@
 import { ASSET_TYPES, type AssetType } from './asset'
 import { typeOfWorkspace } from './assetKind'
-import { kindForExtension, workspaceForKind } from './document'
-import { extensionOf } from './fileName'
+import { documentExtensionOf, kindForExtension, workspaceForKind } from './document'
 
 /**
  * Which domain a file belongs to, plus the answer for one that belongs to none.
@@ -94,7 +93,7 @@ const DOMAIN_BY_EXTENSION: Record<string, AssetType> = {
  * extensions carry no such contract, so they are folded.
  */
 export function natureOf(fileName: string): FileNature {
-  const extension = extensionOf(fileName)
+  const extension = documentExtensionOf(fileName)
 
   const kind = kindForExtension(extension)
   if (kind) {
@@ -173,7 +172,7 @@ export function sourceNatureOf(fileName: string): {
   domain: AssetType | 'other'
   openable: boolean
 } {
-  const extension = extensionOf(fileName).toLowerCase()
+  const extension = documentExtensionOf(fileName).toLowerCase()
   return {
     domain: DOMAIN_BY_EXTENSION[extension] ?? 'other',
     openable: OPENABLE_EXTENSIONS.includes(extension),

@@ -21,7 +21,8 @@
     "section": "The {{label}} section’s folder",
     "scenes": "Scenes, in the {{label}} section",
     "models": "Models, in the {{label}} section",
-    "animations": "Animations, in the {{label}} section"
+    "animations": "Animations, in the {{label}} section",
+    "gui": "Game interfaces"
   },
   "panels": {
     "assistant": "Assistant",

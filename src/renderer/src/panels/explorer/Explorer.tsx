@@ -9,8 +9,13 @@ import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react
 import { useTranslation } from 'react-i18next'
 import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
-import { kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
-import { extensionOf, stemOf } from '@shared/domain/fileName'
+import {
+  documentExtensionOf,
+  documentStemOf,
+  kindForExtension,
+  type DocumentDescriptor,
+} from '@shared/domain/document'
+import { stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
 import { natureOf } from '@shared/domain/fileRole'
@@ -176,7 +181,7 @@ export function Explorer() {
    */
   const documentOf = useCallback(
     (node: FolderNode): DocumentDescriptor | null => {
-      if (node.kind === 'folder' || !kindForExtension(extensionOf(node.name))) return null
+      if (node.kind === 'folder' || !kindForExtension(documentExtensionOf(node.name))) return null
       return documentsByFile.get(node.path) ?? null
     },
     [documentsByFile],
@@ -803,7 +808,9 @@ export function Explorer() {
                   // A document written before the rename wears a uuid and shows its title, and
                   // « Ma scène .gltf » would name nothing anyone could find on disk.
                   extension={
-                    document?.title === stemOf(node.name) ? extensionOf(node.name) : undefined
+                    document?.title === documentStemOf(node.name)
+                      ? documentExtensionOf(node.name)
+                      : undefined
                   }
                   icon={iconFor(node, row.expanded)}
                   ink={inkFor(node)}
