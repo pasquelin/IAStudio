@@ -123,14 +123,23 @@ describe('a timeline playing inside a game', () => {
     expect(Math.max(...cut.veiled)).toBe(0)
   })
 
-  /** A host with no sound to give answers nothing, and the game plays on. */
-  it('carries on when the host has no sound to give', () => {
+  /** 🛑 Asked ONCE: nothing lands in `playing` for a voiceless row, so the branch used to re-fire
+   * on every step of the row's whole length — a start-attempt storm on a real mixer. */
+  it('asks a host with no sound to give once, and carries on', () => {
+    let asked = 0
     const { world } = running(
       { audio: [{ id: 'a1', assetId: 'music', start: 0, duration: 33_000 }] },
-      { play: () => null },
+      {
+        play: () => {
+          asked += 1
+          return null
+        },
+      },
     )
 
-    expect(() => world.step(STEP)).not.toThrow()
+    for (let at = 0; at < 5; at++) expect(() => world.step(STEP)).not.toThrow()
+
+    expect(asked).toBe(1)
   })
 
   it('does nothing at all for a scene that carries no rows', () => {

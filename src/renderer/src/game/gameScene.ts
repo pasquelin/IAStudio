@@ -6,10 +6,13 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
+  type BufferGeometry,
   type Texture,
 } from 'three'
+import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { AssetPort } from '@game/ports/assetPort'
+import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
 import { createGroundPlane } from '@/engines/scene/groundPlane'
 import { applyFog } from '@/engines/scene/worldBinding'
@@ -42,7 +45,11 @@ const MESH_COLOUR = '#b0b4bd'
 /** What stands behind a scene whose backdrop is an environment a game does not ship. */
 const NO_ENVIRONMENT = '#9fb2c8'
 
-export function buildGameScene(state: SceneState, assets: AssetPort): GameScene {
+/** How a carved solid's shape is worked out — see `carver`. */
+type Carve = (graph: CsgGraph) => BufferGeometry
+
+export async function buildGameScene(state: SceneState, assets: AssetPort): Promise<GameScene> {
+  const carve = state.nodes.some(node => node.type === 'carved') ? await carver() : uncutGeometry
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
   const geometries = createGeometryCache()
@@ -81,7 +88,7 @@ export function buildGameScene(state: SceneState, assets: AssetPort): GameScene 
   }
 
   for (const node of state.nodes) {
-    const object = objectOf(node, geometries.acquire, dress)
+    const object = objectOf(node, geometries.acquire, dress, carve)
     if (!object) continue
 
     object.name = node.name
@@ -121,7 +128,9 @@ export function buildGameScene(state: SceneState, assets: AssetPort): GameScene 
       scene.traverse(one => {
         if (!(one instanceof Mesh)) return
         // 🛑 RELEASED, never disposed: the same buffers are drawn by every node of that shape.
-        geometries.release(one.geometry)
+        // A carved solid is cut for itself and no cache lends it, so it is freed here or never.
+        if (geometries.owns(one.geometry)) geometries.release(one.geometry)
+        else one.geometry.dispose()
         if (one.material instanceof MeshStandardMaterial) one.material.dispose()
       })
     },
@@ -141,6 +150,7 @@ function objectOf(
   node: SceneNode,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
   dress: (material: MeshStandardMaterial, assetId: string) => void,
+  carve: Carve,
 ): Object3D | null {
   if (node.type === 'mesh') {
     const mesh = new Mesh(
@@ -151,9 +161,46 @@ function objectOf(
     mesh.receiveShadow = node.receiveShadow
     return mesh
   }
+  if (node.type === 'carved') {
+    const mesh = new Mesh(carve(node.carved), materialOf(node.material, dress))
+    mesh.castShadow = node.castShadow
+    mesh.receiveShadow = node.receiveShadow
+    return mesh
+  }
   if (node.type === 'light') return lightFor(node.light)
-  // A group carries children and nothing else; every other kind is an editor's business.
+  // A group carries children and nothing else. A camera and a path ARE an editor's business.
+  //
+  // 🛑 `model` is a technical HOLE — its shape comes from a file no loader here lands. `sprite`
+  // and `text` are a hole of SCOPE: the studio builds both synchronously, and this module already
+  // has the arrival motif they need. Nothing invisible is walked into either way, `colliderFromNode`
+  // feeling none of the three.
   return node.type === 'group' ? new Object3D() : null
+}
+
+/**
+ * How a solid is cut, loaded ONLY for a scene that carves: the evaluator weighs 174,6 kB of the
+ * exported bundle (43,6 gzip), measured, and a game with no carved solid must not pay it.
+ *
+ * 🛑 It cuts on the game's own thread — 20 solids of four steps froze 300 ms, measured — and a
+ * scene swap goes through here too. A worker is what this wants; ADR-25's uncut brush is what it
+ * falls back on, here as in the studio.
+ */
+async function carver(): Promise<Carve> {
+  try {
+    const { geometryOfGraph } = await import('@/engines/csg/csgEvaluate')
+    return graph => {
+      try {
+        return geometryOfGraph(graph)
+      } catch {
+        // 🛑 SILENT, and it is a declared hole: an exported page has no journal this module can
+        // reach, so a cut that throws shows a doorway walled up with nothing said.
+        return uncutGeometry(graph)
+      }
+    }
+  } catch {
+    // The chunk an export failed to ship. Same hole, one scale up: every solid comes out uncut.
+    return uncutGeometry
+  }
 }
 
 const materialOf = (

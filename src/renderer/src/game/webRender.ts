@@ -19,7 +19,7 @@ import { buildGameScene, type GameScene } from './gameScene'
 
 export type WebRender = RenderPort & {
   /** Puts another scene on. What a `game.scene.load` lands as, outside the studio. */
-  show: (state: SceneState) => void
+  show: (state: SceneState) => Promise<void>
   resize: (width: number, height: number) => void
   draw: () => void
   dispose: () => void
@@ -42,15 +42,25 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
   const sized = { width: 0, height: 0 }
   let aimed = false
   let held: GameScene | null = null
+  // 🛑 Which build the picture belongs to: a scene arriving while another is still being cut would
+  // otherwise have the slower one land on top of it, and the faster one disposed under the draw.
+  let building = 0
 
   return {
-    show: state => {
+    show: async state => {
+      const mine = (building += 1)
+      const built = await buildGameScene(state, assets)
+      if (mine !== building) {
+        built.dispose()
+        return
+      }
+
       held?.dispose()
-      held = buildGameScene(state, assets)
-      applyToneMapping(renderer, held.world.toneMapping, held.world.exposure)
+      held = built
+      applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
-      if (!aimed) frameAll(camera, held.scene)
+      if (!aimed) frameAll(camera, built.scene)
     },
 
     place: (placements: readonly EntityPlacement[]) => {
@@ -100,6 +110,8 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
     },
 
     dispose: () => {
+      // The build in flight with it: what it lands on has just been thrown away.
+      building += 1
       held?.dispose()
       held = null
       veil.dispose()

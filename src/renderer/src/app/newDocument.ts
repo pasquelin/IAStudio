@@ -6,8 +6,9 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { documentPathFor } from '@shared/domain/documentName'
 import { parentOf } from '@shared/domain/folder'
-import { SCRIPT_EXTENSION, SCRIPT_STARTER } from '@shared/domain/game'
+import { SCRIPT_STARTER } from '@shared/domain/game'
 import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
 import { seedSceneTemplate } from '@/stores/scenes'
@@ -26,7 +27,10 @@ import { openDocument } from './dockviewApi'
 async function createScript(of: NamedCreation | undefined): Promise<DocumentDescriptor | null> {
   if (!of) return null
 
-  const path = `${of.folder ?? documentFolderOf('script')}/${of.title}${SCRIPT_EXTENSION}`
+  // Composed like every other kind: from the RAW title, a separator named a file in another
+  // folder, and a name the main process refuses made `writeScript` answer `false` — nothing on
+  // screen, no word.
+  const path = documentPathFor(of.title, 'script', of.folder)
   // Refused rather than overwritten: this path names a file somebody already has work in.
   if (documentAtPath(useDocuments.getState(), path)) return null
   if (!(await orElse(getBridge()?.game.writeScript(path, SCRIPT_STARTER), false))) return null

@@ -558,16 +558,9 @@ export function timelineRowsLost(written: unknown): string[] {
       // whole list lost, and the quietest way to lose one: `readList` answers empty and the
       // first ⌘S writes a timeline without it.
       if (!Array.isArray(rows)) return true
-      // A row this build cannot read, or a second one under an id already taken: `readList`
-      // keeps the first of each, so the others are lost the same silent way.
-      const ids = new Set<unknown>()
-      return rows.some(one => {
-        if (!holds(one)) return true
-        const id = (one as { id: unknown }).id
-        if (ids.has(id)) return true
-        ids.add(id)
-        return false
-      })
+      // A row this build cannot read. A REPEATED id is not one of them: `readList` filters and
+      // keeps every row that holds, duplicates included, so a save writes both back untouched.
+      return rows.some(one => !holds(one))
     })
     .map(([name]) => name)
 

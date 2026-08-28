@@ -2189,6 +2189,23 @@ describe('closing a document', () => {
     expect(useMaterials.getState().states[kept.id]).toBeDefined()
   })
 
+  /** 🛑 The one kind held by its PATH: read out of the store the refresh has just emptied, the
+   * reference answered `null` and the text stayed — under the project being opened. */
+  it('forgets the text of a script a project change dropped', async () => {
+    installFakeBridge({})
+    const left = await useDocuments.getState().create('code')
+    if (!left) throw new Error('expected a document')
+    const script = scriptRefOf(left.id)
+    if (script === null) throw new Error('expected a script reference')
+    useCode.getState().installed(script, 'export default 1\n')
+
+    installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+
+    await expect(refreshDocuments()).resolves.toBe(true)
+
+    expect(useCode.getState().files[script]).toBeUndefined()
+  })
+
   it('leaves the flat view of a document it did not close alone', async () => {
     installFakeBridge({})
     const closing = await useDocuments.getState().create('materials')

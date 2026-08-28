@@ -49,8 +49,13 @@ export function evaluateGraph(graph: CsgGraph): CsgMesh {
 const evaluated = new Map<string, BufferGeometry>()
 const EVALUATED_KEPT = 64
 
-/** The recipe as one geometry. Recursive: a brush may itself be a solid — see `CsgPart`. */
-function geometryOfGraph(graph: CsgGraph): BufferGeometry {
+/**
+ * The recipe as one geometry. Recursive: a brush may itself be a solid — see `CsgPart`.
+ *
+ * Exported for the caller that stays in process: `evaluateGraph` copies into typed arrays for a
+ * `postMessage`, and paying that on this side is one whole copy of every buffer for nothing.
+ */
+export function geometryOfGraph(graph: CsgGraph): BufferGeometry {
   const key = csgKeyOf(graph)
   const held = evaluated.get(key)
   // A COPY out, always: the caller bakes a placement into what it gets, and mutating the cached

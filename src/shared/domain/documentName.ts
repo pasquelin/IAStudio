@@ -1,4 +1,5 @@
-import { EXTENSIONS_BY_KIND, type DocumentKind } from './document'
+import { documentFolderOf, EXTENSIONS_BY_KIND, type DocumentKind } from './document'
+import { pathIn } from './folder'
 import {
   foldForFileName,
   isSafeFileName,
@@ -45,6 +46,18 @@ export type NamedDocument = {
 /** The file a document of this name and kind lands on. */
 export function documentFileName(name: string, kind: DocumentKind): string {
   return `${safeFileName(name, 'document')}${EXTENSIONS_BY_KIND[kind]}`
+}
+
+/**
+ * Where a document of this name and kind lands, in the folder its author picked or its kind's own.
+ *
+ * 🛑 Composition ONLY: what to do about a name the folder already holds differs per caller — the
+ * window refuses it, the main process suffixes it — and one of the two spellings of this path once
+ * skipped `documentFileName` altogether, which let a title carrying a separator name a file
+ * elsewhere.
+ */
+export function documentPathFor(name: string, kind: DocumentKind, folder?: string): string {
+  return pathIn(folder ?? documentFolderOf(kind), documentFileName(name, kind))
 }
 
 /**

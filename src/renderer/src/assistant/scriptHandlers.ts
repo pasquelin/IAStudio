@@ -1,7 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { SCRIPT_EXTENSION } from '@shared/domain/game'
-import { refFromString, refToString } from '@shared/domain/ref'
-import { codeFilesOf, useCode } from '@/stores/code'
+import { refFromString } from '@shared/domain/ref'
+import { codeFilesOf, scriptRefAt, useCode } from '@/stores/code'
 import { scriptTrouble } from '@/stores/play'
 import { useProject } from '@/stores/project'
 import type { ActionHandlers } from './actionHandler'
@@ -42,7 +42,7 @@ export const SCRIPT_HANDLERS: ActionHandlers = {
 
     const path = textOf(input, 'path') ?? ''
     await useCode.getState().reload()
-    const held = useCode.getState().files[refToString({ kind: 'script', path })]
+    const held = useCode.getState().files[scriptRefAt(path)]
     if (!held) return refused('notFound', `no script "${path}" in this project`)
 
     return { ok: true, data: { ref: held.script, source: held.source } }
@@ -58,7 +58,7 @@ export const SCRIPT_HANDLERS: ActionHandlers = {
     }
     const source = textOf(input, 'source') ?? ''
 
-    const script = refToString({ kind: 'script', path })
+    const script = scriptRefAt(path)
     // 🛑 Refused BEFORE it lands, with the line: a file that names a module the sandbox does not
     // hold is one the next Play would refuse anyway, and a model told `ok` never looks again.
     const trouble = await scriptTrouble(script, source)

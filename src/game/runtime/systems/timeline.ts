@@ -22,7 +22,7 @@ export type TimelineSystemOptions = {
  * them on.
  */
 export function createTimelineSystem(options: TimelineSystemOptions): System {
-  // Resolved ONCE: a `?? []` in a fixed update is a fresh array 240 times a second, for every
+  // Resolved ONCE: a `?? []` in a fixed update is a fresh array sixty times a second, for every
   // scene written before this lot — which is all of them.
   const events = options.timeline.events ?? []
   const audio = options.timeline.audio ?? []
@@ -37,6 +37,10 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
   // 🛑 The level last written, per row: a loop with no fade would otherwise cross the port sixty
   // times a second for a number that never moves.
   const level = new Map<string, number>()
+  // 🛑 ONE attempt per row, never cleared: without it the port was asked again on every fixed
+  // step of the row's whole length. The price is declared — a host refusing a voice TRANSIENTLY
+  // mutes that row for good, where the storm would have retried.
+  const voiceless = new Set<string>()
 
   return {
     name: 'timeline',
@@ -59,7 +63,7 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
 
       for (const sound of audio) {
         const on = within(sound, now)
-        if (on && !playing.has(sound.id)) {
+        if (on && !playing.has(sound.id) && !voiceless.has(sound.id)) {
           const opening = levelOf(sound, now)
           const voice = world.ports.audio.play(options.assetRef(sound.assetId), {
             volume: opening,
@@ -68,7 +72,7 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
           if (voice) {
             playing.set(sound.id, voice)
             level.set(sound.id, opening)
-          }
+          } else voiceless.add(sound.id)
         } else if (on) {
           const wanted = levelOf(sound, now)
           if (level.get(sound.id) !== wanted) {
@@ -103,6 +107,7 @@ export function createTimelineSystem(options: TimelineSystemOptions): System {
       for (const voice of playing.values()) voice.stop()
       playing.clear()
       level.clear()
+      voiceless.clear()
     },
   }
 }

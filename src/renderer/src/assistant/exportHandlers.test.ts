@@ -59,4 +59,21 @@ describe('a game written out of the studio', () => {
 
     expect(await runAction('game.export', {})).toMatchObject({ ok: false, refusal: 'declined' })
   })
+
+  /** 🛑 `resources/gameRuntime` is git-ignored, so the main process throws where an assistant is
+   * owed an answer. */
+  it('answers a refusal when the main process throws instead of writing', async () => {
+    installFakeBridge({
+      game: {
+        export: () =>
+          Promise.reject(new Error('no game runtime is built: run `pnpm game:runtime`')),
+      },
+    })
+
+    expect(await runAction('game.export', {})).toMatchObject({
+      ok: false,
+      refusal: 'failed',
+      detail: expect.stringContaining('pnpm game:runtime'),
+    })
+  })
 })

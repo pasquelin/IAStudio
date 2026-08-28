@@ -1,6 +1,5 @@
 import {
   DOCUMENTS_FOLDER,
-  documentFolderOf,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -8,12 +7,13 @@ import {
 import {
   checkDocumentName,
   documentFileName,
+  documentPathFor,
   DOCUMENT_NAME_FAILURES,
   type DocumentNameFailure,
   type NamedDocument,
 } from '@shared/domain/documentName'
 import { foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
-import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
+import { nameOf, parentOf } from '@shared/domain/folder'
 import { refFromString } from '@shared/domain/ref'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
@@ -416,7 +416,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // (there is no file to disagree with), and the first save answers for good: it may land on
       // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
       // folder holds.
-      path: pathIn(of?.folder ?? documentFolderOf(kind), documentFileName(title, kind)),
+      path: documentPathFor(title, kind, of?.folder),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
