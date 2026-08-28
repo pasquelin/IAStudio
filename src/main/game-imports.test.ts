@@ -208,18 +208,24 @@ const BROWSER_NAMES = new Set([
   'CanvasRenderingContext2D',
 ])
 
+type NamesAProperty = ts.PropertyAccessExpression | ts.PropertyAssignment | ts.PropertySignature
+
+const namesAProperty = (node: ts.Node): node is NamesAProperty =>
+  ts.isPropertyAccessExpression(node) ||
+  ts.isPropertyAssignment(node) ||
+  ts.isPropertySignature(node)
+
 /** Identifiers off the AST, so a name inside a comment or a string counts for nothing. */
 function browserNamesIn(file: string, code: string): string[] {
   const parsed = ts.createSourceFile(file, code, ts.ScriptTarget.ESNext, true)
   const found = new Set<string>()
 
   const walk = (node: ts.Node): void => {
-    // A property is somebody else's name — `style.document` says nothing about the browser.
-    // `parent` is undefined on the source file itself, which `isPropertyAccessExpression` reads.
-    const isProperty =
-      node.parent !== undefined &&
-      ts.isPropertyAccessExpression(node.parent) &&
-      node.parent.name === node
+    // A property is somebody else's name — `style.document` says nothing about the browser, and
+    // neither does the `document` field a `UiFrame` carries. A SHORTHAND is not one of these:
+    // `{ document }` names the global. `parent` is undefined on the source file itself.
+    const named = node.parent !== undefined && namesAProperty(node.parent)
+    const isProperty = named && node.parent.name === node
 
     if (ts.isIdentifier(node) && BROWSER_NAMES.has(node.text) && !isProperty) found.add(node.text)
     ts.forEachChild(node, walk)
@@ -255,8 +261,77 @@ describe('what the interface core may reach', () => {
 
     expect(browserNamesIn(from, "const host = globalThis['document']")).toEqual(said('globalThis'))
 
+    // A shorthand IS the global, however it looks like a field.
+    expect(browserNamesIn(from, 'const frame = { document }')).toEqual(said('document'))
+
     expect(browserNamesIn(from, '// the document this reads')).toEqual([])
     expect(browserNamesIn(from, "const said = 'window'")).toEqual([])
     expect(browserNamesIn(from, 'const held = state.document')).toEqual([])
+    expect(browserNamesIn(from, 'const frame = { document: read }')).toEqual([])
+    expect(browserNamesIn(from, 'type Frame = { document: UiDocument }')).toEqual([])
+  })
+})
+
+/**
+ * 🛑 The names that MEASURE a live tree, refused in the renderer that draws interfaces.
+ *
+ * The boxes `layoutOf` computes are the only geometry of an interface. A renderer reading one
+ * back would make the model depend on a browser, leave a world-space renderer with no answer,
+ * and put the editor's snapping one frame behind the pointer — so `pick` resolves from the
+ * boxes alone, and this is what keeps it that way.
+ *
+ * Its blind spot, in clear: a property reached by a STRING passes. Named on the file rather
+ * than on the folder, so `domInput.ts` may go on reading a pointer's `clientX` next door — and
+ * the file is asserted to EXIST, a rename otherwise leaving this guard quietly measuring nothing.
+ */
+const MEASURING_NAMES = new Set([
+  'getBoundingClientRect',
+  'getClientRects',
+  'elementFromPoint',
+  'elementsFromPoint',
+  'getComputedStyle',
+  'offsetWidth',
+  'offsetHeight',
+  'offsetLeft',
+  'offsetTop',
+  'clientWidth',
+  'clientHeight',
+  'scrollWidth',
+  'scrollHeight',
+])
+
+/** Identifiers off the AST, properties INCLUDED — that is where every one of these is read. */
+function measuringNamesIn(code: string): string[] {
+  const parsed = ts.createSourceFile('x.ts', code, ts.ScriptTarget.ESNext, true)
+  const found = new Set<string>()
+
+  const walk = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && MEASURING_NAMES.has(node.text)) found.add(node.text)
+    ts.forEachChild(node, walk)
+  }
+  walk(parsed)
+
+  return [...found].sort()
+}
+
+describe('what the interface renderer may read back', () => {
+  const RENDERER = join(GAME, 'host', 'domUiRenderer.ts')
+
+  it('measures nothing of the tree it drew', () => {
+    expect(measuringNamesIn(readFileSync(RENDERER, 'utf8'))).toEqual([])
+  })
+
+  it('is watching a file that is there', () => {
+    expect(readFileSync(RENDERER, 'utf8').length).toBeGreaterThan(0)
+  })
+
+  it('would see a measurement, however it was reached', () => {
+    expect(measuringNamesIn('const box = node.getBoundingClientRect()')).toEqual([
+      'getBoundingClientRect',
+    ])
+    expect(measuringNamesIn('const wide = host.offsetWidth')).toEqual(['offsetWidth'])
+
+    expect(measuringNamesIn('// the rect this would read')).toEqual([])
+    expect(measuringNamesIn("const said = 'offsetWidth'")).toEqual([])
   })
 })

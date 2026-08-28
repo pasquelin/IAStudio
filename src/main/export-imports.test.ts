@@ -63,10 +63,10 @@ const sourceOf = (file: string): string | null => {
 }
 
 /** Every file the bundle reaches from its entry, and every package it names on the way. */
-function swept(): { files: Set<string>; packages: Set<string> } {
+function swept(from: string = ENTRY): { files: Set<string>; packages: Set<string> } {
   const files = new Set<string>()
   const packages = new Set<string>()
-  const queue = [ENTRY]
+  const queue = [from]
 
   while (queue.length > 0) {
     const file = queue.pop()
@@ -129,4 +129,42 @@ describe('what an exported game carries', () => {
     },
     WHOLE_PROJECT,
   )
+})
+
+/**
+ * 🛑 What showing an interface would ADD to a game's bundle, held as a budget.
+ *
+ * The renderer is not wired into `exportEntry.ts` yet — that is the export lot — so the weight
+ * is read the only way it can be today: the sources the interface renderer reaches, minus those
+ * the bundle already carries. A budget rather than a tally, and it may only ever shrink: a
+ * `.ora` reader or a font parser dragged in behind a convenience import turns this red on the
+ * day it is written, instead of on the day somebody downloads a game.
+ *
+ * Source bytes, not built ones: `resources/gameRuntime` is written by `pnpm game:runtime` and no
+ * suite runs it. The two move together, which is what a budget needs.
+ */
+const UI_RENDERER = resolve(SOURCE_ROOT, 'game/host/domUiRenderer.ts')
+
+/** Measured 2026-08-28 at 54 656 bytes. Lower it whenever the sweep says it can be lowered. */
+const UI_BUDGET = 55_000
+
+describe('what an interface would add to an exported game', () => {
+  const carried = swept()
+  const drawing = swept(UI_RENDERER)
+  const added = [...drawing.files].filter(file => !carried.files.has(file))
+
+  it('opened the interface tree to say so', () => {
+    expect(added.length).toBeGreaterThan(3)
+  })
+
+  it('stays inside its budget', () => {
+    const bytes = added.reduce((total, file) => total + (sourceOf(file)?.length ?? 0), 0)
+
+    expect(bytes).toBeLessThanOrEqual(UI_BUDGET)
+  })
+
+  /** It carries no package of its own, which is the whole of « no new dependency ». */
+  it('names no package the bundle does not already hold', () => {
+    expect([...drawing.packages].filter(one => !carried.packages.has(one)).sort()).toEqual([])
+  })
 })
