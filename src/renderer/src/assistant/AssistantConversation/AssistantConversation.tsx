@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
+import { GhostText } from '@/design/GhostText'
 import { QuietNote } from '@/design/QuietNote'
 import { fieldHandle } from '@/design/scHandle'
 import { PANEL_SCROLL } from '@/design/styles'
@@ -23,7 +24,6 @@ import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
 import { registerChatPanel } from '../chatPanel'
 import { ASSISTANT_STARTERS, starterKey } from '../starters'
-import { AssistantConversationGhost } from './AssistantConversationGhost'
 import { AssistantConversationSuggestions, suggestionId } from './AssistantConversationSuggestions'
 import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
@@ -366,11 +366,11 @@ export function AssistantConversation() {
               mirror sits behind it, and both are positioned for the writing to stay on top. */}
             <div className="relative">
               {ghost !== undefined && (
-                <AssistantConversationGhost
+                <GhostText
                   ref={mirror}
                   typed={draft}
                   tail={ghost.tail}
-                  accept={keyLabel('Tab')}
+                  className={CONVERSATION_FIELD_TYPE}
                 />
               )}
               <textarea
