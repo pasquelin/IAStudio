@@ -59,6 +59,19 @@ async function* eventsOf(body: ReadableStream<Uint8Array> | null): AsyncIterable
   yield* framesIn(decoder.decode(), true)
 }
 
+/**
+ * The window a tag was built with, read from where `/api/tags` already publishes it.
+ *
+ * 🛑 No second call: `/api/show` answers the same figure and costs a round trip per model.
+ * Measured on 2026-08-28 — `qwen3.8:latest` and `qwen3-coder:30b` both answer 262 144 here.
+ */
+function windowOf(details: unknown): { contextTokens?: number } {
+  if (!isRecord(details)) return {}
+
+  const held = details.context_length
+  return typeof held === 'number' && held > 0 ? { contextTokens: held } : {}
+}
+
 export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): OllamaPort {
   const url = (path: string) => `${origin}${path}`
 
@@ -78,7 +91,12 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
           ? entry.capabilities.filter((cap): cap is string => typeof cap === 'string')
           : undefined
         return [
-          { name, size, ...(capabilities && capabilities.length > 0 ? { capabilities } : {}) },
+          {
+            name,
+            size,
+            ...(capabilities && capabilities.length > 0 ? { capabilities } : {}),
+            ...windowOf(entry.details),
+          },
         ]
       })
     },
