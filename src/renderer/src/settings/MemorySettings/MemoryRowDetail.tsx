@@ -1,15 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import type { Memory, MemorySourceKind } from '@shared/domain/assistantMemory'
-import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
-import { cn } from '@/helpers/cn'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/windowStyles'
 import { formatMoment } from '@/helpers/format'
 
 /**
  * What a memory opens onto: its body, and where it came from.
  *
- * Nothing here is computed for the screen — `source`, `createdAt`, `refs` and `supersedes` are
- * the columns themselves. That is what makes a memory answerable for: the person can see what
- * wrote it and what it replaced, and correct either.
+ * 🛑 What it points AT is not here — `MemoryRelations` draws the same four relations beside it,
+ * with the relation named and the target's summary rather than its id. Both were stacked in one
+ * row detail, the poorer version above the better one.
  */
 
 const SOURCE_KEYS: Readonly<Record<MemorySourceKind, string>> = {
@@ -32,32 +31,6 @@ export function MemoryRowDetail({ memory }: { memory: Memory }) {
         {' · '}
         {formatMoment(memory.createdAt, i18n.language, 'local')}
       </p>
-
-      {memory.refs.length > 0 ? (
-        <section>
-          <h4 className={WINDOW_GROUP_LABEL}>{t('settings.memoryRefs')}</h4>
-          <ul className={cn(WINDOW_CAPTION, 'list-inside list-disc')}>
-            {memory.refs.map(one => (
-              <li key={`${one.kind}:${one.ref}`}>{one.ref}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {memory.links.length > 0 ? (
-        <section>
-          <h4 className={WINDOW_GROUP_LABEL}>{t('settings.memoryLinks')}</h4>
-          <ul className={cn(WINDOW_CAPTION, 'list-inside list-disc')}>
-            {memory.links.map(one => (
-              <li key={one}>{one}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {memory.supersedes ? (
-        <p className={WINDOW_HELP}>{t('settings.memorySupersedes', { id: memory.supersedes })}</p>
-      ) : null}
     </div>
   )
 }

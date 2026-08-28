@@ -8,12 +8,9 @@ import type { AsyncMemory } from './memoryClient'
  * Which memory answers, and when its thread is opened.
  *
  * 🛑 Opened LAZILY, and that is what keeps CLAUDE.md's performance rule: opening a project must
- * not pay for a thread, a database and a file nobody has asked a question of yet. A project with
- * no memory and no assistant turn never starts one at all.
+ * not pay for a thread, a database and a file nobody has asked a question of yet.
  *
- * Two of them, and they never meet: the project's travels with its folder, the machine's stays
- * here. Nothing copies between the two — promoting a memory is a gesture the person makes, which
- * writes a new one.
+ * Two of them, and nothing copies between: promoting a memory writes a new one.
  */
 
 /** Flat in `userData`, where the machine's own files live — not under a project's two folders. */

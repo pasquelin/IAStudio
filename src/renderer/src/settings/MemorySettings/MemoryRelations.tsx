@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Memory } from '@shared/domain/assistantMemory'
-import { relationsOf, type MemoryRelation } from '@shared/domain/memoryGraph'
+import { openedBy, relationsOf, type MemoryRelation } from '@shared/domain/memoryGraph'
 import { Tree } from '@/design/Tree'
 import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 
@@ -19,7 +19,16 @@ const RELATION_KEYS: Readonly<Record<MemoryRelation, string>> = {
   supersedes: 'settings.memoryRelationSupersedes',
 }
 
-export function MemoryRelations({ memory, among }: { memory: Memory; among: readonly Memory[] }) {
+export function MemoryRelations({
+  memory,
+  among,
+  onOpen,
+}: {
+  memory: Memory
+  among: readonly Memory[]
+  /** Opens the memory a row stands for. Rows standing for a reference open nothing. */
+  onOpen: (memoryId: string) => void
+}) {
   const { t } = useTranslation()
   const rows = relationsOf(memory, among)
   // Everything open: one hop is small by construction, and a tree that starts folded hides the
@@ -33,9 +42,13 @@ export function MemoryRelations({ memory, among }: { memory: Memory; among: read
         <Tree
           nodes={rows}
           label={t('settings.memoryRelations')}
-          selectedIds={[]}
+          selectedIds={[memory.id]}
           expandedIds={new Set(rows.filter(one => !folded.has(one.id)).map(one => one.id))}
-          onSelect={() => {}}
+          onSelect={ids => {
+            // One row at a time: what a hop means is one memory, and a range would open none.
+            const opens = ids.length === 1 ? openedBy(rows, ids[0] ?? '', memory.id) : null
+            if (opens !== null) onOpen(opens)
+          }}
           onToggle={id =>
             setFolded(held => {
               const next = new Set(held)

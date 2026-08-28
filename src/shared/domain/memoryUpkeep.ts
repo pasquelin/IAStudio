@@ -1,3 +1,4 @@
+import { byCodeUnit, searchWords } from '../text'
 import type { Memory } from './assistantMemory'
 
 /**
@@ -8,21 +9,15 @@ import type { Memory } from './assistantMemory'
  * carries them out. A second copy would let the two disagree about what a duplicate is.
  */
 
-/** Loose enough to catch a rewording, strict enough not to merge two decisions. */
-const plainly = (summary: string): string =>
-  summary
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
-    .trim()
+/** Loose enough to catch a rewording, strict enough not to merge two: the studio's own folding. */
+const plainly = (summary: string): string => searchWords(summary).join(' ')
 
 /** Closed by `id`, so two memories written in the same breath come back in one order. */
 const byWorthKeeping = (one: Memory, other: Memory): number => {
   if (one.importance !== other.importance) return other.importance - one.importance
-  if (one.createdAt !== other.createdAt) return one.createdAt < other.createdAt ? 1 : -1
+  if (one.createdAt !== other.createdAt) return byCodeUnit(other.createdAt, one.createdAt)
 
-  return one.id < other.id ? -1 : 1
+  return byCodeUnit(one.id, other.id)
 }
 
 /**
@@ -78,5 +73,5 @@ export function staleIn(
       const at = Date.parse(lastTouched(memory))
       return !Number.isNaN(at) && asked - at > afterDays * DAY_MS
     })
-    .sort((one, other) => (lastTouched(one) < lastTouched(other) ? -1 : 1))
+    .sort((one, other) => byCodeUnit(lastTouched(one), lastTouched(other)))
 }

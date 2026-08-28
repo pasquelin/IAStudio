@@ -6,18 +6,14 @@ import { orElse } from '@shared/promises'
 import { memoryBridge } from '@/services/bridge'
 
 /**
- * What one action left the studio knowing, written down.
- *
  * Hung on `runAction` and not on `runConfirmedAction`: the latter is exported, and a gesture that
- * skipped it would be a gesture nothing remembered — the window and the MCP wire both cross the
+ * skipped it would be a gesture nothing remembered — both the window and the MCP wire cross the
  * former (`executor.ts`).
  */
 
 /**
- * Draws it, sends it, and answers whether anything was written.
- *
- * Never awaited by its caller and never allowed to throw: an action is done when the studio
- * changed, and a memory that would not persist must not turn a successful call into a refusal.
+ * Never awaited and never allowed to throw: a memory that would not persist must not turn a
+ * successful call into a refusal.
  *
  * 🛑 Nothing captures WHICH project the action ran in: the write lands in whatever `'project'`
  * names when it arrives. A client chaining `script.write` then `project.open` files the first

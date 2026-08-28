@@ -1,24 +1,18 @@
-import { readString } from '../guards'
+import { readText } from '../guards'
 import type { ActionName } from './assistantAction'
 import type { MemoryRefKind, MemoryType } from './assistantMemory'
 
 /**
- * What each action leaves behind, if anything. `null` for almost all of them, and that is the
- * shape of the table rather than a gap: moving a node, searching assets or writing a setting are
- * gestures, not things learned.
- *
- * 🛑 `Record<ActionName, …>` on purpose, exactly like `COVERAGE` in `scripts/banc/coverage.ts`:
- * an action added to the registry does not COMPILE until this file has answered « what, if
- * anything, is worth remembering about it » — even if the answer is `null`, which is then a hole
- * declared rather than one forgotten.
+ * 🛑 `Record<ActionName, …>`, exactly like `COVERAGE` in `scripts/banc/coverage.ts`: an action
+ * added to the registry does not COMPILE until this file has answered what, if anything, is worth
+ * remembering about it — `null` being a hole DECLARED rather than one forgotten.
  */
 
 /**
  * What a rule draws, before the window turns it into a memory.
  *
- * A KEY and not a sentence: the summary is shown to the person in Réglages ▸ Mémoire, so it is a
- * word of the interface and cannot be written here — the window resolves it in their language,
- * exactly as every tooltip factory receives text already translated.
+ * A KEY and not a sentence: the summary is shown in Réglages ▸ Mémoire, so it is a word of the
+ * interface and the window resolves it in the person's language.
  */
 export type MemoryDrawn = {
   type: MemoryType
@@ -38,20 +32,36 @@ export type MemoryRule = null | {
   readonly draft: (input: Record<string, unknown>, data: unknown) => MemoryDrawn | null
 }
 
-/** A field the input holds as words, or nothing. `readString` answers '' for anything else. */
-const textOf = (input: Record<string, unknown>, key: string): string | null =>
-  readString(input, key, '').trim() === '' ? null : readString(input, key, '')
-
-/** The shape three of the six rules share: one named thing, remembered under its name. */
-const named = (
-  input: Record<string, unknown>,
+/**
+ * The ONE shape all six standing rules share: an action names something, and that name is what is
+ * worth remembering.
+ *
+ * 🛑 The field is named ONCE. Written out, `reads: ['clipName']` sat facing a `textOf(input,
+ * 'clipName')` two lines below, and nothing would have said so had the two drifted — that is the
+ * very mismatch `reads` exists to let a guard catch. The i18n hole carries the same name for the
+ * same reason.
+ */
+const worthNaming = (
+  reads: string,
   type: MemoryType,
   summaryKey: string,
   importance: number,
-): MemoryDrawn | null => {
-  const name = textOf(input, 'name')
-  return name === null ? null : { type, summaryKey, values: { name }, importance }
-}
+  anchors?: MemoryRefKind,
+): MemoryRule => ({
+  reads: [reads],
+  draft: input => {
+    const named = readText(input, reads)
+    return named === null
+      ? null
+      : {
+          type,
+          summaryKey,
+          values: { [reads]: named },
+          importance,
+          ...(anchors === undefined ? {} : { refs: [{ kind: anchors, ref: named }] }),
+        }
+  },
+})
 
 export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'command.run': null,
@@ -164,10 +174,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'material.preview': null,
   'material.channel': null,
   'styles.list': null,
-  'style.save': {
-    reads: ['name'],
-    draft: input => named(input, 'convention', 'memoryWorth.styleSave', 2),
-  },
+  'style.save': worthNaming('name', 'convention', 'memoryWorth.styleSave', 2),
   'style.rename': null,
   'style.remove': null,
   'cloud.browse': null,
@@ -250,10 +257,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'post.reset': null,
   'post.key': null,
   'post.unkey': null,
-  'post.save': {
-    reads: ['name'],
-    draft: input => named(input, 'convention', 'memoryWorth.postSave', 2),
-  },
+  'post.save': worthNaming('name', 'convention', 'memoryWorth.postSave', 2),
   'post.rename': null,
   'post.forget': null,
   'post.camera': null,
@@ -268,20 +272,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'ik.add': null,
   'ik.remove': null,
   'animations.list': null,
-  'animation.add': {
-    reads: ['clipName'],
-    draft: input => {
-      const name = textOf(input, 'clipName')
-      return name === null
-        ? null
-        : {
-            type: 'entity',
-            summaryKey: 'memoryWorth.animationAdd',
-            values: { name },
-            importance: 2,
-          }
-    },
-  },
+  'animation.add': worthNaming('clipName', 'entity', 'memoryWorth.animationAdd', 2),
   'animation.remove': null,
   'animation.block': null,
   'animation.settings': null,
@@ -302,20 +293,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'git.stage': null,
   'git.unstage': null,
   'git.restore': null,
-  'git.commit': {
-    reads: ['message'],
-    draft: input => {
-      const message = textOf(input, 'message')
-      return message === null
-        ? null
-        : {
-            type: 'decision',
-            summaryKey: 'memoryWorth.gitCommit',
-            values: { message },
-            importance: 3,
-          }
-    },
-  },
+  'git.commit': worthNaming('message', 'decision', 'memoryWorth.gitCommit', 3),
   'git.createBranch': null,
   'git.checkout': null,
   'git.stash': null,
@@ -342,21 +320,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'runtime.errors': null,
   'script.list': null,
   'script.read': null,
-  'script.write': {
-    reads: ['path'],
-    draft: input => {
-      const path = textOf(input, 'path')
-      return path === null
-        ? null
-        : {
-            type: 'script',
-            summaryKey: 'memoryWorth.scriptWrite',
-            values: { path },
-            importance: 4,
-            refs: [{ kind: 'file', ref: path }],
-          }
-    },
-  },
+  'script.write': worthNaming('path', 'script', 'memoryWorth.scriptWrite', 4, 'file'),
   'studio.describe': null,
   'studio.docs': null,
   'studio.batch': null,
@@ -364,10 +328,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'timeline.remove': null,
   'timeline.template': null,
   'game.template': null,
-  'prefab.define': {
-    reads: ['name'],
-    draft: input => named(input, 'entity', 'memoryWorth.prefabDefine', 3),
-  },
+  'prefab.define': worthNaming('name', 'entity', 'memoryWorth.prefabDefine', 3),
   'prefab.instantiate': null,
   'game.export': null,
   // 🛑 Null for all five, and not by omission: a memory written BY a memory action would be a

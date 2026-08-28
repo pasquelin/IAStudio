@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Memory } from './assistantMemory'
-import { relationsOf } from './memoryGraph'
+import { openedBy, relationsOf } from './memoryGraph'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
   id: 'm_root',
@@ -72,5 +72,29 @@ describe('what a memory sits among', () => {
 
     expect(link?.label).toBe('m_gone')
     expect(link?.memoryId).toBeNull()
+  })
+})
+
+describe('what a row opens onto', () => {
+  /**
+   * 🛑 `memoryId` was documented as « what selecting it opens » and read by nobody:
+   * `selectedIds={[]}` and `onSelect={() => {}}`. Walking one hop without leaving the panel is
+   * the whole point of drawing the relations at all.
+   */
+  it('opens the memory a row stands for', () => {
+    const other = memory({ id: 'm_two', summary: 'Le rail est posé au sol' })
+    const rows = relationsOf(memory({ links: ['m_two'] }), [other])
+
+    expect(openedBy(rows, 'm_root link m_two', 'm_root')).toBe('m_two')
+  })
+
+  /** A row standing for a FILE stands for no memory, and the root is already the one open. */
+  it('opens nothing for a reference, and nothing for the memory already open', () => {
+    const root = memory({ refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
+    const rows = relationsOf(root, [])
+
+    expect(openedBy(rows, 'm_root file Scripts/Cam.ts', 'm_root')).toBeNull()
+    expect(openedBy(rows, 'm_root', 'm_root')).toBeNull()
+    expect(openedBy(rows, 'nothing of the kind', 'm_root')).toBeNull()
   })
 })

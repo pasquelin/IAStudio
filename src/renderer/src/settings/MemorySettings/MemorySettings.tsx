@@ -4,24 +4,22 @@ import { mdiBrain } from '@mdi/js'
 import {
   MEMORY_STATES,
   MEMORY_TYPES,
-  type Memory,
   type MemoryScope,
   type MemoryState,
   type MemoryType,
 } from '@shared/domain/assistantMemory'
-import { Chip } from '@/design/Chip'
 import { Collection } from '@/design/Collection/Collection'
 import { EmptyState } from '@/design/EmptyState'
+import { WindowChip } from '@/design/WindowChip'
 import { WindowSearch } from '@/design/WindowSearch'
-import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
-import { HINT_LEFT } from '@/helpers/tooltip'
-import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
 import { useAssistantMemory } from '@/stores/assistantMemory'
-import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
 import { MemoryRelations } from './MemoryRelations'
+import { MemoryRowActions } from './MemoryRowActions'
 import { MemoryRowDetail } from './MemoryRowDetail'
+import { MemoryUpkeep } from './MemoryUpkeep'
 
 /**
  * What the assistant has learned, and the only screen that can correct it.
@@ -36,9 +34,9 @@ const SHOWN: readonly MemoryState[] = MEMORY_STATES.filter(one => one !== 'dropp
 
 export function MemorySettings() {
   const { t } = useTranslation()
-  const { memories, loaded, pending, indexing } = useAssistantMemory()
-  const { look, amend, forget, rebuild, reset, index, stopIndex } = useAssistantMemory()
-  const { mergeDuplicates, archiveStale, compact } = useAssistantMemory()
+  const memories = useAssistantMemory(state => state.memories)
+  const loaded = useAssistantMemory(state => state.loaded)
+  const look = useAssistantMemory(state => state.look)
   // Held HERE and handed to `look`, rather than read back off the store: the store's own scope
   // moves when the listing lands, so a chip reading it would light up a beat after the click.
   const [scope, setScope] = useState<MemoryScope>('project')
@@ -56,55 +54,17 @@ export function MemorySettings() {
     })
   }, [look, scope, text, type])
 
-  // Counted from what is ON SCREEN: the gestures below act on the listing, so a count read from
-  // anywhere else would offer to merge memories a filter is hiding.
-  const duplicates = duplicatesIn(memories).reduce((sum, group) => sum + group.length - 1, 0)
-  const sleeping = staleIn(memories, new Date().toISOString()).length
-
-  const rowActions = (memory: Memory) => {
-    const pinned = memory.state === 'pinned'
-    const archived = memory.state === 'archived'
-
-    return (
-      <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          className="btn btn-xs"
-          {...HINT_LEFT(t(pinned ? 'settings.memoryUnpinHint' : 'settings.memoryPinHint'))}
-          onClick={() => void amend(memory.id, { state: pinned ? 'live' : 'pinned' })}
-        >
-          {t(pinned ? 'settings.memoryUnpin' : 'settings.memoryPin')}
-        </button>
-        <button
-          type="button"
-          className="btn btn-xs"
-          {...HINT_LEFT(t(archived ? 'settings.memoryRestoreHint' : 'settings.memoryArchiveHint'))}
-          onClick={() => void amend(memory.id, { state: archived ? 'live' : 'archived' })}
-        >
-          {t(archived ? 'settings.memoryRestore' : 'settings.memoryArchive')}
-        </button>
-        <button
-          type="button"
-          className="btn btn-xs btn-error btn-outline"
-          {...HINT_LEFT(t('settings.memoryForgetHint'))}
-          onClick={() => void forget(memory.id)}
-        >
-          {t('settings.memoryForget')}
-        </button>
-      </div>
-    )
-  }
-
   return (
     <div className={cn(SETTING_COLUMN, 'mt-6 gap-4')}>
+      {/* `WindowChip` and not `Chip`: the settings window is not a dock — see its own file. */}
       <div className="flex gap-2">
-        <Chip
+        <WindowChip
           label={t('settings.memoryProject')}
           hint={t('settings.memoryProjectHint')}
           selected={scope === 'project'}
           onClick={() => setScope('project')}
         />
-        <Chip
+        <WindowChip
           label={t('settings.memoryGlobal')}
           hint={t('settings.memoryGlobalHint')}
           selected={scope === 'global'}
@@ -141,14 +101,14 @@ export function MemorySettings() {
           renderRowDetail={one => (
             <>
               <MemoryRowDetail memory={one} />
-              <MemoryRelations memory={one} among={memories} />
+              <MemoryRelations memory={one} among={memories} onOpen={setOpenId} />
             </>
           )}
           renderRow={one => (
             <div className="flex w-full items-center gap-2">
               <span className="grow truncate text-xs">{one.summary}</span>
               <span className={WINDOW_CAPTION}>{t(`memoryTypes.${one.type}`)}</span>
-              {rowActions(one)}
+              <MemoryRowActions memory={one} />
             </div>
           )}
           empty={
@@ -160,109 +120,7 @@ export function MemorySettings() {
         />
       </div>
 
-      <section>
-        <h3 className={WINDOW_GROUP_LABEL}>{t('settings.memory')}</h3>
-
-        <SettingLine
-          title={t('settings.memoryReindex')}
-          help={<p className={WINDOW_HELP}>{t('settings.memoryReindexHelp')}</p>}
-        >
-          <button type="button" className="btn btn-sm" onClick={() => void rebuild()}>
-            {t('settings.memoryReindex')}
-          </button>
-        </SettingLine>
-
-        <SettingLine
-          title={t('settings.memoryEmbed')}
-          help={
-            <p className={WINDOW_HELP}>
-              {pending === 0
-                ? t('settings.memoryEmbedNone')
-                : t('settings.memoryEmbedPending', { count: pending })}
-            </p>
-          }
-        >
-          {indexing ? (
-            <button type="button" className="btn btn-sm" onClick={() => void stopIndex()}>
-              {t('settings.memoryStopEmbed')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              disabled={pending === 0}
-              onClick={() => void index()}
-            >
-              {t('settings.memoryEmbed')}
-            </button>
-          )}
-        </SettingLine>
-
-        <SettingLine
-          title={t('settings.memoryMerge')}
-          help={
-            <p className={WINDOW_HELP}>
-              {duplicates === 0
-                ? t('settings.memoryMergeNone')
-                : t('settings.memoryMergeFound', { count: duplicates })}
-            </p>
-          }
-        >
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={duplicates === 0}
-            onClick={() => void mergeDuplicates()}
-          >
-            {t('settings.memoryMerge')}
-          </button>
-        </SettingLine>
-
-        <SettingLine
-          title={t('settings.memoryStale')}
-          help={
-            <p className={WINDOW_HELP}>
-              {sleeping === 0
-                ? t('settings.memoryStaleNone')
-                : t('settings.memoryStaleFound', { count: sleeping })}
-            </p>
-          }
-        >
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={sleeping === 0}
-            onClick={() => void archiveStale(new Date().toISOString())}
-          >
-            {t('settings.memoryStale')}
-          </button>
-        </SettingLine>
-
-        <SettingLine
-          title={t('settings.memoryCompact')}
-          help={<p className={WINDOW_HELP}>{t('settings.memoryCompactHelp')}</p>}
-        >
-          <button type="button" className="btn btn-sm" onClick={() => void compact()}>
-            {t('settings.memoryCompact')}
-          </button>
-        </SettingLine>
-
-        <SettingLine
-          title={t('settings.memoryPurge')}
-          help={<p className={WINDOW_HELP}>{t('settings.memoryPurgeHelp')}</p>}
-        >
-          <button
-            type="button"
-            className="btn btn-sm btn-error btn-outline"
-            onClick={() => {
-              // Asked for plainly: this one erases the file, and no Cancel covers it.
-              if (window.confirm(t('settings.memoryPurgeConfirm'))) void reset()
-            }}
-          >
-            {t('settings.memoryPurge')}
-          </button>
-        </SettingLine>
-      </section>
+      <MemoryUpkeep memories={memories} />
     </div>
   )
 }

@@ -10,7 +10,10 @@ import type { Memory } from './assistantMemory'
 
 export type MemoryRelation = 'ref' | 'link' | 'supersedes'
 
-/** One row. `parentId` is what `Tree` walks; `memoryId` is what selecting it opens. */
+/**
+ * One row. `parentId` is what `Tree` walks; `memoryId` is what selecting it opens — the row
+ * detail moves to that memory, which is how one hop is walked without leaving the panel.
+ */
 export type MemoryRelationNode = {
   id: string
   parentId: string | null
@@ -74,4 +77,19 @@ export function relationsOf(root: Memory, among: readonly Memory[]): readonly Me
   }
 
   return rows
+}
+
+/**
+ * The memory a row opens onto — nothing for a row standing for a file, nothing for the root.
+ *
+ * 🛑 Here and not in the panel: its `Tree` is virtualised, and jsdom measures every row at zero,
+ * so a decision left in there is one no test can reach.
+ */
+export function openedBy(
+  rows: readonly MemoryRelationNode[],
+  rowId: string,
+  rootId: string,
+): string | null {
+  const opens = rows.find(one => one.id === rowId)?.memoryId ?? null
+  return opens === rootId ? null : opens
 }
