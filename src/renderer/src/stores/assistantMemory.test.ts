@@ -43,7 +43,7 @@ describe('what the window holds', () => {
   })
 
   /** 🛑 A memory the assistant wrote in another window belongs on screen in this one too. */
-  it('follows what another window writes into the same scope', async () => {
+  it('follows what another window writes into the same scope, once it has read', async () => {
     const announcers: ((scope: MemoryScope) => void)[] = []
     const list = vi.fn(() => Promise.resolve([memory()]))
     installFakeBridge({
@@ -57,9 +57,33 @@ describe('what the window holds', () => {
     })
 
     await state().connect()
+    await state().reload()
     list.mockClear()
     for (const announce of announcers) announce('project')
     await vi.waitFor(() => expect(list).toHaveBeenCalled())
+  })
+
+  /**
+   * 🛑 What « opening pays nothing » means here: the settings window connects this from its root,
+   * so a panel nobody opened must not open a thread and a database over someone else's write.
+   */
+  it('does not read on a write announced before the panel has asked for anything', async () => {
+    const announcers: ((scope: MemoryScope) => void)[] = []
+    const list = vi.fn(() => Promise.resolve([memory()]))
+    installFakeBridge({
+      memory: {
+        list,
+        onChanged: callback => {
+          announcers.push(callback)
+          return () => {}
+        },
+      },
+    })
+
+    await state().connect()
+    for (const announce of announcers) announce('project')
+
+    expect(list).not.toHaveBeenCalled()
   })
 
   it('ignores a write into the scope it is not showing', async () => {

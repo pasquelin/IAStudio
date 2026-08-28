@@ -63,8 +63,11 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   connect: connectThroughBridge(async bridge => {
     // Every window follows every write: two replicas of one file is one too many, and a memory
     // written by the assistant in one window belongs on screen in the other.
+    // 🛑 Reloaded only once the panel has ASKED. Subscribing costs nothing; reading opens a
+    // thread and a database, and the settings window connects this from its root — so a change
+    // announced while the reader is on another section must not pay for one.
     const stopChanges = bridge.memory.onChanged(scope => {
-      if (scope === get().scope) void get().reload()
+      if (scope === get().scope && get().loaded) void get().reload()
     })
     const stopSteps = bridge.memory.onIndexed(progress => {
       if (progress.scope !== get().scope) return
@@ -74,7 +77,6 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
       const done = progress.done >= progress.total
       set({ indexing: done ? null : progress, pending: progress.total - progress.done })
     })
-    await get().reload()
     return () => {
       stopChanges()
       stopSteps()
@@ -99,20 +101,31 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     // scope's rows and call them loaded.
     if (get().scope !== scope || get().query !== query) return
 
-    set({ memories, loaded: true })
-    set({ pending: await orElse(getBridge()?.memory.pending(scope), 0) })
+    set({ memories, loaded: true, pending: await orElse(getBridge()?.memory.pending(scope), 0) })
   },
 
   // No optimistic write, unlike the context panel: the id and the date come from the main
   // process, so there is nothing truthful to draw before the answer arrives.
   remember: async draft => await orElse(getBridge()?.memory.remember(get().scope, draft), null),
 
-  // 🛑 `orElse` and not `!== null`: with no bridge the call answers `undefined`, and a window
-  // was told its amendment had gone through.
-  amend: async (id, patch) =>
-    (await orElse(getBridge()?.memory.amend(get().scope, id, patch), null)) !== null,
+  /**
+   * 🛑 `orElse` and not `!== null`: with no bridge the call answers `undefined`, and a window was
+   * told its amendment had gone through.
+   *
+   * Reloaded here rather than left to the change event: the panel is what shows the row, and a
+   * pinned memory still offering « Pin » is the whole gesture failing in front of the person.
+   */
+  amend: async (id, patch) => {
+    const amended = (await orElse(getBridge()?.memory.amend(get().scope, id, patch), null)) !== null
+    if (amended) await get().reload()
+    return amended
+  },
 
-  forget: async id => await orElse(getBridge()?.memory.forget(get().scope, id), false),
+  forget: async id => {
+    const forgotten = await orElse(getBridge()?.memory.forget(get().scope, id), false)
+    if (forgotten) await get().reload()
+    return forgotten
+  },
 
   rebuild: async () => await orElse(getBridge()?.memory.rebuild(get().scope), 0),
 

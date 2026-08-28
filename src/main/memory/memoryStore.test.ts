@@ -413,3 +413,51 @@ describe('compacting the file', () => {
     await expect(store.compact()).resolves.toBe(0)
   })
 })
+
+describe('what compaction refuses to touch', () => {
+  /**
+   * 🛑 A line a NEWER studio wrote is deliberately kept out of the index. Rewriting the file
+   * from the index would erase it — and this is the one gesture that rewrites.
+   */
+  it('refuses a file it could not read whole, and leaves every line standing', async () => {
+    await store.remember(draft({ summary: 'readable' }))
+    await appendFile(file, `${JSON.stringify({ v: MEMORY_VERSION + 1, id: 'm_future' })}\n`)
+    await store.rebuild()
+
+    expect(store.trouble()).toBe('too-new')
+    await expect(store.compact()).resolves.toBe(0)
+    expect(await readFile(file, 'utf8')).toContain('m_future')
+  })
+
+  it('refuses a file that would not read at all, rather than emptying it', async () => {
+    await store.remember(draft({ summary: 'held' }))
+    await appendFile(file, 'this is not a line of json\n')
+    await store.rebuild()
+
+    expect(store.trouble()).toBe('unreadable')
+    await expect(store.compact()).resolves.toBe(0)
+    expect(await readFile(file, 'utf8')).toContain('held')
+  })
+})
+
+describe('what a memory may not replace', () => {
+  const pinnedDraft = (summary: string): MemoryDraft => ({
+    type: 'script',
+    summary,
+    importance: 4,
+    source: { kind: 'action', ref: 'script.write' },
+    refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }],
+  })
+
+  /**
+   * 🛑 Pinning IS the decision to always give it. An automatic rule archiving it would undo that
+   * decision without a word — the same invariant `staleIn` holds for the upkeep.
+   */
+  it('never supersedes a pinned memory', async () => {
+    const pinned = await store.remember({ ...pinnedDraft('the rail'), state: 'pinned' })
+    const second = await store.remember(pinnedDraft('the rail and the target'))
+
+    expect(second.supersedes).toBeUndefined()
+    expect((await store.read(pinned.id))?.state).toBe('pinned')
+  })
+})

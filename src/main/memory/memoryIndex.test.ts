@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Memory } from '@shared/domain/assistantMemory'
+import type { Memory, MemoryRef } from '@shared/domain/assistantMemory'
 import type { SqliteDriver } from '@main/project/sqlite'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMemoryIndex, type MemoryIndex } from './memoryIndex'
@@ -335,6 +335,23 @@ describe('what answers a question', () => {
       },
     ])
 
+  /**
+   * 🛑 A question is not a filter. Read as one — every term required — « à quoi sert le script
+   * CameraRig ? » demanded thirteen words of one memory, and a real studio answered nothing.
+   */
+  it('answers a whole question, not only a memory holding every word of it', () => {
+    index.putAll([
+      memory({ id: 'm_script', summary: 'Scripts/CameraRig.ts drives the rail' }),
+      memory({ id: 'm_other', summary: 'the palette is night blue and ochre' }),
+    ])
+
+    const asked = 'what is the script CameraRig for in this project?'
+
+    expect(ask({ text: asked })[0]?.id).toBe('m_script')
+    // The listing, which IS a filter, still narrows: nothing holds all of those words.
+    expect(index.list({ text: asked })).toEqual([])
+  })
+
   it('finds by an exact word what no vector could reach', () => {
     index.putAll([
       memory({ id: 'm_script', summary: 'Scripts/CameraRig.ts drives the rail' }),
@@ -425,5 +442,31 @@ describe('what answers a question', () => {
 
     // Found by nothing but its own presence, so the ranking never sees a similarity at all.
     expect(ask({ question: new Float32Array([1, 0]), model: 'e' })).toEqual([])
+  })
+})
+
+describe('what a recall may answer with', () => {
+  const NOW_TOO = '2026-08-28T12:00:00.000Z'
+
+  /**
+   * 🛑 What archiving MEANS. The panel still lists it and the file still holds it, but the
+   * assistant stops being given it — a memory set aside came back beside its own replacement.
+   */
+  it('never answers an archived memory', () => {
+    index.putAll([
+      memory({ id: 'm_old', summary: 'the rail, as it used to be', state: 'archived' }),
+      memory({ id: 'm_now', summary: 'the rail, as it is' }),
+    ])
+
+    const found = index.recall({ text: 'rail', now: NOW_TOO, limit: 10 })
+
+    expect(found.map(one => one.id)).toEqual(['m_now'])
+  })
+
+  it('never answers one anchored on the open document either, once archived', () => {
+    const anchor: MemoryRef = { kind: 'scene', ref: 's_1' }
+    index.put(memory({ id: 'm_old', state: 'archived', refs: [anchor] }))
+
+    expect(index.recall({ text: '', refs: [anchor], now: NOW_TOO, limit: 10 })).toEqual([])
   })
 })

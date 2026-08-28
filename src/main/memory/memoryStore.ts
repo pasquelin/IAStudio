@@ -127,6 +127,9 @@ export function hasMoved(held: MemoryStamp | null, now: MemoryStamp | null): boo
   return held.bytes !== now.bytes || held.modifiedAt !== now.modifiedAt
 }
 
+/** The same memory, out of every recall. Named so the state is a declared type, not an `as const`. */
+const archivedOf = (memory: Memory): Memory => ({ ...memory, state: 'archived' })
+
 /**
  * What this draft replaces: a memory of the same TYPE anchored on the same first reference.
  *
@@ -145,7 +148,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
   // measured 61 µs against the 140 µs the append itself costs.
   let folder: Promise<unknown> | null = null
 
-  const append = async (memory: Memory): Promise<void> => {
+  const append = async (...memories: readonly Memory[]): Promise<void> => {
     try {
       folder ??= mkdir(dirname(file), { recursive: true })
       await folder
@@ -155,7 +158,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
       folder = null
       throw error
     }
-    await appendFile(file, lineOf(memory), 'utf8')
+    await appendFile(file, memories.map(lineOf).join(''), 'utf8')
 
     const stamp = await stampOf(file)
     if (stamp) index.restamp(stamp)
@@ -266,14 +269,14 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
         // The file first, always: an index holding what the file does not is an index that
         // answers a memory a restart makes vanish.
-        // The replaced one is written down as archived BEFORE its replacement, so a file read
-        // back line by line, latest wins, never has the two standing at once.
-        if (replaced) {
-          await append({ ...replaced, state: 'archived' })
-          index.put({ ...replaced, state: 'archived' })
-        }
-
-        await append(memory)
+        /**
+         * 🛑 ONE append for both lines. Written in two, an `ENOSPC` between them left the
+         * replaced memory archived with nothing standing in its place — out of every recall,
+         * and nothing saying why.
+         */
+        const archived = replaced && archivedOf(replaced)
+        await append(...(archived ? [archived, memory] : [memory]))
+        if (archived) index.put(archived)
         // `isReadable`, as a rebuild filters: a memory written as dropped must not be listed
         // until a restart and vanish afterwards.
         if (isReadable(memory)) index.put(memory)
@@ -329,6 +332,14 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
     compact: () =>
       writes.next(async () => {
+        /**
+         * 🛑 Refused on a file this build could not read WHOLE, and it is the difference between
+         * a tidying and a loss. A `too-new` line is deliberately kept out of the index; a read
+         * that failed empties it. Rewriting from the index in either case would erase what the
+         * file still holds — a later studio's memories, or all of them.
+         */
+        if (trouble !== null) return 0
+
         // Read back FIRST: the index holds no `dropped` line and no superseded one, so it cannot
         // say how many lines the file carries — only the file can.
         const before = await linesIn(file)

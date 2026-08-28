@@ -1,4 +1,4 @@
-import { isReadable, type Memory } from './assistantMemory'
+import type { Memory } from './assistantMemory'
 
 /**
  * What a memory of six months needs so it stays readable: what says the same thing twice, and
@@ -35,7 +35,10 @@ export function duplicatesIn(memories: readonly Memory[]): readonly (readonly Me
   const bySaying = new Map<string, Memory[]>()
 
   for (const memory of memories) {
-    if (!isReadable(memory)) continue
+    // 🛑 `live` alone. Archived ones are already set aside, and grouping them made merging
+    // endless: the panel lists them, so the same group came back with the count unchanged.
+    // Pinned ones are a decision to always give them — see `staleIn`.
+    if (memory.state !== 'live') continue
 
     const saying = `${memory.type} ${plainly(memory.summary)}`
     const held = bySaying.get(saying) ?? []

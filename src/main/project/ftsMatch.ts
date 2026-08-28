@@ -14,3 +14,15 @@ export function matchExpression(text: string): string | null {
   const terms = text.match(/[\p{L}\p{N}_]+/gu)
   return terms ? terms.map(term => `"${term}"*`).join(' AND ') : null
 }
+
+/**
+ * 🛑 The same words as a QUESTION rather than as a filter — joined by OR, and ranked by bm25.
+ *
+ * A filter narrows: every term must match. A question does the opposite, and getting the two
+ * confused is what made a recall answer nothing at all — « à quoi sert le script CameraRig ? »
+ * demanded all thirteen of its words of one memory, and no memory has thirteen.
+ */
+export function askExpression(text: string): string | null {
+  const terms = text.match(/[\p{L}\p{N}_]+/gu)
+  return terms ? terms.map(term => `"${term}"*`).join(' OR ') : null
+}

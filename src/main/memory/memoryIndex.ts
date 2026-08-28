@@ -11,7 +11,7 @@ import {
   type MemoryType,
 } from '@shared/domain/assistantMemory'
 import { oneOf } from '@shared/guards'
-import { matchExpression } from '@main/project/ftsMatch'
+import { askExpression, matchExpression } from '@main/project/ftsMatch'
 import type { SqliteDriver, SqlRow, SqlValue } from '@main/project/sqlite'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { escapeLike, holes } from '@main/project/sqlText'
@@ -160,10 +160,11 @@ export type MemoryIndex = {
   /** How many it holds, without reading a single one of them back. */
   count: () => number
   /**
-   * The live memory of this type anchored on this very reference, if one stands.
+   * The LIVE memory of this type anchored on this very reference, if one stands.
    *
-   * What `supersedes` is drawn from: a rule that fires twice on the same script must AMEND what
-   * it said, not leave two memories that contradict each other with no way to tell which is now.
+   * What `supersedes` is drawn from: a rule firing twice on one script must amend what it said,
+   * not leave two memories contradicting each other. 🛑 `live` alone — a pinned memory is a
+   * decision to always give it, and archiving it automatically would undo that decision.
    */
   standingOn: (type: MemoryType, ref: MemoryRef) => Memory | null
   list: (query: MemoryQuery) => readonly Memory[]
@@ -240,6 +241,35 @@ export type RecallAsk = {
 
 /** How many each voice may put forward. Ranking a hundred costs nothing; reading them does. */
 const RECALL_CANDIDATES = 40
+
+/**
+ * 🛑 One placeholder per id, and SQLite takes 32 766 of them. Compaction reads every memory at
+ * once, so an unbounded `IN (…)` threw past that count — which failed the whole thread, not just
+ * the query. Well under, because the limit is a build option a driver may lower.
+ */
+const IDS_PER_QUERY = 500
+
+/**
+ * 🛑 What a recall may answer with. `archived` is absent, and that IS what archiving means: the
+ * panel still lists it and the file still holds it, but the assistant stops being given it.
+ * Without this a memory the person had set aside came back in the briefing beside its replacement.
+ */
+const ANSWERING = {
+  states: ['live', 'pinned'],
+  limit: RECALL_CANDIDATES,
+} satisfies MemoryQuery
+
+const byBatch = (
+  ids: readonly string[],
+  ask: (batch: readonly string[]) => readonly SqlRow[],
+): readonly SqlRow[] => {
+  const rows: SqlRow[] = []
+  for (let at = 0; at < ids.length; at += IDS_PER_QUERY) {
+    rows.push(...ask(ids.slice(at, at + IDS_PER_QUERY)))
+  }
+
+  return rows
+}
 
 const isRefKind = (value: string): value is MemoryRefKind =>
   MEMORY_REF_KINDS.some(kind => kind === value)
@@ -320,7 +350,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
   const readStanding = driver.prepare(
     `SELECT ${ALIASED} FROM memories m
      JOIN memory_refs r ON r.memory_id = m.id AND r.kind = ? AND r.ref = ?
-     WHERE m.type = ? AND m.state <> 'archived'
+     WHERE m.type = ? AND m.state = 'live'
      ORDER BY m.created_at DESC, m.id DESC LIMIT 1`,
   )
   const dropOther = driver.prepare('DELETE FROM memory_vectors WHERE model <> ?')
@@ -377,12 +407,14 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     const refs = new Map<string, MemoryRef[]>()
     const links = new Map<string, string[]>()
 
-    const refRows = driver
-      .prepare(
-        `SELECT memory_id, kind, ref FROM memory_refs WHERE memory_id IN (${holes(ids.length)})
-         ORDER BY memory_id, kind, ref`,
-      )
-      .all(...ids)
+    const refRows = byBatch(ids, batch =>
+      driver
+        .prepare(
+          `SELECT memory_id, kind, ref FROM memory_refs WHERE memory_id IN (${holes(batch.length)})
+           ORDER BY memory_id, kind, ref`,
+        )
+        .all(...batch),
+    )
 
     for (const row of refRows) {
       const kind = text(row, 'kind')
@@ -394,12 +426,14 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
       refs.set(id, held)
     }
 
-    const linkRows = driver
-      .prepare(
-        `SELECT from_id, to_id FROM memory_links WHERE from_id IN (${holes(ids.length)})
-         ORDER BY from_id, to_id`,
-      )
-      .all(...ids)
+    const linkRows = byBatch(ids, batch =>
+      driver
+        .prepare(
+          `SELECT from_id, to_id FROM memory_links WHERE from_id IN (${holes(batch.length)})
+           ORDER BY from_id, to_id`,
+        )
+        .all(...batch),
+    )
 
     for (const row of linkRows) {
       const id = text(row, 'from_id')
@@ -413,7 +447,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     )
   }
 
-  const listed = (query: MemoryQuery): readonly Memory[] => {
+  const listed = (query: MemoryQuery, asking = false): readonly Memory[] => {
     const conditions: string[] = []
     const params: SqlValue[] = []
 
@@ -434,7 +468,8 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     }
 
     const wanted = query.text?.trim() ?? ''
-    const match = wanted.length > 0 ? matchExpression(wanted) : null
+    // A question is not a filter — see `askExpression`, which says what that cost.
+    const match = wanted.length > 0 ? (asking ? askExpression : matchExpression)(wanted) : null
 
     if (wanted.length > 0 && match === null) {
       // Punctuation alone tokenises to nothing, and fts5 cannot look for what it never indexed
@@ -501,11 +536,11 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     for (const memory of listed({ states: ['pinned'], limit: RECALL_CANDIDATES })) hold(memory)
 
     if (ask.refs && ask.refs.length > 0) {
-      for (const memory of listed({ refs: ask.refs, limit: RECALL_CANDIDATES })) hold(memory)
+      for (const memory of listed({ ...ANSWERING, refs: ask.refs })) hold(memory)
     }
 
     if (ask.text.trim().length > 0) {
-      const found = listed({ text: ask.text, limit: RECALL_CANDIDATES })
+      const found = listed({ ...ANSWERING, text: ask.text }, true)
       found.forEach((memory, rank) => {
         hold(memory).exactRank = rank
       })
@@ -515,6 +550,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
       const closest = closestTo(ask.model, ask.question, RECALL_CANDIDATES)
       const near = new Map(closest.map(one => [one.id, one.similarity]))
       for (const memory of readMany(closest.map(one => one.id))) {
+        if (memory.state === 'archived') continue
         hold(memory).similarity = near.get(memory.id)
       }
     }
