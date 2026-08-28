@@ -100,6 +100,15 @@ export function registerMemoryHandlers({ host, vectors }: MemoryHandlerDeps): vo
     vectors.stop(parseMemoryScope(scope))
   })
 
+  handle(CHANNELS.memoryCompact, async (_event, scope) => {
+    const [wanted, memory] = await memoryOf(scope)
+    if (!memory) return 0
+
+    const saved = await memory.compact()
+    if (saved > 0) broadcast(EVENTS.memoryChanged, wanted)
+    return saved
+  })
+
   handle(CHANNELS.memoryReset, async (_event, scope) => {
     const [wanted, memory] = await memoryOf(scope)
     if (!memory) return

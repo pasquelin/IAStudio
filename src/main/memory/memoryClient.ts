@@ -42,6 +42,8 @@ export type AsyncMemory = {
   rebuild: () => Promise<number>
   /** Reads it only if it has changed since the index was built — what an opening runs. */
   refresh: () => Promise<number>
+  /** Rewrites the file with one line per standing memory. Answers how many it saved. */
+  compact: () => Promise<number>
   reset: () => Promise<void>
   trouble: () => Promise<MemoryTrouble | null>
   close: () => Promise<void>
@@ -106,6 +108,7 @@ export function createMemoryClient(port: MemoryPort): AsyncMemory {
     dropOtherVectors: model => ask<'dropOtherVectors'>({ op: 'dropOtherVectors', model }),
     rebuild: () => ask<'rebuild'>({ op: 'rebuild' }),
     refresh: () => ask<'refresh'>({ op: 'refresh' }),
+    compact: () => ask<'compact'>({ op: 'compact' }),
     reset: () => ask<'reset'>({ op: 'reset' }),
     trouble: () => ask<'trouble'>({ op: 'trouble' }),
 

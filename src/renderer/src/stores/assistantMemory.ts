@@ -7,6 +7,7 @@ import type {
   MemoryQuery,
   MemoryScope,
 } from '@shared/domain/assistantMemory'
+import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
 import { orElse } from '@shared/promises'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
 
@@ -32,6 +33,17 @@ type AssistantMemoryState = {
   rebuild: () => Promise<number>
   /** Everything forgotten, the file included. The one gesture that erases rather than writes. */
   reset: () => Promise<void>
+  /**
+   * Keeps the best of each group of duplicates, links the rest to it and archives them.
+   *
+   * Archived and not forgotten: what said the same thing twice still says where it came from,
+   * and merging is a tidying, not a judgement about what was true.
+   */
+  mergeDuplicates: () => Promise<number>
+  /** Archives what nothing has drawn on for a season. Pinned memories are never touched. */
+  archiveStale: (now: string) => Promise<number>
+  /** Rewrites the file with one line per standing memory. Answers how many lines it saved. */
+  compact: () => Promise<number>
   /** How many memories have no vector yet, and how far a run has got. `null` while none has. */
   pending: number
   indexing: MemoryIndexing | null
@@ -107,6 +119,36 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   reset: async () => {
     await orElse(getBridge()?.memory.reset(get().scope), undefined)
   },
+
+  mergeDuplicates: async () => {
+    let merged = 0
+    for (const group of duplicatesIn(get().memories)) {
+      const [keeper, ...rest] = group
+      if (!keeper) continue
+
+      for (const one of rest) {
+        // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
+        if (await get().amend(one.id, { state: 'archived', links: [...one.links, keeper.id] })) {
+          merged += 1
+        }
+      }
+    }
+
+    await get().reload()
+    return merged
+  },
+
+  archiveStale: async now => {
+    let archived = 0
+    for (const one of staleIn(get().memories, now)) {
+      if (await get().amend(one.id, { state: 'archived' })) archived += 1
+    }
+
+    await get().reload()
+    return archived
+  },
+
+  compact: async () => await orElse(getBridge()?.memory.compact(get().scope), 0),
 
   index: async () => {
     await orElse(getBridge()?.memory.index(get().scope), undefined)

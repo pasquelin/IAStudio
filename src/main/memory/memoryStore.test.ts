@@ -363,3 +363,53 @@ describe('what a memory replaces', () => {
     expect(other.supersedes).toBeUndefined()
   })
 })
+
+describe('compacting the file', () => {
+  const readLines = async (): Promise<readonly string[]> =>
+    (await readFile(file, 'utf8')).split('\n').filter(line => line.trim().length > 0)
+
+  it('leaves one line per memory that still stands', async () => {
+    const first = await store.remember(draft({ summary: 'one' }))
+    await store.amend(first.id, { summary: 'one, said better' })
+    await store.remember(draft({ summary: 'two' }))
+
+    expect(await readLines()).toHaveLength(3)
+    await expect(store.compact()).resolves.toBe(1)
+
+    const lines = await readLines()
+    expect(lines).toHaveLength(2)
+    expect(lines.join('\n')).toContain('one, said better')
+  })
+
+  /**
+   * 🛑 The one gesture that loses anything, and it loses only what was already forgotten:
+   * archiving is a state, forgetting is a removal, and this is what carries the second out.
+   */
+  it('drops what was forgotten and keeps what was archived', async () => {
+    const gone = await store.remember(draft({ summary: 'forgotten' }))
+    const kept = await store.remember(draft({ summary: 'archived' }))
+    await store.forget(gone.id)
+    await store.amend(kept.id, { state: 'archived' })
+    await store.compact()
+
+    const body = (await readLines()).join('\n')
+    expect(body).not.toContain('forgotten')
+    expect(body).toContain('archived')
+  })
+
+  it('reads back the same memories after a restart', async () => {
+    await store.remember(draft({ summary: 'one' }))
+    await store.remember(draft({ summary: 'two' }))
+    await store.compact()
+
+    database.close()
+    store = open()
+    await store.rebuild()
+
+    expect((await store.list({})).map(one => one.summary).sort()).toEqual(['one', 'two'])
+  })
+
+  it('saves nothing on a file that was never written', async () => {
+    await expect(store.compact()).resolves.toBe(0)
+  })
+})

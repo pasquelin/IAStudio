@@ -26,6 +26,7 @@ export type MemoryRequest =
   | { id: number; op: 'markUsed'; ids: readonly string[] }
   | { id: number; op: 'rebuild' }
   | { id: number; op: 'refresh' }
+  | { id: number; op: 'compact' }
   | { id: number; op: 'reset' }
   | { id: number; op: 'trouble' }
   | { id: number; op: 'recall'; ask: RecallAsk }
@@ -46,6 +47,7 @@ export type MemoryResults = {
   markUsed: void
   rebuild: number
   refresh: number
+  compact: number
   reset: void
   trouble: MemoryTrouble | null
   recall: readonly Memory[]

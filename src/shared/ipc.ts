@@ -161,6 +161,7 @@ export type Channels = {
   memoryPending: 'memory:pending'
   memoryIndex: 'memory:index'
   memoryStopIndex: 'memory:stop-index'
+  memoryCompact: 'memory:compact'
 
   /**
    * Opens one file's information window, or reveals the one that path already has.
@@ -405,6 +406,7 @@ export const CHANNELS: Channels = {
   memoryPending: 'memory:pending',
   memoryIndex: 'memory:index',
   memoryStopIndex: 'memory:stop-index',
+  memoryCompact: 'memory:compact',
 
   fileInfoOpen: 'window:file-info',
 
@@ -1112,6 +1114,11 @@ export type StudioBridge = {
      * a studio with no embedding model has nothing pending, it has nothing to compute.
      */
     pending: (scope: MemoryScope) => Promise<number>
+    /**
+     * Rewrites the file with one line per standing memory, dropping what was forgotten.
+     * Answers how many lines it saved. `0` where there was nothing to save.
+     */
+    compact: (scope: MemoryScope) => Promise<number>
     /** Starts computing what is missing, in the background. Answers as soon as it has started. */
     index: (scope: MemoryScope) => Promise<void>
     /** Stops the run in flight. What it already wrote is kept — see `MemoryVectors`. */

@@ -405,6 +405,25 @@
     "memoryEmbedPending_one": "{{count, number}} memory to compute",
     "memoryCount_one": "{{count, number}} memory",
     "memoryEmbedPending_many": "{{count, number}} memories to compute",
-    "memoryCount_many": "{{count, number}} memories"
+    "memoryCount_many": "{{count, number}} memories",
+    "memoryUpkeep": "Upkeep",
+    "memoryMerge": "Merge the duplicates",
+    "memoryMergeHelp": "Keeps the most important of each group saying the same thing, links the others to it and archives them. Nothing is erased.",
+    "memoryMergeNone": "Nothing says the same thing twice.",
+    "memoryMergeFound_one": "{{count, number}} duplicate",
+    "memoryMergeFound_many": "{{count, number}} duplicates",
+    "memoryMergeFound_other": "{{count, number}} duplicates",
+    "memoryStale": "Archive what sleeps",
+    "memoryStaleHelp": "Sets aside what nothing has drawn on for six months. Pinned memories are never touched.",
+    "memoryStaleNone": "Nothing has slept long enough.",
+    "memoryStaleFound_one": "{{count, number}} sleeping memory",
+    "memoryStaleFound_many": "{{count, number}} sleeping memories",
+    "memoryStaleFound_other": "{{count, number}} sleeping memories",
+    "memoryCompact": "Compact the file",
+    "memoryCompactHelp": "Rewrites the file with one line per standing memory. This is where what was forgotten finally leaves the disk.",
+    "memoryRelations": "What this memory touches",
+    "memoryRelationRef": "points at",
+    "memoryRelationLink": "links to",
+    "memoryRelationSupersedes": "replaces"
   }
 }

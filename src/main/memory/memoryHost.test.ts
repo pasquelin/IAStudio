@@ -16,6 +16,7 @@ const fakeMemory = (): AsyncMemory => ({
   dropOtherVectors: vi.fn(),
   rebuild: vi.fn(),
   refresh: vi.fn(),
+  compact: vi.fn(),
   reset: vi.fn(),
   trouble: vi.fn(),
   close: vi.fn(async () => {}),

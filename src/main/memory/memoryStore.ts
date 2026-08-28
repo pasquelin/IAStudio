@@ -11,7 +11,7 @@ import {
 } from '@shared/domain/assistantMemory'
 import { defined } from '@shared/guards'
 import { orElse } from '@shared/promises'
-import { isMissing, writeQueue } from '@main/persistence'
+import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import type { MemoryIndex, MemoryStamp, RecallAsk } from './memoryIndex'
 import type { MemoryVector, PendingVector } from './vectors'
 import { parseMemory, versionOf } from './validation'
@@ -63,6 +63,15 @@ export type MemoryStore = {
    * pays a full read of a file nothing has touched.
    */
   refresh: () => Promise<number>
+  /**
+   * Rewrites the file with one line per memory that still stands, dropping every amendment and
+   * every forgetting the log holds. Answers how many lines it saved.
+   *
+   * 🛑 What is `dropped` goes for good, and it is the one gesture that loses anything: the file
+   * is append-only precisely so nothing else does. An `archived` memory is KEPT — archiving is
+   * a state, forgetting is a removal, and compaction is what finally carries the second out.
+   */
+  compact: () => Promise<number>
   /** Everything forgotten, the file included. What « reset this project's memory » runs. */
   reset: () => Promise<void>
   /** Why the file answered nothing when it should have. Read after `rebuild`. */
@@ -94,6 +103,12 @@ const lineOf = (memory: Memory): string =>
 async function stampOf(file: string): Promise<{ bytes: number; modifiedAt: number } | null> {
   const stats = await orElse(stat(file), null)
   return stats && { bytes: stats.size, modifiedAt: Math.trunc(stats.mtimeMs) }
+}
+
+/** How many memories the file spells, amendments and forgettings included. */
+async function linesIn(file: string): Promise<number> {
+  const body = await orElse(readFile(file, 'utf8'), '')
+  return body.split('\n').filter(line => line.trim().length > 0).length
 }
 
 /**
@@ -311,6 +326,24 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
       writes.next(async () =>
         hasMoved(index.stamp(), await stampOf(file)) ? await readFileInto() : index.count(),
       ),
+
+    compact: () =>
+      writes.next(async () => {
+        // Read back FIRST: the index holds no `dropped` line and no superseded one, so it cannot
+        // say how many lines the file carries — only the file can.
+        const before = await linesIn(file)
+        if (before === 0) return 0
+
+        const standing = index.list({ limit: Number.MAX_SAFE_INTEGER })
+        // Atomic, unlike every other write here: this one REPLACES the file, and a process that
+        // died mid-write would leave a project's whole memory truncated.
+        await writeAtomic(file, standing.map(lineOf).join(''))
+
+        const stamp = await stampOf(file)
+        if (stamp) index.restamp(stamp)
+
+        return Math.max(0, before - standing.length)
+      }),
 
     reset: () =>
       writes.next(async () => {

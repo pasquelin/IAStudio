@@ -405,6 +405,25 @@
     "memoryEmbedPending_one": "{{count, number}} mémoire à calculer",
     "memoryCount_one": "{{count, number}} mémoire",
     "memoryEmbedPending_many": "{{count, number}} mémoires à calculer",
-    "memoryCount_many": "{{count, number}} mémoires"
+    "memoryCount_many": "{{count, number}} mémoires",
+    "memoryUpkeep": "Entretien",
+    "memoryMerge": "Fusionner les doublons",
+    "memoryMergeHelp": "Garde la plus importante de chaque groupe qui dit la même chose, relie les autres à elle et les archive. Rien n’est effacé.",
+    "memoryMergeNone": "Rien ne dit deux fois la même chose.",
+    "memoryMergeFound_one": "{{count, number}} doublon",
+    "memoryMergeFound_many": "{{count, number}} doublons",
+    "memoryMergeFound_other": "{{count, number}} doublons",
+    "memoryStale": "Archiver le dormant",
+    "memoryStaleHelp": "Met de côté ce que rien n’a servi depuis six mois. Ce qui est épinglé n’est jamais touché.",
+    "memoryStaleNone": "Rien ne dort depuis assez longtemps.",
+    "memoryStaleFound_one": "{{count, number}} mémoire dormante",
+    "memoryStaleFound_many": "{{count, number}} mémoires dormantes",
+    "memoryStaleFound_other": "{{count, number}} mémoires dormantes",
+    "memoryCompact": "Compacter le fichier",
+    "memoryCompactHelp": "Réécrit le fichier avec une ligne par mémoire debout. C’est là que ce qui a été oublié quitte le disque pour de bon.",
+    "memoryRelations": "Ce que cette mémoire touche",
+    "memoryRelationRef": "désigne",
+    "memoryRelationLink": "relie",
+    "memoryRelationSupersedes": "remplace"
   }
 }

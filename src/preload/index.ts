@@ -66,6 +66,7 @@ const bridge: StudioBridge = {
     pending: scope => ipcRenderer.invoke(CHANNELS.memoryPending, scope),
     index: scope => ipcRenderer.invoke(CHANNELS.memoryIndex, scope),
     stopIndex: scope => ipcRenderer.invoke(CHANNELS.memoryStopIndex, scope),
+    compact: scope => ipcRenderer.invoke(CHANNELS.memoryCompact, scope),
     onChanged: callback => subscribe<MemoryScope>(EVENTS.memoryChanged, callback),
     onIndexed: callback => subscribe<MemoryIndexing>(EVENTS.memoryIndexed, callback),
   },

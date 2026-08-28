@@ -26,6 +26,8 @@ export async function dispatchMemoryRequest(
       return await store.rebuild()
     case 'refresh':
       return await store.refresh()
+    case 'compact':
+      return await store.compact()
     case 'reset':
       return await store.reset()
     case 'trouble':

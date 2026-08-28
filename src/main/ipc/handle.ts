@@ -60,6 +60,7 @@ type ChannelMethod = {
   [CHANNELS.memoryPending]: StudioBridge['memory']['pending']
   [CHANNELS.memoryIndex]: StudioBridge['memory']['index']
   [CHANNELS.memoryStopIndex]: StudioBridge['memory']['stopIndex']
+  [CHANNELS.memoryCompact]: StudioBridge['memory']['compact']
   [CHANNELS.projectReadContext]: StudioBridge['project']['readContext']
   [CHANNELS.projectWriteContext]: StudioBridge['project']['writeContext']
   [CHANNELS.projectExport]: StudioBridge['project']['exportInto']

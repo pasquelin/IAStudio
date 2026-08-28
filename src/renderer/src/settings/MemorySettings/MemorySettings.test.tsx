@@ -48,6 +48,9 @@ function standing(memories: readonly Memory[] = [memory()], over: Partial<Memory
     },
     rebuild: async () => memories.length,
     reset: async () => {},
+    mergeDuplicates: async () => 0,
+    archiveStale: async () => 0,
+    compact: async () => 0,
     index: async () => {},
     stopIndex: async () => {},
   })
@@ -154,5 +157,58 @@ describe('the vectors', () => {
 
     expect(screen.getByText('Toutes les mémoires ont leur vecteur.')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Calculer les vecteurs' })).toBeDisabled()
+  })
+})
+
+describe('the upkeep', () => {
+  const twice = (): readonly Memory[] => [
+    memory({ id: 'm_a' }),
+    memory({ id: 'm_b', summary: 'les cameras suivent le rail !' }),
+  ]
+
+  it('counts what says the same thing twice, and offers to merge it', async () => {
+    standing(twice())
+    const merge = vi.fn(async () => 1)
+    useAssistantMemory.setState({ mergeDuplicates: merge })
+    render(<MemorySettings />)
+
+    expect(screen.getByText('1 doublon')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Fusionner les doublons' }))
+    expect(merge).toHaveBeenCalled()
+  })
+
+  it('offers nothing to merge when nothing repeats', () => {
+    render(<MemorySettings />)
+
+    expect(screen.getByText('Rien ne dit deux fois la même chose.')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Fusionner les doublons' })).toBeDisabled()
+  })
+
+  /** 🛑 Pinning IS the decision that it never goes stale — see `staleIn`. */
+  it('never counts a pinned memory as sleeping', () => {
+    standing([memory({ state: 'pinned', usedAt: '2025-01-01T00:00:00.000Z' })])
+    render(<MemorySettings />)
+
+    expect(screen.getByText('Rien ne dort depuis assez longtemps.')).toBeVisible()
+  })
+
+  it('counts what has slept, and offers to archive it', async () => {
+    standing([memory({ usedAt: '2025-01-01T00:00:00.000Z' })])
+    const archive = vi.fn(async () => 1)
+    useAssistantMemory.setState({ archiveStale: archive })
+    render(<MemorySettings />)
+
+    expect(screen.getByText('1 mémoire dormante')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Archiver le dormant' }))
+    expect(archive).toHaveBeenCalled()
+  })
+
+  it('compacts the file on demand', async () => {
+    const compact = vi.fn(async () => 3)
+    useAssistantMemory.setState({ compact })
+    render(<MemorySettings />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Compacter le fichier' }))
+    expect(compact).toHaveBeenCalled()
   })
 })

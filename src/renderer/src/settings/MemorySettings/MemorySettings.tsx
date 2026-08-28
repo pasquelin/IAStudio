@@ -16,9 +16,11 @@ import { WindowSearch } from '@/design/WindowSearch'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_LEFT } from '@/helpers/tooltip'
+import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
 import { useAssistantMemory } from '@/stores/assistantMemory'
 import { SettingLine } from '../SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
+import { MemoryRelations } from './MemoryRelations'
 import { MemoryRowDetail } from './MemoryRowDetail'
 
 /**
@@ -36,6 +38,7 @@ export function MemorySettings() {
   const { t } = useTranslation()
   const { memories, loaded, pending, indexing } = useAssistantMemory()
   const { look, amend, forget, rebuild, reset, index, stopIndex } = useAssistantMemory()
+  const { mergeDuplicates, archiveStale, compact } = useAssistantMemory()
   // Held HERE and handed to `look`, rather than read back off the store: the store's own scope
   // moves when the listing lands, so a chip reading it would light up a beat after the click.
   const [scope, setScope] = useState<MemoryScope>('project')
@@ -52,6 +55,11 @@ export function MemorySettings() {
       ...(type ? { types: [type] } : {}),
     })
   }, [look, scope, text, type])
+
+  // Counted from what is ON SCREEN: the gestures below act on the listing, so a count read from
+  // anywhere else would offer to merge memories a filter is hiding.
+  const duplicates = duplicatesIn(memories).reduce((sum, group) => sum + group.length - 1, 0)
+  const sleeping = staleIn(memories, new Date().toISOString()).length
 
   const rowActions = (memory: Memory) => {
     const pinned = memory.state === 'pinned'
@@ -130,7 +138,12 @@ export function MemorySettings() {
           label={t('settings.memory')}
           expandedId={openId}
           onToggleRow={one => setOpenId(openId === one.id ? null : one.id)}
-          renderRowDetail={one => <MemoryRowDetail memory={one} />}
+          renderRowDetail={one => (
+            <>
+              <MemoryRowDetail memory={one} />
+              <MemoryRelations memory={one} among={memories} />
+            </>
+          )}
           renderRow={one => (
             <div className="flex w-full items-center gap-2">
               <span className="grow truncate text-xs">{one.summary}</span>
@@ -183,6 +196,55 @@ export function MemorySettings() {
               {t('settings.memoryEmbed')}
             </button>
           )}
+        </SettingLine>
+
+        <SettingLine
+          title={t('settings.memoryMerge')}
+          help={
+            <p className={WINDOW_HELP}>
+              {duplicates === 0
+                ? t('settings.memoryMergeNone')
+                : t('settings.memoryMergeFound', { count: duplicates })}
+            </p>
+          }
+        >
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={duplicates === 0}
+            onClick={() => void mergeDuplicates()}
+          >
+            {t('settings.memoryMerge')}
+          </button>
+        </SettingLine>
+
+        <SettingLine
+          title={t('settings.memoryStale')}
+          help={
+            <p className={WINDOW_HELP}>
+              {sleeping === 0
+                ? t('settings.memoryStaleNone')
+                : t('settings.memoryStaleFound', { count: sleeping })}
+            </p>
+          }
+        >
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={sleeping === 0}
+            onClick={() => void archiveStale(new Date().toISOString())}
+          >
+            {t('settings.memoryStale')}
+          </button>
+        </SettingLine>
+
+        <SettingLine
+          title={t('settings.memoryCompact')}
+          help={<p className={WINDOW_HELP}>{t('settings.memoryCompactHelp')}</p>}
+        >
+          <button type="button" className="btn btn-sm" onClick={() => void compact()}>
+            {t('settings.memoryCompact')}
+          </button>
         </SettingLine>
 
         <SettingLine
