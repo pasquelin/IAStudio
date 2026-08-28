@@ -1,4 +1,4 @@
-import { composed, type Command } from '../core/history'
+import { commandId, composed, type Command } from '../core/history'
 import {
   rigFaultOf,
   rigRenamed,
@@ -1161,15 +1161,6 @@ export function removeNodes(
 /** Where a drag left every node it carried. One drag, one entry, however many nodes moved. */
 export function moveNodes(moves: readonly NodeMove[]): Command<SceneState> {
   return batch('transform', moves, move => setTransform(move.id, move.transform))
-}
-
-/**
- * One convention for what a history entry is called, in one place: the coalescing of a gesture
- * turns on two consecutive commands sharing an id, and a format that drifted by a character
- * would break it silently — a drag would cost one undo per frame.
- */
-export function commandId(label: string, ids: readonly string[]): string {
-  return `${label}:${ids.join(',')}`
 }
 
 /**

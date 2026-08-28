@@ -19,6 +19,7 @@ import type * as frScene from '../fr/scene.json'
 import type * as frSettings from '../fr/settings.json'
 import type * as frCode from '../fr/code.json'
 import type * as frShell from '../fr/shell.json'
+import type * as frUi from '../fr/ui.json'
 import type * as frUsage from '../fr/usage.json'
 import activity from './activity.json'
 import ai from './ai.json'
@@ -40,6 +41,7 @@ import postfx from './postfx.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
+import ui from './ui.json'
 import usage from './usage.json'
 
 /** The roots a section is responsible for, read off its French twin rather than listed here. */
@@ -76,5 +78,6 @@ export const en = {
   ...(settings satisfies Section<keyof typeof frSettings>),
   ...(shell satisfies Section<keyof typeof frShell>),
   ...(material satisfies Section<keyof typeof frMaterial>),
+  ...(ui satisfies Section<keyof typeof frUi>),
   ...(usage satisfies Section<keyof typeof frUsage>),
 }

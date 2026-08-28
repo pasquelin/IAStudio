@@ -15,6 +15,7 @@ import { definition as lights } from '@/panels/lights'
 import { definition as meshes } from '@/panels/meshes'
 import { definition as problems } from '@/panels/problems'
 import { definition as projects } from '@/panels/projects'
+import { definition as guiTree } from '@/panels/guiTree'
 import { definition as scene } from '@/panels/scene'
 import { definition as text } from '@/panels/text'
 import { definition as timeline } from '@/panels/timeline'
@@ -38,6 +39,7 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   git,
   history,
   scene,
+  guiTree,
   generator,
   inspector,
   assets,

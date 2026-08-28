@@ -14,6 +14,7 @@ import {
   mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
+  mdiViewDashboardOutline,
 } from '@mdi/js'
 import {
   placementIn,
@@ -58,6 +59,7 @@ const ICONS: Record<ToolId, string> = {
   // neither the fork above it nor the film reel the montage wears.
   history: mdiHistory,
   scene: mdiFileTreeOutline,
+  guiTree: mdiViewDashboardOutline,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
   assets: mdiImageMultipleOutline,

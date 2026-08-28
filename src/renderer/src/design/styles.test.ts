@@ -183,9 +183,11 @@ describe('the row skin and the state it publishes', () => {
    */
   const MAY_FILL_UNDER_THE_POINTER = [
     '../home/sections/Tools/ToolsGroup.tsx',
-    // Back to two on 2026-08-20: the tiles a new scene picks its template from. A tile in the
+    // Back to two on 2026-08-20: the tiles a new document picks its template from. A tile in the
     // same strict sense — a still and a name, and nothing else on it that looks like a control.
-    '../newDocument/NewDocumentWindow/NewDocumentTemplates.tsx',
+    // ONE file since 2026-08-28, not one per kind: the scene's eight and the interface's four
+    // are drawn by the same tile, so the fill is asked for at a single site.
+    '../newDocument/NewDocumentWindow/NewDocumentTemplateTile.tsx',
   ]
 
   /**

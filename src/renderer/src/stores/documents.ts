@@ -241,6 +241,9 @@ export function documentForAsset(
 export const activeSceneId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'scene')
 
+/** The interface in front, as a selector. Same reason as `activeSceneId`, for its outliner. */
+export const activeGuiId = (state: DocumentsSlice): string | null => activeIdOfKind(state, 'gui')
+
 /** The image in front, as a selector. Same reason as `activeSceneId`, for the layer stack. */
 export const activeImageId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'image')

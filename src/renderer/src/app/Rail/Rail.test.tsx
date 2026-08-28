@@ -213,6 +213,7 @@ describe('Rail', () => {
 
     expect(marksOf(container)).toEqual([
       'Scène',
+      'Interface',
       'Lumières',
       'Mailles',
       'Animations',

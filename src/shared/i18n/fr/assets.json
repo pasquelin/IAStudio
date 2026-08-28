@@ -210,6 +210,18 @@
       "topDown": "La caméra en plongée, au-dessus de la scène",
       "postProcessing": "Un mouvement de caméra, une bascule de point et un halo animé — de quoi juger toute la chaîne"
     },
+    "uiTemplates": {
+      "empty": "Vide",
+      "hud": "HUD",
+      "mainMenu": "Menu principal",
+      "pause": "Menu de pause"
+    },
+    "uiTemplateHints": {
+      "empty": "Un écran nu, à remplir",
+      "hud": "Un score en haut, une jauge de vie en bas",
+      "mainMenu": "Un titre et des boutons, au centre",
+      "pause": "Un voile sur la partie, et de quoi reprendre"
+    },
     "folderField": "Emplacement",
     "folderHint": "Choisit le dossier du projet où le document sera enregistré",
     "folderEmpty": "Aucun sous-dossier",

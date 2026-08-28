@@ -144,7 +144,11 @@ describe('a ui document', () => {
     expect(reread(documentWith([])).version).toBe(UI_VERSION)
   })
 
-  /** Defaults first, the file on top: how a document written by an older build opens at all. */
+  /**
+   * Defaults first, the file on top: how a document written by an older build opens at all.
+   * `name` defaults to NOTHING and not to the type — an outliner showing `panel` as a title
+   * would be writing an English identifier onto a screen the studio translates.
+   */
   it('fills what a file does not say rather than dropping the element', () => {
     const read = uiFromPayload(
       { root: { type: 'screen', id: 'root', children: [{ type: 'panel', id: 'p' }] } },
@@ -154,7 +158,7 @@ describe('a ui document', () => {
     expect(read.root.children[0]).toEqual({
       id: 'p',
       type: 'panel',
-      name: 'panel',
+      name: '',
       visible: true,
       enabled: true,
       locked: false,

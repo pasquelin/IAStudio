@@ -25,9 +25,11 @@ import {
   UI_JUSTIFIES,
   UI_SCROLL_AXES,
   UI_TEXT_ALIGNS,
+  UI_SCHEMA_URL,
   UI_VERSION,
   holdsChildren,
   isUiElementType,
+  type UiElementType,
   isUiMode,
   type UiAnchor,
   type UiBinding,
@@ -94,9 +96,13 @@ export function uiFromPayload(payload: unknown, newId: () => string): UiState {
   }
 }
 
-/** What a saved interface holds. The version is stamped here and nowhere else. */
-export function uiPayload(document: UiDocument): UiDocument {
-  return { ...document, version: UI_VERSION }
+/**
+ * What a saved interface holds. The version and the schema pointer are stamped HERE and nowhere
+ * else: the window produces the structure the file carries, and the main process only writes the
+ * syntax of it — a `$schema` added on the way to disk would be one the window never held.
+ */
+export function uiPayload(document: UiDocument): UiDocument & { $schema: string } {
+  return { $schema: UI_SCHEMA_URL, ...document, version: UI_VERSION }
 }
 
 export function newUiDocument(newId: () => string): UiDocument {
@@ -113,7 +119,7 @@ export function emptyScreen(newId: () => string): UiScreen {
   return {
     id: newId(),
     type: 'screen',
-    name: 'Screen',
+    name: '',
     visible: true,
     enabled: true,
     locked: false,
@@ -122,6 +128,22 @@ export function emptyScreen(newId: () => string): UiScreen {
     interaction: DEFAULT_INTERACTION,
     children: [],
   }
+}
+
+/**
+ * A brand new element of a type, defaults everywhere.
+ *
+ * Through the same reader a file goes through rather than a second table of what an element is:
+ * a field added to the format would otherwise arrive on read and be missing on create.
+ */
+export function newUiElement<T extends UiElementType>(
+  type: T,
+  newId: () => string,
+): Extract<UiElement, { type: T }> {
+  // `as`: the reader answers the whole union — it is asked what a FILE holds — where the type
+  // named here settles which variant. `element` answers null only for something that is not an
+  // element at all, which a bare type of the closed list never is.
+  return (element({ type }, newId) ?? emptyScreen(newId)) as Extract<UiElement, { type: T }>
 }
 
 /**
@@ -136,7 +158,9 @@ function element(value: unknown, newId: () => string): UiElement | null {
     // binding, a keyframe, a script's `get` — is broken either way, and a visible element is
     // something to repair where a dropped one is something to notice.
     id: readString(value, 'id', '') || newId(),
-    name: readString(value, 'name', value.type),
+    // Nameless by default, never the type: a name is what its AUTHOR called it, and `panel`
+    // written here is an English identifier the outliner would then show as a title.
+    name: readString(value, 'name', ''),
     visible: readBoolean(value, 'visible', true),
     enabled: readBoolean(value, 'enabled', true),
     locked: readBoolean(value, 'locked', false),
