@@ -138,6 +138,13 @@ export function AssistantConversation() {
   // A tail already spells this one out: the lone bordered row read as a button to press.
   const listed = spelled !== undefined && shown.length === 1 ? [] : shown
 
+  /**
+   * The list opens UPWARD, so the row nearest the caret is the LAST one drawn: rank 0 — the best
+   * match, and the one the tail spells out — sits at the bottom, against the field one writes in.
+   */
+  const rows = [...listed].reverse()
+  const heldRow = listed.length - 1 - rank
+
   // Taken means WRITTEN, never sent: the sentence is a start, and what one adds to it — a name,
   // a size, a folder — is the half the studio cannot guess.
   const take = (sentence: string): void => {
@@ -172,18 +179,20 @@ export function AssistantConversation() {
     // 🛑 Only where the caret has nowhere left to go: the field takes three lines and holds
     // dictated paragraphs, which wrap without ever carrying a newline to test for. Read from the
     // event and not from `caretAtEnd`, which answers for one end and this needs both.
-    const field = event.currentTarget
-    const spare =
-      event.key === 'ArrowDown'
-        ? atEnd(field)
-        : // The END too, or an ArrowUp collapsing a selection that starts at 0 walked the list
-          // instead of moving the caret, which is what the key means with something selected.
-          event.key === 'ArrowUp' && field.selectionStart === 0 && field.selectionEnd === 0
+    /**
+     * ↑ walks INTO the list, which is above, and ↓ comes back down toward the field — the keys
+     * mean what the eye sees. 🛑 Only from the end of a draft holding no newline: the field takes
+     * three lines for dictated paragraphs, and a walk cannot confiscate the way through one.
+     *
+     * **Blind to WRAP**: a long single line that wraps loses ↑ too. No sentence that long matches
+     * a starter, so no list is up when it would matter.
+     */
+    const walks = atEnd(event.currentTarget) && !draft.includes('\n')
 
     // `listed`, not `shown`: a lone match the tail spells out draws no rows, and an arrow that
     // walked it moved nothing anyone could see.
-    if (spare && listed.length > 1) {
-      setRank(at => (at + (event.key === 'ArrowDown' ? 1 : -1) + listed.length) % listed.length)
+    if (walks && listed.length > 1 && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      setRank(at => (at + (event.key === 'ArrowUp' ? 1 : -1) + listed.length) % listed.length)
       return true
     }
 
@@ -369,8 +378,8 @@ export function AssistantConversation() {
           >
             {listed.length > 0 && (
               <AssistantConversationSuggestions
-                matches={listed}
-                active={rank}
+                matches={rows}
+                active={heldRow}
                 label={t('assistant.suggestions')}
                 hint={t('assistant.starterHint')}
                 id={listId}
@@ -411,7 +420,9 @@ export function AssistantConversation() {
                 // element, and a textarea can hold none. Without it the walk is announced by nobody.
                 aria-controls={listed.length > 0 ? listId : undefined}
                 aria-owns={listed.length > 0 ? listId : undefined}
-                aria-activedescendant={listed.length === 0 ? undefined : suggestionId(listId, rank)}
+                aria-activedescendant={
+                  listed.length === 0 ? undefined : suggestionId(listId, heldRow)
+                }
                 placeholder={t('assistant.placeholder')}
                 // The only place the gesture is named to someone who does not read with an ear:
                 // a grey tail reads as text already written until one is told what takes it.
