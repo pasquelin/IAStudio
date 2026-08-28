@@ -20,6 +20,7 @@ import { POST_ACTIONS } from './postActions'
 import { SCENE_ACTIONS } from './sceneActions'
 import { SEQUENCE_ACTIONS } from './sequenceActions'
 import { CONTEXT_ACTIONS } from './contextActions'
+import { MEMORY_ACTIONS } from './memoryActions'
 import {
   ASSEMBLY_ACTIONS,
   EXPORT_ACTIONS,
@@ -82,6 +83,7 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'assembly', actions: ASSEMBLY_ACTIONS },
   { name: 'export', actions: EXPORT_ACTIONS },
   { name: 'context', actions: CONTEXT_ACTIONS },
+  { name: 'memory', actions: MEMORY_ACTIONS },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },
 ]

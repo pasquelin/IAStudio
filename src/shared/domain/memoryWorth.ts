@@ -370,6 +370,13 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   },
   'prefab.instantiate': null,
   'game.export': null,
+  // 🛑 Null for all five, and not by omission: a memory written BY a memory action would be a
+  // memory of having written one, and `memory.write` already wrote what was worth keeping.
+  'memory.recall': null,
+  'memory.read': null,
+  'memory.write': null,
+  'memory.forget': null,
+  'memory.link': null,
   'context.read': null,
   'context.write': null,
   'context.remove': null,

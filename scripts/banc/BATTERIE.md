@@ -960,3 +960,15 @@ fait écrire par un **modèle** — un cloud de discussion ou un modèle de code
 - [ ] « Demande au modèle de réécrire ce script pour qu'il aille deux fois plus vite. »
 - [ ] « Avant de dépenser quoi que ce soit, dis-moi ce qui est armé dans le générateur. »
 - [ ] « Fais écrire un nouveau script de saut, sans toucher à celui qui est ouvert. »
+
+## 67. Retenir ce qu'on lui apprend d'un projet
+
+Ce que l'assistant a appris vit dans `<projet>/.ia-studio/memory.ndjson`, voyage avec le dossier,
+et revient dans son briefing sans qu'on ait à le redire. Les cinq actions sont en `reach: 'mcp'` :
+mesuré, le briefing court laisse 108 caractères, et le plus petit de ces blocs est plus long.
+
+- [ ] « Retiens que les caméras suivent le rail, jamais la cible. »
+- [ ] « Qu'est-ce que tu sais des caméras de ce projet ? »
+- [ ] « Donne-moi le détail de ce que tu sais sur les caméras. »
+- [ ] « Oublie ce que tu as retenu sur les caméras. »
+- [ ] « Relie ce que tu sais des caméras à ce que tu sais du script. »

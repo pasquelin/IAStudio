@@ -29,6 +29,7 @@ import { POST_HANDLERS } from './postHandlers'
 import { SCENE_HANDLERS } from './sceneHandlers'
 import { SEQUENCE_HANDLERS } from './sequenceHandlers'
 import { CONTEXT_HANDLERS } from './contextHandlers'
+import { MEMORY_HANDLERS } from './memoryHandlers'
 import { GAME_HANDLERS } from './gameHandlers'
 import { PLAY_HANDLERS } from './playHandlers'
 import { SCRIPT_HANDLERS } from './scriptHandlers'
@@ -72,6 +73,7 @@ const HANDLERS: ActionHandlers = {
   ...RIG_HANDLERS,
   ...GIT_HANDLERS,
   ...CONTEXT_HANDLERS,
+  ...MEMORY_HANDLERS,
   ...SETTINGS_HANDLERS,
   ...SHELL_HANDLERS,
   // Last, and in the table like every other: a family declaring this name would otherwise

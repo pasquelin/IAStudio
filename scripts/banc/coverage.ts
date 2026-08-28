@@ -349,6 +349,12 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
 
   'game.export': ['65.1'],
 
+  'memory.recall': ['67.2'],
+  'memory.read': ['67.3'],
+  'memory.write': ['67.1', '67.5'],
+  'memory.forget': ['67.4'],
+  'memory.link': ['67.5'],
+
   'context.read': ['57.3'],
   'context.write': ['57.4'],
   'context.remove': ['57.5'],
