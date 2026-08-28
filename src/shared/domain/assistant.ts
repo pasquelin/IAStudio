@@ -203,12 +203,14 @@ export type AssistantThought = {
    */
   state?: string
   /**
-   * What the assistant has LEARNED about this project, as summaries — see `assistantMemory.ts`.
+   * How many memories this project holds — see `assistantMemory.ts`.
    *
-   * 🛑 Filled in the MAIN process, by the same route and for the same reason as `context` and
-   * `state`: `parseThought` does not declare it, so zod strips one that arrived over the boundary.
+   * 🛑 A COUNT and not the memories: what a briefing says is that a memory EXISTS and how to ask
+   * it, never what it holds. Filled in the MAIN process, by the same route and for the same
+   * reason as `context` and `state`: `parseThought` does not declare it, so zod strips one that
+   * arrived over the boundary.
    */
-  recalled?: string
+  memories?: number
   /**
    * What the open document can be aimed at, narrowed by the window — see `target.ts`.
    *

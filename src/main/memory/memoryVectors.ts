@@ -1,8 +1,7 @@
-import type { Memory, MemoryRef, MemoryScope } from '@shared/domain/assistantMemory'
+import type { Memory, MemoryRecallAsk, MemoryScope } from '@shared/domain/assistantMemory'
 import { messageOf } from '@shared/guards'
 import type { Embedder } from './embedder'
 import { createEmbedQueue, type EmbedProgress, type EmbedQueue } from './embedQueue'
-import { recalledWithin } from './recallScore'
 import type { MemoryHost } from './memoryHost'
 
 /**
@@ -21,12 +20,20 @@ export type MemoryVectors = {
   /** Stops the run in flight; what it wrote is kept. Half an index is not a broken one. */
   stop: (scope: MemoryScope) => void
   /**
-   * What the assistant should be reminded of, as summaries — one per line, best first.
+   * What answers a question, best first — the ONE place the question is embedded.
+   *
+   * 🛑 Not a filter: `MemoryStore.list` narrows by every word, this ranks by any of them and by
+   * meaning. What a client reaches through `memory.recall` comes through here.
    *
    * Empty for a studio with no project open, and for one that has learned nothing. Never a
    * refusal: a turn happens with or without a memory, and waiting on one would cost the turn.
    */
-  recalled: (utterance: string, refs: readonly MemoryRef[], room: number) => Promise<string>
+  recall: (scope: MemoryScope, ask: MemoryRecallAsk) => Promise<readonly Memory[]>
+  /**
+   * How many memories a scope holds, without reading one — what the briefing pays instead of a
+   * recall. `0` for a studio with no project open, and for one that has learned nothing.
+   */
+  held: (scope: MemoryScope) => Promise<number>
   close: () => Promise<void>
 }
 
@@ -37,14 +44,8 @@ export type MemoryVectorsDeps = {
   onTrouble: (message: string) => void
 }
 
-/** How many the thread ranks before the budget cuts. Ranking costs nothing; reading them does. */
-const RECALL_LIMIT = 20
-
-/**
- * The summary alone — no id, which would cost 38 characters a line of a budget already negative.
- * A model that wants the body asks `memory.recall`, which answers ids.
- */
-const summaryLine = (one: Memory): string => `  ${one.summary}`
+/** How many a recall answers when the caller names no limit of its own. */
+const RECALL_LIMIT = 10
 
 export function createMemoryVectors({
   host,
@@ -86,15 +87,20 @@ export function createMemoryVectors({
 
     stop: scope => stops.get(scope)?.abort(),
 
-    recalled: async (utterance, refs, room) => {
+    recall: async (scope, ask) => {
       try {
-        return await remembered(utterance, refs, room)
+        return await remembered(scope, ask)
       } catch (error) {
-        // 🛑 Swallowed on purpose, and it is the whole contract: `brainRouted` awaits this inside
-        // the same `Promise.all` as the provider, so a dead embedder would kill the TURN.
+        // 🛑 Swallowed on purpose: a dead embedder must cost the answer, never the turn that
+        // asked for it — a client gets an empty recall and a line in the journal.
         onTrouble(messageOf(error))
-        return ''
+        return []
       }
+    },
+
+    held: async scope => {
+      const memory = await host.of(scope)
+      return memory === null ? 0 : await memory.count()
     },
 
     close: async () => {
@@ -103,37 +109,27 @@ export function createMemoryVectors({
     },
   }
 
-  async function remembered(
-    utterance: string,
-    refs: readonly MemoryRef[],
-    room: number,
-  ): Promise<string> {
-    if (room <= 0) return ''
-
-    const memory = await host.of('project')
-    if (memory === null) return ''
+  async function remembered(scope: MemoryScope, ask: MemoryRecallAsk): Promise<readonly Memory[]> {
+    const memory = await host.of(scope)
+    if (memory === null) return []
 
     const model = embedder.chosen()
     // 🛑 Embedded ONLY where a model can answer: a studio without one pays nothing for the
     // attempt, and falls back on exact search rather than pretending to have searched.
-    const question = model === null ? undefined : await embedder.embedQuery(utterance)
+    const question = model === null ? undefined : await embedder.embedQuery(ask.text)
 
     const found = await memory.recall({
-      text: utterance,
-      refs,
+      text: ask.text,
+      refs: ask.refs ?? [],
       ...(question && question.length > 0 && model ? { question, model } : {}),
       now: new Date().toISOString(),
-      limit: RECALL_LIMIT,
+      limit: ask.limit ?? RECALL_LIMIT,
     })
 
-    const kept = recalledWithin(
-      found.map(one => ({ memory: one, score: 0 })),
-      room,
-    )
     // Stamped as served, which is what later makes an unused memory age.
-    if (kept.length > 0) void memory.markUsed(kept.map(one => one.id))
+    if (found.length > 0) void memory.markUsed(found.map(one => one.id))
 
-    return kept.map(summaryLine).join('\n')
+    return found
   }
 
   /** Named rather than a floating chain: what it does is index one scope, whatever happens. */

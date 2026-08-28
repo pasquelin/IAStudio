@@ -23,6 +23,8 @@ export type MemoryRequest =
   | { id: number; op: 'forget'; memoryId: string }
   | { id: number; op: 'read'; memoryId: string }
   | { id: number; op: 'list'; query: MemoryQuery }
+  /** How many memories stand, without reading one — see `AsyncMemory.count`. */
+  | { id: number; op: 'count' }
   | { id: number; op: 'markUsed'; ids: readonly string[] }
   | { id: number; op: 'rebuild' }
   | { id: number; op: 'refresh' }
@@ -44,6 +46,7 @@ export type MemoryResults = {
   forget: boolean
   read: Memory | null
   list: readonly Memory[]
+  count: number
   markUsed: void
   rebuild: number
   refresh: number

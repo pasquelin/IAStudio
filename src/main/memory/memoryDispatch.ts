@@ -20,6 +20,8 @@ export async function dispatchMemoryRequest(
       return await store.read(request.memoryId)
     case 'list':
       return await store.list(request.query)
+    case 'count':
+      return await store.count()
     case 'markUsed':
       return await store.markUsed(request.ids)
     case 'rebuild':

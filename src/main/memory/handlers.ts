@@ -9,6 +9,7 @@ import {
   parseMemoryDraft,
   parseMemoryPatch,
   parseMemoryQuery,
+  parseMemoryRecallAsk,
   parseMemoryScope,
 } from './validation'
 
@@ -33,6 +34,14 @@ export function registerMemoryHandlers({ host, vectors }: MemoryHandlerDeps): vo
     const [, memory] = await memoryOf(scope)
     // No project open is a studio on its home screen, not a failure: an empty list is the answer.
     return (await memory?.list(parseMemoryQuery(query))) ?? []
+  })
+
+  /**
+   * 🛑 Through `vectors` and not the memory: this is where the question is EMBEDDED, and a recall
+   * that went straight to the store would rank on words alone while pretending otherwise.
+   */
+  handle(CHANNELS.memoryRecall, async (_event, scope, ask) => {
+    return await vectors.recall(parseMemoryScope(scope), parseMemoryRecallAsk(ask))
   })
 
   handle(CHANNELS.memoryRead, async (_event, scope, id) => {

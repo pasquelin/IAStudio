@@ -4,6 +4,7 @@ import { GENERATIVE_WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
 import { studioBriefing } from './instruction'
+import { roomFor } from './promptWindow'
 import { STATE_MAX } from './studioState'
 
 /**
@@ -247,55 +248,61 @@ describe('a door that refused the whole catalogue', () => {
   })
 })
 
-describe('what the assistant is reminded of', () => {
-  const RECALLED = '  Cameras follow the rail, never the target.'
+describe('what a briefing says about the memory', () => {
+  /**
+   * 🛑 A SIGNAL and not the memories. Injecting summaries paid an embedding and a scan of every
+   * vector on every turn, for a block four doors of five had no room to carry — measured on the
+   * running app: `room=7116 briefing=7094 recalledLen=49 inBriefing=false`.
+   */
+  it('names the actions that read it, and never what it holds', () => {
+    const text = studioBriefing({ memories: 12, room: NARROW }).text
 
-  it('carries it, after what the project is and before what it is doing', () => {
-    const text = studioBriefing({
-      context: 'A short film.',
-      recalled: RECALLED,
-      state: 'Studio now:\n  Space: image.',
-      room: NARROW,
-    }).text
-
-    expect(text).toContain(RECALLED)
-    expect(text.indexOf('A short film.')).toBeLessThan(text.indexOf(RECALLED))
-    expect(text.indexOf(RECALLED)).toBeLessThan(text.indexOf('Space: image.'))
+    expect(text).toContain('memory.recall answers it')
+    expect(text).not.toContain('learned about this project:')
   })
 
-  it('says nothing at all when nothing was learned', () => {
-    expect(studioBriefing({ room: NARROW }).text).not.toContain('learned about this project')
+  it('says nothing at all about a project that has learned nothing', () => {
+    const text = studioBriefing({ memories: 0, room: NARROW }).text
+
+    expect(text).not.toContain('memory.recall answers it')
+    expect(studioBriefing({ room: NARROW }).text).not.toContain('memory.recall answers it')
+  })
+
+  /** The whole registry holds `memory.recall`; a narrow door reaches it through `actions.find`. */
+  it('signals the memory on the wide door as well as on the narrow one', () => {
+    expect(studioBriefing({ memories: 3, room: WIDE }).text).toContain('memory.recall answers it')
   })
 
   /**
-   * 🛑 The order the whole budget rests on. The memory is the one block the studio can recompute
-   * at will; the state is what the person is looking at, and a model without it loses its bearings.
+   * 🛑 The budget the signal was WRITTEN against, and nothing else would notice it moving: the
+   * narrowest door has 108 characters left, one action block is three hundred, and a signal over
+   * that ceiling pushes the briefing past the window — which the runtime then truncates from the
+   * HEAD, where the preamble sits (ADR-18). Measured at 78; a longer sentence costs the studio a
+   * silently cut briefing on every 4 096-token model.
    */
-  it('gives ground before the state does, which comes through whole', () => {
-    const state = 'Studio now:\n  Space: image.\n  In front: "A picture" (image).'
-    const recalled = ['  one', '  two', '  three', '  four'].join('\n')
-    const full = studioBriefing({ recalled, state, targets: SATURATED, room: WIDE }).text
+  it('costs the narrowest door less than the room it has left', () => {
+    const room = roomFor(4096)
+    const without = studioBriefing({ room, memories: 0 }).text
+    const with_ = studioBriefing({ room, memories: 12 }).text
 
-    const squeezed = studioBriefing({
-      recalled,
-      state,
-      targets: SATURATED,
-      room: full.length - 20,
-    }).text
-
-    // The state INTACT is the claim. That the memory shrank is not: every later step recomposes
-    // with the shortened memory, so it shrinks whichever block gave ground first.
-    expect(squeezed).toContain('In front: "A picture"')
-    expect(squeezed).not.toContain('  four')
+    expect(with_.length - without.length).toBeLessThanOrEqual(108)
+    expect(with_.length).toBeLessThanOrEqual(room)
   })
 
-  /** Cut by whole lines, so half a decision never reads as a different decision. */
-  it('never cuts a summary in half', () => {
-    const recalled = ['  a decision about the rail', '  another about the palette'].join('\n')
-    const full = studioBriefing({ recalled, room: WIDE }).text
-    const squeezed = studioBriefing({ recalled, room: full.length - 10 }).text
+  /**
+   * 🛑 What the count buys: the signal is one line, so it cannot be what a saturated briefing
+   * gives ground on — where a block of summaries was cut first and thrown away whole.
+   */
+  it('keeps the signal in a briefing saturated enough to cut the state', () => {
+    const state = 'Studio now:\n  Space: image.\n  In front: "A picture" (image).'
+    const full = studioBriefing({ memories: 4, state, targets: SATURATED, room: WIDE }).text
+    const squeezed = studioBriefing({
+      memories: 4,
+      state,
+      targets: SATURATED,
+      room: full.length - 200,
+    }).text
 
-    expect(squeezed).toContain('  a decision about the rail')
-    expect(squeezed).not.toContain('another about')
+    expect(squeezed).toContain('memory.recall answers it')
   })
 })

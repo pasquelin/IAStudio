@@ -17,22 +17,49 @@ import { numberOf, textOf } from './actionInputs'
  * 🛑 Never the machine's own. Promoting something a project taught into what the person is like
  * is a gesture they make in Réglages ▸ Mémoire; a client that could do it would write one
  * project's habits into every other.
+ *
+ * 🛑 Straight to the bridge, where `contextHandlers` goes through its store — and that is why:
+ * the store holds a `scope` the panel moves, so borrowing it would write into the machine's
+ * memory whenever the window had been left on « Global ».
  */
 
-/** A memory answered outward: the summary and its id, never the whole row. */
-const found = (one: Memory): { id: string; type: MemoryType; summary: string } => ({
+/**
+ * A memory answered outward.
+ *
+ * 🛑 Enough to be USEFUL in one round trip, which is what the memory being a resource rather than
+ * a briefing block requires: the summary answers, `body` says whether `memory.read` is worth
+ * asking for, and `importance` is what ranks two answers that both fit. `[M]` 137 characters of
+ * JSON a memory against 89 for the id and summary alone — the whole row would be 340.
+ */
+const found = (one: Memory): MemoryFound => ({
   id: one.id,
   type: one.type,
   summary: one.summary,
+  importance: one.importance,
+  hasBody: one.body.length > 0,
 })
+
+type MemoryFound = {
+  id: string
+  type: MemoryType
+  summary: string
+  importance: number
+  /** Whether anything stands behind the summary. `false` makes `memory.read` a wasted call. */
+  hasBody: boolean
+}
 
 const isType = (value: string): value is MemoryType => MEMORY_TYPES.some(one => one === value)
 
+/**
+ * 🛑 `recall` and not `list`, and the difference is the whole point: `list` is a FILTER, so it
+ * demanded every word of « à quoi sert le script CameraRig ? » of a single memory. This is the
+ * one call that embeds the question and ranks by meaning as well as by words.
+ */
 async function recall(input: Record<string, unknown>): Promise<ActionOutcome> {
   const query = textOf(input, 'query')
   if (query === null) return refused('badInput')
 
-  const memories = await getBridge()?.memory.list('project', {
+  const memories = await getBridge()?.memory.recall('project', {
     text: query,
     limit: Math.min(numberOf(input, 'limit') ?? 10, MEMORY_PAGE),
   })

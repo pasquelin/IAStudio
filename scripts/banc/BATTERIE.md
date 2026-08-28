@@ -963,9 +963,13 @@ fait écrire par un **modèle** — un cloud de discussion ou un modèle de code
 
 ## 67. Retenir ce qu'on lui apprend d'un projet
 
-Ce que l'assistant a appris vit dans `<projet>/.ia-studio/memory.ndjson`, voyage avec le dossier,
-et revient dans son briefing sans qu'on ait à le redire. Les cinq actions sont en `reach: 'mcp'` :
-mesuré, le briefing court laisse 108 caractères, et le plus petit de ces blocs est plus long.
+Ce que l'assistant a appris vit dans `<projet>/.ia-studio/memory.ndjson` et voyage avec le
+dossier. 🛑 **Rien n'est injecté dans le briefing** : il ne porte qu'un signal d'une ligne, et
+seulement si la mémoire n'est pas vide — c'est le modèle qui va la chercher. Les cinq actions
+sont en `reach: 'mcp'` : mesuré, le briefing court laisse 108 caractères, et le plus petit de ces
+blocs est plus long, donc une porte étroite les atteint par `actions.find`.
+
+Ce que la section mesure au-delà de son décor : que le modèle DEMANDE ce qu'il ne sait pas.
 
 - [ ] « Retiens que les caméras suivent le rail, jamais la cible. »
 - [ ] « Qu'est-ce que tu sais des caméras de ce projet ? »

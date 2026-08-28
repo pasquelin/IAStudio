@@ -30,6 +30,11 @@ export type AsyncMemory = {
   forget: (id: string) => Promise<boolean>
   read: (id: string) => Promise<Memory | null>
   list: (query: MemoryQuery) => Promise<readonly Memory[]>
+  /**
+   * How many memories stand. One `count(*)`, no row read and no vector compared — what a briefing
+   * pays to say a memory exists.
+   */
+  count: () => Promise<number>
   markUsed: (ids: readonly string[]) => Promise<void>
   /** What answers a question, best first — gathered and ranked on the thread. */
   recall: (ask: RecallAsk) => Promise<readonly Memory[]>
@@ -100,6 +105,7 @@ export function createMemoryClient(port: MemoryPort): AsyncMemory {
     forget: memoryId => ask<'forget'>({ op: 'forget', memoryId }),
     read: memoryId => ask<'read'>({ op: 'read', memoryId }),
     list: query => ask<'list'>({ op: 'list', query }),
+    count: () => ask<'count'>({ op: 'count' }),
     markUsed: ids => ask<'markUsed'>({ op: 'markUsed', ids }),
     recall: wanted => ask<'recall'>({ op: 'recall', ask: wanted }),
     writeVectors: vectors => ask<'writeVectors'>({ op: 'writeVectors', vectors }),

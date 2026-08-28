@@ -51,6 +51,7 @@ type ChannelMethod = {
   [CHANNELS.projectFolderRoles]: StudioBridge['project']['folderRoles']
   [CHANNELS.projectFolderFor]: StudioBridge['project']['folderFor']
   [CHANNELS.memoryList]: StudioBridge['memory']['list']
+  [CHANNELS.memoryRecall]: StudioBridge['memory']['recall']
   [CHANNELS.memoryRead]: StudioBridge['memory']['read']
   [CHANNELS.memoryRemember]: StudioBridge['memory']['remember']
   [CHANNELS.memoryAmend]: StudioBridge['memory']['amend']

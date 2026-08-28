@@ -57,6 +57,7 @@ const bridge: StudioBridge = {
   },
   memory: {
     list: (scope, query) => ipcRenderer.invoke(CHANNELS.memoryList, scope, query),
+    recall: (scope, ask) => ipcRenderer.invoke(CHANNELS.memoryRecall, scope, ask),
     read: (scope, id) => ipcRenderer.invoke(CHANNELS.memoryRead, scope, id),
     remember: (scope, draft) => ipcRenderer.invoke(CHANNELS.memoryRemember, scope, draft),
     amend: (scope, id, patch) => ipcRenderer.invoke(CHANNELS.memoryAmend, scope, id, patch),

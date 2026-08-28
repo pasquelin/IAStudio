@@ -183,7 +183,6 @@ import { openCatalogThread } from './project/catalogThread'
 import { createEmbedder, EMBEDDER_IDLE_MS } from './memory/embedder'
 import { embedModelId, embedWeightsOf, type EmbedChoiceDeps } from './memory/embedChoice'
 import { openEmbedProcess } from './memory/embedProcess'
-import { MEMORY_ROOM } from '@shared/domain/assistantMemory'
 import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
 import { createMemoryVectors, type MemoryVectors } from './memory/memoryVectors'
 import { openMemoryThread } from './memory/memoryThread'
@@ -2026,9 +2025,9 @@ export function createServices(settings: SettingsStore): Services {
       const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
       return outcome.ok ? describeStudio(outcome.data) : ''
     },
-    // The open document's own anchors are the window's to name, and it does not answer this
-    // door: the memory is anchored on the project alone until a lot gives the two a route.
-    recalledOf: utterance => memoryVectors.recalled(utterance, [], MEMORY_ROOM),
+    // A count and never a recall: the briefing says a memory EXISTS, the model asks it if it
+    // wants to. `held` opens nothing when no project is open.
+    memoriesOf: () => memoryVectors.held('project'),
   })
 
   const checkout = checkoutOf(app.getAppPath())

@@ -9,6 +9,7 @@ import type {
   MemoryDraft,
   MemoryPatch,
   MemoryQuery,
+  MemoryRecallAsk,
   MemoryIndexing,
   MemoryScope,
 } from './domain/assistantMemory'
@@ -152,6 +153,7 @@ export type Channels = {
   projectReadContext: 'project:read-context'
   projectWriteContext: 'project:write-context'
   memoryList: 'memory:list'
+  memoryRecall: 'memory:recall'
   memoryRead: 'memory:read'
   memoryRemember: 'memory:remember'
   memoryAmend: 'memory:amend'
@@ -397,6 +399,7 @@ export const CHANNELS: Channels = {
   projectReadContext: 'project:read-context',
   projectWriteContext: 'project:write-context',
   memoryList: 'memory:list',
+  memoryRecall: 'memory:recall',
   memoryRead: 'memory:read',
   memoryRemember: 'memory:remember',
   memoryAmend: 'memory:amend',
@@ -1100,6 +1103,14 @@ export type StudioBridge = {
    */
   memory: {
     list: (scope: MemoryScope, query: MemoryQuery) => Promise<readonly Memory[]>
+    /**
+     * What ANSWERS a question, best first — never the same call as `list`, which filters.
+     *
+     * 🛑 The one door the question is embedded behind: the model lives in the main process and a
+     * window that scored its own would be a window holding ten thousand vectors. Empty for a
+     * studio with no project open, and never a refusal.
+     */
+    recall: (scope: MemoryScope, ask: MemoryRecallAsk) => Promise<readonly Memory[]>
     read: (scope: MemoryScope, id: string) => Promise<Memory | null>
     remember: (scope: MemoryScope, draft: MemoryDraft) => Promise<Memory | null>
     /** Nothing when no such memory is held, which a window tells from a refusal by asking again. */

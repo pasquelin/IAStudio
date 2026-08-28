@@ -51,6 +51,23 @@ export function createBenchMemory(): BenchMemory {
     },
     channels: {
       list: (scope, query) => project(scope, () => store.list(query), []),
+      /**
+       * 🛑 No question EMBEDDED, and that is the port rather than the rule: the studio's embedder
+       * is a model this bench has no reason to load, so a recall here ranks on words, anchors,
+       * importance and recency — every voice of `recallScore` but the similar one.
+       */
+      recall: (scope, ask) =>
+        project(
+          scope,
+          () =>
+            store.recall({
+              text: ask.text,
+              refs: ask.refs ?? [],
+              now: new Date(2026, 7, 28, 12).toISOString(),
+              limit: ask.limit ?? 10,
+            }),
+          [],
+        ),
       read: (scope, id) => project(scope, () => store.read(id), null),
       remember: (scope, draft) => project(scope, () => store.remember(draft), null),
       amend: (scope, id, patch) => project(scope, () => store.amend(id, patch), null),

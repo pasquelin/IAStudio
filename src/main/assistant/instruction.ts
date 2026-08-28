@@ -211,6 +211,20 @@ const WIDE_RULES = [
   '    refused again on the same arguments: change them, or do something else.',
 ]
 
+/**
+ * 🛑 The whole of what a briefing says about the memory, and it says it only when there is
+ * something to find — a project that has learned nothing pays not one character.
+ *
+ * A SIGNAL rather than the memories themselves: pushing summaries cost an embedding and a scan of
+ * every vector on every turn, for a block the room threw away whole on four doors of five.
+ *
+ * 🛑 78 characters, and that is a budget rather than a style: `memory.recall` is `reach: 'mcp'`
+ * because the short share has 108 characters left against one action block of three hundred, so
+ * this line has to fit the same 108. It NAMES the action rather than describing it — that name
+ * is what a narrow door then hands to `FIND_RULE`.
+ */
+const MEMORY_RULE = '  - This project has a memory: memory.recall answers it. Ask before guessing.'
+
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */
 const FIND_RULE =
   `  - Nothing in the catalogue fits? Answer with that ONE call and nothing else: ` +
@@ -259,13 +273,14 @@ export type BriefingParts = {
   /** What the studio is right now, already in sentences — see `describeStudio`. */
   state?: string
   /**
-   * What the assistant learned about this project, one summary a line — see `assistantMemory.ts`.
+   * How many memories this project holds. What the briefing pays instead of the memories.
    *
-   * 🛑 The FIRST block to give ground when the room runs out, before the state: it is the only
-   * one the studio can recompute at will, and a memory missing costs a reminder where a state
-   * missing costs the model its bearings.
+   * 🛑 A COUNT, never a recall — see `MEMORY_RULE`. Injecting summaries paid an embedding and a
+   * vector scan on every single turn for a block that four doors of five threw away whole: the
+   * short briefing runs 7 008 characters against a room of 7 116, and the memory was the first
+   * thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
    */
-  recalled?: string
+  memories?: number
   /** What the open document can be aimed at, narrowed by the window — see `target.ts`. */
   targets?: readonly Target[]
   /**
@@ -306,12 +321,12 @@ export type Briefing = {
 }
 
 /**
- * 🛑 What GIVES GROUND when the room runs out, in order: the memory, then the state, then the
- * targets, then the project context. Never the sentence, which `instructionFor` guarantees, and
- * never the catalogue, without which nothing can be named.
+ * 🛑 What GIVES GROUND when the room runs out, in order: the state, then the targets, then the
+ * project context. Never the sentence, which `instructionFor` guarantees, and never the
+ * catalogue, without which nothing can be named.
  *
- * The memory first because it is the one part the studio can recompute at will, and the state
- * before the targets because `instruction.test.ts` saturates both at once.
+ * The memory is not on this list any more, and that is the point: it is one line naming a way to
+ * ask, not a block of summaries to be cut down.
  */
 function briefingText(
   parts: BriefingParts,
@@ -324,18 +339,9 @@ function briefingText(
   const full = composed(parts, catalogue, rules, found, state, targets)
   if (full.length <= parts.room) return full
 
-  // The memory gives ground first, by whole memories: half a decision reads as a different one.
-  const recalled = linesWithin(
-    parts.recalled ?? '',
-    Math.max(0, (parts.recalled ?? '').length - (full.length - parts.room)),
-  )
-  const lighter = composed({ ...parts, recalled }, catalogue, rules, found, state, targets)
-  if (lighter.length <= parts.room) return lighter
-
-  // Then the state — it is prose, and its lines are ranked from the most useful.
-  const shortened = { ...parts, recalled }
-  const short = linesWithin(state, Math.max(0, state.length - (lighter.length - parts.room)))
-  const trimmed = composed(shortened, catalogue, rules, found, short, targets)
+  // The state gives ground first — it is prose, and its lines are ranked from the most useful.
+  const short = linesWithin(state, Math.max(0, state.length - (full.length - parts.room)))
+  const trimmed = composed(parts, catalogue, rules, found, short, targets)
   if (trimmed.length <= parts.room) return trimmed
 
   /**
@@ -345,7 +351,7 @@ function briefingText(
    */
   const over = trimmed.length - parts.room
   const aimed = targetsWithin(targets, over)
-  const cut = composed(shortened, catalogue, rules, found, short, aimed)
+  const cut = composed(parts, catalogue, rules, found, short, aimed)
   if (cut.length <= parts.room) return cut
 
   /**
@@ -357,7 +363,7 @@ function briefingText(
    */
   const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
   return composed(
-    { ...shortened, context: linesWithin(parts.context ?? '', room) },
+    { ...parts, context: linesWithin(parts.context ?? '', room) },
     catalogue,
     rules,
     found,
@@ -393,11 +399,6 @@ function composed(
   // Before the catalogue rather than after it: what the project IS frames every action the model
   // might pick, where a note under the list reads as a footnote to the last one.
   const about = parts.context ? ['Project context:', parts.context, ''] : []
-  // After what the project IS and before what it is doing: what was learned frames an action the
-  // same way the project does, where the state is what is under the person's eyes right now.
-  const learned = parts.recalled
-    ? ['What you have learned about this project:', parts.recalled, '']
-    : []
   const now = state ? [state, ''] : []
   // After the catalogue rather than before it: `target.select` is what these ids are for, and a
   // list read before the action that consumes them reads as facts about nothing.
@@ -410,7 +411,6 @@ function composed(
     roleWith(rules),
     '',
     ...about,
-    ...learned,
     ...now,
     ...idle,
     'Catalogue:',
@@ -423,6 +423,10 @@ function composed(
   ].join('\n')
 }
 
+/** The signal, or nothing at all — an empty memory is a rule the model would read for no reason. */
+const memoryRuleOf = (parts: BriefingParts): readonly string[] =>
+  (parts.memories ?? 0) > 0 ? [MEMORY_RULE] : []
+
 /**
  * Everything but the person's sentence, sized to the room the brain has: the whole registry when
  * it fits, and the spoken vocabulary plus the way to ask for the rest when it does not. Nothing
@@ -434,7 +438,12 @@ export function studioBriefing(parts: BriefingParts): Briefing {
   // and every 4 096-token model would otherwise join 69 000 characters on every sentence typed.
   if (parts.room < whole.text.length) return narrowBriefing(parts)
 
-  const wide = briefingText(parts, whole.text, [...RULES, ...WIDE_RULES], '')
+  const wide = briefingText(
+    parts,
+    whole.text,
+    [...RULES, ...memoryRuleOf(parts), ...WIDE_RULES],
+    '',
+  )
   if (wide.length > parts.room) return narrowBriefing(parts)
 
   return { text: wide, allowed: whole.allowed, expand: null, narrow: () => narrowBriefing(parts) }
@@ -445,7 +454,7 @@ function narrowBriefing(declared: BriefingParts): Briefing {
   const short = shortShare()
 
   return {
-    text: briefingText(parts, short.text, [...RULES, FIND_RULE], ''),
+    text: briefingText(parts, short.text, [...RULES, ...memoryRuleOf(parts), FIND_RULE], ''),
     allowed: short.allowed,
     // Offered once, and only from here: an expansion of an expansion is a conversation with
     // itself, paid for by the person waiting — see `expandedWith`.
@@ -470,7 +479,7 @@ export async function briefingFor(
     continuing: request.continuing === true,
     notReady: await notReady?.(),
     context: request.context,
-    recalled: request.recalled,
+    memories: request.memories,
     state: request.state,
     targets: request.targets,
     room,
@@ -515,7 +524,8 @@ function expandedWith(parts: BriefingParts, query: string): Briefing {
   const hits = findActions(query).filter(action => !short.allowed.has(action.name))
   // Composed once: measuring by joining a second copy of the same 6 500 characters is the very
   // waste this file's own history records having removed.
-  const fixed = briefingText(parts, short.text, RULES, '').length + footerRoom(query, hits.length)
+  const rules = [...RULES, ...memoryRuleOf(parts)]
+  const fixed = briefingText(parts, short.text, rules, '').length + footerRoom(query, hits.length)
   let left = parts.room - fixed
 
   const kept: AssistantAction[] = []
@@ -529,7 +539,7 @@ function expandedWith(parts: BriefingParts, query: string): Briefing {
   }
 
   return {
-    text: briefingText(parts, short.text, RULES, foundBlock(query, hits.length, kept)),
+    text: briefingText(parts, short.text, rules, foundBlock(query, hits.length, kept)),
     allowed: new Set([...short.allowed, ...kept.map(one => one.name)]),
     expand: null,
     // An expansion is longer than the briefing that just went through, so it is the read most

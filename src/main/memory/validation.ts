@@ -15,6 +15,7 @@ import {
   type MemoryDraft,
   type MemoryPatch,
   type MemoryQuery,
+  type MemoryRecallAsk,
   type MemoryScope,
 } from '@shared/domain/assistantMemory'
 
@@ -104,6 +105,17 @@ export function parseMemoryPatch(value: unknown): MemoryPatch {
 
 export function parseMemoryQuery(value: unknown): MemoryQuery {
   return memoryQuery.parse(value)
+}
+
+/** A question, bounded like a query: what ranks the answers costs a comparison per memory. */
+const memoryRecallAsk = z.object({
+  text: z.string().min(1),
+  refs: z.array(memoryRef).optional(),
+  limit: z.number().int().min(1).max(MEMORY_PAGE).optional(),
+})
+
+export function parseMemoryRecallAsk(value: unknown): MemoryRecallAsk {
+  return memoryRecallAsk.parse(value)
 }
 
 const memoryScope = z.enum(MEMORY_SCOPES)

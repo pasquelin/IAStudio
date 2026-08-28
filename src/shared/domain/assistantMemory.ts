@@ -203,10 +203,15 @@ export type MemoryIndexing = {
 }
 
 /**
- * How much of a briefing the memory may take, in characters.
+ * A question put to the memory, as opposed to a filter laid over it — see `MemoryQuery`.
  *
- * 🛑 A hard ceiling and the FIRST block to give ground — `roomFor(4096)` is 7 116 against a short
- * briefing measured at 8 232, so the room is already negative before a memory is added. Ten
- * summaries at `MEMORY_SUMMARY_MAX` would be 2 000; this holds about six.
+ * 🛑 The two are not one type because they narrow in opposite directions: every word of a query
+ * must match, where a question is answered by whatever comes closest to any of them. The window
+ * hands this in; what embeds it and ranks the answers lives in the main process.
  */
-export const MEMORY_ROOM = 1200
+export type MemoryRecallAsk = {
+  text: string
+  /** What is on screen — the open scene, the open script. Ranked first when it matches. */
+  refs?: readonly MemoryRef[]
+  limit?: number
+}

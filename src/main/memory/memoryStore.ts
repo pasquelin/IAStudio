@@ -36,6 +36,14 @@ export type MemoryStore = {
   forget: (id: string) => Promise<boolean>
   read: (id: string) => Promise<Memory | null>
   list: (query: MemoryQuery) => Promise<readonly Memory[]>
+  /**
+   * How many memories stand, without reading one.
+   *
+   * 🛑 One `count(*)` against a recall's embedding and vector scan — `[M]` 11 ms and 3 ms for 208
+   * memories. It is what the briefing pays to say a memory exists at all; the recall itself is
+   * paid only by a model that asks for it.
+   */
+  count: () => Promise<number>
   markUsed: (ids: readonly string[]) => Promise<void>
   /**
    * The embeddings, which live in the index alone and never in the file.
@@ -310,6 +318,8 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
     read: async id => index.read(id),
 
     list: async query => index.list(query),
+
+    count: async () => index.count(),
 
     markUsed: async ids => index.markUsed(ids, now()),
 

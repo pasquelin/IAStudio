@@ -8,6 +8,7 @@ const fakeMemory = (): AsyncMemory => ({
   forget: vi.fn(),
   read: vi.fn(),
   list: vi.fn(),
+  count: vi.fn(),
   markUsed: vi.fn(),
   recall: vi.fn(),
   writeVectors: vi.fn(),

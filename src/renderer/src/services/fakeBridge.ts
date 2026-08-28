@@ -54,6 +54,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     // a memory nobody stubbed must not have a window drawing rows nothing wrote.
     memory: {
       list: () => Promise.resolve([]),
+      recall: () => Promise.resolve([]),
       read: () => Promise.resolve(null),
       remember: () => Promise.resolve(null),
       amend: () => Promise.resolve(null),

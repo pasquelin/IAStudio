@@ -32,12 +32,14 @@ export type RoutedBrainDeps = {
    */
   stateOf: () => Promise<string>
   /**
-   * What the assistant learned about this project that bears on the sentence just typed.
+   * How many memories the open project holds.
    *
-   * Here for the reason the two above are: a memory a renderer names is one it could forge. Empty
-   * where nothing was learned, and never a refusal — a turn happens with or without it.
+   * 🛑 A COUNT, and it replaces a recall that ran on EVERY turn: `[M]` embedding the sentence
+   * costs 11 ms and comparing 208 vectors 3 ms, for a block four doors of five had no room to
+   * carry. One `count(*)` says the same thing the briefing needs — that there is something to
+   * ask — and the model pays for a recall only when it decides to.
    */
-  recalledOf: (utterance: string) => Promise<string>
+  memoriesOf: () => Promise<number>
 }
 
 /** The brain and, when there is none, the reason — which is the only thing left to say. */
@@ -65,17 +67,17 @@ export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
     think: async (request, signal) => {
       // The four together: WHICH brain answers probes the runtimes, and none of the other three
       // depends on the answer. Serially, the person waited for their sum.
-      const [provider, context, state, recalled] = await Promise.all([
+      const [provider, context, state, memories] = await Promise.all([
         deps.providerOf(),
         deps.contextOf(),
         deps.stateOf(),
-        deps.recalledOf(request.utterance),
+        deps.memoriesOf(),
       ])
 
       const [brain, why] = brainFor(deps, provider)
       if (brain === null) throw new Error(`nothing serves the assistant: ${why}`)
 
-      return await brain.think({ ...request, context, state, recalled }, signal)
+      return await brain.think({ ...request, context, state, memories }, signal)
     },
   }
 }

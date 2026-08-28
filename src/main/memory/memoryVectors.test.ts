@@ -36,6 +36,7 @@ function stand({
     markUsed: async (ids: readonly string[]) => {
       used.push([...ids])
     },
+    count: async () => found.length,
   } as unknown as AsyncMemory
 
   const embedder: Embedder = {
@@ -61,47 +62,61 @@ function stand({
   }
 }
 
-describe('what the assistant is reminded of', () => {
-  it('answers the summaries, one a line, best first', async () => {
+describe('what answers a question put to the memory', () => {
+  it('answers the memories, best first', async () => {
     const stood = stand({ found: [memory('m_a', 'the rail'), memory('m_b', 'the palette')] })
 
-    await expect(stood.vectors.recalled('why the rail?', [], 1000)).resolves.toBe(
-      '  the rail\n  the palette',
-    )
+    const found = await stood.vectors.recall('project', { text: 'why the rail?' })
+
+    expect(found.map(one => one.summary)).toEqual(['the rail', 'the palette'])
   })
 
   /** What was served is what later ages — see `RECALL_WEIGHTS`. */
   it('stamps what it served', async () => {
     const stood = stand({ found: [memory('m_a', 'the rail')] })
-    await stood.vectors.recalled('why the rail?', [], 1000)
+    await stood.vectors.recall('project', { text: 'why the rail?' })
 
     await vi.waitFor(() => expect(stood.used).toEqual([['m_a']]))
   })
 
-  /** 🛑 The budget is a hard ceiling, and it cuts by whole memories. */
-  it('keeps only what fits the room, and nothing at all for no room', async () => {
-    const stood = stand({ found: [memory('m_a', 'aaaa'), memory('m_b', 'bbbb')] })
+  /**
+   * 🛑 The question is EMBEDDED here and nowhere else: a recall that skipped this would rank on
+   * words alone, which is the filter this call exists not to be.
+   */
+  it('embeds the question against the model whose vectors it compares', async () => {
+    const stood = stand({ found: [memory('m_a', 'the rail')] })
+    await stood.vectors.recall('project', { text: 'why the rail?' })
 
-    await expect(stood.vectors.recalled('x', [], 8)).resolves.toBe('  aaaa')
-    await expect(stood.vectors.recalled('x', [], 0)).resolves.toBe('')
+    expect(stood.asked[0]).toMatchObject({ model: 'e' })
+    expect(stood.asked[0]).toHaveProperty('question')
   })
 
   /** A studio with no embedding model pays nothing for the attempt and searches on words. */
   it('asks no question of a model that is not there', async () => {
     const stood = stand({ found: [], model: null })
-    await stood.vectors.recalled('why the rail?', [], 1000)
+    await stood.vectors.recall('project', { text: 'why the rail?' })
 
     expect(stood.asked[0]).not.toHaveProperty('question')
   })
 
   /**
-   * 🛑 `brainRouted` awaits this in the same `Promise.all` as the provider: a rejection here
-   * would kill the TURN, and the window would mark it lost — over a reminder.
+   * 🛑 What the briefing pays instead of a recall: no embedding, no vector compared, no row read.
+   */
+  it('counts what a scope holds without asking a question of it', async () => {
+    const stood = stand({ found: [memory('m_a', 'the rail'), memory('m_b', 'the palette')] })
+
+    await expect(stood.vectors.held('project')).resolves.toBe(2)
+    expect(stood.asked).toEqual([])
+  })
+
+  /**
+   * 🛑 A dead embedder must cost the answer and never the turn that asked for it: a client gets
+   * an empty recall and a line in the journal.
    */
   it('answers nothing rather than failing when the memory or the embedder is gone', async () => {
     const stood = stand({ failing: true })
 
-    await expect(stood.vectors.recalled('why the rail?', [], 1000)).resolves.toBe('')
+    await expect(stood.vectors.recall('project', { text: 'why?' })).resolves.toEqual([])
     expect(stood.troubles).toHaveLength(1)
   })
 })
