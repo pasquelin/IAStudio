@@ -99,8 +99,16 @@ export function createMemoryVectors({
     },
 
     held: async scope => {
-      const memory = await host.of(scope)
-      return memory === null ? 0 : await memory.count()
+      try {
+        const memory = await host.of(scope)
+        return memory === null ? 0 : await memory.count()
+      } catch (error) {
+        // 🛑 Same contract as `recall`, and it matters more here: `brainRouted` awaits this in
+        // the same `Promise.all` as the provider, so a dead memory thread would kill the TURN —
+        // over a count the answer does not need.
+        onTrouble(messageOf(error))
+        return 0
+      }
     },
 
     close: async () => {

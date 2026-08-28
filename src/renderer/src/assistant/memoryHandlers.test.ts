@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Memory } from '@shared/domain/assistantMemory'
+import { MEMORY_BODY_MAX, MEMORY_SUMMARY_MAX, type Memory } from '@shared/domain/assistantMemory'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { MEMORY_HANDLERS } from './memoryHandlers'
 
@@ -75,5 +75,22 @@ describe('what a client reaches the memory by', () => {
 
   it('refuses a recall with no question in it', async () => {
     expect(await run('memory.recall', {})).toEqual({ ok: false, refusal: 'badInput' })
+  })
+
+  /**
+   * 🛑 `fits` does not enforce `max` on a text field, so an over-long value reached the main
+   * process, `parseMemoryDraft` threw, and the client got a catch-all refusal naming no field —
+   * which it then retried with the same value.
+   */
+  it('refuses a summary or a body longer than the store takes, by name', async () => {
+    const remember = vi.fn(() => Promise.resolve(memory()))
+    installFakeBridge({ memory: { remember } })
+
+    const tooLong = { type: 'decision', summary: 'x'.repeat(MEMORY_SUMMARY_MAX + 1) }
+    expect(await run('memory.write', tooLong)).toEqual({ ok: false, refusal: 'badInput' })
+
+    const bigBody = { type: 'decision', summary: 'x', body: 'y'.repeat(MEMORY_BODY_MAX + 1) }
+    expect(await run('memory.write', bigBody)).toEqual({ ok: false, refusal: 'badInput' })
+    expect(remember).not.toHaveBeenCalled()
   })
 })

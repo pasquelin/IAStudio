@@ -1,6 +1,8 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
+  MEMORY_BODY_MAX,
   MEMORY_PAGE,
+  MEMORY_SUMMARY_MAX,
   MEMORY_TYPES,
   type Memory,
   type MemoryDraft,
@@ -81,9 +83,14 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   const type = textOf(input, 'type')
   const summary = textOf(input, 'summary')
   if (type === null || !isType(type) || summary === null) return refused('badInput')
+  // 🛑 Bounded HERE: `fits` does not enforce `max` on a text field, so an over-long value reached
+  // the main process, `parseMemoryDraft` threw, and the client got a catch-all refusal naming no
+  // field — which it then retried with the same value.
+  if (summary.length > MEMORY_SUMMARY_MAX) return refused('badInput')
 
   const file = textOf(input, 'file')
   const body = textOf(input, 'body')
+  if (body !== null && body.length > MEMORY_BODY_MAX) return refused('badInput')
   const draft: MemoryDraft = {
     type,
     summary,

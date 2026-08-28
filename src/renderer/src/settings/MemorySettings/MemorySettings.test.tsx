@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Memory, MemoryPatch, MemoryQuery, MemoryScope } from '@shared/domain/assistantMemory'
 import { useAssistantMemory } from '@/stores/assistantMemory'
+import { useProject } from '@/stores/project'
 import { MemorySettings } from './MemorySettings'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
@@ -93,6 +94,43 @@ describe('what the assistant knows', () => {
     await userEvent.type(screen.getByRole('searchbox'), 'rail')
 
     await waitFor(() => expect(asked.at(-1)?.query.text).toBe('rail'))
+  })
+})
+
+describe('what an empty listing says', () => {
+  /**
+   * 🛑 The one thing `loaded` exists to prevent: a panel drawn before the first answer claiming
+   * the assistant has learned nothing. It was the branch the flag guards that said it.
+   */
+  it('says nothing at all while the first answer is on its way', () => {
+    standing([])
+    // A listing that never lands: what the panel shows between mounting and the first answer.
+    useAssistantMemory.setState({ loaded: false, look: async () => {} })
+    render(<MemorySettings />)
+
+    expect(screen.queryByText(/rien retenu/)).toBeNull()
+    expect(screen.queryByText(/Ouvrez un projet/)).toBeNull()
+  })
+
+  /**
+   * 🛑 « Open a project » over an OPEN project. The memory answers an empty list for both cases,
+   * so only the project store tells « nothing learned » from « nothing to learn about ».
+   */
+  it('does not ask for a project when one is open and has learned nothing', async () => {
+    standing([])
+    useProject.setState({ project: { root: '/p', name: 'p' } as never })
+    render(<MemorySettings />)
+
+    expect(await screen.findByText(/rien retenu/)).toBeVisible()
+    expect(screen.queryByText(/Ouvrez un projet/)).toBeNull()
+  })
+
+  it('asks for a project when none is open', async () => {
+    standing([])
+    useProject.setState({ project: null })
+    render(<MemorySettings />)
+
+    expect(await screen.findByText(/Ouvrez un projet/)).toBeVisible()
   })
 })
 

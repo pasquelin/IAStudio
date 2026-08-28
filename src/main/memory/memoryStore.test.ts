@@ -441,6 +441,31 @@ describe('what compaction refuses to touch', () => {
     expect(await readFile(file, 'utf8')).toContain('m_future')
   })
 
+  /**
+   * 🛑 The session that compacts is rarely the one that read. `trouble` is set by `readFileInto`
+   * alone, and `refresh` short-circuits on an unmoved stamp — so a second launch over the very
+   * same file saw `trouble === null` and rewrote it, reporting the erased lines as lines saved.
+   */
+  it('refuses a file a PREVIOUS session found unreadable, not merely this one', async () => {
+    await store.remember(draft({ summary: 'readable' }))
+    await appendFile(file, `${JSON.stringify({ v: MEMORY_VERSION + 1, id: 'm_future' })}\n`)
+    await store.rebuild()
+
+    // A second launch over the SAME index — which is a file on disk and survives — so the stamp
+    // has not moved and `refresh` answers from it without reading a line.
+    store = createMemoryStore({
+      file,
+      index: createMemoryIndex(database),
+      now: () => '2026-08-28T10:00:00.000Z',
+      newId: () => 'm_next',
+    })
+    expect(await store.refresh()).toBe(1)
+    expect(store.trouble()).toBeNull()
+
+    await expect(store.compact()).resolves.toBe(0)
+    expect(await readFile(file, 'utf8')).toContain('m_future')
+  })
+
   it('refuses a file that would not read at all, rather than emptying it', async () => {
     await store.remember(draft({ summary: 'held' }))
     await appendFile(file, 'this is not a line of json\n')

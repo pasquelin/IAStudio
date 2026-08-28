@@ -15,6 +15,7 @@ import { WindowSearch } from '@/design/WindowSearch'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useAssistantMemory } from '@/stores/assistantMemory'
+import { useProject } from '@/stores/project'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
 import { MemoryRelations } from './MemoryRelations'
 import { MemoryRowActions } from './MemoryRowActions'
@@ -37,6 +38,9 @@ export function MemorySettings() {
   const memories = useAssistantMemory(state => state.memories)
   const loaded = useAssistantMemory(state => state.loaded)
   const look = useAssistantMemory(state => state.look)
+  // 🛑 Which of « nothing learned » and « no project open » is true is not the memory's to know:
+  // its `project` scope answers an empty list for both, and the two ask for opposite things.
+  const opened = useProject(state => state.project !== null)
   // Held HERE and handed to `look`, rather than read back off the store: the store's own scope
   // moves when the listing lands, so a chip reading it would light up a beat after the click.
   const [scope, setScope] = useState<MemoryScope>('project')
@@ -114,7 +118,12 @@ export function MemorySettings() {
           empty={
             <EmptyState
               icon={mdiBrain}
-              message={emptyMessage(t, { loaded, scope, searching: text.trim().length > 0 })}
+              message={emptyMessage(t, {
+                loaded,
+                scope,
+                opened,
+                searching: text.trim().length > 0,
+              })}
             />
           }
         />
@@ -125,12 +134,22 @@ export function MemorySettings() {
   )
 }
 
-/** Empty, unmatched, or a studio with no project open — three different things to say. */
+/**
+ * Empty, unmatched, or a studio with no project open — three different things to say, and a
+ * fourth that says nothing at all.
+ *
+ * 🛑 Silent while the first answer is on its way: `loaded` exists precisely so a panel drawn
+ * before it does not claim « nothing learned », and the branch that did was the one it guards.
+ * And « open a project » is only true when none IS open — the memory answers an empty list for
+ * both cases, so the project store is what tells them apart.
+ */
 function emptyMessage(
   t: (key: string) => string,
-  where: { loaded: boolean; scope: MemoryScope; searching: boolean },
+  where: { loaded: boolean; scope: MemoryScope; opened: boolean; searching: boolean },
 ): string {
-  if (!where.loaded) return t('settings.memoryEmpty')
+  if (!where.loaded) return ''
   if (where.searching) return t('settings.memoryUnmatched')
-  return where.scope === 'project' ? t('settings.memoryNoProject') : t('settings.memoryEmpty')
+  if (where.scope === 'project' && !where.opened) return t('settings.memoryNoProject')
+
+  return t('settings.memoryEmpty')
 }

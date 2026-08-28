@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
 import { MEMORY_WORTH } from '@shared/domain/memoryWorth'
-import type { MemoryDraft } from '@shared/domain/assistantMemory'
+import { MEMORY_SUMMARY_MAX, type MemoryDraft } from '@shared/domain/assistantMemory'
 import { orElse } from '@shared/promises'
 import { memoryBridge } from '@/services/bridge'
 
@@ -33,23 +33,45 @@ export async function rememberOutcome(
   const drawn = rule.draft(input, outcome.data)
   if (drawn === null) return false
 
+  /**
+   * Resolved HERE, in the person's language: the summary is what Réglages ▸ Mémoire shows them.
+   *
+   * 🛑 `escapeValue: false` HERE and not left to the window's own setup: this sentence goes into
+   * a file a project carries, never into HTML, and escaping turned `Scripts/Cam.ts` into
+   * `Scripts&#x2F;Cam.ts` — a path no anchor would ever match again.
+   */
+  const summary = withinSummary(
+    i18next.t(drawn.summaryKey, { ...drawn.values, interpolation: { escapeValue: false } }),
+  )
+  // A sentence the studio cannot write is not a memory: without one, `parseMemoryDraft` would
+  // throw in the main process and `orElse` would swallow it without a word.
+  if (summary === null) return false
+
   const draft: MemoryDraft = {
     type: drawn.type,
-    // Resolved HERE, in the person's language: the summary is what Réglages ▸ Mémoire shows them,
-    // so it is a word of the interface and cannot be a sentence written in a table.
-    /**
-     * 🛑 `escapeValue: false` HERE and not left to the window's own setup: this sentence goes
-     * into a file a project carries, never into HTML, and escaping turned `Scripts/Cam.ts` into
-     * `Scripts&#x2F;Cam.ts` — a path no anchor would ever match again.
-     */
-    summary: i18next.t(drawn.summaryKey, {
-      ...drawn.values,
-      interpolation: { escapeValue: false },
-    }),
+    summary,
     importance: drawn.importance,
     source: { kind: 'action', ref: name },
     ...(drawn.refs ? { refs: drawn.refs } : {}),
   }
 
   return (await orElse(memoryBridge()?.remember('project', draft), null)) !== null
+}
+
+/**
+ * 🛑 Cut rather than refused: a rule interpolates a value the action does not bound — `git.commit`
+ * takes a `longText` message, and this repository's own convention gives commits a body. Over the
+ * cap `parseMemoryDraft` throws in the main process, `orElse` swallows it, and the memory is never
+ * written with nothing said.
+ *
+ * `unknown` in, and nothing for what is not a sentence: `t` answers no string where i18next was
+ * never initialised — which is every bench run, and reading `.length` off it threw OUT of the
+ * `void` this is called on.
+ */
+const withinSummary = (summary: unknown): string | null => {
+  if (typeof summary !== 'string' || summary.trim() === '') return null
+
+  return summary.length <= MEMORY_SUMMARY_MAX
+    ? summary
+    : `${summary.slice(0, MEMORY_SUMMARY_MAX - 1)}…`
 }

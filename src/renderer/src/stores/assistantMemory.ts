@@ -92,7 +92,9 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   }),
 
   look: async (scope, query) => {
-    set({ scope, query })
+    // The bar belongs to the scope that was showing: a run under way in the other one is not
+    // this panel's business, and `onIndexed` filters on the scope anyway.
+    set({ scope, query, ...(scope === get().scope ? {} : { indexing: null }) })
     await get().reload()
   },
 
@@ -188,5 +190,9 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
 
   stopIndex: async () => {
     await orElse(memoryBridge()?.stopIndex(get().scope), undefined)
+    // 🛑 Cleared HERE: an aborted run leaves `sweep`'s loop without a last `onProgress`, so no
+    // event ever says it ended — and the panel offered Stop for the rest of the session, with
+    // Embed unreachable behind it.
+    set({ indexing: null })
   },
 }))

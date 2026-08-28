@@ -107,6 +107,31 @@ describe('what the window holds', () => {
   })
 })
 
+describe('the bar that says something is happening', () => {
+  /**
+   * 🛑 An aborted run leaves `sweep`'s loop without a last `onProgress`, so nothing ever says it
+   * ended: the panel kept offering Stop for the rest of the session, with Embed unreachable
+   * behind it, and pressing Stop again aborted a controller nobody was watching.
+   */
+  it('takes the bar down when the run is stopped, without waiting for an event', async () => {
+    installFakeBridge({ memory: { stopIndex: () => Promise.resolve() } })
+    useAssistantMemory.setState({ indexing: { scope: 'project', done: 3, total: 40 } })
+
+    await state().stopIndex()
+
+    expect(state().indexing).toBeNull()
+  })
+
+  it('takes it down when the panel moves to the other memory', async () => {
+    installFakeBridge()
+    useAssistantMemory.setState({ indexing: { scope: 'project', done: 3, total: 40 } })
+
+    await state().look('global', {})
+
+    expect(state().indexing).toBeNull()
+  })
+})
+
 describe('writing from the window', () => {
   it('writes into the scope on screen', async () => {
     const remember = vi.fn(() => Promise.resolve(memory()))

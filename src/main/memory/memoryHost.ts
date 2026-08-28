@@ -68,10 +68,9 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
     },
 
     global: async () => {
-      openingGlobal ??= open(
-        join(userData, GLOBAL_MEMORY_FILE),
-        join(userData, GLOBAL_MEMORY_INDEX),
-      )
+      // 🛑 Through `openAt` like the project's, and not `open`: a rejected promise CACHED here
+      // rejects every later `global` call across IPC, for ever, without a word in the journal.
+      openingGlobal ??= openAt(userData, GLOBAL_MEMORY_FILE, GLOBAL_MEMORY_INDEX)
       return await openingGlobal
     },
 

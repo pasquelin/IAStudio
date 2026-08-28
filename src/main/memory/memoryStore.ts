@@ -152,6 +152,9 @@ function supersededBy(index: MemoryIndex, draft: MemoryDraft): Memory | null {
 export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps): MemoryStore {
   const writes = writeQueue()
   let trouble: MemoryTrouble | null = null
+  // 🛑 Whether THIS session has read the file. `trouble` is set by `readFileInto` alone, and an
+  // opening whose stamp had not moved never calls it — see `compact`, which the difference costs.
+  let readHere = false
   // Made once rather than on every append: a recursive `mkdir` on a folder that is already there
   // measured 61 µs against the 140 µs the append itself costs.
   let folder: Promise<unknown> | null = null
@@ -178,6 +181,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
    */
   const readFileInto = async (): Promise<number> => {
     trouble = null
+    readHere = true
 
     let body: string
     try {
@@ -343,11 +347,12 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
     compact: () =>
       writes.next(async () => {
         /**
-         * 🛑 Refused on a file this build could not read WHOLE, and it is the difference between
-         * a tidying and a loss. A `too-new` line is deliberately kept out of the index; a read
-         * that failed empties it. Rewriting from the index in either case would erase what the
-         * file still holds — a later studio's memories, or all of them.
+         * 🛑 Read back FIRST when this session has not, and only then refused. A `too-new` line is
+         * kept out of the index and sets `trouble`; but an opening whose stamp had not moved never
+         * reads, so `trouble` is null on the next launch over the very same file — and the rewrite
+         * below would then erase a later studio's memories while reporting them as lines saved.
          */
+        if (!readHere) await readFileInto()
         if (trouble !== null) return 0
 
         // Read back FIRST: the index holds no `dropped` line and no superseded one, so it cannot
