@@ -1,5 +1,5 @@
 import { mdiChatOutline } from '@mdi/js'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
@@ -9,18 +9,20 @@ import { PANEL_SCROLL } from '@/design/styles'
 import { Spinner } from '@/design/Spinner'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
+import { foldForSearch, matchesWords, searchWords } from '@shared/text'
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
 import { HINT_TOP, TIP_TOP } from '@/helpers/tooltip'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
 import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
-import { useLayouts } from '@/stores/layouts'
+import { useToolSurface } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { registerDictationTarget } from '@/dictation/destination'
 import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
 import { registerChatPanel } from '../chatPanel'
 import { ASSISTANT_STARTERS, starterKey } from '../starters'
+import { AssistantConversationSuggestions, suggestionId } from './AssistantConversationSuggestions'
 import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
@@ -36,6 +38,9 @@ import { CONVERSATION_CARD } from './conversationStyles'
  */
 export function AssistantConversation() {
   const { t } = useTranslation()
+  // `useId` and not a module constant: two hosts never mount at once today, and an id that
+  // assumed it would be a broken `aria-activedescendant` the day one does.
+  const listId = useId()
   const turns = useAssistant(state => state.turns)
   const busy = useAssistant(state => state.busy)
   const round = useAssistant(state => state.round)
@@ -45,7 +50,7 @@ export function AssistantConversation() {
   const micOpen = useDictation(store => store.state === 'listening')
   const draft = useAssistant(state => state.draft)
   const setDraft = useAssistant(state => state.setDraft)
-  const workspace = useLayouts(state => state.activeWorkspace)
+  const surface = useToolSurface()
   const offer = useAssistantOffer()
   const openSection = useSettings(state => state.openSection)
 
@@ -58,6 +63,86 @@ export function AssistantConversation() {
    * sentence to whatever is under the pointer. It falls on its own when the microphone shuts.
    */
   const [speaking, setSpeaking] = useState(false)
+
+  /**
+   * What one can ask, narrowed by what is being written. Nothing while the field is empty: the
+   * list is an ANSWER to typing, and one that opened on six sentences nobody asked for is the
+   * two rows of chips this replaced.
+   */
+  const matches = useMemo(() => {
+    const words = searchWords(draft)
+    if (words.length === 0) return []
+
+    const written = foldForSearch(draft.trim())
+    // Folded on BOTH sides, as the match is: compared raw, a sentence typed without its accents
+    // stayed offered as though it were something else.
+    return ASSISTANT_STARTERS[surface]
+      .map(starter => t(starterKey(starter)))
+      .filter(one => matchesWords(one, words) && foldForSearch(one) !== written)
+  }, [draft, surface, t])
+
+  /** Rank 0 is the sentence one is writing; 1..n are the suggestions. */
+  const [rank, setRank] = useState(0)
+  const [given, setGiven] = useState(false)
+  const [walked, setWalked] = useState(matches)
+
+  /**
+   * 🛑 A rebuilt list gives the rank back, whatever rebuilt it — a keystroke, a change of space,
+   * a language, a dictated word appended from elsewhere. Kept, rank 5 named one sentence and then
+   * another, highlighted and silently different, and Enter took the second.
+   */
+  if (walked !== matches) {
+    setWalked(matches)
+    setRank(0)
+    setGiven(false)
+  }
+
+  const shown = !given && !busy ? matches : []
+  const held = rank === 0 ? undefined : shown[rank - 1]
+
+  // Chosen means WRITTEN, never sent: the sentence is a start, and what one adds to it — a name,
+  // a size, a folder — is the half the studio cannot guess.
+  const choose = (sentence: string): void => {
+    setDraft(sentence)
+    setRank(0)
+    field.current?.focus()
+  }
+
+  /**
+   * The arrows walk the list, Escape gives it up, Enter takes what is held. Enter holding nothing
+   * still sends — the list must not put a step between a finished sentence and its going.
+   */
+  const steer = (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
+    if (shown.length === 0 || isComposing(event)) return false
+
+    // 🛑 Only where the caret has nowhere left to go: the field takes three lines and holds
+    // dictated paragraphs, which wrap without ever carrying a newline to test for.
+    const caret = event.currentTarget.selectionStart
+    const spare =
+      event.key === 'ArrowDown' ? caret === draft.length : event.key === 'ArrowUp' && caret === 0
+
+    if (spare) {
+      const ranks = shown.length + 1
+      setRank(at => (at + (event.key === 'ArrowDown' ? 1 : -1) + ranks) % ranks)
+      event.preventDefault()
+      return true
+    }
+
+    if (event.key === 'Escape') {
+      setGiven(true)
+      setRank(0)
+      event.preventDefault()
+      return true
+    }
+
+    if (event.key === 'Enter' && held !== undefined) {
+      choose(held)
+      event.preventDefault()
+      return true
+    }
+
+    return false
+  }
 
   const thread = useRef<HTMLOListElement>(null)
   /**
@@ -239,6 +324,18 @@ export function AssistantConversation() {
               data-sc={fieldHandle('assistant.draft')}
               rows={3}
               value={draft}
+              // 🛑 No `role="combobox"`: it REPLACES the field's own role, and ARIA 1.2 drops
+              // `aria-multiline` with it — what one writes here is a paragraph. These three ARE
+              // allowed on a textbox, where `aria-expanded` is not and was read by nobody.
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              // `aria-owns` beside it: ARIA asks that the held row be a descendant of the focused
+              // element, and a textarea can hold none. Without it the walk is announced by nobody.
+              aria-controls={shown.length > 0 ? listId : undefined}
+              aria-owns={shown.length > 0 ? listId : undefined}
+              aria-activedescendant={
+                held === undefined ? undefined : suggestionId(listId, rank - 1)
+              }
               placeholder={t('assistant.placeholder')}
               // While a plan is running: a second sentence would interleave two plans over one
               // generator form, and the question on screen belongs to the first of them.
@@ -247,6 +344,11 @@ export function AssistantConversation() {
               // Enter still sends, as it did when this was one line: a textarea's own default would
               // have made the keyboard path to sending disappear. Shift+Enter is the new line.
               onKeyDown={event => {
+                if (steer(event)) {
+                  event.preventDefault()
+                  return
+                }
+
                 // While an input method composes, Enter picks the candidate character — see
                 // `isComposing`. Sending here would cut the word being written.
                 if (event.key !== 'Enter' || event.shiftKey || isComposing(event)) return
@@ -255,6 +357,23 @@ export function AssistantConversation() {
               }}
               className="text-text w-full resize-none border-none bg-transparent px-1 text-xs"
             />
+
+            {shown.length > 0 && (
+              <AssistantConversationSuggestions
+                matches={shown}
+                active={rank - 1}
+                label={t('assistant.suggestions')}
+                hint={t('assistant.starterHint')}
+                id={listId}
+                onChoose={choose}
+              />
+            )}
+
+            {/* The list appears, renumbers and goes under the fingers without a word otherwise —
+                the same reason the title bar announces a reordered tab. */}
+            <p role="status" aria-live="polite" className="sr-only">
+              {shown.length > 0 ? t('assistant.suggested', { count: shown.length }) : ''}
+            </p>
 
             {/* Wrapping: the picker and the pair sit side by side wherever there is room and
                 stack where there is not — one line could only shrink, and the picker has a
@@ -292,30 +411,6 @@ export function AssistantConversation() {
               </span>
             </div>
           </form>
-
-          {/* Only over a blank thread, and only what the section at hand can actually be asked for:
-            a suggestion beside an exchange is an interruption, and one about pictures in a timeline
-            is noise. They WRITE the sentence rather than sending it — see `ASSISTANT_STARTERS`. */}
-          {turns.length === 0 && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {ASSISTANT_STARTERS[workspace].map(starter => {
-                const sentence = t(starterKey(starter))
-
-                return (
-                  <Button
-                    key={starter}
-                    {...HINT_TOP(t('assistant.starterHint'))}
-                    onClick={() => {
-                      setDraft(sentence)
-                      field.current?.focus()
-                    }}
-                  >
-                    {sentence}
-                  </Button>
-                )
-              })}
-            </div>
-          )}
         </>
       )}
     </div>

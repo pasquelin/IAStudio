@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { aiOverview, roleRow } from '@shared/domain/aiOverview-fixtures'
@@ -40,7 +40,9 @@ beforeEach(() => {
   })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useDictation.setState({ partial: '', state: 'idle' })
-  useLayouts.setState({ activeWorkspace: 'image' })
+  // 🛑 `home` starts TRUE in the store, so a suite that only names the space still reads the
+  // home surface — and the suggestions of a screen holding no document.
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
   useAiModels.setState({
     overview: aiOverview({
       roles: [
@@ -137,23 +139,94 @@ describe('the assistant conversation', () => {
    * 🛑 It WRITES the sentence. An action of this studio can spend, and a suggestion that sent on
    * its own would start the spending on the person's behalf.
    */
-  it('writes a starter into the field rather than sending it', async () => {
+  it('writes a suggestion into the field rather than sending it', async () => {
     render(<AssistantConversation />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Génère une image' }))
+    await userEvent.type(screen.getByRole('textbox'), 'genere')
+    await userEvent.click(screen.getByRole('option', { name: 'Génère une image' }))
 
     expect(screen.getByRole('textbox')).toHaveValue('Génère une image')
     expect(say).not.toHaveBeenCalled()
   })
 
+  /**
+   * An ANSWER to typing, never an offer standing there: two rows of chips over a blank thread
+   * were three sentences one could not add to and could not get rid of.
+   */
+  it('offers nothing until something is being written', async () => {
+    render(<AssistantConversation />)
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+
+    await userEvent.type(screen.getByRole('textbox'), 'image')
+
+    expect(within(screen.getByRole('listbox')).getAllByRole('option').length).toBeGreaterThan(0)
+  })
+
+  // Accents and case are how one SPELLS, not what one is looking for — `foldForSearch` is the
+  // studio's own answer to that, and this is the reason it is reused rather than a `includes`.
+  it('finds a sentence typed without its accents', async () => {
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'genere une im')
+
+    expect(screen.getByRole('option', { name: 'Génère une image' })).toBeInTheDocument()
+  })
+
+  /**
+   * Folded on both sides: compared raw, a sentence typed the way the rest of the feature invites
+   * — without its accents — stayed offered underneath itself, over a sentence already finished.
+   */
+  it('stops offering a sentence once it is written, accents or not', async () => {
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'genere une image')
+
+    // The others still answer those words — only the one already written stops being offered.
+    expect(screen.queryByRole('option', { name: 'Génère une image' })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /variante/ })).toBeInTheDocument()
+  })
+
   // A suggestion about pictures, in a timeline, is noise: what is offered is what the space at
   // hand can actually be asked for.
-  it('offers the starters of the space one is in', () => {
+  it('offers the sentences of the space one is in', async () => {
     useLayouts.setState({ activeWorkspace: 'audio' })
     render(<AssistantConversation />)
 
-    expect(screen.getByRole('button', { name: 'Génère un son' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Génère une image' })).not.toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox'), 'genere un')
+
+    expect(screen.getByRole('option', { name: 'Génère un son' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Génère une image' })).not.toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 The home has no space of its own, so it used to read `activeWorkspace` and offer whatever
+   * space one had last been in — three sentences about pictures, on a screen holding no document.
+   */
+  it('offers the project’s own sentences on the home, not the last space visited', async () => {
+    useLayouts.setState({ activeWorkspace: 'image', home: true })
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'projet')
+
+    expect(screen.getByRole('option', { name: /Crée un nouveau projet/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Génère une image' })).not.toBeInTheDocument()
+  })
+
+  /**
+   * The arrows walk the list and Enter takes what they hold; Enter with nothing held still sends,
+   * which is what it has always done. A list that put a step between a finished sentence and its
+   * going would be paid on every message.
+   */
+  it('takes the line the arrows hold, and sends when they hold none', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere une im{ArrowDown}{Enter}')
+    expect(field).toHaveValue('Génère une image')
+    expect(say).not.toHaveBeenCalled()
+
+    await userEvent.type(field, '{Enter}')
+    expect(say).toHaveBeenCalledWith('Génère une image')
   })
 
   /**
@@ -205,13 +278,20 @@ describe('the assistant conversation', () => {
   })
 
   // Beside an exchange they are an interruption: the blank page is the only thing they answer.
-  it('drops the starters once the conversation has begun', () => {
+  /**
+   * They used to be withheld once a thread had begun — beside an exchange, three chips standing
+   * there were an interruption. An answer to typing is not: the second sentence of a conversation
+   * is written in the same field as the first, and it deserves the same help.
+   */
+  it('still answers a sentence begun in the middle of a conversation', async () => {
     useAssistant.setState({
       turns: [{ id: 1, said: 'bonjour', answered: 'Bonjour.', steps: [], lost: false }],
     })
     render(<AssistantConversation />)
 
-    expect(screen.queryByRole('button', { name: 'Génère une image' })).not.toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox'), 'genere une')
+
+    expect(screen.getByRole('option', { name: 'Génère une image' })).toBeInTheDocument()
   })
 })
 
@@ -357,5 +437,110 @@ describe('what it claims of the studio', () => {
     act(() => screen.getByRole('textbox').blur())
 
     expect(mountedDictationTarget()).toBeNull()
+  })
+})
+
+/**
+ * The list is walked with the caret still in the field — `aria-activedescendant`, never a focus
+ * that moves. Three things went wrong there and none of them reddened: the rank kept an index
+ * the list no longer had, the arrows were confiscated from a paragraph, and every suggestion was
+ * a tab stop between the field and the send button.
+ */
+describe('walking the suggestions', () => {
+  beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
+  })
+
+  /**
+   * Typing gives the line back. The rank would otherwise survive a list rebuilt under it — held
+   * on a sentence one has since walked away from, and Enter would take that one instead of the
+   * words on screen.
+   */
+  it('lets go of the line it held as soon as one types again', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'une{ArrowDown}')
+    expect(document.getElementById(field.getAttribute('aria-activedescendant') ?? '')) //
+      .toBeInTheDocument()
+
+    // A space keeps every match — `searchWords` drops it — so only the RANK can have changed.
+    await userEvent.type(field, ' ')
+
+    expect(field).not.toHaveAttribute('aria-activedescendant')
+  })
+
+  /**
+   * The field takes three lines and exists for dictated paragraphs: confiscating the arrows the
+   * moment a suggestion matches would leave one with no way to move the caret between them.
+   */
+  it('leaves the arrows to the field once the draft has more than one line', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere{Shift>}{Enter}{/Shift}une image{ArrowUp}')
+
+    expect(field).not.toHaveAttribute('aria-activedescendant')
+  })
+
+  it('keeps the caret in the field, so Tab still reaches what follows it', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere{ArrowDown}')
+
+    expect(field).toHaveFocus()
+    expect(field.getAttribute('aria-activedescendant')).toBe(
+      screen.getAllByRole('option')[0]?.getAttribute('id'),
+    )
+  })
+})
+
+/**
+ * Three ways a list could outlive what asked for it, none of which a keystroke closes.
+ */
+describe('giving the suggestions back', () => {
+  beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
+  })
+
+  // Escape reclaimed the highlight and left the list standing: there was no gesture short of
+  // emptying the field to get the room back.
+  it('takes Escape for the list itself, not only for the line held', async () => {
+    render(<AssistantConversation />)
+
+    await userEvent.type(screen.getByRole('textbox'), 'image{Escape}')
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 While a plan runs the field is disabled but dictation keeps appending to the draft: the
+   * list stood over a running plan with clickable options, and choosing one replaced the spoken
+   * words while `focus()` went nowhere.
+   */
+  it('stands down while a plan is running', () => {
+    useAssistant.setState({ busy: true, draft: 'genere une im' })
+    render(<AssistantConversation />)
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 The rank outlived the list when something OTHER than a keystroke rebuilt it — a change of
+   * space, of language, a dictated word. Rank 3 named one sentence and then another, highlighted
+   * and silently different, and Enter took the second.
+   */
+  it('gives the rank back when the space changes under it', async () => {
+    const { rerender } = render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere{ArrowDown}')
+    expect(field).toHaveAttribute('aria-activedescendant')
+
+    act(() => useLayouts.setState({ activeWorkspace: 'audio' }))
+    rerender(<AssistantConversation />)
+
+    expect(field).not.toHaveAttribute('aria-activedescendant')
   })
 })
