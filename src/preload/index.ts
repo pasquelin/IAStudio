@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
+import type { MemoryScope } from '@shared/domain/assistantMemory'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -53,6 +54,16 @@ const bridge: StudioBridge = {
     setPending: pending => ipcRenderer.invoke(CHANNELS.settingsPending, pending),
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
+  },
+  memory: {
+    list: (scope, query) => ipcRenderer.invoke(CHANNELS.memoryList, scope, query),
+    read: (scope, id) => ipcRenderer.invoke(CHANNELS.memoryRead, scope, id),
+    remember: (scope, draft) => ipcRenderer.invoke(CHANNELS.memoryRemember, scope, draft),
+    amend: (scope, id, patch) => ipcRenderer.invoke(CHANNELS.memoryAmend, scope, id, patch),
+    forget: (scope, id) => ipcRenderer.invoke(CHANNELS.memoryForget, scope, id),
+    rebuild: scope => ipcRenderer.invoke(CHANNELS.memoryRebuild, scope),
+    reset: scope => ipcRenderer.invoke(CHANNELS.memoryReset, scope),
+    onChanged: callback => subscribe<MemoryScope>(EVENTS.memoryChanged, callback),
   },
   mcp: {
     state: () => ipcRenderer.invoke(CHANNELS.mcpState),

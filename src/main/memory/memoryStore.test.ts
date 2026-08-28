@@ -1,0 +1,222 @@
+import { appendFile, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MEMORY_VERSION, type MemoryDraft } from '@shared/domain/assistantMemory'
+import type { SqliteDriver } from '@main/project/sqlite'
+import { openMemoryDatabase } from '@main/project/sqliteMemory'
+import { createMemoryIndex } from './memoryIndex'
+import { createMemoryStore, type MemoryStore } from './memoryStore'
+
+const draft = (fields: Partial<MemoryDraft> = {}): MemoryDraft => ({
+  type: 'decision',
+  summary: 'Cameras follow the rail',
+  importance: 3,
+  source: { kind: 'person' },
+  ...fields,
+})
+
+let root: string
+let file: string
+let store: MemoryStore
+let database: SqliteDriver
+let minted: number
+
+const open = (): MemoryStore => {
+  minted = 0
+  database = openMemoryDatabase()
+  return createMemoryStore({
+    file,
+    index: createMemoryIndex(database),
+    now: () => '2026-08-28T10:00:00.000Z',
+    newId: () => `m_${++minted}`,
+  })
+}
+
+beforeEach(async () => {
+  root = await mkdtemp(join(tmpdir(), 'ia-studio-memory-'))
+  file = join(root, '.ia-studio', 'memory.ndjson')
+  store = open()
+})
+
+afterEach(async () => {
+  database.close()
+  await rm(root, { recursive: true, force: true })
+})
+
+const lines = async (): Promise<unknown[]> =>
+  (await readFile(file, 'utf8'))
+    .split('\n')
+    .filter(line => line.trim().length > 0)
+    .map(line => JSON.parse(line))
+
+describe('remembering something', () => {
+  it('answers the memory it made, id and date included', async () => {
+    const memory = await store.remember(draft())
+
+    expect(memory).toEqual({
+      id: 'm_1',
+      type: 'decision',
+      summary: 'Cameras follow the rail',
+      body: '',
+      importance: 3,
+      createdAt: '2026-08-28T10:00:00.000Z',
+      source: { kind: 'person' },
+      refs: [],
+      links: [],
+      state: 'live',
+    })
+  })
+
+  it('writes one line carrying the format version', async () => {
+    await store.remember(draft())
+
+    expect(await lines()).toEqual([expect.objectContaining({ v: MEMORY_VERSION, id: 'm_1' })])
+  })
+
+  it('makes the folder rather than failing on a project that has none', async () => {
+    await store.remember(draft())
+
+    expect(await lines()).toHaveLength(1)
+  })
+
+  it('finds it again by its words straight away', async () => {
+    await store.remember(draft({ summary: 'La caméra suit le rail taillé' }))
+
+    expect((await store.list({ text: 'camera taille' })).map(one => one.id)).toEqual(['m_1'])
+  })
+})
+
+describe('surviving a restart', () => {
+  /** 🛑 The whole point of the file: the index is thrown away, this is not. */
+  it('reads back what a previous session wrote, index and all', async () => {
+    await store.remember(draft({ summary: 'first' }))
+    await store.remember(draft({ summary: 'second' }))
+    store.close()
+
+    store = open()
+    expect(await store.rebuild()).toBe(2)
+    expect((await store.list({})).map(one => one.summary)).toEqual(
+      expect.arrayContaining(['first', 'second']),
+    )
+  })
+
+  it('opens a project that never remembered anything', async () => {
+    expect(await store.rebuild()).toBe(0)
+    expect(store.trouble()).toBeNull()
+  })
+
+  /**
+   * 🛑 A memory written three times is held once, as its LAST line describes it. Without this the
+   * file would answer three memories of one, and a correction would never take.
+   */
+  it('lets the last line about a memory win', async () => {
+    await store.remember(draft({ summary: 'the first thing said' }))
+    await store.amend('m_1', { summary: 'what it really was' })
+    store.close()
+
+    store = open()
+    expect(await store.rebuild()).toBe(1)
+    expect((await store.read('m_1'))?.summary).toBe('what it really was')
+  })
+
+  it('leaves out what was dropped', async () => {
+    await store.remember(draft())
+    await store.forget('m_1')
+    store.close()
+
+    store = open()
+    expect(await store.rebuild()).toBe(0)
+  })
+
+  /**
+   * 🛑 One JSON object per line is what buys this: an array would lose every memory after the
+   * damaged byte, where here a broken line costs that memory alone.
+   */
+  it('keeps every good line around a broken one', async () => {
+    await store.remember(draft({ summary: 'before' }))
+    await appendFile(file, '{ this is not json\n', 'utf8')
+    await store.remember(draft({ summary: 'after' }))
+    store.close()
+
+    store = open()
+    expect(await store.rebuild()).toBe(2)
+    expect(store.trouble()).toBe('unreadable')
+  })
+
+  /**
+   * 🛑 Set aside, never rewritten: the file is the person's, and a build that cannot read a line
+   * must not be the build that deletes it.
+   */
+  it('leaves a line from a later studio in the file and says so', async () => {
+    await store.remember(draft({ summary: 'ours' }))
+    await appendFile(file, `${JSON.stringify({ v: MEMORY_VERSION + 1, id: 'm_future' })}\n`, 'utf8')
+    store.close()
+
+    store = open()
+    expect(await store.rebuild()).toBe(1)
+    expect(store.trouble()).toBe('too-new')
+    expect(await lines()).toHaveLength(2)
+  })
+
+  it('refuses a line whose summary is not a summary at all', async () => {
+    await mkdir(dirname(file), { recursive: true })
+    await appendFile(file, `${JSON.stringify({ v: MEMORY_VERSION, id: 'm_x' })}\n`, 'utf8')
+
+    expect(await store.rebuild()).toBe(0)
+    expect(store.trouble()).toBe('unreadable')
+  })
+})
+
+describe('changing what a memory says', () => {
+  it('answers nothing for a memory it does not hold', async () => {
+    expect(await store.amend('m_gone', { summary: 'x' })).toBeNull()
+  })
+
+  it('writes the whole memory again rather than a difference', async () => {
+    await store.remember(draft())
+    await store.amend('m_1', { state: 'pinned' })
+
+    const written = await lines()
+    expect(written).toHaveLength(2)
+    expect(written[1]).toEqual(expect.objectContaining({ id: 'm_1', state: 'pinned' }))
+  })
+
+  it('keeps the id, the date and the source beyond what a caller may set', async () => {
+    await store.remember(draft())
+    const amended = await store.amend('m_1', { summary: 'reworded' })
+
+    expect(amended).toEqual(
+      expect.objectContaining({
+        id: 'm_1',
+        createdAt: '2026-08-28T10:00:00.000Z',
+        source: { kind: 'person' },
+        summary: 'reworded',
+      }),
+    )
+  })
+})
+
+describe('forgetting', () => {
+  it('says so when there was nothing to forget', async () => {
+    expect(await store.forget('m_gone')).toBe(false)
+  })
+
+  it('stops answering it, and writes down that it is gone', async () => {
+    await store.remember(draft())
+    expect(await store.forget('m_1')).toBe(true)
+
+    expect(await store.read('m_1')).toBeNull()
+    expect((await lines())[1]).toEqual(expect.objectContaining({ id: 'm_1', state: 'dropped' }))
+  })
+})
+
+describe('resetting a project memory', () => {
+  it('leaves no file and no memory behind', async () => {
+    await store.remember(draft())
+    await store.reset()
+
+    expect(await store.list({})).toEqual([])
+    await expect(readFile(file, 'utf8')).rejects.toThrow()
+  })
+})

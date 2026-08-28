@@ -180,6 +180,8 @@ import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } fro
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
 import { openCatalogThread } from './project/catalogThread'
+import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
+import { openMemoryThread } from './memory/memoryThread'
 import { catalogOf } from './provider/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
 import { createAssetInputResolver } from './provider/assetInputs'
@@ -261,6 +263,8 @@ export type Services = {
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
+  /** What the assistant has learned — the open project's, and the machine's own. */
+  memory: MemoryHost
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
@@ -826,6 +830,16 @@ export function createServices(settings: SettingsStore): Services {
     applyProjectAccount(plan, active, current.path)
   }
 
+  /**
+   * Declared before the store because its `onChange` names it, and it needs nothing of the store:
+   * a memory is opened from a PATH, and the path is what `onChange` hands over.
+   */
+  const memory = createMemoryHost({
+    userData: app.getPath('userData'),
+    open: openMemoryThread,
+    onTrouble: why => log.warn('memory', why),
+  })
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
@@ -843,6 +857,9 @@ export function createServices(settings: SettingsStore): Services {
       // waveform and no proxy, and nothing else would ever go back for them. A project opened
       // after the fix would otherwise show exactly what it showed before it.
       if (current) void catchUpProject()
+
+      // Told which project it belongs to; it opens nothing until something asks it a question.
+      memory.follow(current?.path ?? null)
 
       // One watch at a time, and it belongs to the project that is open: left running, the
       // previous project's folder would go on announcing changes the explorer would answer by
@@ -2087,6 +2104,7 @@ export function createServices(settings: SettingsStore): Services {
     ownerScope,
     removeAssetFile,
     project,
+    memory,
     // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
     // here, and an export named against nothing is a refusal rather than a failure.
     projectPath: () => project.current()?.path ?? null,

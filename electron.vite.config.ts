@@ -68,11 +68,12 @@ export default defineConfig(({ command }) => ({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        // The catalogue's thread and the three worker processes are entry points of their own:
-        // each is resolved beside the bundled main, so each has to land there as a file of its own.
+        // The two threads and the three worker processes are entry points of their own: each is
+        // resolved beside the bundled main, so each has to land there as a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
           catalogWorker: resolve('src/main/project/catalogWorker.ts'),
+          memoryWorker: resolve('src/main/memory/memoryWorker.ts'),
           peaksWorker: resolve('src/main/media/peaksWorker.ts'),
           bundleWorker: resolve('src/main/bundle/bundleWorker.ts'),
           sttWorker: resolve('src/main/dictation/sttWorker.ts'),

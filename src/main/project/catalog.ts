@@ -27,7 +27,10 @@ import {
 import { isPbrChannel } from '@shared/domain/material'
 import { LOG_SCOPES } from '@shared/ipc'
 import { byCodeUnit } from '@shared/text'
+import { matchExpression } from './ftsMatch'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
+import { migrateTo, transaction } from './sqlMigrate'
+import { optionalNumber, optionalText, text } from './sqlRow'
 
 /**
  * Schema history. Append only: an existing project carries its version in `user_version`, and
@@ -226,31 +229,7 @@ const MIGRATIONS: readonly string[] = [
 const DEFAULT_LIMIT = 200
 
 export function migrate(driver: SqliteDriver): void {
-  for (let version = currentVersion(driver); version < MIGRATIONS.length; version++) {
-    driver.exec(MIGRATIONS[version] ?? '')
-    driver.exec(`PRAGMA user_version = ${version + 1}`)
-  }
-}
-
-function text(row: SqlRow, column: string): string {
-  const value = row[column]
-  return typeof value === 'string' ? value : ''
-}
-
-function optionalText(row: SqlRow, column: string): string | undefined {
-  const value = row[column]
-  return typeof value === 'string' ? value : undefined
-}
-
-function optionalNumber(row: SqlRow, column: string): number | undefined {
-  const value = row[column]
-  if (typeof value === 'number') return value
-  return typeof value === 'bigint' ? Number(value) : undefined
-}
-
-function currentVersion(driver: SqliteDriver): number {
-  const row = driver.prepare('PRAGMA user_version').get()
-  return row ? (optionalNumber(row, 'user_version') ?? 0) : 0
+  migrateTo(driver, MIGRATIONS)
 }
 
 /** The column is a closed union in the domain but a free string in SQLite. */
@@ -378,36 +357,6 @@ function isUnder(path: string, folder: string): boolean {
 /** `%` and `_` are wildcards: typed by a user they must match themselves, not everything. */
 function escapeLike(text: string): string {
   return text.replace(/[\\%_]/g, character => `\\${character}`)
-}
-
-/**
- * What the user typed, as an fts5 expression — or `null` when nothing they typed is a word.
- *
- * Words only, and quoted: `-`, `*`, `AND` and `(` are operators in that grammar, and a name is
- * not a query. The trailing star is what makes the row appear while the word is still being
- * typed, which is the only reason a search runs on every keystroke at all.
- *
- * Every term must match, as the tag filter does: filters narrow, they do not widen.
- */
-function matchExpression(text: string): string | null {
-  const terms = text.match(/[\p{L}\p{N}_]+/gu)
-  return terms ? terms.map(term => `"${term}"*`).join(' AND ') : null
-}
-
-/**
- * All or nothing, on a driver where forgetting the `ROLLBACK` leaves a transaction open for the
- * rest of the session — and every window behind it.
- */
-function transaction<T>(driver: SqliteDriver, body: () => T): T {
-  driver.exec('BEGIN')
-  try {
-    const result = body()
-    driver.exec('COMMIT')
-    return result
-  } catch (error) {
-    driver.exec('ROLLBACK')
-    throw error
-  }
 }
 
 /**

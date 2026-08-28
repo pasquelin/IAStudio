@@ -4,6 +4,13 @@ import type { AiOverview, ChoiceScope } from './domain/aiOverview'
 import type { AiRoleId, RoleProvider } from './domain/aiRole'
 import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
+import type {
+  Memory,
+  MemoryDraft,
+  MemoryPatch,
+  MemoryQuery,
+  MemoryScope,
+} from './domain/assistantMemory'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
@@ -143,6 +150,13 @@ export type Channels = {
   projectFileFacts: 'project:file-facts'
   projectReadContext: 'project:read-context'
   projectWriteContext: 'project:write-context'
+  memoryList: 'memory:list'
+  memoryRead: 'memory:read'
+  memoryRemember: 'memory:remember'
+  memoryAmend: 'memory:amend'
+  memoryForget: 'memory:forget'
+  memoryRebuild: 'memory:rebuild'
+  memoryReset: 'memory:reset'
 
   /**
    * Opens one file's information window, or reveals the one that path already has.
@@ -377,6 +391,13 @@ export const CHANNELS: Channels = {
   projectFileFacts: 'project:file-facts',
   projectReadContext: 'project:read-context',
   projectWriteContext: 'project:write-context',
+  memoryList: 'memory:list',
+  memoryRead: 'memory:read',
+  memoryRemember: 'memory:remember',
+  memoryAmend: 'memory:amend',
+  memoryForget: 'memory:forget',
+  memoryRebuild: 'memory:rebuild',
+  memoryReset: 'memory:reset',
 
   fileInfoOpen: 'window:file-info',
 
@@ -929,6 +950,7 @@ export type TraceEntry = { scope: TraceScope; message: string }
 
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
+  memoryChanged: 'evt:memory-changed',
   jobProgress: 'evt:job-progress',
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
@@ -1055,6 +1077,30 @@ export type StudioBridge = {
     onChange: (callback: (settings: Settings) => void) => Unsubscribe
     /** Section the settings window is asked to show while it is already open. */
     onSection: (callback: (section: SettingsSectionId) => void) => Unsubscribe
+  }
+  /**
+   * What the assistant has learned — the project's, and the machine's own.
+   *
+   * `scope` is on every call rather than implied by a second namespace: the two behave alike in
+   * every respect but which file they land in, and a window that filters a list by one of them
+   * would be a window that could get it wrong.
+   *
+   * A project scope answers nothing at all when no project is open. That is not a failure and
+   * is not reported as one — it is a studio on its home screen.
+   */
+  memory: {
+    list: (scope: MemoryScope, query: MemoryQuery) => Promise<readonly Memory[]>
+    read: (scope: MemoryScope, id: string) => Promise<Memory | null>
+    remember: (scope: MemoryScope, draft: MemoryDraft) => Promise<Memory | null>
+    /** Nothing when no such memory is held, which a window tells from a refusal by asking again. */
+    amend: (scope: MemoryScope, id: string, patch: MemoryPatch) => Promise<Memory | null>
+    forget: (scope: MemoryScope, id: string) => Promise<boolean>
+    /** Reads the file back into the index. Answers how many memories stand once it has. */
+    rebuild: (scope: MemoryScope) => Promise<number>
+    /** Everything forgotten, the file included. What « reset this project's memory » runs. */
+    reset: (scope: MemoryScope) => Promise<void>
+    /** Fires for every window when any of them writes: two replicas of one file is one too many. */
+    onChanged: (callback: (scope: MemoryScope) => void) => Unsubscribe
   }
   /**
    * The door onto this machine — its own pair, like `window` and `updates`, because the SETTING
