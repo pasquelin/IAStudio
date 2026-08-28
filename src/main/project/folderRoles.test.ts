@@ -104,6 +104,21 @@ describe('a project no folder of which carries a role', () => {
   })
 })
 
+/**
+ * 🛑 A property of the VOLUME, measured rather than deduced from `process.platform`: APFS and NTFS
+ * fold the case, ext4 does not. The default moved from `scripts` to `Scripts`, so this is exactly
+ * what a project made before the roles hands the studio.
+ */
+describe('a folder the disk already holds under another case', () => {
+  it('records the name the disk holds, not the one asked for', async ({ skip }) => {
+    await mkdir(join(root, 'scripts'), { recursive: true })
+    if (!(await exists(join(root, 'Scripts')))) return skip()
+
+    expect(await ensureRoleFolder(root, {}, 'code')).toBe('scripts')
+    expect(await readFile(join(root, 'scripts', ROLE_MARKER), 'utf8')).toBe('code\n')
+  })
+})
+
 describe('a role whose folder is gone', () => {
   it('is left out of the map rather than pointed at a folder nothing holds', async () => {
     await layRoleFolders(root)

@@ -1,6 +1,9 @@
 import { mkdir, readFile } from 'node:fs/promises'
+import { orElse } from '@shared/promises'
 import { join } from 'node:path'
-import { parentOf } from '@shared/domain/folder'
+import { readdir } from 'node:fs/promises'
+import { foldForFileName } from '@shared/domain/fileName'
+import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
 import {
   DEFAULT_ROLE_PATHS,
   FOLDER_ROLES,
@@ -28,10 +31,24 @@ async function readMarker(root: string, folder: string): Promise<FolderRole | nu
   }
 }
 
+/**
+ * The name the DISK holds for `folder`, which is not always the one asked for: APFS and NTFS fold
+ * the case, so `mkdir` over an existing `scripts/` is a no-op and the studio would go on recording
+ * `Scripts` — a folder the explorer then badges by a name nothing answers to.
+ */
+async function heldName(root: string, folder: string): Promise<string> {
+  const above = parentOf(folder)
+  const wanted = foldForFileName(nameOf(folder))
+  const entries = await orElse(readdir(join(root, above ?? '')), [])
+  const found = entries.find(entry => foldForFileName(entry) === wanted)
+
+  return found === undefined ? folder : pathIn(above ?? '', found)
+}
+
 /** Lays a folder down and says what it is for, leaving Windows its attribute to the caller. */
 async function writeMarker(root: string, folder: string, role: FolderRole): Promise<string> {
-  const marker = join(root, folder, ROLE_MARKER)
   await mkdir(join(root, folder), { recursive: true })
+  const marker = join(root, await heldName(root, folder), ROLE_MARKER)
   await writeAtomic(marker, `${role}\n`)
   return marker
 }
@@ -208,5 +225,5 @@ export async function ensureRoleFolder(
   if (known !== undefined && (await exists(join(root, known)))) return known
 
   await markRoleFolder(root, DEFAULT_ROLE_PATHS[role], role)
-  return DEFAULT_ROLE_PATHS[role]
+  return await heldName(root, DEFAULT_ROLE_PATHS[role])
 }
