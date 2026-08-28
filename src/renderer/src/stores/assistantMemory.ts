@@ -7,7 +7,8 @@ import type {
   MemoryQuery,
   MemoryScope,
 } from '@shared/domain/assistantMemory'
-import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
+import { MEMORY_PAGE } from '@shared/domain/assistantMemory'
+import { alreadySaid, duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
 import { orElse } from '@shared/promises'
 import { connectThroughBridge, memoryBridge } from '@/services/bridge'
 
@@ -71,6 +72,14 @@ type AssistantMemoryState = {
   mergeDuplicates: () => Promise<number>
   /** Archives what nothing has drawn on for a season. Pinned memories are never touched. */
   archiveStale: (now: string) => Promise<number>
+  /**
+   * Copies one memory of a project into the machine's own, so it serves every project.
+   *
+   * 🛑 The ONE way anything reaches the machine's memory, and it is a gesture the person makes:
+   * no automatic rule and no MCP client writes there, or one project's habits would land in what
+   * follows the person everywhere. Answers false when there was nothing to copy.
+   */
+  promote: (memory: Memory) => Promise<boolean>
   /** Rewrites the file with one line per standing memory. Answers how many lines it saved. */
   compact: () => Promise<number>
   /** How many memories have no vector yet, and how far a run has got. `null` while none has. */
@@ -217,6 +226,32 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
 
     await get().reload()
     return archived
+  },
+
+  promote: async memory => {
+    // Read from the machine's own, never from what is on screen: the panel is showing a project.
+    const standing = await orElse(memoryBridge()?.list('global', { limit: MEMORY_PAGE }), [])
+    if (alreadySaid(standing, memory)) return true
+
+    /**
+     * 🛑 Neither `refs` nor `links` travel. A ref is a path or an id INSIDE the project, which
+     * names nothing once the project is closed — and `supersededBy` picks what a draft replaces
+     * by its first ref, so carrying one would have a promoted memory replace another over a path
+     * that means nothing there. What travels is what was learned, not where it was learned.
+     */
+    const written = await orElse(
+      memoryBridge()?.remember('global', {
+        type: memory.type,
+        summary: memory.summary,
+        importance: memory.importance,
+        // The person decided this one follows them, whoever first wrote it down.
+        source: { kind: 'person' },
+        ...(memory.body === '' ? {} : { body: memory.body }),
+      }),
+      null,
+    )
+
+    return written !== null
   },
 
   compact: async () => await orElse(memoryBridge()?.compact(get().scope), 0),

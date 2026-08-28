@@ -171,6 +171,26 @@ describe('correcting what it knows', () => {
   })
 })
 
+describe('promoting to the machine', () => {
+  it('offers it on a memory of the project', async () => {
+    standing()
+    render(<MemorySettings />)
+
+    expect(await screen.findByRole('button', { name: 'Retenir partout' })).toBeVisible()
+  })
+
+  /** The machine's own memory has nowhere further to be promoted to. */
+  it('offers nothing on a memory of the machine', async () => {
+    standing()
+    render(<MemorySettings />)
+    await userEvent.click(screen.getByRole('button', { name: 'Cette machine' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Retenir partout' })).toBeNull(),
+    )
+  })
+})
+
 describe('the vectors', () => {
   it('says how many are waiting, and offers to compute them', () => {
     standing()

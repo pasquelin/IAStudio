@@ -8,11 +8,24 @@ export function MemoryRowActions({ memory }: { memory: Memory }) {
   const { t } = useTranslation()
   const amend = useAssistantMemory(state => state.amend)
   const forget = useAssistantMemory(state => state.forget)
+  const promote = useAssistantMemory(state => state.promote)
+  // The machine's own memory has nowhere further to be promoted to.
+  const ofProject = useAssistantMemory(state => state.scope === 'project')
   const pinned = memory.state === 'pinned'
   const archived = memory.state === 'archived'
 
   return (
     <div className="flex shrink-0 items-center gap-2">
+      {ofProject ? (
+        <button
+          type="button"
+          className="btn btn-xs"
+          {...HINT_LEFT(t('settings.memoryPromoteHint'))}
+          onClick={() => void promote(memory)}
+        >
+          {t('settings.memoryPromote')}
+        </button>
+      ) : null}
       <button
         type="button"
         className="btn btn-xs"

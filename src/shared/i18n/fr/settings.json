@@ -424,6 +424,8 @@
     "memoryRelations": "Ce que cette mémoire touche",
     "memoryRelationRef": "désigne",
     "memoryRelationLink": "relie",
-    "memoryRelationSupersedes": "remplace"
+    "memoryRelationSupersedes": "remplace",
+    "memoryPromote": "Retenir partout",
+    "memoryPromoteHint": "Recopie cette mémoire dans celle de la machine, pour qu’elle serve dans tous vos projets. Ce que le projet a appris y reste."
   }
 }

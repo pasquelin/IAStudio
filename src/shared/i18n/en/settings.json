@@ -424,6 +424,8 @@
     "memoryRelations": "What this memory touches",
     "memoryRelationRef": "points at",
     "memoryRelationLink": "links to",
-    "memoryRelationSupersedes": "replaces"
+    "memoryRelationSupersedes": "replaces",
+    "memoryPromote": "Keep everywhere",
+    "memoryPromoteHint": "Copies this memory into the machine’s own, so it serves in every project of yours. What the project learned stays there too."
   }
 }

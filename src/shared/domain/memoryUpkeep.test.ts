@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Memory } from './assistantMemory'
-import { duplicatesIn, staleIn } from './memoryUpkeep'
+import { alreadySaid, duplicatesIn, staleIn } from './memoryUpkeep'
 
 const NOW = '2026-08-28T12:00:00.000Z'
 
@@ -87,5 +87,20 @@ describe('what nothing has drawn on', () => {
   it('reads how old one is off when it was written, until something has served it', () => {
     expect(staleIn([memory({ createdAt: long })], NOW).map(one => one.id)).toEqual(['m_one'])
     expect(staleIn([memory({ createdAt: long, usedAt: NOW })], NOW)).toEqual([])
+  })
+})
+
+describe('what a list already says', () => {
+  /** The same judgement `duplicatesIn` makes — a rewording counts, a different type does not. */
+  it('recognises a rewording, and tells two types apart', () => {
+    const held = [memory({ summary: 'Les CAMÉRAS suivent le rail !' })]
+
+    expect(alreadySaid(held, { type: 'decision', summary: 'les cameras suivent le rail' })).toBe(
+      true,
+    )
+    expect(alreadySaid(held, { type: 'script', summary: 'Les caméras suivent le rail' })).toBe(
+      false,
+    )
+    expect(alreadySaid([], { type: 'decision', summary: 'anything' })).toBe(false)
   })
 })

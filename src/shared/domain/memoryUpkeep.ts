@@ -46,6 +46,21 @@ export function duplicatesIn(memories: readonly Memory[]): readonly (readonly Me
     .map(group => [...group].sort(byWorthKeeping))
 }
 
+/**
+ * Whether one of these already says what a draft says — same type, same wording.
+ *
+ * The same judgement `duplicatesIn` makes, exported because promoting a memory to the machine's
+ * own asks it of a list the panel is not showing: clicking twice must add nothing the second time.
+ */
+export function alreadySaid(
+  memories: readonly Memory[],
+  draft: { type: Memory['type']; summary: string },
+): boolean {
+  const saying = `${draft.type} ${plainly(draft.summary)}`
+
+  return memories.some(one => `${one.type} ${plainly(one.summary)}` === saying)
+}
+
 /** After how long unused a memory is offered for archiving. Two seasons of a project. */
 export const MEMORY_STALE_DAYS = 180
 

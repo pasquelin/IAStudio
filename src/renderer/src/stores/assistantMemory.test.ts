@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Memory, MemoryScope } from '@shared/domain/assistantMemory'
+import type { Memory, MemoryDraft, MemoryScope } from '@shared/domain/assistantMemory'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssistantMemory } from './assistantMemory'
 
@@ -163,6 +163,62 @@ describe('what a listing costs', () => {
 
     expect(await state().mergeDuplicates()).toBe(2)
     expect(list).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('what the person promotes to the machine', () => {
+  /**
+   * 🛑 The ONE way anything reaches the machine's memory. No automatic rule and no MCP client
+   * writes there, or one project's habits would land in what follows the person everywhere.
+   */
+  it('writes into the machine, never into the project it came from', async () => {
+    const remember = vi.fn(() => Promise.resolve(memory()))
+    installFakeBridge({ memory: { list: () => Promise.resolve([]), remember } })
+
+    expect(await state().promote(memory({ body: 'décidé au troisième montage' }))).toBe(true)
+
+    expect(remember).toHaveBeenCalledWith('global', {
+      type: 'decision',
+      summary: 'Cameras follow the rail',
+      importance: 3,
+      source: { kind: 'person' },
+      body: 'décidé au troisième montage',
+    })
+  })
+
+  /**
+   * 🛑 A ref is a path or an id INSIDE the project, which names nothing once it is closed — and
+   * `supersededBy` picks what a draft replaces by its FIRST ref, so carrying one would have a
+   * promoted memory replace another over a path that means nothing there.
+   */
+  it('carries what was learned, never where it was learned', async () => {
+    const written: MemoryDraft[] = []
+    installFakeBridge({
+      memory: {
+        list: () => Promise.resolve([]),
+        remember: (_scope: MemoryScope, draft: MemoryDraft) => {
+          written.push(draft)
+          return Promise.resolve(memory())
+        },
+      },
+    })
+
+    await state().promote(
+      memory({ refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }], links: ['m_two'] }),
+    )
+
+    expect(written[0]).not.toHaveProperty('refs')
+    expect(written[0]).not.toHaveProperty('links')
+  })
+
+  it('adds nothing the second time it is clicked', async () => {
+    const remember = vi.fn(() => Promise.resolve(memory()))
+    installFakeBridge({
+      memory: { list: () => Promise.resolve([memory({ id: 'm_already' })]), remember },
+    })
+
+    expect(await state().promote(memory())).toBe(true)
+    expect(remember).not.toHaveBeenCalled()
   })
 })
 
