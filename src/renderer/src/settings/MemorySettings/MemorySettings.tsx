@@ -81,11 +81,15 @@ export function MemorySettings() {
       </div>
 
       <div className="flex gap-2">
-        <WindowSearch label={t('settings.memorySearch')} value={text} onChange={setText} />
+        {/* 🛑 Wrapped: `WindowSearch` is `w-full shrink-0`, which is its COLUMN behaviour — in a
+            row it took the whole width and pushed the filter off the edge of the window. */}
+        <div className="min-w-0 grow">
+          <WindowSearch label={t('settings.memorySearch')} value={text} onChange={setText} />
+        </div>
         <select
           data-sc="field:memory.type"
           aria-label={t('settings.memoryFilterAll')}
-          className={SETTING_SELECT}
+          className={cn(SETTING_SELECT, 'shrink-0')}
           value={type}
           onChange={event => setType(event.target.value as MemoryType | '')}
         >

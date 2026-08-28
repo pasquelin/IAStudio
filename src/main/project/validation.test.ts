@@ -271,6 +271,12 @@ describe('parseFolderPath', () => {
     expect(() => parseFolderPath(path)).toThrow()
   })
 
+  // 🛑 Forward slashes, so `isAbsolute` answers FALSE on this Mac and on the Linux runner: the
+  // drive letter is what refuses it, and dropping that clause leaves both of them green.
+  it.each(['C:/Windows', 'd:/data'])('refuses the drive letter in %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
   // Both rows, so the bound is pinned at one number rather than anywhere inside an interval.
   it('refuses a path past its own bound and keeps the last one under it', () => {
     expect(parseFolderPath('a'.repeat(1024))).toBe('a'.repeat(1024))

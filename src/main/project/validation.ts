@@ -139,6 +139,9 @@ const withinPathBound = withinCodePoints(1024)
  * by `/`. Bounded, never absolute, never climbing, and never through a backslash — Windows takes
  * that as a separator, so `..\..` would walk out through a check that only looked at `/`.
  *
+ * 🛑 The drive letter is spelt OUT rather than left to `isAbsolute`, which answers for the system
+ * it RUNS on: `C:/Users/x` reads as relative on macOS and on the Linux runner alike.
+ *
  * A control character is deliberately NOT refused, unlike `pathSegment`: that one names what gets
  * CREATED, this one names what already exists. APFS holds such a name and `folder.list` hands it
  * straight back, so refusing here would lose a folder the disk really has.
@@ -147,6 +150,7 @@ export function isProjectRelativeFolder(value: string): boolean {
   return (
     withinPathBound(value) &&
     !isAbsolute(value) &&
+    !/^[A-Za-z]:/.test(value) &&
     !value.startsWith('/') &&
     !value.includes('\\') &&
     value.split('/').every(segment => segment !== '.' && segment !== '..')
