@@ -30,6 +30,16 @@ export async function dispatchMemoryRequest(
       return await store.reset()
     case 'trouble':
       return store.trouble()
+    case 'recall':
+      return await store.recall(request.ask)
+    case 'writeVectors':
+      return await store.writeVectors(request.vectors)
+    case 'withoutVector':
+      return await store.withoutVector(request.model, request.limit)
+    case 'pendingVectors':
+      return await store.pendingVectors(request.model)
+    case 'dropOtherVectors':
+      return await store.dropOtherVectors(request.model)
     case 'close':
       return await store.close()
   }

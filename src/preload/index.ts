@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
-import type { MemoryScope } from '@shared/domain/assistantMemory'
+import type { MemoryIndexing, MemoryScope } from '@shared/domain/assistantMemory'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -63,7 +63,11 @@ const bridge: StudioBridge = {
     forget: (scope, id) => ipcRenderer.invoke(CHANNELS.memoryForget, scope, id),
     rebuild: scope => ipcRenderer.invoke(CHANNELS.memoryRebuild, scope),
     reset: scope => ipcRenderer.invoke(CHANNELS.memoryReset, scope),
+    pending: scope => ipcRenderer.invoke(CHANNELS.memoryPending, scope),
+    index: scope => ipcRenderer.invoke(CHANNELS.memoryIndex, scope),
+    stopIndex: scope => ipcRenderer.invoke(CHANNELS.memoryStopIndex, scope),
     onChanged: callback => subscribe<MemoryScope>(EVENTS.memoryChanged, callback),
+    onIndexed: callback => subscribe<MemoryIndexing>(EVENTS.memoryIndexed, callback),
   },
   mcp: {
     state: () => ipcRenderer.invoke(CHANNELS.mcpState),

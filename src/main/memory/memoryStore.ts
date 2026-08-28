@@ -12,7 +12,8 @@ import {
 import { defined } from '@shared/guards'
 import { orElse } from '@shared/promises'
 import { isMissing, writeQueue } from '@main/persistence'
-import type { MemoryIndex, MemoryStamp } from './memoryIndex'
+import type { MemoryIndex, MemoryStamp, RecallAsk } from './memoryIndex'
+import type { MemoryVector, PendingVector } from './vectors'
 import { parseMemory, versionOf } from './validation'
 
 /**
@@ -36,6 +37,22 @@ export type MemoryStore = {
   read: (id: string) => Promise<Memory | null>
   list: (query: MemoryQuery) => Promise<readonly Memory[]>
   markUsed: (ids: readonly string[]) => Promise<void>
+  /**
+   * The embeddings, which live in the index alone and never in the file.
+   *
+   * By ADR-24's criterion, the same one that keeps `usedAt` out: a vector is what one model on
+   * one machine computed, so it says nothing about the project and does not travel with it. It
+   * costs a recomputation on another machine, and a recomputation is what a derived index is for.
+   *
+   * 🛑 No reader across this boundary. `[M]` reading 10 000 vectors of 768 dimensions costs 78 ms
+   * and 30 MB, and a structured clone would pay both again — what compares them belongs on the
+   * side that holds them.
+   */
+  recall: (ask: RecallAsk) => Promise<readonly Memory[]>
+  writeVectors: (vectors: readonly MemoryVector[]) => Promise<void>
+  withoutVector: (model: string, limit: number) => Promise<readonly PendingVector[]>
+  pendingVectors: (model: string) => Promise<number>
+  dropOtherVectors: (model: string) => Promise<void>
   /** Reads the file back into the index, whatever the index already holds. */
   rebuild: () => Promise<number>
   /**
@@ -132,12 +149,16 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
       // A project that never remembered anything is the ordinary case, not a fault.
       if (isMissing(error)) {
         index.clear()
+        // Swept: no file is no memories, so every vector held is an orphan.
+        index.sweepVectors()
         return 0
       }
       // Emptied as well: answering `0` to the window while `list` still served the old rows had
       // the panel told « nothing » and showing something.
       trouble = 'unreadable'
       index.clear()
+      // 🛑 NOT swept, unlike the two other emptyings: a volume that blinked would otherwise cost
+      // a full re-embedding — 24 ms a memory — for a file the next read finds intact.
       return 0
     }
 
@@ -179,15 +200,16 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
     // The file has no `usedAt` to give back, so it is taken from the index before it is emptied:
     // what this machine served is the one thing a rebuild would otherwise destroy.
-    const served = new Map(
-      index.list({ limit: Number.MAX_SAFE_INTEGER }).map(one => [one.id, one.usedAt]),
-    )
+    const served = index.served()
     const standing = [...held.values()]
       .filter(isReadable)
       .map(memory => ({ ...memory, ...defined({ usedAt: served.get(memory.id) }) }))
 
     index.clear()
     index.putAll(standing)
+    // AFTER the file has been read whole: `clear` spares the vectors on purpose, so what is an
+    // orphan is only known once every line that still stands has been put back.
+    index.sweepVectors()
 
     const stamp = await stampOf(file)
     if (stamp) index.restamp(stamp)
@@ -247,6 +269,16 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
     markUsed: async ids => index.markUsed(ids, now()),
 
+    recall: async ask => index.recall(ask),
+
+    writeVectors: async vectors => index.writeVectors(vectors),
+
+    withoutVector: async (model, limit) => index.withoutVector(model, limit),
+
+    pendingVectors: async model => index.pendingVectors(model),
+
+    dropOtherVectors: async model => index.dropOtherVectors(model),
+
     rebuild: () => writes.next(readFileInto),
 
     refresh: () =>
@@ -257,6 +289,8 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
     reset: () =>
       writes.next(async () => {
         index.clear()
+        // Swept: this is the gesture that means « forget all of it », vectors included.
+        index.sweepVectors()
         trouble = null
         await rm(file, { force: true })
       }),

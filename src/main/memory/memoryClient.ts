@@ -5,7 +5,9 @@ import type {
   MemoryQuery,
   MemoryTrouble,
 } from '@shared/domain/assistantMemory'
+import type { RecallAsk } from './memoryIndex'
 import type { MemoryOp, MemoryRequest, MemoryResponse, MemoryResults } from './memoryProtocol'
+import type { MemoryVector, PendingVector } from './vectors'
 
 /**
  * The thread, reduced to what the client needs. Injected rather than imported so the protocol
@@ -29,6 +31,13 @@ export type AsyncMemory = {
   read: (id: string) => Promise<Memory | null>
   list: (query: MemoryQuery) => Promise<readonly Memory[]>
   markUsed: (ids: readonly string[]) => Promise<void>
+  /** What answers a question, best first — gathered and ranked on the thread. */
+  recall: (ask: RecallAsk) => Promise<readonly Memory[]>
+  /** The embeddings, which live in the index alone and never in the file — see `MemoryStore`. */
+  writeVectors: (vectors: readonly MemoryVector[]) => Promise<void>
+  withoutVector: (model: string, limit: number) => Promise<readonly PendingVector[]>
+  pendingVectors: (model: string) => Promise<number>
+  dropOtherVectors: (model: string) => Promise<void>
   /** Reads the file into the index, whatever it already holds. */
   rebuild: () => Promise<number>
   /** Reads it only if it has changed since the index was built — what an opening runs. */
@@ -90,6 +99,11 @@ export function createMemoryClient(port: MemoryPort): AsyncMemory {
     read: memoryId => ask<'read'>({ op: 'read', memoryId }),
     list: query => ask<'list'>({ op: 'list', query }),
     markUsed: ids => ask<'markUsed'>({ op: 'markUsed', ids }),
+    recall: wanted => ask<'recall'>({ op: 'recall', ask: wanted }),
+    writeVectors: vectors => ask<'writeVectors'>({ op: 'writeVectors', vectors }),
+    withoutVector: (model, limit) => ask<'withoutVector'>({ op: 'withoutVector', model, limit }),
+    pendingVectors: model => ask<'pendingVectors'>({ op: 'pendingVectors', model }),
+    dropOtherVectors: model => ask<'dropOtherVectors'>({ op: 'dropOtherVectors', model }),
     rebuild: () => ask<'rebuild'>({ op: 'rebuild' }),
     refresh: () => ask<'refresh'>({ op: 'refresh' }),
     reset: () => ask<'reset'>({ op: 'reset' }),

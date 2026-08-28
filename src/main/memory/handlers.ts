@@ -4,6 +4,7 @@ import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import type { AsyncMemory } from './memoryClient'
 import type { MemoryHost } from './memoryHost'
+import type { MemoryVectors } from './memoryVectors'
 import {
   parseMemoryDraft,
   parseMemoryPatch,
@@ -13,6 +14,7 @@ import {
 
 export type MemoryHandlerDeps = {
   host: MemoryHost
+  vectors: MemoryVectors
 }
 
 /**
@@ -21,10 +23,10 @@ export type MemoryHandlerDeps = {
  * Everything a window sends is checked here and nowhere else: the channel is typed, but
  * TypeScript is gone at runtime and the sender is a renderer.
  */
-export function registerMemoryHandlers({ host }: MemoryHandlerDeps): void {
+export function registerMemoryHandlers({ host, vectors }: MemoryHandlerDeps): void {
   const memoryOf = async (scope: unknown): Promise<[MemoryScope, AsyncMemory | null]> => {
     const wanted = parseMemoryScope(scope)
-    return [wanted, wanted === 'global' ? await host.global() : await host.project()]
+    return [wanted, await host.of(wanted)]
   }
 
   handle(CHANNELS.memoryList, async (_event, scope, query) => {
@@ -44,6 +46,9 @@ export function registerMemoryHandlers({ host }: MemoryHandlerDeps): void {
 
     const written = await memory.remember(parseMemoryDraft(draft))
     broadcast(EVENTS.memoryChanged, wanted)
+    // Not awaited: a window that waited on 24 ms of embedding per memory is a window that stopped
+    // drawing to compute something nothing on screen reads.
+    vectors.catchUp(wanted)
     return written
   })
 
@@ -52,7 +57,11 @@ export function registerMemoryHandlers({ host }: MemoryHandlerDeps): void {
     if (!memory) return null
 
     const amended = await memory.amend(String(id), parseMemoryPatch(patch))
-    if (amended) broadcast(EVENTS.memoryChanged, wanted)
+    if (amended) {
+      broadcast(EVENTS.memoryChanged, wanted)
+      // Reworded is re-embedded: the digest that ties a vector to its words no longer matches.
+      vectors.catchUp(wanted)
+    }
     return amended
   })
 
@@ -71,7 +80,24 @@ export function registerMemoryHandlers({ host }: MemoryHandlerDeps): void {
 
     const read = await memory.rebuild()
     broadcast(EVENTS.memoryChanged, wanted)
+    vectors.catchUp(wanted)
     return read
+  })
+
+  /**
+   * 🛑 The scope alone, never `memoryOf`, which OPENS the memory: a studio with no embedding
+   * model answers these three without a thread, and `memoryOf` would disarm that guard here.
+   */
+  handle(CHANNELS.memoryPending, async (_event, scope) => {
+    return await vectors.pending(parseMemoryScope(scope))
+  })
+
+  handle(CHANNELS.memoryIndex, async (_event, scope) => {
+    vectors.catchUp(parseMemoryScope(scope))
+  })
+
+  handle(CHANNELS.memoryStopIndex, async (_event, scope) => {
+    vectors.stop(parseMemoryScope(scope))
   })
 
   handle(CHANNELS.memoryReset, async (_event, scope) => {

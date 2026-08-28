@@ -9,6 +9,7 @@ import type {
   MemoryDraft,
   MemoryPatch,
   MemoryQuery,
+  MemoryIndexing,
   MemoryScope,
 } from './domain/assistantMemory'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
@@ -157,6 +158,9 @@ export type Channels = {
   memoryForget: 'memory:forget'
   memoryRebuild: 'memory:rebuild'
   memoryReset: 'memory:reset'
+  memoryPending: 'memory:pending'
+  memoryIndex: 'memory:index'
+  memoryStopIndex: 'memory:stop-index'
 
   /**
    * Opens one file's information window, or reveals the one that path already has.
@@ -398,6 +402,9 @@ export const CHANNELS: Channels = {
   memoryForget: 'memory:forget',
   memoryRebuild: 'memory:rebuild',
   memoryReset: 'memory:reset',
+  memoryPending: 'memory:pending',
+  memoryIndex: 'memory:index',
+  memoryStopIndex: 'memory:stop-index',
 
   fileInfoOpen: 'window:file-info',
 
@@ -951,6 +958,7 @@ export type TraceEntry = { scope: TraceScope; message: string }
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
   memoryChanged: 'evt:memory-changed',
+  memoryIndexed: 'evt:memory-indexed',
   jobProgress: 'evt:job-progress',
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
@@ -1099,8 +1107,19 @@ export type StudioBridge = {
     rebuild: (scope: MemoryScope) => Promise<number>
     /** Everything forgotten, the file included. What « reset this project's memory » runs. */
     reset: (scope: MemoryScope) => Promise<void>
+    /**
+     * How many memories have no embedding yet for the model that is chosen. `0` where none is —
+     * a studio with no embedding model has nothing pending, it has nothing to compute.
+     */
+    pending: (scope: MemoryScope) => Promise<number>
+    /** Starts computing what is missing, in the background. Answers as soon as it has started. */
+    index: (scope: MemoryScope) => Promise<void>
+    /** Stops the run in flight. What it already wrote is kept — see `MemoryVectors`. */
+    stopIndex: (scope: MemoryScope) => Promise<void>
     /** Fires for every window when any of them writes: two replicas of one file is one too many. */
     onChanged: (callback: (scope: MemoryScope) => void) => Unsubscribe
+    /** How far the embedding of a scope has got. Silent while nothing is being computed. */
+    onIndexed: (callback: (progress: MemoryIndexing) => void) => Unsubscribe
   }
   /**
    * The door onto this machine — its own pair, like `window` and `updates`, because the SETTING

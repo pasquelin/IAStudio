@@ -14,7 +14,17 @@ import { matchExpression } from '@main/project/ftsMatch'
 import type { SqliteDriver, SqlRow, SqlValue } from '@main/project/sqlite'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { escapeLike, holes } from '@main/project/sqlText'
-import { number, optionalText, text } from '@main/project/sqlRow'
+import { bytes, number, optionalText, text } from '@main/project/sqlRow'
+import {
+  digestOf,
+  dotOfBytes,
+  embeddedTextOf,
+  packed,
+  unpacked,
+  type MemoryVector,
+  type PendingVector,
+} from './vectors'
+import { rankedRecall, type RecallCandidate } from './recallScore'
 
 /**
  * The searchable half of the memory — DERIVED, and thrown away without a second thought.
@@ -98,6 +108,32 @@ const MIGRATIONS: readonly string[] = [
   CREATE INDEX memories_type_idx   ON memories(type);
   CREATE INDEX memory_refs_ref_idx ON memory_refs(kind, ref);
   `,
+  `
+  -- What was embedded, so a rebuild does not throw every vector away. See \`digestOf\`.
+  ALTER TABLE memories ADD COLUMN text_digest TEXT NOT NULL DEFAULT '';
+
+  -- 🛑 NO foreign key, and that is the whole point: \`memories\` is emptied and rewritten every
+  -- time the file is read back, and a cascade would take every embedding with it — 24 ms each,
+  -- so four minutes for ten thousand of them on an opening that changed nothing. What ties a
+  -- vector to a memory is the DIGEST of what was embedded; what removes an orphan is \`sweep\`.
+  --
+  -- 🛑 No \`vec0\` either, and that was measured before it was decided: sqlite-vec loads under
+  -- \`better-sqlite3\` and answers \`no such module\` under \`node:sqlite\`, the driver the suite
+  -- exercises — half the retrieval would have been untestable. Brute force over 20 000 vectors
+  -- of 384 dimensions took 9 ms, so it buys nothing at this size either.
+  CREATE TABLE memory_vectors (
+    memory_id   TEXT PRIMARY KEY,
+    text_digest TEXT NOT NULL,
+    model       TEXT NOT NULL,
+    vector      BLOB NOT NULL
+  );
+
+  CREATE INDEX memory_vectors_model_idx ON memory_vectors(model, text_digest);
+
+  -- What the pending page is ordered by. [M] 10 000 memories in batches of eight: 3,53 ms a
+  -- page without it, 2,24 with, and 2 ms to build.
+  CREATE INDEX memories_created_idx ON memories(created_at, id);
+  `,
 ]
 
 /**
@@ -125,10 +161,41 @@ export type MemoryIndex = {
   list: (query: MemoryQuery) => readonly Memory[]
   /** Stamps what a retrieval served, which is what later makes an unused memory age. */
   markUsed: (ids: readonly string[], at: string) => void
+  /**
+   * When each memory was last served, for the ones that ever were — what a rebuild carries over.
+   *
+   * 🛑 Two columns and no join. Read through `list`, an opening built one placeholder per memory
+   * and threw past SQLITE_MAX_VARIABLE_NUMBER — 32 766 — which failed the whole thread, not just
+   * the rebuild. It also read every summary, body, ref and link to recover one date.
+   */
+  served: () => ReadonlyMap<string, string>
   stamp: () => MemoryStamp | null
   restamp: (stamp: MemoryStamp) => void
   /** Empties the tables for a rebuild. The schema stays: the file is what is authoritative. */
   clear: () => void
+  /** Writes what an embedder answered. One transaction whatever the batch — see `putAll`. */
+  writeVectors: (vectors: readonly MemoryVector[]) => void
+  /**
+   * Every vector this model produced, in one read. `[M]` 78 ms and 30 MB for 10 000 of 768
+   * dimensions — which is why nothing outside this thread ever asks for them.
+   */
+  vectors: (model: string) => readonly MemoryVector[]
+  /** What this model has no vector for, oldest first, with the words that make one. */
+  withoutVector: (model: string, limit: number) => readonly PendingVector[]
+  /** How many are still waiting — what a progress bar divides by, without reading one of them. */
+  pendingVectors: (model: string) => number
+  /** Forgets what another model produced. A DELETE: the memories themselves have not moved. */
+  dropOtherVectors: (model: string) => void
+  /**
+   * What answers a question, best first — the four voices gathered and ranked here.
+   *
+   * 🛑 In the INDEX and not in the main process: sweeping the vectors is `[M]` 19 ms of SQL and
+   * 12 ms of arithmetic at 10 000 memories, and handing them across a thread boundary to do it
+   * elsewhere would clone 30 MB per question asked.
+   */
+  recall: (ask: RecallAsk) => readonly Memory[]
+  /** Drops the vectors of memories the file no longer holds. What the end of a rebuild runs. */
+  sweepVectors: () => void
   close: () => void
 }
 
@@ -144,10 +211,27 @@ const COLUMN_NAMES: readonly string[] = [
   'source_ref',
   'state',
   'supersedes',
+  'text_digest',
 ]
 
 const COLUMNS = COLUMN_NAMES.join(', ')
 const ALIASED = COLUMN_NAMES.map(column => `m.${column}`).join(', ')
+
+/** What a recall is given. `question` and `model` travel together: one without the other scores
+ * nothing. */
+export type RecallAsk = {
+  text: string
+  refs?: readonly MemoryRef[]
+  /** The question, embedded and normalised, or nothing where no model could answer. */
+  question?: Float32Array
+  /** Whose vectors to compare against — a model's own space, never another's. */
+  model?: string
+  now: string
+  limit: number
+}
+
+/** How many each voice may put forward. Ranking a hundred costs nothing; reading them does. */
+const RECALL_CANDIDATES = 40
 
 const isRefKind = (value: string): value is MemoryRefKind =>
   MEMORY_REF_KINDS.some(kind => kind === value)
@@ -201,6 +285,42 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
   const dropStamp = driver.prepare('DELETE FROM memory_source')
   const writeStamp = driver.prepare('INSERT INTO memory_source (bytes, modified_at) VALUES (?, ?)')
   const dropAll = driver.prepare('DELETE FROM memories')
+  const readServed = driver.prepare('SELECT id, used_at FROM memories WHERE used_at IS NOT NULL')
+  const writeVector = driver.prepare(
+    `INSERT INTO memory_vectors (memory_id, text_digest, model, vector) VALUES (?, ?, ?, ?)
+     ON CONFLICT(memory_id) DO UPDATE SET text_digest = excluded.text_digest,
+       model = excluded.model, vector = excluded.vector`,
+  )
+  // Joined on the digest too: a memory reworded still holds the vector of what it used to say.
+  const readVectors = driver.prepare(
+    `SELECT v.memory_id, v.text_digest, v.vector FROM memory_vectors v
+     JOIN memories m ON m.id = v.memory_id AND m.text_digest = v.text_digest
+     WHERE v.model = ? ORDER BY v.memory_id`,
+  )
+  const countPending = driver.prepare(
+    `SELECT count(*) AS held FROM memories m
+     LEFT JOIN memory_vectors v
+       ON v.memory_id = m.id AND v.model = ? AND v.text_digest = m.text_digest
+     WHERE v.memory_id IS NULL`,
+  )
+  const readPending = driver.prepare(
+    `SELECT m.id, m.summary, m.body, m.text_digest FROM memories m
+     LEFT JOIN memory_vectors v
+       ON v.memory_id = m.id AND v.model = ? AND v.text_digest = m.text_digest
+     WHERE v.memory_id IS NULL ORDER BY m.created_at, m.id LIMIT ?`,
+  )
+  const dropOther = driver.prepare('DELETE FROM memory_vectors WHERE model <> ?')
+  // The blob and the id alone: building a `MemoryVector` per row cost `[M]` 78 ms at 10 000
+  // against 19 for the read itself — a recall sweeps all of them.
+  const sweepVectorsOf = driver.prepare(
+    `SELECT v.memory_id, v.vector FROM memory_vectors v
+     JOIN memories m ON m.id = v.memory_id AND m.text_digest = v.text_digest
+     WHERE v.model = ?`,
+  )
+  const dropVector = driver.prepare('DELETE FROM memory_vectors WHERE memory_id = ?')
+  const dropOrphans = driver.prepare(
+    'DELETE FROM memory_vectors WHERE memory_id NOT IN (SELECT id FROM memories)',
+  )
 
   const write = (memory: Memory): void => {
     /**
@@ -223,6 +343,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
       memory.source.ref ?? null,
       memory.state,
       memory.supersedes ?? null,
+      digestOf(embeddedTextOf(memory.summary, memory.body)),
     )
     for (const ref of memory.refs) insertRef.run(memory.id, ref.kind, ref.ref)
     for (const link of memory.links) insertLink.run(memory.id, link)
@@ -278,14 +399,130 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     )
   }
 
+  const listed = (query: MemoryQuery): readonly Memory[] => {
+    const conditions: string[] = []
+    const params: SqlValue[] = []
+
+    if (query.types && query.types.length > 0) {
+      conditions.push(`m.type IN (${holes(query.types.length)})`)
+      params.push(...query.types)
+    }
+
+    if (query.states && query.states.length > 0) {
+      conditions.push(`m.state IN (${holes(query.states.length)})`)
+      params.push(...query.states)
+    }
+
+    if (query.refs && query.refs.length > 0) {
+      const anchors = query.refs.map(() => '(kind = ? AND ref = ?)').join(' OR ')
+      conditions.push(`m.id IN (SELECT memory_id FROM memory_refs WHERE ${anchors})`)
+      for (const ref of query.refs) params.push(ref.kind, ref.ref)
+    }
+
+    const wanted = query.text?.trim() ?? ''
+    const match = wanted.length > 0 ? matchExpression(wanted) : null
+
+    if (wanted.length > 0 && match === null) {
+      // Punctuation alone tokenises to nothing, and fts5 cannot look for what it never indexed
+      // — searching "%" and finding "100%" is what this keeps.
+      conditions.push(`(m.summary LIKE ? ESCAPE '\\' OR m.body LIKE ? ESCAPE '\\')`)
+      params.push(`%${escapeLike(wanted)}%`, `%${escapeLike(wanted)}%`)
+    }
+
+    const filters = conditions.join(' AND ')
+    const limit = query.limit ?? MEMORY_PAGE
+
+    /**
+     * Ranked by fts5 when the query has words, by weight otherwise: `rank` IS bm25, and it is
+     * the one ordering that answers « which of these is about what was asked ».
+     */
+    const sql =
+      match === null
+        ? `SELECT ${ALIASED} FROM memories m ${filters ? `WHERE ${filters}` : ''}
+           ORDER BY m.importance DESC, m.created_at DESC, m.id DESC LIMIT ?`
+        : `SELECT ${ALIASED} FROM memories_fts f JOIN memories m ON m.rowid = f.rowid
+           WHERE memories_fts MATCH ? ${filters ? `AND ${filters}` : ''}
+           ORDER BY f.rank LIMIT ?`
+
+    const bound = match === null ? [...params, limit] : [match, ...params, limit]
+    return attach(driver.prepare(sql).all(...bound))
+  }
+
+  /** The ids whose vectors are closest to the question, best first, with how close they came. */
+  const closestTo = (
+    model: string,
+    question: Float32Array,
+    top: number,
+  ): readonly { id: string; similarity: number }[] => {
+    const scored = sweepVectorsOf.all(model).map(row => ({
+      id: text(row, 'memory_id'),
+      similarity: dotOfBytes(bytes(row, 'vector'), question),
+    }))
+
+    return scored.sort((one, other) => other.similarity - one.similarity).slice(0, top)
+  }
+
+  const readMany = (ids: readonly string[]): readonly Memory[] =>
+    ids.length === 0
+      ? []
+      : attach(
+          driver
+            .prepare(`SELECT ${COLUMNS} FROM memories WHERE id IN (${holes(ids.length)})`)
+            .all(...ids),
+        )
+
+  /**
+   * The four voices, gathered into one candidate per memory. Merged rather than concatenated: a
+   * memory the words AND the meaning both found must be scored once, carrying both signals.
+   */
+  const gathered = (ask: RecallAsk): readonly RecallCandidate[] => {
+    const candidates = new Map<string, RecallCandidate>()
+    const hold = (memory: Memory): RecallCandidate => {
+      const held = candidates.get(memory.id) ?? { memory }
+      candidates.set(memory.id, held)
+      return held
+    }
+
+    // Pinned first, so what the person decided to always give is in the set whatever it scores.
+    for (const memory of listed({ states: ['pinned'], limit: RECALL_CANDIDATES })) hold(memory)
+
+    if (ask.refs && ask.refs.length > 0) {
+      for (const memory of listed({ refs: ask.refs, limit: RECALL_CANDIDATES })) hold(memory)
+    }
+
+    if (ask.text.trim().length > 0) {
+      const found = listed({ text: ask.text, limit: RECALL_CANDIDATES })
+      found.forEach((memory, rank) => {
+        hold(memory).exactRank = rank
+      })
+    }
+
+    if (ask.question && ask.question.length > 0 && ask.model) {
+      const closest = closestTo(ask.model, ask.question, RECALL_CANDIDATES)
+      const near = new Map(closest.map(one => [one.id, one.similarity]))
+      for (const memory of readMany(closest.map(one => one.id))) {
+        hold(memory).similarity = near.get(memory.id)
+      }
+    }
+
+    return [...candidates.values()]
+  }
+
+  const recallWith = (ask: RecallAsk): readonly Memory[] =>
+    rankedRecall(gathered(ask), { ...(ask.refs && { refs: ask.refs }), now: ask.now })
+      .slice(0, ask.limit)
+      .map(one => one.memory)
+
   return {
     put: memory => transaction(driver, () => write(memory)),
 
     putAll: memories => transaction(driver, () => memories.forEach(write)),
 
     remove: id => {
-      // The cascade takes the refs and the links, and the fts5 trigger takes the words.
+      // The cascade takes the refs and the links, and the fts5 trigger takes the words. The
+      // vector is NOT cascaded — see the migration — so forgetting says so itself.
       deleteMemory.run(id)
+      dropVector.run(id)
     },
 
     count: () => number(countMemories.get() ?? {}, 'held'),
@@ -295,54 +532,9 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
       return row ? (attach([row])[0] ?? null) : null
     },
 
-    list: query => {
-      const conditions: string[] = []
-      const params: SqlValue[] = []
+    list: listed,
 
-      if (query.types && query.types.length > 0) {
-        conditions.push(`m.type IN (${holes(query.types.length)})`)
-        params.push(...query.types)
-      }
-
-      if (query.states && query.states.length > 0) {
-        conditions.push(`m.state IN (${holes(query.states.length)})`)
-        params.push(...query.states)
-      }
-
-      if (query.refs && query.refs.length > 0) {
-        const anchors = query.refs.map(() => '(kind = ? AND ref = ?)').join(' OR ')
-        conditions.push(`m.id IN (SELECT memory_id FROM memory_refs WHERE ${anchors})`)
-        for (const ref of query.refs) params.push(ref.kind, ref.ref)
-      }
-
-      const wanted = query.text?.trim() ?? ''
-      const match = wanted.length > 0 ? matchExpression(wanted) : null
-
-      if (wanted.length > 0 && match === null) {
-        // Punctuation alone tokenises to nothing, and fts5 cannot look for what it never indexed
-        // — searching "%" and finding "100%" is what this keeps.
-        conditions.push(`(m.summary LIKE ? ESCAPE '\\' OR m.body LIKE ? ESCAPE '\\')`)
-        params.push(`%${escapeLike(wanted)}%`, `%${escapeLike(wanted)}%`)
-      }
-
-      const filters = conditions.join(' AND ')
-      const limit = query.limit ?? MEMORY_PAGE
-
-      /**
-       * Ranked by fts5 when the query has words, by weight otherwise: `rank` IS bm25, and it is
-       * the one ordering that answers « which of these is about what was asked ».
-       */
-      const sql =
-        match === null
-          ? `SELECT ${ALIASED} FROM memories m ${filters ? `WHERE ${filters}` : ''}
-             ORDER BY m.importance DESC, m.created_at DESC, m.id DESC LIMIT ?`
-          : `SELECT ${ALIASED} FROM memories_fts f JOIN memories m ON m.rowid = f.rowid
-             WHERE memories_fts MATCH ? ${filters ? `AND ${filters}` : ''}
-             ORDER BY f.rank LIMIT ?`
-
-      const bound = match === null ? [...params, limit] : [match, ...params, limit]
-      return attach(driver.prepare(sql).all(...bound))
-    },
+    served: () => new Map(readServed.all().map(row => [text(row, 'id'), text(row, 'used_at')])),
 
     markUsed: (ids, at) => {
       if (ids.length === 0) return
@@ -370,6 +562,44 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
         dropAll.run()
         dropStamp.run()
       }),
+
+    writeVectors: vectors =>
+      transaction(driver, () => {
+        for (const one of vectors) {
+          writeVector.run(one.memoryId, one.digest, one.model, packed(one.values))
+        }
+      }),
+
+    vectors: model =>
+      readVectors.all(model).map(row => ({
+        memoryId: text(row, 'memory_id'),
+        model,
+        digest: text(row, 'text_digest'),
+        values: unpacked(bytes(row, 'vector')),
+      })),
+
+    withoutVector: (model, limit) =>
+      readPending.all(model, limit).map(row => ({
+        id: text(row, 'id'),
+        text: embeddedTextOf(text(row, 'summary'), text(row, 'body')),
+        // Read rather than recomputed: the column is what the join compares, so hashing the two
+        // halves a second time here is one more chance for the two answers to disagree.
+        digest: text(row, 'text_digest'),
+      })),
+
+    pendingVectors: model => number(countPending.get(model) ?? {}, 'held'),
+
+    dropOtherVectors: model => {
+      dropOther.run(model)
+    },
+
+    recall: ask => recallWith(ask),
+
+    // Run after a rebuild, never during one: `clear` deliberately spares the vectors, so what a
+    // file no longer holds is only known once the file has been read back whole.
+    sweepVectors: () => {
+      dropOrphans.run()
+    },
 
     close: () => driver.close(),
   }

@@ -14,7 +14,7 @@ import {
  */
 
 /**
- * `<family>/<capability>` for generation, or one of the two standalone roles.
+ * `<family>/<capability>` for generation, or one of the standalone roles.
  *
  * Branded like `RuntimeEndpointId`, and for the same reason: it keys the stored preference, and a
  * malformed key in a record reads as "no choice made" rather than reddening anywhere.
@@ -27,8 +27,22 @@ export const ASSISTANT_ROLE = 'assistant' as AiRoleId
 /** Turns speech into text. The only role already served locally today. */
 export const DICTATION_ROLE = 'dictation' as AiRoleId
 
-/** The two roles no space holds. Exported because they are the only ones a bundle NAMES. */
-export const STANDALONE_ROLES: readonly AiRoleId[] = [ASSISTANT_ROLE, DICTATION_ROLE]
+/**
+ * Turns a sentence into a vector, for the assistant's memory and nothing else.
+ *
+ * A role of its own rather than the assistant's model doing double duty: measured 2026-08-28, the
+ * chat model scored 0.812 between a matching pair and 0.818 between an unrelated one — it does not
+ * discriminate at all. And llama.cpp holds ONE model at a time, so indexing a sentence on the
+ * assistant's model would evict the weights the conversation is running on.
+ */
+export const EMBEDDING_ROLE = 'embedding' as AiRoleId
+
+/** The roles no space holds. Exported because they are the only ones a bundle NAMES. */
+export const STANDALONE_ROLES: readonly AiRoleId[] = [
+  ASSISTANT_ROLE,
+  DICTATION_ROLE,
+  EMBEDDING_ROLE,
+]
 
 /**
  * The only way to name a generation role. It throws rather than answering null: a role is composed
@@ -39,7 +53,7 @@ export function aiRoleId(family: ModelFamily, capability: string): AiRoleId {
     throw new Error(`not a capability of ${family}: ${capability}`)
   }
 
-  // The one cast of this module beyond the two constants: a brand is unforgeable anywhere but here.
+  // The one cast of this module beyond the standalone constants: a brand is unforgeable here alone.
   return `${family}/${capability}` as AiRoleId
 }
 
@@ -62,8 +76,7 @@ export function currentAiRoleKey(stored: string): string {
  *
  * Derived from `CAPABILITIES_BY_FAMILY` rather than listed: a family that gains a capability gains
  * its role, and a list written here would drift the day one is added. Built ONCE: it is walked on
- * every compose, so on every assistant turn, and rebuilding twenty-one entries there is twenty-one
- * allocations for a list nothing can change.
+ * every compose, so on every assistant turn.
  */
 const ALL_ROLES: readonly AiRoleId[] = [
   ...STANDALONE_ROLES,
@@ -76,7 +89,7 @@ export function allRoles(): readonly AiRoleId[] {
   return ALL_ROLES
 }
 
-/** Whether the role belongs to a space, as opposed to being one of the two standalone ones. */
+/** Whether the role belongs to a space, as opposed to being one of the standalone ones. */
 export function isGenerationRole(role: AiRoleId): boolean {
   return partsOfRole(role) !== null
 }

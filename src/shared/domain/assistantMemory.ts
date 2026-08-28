@@ -191,3 +191,22 @@ export type MemoryTrouble = 'unreadable' | 'too-new'
 export function isReadable(memory: Memory): boolean {
   return memory.state !== 'dropped'
 }
+
+/**
+ * How far the embedding of one memory has got. `total` is what was missing when the run started,
+ * so a memory written during it does not make the bar go backwards — it makes the next run.
+ */
+export type MemoryIndexing = {
+  scope: MemoryScope
+  done: number
+  total: number
+}
+
+/**
+ * How much of a briefing the memory may take, in characters.
+ *
+ * 🛑 A hard ceiling and the FIRST block to give ground — `roomFor(4096)` is 7 116 against a short
+ * briefing measured at 8 232, so the room is already negative before a memory is added. Ten
+ * summaries at `MEMORY_SUMMARY_MAX` would be 2 000; this holds about six.
+ */
+export const MEMORY_ROOM = 1200

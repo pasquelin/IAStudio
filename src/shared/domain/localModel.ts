@@ -180,6 +180,14 @@ export type LocalModel = {
    * the names their manifest gives. Its presence is what says "there is nothing to download".
    */
   readonly weightsPath?: string
+  /**
+   * What an EMBEDDING model wants in front of a document and in front of a question.
+   *
+   * In the manifest and not in a table beside it, for the reason `contextTokens` is here: it is
+   * what the weights were trained to read. `[M]` 2026-08-28, EmbeddingGemma separated a matching
+   * pair from an unrelated one by 0.427 with its two prompts, and by 0.379 without.
+   */
+  readonly embedPrompts?: { readonly document: string; readonly query: string }
 }
 
 /**

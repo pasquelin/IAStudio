@@ -20,6 +20,7 @@ const routed = (over: Partial<RoutedBrainDeps> = {}) =>
     cloudBrain: id => (id === 'a-cloud' ? answering('from the cloud') : null),
     contextOf: () => Promise.resolve(''),
     stateOf: () => Promise.resolve(''),
+    recalledOf: () => Promise.resolve(''),
     ...over,
   })
 

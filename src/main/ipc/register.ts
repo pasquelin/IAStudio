@@ -139,7 +139,7 @@ export function registerIpc(services: Services): void {
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
   })
-  registerMemoryHandlers({ host: services.memory })
+  registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
   registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
   registerDictationHandlers({
     session: services.dictation,

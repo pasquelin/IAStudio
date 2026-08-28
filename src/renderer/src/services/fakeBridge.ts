@@ -60,7 +60,11 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       forget: () => Promise.resolve(false),
       rebuild: () => Promise.resolve(0),
       reset: () => Promise.resolve(),
+      pending: () => Promise.resolve(0),
+      index: () => Promise.resolve(),
+      stopIndex: () => Promise.resolve(),
       onChanged: noSubscription,
+      onIndexed: noSubscription,
       ...overrides.memory,
     },
     mcp: {

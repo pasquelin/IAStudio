@@ -3,6 +3,7 @@ import type { Memory } from '@shared/domain/assistantMemory'
 import type { SqliteDriver } from '@main/project/sqlite'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMemoryIndex, type MemoryIndex } from './memoryIndex'
+import { digestOf, embeddedTextOf, type MemoryVector } from './vectors'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
   id: 'm_one',
@@ -206,5 +207,223 @@ describe('what a retrieval served', () => {
 
     expect(index.read('m_a')?.usedAt).toBe('2026-08-28T12:00:00.000Z')
     expect(index.read('m_b')?.usedAt).toBeUndefined()
+  })
+})
+
+describe('the embeddings beside the memories', () => {
+  const vectorOf = (memoryId: string, values: readonly number[], digest: string): MemoryVector => ({
+    memoryId,
+    model: 'e',
+    digest,
+    values: new Float32Array(values),
+  })
+
+  const digestFor = (one: Memory): string => digestOf(embeddedTextOf(one.summary, one.body))
+
+  /**
+   * 🛑 The table itself, never `vectors()`. That reader JOINs on `memories`, so an orphan it left
+   * behind reads as absent through it — a test written the obvious way passes WITH the leak.
+   */
+  const rowsHeld = (): number =>
+    Number(database.prepare('SELECT count(*) AS held FROM memory_vectors').get()?.['held'] ?? -1)
+
+  it('gives back the floats it was handed, through the blob', () => {
+    const written = memory({ summary: 'a sentence with a vector' })
+    index.put(written)
+    index.writeVectors([vectorOf('m_one', [0.5, -0.25, 0], digestFor(written))])
+
+    expect([...(index.vectors('e')[0]?.values ?? [])]).toEqual([0.5, -0.25, 0])
+  })
+
+  it('names what still has none, and stops naming it once it has one', () => {
+    const written = memory()
+    index.put(written)
+
+    expect(index.pendingVectors('e')).toBe(1)
+    expect(index.withoutVector('e', 10).map(one => one.id)).toEqual(['m_one'])
+
+    index.writeVectors([vectorOf('m_one', [1], digestFor(written))])
+
+    expect(index.pendingVectors('e')).toBe(0)
+    expect(index.withoutVector('e', 10)).toEqual([])
+  })
+
+  it('embeds both halves of a memory, not the summary alone', () => {
+    index.put(memory({ summary: 'the rail', body: 'Scripts/Cam.ts drives it' }))
+
+    expect(index.withoutVector('e', 10)[0]?.text).toBe('the rail\nScripts/Cam.ts drives it')
+  })
+
+  /**
+   * 🛑 The reason the table is keyed on a digest rather than on a row. Reading the file back
+   * empties and rewrites `memories`, which is what an opening does whenever anything was
+   * remembered since — and a vector costs 24 ms to make.
+   */
+  it('keeps a vector across a rebuild that rewrote the same memory', () => {
+    const written = memory()
+    index.put(written)
+    index.writeVectors([vectorOf('m_one', [1], digestFor(written))])
+
+    index.clear()
+    index.putAll([written])
+
+    expect(index.pendingVectors('e')).toBe(0)
+    expect(index.vectors('e')).toHaveLength(1)
+  })
+
+  it('asks for a new one when the words changed, and stops answering the old one', () => {
+    const written = memory()
+    index.put(written)
+    index.writeVectors([vectorOf('m_one', [1], digestFor(written))])
+
+    index.put(memory({ summary: 'the cameras follow the target after all' }))
+
+    expect(index.pendingVectors('e')).toBe(1)
+    // Not merely « pending »: the stale vector must not be scored against a question either.
+    expect(index.vectors('e')).toEqual([])
+  })
+
+  it('drops what another model produced, and keeps its own', () => {
+    const written = memory()
+    index.put(written)
+    index.writeVectors([{ ...vectorOf('m_one', [1], digestFor(written)), model: 'old' }])
+
+    index.dropOtherVectors('e')
+
+    expect(index.vectors('old')).toEqual([])
+    expect(index.pendingVectors('e')).toBe(1)
+  })
+
+  it('drops the vector of a memory that was forgotten', () => {
+    const written = memory()
+    index.put(written)
+    index.writeVectors([vectorOf('m_one', [1], digestFor(written))])
+    index.remove('m_one')
+
+    expect(rowsHeld()).toBe(0)
+  })
+
+  /** `clear` spares them on purpose, so a memory the file dropped is only orphaned after. */
+  it('sweeps the vectors of memories the file no longer holds', () => {
+    const written = memory()
+    index.put(written)
+    index.writeVectors([vectorOf('m_one', [1], digestFor(written))])
+
+    index.clear()
+    index.putAll([memory({ id: 'm_other' })])
+
+    expect(rowsHeld()).toBe(1)
+
+    index.sweepVectors()
+
+    expect(rowsHeld()).toBe(0)
+  })
+})
+
+describe('what answers a question', () => {
+  const NOW = '2026-08-28T12:00:00.000Z'
+  const ask = (fields: Partial<Parameters<MemoryIndex['recall']>[0]> = {}): readonly Memory[] =>
+    index.recall({ text: '', now: NOW, limit: 10, ...fields })
+
+  const vectorFor = (one: Memory, values: readonly number[]): void =>
+    index.writeVectors([
+      {
+        memoryId: one.id,
+        model: 'e',
+        digest: digestOf(embeddedTextOf(one.summary, one.body)),
+        values: new Float32Array(values),
+      },
+    ])
+
+  it('finds by an exact word what no vector could reach', () => {
+    index.putAll([
+      memory({ id: 'm_script', summary: 'Scripts/CameraRig.ts drives the rail' }),
+      memory({ id: 'm_other', summary: 'the palette is night blue and ochre' }),
+    ])
+
+    expect(ask({ text: 'CameraRig' }).map(one => one.id)).toEqual(['m_script'])
+  })
+
+  /** The one voice that answers a question nobody can word exactly. */
+  it('finds by meaning what the words missed', () => {
+    const near = memory({ id: 'm_near', summary: 'we chose to export materials as MaterialX' })
+    const far = memory({ id: 'm_far', summary: 'the forest GLB takes forty seconds to load' })
+    index.putAll([near, far])
+    vectorFor(near, [1, 0])
+    vectorFor(far, [0, 1])
+
+    const found = ask({
+      text: 'nothing matches these words',
+      question: new Float32Array([1, 0]),
+      model: 'e',
+    })
+
+    expect(found[0]?.id).toBe('m_near')
+  })
+
+  it('answers on words alone when no model has embedded anything', () => {
+    index.putAll([memory({ id: 'm_script', summary: 'Scripts/CameraRig.ts drives the rail' })])
+
+    expect(ask({ text: 'CameraRig', model: 'e' }).map(one => one.id)).toEqual(['m_script'])
+  })
+
+  /** What is on screen is not a guess — see `RECALL_WEIGHTS`. */
+  it('puts what the open document is anchored to ahead of a word that merely matched', () => {
+    index.putAll([
+      memory({ id: 'm_words', summary: 'the rail was rebuilt in the workshop' }),
+      memory({
+        id: 'm_here',
+        summary: 'a note about nothing',
+        refs: [{ kind: 'scene', ref: 's_1' }],
+      }),
+    ])
+
+    const found = ask({ text: 'rail', refs: [{ kind: 'scene', ref: 's_1' }] })
+
+    expect(found[0]?.id).toBe('m_here')
+  })
+
+  it('gives a pinned memory even when nothing about it was asked', () => {
+    index.putAll([
+      memory({ id: 'm_pinned', state: 'pinned', summary: 'always tell me about the client' }),
+      memory({ id: 'm_words', summary: 'the rail was rebuilt' }),
+    ])
+
+    expect(ask({ text: 'rail' })[0]?.id).toBe('m_pinned')
+  })
+
+  /**
+   * 🛑 Merged and not concatenated: a memory both voices found would otherwise be answered twice,
+   * and the second copy would push a different memory out of the budget.
+   */
+  it('answers a memory once when the words and the meaning both found it', () => {
+    const both = memory({ id: 'm_both', summary: 'the rail and the cameras' })
+    index.put(both)
+    vectorFor(both, [1, 0])
+
+    const found = ask({ text: 'rail', question: new Float32Array([1, 0]), model: 'e' })
+
+    expect(found.map(one => one.id)).toEqual(['m_both'])
+  })
+
+  it('answers nothing at all when nothing is held', () => {
+    expect(ask({ text: 'rail' })).toEqual([])
+  })
+
+  /** A vector another model made is in another space: scoring against it is worse than not. */
+  it('ignores the vectors of a model it was not asked about', () => {
+    const one = memory({ id: 'm_one', summary: 'a memory with an old vector' })
+    index.put(one)
+    index.writeVectors([
+      {
+        memoryId: one.id,
+        model: 'old',
+        digest: digestOf(embeddedTextOf(one.summary, one.body)),
+        values: new Float32Array([1, 0]),
+      },
+    ])
+
+    // Found by nothing but its own presence, so the ranking never sees a similarity at all.
+    expect(ask({ question: new Float32Array([1, 0]), model: 'e' })).toEqual([])
   })
 })

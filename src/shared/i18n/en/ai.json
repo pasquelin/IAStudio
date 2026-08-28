@@ -1,7 +1,8 @@
 {
   "aiRoles": {
     "assistant": "Assistant",
-    "dictation": "Dictation"
+    "dictation": "Dictation",
+    "embedding": "Memory (vectors)"
   },
   "aiClouds": {
     "scenario": "Scenario",

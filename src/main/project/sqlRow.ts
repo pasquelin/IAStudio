@@ -27,3 +27,12 @@ export function optionalNumber(row: SqlRow, column: string): number | undefined 
 export function number(row: SqlRow, column: string): number {
   return optionalNumber(row, column) ?? 0
 }
+
+/**
+ * A blob column, as bytes. Empty for anything else — a caller reading a vector out of a row that
+ * holds none gets a vector of no dimensions, which is what an absent embedding already is.
+ */
+export function bytes(row: SqlRow, column: string): Uint8Array {
+  const value = row[column]
+  return value instanceof Uint8Array ? value : new Uint8Array()
+}

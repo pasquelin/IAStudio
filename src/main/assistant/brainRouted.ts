@@ -31,6 +31,13 @@ export type RoutedBrainDeps = {
    * before any of this, which is worse than knowing and better than waiting.
    */
   stateOf: () => Promise<string>
+  /**
+   * What the assistant learned about this project that bears on the sentence just typed.
+   *
+   * Here for the reason the two above are: a memory a renderer names is one it could forge. Empty
+   * where nothing was learned, and never a refusal — a turn happens with or without it.
+   */
+  recalledOf: (utterance: string) => Promise<string>
 }
 
 /** The brain and, when there is none, the reason — which is the only thing left to say. */
@@ -56,18 +63,19 @@ function brainFor(
 export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
   return {
     think: async (request, signal) => {
-      // The three together: WHICH brain answers probes the runtimes, and neither the project nor
-      // the studio's state depends on the answer. Serially, the person waited for their sum.
-      const [provider, context, state] = await Promise.all([
+      // The four together: WHICH brain answers probes the runtimes, and none of the other three
+      // depends on the answer. Serially, the person waited for their sum.
+      const [provider, context, state, recalled] = await Promise.all([
         deps.providerOf(),
         deps.contextOf(),
         deps.stateOf(),
+        deps.recalledOf(request.utterance),
       ])
 
       const [brain, why] = brainFor(deps, provider)
       if (brain === null) throw new Error(`nothing serves the assistant: ${why}`)
 
-      return await brain.think({ ...request, context, state }, signal)
+      return await brain.think({ ...request, context, state, recalled }, signal)
     },
   }
 }

@@ -180,7 +180,12 @@ import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } fro
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
 import { openCatalogThread } from './project/catalogThread'
+import { createEmbedder, EMBEDDER_IDLE_MS } from './memory/embedder'
+import { embedModelId, embedWeightsOf, type EmbedChoiceDeps } from './memory/embedChoice'
+import { openEmbedProcess } from './memory/embedProcess'
+import { MEMORY_ROOM } from '@shared/domain/assistantMemory'
 import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
+import { createMemoryVectors, type MemoryVectors } from './memory/memoryVectors'
 import { openMemoryThread } from './memory/memoryThread'
 import { catalogOf } from './provider/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
@@ -265,6 +270,8 @@ export type Services = {
   project: ProjectStore
   /** What the assistant has learned — the open project's, and the machine's own. */
   memory: MemoryHost
+  /** The embeddings of both memories, and the one process that computes them. */
+  memoryVectors: MemoryVectors
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
@@ -1573,6 +1580,36 @@ export function createServices(settings: SettingsStore): Services {
     discovered: () => ai.discovered(),
   } satisfies typeof fromManager)
 
+  /**
+   * What the person chose for the embedding role, and where its weights sit. Split in two on
+   * purpose: `chosenId` is asked on every recall, and resolving a `.gguf` path is what it must
+   * not pay for.
+   */
+  const embedDeps: EmbedChoiceDeps = {
+    choices: () => settings.read().ai.roles,
+    byProject: () => settings.read().ai.projectRoles,
+    projectPath: () => project.current()?.path ?? null,
+    installedIds: () => ai.installedIds(),
+    modelOf,
+  }
+
+  const memoryVectors = createMemoryVectors({
+    host: memory,
+    embedder: createEmbedder({
+      chosenId: () => embedModelId(embedDeps),
+      weightsFor: modelId => embedWeightsOf(embedDeps, modelId, weightsOf),
+      open: openEmbedProcess,
+      onTrouble: why => log.warn('memory', why),
+      idleMs: EMBEDDER_IDLE_MS,
+      schedule: (run: () => void, delayMs: number) => {
+        const timer = setTimeout(run, delayMs)
+        return () => clearTimeout(timer)
+      },
+    }),
+    onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
+    onTrouble: why => log.warn('memory', why),
+  })
+
   /** The whole of rank 3's gesture: a picker, a header, an entry. */
   const addOwnAiModel = async (): Promise<AiOverview> => {
     const picked = await pickWeights(language())
@@ -1989,6 +2026,9 @@ export function createServices(settings: SettingsStore): Services {
       const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
       return outcome.ok ? describeStudio(outcome.data) : ''
     },
+    // The open document's own anchors are the window's to name, and it does not answer this
+    // door: the memory is anchored on the project alone until a lot gives the two a route.
+    recalledOf: utterance => memoryVectors.recalled(utterance, [], MEMORY_ROOM),
   })
 
   const checkout = checkoutOf(app.getAppPath())
@@ -2105,6 +2145,7 @@ export function createServices(settings: SettingsStore): Services {
     removeAssetFile,
     project,
     memory,
+    memoryVectors,
     // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
     // here, and an export named against nothing is a refusal rather than a failure.
     projectPath: () => project.current()?.path ?? null,

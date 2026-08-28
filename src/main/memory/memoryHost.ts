@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import type { MemoryScope } from '@shared/domain/assistantMemory'
 import { messageOf } from '@shared/guards'
 import { MEMORY_FILE, MEMORY_INDEX_FILE } from '@shared/domain/project'
 import type { AsyncMemory } from './memoryClient'
@@ -24,6 +25,8 @@ export type MemoryHost = {
   project: () => Promise<AsyncMemory | null>
   /** The machine's own. Nothing when it will not open, which is said in the journal. */
   global: () => Promise<AsyncMemory | null>
+  /** Whichever of the two a scope names — the one reading of that, so it cannot be got wrong. */
+  of: (scope: MemoryScope) => Promise<AsyncMemory | null>
   /** Follows what the project store publishes. Closes what the previous project held. */
   follow: (root: string | null) => void
   close: () => Promise<void>
@@ -59,7 +62,7 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
     }
   }
 
-  return {
+  const host: MemoryHost = {
     project: async () => {
       if (root === null) return null
 
@@ -74,6 +77,8 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
       )
       return await openingGlobal
     },
+
+    of: async scope => (scope === 'global' ? await host.global() : await host.project()),
 
     follow: next => {
       if (next === root) return
@@ -94,6 +99,8 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
       await Promise.all(held.map(one => (one ? closeQuietly(one, onTrouble) : Promise.resolve())))
     },
   }
+
+  return host
 }
 
 /** Closing is bookkeeping: a thread that will not go must not stop the studio from quitting. */

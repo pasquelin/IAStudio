@@ -5,6 +5,8 @@ import type {
   MemoryQuery,
   MemoryTrouble,
 } from '@shared/domain/assistantMemory'
+import type { RecallAsk } from './memoryIndex'
+import type { MemoryVector, PendingVector } from './vectors'
 
 /**
  * What the main process and the memory thread say to each other.
@@ -26,6 +28,11 @@ export type MemoryRequest =
   | { id: number; op: 'refresh' }
   | { id: number; op: 'reset' }
   | { id: number; op: 'trouble' }
+  | { id: number; op: 'recall'; ask: RecallAsk }
+  | { id: number; op: 'writeVectors'; vectors: readonly MemoryVector[] }
+  | { id: number; op: 'withoutVector'; model: string; limit: number }
+  | { id: number; op: 'pendingVectors'; model: string }
+  | { id: number; op: 'dropOtherVectors'; model: string }
   /** Settles what is queued and shuts the database. Answered BEFORE the thread is terminated. */
   | { id: number; op: 'close' }
 
@@ -41,6 +48,11 @@ export type MemoryResults = {
   refresh: number
   reset: void
   trouble: MemoryTrouble | null
+  recall: readonly Memory[]
+  writeVectors: void
+  withoutVector: readonly PendingVector[]
+  pendingVectors: number
+  dropOtherVectors: void
   close: void
 }
 

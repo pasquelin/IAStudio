@@ -258,6 +258,14 @@ export type BriefingParts = {
   context?: string
   /** What the studio is right now, already in sentences — see `describeStudio`. */
   state?: string
+  /**
+   * What the assistant learned about this project, one summary a line — see `assistantMemory.ts`.
+   *
+   * 🛑 The FIRST block to give ground when the room runs out, before the state: it is the only
+   * one the studio can recompute at will, and a memory missing costs a reminder where a state
+   * missing costs the model its bearings.
+   */
+  recalled?: string
   /** What the open document can be aimed at, narrowed by the window — see `target.ts`. */
   targets?: readonly Target[]
   /**
@@ -298,12 +306,12 @@ export type Briefing = {
 }
 
 /**
- * 🛑 The state block is what GIVES GROUND when the room runs out — not the sentence, which
- * `instructionFor` guarantees, and not the catalogue, without which nothing can be named.
+ * 🛑 What GIVES GROUND when the room runs out, in order: the memory, then the state, then the
+ * targets, then the project context. Never the sentence, which `instructionFor` guarantees, and
+ * never the catalogue, without which nothing can be named.
  *
- * It has to: `instruction.test.ts` saturates the project context and the target list at once and
- * holds two thousand characters for the sentence, and the state is the one part composed from
- * names a person chose. Composed twice only when it overruns, which is not the ordinary turn.
+ * The memory first because it is the one part the studio can recompute at will, and the state
+ * before the targets because `instruction.test.ts` saturates both at once.
  */
 function briefingText(
   parts: BriefingParts,
@@ -316,9 +324,18 @@ function briefingText(
   const full = composed(parts, catalogue, rules, found, state, targets)
   if (full.length <= parts.room) return full
 
-  // The state gives ground first — it is prose, and its lines are ranked from the most useful.
-  const short = linesWithin(state, Math.max(0, state.length - (full.length - parts.room)))
-  const trimmed = composed(parts, catalogue, rules, found, short, targets)
+  // The memory gives ground first, by whole memories: half a decision reads as a different one.
+  const recalled = linesWithin(
+    parts.recalled ?? '',
+    Math.max(0, (parts.recalled ?? '').length - (full.length - parts.room)),
+  )
+  const lighter = composed({ ...parts, recalled }, catalogue, rules, found, state, targets)
+  if (lighter.length <= parts.room) return lighter
+
+  // Then the state — it is prose, and its lines are ranked from the most useful.
+  const shortened = { ...parts, recalled }
+  const short = linesWithin(state, Math.max(0, state.length - (lighter.length - parts.room)))
+  const trimmed = composed(shortened, catalogue, rules, found, short, targets)
   if (trimmed.length <= parts.room) return trimmed
 
   /**
@@ -328,7 +345,7 @@ function briefingText(
    */
   const over = trimmed.length - parts.room
   const aimed = targetsWithin(targets, over)
-  const cut = composed(parts, catalogue, rules, found, short, aimed)
+  const cut = composed(shortened, catalogue, rules, found, short, aimed)
   if (cut.length <= parts.room) return cut
 
   /**
@@ -340,7 +357,7 @@ function briefingText(
    */
   const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
   return composed(
-    { ...parts, context: linesWithin(parts.context ?? '', room) },
+    { ...shortened, context: linesWithin(parts.context ?? '', room) },
     catalogue,
     rules,
     found,
@@ -376,6 +393,11 @@ function composed(
   // Before the catalogue rather than after it: what the project IS frames every action the model
   // might pick, where a note under the list reads as a footnote to the last one.
   const about = parts.context ? ['Project context:', parts.context, ''] : []
+  // After what the project IS and before what it is doing: what was learned frames an action the
+  // same way the project does, where the state is what is under the person's eyes right now.
+  const learned = parts.recalled
+    ? ['What you have learned about this project:', parts.recalled, '']
+    : []
   const now = state ? [state, ''] : []
   // After the catalogue rather than before it: `target.select` is what these ids are for, and a
   // list read before the action that consumes them reads as facts about nothing.
@@ -388,6 +410,7 @@ function composed(
     roleWith(rules),
     '',
     ...about,
+    ...learned,
     ...now,
     ...idle,
     'Catalogue:',
@@ -447,6 +470,7 @@ export async function briefingFor(
     continuing: request.continuing === true,
     notReady: await notReady?.(),
     context: request.context,
+    recalled: request.recalled,
     state: request.state,
     targets: request.targets,
     room,

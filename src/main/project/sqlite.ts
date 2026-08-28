@@ -11,8 +11,14 @@
  * since every method here is synchronous. The whole catalogue runs on its own thread instead —
  * see `catalogThread.ts`.
  */
-/** What its readers bind. Deliberately narrower than what SQLite accepts. */
-export type SqlValue = string | number | null
+/**
+ * What its readers bind. Deliberately narrower than what SQLite accepts.
+ *
+ * `Uint8Array` is here for one column — an embedding, which is a `Float32Array` seen as bytes.
+ * Measured against both drivers before it was widened: `node:sqlite` and `better-sqlite3` each
+ * accept it and each give it back as bytes, so a blob is genuinely exercised on either side.
+ */
+export type SqlValue = string | number | null | Uint8Array
 
 /**
  * What SQLite gives back. Wider than `SqlValue`: an integer column can come back as a

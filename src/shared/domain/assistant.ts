@@ -201,6 +201,13 @@ export type AssistantThought = {
    */
   state?: string
   /**
+   * What the assistant has LEARNED about this project, as summaries — see `assistantMemory.ts`.
+   *
+   * 🛑 Filled in the MAIN process, by the same route and for the same reason as `context` and
+   * `state`: `parseThought` does not declare it, so zod strips one that arrived over the boundary.
+   */
+  recalled?: string
+  /**
    * What the open document can be aimed at, narrowed by the window — see `target.ts`.
    *
    * Unlike `context` and `state` this one IS the renderer's to name: it describes its own window,

@@ -246,3 +246,56 @@ describe('a door that refused the whole catalogue', () => {
     expect(studioBriefing({ room: NARROW }).narrow).toBeNull()
   })
 })
+
+describe('what the assistant is reminded of', () => {
+  const RECALLED = '  Cameras follow the rail, never the target.'
+
+  it('carries it, after what the project is and before what it is doing', () => {
+    const text = studioBriefing({
+      context: 'A short film.',
+      recalled: RECALLED,
+      state: 'Studio now:\n  Space: image.',
+      room: NARROW,
+    }).text
+
+    expect(text).toContain(RECALLED)
+    expect(text.indexOf('A short film.')).toBeLessThan(text.indexOf(RECALLED))
+    expect(text.indexOf(RECALLED)).toBeLessThan(text.indexOf('Space: image.'))
+  })
+
+  it('says nothing at all when nothing was learned', () => {
+    expect(studioBriefing({ room: NARROW }).text).not.toContain('learned about this project')
+  })
+
+  /**
+   * 🛑 The order the whole budget rests on. The memory is the one block the studio can recompute
+   * at will; the state is what the person is looking at, and a model without it loses its bearings.
+   */
+  it('gives ground before the state does, which comes through whole', () => {
+    const state = 'Studio now:\n  Space: image.\n  In front: "A picture" (image).'
+    const recalled = ['  one', '  two', '  three', '  four'].join('\n')
+    const full = studioBriefing({ recalled, state, targets: SATURATED, room: WIDE }).text
+
+    const squeezed = studioBriefing({
+      recalled,
+      state,
+      targets: SATURATED,
+      room: full.length - 20,
+    }).text
+
+    // The state INTACT is the claim. That the memory shrank is not: every later step recomposes
+    // with the shortened memory, so it shrinks whichever block gave ground first.
+    expect(squeezed).toContain('In front: "A picture"')
+    expect(squeezed).not.toContain('  four')
+  })
+
+  /** Cut by whole lines, so half a decision never reads as a different decision. */
+  it('never cuts a summary in half', () => {
+    const recalled = ['  a decision about the rail', '  another about the palette'].join('\n')
+    const full = studioBriefing({ recalled, room: WIDE }).text
+    const squeezed = studioBriefing({ recalled, room: full.length - 10 }).text
+
+    expect(squeezed).toContain('  a decision about the rail')
+    expect(squeezed).not.toContain('another about')
+  })
+})
