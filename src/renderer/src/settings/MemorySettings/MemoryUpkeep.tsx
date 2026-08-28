@@ -2,10 +2,9 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Memory } from '@shared/domain/assistantMemory'
 import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
-import { WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
-import { SettingLine } from '../SettingLine'
+import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { SettingActionLine } from '../SettingActionLine'
 import { useAssistantMemory } from '@/stores/assistantMemory'
-import { MemoryAction } from './MemoryAction'
 
 /**
  * What keeps a memory of six months readable: embed what is missing, merge what says the same
@@ -43,41 +42,29 @@ export function MemoryUpkeep({ memories }: { memories: readonly Memory[] }) {
     <section>
       <h3 className={WINDOW_GROUP_LABEL}>{t('settings.memory')}</h3>
 
-      <MemoryAction
+      <SettingActionLine
         title={t('settings.memoryReindex')}
         help={t('settings.memoryReindexHelp')}
         button={t('settings.memoryReindex')}
         onRun={() => void rebuild()}
       />
 
-      {/* The only one that is not one button: a run under way is stopped, never started twice. */}
-      <SettingLine
+      {/* One line, two gestures: a run under way is stopped, never started twice. `quiet` is what
+          says so — stopping is neither the thing to do nor a thing that erases. */}
+      <SettingActionLine
         title={t('settings.memoryEmbed')}
         help={
-          <p className={WINDOW_HELP}>
-            {pending === 0
-              ? t('settings.memoryEmbedNone')
-              : t('settings.memoryEmbedPending', { count: pending })}
-          </p>
+          pending === 0
+            ? t('settings.memoryEmbedNone')
+            : t('settings.memoryEmbedPending', { count: pending })
         }
-      >
-        {indexing ? (
-          <button type="button" className="btn btn-sm" onClick={() => void stopIndex()}>
-            {t('settings.memoryStopEmbed')}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-sm btn-primary"
-            disabled={pending === 0}
-            onClick={() => void index()}
-          >
-            {t('settings.memoryEmbed')}
-          </button>
-        )}
-      </SettingLine>
+        button={indexing ? t('settings.memoryStopEmbed') : t('settings.memoryEmbed')}
+        tone={indexing ? 'quiet' : 'action'}
+        disabled={!indexing && pending === 0}
+        onRun={() => void (indexing ? stopIndex() : index())}
+      />
 
-      <MemoryAction
+      <SettingActionLine
         title={t('settings.memoryMerge')}
         help={
           duplicates === 0
@@ -89,7 +76,7 @@ export function MemoryUpkeep({ memories }: { memories: readonly Memory[] }) {
         onRun={() => void mergeDuplicates()}
       />
 
-      <MemoryAction
+      <SettingActionLine
         title={t('settings.memoryStale')}
         help={
           sleeping === 0
@@ -101,14 +88,14 @@ export function MemoryUpkeep({ memories }: { memories: readonly Memory[] }) {
         onRun={() => void archiveStale(now)}
       />
 
-      <MemoryAction
+      <SettingActionLine
         title={t('settings.memoryCompact')}
         help={t('settings.memoryCompactHelp')}
         button={t('settings.memoryCompact')}
         onRun={() => void compact()}
       />
 
-      <MemoryAction
+      <SettingActionLine
         title={t('settings.memoryPurge')}
         help={t('settings.memoryPurgeHelp')}
         button={t('settings.memoryPurge')}

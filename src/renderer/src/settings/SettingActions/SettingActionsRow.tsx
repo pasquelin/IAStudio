@@ -1,10 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import type { SettingAction } from '@shared/domain/settingsRegistry'
 import { getBridge } from '@/services/bridge'
-import { HINT_LEFT } from '@/helpers/tooltip'
-import { SettingLine } from '../SettingLine'
+import { SettingActionLine } from '../SettingActionLine'
 import { useSettingsDraft } from '@/stores/settingsDraft'
-import { WINDOW_HELP } from '@/design/windowStyles'
 
 /**
  * A button that acts, rather than a setting that holds a value — which is why these live in a
@@ -25,22 +23,12 @@ export function SettingActionsRow({ action }: { action: SettingAction }) {
   }
 
   return (
-    <SettingLine
+    <SettingActionLine
       title={t(action.titleKey)}
-      help={<p className={WINDOW_HELP}>{t(action.helpKey)}</p>}
-    >
-      <button
-        type="button"
-        // The action's own help, under the pointer: the pane shows it beside the row, and a
-        // narrow window pushes it out of sight before the button goes with it.
-        {...HINT_LEFT(t(action.helpKey))}
-        onClick={run}
-        className={
-          action.confirmKey ? 'btn btn-sm btn-error btn-outline' : 'btn btn-sm btn-primary'
-        }
-      >
-        {t(action.buttonKey)}
-      </button>
-    </SettingLine>
+      help={t(action.helpKey)}
+      button={t(action.buttonKey)}
+      {...(action.confirmKey ? { confirm: action.confirmKey } : {})}
+      onRun={run}
+    />
   )
 }

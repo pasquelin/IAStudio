@@ -1,4 +1,5 @@
 import { ProgressBar } from '@/design/ProgressBar'
+import { WINDOW_ACTION } from '@/design/windowStyles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 
 export type AiFlightRowProps = {
@@ -20,12 +21,7 @@ export function AiFlightRow({ ratio, label, stop, stopHint, onStop }: AiFlightRo
   return (
     <span className="flex items-center gap-2">
       <ProgressBar ratio={ratio} label={label} className="w-24" />
-      <button
-        type="button"
-        {...HINT_LEFT(stopHint)}
-        className="btn btn-sm btn-primary"
-        onClick={onStop}
-      >
+      <button type="button" {...HINT_LEFT(stopHint)} className={WINDOW_ACTION} onClick={onStop}>
         {stop}
       </button>
     </span>

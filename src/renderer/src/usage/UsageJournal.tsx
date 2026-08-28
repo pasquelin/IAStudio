@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { UsagePeriod } from '@shared/domain/usage'
+import { WINDOW_ACTION_SECONDARY } from '@/design/windowStyles'
+import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { UsageTable } from './UsageTable/UsageTable'
 import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'
@@ -68,7 +70,7 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
       {page.more && (
         <button
           type="button"
-          className="btn btn-xs self-start"
+          className={cn(WINDOW_ACTION_SECONDARY, 'self-start')}
           {...HINT_RIGHT(t('usage.loadMoreHint'))}
           onClick={more}
           disabled={loading}

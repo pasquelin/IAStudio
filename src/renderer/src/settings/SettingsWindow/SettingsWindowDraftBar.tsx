@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { WINDOW_ACTION, WINDOW_ACTION_SECONDARY } from '@/design/windowStyles'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settingsDraft'
 
@@ -22,7 +23,7 @@ export function SettingsWindowDraftBar() {
     <footer className="border-base-300 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2">
       <button
         type="button"
-        className="btn btn-sm btn-ghost"
+        className={WINDOW_ACTION_SECONDARY}
         {...HINT_TOP(t('settings.cancelHint'))}
         onClick={cancel}
       >
@@ -30,7 +31,7 @@ export function SettingsWindowDraftBar() {
       </button>
       <button
         type="button"
-        className="btn btn-sm btn-primary"
+        className={WINDOW_ACTION}
         {...HINT_TOP(t('settings.applyHint'))}
         onClick={() => void apply()}
       >
@@ -38,7 +39,7 @@ export function SettingsWindowDraftBar() {
       </button>
       <button
         type="button"
-        className="btn btn-sm btn-primary"
+        className={WINDOW_ACTION}
         {...HINT_TOP(t('settings.confirmHint'))}
         onClick={() => void apply().then(() => window.close())}
       >

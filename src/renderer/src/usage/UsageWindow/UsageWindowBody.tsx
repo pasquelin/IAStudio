@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsagePeriod, UsageReport } from '@shared/domain/usage'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_ACTION_SECONDARY, WINDOW_CAPTION } from '@/design/windowStyles'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { UsageActivities } from '../UsageActivities/UsageActivities'
 import { UsageJournal } from '../UsageJournal'
@@ -26,7 +26,7 @@ export function UsageWindowBody({ id, period, report, failure, onRetry }: UsageW
         <p className="text-xs">{t('usage.failure')}</p>
         <button
           type="button"
-          className="btn btn-xs"
+          className={WINDOW_ACTION_SECONDARY}
           {...HINT_RIGHT(t('usage.retryHint'))}
           onClick={onRetry}
         >

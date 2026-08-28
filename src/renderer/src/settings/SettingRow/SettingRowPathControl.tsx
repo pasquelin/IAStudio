@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/helpers/cn'
+import { WINDOW_ACTION } from '@/design/windowStyles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import type { CommittedProps } from './controls'
@@ -36,7 +38,7 @@ export function SettingRowPathControl({
       />
       <button
         type="button"
-        className="btn btn-sm btn-primary shrink-0"
+        className={cn(WINDOW_ACTION, 'shrink-0')}
         {...HINT_LEFT(t('settings.browseHint'))}
         onClick={() => void browse()}
       >

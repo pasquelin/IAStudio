@@ -1,6 +1,6 @@
 import { mdiRestore } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { UiIcon } from '@/design/UiIcon'
+import { WindowIconButton } from '@/design/WindowIconButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 
 export type SettingRestoreButtonProps = {
@@ -22,16 +22,15 @@ export function SettingRestoreButton({ restorable, of, onRestore }: SettingResto
     of === undefined ? t('settings.restoreDefault') : `${t('settings.restoreDefault')} — ${of}`
 
   return (
-    <button
-      type="button"
+    <WindowIconButton
+      path={mdiRestore}
+      label={title}
       // The studio's tooltip rather than `title`: the native one comes with the OS delay and
       // none of the theme, and these windows mount the shared host like every other.
-      {...TIP_LEFT(title, false, t('settings.restoreDefaultHint'))}
-      className="btn btn-ghost btn-xs btn-square"
+      tooltip={TIP_LEFT(title, false, t('settings.restoreDefaultHint'))}
       disabled={!restorable}
+      faded={!restorable}
       onClick={onRestore}
-    >
-      <UiIcon path={mdiRestore} size={14} className={restorable ? '' : 'opacity-0'} />
-    </button>
+    />
   )
 }
