@@ -1,10 +1,11 @@
 import { mdiChatOutline } from '@mdi/js'
-import { useEffect, useRef, useState, type Ref } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
 import { QuietNote } from '@/design/QuietNote'
 import { fieldHandle } from '@/design/scHandle'
+import { PANEL_SCROLL } from '@/design/styles'
 import { Spinner } from '@/design/Spinner'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
@@ -25,17 +26,15 @@ import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
 import { CONVERSATION_CARD } from './conversationStyles'
 
-export type AssistantConversationProps = {
-  /** The conversation column, so a host can dismiss on a press outside THIS and not its scrim. */
-  ref?: Ref<HTMLDivElement>
-}
-
 /**
  * The conversation: what has been said, what is asked, and the place one writes. Two hosts — the
  * right column's panel and the empty centre — one store, one thread, never both at once. It
  * claims the caret while mounted, the spoken word only while read; the confirmer is the shell's.
+ *
+ * 🛑 It FILLS what it is given, at the scale the docks read at: the width of a page and the type
+ * of one belonged to the modal, and a column the reader can drag to 140 px does not have either.
  */
-export function AssistantConversation({ ref }: AssistantConversationProps) {
+export function AssistantConversation() {
   const { t } = useTranslation()
   const turns = useAssistant(state => state.turns)
   const busy = useAssistant(state => state.busy)
@@ -151,31 +150,30 @@ export function AssistantConversation({ ref }: AssistantConversationProps) {
   }
 
   return (
-    // Centred while there is nothing to read, so the first sentence is written where the eye
-    // already is rather than at the foot of an empty page.
     <div
-      ref={ref}
       onFocus={() => setInside(true)}
       onBlur={event => {
         const stays = event.currentTarget.contains(event.relatedTarget)
         setInside(stays)
         if (!stays) setSpeaking(micOpen)
       }}
-      className={cn(
-        'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-4',
-        turns.length === 0 && 'justify-center',
-      )}
+      className="flex min-h-0 w-full flex-1 flex-col gap-2 p-1"
     >
       {turns.length === 0 ? (
-        // Nothing to invite with while nothing can answer: the call below says what to do instead.
-        !unserved && <QuietNote standalone>{t('assistant.empty')}</QuietNote>
+        // The room a thread would take, kept empty: the composer stays at the foot in both hosts,
+        // where a chat puts it, rather than climbing to the top of a window with nothing in it.
+        <div className="flex flex-1 flex-col justify-center">
+          {/* Nothing to invite with while nothing can answer: the call below says what to do. */}
+          {!unserved && <QuietNote standalone>{t('assistant.empty')}</QuietNote>}
+        </div>
       ) : (
         <ol
           ref={thread}
           onScroll={rememberScroll}
-          // No bar: a thread reads as a page of words, and one down its side turns it back
-          // into a scrolling box. Elsewhere in the studio the bar is information.
-          className="m-0 flex min-h-0 flex-1 scrollbar-none list-none flex-col gap-3 overflow-y-auto p-0"
+          // 🛑 `pl-0` and never `p-0`: what is stripped is a list's own indent, and the right
+          // padding of `PANEL_SCROLL` is the room the macOS overlay bar is drawn in — over the
+          // bubbles, which are the one thing in the studio aligned to that edge.
+          className={cn(PANEL_SCROLL, 'm-0 list-none gap-2 pl-0')}
         >
           {turns.map(turn => (
             <AssistantConversationTurn key={turn.id} turn={turn} />
@@ -255,10 +253,13 @@ export function AssistantConversation({ ref }: AssistantConversationProps) {
                 event.preventDefault()
                 send()
               }}
-              className="text-text w-full resize-none border-none bg-transparent px-1 text-base"
+              className="text-text w-full resize-none border-none bg-transparent px-1 text-xs"
             />
 
-            <div className="flex items-center gap-2">
+            {/* Wrapping: the picker and the pair sit side by side wherever there is room and
+                stack where there is not — one line could only shrink, and the picker has a
+                floor. */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* Down here from the header, beside the sentence it will read: the moment one wants
                 another brain is the middle of writing, not a trip to a preferences window. */}
               <AssistantConversationPicker />
@@ -296,7 +297,7 @@ export function AssistantConversation({ ref }: AssistantConversationProps) {
             a suggestion beside an exchange is an interruption, and one about pictures in a timeline
             is noise. They WRITE the sentence rather than sending it — see `ASSISTANT_STARTERS`. */}
           {turns.length === 0 && (
-            <div className="flex shrink-0 flex-wrap justify-center gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
               {ASSISTANT_STARTERS[workspace].map(starter => {
                 const sentence = t(starterKey(starter))
 

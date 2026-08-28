@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { aiOverview, roleRow } from '@shared/domain/aiOverview-fixtures'
@@ -10,6 +10,8 @@ import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
+import { focusChat } from '../chatPanel'
+import { mountedDictationTarget } from '@/dictation/destination'
 import { AssistantConversation } from './AssistantConversation'
 
 const say = vi.hoisted(() => vi.fn<(utterance: string) => Promise<void>>())
@@ -288,5 +290,72 @@ describe('while the assistant is working', () => {
     render(<AssistantConversation />)
 
     expect(screen.getByRole('button', { name: /arrêter/i })).toBeDisabled()
+  })
+})
+
+/**
+ * What the conversation claims WHILE it is on screen, which is not the same as while it is
+ * mounted: the right column draws it untouched in every space, so a claim made on mounting would
+ * take the caret and the spoken word of the whole studio with it.
+ */
+describe('what it claims of the studio', () => {
+  it('stages the thread, so nothing else speaks for it', () => {
+    render(<AssistantConversation />)
+
+    expect(useAssistant.getState().staged).toBe(1)
+  })
+
+  /**
+   * The caret follows the GESTURE, never the layout: ⌘K asks for it and the host takes it on the
+   * frame it mounts. Focused on mount either way, it would swallow every studio shortcut from the
+   * first frame of a launch.
+   */
+  it('leaves the caret alone when it is merely what a column draws', () => {
+    render(<AssistantConversation />)
+
+    expect(screen.getByRole('textbox')).not.toHaveFocus()
+  })
+
+  it('takes the caret when a gesture asked for the conversation first', () => {
+    focusChat()
+    render(<AssistantConversation />)
+
+    expect(screen.getByRole('textbox')).toHaveFocus()
+  })
+
+  // 🛑 Claimed unconditionally, every dictation of the studio landed here — a generation prompt
+  // included, since the panel is up in every space.
+  it('leaves the spoken word to the caret until the reader is inside it', async () => {
+    render(<AssistantConversation />)
+    expect(mountedDictationTarget()).toBeNull()
+
+    await userEvent.click(screen.getByRole('textbox'))
+
+    expect(mountedDictationTarget()).not.toBeNull()
+  })
+
+  /**
+   * A session begun here outlives the caret: one dictates with the hands off the keyboard, so
+   * looking at the canvas mid-sentence must not hand the rest of the sentence to whatever is
+   * under the pointer — nor stop the microphone.
+   */
+  it('keeps the spoken word once a session has begun, caret or not', async () => {
+    render(<AssistantConversation />)
+    await userEvent.click(screen.getByRole('textbox'))
+    act(() => useDictation.setState({ state: 'listening' }))
+
+    act(() => screen.getByRole('textbox').blur())
+
+    expect(mountedDictationTarget()).not.toBeNull()
+    expect(useDictation.getState().state).toBe('listening')
+  })
+
+  it('gives the spoken word back once the reader has left and the microphone is shut', async () => {
+    render(<AssistantConversation />)
+    await userEvent.click(screen.getByRole('textbox'))
+
+    act(() => screen.getByRole('textbox').blur())
+
+    expect(mountedDictationTarget()).toBeNull()
   })
 })

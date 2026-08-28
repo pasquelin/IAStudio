@@ -20,7 +20,8 @@ export function AssistantStatus() {
   const busy = useAssistant(state => state.busy)
   const said = useAssistant(state => state.turns.at(-1)?.said ?? '')
 
-  // Nothing while a surface has the thread up — modal or empty centre: it says all of this at
+  // Nothing while a surface has the thread up — the right column or the empty centre: it says
+  // all of this at
   // length already, with its own spinner.
   if (staged || !busy || said === '') return null
 

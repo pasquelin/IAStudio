@@ -528,6 +528,12 @@
      unbounded column put a row's label at one edge and its value at the other; the rails narrow
      the centre for a workspace, and the home has none of them open on most of its width. */
   --sc-home-width: 1100px;
+  /* How wide the conversation is allowed to grow where its host is a whole window — the empty
+     centre. Derived, like the card above: the thread is prose under `--text-*`, so a fixed cap
+     would widen the measure in characters at every step of the scale. 520px at scale 1 is about
+     86 characters of `--text-xs`, measured against 760px giving 126 of it. The right column caps
+     itself by being a column, so nothing reads this there. */
+  --sc-chat-width: calc(520px * var(--sc-font-scale));
   /* How tall a card of the home's top band stands. A gauge because the rail is handed a NUMBER,
      and derived because the card is prose under `--text-*`: at scale 1.4 its four clamped lines
      no longer fit a 168px box, and `overflow` cuts the fourth through the middle — for exactly
@@ -780,25 +786,6 @@ body,
 :fullscreen,
 :fullscreen::backdrop {
   background: var(--color-monitor);
-}
-
-/*
- * A surface that scrolls without saying so.
- *
- * For the conversation, and it is the one place it belongs: a thread reads as a page of words, and
- * a bar down its side turns it back into a scrolling box. Everywhere else in the studio the bar is
- * information — a panel of layers, a list of assets, an inspector all use it to say how much more
- * there is.
- *
- * A utility rather than a class written in the component, so the two spellings it takes — the
- * WebKit pseudo-element and the standard property — stay together. They are one rule.
- */
-@utility scrollbar-none {
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 /*
