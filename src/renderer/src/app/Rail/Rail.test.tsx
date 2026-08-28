@@ -124,14 +124,14 @@ describe('Rail', () => {
     })
 
     /**
-     * The right rail is the legend of the band's right half alone, since the home's right COLUMN
-     * went with the account's library: the history of the open project, and no separator — this
-     * screen acts on no document, so it has nothing to open into.
+     * The right rail carries the assistant and the band's right half, and nothing between them:
+     * the home's right COLUMN went with the account's library, and what came back into it on
+     * 28 August is the one panel this screen shares with the spaces.
      */
-    it('draws the right rail as the band alone', () => {
+    it('draws the right rail as the assistant and the band', () => {
       const { container } = render(<Rail side="right" />)
 
-      expect(marksOf(container)).toEqual(['Historique'])
+      expect(marksOf(container)).toEqual(['Assistant', 'Historique'])
     })
 
     // No half names a panel on the default layout, so what reads as up is the first one the

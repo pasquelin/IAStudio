@@ -26,6 +26,7 @@ type ToolEntry = {
  * watches this very property would have stayed green whatever the glob did to the entry chunk.
  */
 export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
+  assistant: { load: () => import('@/panels/assistant'), role: 'actions' },
   layers: { load: () => import('@/panels/layers'), role: 'actions' },
   meshes: { load: () => import('@/panels/meshes'), role: 'actions' },
   lights: { load: () => import('@/panels/lights'), role: 'actions' },

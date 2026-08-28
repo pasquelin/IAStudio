@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAssistant } from '@/stores/assistant'
+import { registerChatPanel } from './chatPanel'
 import { AssistantToast } from './AssistantToast'
 
 const turn = (id: number, lost = false) => ({
@@ -15,7 +16,7 @@ const turn = (id: number, lost = false) => ({
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
-  useAssistant.setState({ open: false, busy: false, seen: 0, staged: 0, turns: [turn(1)] })
+  useAssistant.setState({ busy: false, seen: 0, staged: 0, turns: [turn(1)] })
 })
 
 afterEach(() => {
@@ -42,12 +43,15 @@ describe('what became of the sentence, once', () => {
     expect(screen.getByText(/n’a pas su répondre/)).toBeInTheDocument()
   })
 
-  it('opens the window on the detail', async () => {
+  it('takes the reader to the conversation, on the detail', async () => {
+    const focus = vi.fn()
+    const drop = registerChatPanel({ focus })
     render(<AssistantToast />)
 
     await userEvent.click(screen.getByText('L’assistant a répondu'))
 
-    expect(useAssistant.getState().open).toBe(true)
+    expect(focus).toHaveBeenCalled()
+    drop()
   })
 
   /**
@@ -85,10 +89,9 @@ describe('what became of the sentence, once', () => {
    * nothing ever reported it: the status line only speaks while the plan runs, and this thought
    * it had been read.
    */
-  it('still reports an answer that landed after the window was opened and closed again', () => {
+  it('still reports an answer that landed after the conversation came and went', () => {
     useAssistant.setState({ busy: true, turns: [turn(1)] })
-    useAssistant.getState().show()
-    useAssistant.getState().hide()
+    useAssistant.getState().stage()()
     useAssistant.setState({ busy: false })
     render(<AssistantToast />)
 

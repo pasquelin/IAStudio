@@ -42,6 +42,7 @@ export function familyOf(surface: ToolSurface): SurfaceFamily {
 export type ToolZone = 'left' | 'right' | 'top' | 'bottomLeft' | 'bottomRight'
 
 export type ToolId =
+  | 'assistant'
   | 'layers'
   | 'meshes'
   | 'lights'
@@ -110,10 +111,26 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'git' | 'cloud'
+  requires?: 'project' | 'git' | 'cloud' | 'centreTaken'
+  /**
+   * Whether the panel takes its zone WHOLE: shown, the other half draws nothing. Only a
+   * `primary` may ask for it — `tool.test.ts` holds that, the resolver silencing the second half
+   * alone.
+   */
+  solo?: true
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
+
+/**
+ * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
+ * `null`, it is open on no panel in particular; an id, on the panel the user chose.
+ *
+ * That third state earns its keep: what is open is stored once for all the sections, while the
+ * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
+ * the sky in Skyboxes. An id there would impose one section's answer on the other five.
+ */
+export type ZoneSlots = Partial<Record<ToolSlot, ToolId | null>>
 
 /**
  * Tools sharing a zone AND a slot take turns; tools in different slots of the same zone show
@@ -154,6 +171,20 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The upper right, in rail order. Every tool here takes its turn with the others its space
   // declares — the order below is the order their icons stack.
   //
+  // First of them all, and on every surface: this is the studio one TALKS to, and a panel one
+  // has to go looking for is a panel one stops using. An untouched right column therefore opens
+  // on it, whole — `solo` — rather than on the layer stack it used to.
+  //
+  // 🛑 `requires: 'centreTaken'`: with no document open the empty centre holds the same thread,
+  // and an icon here would offer a second field on the one draft.
+  {
+    id: 'assistant',
+    zone: 'right',
+    slot: 'primary',
+    surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
+    requires: 'centreTaken',
+    solo: true,
+  },
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // Beside the stack rather than inside the inspector: what a caption is SET IN is read while it
   // is being typed, and an inspector folded away takes the whole type panel with it.

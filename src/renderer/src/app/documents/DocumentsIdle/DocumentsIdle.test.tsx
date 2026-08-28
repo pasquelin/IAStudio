@@ -31,7 +31,7 @@ const watermark = (group?: DockviewGroupPanel): IWatermarkPanelProps => ({
 
 beforeEach(() => {
   useAiModels.setState({ overview: null })
-  useAssistant.setState({ open: false, turns: [], busy: false, asked: null, draft: '' })
+  useAssistant.setState({ turns: [], busy: false, asked: null, draft: '' })
   useSettings.setState({ settings: DEFAULT_SETTINGS })
   useDictation.setState({ partial: '', state: 'idle' })
   installFakeBridge()
@@ -50,14 +50,6 @@ describe('the empty centre', () => {
 
     expect(screen.getByText(/Aucun document ouvert/)).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
-  })
-
-  it('steps aside while the modal holds the conversation', () => {
-    useAiModels.setState({ overview: served('cloud') })
-    useAssistant.setState({ open: true })
-    const { container } = render(<DocumentsIdle {...watermark()} />)
-
-    expect(container).toBeEmptyDOMElement()
   })
 
   /**

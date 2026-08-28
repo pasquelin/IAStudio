@@ -16,6 +16,7 @@ import {
   type AssistantStep,
   type AssistantTurn,
 } from '@/assistant/conversation'
+import { closeTool } from '@/helpers/revealPanel'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
 
@@ -23,7 +24,6 @@ import { useSettings } from './settings'
 type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) => void }
 
 type AssistantState = {
-  open: boolean
   turns: AssistantTurn[]
   /** From the moment a sentence is sent until its last action has run or been refused. */
   busy: boolean
@@ -52,35 +52,35 @@ type AssistantState = {
   draft: string
   setDraft: (draft: string) => void
   /**
-   * How many surfaces have the thread on screen — the modal, the empty centre, or neither.
-   *
-   * 🛑 Not `open`, which means the MODAL alone. Everything that speaks only when nobody is
-   * reading — the toast, the status line, marking a turn seen — asks this: with the centre
-   * staging the same thread, `open` says "nobody is reading" over a full page of words.
+   * How many surfaces have the thread on screen — the right column's panel, the empty centre,
+   * or neither. Everything that speaks only when nobody is reading — the toast, the status line,
+   * marking a turn seen — asks this.
    *
    * A count rather than a flag: the two hosts hand over in one commit, and a cleanup landing
    * after the newcomer's mount would leave it at zero with the thread on screen.
    */
   staged: number
+  /**
+   * Whether the conversation has claimed the spoken word — which a mounted host has NOT, `staged`
+   * being true of an untouched right column. Only the status line reads it, to say where the
+   * words are going.
+   */
+  hearing: boolean
   /** Declares the thread on screen. Returns the way to take it back down. */
   stage: () => () => void
-
-  show: () => void
-  hide: () => void
-  toggle: () => void
   /**
    * The last turn the person has actually SEEN, by id.
    *
    * Because one now talks to the studio without its window up: the sentence goes, something
    * happens on screen, and nothing said it had been taken, was being worked on, or came back
    * empty. The status line reads this to know whether it still has something to report — and
-   * showing the window is what marks it read, as dismissing a toast is.
+   * bringing a host on screen is what marks it read, as dismissing a toast is.
    */
   seen: number
   markSeen: () => void
   /** Sends one sentence, then runs what came back, in order. */
   say: (utterance: string) => Promise<void>
-  /** Asks the person, on screen. Registered as the studio's confirmer by the modal. */
+  /** Asks the person, on screen. Registered as the studio's confirmer by the shell. */
   ask: (request: ConfirmRequest) => Promise<boolean>
   answer: (granted: boolean) => void
   setModel: (model: AssistantModel) => void
@@ -115,7 +115,6 @@ async function targetsFor(said: string): Promise<readonly Target[]> {
  * ceiling (`assistant.steps`) and a stop the person can press, rather than a chain of one.
  */
 export const useAssistant = create<AssistantState>()((set, get) => ({
-  open: false,
   turns: [],
   busy: false,
   round: 0,
@@ -125,46 +124,32 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   seen: 0,
   draft: '',
   staged: 0,
+  hearing: false,
 
   setDraft: draft => set({ draft }),
 
-  stage: () => {
-    set(state => ({ staged: state.staged + 1 }))
-
-    // The last surface going down with a question still waiting brings the modal up: `ask` decides
-    // once, and the idle centre is taken down by opening a document, going Home, or losing the
-    // model list. Left as it was, nothing could answer, and `busy` held for the session.
-    return () =>
-      set(state => ({
-        staged: state.staged - 1,
-        open: state.open || (state.staged === 1 && state.asked !== null),
-      }))
-  },
-
   /**
-   * Showing IS reading — but only of what there is to read.
+   * Coming on screen IS reading — but only of what there is to read.
    *
    * The `busy` guard is the whole subtlety: a turn joins `turns` when it is SENT, not when it is
-   * answered, so opening the window while a plan runs would mark an answer seen before it exists.
-   * Close again before it lands and nothing would ever report it — the status line only speaks
-   * while `busy`, and the toast would think it had been read. What marks a running turn seen is
-   * the end of `say`, and only if the window is still up to show it.
+   * answered, so mounting while a plan runs would mark an answer seen before it exists. Leave
+   * before it lands and nothing would ever report it — the status line only speaks while `busy`,
+   * and the toast would think it had been read. What marks a running turn seen is the end of
+   * `say`, and only if a host is still up to show it.
    */
-  show: () => set(state => ({ open: true, seen: state.busy ? state.seen : lastSeen(state) })),
+  stage: () => {
+    set(state => ({ staged: state.staged + 1, seen: state.busy ? state.seen : lastSeen(state) }))
+
+    // 🛑 A question is NOT declined by the last host going down: the two hosts hand over in one
+    // commit, and a lazy panel takes frames to arrive — declining there refused questions nobody
+    // had seen. It waits instead, and the next host to mount shows it.
+    return () => set(state => ({ staged: state.staged - 1 }))
+  },
 
   // Read off the turns rather than off `lastTurnId`, which counts what this module has ALLOCATED
   // rather than what the window holds: a state restored from anywhere else leaves the counter at
   // zero, so every turn stayed unread for ever and the reminder never went away.
   markSeen: () => set(state => ({ seen: lastSeen(state) })),
-
-  hide: () => {
-    // Closing IS declining. A question left unanswered would hold `busy` for the rest of the
-    // session, and the promise behind it belongs to an action that is about to spend something.
-    get().answer(false)
-    set({ open: false })
-  },
-
-  toggle: () => (get().open ? get().hide() : get().show()),
 
   ask: request =>
     new Promise<boolean>(resolve => {
@@ -185,14 +170,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
         return
       }
 
-      // The modal opens only where the thread is on screen NOWHERE. Unconditional, a question
-      // raised from the idle centre threw the window over the very exchange one was reading, to
-      // answer a line that was already there.
-      set(state => ({
-        open: state.staged > 0 ? state.open : true,
-        seen: lastSeen(state),
-        asked: { request, answer: resolve },
-      }))
+      set(state => ({ seen: lastSeen(state), asked: { request, answer: resolve } }))
     }),
 
   answer: granted => {
@@ -302,8 +280,9 @@ async function chainOn(
 
     // Asked once the plan has run, never while a question is on screen: closing IS declining,
     // so a plan that asked for something and then asked to be dismissed would refuse itself.
+    // Nothing to close where the empty centre holds the thread — that surface IS the centre.
     if (answer.calls.some(call => call.action === 'chat.close') && !get().asked) {
-      set({ open: false })
+      closeTool('assistant')
     }
 
     if (get().stopping) {

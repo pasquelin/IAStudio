@@ -179,6 +179,121 @@ describe('tools store', () => {
     expect(useTools.getState().focusedZone).toBeNull()
   })
 
+  /**
+   * The right column belongs to the assistant while it is up, and gives itself back after.
+   *
+   * A conversation read in half a column is a conversation nobody holds, so the panel declares
+   * `solo` and the store puts the column away rather than sharing it — then restores exactly what
+   * it put away, since anything else would be the studio's default, not the reader's.
+   */
+  describe('a panel that takes its zone whole', () => {
+    it('puts the other half away, and gives it back on closing', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', {
+          open: { right: { primary: 'layers', secondary: 'inspector' } },
+        }),
+      })
+      const { show, close } = useTools.getState()
+
+      show('image', 'right', 'assistant')
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'assistant',
+      })
+
+      close('image', 'right', 'primary')
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'layers',
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * Asking for another panel is a CHOICE, and restoring over it would undo the very gesture
+     * that was just made. The column comes back, and what was asked for stands in it.
+     */
+    it('gives the column back around the panel asked for, rather than over it', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', {
+          open: { right: { primary: 'layers', secondary: 'inspector' } },
+        }),
+      })
+      const { show } = useTools.getState()
+
+      show('image', 'right', 'assistant')
+      show('image', 'right', 'text')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'text',
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * The column nobody arranged: the assistant is what an untouched right half draws, so there
+     * is nothing stashed to give back. The half falls to the first panel that SHARES the zone —
+     * without it, an unnamed half would answer with the assistant again and swallow the gesture.
+     */
+    it('falls to the panel behind it where nothing was ever put away', () => {
+      useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+
+      useTools.getState().show('image', 'right', 'inspector')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'layers',
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * 🛑 The half the solo panel SILENCES is not a half it closed: rebuilding the column from the
+     * shared panel alone shut the inspector every time a rail icon of the upper half was clicked.
+     */
+    it('keeps the silenced half when the reader asks for another panel beside it', () => {
+      useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+
+      useTools.getState().show('image', 'right', 'layers')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'layers',
+        secondary: null,
+      })
+    })
+
+    /**
+     * 🛑 It closes THAT HALF, never the column: the half beside it may hold a panel the reader
+     * chose while the assistant was withheld, and closing the assistant took it down with it.
+     */
+    it('closes only the half it was asked to, where nothing was put away', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', { open: { right: { secondary: 'inspector' } } }),
+      })
+
+      useTools.getState().close('image', 'right', 'primary')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * 🛑 A reset that left the stash behind gave the column back on the next close — undoing,
+     * silently, the very reset that had just cleared it.
+     */
+    it('forgets what it put away when the layout is reset', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', {
+          open: { right: { primary: 'layers', secondary: 'inspector' } },
+        }),
+      })
+      useTools.getState().show('image', 'right', 'assistant')
+
+      useTools.getState().reset()
+      useTools.getState().close('image', 'right', 'primary')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({ secondary: null })
+    })
+  })
+
   it('clamps the divider between the two halves', () => {
     useTools.setState({
       arrangements: arrangedFor('image', {

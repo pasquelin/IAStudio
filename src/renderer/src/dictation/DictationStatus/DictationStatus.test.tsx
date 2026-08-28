@@ -24,7 +24,7 @@ function show(
 beforeEach(() => {
   installFakeBridge()
   useSettings.setState({ settings: DEFAULT_SETTINGS })
-  useAssistant.setState({ open: false })
+  useAssistant.setState({ hearing: false })
   useDictation.setState({ state: 'idle', partial: '', failure: null, download: null })
 })
 
@@ -35,7 +35,7 @@ describe('what dictation says to the whole application', () => {
    *
    * Saying WHERE the words are going rather than only that the microphone is on: the same
    * microphone types into a prompt and talks to the assistant, and nothing else on screen tells
-   * the two apart — the assistant claims the spoken word without necessarily showing its window.
+   * the two apart — the assistant's panel is up in every space without having claimed anything.
    */
   it('says the words are going to the field it is dictating into', () => {
     show('listening')
@@ -44,7 +44,7 @@ describe('what dictation says to the whole application', () => {
   })
 
   it('says the words are going to the assistant when the assistant has claimed them', () => {
-    useAssistant.setState({ open: true })
+    useAssistant.setState({ hearing: true })
     show('listening')
 
     expect(screen.getByRole('status')).toHaveTextContent('L’assistant vous écoute')

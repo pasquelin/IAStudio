@@ -117,7 +117,7 @@ describe('every workspace', () => {
 
 describe('the home', () => {
   /**
-   * FOUR placements, where there were eleven until 13 August. The eight that went then answered
+   * SIX placements, where there were eleven until 13 August. The eight that went then answered
    * a question about the studio — what it spent, how many assets it holds by kind, the newest
    * ones, favourites, ideas, look-alikes, and two journals the status bar already carries — and
    * this screen is where one comes to OPEN something. The ninth was the account's remote library,
@@ -135,6 +135,9 @@ describe('the home', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
+      // The one panel this screen shares with the spaces, and the reason its right column is no
+      // longer empty: one talks to the studio from the home as much as from an editor.
+      ['assistant', 'right', 'primary'],
       ['projects', 'left', 'primary'],
       ['explorer', 'left', 'secondary'],
       // Declared after it on purpose, and the order is what says so: the folder is what an
@@ -149,8 +152,10 @@ describe('the home', () => {
    * The rule every space follows: the left is what one opens FROM, the right is what one opens.
    *
    * The left column holds both halves, as every space does — the projects above, and under them
-   * the one that is open, read as a folder. The right holds NOTHING, and that is the rule's own
-   * result rather than a gap: this screen acts on no document, so it has nothing to open INTO.
+   * the one that is open, read as a folder. The right holds the ASSISTANT and nothing else, which
+   * reverses what this said until 28 August: the rule was that this screen acts on no document,
+   * so it had nothing to open into. Talking to the studio is not acting on a document, and the
+   * home is where one asks it to make something in the first place.
    *
    * The BAND is new on 17 August, and it is the one zone this screen had never had. What it
    * holds is read across — a history is one commit per line, and a branch graph in a 280 px
@@ -168,7 +173,9 @@ describe('the home', () => {
     // A rota of three, all about the open project: its folder, that folder's history, and the
     // world what is made in it is set in.
     expect(inHalf('left', 'secondary')).toEqual(['explorer', 'git', 'context'])
-    expect(inHalf('right', 'primary')).toEqual([])
+    expect(inHalf('right', 'primary')).toEqual(['assistant'])
+    // Still nothing: what an inspector reads is a selection, and this screen holds no document
+    // to select in.
     expect(inHalf('right', 'secondary')).toEqual([])
     expect(inHalf('bottomRight', 'primary')).toEqual(['history'])
     // The band's left half is where a panel is DRAGGED, never where one is declared.
@@ -260,34 +267,42 @@ describe('the left column', () => {
 })
 
 describe('the rail order of the upper right', () => {
+  /**
+   * The assistant opens every one of them, and that is the whole of the 28 August lot: it was a
+   * button in the title bar, reachable only by ⌘K or by a word nobody read. First of the half
+   * means it is what an untouched right column draws — see `solo` below.
+   */
+  it('begins with the assistant, in every space', () => {
+    for (const workspace of WORKSPACE_IDS) expect(upperRightIn(workspace)[0]).toBe('assistant')
+  })
+
   // What the right keeps once the Explorer has gone left: what acts on the document that is
   // already open, and only that.
   it('reads the panels of the document, and no longer the Explorer', () => {
-    expect(upperRightIn('image')).toEqual(['layers', 'text'])
+    expect(upperRightIn('image')).toEqual(['assistant', 'layers', 'text'])
   })
 
   it('reads the scene in 3D, and no longer the shelf', () => {
-    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes', 'animations'])
+    expect(upperRightIn('3d')).toEqual(['assistant', 'scene', 'lights', 'meshes', 'animations'])
   })
 
   /**
-   * EMPTY, and it is the shelf leaving that empties it: these two spaces put nothing else in
-   * that half. Asserted rather than left unsaid — a half with no tool is a state the rail and
-   * the shell have to survive, and the day something is declared there this line is what asks
-   * whether it belongs.
+   * The assistant ALONE, and it is the shelf leaving that emptied these two of everything else.
+   * Asserted rather than left unsaid — the day something is declared there this line is what
+   * asks whether it belongs.
    */
-  it('leaves the upper right of Video and Audio to nothing at all', () => {
-    expect(upperRightIn('video')).toEqual([])
-    expect(upperRightIn('audio')).toEqual([])
+  it('leaves the upper right of Video and Audio to the assistant alone', () => {
+    expect(upperRightIn('video')).toEqual(['assistant'])
+    expect(upperRightIn('audio')).toEqual(['assistant'])
   })
 
   /**
-   * Nothing at all, since what a sky IS and how it is LOOKED at both went back to the inspector —
+   * Nothing else, since what a sky IS and how it is LOOKED at both went back to the inspector —
    * the first on 2026-08-19, the second right after. Two boxes describing one document were two
    * places to learn to find, and the second sat above an inspector reading "select something".
    */
   it('leaves the upper right of Skyboxes to the inspector alone', () => {
-    expect(upperRightIn('skyboxes')).toEqual([])
+    expect(upperRightIn('skyboxes')).toEqual(['assistant'])
   })
 
   /**
@@ -296,7 +311,27 @@ describe('the rail order of the upper right', () => {
    * one document — what it IS, what reads it, and the panel that describes what is selected.
    */
   it('leaves the upper right of Textures to the inspector alone', () => {
-    expect(upperRightIn('materials')).toEqual([])
+    expect(upperRightIn('materials')).toEqual(['assistant'])
+  })
+
+  /**
+   * ONE panel takes its zone whole, and it is this one: a conversation read in half a column is
+   * a conversation nobody holds. Held as a closed list rather than as a property of the
+   * assistant — a second `solo` panel is a right column two panels fight over.
+   */
+  it('is the only half a panel may take whole', () => {
+    expect(TOOL_PLACEMENTS.filter(placement => placement.solo).map(placement => placement.id)) //
+      .toEqual(['assistant'])
+  })
+
+  /**
+   * 🛑 `solo` only silences the SECOND half, so a `secondary` asking for it would put the column
+   * away and then be resolved away itself — leaving the zone drawing the primary's fallback with
+   * an orphaned stash behind it. Held here rather than left to the one placement that uses it.
+   */
+  it('lets only the half nearest the edge take the zone whole', () => {
+    expect(TOOL_PLACEMENTS.filter(placement => placement.solo && placement.slot !== 'primary')) //
+      .toEqual([])
   })
 })
 

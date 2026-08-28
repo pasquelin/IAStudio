@@ -98,14 +98,22 @@ describe('a command the application performs itself', () => {
   })
 })
 
-describe('the assistant’s own window', () => {
-  it('is toggled while it is mounted', () => {
-    const toggle = vi.fn()
-    const drop = registerChatPanel({ toggle })
+describe('the assistant', () => {
+  it('takes the caret where the conversation already stands', () => {
+    const focus = vi.fn()
+    const drop = registerChatPanel({ focus })
 
     expect(routeCommand('app.assistant')).toBe('ran')
-    expect(toggle).toHaveBeenCalled()
+    expect(focus).toHaveBeenCalled()
     drop()
+  })
+
+  /**
+   * 🛑 A settings window and a mirror hold neither host and no shell. Writing the docks store
+   * there and answering "done" reported a gesture that could not have happened.
+   */
+  it('answers noSurface in a window that stages no conversation', () => {
+    expect(routeCommand('app.assistant')).toBe('noSurface')
   })
 
   // A settings window and a mirror have no overlay: saying so beats reporting a window that
@@ -175,7 +183,7 @@ describe('the registry as a whole', () => {
     // `document.save` and `document.saveAs` want a tab, and the spaces one that can still move.
     useDocuments.setState({ activeId: 'doc-1' })
     useLayouts.setState({ activeWorkspace: 'video' })
-    const drop = registerChatPanel({ toggle: () => {} })
+    const drop = registerChatPanel({ focus: () => {} })
 
     const unrouted = COMMAND_REGISTRY.filter(
       descriptor => descriptor.scope === 'global' || descriptor.scope === 'spaces',

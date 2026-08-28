@@ -6,7 +6,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { useToolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { TOOL_SLOTS, type ToolSlot, type ToolZone } from '@shared/domain/tool'
-import { shownTool, toolTitleKey, type Tool } from '@/helpers/toolRegistry'
+import { shownTools, toolTitleKey, type Tool } from '@/helpers/toolRegistry'
 import { useAvailableTools } from '@/hooks/useAvailableTools'
 import { useToolState } from '@/hooks/useToolState'
 
@@ -44,12 +44,17 @@ export function RailGroup({ zone }: { zone: ToolZone }) {
   // icons used to be. No surface declares a `top` placement at all.
   if (tools.length === 0) return null
 
+  // After the early return: no surface declares a `top` placement at all, and resolving both
+  // halves of a zone nobody draws is a full pass over the registry for nothing.
+  const drawn = shownTools(open[zone], zone, surface, state)
+
   return (
     <div className="flex flex-col items-center gap-2">
       {halvesOf(tools).map(([slot, inSlot], index) => {
         // What the half draws, not what it stores: a panel standing in for one this section
-        // puts elsewhere is up, and its icon has to read — and close — as up.
-        const up = shownTool(open[zone]?.[slot], zone, slot, surface, state)
+        // puts elsewhere is up, and its icon has to read — and close — as up. A half silenced by
+        // a solo panel beside it draws nothing, so none of its icons reads as up either.
+        const up = drawn[slot]
 
         return (
           <Fragment key={`${zone}:${slot}`}>

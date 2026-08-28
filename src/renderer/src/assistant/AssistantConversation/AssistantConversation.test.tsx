@@ -97,7 +97,7 @@ describe('the assistant conversation', () => {
   // two sessions is a leftover, not a sentence anybody is speaking.
   it('shows the sentence still being spoken', () => {
     useDictation.setState({ partial: 'ouvre un fichier', state: 'listening' })
-    render(<AssistantConversation voice />)
+    render(<AssistantConversation />)
 
     expect(screen.getByText('ouvre un fichier')).toBeInTheDocument()
   })
@@ -196,11 +196,9 @@ describe('the assistant conversation', () => {
    * Offered without one, a settled sentence falls to the caret, which the button itself just
    * took, and the words are dropped with nothing on screen.
    */
-  it('offers the microphone only to a host that claimed the spoken word', () => {
-    const { rerender } = render(<AssistantConversation />)
-    expect(screen.queryByRole('button', { name: /Dicter/ })).not.toBeInTheDocument()
+  it('offers the microphone, having claimed the spoken word by being on screen', () => {
+    render(<AssistantConversation />)
 
-    rerender(<AssistantConversation voice />)
     expect(screen.getByRole('button', { name: /Dicter/ })).toBeInTheDocument()
   })
 

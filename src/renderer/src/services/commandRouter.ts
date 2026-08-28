@@ -2,7 +2,7 @@ import { commandDescriptor, type CommandId } from '@shared/domain/command'
 import type { StudioBridge } from '@shared/ipc'
 import { saveDocument, saveDocumentAs } from '@/app/documentIo'
 import { importOtioz } from '@/app/otioImport'
-import { mountedChatPanel } from '@/assistant/chatPanel'
+import { revealChat } from '@/assistant/revealChat'
 import { applyWorkspaceMove } from '@/helpers/applyWorkspaceMove'
 import { getBridge } from '@/services/bridge'
 import { commandScopeIsArmed, publishCommand } from '@/services/commandBus'
@@ -74,13 +74,8 @@ function runHere(command: CommandId): CommandRouting | null {
       return through(bridge => void bridge.settings.open('general'))
     case 'window.fullScreen':
       return through(bridge => void bridge.window.toggleFullScreen())
-    case 'app.assistant': {
-      const panel = mountedChatPanel()
-      if (!panel) return 'noSurface'
-
-      panel.toggle()
-      return 'ran'
-    }
+    case 'app.assistant':
+      return revealChat() ? 'ran' : 'noSurface'
     case 'app.dictate':
       return toggleDictation()
     case 'spaces.moveLeft':

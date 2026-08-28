@@ -12,7 +12,7 @@ const turn = {
 }
 
 beforeEach(() => {
-  useAssistant.setState({ open: false, busy: false, seen: 0, staged: 0, turns: [turn] })
+  useAssistant.setState({ busy: false, seen: 0, staged: 0, turns: [turn] })
 })
 
 describe('that the assistant is working on what was just said', () => {

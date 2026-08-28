@@ -10,8 +10,7 @@ import { showWorkspace } from '../dockviewApi'
 import { guardUnsavedWork } from '../unsavedGuard'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useGitWatch } from '@/hooks/useGitWatch'
-import { AssistantEntry } from '@/assistant/AssistantEntry'
-import { AssistantOverlay } from '@/assistant/AssistantOverlay/AssistantOverlay'
+import { holdConfirmer } from '@/assistant/holdConfirmer'
 import { AssistantStatus } from '@/assistant/AssistantStatus'
 import { AssistantToast } from '@/assistant/AssistantToast'
 import { DictationStatus } from '@/dictation/DictationStatus/DictationStatus'
@@ -23,7 +22,6 @@ import { TasksStatus } from '../TasksStatus'
 import { JobsStatus } from '../JobsStatus'
 import { UpdateStatus } from '../UpdateStatus'
 import { Rail } from '../Rail/Rail'
-import { Separator } from '@/design/Separator'
 import { AccountSelect } from '../AccountSelect'
 import { ProjectSelect } from '../ProjectSelect'
 import { TitleBar } from '../TitleBar/TitleBar'
@@ -50,6 +48,9 @@ export function Shell() {
 
   // The window is the one that holds documents, so it is the one that must not go quietly.
   useEffect(() => guardUnsavedWork(window), [])
+
+  // The window's confirmer: it outlives either host of the conversation, and brings one up.
+  useEffect(holdConfirmer, [])
   useAutosave()
 
   // Here rather than in the two panels that draw it: whether git holds the folder decides whether
@@ -74,12 +75,8 @@ export function Shell() {
         onHome={homeEnabled ? () => setHome(true) : undefined}
         // Local then remote: the folder everything is written into, then the key it is
         // generated on. The pair is the studio's "where am I" in one corner.
-        // The two ways to reach the assistant, then the pair that says where one is. Parted by a
-        // hairline because they are not the same kind of thing: one acts, the other points.
         actions={
           <>
-            <AssistantEntry />
-            <Separator orientation="vertical" />
             <ProjectSelect />
             <AccountSelect />
           </>
@@ -144,9 +141,6 @@ export function Shell() {
       />
       <ActivityToasts />
       <AssistantToast />
-      {/* Over everything, and mounted whether or not it shows: it is the window's confirmer, and
-          an action that needs a yes must be able to raise one from a closed modal. */}
-      <AssistantOverlay />
       {/* The window a slot browses the whole project from. Mounted here rather than by the
           inspector: a panel that happened to be closed would leave the browse button with
           nobody to ask. */}

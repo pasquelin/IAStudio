@@ -5,6 +5,7 @@ import { Toast } from '@/design/Toast/Toast'
 import { ToastStack } from '@/design/Toast/ToastStack'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
+import { revealChat } from './revealChat'
 
 /**
  * How long an answer stands before it takes itself away.
@@ -72,7 +73,7 @@ export function AssistantToast() {
         <button
           type="button"
           {...HINT_TOP(t('assistant.reviewHint'))}
-          onClick={() => useAssistant.getState().show()}
+          onClick={revealChat}
           className="min-w-0 flex-1 cursor-pointer border-none bg-transparent text-left"
         >
           <span className="text-text block text-xs">
