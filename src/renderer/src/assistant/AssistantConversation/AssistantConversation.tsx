@@ -9,7 +9,7 @@ import { PANEL_SCROLL } from '@/design/styles'
 import { Spinner } from '@/design/Spinner'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
-import { foldForSearch, matchesWords, searchWords } from '@shared/text'
+import { completionFor, foldForSearch, matchesWords, searchWords } from '@shared/text'
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
 import { HINT_TOP, TIP_TOP } from '@/helpers/tooltip'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
@@ -22,11 +22,29 @@ import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
 import { registerChatPanel } from '../chatPanel'
 import { ASSISTANT_STARTERS, starterKey } from '../starters'
+import { AssistantConversationGhost } from './AssistantConversationGhost'
 import { AssistantConversationSuggestions, suggestionId } from './AssistantConversationSuggestions'
 import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
 import { CONVERSATION_CARD } from './conversationStyles'
+
+/**
+ * The sentence a grey tail would spell out, and the tail itself — nothing when the sentence does
+ * not begin the way the field does.
+ *
+ * 🛑 The two travel TOGETHER: taking the tail writes the sentence in its own spelling, accents
+ * included, so a caller holding one without the other wrote back what the hand had mistyped.
+ */
+function tailOf(
+  sentence: string | undefined,
+  draft: string,
+): { sentence: string; tail: string } | undefined {
+  if (sentence === undefined) return undefined
+
+  const tail = completionFor(sentence, draft)
+  return tail === undefined ? undefined : { sentence, tail }
+}
 
 /**
  * The conversation: what has been said, what is asked, and the place one writes. Two hosts — the
@@ -81,15 +99,17 @@ export function AssistantConversation() {
       .filter(one => matchesWords(one, words) && foldForSearch(one) !== written)
   }, [draft, surface, t])
 
-  /** Rank 0 is the sentence one is writing; 1..n are the suggestions. */
+  /** Which match is held. The FIRST by default: a tail nobody asked for is one nobody would see. */
   const [rank, setRank] = useState(0)
   const [given, setGiven] = useState(false)
   const [walked, setWalked] = useState(matches)
+  /** The tail is painted after what is written, so it is only offered from there. */
+  const [caretAtEnd, setCaretAtEnd] = useState(true)
 
   /**
    * 🛑 A rebuilt list gives the rank back, whatever rebuilt it — a keystroke, a change of space,
    * a language, a dictated word appended from elsewhere. Kept, rank 5 named one sentence and then
-   * another, highlighted and silently different, and Enter took the second.
+   * another, highlighted and silently different, and Tab took the second.
    */
   if (walked !== matches) {
     setWalked(matches)
@@ -98,46 +118,51 @@ export function AssistantConversation() {
   }
 
   const shown = !given && !busy ? matches : []
-  const held = rank === 0 ? undefined : shown[rank - 1]
+  const ghost = caretAtEnd ? tailOf(shown[rank], draft) : undefined
 
-  // Chosen means WRITTEN, never sent: the sentence is a start, and what one adds to it — a name,
+  /**
+   * The one match a tail already spells out needs no row under the field: that lone bordered line
+   * read as a button one was meant to press, which is the whole reason for the tail.
+   */
+  const listed = ghost !== undefined && shown.length === 1 ? [] : shown
+
+  // Taken means WRITTEN, never sent: the sentence is a start, and what one adds to it — a name,
   // a size, a folder — is the half the studio cannot guess.
-  const choose = (sentence: string): void => {
+  const take = (sentence: string): void => {
     setDraft(sentence)
-    setRank(0)
+    setCaretAtEnd(true)
     field.current?.focus()
   }
 
   /**
-   * The arrows walk the list, Escape gives it up, Enter takes what is held. Enter holding nothing
-   * still sends — the list must not put a step between a finished sentence and its going.
+   * Tab and the right arrow take the tail, the arrows change which sentence it spells, Escape
+   * gives it up. 🛑 Enter is none of them: a match is held from the first keystroke now, and an
+   * Enter that took it would send the assistant a sentence the hand never finished.
    */
   const steer = (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if (shown.length === 0 || isComposing(event)) return false
 
-    // 🛑 Only where the caret has nowhere left to go: the field takes three lines and holds
-    // dictated paragraphs, which wrap without ever carrying a newline to test for.
-    const caret = event.currentTarget.selectionStart
-    const spare =
-      event.key === 'ArrowDown' ? caret === draft.length : event.key === 'ArrowUp' && caret === 0
-
-    if (spare) {
-      const ranks = shown.length + 1
-      setRank(at => (at + (event.key === 'ArrowDown' ? 1 : -1) + ranks) % ranks)
-      event.preventDefault()
+    // A tail is only ever painted at the end of what is written, so both keys that take it are
+    // already where they had nowhere left to go.
+    if (ghost !== undefined && (event.key === 'Tab' || event.key === 'ArrowRight')) {
+      take(ghost.sentence)
       return true
     }
 
     if (event.key === 'Escape') {
       setGiven(true)
-      setRank(0)
-      event.preventDefault()
       return true
     }
 
-    if (event.key === 'Enter' && held !== undefined) {
-      choose(held)
-      event.preventDefault()
+    // 🛑 Only where the caret has nowhere left to go: the field takes three lines and holds
+    // dictated paragraphs, which wrap without ever carrying a newline to test for. Read from the
+    // event and not from `caretAtEnd`, which answers for one end and this needs both.
+    const caret = event.currentTarget.selectionStart
+    const spare =
+      event.key === 'ArrowDown' ? caret === draft.length : event.key === 'ArrowUp' && caret === 0
+
+    if (spare) {
+      setRank(at => (at + (event.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length)
       return true
     }
 
@@ -153,6 +178,8 @@ export function AssistantConversation() {
    */
   const following = useRef(true)
   const field = useRef<HTMLTextAreaElement>(null)
+  /** Followed to the field's own scroll: a tail out of view is a tail nobody can take. */
+  const mirror = useRef<HTMLDivElement>(null)
 
   /**
    * Follows the newest line, but only for someone who was already at it.
@@ -317,62 +344,89 @@ export function AssistantConversation() {
               long — dictated into a single line it scrolled sideways under the caret, with the
               beginning of one's own sentence out of sight. No field chrome of its own, since the
               block around it is the field. */}
-            <textarea
-              ref={field}
-              // The one field of the studio a client most wants to fill, and it had no name a
-              // script could reach: the guard reads per FILE, and the model picker below it answers.
-              data-sc={fieldHandle('assistant.draft')}
-              rows={3}
-              value={draft}
-              // 🛑 No `role="combobox"`: it REPLACES the field's own role, and ARIA 1.2 drops
-              // `aria-multiline` with it — what one writes here is a paragraph. These three ARE
-              // allowed on a textbox, where `aria-expanded` is not and was read by nobody.
-              aria-autocomplete="list"
-              aria-haspopup="listbox"
-              // `aria-owns` beside it: ARIA asks that the held row be a descendant of the focused
-              // element, and a textarea can hold none. Without it the walk is announced by nobody.
-              aria-controls={shown.length > 0 ? listId : undefined}
-              aria-owns={shown.length > 0 ? listId : undefined}
-              aria-activedescendant={
-                held === undefined ? undefined : suggestionId(listId, rank - 1)
-              }
-              placeholder={t('assistant.placeholder')}
-              // While a plan is running: a second sentence would interleave two plans over one
-              // generator form, and the question on screen belongs to the first of them.
-              disabled={busy}
-              onChange={event => setDraft(event.target.value)}
-              // Enter still sends, as it did when this was one line: a textarea's own default would
-              // have made the keyboard path to sending disappear. Shift+Enter is the new line.
-              onKeyDown={event => {
-                if (steer(event)) {
-                  event.preventDefault()
-                  return
+            {/* The mirror behind the field, and the field over it: a textarea paints no text of
+              its own, and both must be positioned for the writing to stay on top. */}
+            <div className="relative">
+              {ghost !== undefined && (
+                <AssistantConversationGhost
+                  ref={mirror}
+                  typed={draft}
+                  tail={ghost.tail}
+                  accept={t('assistant.acceptKey')}
+                />
+              )}
+              <textarea
+                ref={field}
+                // The one field of the studio a client most wants to fill, and it had no name a
+                // script could reach: the guard reads per FILE, and the model picker below it answers.
+                data-sc={fieldHandle('assistant.draft')}
+                rows={3}
+                value={draft}
+                // 🛑 No `role="combobox"`: it REPLACES the field's own role, and ARIA 1.2 drops
+                // `aria-multiline` with it — what one writes here is a paragraph. These three ARE
+                // allowed on a textbox, where `aria-expanded` is not and was read by nobody.
+                aria-autocomplete="both"
+                aria-haspopup="listbox"
+                // `aria-owns` beside it: ARIA asks that the held row be a descendant of the focused
+                // element, and a textarea can hold none. Without it the walk is announced by nobody.
+                aria-controls={listed.length > 0 ? listId : undefined}
+                aria-owns={listed.length > 0 ? listId : undefined}
+                aria-activedescendant={listed.length === 0 ? undefined : suggestionId(listId, rank)}
+                placeholder={t('assistant.placeholder')}
+                // While a plan is running: a second sentence would interleave two plans over one
+                // generator form, and the question on screen belongs to the first of them.
+                disabled={busy}
+                onChange={event => {
+                  setDraft(event.target.value)
+                  setCaretAtEnd(event.target.selectionStart === event.target.value.length)
+                }}
+                // Where the caret lands by click or by arrow. Read on change TOO, and not instead:
+                // a field typed into fires one of the two on some engines and both on others.
+                onSelect={event =>
+                  setCaretAtEnd(
+                    event.currentTarget.selectionStart === event.currentTarget.value.length,
+                  )
                 }
+                onScroll={event => {
+                  if (mirror.current) mirror.current.scrollTop = event.currentTarget.scrollTop
+                }}
+                // Enter still sends, as it did when this was one line: a textarea's own default would
+                // have made the keyboard path to sending disappear. Shift+Enter is the new line.
+                onKeyDown={event => {
+                  if (steer(event)) {
+                    event.preventDefault()
+                    return
+                  }
 
-                // While an input method composes, Enter picks the candidate character — see
-                // `isComposing`. Sending here would cut the word being written.
-                if (event.key !== 'Enter' || event.shiftKey || isComposing(event)) return
-                event.preventDefault()
-                send()
-              }}
-              className="text-text w-full resize-none border-none bg-transparent px-1 text-xs"
-            />
+                  // While an input method composes, Enter picks the candidate character — see
+                  // `isComposing`. Sending here would cut the word being written.
+                  if (event.key !== 'Enter' || event.shiftKey || isComposing(event)) return
+                  event.preventDefault()
+                  send()
+                }}
+                className="text-text relative w-full resize-none border-none bg-transparent px-1 text-xs"
+              />
+            </div>
 
-            {shown.length > 0 && (
+            {listed.length > 0 && (
               <AssistantConversationSuggestions
-                matches={shown}
-                active={rank - 1}
+                matches={listed}
+                active={rank}
                 label={t('assistant.suggestions')}
                 hint={t('assistant.starterHint')}
                 id={listId}
-                onChoose={choose}
+                onChoose={take}
               />
             )}
 
             {/* The list appears, renumbers and goes under the fingers without a word otherwise —
                 the same reason the title bar announces a reordered tab. */}
             <p role="status" aria-live="polite" className="sr-only">
-              {shown.length > 0 ? t('assistant.suggested', { count: shown.length }) : ''}
+              {ghost !== undefined
+                ? t('assistant.completing', { sentence: ghost.sentence })
+                : listed.length > 0
+                  ? t('assistant.suggested', { count: listed.length })
+                  : ''}
             </p>
 
             {/* Wrapping: the picker and the pair sit side by side wherever there is room and
