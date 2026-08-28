@@ -7,7 +7,7 @@ import {
   type MemoryRef,
   type MemoryType,
 } from '@shared/domain/assistantMemory'
-import { getBridge } from '@/services/bridge'
+import { memoryBridge } from '@/services/bridge'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
 
@@ -59,7 +59,7 @@ async function recall(input: Record<string, unknown>): Promise<ActionOutcome> {
   const query = textOf(input, 'query')
   if (query === null) return refused('badInput')
 
-  const memories = await getBridge()?.memory.recall('project', {
+  const memories = await memoryBridge()?.recall('project', {
     text: query,
     limit: Math.min(numberOf(input, 'limit') ?? 10, MEMORY_PAGE),
   })
@@ -73,7 +73,7 @@ async function read(input: Record<string, unknown>): Promise<ActionOutcome> {
   const id = textOf(input, 'memoryId')
   if (id === null) return refused('badInput')
 
-  const memory = await getBridge()?.memory.read('project', id)
+  const memory = await memoryBridge()?.read('project', id)
   return memory ? { ok: true, data: memory } : refused('notFound')
 }
 
@@ -94,7 +94,7 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
     ...(file === null ? {} : { refs: [fileRef(file)] }),
   }
 
-  const written = await getBridge()?.memory.remember('project', draft)
+  const written = await memoryBridge()?.remember('project', draft)
   return written ? { ok: true, data: found(written) } : refused('notAllowed')
 }
 
@@ -105,7 +105,7 @@ async function forget(input: Record<string, unknown>): Promise<ActionOutcome> {
   const id = textOf(input, 'memoryId')
   if (id === null) return refused('badInput')
 
-  return (await getBridge()?.memory.forget('project', id)) ? { ok: true } : refused('notFound')
+  return (await memoryBridge()?.forget('project', id)) ? { ok: true } : refused('notFound')
 }
 
 /**
@@ -117,11 +117,11 @@ async function link(input: Record<string, unknown>): Promise<ActionOutcome> {
   const to = textOf(input, 'toMemoryId')
   if (id === null || to === null) return refused('badInput')
 
-  const held = await getBridge()?.memory.read('project', id)
+  const held = await memoryBridge()?.read('project', id)
   if (!held) return refused('notFound')
   if (held.links.includes(to)) return { ok: true }
 
-  const amended = await getBridge()?.memory.amend('project', id, {
+  const amended = await memoryBridge()?.amend('project', id, {
     links: [...held.links, to],
   })
   return amended ? { ok: true } : refused('failed')

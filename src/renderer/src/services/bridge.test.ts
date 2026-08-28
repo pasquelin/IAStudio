@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { connectThroughBridge } from './bridge'
+import { connectThroughBridge, memoryBridge } from './bridge'
 import { installFakeBridge } from './fakeBridge'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -21,5 +21,26 @@ describe('connecting through the bridge', () => {
     expect(() => connectThroughBridge(join)()).not.toThrow()
     expect(await connectThroughBridge(join)()).toBeTypeOf('function')
     expect(join).not.toHaveBeenCalled()
+  })
+})
+
+describe('the memory half of the bridge', () => {
+  /**
+   * 🛑 A DEVELOPMENT window whose preload predates this branch has every other half and not this
+   * one. `getBridge()?.memory.remember(…)` guards the bridge and not the half, so it threw where
+   * every caller expected a bridge that answers nothing — and `rememberOutcome` is called on a
+   * `void`, which makes that throw an unhandled rejection.
+   */
+  it('answers nothing for a preload that has no memory at all', () => {
+    vi.stubGlobal('studio', {})
+
+    expect(memoryBridge()).toBeUndefined()
+    expect(() => memoryBridge()?.remember('project', undefined as never)).not.toThrow()
+  })
+
+  it('answers nothing without a bridge at all', () => {
+    vi.stubGlobal('studio', undefined)
+
+    expect(memoryBridge()).toBeUndefined()
   })
 })

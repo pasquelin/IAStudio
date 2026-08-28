@@ -9,7 +9,15 @@ import type {
 } from '@shared/domain/assistantMemory'
 import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
 import { orElse } from '@shared/promises'
-import { connectThroughBridge, getBridge } from '@/services/bridge'
+import { connectThroughBridge, memoryBridge } from '@/services/bridge'
+
+/**
+ * One amendment, against a scope the caller NAMES — what a burst holds on to while the person is
+ * free to move the pill. `orElse` and not `!== null`: with no bridge the call answers `undefined`,
+ * and a window was told its amendment had gone through.
+ */
+const amendedIn = async (scope: MemoryScope, id: string, patch: MemoryPatch): Promise<boolean> =>
+  (await orElse(memoryBridge()?.amend(scope, id, patch), null)) !== null
 
 /**
  * What the window holds of the two memories.
@@ -94,46 +102,52 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     // saying true about them is a panel claiming they are the answer.
     set({ loaded: false })
 
-    const memories = await orElse(getBridge()?.memory.list(scope, query), [])
+    const memories = await orElse(memoryBridge()?.list(scope, query), [])
 
     // 🛑 Dropped when the question moved on: two reads in flight — a scope switch, or a write
     // announced mid-switch — can settle out of order, and the slower one would paint the other
     // scope's rows and call them loaded.
     if (get().scope !== scope || get().query !== query) return
 
-    set({ memories, loaded: true, pending: await orElse(getBridge()?.memory.pending(scope), 0) })
+    set({ memories, loaded: true, pending: await orElse(memoryBridge()?.pending(scope), 0) })
   },
 
   // No optimistic write, unlike the context panel: the id and the date come from the main
   // process, so there is nothing truthful to draw before the answer arrives.
-  remember: async draft => await orElse(getBridge()?.memory.remember(get().scope, draft), null),
+  remember: async draft => await orElse(memoryBridge()?.remember(get().scope, draft), null),
 
   /**
-   * 🛑 `orElse` and not `!== null`: with no bridge the call answers `undefined`, and a window was
-   * told its amendment had gone through.
-   *
    * Reloaded here rather than left to the change event: the panel is what shows the row, and a
    * pinned memory still offering « Pin » is the whole gesture failing in front of the person.
    */
   amend: async (id, patch) => {
-    const amended = (await orElse(getBridge()?.memory.amend(get().scope, id, patch), null)) !== null
+    const amended = await amendedIn(get().scope, id, patch)
     if (amended) await get().reload()
     return amended
   },
 
   forget: async id => {
-    const forgotten = await orElse(getBridge()?.memory.forget(get().scope, id), false)
+    const forgotten = await orElse(memoryBridge()?.forget(get().scope, id), false)
     if (forgotten) await get().reload()
     return forgotten
   },
 
-  rebuild: async () => await orElse(getBridge()?.memory.rebuild(get().scope), 0),
+  rebuild: async () => await orElse(memoryBridge()?.rebuild(get().scope), 0),
 
   reset: async () => {
-    await orElse(getBridge()?.memory.reset(get().scope), undefined)
+    await orElse(memoryBridge()?.reset(get().scope), undefined)
   },
 
+  /**
+   * 🛑 The scope is read ONCE, and `amendedIn` is what makes that possible: `amend` reads
+   * `get().scope` on every call, so moving the pill mid-run sent the rest of the burst at the
+   * other memory — where the ids do not exist, so nothing was written wrongly, but the merge
+   * stopped half done and reported a figure that was not true.
+   *
+   * One reload at the end and not one per memory, for the same reason.
+   */
   mergeDuplicates: async () => {
+    const scope = get().scope
     let merged = 0
     for (const group of duplicatesIn(get().memories)) {
       const [keeper, ...rest] = group
@@ -141,9 +155,8 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
 
       for (const one of rest) {
         // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
-        if (await get().amend(one.id, { state: 'archived', links: [...one.links, keeper.id] })) {
-          merged += 1
-        }
+        const patch: MemoryPatch = { state: 'archived', links: [...one.links, keeper.id] }
+        if (await amendedIn(scope, one.id, patch)) merged += 1
       }
     }
 
@@ -152,22 +165,23 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   },
 
   archiveStale: async now => {
+    const scope = get().scope
     let archived = 0
     for (const one of staleIn(get().memories, now)) {
-      if (await get().amend(one.id, { state: 'archived' })) archived += 1
+      if (await amendedIn(scope, one.id, { state: 'archived' })) archived += 1
     }
 
     await get().reload()
     return archived
   },
 
-  compact: async () => await orElse(getBridge()?.memory.compact(get().scope), 0),
+  compact: async () => await orElse(memoryBridge()?.compact(get().scope), 0),
 
   index: async () => {
-    await orElse(getBridge()?.memory.index(get().scope), undefined)
+    await orElse(memoryBridge()?.index(get().scope), undefined)
   },
 
   stopIndex: async () => {
-    await orElse(getBridge()?.memory.stopIndex(get().scope), undefined)
+    await orElse(memoryBridge()?.stopIndex(get().scope), undefined)
   },
 }))

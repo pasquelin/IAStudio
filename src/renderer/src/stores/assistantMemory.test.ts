@@ -142,4 +142,30 @@ describe('writing from the window', () => {
 
     expect(await state().amend('m_gone', { summary: 'x' })).toBe(false)
   })
+
+  /**
+   * 🛑 The scope is captured ONCE. Moving the pill mid-burst sent the rest of the merge at the
+   * other memory — the ids do not exist there, so nothing was written wrongly, but the merge
+   * stopped half done and reported a figure that was not true.
+   */
+  it('merges into the scope the burst started in, whatever the pill does meanwhile', async () => {
+    const asked: MemoryScope[] = []
+    const twins = [memory({ id: 'm_a' }), memory({ id: 'm_b' }), memory({ id: 'm_c' })]
+    installFakeBridge({
+      memory: {
+        list: () => Promise.resolve(twins),
+        amend: (scope: MemoryScope, id: string) => {
+          asked.push(scope)
+          // What a window does while the burst runs: the panel moves to the machine's memory.
+          useAssistantMemory.setState({ scope: 'global' })
+          return Promise.resolve(twins.find(one => one.id === id) ?? null)
+        },
+      },
+    })
+
+    await state().reload()
+
+    expect(await state().mergeDuplicates()).toBe(2)
+    expect(asked).toEqual(['project', 'project'])
+  })
 })

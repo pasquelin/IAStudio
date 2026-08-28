@@ -3,7 +3,7 @@ import type { ActionName, ActionOutcome } from '@shared/domain/assistant'
 import { MEMORY_WORTH } from '@shared/domain/memoryWorth'
 import type { MemoryDraft } from '@shared/domain/assistantMemory'
 import { orElse } from '@shared/promises'
-import { getBridge } from '@/services/bridge'
+import { memoryBridge } from '@/services/bridge'
 
 /**
  * What one action left the studio knowing, written down.
@@ -18,6 +18,10 @@ import { getBridge } from '@/services/bridge'
  *
  * Never awaited by its caller and never allowed to throw: an action is done when the studio
  * changed, and a memory that would not persist must not turn a successful call into a refusal.
+ *
+ * 🛑 Nothing captures WHICH project the action ran in: the write lands in whatever `'project'`
+ * names when it arrives. A client chaining `script.write` then `project.open` files the first
+ * memory in the second project, and nothing says so.
  */
 export async function rememberOutcome(
   name: ActionName,
@@ -51,5 +55,5 @@ export async function rememberOutcome(
     ...(drawn.refs ? { refs: drawn.refs } : {}),
   }
 
-  return (await orElse(getBridge()?.memory.remember('project', draft), null)) !== null
+  return (await orElse(memoryBridge()?.remember('project', draft), null)) !== null
 }
