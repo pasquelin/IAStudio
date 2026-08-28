@@ -144,6 +144,13 @@ export type AiManager = {
   /** A catalogue id, including one Ollama just listed. Unknown is expected. */
   lookup: (modelId: string) => LocalModel | null
   /**
+   * What a runtime listed, as of the last compose — Ollama's tags, and nothing else today.
+   *
+   * Synchronous and possibly empty: the registry asks it per summary, and « not listed yet » is
+   * the honest answer before the first compose rather than a round trip inside a getter.
+   */
+  discovered: () => readonly LocalModel[]
+  /**
    * Drops the discovered listing so the next compose re-asks. A tag deleted outside must not
    * keep being served from cache; the stored choice is left alone.
    */
@@ -785,6 +792,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     },
 
     lookup: modelId => modelOf(modelId),
+
+    discovered: () => lastDiscovered,
 
     forgetDiscovered,
 

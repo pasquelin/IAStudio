@@ -602,13 +602,25 @@ export function createServices(settings: SettingsStore): Services {
    */
   let merged: { of: string; all: readonly LocalModel[] } | null = null
 
+  /** Stable, so an empty answer hands the merge below the same identity every time. */
+  const NOTHING_DISCOVERED: readonly LocalModel[] = []
+
+  /**
+   * What a runtime listed, answered by the manager — which is built AFTER the registry that asks.
+   * Empty until then, like `installedLocally` beside it.
+   */
+  const discoveredLocally = { models: (): readonly LocalModel[] => NOTHING_DISCOVERED }
+
   const mergedCatalogue = (): readonly LocalModel[] => {
     const own = settings.read().ai.ownModels
+    const found = discoveredLocally.models()
     // 🛑 Keyed by the IDS and not by the array: `settings.read()` re-parses, and zod 4 hands back
     // a fresh array every time — measured — so an identity check never held and the merge was
     // rebuilt on every keystroke of the panel's search field, which is what it was written to stop.
-    const key = own.map(one => one.id).join('\u0000')
-    if (merged?.of !== key) merged = { of: key, all: catalogueWith(own) }
+    // The discovered ids join the key: a tag that appears must reach the picker, and one deleted
+    // outside must leave it.
+    const key = [...own, ...found].map(one => one.id).join('\u0000')
+    if (merged?.of !== key) merged = { of: key, all: catalogueWith(own, found) }
 
     return merged.all
   }

@@ -155,16 +155,22 @@ export function catalogueWith(
   return extra.length === 0 ? ALL : [...ALL, ...extra]
 }
 
-/** Whether a discovered model (no family) or a declared one actually serves this role. */
+/**
+ * Whether a discovered model (no family) or a declared one actually serves this role.
+ *
+ * 🛑 `serves` FIRST, and outside the family test: a discovered tag declares no family and no
+ * capabilities, so reading it only inside that branch made the field dead for exactly the models
+ * it exists for — an Ollama conversation that writes scripts was offered to the assistant alone.
+ */
 function discoveredServes(model: LocalModel, role: AiRoleId): boolean {
+  if ((model.serves ?? []).includes(role)) return true
+
   const family = model.family
   const capabilities = model.capabilities
   if (family && capabilities) {
     const known = CAPABILITIES_BY_FAMILY[family]
-    return (
-      capabilities.some(
-        capability => known.includes(capability) && aiRoleId(family, capability) === role,
-      ) || (model.serves ?? []).includes(role)
+    return capabilities.some(
+      capability => known.includes(capability) && aiRoleId(family, capability) === role,
     )
   }
 

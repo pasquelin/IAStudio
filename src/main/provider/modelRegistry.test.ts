@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { aiRoleId } from '@shared/domain/aiRole'
 import {
   LOCAL_RUNTIME,
   PROVIDER_MAINTAINER,
@@ -917,6 +918,31 @@ describe('model registry', () => {
 
       expect(described.fields.map(field => field.key)).toContain('steps')
       expect(described.runsOn).toBe(LOCAL_RUNTIME)
+      expect(spied.lists).toEqual([])
+    })
+
+    /**
+     * The shape a DISCOVERED tag has: no family of its own, the employments it serves declared in
+     * `serves`. Both halves matter — it must reach the picker of that family, and its form must
+     * come from here rather than from a catalogue that has never heard of its id.
+     */
+    it('lists and describes a discovered model that declares no family', async () => {
+      const tag = localModel({
+        id: 'qwen2.5-coder:7b',
+        name: 'qwen2.5-coder:7b',
+        loader: 'ollama',
+        modality: 'text',
+        serves: [aiRoleId('code', 'txt2code'), aiRoleId('code', 'code2code')],
+      })
+      const spied = spiedCatalog({ public: [FLUX] })
+      const registry = registryOf({ catalog: spied.catalog, localModels: () => [tag] })
+
+      const page = await registry.search({ family: 'code' })
+      const described = await registry.describe('qwen2.5-coder:7b')
+
+      expect(page.items.map(one => one.id)).toEqual(['qwen2.5-coder:7b'])
+      expect(described.fields.map(field => field.key)).toContain('prompt')
+      // 🛑 No round trip: a local id asked of Scenario answers `404`, journalled as a failure.
       expect(spied.lists).toEqual([])
     })
 
