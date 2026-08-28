@@ -666,7 +666,11 @@ export const useTools = create<ToolsState>()(
       // the only panel of the home's RIGHT column, so an unmigrated arrangement keeps that zone
       // OPEN — `openEverywhereItSits` keeps a zone that was open even once emptied — and the
       // whole installed base would carry a 260 px column drawing nothing, with a handle to drag.
-      version: 19,
+      // 20 is the assistant ARRIVING in that same column, and it costs the mirror image: the home
+      // gained a right zone it never had, and an unmigrated arrangement — which names the halves
+      // it knew and no others — leaves it CLOSED for ever. `migrate` rebuilds the home from the
+      // defaults, so the bump IS the fix; a `ToolId` added is a bump like a `ToolId` dropped.
+      version: 20,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

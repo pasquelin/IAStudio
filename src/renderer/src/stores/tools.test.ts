@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { shownTools, type ToolState } from '@/helpers/toolRegistry'
 import { arrangedFor } from './tool-fixtures'
 import {
   familyOf,
@@ -405,6 +406,15 @@ describe('the home and the workspaces arrange their zones apart', () => {
   })
 })
 
+/** The home with a project open: the assistant asks for a centre holding anything but the thread,
+ * and the home page IS that. */
+const IN_HOME: ToolState = {
+  hasProject: true,
+  hasGit: true,
+  hasCloud: true,
+  centreTaken: true,
+}
+
 describe('migrating to the split arrangement', () => {
   // Everything version 8 stored was the workspaces': one arrangement, flat at the root, since the
   // home had no zones of its own to arrange.
@@ -440,6 +450,31 @@ describe('migrating to the split arrangement', () => {
     expect(migrated?.lengths.sizes).toEqual({ left: 400 })
     // The home is the one this bump changes: it starts on both halves of both columns.
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
+  })
+
+  /**
+   * 🛑 A `ToolId` ARRIVING costs a bump exactly as one leaving does, and this is the case that
+   * proves it: version 19 knew no right column on the home, so an arrangement written by it names
+   * the halves it had and no others. Left unmigrated, the zone reads as one nobody opened — the
+   * assistant would be reachable from the home by ⌘K alone, for ever, on every installed profile.
+   */
+  it('opens the home on the assistant, which a version 19 arrangement cannot name', () => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
+          workspaces: { open: { right: { primary: 'layers' } } },
+          home: {
+            open: { left: { primary: null, secondary: null }, bottomRight: { primary: null } },
+          },
+        },
+      },
+      19,
+    )
+
+    expect(migrated?.arrangements.home.open.right).toEqual({ primary: null })
+    expect(
+      shownTools(migrated?.arrangements.home.open.right, 'right', HOME_SURFACE, IN_HOME),
+    ).toMatchObject({ primary: 'assistant' })
   })
 
   /**
