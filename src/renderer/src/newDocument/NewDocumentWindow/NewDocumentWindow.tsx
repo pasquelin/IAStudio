@@ -1,10 +1,15 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EXTENSIONS_BY_KIND } from '@shared/domain/document'
+import { EXTENSIONS_BY_KIND, type DocumentKind } from '@shared/domain/document'
 import { checkDocumentName } from '@shared/domain/documentName'
 import { FOLDER_ROOT } from '@shared/domain/folder'
-import type { NamedDocumentPlace, NewDocumentAsk } from '@shared/domain/newDocument'
+import type {
+  DocumentTemplateId,
+  NamedDocumentPlace,
+  NewDocumentAsk,
+} from '@shared/domain/newDocument'
 import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { DEFAULT_UI_TEMPLATE, type UiTemplateId } from '@shared/domain/uiTemplates'
 import { Button } from '@/design/Button'
 import { FolderPicker } from '@/design/FolderPicker/FolderPicker'
 import { WindowShell } from '@/design/WindowShell'
@@ -16,6 +21,7 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { takenDocumentNames, useDocuments } from '@/stores/documents'
 import { DOCUMENT_NAME_REFUSALS } from '../documentName'
 import { NewDocumentTemplates } from './NewDocumentTemplates'
+import { NewDocumentUiTemplates } from './NewDocumentUiTemplates'
 
 /**
  * What a document is called and where it goes, asked in a WINDOW before it is made.
@@ -39,6 +45,9 @@ export function NewDocumentWindow() {
   const [draft, setDraft] = useState('')
   const [folder, setFolder] = useState(FOLDER_ROOT)
   const [template, setTemplate] = useState<SceneTemplateId>(DEFAULT_SCENE_TEMPLATE)
+  // Two states rather than one of the union: each section keeps what was picked in it,
+  // and a window reopened on the other kind would otherwise answer with an id it refuses.
+  const [uiTemplate, setUiTemplate] = useState<UiTemplateId>(DEFAULT_UI_TEMPLATE)
   const stored = useDocuments(state => state.stored)
   const field = useRef<HTMLInputElement>(null)
   const nameId = useId()
@@ -96,6 +105,13 @@ export function NewDocumentWindow() {
     if (event.key === 'Escape' && !isComposing(event)) settle(null)
   }
 
+  /** What this kind answers with, or nothing at all — never the other kind's id. */
+  const templateOf = (kind: DocumentKind): { template?: DocumentTemplateId } => {
+    if (kind === 'scene') return { template }
+    if (kind === 'gui') return { template: uiTemplate }
+    return {}
+  }
+
   return (
     <WindowShell title={t(`documents.newByKind.${ask.kind}`)}>
       <form
@@ -105,14 +121,9 @@ export function NewDocumentWindow() {
         onKeyDown={onKeyDown}
         onSubmit={event => {
           event.preventDefault()
-          // The template travels for a scene and for nothing else: a kind that drew no section
-          // would be answering with a choice nobody was offered.
-          if (!refusal)
-            settle({
-              title: draft.trim(),
-              folder,
-              ...(ask.kind === 'scene' ? { template } : {}),
-            })
+          // The template travels for the kind that DREW a section and for no other: one that
+          // showed none would be answering with a choice nobody was offered.
+          if (!refusal) settle({ title: draft.trim(), folder, ...templateOf(ask.kind) })
         }}
       >
         {/* Labelled where it shows, not by an `aria-label`: two bare fields under one heading
@@ -147,10 +158,14 @@ export function NewDocumentWindow() {
 
         {/* Under the name and above the folder, which is the order the questions come in: what it
             is called, what it holds, where it goes. */}
-        {ask.kind === 'scene' && (
+        {(ask.kind === 'scene' || ask.kind === 'gui') && (
           <div className="flex flex-col gap-1.5">
             <span className="text-muted text-xs">{t('documents.templateField')}</span>
-            <NewDocumentTemplates value={template} onChange={setTemplate} />
+            {ask.kind === 'scene' ? (
+              <NewDocumentTemplates value={template} onChange={setTemplate} />
+            ) : (
+              <NewDocumentUiTemplates value={uiTemplate} onChange={setUiTemplate} />
+            )}
           </div>
         )}
 

@@ -25,6 +25,7 @@ import {
   UI_JUSTIFIES,
   UI_SCROLL_AXES,
   UI_TEXT_ALIGNS,
+  UI_SCHEMA_URL,
   UI_VERSION,
   holdsChildren,
   isUiElementType,
@@ -95,9 +96,13 @@ export function uiFromPayload(payload: unknown, newId: () => string): UiState {
   }
 }
 
-/** What a saved interface holds. The version is stamped here and nowhere else. */
-export function uiPayload(document: UiDocument): UiDocument {
-  return { ...document, version: UI_VERSION }
+/**
+ * What a saved interface holds. The version and the schema pointer are stamped HERE and nowhere
+ * else: the window produces the structure the file carries, and the main process only writes the
+ * syntax of it — a `$schema` added on the way to disk would be one the window never held.
+ */
+export function uiPayload(document: UiDocument): UiDocument & { $schema: string } {
+  return { $schema: UI_SCHEMA_URL, ...document, version: UI_VERSION }
 }
 
 export function newUiDocument(newId: () => string): UiDocument {

@@ -142,11 +142,16 @@ describe('what an exported game carries', () => {
  *
  * Source bytes, not built ones: `resources/gameRuntime` is written by `pnpm game:runtime` and no
  * suite runs it. The two move together, which is what a budget needs.
+ *
+ * 🛑 Its blind spot, in clear: a line of COMMENT weighs as much here as a line of code, where
+ * the bundle carries none of it. Documenting the format therefore costs budget — measured on
+ * 2026-08-28, one constant and its three lines of why moved this by 417 bytes. The alternative
+ * is stripping trivia off an AST for a number nobody would trust more.
  */
 const UI_RENDERER = resolve(SOURCE_ROOT, 'game/host/domUiRenderer.ts')
 
-/** Measured 2026-08-28 at 54 656 bytes. Lower it whenever the sweep says it can be lowered. */
-const UI_BUDGET = 55_000
+/** Measured 2026-08-28 at 55 073 bytes. Lower it whenever the sweep says it can be lowered. */
+const UI_BUDGET = 56_000
 
 describe('what an interface would add to an exported game', () => {
   const carried = swept()

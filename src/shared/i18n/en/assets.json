@@ -210,6 +210,18 @@
       "topDown": "The camera looking down on the scene",
       "postProcessing": "A camera move, a rack focus and an animated bloom — the whole chain, judged at once"
     },
+    "uiTemplates": {
+      "empty": "Empty",
+      "hud": "HUD",
+      "mainMenu": "Main menu",
+      "pause": "Pause menu"
+    },
+    "uiTemplateHints": {
+      "empty": "A bare screen, to be filled",
+      "hud": "A score up top, a health bar below",
+      "mainMenu": "A title and buttons, in the middle",
+      "pause": "A veil over the game, and a way back in"
+    },
     "folderField": "Location",
     "folderHint": "Chooses the project folder the document will be saved in",
     "folderEmpty": "No sub-folder",

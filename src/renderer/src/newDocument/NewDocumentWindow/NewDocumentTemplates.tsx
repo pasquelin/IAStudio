@@ -17,10 +17,8 @@ import {
   type SceneTemplateGroup,
   type SceneTemplateId,
 } from '@shared/domain/sceneTemplate'
-import { MediaTile } from '@/design/MediaTile'
-import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { HINT_BOTTOM } from '@/helpers/tooltip'
+import { NewDocumentTemplateTile } from './NewDocumentTemplateTile'
 
 /** The glyph a template falls back on until its still has been drawn. */
 const ICONS: Record<SceneTemplateId, string> = {
@@ -74,28 +72,15 @@ export function NewDocumentTemplates({ value, onChange }: NewDocumentTemplatesPr
           <ul className={cn('grid gap-2', LAYOUT[group].columns)}>
             {TEMPLATES_BY_GROUP[group].map(id => (
               <li key={id}>
-                <button
-                  type="button"
-                  aria-pressed={value === id}
-                  // On the element that wears the skin: `rowSkin` publishes the picked state
-                  // through it, and a background painted without it says nothing to a reader.
-                  data-selected={value === id || undefined}
-                  data-sc={`field:document.template.${id}`}
-                  {...HINT_BOTTOM(t(`documents.templateHints.${id}`))}
-                  onClick={() => onChange(id)}
-                  // No background of its own after `rowSkin`: `cn` keeps the LAST of two
-                  // conflicting fills, and a `bg-transparent` here would undo the selection.
-                  className={cn(
-                    rowSkin(value === id, { surface: 'tile' }),
-                    'w-full cursor-pointer border-none p-1',
-                  )}
-                >
-                  <MediaTile
-                    url={templateThumbnailUrl(id)}
-                    caption={t(`documents.templates.${id}`)}
-                    fallbackIcon={ICONS[id]}
-                  />
-                </button>
+                <NewDocumentTemplateTile
+                  id={id}
+                  caption={t(`documents.templates.${id}`)}
+                  hint={t(`documents.templateHints.${id}`)}
+                  icon={ICONS[id]}
+                  url={templateThumbnailUrl(id)}
+                  selected={value === id}
+                  onPick={() => onChange(id)}
+                />
               </li>
             ))}
           </ul>

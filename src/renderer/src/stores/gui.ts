@@ -1,3 +1,5 @@
+import { uiFromTemplate, type UiTemplateId } from '@shared/domain/uiTemplates'
+import { newId } from '@/helpers/ids'
 import type { SelectionMode } from '@/helpers/selection'
 import { setUiSelection } from '@/engines/gui/guiCommands'
 import { createDocumentStore } from './documentStore'
@@ -32,4 +34,16 @@ export function selectInGui(
   const next = setUiSelection(current, ids, mode)
 
   if (next.selectedIds !== current.selectedIds) state.replace(documentId, next)
+}
+
+/**
+ * Fills a freshly made document with what its template opens on, before any editor mounts.
+ *
+ * `ensure`, so this never writes over an interface already there — and the state being present
+ * is exactly what stops `restoreDocument` from putting the studio default in its place.
+ */
+export function seedGuiTemplate(documentId: string, template: UiTemplateId): void {
+  store.use
+    .getState()
+    .ensure(documentId, () => ({ document: uiFromTemplate(template, newId), selectedIds: [] }))
 }

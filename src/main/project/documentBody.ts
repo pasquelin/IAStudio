@@ -388,7 +388,8 @@ const OPEN_UI: DocumentBodyFormat = {
     }
 
     // The stamp FIRST, and the document after it: written last it would sit behind the tree,
-    // outside the bounded head, and the file would drop out of every listing.
+    // outside the bounded head, and the file would drop out of every listing. The `$schema` is
+    // the WINDOW's — `uiPayload` puts it there — so it travels in `rest` like any other member.
     const { [STUDIO_METADATA_KEY]: held, ...rest } = parsed
     return `${JSON.stringify(
       { [STUDIO_METADATA_KEY]: studioStamp(isRecord(held) ? held : {}, document), ...rest },

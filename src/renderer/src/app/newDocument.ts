@@ -10,8 +10,11 @@ import { documentPathFor } from '@shared/domain/documentName'
 import { parentOf } from '@shared/domain/folder'
 import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { SCRIPT_STARTER } from '@shared/domain/game'
-import { DEFAULT_SCENE_TEMPLATE, type SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { DEFAULT_SCENE_TEMPLATE, isSceneTemplateId } from '@shared/domain/sceneTemplate'
+import type { DocumentTemplateId } from '@shared/domain/newDocument'
+import { DEFAULT_UI_TEMPLATE, isUiTemplateId } from '@shared/domain/uiTemplates'
 import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
+import { seedGuiTemplate } from '@/stores/gui'
 import { seedSceneTemplate } from '@/stores/scenes'
 import {
   documentAtPath,
@@ -99,10 +102,12 @@ export function createDocumentIn(
 }
 
 /**
- * What a caller who has nobody to ask already knows. `template` is read for a scene and ignored
- * everywhere else — the assistant names one, and a caller that says nothing takes the default.
+ * What a caller who has nobody to ask already knows. `template` is read for the two kinds that
+ * open on one and ignored elsewhere — the assistant names one, and a caller that says nothing
+ * takes the default. Narrowed by the kind at the seeding, never trusted on its face: the two
+ * families share a field, and `empty` is the only id both of them spell.
  */
-export type NamedCreation = { title: string; folder?: string; template?: SceneTemplateId }
+export type NamedCreation = { title: string; folder?: string; template?: DocumentTemplateId }
 
 async function named(
   workspace: WorkspaceId,
@@ -162,7 +167,13 @@ async function named(
     // editor mounts, so the hook that installs the working textures has not run — every shape of
     // the first 3D document of a session was born bare, and saved that way for good.
     await textures
-    seedSceneTemplate(created.id, of?.template ?? DEFAULT_SCENE_TEMPLATE)
+    const wanted = of?.template
+    seedSceneTemplate(created.id, isSceneTemplateId(wanted) ? wanted : DEFAULT_SCENE_TEMPLATE)
+  }
+
+  if (created.kind === 'gui') {
+    const wanted = of?.template
+    seedGuiTemplate(created.id, isUiTemplateId(wanted) ? wanted : DEFAULT_UI_TEMPLATE)
   }
 
   openDocument(created)

@@ -1,5 +1,6 @@
 import type { DocumentDescriptor, DocumentKind } from './document'
 import type { SceneTemplateId } from './sceneTemplate'
+import type { UiTemplateId } from './uiTemplates'
 
 /** URL fragment that tells the shared bundle it is rendering the new-document window. */
 export const NEW_DOCUMENT_ROUTE = 'new-document'
@@ -25,15 +26,21 @@ export type NewDocumentAsk = {
 }
 
 /**
- * What a named document is to be: where it goes, what it is called, and — for a scene alone —
- * what it opens on.
+ * What a kind can open ON. Two families and no more, told apart by which kind is being named —
+ * a union rather than a string, so a scene id cannot travel from the interface window.
+ */
+export type DocumentTemplateId = SceneTemplateId | UiTemplateId
+
+/**
+ * What a named document is to be: where it goes, what it is called, and — for the two kinds that
+ * offer one — what it opens on.
  *
- * `template` is absent for every other kind rather than defaulted here: only the scene window
- * draws that section, and a value travelling from a kind that never showed one would be a
+ * `template` is absent for every other kind rather than defaulted here: only a window that DREW
+ * the section answers with one, and a value travelling from a kind that showed none would be a
  * choice nobody made.
  */
 export type NamedDocumentPlace = {
   title: string
   folder: string
-  template?: SceneTemplateId
+  template?: DocumentTemplateId
 }

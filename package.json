@@ -38,6 +38,7 @@
     "licences:collect": "node scripts/collect-licences.mjs",
     "engine:licences": "node scripts/collect-python-licences.mjs",
     "manual:collect": "node scripts/collect-manual.ts",
+    "ui:schema": "node --import ./scripts/tsResolve.mjs scripts/emit-ui-schema.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "decoders:copy": "node scripts/copy-decoders.mjs",
     "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs",
