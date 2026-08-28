@@ -118,6 +118,13 @@ export function parseMemoryRecallAsk(value: unknown): MemoryRecallAsk {
   return memoryRecallAsk.parse(value)
 }
 
+/** An id, CHECKED — `String(undefined)` reads back as the string "undefined", which is not one. */
+const memoryId = z.string().min(1)
+
+export function parseMemoryId(value: unknown): string {
+  return memoryId.parse(value)
+}
+
 const memoryScope = z.enum(MEMORY_SCOPES)
 
 export function parseMemoryScope(value: unknown): MemoryScope {

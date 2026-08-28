@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { digestOf, embeddedTextOf, normalised, packed, similarity, unpacked } from './vectors'
+import { digestOf, dotOfBytes, embeddedTextOf, normalised, packed } from './vectors'
 
 describe('normalising', () => {
   it('brings a vector to unit length', () => {
@@ -15,12 +15,12 @@ describe('normalising', () => {
   })
 })
 
-describe('comparing', () => {
+describe('comparing a stored vector to a question', () => {
   it('scores identical directions at one and opposite ones at minus one', () => {
     const one = normalised(new Float32Array([1, 1]))
 
-    expect(similarity(one, one)).toBeCloseTo(1, 6)
-    expect(similarity(one, normalised(new Float32Array([-1, -1])))).toBeCloseTo(-1, 6)
+    expect(dotOfBytes(packed(one), one)).toBeCloseTo(1, 6)
+    expect(dotOfBytes(packed(one), normalised(new Float32Array([-1, -1])))).toBeCloseTo(-1, 6)
   })
 
   /**
@@ -29,18 +29,13 @@ describe('comparing', () => {
    * model never made.
    */
   it('scores vectors of different lengths as nothing alike', () => {
-    expect(similarity(new Float32Array([1, 0]), new Float32Array([1, 0, 0]))).toBe(0)
-    expect(similarity(new Float32Array(), new Float32Array())).toBe(0)
+    expect(dotOfBytes(packed(new Float32Array([1, 0])), new Float32Array([1, 0, 0]))).toBe(0)
+    expect(dotOfBytes(new Uint8Array([1, 2, 3]), new Float32Array([1]))).toBe(0)
+    expect(dotOfBytes(packed(new Float32Array()), new Float32Array())).toBe(0)
   })
 })
 
 describe('the blob a column holds', () => {
-  it('gives the same floats back', () => {
-    const values = normalised(new Float32Array([0.5, -0.25, 0.125]))
-
-    expect([...unpacked(packed(values))]).toEqual([...values])
-  })
-
   /**
    * `packed` slices, and this is what that is for: a view over a longer buffer would write the
    * whole of it to the column, and read back as a vector of the wrong length.
@@ -51,8 +46,10 @@ describe('the blob a column holds', () => {
     expect(packed(long.subarray(1, 3)).byteLength).toBe(8)
   })
 
-  it('answers nothing for bytes that are not whole floats', () => {
-    expect([...unpacked(new Uint8Array([1, 2, 3]))]).toEqual([])
+  it('gives the same floats back, through the reader the index uses', () => {
+    const values = normalised(new Float32Array([0.5, -0.25, 0.125]))
+
+    expect(dotOfBytes(packed(values), values)).toBeCloseTo(1, 6)
   })
 })
 

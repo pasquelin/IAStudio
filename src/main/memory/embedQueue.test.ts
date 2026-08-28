@@ -96,6 +96,21 @@ describe('bringing an index up to date', () => {
     expect(holder.dropped).toEqual(['gemma'])
   })
 
+  /**
+   * 🛑 A `model <> ?` cannot use the `(model, text_digest)` index, so it is a full scan of the
+   * vector table — and `catchUp` fires on EVERY remembered action, not when the model changes.
+   */
+  it('sweeps once for a model, however many runs it is given', async () => {
+    const holder = fakeHolder([])
+    const { run } = queueOn(fakeEmbedder('gemma'))
+
+    await run.run(holder)
+    await run.run(holder)
+    await run.run(holder)
+
+    expect(holder.dropped).toEqual(['gemma'])
+  })
+
   it('does nothing at all when no model is chosen', async () => {
     const holder = fakeHolder(['m_a'])
     const { run, steps } = queueOn(fakeEmbedder(null))

@@ -108,7 +108,7 @@ const lineOf = (memory: Memory): string =>
  * What a `stat` says, or nothing. Nothing for a file that is not there yet AND for one that will
  * not stat: the stamp is bookkeeping, and a write already on disk must not fail over it.
  */
-async function stampOf(file: string): Promise<{ bytes: number; modifiedAt: number } | null> {
+async function stampOf(file: string): Promise<MemoryStamp | null> {
   const stats = await orElse(stat(file), null)
   return stats && { bytes: stats.size, modifiedAt: Math.trunc(stats.mtimeMs) }
 }

@@ -7,7 +7,7 @@ import type { SqliteDriver } from '@main/project/sqlite'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMemoryIndex } from './memoryIndex'
 import { createMemoryStore, hasMoved, type MemoryStore } from './memoryStore'
-import { parseMemoryPatch } from './validation'
+import { parseMemoryId, parseMemoryPatch } from './validation'
 
 const draft = (fields: Partial<MemoryDraft> = {}): MemoryDraft => ({
   type: 'decision',
@@ -229,6 +229,18 @@ describe('changing what a memory says', () => {
     )
     expect(await store.rebuild()).toBe(1)
     expect(store.trouble()).toBeNull()
+  })
+
+  /**
+   * 🛑 A COERCION is not a check: `String(undefined)` reads back as the string "undefined" and
+   * `String({})` as "[object Object]", so a window sending nothing at all asked the store about a
+   * memory named after its own mistake. The three id-taking channels went through `String`.
+   */
+  it('refuses an id that is not one, rather than coercing it into a name', () => {
+    expect(() => parseMemoryId(undefined)).toThrow()
+    expect(() => parseMemoryId({})).toThrow()
+    expect(() => parseMemoryId('')).toThrow()
+    expect(parseMemoryId('m_1')).toBe('m_1')
   })
 
   it('writes the whole memory again rather than a difference', async () => {

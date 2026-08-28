@@ -83,6 +83,7 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   if (type === null || !isType(type) || summary === null) return refused('badInput')
 
   const file = textOf(input, 'file')
+  const body = textOf(input, 'body')
   const draft: MemoryDraft = {
     type,
     summary,
@@ -90,7 +91,7 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
     // `assistant`, never `person`: what a client wrote is not what the person typed, and the
     // panel shows the difference.
     source: { kind: 'assistant' },
-    ...(textOf(input, 'body') === null ? {} : { body: textOf(input, 'body') ?? '' }),
+    ...(body === null ? {} : { body }),
     ...(file === null ? {} : { refs: [fileRef(file)] }),
   }
 

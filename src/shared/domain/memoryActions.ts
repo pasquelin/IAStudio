@@ -1,4 +1,4 @@
-import { action, type AssistantAction } from './assistantAction'
+import { action, type ActionName, type AssistantAction } from './assistantAction'
 import {
   MEMORY_BODY_MAX,
   MEMORY_IMPORTANCE_MAX,
@@ -12,13 +12,19 @@ import {
  * What the assistant has learned, read and written from outside the window.
  *
  * 🛑 `reach: 'mcp'` for all five, `memory.recall` included, and it is MEASURED rather than timid:
- * the short briefing runs 7 008 characters against `roomFor(4096)` = 7 116, so 108 are left — and
+ * the short briefing runs 7 078 characters against `roomFor(4096)` = 7 116, so 38 are left — and
  * the smallest of these blocks is longer than that. At `'both'` it would take an action off the
  * catalogue every 4 096-token model is shown.
  *
- * The assistant already RECEIVES what was recalled in its briefing; these are for a client that
- * wants the body behind a summary, or wants to write one itself.
+ * Nothing is pushed at the assistant: its briefing carries a SIGNAL naming this action, and a
+ * narrow door reaches it through `actions.find` — see `MEMORY_SIGNAL` in `instruction.ts`.
  */
+
+/**
+ * Named here because the briefing signals it by name, and a name spelt twice is a name that
+ * drifts — the same reason `DISCOVERY_ACTION` is named rather than written out.
+ */
+export const MEMORY_RECALL_ACTION: ActionName = 'memory.recall'
 export const MEMORY_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'memory.recall',

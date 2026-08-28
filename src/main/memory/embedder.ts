@@ -42,8 +42,6 @@ export type EmbedderDeps = {
 type Held = {
   modelId: string
   client: EmbedClient
-  /** What the weights actually answered, never what a manifest claimed. */
-  dims: number
 }
 
 export function createEmbedder({
@@ -85,13 +83,14 @@ export function createEmbedder({
     })
 
     try {
-      const dims = await client.load(
+      // The dimensions it answers are checked by `embedClient` and read by nobody after that.
+      await client.load(
         wanted.weights,
         wanted.documentPrefix,
         wanted.queryPrefix,
         wanted.contextTokens,
       )
-      return { modelId, client, dims }
+      return { modelId, client }
     } catch (error) {
       // A model that will not load costs the vectors, never the studio: the retrieval falls back
       // on exact search rather than pretending to have searched.

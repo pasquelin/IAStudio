@@ -570,6 +570,12 @@ export function createSettings(): SettingsStore {
   return settings
 }
 
+/** The clock these two ports are injected with — written twice in this file, forty lines apart. */
+const afterDelay = (run: () => void, delayMs: number): (() => void) => {
+  const timer = setTimeout(run, delayMs)
+  return () => clearTimeout(timer)
+}
+
 /**
  * Composition root of the main process. Everything stateful is built here, once, so no module
  * reaches for a singleton and every collaborator stays injectable in tests.
@@ -1600,10 +1606,7 @@ export function createServices(settings: SettingsStore): Services {
       open: openEmbedProcess,
       onTrouble: why => log.warn('memory', why),
       idleMs: EMBEDDER_IDLE_MS,
-      schedule: (run: () => void, delayMs: number) => {
-        const timer = setTimeout(run, delayMs)
-        return () => clearTimeout(timer)
-      },
+      schedule: afterDelay,
     }),
     onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
     onTrouble: why => log.warn('memory', why),
@@ -1643,10 +1646,7 @@ export function createServices(settings: SettingsStore): Services {
     emit: event => broadcast(EVENTS.dictation, event),
     log: (level, message) => log[level]('dictation', message),
     join,
-    schedule: (run, delayMs) => {
-      const timer = setTimeout(run, delayMs)
-      return () => clearTimeout(timer)
-    },
+    schedule: afterDelay,
   })
 
   const collectorOf = (scenario: Scenario): AssetCollector =>

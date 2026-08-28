@@ -260,24 +260,43 @@ describe('what a briefing says about the memory', () => {
    * vector on every turn, for a block four doors of five had no room to carry — measured on the
    * running app: `room=7116 briefing=7094 recalledLen=49 inBriefing=false`.
    */
-  it('names the actions that read it, and never what it holds', () => {
-    const text = studioBriefing({ memories: 12, room: NARROW }).text
+  it('names the action that reads it, and never what it holds', () => {
+    const text = studioBriefing({ memories: 12, room: WIDE }).text
 
     expect(text).toContain('memory.recall answers it')
     expect(text).not.toContain('learned about this project:')
   })
 
   it('says nothing at all about a project that has learned nothing', () => {
-    const text = studioBriefing({ memories: 0, room: NARROW }).text
+    expect(studioBriefing({ memories: 0, room: WIDE }).text).not.toContain('has a memory')
+    expect(studioBriefing({ room: WIDE }).text).not.toContain('has a memory')
+  })
 
+  /**
+   * 🛑 The whole point of deciding on `allowed` rather than on room: a briefing naming an action
+   * the model was neither SHOWN nor told how to ask for costs the WHOLE turn — `parseReply`
+   * refuses a reply the moment one call names an unlisted action.
+   */
+  it('names the word to search for where the catalogue does not hold the action', () => {
+    const room = bareShort() + 200
+    const text = studioBriefing({ memories: 12, room }).text
+
+    expect(studioBriefing({ room, memories: 0 }).allowed.has('memory.recall')).toBe(false)
+    expect(text).toContain('search "memory"')
     expect(text).not.toContain('memory.recall answers it')
-    expect(studioBriefing({ room: NARROW }).text).not.toContain('memory.recall answers it')
+  })
+
+  /** An expansion holds neither the action nor a second `actions.find`: it says nothing at all. */
+  it('says nothing in a briefing that answers a find', () => {
+    const expanded = studioBriefing({ memories: 12, room: bareShort() + 400 }).expand?.('layers')
+
+    expect(expanded?.text).not.toContain('has a memory')
   })
 
   /**
    * 🛑 The signal is the LAST thing to give ground, and it does give ground: the short share is
-   * 7 078 characters against a room of 7 116, so one `both` action added upstream takes the 78
-   * this line costs. Overrunning is not the milder failure — a runtime truncates from the HEAD,
+   * 7 078 characters against a room of 7 116, so one `both` action added upstream takes the room
+   * this line needs. Overrunning is not the milder failure — a runtime truncates from the HEAD,
    * where the preamble sits (ADR-18). Measured when `generator.armed` joined the spoken catalogue.
    */
   it('gives the signal up rather than overrun a door that has no room for it', () => {
@@ -285,43 +304,17 @@ describe('what a briefing says about the memory', () => {
     const text = studioBriefing({ memories: 12, room }).text
 
     expect(text.length).toBeLessThanOrEqual(room)
-    expect(text).not.toContain('memory.recall answers it')
-  })
-
-  /** The whole registry holds `memory.recall`; a narrow door reaches it through `actions.find`. */
-  it('signals the memory on the wide door as well as on the narrow one', () => {
-    expect(studioBriefing({ memories: 3, room: WIDE }).text).toContain('memory.recall answers it')
+    expect(text).not.toContain('has a memory')
   })
 
   /**
-   * 🛑 The budget the signal was WRITTEN against, and nothing else would notice it moving: the
-   * short share had 108 characters left against `roomFor(4096)` when this was measured, and one
-   * action block is three hundred. A signal over that ceiling is a signal that gives ground on
-   * every narrow door — which is the one thing it exists not to do.
+   * 🛑 What the wide door would otherwise pay for 78 characters: `studioBriefing` falls back to
+   * the spoken vocabulary whole, so the signal would cost 267 actions to say one sentence.
    */
-  it('costs a narrow door less than the room a short catalogue leaves', () => {
-    const room = bareShort() + 200
-    const without = studioBriefing({ room, memories: 0 }).text
-    const with_ = studioBriefing({ room, memories: 12 }).text
+  it('never costs the wide door its catalogue', () => {
+    const bare = studioBriefing({ memories: 0, room: WIDE })
+    const signalled = studioBriefing({ memories: 12, room: bare.text.length + 10 })
 
-    expect(with_.length - without.length).toBeLessThanOrEqual(108)
-    expect(with_).toContain('memory.recall answers it')
-  })
-
-  /**
-   * 🛑 What the count buys: the signal is one line, so it cannot be what a saturated briefing
-   * gives ground on — where a block of summaries was cut first and thrown away whole.
-   */
-  it('keeps the signal in a briefing saturated enough to cut the state', () => {
-    const state = 'Studio now:\n  Space: image.\n  In front: "A picture" (image).'
-    const full = studioBriefing({ memories: 4, state, targets: SATURATED, room: WIDE }).text
-    const squeezed = studioBriefing({
-      memories: 4,
-      state,
-      targets: SATURATED,
-      room: full.length - 200,
-    }).text
-
-    expect(squeezed).toContain('memory.recall answers it')
+    expect(signalled.allowed.size).toBe(bare.allowed.size)
   })
 })

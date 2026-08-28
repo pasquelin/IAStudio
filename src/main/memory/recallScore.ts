@@ -1,3 +1,5 @@
+import { clamp } from '@shared/numeric'
+import { byCodeUnit } from '@shared/text'
 import type { Memory, MemoryRef } from '@shared/domain/assistantMemory'
 import { MEMORY_IMPORTANCE_MAX, MEMORY_IMPORTANCE_MIN } from '@shared/domain/assistantMemory'
 
@@ -58,8 +60,7 @@ const fromSimilarity = (similarity: number | undefined): number =>
   similarity === undefined ? 0 : Math.max(0, similarity)
 
 const fromImportance = (importance: number): number =>
-  (Math.min(MEMORY_IMPORTANCE_MAX, Math.max(MEMORY_IMPORTANCE_MIN, importance)) -
-    MEMORY_IMPORTANCE_MIN) /
+  (clamp(importance, MEMORY_IMPORTANCE_MIN, MEMORY_IMPORTANCE_MAX) - MEMORY_IMPORTANCE_MIN) /
   (MEMORY_IMPORTANCE_MAX - MEMORY_IMPORTANCE_MIN)
 
 /** Halving every `RECALL_HALF_LIFE_DAYS`. From `createdAt` until served: new is not stale. */
@@ -105,25 +106,6 @@ export function rankedRecall(
     if (pinned !== 0) return pinned
     if (other.score !== one.score) return other.score - one.score
 
-    return one.memory.id < other.memory.id ? -1 : 1
+    return byCodeUnit(one.memory.id, other.memory.id)
   })
-}
-
-/**
- * 🛑 Cut by WHOLE memories: a decision truncated reads as a different decision, which is worse
- * than one missing. Too long for what is left is passed over, never stopped at — the list is
- * ranked, and one long summary is no reason to drop the shorter ones behind it.
- */
-export function recalledWithin(ranked: readonly RecallScored[], room: number): readonly Memory[] {
-  const kept: Memory[] = []
-  let left = room
-
-  for (const one of ranked) {
-    const cost = one.memory.summary.length + 1
-    if (cost > left) continue
-    left -= cost
-    kept.push(one.memory)
-  }
-
-  return kept
 }

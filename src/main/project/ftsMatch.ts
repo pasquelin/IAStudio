@@ -11,8 +11,7 @@
  * matched.
  */
 export function matchExpression(text: string): string | null {
-  const terms = text.match(/[\p{L}\p{N}_]+/gu)
-  return terms ? terms.map(term => `"${term}"*`).join(' AND ') : null
+  return joined(text, ' AND ')
 }
 
 /**
@@ -23,6 +22,11 @@ export function matchExpression(text: string): string | null {
  * demanded all thirteen of its words of one memory, and no memory has thirteen.
  */
 export function askExpression(text: string): string | null {
+  return joined(text, ' OR ')
+}
+
+/** The one tokeniser. The two above differ by their joiner and by nothing else. */
+const joined = (text: string, joiner: string): string | null => {
   const terms = text.match(/[\p{L}\p{N}_]+/gu)
-  return terms ? terms.map(term => `"${term}"*`).join(' OR ') : null
+  return terms ? terms.map(term => `"${term}"*`).join(joiner) : null
 }

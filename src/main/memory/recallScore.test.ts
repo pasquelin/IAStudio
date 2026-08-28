@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Memory, MemoryRef } from '@shared/domain/assistantMemory'
-import { rankedRecall, recalledWithin, scoreOf, type RecallCandidate } from './recallScore'
+import { rankedRecall, scoreOf, type RecallCandidate } from './recallScore'
 
 const NOW = '2026-08-28T12:00:00.000Z'
 
@@ -93,27 +93,5 @@ describe('what the person decided to always give', () => {
         { memory: memory({ id: 'm_pinned', state: 'pinned', importance: 1 }) },
       ]),
     ).toEqual(['m_pinned', 'm_best'])
-  })
-})
-
-describe('what fits in a briefing', () => {
-  const scored = (id: string, summary: string) => ({ memory: memory({ id, summary }), score: 1 })
-
-  /** 🛑 A decision truncated reads as a different decision — worse than one missing. */
-  it('cuts by whole memories, never mid-sentence', () => {
-    const kept = recalledWithin([scored('m_a', 'aaaa'), scored('m_b', 'bbbb')], 6)
-
-    expect(kept.map(one => one.summary)).toEqual(['aaaa'])
-  })
-
-  /** The list is ranked: one long summary is no reason to drop the shorter ones behind it. */
-  it('passes over one that will not fit and keeps going', () => {
-    const kept = recalledWithin([scored('m_long', 'x'.repeat(50)), scored('m_short', 'yy')], 6)
-
-    expect(kept.map(one => one.id)).toEqual(['m_short'])
-  })
-
-  it('keeps nothing when there is no room at all', () => {
-    expect(recalledWithin([scored('m_a', 'aaaa')], 0)).toEqual([])
   })
 })

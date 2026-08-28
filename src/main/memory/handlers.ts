@@ -7,6 +7,7 @@ import type { MemoryHost } from './memoryHost'
 import type { MemoryVectors } from './memoryVectors'
 import {
   parseMemoryDraft,
+  parseMemoryId,
   parseMemoryPatch,
   parseMemoryQuery,
   parseMemoryRecallAsk,
@@ -46,7 +47,7 @@ export function registerMemoryHandlers({ host, vectors }: MemoryHandlerDeps): vo
 
   handle(CHANNELS.memoryRead, async (_event, scope, id) => {
     const [, memory] = await memoryOf(scope)
-    return (await memory?.read(String(id))) ?? null
+    return (await memory?.read(parseMemoryId(id))) ?? null
   })
 
   handle(CHANNELS.memoryRemember, async (_event, scope, draft) => {
@@ -65,7 +66,7 @@ export function registerMemoryHandlers({ host, vectors }: MemoryHandlerDeps): vo
     const [wanted, memory] = await memoryOf(scope)
     if (!memory) return null
 
-    const amended = await memory.amend(String(id), parseMemoryPatch(patch))
+    const amended = await memory.amend(parseMemoryId(id), parseMemoryPatch(patch))
     if (amended) {
       broadcast(EVENTS.memoryChanged, wanted)
       // Reworded is re-embedded: the digest that ties a vector to its words no longer matches.
@@ -78,7 +79,7 @@ export function registerMemoryHandlers({ host, vectors }: MemoryHandlerDeps): vo
     const [wanted, memory] = await memoryOf(scope)
     if (!memory) return false
 
-    const forgotten = await memory.forget(String(id))
+    const forgotten = await memory.forget(parseMemoryId(id))
     if (forgotten) broadcast(EVENTS.memoryChanged, wanted)
     return forgotten
   })

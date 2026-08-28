@@ -102,14 +102,19 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     // saying true about them is a panel claiming they are the answer.
     set({ loaded: false })
 
-    const memories = await orElse(memoryBridge()?.list(scope, query), [])
+    // Together: `pending` counts a whole scope and does not depend on the query, so serialising
+    // the two made every keystroke of the search wait for a count it could not have changed.
+    const [memories, pending] = await Promise.all([
+      orElse(memoryBridge()?.list(scope, query), []),
+      orElse(memoryBridge()?.pending(scope), 0),
+    ])
 
     // 🛑 Dropped when the question moved on: two reads in flight — a scope switch, or a write
     // announced mid-switch — can settle out of order, and the slower one would paint the other
     // scope's rows and call them loaded.
     if (get().scope !== scope || get().query !== query) return
 
-    set({ memories, loaded: true, pending: await orElse(memoryBridge()?.pending(scope), 0) })
+    set({ memories, loaded: true, pending })
   },
 
   // No optimistic write, unlike the context panel: the id and the date come from the main

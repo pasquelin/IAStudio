@@ -1,4 +1,4 @@
-import { isRecord, readBoolean, readText } from '@shared/guards'
+import { isRecord, readBoolean } from '@shared/guards'
 
 /**
  * Reading an action's input, after `validatesInput` has agreed it fits the registry. The checks
@@ -6,7 +6,8 @@ import { isRecord, readBoolean, readText } from '@shared/guards'
  * would cross the boundary as a bare `badInput` and tell the client nothing.
  */
 
-export const textOf = readText
+/** The same reader both sides of the boundary use — named here for the handlers that call it. */
+export { readText as textOf } from '@shared/guards'
 
 export function numberOf(input: Record<string, unknown>, key: string): number | null {
   const value = input[key]

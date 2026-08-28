@@ -12,6 +12,7 @@ import {
 } from '@shared/domain/assistantMemory'
 import { oneOf } from '@shared/guards'
 import { askExpression, matchExpression } from '@main/project/ftsMatch'
+import { chunk } from '@shared/collections'
 import type { SqliteDriver, SqlRow, SqlValue } from '@main/project/sqlite'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { escapeLike, holes } from '@main/project/sqlText'
@@ -21,7 +22,6 @@ import {
   dotOfBytes,
   embeddedTextOf,
   packed,
-  unpacked,
   type MemoryVector,
   type PendingVector,
 } from './vectors'
@@ -184,11 +184,6 @@ export type MemoryIndex = {
   clear: () => void
   /** Writes what an embedder answered. One transaction whatever the batch — see `putAll`. */
   writeVectors: (vectors: readonly MemoryVector[]) => void
-  /**
-   * Every vector this model produced, in one read. `[M]` 78 ms and 30 MB for 10 000 of 768
-   * dimensions — which is why nothing outside this thread ever asks for them.
-   */
-  vectors: (model: string) => readonly MemoryVector[]
   /** What this model has no vector for, oldest first, with the words that make one. */
   withoutVector: (model: string, limit: number) => readonly PendingVector[]
   /** How many are still waiting — what a progress bar divides by, without reading one of them. */
@@ -262,14 +257,7 @@ const ANSWERING = {
 const byBatch = (
   ids: readonly string[],
   ask: (batch: readonly string[]) => readonly SqlRow[],
-): readonly SqlRow[] => {
-  const rows: SqlRow[] = []
-  for (let at = 0; at < ids.length; at += IDS_PER_QUERY) {
-    rows.push(...ask(ids.slice(at, at + IDS_PER_QUERY)))
-  }
-
-  return rows
-}
+): readonly SqlRow[] => chunk([...ids], IDS_PER_QUERY).flatMap(ask)
 
 const isRefKind = (value: string): value is MemoryRefKind =>
   MEMORY_REF_KINDS.some(kind => kind === value)
@@ -328,12 +316,6 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     `INSERT INTO memory_vectors (memory_id, text_digest, model, vector) VALUES (?, ?, ?, ?)
      ON CONFLICT(memory_id) DO UPDATE SET text_digest = excluded.text_digest,
        model = excluded.model, vector = excluded.vector`,
-  )
-  // Joined on the digest too: a memory reworded still holds the vector of what it used to say.
-  const readVectors = driver.prepare(
-    `SELECT v.memory_id, v.text_digest, v.vector FROM memory_vectors v
-     JOIN memories m ON m.id = v.memory_id AND m.text_digest = v.text_digest
-     WHERE v.model = ? ORDER BY v.memory_id`,
   )
   const countPending = driver.prepare(
     `SELECT count(*) AS held FROM memories m
@@ -548,10 +530,15 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
 
     if (ask.question && ask.question.length > 0 && ask.model) {
       const closest = closestTo(ask.model, ask.question, RECALL_CANDIDATES)
-      const near = new Map(closest.map(one => [one.id, one.similarity]))
-      for (const memory of readMany(closest.map(one => one.id))) {
-        if (memory.state === 'archived') continue
-        hold(memory).similarity = near.get(memory.id)
+      // 🛑 ONE read, and only of what no other voice put forward: the three above already hold
+      // their rows, and reading them again joins their refs and links a second time.
+      const unread = readMany(closest.filter(one => !candidates.has(one.id)).map(one => one.id))
+      const held = new Map(unread.map(memory => [memory.id, memory]))
+
+      for (const one of closest) {
+        const memory = candidates.get(one.id)?.memory ?? held.get(one.id)
+        if (memory === undefined || memory.state === 'archived') continue
+        hold(memory).similarity = one.similarity
       }
     }
 
@@ -624,14 +611,6 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
           writeVector.run(one.memoryId, one.digest, one.model, packed(one.values))
         }
       }),
-
-    vectors: model =>
-      readVectors.all(model).map(row => ({
-        memoryId: text(row, 'memory_id'),
-        model,
-        digest: text(row, 'text_digest'),
-        values: unpacked(bytes(row, 'vector')),
-      })),
 
     withoutVector: (model, limit) =>
       readPending.all(model, limit).map(row => ({

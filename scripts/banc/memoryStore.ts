@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { Memory, MemoryScope } from '@shared/domain/assistantMemory'
+import { MEMORY_FILE } from '@shared/domain/project'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMemoryIndex } from '@main/memory/memoryIndex'
 import { createMemoryStore, type MemoryStore } from '@main/memory/memoryStore'
@@ -26,7 +27,7 @@ export function createBenchMemory(): BenchMemory {
   const index = createMemoryIndex(database)
   let minted = 0
   const store: MemoryStore = createMemoryStore({
-    file: join(root, '.ia-studio', 'memory.ndjson'),
+    file: join(root, MEMORY_FILE),
     index,
     now: () => new Date(2026, 7, 28, 0, 0, minted).toISOString(),
     newId: () => `m_${++minted}_${randomUUID().slice(0, 4)}`,

@@ -31,37 +31,12 @@ export function normalised(values: Float32Array): Float32Array {
 }
 
 /**
- * How alike two NORMALISED vectors are, in [-1, 1] — the caller normalises once at write time.
- *
- * Two lengths score as nothing alike rather than throwing: an index that survived a change of
- * model holds both, and a retrieval must answer.
- */
-export function similarity(one: Float32Array, other: Float32Array): number {
-  if (one.length !== other.length || one.length === 0) return 0
-
-  let sum = 0
-  for (let at = 0; at < one.length; at++) sum += (one[at] ?? 0) * (other[at] ?? 0)
-  return sum
-}
-
-/**
  * The vector as the column holds it — a VIEW, since binding copies the bytes before `run` returns.
  * Written in the machine's own byte order and read back the same way by `dotOfBytes`: the index is
  * derived and never travels, and every target the studio ships to is little-endian.
  */
 export function packed(values: Float32Array): Uint8Array {
   return new Uint8Array(values.buffer, values.byteOffset, values.byteLength)
-}
-
-/**
- * The bytes back as floats, COPIED: a pooled driver buffer is rarely four-byte aligned, which
- * `Float32Array` refuses to view. Nothing for a partial float — unlike `peaksFromBytes`, which
- * keeps a waveform's usable prefix: half a vector points elsewhere, it is not a shorter one.
- */
-export function unpacked(bytes: Uint8Array): Float32Array {
-  if (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) return new Float32Array()
-
-  return new Float32Array(bytes.slice().buffer)
 }
 
 /**

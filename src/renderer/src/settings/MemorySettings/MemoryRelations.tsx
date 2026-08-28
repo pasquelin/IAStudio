@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Memory } from '@shared/domain/assistantMemory'
 import { openedBy, relationsOf, type MemoryRelation } from '@shared/domain/memoryGraph'
 import { Tree } from '@/design/Tree'
+import { useFolded } from '@/hooks/useFolded'
 import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 
 /**
@@ -32,8 +32,8 @@ export function MemoryRelations({
   const { t } = useTranslation()
   const rows = relationsOf(memory, among)
   // Everything open: one hop is small by construction, and a tree that starts folded hides the
-  // one thing this view exists to show.
-  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set())
+  // one thing this view exists to show — which is what `useFolded` is written for.
+  const folded = useFolded()
 
   return (
     <section>
@@ -43,20 +43,13 @@ export function MemoryRelations({
           nodes={rows}
           label={t('settings.memoryRelations')}
           selectedIds={[memory.id]}
-          expandedIds={new Set(rows.filter(one => !folded.has(one.id)).map(one => one.id))}
+          expandedIds={new Set(rows.filter(one => !folded.ids.has(one.id)).map(one => one.id))}
           onSelect={ids => {
             // One row at a time: what a hop means is one memory, and a range would open none.
             const opens = ids.length === 1 ? openedBy(rows, ids[0] ?? '', memory.id) : null
             if (opens !== null) onOpen(opens)
           }}
-          onToggle={id =>
-            setFolded(held => {
-              const next = new Set(held)
-              if (next.has(id)) next.delete(id)
-              else next.add(id)
-              return next
-            })
-          }
+          onToggle={folded.toggle}
           renderRow={({ node }) => (
             <span className="truncate text-xs">
               {node.relation ? `${t(RELATION_KEYS[node.relation])} · ` : ''}

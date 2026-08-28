@@ -50,6 +50,10 @@ export function createEmbedQueue({
   batch = EMBED_BATCH,
 }: EmbedQueueDeps): EmbedQueue {
   let running: Promise<number> | null = null
+  // 🛑 What the last sweep already cleaned up after. `dropOtherVectors` is a `model <> ?`, which
+  // the `(model, text_digest)` index cannot serve, so it is a full scan of the vector table — and
+  // `catchUp` fires on EVERY remembered action, not only when the chosen model moved.
+  let swept: string | null = null
 
   const sweep = async (holder: VectorHolder, signal?: AbortSignal): Promise<number> => {
     const model = embedder.chosen()
@@ -58,7 +62,10 @@ export function createEmbedQueue({
 
     // Whatever another model left behind, before anything is counted: they are dead weight in
     // the index and would be scored against a question they cannot answer.
-    await holder.dropOtherVectors(model)
+    if (swept !== model) {
+      await holder.dropOtherVectors(model)
+      swept = model
+    }
 
     const total = await holder.pendingVectors(model)
     let done = 0

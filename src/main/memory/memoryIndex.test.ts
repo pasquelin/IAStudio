@@ -227,12 +227,29 @@ describe('the embeddings beside the memories', () => {
   const rowsHeld = (): number =>
     Number(database.prepare('SELECT count(*) AS held FROM memory_vectors').get()?.['held'] ?? -1)
 
-  it('gives back the floats it was handed, through the blob', () => {
+  /**
+   * 🛑 Read through `recall` and not through a reader of its own: the blob is written here and
+   * compared by `dotOfBytes` on the other side, so an accessor that unpacked it back would prove
+   * the round trip of a path nothing in production takes.
+   */
+  const scoredByMeaning = (question: readonly number[]): readonly string[] =>
+    index
+      .recall({
+        // No word in common with any memory here: the vector voice is the only one that can answer.
+        text: 'zzz',
+        question: new Float32Array(question),
+        model: 'e',
+        now: '2026-08-28T12:00:00.000Z',
+        limit: 10,
+      })
+      .map(one => one.id)
+
+  it('scores a memory on the floats it was handed, through the blob', () => {
     const written = memory({ summary: 'a sentence with a vector' })
     index.put(written)
-    index.writeVectors([vectorOf('m_one', [0.5, -0.25, 0], digestFor(written))])
+    index.writeVectors([vectorOf('m_one', [1, 0, 0], digestFor(written))])
 
-    expect([...(index.vectors('e')[0]?.values ?? [])]).toEqual([0.5, -0.25, 0])
+    expect(scoredByMeaning([1, 0, 0])).toEqual(['m_one'])
   })
 
   it('names what still has none, and stops naming it once it has one', () => {
@@ -268,7 +285,7 @@ describe('the embeddings beside the memories', () => {
     index.putAll([written])
 
     expect(index.pendingVectors('e')).toBe(0)
-    expect(index.vectors('e')).toHaveLength(1)
+    expect(scoredByMeaning([1])).toEqual(['m_one'])
   })
 
   it('asks for a new one when the words changed, and stops answering the old one', () => {
@@ -280,7 +297,7 @@ describe('the embeddings beside the memories', () => {
 
     expect(index.pendingVectors('e')).toBe(1)
     // Not merely « pending »: the stale vector must not be scored against a question either.
-    expect(index.vectors('e')).toEqual([])
+    expect(scoredByMeaning([1])).toEqual([])
   })
 
   it('drops what another model produced, and keeps its own', () => {
@@ -290,7 +307,7 @@ describe('the embeddings beside the memories', () => {
 
     index.dropOtherVectors('e')
 
-    expect(index.vectors('old')).toEqual([])
+    expect(rowsHeld()).toBe(0)
     expect(index.pendingVectors('e')).toBe(1)
   })
 

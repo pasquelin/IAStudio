@@ -110,13 +110,16 @@ export function createMemoryVectors({
   }
 
   async function remembered(scope: MemoryScope, ask: MemoryRecallAsk): Promise<readonly Memory[]> {
-    const memory = await host.of(scope)
-    if (memory === null) return []
-
     const model = embedder.chosen()
+    // Together, and neither depends on the other: on the first recall of a session both are cold
+    // — a worker thread and a database against `[M]` 785 ms of loading the embedding model.
     // 🛑 Embedded ONLY where a model can answer: a studio without one pays nothing for the
     // attempt, and falls back on exact search rather than pretending to have searched.
-    const question = model === null ? undefined : await embedder.embedQuery(ask.text)
+    const [memory, question] = await Promise.all([
+      host.of(scope),
+      model === null ? undefined : embedder.embedQuery(ask.text),
+    ])
+    if (memory === null) return []
 
     const found = await memory.recall({
       text: ask.text,
