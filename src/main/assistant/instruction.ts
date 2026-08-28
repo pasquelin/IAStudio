@@ -327,7 +327,26 @@ function briefingText(
    * end is dropping what the sentence never mentioned.
    */
   const over = trimmed.length - parts.room
-  return composed(parts, catalogue, rules, found, short, targetsWithin(targets, over))
+  const aimed = targetsWithin(targets, over)
+  const cut = composed(parts, catalogue, rules, found, short, aimed)
+  if (cut.length <= parts.room) return cut
+
+  /**
+   * 🛑 Last, the project context — and it is a THIRD step because the two above can both run out:
+   * the state is cut by whole lines and the targets by whole entries, so a saturated briefing
+   * settles a couple of dozen characters over the room with nothing left to give. Measured when
+   * Code gained a family: seven unserved spaces instead of six put the widest briefing at 8 022
+   * against a room of 8 000, and the catalogue is the one part that never gives ground.
+   */
+  const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
+  return composed(
+    { ...parts, context: linesWithin(parts.context ?? '', room) },
+    catalogue,
+    rules,
+    found,
+    short,
+    aimed,
+  )
 }
 
 function targetsWithin(targets: readonly Target[], over: number): readonly Target[] {

@@ -8,6 +8,7 @@ import { claimModelOnSubmit } from './modelGeneration'
 import { claimSequenceOnSubmit } from './sequenceGeneration'
 import { claimSkyboxOnSubmit } from './skyboxGeneration'
 import { claimMaterialOnSubmit } from './materialGeneration'
+import { claimScriptOnSubmit } from './codeGeneration'
 
 /**
  * 🛑 Every workspace that has somewhere to put a result. A kind missing here is a generation that
@@ -23,9 +24,7 @@ const CLAIMS: Record<DocumentKind, ((into?: LandingTarget) => (job: Job | null) 
   sequence: claimSequenceOnSubmit,
   audio: claimAudioOnSubmit,
   material: claimMaterialOnSubmit,
-  // `null` rather than a claim that does nothing: no model Scenario serves writes a script, so
-  // there is no result for the Code space to land — see `FAMILY_BY_WORKSPACE`.
-  script: null,
+  script: claimScriptOnSubmit,
 }
 
 /**

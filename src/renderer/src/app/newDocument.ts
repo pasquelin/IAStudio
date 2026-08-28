@@ -23,8 +23,16 @@ import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { getBridge } from '@/services/bridge'
 import { openDocument } from './dockviewApi'
 
-/** The file first, then the tab: `relist` is what gives the document the id its path spells. */
-async function createScript(of: NamedCreation | undefined): Promise<DocumentDescriptor | null> {
+/**
+ * The file first, then the tab: `relist` is what gives the document the id its path spells.
+ *
+ * Exported for the one other thing that makes a script — a generation, which brings its own
+ * source where a person's gesture brings the starter.
+ */
+export async function createScript(
+  of: NamedCreation | undefined,
+  source: string = SCRIPT_STARTER,
+): Promise<DocumentDescriptor | null> {
   if (!of) return null
 
   // Composed like every other kind: from the RAW title, a separator named a file in another
@@ -33,7 +41,7 @@ async function createScript(of: NamedCreation | undefined): Promise<DocumentDesc
   const path = documentPathFor(of.title, 'script', of.folder)
   // Refused rather than overwritten: this path names a file somebody already has work in.
   if (documentAtPath(useDocuments.getState(), path)) return null
-  if (!(await orElse(getBridge()?.game.writeScript(path, SCRIPT_STARTER), false))) return null
+  if (!(await orElse(getBridge()?.game.writeScript(path, source), false))) return null
 
   await useDocuments.getState().relist()
   const created = documentAtPath(useDocuments.getState(), path)
@@ -88,7 +96,7 @@ export function createDocumentIn(
  * What a caller who has nobody to ask already knows. `template` is read for a scene and ignored
  * everywhere else — the assistant names one, and a caller that says nothing takes the default.
  */
-type NamedCreation = { title: string; folder?: string; template?: SceneTemplateId }
+export type NamedCreation = { title: string; folder?: string; template?: SceneTemplateId }
 
 async function named(
   workspace: WorkspaceId,

@@ -241,6 +241,10 @@ export const activeSceneId = (state: DocumentsSlice): string | null =>
 export const activeImageId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'image')
 
+/** The script in front, as a selector — what the code generator rewrites when asked to. */
+export const activeScriptId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'script')
+
 /** The sequence in front, as a selector. Same reason again, for the montage and its inspector. */
 export const activeSequenceId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'sequence')

@@ -97,6 +97,16 @@ export type ChatRequest = {
   /** Whether the answer must be one JSON object. Stated by the caller: nothing here guesses. */
   readonly json: boolean
   /**
+   * The three knobs `localFieldsOf('text', …)` publishes. Absent where the caller fills none —
+   * the assistant asks for none, and a door then keeps its own default.
+   *
+   * 🛑 Carried because the FORM offers them: a generation panel showing a temperature that
+   * changes nothing is a control that lies, and the cloud runner honours all three.
+   */
+  readonly maxTokens?: number
+  readonly temperature?: number
+  readonly topP?: number
+  /**
    * Stops the generation. Invariant 6 of `CLAUDE.md`: every long task is cancellable, and a turn
    * run in this process is the longest of them — a closed window otherwise leaves the model
    * generating to its ceiling with nobody to answer.

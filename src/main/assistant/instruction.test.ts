@@ -145,7 +145,7 @@ describe('how much of the catalogue the model is shown', () => {
       const briefing = studioBriefing({
         continuing,
         // The widest this list can ever be: `spacesWithNoModel` names spaces whose PRIMARY
-        // employment nothing serves, and Code has no employment at all to be unserved.
+        // employment nothing serves, and every space has one since Code gained `code/txt2code`.
         notReady: GENERATIVE_WORKSPACE_IDS,
         context: 'x'.repeat(CONTEXT_COMPOSED_MAX),
         state: [...Array(20).keys()]

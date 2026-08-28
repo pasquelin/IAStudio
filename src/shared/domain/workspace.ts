@@ -1,5 +1,5 @@
 import { primaryRoleOf, type AiRoleId } from './aiRole'
-import type { ModelFamily } from './model'
+import { CATALOGUE_FAMILIES, type ModelFamily } from './model'
 import { reconcileOrder } from './order'
 
 /**
@@ -27,31 +27,42 @@ export const DEFAULT_WORKSPACE: WorkspaceId = 'image'
  * beside the icons: the window draws a model browser per space and the assistant names the spaces
  * nothing can generate in — two tables would drift the day one moves.
  *
- * Code is the one `null`, and it is not a gap to fill: Scenario serves images, meshes and sounds,
- * and a script is none of those. Its space therefore draws no generator and no remote library.
+ * No `null` left since Code gained `code`. The type keeps it: a space that produces nothing is a
+ * shape this record must still be able to express, and `roleOfWorkspace` already answers for it.
  */
 export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily | null> = {
   image: 'image',
   video: 'video',
   '3d': '3d',
-  code: null,
+  code: 'code',
   audio: 'audio',
   materials: 'material',
   skyboxes: 'skybox',
 }
 
 /**
- * The spaces a model can be run in — every one but Code. What the two Scenario panels stand on,
- * and it is derived rather than listed: a space added without a family would otherwise get an
- * icon opening onto a picker with nothing to pick.
+ * The spaces a model can be run in. What the generator panel stands on, and it is derived rather
+ * than listed: a space added without a family would otherwise get an icon opening onto a picker
+ * with nothing to pick.
  */
 export const GENERATIVE_WORKSPACE_IDS: readonly WorkspaceId[] = WORKSPACE_IDS.filter(
   id => FAMILY_BY_WORKSPACE[id] !== null,
 )
 
 /**
- * The employment a generation in this space would run under, or `null` where none would — Code,
- * and any space whose family declares no primary employment.
+ * The spaces a REMOTE LIBRARY can be browsed in — every generative one but Code.
+ *
+ * 🛑 Not the same list as above: a code model is served by a chat, which publishes no assets, so
+ * the shelf would have stood beside a script editor listing pictures.
+ */
+export const LIBRARY_WORKSPACE_IDS: readonly WorkspaceId[] = WORKSPACE_IDS.filter(id => {
+  const family = FAMILY_BY_WORKSPACE[id]
+  return family !== null && CATALOGUE_FAMILIES.includes(family)
+})
+
+/**
+ * The employment a generation in this space would run under, or `null` where none would — any
+ * space with no family, and any whose family declares no primary employment.
  *
  * Written once because three readers ask it: the briefing that names the armed model, the list of
  * spaces nothing serves, and the panel that arms one. Each carried its own `family === null`.

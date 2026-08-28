@@ -759,6 +759,11 @@ export type LogScope =
    * speak once, while this is a gesture and answers every time the hand repeats it.
    */
   | 'canvas.place'
+  /**
+   * A generated script the editor refused: it held changes nobody saved, and `⌘Z` does not reach
+   * into the code editor — so the answer is announced rather than written over the work.
+   */
+  | 'code.land'
   // Not `assets.open`, and the split is the point: the document DOES open here, and the code
   // carries on building it. What is reported is that it could not take the size of the picture
   // behind it — which matters because ⌘S writes the document's size back over that picture.
@@ -838,6 +843,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'skybox.export',
   'canvas.layer',
   'canvas.place',
+  'code.land',
   'canvas.size',
   'canvas.edit',
   'image.export',

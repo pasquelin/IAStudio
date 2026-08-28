@@ -98,6 +98,7 @@
     "audio": "Audio",
     "material": "Material",
     "skybox": "Sky",
+    "code": "Code",
     "upscale": "Upscaling",
     "background-removal": "Background removal",
     "vectorization": "Vectorisation",
@@ -127,6 +128,8 @@
     "reference_texture": "Material reference",
     "txt2skybox": "Text to panorama",
     "img2skybox": "Image to panorama",
+    "txt2code": "Text to code",
+    "code2code": "Code to code",
     "upscale": "Upscaling",
     "cutout": "Background removal",
     "vectorize": "Vectorisation"

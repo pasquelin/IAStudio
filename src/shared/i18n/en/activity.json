@@ -103,6 +103,7 @@
       "skybox.export": "Exporting the sky failed",
       "canvas.layer": "A layer could not be loaded",
       "canvas.place": "That image could not be laid on the document",
+      "code.land": "The generated script could not be written into the editor",
       "canvas.size": "This image could not keep its own size",
       "canvas.edit": "The image could not be sent to the model",
       "image.export": "Exporting the image failed",

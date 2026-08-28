@@ -27,13 +27,14 @@ describe('workspaces', () => {
 
   /**
    * A space that declared no family would silently open the Models panel on the whole catalogue.
-   * ONE is entitled to that — Code, which runs no model and where neither Scenario panel stands.
-   * Written as a pair, so a second `null` fails here rather than opening that panel on nothing.
+   * NONE is entitled to that since Code gained `code` — written as an empty list rather than
+   * removed, so the day a space arrives without a family it fails here instead of opening that
+   * panel on nothing.
    */
-  it('maps every workspace but Code to a model family', () => {
+  it('maps every workspace to a model family', () => {
     const familyless = WORKSPACES.filter(workspace => workspace.family === null)
 
-    expect(familyless.map(workspace => workspace.id)).toEqual(['code'])
+    expect(familyless.map(workspace => workspace.id)).toEqual([])
   })
 
   it('has no two workspaces sharing an id', () => {

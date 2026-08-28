@@ -65,6 +65,8 @@ export type ModelFamily =
   | 'audio'
   | 'material'
   | 'skybox'
+  /** Source text, and the one family no catalogue of this studio publishes — see `CODE_FAMILY`. */
+  | 'code'
   | 'upscale'
   | 'background-removal'
   | 'vectorization'
@@ -77,11 +79,34 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
   'audio',
   'material',
   'skybox',
+  'code',
   'upscale',
   'background-removal',
   'vectorization',
   'other',
 ]
+
+/**
+ * The family a language model serves and a diffusion catalogue does not.
+ *
+ * 🛑 It is served by CHAT — a cloud that answers `/v1/chat/completions`, or a text model on this
+ * machine — never by the Scenario catalogue, which publishes no code model and no code
+ * capability. Named rather than spelled, because three modules narrow on it: what Scenario is
+ * asked for, which clouds hold a library to browse, and which target the job runner routes to a
+ * chat rather than to a generation.
+ */
+export const CODE_FAMILY: ModelFamily = 'code'
+
+/**
+ * The families a catalogue of generated ASSETS publishes — every one but `code`.
+ *
+ * What Scenario declares it serves, and what a remote library is browsable for. Derived rather
+ * than listed: a family added to the studio joins the catalogue unless it is `code`, which is
+ * the exception this constant exists to state once.
+ */
+export const CATALOGUE_FAMILIES: readonly ModelFamily[] = MODEL_FAMILIES.filter(
+  family => family !== CODE_FAMILY,
+)
 
 /**
  * What a family a settings file still spells the old way is called today — `texture` named the
@@ -297,6 +322,10 @@ export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
   material: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
   skybox: ['txt2skybox', 'img2skybox'],
+  // Written and rewritten, and nothing else: what a chat can be asked for that lands in a script.
+  // Neither is an API enum value — no catalogue publishes them, and `STUDIO_CAPABILITIES` does
+  // not name them either, since what serves them is a cloud key or a text model, never a listing.
+  code: ['txt2code', 'code2code'],
   upscale: ['upscale'],
   'background-removal': ['cutout'],
   vectorization: ['vectorize'],
@@ -404,6 +433,9 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   material: [],
   // Empty like its publishers: Scenario's four panoramas leave a facet nothing to narrow.
   skybox: [],
+  // Empty, and it cannot be otherwise: no catalogue lists a code model, so there is no listing
+  // for a tag to narrow. The choice is a cloud or a model on this machine.
+  code: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],
@@ -488,6 +520,8 @@ export const PUBLISHERS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   material: [],
   // Empty for the same reason as its tags: Scenario, BFL and Tencent publish one model each.
   skybox: [],
+  // Empty: a cloud is the publisher, and it is already what the person picks.
+  code: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],

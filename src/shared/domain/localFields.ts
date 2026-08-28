@@ -69,6 +69,13 @@ export type LocalFieldTemplate = Omit<FieldDescriptor, 'label' | 'help'> & {
 export const PROMPT_FIELD_KEY = 'prompt'
 
 /**
+ * The key the seed is named by. Exported for the one form that has to DROP it: a chat cloud is
+ * asked over three wire formats and only some of them take a seed, so offering the knob there
+ * would be a control that does nothing on two clouds out of three.
+ */
+export const SEED_FIELD_KEY = 'seed'
+
+/**
  * The group a form folds away — § 14 of the unified panel.
  *
  * Shared because both sides write it: the templates below file their knobs under it, and the
@@ -85,7 +92,7 @@ const PROMPT: LocalFieldTemplate = {
 }
 
 const SEED: LocalFieldTemplate = {
-  key: 'seed',
+  key: SEED_FIELD_KEY,
   kind: 'seed',
   labelKey: 'localFields.seed',
   helpKey: 'localFields.seedHelp',

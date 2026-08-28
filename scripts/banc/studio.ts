@@ -69,6 +69,8 @@ export type Studio = {
   references: () => readonly string[]
   /** What family a job ran — the API's own answer, which `Job` does not carry. */
   familyOf: (modelId: string) => ModelFamily | null
+  /** The body each generation was SENT, so an oracle can read what the panel actually put in it. */
+  sentBodies: () => Record<string, Record<string, unknown>>
   /** Whether anything outlived the looking: a document written, or a file gesture carried out. */
   changed: () => boolean
   /** Every call it refused, named — a DECOR that hits one has laid out nothing. */
@@ -394,6 +396,7 @@ export async function createStudio(
     shell,
     projectName: () => useProject.getState().project?.manifest.name ?? '',
     familyOf: cloud.familyOf,
+    sentBodies: () => useJobs.getState().bodies,
     changed: () => unsavedDocumentIds().some(one => !settled.has(one)) || ops.can().undo,
     refusals: () => refusals,
 

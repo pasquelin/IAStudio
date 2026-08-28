@@ -13,6 +13,6 @@ describe('the spaces nothing can generate in', () => {
 
   // One weighing per space and no more: what the manager is asked per sentence.
   it('asks after one employment per space', () => {
-    expect(SPACE_ROLES).toHaveLength(6)
+    expect(SPACE_ROLES).toHaveLength(7)
   })
 })

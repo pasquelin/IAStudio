@@ -10,6 +10,8 @@ export type RetryOptions = {
   maxRetries: () => number
   sleep: (ms: number) => Promise<void>
   backoffBaseMs?: number
+  /** What a retry can fix here. Defaults to the Scenario SDK's own reading of a failure. */
+  retryable?: (error: unknown) => boolean
 }
 
 /** Doubles per attempt, from this. */
@@ -46,13 +48,14 @@ export function createRetry({
   maxRetries,
   sleep,
   backoffBaseMs = DEFAULT_BACKOFF_BASE_MS,
+  retryable = isRetryable,
 }: RetryOptions): Retry {
   return async action => {
     for (let attempt = 0; ; attempt++) {
       try {
         return await action()
       } catch (error) {
-        if (attempt >= maxRetries() || !isRetryable(error)) throw error
+        if (attempt >= maxRetries() || !retryable(error)) throw error
         await sleep(backoffDelay(backoffBaseMs, attempt))
       }
     }

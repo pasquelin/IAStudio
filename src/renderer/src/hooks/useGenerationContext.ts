@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
+import type { AvailableInput } from '@shared/domain/aiCapability'
 import {
   availableInputsOf,
   type GenerationInput,
@@ -13,7 +14,7 @@ import { usePickedRows } from './usePickedRows'
 import { deselect } from '@/helpers/selection'
 import { workspaceById } from '@/helpers/workspaces'
 import { useAssets, assetsById } from '@/stores/assets'
-import { activeSceneId, useDocuments } from '@/stores/documents'
+import { activeSceneId, activeScriptId, useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { latestGenerationIds, useJobs } from '@/stores/jobs'
@@ -109,11 +110,20 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
     useSelection.getState().selectFiles(deselect(picked, input.path))
   }, [])
 
+  // Offered to the resolver and to nothing else: there is no catalogue row to attach and no
+  // thumbnail to draw. Its TEXT travels in the body — see `bodyExtras`.
+  const scriptId = useDocuments(activeScriptId)
+
+  const available = useMemo<readonly AvailableInput[]>(
+    () => (scriptId === null ? inputs : [...inputs, SCRIPT_AT_HAND]),
+    [inputs, scriptId],
+  )
+
   // Memoised with the inputs it reads: the resolution allocates a contract per required input,
   // and the panel re-renders on every keystroke of the form below it.
   const capability = useMemo(
-    () => resolveCapability(family, inputs, forced),
-    [family, inputs, forced],
+    () => resolveCapability(family, available, forced),
+    [family, available, forced],
   )
 
   return useMemo(() => ({ inputs, capability, withdraw }), [inputs, capability, withdraw])
@@ -121,6 +131,9 @@ export function useGenerationContext(forced: AiRoleId | null): GenerationContext
 
 /** Stable, so a workspace with no scene open does not hand React a new array per render. */
 const NO_KEYS: readonly string[] = []
+
+/** The open script, as the resolver sees it. Frozen once: it carries no id and never varies. */
+const SCRIPT_AT_HAND: AvailableInput = { role: 'source', kind: 'code' }
 
 /** A separator no node name can hold, so the three parts travel as one comparable string. */
 const KEY_PART = '\u0000'

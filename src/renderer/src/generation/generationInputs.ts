@@ -1,5 +1,4 @@
 import type { AssetType } from '@shared/domain/asset'
-import type { AvailableInput } from '@shared/domain/aiCapability'
 
 /**
  * What the workspace offers a generation — ADR-23. Handed the state rather than reading a store,
@@ -21,7 +20,13 @@ export type InputOrigin =
 /** Walked by `dynamic-keys.i18n.test.ts`: the sentence under each thumbnail is composed. */
 export const INPUT_ORIGINS: readonly InputOrigin[] = ['explorer', 'scene', 'result']
 
-export type GenerationInput = AvailableInput & {
+/**
+ * One input the panel draws and ATTACHES to a field. Narrower than `AvailableInput`: a script is
+ * at hand without being a row of the shelf — see `useGenerationContext`.
+ */
+export type GenerationInput = {
+  role: 'source' | 'mask'
+  kind: AssetType
   /**
    * 🛑 The catalogue row it names, and never optional: an input the panel cannot ATTACH is one it
    * would draw and never send. A canvas has no asset until it flattens, and flattening is
@@ -31,16 +36,16 @@ export type GenerationInput = AvailableInput & {
   /** What the panel draws beside the thumbnail. Document data, never a word of the interface. */
   label: string
 } & (
-    | { origin: 'result' }
-    /**
-     * 🛑 The placement it was picked as, REQUIRED by the union: a scene selects nodes, two of them
-     * can reference one model, and withdrawing by asset id would take both off. Optional, the
-     * panel drew a cross that silently did nothing.
-     */
-    | { origin: 'scene'; nodeId: string }
-    /** The PATH it was picked by, for the same reason: the explorer deselects by path. */
-    | { origin: 'explorer'; path: string }
-  )
+  | { origin: 'result' }
+  /**
+   * 🛑 The placement it was picked as, REQUIRED by the union: a scene selects nodes, two of them
+   * can reference one model, and withdrawing by asset id would take both off. Optional, the
+   * panel drew a cross that silently did nothing.
+   */
+  | { origin: 'scene'; nodeId: string }
+  /** The PATH it was picked by, for the same reason: the explorer deselects by path. */
+  | { origin: 'explorer'; path: string }
+)
 
 /** An input a gesture put there, so taking it off has something to undo. */
 export type WithdrawableInput = Extract<GenerationInput, { origin: 'explorer' | 'scene' }>

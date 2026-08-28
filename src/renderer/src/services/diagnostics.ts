@@ -27,6 +27,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'document.close',
   'document.delete',
   'assets.reveal',
+  // Asked for again, refused again: a second generation the editor turns down is a second thing
+  // the person paid for and did not get.
+  'code.land',
   // A double-click is a gesture too: refusing the same asset twice must say so twice.
   'assets.open',
   // The same double-click, one step earlier — before there is an asset to open. A reader whose

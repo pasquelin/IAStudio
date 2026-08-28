@@ -35,6 +35,13 @@ export type Job = {
    * produced under this one (`local_…`). Absent until submit has answered.
    */
   remoteId?: string
+  /**
+   * What a generation that writes no file answered — the script a code model wrote.
+   *
+   * 🛑 Not an asset, and deliberately: a script is a DOCUMENT of the project, so it lands in an
+   * editor rather than on the shelf, and the window is what puts it there.
+   */
+  text?: string
 }
 
 /** The runner's own id (`local_…`). Collecting under ours files nothing and still succeeds. */

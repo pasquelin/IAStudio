@@ -5,6 +5,7 @@ import type { Job } from '@shared/domain/job'
 import type { PbrChannel } from '@shared/domain/material'
 import {
   CAPABILITIES_BY_FAMILY,
+  CODE_FAMILY,
   type FieldDescriptor,
   type ModelDescriptor,
   type ModelFamily,
@@ -67,8 +68,21 @@ const REFERENCE: FieldDescriptor = {
   required: false,
 }
 
-/** The families the batterie generates in — one demo model each. */
-const FAMILIES: readonly ModelFamily[] = ['image', 'video', '3d', 'audio', 'material', 'skybox']
+/**
+ * The families the batterie generates in — one demo model each.
+ *
+ * `code` is in and has no `OUTPUT` line, which is what tells the two apart: it answers TEXT on
+ * the job and files nothing, the way a chat cloud does.
+ */
+const FAMILIES: readonly ModelFamily[] = [
+  'image',
+  'video',
+  '3d',
+  'audio',
+  'material',
+  'skybox',
+  'code',
+]
 
 const MODELS: readonly (ModelSummary & { fields: FieldDescriptor[] })[] = FAMILIES.map(family => ({
   id: `model-${family}`,
@@ -120,13 +134,30 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
 
     generate: async (modelId, body) => {
       const model = found(modelId)
-      const output = model && OUTPUT[model.family]
-      if (!model || !output) throw new Error(`no model ${modelId}`)
+      if (!model) throw new Error(`no model ${modelId}`)
 
       runs += 1
-      const id = `job-${runs}`
-      const label = nameOfRun(model.name, body)
-      const name = assetFileName(label, `.${output.extension}`)
+      const finished = (over: Partial<Job>): Job => ({
+        id: `job-${runs}`,
+        targetId: modelId,
+        label: nameOfRun(model.name, body),
+        status: 'succeeded',
+        progress: 1,
+        createdAt: WHEN,
+        finishedAt: WHEN,
+        assetIds: [],
+        ...over,
+      })
+
+      // A script is not an asset: it comes back as TEXT on the job, and nothing is filed.
+      if (model.family === CODE_FAMILY) {
+        return finished({ text: 'export default defineScript({ onUpdate() {} })' })
+      }
+
+      const output = OUTPUT[model.family]
+      if (!output) throw new Error(`no output for ${model.family}`)
+
+      const name = assetFileName(nameOfRun(model.name, body), `.${output.extension}`)
       const path = pathIn(defaultAssetFolder(output), name)
       const asset: Asset = {
         id: `generated-${runs}`,
@@ -137,23 +168,14 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
         path,
         tags: [],
         createdAt: WHEN,
-        jobId: id,
+        jobId: `job-${runs}`,
       }
 
       await folder.createFolder(defaultAssetFolder(output))
       await folder.write(path)
       await catalog.add(asset)
 
-      return {
-        id,
-        targetId: modelId,
-        label,
-        status: 'succeeded',
-        progress: 1,
-        createdAt: WHEN,
-        finishedAt: WHEN,
-        assetIds: [asset.id],
-      }
+      return finished({ assetIds: [asset.id] })
     },
   }
 }

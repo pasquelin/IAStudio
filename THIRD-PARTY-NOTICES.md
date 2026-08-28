@@ -90,6 +90,8 @@ The terms below govern these components. They are not affected by the licence of
 | Qwen2.5 1.5B Instruct | Q4_K_M | Apache-2.0 |
 | Qwen2.5 14B Instruct | Q4_K_M | Apache-2.0 |
 | Qwen2.5 7B Instruct | Q4_K_M | Apache-2.0 |
+| Qwen2.5-Coder 1.5B Instruct | Q4_K_M | Apache-2.0 |
+| Qwen2.5-Coder 7B Instruct | Q4_K_M | Apache-2.0 |
 | react | 19.2.8 | MIT |
 | react-dom | 19.2.8 | MIT |
 | react-hook-form | 7.85.0 | MIT |
@@ -2758,6 +2760,44 @@ https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF
 
 ```
 The language model the assistant runs on when it runs on this machine, in its 7B size.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.
+Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## Qwen2.5-Coder 1.5B Instruct
+
+Version: Q4_K_M  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF
+```
+
+```
+The model the Code space writes scripts with on this machine, in its 1.5B size.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.
+Full terms: https://www.apache.org/licenses/LICENSE-2.0
+```
+## Qwen2.5-Coder 7B Instruct
+
+Version: Q4_K_M  
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF
+```
+
+```
+The model the Code space writes scripts with on this machine, in its 7B size.
 It is NOT shipped with the application: it is fetched on request into the user data folder,
 against a published digest, and removed from the model manager.
 

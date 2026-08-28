@@ -35,9 +35,9 @@ export function resolveCapability(
   available: readonly AvailableInput[],
   forced?: AiRoleId | null,
 ): CapabilityChoice {
-  // Code is the space with no family, and the generator does not stand in it — the panel that
-  // would read this choice is not on that surface at all. Answered rather than thrown: the hook
-  // runs off the ACTIVE workspace, which passes through Code whenever the rail does.
+  // No workspace answers `null` today — Code was the last, until it gained `code`. Answered
+  // rather than thrown all the same: the hook runs off the ACTIVE workspace, and the home is a
+  // surface the rail passes through with no family at all.
   if (family === null) return { chosen: null, reachable: [], forced: false }
 
   const offered = CAPABILITIES_BY_FAMILY[family].flatMap(capability => {

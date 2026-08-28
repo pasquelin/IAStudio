@@ -418,29 +418,49 @@ function pythonLicences() {
 }
 
 /**
- * The assistant's models, one notice per catalogue entry. Apache-2.0 asks for the notice wherever
- * the work is used, and these are downloaded rather than shipped — the licence travels all the same.
+ * The language models this studio runs itself, one notice per catalogue entry. Apache-2.0 asks
+ * for the notice wherever the work is used, and these are downloaded rather than shipped — the
+ * licence travels all the same.
  *
- * Spelled from the same list the catalogue holds, so a fifth entry cannot ship without its line:
- * `catalogue.test.ts` confronts `shippedModels()` with what this writes.
+ * Two series, and the difference is the employment: the plain Instruct weights answer the
+ * assistant, the Coder ones write the scripts of the Code space. Spelled from the same list the
+ * catalogue holds, so an entry cannot ship without its line: `catalogue.test.ts` confronts
+ * `shippedModels()` with what this writes.
  */
 function qwenLicences() {
-  const sizes = ['0.5B', '1.5B', '7B', '14B']
+  const series = [
+    {
+      name: size => `Qwen2.5 ${size} Instruct`,
+      repo: size => `Qwen/Qwen2.5-${size}-Instruct-GGUF`,
+      sizes: ['0.5B', '1.5B', '7B', '14B'],
+      what: size =>
+        `The language model the assistant runs on when it runs on this machine, in its ${size} size.`,
+    },
+    {
+      name: size => `Qwen2.5-Coder ${size} Instruct`,
+      repo: size => `Qwen/Qwen2.5-Coder-${size}-Instruct-GGUF`,
+      sizes: ['1.5B', '7B'],
+      what: size =>
+        `The model the Code space writes scripts with on this machine, in its ${size} size.`,
+    },
+  ]
 
-  return sizes.map(size => ({
-    name: `Qwen2.5 ${size} Instruct`,
-    version: 'Q4_K_M',
-    spdx: 'Apache-2.0',
-    text: [
-      `The language model the assistant runs on when it runs on this machine, in its ${size} size.`,
-      'It is NOT shipped with the application: it is fetched on request into the user data folder,',
-      'against a published digest, and removed from the model manager.',
-      '',
-      'Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.',
-      'Full terms: https://www.apache.org/licenses/LICENSE-2.0',
-    ].join('\n'),
-    sources: `https://huggingface.co/Qwen/Qwen2.5-${size}-Instruct-GGUF`,
-  }))
+  return series.flatMap(one =>
+    one.sizes.map(size => ({
+      name: one.name(size),
+      version: 'Q4_K_M',
+      spdx: 'Apache-2.0',
+      text: [
+        one.what(size),
+        'It is NOT shipped with the application: it is fetched on request into the user data folder,',
+        'against a published digest, and removed from the model manager.',
+        '',
+        'Copyright the Qwen team, Alibaba Cloud. Licensed under the Apache License, Version 2.0.',
+        'Full terms: https://www.apache.org/licenses/LICENSE-2.0',
+      ].join('\n'),
+      sources: `https://huggingface.co/${one.repo(size)}`,
+    })),
+  )
 }
 
 /**

@@ -1,12 +1,11 @@
-import { orElse } from '@shared/promises'
 import type { HttpChat } from '@shared/domain/aiCloud'
 import type { AssistantThought } from '@shared/domain/assistant'
-import { isRecord } from '@shared/guards'
+import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
 import type { AssistantBrain, NotReady } from './brainPort'
-import { answeredTurn, OversizedRequest, turnsWith } from './brainTurn'
+import { answeredTurn, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
 import { roomFor } from './promptWindow'
 
@@ -32,11 +31,9 @@ export type HttpBrainDeps = {
   credentials: () => Credentials | null
   /** Which model of that cloud answers. Read on each turn: it is a setting, and settings change. */
   model: () => string
-  fetch?: (input: string, init?: RequestInit) => Promise<Response>
+  fetch?: CloudPoster
   notReady?: NotReady
 }
-
-type Poster = NonNullable<HttpBrainDeps['fetch']>
 
 function messagesFor(
   briefing: string,
@@ -50,179 +47,6 @@ function messagesFor(
     { role: 'system', content: briefing },
     { role: 'user', content: prior + utterance },
   ]
-}
-
-function textOf(value: unknown, path: readonly string[]): string | null {
-  let current: unknown = value
-  for (const key of path) {
-    if (!isRecord(current)) return null
-    current = current[key]
-  }
-  return typeof current === 'string' && current.length > 0 ? current : null
-}
-
-function openaiText(body: unknown): string | null {
-  if (!isRecord(body) || !Array.isArray(body['choices'])) return null
-  return textOf(body['choices'][0], ['message', 'content'])
-}
-
-function anthropicText(body: unknown): string | null {
-  if (!isRecord(body) || !Array.isArray(body['content'])) return null
-  return textOf(body['content'][0], ['text'])
-}
-
-function geminiText(body: unknown): string | null {
-  if (!isRecord(body) || !Array.isArray(body['candidates'])) return null
-  const first: unknown = body['candidates'][0]
-  if (
-    !isRecord(first) ||
-    !isRecord(first['content']) ||
-    !Array.isArray(first['content']['parts'])
-  ) {
-    return null
-  }
-  return textOf(first['content']['parts'][0], ['text'])
-}
-
-/**
- * The statuses that mean "this request was not acceptable as sent" — which, for a briefing of
- * seventy thousand characters against a model typed by hand, is what a window too small looks
- * like. A 401, a 429 or a 500 are NOT among them: they say nothing about the size, and asking
- * again with a shorter one would double a rate limit and hide the real cause.
- */
-const TOO_MUCH: readonly number[] = [400, 413, 422]
-
-async function readBody(
-  response: Response,
-  pick: (body: unknown) => string | null,
-  label: string,
-): Promise<string> {
-  const body: unknown = await orElse(response.json(), null)
-  if (!response.ok) {
-    const detail = textOf(body, ['error', 'message']) ?? `${response.status}`
-    const refusal = `${label} refused: ${detail}`
-    throw TOO_MUCH.includes(response.status) ? new OversizedRequest(refusal) : new Error(refusal)
-  }
-  const text = pick(body)
-  if (text === null) throw new Error(`${label} answered nothing`)
-  return text
-}
-
-function systemOf(messages: readonly ChatTurn[]): string {
-  return messages.find(turn => turn.role === 'system')?.content ?? ''
-}
-
-function geminiContents(messages: readonly ChatTurn[]): unknown[] {
-  return messages
-    .filter(turn => turn.role !== 'system')
-    .map(turn => ({
-      role: turn.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: turn.content }],
-    }))
-}
-
-async function postJson(
-  post: Poster,
-  url: string,
-  headers: Record<string, string>,
-  body: unknown,
-  signal?: AbortSignal,
-): Promise<Response> {
-  return await post(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify(body),
-    ...(signal ? { signal } : {}),
-  })
-}
-
-async function askOpenAi(
-  chat: Extract<HttpChat, { kind: 'openai' }>,
-  key: string,
-  messages: readonly ChatTurn[],
-  post: Poster,
-  signal?: AbortSignal,
-): Promise<string> {
-  const response = await postJson(
-    post,
-    `${chat.baseUrl.replace(/\/$/, '')}/chat/completions`,
-    { authorization: `Bearer ${key}` },
-    { model: chat.model, messages, response_format: { type: 'json_object' } },
-    signal,
-  )
-  return await readBody(response, openaiText, chat.baseUrl)
-}
-
-async function askAnthropic(
-  chat: Extract<HttpChat, { kind: 'anthropic' }>,
-  key: string,
-  messages: readonly ChatTurn[],
-  post: Poster,
-  signal?: AbortSignal,
-): Promise<string> {
-  const response = await postJson(
-    post,
-    'https://api.anthropic.com/v1/messages',
-    { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    {
-      model: chat.model,
-      max_tokens: ASK_TOKENS,
-      system: systemOf(messages),
-      messages: messages
-        .filter(turn => turn.role !== 'system')
-        .map(turn => ({
-          role: turn.role === 'assistant' ? 'assistant' : 'user',
-          content: turn.content,
-        })),
-    },
-    signal,
-  )
-  return await readBody(response, anthropicText, 'anthropic')
-}
-
-async function askGemini(
-  chat: Extract<HttpChat, { kind: 'gemini' }>,
-  key: string,
-  messages: readonly ChatTurn[],
-  post: Poster,
-  signal?: AbortSignal,
-): Promise<string> {
-  const system = systemOf(messages)
-  const url =
-    // Encoded like the key beside it: the model is typed by hand now, and a `#` in it truncated
-    // the URL — dropping `?key=` and answering 401 with nothing to read.
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(chat.model)}` +
-    `:generateContent` +
-    `?key=${encodeURIComponent(key)}`
-  const response = await postJson(
-    post,
-    url,
-    {},
-    {
-      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-      contents: geminiContents(messages),
-      generationConfig: { responseMimeType: 'application/json' },
-    },
-    signal,
-  )
-  return await readBody(response, geminiText, 'gemini')
-}
-
-async function ask(
-  chat: HttpChat,
-  key: string,
-  messages: readonly ChatTurn[],
-  post: Poster,
-  signal?: AbortSignal,
-): Promise<string> {
-  switch (chat.kind) {
-    case 'openai':
-      return await askOpenAi(chat, key, messages, post, signal)
-    case 'anthropic':
-      return await askAnthropic(chat, key, messages, post, signal)
-    case 'gemini':
-      return await askGemini(chat, key, messages, post, signal)
-  }
 }
 
 /**
@@ -265,7 +89,17 @@ export function createHttpChatBrain({
       // The model is settled HERE and nowhere deeper: what a cloud is talked to with is a
       // setting, and the three request shapes below only ever read the one they were handed.
       const asked = { ...chat, model: model() }
-      const answer = await ask(asked, held.key, messages, send, signal)
+      const answer = await askCloudChat(
+        {
+          chat: asked,
+          key: held.key,
+          messages,
+          json: true,
+          maxTokens: ASK_TOKENS,
+          ...(signal ? { signal } : {}),
+        },
+        send,
+      )
       if (briefing.narrow === null) narrowed = true
       return { answer, cost: 0 }
     } catch (error) {

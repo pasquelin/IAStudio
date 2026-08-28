@@ -13,7 +13,12 @@ import {
   type ToolSurface,
   type ToolZone,
 } from './tool'
-import { GENERATIVE_WORKSPACE_IDS, WORKSPACE_IDS, type WorkspaceId } from './workspace'
+import {
+  GENERATIVE_WORKSPACE_IDS,
+  LIBRARY_WORKSPACE_IDS,
+  WORKSPACE_IDS,
+  type WorkspaceId,
+} from './workspace'
 
 const TOOL_IDS: ToolId[] = [...new Set(TOOL_PLACEMENTS.map(placement => placement.id))]
 
@@ -46,23 +51,26 @@ describe('the placements of one tool', () => {
 describe('resolving where a tool sits', () => {
   // One placement for all six, where there used to be two: the shelf reads the same question
   // in every space — what can I get from Scenario — so it has no reason to move with the space.
-  it('puts the asset shelf in the left column of every generating workspace', () => {
-    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
+  it('puts the asset shelf in the left column of every workspace a library serves', () => {
+    for (const workspace of LIBRARY_WORKSPACE_IDS) {
       expect(placementIn('assets', workspace)?.zone).toBe('left')
       expect(placementIn('assets', workspace)?.slot).toBe('primary')
     }
   })
 
-  it('serves the shelf wherever a model runs — it is never simply absent', () => {
-    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
+  it('serves the shelf wherever a library holds something — it is never simply absent', () => {
+    for (const workspace of LIBRARY_WORKSPACE_IDS) {
       expect(placementIn('assets', workspace)).not.toBeNull()
     }
   })
 
-  /** 🛑 The one space the two Scenario panels skip, and the compiler cannot say it: `surfaces`
-   * is derived, so a family added to Code would put them back with nothing to report it. */
-  it('offers neither Scenario panel in Code, which runs no model', () => {
-    expect(placementIn('generator', 'code')).toBeNull()
+  /**
+   * 🛑 The one space that generates WITHOUT a library, and the compiler cannot say it: both
+   * `surfaces` lists are derived, so putting `code` back in `CATALOGUE_FAMILIES` would open a
+   * shelf of pictures beside the editor with nothing to report it.
+   */
+  it('generates in Code and browses no library there', () => {
+    expect(placementIn('generator', 'code')).not.toBeNull()
     expect(placementIn('assets', 'code')).toBeNull()
   })
 
@@ -215,13 +223,26 @@ describe('a horizontal band', () => {
 })
 
 describe('the left column', () => {
-  it('holds the Scenario panels, and only them, in the upper half of a generating workspace', () => {
-    for (const workspace of GENERATIVE_WORKSPACE_IDS) {
-      const upper = TOOL_PLACEMENTS.filter(
+  const upperOf = (workspace: WorkspaceId): Set<string> =>
+    new Set(
+      TOOL_PLACEMENTS.filter(
         placement =>
           placement.zone === 'left' && placement.slot === 'primary' && serves(placement, workspace),
-      )
-      expect(new Set(upper.map(placement => placement.id))).toEqual(new Set(SCENARIO_TOOLS))
+      ).map(placement => placement.id),
+    )
+
+  it('holds the Scenario panels, and only them, in the upper half of a workspace with a library', () => {
+    for (const workspace of LIBRARY_WORKSPACE_IDS) {
+      expect(upperOf(workspace)).toEqual(new Set(SCENARIO_TOOLS))
+    }
+  })
+
+  /** The generator alone, where the library has nothing to list — Code, and Code alone. */
+  it('holds the generator alone in the upper half of a workspace with no library', () => {
+    for (const workspace of GENERATIVE_WORKSPACE_IDS.filter(
+      one => !LIBRARY_WORKSPACE_IDS.includes(one),
+    )) {
+      expect(upperOf(workspace)).toEqual(new Set(['generator']))
     }
   })
 

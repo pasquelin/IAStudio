@@ -1,24 +1,29 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
+import { cloudModelId } from '@shared/domain/codeGeneration'
+import type { CodeJobRunner } from './codeJobRunner'
 import type { LocalJobRunner } from './localJobRunner'
 import { createRoutedJobRunner } from './routedJobRunner'
 
 const answered = (jobId: string): RemoteJob => ({ jobId, status: 'success', assetIds: [] })
 
-const localRunner = (): LocalJobRunner => ({
-  submit: () => Promise.resolve(answered('local_1')),
-  poll: jobId => Promise.resolve(answered(jobId)),
+/** A runner that answers under its own prefix — which is the only thing routing turns on. */
+const runnerOf = (prefix: string) => ({
+  submit: () => Promise.resolve(answered(`${prefix}1`)),
+  poll: (jobId: string) => Promise.resolve(answered(jobId)),
   cancel: () => Promise.resolve(),
-  outputOf: () => null,
-  producedBy: () => null,
-  owns: jobId => jobId.startsWith('local_'),
+  owns: (jobId: string) => jobId.startsWith(prefix),
 })
 
-const cloudRunner = (): JobRunner => ({
-  submit: () => Promise.resolve(answered('job_1')),
-  poll: jobId => Promise.resolve(answered(jobId)),
-  cancel: () => Promise.resolve(),
+const localRunner = (): LocalJobRunner => ({
+  ...runnerOf('local_'),
+  outputOf: () => null,
+  producedBy: () => null,
 })
+
+const codeRunner = (): CodeJobRunner => runnerOf('code_')
+
+const cloudRunner = (): JobRunner => runnerOf('job_')
 
 describe('the routed job runner', () => {
   /**
@@ -33,6 +38,7 @@ describe('the routed job runner', () => {
 
     const runner = createRoutedJobRunner({
       local,
+      code: codeRunner(),
       cloud: () => cloud,
       isLocalTarget: id => id === 'local_model',
     })
@@ -47,6 +53,27 @@ describe('the routed job runner', () => {
   })
 
   /**
+   * 🛑 Before `isLocalTarget`, and it has to be: a chat cloud is not on this machine and is not
+   * Scenario either. Routed by the id alone, a script would have gone to the catalogue.
+   */
+  it('sends a script to the chat that writes one, with no account of Scenario held', async () => {
+    const code = codeRunner()
+    const codePoll = vi.spyOn(code, 'poll')
+
+    const runner = createRoutedJobRunner({
+      local: localRunner(),
+      code,
+      cloud: () => null,
+      isLocalTarget: () => false,
+    })
+
+    expect((await runner.submit({ id: cloudModelId('anthropic') }, {})).jobId).toBe('code_1')
+
+    await runner.poll('code_1')
+    expect(codePoll).toHaveBeenCalledOnce()
+  })
+
+  /**
    * A generation on this machine needs no account, and asking for one that does without a key is
    * a readable refusal — rejected rather than thrown, because the manager awaits these and a
    * synchronous throw would escape the retry meant to word the failure.
@@ -54,6 +81,7 @@ describe('the routed job runner', () => {
   it('runs on this machine with no account, and says why a cloud target cannot', async () => {
     const runner = createRoutedJobRunner({
       local: localRunner(),
+      code: codeRunner(),
       cloud: () => null,
       isLocalTarget: id => id === 'local_model',
     })

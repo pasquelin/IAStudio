@@ -119,6 +119,7 @@ describe('SettingsWindow', () => {
       'Audio',
       'Matières',
       'Skyboxes',
+      'Code',
       'Agrandissement',
       'Détourage',
       'Vectorisation',
