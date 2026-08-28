@@ -1423,9 +1423,6 @@
       "entryScene": "Opening scene",
       "gameTitle": "Game title"
     },
-    "title": "Assistant",
-    "writeHint": "Opens the assistant so you can write what you want done",
-    "stagedHint": "The assistant is already in the middle of the window",
     "listening": "The assistant is listening",
     "done": "The assistant has answered",
     "reviewHint": "Opens the assistant to show what it understood and what it did",
@@ -1434,8 +1431,6 @@
     "placeholder": "Open a 3D file, find a model, prepare a generation…",
     "send": "Send",
     "sendHint": "Sends the sentence to the assistant, which picks the actions and runs them",
-    "close": "Close",
-    "closeHint": "Closes the window without cancelling anything already under way",
     "thinking": "The assistant is thinking…",
     "workingRound": "The assistant is working — step {{round}}",
     "stopping": "Stopping — the studio is finishing what is running…",

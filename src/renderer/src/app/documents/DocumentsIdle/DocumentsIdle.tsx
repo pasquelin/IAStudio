@@ -2,22 +2,16 @@ import type { IWatermarkPanelProps } from 'dockview-react'
 import { useTranslation } from 'react-i18next'
 import { AssistantConversation } from '@/assistant/AssistantConversation/AssistantConversation'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
-import { useAssistant } from '@/stores/assistant'
 import { DocumentsMessage } from '../DocumentsMessage'
 
 /**
  * What the middle of the window holds with no document open: Dockview's watermark, taken down on
- * the first group — so it costs nothing while a document is worked on. Same store as the modal,
- * so a sentence begun here is the one ⌘K opens onto.
+ * the first group — so it costs nothing while a document is worked on. The right column's own
+ * panel is withheld for as long as this stands, so there is one thread and one field on screen.
  */
 export function DocumentsIdle({ group }: IWatermarkPanelProps) {
   const { t } = useTranslation()
   const offer = useAssistantOffer()
-  const overlayUp = useAssistant(state => state.open)
-
-  // The modal is over this and carries the same thread. Rendered anyway, it would put a second
-  // question with a second pair of buttons — and a second focusable field — behind the scrim.
-  if (overlayUp) return null
 
   // Dockview mounts this factory twice over: once for the empty centre, and once per EMPTY GROUP,
   // which `group` is the only way to tell apart. Two of those would be two fields on one draft.

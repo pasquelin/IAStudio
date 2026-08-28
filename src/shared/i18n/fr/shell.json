@@ -18,6 +18,7 @@
     "moveRightHint": "Place cet espace après son voisin de droite dans la barre"
   },
   "panels": {
+    "assistant": "Assistant",
     "layers": "Calques",
     "meshes": "Mailles",
     "lights": "Lumières",

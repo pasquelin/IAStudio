@@ -1,5 +1,5 @@
 import { mdiChatOutline } from '@mdi/js'
-import { useEffect, useRef, type Ref } from 'react'
+import { useEffect, useRef, useState, type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
@@ -15,8 +15,10 @@ import { useAssistant } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
+import { registerDictationTarget } from '@/dictation/destination'
 import { DictationButton } from '@/dictation/DictationButton'
 import { Heard } from '@/dictation/Heard'
+import { registerChatPanel } from '../chatPanel'
 import { ASSISTANT_STARTERS, starterKey } from '../starters'
 import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
@@ -26,21 +28,14 @@ import { CONVERSATION_CARD } from './conversationStyles'
 export type AssistantConversationProps = {
   /** The conversation column, so a host can dismiss on a press outside THIS and not its scrim. */
   ref?: Ref<HTMLDivElement>
-  /** The modal asks for the caret; the idle centre must not, or it eats every studio shortcut. */
-  autoFocus?: boolean
-  /**
-   * Whether this host has claimed the spoken word. The microphone goes where the claim is: shown
-   * without one, a settled sentence falls to the caret — which the button itself just took.
-   */
-  voice?: boolean
 }
 
 /**
- * The conversation: what has been said, what is asked, and the place one writes. Two hosts, one
- * store, one thread. 🛑 Claims nothing — the confirmer, ⌘K and the spoken word belong to the
- * overlay, which is up as long as the shell is.
+ * The conversation: what has been said, what is asked, and the place one writes. Two hosts — the
+ * right column's panel and the empty centre — one store, one thread, never both at once. It
+ * claims the caret while mounted, the spoken word only while read; the confirmer is the shell's.
  */
-export function AssistantConversation({ ref, autoFocus, voice }: AssistantConversationProps) {
+export function AssistantConversation({ ref }: AssistantConversationProps) {
   const { t } = useTranslation()
   const turns = useAssistant(state => state.turns)
   const busy = useAssistant(state => state.busy)
@@ -54,6 +49,16 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
   const workspace = useLayouts(state => state.activeWorkspace)
   const offer = useAssistantOffer()
   const openSection = useSettings(state => state.openSection)
+
+  // Focus IN the block, not on the field: the microphone button is one of its children, and
+  // pressing it must not hand the spoken word back to whatever the caret was in before.
+  const [inside, setInside] = useState(false)
+  /**
+   * A session begun here and still running once the caret has moved on: one dictates with the
+   * hands off the keyboard, so looking at the canvas mid-sentence must not hand the rest of the
+   * sentence to whatever is under the pointer. It falls on its own when the microphone shuts.
+   */
+  const [speaking, setSpeaking] = useState(false)
 
   const thread = useRef<HTMLOListElement>(null)
   /**
@@ -80,6 +85,43 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
   }
 
   useEffect(() => useAssistant.getState().stage(), [])
+
+  // ⌘K and the native menu reach the field through this, wherever the conversation stands. The
+  // two hosts are never up together, so the last to mount is always the one on screen.
+  useEffect(() => registerChatPanel({ focus: () => field.current?.focus() }), [])
+
+  /**
+   * The spoken word, and only for a reader who came HERE to speak. 🛑 Not for as long as the
+   * panel is mounted: it is what an untouched right column draws, so an unconditional claim
+   * would send every dictation of the studio here — the prompt of a generation included.
+   */
+  const heard = inside || (speaking && micOpen)
+  useEffect(() => {
+    useAssistant.setState({ hearing: heard })
+    if (!heard) return
+
+    return registerDictationTarget(text => {
+      const assistant = useAssistant.getState()
+      // While a plan is running the assistant takes no new sentence — but the words were spoken,
+      // and dropping them left no trace at all. They land in the field instead.
+      if (assistant.busy) {
+        assistant.setDraft(assistant.draft === '' ? text : `${assistant.draft} ${text}`)
+        return
+      }
+
+      void assistant.say(text)
+    })
+  }, [heard])
+
+  // Leaving over a live microphone used to leave it running, with the status line quietly
+  // changing to "dictating to the field".
+  useEffect(
+    () => () => {
+      useAssistant.setState({ hearing: false })
+      if (useDictation.getState().state === 'listening') void useDictation.getState().stop()
+    },
+    [],
+  )
 
   /**
    * 🛑 `round` and `asked` as well as `turns`: the working line is the LAST child of the thread
@@ -113,6 +155,12 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
     // already is rather than at the foot of an empty page.
     <div
       ref={ref}
+      onFocus={() => setInside(true)}
+      onBlur={event => {
+        const stays = event.currentTarget.contains(event.relatedTarget)
+        setInside(stays)
+        if (!stays) setSpeaking(micOpen)
+      }}
       className={cn(
         'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-4 p-4',
         turns.length === 0 && 'justify-center',
@@ -153,9 +201,7 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
       {/* The running hypothesis, above the field it will land in. The label is what makes it
           this window's: it says where the words are going, which "Listening…" does not — the
           same microphone dictates into a prompt. */}
-      {voice && micOpen && (
-        <Heard label={t('assistant.listening')} className="shrink-0 px-2 text-xs" />
-      )}
+      {micOpen && <Heard label={t('assistant.listening')} className="shrink-0 px-2 text-xs" />}
 
       {unserved ? (
         // The composer alone, never the thread above it: what is missing is something to ANSWER,
@@ -196,9 +242,6 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
               rows={3}
               value={draft}
               placeholder={t('assistant.placeholder')}
-              // The platform's own, rather than an effect that could never fire twice: the value is
-              // constant per host.
-              autoFocus={autoFocus}
               // While a plan is running: a second sentence would interleave two plans over one
               // generator form, and the question on screen belongs to the first of them.
               disabled={busy}
@@ -222,7 +265,7 @@ export function AssistantConversation({ ref, autoFocus, voice }: AssistantConver
 
               {/* Beside the button it shares a job with: this pair is "how the sentence gets in". */}
               <span className="ml-auto flex items-center gap-2">
-                {voice && <DictationButton variant="header" tooltip={TIP_TOP} />}
+                <DictationButton variant="header" tooltip={TIP_TOP} />
 
                 {/* Where Send was, and never beside it: the same corner the eye already goes to
                     for "act on this", and a chain one cannot stop is one nobody dares start. */}

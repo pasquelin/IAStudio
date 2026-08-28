@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { gitHoldsFolder } from '@shared/domain/git'
 import type { ToolState } from '@/helpers/toolRegistry'
 import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
+import { useDocuments } from '@/stores/documents'
 import { useGit } from '@/stores/git'
+import { useHomeVisible } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 
 /**
@@ -13,6 +15,13 @@ export function useToolState(): ToolState {
   const hasProject = useProject(state => state.project !== null)
   const hasGit = useGit(state => gitHoldsFolder(state.repository))
   const hasCloud = useAccounts(accountsHoldLibrary)
+  const home = useHomeVisible()
+  // Whether the centre holds ANY document, never how many: subscribed to the count, opening a
+  // second tab would re-render every rail group and the shell around Dockview for nothing.
+  const anyDocument = useDocuments(state => Object.keys(state.documents).length > 0)
 
-  return useMemo(() => ({ hasProject, hasGit, hasCloud }), [hasProject, hasGit, hasCloud])
+  return useMemo(
+    () => ({ hasProject, hasGit, hasCloud, centreTaken: home || anyDocument }),
+    [hasProject, hasGit, hasCloud, home, anyDocument],
+  )
 }

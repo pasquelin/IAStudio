@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
 import { definition as assets } from '@/panels/assets'
+import { definition as assistant } from '@/panels/assistant'
 import { definition as explorer } from '@/panels/explorer'
 import { definition as git } from '@/panels/git'
 import { definition as history } from '@/panels/history'
@@ -28,6 +29,7 @@ import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './toolComponents'
  * compile here rather than at a case.
  */
 const PANELS: Record<ToolId, ToolDefinition> = {
+  assistant,
   layers,
   meshes,
   lights,

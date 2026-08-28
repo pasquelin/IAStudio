@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { DEFAULT_ARRANGEMENTS, DEFAULT_OPEN, arrangementOf, useTools } from '@/stores/tools'
 import { useLayouts } from '@/stores/layouts'
-import { revealAssets } from './revealPanel'
+import { useDocuments } from '@/stores/documents'
+import { installDocument } from '@/stores/document-fixtures'
+import { revealAssets, revealTool } from './revealPanel'
 
 beforeEach(() => {
   useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
@@ -58,5 +60,27 @@ describe('revealing the shelf', () => {
     expect(arrangementOf(useTools.getState(), 'image').open).not.toEqual(DEFAULT_OPEN.workspaces)
     expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('assets')
     expect(useTools.getState().focusedZone).toBe('left')
+  })
+})
+
+/**
+ * A panel is not reachable simply because the surface declares one somewhere: the assistant is
+ * withheld while the empty centre stages the same conversation, and naming it in the half anyway
+ * wrote a layout the reader never asked for — then resolved it away and opened the column on the
+ * layers instead. Silently, since every gate is green on a store write nothing draws.
+ */
+describe('revealing a panel the surface is not offering', () => {
+  it('refuses rather than writing it into the half', () => {
+    useDocuments.setState({ documents: {}, activeId: null })
+
+    expect(revealTool('assistant')).toBe(false)
+    expect(arrangementOf(useTools.getState(), 'image').open.right).toBeUndefined()
+  })
+
+  it('opens it once a document holds the centre', () => {
+    installDocument('doc-1', 'image')
+
+    expect(revealTool('assistant')).toBe(true)
+    expect(arrangementOf(useTools.getState(), 'image').open.right?.primary).toBe('assistant')
   })
 })

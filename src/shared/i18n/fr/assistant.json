@@ -1099,7 +1099,7 @@
       },
       "prefabDefine": {
         "title": "Nommer un prefab",
-        "description": "Inscrit une scène du projet dans game.json comme pièce réutilisable, sous le nom donné. Sans document, c\u2019est la scène en face."
+        "description": "Inscrit une scène du projet dans game.json comme pièce réutilisable, sous le nom donné. Sans document, c’est la scène en face."
       },
       "prefabInstantiate": {
         "title": "Instancier un prefab",
@@ -1423,9 +1423,6 @@
       "entryScene": "Scène de départ",
       "gameTitle": "Titre du jeu"
     },
-    "title": "Assistant",
-    "writeHint": "Ouvre l’assistant pour lui écrire ce que vous voulez faire",
-    "stagedHint": "L’assistant est déjà au centre de la fenêtre",
     "listening": "L’assistant vous écoute",
     "done": "L’assistant a répondu",
     "reviewHint": "Ouvre l’assistant sur ce qu’il a compris et sur ce qu’il a fait",
@@ -1434,8 +1431,6 @@
     "placeholder": "Ouvre un fichier 3D, cherche un modèle, prépare une génération…",
     "send": "Envoyer",
     "sendHint": "Envoie la phrase à l’assistant, qui choisit les actions et les exécute",
-    "close": "Fermer",
-    "closeHint": "Referme la fenêtre sans rien annuler de ce qui tourne déjà",
     "thinking": "L’assistant réfléchit…",
     "workingRound": "L’assistant travaille — étape {{round}}",
     "stopping": "Arrêt demandé — le studio finit ce qui tourne…",

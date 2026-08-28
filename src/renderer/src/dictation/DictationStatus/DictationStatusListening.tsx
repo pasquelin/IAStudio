@@ -18,9 +18,9 @@ import { LevelMeter } from '../LevelMeter'
  */
 export function DictationStatusListening() {
   const { t } = useTranslation()
-  // Open IS the claim: the window takes the spoken word for as long as it is up, and nothing
-  // else in the studio does.
-  const toAssistant = useAssistant(state => state.open)
+  // The CLAIM, never the host: the assistant is what an untouched right column draws, so being
+  // on screen would say the words go there while they land in the prompt one is typing.
+  const toAssistant = useAssistant(state => state.hearing)
 
   return (
     <span className="text-accent-ink flex items-center gap-1.5">

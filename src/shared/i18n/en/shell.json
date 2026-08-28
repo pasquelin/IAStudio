@@ -18,6 +18,7 @@
     "moveRightHint": "Puts this space after its right-hand neighbour on the bar"
   },
   "panels": {
+    "assistant": "Assistant",
     "layers": "Layers",
     "meshes": "Meshes",
     "lights": "Lights",

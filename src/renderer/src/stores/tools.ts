@@ -17,8 +17,16 @@ import {
   type ToolSlot,
   type ToolSurface,
   type ToolZone,
+  type ZoneSlots,
 } from '@shared/domain/tool'
 import { isRecord } from '@shared/guards'
+import {
+  firstToolIn,
+  isSolo,
+  shownTools,
+  toolStateOf,
+  type ToolState,
+} from '@/helpers/toolRegistry'
 
 export const MIN_SIZE = 140
 
@@ -27,16 +35,6 @@ export const MIN_CENTER = 240
 
 /** Room a split keeps for the half it is taken from. */
 export const MIN_SPLIT = 100
-
-/**
- * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
- * `null`, it is open on no panel in particular; an id, on the panel the user chose.
- *
- * That third state earns its keep: what is open is stored once for all the sections, while the
- * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
- * the sky in Skyboxes. An id there would impose one section's answer on the other five.
- */
-type ZoneSlots = Partial<Record<ToolSlot, ToolId | null>>
 
 /** Which tool each half of each zone currently shows. */
 export type OpenByZone = Partial<Record<ToolZone, ZoneSlots>>
@@ -50,6 +48,13 @@ type SizesByZone = Partial<Record<ToolZone, number>>
 export type Arrangement = {
   open: OpenByZone
 }
+
+/**
+ * What a zone held before a `solo` panel took it whole. Beside `focusedZone` rather than inside
+ * `arrangements`, which `partialize` writes: a column reopening by itself days later, on an
+ * arrangement nobody remembers making, is not a restoration.
+ */
+export type StashedByZone = Partial<Record<SurfaceFamily, Partial<Record<ToolZone, ZoneSlots>>>>
 
 /**
  * How wide and how tall the frame is — ONE set for the whole studio, where the panels are per
@@ -73,6 +78,8 @@ type ToolsState = {
   lengths: Lengths
   /** Last clicked zone: the one whose rail icon gets accented. */
   focusedZone: ToolZone | null
+  /** What a `solo` panel put away, per family. Never persisted — see `StashedByZone`. */
+  stashed: StashedByZone
   /** Brings a tool up in the half its placement declares, and focuses its zone. */
   show: (surface: ToolSurface, zone: ToolZone, tool: ToolId) => void
   close: (surface: ToolSurface, zone: ToolZone, slot: ToolSlot) => void
@@ -139,9 +146,12 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   },
   home: {
     // Both halves of the left column, as every space has: the projects above, and under them
-    // the one that is open, read as a folder. There is no right column: the account's library
-    // was the only panel that ever stood there, and this screen acts on no document.
+    // the one that is open, read as a folder.
     left: { primary: null, secondary: null },
+    // The upper right, and it alone: the assistant, which this screen serves like every space —
+    // one asks the studio to make something from here more than from anywhere else. There is no
+    // lower right, an inspector having no selection to read on a screen holding no document.
+    right: { primary: null },
     // The band, since 17 August, and it holds one thing: the history of the project that is
     // open. `null` means "the half is there and nothing was chosen", which is what leaves it to
     // the first tool the registry serves — and with no project open, that is no tool at all.
@@ -179,6 +189,103 @@ export function fitZoneSize(size: number, available: number, opposite: number): 
 export function fitSplit(size: number, available: number): number {
   const ceiling = Math.max(MIN_SPLIT, Math.round(available - MIN_SPLIT))
   return clamp(Math.round(size), MIN_SPLIT, ceiling)
+}
+
+/** The panel taking the zone whole right now, or `null` — the zone is shared. */
+function soloShowing(
+  surface: ToolSurface,
+  zone: ToolZone,
+  held: ZoneSlots | undefined,
+  state: ToolState,
+): ToolId | null {
+  const primary = shownTools(held, zone, surface, state).primary
+  return primary !== null && isSolo(primary, surface) ? primary : null
+}
+
+/**
+ * The zone's halves after a panel is brought up, and the remaining stash. Nothing put away means
+ * the solo panel is what an untouched half DRAWS, so the other falls to the first panel SHARING
+ * the zone — left unnamed it would answer with the solo panel and swallow the gesture.
+ */
+function slotsShowing(
+  state: ToolsState,
+  surface: ToolSurface,
+  zone: ToolZone,
+  slot: ToolSlot,
+  tool: ToolId,
+): [ZoneSlots, StashedByZone] {
+  const held = arrangementOf(state, surface).open[zone]
+  if (isSolo(tool, surface)) return [{ [slot]: tool }, withStash(state, surface, zone, held ?? {})]
+
+  const tools = toolStateOf()
+  if (soloShowing(surface, zone, held, tools) === null) {
+    return [{ ...(held ?? {}), [slot]: tool }, state.stashed]
+  }
+
+  // 🛑 Around what the zone already HOLDS, never instead of it: the other half is silenced by the
+  // solo panel, not closed by it, and rebuilding from the shared panel alone shut the inspector.
+  const back = stashOf(state, surface, zone) ?? sharedInstead(held, zone, surface, tools)
+  return [{ ...back, [slot]: tool }, withoutStash(state, surface, zone)]
+}
+
+/** The zone as it stands, with the half the solo panel took given to the first panel sharing it. */
+function sharedInstead(
+  held: ZoneSlots | undefined,
+  zone: ToolZone,
+  surface: ToolSurface,
+  state: ToolState,
+): ZoneSlots {
+  const shared = firstToolIn(zone, 'primary', surface, state, true)
+  const next = { ...(held ?? {}) }
+  if (shared === null) delete next.primary
+  else next.primary = shared
+  return next
+}
+
+/**
+ * The zone's halves after one is closed, and the remaining stash.
+ *
+ * 🛑 Nothing put away closes THAT HALF, never the zone: the solo panel may be silencing a half
+ * the reader chose, and wiping it would take a panel they never asked to close with it.
+ */
+function slotsClosing(
+  state: ToolsState,
+  surface: ToolSurface,
+  zone: ToolZone,
+  slot: ToolSlot,
+): [ZoneSlots, StashedByZone] {
+  const held = arrangementOf(state, surface).open[zone]
+  const leaving = shownTools(held, zone, surface, toolStateOf())[slot]
+  const stashed = stashOf(state, surface, zone)
+
+  if (stashed && leaving !== null && isSolo(leaving, surface)) {
+    return [stashed, withoutStash(state, surface, zone)]
+  }
+
+  const next = { ...(held ?? {}) }
+  delete next[slot]
+  return [next, state.stashed]
+}
+
+function stashOf(state: ToolsState, surface: ToolSurface, zone: ToolZone): ZoneSlots | undefined {
+  return state.stashed[familyOf(surface)]?.[zone]
+}
+
+function withStash(
+  state: ToolsState,
+  surface: ToolSurface,
+  zone: ToolZone,
+  slots: ZoneSlots,
+): StashedByZone {
+  const family = familyOf(surface)
+  return { ...state.stashed, [family]: { ...state.stashed[family], [zone]: slots } }
+}
+
+function withoutStash(state: ToolsState, surface: ToolSurface, zone: ToolZone): StashedByZone {
+  const family = familyOf(surface)
+  const held = { ...state.stashed[family] }
+  delete held[zone]
+  return { ...state.stashed, [family]: held }
 }
 
 /** True once either half holds something: an empty zone takes no room at all. */
@@ -439,6 +546,7 @@ export const useTools = create<ToolsState>()(
       arrangements: DEFAULT_ARRANGEMENTS,
       lengths: DEFAULT_LENGTHS,
       focusedZone: null,
+      stashed: {},
 
       show: (surface, zone, tool) =>
         set(state => {
@@ -448,22 +556,22 @@ export const useTools = create<ToolsState>()(
           const { open } = arrangementOf(state, surface)
           if (open[zone]?.[slot] === tool) return { focusedZone: zone }
 
+          const [slots, stashed] = slotsShowing(state, surface, zone, slot, tool)
           return {
-            arrangements: written(state, surface, {
-              open: { ...open, [zone]: { ...(open[zone] ?? {}), [slot]: tool } },
-            }),
+            arrangements: written(state, surface, { open: { ...open, [zone]: slots } }),
+            stashed,
             focusedZone: zone,
           }
         }),
 
       close: (surface, zone, slot) =>
         set(state => {
-          const next = { ...(arrangementOf(state, surface).open[zone] ?? {}) }
-          delete next[slot]
-          const open = { ...arrangementOf(state, surface).open, [zone]: next }
+          const [slots, stashed] = slotsClosing(state, surface, zone, slot)
+          const open = { ...arrangementOf(state, surface).open, [zone]: slots }
 
           return {
             arrangements: written(state, surface, { open }),
+            stashed,
             focusedZone:
               !isZoneOpen(open, zone) && state.focusedZone === zone ? null : state.focusedZone,
           }
@@ -512,6 +620,9 @@ export const useTools = create<ToolsState>()(
           arrangements: DEFAULT_ARRANGEMENTS,
           lengths: DEFAULT_LENGTHS,
           focusedZone: null,
+          // Left behind, a solo panel closed after a reset would give back the column the reset
+          // had just cleared.
+          stashed: {},
         }),
     }),
     {

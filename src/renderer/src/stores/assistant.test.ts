@@ -57,7 +57,6 @@ beforeEach(() => {
   runConfirmedAction.mockResolvedValue({ ok: true })
   chainCeiling(12)
   useAssistant.setState({
-    open: false,
     turns: [],
     busy: false,
     round: 0,
@@ -201,25 +200,12 @@ describe('saying something to the assistant', () => {
 })
 
 describe('the question asked before anything is engaged', () => {
-  // A question nobody can see is not a question — and one may arrive from outside this window.
-  it('brings the modal up on its own', async () => {
-    const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
-
-    expect(useAssistant.getState().open).toBe(true)
-    useAssistant.getState().answer(false)
-    await expect(asked).resolves.toBe(false)
-  })
-
-  /**
-   * The other half of the same rule: the idle centre stages the very same thread, so throwing the
-   * modal over it moved the reader out of the page they were reading to answer a line already on
-   * their screen.
-   */
-  it('leaves the thread where it is when a surface already shows it', async () => {
+  // Whoever is staging the thread shows it: the shell brings a host up before asking, so the
+  // store's job is to hold the one question and the promise waiting on it.
+  it('waits on the surface staging the thread', async () => {
     const unstage = useAssistant.getState().stage()
     const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
 
-    expect(useAssistant.getState().open).toBe(false)
     expect(useAssistant.getState().asked?.request.action).toBe('generator.submit')
 
     useAssistant.getState().answer(true)
@@ -227,15 +213,21 @@ describe('the question asked before anything is engaged', () => {
     unstage()
   })
 
-  /** Opening a document, going Home or losing the model list all take that surface down. */
-  it('brings the modal up when the surface showing the question goes away', async () => {
+  /**
+   * 🛑 It WAITS rather than being declined: the two hosts hand over in one commit — opening a
+   * document, going Home — and the panel arrives a few frames later, so declining on the way
+   * refused questions nobody had been shown.
+   */
+  it('outlives the surface showing it, for the next one to show', async () => {
     const unstage = useAssistant.getState().stage()
     const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
     unstage()
 
-    expect(useAssistant.getState().open).toBe(true)
-    useAssistant.getState().answer(false)
-    await expect(asked).resolves.toBe(false)
+    expect(useAssistant.getState().asked?.request.action).toBe('generator.submit')
+
+    useAssistant.getState().stage()
+    useAssistant.getState().answer(true)
+    await expect(asked).resolves.toBe(true)
   })
 
   /**
@@ -256,16 +248,6 @@ describe('the question asked before anything is engaged', () => {
 
     useAssistant.getState().answer(true)
     await expect(first).resolves.toBe(true)
-  })
-
-  /** Left unanswered it would hold `busy` for the rest of the session, and spend nothing ever. */
-  it('is declined by closing the modal, never left waiting', async () => {
-    const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
-    useAssistant.getState().hide()
-
-    await expect(asked).resolves.toBe(false)
-    expect(useAssistant.getState().open).toBe(false)
-    expect(useAssistant.getState().asked).toBeNull()
   })
 })
 

@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mountedConfirmer } from '@/assistant/confirm'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { installDocument } from '@/stores/document-fixtures'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { arrangedFor } from '@/stores/tool-fixtures'
@@ -277,20 +279,19 @@ describe('a side column', () => {
 
 describe('the home', () => {
   /**
-   * One column and no band: the montage and the asset strip act on an open document, and the
+   * Two columns and no band: the montage and the asset strip act on an open document, and the
    * home has none. Those zones are not drawn, so neither are their rails.
    */
-  it('draws its one column and neither band', () => {
+  it('draws its two columns and neither band', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Bibliothèque')).not.toBeInTheDocument()
-    // ONE divider — where a workspace has four. The right column went with the account's library,
-    // and a column split needs both halves populated: with no project open the left one holds
-    // the projects alone, so a handle drawn there would drag a cut with nothing on its far side.
-    expect(handles()).toHaveLength(1)
+    // TWO dividers — where a workspace has four: one per column, and no split inside either. A
+    // column split needs both halves populated, and each of these holds one panel.
+    expect(handles()).toHaveLength(2)
   })
 
   /**
@@ -353,8 +354,8 @@ describe('the home', () => {
 
     const { sizes, splits } = useTools.getState().lengths
     expect(sizes.left).toBeDefined()
-    // Nothing writes a right-hand width any more: this surface has one column.
-    expect(sizes.right).toBeUndefined()
+    // The right column came back on 28 August, with the assistant as its only panel.
+    expect(sizes.right).toBeDefined()
     // No split to drag any more, and that is the assertion rather than an omission: the home has
     // one half per column since 13 August, so nothing here writes `splits`.
     expect(splits).toEqual({})
@@ -416,5 +417,53 @@ describe('who is in front', () => {
     }))
 
     expect(homeIsVisible()).toBe(true)
+  })
+})
+
+/**
+ * The confirmer is what every action with a commitment asks before spending, and it used to be
+ * the modal — mounted whether or not it showed. The modal is gone, so nothing but this says the
+ * studio still has one: without it `executor` refuses every such action as `noConfirmer`, and
+ * the whole gate stays green on it.
+ */
+describe('the question asked before anything is engaged', () => {
+  it('has somewhere to be asked for as long as the shell is up', () => {
+    expect(mountedConfirmer()).toBeNull()
+
+    const { unmount } = renderShell()
+    expect(mountedConfirmer()).not.toBeNull()
+
+    unmount()
+    expect(mountedConfirmer()).toBeNull()
+  })
+})
+
+/**
+ * The shape the frame takes IN WORK, which every case above misses: they run with no document
+ * open, the one configuration where the right column still has two halves. With a document in
+ * front the assistant is offered, and it takes the column whole.
+ */
+describe('the right column with a document in front', () => {
+  beforeEach(() => {
+    installDocument('doc-1', 'image')
+  })
+
+  it('is the assistant alone, on an untouched layout', () => {
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    renderShell()
+
+    expect(screen.getByLabelText('Assistant')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Inspecteur')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
+  })
+
+  it('gives the column back to the panel asked for, and keeps the inspector beside it', () => {
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    useTools.getState().show('image', 'right', 'inspector')
+    renderShell()
+
+    expect(screen.queryByLabelText('Assistant')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
+    expect(screen.getByLabelText('Calques')).toBeInTheDocument()
   })
 })

@@ -1,5 +1,11 @@
-import { placementIn, type ToolId, type ToolSurface } from '@shared/domain/tool'
-import { shownTool, toolStateOf } from '@/helpers/toolRegistry'
+import {
+  placementIn,
+  type ToolId,
+  type ToolSlot,
+  type ToolSurface,
+  type ToolZone,
+} from '@shared/domain/tool'
+import { offeredPlacement, shownTools, toolStateOf } from '@/helpers/toolRegistry'
 import { toolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 
@@ -9,9 +15,10 @@ import { arrangementOf, useTools } from '@/stores/tools'
  * band is the montage in three spaces and the history in the other three, and a half that does
  * not match its placement renders a different panel altogether.
  *
- * No placement means this surface does not serve the tool — opening it would accent a rail
- * icon that is not drawn and show nothing. Answered rather than ignored, for the one caller that
- * has to say so: an MCP client naming a panel the surface in front does not carry.
+ * 🛑 OFFERED, not merely placed: a panel withheld by its `requires` would be written into the
+ * half and then resolved away, opening the column on something else entirely. Answered rather
+ * than ignored, for the one caller that has to say so: an MCP client naming a panel the surface
+ * in front does not carry.
  *
  * Already up is only focused, never rewritten: the half may be showing this panel because it is
  * the first one the section declares, and naming it would settle for all six sections a question
@@ -19,11 +26,12 @@ import { arrangementOf, useTools } from '@/stores/tools'
  */
 export function revealTool(tool: ToolId): boolean {
   const surface = toolSurface()
-  const placement = placementIn(tool, surface)
+  const state = toolStateOf()
+  const placement = offeredPlacement(tool, surface, state)
   if (!placement) return false
 
   const tools = useTools.getState()
-  if (toolIsShown(tool, surface)) tools.focus(placement.zone)
+  if (shownIn(tool, surface, placement.zone, placement.slot)) tools.focus(placement.zone)
   else tools.show(surface, placement.zone, tool)
   return true
 }
@@ -36,9 +44,12 @@ export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
   const placement = placementIn(tool, surface)
   if (!placement) return false
 
-  const { zone, slot } = placement
+  return shownIn(tool, surface, placement.zone, placement.slot)
+}
+
+function shownIn(tool: ToolId, surface: ToolSurface, zone: ToolZone, slot: ToolSlot): boolean {
   const { open } = arrangementOf(useTools.getState(), surface)
-  return shownTool(open[zone]?.[slot], zone, slot, surface, toolStateOf()) === tool
+  return shownTools(open[zone], zone, surface, toolStateOf())[slot] === tool
 }
 
 /**
@@ -50,7 +61,7 @@ export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
 export function closeTool(tool: ToolId): boolean {
   const surface = toolSurface()
   const placement = placementIn(tool, surface)
-  if (!placement || !toolIsShown(tool, surface)) return false
+  if (!placement || !shownIn(tool, surface, placement.zone, placement.slot)) return false
 
   useTools.getState().close(surface, placement.zone, placement.slot)
   return true

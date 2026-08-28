@@ -451,8 +451,8 @@ describe('the field that takes what its line has left', () => {
 
 /**
  * The gauge and the room a NAMED control of the title bar takes, which the assistant's entry and
- * the account trigger had each written out. The pills beside them are not this shape and keep
- * their own `gap-2 px-3 py-1`: a pill is as wide as the space it stands for.
+ * the account trigger had each written out before it existed. The pills beside them are not this
+ * shape and keep their own `gap-2 px-3 py-1`: a pill is as wide as the space it stands for.
  */
 const respacesTitleBar = rewrites('TITLE_BAR_GHOST', ['h-(--sc-control)', 'px-2'])
 
@@ -482,13 +482,17 @@ describe('the named control of a title bar', () => {
     expect(respacesTitleBar("cn(TITLE_BAR_GHOST, 'gap-2 px-3 py-1')")).toBe(false)
   })
 
-  // The partner of the rule above: a constant nobody wears is a dead export.
-  it('is worn by the two controls it was extracted from', () => {
+  /**
+   * The partner of the rule above: a constant nobody wears is a dead export. ONE since 28 August,
+   * where it was extracted from two — the assistant's entry left the title bar to become a panel
+   * of the right column.
+   */
+  it('is worn by the control it was extracted for', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('TITLE_BAR_TRIGGER'),
     )
 
-    expect(wearing.length).toBeGreaterThanOrEqual(2)
+    expect(wearing.length).toBeGreaterThanOrEqual(1)
   })
 })
 

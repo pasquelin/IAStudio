@@ -327,10 +327,12 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
   {
     name: '55.5 opens the layers panel',
     said: ['Ouvre le panneau des calques.'],
-    // Closed first: Images opens with its layers panel up, so « ouvre-le » would ask for nothing.
+    // The half is put on ANOTHER of its panels rather than closed: what an untouched right column
+    // draws depends on whether the assistant is offered there, and a decor that leaves the oracle
+    // already true measures nothing at all.
     setup: async studio => {
       await boatImage(studio)
-      await studio.run('panel.close', { panel: 'layers' })
+      await studio.run('panel.open', { panel: 'text' })
     },
     passed: () => toolIsShown('layers', toolSurface()),
   },

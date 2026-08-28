@@ -1,5 +1,6 @@
 import {
   mdiAlertCircleOutline,
+  mdiChatOutline,
   mdiRunFast,
   mdiBookOpenPageVariantOutline,
   mdiCreationOutline,
@@ -19,14 +20,18 @@ import {
   serves,
   TOOL_PLACEMENTS,
   type ToolId,
+  type ToolPlacement,
   type ToolSlot,
   type ToolSurface,
   type ToolZone,
+  type ZoneSlots,
 } from '@shared/domain/tool'
 import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
 import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
+import { useDocuments } from '@/stores/documents'
 import { useGit } from '@/stores/git'
+import { homeIsVisible } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 
 export type Tool = {
@@ -35,9 +40,12 @@ export type Tool = {
   zone: ToolZone
   slot: ToolSlot
   surfaces: readonly ToolSurface[]
+  solo?: true
 }
 
 const ICONS: Record<ToolId, string> = {
+  // The same glyph the title bar wore until the assistant became a panel of its own.
+  assistant: mdiChatOutline,
   layers: mdiLayersOutline,
   // From the scene registry: the rail icon and the panel's own empty state must not drift.
   meshes: NODE_KINDS.mesh.icon,
@@ -116,6 +124,7 @@ export function toolStateOf(): ToolState {
     hasProject: useProject.getState().project !== null,
     hasGit: gitHoldsFolder(useGit.getState().repository),
     hasCloud: accountsHoldLibrary(useAccounts.getState()),
+    centreTaken: homeIsVisible() || Object.keys(useDocuments.getState().documents).length > 0,
   }
 }
 
@@ -123,6 +132,11 @@ export function toolStateOf(): ToolState {
 export type ToolState = {
   /** A project folder open, which is what the Explorer reads. */
   hasProject: boolean
+  /**
+   * The centre holding anything but the conversation — a document, or the home page, which has
+   * no Dockview at all. False means the empty centre is staging the thread itself.
+   */
+  centreTaken: boolean
   /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
   hasGit: boolean
   /**
@@ -148,16 +162,16 @@ function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   // asynchronously, so a project just closed still reads `ready` until the next status lands.
   if (requires === 'git') return state.hasProject && state.hasGit
   if (requires === 'cloud') return state.hasCloud
+  if (requires === 'centreTaken') return state.centreTaken
   return true
 }
 
 /**
- * `undefined` for a closed half, `null` for one open on no panel in particular, an id for one the
- * user chose. Three substitutions — an unchosen half falls to the section's first panel, a half
- * holding a tool the section puts elsewhere shows what it does put there, a generator with no
- * model gives way to Models — and none of them touches the persisted state.
+ * One half, resolved: `undefined` is closed, `null` is open on no panel in particular, an id is
+ * one the user chose. 🛑 Private — it cannot see the other half, so it does not know a `solo`
+ * panel is silencing this one. Every reader goes through `shownTools`.
  */
-export function shownTool(
+function shownTool(
   tool: ToolId | null | undefined,
   zone: ToolZone,
   slot: ToolSlot,
@@ -179,17 +193,59 @@ export function shownTool(
   return firstToolIn(zone, slot, surface, state)
 }
 
-/** The panel a section puts first in a half — what an unchosen half shows, and the fallback. */
-function firstToolIn(
+/** What a zone's halves hold, once resolved. `null` where the half draws nothing at all. */
+export type ShownTools = { primary: ToolId | null; secondary: ToolId | null }
+
+/**
+ * Both halves at once, because one can silence the other: a `solo` panel takes the zone WHOLE.
+ * Resolved here rather than in each of the three readers, two of which would contradict it.
+ */
+export function shownTools(
+  slots: ZoneSlots | undefined,
+  zone: ToolZone,
+  surface: ToolSurface,
+  state: ToolState,
+): ShownTools {
+  const primary = shownTool(slots?.primary, zone, 'primary', surface, state)
+  if (primary !== null && isSolo(primary, surface)) return { primary, secondary: null }
+
+  return { primary, secondary: shownTool(slots?.secondary, zone, 'secondary', surface, state) }
+}
+
+/** Whether this panel takes its zone whole where it stands. */
+export function isSolo(id: ToolId, surface: ToolSurface): boolean {
+  return placementIn(id, surface)?.solo === true
+}
+
+/**
+ * The panel a section puts first in a half — what an unchosen half shows, and the fallback.
+ * `sharing` skips the one taking the zone whole, which a half falling back beside it would
+ * otherwise answer with again, swallowing the gesture just made.
+ */
+export function firstToolIn(
   zone: ToolZone,
   slot: ToolSlot,
   surface: ToolSurface,
   state: ToolState,
+  sharing = false,
 ): ToolId | null {
   const first = toolsInZone(zone, surface).find(
-    candidate => candidate.slot === slot && canOffer(candidate.id, surface, state),
+    candidate =>
+      candidate.slot === slot &&
+      !(sharing && candidate.solo) &&
+      canOffer(candidate.id, surface, state),
   )
   return first ? first.id : null
+}
+
+/** Where the panel sits on this surface, or `null` where it is not on offer right now. */
+export function offeredPlacement(
+  id: ToolId,
+  surface: ToolSurface,
+  state: ToolState,
+): ToolPlacement | null {
+  const placement = placementIn(id, surface)
+  return placement && canOffer(id, surface, state) ? placement : null
 }
 
 /**
