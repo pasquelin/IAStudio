@@ -75,8 +75,22 @@ function scalarSchema(field: ActionField): ScalarSchema {
     ...(type ? { type } : {}),
     description: englishText(field.labelKey),
     ...closed,
-    ...(field.min === undefined ? {} : { minimum: field.min }),
-    ...(field.max === undefined ? {} : { maximum: field.max }),
+    ...boundsOf(field, type),
+  }
+}
+
+/**
+ * 🛑 `minimum`/`maximum` are NUMERIC keywords: emitted on a `{type: 'string'}` they are ignored by
+ * every validator, so the contract announced a bound nobody applied. A string is bounded by
+ * `maxLength`, and `min`/`max` on a text field mean a length — that is what `fits` reads too.
+ */
+function boundsOf(field: ActionField, type: string | undefined): Record<string, number> {
+  const bounded =
+    type === 'string' ? { min: 'minLength', max: 'maxLength' } : { min: 'minimum', max: 'maximum' }
+
+  return {
+    ...(field.min === undefined ? {} : { [bounded.min]: field.min }),
+    ...(field.max === undefined ? {} : { [bounded.max]: field.max }),
   }
 }
 

@@ -193,7 +193,8 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
 
         for (const one of rest) {
           // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
-          const patch: MemoryPatch = { state: 'archived', links: [...one.links, keeper.id] }
+          // `linkTo` and not `links`: the union is computed in the store, over what stands there.
+          const patch: MemoryPatch = { state: 'archived', linkTo: [keeper.id] }
           if (await amendedIn(scope, one.id, patch)) done += 1
         }
       }

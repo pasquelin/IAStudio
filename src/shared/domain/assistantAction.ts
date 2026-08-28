@@ -554,6 +554,10 @@ export const refused = (refusal: ActionRefusal, detail?: string): ActionOutcome 
  * something else has already refused, so a lone `<path_id>` used to reach the handler and come
  * back as `notFound` — a hunt for a node whose name was never a name.
  */
+const withinLength = (field: ActionField, value: string): boolean =>
+  (field.min === undefined || value.length >= field.min) &&
+  (field.max === undefined || value.length <= field.max)
+
 function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
     case 'text':
@@ -565,7 +569,11 @@ function fits(field: ActionField, value: unknown): boolean {
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&
         !PLACEHOLDER.test(value) &&
-        (!field.options || field.options.includes(value))
+        (!field.options || field.options.includes(value)) &&
+        // 🛑 A LENGTH on a text field, and it was applied by nobody: an over-long summary reached
+        // the main process, zod threw there, and the client got a refusal naming no field to
+        // repair — so it retried the same call. `tools.ts` publishes it as `maxLength`.
+        withinLength(field, value)
       )
     // Apart from the strings, because every reader of a colour falls back SILENTLY on a value it
     // cannot parse — the paint never took, and the caller was told it did.

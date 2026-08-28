@@ -48,6 +48,19 @@ export function frontTargets(): DocumentTargets | null {
   return kind === undefined ? null : TARGETS_BY_KIND[kind]
 }
 
+/**
+ * The document in front, as an id and a path — what a memory is anchored by.
+ *
+ * `null` on a home screen. Here rather than in `memoryHandlers` because this file already owns
+ * the one reading of « what is in front », and a second one is free to disagree with it.
+ */
+export function frontDocument(): { id: string; path: string } | null {
+  const { activeId, documents } = useDocuments.getState()
+  const held = activeId === null ? undefined : documents[activeId]
+
+  return held === undefined ? null : { id: held.id, path: held.path }
+}
+
 /** Aiming, whichever space holds the document. `target.select` is the one spoken door to it. */
 export function aimAt(id: string): ActionOutcome {
   return frontTargets()?.select(id) ?? refused('wrongSurface')

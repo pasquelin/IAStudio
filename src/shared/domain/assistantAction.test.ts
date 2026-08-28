@@ -91,6 +91,18 @@ describe('an input, checked against the fields that declare it', () => {
   })
 
   /**
+   * 🛑 A `max` on a text field is a LENGTH, and it was applied by nobody: an over-long value went
+   * through to the main process, zod threw there, and the client got a refusal naming no field to
+   * repair — so it retried the same call. `tools.ts` publishes it as `maxLength`.
+   */
+  it('holds a text field to the length its registry declares', () => {
+    const fields = [field({ key: 'summary', kind: 'text', required: true, max: 5 })]
+
+    expect(validatesInput(fields, { summary: 'short' })).toBe(true)
+    expect(validatesInput(fields, { summary: 'far too long' })).toBe(false)
+  })
+
+  /**
    * `raw` carries a generation model's own parameters, whose shape is only known once
    * `GET /models/{id}` has answered. Anything defined is therefore in bounds — and `null` is
    * defined, which is what a client sends to clear a value.

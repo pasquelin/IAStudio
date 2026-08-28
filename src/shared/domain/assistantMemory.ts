@@ -179,6 +179,14 @@ export type MemoryPatch = {
   refs?: readonly MemoryRef[]
   links?: readonly string[]
   state?: MemoryState
+  /**
+   * Ids to ADD to the links a memory already holds, rather than replace them with.
+   *
+   * 🛑 A caller that read a memory, appended one id and wrote the list back lost whatever another
+   * window — or a merge — had linked in between, without a word. The union is computed inside the
+   * store's write queue, where nothing else can be writing.
+   */
+  linkTo?: readonly string[]
 }
 
 /**
@@ -200,6 +208,25 @@ export type MemoryIndexing = {
   scope: MemoryScope
   done: number
   total: number
+}
+
+/**
+ * What is in front, as anchors — the document's own path and its id.
+ *
+ * 🛑 `anchored` is the strongest voice of `recallScore` (weight 1, « it is not a guess »), and it
+ * answers nothing unless something fills `refs`. Composed here rather than in the window so the
+ * shape a recall is anchored by and the shape `MEMORY_WORTH` writes cannot drift apart: a script
+ * remembered under `{kind: 'file'}` has to be findable by the same kind.
+ */
+export function anchorsOf(front: { id: string; path: string } | null): readonly MemoryRef[] {
+  if (front === null) return []
+
+  return front.path === ''
+    ? [{ kind: 'document', ref: front.id }]
+    : [
+        { kind: 'file', ref: front.path },
+        { kind: 'document', ref: front.id },
+      ]
 }
 
 /**

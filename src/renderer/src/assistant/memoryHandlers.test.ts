@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MEMORY_BODY_MAX, MEMORY_SUMMARY_MAX, type Memory } from '@shared/domain/assistantMemory'
+import type { Memory } from '@shared/domain/assistantMemory'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useDocuments } from '@/stores/documents'
 import { MEMORY_HANDLERS } from './memoryHandlers'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
@@ -34,9 +35,45 @@ describe('what a client reaches the memory by', () => {
 
     expect(recall).toHaveBeenCalledWith('project', {
       text: 'à quoi sert le script CameraRig ?',
+      refs: [],
       limit: 10,
     })
     expect(list).not.toHaveBeenCalled()
+  })
+
+  /**
+   * 🛑 `anchored` is the strongest voice of the ranking — weight 1, « it is not a guess » — and
+   * nothing else in the studio fills it: a recall that did not carry what is in front scored on
+   * words and meaning alone, and the weight never answered once in production.
+   */
+  it('anchors the question on the document in front', async () => {
+    const recall = vi.fn(() => Promise.resolve([]))
+    installFakeBridge({ memory: { recall } })
+    useDocuments.setState({
+      activeId: 'd_1',
+      documents: { d_1: { id: 'd_1', path: 'Scripts/CameraRig.ts' } as never },
+    })
+
+    await run('memory.recall', { query: 'the rail' })
+
+    expect(recall).toHaveBeenCalledWith('project', {
+      text: 'the rail',
+      refs: [
+        { kind: 'file', ref: 'Scripts/CameraRig.ts' },
+        { kind: 'document', ref: 'd_1' },
+      ],
+      limit: 10,
+    })
+  })
+
+  it('carries no anchor on a home screen', async () => {
+    const recall = vi.fn(() => Promise.resolve([]))
+    installFakeBridge({ memory: { recall } })
+    useDocuments.setState({ activeId: null, documents: {} })
+
+    await run('memory.recall', { query: 'the rail' })
+
+    expect(recall).toHaveBeenCalledWith('project', { text: 'the rail', refs: [], limit: 10 })
   })
 
   /**
@@ -75,22 +112,5 @@ describe('what a client reaches the memory by', () => {
 
   it('refuses a recall with no question in it', async () => {
     expect(await run('memory.recall', {})).toEqual({ ok: false, refusal: 'badInput' })
-  })
-
-  /**
-   * 🛑 `fits` does not enforce `max` on a text field, so an over-long value reached the main
-   * process, `parseMemoryDraft` threw, and the client got a catch-all refusal naming no field —
-   * which it then retried with the same value.
-   */
-  it('refuses a summary or a body longer than the store takes, by name', async () => {
-    const remember = vi.fn(() => Promise.resolve(memory()))
-    installFakeBridge({ memory: { remember } })
-
-    const tooLong = { type: 'decision', summary: 'x'.repeat(MEMORY_SUMMARY_MAX + 1) }
-    expect(await run('memory.write', tooLong)).toEqual({ ok: false, refusal: 'badInput' })
-
-    const bigBody = { type: 'decision', summary: 'x', body: 'y'.repeat(MEMORY_BODY_MAX + 1) }
-    expect(await run('memory.write', bigBody)).toEqual({ ok: false, refusal: 'badInput' })
-    expect(remember).not.toHaveBeenCalled()
   })
 })

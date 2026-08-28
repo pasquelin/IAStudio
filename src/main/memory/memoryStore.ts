@@ -308,7 +308,13 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
         const held = index.read(id)
         if (held === null) return null
 
-        const amended: Memory = { ...held, ...patch }
+        const { linkTo, ...replacing } = patch
+        const amended: Memory = {
+          ...held,
+          ...replacing,
+          // Added to what stands at THIS point of the queue, so a link written meanwhile survives.
+          ...(linkTo === undefined ? {} : { links: [...new Set([...held.links, ...linkTo])] }),
+        }
         await append(amended)
         if (isReadable(amended)) index.put(amended)
         else index.remove(amended.id)

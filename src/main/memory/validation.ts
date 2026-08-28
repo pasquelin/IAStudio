@@ -77,6 +77,7 @@ const memoryPatch = z.object({
   refs: z.array(memoryRef).optional(),
   links: z.array(z.string().min(1)).optional(),
   state: z.enum(MEMORY_STATES).optional(),
+  linkTo: z.array(z.string().min(1)).optional(),
 })
 
 /** Bounded here rather than trusted: a window asking for every memory at once is a frozen window. */

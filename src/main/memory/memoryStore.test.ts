@@ -243,6 +243,33 @@ describe('changing what a memory says', () => {
     expect(parseMemoryId('m_1')).toBe('m_1')
   })
 
+  /**
+   * 🛑 A caller that read a memory, appended one id and wrote the list back lost whatever another
+   * window — or a merge — had linked in between, without a word. The union is computed inside the
+   * write queue, so both links survive whatever order they arrive in.
+   */
+  it('adds a link to what stands, rather than to what the caller had read', async () => {
+    await store.remember(draft())
+
+    // Two writers who each read `links: []` and each add one id.
+    const [first, second] = await Promise.all([
+      store.amend('m_1', { linkTo: ['m_other'] }),
+      store.amend('m_1', { linkTo: ['m_third'] }),
+    ])
+
+    expect(first?.links.length).toBeLessThan(2)
+    expect(second?.links).toEqual(['m_other', 'm_third'])
+    expect((await store.read('m_1'))?.links).toEqual(['m_other', 'm_third'])
+  })
+
+  it('adds a link once, however many times it is asked for', async () => {
+    await store.remember(draft())
+    await store.amend('m_1', { linkTo: ['m_other'] })
+    await store.amend('m_1', { linkTo: ['m_other'] })
+
+    expect((await store.read('m_1'))?.links).toEqual(['m_other'])
+  })
+
   it('writes the whole memory again rather than a difference', async () => {
     await store.remember(draft())
     await store.amend('m_1', { state: 'pinned' })

@@ -1,8 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
-  MEMORY_BODY_MAX,
+  anchorsOf,
   MEMORY_PAGE,
-  MEMORY_SUMMARY_MAX,
   MEMORY_TYPES,
   type Memory,
   type MemoryDraft,
@@ -10,6 +9,7 @@ import {
   type MemoryType,
 } from '@shared/domain/assistantMemory'
 import { memoryBridge } from '@/services/bridge'
+import { frontDocument } from './documentTargets'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
 
@@ -63,6 +63,10 @@ async function recall(input: Record<string, unknown>): Promise<ActionOutcome> {
 
   const memories = await memoryBridge()?.recall('project', {
     text: query,
+    // 🛑 What is in front travels with the question: `anchored` is the strongest voice of the
+    // ranking, and nothing else in the studio fills it — a recall without this scores on words
+    // and meaning alone, and the weight written as « it is not a guess » never answers.
+    refs: anchorsOf(frontDocument()),
     limit: Math.min(numberOf(input, 'limit') ?? 10, MEMORY_PAGE),
   })
 
@@ -83,14 +87,9 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   const type = textOf(input, 'type')
   const summary = textOf(input, 'summary')
   if (type === null || !isType(type) || summary === null) return refused('badInput')
-  // 🛑 Bounded HERE: `fits` does not enforce `max` on a text field, so an over-long value reached
-  // the main process, `parseMemoryDraft` threw, and the client got a catch-all refusal naming no
-  // field — which it then retried with the same value.
-  if (summary.length > MEMORY_SUMMARY_MAX) return refused('badInput')
 
   const file = textOf(input, 'file')
   const body = textOf(input, 'body')
-  if (body !== null && body.length > MEMORY_BODY_MAX) return refused('badInput')
   const draft: MemoryDraft = {
     type,
     summary,
@@ -125,14 +124,10 @@ async function link(input: Record<string, unknown>): Promise<ActionOutcome> {
   const to = textOf(input, 'toMemoryId')
   if (id === null || to === null) return refused('badInput')
 
-  const held = await memoryBridge()?.read('project', id)
-  if (!held) return refused('notFound')
-  if (held.links.includes(to)) return { ok: true }
-
-  const amended = await memoryBridge()?.amend('project', id, {
-    links: [...held.links, to],
-  })
-  return amended ? { ok: true } : refused('failed')
+  // 🛑 ONE call, and the union is computed in the store's write queue. Read-then-write across the
+  // boundary lost whatever the other window — or a merge — had linked in between.
+  const amended = await memoryBridge()?.amend('project', id, { linkTo: [to] })
+  return amended ? { ok: true } : refused('notFound')
 }
 
 export const MEMORY_HANDLERS: ActionHandlers = {
