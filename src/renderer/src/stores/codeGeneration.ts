@@ -1,3 +1,6 @@
+import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
+import type { Job } from '@shared/domain/job'
+import type { LandingTarget } from '@shared/domain/landingTarget'
 import { reportNotice } from '@/services/diagnostics'
 import { createLandingClaims, landingInto } from './generationLanding'
 import { useJobs } from './jobs'
@@ -29,7 +32,27 @@ async function putScript(documentId: string | null, source: string): Promise<voi
  */
 const claims = createLandingClaims('script')
 
-export const claimScriptOnSubmit = claims.claimOnSubmit
+/**
+ * The landing chunk, fetched while the model is still writing: 1 251 ms cold against 0,056 ms
+ * once a two-second generation has run, measured. A failure changes nothing — `putScript` retries.
+ */
+async function warmLanding(): Promise<void> {
+  try {
+    await import('@/spaces/code/landScript')
+  } catch {
+    // Said by `putScript`, which is where a person can act on it.
+  }
+}
+
+export const claimScriptOnSubmit = (
+  into?: LandingTarget,
+  role: AiRoleId | null = null,
+): ((job: Job | null) => void) => {
+  // 🛑 Gated on the FAMILY: a claim is fanned out to all seven spaces, and this chunk pulls
+  // `app/newDocument` with the scene stack behind it.
+  if (role !== null && partsOfRole(role)?.family === 'code') void warmLanding()
+  return claims.claimOnSubmit(into)
+}
 
 export function connectCodeGeneration(): () => void {
   return claims.connect(settled => {

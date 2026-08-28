@@ -1,6 +1,7 @@
 import { findActions, refused, type ActionOutcome } from '@shared/domain/assistant'
 import { commandDescriptor } from '@shared/domain/command'
 import { primaryRoleOf } from '@shared/domain/aiRole'
+import { LANDING_TARGETS } from '@shared/domain/landingTarget'
 import { MODEL_FAMILIES } from '@shared/domain/model'
 import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -48,7 +49,7 @@ function runCommand(input: Record<string, unknown>): ActionOutcome {
   return ROUTED[routeCommand(descriptor.id)]
 }
 
-async function submitPrepared(): Promise<ActionOutcome> {
+async function submitPrepared(input: Record<string, unknown>): Promise<ActionOutcome> {
   const generator = mountedGenerator()
   if (!generator) {
     // Opened rather than merely refused: the next attempt then has somewhere to land, and the
@@ -57,10 +58,27 @@ async function submitPrepared(): Promise<ActionOutcome> {
     return refused('generatorClosed')
   }
 
-  if (!generator.body()) return refused('nothingPrepared')
+  const armed = generator.armed()
+  if (!armed) return refused('nothingPrepared')
 
-  const job = await generator.submit()
-  return job ? { ok: true, data: { jobId: job.id } } : refused('notSubmitted')
+  // 🛑 What the call names, else what the panel shows — and a refusal rather than a default
+  // where the studio itself would have asked. Its options travel in `detail`, the half a client
+  // reads: a refusal naming nothing was sent again word for word 384 times on 2026-08-25.
+  const into = oneOf(input, 'landing', LANDING_TARGETS) ?? armed.landing.target
+  if (into === null) {
+    return refused('ambiguousLanding', `name landing: one of ${LANDING_TARGETS.join(', ')}`)
+  }
+
+  const job = await generator.submit(into)
+  return job ? { ok: true, data: { jobId: job.id, landing: into } } : refused('notSubmitted')
+}
+
+/** What is armed, before a call may quote a cost or spend one — model, operation, sources, where. */
+function armedGeneration(): ActionOutcome {
+  const armed = mountedGenerator()?.armed()
+  if (!armed) return refused('generatorClosed')
+
+  return { ok: true, data: armed }
 }
 
 function prepareGenerator(input: Record<string, unknown>): ActionOutcome {
@@ -68,7 +86,12 @@ function prepareGenerator(input: Record<string, unknown>): ActionOutcome {
   const parameters = recordOf(input, 'parameters')
   if (!family || !parameters) return refused('badInput')
 
-  openGeneratorOn(family, textOf(input, 'modelId') ?? '', parameters)
+  openGeneratorOn(
+    family,
+    textOf(input, 'modelId') ?? '',
+    parameters,
+    textOf(input, 'operation') ?? undefined,
+  )
   return { ok: true }
 }
 
@@ -161,6 +184,7 @@ export const CORE_HANDLERS: ActionHandlers = {
   'actions.find': findInCatalogue,
   'workspace.open': openWorkspace,
   'generator.prepare': prepareGenerator,
+  'generator.armed': armedGeneration,
   'generator.submit': submitPrepared,
   'prompt.suggest': suggestPrompts,
   'prompt.describeStyle': describeStyle,

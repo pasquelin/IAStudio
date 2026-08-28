@@ -43,6 +43,11 @@ export type JobRunner = {
   submit: (target: JobTarget, body: Record<string, unknown>) => Promise<RemoteJob>
   poll: (jobId: string) => Promise<RemoteJob>
   cancel: (jobId: string) => Promise<void>
+  /**
+   * The manager has the outcome and will never poll this one again — whatever the runner kept to
+   * answer with may go. Optional: a runner that keeps nothing has nothing to release.
+   */
+  forget?: (jobId: string) => void
 }
 
 /**
@@ -485,6 +490,10 @@ export function createJobManager({
     const awaiting = entry.settled
     entry.settled = null
     entry.body = {}
+    // 🛑 HERE and not on the poll that answered: `follow` leaves without settling when the
+    // project changed under it, and the resume that follows polls the SAME job again — a runner
+    // that had let go of its answer would settle it succeeded with nothing.
+    if (entry.remoteId !== null) entry.account?.runner.forget?.(entry.remoteId)
     // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
     // agent and its sockets, and a finished job would keep a switched-away account's alive for
     // the rest of the session. `execute` holds its own reference, and `cancel` returns before

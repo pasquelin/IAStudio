@@ -1,5 +1,6 @@
 import { action, type ActionCommitment, type AssistantAction } from './assistantAction'
 import { COMMAND_REGISTRY, type CommandId } from './command'
+import { LANDING_TARGETS } from './landingTarget'
 import { MODEL_FAMILIES } from './model'
 import { WORKSPACE_IDS } from './workspace'
 
@@ -138,10 +139,32 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         options: MODEL_FAMILIES,
       },
       { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
+      /**
+       * 🛑 The employment, since a family alone names its FIRST — so `code` armed `txt2code` and
+       * a call could never reach `code2code`, which is what « rewrite this script » is.
+       *
+       * `text` rather than a closed set of the twenty-five: only the named family's own are
+       * valid, so nine listings out of ten would be wrong, and the narrow briefing pays 8 000
+       * characters for eleven actions. An employment the family does not declare is ignored.
+       */
+      { key: 'operation', kind: 'text', labelKey: 'assistant.fields.operation', required: false },
       // `raw`, because the shape is the target model's own and is only known once
       // `GET /models/{id}` has answered — which `model.schema` is there to ask.
       { key: 'parameters', kind: 'raw', labelKey: 'assistant.fields.parameters', required: true },
     ],
+  }),
+  /**
+   * 🛑 `mcp`, not `both`: the brain in the window SEES the panel, where a client outside it has
+   * only this to read the destination from before it spends. Out of the short list, never out of
+   * reach — and the narrow briefing is 8 000 characters that the catalogue never gives ground on.
+   */
+  action({
+    name: 'generator.armed',
+    titleKey: 'assistant.actions.generatorArmed.title',
+    descriptionKey: 'assistant.actions.generatorArmed.description',
+    commitment: 'none',
+    reach: 'mcp',
+    fields: [],
   }),
   action({
     name: 'generator.submit',
@@ -149,7 +172,15 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.generatorSubmit.description',
     commitment: 'credits',
     reach: 'both',
-    fields: [],
+    fields: [
+      {
+        key: 'landing',
+        kind: 'choice',
+        labelKey: 'assistant.fields.landing',
+        required: false,
+        options: LANDING_TARGETS,
+      },
+    ],
   }),
   action({
     name: 'jobs.list',

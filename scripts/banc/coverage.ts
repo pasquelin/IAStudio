@@ -24,7 +24,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'workspace.open': ['5.1', '5.2', '5.3'],
   'models.search': ['20.1'],
   'models.select': ['20.1'],
-  'generator.prepare': ['20.1', '22.1', '66.1', '66.2'],
+  'generator.prepare': ['20.1', '22.1', '66.1', '66.2', '66.3', '66.4'],
+  'generator.armed': ['66.3'],
   'generator.submit': [
     '20.1',
     '20.3',
@@ -37,6 +38,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
     '24.10',
     '66.1',
     '66.2',
+    '66.4',
   ],
   'jobs.list': ['44.1'],
   'prompt.suggest': ['45.5'],

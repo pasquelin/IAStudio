@@ -19,11 +19,15 @@
       },
       "generatorPrepare": {
         "title": "Prepare a generation",
-        "description": "Fills the Generator’s form with a model and its parameters, then shows it. Nothing is sent, and the generation is still to be started."
+        "description": "Fills the Generator’s form with a model and its parameters, then shows it. Nothing is sent."
+      },
+      "generatorArmed": {
+        "title": "Read what is armed",
+        "description": "Answers the Generator’s model, operation, sources and destination as it stands. Sends nothing and spends nothing."
       },
       "generatorSubmit": {
         "title": "Start the prepared generation",
-        "description": "Sends the form as it stands on screen. Spends creative units, whose estimate is stated before anything is committed."
+        "description": "Sends the form as it stands. Spends creative units, whose estimate is stated first."
       },
       "jobsList": {
         "title": "List the jobs",
@@ -1120,6 +1124,7 @@
       "noWindow": "No studio window was in front to run that action.",
       "timedOut": "The request stood on screen unanswered, and was given up on.",
       "noReference": "The form carries no reference image to read a style from.",
+      "ambiguousLanding": "Two destinations are possible and the studio would have asked. Name one: the wrong choice writes over an open file.",
       "formChanged": "The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure.",
       "notFound": "Nothing of that name is there to act on. The call itself was well formed.",
       "notAllowed": "The studio does not let a call from outside change that. Only its own window does.",
@@ -1139,7 +1144,9 @@
       "query": "Keywords",
       "family": "Generation family",
       "modelId": "Model identifier",
+      "operation": "Employment, e.g. code2code",
       "parameters": "Model parameters",
+      "landing": "Where the result goes",
       "draft": "Sentence to rework",
       "text": "Text to translate",
       "documentId": "Document identifier",

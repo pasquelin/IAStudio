@@ -215,7 +215,9 @@ export const generated =
   (family: string, modelId: string, prompt: string) =>
   async (studio: Studio): Promise<void> => {
     await studio.run('generator.prepare', { family, modelId, parameters: { prompt } })
-    await studio.run('generator.submit', {})
+    // 🛑 Named, as a call from outside now has to be when the studio would have ASKED: the decor
+    // wants the result in the document it just laid out, and a refusal here lays out nothing.
+    await studio.run('generator.submit', { landing: 'document' })
   }
 
 export const madeCar = generated('image', 'model-image', 'a red sports car')

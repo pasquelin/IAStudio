@@ -24,6 +24,7 @@ export type ActionName =
   | 'models.search'
   | 'models.select'
   | 'generator.prepare'
+  | 'generator.armed'
   | 'generator.submit'
   | 'jobs.list'
   | 'prompt.suggest'
@@ -459,6 +460,11 @@ export type ActionRefusal =
   | 'timedOut'
   /** Nothing to read a style from: the form carries no reference picture. */
   | 'noReference'
+  /**
+   * Two destinations, and the studio would have asked. Named rather than guessed: the wrong one
+   * writes over a file somebody is editing — the options travel in the outcome's `data`.
+   */
+  | 'ambiguousLanding'
   /** The form moved between the figure being quoted and the yes. What was priced is what goes. */
   | 'formChanged'
   /** Well formed, and its target is not there. A client told `badInput` retries the parameters. */
@@ -484,6 +490,7 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'noWindow',
   'timedOut',
   'noReference',
+  'ambiguousLanding',
   'formChanged',
   'notFound',
   'notAllowed',

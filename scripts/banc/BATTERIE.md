@@ -157,7 +157,7 @@ Ces comptes portent sur les **runs RATÉS seuls** — le rapport n'imprime la ch
   changé de forme plutôt que de disparaître : le modèle écrit maintenant des noms de VARIABLE nus —
   `nodeId=rimLightId`, `shotId=shotId`, `assetIds=asset-4`. 🛑 **Non comparable aux 23 d'avant** :
   cinq passes de 192 scénarios à un run contre une passe de 364 à trois runs.
-- **Non mesuré** : « il écrit une valeur absolue là où la phrase dit *de plus* ». Le compter
+- **Non mesuré** : « il écrit une valeur absolue là où la phrase dit _de plus_ ». Le compter
   demande de croiser chaque énoncé avec son état de départ, ce que le log ne porte pas.
 
 ### Trois nids de refus, et aucun n'est la faute du modèle
@@ -958,3 +958,5 @@ fait écrire par un **modèle** — un cloud de discussion ou un modèle de code
 
 - [ ] « Fais écrire par un modèle un script qui fait tourner l'objet. »
 - [ ] « Demande au modèle de réécrire ce script pour qu'il aille deux fois plus vite. »
+- [ ] « Avant de dépenser quoi que ce soit, dis-moi ce qui est armé dans le générateur. »
+- [ ] « Fais écrire un nouveau script de saut, sans toucher à celui qui est ouvert. »

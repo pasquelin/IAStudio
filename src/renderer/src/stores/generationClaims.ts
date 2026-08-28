@@ -1,7 +1,8 @@
+import type { AiRoleId } from '@shared/domain/aiRole'
 import { DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
 import type { Job } from '@shared/domain/job'
 import { activeIdOfKind, useDocuments } from './documents'
-import type { LandingTarget } from './generationLanding'
+import type { LandingTarget } from '@shared/domain/landingTarget'
 import { claimAudioOnSubmit } from './audioGeneration'
 import { claimImageOnSubmit } from './imageGeneration'
 import { claimModelOnSubmit } from './modelGeneration'
@@ -17,7 +18,13 @@ import { claimScriptOnSubmit } from './codeGeneration'
  * `Record<DocumentKind, …>` so the compiler asks for the seventh workspace's line rather than a
  * test noticing it later. The generator serves all of them and knows none.
  */
-const CLAIMS: Record<DocumentKind, ((into?: LandingTarget) => (job: Job | null) => void) | null> = {
+type Claim = (into: LandingTarget | undefined, role: AiRoleId | null) => (job: Job | null) => void
+
+/**
+ * The employment is carried beside the destination because one workspace ACTS on it: a claim is
+ * fanned out to all seven at once, so the Code space is told about an image generation too.
+ */
+const CLAIMS: Record<DocumentKind, Claim | null> = {
   skybox: claimSkyboxOnSubmit,
   image: claimImageOnSubmit,
   scene: claimModelOnSubmit,
@@ -31,10 +38,13 @@ const CLAIMS: Record<DocumentKind, ((into?: LandingTarget) => (job: Job | null) 
  * Every workspace claimed in one call. Both halves are fanned out together, or a claim taken by
  * one space and settled by another would drop the result in the wrong tab.
  */
-export function claimOnSubmit(into?: LandingTarget): (job: Job | null) => void {
+export function claimOnSubmit(
+  into?: LandingTarget,
+  role: AiRoleId | null = null,
+): (job: Job | null) => void {
   const claims = Object.values(CLAIMS)
     .filter(claim => claim !== null)
-    .map(claim => claim(into))
+    .map(claim => claim(into, role))
 
   return job => {
     for (const claim of claims) claim(job)

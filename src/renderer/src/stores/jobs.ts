@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import type { Job, JobProgress, JobTarget } from '@shared/domain/job'
+import { isFinished, type Job, type JobProgress, type JobTarget } from '@shared/domain/job'
 import type { ContextUse } from '@shared/domain/projectContext'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
+import { withoutKey } from '@/helpers/objects'
 import { useAssets } from './assets'
 
 type JobsState = {
@@ -42,6 +43,14 @@ const NO_IDS: readonly string[] = []
 export function latestGenerationIds(state: Pick<JobsState, 'jobs'>): readonly string[] {
   const finished = state.jobs.find(job => job.status === 'succeeded' && job.assetIds?.length)
   return finished?.assetIds ?? NO_IDS
+}
+
+/**
+ * No asset, no `jobId` for `generationOf` to find the body back through. Code bodies carry
+ * `studio.d.ts`: 20 generations retained 254 527 B until the reload.
+ */
+function unreadable(job: Job): boolean {
+  return isFinished(job.status) && (job.assetIds?.length ?? 0) === 0
 }
 
 /**
@@ -88,8 +97,8 @@ export const useJobs = create<JobsState>()((set, get) => ({
     // exact moment the browser has something new to show.
     if (progress.status === 'succeeded') useAssets.getState().invalidate()
 
-    set(state => ({
-      jobs: state.jobs.map(job =>
+    set(state => {
+      const jobs = state.jobs.map(job =>
         job.id === progress.id
           ? {
               ...job,
@@ -100,8 +109,17 @@ export const useJobs = create<JobsState>()((set, get) => ({
               ...(progress.cost === undefined ? {} : { cost: progress.cost }),
             }
           : job,
-      ),
-    }))
+      )
+
+      // Guarded before the scan: an `in-progress` tick arrives every couple of seconds per job,
+      // and walking the history for it would answer no every time.
+      if (!isFinished(progress.status)) return { jobs }
+
+      const settled = jobs.find(job => job.id === progress.id)
+      return settled && unreadable(settled)
+        ? { jobs, bodies: withoutKey(state.bodies, settled.id) }
+        : { jobs }
+    })
   },
 
   submit: async (target, body, use) => {

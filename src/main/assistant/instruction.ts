@@ -124,7 +124,7 @@ const FORMAT = [
   // twenty-three calls over five passes carried `<shotId>` or `<path found>` where a value goes.
   'Example: {"say":"Making an image.","calls":[{"action":"generator.prepare",',
   '"input":{"family":"image","modelId":"flux.1-dev","parameters":{"prompt":"a bicycle"}}},',
-  '{"action":"generator.submit","input":{}}]}',
+  '{"action":"generator.submit","input":{"landing":"document"}}]}',
 ].join('\n')
 
 const RULES = [

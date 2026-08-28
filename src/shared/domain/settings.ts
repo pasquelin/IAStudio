@@ -7,6 +7,7 @@ import { ASSISTANT_STEPS_DEFAULT } from './assistantSteps'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
+import type { LandingTarget } from './landingTarget'
 import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
@@ -53,7 +54,7 @@ export const THEME_ATTRIBUTE: Record<ResolvedTheme, string> = {
 }
 
 /** What a finished generation does with a document that is already open. */
-export type LandingChoice = 'ask' | 'document' | 'newTab'
+export type LandingChoice = 'ask' | LandingTarget
 
 export const LANDING_CHOICES: readonly LandingChoice[] = ['ask', 'document', 'newTab']
 

@@ -1,5 +1,21 @@
 import type { Job } from '@shared/domain/job'
+import type { LandingTarget } from '@shared/domain/landingTarget'
+import type { ModelFamily } from '@shared/domain/model'
+import type { ArmedLanding } from '@/generation/landingChoice'
+import type { GenerationInput } from '@/generation/generationInputs'
 import { createMountedHost } from '@/helpers/hostRegistry'
+
+/** Everything armed, as one answer — read before a call may quote a cost or spend one. */
+export type ArmedGeneration = {
+  modelId: string
+  /** The employment settled on, `<family>/<capability>` — ADR-23. */
+  operation: string
+  family: ModelFamily | null
+  /** What the workspace is handing the operation. */
+  sources: readonly Pick<GenerationInput, 'role' | 'kind' | 'assetId' | 'label'>[]
+  landing: ArmedLanding
+  parameters: Record<string, unknown>
+}
 
 /**
  * The generator's form, reachable from outside it.
@@ -20,7 +36,10 @@ import { createMountedHost } from '@/helpers/hostRegistry'
 export type GeneratorBridge = {
   /** What would be sent, as the form stands. `null` when nothing is armed. */
   body: () => { modelId: string; values: Record<string, unknown> } | null
-  submit: () => Promise<Job | null>
+  /** The same, plus the operation, the sources and the destination. `null` when nothing is armed. */
+  armed: () => ArmedGeneration | null
+  /** `into` overrides the destination the panel shows; absent takes it. */
+  submit: (into?: LandingTarget) => Promise<Job | null>
   /**
    * The reference pictures sitting on the form, as asset ids.
    *

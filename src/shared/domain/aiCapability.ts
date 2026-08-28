@@ -220,6 +220,17 @@ export function contractOf(role: AiRoleId): CapabilityContract | null {
   return BY_ROLE.get(role) ?? null
 }
 
+/**
+ * Whether the employment is HANDED the medium it produces — what tells a rework from a fresh
+ * make, and the one fact `landingOfRole` and `bodyExtras` both turn on.
+ */
+export function reworksItsOutput(role: AiRoleId): boolean {
+  const contract = contractOf(role)
+  if (contract === null) return false
+
+  return contract.inputs.some(input => input.role === 'source' && input.kind === contract.output)
+}
+
 /** Every employment that has a contract, which is every generation role. */
 export function rolesWithContract(): readonly AiRoleId[] {
   return [...BY_ROLE.keys()]
