@@ -17,6 +17,18 @@
     "moveLeftHint": "Puts this space before its left-hand neighbour on the bar",
     "moveRightHint": "Puts this space after its right-hand neighbour on the bar"
   },
+  "folderRoles": {
+    "image": "The Image section’s folder",
+    "video": "The Video section’s folder",
+    "audio": "The Audio section’s folder",
+    "materials": "The Materials section’s folder",
+    "skyboxes": "The Skyboxes section’s folder",
+    "code": "The Code section’s folder",
+    "modelling": "The Modelling section’s folder",
+    "scenes": "Scenes, in the Modelling section",
+    "models": "Models, in the Modelling section",
+    "animations": "Animations, in the Modelling section"
+  },
   "panels": {
     "assistant": "Assistant",
     "layers": "Layers",

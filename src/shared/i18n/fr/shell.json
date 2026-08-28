@@ -17,6 +17,18 @@
     "moveLeftHint": "Place cet espace avant son voisin de gauche dans la barre",
     "moveRightHint": "Place cet espace après son voisin de droite dans la barre"
   },
+  "folderRoles": {
+    "image": "Dossier de la section Image",
+    "video": "Dossier de la section Vidéo",
+    "audio": "Dossier de la section Audio",
+    "materials": "Dossier de la section Matières",
+    "skyboxes": "Dossier de la section Skyboxes",
+    "code": "Dossier de la section Code",
+    "modelling": "Dossier de la section Modélisation",
+    "scenes": "Scènes de la section Modélisation",
+    "models": "Modèles de la section Modélisation",
+    "animations": "Animations de la section Modélisation"
+  },
   "panels": {
     "assistant": "Assistant",
     "layers": "Calques",

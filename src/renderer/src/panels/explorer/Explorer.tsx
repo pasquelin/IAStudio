@@ -13,6 +13,7 @@ import { kindForExtension, type DocumentDescriptor } from '@shared/domain/docume
 import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
+import { roleOfFolder } from '@shared/domain/folderRole'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
@@ -26,6 +27,7 @@ import { renameAsset, renameDocument } from '@/helpers/rename'
 import { startSceneDrag } from '@/helpers/sceneDrag'
 import { openProjectFile } from '@/helpers/openProjectFile'
 import { applySelection } from '@/helpers/selection'
+import { ROLE_ICONS } from '@/helpers/roleIcons'
 import { workspaceById } from '@/helpers/workspaces'
 import { useDomainTree } from '@/hooks/useDomainTree'
 import { useFolderSearch } from '@/hooks/useFolderSearch'
@@ -38,6 +40,7 @@ import { useDocuments } from '@/stores/documents'
 import { useMedia } from '@/stores/media'
 import { fileClipboardCut, useFileClipboard } from '@/stores/fileClipboard'
 import { explorerSearch, useExplorerView } from '@/stores/explorerView'
+import { useFolderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
@@ -74,6 +77,7 @@ export function Explorer() {
   const { t, i18n } = useTranslation()
   const language = i18n.language
   const projectPath = useProject(state => state.project?.path ?? null)
+  const roles = useFolderRoles(state => state.roles)
   const stored = useDocuments(state => state.stored)
   const open = useDocuments(state => state.documents)
   const collection = useExplorerView(state => state.collection)
@@ -460,7 +464,28 @@ export function Explorer() {
     if (document) return workspaceById(document.workspace).icon
     if (node.kind !== 'folder') return mdiFileOutline
 
+    // Read off the RESOLVED map rather than off the name: the folder serving a section is the
+    // one carrying the marker, wherever the user has since renamed or moved it — and a fresh
+    // folder wearing the old default name is an ordinary folder, which is why it answers null.
+    const role = roleOfFolder(node.path, roles)
+    if (role) return ROLE_ICONS[role]
+
     return expanded ? mdiFolderOpenOutline : mdiFolderOutline
+  }
+
+  /**
+   * What a row says beyond its name — which section a folder serves.
+   *
+   * In WORDS and translated, where the folder's own name is the disk's and never is: that split
+   * is the whole answer to « a folder cannot be named in two languages ». Nothing for an
+   * ordinary folder: a hint echoing what is already on screen is noise, on screen and to a
+   * reader alike.
+   */
+  const hintFor = (node: FolderNode): string | undefined => {
+    if (node.kind !== 'folder') return undefined
+
+    const role = roleOfFolder(node.path, roles)
+    return role ? t(`folderRoles.${role}`) : undefined
   }
 
   /**
@@ -757,6 +782,7 @@ export function Explorer() {
                     document?.title === stemOf(node.name) ? extensionOf(node.name) : undefined
                   }
                   icon={iconFor(node, row.expanded)}
+                  hint={hintFor(node)}
                   preview={previewFor(node)}
                   open={isOpen(document)}
                   // What a cut looks like before it is pasted: the rows are still there, still

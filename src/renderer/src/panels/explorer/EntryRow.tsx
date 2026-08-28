@@ -26,6 +26,12 @@ export type EntryRowProps = {
    * draws it: the file is still there and still opens, and the gesture is not finished.
    */
   waiting?: boolean
+  /**
+   * What the row has to say that the name does not — which section a folder serves, for one.
+   * A folder is the user's to rename, so the NAME on screen is always the disk's; this is where
+   * the role gets said, in words, translated.
+   */
+  hint?: string
   /** Fired with the new name, or with the old one when the edit was abandoned. */
   onRename?: (name: string) => void
 }
@@ -52,6 +58,7 @@ export function EntryRow({
   preview,
   open,
   waiting,
+  hint,
   onRename,
 }: EntryRowProps) {
   const { t } = useTranslation()
@@ -104,6 +111,7 @@ export function EntryRow({
       // extension inside the value would be typed over by whoever replaces the name.
       suffix={extension}
       quiet={waiting}
+      hint={hint}
     />
   )
 }

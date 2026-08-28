@@ -3,6 +3,7 @@ import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
 import { PICTURE_TRAITS } from '@shared/domain/formatCapability'
+import { FOLDER_ROLES } from '@shared/domain/folderRole'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
@@ -134,6 +135,10 @@ const COMPOSED_KEYS: readonly string[] = [
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.
   ...WORKSPACE_IDS.map(workspace => `workspaces.${workspace}`),
+  // What a folder in the explorer SERVES, said in words where its name is the disk's and never
+  // translated. The one place a role reaches a reader, so a missing line here is a folder whose
+  // section nobody can name.
+  ...FOLDER_ROLES.map(role => `folderRoles.${role}`),
   // Why a typed name was refused, read off the failure the shared check answers with. The
   // compiler holds the other half — the record has one entry per failure or it does not build.
   ...Object.values(DOCUMENT_NAME_REFUSALS),

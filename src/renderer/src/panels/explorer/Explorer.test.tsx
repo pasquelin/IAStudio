@@ -18,6 +18,7 @@ import { useDocuments } from '@/stores/documents'
 import { useExplorerView } from '@/stores/explorerView'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { useLayouts } from '@/stores/layouts'
+import { useFolderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
 
@@ -239,6 +240,8 @@ beforeEach(() => {
   // `known` settled: the panel says nothing at all until the main process has answered, and
   // every case below is about what it says once it has.
   useProject.setState({ project: null, known: true })
+  // Persisted like the view above: a role one case resolved would badge a folder in the next.
+  useFolderRoles.setState({ roles: {} })
   useLayouts.setState({ layout: null })
   // Persisted, so a term one case typed would narrow the tree of the next one.
   useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' })
@@ -261,6 +264,38 @@ async function listing(): Promise<HTMLElement> {
 }
 
 describe('the project explorer', () => {
+  /**
+   * 🛑 The whole answer to « a folder cannot be named in two languages »: the NAME on screen is
+   * the disk's, always, and what a folder SERVES is said beside it in words that translate.
+   */
+  describe('a folder serving a section', () => {
+    it('says which section it serves, under the name the disk gives it', async () => {
+      withProject()
+      useFolderRoles.setState({ roles: { models: 'Mes modèles' } })
+      install({ '': [folder('Mes modèles')] })
+      render(<Explorer />)
+
+      const row = await within(await listing()).findByText('Mes modèles')
+
+      expect(row.closest('[data-tooltip-content]')).toHaveAttribute(
+        'data-tooltip-content',
+        'Modèles de la section Modélisation',
+      )
+    })
+
+    /** A fresh folder wearing the old default name is an ordinary folder, and says nothing. */
+    it('says nothing for a folder no role was resolved to', async () => {
+      withProject()
+      useFolderRoles.setState({ roles: { image: 'Photos' } })
+      install({ '': [folder('Images')] })
+      render(<Explorer />)
+
+      const row = await within(await listing()).findByText('Images')
+
+      expect(row.closest('[data-tooltip-content]')).toBeNull()
+    })
+  })
+
   it('says so when no project is open, rather than listing nothing', () => {
     render(<Explorer />)
     expect(screen.getByText(/Aucun projet ouvert/)).toBeInTheDocument()
