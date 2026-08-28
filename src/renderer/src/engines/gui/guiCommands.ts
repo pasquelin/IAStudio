@@ -193,7 +193,7 @@ export function duplicateUiElements(
     apply: state => {
       let root = state.document.root
       const made: string[] = []
-      for (const id of ids) {
+      for (const id of rootsOf(state.document.root, ids)) {
         const element = elementById(root, id)
         const parent = parentOf(root, id)
         if (!element || !parent) continue
@@ -207,7 +207,7 @@ export function duplicateUiElements(
     },
     revert: state => {
       let root = state.document.root
-      for (const id of ids) {
+      for (const id of rootsOf(state.document.root, ids)) {
         const copy = minted.get(id)
         if (copy !== undefined) root = withoutElement(root, copy)
       }
@@ -216,6 +216,14 @@ export function duplicateUiElements(
     refuses: refusesEvery(ids),
   }
 }
+
+/**
+ * 🛑 The ones NOT already inside another of the batch. A parent and its own child both copied
+ * would mint the child's id twice — once inside the parent's subtree, once on its own — and two
+ * elements under one id give the layout and the picking two answers to the same question.
+ */
+const rootsOf = (root: UiScreen, ids: readonly string[]): readonly string[] =>
+  ids.filter(id => !ids.some(other => other !== id && contains(root, other, id)))
 
 /**
  * A panel laid where the FIRST of the batch stands in the TREE — grouping six rows must not

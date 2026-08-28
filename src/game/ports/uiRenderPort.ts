@@ -9,6 +9,12 @@ export type UiValue = string | number | boolean
 export type UiValues = ReadonlyMap<string, UiValue>
 
 /**
+ * For a surface with nothing live — the editor. Shared rather than built per frame: a renderer
+ * skipping what has not changed compares this by IDENTITY, and a fresh map every draw defeats it.
+ */
+export const NO_UI_VALUES: UiValues = new Map()
+
+/**
  * One interface, ready to be drawn: what it IS, where its elements landed, and what is live in
  * it. `order` is the pile — the last opened on top — and the renderer paints in that order.
  */

@@ -154,6 +154,19 @@ describe('editing an interface', () => {
   })
 
   /**
+   * 🛑 A parent and its own child both picked: the child is copied ONCE, inside its parent. Both
+   * copied on their own would mint the child's id twice, and two elements under one id give the
+   * layout and the picking two answers.
+   */
+  it('copies only the elements the batch does not already hold', () => {
+    const [after] = ran(stateOf(), duplicateUiElements(['a', 'a1'], newId))
+    const ids = idsOf(after)
+
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(ids.length).toBe(idsOf(stateOf()).length + 2)
+  })
+
+  /**
    * 🛑 The ids are minted ONCE and reused by the redo: minted again, the whole subtree would come
    * back under other ids and any later command naming one would go inert.
    */

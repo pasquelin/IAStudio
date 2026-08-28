@@ -264,6 +264,11 @@ function cssOf(one: Posed, assets: AssetPort): string {
   if (element.type === 'image') {
     said.push(...pictureCss(assets, element.image.assetId, element.image.fit, element.image.tint))
   }
+  // Under whatever the style asked for, so a bar reads as a share of something even when its
+  // author gave it no background of its own — which is what a new one has.
+  if (element.type === 'progress' && element.style.background.kind === 'none') {
+    said.push(`background-color:${element.progress.track}`)
+  }
   if (element.type === 'text' || element.type === 'button') said.push(...textCss(element.text))
   if (element.type === 'input')
     said.push('display:flex', 'align-items:center', `font:${FIELD_FACE}`)

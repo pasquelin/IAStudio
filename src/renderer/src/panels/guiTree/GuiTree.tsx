@@ -15,5 +15,8 @@ export function GuiTree() {
   if (!documentId) {
     return <EmptyState icon={mdiViewDashboardOutline} message={t('gui.noDocument')} />
   }
-  return <GuiOutliner documentId={documentId} />
+  // 🛑 `key`: the outliner's fold state opens on the root's id, which is a uuid per document.
+  // Without it, moving to a second interface keeps the first one's set and shows the screen
+  // row collapsed and empty. `SceneTree` escapes this only because its root is a constant.
+  return <GuiOutliner key={documentId} documentId={documentId} />
 }

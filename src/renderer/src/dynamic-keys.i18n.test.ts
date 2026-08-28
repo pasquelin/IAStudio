@@ -9,6 +9,9 @@ import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
 import { EASINGS } from '@shared/domain/animation'
+import { UI_ELEMENT_TYPES } from '@shared/domain/ui'
+import { UI_RESOLUTION_IDS } from '@shared/domain/uiResolution'
+import { UI_TEMPLATE_IDS } from '@shared/domain/uiTemplates'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
@@ -92,6 +95,17 @@ const COMPOSED_KEYS: readonly string[] = [
   // no sentence would put a raw key over the viewport at the very moment the mode opens.
   ...NAVIGATION_HINT_GROUPS.map(group => `sceneNavigation.${group.key}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // One row per element type in the bar's flyout, and the same word again as the outliner's
+  // fallback title for an element its author has not named — the commonest state of a new one.
+  ...UI_ELEMENT_TYPES.map(type => `guiTools.types.${type}`),
+  ...UI_ELEMENT_TYPES.map(type => `guiTools.typeHints.${type}`),
+  // One row per canvas an interface can be composed for.
+  ...UI_RESOLUTION_IDS.map(id => `guiTools.resolutions.${id}`),
+  ...UI_RESOLUTION_IDS.map(id => `guiTools.resolutionHints.${id}`),
+  // The four an interface opens on, in the window that names a new document.
+  ...UI_TEMPLATE_IDS.map(id => `documents.uiTemplates.${id}`),
+  ...UI_TEMPLATE_IDS.map(id => `documents.uiTemplateHints.${id}`),
+
   // Where a generation's source was taken from, written under its thumbnail. An origin with no
   // sentence would put a raw key on the one line saying what the studio is about to send.
   ...INPUT_ORIGINS.map(origin => `generation.sourceFrom_${origin}`),

@@ -5,14 +5,15 @@ import type { UiBoxes } from '@shared/domain/ui'
 import { createCanvasUiMeasure } from '@game/host/canvasUiMeasure'
 import { createDomUiRenderer } from '@game/host/domUiRenderer'
 import { createUiRuler } from '@game/host/uiRuler'
-import type { UiRenderPort } from '@game/ports/uiRenderPort'
+import { NO_UI_VALUES, type UiRenderPort } from '@game/ports/uiRenderPort'
 import { layoutOf } from '@game/ui/uiLayout'
 import { flattened } from '@game/ui/uiTree'
 import { clampCanvasScale, toDocument, zoomCanvasAt } from '@/engines/canvas/viewport'
 import { pickFrom } from '@/helpers/selection'
 import { assetVersionOf } from '@/stores/assets'
 import { guiOf, selectInGui, useGuis } from '@/stores/gui'
-import { guiViewportOf, useGuiViews } from '@/stores/guiViews'
+import { guiHostOf, guiViewportOf, useGuiViews } from '@/stores/guiViews'
+import { fitGuiToPanel } from '../guiView'
 import { GuiSelectionFrame } from './GuiSelectionFrame'
 
 /**
@@ -60,10 +61,14 @@ export function GuiStage({ documentId }: { documentId: string }) {
     if (!observed) return
 
     const observer = new ResizeObserver(() => {
+      const first = guiHostOf(useGuiViews.getState(), documentId).width === 0
       useGuiViews.getState().setHost(documentId, {
         width: observed.clientWidth,
         height: observed.clientHeight,
       })
+      // Framed the first time the panel has a size: a 1920-wide page opened at scale 1 shows its
+      // top-left corner and nothing else, and the image editor frames on its first measure too.
+      if (first) fitGuiToPanel(documentId)
     })
     observer.observe(observed)
     return () => observer.disconnect()
@@ -93,7 +98,9 @@ export function GuiStage({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     renderer.current?.resize(ui.design)
-    renderer.current?.draw([{ ui: documentId, document: ui, boxes, values: new Map(), order: 0 }])
+    renderer.current?.draw([
+      { ui: documentId, document: ui, boxes, values: NO_UI_VALUES, order: 0 },
+    ])
   }, [documentId, ui, boxes])
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
@@ -126,18 +133,23 @@ export function GuiStage({ documentId }: { documentId: string }) {
     const frame = host.current?.getBoundingClientRect()
     if (!frame) return
 
+    // 🛑 Off the STORE, not off the render closure: wheel events outrun React's commits, so two
+    // in one frame would both start from the same stale viewport and the second would drop the
+    // first. `guiView.reframe` reads the store for the same reason.
     const views = useGuiViews.getState()
+    const held = guiViewportOf(views, documentId)
+
     if (event.ctrlKey || event.metaKey) {
       const anchor = { x: event.clientX - frame.left, y: event.clientY - frame.top }
-      const scale = clampCanvasScale(viewport.scale * Math.exp(-event.deltaY / WHEEL_PER_DOUBLING))
-      views.setViewport(documentId, zoomCanvasAt(viewport, scale, anchor))
+      const scale = clampCanvasScale(held.scale * Math.exp(-event.deltaY / WHEEL_PER_DOUBLING))
+      views.setViewport(documentId, zoomCanvasAt(held, scale, anchor))
       return
     }
 
     views.setViewport(documentId, {
-      ...viewport,
-      x: viewport.x - event.deltaX,
-      y: viewport.y - event.deltaY,
+      ...held,
+      x: held.x - event.deltaX,
+      y: held.y - event.deltaY,
     })
   }
 

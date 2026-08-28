@@ -119,7 +119,7 @@ export function emptyScreen(newId: () => string): UiScreen {
   return {
     id: newId(),
     type: 'screen',
-    name: 'Screen',
+    name: '',
     visible: true,
     enabled: true,
     locked: false,
@@ -158,7 +158,9 @@ function element(value: unknown, newId: () => string): UiElement | null {
     // binding, a keyframe, a script's `get` — is broken either way, and a visible element is
     // something to repair where a dropped one is something to notice.
     id: readString(value, 'id', '') || newId(),
-    name: readString(value, 'name', value.type),
+    // Nameless by default, never the type: a name is what its AUTHOR called it, and `panel`
+    // written here is an English identifier the outliner would then show as a title.
+    name: readString(value, 'name', ''),
     visible: readBoolean(value, 'visible', true),
     enabled: readBoolean(value, 'enabled', true),
     locked: readBoolean(value, 'locked', false),
