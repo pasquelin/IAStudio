@@ -24,8 +24,11 @@ export function DocumentsIdle({ group }: IWatermarkPanelProps) {
     return <DocumentsMessage message={t('documents.none')} />
   }
 
+  // The reading frame is the HOST's: the conversation fills what it is given, and the centre is
+  // the whole window — a line of text run across it is a line nobody reads twice. The panel does
+  // the same in its own way, by being a column.
   return (
-    <div className="flex size-full flex-col">
+    <div className="mx-auto flex size-full max-w-(--sc-chat-width) flex-col">
       <AssistantConversation />
     </div>
   )

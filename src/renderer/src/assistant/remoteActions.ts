@@ -5,7 +5,7 @@ import { getBridge } from '@/services/bridge'
 /**
  * Actions asked for from OUTSIDE this window — today, by an MCP client.
  *
- * They land on exactly the same gate as the ones the modal decides on: `runConfirmedAction`.
+ * They land on exactly the same gate as the ones the conversation decides on: `runConfirmedAction`.
  * That is the whole point of the arrangement — a generation asked for from the other side of
  * the machine raises the same question on this screen, with the same figure, and spends nothing
  * until somebody says yes.

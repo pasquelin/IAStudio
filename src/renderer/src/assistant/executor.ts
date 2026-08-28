@@ -172,7 +172,8 @@ async function runBatch(input: Record<string, unknown>): Promise<ActionOutcome> 
  * Both gates sit here rather than in the main process, and that is deliberate: the figure quoted
  * comes from the form the window is showing, which the main process cannot see, and the question
  * is asked on a screen only the window has. It also means there is one gate rather than two —
- * whether the call came from the modal or from an MCP client on the other side of the machine,
+ * whether the call came from the conversation or from an MCP client on the other side of the
+ * machine,
  * it arrives at this function and is treated the same way.
  */
 export async function runConfirmedAction(

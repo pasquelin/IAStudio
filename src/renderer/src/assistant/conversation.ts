@@ -76,7 +76,8 @@ function listWithin(items: readonly unknown[]): string {
  * One exchange: what was said, what came back, and what it actually did.
  *
  * The steps are kept apart from the sentence rather than folded into it, because the two are
- * read by different eyes: the modal draws a line per step in the person's own language, and the
+ * read by different eyes: the conversation draws a line per step in the person's own language,
+ * and the
  * model gets the same steps in English through `assistantHistory`.
  */
 export type AssistantTurn = {
