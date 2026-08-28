@@ -6,5 +6,15 @@
     "postSave": "« {{name}} » est un réglage de post-traitement enregistré pour ce projet",
     "animationAdd": "L’animation « {{name}} » a été ajoutée au squelette",
     "gitCommit": "Décidé et enregistré dans git : {{message}}"
+  },
+  "memoryTypes": {
+    "decision": "Décision",
+    "architecture": "Architecture",
+    "feature": "Fonctionnalité",
+    "entity": "Entité",
+    "script": "Script",
+    "problem": "Problème",
+    "intent": "Intention",
+    "convention": "Convention"
   }
 }

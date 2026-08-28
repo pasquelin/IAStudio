@@ -130,6 +130,7 @@ describe('SettingsWindow', () => {
       'Médias',
       'Versions',
       'Point d’entrée (MCP)',
+      'Mémoire de l’assistant',
       'Stockage',
       'Avancé',
     ])

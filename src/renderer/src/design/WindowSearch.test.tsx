@@ -48,6 +48,7 @@ describe('WindowSearch', () => {
 
     expect(wearing.sort()).toEqual([
       '../manual/ManualWindow/ManualWindow.tsx',
+      '../settings/MemorySettings/MemorySettings.tsx',
       '../settings/SettingsWindow/SettingsWindow.tsx',
     ])
   })

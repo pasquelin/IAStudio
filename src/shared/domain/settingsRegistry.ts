@@ -155,6 +155,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     descriptionKey: 'settings.mcpDescription',
   },
   {
+    id: 'memory',
+    labelKey: 'settings.memory',
+    descriptionKey: 'settings.memoryDescription',
+  },
+  {
     id: 'storage',
     labelKey: 'settings.storage',
     descriptionKey: 'settings.storageDescription',

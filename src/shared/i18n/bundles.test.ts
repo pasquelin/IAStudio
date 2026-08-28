@@ -913,6 +913,12 @@ describe('the translation bundles', () => {
       reads: ['échec', 'échouée'],
       separates: "an ingest status, and a job's, which agrees with `tâche`",
     },
+    forget: {
+      reads: ['retirer', 'oublier'],
+      separates:
+        'a post preset taken off the list, and a memory the assistant lets go of — which is ' +
+        'written down rather than erased, so « retirer » would say the opposite of what happens',
+    },
     free: {
       reads: ['libre', 'gratuit'],
       separates: 'a camera aiming at nothing, and what a generation costs',

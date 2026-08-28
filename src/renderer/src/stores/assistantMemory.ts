@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type {
   Memory,
   MemoryDraft,
+  MemoryIndexing,
   MemoryPatch,
   MemoryQuery,
   MemoryScope,
@@ -27,6 +28,16 @@ type AssistantMemoryState = {
   remember: (draft: MemoryDraft) => Promise<Memory | null>
   amend: (id: string, patch: MemoryPatch) => Promise<boolean>
   forget: (id: string) => Promise<boolean>
+  /** Reads the file back and rebuilds the index. Answers how many memories stand once it has. */
+  rebuild: () => Promise<number>
+  /** Everything forgotten, the file included. The one gesture that erases rather than writes. */
+  reset: () => Promise<void>
+  /** How many memories have no vector yet, and how far a run has got. `null` while none has. */
+  pending: number
+  indexing: MemoryIndexing | null
+  /** Starts computing what is missing, in the background, and follows it. */
+  index: () => Promise<void>
+  stopIndex: () => Promise<void>
 }
 
 export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => ({
@@ -34,15 +45,28 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   scope: 'project',
   query: {},
   loaded: false,
+  pending: 0,
+  indexing: null,
 
   connect: connectThroughBridge(async bridge => {
     // Every window follows every write: two replicas of one file is one too many, and a memory
     // written by the assistant in one window belongs on screen in the other.
-    const stop = bridge.memory.onChanged(scope => {
+    const stopChanges = bridge.memory.onChanged(scope => {
       if (scope === get().scope) void get().reload()
     })
+    const stopSteps = bridge.memory.onIndexed(progress => {
+      if (progress.scope !== get().scope) return
+
+      // Cleared at the end rather than left showing « 40 / 40 »: a bar that never goes away is
+      // a bar that stops meaning « something is happening ».
+      const done = progress.done >= progress.total
+      set({ indexing: done ? null : progress, pending: progress.total - progress.done })
+    })
     await get().reload()
-    return stop
+    return () => {
+      stopChanges()
+      stopSteps()
+    }
   }),
 
   look: async (scope, query) => {
@@ -64,6 +88,7 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     if (get().scope !== scope || get().query !== query) return
 
     set({ memories, loaded: true })
+    set({ pending: await orElse(getBridge()?.memory.pending(scope), 0) })
   },
 
   // No optimistic write, unlike the context panel: the id and the date come from the main
@@ -76,4 +101,18 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     (await orElse(getBridge()?.memory.amend(get().scope, id, patch), null)) !== null,
 
   forget: async id => await orElse(getBridge()?.memory.forget(get().scope, id), false),
+
+  rebuild: async () => await orElse(getBridge()?.memory.rebuild(get().scope), 0),
+
+  reset: async () => {
+    await orElse(getBridge()?.memory.reset(get().scope), undefined)
+  },
+
+  index: async () => {
+    await orElse(getBridge()?.memory.index(get().scope), undefined)
+  },
+
+  stopIndex: async () => {
+    await orElse(getBridge()?.memory.stopIndex(get().scope), undefined)
+  },
 }))

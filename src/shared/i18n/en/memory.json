@@ -6,5 +6,15 @@
     "postSave": "“{{name}}” is a post-processing preset saved for this project",
     "animationAdd": "The animation “{{name}}” was added to the rig",
     "gitCommit": "Decided and recorded in git: {{message}}"
+  },
+  "memoryTypes": {
+    "decision": "Decision",
+    "architecture": "Architecture",
+    "feature": "Feature",
+    "entity": "Entity",
+    "script": "Script",
+    "problem": "Problem",
+    "intent": "Intent",
+    "convention": "Convention"
   }
 }
