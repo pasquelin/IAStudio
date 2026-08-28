@@ -3,11 +3,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { onTestFinished } from 'vitest'
 import type { DocumentKind } from '@shared/domain/document'
+import type { FolderRole } from '@shared/domain/folderRole'
 import type { Project } from '@shared/domain/project'
 import type { AsyncCatalog } from './catalogClient'
 import { memoryCatalog } from './catalog-fixtures'
 import { createDocumentFiles, type DocumentFiles } from './documents'
 import { createFolderReader } from './folder'
+import { ensureRoleFolder } from './folderRoles'
 import { createProjectStore, type ProjectStore } from './store'
 
 /** A real project on a real folder, and the pieces a test needs to reach into it. */
@@ -18,6 +20,12 @@ import { createProjectStore, type ProjectStore } from './store'
  * through anything else would be measuring a second implementation. `'en'` because the language
  * only settles how names are ordered, and this reader's own order is taken by code unit.
  */
+/** What a write asks for a folder, on a project laid out by hand. Nine cases wired this. */
+export const roleFolderAt =
+  (root: string) =>
+  (role: FolderRole): Promise<string> =>
+    ensureRoleFolder(root, {}, role)
+
 export function documentFilesAt(root: string, now: string): DocumentFiles {
   const reader = createFolderReader(
     () => root,
@@ -29,6 +37,7 @@ export function documentFilesAt(root: string, now: string): DocumentFiles {
     now: () => now,
     walkFiles: () => reader.walk(),
     folderNames: relative => reader.names(relative),
+    folderFor: roleFolderAt(root),
   })
 }
 
@@ -65,6 +74,7 @@ export async function withTempProject(
     openCatalog: async () => catalog,
     now: () => now,
     onChange: () => {},
+    onRoles: () => {},
   })
 
   onTestFinished(async () => {

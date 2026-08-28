@@ -57,7 +57,7 @@ export const titled = (run: Run, title: string): DocumentDescriptor | undefined 
 
 /**
  * 🛑 Title OR path, never `path || title`: opening a PICTURE makes an image document, whose path
- * is `documents/<name>.ora`. Written the other way, `2.1` could not pass — the studio did exactly
+ * is `Images/<name>.ora`. Written the other way, `2.1` could not pass — the studio did exactly
  * what was asked and the path ended in `.ora`. Measured on the bench pass of 2026-08-25.
  */
 export const openedFile = (run: Run, ending: string): boolean =>

@@ -1,4 +1,4 @@
-import { MATERIALS_FOLDER } from './asset'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from './folderRole'
 import { SCRIPT_EXTENSION } from './game'
 import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
@@ -94,37 +94,44 @@ export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
  */
 export const DOCUMENT_VERSION = 3
 
-export const DOCUMENTS_FOLDER = 'documents'
-
 /**
- * Where a script lands. Its own shelf rather than `documents/`, because a script is read by the
- * GAME as well as by the editor: `game.scripts()` walks the project for `.ts`, and a folder
- * named for what it holds is what makes an exported game's tree read by eye.
+ * The one folder every document used to be filed under, whatever it was.
+ *
+ * Nothing writes into it any more and nothing is migrated out of it: a project made before the
+ * roles keeps its files exactly where they are, and the next save lands beside its own kind. Read
+ * for two things only — the path a pre-version-3 file still sits at, and the staging sweep, which
+ * has to look where a stopped save may have left a copy.
  */
-export const SCRIPTS_FOLDER = 'scripts'
+export const LEGACY_DOCUMENTS_FOLDER = 'documents'
 
 /**
- * Where a document of this kind lands when its author names no folder — the shelf for what has
- * none of its own, or `Materials` for the one kind that does.
+ * The role a document of this kind is filed under when its author names no folder.
+ *
+ * A `Record` rather than a chain of tests: an eighth kind does not compile until it has answered
+ * where it lands, where a fallback would file it under one shelf without a word.
  *
  * Read by the STORE and not by the naming window alone: a caller that supplies a title opens no
  * window at all — the assistant and the MCP wire both do — and a second answer written there
  * would file the same gesture in two folders.
  */
-export function documentFolderOf(kind: DocumentKind): string {
-  return FOLDER_BY_KIND[kind]
+const ROLE_BY_KIND: Record<DocumentKind, FolderRole> = {
+  image: 'image',
+  scene: 'scenes',
+  sequence: 'video',
+  audio: 'audio',
+  skybox: 'skyboxes',
+  material: 'materials',
+  script: 'code',
 }
 
-/** A `Record` rather than a chain of tests: an eighth kind does not compile until it has answered
- * where it lands, where a fallback would file it under `documents/` without a word. */
-const FOLDER_BY_KIND: Record<DocumentKind, string> = {
-  image: DOCUMENTS_FOLDER,
-  scene: DOCUMENTS_FOLDER,
-  sequence: DOCUMENTS_FOLDER,
-  audio: DOCUMENTS_FOLDER,
-  skybox: DOCUMENTS_FOLDER,
-  material: MATERIALS_FOLDER,
-  script: SCRIPTS_FOLDER,
+export function roleForKind(kind: DocumentKind): FolderRole {
+  return ROLE_BY_KIND[kind]
+}
+
+/** Where a document of this kind STARTS. Where it lands is `ProjectStore.folderFor`, which reads
+ * the markers and lays the folder down. */
+export function documentFolderOf(kind: DocumentKind): string {
+  return DEFAULT_ROLE_PATHS[roleForKind(kind)]
 }
 
 export { STUDIO_METADATA_KEY } from './studioMetadata'
@@ -172,7 +179,7 @@ export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
  * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
-  return `${DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
+  return `${LEGACY_DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
 }
 
 /**

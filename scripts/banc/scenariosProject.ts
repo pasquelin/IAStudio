@@ -145,7 +145,9 @@ export const PROJECT_SCENARIOS: readonly Scenario[] = [
     name: '3.4 finds the textures of the current model',
     said: ['Trouve-moi toutes les textures associées à mon modèle 3D actuel.'],
     setup: async studio => {
-      await studio.run('file.open', { path: '3D/a medieval stone castle with towers.glb' })
+      await studio.run('file.open', {
+        path: 'Modelling/Models/a medieval stone castle with towers.glb',
+      })
     },
     passed: run => read.spoke(run),
   },

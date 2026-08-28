@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentDescriptor, DocumentWrite } from '@shared/domain/document'
+import {
+  documentFolderOf,
+  type DocumentDescriptor,
+  type DocumentWrite,
+} from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fakeBridge'
 import {
   documentForAsset,
@@ -68,7 +72,7 @@ describe('documents store', () => {
               kind: 'scene',
               title: 'Scène 1',
               workspace: '3d',
-              path: 'documents/Scène 1.gltf',
+              path: `${documentFolderOf('scene')}/Scène 1.gltf`,
             },
           ]),
       },

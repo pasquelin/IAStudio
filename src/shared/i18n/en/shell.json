@@ -17,6 +17,12 @@
     "moveLeftHint": "Puts this space before its left-hand neighbour on the bar",
     "moveRightHint": "Puts this space after its right-hand neighbour on the bar"
   },
+  "folderRoles": {
+    "section": "The {{label}} section’s folder",
+    "scenes": "Scenes, in the {{label}} section",
+    "models": "Models, in the {{label}} section",
+    "animations": "Animations, in the {{label}} section"
+  },
   "panels": {
     "assistant": "Assistant",
     "layers": "Layers",

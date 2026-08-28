@@ -90,6 +90,7 @@ export function registerIpc(services: Services): void {
     newAssetId: services.newAssetId,
     folder: () => bundledTextures(resourcesRoot()),
     projectPath: () => services.project.path(),
+    roles: () => services.project.roles(),
     exists: services.exists,
   })
   const git = registerGitHandlers({

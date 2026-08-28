@@ -1,15 +1,18 @@
 import {
   mdiCodeBraces,
+  mdiCubeScan,
   mdiCubeOutline,
   mdiImageOutline,
   mdiPanoramaVariantOutline,
   mdiRun,
   mdiTextureBox,
+  mdiVectorTriangle,
   mdiVideoOutline,
   mdiVolumeHigh,
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
+import { WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
 import { type ModelFamily } from '@shared/domain/model'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import {
@@ -71,6 +74,52 @@ const OWN_ICON: Record<AssetType, string | null> = {
  */
 export function assetIcon(type: AssetType): string {
   return OWN_ICON[type] ?? ICONS[workspaceOfType(type)]
+}
+
+/**
+ * A glyph of its own, or `null` to keep its section's — the shape `OWN_ICON` has, for the same
+ * reason: four roles answer `3d`, and one cube on all four would say they are one shelf.
+ */
+const OWN_ROLE_ICON: Record<FolderRole, string | null> = {
+  image: null,
+  video: null,
+  audio: null,
+  materials: null,
+  skyboxes: null,
+  code: null,
+  modelling: null,
+  scenes: mdiCubeScan,
+  models: mdiVectorTriangle,
+  // The same runner an animation ASSET wears: two glyphs for one idea, in one panel, is what
+  // relisting the table produced the first time.
+  animations: assetIcon('animation'),
+}
+
+/** What stands for a folder serving a section. Read off the workspace table, never relisted. */
+export function roleIcon(role: FolderRole): string {
+  return OWN_ROLE_ICON[role] ?? ICONS[WORKSPACE_BY_ROLE[role]]
+}
+
+/**
+ * Which line names this role — the seven that ARE their section share one, filled with the
+ * section's label. Total rather than a test on the id: a role with no answer would compose a key
+ * nothing translates, and a raw key on screen is this repository's costliest defect.
+ */
+const ROLE_LABEL: Record<FolderRole, 'section' | 'scenes' | 'models' | 'animations'> = {
+  image: 'section',
+  video: 'section',
+  audio: 'section',
+  materials: 'section',
+  skyboxes: 'section',
+  code: 'section',
+  modelling: 'section',
+  scenes: 'scenes',
+  models: 'models',
+  animations: 'animations',
+}
+
+export function roleLabelKey(role: FolderRole): string {
+  return `folderRoles.${ROLE_LABEL[role]}`
 }
 
 /**

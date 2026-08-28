@@ -1,4 +1,5 @@
-import { defaultAssetFolder, type Asset, type AssetType } from '@shared/domain/asset'
+import { roleForAsset, type Asset, type AssetType } from '@shared/domain/asset'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { assetFileName, generatedAssetName } from '@shared/domain/assetName'
 import { pathIn } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
@@ -158,7 +159,7 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
       if (!output) throw new Error(`no output for ${model.family}`)
 
       const name = assetFileName(nameOfRun(model.name, body), `.${output.extension}`)
-      const path = pathIn(defaultAssetFolder(output), name)
+      const path = pathIn(DEFAULT_ROLE_PATHS[roleForAsset(output)], name)
       const asset: Asset = {
         id: `generated-${runs}`,
         name,
@@ -171,7 +172,7 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
         jobId: `job-${runs}`,
       }
 
-      await folder.createFolder(defaultAssetFolder(output))
+      await folder.createFolder(DEFAULT_ROLE_PATHS[roleForAsset(output)])
       await folder.write(path)
       await catalog.add(asset)
 

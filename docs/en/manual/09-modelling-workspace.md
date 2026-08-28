@@ -813,7 +813,7 @@ stands in the scene, not where it stands inside its group.
 
 ## Saving
 
-`⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
+`⌘S` / `Ctrl+S` writes the scene into the project, under `Modelling/Scenes/`.
 
 **3D scenes can save**, as do the six other document kinds.
 

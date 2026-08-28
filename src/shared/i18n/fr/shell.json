@@ -17,6 +17,12 @@
     "moveLeftHint": "Place cet espace avant son voisin de gauche dans la barre",
     "moveRightHint": "Place cet espace après son voisin de droite dans la barre"
   },
+  "folderRoles": {
+    "section": "Dossier de la section {{label}}",
+    "scenes": "Scènes de la section {{label}}",
+    "models": "Modèles de la section {{label}}",
+    "animations": "Animations de la section {{label}}"
+  },
   "panels": {
     "assistant": "Assistant",
     "layers": "Calques",

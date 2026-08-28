@@ -13,6 +13,7 @@ import { kindForExtension, type DocumentDescriptor } from '@shared/domain/docume
 import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
+import { FOLDER_ROLES, WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
@@ -26,7 +27,7 @@ import { renameAsset, renameDocument } from '@/helpers/rename'
 import { startSceneDrag } from '@/helpers/sceneDrag'
 import { openProjectFile } from '@/helpers/openProjectFile'
 import { applySelection } from '@/helpers/selection'
-import { workspaceById } from '@/helpers/workspaces'
+import { roleIcon, roleLabelKey, workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDomainTree } from '@/hooks/useDomainTree'
 import { useFolderSearch } from '@/hooks/useFolderSearch'
 import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
@@ -38,6 +39,7 @@ import { useDocuments } from '@/stores/documents'
 import { useMedia } from '@/stores/media'
 import { fileClipboardCut, useFileClipboard } from '@/stores/fileClipboard'
 import { explorerSearch, useExplorerView } from '@/stores/explorerView'
+import { useFolderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
@@ -74,6 +76,11 @@ export function Explorer() {
   const { t, i18n } = useTranslation()
   const language = i18n.language
   const projectPath = useProject(state => state.project?.path ?? null)
+  const roles = useFolderRoles(state => state.roles)
+  const byFolder: Map<string, FolderRole> = useMemo(
+    () => new Map(FOLDER_ROLES.flatMap(role => (roles[role] ? [[roles[role], role]] : []))),
+    [roles],
+  )
   const stored = useDocuments(state => state.stored)
   const open = useDocuments(state => state.documents)
   const collection = useExplorerView(state => state.collection)
@@ -452,6 +459,13 @@ export function Explorer() {
   // search that matches nothing would otherwise take the field it was typed in off the screen,
   // and leave no way back to the folder.
   /**
+   * Read off the RESOLVED map, never off the name: a fresh folder wearing the old default name is
+   * an ordinary folder. Inverted once — the panel asks it twice per row.
+   */
+  const roleOf = (node: FolderNode): FolderRole | null =>
+    node.kind === 'folder' ? (byFolder.get(node.path) ?? null) : null
+
+  /**
    * The glyph an entry wears. The descriptor is asked FIRST: an image document is a directory, and
    * answering the folder question first showed a folder over every other space's own glyph.
    */
@@ -460,7 +474,18 @@ export function Explorer() {
     if (document) return workspaceById(document.workspace).icon
     if (node.kind !== 'folder') return mdiFileOutline
 
+    const role = roleOf(node)
+    if (role) return roleIcon(role)
+
     return expanded ? mdiFolderOpenOutline : mdiFolderOutline
+  }
+
+  /** Which section a folder SERVES, in words — its NAME is the disk's and never translated. */
+  const hintFor = (node: FolderNode): string | undefined => {
+    const role = roleOf(node)
+    if (!role) return undefined
+
+    return t(roleLabelKey(role), { label: t(workspaceLabelKey(WORKSPACE_BY_ROLE[role])) })
   }
 
   /**
@@ -757,6 +782,7 @@ export function Explorer() {
                     document?.title === stemOf(node.name) ? extensionOf(node.name) : undefined
                   }
                   icon={iconFor(node, row.expanded)}
+                  hint={hintFor(node)}
                   preview={previewFor(node)}
                   open={isOpen(document)}
                   // What a cut looks like before it is pasted: the rows are still there, still

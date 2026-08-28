@@ -1,4 +1,6 @@
+import { orElse } from '@shared/promises'
 import { documentFolderOf } from '@shared/domain/document'
+import { getBridge } from '@/services/bridge'
 import { createScript } from '@/app/newDocument'
 import { scriptRefOf, useCode } from '@/stores/code'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
@@ -15,7 +17,9 @@ export async function landScript(documentId: string | null, source: string): Pro
     return script !== null && useCode.getState().wrote(script, source)
   }
 
-  const folder = documentFolderOf('script')
+  // ASKED, never composed: only the main process reads the markers, so only it knows where the
+  // code folder went after a rename — and asking is what lays it back down, marked.
+  const folder = await orElse(getBridge()?.project.folderFor('code'), documentFolderOf('script'))
   const taken = takenDocumentNames(useDocuments.getState(), folder)
   const created = await createScript(
     { title: untitledDocumentName(taken, 'script'), folder },

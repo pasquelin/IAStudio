@@ -128,8 +128,13 @@ What it lays inside:
 
 ```
 My first project/          ← the folder YOU chose
-├── assets/           everything you make and import
-├── documents/        your works in progress
+├── Images/           one folder per section of the studio: what you make there
+├── Video/              and what you generate there land together
+├── Audio/
+├── Materials/
+├── Skyboxes/
+├── Scripts/
+├── Modelling/        scenes, models and animations, in three subfolders
 ├── .project.json     the project's identity card — hidden
 └── .index/           the catalogue and its caches — keep this, hidden
 ```

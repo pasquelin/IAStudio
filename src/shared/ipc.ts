@@ -12,6 +12,7 @@ import type { GameManifest, GameScriptFile, GameState } from './domain/game'
 import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
 import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
+import type { FolderRole, RoleFolders } from './domain/folderRole'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
@@ -137,6 +138,8 @@ export type Channels = {
   projectFileHistory: 'project:file-history'
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
+  projectFolderRoles: 'project:folder-roles'
+  projectFolderFor: 'project:folder-for'
   projectFileFacts: 'project:file-facts'
   projectReadContext: 'project:read-context'
   projectWriteContext: 'project:write-context'
@@ -369,6 +372,8 @@ export const CHANNELS: Channels = {
   projectFileHistory: 'project:file-history',
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
+  projectFolderRoles: 'project:folder-roles',
+  projectFolderFor: 'project:folder-for',
   projectFileFacts: 'project:file-facts',
   projectReadContext: 'project:read-context',
   projectWriteContext: 'project:write-context',
@@ -935,6 +940,7 @@ export const EVENTS = {
   projectFolderChanged: 'evt:project-folder-changed',
   filesChanged: 'evt:files-changed',
   projectRescan: 'evt:project-rescan',
+  projectFolderRoles: 'evt:project-folder-roles',
   projectContext: 'evt:project-context',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
@@ -1225,6 +1231,24 @@ export type StudioBridge = {
     rescanState: () => Promise<RescanState>
     /** Calls off the pass that is running. What it had already written stays written. */
     stopRescan: () => Promise<void>
+    /**
+     * Where each role's folder sits in the open project — PARTIAL, a role whose folder is gone
+     * being absent rather than pointed at its default. `{}` while no project is open.
+     *
+     * For DRAWING, never for deciding where to write: `folderFor` is what a write asks, and it
+     * lays the folder down. A window that composed a landing path from this map would file into
+     * a folder nothing marked — and a map replicated over an event is empty for a few frames.
+     */
+    folderRoles: () => Promise<RoleFolders>
+    /**
+     * The folder a role names, laid down with its marker if the project has none.
+     *
+     * Asked rather than composed, and that is the whole mechanism: only the main process reads
+     * the markers, so only it can say where a role went after a rename in the Finder — and
+     * laying the folder down is what keeps the role resolvable at the next open.
+     */
+    folderFor: (role: FolderRole) => Promise<string>
+    onFolderRoles: (callback: (roles: RoleFolders) => void) => Unsubscribe
     /**
      * What the disk says about one entry — size and stamps, for a folder as much as for a file.
      *

@@ -70,10 +70,9 @@ async function freeAssetName(
 /**
  * The same answer as a path, which is what an import needs to write.
  *
- * The folder is CREATED rather than required. `DEFAULT_ASSET_FOLDERS` is a default and no longer
- * a layout: a user who threw `Images/` away did nothing wrong, and the two answers that were
- * available without this — failing the import, or emptying it into the project root — are both
- * worse than putting the folder back.
+ * The folder is CREATED rather than required: a user who threw `Images/` away did nothing wrong,
+ * and failing the import or emptying it into the project root are both worse than putting the
+ * folder back. `ProjectStore.folderFor` is what says WHICH folder, and marks it.
  */
 export async function freeAssetPath(
   root: string,

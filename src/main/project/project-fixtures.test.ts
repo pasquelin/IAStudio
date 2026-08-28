@@ -2,7 +2,7 @@ import { readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
-import { DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
+import { documentFolderOf, DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
 import { ORA_MERGED_PATH, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
 
@@ -107,7 +107,7 @@ describe('the project fixture', () => {
      * another tool leaves on disk, and it is exactly the loss a file count cannot see.
      */
     await writeFile(
-      join(root, 'documents', 'Cover.ora'),
+      join(root, documentFolderOf('image'), 'Cover.ora'),
       zipSync({
         mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }],
         'stack.xml': strToU8(

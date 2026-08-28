@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,8 +7,8 @@ import {
   MANIFEST_FILE,
   MANIFEST_VERSION,
   MACHINE_FOLDERS,
-  STARTER_FOLDERS,
 } from '@shared/domain/project'
+import { DEFAULT_ROLE_PATHS, ROLE_MARKER } from '@shared/domain/folderRole'
 import { isRecord } from '@shared/guards'
 import {
   createProjectStore,
@@ -57,6 +57,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
     })
   })
 
@@ -72,7 +73,7 @@ describe('project store', () => {
     // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
     // a subfolder put a project inside the folder the user had just made for it.
     expect(project.path).toBe(root)
-    for (const folder of [...MACHINE_FOLDERS, ...STARTER_FOLDERS]) {
+    for (const folder of [...MACHINE_FOLDERS, ...Object.values(DEFAULT_ROLE_PATHS)]) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
 
@@ -94,8 +95,36 @@ describe('project store', () => {
 
   // The rule the entry states: what the folder holds for the user stays in the open, what the
   // machine keeps goes under a dot. `layouts/` was neither — nothing has ever written to it.
+  it('says what each folder it laid down is for, so a rename cannot lose one', async () => {
+    const project = await store.create(root, 'My project')
+
+    expect(await readFile(join(project.path, 'Modelling/Models', ROLE_MARKER), 'utf8')).toBe(
+      'models\n',
+    )
+  })
+
+  /**
+   * 🛑 What the manual promises, and it has to hold WITHOUT closing the project: renaming a role
+   * folder while it is open once left the map naming where it used to be, so the next write laid
+   * the default back down and orphaned the folder the user had just renamed, marker and all.
+   */
+  it('follows a role folder renamed while the project is open', async () => {
+    const project = await store.create(root, 'My project')
+    await rename(join(project.path, 'Images'), join(project.path, 'Mes photos'))
+
+    expect(await store.folderFor('image')).toBe('Mes photos')
+    expect(await exists(join(project.path, 'Images'))).toBe(false)
+  })
+
+  it('empties the roles with the project, so none answers for a folder nobody has open', async () => {
+    await store.create(root, 'My project')
+    await store.close()
+
+    expect(store.roles()).toEqual({})
+  })
+
   it('leaves no folder behind that nothing writes to', () => {
-    expect([...MACHINE_FOLDERS, ...STARTER_FOLDERS]).not.toContain('layouts')
+    expect([...MACHINE_FOLDERS, ...Object.values(DEFAULT_ROLE_PATHS)]).not.toContain('layouts')
   })
 
   /**
@@ -429,6 +458,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
       // Read INSIDE the settling: the project still being there is the order this exists for.
       settle: async () => {
         settled = settling.current() !== null
@@ -453,6 +483,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
       settle: async () => {
         stamping?.()
       },
@@ -488,6 +519,7 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
       settle: async () => {
         if (hold) await hold
       },
@@ -634,6 +666,7 @@ describe('project store', () => {
       },
       now: () => '2026-08-06T10:00:00.000Z',
       onChange,
+      onRoles: () => {},
     })
 
     const first = await fragile.create(join(root, 'first'), 'First')
@@ -689,6 +722,7 @@ describe('renaming a project', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
     })
   })
 

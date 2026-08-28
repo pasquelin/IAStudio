@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { documentFolderOf } from '@shared/domain/document'
 import { useCode } from '@/stores/code'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { openScriptAt } from './openScript'
 
-const WALK = 'script:scripts/Walk.ts'
+const WALK = `script:${documentFolderOf('script')}/Walk.ts`
 
 describe('clicking into a script', () => {
   beforeEach(() => {

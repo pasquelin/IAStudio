@@ -68,6 +68,7 @@ function install(folder: string, ids = 0): Promise<InstalledCheckerTexture[]> {
     assets: backend(),
     newAssetId: () => `asset_${(minted += 1)}`,
     folder: () => folder,
+    roles: () => ({}),
     projectPath: () => PROJECT,
     exists: file => onDisk.has(file),
   })

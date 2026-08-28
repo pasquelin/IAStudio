@@ -3,7 +3,8 @@ import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   documentPath,
-  DOCUMENTS_FOLDER,
+  LEGACY_DOCUMENTS_FOLDER,
+  roleForKind,
   DOCUMENT_VERSION,
   isStagingName,
   isDocumentExtension,
@@ -22,6 +23,7 @@ import {
   nextFreeDocumentName,
   type NamedDocument,
 } from '@shared/domain/documentName'
+import type { FolderRole } from '@shared/domain/folderRole'
 import { extensionOf, foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
@@ -112,6 +114,11 @@ export type DocumentFilesDeps = {
    * folders documents were actually found in, which is the only place a staging copy can be.
    */
   folderNames: (relative: string) => Promise<readonly string[] | null>
+  /**
+   * Where a first save goes when its caller names none — `ProjectStore.folderFor`. Asked rather
+   * than composed: only the main process reads the markers a rename leaves in place.
+   */
+  folderFor: (role: FolderRole) => Promise<string>
 }
 
 /**
@@ -199,6 +206,7 @@ export function createDocumentFiles({
   now,
   walkFiles,
   folderNames,
+  folderFor,
 }: DocumentFilesDeps): DocumentFiles {
   /**
    * In-flight work per DOCUMENT, so writing, renaming and removing one cannot interleave.
@@ -441,7 +449,7 @@ export function createDocumentFiles({
      * a document — one or two in an ordinary project — rather than a second walk.
      */
     const folders = new Set(candidates.map(path => parentOf(path) ?? ''))
-    folders.add(DOCUMENTS_FOLDER)
+    folders.add(LEGACY_DOCUMENTS_FOLDER)
 
     const staged = await Promise.all(
       [...folders].map(async folder => {
@@ -533,9 +541,9 @@ export function createDocumentFiles({
 
   /**
    * Where a document written for the first time goes: under its own name, in the folder its
-   * author picked. `DOCUMENTS_FOLDER` is the fallback for a caller that names none — a default,
-   * not where documents live: they live wherever the user put them, which is what `walkFiles`
-   * finds.
+   * author picked. The kind's own folder is the fallback for a caller that names none — a
+   * default, not where documents live: they live wherever the user put them, which is what
+   * `walkFiles` finds.
    *
    * Suffixed rather than refused when the folder already holds that name — this is the studio
    * naming a document nobody has named yet ("Scène 2", the title of an asset opened twice),
@@ -545,11 +553,8 @@ export function createDocumentFiles({
    * answer worth having: this path is handed straight to a write that overwrites what it lands
    * on, and nothing else stands between the two.
    */
-  const freshFile = async (
-    kind: DocumentKind,
-    title: string,
-    folder = DOCUMENTS_FOLDER,
-  ): Promise<string> => {
+  const freshFile = async (kind: DocumentKind, title: string, named?: string): Promise<string> => {
+    const folder = named ?? (await folderFor(roleForKind(kind)))
     const taken = await namesIn(folder)
     return join(
       absoluteOf(folder),

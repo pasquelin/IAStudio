@@ -15,11 +15,12 @@ import type { LocalModel } from '@shared/domain/localModel'
 import { needsOwnFolder } from '@shared/domain/localModel'
 import {
   ASSET_ID_PREFIX,
-  defaultAssetFolder,
+  roleForAsset,
   type Asset,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import { folderForRole } from '@shared/domain/folderRole'
 import type { MediaCapabilities } from '@shared/domain/media'
 import {
   LEGACY_ASSETS_FOLDER,
@@ -828,6 +829,7 @@ export function createServices(settings: SettingsStore): Services {
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
+    onRoles: roles => broadcast(EVENTS.projectFolderRoles, roles),
     onChange: current => {
       if (current) settleOpenedProject(current)
       broadcast(EVENTS.projectChanged, current)
@@ -1012,7 +1014,7 @@ export function createServices(settings: SettingsStore): Services {
     // `onImported` does, and `announce` swallows what that listener raises: a project closed while
     // the catalogue was answering would have cost a mesh its textures, silently.
     const root = project.current()?.path
-    const folder = defaultAssetFolder(asset)
+    const folder = folderForRole(roleForAsset(asset), project.roles())
 
     if (!root || legacyLayoutSettled.has(root)) return
     if (!landedInDefaultFolder(asset.path, folder)) return
@@ -1110,6 +1112,7 @@ export function createServices(settings: SettingsStore): Services {
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
+    folderFor: role => project.folderFor(role),
     catalog: () => project.catalog(),
     now: timestamp,
     // The same function the rescan hashes with (`projectDisk` passes the very same one), which
@@ -1152,6 +1155,7 @@ export function createServices(settings: SettingsStore): Services {
     // one depth bound, rather than a second one free to disagree about how deep a project goes.
     walkFiles: () => folder.walk(),
     folderNames: relative => folder.names(relative),
+    folderFor: role => project.folderFor(role),
   })
 
   const projectRoot = (): string | null => project.current()?.path ?? null

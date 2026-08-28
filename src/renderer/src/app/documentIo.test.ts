@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DOCUMENT_KINDS,
   DOCUMENT_VERSION,
+  documentFolderOf,
   workspaceForKind,
   type DocumentWrite,
 } from '@shared/domain/document'
@@ -172,7 +173,7 @@ describe('saveDocument', () => {
       { title: expect.any(String), content: expect.any(String) },
       false,
       // Where the descriptor says it goes, which a first save reads and a later one ignores.
-      'documents',
+      documentFolderOf('scene'),
     )
 
     // What was written is read back rather than compared to a spelling: the file is a standard
@@ -1481,7 +1482,7 @@ describe('an image document', () => {
         ],
       }),
       false,
-      'documents',
+      documentFolderOf('image'),
     )
   })
 

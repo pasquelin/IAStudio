@@ -1,6 +1,5 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
-import { DEFAULT_ASSET_FOLDERS, MATERIALS_FOLDER } from './asset'
 import { parentOf } from './folder'
 
 export const MANIFEST_VERSION = 1
@@ -38,6 +37,16 @@ export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
  * Under `.index/` because it is machinery the studio can rebuild, not the user's work.
  */
 export const PENDING_FILES_FILE = `${INDEX_FOLDER}/pending-files.ndjson`
+
+/**
+ * Where the last folder-role resolution was written down — a CACHE, never the answer. What binds
+ * a role to a folder is the marker the folder carries; this only spares the walk.
+ *
+ * Declared beside the other `.index/` paths rather than in the resolver, for the reason
+ * `INDEX_FOLDER` gives: three spellings of one folder is how one ends up pointing at a folder
+ * nothing creates.
+ */
+export const ROLE_CACHE_FILE = `${INDEX_FOLDER}/folder-roles.json`
 
 export type Manifest = {
   version: number
@@ -286,22 +295,6 @@ export const MACHINE_FOLDERS: readonly string[] = [
   FILMSTRIPS_FOLDER,
   POSTERS_FOLDER,
   THUMBNAILS_FOLDER,
-]
-
-/**
- * What a new project opens with — ORDINARY folders from the first second, renamed, filled and
- * thrown away like any the user makes. They are a starting point, not a layout the studio reads
- * anything back from.
- *
- * Derived from `DEFAULT_ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the
- * writer pointing at a folder this never created — plus the ONE entry no kind derives,
- * `MATERIALS_FOLDER`, which holds the `.mtlx` documents and the pictures that serve one. `assets/` and `documents/` are no longer among
- * them: a document lands in `documents/` when nothing says otherwise and the folder appears with
- * the first save, exactly as an import recreates `Images/`.
- */
-export const STARTER_FOLDERS: readonly string[] = [
-  ...Object.values(DEFAULT_ASSET_FOLDERS),
-  MATERIALS_FOLDER,
 ]
 
 /**

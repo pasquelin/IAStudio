@@ -8,7 +8,8 @@ import {
   type CheckerTextureId,
   type InstalledCheckerTexture,
 } from '@shared/domain/checkerTexture'
-import { MATERIALS_FOLDER, withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { folderForRole, type RoleFolders } from '@shared/domain/folderRole'
 import { pathIn } from '@shared/domain/folder'
 import { CHANNELS } from '@shared/ipc'
 import { ownFileOf } from './protocol'
@@ -25,13 +26,18 @@ type BundledTextureDeps = {
   folder: () => string
   /** The open project's folder, which is what a stored path is relative to. */
   projectPath: () => string
+  /**
+   * Where each role's folder sits — `ProjectStore.roles`. A LOOKUP rather than a landing: the row
+   * the catalogue holds names the folder the write chose, and this has to ask the same question.
+   */
+  roles: () => RoleFolders
   /** Whether a file is still there. Injected, exactly as `assets:absent` takes it. */
   exists: (file: string) => boolean
 }
 
 /** Where one lands in the project, and where it is looked for before being copied again. */
-function pathOf(id: CheckerTextureId): string {
-  return pathIn(MATERIALS_FOLDER, checkerTextureFile(id))
+function pathOf(id: CheckerTextureId, roles: RoleFolders): string {
+  return pathIn(folderForRole('materials', roles), checkerTextureFile(id))
 }
 
 /**
@@ -74,10 +80,11 @@ export function registerBundledTextureHandlers({
   newAssetId,
   folder,
   projectPath,
+  roles,
   exists,
 }: BundledTextureDeps): void {
   const install = async (id: CheckerTextureId): Promise<Asset> => {
-    let held = (await catalog().search({ path: pathOf(id) }))[0]
+    let held = (await catalog().search({ path: pathOf(id, roles()) }))[0]
     for (const former of formerPathsOf(id)) {
       held ??= (await catalog().search({ path: former }))[0]
     }

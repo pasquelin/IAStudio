@@ -82,14 +82,19 @@ another from the list, picking one in the dialogue. Giving up leaves everything 
 ```
 My project/
 │
-├── Images/               SEVEN FOLDERS TO START FROM
+├── Images/               ONE FOLDER PER SECTION OF THE STUDIO
 ├── Video/                  laid down at creation, and ordinary: rename them,
-├── Audio/                  empty them, throw them away, arrange them otherwise
-├── 3D/
-├── Sky/
-├── Animations/
+├── Audio/                  move them, empty them, arrange them otherwise
 ├── Materials/            your materials, and the pictures that serve one
+├── Skyboxes/
+├── Scripts/
+├── Modelling/            the Modelling section files three things
+│   ├── Scenes/             your scenes
+│   ├── Models/             your meshes
+│   └── Animations/         your motions
 │                           …and whatever you make beside them
+│
+│   Each carries a .ia-studio-role — HIDDEN — saying which section it serves
 │
 ├── .project.json         the identity card — HIDDEN
 │
@@ -112,18 +117,38 @@ Your files stay visible and you arrange them as you see fit — you must be able
 copy them, repair them. The identity card, the index and the backup do not: they are the studio's
 tools, not your work.
 
-> **The seven starter folders are only a starting point.** They are laid down at creation and never
-> put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
-> land, where the studio recreates it rather than refusing to work.
+> **These folders are only a starting point.** They are laid down at creation and never put back:
+> delete `Images/` and it stays deleted — except the day a generation needs somewhere to land,
+> where the studio recreates it rather than refusing to work.
+
+> **Rename them, move them: they go on serving their section.** What binds a folder to a section
+> is not its name but a small hidden file it carries, `.ia-studio-role`. It travels with the
+> folder — a rename in the Finder or in Windows Explorer, a move, a copy, a zip. Rename
+> `Modelling/` to “My models” and the next mesh still lands there.
+>
+> In the studio's explorer, a folder serving a section wears that section's icon, and **its name
+> stays the one on disk** — what you read in the studio is what you read in the Finder. The icon
+> and the tooltip are what say the section, in your language; the folder never changes name
+> because you changed language.
+>
+> A fresh folder wearing the original name — you renamed `Images/`, then made an `Images/` by hand
+> — is an ordinary folder: the marker decides, not the word.
+
+> **The names on disk are English, and that is deliberate.** A folder following the interface
+> language would be renamed at every language change, and everything the catalogue knows about
+> what it holds would point beside the file. The studio translates what a folder SERVES, never its
+> name.
 
 > **`Materials/` is the only one that answers to no kind of file.** It holds your **materials**
 > — the `.mtlx` documents — and the **pictures that serve one**: a base colour, a normal, a
 > roughness land there, where a photograph lands in `Images/`. What tells them apart is not their
 > nature, both being pictures, but **the channel** the second one carries.
 
-> **A project created before 26/08 has one `Textures/` more**, and it keeps it: every asset
-> carries its own path, and nothing reads its role off a folder name. What is there stays
-> readable and editable; the folder is renamed, emptied or merged by hand, like any other.
+> **A project created before this layout keeps its own, untouched.** `3D/`, `Sky/`, `documents/`,
+> `scripts/`, `Textures/`: nothing is moved, nothing is renamed, and everything in them stays
+> readable and editable. Every file carries its own path, and nothing reads its role off the name
+> of the folder holding it. Only files made FROM NOW ON land in the new layout, which appears
+> beside the old one. You can rearrange everything by hand, at your own pace, or not at all.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
 > sets it on `.project.json` and on `.index/` itself. **`.ia-studio/` does not get it**: the day it
@@ -338,7 +363,9 @@ folder chosen is where the document goes** — there are not two things to keep 
 path is written above the columns. You never leave the project: nothing else is offered.
 
 The columns open on the folder the Explorer is showing, or, when nothing is picked there, on
-`Materials/` for a material and on `documents/` for everything else. Below them, **New folder** makes one in the chosen folder without leaving the window.
+the section's own folder — `Modelling/Scenes/` for a scene, `Images/` for an image, `Materials/`
+for a material. Below them, **New folder** makes one in the chosen folder without leaving the
+window.
 
 It is saved with `⌘S` / `Ctrl+S` — into the folder you chose when you made it, and afterwards
 wherever you filed it — under an extension that says what it is:

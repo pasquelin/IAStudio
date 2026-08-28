@@ -810,6 +810,26 @@ the FOLDER rather than in the settings, unlike `settings.ai.projectRoles` — th
 [ADR-24](../ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md). It refuses to be overwritten when it is
 unreadable or from a newer build, the opposite of `jobStore.ts`: what it holds is somebody's text.
 
+A **folder's role** is told by a marker it carries, `.ia-studio-role`, and not by its name: ten
+roles (`shared/domain/folderRole.ts`), one per place the studio files something. `DEFAULT_ROLE_PATHS`
+says where each one STARTS — `Images/`, `Modelling/Scenes/`, `Scripts/`… — and nothing more: the
+folder is ordinary from the first second, and a rename made in the Finder costs it nothing, the
+marker travelling with it. A table of paths kept elsewhere would be wrong from that rename on.
+
+Resolution is in two steps (`main/project/folderRoles.ts`). `.index/folder-roles.json` remembers
+each role's last path, and opening VERIFIES it against the marker — ten reads. Only a role that no
+longer answers sends out a walk, which reuses `FolderReader.walk` with hidden entries shown: a
+marker IS one. A role whose folder is gone is absent from the map rather than pointed at its
+default — absent says “nowhere yet” where a default would say “here”, and what is here gets
+written into; the folder comes back at the first write that needs it (`ProjectStore.folderFor`),
+never on an open. Two folders claiming one role are settled by depth then by code unit, never by a
+collator.
+
+The names are ENGLISH and fixed: a folder following the language would be renamed at every change,
+and every catalogue row under it would point beside the file. What translates is the ROLE — ten
+`folderRoles.*` keys — which the explorer says with a section icon and a tooltip, the name shown
+always staying the one on disk.
+
 The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, name, type,
 location, tags, timestamps, and the path when the asset is local. It exists so the Explorer
 can search thousands of items without touching the filesystem, and so a project remains portable.
@@ -833,7 +853,7 @@ deletes — gives a whole row back if the file comes out of it.
 Assets are either `local` (a file in the project) or `cloud` (still only on the provider). A local
 image is served to the renderer as `ia-studio://<id>`.
 
-**Documents** are files filed wherever the user wants them — `documents/` is only where a
+**Documents** are files filed wherever the user wants them — their section's folder is only where a
 first save lands, and `documents.list()` walks the whole project to find them. One per document,
 **named after the document** —
 `Niveau.gltf`, `Bande annonce.otio`. Its id lives in the envelope (format version 3) rather than

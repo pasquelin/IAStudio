@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ASSET_FOLDERS, MATERIALS_FOLDER } from './asset'
 import type { AccountSummary } from './account'
 import {
   listedAt,
   planProjectAccount,
-  STARTER_FOLDERS,
   projectPickerFolder,
   landedInDefaultFolder,
   projectsByCreation,
@@ -285,18 +283,5 @@ describe('an asset filed in the default folder of its kind', () => {
   // An asset linked where the user left it, or one that lives in the library alone.
   it('is not an asset with no file in the project', () => {
     expect(landedInDefaultFolder(undefined, 'Images')).toBe(false)
-  })
-})
-
-describe('the folders a new project is laid out with', () => {
-  it('holds one for the materials, which no asset type answers for', () => {
-    expect(STARTER_FOLDERS).toContain(MATERIALS_FOLDER)
-    expect(Object.values(DEFAULT_ASSET_FOLDERS)).not.toContain(MATERIALS_FOLDER)
-  })
-
-  it('holds one per asset kind beside it', () => {
-    for (const folder of Object.values(DEFAULT_ASSET_FOLDERS)) {
-      expect(STARTER_FOLDERS).toContain(folder)
-    }
   })
 })

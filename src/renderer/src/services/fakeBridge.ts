@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { CloseChoice, DocumentWrite } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { noGame } from '@shared/domain/game'
 import { IDLE_RESCAN } from '@shared/domain/project'
 import { noContext } from '@shared/domain/projectContext'
@@ -102,6 +103,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onRescan: noSubscription,
       rescanState: () => Promise.resolve(IDLE_RESCAN),
       stopRescan: () => Promise.resolve(),
+      folderRoles: () => Promise.resolve({}),
+      folderFor: role => Promise.resolve(DEFAULT_ROLE_PATHS[role]),
+      onFolderRoles: noSubscription,
       // Nothing on disk unless a suite says otherwise, which is what the window under test then
       // reads as « this entry is no longer there » rather than as a blank pane.
       fileFacts: () => Promise.resolve(null),
