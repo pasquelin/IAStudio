@@ -11,7 +11,7 @@ import { MEMORY_IMPORTANCE_MAX, MEMORY_IMPORTANCE_MIN } from '@shared/domain/ass
  * 🛑 Not tuned against a benchmark — there is none. What makes them defensible is that
  * `recallScore.test.ts` states the ORDER each is there to produce.
  */
-export const RECALL_WEIGHTS = {
+const RECALL_WEIGHTS = {
   /** What the open scene or the open script is about. The strongest: it is not a guess. */
   anchored: 1,
   /** Words that matched. Strong, and it is the only voice that answers an exact name. */
@@ -25,7 +25,7 @@ export const RECALL_WEIGHTS = {
 }
 
 /** After how long unused a memory has lost half its recency. A season of a project. */
-export const RECALL_HALF_LIFE_DAYS = 30
+const RECALL_HALF_LIFE_DAYS = 30
 
 const DAY_MS = 86_400_000
 

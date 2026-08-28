@@ -21,7 +21,7 @@ export type VectorHolder = Pick<
 >
 
 /** A batch is answered in one go, so a question waits for all of it — `[M]` 9,7 ms each. */
-export const EMBED_BATCH = 8
+const EMBED_BATCH = 8
 
 export type EmbedQueue = {
   /**
