@@ -58,6 +58,27 @@
    * Restated darker in the light theme, where a lighter blue would be the wrong direction.
    */
   --color-accent-ink: #6193f3;
+
+  /*
+   * One hue per section, worn by GLYPHS alone — never by a word, which WCAG 1.4.3 would hold to
+   * 4.5 and which would turn a folder listing into seven colours shouting at once.
+   *
+   * 🛑 Redundant by design: the icons already differ in SHAPE, so the colour reinforces and never
+   * carries alone (WCAG 1.4.1). And every hue sits at least 57° from the accent's 222°, because a
+   * blue glyph beside an unselected row would say « chosen » — the one thing accent means here.
+   *
+   * MEASURED on the three grounds an icon lands on AND on each of them under a CHOSEN row, which
+   * fills `bg-accent-soft` and is the tightest of the six: 3.08 to 3.53:1 there against 5.60 to
+   * 7.12 on a bare ground, where 1.4.11 asks 3. It is the selected row the first measurement
+   * missed — the seven read 2.45 to 2.48 on it, and the guard looked only at the bare grounds.
+   */
+  --color-domain-image: #de8cbb;
+  --color-domain-video: #de928a;
+  --color-domain-3d: #ca9f47;
+  --color-domain-code: #88b334;
+  --color-domain-audio: #37be37;
+  --color-domain-skyboxes: #36b998;
+  --color-domain-materials: #cb8fde;
   /*
    * What is written ON that fill, declared HERE and not only in the daisyUI blocks: three dock
    * components read `text-accent-content`, and leaving the name to daisyUI's variable map would
@@ -416,6 +437,15 @@
   --border: 1px;
   --depth: 0;
   --noise: 0;
+
+  /* The same seven hues, darkened. Tightest is a chosen row at 3.08, against 3.95 bare. */
+  --color-domain-image: #c42381;
+  --color-domain-video: #c83124;
+  --color-domain-3d: #896419;
+  --color-domain-code: #557414;
+  --color-domain-audio: #167b16;
+  --color-domain-skyboxes: #157860;
+  --color-domain-materials: #a925d5;
 
   --color-chassis: #dcdde1;
   --color-panel: #ffffff;

@@ -13,6 +13,7 @@ import { kindForExtension, type DocumentDescriptor } from '@shared/domain/docume
 import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
+import { natureOf } from '@shared/domain/fileRole'
 import { FOLDER_ROLES, WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
@@ -27,7 +28,15 @@ import { renameAsset, renameDocument } from '@/helpers/rename'
 import { startSceneDrag } from '@/helpers/sceneDrag'
 import { openProjectFile } from '@/helpers/openProjectFile'
 import { applySelection } from '@/helpers/selection'
-import { roleIcon, roleLabelKey, workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
+import {
+  domainInk,
+  roleIcon,
+  roleInk,
+  roleLabelKey,
+  workspaceById,
+  workspaceInk,
+  workspaceLabelKey,
+} from '@/helpers/workspaces'
 import { useDomainTree } from '@/hooks/useDomainTree'
 import { useFolderSearch } from '@/hooks/useFolderSearch'
 import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
@@ -466,6 +475,21 @@ export function Explorer() {
     node.kind === 'folder' ? (byFolder.get(node.path) ?? null) : null
 
   /**
+   * The hue the glyph is inked in — the section it belongs to, and nothing for what belongs to
+   * none. A document answers by its workspace, a role folder by its role, a file by what the
+   * catalogue says it IS; the plain folders and the strays stay in ordinary ink.
+   */
+  const inkFor = (node: FolderNode): string | undefined => {
+    const document = documentOf(node)
+    if (document) return workspaceInk(document.workspace)
+
+    const role = roleOf(node)
+    if (role) return roleInk(role)
+
+    return node.kind === 'file' ? domainInk(natureOf(node.path).domain) : undefined
+  }
+
+  /**
    * The glyph an entry wears. The descriptor is asked FIRST: an image document is a directory, and
    * answering the folder question first showed a folder over every other space's own glyph.
    */
@@ -782,6 +806,7 @@ export function Explorer() {
                     document?.title === stemOf(node.name) ? extensionOf(node.name) : undefined
                   }
                   icon={iconFor(node, row.expanded)}
+                  ink={inkFor(node)}
                   hint={hintFor(node)}
                   preview={previewFor(node)}
                   open={isOpen(document)}

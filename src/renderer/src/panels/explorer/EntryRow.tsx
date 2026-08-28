@@ -17,6 +17,8 @@ export type EntryRowProps = {
    */
   extension?: string
   icon: string
+  /** The section's hue for the glyph, or nothing for what belongs to no section. */
+  ink?: string
   /** A preview of the file, drawn at glyph size — the tree shows one too, as a file browser does. */
   preview?: string
   /** Whether a tab is showing this file right now. Only a document can be. */
@@ -51,6 +53,7 @@ export function EntryRow({
   name,
   extension,
   icon,
+  ink,
   preview,
   open,
   waiting,
@@ -98,7 +101,13 @@ export function EntryRow({
           draggable={false}
           className="size-full rounded-(--radius-sc-sm) object-cover"
           fallback={
-            <UiIcon path={icon} size={14} className={cn('shrink-0', open && 'text-accent-ink')} />
+            // `open` last, so the accent mark wins the merge: which document is in front outranks
+            // which section it belongs to, and a row can be both.
+            <UiIcon
+              path={icon}
+              size={14}
+              className={cn('shrink-0', ink, open && 'text-accent-ink')}
+            />
           }
         />
       }

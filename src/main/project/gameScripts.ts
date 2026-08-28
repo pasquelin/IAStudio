@@ -16,7 +16,7 @@ export type GameScriptStore = {
 
 export type GameScriptDeps = {
   rootOf: () => string | null
-  /** The project's own walk — one depth bound and one refusal, shared with the explorer. */
+  /** The project's own walk — its depth bound and its refusals, shared with the explorer. */
   walk: () => Promise<FolderEntry[]>
 }
 

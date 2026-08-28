@@ -1192,11 +1192,15 @@ export type StudioBridge = {
      */
     listFolder: (relative: string, hidden: boolean) => Promise<FolderEntry[]>
     /**
-     * Every entry of the whole project folder whose name holds `term` — the explorer's second
-     * source of nodes, and the only one that can answer for a folder nobody has unfolded.
+     * Every entry of the project folder whose name holds `term` — the explorer's second source of
+     * nodes, and the only one that can answer for a folder nobody has unfolded.
      *
      * A flat list, in no order the reader should rely on: the tree rebuilds the ancestors of each
      * match and sorts what it draws. An empty term answers nothing rather than the whole folder.
+     *
+     * **Not `node_modules`.** It is listed and it unfolds; it is never crossed, holding thousands
+     * of entries and not one of them the user's — a project beside a checkout answered forty
+     * thousand matches nobody wrote.
      */
     searchFolder: (term: string, hidden: boolean) => Promise<FolderEntry[]>
     /**
@@ -1206,6 +1210,9 @@ export type StudioBridge = {
      * Folders do not come back: a folder is not a domain. A document written as a folder does,
      * as the item it is. The listing is flat and unordered; the panel groups and sorts it, and
      * asks the catalogue about the whole of it in one go (`AssetQuery.paths`).
+     *
+     * **Not `node_modules`**, at either setting of `hidden`: nothing under it is the user's work,
+     * and crossing it cost a save 142 ms where the rest of the project costs 8.
      */
     walkFolder: (hidden: boolean) => Promise<FolderEntry[]>
     /**

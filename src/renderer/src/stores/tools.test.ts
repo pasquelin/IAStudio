@@ -16,6 +16,7 @@ import {
   DEFAULT_LENGTHS,
   DEFAULT_OPEN,
   DEFAULT_SIZES,
+  defaultSizeOf,
   migrateTools,
   fitZoneSize,
   fitSplit,
@@ -102,7 +103,12 @@ describe('tools store', () => {
     expect((sizes.left ?? 0) + (sizes.right ?? 0)).toBeLessThanOrEqual(1000 - MIN_CENTER)
   })
 
-  /** A zone open anywhere takes its width off the others, whichever family holds it open. */
+  /**
+   * A zone open anywhere takes its width off the others, whichever family holds it open — and at
+   * the width that family DRAWS it: the home is left on its default here, where the right column
+   * is open on the assistant's 460. What is left of 800 is under the floor, so the drag stops at
+   * `MIN_SIZE`.
+   */
   it('re-clamps every zone when the window shrinks', () => {
     useTools.setState({
       arrangements: arrangedFor('image', {
@@ -111,7 +117,7 @@ describe('tools store', () => {
       lengths: { sizes: { left: 600 }, splits: {} },
     })
     useTools.getState().fit(800, 600)
-    expect(useTools.getState().lengths.sizes.left).toBe(800 - DEFAULT_SIZES.right - MIN_CENTER)
+    expect(useTools.getState().lengths.sizes.left).toBe(MIN_SIZE)
   })
 
   /**
@@ -307,6 +313,48 @@ describe('tools store', () => {
 })
 
 /**
+ * A conversation at 260 wraps every sentence onto three lines, and the layer stack at 460 is
+ * mostly gutter — so the width belongs to the TOOL, until somebody drags one.
+ */
+describe('a tool that opens its zone wider than the zone would', () => {
+  it('opens at its own width, where its neighbours keep the zone width', () => {
+    expect(defaultSizeOf('right', 'assistant')).toBe(460)
+    expect(defaultSizeOf('right', 'layers')).toBe(DEFAULT_SIZES.right)
+    expect(defaultSizeOf('right', null)).toBe(DEFAULT_SIZES.right)
+  })
+
+  /**
+   * 🛑 The clamp reads the same number, or the opposite column may be dragged over room this one
+   * is already drawing in — and the centre goes under its floor with nothing on screen saying so.
+   */
+  it('is the room the opposite column is bounded against', () => {
+    useTools.setState({
+      arrangements: arrangedFor('home', {
+        open: { left: { primary: 'projects' }, right: { primary: 'assistant' } },
+      }),
+      lengths: { sizes: {}, splits: {} },
+    })
+
+    useTools.getState().resize('left', 900, 1400)
+
+    expect(useTools.getState().lengths.sizes.left).toBe(1400 - 460 - MIN_CENTER)
+  })
+
+  /**
+   * 🛑 The case above names the tool; NO stored layout does. `DEFAULT_OPEN` holds `null` — "the
+   * panel this surface declares first" — and the shell resolves it before drawing, so a clamp
+   * reading the stored half sees no tool and bounds against the zone's own width instead.
+   */
+  it('is that room on a layout nobody has touched, where no half names a tool', () => {
+    useTools.getState().reset()
+
+    useTools.getState().resize('left', 900, 1400)
+
+    expect(useTools.getState().lengths.sizes.left).toBe(1400 - 460 - MIN_CENTER)
+  })
+})
+
+/**
  * `DEFAULT_OPEN` is a second copy of what `TOOL_PLACEMENTS` already says, kept by hand — and the
  * home's upper left has been named, unnamed and named again in three versions, once per panel
  * that moved through it. Nothing crossed the two until this test.
@@ -394,7 +442,10 @@ describe('the home and the workspaces arrange their zones apart', () => {
   it('bounds each column against the other', () => {
     useTools.getState().resize('left', 700, 1000)
 
-    expect(useTools.getState().lengths.sizes.left).toBe(1000 - DEFAULT_SIZES.right - MIN_CENTER)
+    // 460, not the zone's own width: the home's right column is open on the assistant, and this
+    // read `DEFAULT_SIZES.right` for as long as the clamp looked at the stored half rather than
+    // the drawn one.
+    expect(useTools.getState().lengths.sizes.left).toBe(1000 - 460 - MIN_CENTER)
   })
 
   it('re-clamps the studio when the window shrinks', () => {

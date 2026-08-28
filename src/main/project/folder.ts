@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName } from '@shared/domain/document'
 import { entriesByName, isHiddenEntry, pathIn, type FolderEntry } from '@shared/domain/folder'
-import { isUnwatchedByGit } from '@shared/domain/git'
+import { GIT_FOLDER, isUnwatchedByGit } from '@shared/domain/git'
+import { INDEX_FOLDER } from '@shared/domain/project'
 import { matchesWords, searchWords } from '@shared/text'
 
 /**
@@ -14,6 +15,20 @@ import { matchesWords, searchWords } from '@shared/text'
  * nobody was looking for by the time the tree has drawn its ancestors.
  */
 const MAX_SEARCH_DEPTH = 12
+
+/**
+ * Folders no walk goes DOWN into. A different question from `isHiddenEntry`, which decides what
+ * is SHOWN: `node_modules` wears no dot, so it is listed like any folder and unfolds when asked
+ * — it is only never CROSSED. `folderRoles.bench.ts` holds what it costs.
+ */
+const UNWALKED: ReadonlySet<string> = new Set(['node_modules'])
+
+/**
+ * What the studio's OWN walk refuses on top, DERIVED so a name added above reaches both: `named`
+ * reads hidden entries to find the studio's markers, and none of them is under either of these.
+ * A reader asking to SEE them is the other question, and `hidden` still answers it.
+ */
+const UNWALKED_BY_THE_STUDIO: ReadonlySet<string> = new Set([...UNWALKED, GIT_FOLDER, INDEX_FOLDER])
 
 export type FolderReader = {
   /**
@@ -115,7 +130,8 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
   const walkAll = async (
     hidden: boolean,
     keep: (entry: FolderEntry) => boolean,
-    sorted = true,
+    sorted: boolean,
+    unwalked: ReadonlySet<string>,
   ): Promise<FolderEntry[]> => {
     const found: FolderEntry[] = []
 
@@ -130,6 +146,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         // writing, half-landed. A document wears the extension of an open format now, and a
         // glTF delivered unpacked into `Repérages.gltf/` is material the rescan must see.
         if (isStagingName(entry.name)) continue
+        if (unwalked.has(entry.name)) continue
         deeper.push(walk(entry.path, depth + 1))
       }
 
@@ -155,7 +172,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       const words = searchWords(term)
       if (words.length === 0) return []
 
-      return await walkAll(hidden, entry => matchesWords(entry.name, words))
+      return await walkAll(hidden, entry => matchesWords(entry.name, words), true, UNWALKED)
     },
 
     walk: async (hidden = false) =>
@@ -166,12 +183,13 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       // and not one caller of this keeps the order — the domain view groups what comes back, the
       // document listing re-sorts by code unit, and the reconciliation pass puts it into a `Set`.
       // This is the walk that crosses a hundred thousand files on every save.
-      await walkAll(hidden, entry => entry.kind === 'file', false),
+      await walkAll(hidden, entry => entry.kind === 'file', false, UNWALKED),
 
     names: async relative => await orElse(readdir(join(rootOf(), relative)), null),
 
     // Unsorted, and hidden shown: what this answers is the studio's own bookkeeping.
-    named: async name => await walkAll(true, entry => entry.name === name, false),
+    named: async name =>
+      await walkAll(true, entry => entry.name === name, false, UNWALKED_BY_THE_STUDIO),
   }
 }
 

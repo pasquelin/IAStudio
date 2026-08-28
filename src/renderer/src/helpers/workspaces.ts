@@ -12,6 +12,7 @@ import {
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
+import type { FileDomain } from '@shared/domain/fileRole'
 import { WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
 import { type ModelFamily } from '@shared/domain/model'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
@@ -93,6 +94,40 @@ const OWN_ROLE_ICON: Record<FolderRole, string | null> = {
   // The same runner an animation ASSET wears: two glyphs for one idea, in one panel, is what
   // relisting the table produced the first time.
   animations: assetIcon('animation'),
+}
+
+/**
+ * The ink a section's glyph wears — one hue per section, so a listing is read by colour before it
+ * is read by shape. `index.css` measures them; nothing here holds a value.
+ */
+const DOMAIN_INK: Record<WorkspaceId, string> = {
+  image: 'text-domain-image',
+  video: 'text-domain-video',
+  '3d': 'text-domain-3d',
+  code: 'text-domain-code',
+  audio: 'text-domain-audio',
+  materials: 'text-domain-materials',
+  skyboxes: 'text-domain-skyboxes',
+}
+
+/** What a workspace's glyph is inked in — its four folder roles share it, being one section. */
+export function workspaceInk(workspace: WorkspaceId): string {
+  return DOMAIN_INK[workspace]
+}
+
+/** What a folder serving a section is inked in. */
+export function roleInk(role: FolderRole): string {
+  return DOMAIN_INK[WORKSPACE_BY_ROLE[role]]
+}
+
+/**
+ * What a FILE is inked in, by what it is. Nothing for `other`: a stray beside the work is not of
+ * a section, and inking it would promise a belonging the catalogue never claimed.
+ */
+export function domainInk(domain: FileDomain): string | undefined {
+  if (domain === 'other') return undefined
+
+  return domain === 'material' ? DOMAIN_INK.materials : DOMAIN_INK[workspaceOfType(domain)]
 }
 
 /** What stands for a folder serving a section. Read off the workspace table, never relisted. */
