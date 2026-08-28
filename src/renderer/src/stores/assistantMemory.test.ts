@@ -20,7 +20,13 @@ const memory = (fields: Partial<Memory> = {}): Memory => ({
 const state = () => useAssistantMemory.getState()
 
 beforeEach(() => {
-  useAssistantMemory.setState({ memories: [], scope: 'project', query: {}, loaded: false })
+  useAssistantMemory.setState({
+    memories: [],
+    scope: 'project',
+    query: {},
+    loaded: false,
+    asked: false,
+  })
 })
 
 describe('what the window holds', () => {
@@ -104,6 +110,59 @@ describe('what the window holds', () => {
     for (const announce of announcers) announce('global')
 
     expect(list).not.toHaveBeenCalled()
+  })
+})
+
+describe('what a listing costs', () => {
+  /**
+   * 🛑 `pending` is a `LEFT JOIN` over EVERY memory of the scope and does not depend on the
+   * query, so counting it per listing made each keystroke of the search pay a scan whose answer
+   * could not have moved.
+   */
+  it('counts what is left to embed per scope, not per question typed', async () => {
+    const pending = vi.fn(() => Promise.resolve(3))
+    installFakeBridge({ memory: { list: () => Promise.resolve([]), pending } })
+
+    await state().look('project', {})
+    await state().look('project', { text: 'rail' })
+    await state().look('project', { text: 'rails' })
+
+    expect(pending).toHaveBeenCalledTimes(1)
+
+    await state().look('global', {})
+    expect(pending).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * 🛑 The main process announces a change per amendment and this window hears its OWN: a merge
+   * set off a full listing per amendment, in every open window, for a result one final read
+   * describes.
+   */
+  it('reads once at the end of a burst, not once per memory it amended', async () => {
+    const announcers: ((scope: MemoryScope) => void)[] = []
+    const twins = [memory({ id: 'm_a' }), memory({ id: 'm_b' }), memory({ id: 'm_c' })]
+    const list = vi.fn(() => Promise.resolve(twins))
+    installFakeBridge({
+      memory: {
+        list,
+        // What the main process does on every amendment — see `handlers.ts`.
+        amend: (_scope: MemoryScope, id: string) => {
+          for (const announce of announcers) announce('project')
+          return Promise.resolve(twins.find(one => one.id === id) ?? null)
+        },
+        onChanged: callback => {
+          announcers.push(callback)
+          return () => {}
+        },
+      },
+    })
+
+    await state().connect()
+    await state().reload()
+    list.mockClear()
+
+    expect(await state().mergeDuplicates()).toBe(2)
+    expect(list).toHaveBeenCalledTimes(1)
   })
 })
 

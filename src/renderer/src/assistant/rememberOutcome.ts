@@ -30,7 +30,7 @@ export async function rememberOutcome(
   const rule = MEMORY_WORTH[name]
   if (rule === null) return false
 
-  const drawn = rule.draft(input, outcome.data)
+  const drawn = rule.draft(input)
   if (drawn === null) return false
 
   /**

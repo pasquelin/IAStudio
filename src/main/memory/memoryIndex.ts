@@ -317,6 +317,18 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
      ON CONFLICT(memory_id) DO UPDATE SET text_digest = excluded.text_digest,
        model = excluded.model, vector = excluded.vector`,
   )
+  /**
+   * 🛑 Held, unlike their many-hole siblings: `read` and `standingOn` always pass ONE id, and
+   * `standingOn` runs on every `remember` — so this was a real `sqlite3_prepare_v2` per action
+   * the assistant took. Only a query whose number of `?` varies is compiled per call.
+   */
+  const readOneRefs = driver.prepare(
+    `SELECT memory_id, kind, ref FROM memory_refs WHERE memory_id = ? ORDER BY kind, ref`,
+  )
+  const readOneLinks = driver.prepare(
+    `SELECT from_id, to_id FROM memory_links WHERE from_id = ? ORDER BY to_id`,
+  )
+
   const countPending = driver.prepare(
     `SELECT count(*) AS held FROM memories m
      LEFT JOIN memory_vectors v
@@ -390,12 +402,15 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     const links = new Map<string, string[]>()
 
     const refRows = byBatch(ids, batch =>
-      driver
-        .prepare(
-          `SELECT memory_id, kind, ref FROM memory_refs WHERE memory_id IN (${holes(batch.length)})
-           ORDER BY memory_id, kind, ref`,
-        )
-        .all(...batch),
+      batch.length === 1
+        ? readOneRefs.all(...batch)
+        : driver
+            .prepare(
+              `SELECT memory_id, kind, ref FROM memory_refs
+               WHERE memory_id IN (${holes(batch.length)})
+               ORDER BY memory_id, kind, ref`,
+            )
+            .all(...batch),
     )
 
     for (const row of refRows) {
@@ -409,12 +424,14 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
     }
 
     const linkRows = byBatch(ids, batch =>
-      driver
-        .prepare(
-          `SELECT from_id, to_id FROM memory_links WHERE from_id IN (${holes(batch.length)})
-           ORDER BY from_id, to_id`,
-        )
-        .all(...batch),
+      batch.length === 1
+        ? readOneLinks.all(...batch)
+        : driver
+            .prepare(
+              `SELECT from_id, to_id FROM memory_links WHERE from_id IN (${holes(batch.length)})
+               ORDER BY from_id, to_id`,
+            )
+            .all(...batch),
     )
 
     for (const row of linkRows) {
@@ -627,7 +644,7 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
       dropOther.run(model)
     },
 
-    recall: ask => recallWith(ask),
+    recall: recallWith,
 
     // Run after a rebuild, never during one: `clear` deliberately spares the vectors, so what a
     // file no longer holds is only known once the file has been read back whole.

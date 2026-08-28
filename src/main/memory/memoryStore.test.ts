@@ -421,6 +421,22 @@ describe('compacting the file', () => {
     expect((await store.list({})).map(one => one.summary).sort()).toEqual(['one', 'two'])
   })
 
+  /**
+   * 🛑 The saving is measured against the FILE, and the file grows under the session that reads
+   * it: a count taken once at the read and never followed would report a stale figure — and this
+   * is the gesture that then rewrites the file from it.
+   */
+  it('measures its saving against a file that grew since it was read', async () => {
+    await store.remember(draft({ summary: 'first' }))
+    await store.rebuild()
+    await store.amend('m_1', { state: 'pinned' })
+    await store.amend('m_1', { summary: 'reworded' })
+
+    // Four lines on disk — one written, one re-read, two amendments — for one memory standing.
+    await expect(store.compact()).resolves.toBe(2)
+    expect(await lines()).toHaveLength(1)
+  })
+
   it('saves nothing on a file that was never written', async () => {
     await expect(store.compact()).resolves.toBe(0)
   })

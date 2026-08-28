@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defined } from '@shared/guards'
+import { defined, isRecord } from '@shared/guards'
 import {
   MEMORY_BODY_MAX,
   MEMORY_PAGE,
@@ -132,19 +132,18 @@ export function parseMemoryScope(value: unknown): MemoryScope {
 }
 
 /**
- * 🛑 Built once, at the module. Inside the function it was rebuilt per LINE, and reading a file
- * of ten thousand took 1 177 ms against 60,6 — nineteen times, measured, on the one path that
- * stands between opening a project and answering its first question.
- */
-const declaredVersion = z.object({ v: z.number().int().min(1) })
-
-/**
  * The version a line declares, or nothing. A line with no version is not a line of this file:
  * every one the studio writes carries it.
+ *
+ * 🛑 Read rather than parsed: `storedMemory` validates the same line right after, so a zod pass
+ * for one integer key is the second walk of every line of the file — and reading ten thousand
+ * stands between opening a project and answering its first question.
  */
 export function versionOf(value: unknown): number | null {
-  const version = declaredVersion.safeParse(value)
-  return version.success ? version.data.v : null
+  if (!isRecord(value)) return null
+
+  const version = value['v']
+  return typeof version === 'number' && Number.isInteger(version) && version >= 1 ? version : null
 }
 
 /**

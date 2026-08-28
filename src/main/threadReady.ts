@@ -1,6 +1,12 @@
 import type { Worker } from 'node:worker_threads'
 
 /**
+ * What a thread says once, before anything is asked of it. Declared here rather than in each
+ * protocol: three of them spelt the same union, and this is the one function that reads it.
+ */
+export type ThreadReady = { ready: true } | { ready: false; error: string }
+
+/**
  * Waits for a worker thread to say it has opened whatever it owns.
  *
  * The three `off` before resolving are the whole subtlety: an `exit` arriving after a successful
@@ -9,7 +15,7 @@ import type { Worker } from 'node:worker_threads'
 export function threadReady(
   worker: Worker,
   what: string,
-  isReady: (message: unknown) => message is { ready: true } | { ready: false; error: string },
+  isReady: (message: unknown) => message is ThreadReady,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const settle = (error?: Error): void => {

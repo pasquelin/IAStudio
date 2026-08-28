@@ -31,10 +31,7 @@ describe('what each action leaves behind', () => {
 
   it('draws a type and an importance the domain admits', () => {
     const drawn = ruled.flatMap(([, rule]) => {
-      const made = rule.draft(
-        Object.fromEntries(rule.reads.map(key => [key, 'something'])),
-        undefined,
-      )
+      const made = rule.draft(Object.fromEntries(rule.reads.map(key => [key, 'something'])))
       return made === null ? [] : [made]
     })
 
@@ -48,12 +45,12 @@ describe('what each action leaves behind', () => {
 
   /** Nothing at all rather than a memory saying nothing: the field it needed was empty. */
   it('draws nothing when what it reads is absent', () => {
-    for (const [, rule] of ruled) expect(rule.draft({}, undefined)).toBeNull()
+    for (const [, rule] of ruled) expect(rule.draft({})).toBeNull()
   })
 
   /** The example the lot is measured by: a script leaves a trace, moving a node leaves none. */
   it('remembers a script written, and nothing about a node moved', () => {
-    const written = MEMORY_WORTH['script.write']?.draft({ path: 'Scripts/Cam.ts' }, undefined)
+    const written = MEMORY_WORTH['script.write']?.draft({ path: 'Scripts/Cam.ts' })
 
     expect(written).toMatchObject({
       type: 'script',

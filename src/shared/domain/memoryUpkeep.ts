@@ -5,8 +5,8 @@ import type { Memory } from './assistantMemory'
  * What a memory of six months needs so it stays readable: what says the same thing twice, and
  * what nothing has drawn on for a season.
  *
- * Pure, and in `shared/` because both sides ask — the panel offers the gestures, the store
- * carries them out. A second copy would let the two disagree about what a duplicate is.
+ * Pure, and in `shared/` so the window and the main process cannot disagree about what a
+ * duplicate is. Both importers are in the renderer today; the definition is not the renderer's.
  */
 
 /** Loose enough to catch a rewording, strict enough not to merge two: the studio's own folding. */
@@ -59,11 +59,7 @@ const lastTouched = (memory: Memory): string => memory.usedAt ?? memory.createdA
  * 🛑 Pinned ones are never here: what the person decided to always give does not go stale, and
  * offering to archive it would undo a decision rather than tidy after one.
  */
-export function staleIn(
-  memories: readonly Memory[],
-  now: string,
-  afterDays = MEMORY_STALE_DAYS,
-): readonly Memory[] {
+export function staleIn(memories: readonly Memory[], now: string): readonly Memory[] {
   const asked = Date.parse(now)
   if (Number.isNaN(asked)) return []
 
@@ -71,7 +67,7 @@ export function staleIn(
     .filter(memory => memory.state === 'live')
     .filter(memory => {
       const at = Date.parse(lastTouched(memory))
-      return !Number.isNaN(at) && asked - at > afterDays * DAY_MS
+      return !Number.isNaN(at) && asked - at > MEMORY_STALE_DAYS * DAY_MS
     })
     .sort((one, other) => byCodeUnit(lastTouched(one), lastTouched(other)))
 }

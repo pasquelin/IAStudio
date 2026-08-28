@@ -17,7 +17,7 @@ import {
  * catalogue every 4 096-token model is shown.
  *
  * Nothing is pushed at the assistant: its briefing carries a SIGNAL naming this action, and a
- * narrow door reaches it through `actions.find` — see `MEMORY_SIGNAL` in `instruction.ts`.
+ * narrow door reaches it through `actions.find` — see `memorySignal` in `instruction.ts`.
  */
 
 /**
@@ -27,7 +27,7 @@ import {
 export const MEMORY_RECALL_ACTION: ActionName = 'memory.recall'
 export const MEMORY_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'memory.recall',
+    name: MEMORY_RECALL_ACTION,
     titleKey: 'assistant.actions.memoryRecall.title',
     descriptionKey: 'assistant.actions.memoryRecall.description',
     commitment: 'none',

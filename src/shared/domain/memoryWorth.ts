@@ -29,7 +29,7 @@ export type MemoryDrawn = {
  */
 export type MemoryRule = null | {
   readonly reads: readonly string[]
-  readonly draft: (input: Record<string, unknown>, data: unknown) => MemoryDrawn | null
+  readonly draft: (input: Record<string, unknown>) => MemoryDrawn | null
 }
 
 /**

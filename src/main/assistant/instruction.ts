@@ -274,7 +274,7 @@ export type BriefingParts = {
   /**
    * How many memories this project holds. What the briefing pays instead of the memories.
    *
-   * 🛑 A COUNT, never a recall — see `MEMORY_RULE`. Injecting summaries paid an embedding and a
+   * 🛑 A COUNT, never a recall — see `memorySignal`. Injecting summaries paid an embedding and a
    * vector scan on every single turn for a block that four doors of five threw away whole: the
    * short briefing runs 7 008 characters against a room of 7 116, and the memory was the first
    * thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
@@ -441,9 +441,6 @@ function memorySignal(
   return canFind ? [MEMORY_FIND] : []
 }
 
-/** A briefing and the rules it was composed from — the text is built once, never measured twice. */
-type Composed = { readonly rules: readonly string[]; readonly text: string }
-
 /**
  * The briefing with the signal, or without it when it does not FIT.
  *
@@ -459,13 +456,20 @@ function composedWithSignal(
   catalogue: string,
   base: readonly string[],
   signal: readonly string[],
-): Composed {
-  const rules = [...base, ...signal]
-  const text = briefingText(parts, catalogue, rules, '')
-  if (signal.length === 0 || text.length <= parts.room) return { rules, text }
+): string {
+  const text = briefingText(parts, catalogue, [...base, ...signal], '')
+  if (signal.length === 0 || text.length <= parts.room) return text
 
-  return { rules: base, text: briefingText(parts, catalogue, base, '') }
+  // 🛑 Retried only where the signal is what tipped it over: a briefing that overruns by tens of
+  // thousands is heading for `narrowBriefing` anyway, and composing a 69 000-character catalogue
+  // a second time to learn that is the very waste this file's history records having removed.
+  const over = text.length - parts.room
+  return over > signalCost(signal) ? text : briefingText(parts, catalogue, base, '')
 }
+
+/** What the signal adds to a briefing: its own line, and the newline that joins it. */
+const signalCost = (signal: readonly string[]): number =>
+  signal.reduce((sum, line) => sum + line.length + 1, 0)
 
 /**
  * Everything but the person's sentence, sized to the room the brain has: the whole registry when
@@ -485,10 +489,10 @@ export function studioBriefing(parts: BriefingParts): Briefing {
     WIDE_ALL,
     memorySignal(parts, whole.allowed, false),
   )
-  if (wide.text.length > parts.room) return narrowBriefing(parts)
+  if (wide.length > parts.room) return narrowBriefing(parts)
 
   return {
-    text: wide.text,
+    text: wide,
     allowed: whole.allowed,
     expand: null,
     narrow: () => narrowBriefing(parts),
@@ -508,7 +512,7 @@ function narrowBriefing(declared: BriefingParts): Briefing {
       short.text,
       NARROW_RULES,
       memorySignal(parts, short.allowed, true),
-    ).text,
+    ),
     allowed: short.allowed,
     // Offered once, and only from here: an expansion of an expansion is a conversation with
     // itself, paid for by the person waiting — see `expandedWith`.

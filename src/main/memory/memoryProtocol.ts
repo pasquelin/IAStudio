@@ -5,6 +5,7 @@ import type {
   MemoryQuery,
   MemoryTrouble,
 } from '@shared/domain/assistantMemory'
+import type { ThreadReady } from '@main/threadReady'
 import type { RecallAsk } from './memoryIndex'
 import type { MemoryVector, PendingVector } from './vectors'
 
@@ -67,7 +68,7 @@ export type MemoryResponse =
   { id: number; ok: true; value: unknown } | { id: number; ok: false; error: string }
 
 /** Said once, before anything is asked: the database is open and the file has been read. */
-export type MemoryReady = { ready: true } | { ready: false; error: string }
+export type MemoryReady = ThreadReady
 
 export function isMemoryReady(message: unknown): message is MemoryReady {
   return typeof message === 'object' && message !== null && 'ready' in message

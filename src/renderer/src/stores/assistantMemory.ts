@@ -20,6 +20,25 @@ const amendedIn = async (scope: MemoryScope, id: string, patch: MemoryPatch): Pr
   (await orElse(memoryBridge()?.amend(scope, id, patch), null)) !== null
 
 /**
+ * 🛑 Whether an upkeep burst is running, and it is what makes « one reload at the end » true.
+ *
+ * The main process broadcasts a change per amendment and this window hears its OWN: a merge of a
+ * hundred memories set off a full listing per amendment, in every open window, for a result one
+ * final read describes. Held at the module rather than in the state: it must not draw anything.
+ */
+let bursting = false
+
+/** Runs a burst with its own announcements muted, and lets them through again whatever happens. */
+async function burst<T>(run: () => Promise<T>): Promise<T> {
+  bursting = true
+  try {
+    return await run()
+  } finally {
+    bursting = false
+  }
+}
+
+/**
  * What the window holds of the two memories.
  *
  * A listing rather than the whole of either: the file may hold years of a project, and nothing on
@@ -31,6 +50,8 @@ type AssistantMemoryState = {
   query: MemoryQuery
   /** Told apart from « none held »: a panel drawn before the first answer must not say « empty ». */
   loaded: boolean
+  /** Whether the panel has asked once — what makes `pending` a read per SCOPE, not per keystroke. */
+  asked: boolean
   connect: () => Promise<() => void>
   look: (scope: MemoryScope, query: MemoryQuery) => Promise<void>
   reload: () => Promise<void>
@@ -62,6 +83,7 @@ type AssistantMemoryState = {
 
 export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => ({
   memories: [],
+  asked: false,
   scope: 'project',
   query: {},
   loaded: false,
@@ -75,7 +97,8 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     // thread and a database, and the settings window connects this from its root — so a change
     // announced while the reader is on another section must not pay for one.
     const stopChanges = bridge.memory.onChanged(scope => {
-      if (scope === get().scope && get().loaded) void get().reload()
+      if (bursting || scope !== get().scope || !get().loaded) return
+      void get().reload()
     })
     const stopSteps = bridge.memory.onIndexed(progress => {
       if (progress.scope !== get().scope) return
@@ -94,8 +117,14 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   look: async (scope, query) => {
     // The bar belongs to the scope that was showing: a run under way in the other one is not
     // this panel's business, and `onIndexed` filters on the scope anyway.
-    set({ scope, query, ...(scope === get().scope ? {} : { indexing: null }) })
+    const moved = scope !== get().scope
+    set({ scope, query, ...(moved ? { indexing: null } : {}) })
     await get().reload()
+    // Here and not in `reload`: what is left to embed belongs to the SCOPE, so it is read when
+    // the scope changes and when the panel first asks — never on a filter the count ignores.
+    if (moved || !get().asked) {
+      set({ asked: true, pending: await orElse(memoryBridge()?.pending(scope), 0) })
+    }
   },
 
   reload: async () => {
@@ -104,19 +133,20 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     // saying true about them is a panel claiming they are the answer.
     set({ loaded: false })
 
-    // Together: `pending` counts a whole scope and does not depend on the query, so serialising
-    // the two made every keystroke of the search wait for a count it could not have changed.
-    const [memories, pending] = await Promise.all([
-      orElse(memoryBridge()?.list(scope, query), []),
-      orElse(memoryBridge()?.pending(scope), 0),
-    ])
+    /**
+     * 🛑 The listing alone. `pending` is a `LEFT JOIN` over EVERY memory of the scope and does
+     * not depend on the query, so counting it here made each keystroke of the search pay a scan
+     * whose answer could not have moved. It is read when the scope does — see `look` — and
+     * published live by `onIndexed` while a run is going.
+     */
+    const memories = await orElse(memoryBridge()?.list(scope, query), [])
 
     // 🛑 Dropped when the question moved on: two reads in flight — a scope switch, or a write
     // announced mid-switch — can settle out of order, and the slower one would paint the other
     // scope's rows and call them loaded.
     if (get().scope !== scope || get().query !== query) return
 
-    set({ memories, loaded: true, pending })
+    set({ memories, loaded: true })
   },
 
   // No optimistic write, unlike the context panel: the id and the date come from the main
@@ -155,17 +185,20 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
    */
   mergeDuplicates: async () => {
     const scope = get().scope
-    let merged = 0
-    for (const group of duplicatesIn(get().memories)) {
-      const [keeper, ...rest] = group
-      if (!keeper) continue
+    const merged = await burst(async () => {
+      let done = 0
+      for (const group of duplicatesIn(get().memories)) {
+        const [keeper, ...rest] = group
+        if (!keeper) continue
 
-      for (const one of rest) {
-        // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
-        const patch: MemoryPatch = { state: 'archived', links: [...one.links, keeper.id] }
-        if (await amendedIn(scope, one.id, patch)) merged += 1
+        for (const one of rest) {
+          // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
+          const patch: MemoryPatch = { state: 'archived', links: [...one.links, keeper.id] }
+          if (await amendedIn(scope, one.id, patch)) done += 1
+        }
       }
-    }
+      return done
+    })
 
     await get().reload()
     return merged
@@ -173,10 +206,13 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
 
   archiveStale: async now => {
     const scope = get().scope
-    let archived = 0
-    for (const one of staleIn(get().memories, now)) {
-      if (await amendedIn(scope, one.id, { state: 'archived' })) archived += 1
-    }
+    const archived = await burst(async () => {
+      let done = 0
+      for (const one of staleIn(get().memories, now)) {
+        if (await amendedIn(scope, one.id, { state: 'archived' })) done += 1
+      }
+      return done
+    })
 
     await get().reload()
     return archived

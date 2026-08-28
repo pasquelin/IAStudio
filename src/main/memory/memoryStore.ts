@@ -152,6 +152,9 @@ function supersededBy(index: MemoryIndex, draft: MemoryDraft): Memory | null {
 export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps): MemoryStore {
   const writes = writeQueue()
   let trouble: MemoryTrouble | null = null
+  // How many lines the FILE spells, amendments and forgettings included — what `compact` measures
+  // its saving against. Counted where the file is already being walked; `null` until it has been.
+  let spelt: number | null = null
   // 🛑 Whether THIS session has read the file. `trouble` is set by `readFileInto` alone, and an
   // opening whose stamp had not moved never calls it — see `compact`, which the difference costs.
   let readHere = false
@@ -170,6 +173,9 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
       throw error
     }
     await appendFile(file, memories.map(lineOf).join(''), 'utf8')
+    // 🛑 Kept in step with what lands on disk: a count that stopped following the appends would
+    // have `compact` measure its saving against a file that has grown since.
+    if (spelt !== null) spelt += memories.length
 
     const stamp = await stampOf(file)
     if (stamp) index.restamp(stamp)
@@ -182,6 +188,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
   const readFileInto = async (): Promise<number> => {
     trouble = null
     readHere = true
+    spelt = 0
 
     let body: string
     try {
@@ -207,6 +214,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
     for (const line of body.split('\n')) {
       if (line.trim().length === 0) continue
+      spelt += 1
 
       let value: unknown
       try {
@@ -355,9 +363,10 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
         if (!readHere) await readFileInto()
         if (trouble !== null) return 0
 
-        // Read back FIRST: the index holds no `dropped` line and no superseded one, so it cannot
-        // say how many lines the file carries — only the file can.
-        const before = await linesIn(file)
+        // 🛑 Counted by the read above rather than by a second one: the index holds no `dropped`
+        // line and no superseded one, so only the file can say how many it carries — and reading
+        // it twice in a row cost `[M]` 672 ms at 10 000 memories where one read costs 336.
+        const before = spelt ?? (await linesIn(file))
         if (before === 0) return 0
 
         const standing = index.list({ limit: Number.MAX_SAFE_INTEGER })
@@ -365,6 +374,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
         // died mid-write would leave a project's whole memory truncated.
         await writeAtomic(file, standing.map(lineOf).join(''))
 
+        spelt = standing.length
         const stamp = await stampOf(file)
         if (stamp) index.restamp(stamp)
 

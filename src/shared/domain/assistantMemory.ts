@@ -83,9 +83,9 @@ export const MEMORY_IMPORTANCE_MIN = 1
 export const MEMORY_IMPORTANCE_MAX = 5
 
 /**
- * 🛑 One sentence, and the bound is what keeps a briefing affordable: only the summary travels.
- * Ten memories at this ceiling cost 2 000 characters, against a short briefing measured at
- * 8 232 for a room of 7 116 — see `main/assistant/instruction.ts`.
+ * 🛑 One sentence. Nothing travels in a briefing any more, but the bound is what a listing, a row
+ * of the panel and a recall's answer are all sized by — and `rememberOutcome` CUTS to it rather
+ * than lose the memory, so raising it would let an interpolated value swallow a whole row.
  */
 export const MEMORY_SUMMARY_MAX = 200
 

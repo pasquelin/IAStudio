@@ -155,9 +155,7 @@ export function createMemoryVectors({
       const queue = queueFor(scope)
       // 🛑 Replaced only when no run is going. `run` JOINS one already in flight and ignores the
       // new signal, so overwriting here left Stop aborting a controller nothing was watching.
-      const stop = queue.busy()
-        ? (stops.get(scope) ?? new AbortController())
-        : new AbortController()
+      const stop = (queue.busy() ? stops.get(scope) : null) ?? new AbortController()
       stops.set(scope, stop)
       await queue.run(holder, stop.signal)
     } catch (error) {

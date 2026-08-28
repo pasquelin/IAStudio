@@ -1,7 +1,9 @@
 import { messageOf } from '@shared/guards'
+import { createWorkerDispatch } from '@main/workerDispatch'
 import { normalised } from './vectors'
 import {
   isEmbedCancel,
+  type EmbedCancel,
   type EmbedLoad,
   type EmbedRequest,
   type EmbedResponse,
@@ -21,8 +23,6 @@ type Engine = {
 }
 
 let engine: Engine | null = null
-/** Runs the other side gave up on. Read between texts, so a batch stops without waiting it out. */
-const dropped = new Set<number>()
 
 const reply = (response: EmbedResponse): void => {
   process.parentPort.postMessage(response)
@@ -69,13 +69,14 @@ async function load(request: EmbedLoad): Promise<number> {
 async function embed(
   current: Engine,
   request: EmbedTexts,
-  id: number,
+  signal: AbortSignal,
 ): Promise<readonly Float32Array[]> {
   const prefix = request.asQuery ? current.queryPrefix : current.documentPrefix
   const vectors: Float32Array[] = []
 
   for (const text of request.texts) {
-    if (dropped.has(id)) throw new Error('cancelled')
+    // Read between texts — 9,7 ms each — so a batch stops without being waited out.
+    if (signal.aborted) throw new Error('cancelled')
     // Normalised HERE, once: a comparison is then a dot product rather than two square roots
     // per candidate on every question asked.
     vectors.push(normalised(Float32Array.from(await current.embed(prefix + text))))
@@ -94,32 +95,33 @@ async function forget(): Promise<void> {
   }
 }
 
-async function answer(request: EmbedRequest): Promise<unknown> {
-  if (isEmbedCancel(request)) throw new Error('cancelled')
+async function answer(request: EmbedJob, signal: AbortSignal): Promise<unknown> {
   if (request.op === 'load') return await load(request)
 
   const current = engine
   // Raised rather than answered empty: an empty batch reads as a model that found nothing to say.
   if (!current) throw new Error('no embedding model is loaded')
 
-  return await embed(current, request, request.id)
+  return await embed(current, request, signal)
 }
 
-process.parentPort.on('message', event => {
-  const request = event.data as EmbedRequest
-  if (isEmbedCancel(request)) dropped.add(request.id)
-  void served(request)
+type EmbedJob = Exclude<EmbedRequest, EmbedCancel>
+
+/**
+ * 🛑 The shared loop, like the two other utility processes: it holds one `AbortController` per
+ * run, so a cancel that arrives while `embed` is parked between texts still stops it. The hand
+ * -rolled table this replaced had to keep an id until the RUN settled — a controller stays
+ * aborted, so there is no such race left to describe.
+ */
+const dispatch = createWorkerDispatch<EmbedRequest, EmbedJob, EmbedResponse>({
+  reply,
+  isJob: (message): message is EmbedJob => !isEmbedCancel(message),
+  run: async (job, signal): Promise<EmbedResponse> => ({
+    id: job.id,
+    ok: true,
+    value: await answer(job, signal),
+  }),
+  failed: (id, error): EmbedResponse => ({ id, ok: false, error: messageOf(error) }),
 })
 
-/** Named rather than a `.then` chain: what it does is answer one request, whatever happens. */
-async function served(request: EmbedRequest): Promise<void> {
-  try {
-    reply({ id: request.id, ok: true, value: await answer(request) })
-  } catch (error) {
-    reply({ id: request.id, ok: false, error: messageOf(error) })
-  } finally {
-    // 🛑 Only when the RUN settles. Deleted on the cancel's own turn, the loop parked inside
-    // `embed` — 9,7 ms a text — found the set empty at its next look and ran the batch out.
-    if (!isEmbedCancel(request)) dropped.delete(request.id)
-  }
-}
+process.parentPort.on('message', event => dispatch(event.data))
