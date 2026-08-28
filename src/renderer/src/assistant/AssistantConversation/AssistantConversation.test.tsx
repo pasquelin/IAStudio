@@ -298,6 +298,21 @@ describe('the assistant conversation', () => {
   })
 
   /**
+   * The composer is pinned to the foot of its column, so a list under the field lifts the field,
+   * the picker and Send out from under the hand that is typing. It grows upward instead.
+   */
+  it('opens above the field, so nothing under the fingers moves', async () => {
+    render(<AssistantConversation />)
+    const field = screen.getByRole('textbox')
+
+    await userEvent.type(field, 'genere une')
+
+    expect(screen.getByRole('listbox').compareDocumentPosition(field)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  /**
    * The other half of Tab. 🛑 Typed with matches ON SCREEN, since a field matching nothing leaves
    * `steer` at its first guard and never reaches the branch this is about.
    */
