@@ -20,6 +20,12 @@ export type MemoryVectors = {
   /** Stops the run in flight; what it wrote is kept. Half an index is not a broken one. */
   stop: (scope: MemoryScope) => void
   /**
+   * 🛑 Drops the project's queue and what stops it. Called when the open project CHANGES: `run`
+   * JOINS a run already in flight and ignores the holder it is handed, so the next project's
+   * `catchUp` returned the previous one's promise and indexed nothing at all.
+   */
+  release: () => void
+  /**
    * What answers a question, best first — the ONE place the question is embedded.
    *
    * 🛑 Not a filter: `MemoryStore.list` narrows by every word, this ranks by any of them and by
@@ -86,6 +92,12 @@ export function createMemoryVectors({
     },
 
     stop: scope => stops.get(scope)?.abort(),
+
+    release: () => {
+      stops.get('project')?.abort()
+      stops.delete('project')
+      queues.delete('project')
+    },
 
     recall: async (scope, ask) => {
       try {

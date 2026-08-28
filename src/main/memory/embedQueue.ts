@@ -50,10 +50,13 @@ export function createEmbedQueue({
   batch = EMBED_BATCH,
 }: EmbedQueueDeps): EmbedQueue {
   let running: Promise<number> | null = null
-  // 🛑 What the last sweep already cleaned up after. `dropOtherVectors` is a `model <> ?`, which
-  // the `(model, text_digest)` index cannot serve, so it is a full scan of the vector table — and
-  // `catchUp` fires on EVERY remembered action, not only when the chosen model moved.
-  let swept: string | null = null
+  /**
+   * 🛑 What the last sweep already cleaned up after, and which HOLDER it cleaned. `dropOtherVectors`
+   * is a `model <> ?` the `(model, text_digest)` index cannot serve, so it is a full scan — and
+   * `catchUp` fires on every remembered action, not only when the chosen model moved. The holder
+   * is part of the key because a queue outlives the project it first ran for.
+   */
+  let swept: { model: string; holder: VectorHolder } | null = null
 
   const sweep = async (holder: VectorHolder, signal?: AbortSignal): Promise<number> => {
     const model = embedder.chosen()
@@ -62,12 +65,15 @@ export function createEmbedQueue({
 
     // Whatever another model left behind, before anything is counted: they are dead weight in
     // the index and would be scored against a question they cannot answer.
-    if (swept !== model) {
+    if (swept?.model !== model || swept.holder !== holder) {
       await holder.dropOtherVectors(model)
-      swept = model
+      swept = { model, holder }
     }
 
-    const total = await holder.pendingVectors(model)
+    // 🛑 A CEILING that follows: the loop asks `withoutVector` again each round, so a memory
+    // remembered mid-run is picked up by this run — and `done` passed the total sampled here,
+    // which the window turned into a negative count and a bar that vanished mid-run.
+    let total = await holder.pendingVectors(model)
     let done = 0
     onProgress({ done, total })
 
@@ -97,6 +103,7 @@ export function createEmbedQueue({
 
       await holder.writeVectors(vectors)
       done += vectors.length
+      total = Math.max(total, done)
       onProgress({ done, total })
     }
 

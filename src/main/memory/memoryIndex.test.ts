@@ -487,3 +487,18 @@ describe('what a recall may answer with', () => {
     expect(index.recall({ text: '', refs: [anchor], now: NOW_TOO, limit: 10 })).toEqual([])
   })
 })
+
+describe('how many it holds', () => {
+  /**
+   * 🛑 The ANSWERABLE states. The briefing's signal is driven by this count, and a project whose
+   * memories were all archived told the model « memory.recall answers it » for a recall that
+   * answers nothing — a wasted round trip on every conversation.
+   */
+  it('counts what a recall could answer with, never what was set aside', () => {
+    index.put(memory({ id: 'm_live' }))
+    index.put(memory({ id: 'm_pinned', state: 'pinned' }))
+    index.put(memory({ id: 'm_archived', state: 'archived' }))
+
+    expect(index.count()).toBe(2)
+  })
+})

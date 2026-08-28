@@ -393,6 +393,10 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
         // Swept: this is the gesture that means « forget all of it », vectors included.
         index.sweepVectors()
         trouble = null
+        // 🛑 The count follows the file it counts: left at fifty over an erased file, the next
+        // `compact` would report fifty lines saved on a rewrite that saved nothing.
+        spelt = 0
+        readHere = true
         await rm(file, { force: true })
       }),
 

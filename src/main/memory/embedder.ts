@@ -56,6 +56,10 @@ export function createEmbedder({
   // The PROMISE, never the client: two questions arriving at once must not fork two processes,
   // each loading the same 318 MB.
   let opening: Promise<Held | null> | null = null
+  // 🛑 WHICH model the load in flight is for. Without it, `held` is still null while A loads, so
+  // the guard below cannot fire and a caller asking for B was handed A's client — and the batch
+  // it computed was written under `model = 'B'`, where `dropOtherVectors('B')` never reaches it.
+  let loading: string | null = null
   let cancelIdle: (() => void) | null = null
 
   const letGo = (): void => {
@@ -112,11 +116,27 @@ export function createEmbedder({
     // Another model is another SPACE entirely, so the old weights must go: the vectors already
     // stored are invalidated by their `model` column, not converted.
     if (held && held.modelId !== modelId) letGo()
+    // The same, for a load still in flight — which `held` cannot say anything about yet.
+    if (opening !== null && loading !== modelId) {
+      opening = null
+      loading = null
+    }
 
-    opening ??= start(modelId)
-    held = await opening
-    if (held === null) opening = null
-    else restIdle()
+    if (opening === null) {
+      loading = modelId
+      opening = start(modelId)
+    }
+
+    const answered = await opening
+    // Read back rather than assigned blind: a load that started for another model settled while
+    // this one waited, and its client is not the one this caller asked for.
+    if (loading !== modelId) return await ready()
+
+    held = answered
+    if (held === null) {
+      opening = null
+      loading = null
+    } else restIdle()
 
     return held
   }

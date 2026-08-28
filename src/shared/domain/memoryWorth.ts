@@ -294,6 +294,12 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'git.stage': null,
   'git.unstage': null,
   'git.restore': null,
+  /**
+   * 🛑 A commit made from the studio leaves the tree DIRTY: this writes to
+   * `.ia-studio/memory.ndjson`, which is versioned on purpose — the memory travels with the
+   * project — so the version panel shows a change straight after every commit. True of every
+   * rule here; this one just makes it visible on the spot.
+   */
   'git.commit': worthNaming('message', 'decision', 'memoryWorth.gitCommit', 3),
   'git.createBranch': null,
   'git.checkout': null,

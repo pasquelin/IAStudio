@@ -9,6 +9,7 @@ const pendingOf = (id: string): PendingVector => ({ id, text: `about ${id}`, dig
 function fakeHolder(ids: readonly string[]): VectorHolder & {
   written: MemoryVector[]
   dropped: string[]
+  waiting: string[]
 } {
   const waiting = [...ids]
   const written: MemoryVector[] = []
@@ -17,6 +18,7 @@ function fakeHolder(ids: readonly string[]): VectorHolder & {
   return {
     written,
     dropped,
+    waiting,
     pendingVectors: async () => waiting.length,
     withoutVector: async (_model, limit) => waiting.slice(0, limit).map(pendingOf),
     writeVectors: async vectors => {
@@ -199,6 +201,33 @@ describe('stopping', () => {
     await expect(run.run(holder)).resolves.toBe(0)
     expect(holder.written).toHaveLength(2)
     expect(troubles).toEqual(['out of memory'])
+  })
+})
+
+describe('what the bar is told', () => {
+  /**
+   * 🛑 The loop asks `withoutVector` again each round, so a memory remembered mid-run is picked
+   * up by THIS run — and `done` passed the total sampled before the loop. The window turns that
+   * into `total - done`, so it drew a negative count and took its own Stop button away.
+   */
+  it('never reports more done than there is to do', async () => {
+    const holder = fakeHolder(['m_a', 'm_b'])
+    let added = false
+    // What a remembered action does WHILE the run is going — `pendingVectors` was read before it,
+    // and the loop asks `withoutVector` again each round, so this run picks the newcomer up.
+    const embedder = fakeEmbedder('gemma', async texts => {
+      if (!added) {
+        added = true
+        holder.waiting.push('m_late')
+      }
+      return texts.map(() => new Float32Array([1, 0]))
+    })
+    const { run, steps } = queueOn(embedder, 1)
+
+    await run.run(holder)
+
+    expect(steps.every(one => one.done <= one.total)).toBe(true)
+    expect(steps.at(-1)).toEqual({ done: 3, total: 3 })
   })
 })
 

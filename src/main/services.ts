@@ -872,6 +872,8 @@ export function createServices(settings: SettingsStore): Services {
 
       // Told which project it belongs to; it opens nothing until something asks it a question.
       memory.follow(current?.path ?? null)
+      // And the vectors let go of the queue that was serving the previous one — see `release`.
+      memoryVectors.release()
 
       // One watch at a time, and it belongs to the project that is open: left running, the
       // previous project's folder would go on announcing changes the explorer would answer by

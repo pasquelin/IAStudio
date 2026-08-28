@@ -71,7 +71,13 @@ export function createMemoryHost({ userData, open, onTrouble }: MemoryHostDeps):
       // 🛑 Through `openAt` like the project's, and not `open`: a rejected promise CACHED here
       // rejects every later `global` call across IPC, for ever, without a word in the journal.
       openingGlobal ??= openAt(userData, GLOBAL_MEMORY_FILE, GLOBAL_MEMORY_INDEX)
-      return await openingGlobal
+      const opened = await openingGlobal
+      // 🛑 A failure is not remembered: a database locked for a moment would otherwise disable
+      // the machine's own memory for the whole session, with a restart the only way back. The
+      // project scope escapes this only because `follow` clears its own.
+      if (opened === null) openingGlobal = null
+
+      return opened
     },
 
     of: async scope => (scope === 'global' ? await host.global() : await host.project()),

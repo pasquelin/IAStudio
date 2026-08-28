@@ -11,7 +11,7 @@ type Opened = {
 
 function stand(
   modelId: string | null,
-  { dims = 768, failing = false } = {},
+  { dims = 768, failing = false, slow = false } = {},
 ): {
   embedder: Embedder
   opened: Opened[]
@@ -20,6 +20,8 @@ function stand(
   die: () => void
   idle: () => void
   chose: (next: string | null) => void
+  /** Lets a load that was held open settle — what makes a race testable. */
+  settle: () => void
 } {
   const opened: Opened[] = []
   const troubles: string[] = []
@@ -28,11 +30,13 @@ function stand(
   let fire: () => void = () => {}
 
   let killProcess: () => void = () => {}
+  const parked: (() => void)[] = []
   const open = (onGone: () => void): EmbedClient => {
     killProcess = onGone
     const client: EmbedClient = {
       load: async (weights, documentPrefix) => {
         opened.push({ weights, documentPrefix, client })
+        if (slow) await new Promise<void>(resolve => parked.push(resolve))
         if (failing) throw new Error('no usable binary')
         return dims
       },
@@ -49,6 +53,9 @@ function stand(
     opened,
     troubles,
     die: () => killProcess(),
+    settle: () => {
+      for (const let_go of parked.splice(0)) let_go()
+    },
     closed: () => closes,
     idle: () => fire(),
     chose: next => {
@@ -203,5 +210,32 @@ describe('closing', () => {
     await stood.embedder.close()
 
     expect(stood.closed()).toBe(0)
+  })
+})
+
+describe('a choice that moves while the weights are loading', () => {
+  /**
+   * 🛑 `held` is still null while the first load is in flight, so the guard that drops another
+   * model cannot fire: a caller asking for B was handed A's client, and the batch it computed
+   * went into `memory_vectors` under `model = 'B'` — rows `dropOtherVectors('B')` never reaches,
+   * and which satisfy the join for ever. Poisoned vectors, permanently.
+   */
+  it('never hands out the client of a model that is no longer chosen', async () => {
+    const stood = stand(GEMMA, { slow: true })
+
+    const first = stood.embedder.embed(['the rail'])
+    stood.chose('another-model')
+    const second = stood.embedder.embed(['the palette'])
+    stood.settle()
+    await Promise.all([first, second])
+    stood.settle()
+    await second
+
+    // Both weights were loaded, and the SECOND caller waited for its own rather than taking the
+    // first one's: the last load is the one that was chosen.
+    expect(stood.opened.map(one => one.weights)).toEqual([
+      `/models/${GEMMA}.gguf`,
+      '/models/another-model.gguf',
+    ])
   })
 })

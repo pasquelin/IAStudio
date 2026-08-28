@@ -131,3 +131,35 @@ describe('when a memory will not open', () => {
     expect(troubles).toEqual(['the database is locked'])
   })
 })
+
+describe("the machine's own memory", () => {
+  /**
+   * 🛑 A failure is not remembered: a database locked for a moment would otherwise disable the
+   * machine's own memory for the whole SESSION, with a restart the only way back. The project
+   * scope escapes this only because `follow` clears its own.
+   */
+  it('tries again after a failure rather than answering nothing for ever', async () => {
+    let failing = true
+    const open = vi.fn(async () => {
+      if (failing) throw new Error('database is locked')
+      return fakeMemory()
+    })
+    const { host, troubles } = hostOn(open)
+
+    expect(await host.global()).toBeNull()
+    expect(troubles).toHaveLength(1)
+
+    failing = false
+    expect(await host.global()).not.toBeNull()
+    expect(open).toHaveBeenCalledTimes(2)
+  })
+
+  /** And a memory that DID open is held: two turns asking at once must not open two threads. */
+  it('opens it once for every caller that asks', async () => {
+    const { host, open } = hostOn()
+
+    await Promise.all([host.global(), host.global()])
+
+    expect(open).toHaveBeenCalledOnce()
+  })
+})

@@ -305,7 +305,14 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
   )
   // Held like the five above: the SQL of all of them is fixed, and `catalog.ts` draws the line
   // in the same place — only a query whose number of `?` varies is compiled per call.
-  const countMemories = driver.prepare('SELECT count(*) AS held FROM memories')
+  /**
+   * 🛑 The ANSWERABLE states, not every row. The briefing's signal is driven by this count, and a
+   * project whose memories were all archived told the model « memory.recall answers it » for a
+   * recall that answers nothing — a wasted round trip on every conversation.
+   */
+  const countMemories = driver.prepare(
+    `SELECT count(*) AS held FROM memories WHERE state IN ('live', 'pinned')`,
+  )
   const readMemory = driver.prepare(`SELECT ${COLUMNS} FROM memories WHERE id = ?`)
   const readStamp = driver.prepare('SELECT bytes, modified_at FROM memory_source')
   const dropStamp = driver.prepare('DELETE FROM memory_source')
