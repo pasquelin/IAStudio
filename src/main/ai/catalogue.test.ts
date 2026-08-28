@@ -246,7 +246,7 @@ describe('the shipped catalogue', () => {
     expect(bare).toEqual([])
   })
 
-  it('offers a discovered chat model to the assistant and not to generation', () => {
+  it('offers a discovered chat model to the assistant and not to drawing', () => {
     const qwen = ollamaModel({ name: 'qwen3:8b', size: 5_000_000_000 })
     expect(qwen).not.toBeNull()
     if (!qwen) return
@@ -254,6 +254,24 @@ describe('the shipped catalogue', () => {
     expect(modelsForWith(ASSISTANT_ROLE, [], [qwen]).map(model => model.id)).toContain('qwen3:8b')
     expect(modelsForWith(aiRoleId('image', 'txt2img'), [], [qwen])).not.toContainEqual(qwen)
     expect(modelWith('qwen3:8b', [], [qwen])).toBe(qwen)
+  })
+
+  /**
+   * 🛑 A discovered tag declares NO family and NO capabilities, so `serves` was read inside a
+   * branch it never reached: the field was dead for exactly the models it exists for, and an
+   * Ollama conversation that writes scripts was offered to the assistant alone.
+   */
+  it('offers a discovered chat model the employments its manifest says it serves', () => {
+    const qwen = ollamaModel({ name: 'qwen2.5-coder:7b', size: 5_000_000_000 })
+    expect(qwen).not.toBeNull()
+    if (!qwen) return
+
+    expect(qwen.family).toBeUndefined()
+    for (const capability of ['txt2code', 'code2code']) {
+      expect(
+        modelsForWith(aiRoleId('code', capability), [], [qwen]).map(model => model.id),
+      ).toContain('qwen2.5-coder:7b')
+    }
   })
 
   it('offers a discovered image tag to drawing, not to the assistant', () => {

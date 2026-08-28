@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { aiRoleId, ASSISTANT_ROLE } from './aiRole'
-import { ollamaModel, rolesOfOllamaModel } from './ollamaModel'
+import { aiRoleId } from './aiRole'
+import { ollamaModel } from './ollamaModel'
 
 const tag = (name: string, size = 4_000_000_000, capabilities?: readonly string[]) => ({
   name,
@@ -15,11 +15,9 @@ describe('ollamaModel', () => {
     expect(model?.loader).toBe('ollama')
     expect(model?.family).toBeUndefined()
     expect(model?.modality).toBe('text')
-    expect(rolesOfOllamaModel(model!)).toEqual([
-      ASSISTANT_ROLE,
-      aiRoleId('code', 'txt2code'),
-      aiRoleId('code', 'code2code'),
-    ])
+    // What it serves BEYOND a conversation. `serves` and not a second table: `discoveredServes`
+    // reads this field, and a table beside it was called by nothing — see `catalogue.ts`.
+    expect(model?.serves).toEqual([aiRoleId('code', 'txt2code'), aiRoleId('code', 'code2code')])
   })
 
   it('keeps a vision-language model on the assistant — there is no image-analysis employment', () => {
@@ -33,10 +31,7 @@ describe('ollamaModel', () => {
     expect(model?.family).toBe('image')
     expect(model?.capabilities).toEqual(['txt2img'])
     expect(model?.modality).toBe('image')
-    expect(rolesOfOllamaModel(model!)).toEqual([
-      aiRoleId('image', 'txt2img'),
-      aiRoleId('material', 'txt2img_texture'),
-    ])
+    expect(model?.serves).toEqual([aiRoleId('material', 'txt2img_texture')])
   })
 
   it('reads flux in the name as image when Ollama named no capability', () => {

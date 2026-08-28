@@ -1,4 +1,4 @@
-import { aiRoleId, ASSISTANT_ROLE, type AiRoleId } from './aiRole'
+import { aiRoleId, type AiRoleId } from './aiRole'
 import type { LocalModel } from './localModel'
 
 /**
@@ -81,17 +81,3 @@ const CODE_ROLES: readonly AiRoleId[] = [
   aiRoleId('code', 'txt2code'),
   aiRoleId('code', 'code2code'),
 ]
-
-/**
- * What a discovered Ollama model may be chosen for — never a role it cannot produce.
- *
- * A conversation answers the assistant AND writes scripts: both are one round trip against the
- * same weights. Which one it is good AT is the person's call, which is what the choice is for.
- */
-export function rolesOfOllamaModel(model: LocalModel): readonly AiRoleId[] {
-  if (model.loader !== 'ollama') return []
-  if (model.family === 'image') {
-    return [aiRoleId('image', 'txt2img'), aiRoleId('material', 'txt2img_texture')]
-  }
-  return [ASSISTANT_ROLE, ...CODE_ROLES]
-}
