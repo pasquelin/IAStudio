@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clamp } from '@shared/numeric'
+import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import {
   BOTTOM_ZONES,
   familyOf,
+  HOME_SURFACE,
   isBottom,
   isHorizontal,
   placementIn,
@@ -119,20 +121,37 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
  */
 const TOOL_SIZES: Partial<Record<ToolId, number>> = { assistant: 460 }
 
+/** Every surface a zone is drawn on. Two families, but seven of them resolve an unnamed half. */
+const ALL_SURFACES: readonly ToolSurface[] = [...WORKSPACE_IDS, HOME_SURFACE]
+
 /** What a zone opens at, the tool it is showing first. */
 export function defaultSizeOf(zone: ToolZone, shown: ToolId | null): number {
   return (shown === null ? undefined : TOOL_SIZES[shown]) ?? DEFAULT_SIZES[zone]
 }
 
 /**
- * The room a zone takes when nothing has been dragged — the WIDEST any family has it open at.
+ * The room a zone takes when nothing has been dragged — the WIDEST any surface has it open at.
  *
  * Read while clamping the opposite column: under-report it and the other side may be dragged over
  * room this one is already drawing in, squeezing the centre past its floor.
+ *
+ * 🛑 Through `shownTools`, never off the stored half. `DEFAULT_OPEN` holds `null` — "whatever this
+ * surface declares first" — which the shell resolves before it draws: reading the half raw saw no
+ * tool on every untouched layout, bounded against the zone's own width, and let the left column
+ * take the assistant's 460 as well as its own. Measured on a reset store: 40 px of centre against
+ * a floor of 240. Per SURFACE and not per family, because what `null` resolves to is a question
+ * only a surface answers.
  */
 function undraggedSizeOf(zone: ToolZone, arrangements: Record<SurfaceFamily, Arrangement>): number {
-  const held = SURFACE_FAMILIES.map(family => arrangements[family].open[zone]?.primary ?? null)
-  return Math.max(DEFAULT_SIZES[zone], ...held.map(tool => defaultSizeOf(zone, tool)))
+  const state = toolStateOf()
+  const drawn = ALL_SURFACES.filter(surface =>
+    isZoneOpen(arrangements[familyOf(surface)].open, zone),
+  ).map(surface => {
+    const held = arrangements[familyOf(surface)].open[zone]
+    return defaultSizeOf(zone, shownTools(held, zone, surface, state).primary)
+  })
+
+  return Math.max(DEFAULT_SIZES[zone], ...drawn)
 }
 
 /**
