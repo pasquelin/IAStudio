@@ -134,6 +134,17 @@ describe('a studio token written into a class', () => {
   })
 })
 
+/** A colour's hue in degrees — all this file needs of one, and it needs it for one rule. */
+function hueOf(hex: string): number {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16) / 255)
+  const high = Math.max(r, g, b)
+  const span = high - Math.min(r, g, b)
+  if (span === 0) return 0
+
+  const turn = high === r ? (g - b) / span : high === g ? 2 + (b - r) / span : 4 + (r - g) / span
+  return (turn * 60 + 360) % 360
+}
+
 /**
  * Read per theme: the light theme restates every token, and an ink that clears its dark
  * background is exactly the wrong colour on the light one. The dark values are the reference and
@@ -426,6 +437,45 @@ function fillFailures(sources: readonly (readonly [string, string])[]): string[]
     Object.keys(ALPHA_FILL_ALLOWED).some(one => path.endsWith(one)) ? null : AA_NON_TEXT,
   )
 }
+
+/**
+ * 🛑 One hue per section, worn by GLYPHS. Held at the 3:1 of WCAG 1.4.11 on both grounds an icon
+ * lands on and in both themes — a palette measured once reads in the dark and washes out in the
+ * light.
+ *
+ * The distance to the accent is measured too, and it is not cosmetic: the accent means « chosen »
+ * here, so a glyph within reach of its hue says a row is selected when it is not.
+ */
+describe('the hue each section is inked in', () => {
+  const SECTIONS = ['image', 'video', '3d', 'code', 'audio', 'skyboxes', 'materials']
+  const GROUNDS = ['panel', 'surface']
+
+  for (const theme of THEMES) {
+    it(`clears what a glyph owes, on every ground, ${theme.name}`, () => {
+      const tokens = palette(theme.from)
+      const under = SECTIONS.flatMap(section =>
+        GROUNDS.filter(
+          ground =>
+            contrastRatio(tokens[`domain-${section}`] ?? '', tokens[ground] ?? '') < AA_NON_TEXT,
+        ).map(ground => `domain-${section} on ${ground}`),
+      )
+
+      expect(under).toEqual([])
+    })
+  }
+
+  it('gives no section a hue the accent could be mistaken for', () => {
+    const tokens = palette(THEMES[0]?.from ?? 0)
+    const accent = hueOf(tokens.accent ?? '')
+
+    const near = SECTIONS.filter(section => {
+      const away = Math.abs(hueOf(tokens[`domain-${section}`] ?? '') - accent)
+      return Math.min(away, 360 - away) <= 45
+    })
+
+    expect(near).toEqual([])
+  })
+})
 
 describe('the contrast of the inks', () => {
   for (const theme of THEMES) {

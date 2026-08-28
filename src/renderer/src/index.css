@@ -58,6 +58,25 @@
    * Restated darker in the light theme, where a lighter blue would be the wrong direction.
    */
   --color-accent-ink: #6193f3;
+
+  /*
+   * One hue per section, worn by GLYPHS alone — never by a word, which WCAG 1.4.3 would hold to
+   * 4.5 and which would turn a folder listing into seven colours shouting at once.
+   *
+   * 🛑 Redundant by design: the icons already differ in SHAPE, so the colour reinforces and never
+   * carries alone (WCAG 1.4.1). And every hue sits at least 57° from the accent's 222°, because a
+   * blue glyph beside an unselected row would say « chosen » — the one thing accent means here.
+   *
+   * MEASURED against `panel` and `surface`, the two grounds an icon lands on: 5.20 to 5.25:1
+   * here, where 1.4.11 asks 3. Restated in the light theme, where the same hues must go DARKER.
+   */
+  --color-domain-image: #d671ac;
+  --color-domain-video: #d67970;
+  --color-domain-3d: #b78c35;
+  --color-domain-code: #799f2e;
+  --color-domain-audio: #31a931;
+  --color-domain-skyboxes: #30a487;
+  --color-domain-materials: #bf76d7;
   /*
    * What is written ON that fill, declared HERE and not only in the daisyUI blocks: three dock
    * components read `text-accent-content`, and leaving the name to daisyUI's variable map would
@@ -416,6 +435,15 @@
   --border: 1px;
   --depth: 0;
   --noise: 0;
+
+  /* The same seven hues, darkened: on white, 4.01 to 4.04:1 where 1.4.11 asks 3. */
+  --color-domain-image: #da3093;
+  --color-domain-video: #db4235;
+  --color-domain-3d: #9c721c;
+  --color-domain-code: #608417;
+  --color-domain-audio: #198c19;
+  --color-domain-skyboxes: #18896d;
+  --color-domain-materials: #b742de;
 
   --color-chassis: #dcdde1;
   --color-panel: #ffffff;
