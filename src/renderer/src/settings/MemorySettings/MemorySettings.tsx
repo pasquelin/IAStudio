@@ -12,8 +12,8 @@ import {
 import { Collection } from '@/design/Collection/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { WindowChip } from '@/design/WindowChip'
-import { WindowSearch } from '@/design/WindowSearch'
 import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { fieldHandle } from '@/design/scHandle'
 import { cn } from '@/helpers/cn'
 import { useAssistantMemory } from '@/stores/assistantMemory'
 import { useProject } from '@/stores/project'
@@ -81,15 +81,28 @@ export function MemorySettings() {
       </div>
 
       <div className="flex gap-2">
-        {/* 🛑 Wrapped: `WindowSearch` is `w-full shrink-0`, which is its COLUMN behaviour — in a
-            row it took the whole width and pushed the filter off the edge of the window. */}
-        <div className="min-w-0 grow">
-          <WindowSearch label={t('settings.memorySearch')} value={text} onChange={setText} />
-        </div>
+        {/* 🛑 `input-sm` and not `WindowSearch`, which is the NAV field of a window: it is
+            `input-xs w-full shrink-0`, so it stood eight pixels shorter than the select beside it
+            and took the whole row without yielding. Every other settings form is `…-sm`. */}
+        <input
+          data-sc={fieldHandle('memory.search')}
+          type="search"
+          className="input input-sm min-w-0 grow"
+          aria-label={t('settings.memorySearch')}
+          placeholder={t('settings.memorySearch')}
+          value={text}
+          onChange={event => setText(event.target.value)}
+        />
         <select
           data-sc="field:memory.type"
           aria-label={t('settings.memoryFilterAll')}
-          className={cn(SETTING_SELECT, 'shrink-0')}
+          /**
+           * 🛑 A FLOOR, never a cap: `SETTING_SELECT` is `max-w-xs` for a row where the select
+           * stands alone, and here it took twice the field beside it. Bare `w-auto` is worse —
+           * `[M]` a native select sizes on the option SHOWN, so it jumped between 67 and 122 px
+           * as the filter moved. The floor holds it still; it grows rather than truncate.
+           */
+          className={cn(SETTING_SELECT, 'w-auto min-w-40 shrink-0')}
           value={type}
           onChange={event => setType(event.target.value as MemoryType | '')}
         >
