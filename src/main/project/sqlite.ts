@@ -28,7 +28,7 @@ type SqlOutput = string | number | bigint | Uint8Array | null
 
 export type SqlRow = Record<string, SqlOutput | undefined>
 
-type SqliteStatement = {
+export type SqliteStatement = {
   all: (...params: SqlValue[]) => SqlRow[]
   get: (...params: SqlValue[]) => SqlRow | undefined
   run: (...params: SqlValue[]) => void

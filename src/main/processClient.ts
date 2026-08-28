@@ -8,7 +8,7 @@
  */
 
 /** The worker, reduced to what a client needs — injected, since forking needs a live app. */
-type ProcessPort<Message, Response> = {
+export type ProcessPort<Message, Response> = {
   postMessage: (message: Message) => void
   onMessage: (listener: (response: Response) => void) => void
   /** The process died. Whatever it was asked will never be answered. */

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDebounced, SEARCH_DELAY_MS } from '@/hooks/useDebounced'
 import { useTranslation } from 'react-i18next'
 import { mdiBrain } from '@mdi/js'
 import {
@@ -45,6 +46,9 @@ export function MemorySettings() {
   // moves when the listing lands, so a chip reading it would light up a beat after the click.
   const [scope, setScope] = useState<MemoryScope>('project')
   const [text, setText] = useState('')
+  // 🛑 Debounced, or every keystroke clears the list, crosses IPC and pays an FTS scan on the
+  // memory thread — for an answer the next keystroke throws away.
+  const searched = useDebounced(text.trim(), SEARCH_DELAY_MS)
   const [type, setType] = useState<MemoryType | ''>('')
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -53,10 +57,10 @@ export function MemorySettings() {
     // panel never holds a query the store disagrees with.
     void look(scope, {
       states: SHOWN,
-      ...(text.trim() ? { text: text.trim() } : {}),
+      ...(searched ? { text: searched } : {}),
       ...(type ? { types: [type] } : {}),
     })
-  }, [look, scope, text, type])
+  }, [look, scope, searched, type])
 
   return (
     <div className={cn(SETTING_COLUMN, 'mt-6 gap-4')}>

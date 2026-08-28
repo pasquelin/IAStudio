@@ -176,13 +176,9 @@ export function AssistantConversation() {
       return true
     }
 
-    // 🛑 Only where the caret has nowhere left to go: the field takes three lines and holds
-    // dictated paragraphs, which wrap without ever carrying a newline to test for. Read from the
-    // event and not from `caretAtEnd`, which answers for one end and this needs both.
     /**
-     * ↑ walks INTO the list, which is above, and ↓ comes back down toward the field — the keys
-     * mean what the eye sees. 🛑 Only from the end of a draft holding no newline: the field takes
-     * three lines for dictated paragraphs, and a walk cannot confiscate the way through one.
+     * ↑ walks INTO the list above, ↓ comes back down — and only from the end of a draft holding
+     * no newline, or a walk would confiscate the way through a dictated paragraph.
      *
      * **Blind to WRAP**: a long single line that wraps loses ↑ too. No sentence that long matches
      * a starter, so no list is up when it would matter.

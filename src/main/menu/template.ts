@@ -163,6 +163,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     actions,
   } = options
 
+  // 🛑 The KIND and not the space alone: the 3D space also opens interfaces, and a scene row over
+  // one acts on a scene nobody is looking at. Every rank below reads this, never `workspace`.
+  const surface = scopeOfWorkspace(workspace, kind)
+
   /**
    * How a native row may carry a command's key, read off the registry so the menu never advertises
    * one a remap has moved. `registerAccelerator` is Windows and Linux ONLY: on macOS a row that
@@ -312,7 +316,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * commands keep their full title for the palette, where nothing stands above them.
    */
   const exportSubmenu = (): MenuItemConstructorOptions[] => {
-    if (workspace === '3d') {
+    if (surface === 'scene') {
       return [
         { label: t.menu.exportScene, submenu: exportItems('scene') },
         // Greyed rather than dropped: a row that comes and goes is one the eye has to look for.
@@ -426,7 +430,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     { role: 'undo', label: t.commands.undo.title },
     { role: 'redo', label: t.commands.redo.title },
   ]
-  const surface = scopeOfWorkspace(workspace, kind)
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
 
@@ -439,10 +442,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * act on the scene even with the caret in a field: the menu path carries no `isTyping` guard,
    * unlike the keyboard one, which is what makes a key safe here where a row would not be.
    */
-  // The KIND and not the space alone: the 3D space also opens interfaces, and Group, Carve or
-  // Weld over one are rows acting on a scene nobody is looking at.
   const sceneEditItems: MenuItemConstructorOptions[] =
-    workspace === '3d' && kind !== 'gui'
+    surface === 'scene'
       ? [
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
@@ -567,7 +568,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * changes once a session, not gestures repeated by the minute, which is what a menu is for.
    */
   const sceneViewMenu: MenuItemConstructorOptions[] =
-    workspace === '3d'
+    surface === 'scene'
       ? [
           { type: 'separator' },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
@@ -670,7 +671,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
-    workspace === '3d'
+    surface === 'scene'
       ? [
           {
             label: t.menu.add,

@@ -17,15 +17,9 @@ import type { MemoryVector, PendingVector } from './vectors'
 import { parseMemory, versionOf } from './validation'
 
 /**
- * The memories themselves — one JSON object per line, appended, never rewritten in place.
- *
- * 🛑 THIS is what a project carries. The index beside it under `.index/` is derived and is thrown
+ * 🛑 THIS is what a project carries. The index beside it under `.index/` is derived and thrown
  * away without a thought; this file is not, which is why it sits in `.ia-studio/` with
- * `items.json` and outside what the studio's `.gitignore` excludes.
- *
- * Append-only for two reasons that both matter: adding a memory costs one write whatever the file
- * holds, and a process that dies mid-write loses the line it was writing rather than the file.
- * What that costs is a compaction, which is a later lot's business.
+ * `items.json`, outside what the studio's `.gitignore` excludes.
  */
 
 export type MemoryStore = {
@@ -72,12 +66,8 @@ export type MemoryStore = {
    */
   refresh: () => Promise<number>
   /**
-   * Rewrites the file with one line per memory that still stands, dropping every amendment and
-   * every forgetting the log holds. Answers how many lines it saved.
-   *
-   * 🛑 What is `dropped` goes for good, and it is the one gesture that loses anything: the file
-   * is append-only precisely so nothing else does. An `archived` memory is KEPT — archiving is
-   * a state, forgetting is a removal, and compaction is what finally carries the second out.
+   * 🛑 The one gesture that loses anything: what is `dropped` goes for good. An `archived` memory
+   * is KEPT — archiving is a state, forgetting is a removal, and this is what carries it out.
    */
   compact: () => Promise<number>
   /** Everything forgotten, the file included. What « reset this project's memory » runs. */
@@ -120,14 +110,10 @@ async function linesIn(file: string): Promise<number> {
 }
 
 /**
- * Whether the file has moved since the index was built.
+ * Whether the file has moved since the index was built. A function of its own because putting an
+ * mtime back is what a test would need, and APFS rounds a fractional `mtimeMs` either way.
  *
- * A function of its own because it is the whole of what `refresh` decides, and the alternative
- * was a test that rewrites a file and puts its mtime back — which APFS does not allow: `utimes`
- * rounds a fractional `mtimeMs` and the stamp moves by one, measured, in both directions.
- *
- * No stamp means an index that has never read this file. No file means one that is gone, and
- * both are stale: the first has everything to read, the second has everything to forget.
+ * No stamp is an index that never read this file; no file is one that is gone. Both are stale.
  */
 export function hasMoved(held: MemoryStamp | null, now: MemoryStamp | null): boolean {
   if (held === null || now === null) return true
@@ -139,10 +125,8 @@ export function hasMoved(held: MemoryStamp | null, now: MemoryStamp | null): boo
 const archivedOf = (memory: Memory): Memory => ({ ...memory, state: 'archived' })
 
 /**
- * What this draft replaces: a memory of the same TYPE anchored on the same first reference.
- *
- * The first reference and not any of them: a script memory is about its file, and a memory
- * naming a scene as well must not be superseded by every other memory of that scene.
+ * What this draft replaces: same TYPE, same FIRST reference — not any of them. A script memory is
+ * about its file, and one naming a scene too must not be superseded by every memory of that scene.
  */
 function supersededBy(index: MemoryIndex, draft: MemoryDraft): Memory | null {
   const anchor = draft.refs?.[0]
@@ -181,10 +165,7 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
     if (stamp) index.restamp(stamp)
   }
 
-  /**
-   * The file, applied line by line, latest wins. A memory written three times is held once, as
-   * its last line describes it — that is what makes an append-only file a store rather than a log.
-   */
+  /** Line by line, latest wins — what makes an append-only file a store rather than a log. */
   const readFileInto = async (): Promise<number> => {
     trouble = null
     readHere = true
@@ -269,11 +250,8 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
   return {
     remember: draft =>
       writes.next(async () => {
-        /**
-         * 🛑 What a memory REPLACES, rather than what it adds beside. A rule that fires twice on
-         * one script would otherwise leave two memories contradicting each other, with nothing
-         * saying which is now — and both would be recalled.
-         */
+        // 🛑 What a memory REPLACES, not what it adds beside: a rule firing twice on one script
+        // would leave two memories contradicting each other, and both would be recalled.
         const replaced = supersededBy(index, draft)
 
         const memory: Memory = {
@@ -289,11 +267,8 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
 
         // The file first, always: an index holding what the file does not is an index that
         // answers a memory a restart makes vanish.
-        /**
-         * 🛑 ONE append for both lines. Written in two, an `ENOSPC` between them left the
-         * replaced memory archived with nothing standing in its place — out of every recall,
-         * and nothing saying why.
-         */
+        // 🛑 ONE append for both lines: written in two, an `ENOSPC` between them left the
+        // replaced memory archived with nothing standing in its place, out of every recall.
         const archived = replaced && archivedOf(replaced)
         await append(...(archived ? [archived, memory] : [memory]))
         if (archived) index.put(archived)
@@ -361,10 +336,9 @@ export function createMemoryStore({ file, index, now, newId }: MemoryStoreDeps):
     compact: () =>
       writes.next(async () => {
         /**
-         * 🛑 Read back FIRST when this session has not, and only then refused. A `too-new` line is
-         * kept out of the index and sets `trouble`; but an opening whose stamp had not moved never
-         * reads, so `trouble` is null on the next launch over the very same file — and the rewrite
-         * below would then erase a later studio's memories while reporting them as lines saved.
+         * 🛑 Read back FIRST when this session has not. An opening whose stamp had not moved never
+         * reads, so `trouble` is null on the next launch over a file holding a `too-new` line —
+         * and the rewrite below would erase a later studio's memories, reporting them as saved.
          */
         if (!readHere) await readFileInto()
         if (trouble !== null) return 0

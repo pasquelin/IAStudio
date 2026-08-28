@@ -1,4 +1,5 @@
 import { isRecord, oneOf, readBoolean, readNumber, readPositive, readString } from '../guards'
+import { clamp } from '../numeric'
 import { readColor } from './color'
 import { readFontRef } from './font'
 import {
@@ -199,16 +200,13 @@ function element(value: unknown, newId: () => string): UiElement | null {
   return { ...base, type: 'panel', children: kids }
 }
 
-function children(value: unknown, newId: () => string): readonly UiElement[] {
-  if (!Array.isArray(value)) return []
-
-  const read: UiElement[] = []
-  for (const one of value) {
-    const child = element(one, newId)
-    if (child) read.push(child)
-  }
-  return read
+/** What a reader made of a list, dropping what it could not read. Anything but a list is none. */
+function kept<T>(value: unknown, read: (one: unknown) => T | null): readonly T[] {
+  return Array.isArray(value) ? value.map(read).filter((one): one is T => one !== null) : []
 }
+
+const children = (value: unknown, newId: () => string): readonly UiElement[] =>
+  kept(value, one => element(one, newId))
 
 function placement(value: unknown): UiPlacement {
   if (!isRecord(value)) return DEFAULT_PLACEMENT
@@ -290,7 +288,7 @@ function style(value: unknown): UiStyle {
       color: readColor(border, 'color', DEFAULT_STYLE.border.color),
       radius: readPositive(border, 'radius', DEFAULT_STYLE.border.radius),
     },
-    opacity: clamped(readNumber(value, 'opacity', 1)),
+    opacity: clamp(readNumber(value, 'opacity', 1), 0, 1),
     padding: edges(value.padding),
   }
 }
@@ -399,16 +397,7 @@ function checkbox(value: unknown): UiCheckbox {
   return { checked: readBoolean(value, 'checked', false) }
 }
 
-function bindings(value: unknown): readonly UiBinding[] {
-  if (!Array.isArray(value)) return []
-
-  const read: UiBinding[] = []
-  for (const one of value) {
-    const bound = binding(one)
-    if (bound) read.push(bound)
-  }
-  return read
-}
+const bindings = (value: unknown): readonly UiBinding[] => kept(value, binding)
 
 /**
  * A binding, or nothing. Dropped rather than defaulted: a source whose `kind` this build does
@@ -445,5 +434,3 @@ function fallbackOf(value: unknown): string | number | boolean | null {
   if (typeof value === 'string' || typeof value === 'boolean') return value
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
-
-const clamped = (value: number): number => Math.min(1, Math.max(0, value))

@@ -12,7 +12,7 @@ import { PROMPT_FIELD_KEY } from '@shared/domain/localFields'
 import type { JobRunner, RemoteJob } from '@main/provider/jobManager'
 import type { Retry } from '@main/provider/retry'
 import { askCloudChat, CloudRefused, type CloudPoster } from './cloudChat'
-import { forgetSettled, textIn } from './localJobRunner'
+import { forgetSettled, knobsIn, textIn } from './localJobRunner'
 
 /**
  * Scripts written by a chat cloud, behind the shape the job manager already speaks. What comes
@@ -59,18 +59,6 @@ function entered(error: JobFailure | null): CodeJob {
     abort: new AbortController(),
     answer: '',
     error,
-  }
-}
-
-/** The two knobs every wire format honours, as the form filled them. Absent stays absent, so each
- * cloud's own default stands rather than one written here. */
-function knobsIn(body: Record<string, unknown>): { temperature?: number; topP?: number } {
-  const temperature = body['temperature']
-  const topP = body['topP']
-
-  return {
-    ...(typeof temperature === 'number' ? { temperature } : {}),
-    ...(typeof topP === 'number' ? { topP } : {}),
   }
 }
 
@@ -141,8 +129,8 @@ export function createCodeJobRunner(deps: CodeJobDeps): CodeJobRunner {
               { role: 'user', content: prompt.user },
             ],
             json: false,
-            maxTokens: maxTokensIn(body),
             ...knobsIn(body),
+            maxTokens: maxTokensIn(body),
             signal: job.abort.signal,
           },
           deps.post,

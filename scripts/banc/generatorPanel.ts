@@ -13,6 +13,7 @@ import { referencePictures } from '@/helpers/dynamicForm'
 import { resolveModelForCapability } from '@/helpers/modelForCapability'
 import { useAiModels } from '@/stores/aiModels'
 import { useDocuments } from '@/stores/documents'
+import { roleFolderOf, useFolderRoles } from '@/stores/folderRoles'
 import { useGeneration } from '@/stores/generation'
 import { claimOnSubmit, documentAwaits } from '@/stores/generationClaims'
 import { useJobs } from '@/stores/jobs'
@@ -62,7 +63,11 @@ export function installGeneratorPanel(
       useSettings.getState().settings.generation.landing,
       documentAwaits(),
     )
-    return { ...chosen, creates: landingCreatesOf(role, landingSiblingsOf(role, documents)) }
+    const folder = roleFolderOf(useFolderRoles.getState(), 'script')
+    return {
+      ...chosen,
+      creates: landingCreatesOf(role, landingSiblingsOf(role, documents, folder)),
+    }
   }
 
   const panel: GeneratorBridge = {

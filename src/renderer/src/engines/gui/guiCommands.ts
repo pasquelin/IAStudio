@@ -75,7 +75,7 @@ export function removeUiElements(ids: readonly string[]): Command<GuiState> {
  * One element hung from another, at a place in it — capturing where it CAME FROM rather than
  * photographing the tree, which is what lets two of these coalesce into one drag later on.
  */
-export function reparentUiElement(id: string, parentId: string, index?: number): Command<GuiState> {
+function reparentUiElement(id: string, parentId: string, index?: number): Command<GuiState> {
   let from: { parentId: string; index: number } | null = null
 
   return {
@@ -119,9 +119,12 @@ export function canHoldUi(root: UiScreen, id: string, parentId: string): boolean
 }
 
 export function renameUiElement(id: string, name: string): Command<GuiState> {
-  return editUiElement(commandId('ui.rename', [id]), id, element => ({ ...element, name }), {
-    unchanged: element => element.name === name,
-  })
+  return editUiElement(
+    commandId('ui.rename', [id]),
+    id,
+    element => ({ ...element, name }),
+    element => element.name === name,
+  )
 }
 
 /** What an element IS on screen and to the hand, each written the same way. */
@@ -132,14 +135,13 @@ export function setUiFlag(id: string, flag: UiFlag, value: boolean): Command<Gui
     commandId(`ui.${flag}`, [id]),
     id,
     element => ({ ...element, [flag]: value }),
-    { unchanged: element => element[flag] === value },
+    element => element[flag] === value,
   )
 }
 
 /**
- * A flag written across a batch, in ONE entry. What the FIRST of them is not settles a mixed
- * selection — here rather than in whichever surface asked, so the toolbar, a shortcut and the
- * MCP all flip a batch the same way.
+ * A flag written across a batch, in ONE entry — here rather than in whichever surface asked, so
+ * the toolbar, a shortcut and the MCP all flip a batch the same way.
  */
 export function setUiFlags(ids: readonly string[], flag: UiFlag): Command<GuiState> {
   let before: Map<string, boolean> = new Map()
@@ -222,8 +224,23 @@ export function duplicateUiElements(
  * would mint the child's id twice — once inside the parent's subtree, once on its own — and two
  * elements under one id give the layout and the picking two answers to the same question.
  */
-const rootsOf = (root: UiScreen, ids: readonly string[]): readonly string[] =>
-  ids.filter(id => !ids.some(other => other !== id && contains(root, other, id)))
+const rootsOf = (root: UiScreen, ids: readonly string[]): readonly string[] => {
+  const wanted = new Set(ids)
+  const outermost = new Set<string>()
+
+  // One descent carrying « an ancestor is already in the batch », rather than a `contains` walk
+  // per pair: twenty duplicated rows asked the tree four hundred times.
+  const walk = (element: UiElement, inside: boolean): void => {
+    const held = wanted.has(element.id)
+    if (held && !inside) outermost.add(element.id)
+    for (const child of childrenOf(element)) walk(child, inside || held)
+  }
+  walk(root, false)
+
+  // Filtered through `ids` and not read off the walk: the batch's own order is what the copies
+  // come back in.
+  return ids.filter(id => outermost.has(id))
+}
 
 /**
  * A panel laid where the FIRST of the batch stands in the TREE — grouping six rows must not
@@ -298,7 +315,7 @@ function editUiElement(
   id: string,
   elementId: string,
   change: (element: UiElement) => UiElement,
-  refusal: { unchanged: (element: UiElement) => boolean },
+  unchanged: (element: UiElement) => boolean,
 ): Command<GuiState> {
   let before: UiElement | null = null
 
@@ -320,7 +337,7 @@ function editUiElement(
     // 🛑 An edit writing what the element already carries costs a ⌘Z that moves nothing.
     refuses: state => {
       const element = elementById(state.document.root, elementId)
-      return !element || refusal.unchanged(element)
+      return !element || unchanged(element)
     },
   }
 }

@@ -6,6 +6,7 @@ import { LANDING_TARGETS, type LandingTarget } from '@shared/domain/landingTarge
 import { SelectField } from '@/design/SelectField'
 import { PANEL_SECTION } from '@/design/styles'
 import { landingCreatesOf, landingSiblingsOf, type LandingChoice } from '@/generation/landingChoice'
+import { roleFolderOf, useFolderRoles } from '@/stores/folderRoles'
 import { useDocuments } from '@/stores/documents'
 
 export type GeneratorLandingProps = {
@@ -24,7 +25,8 @@ export function GeneratorLanding({ role, choice, landing, onLanding }: Generator
 
   // 🛑 Memoised on the SIBLINGS, never read straight from the selector: naming a file that does
   // not exist yet calls i18next per candidate — 102 µs at twenty untitled scripts, measured.
-  const siblings = useDocuments(useShallow(state => landingSiblingsOf(role, state)))
+  const folder = useFolderRoles(state => roleFolderOf(state, 'script'))
+  const siblings = useDocuments(useShallow(state => landingSiblingsOf(role, state, folder)))
   const creates = useMemo(() => landingCreatesOf(role, siblings), [role, siblings])
 
   const options = useMemo(

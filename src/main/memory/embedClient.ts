@@ -1,15 +1,8 @@
 import { writeQueue } from '@main/persistence'
-import { createProcessClient } from '@main/processClient'
+import { createProcessClient, type ProcessPort } from '@main/processClient'
 import type { EmbedAsk, EmbedRequest, EmbedResponse } from './embedProtocol'
 
-/** The process, reduced to what a client needs — injected, since forking needs a live app. */
-export type EmbedPort = {
-  postMessage: (message: EmbedRequest) => void
-  onMessage: (listener: (response: EmbedResponse) => void) => void
-  /** The process died. Whatever it was asked will never be answered. */
-  onFailure: (listener: (error: Error) => void) => void
-  kill: () => void
-}
+export type EmbedPort = ProcessPort<EmbedRequest, EmbedResponse> & { kill: () => void }
 
 export const EMBEDDER_GONE = 'the embedding process is gone'
 

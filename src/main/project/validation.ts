@@ -143,16 +143,19 @@ const withinPathBound = withinCodePoints(1024)
  * CREATED, this one names what already exists. APFS holds such a name and `folder.list` hands it
  * straight back, so refusing here would lose a folder the disk really has.
  */
-const folderPath = z.string().refine(
-  // One `refine`, and short-circuited, because zod runs every check after a failed one: a bound
-  // of its own would still let a 5 MB string be split, two thousand at a time via `folderPaths`.
-  value =>
+export function isProjectRelativeFolder(value: string): boolean {
+  return (
     withinPathBound(value) &&
     !isAbsolute(value) &&
     !value.startsWith('/') &&
     !value.includes('\\') &&
-    value.split('/').every(segment => segment !== '.' && segment !== '..'),
-)
+    value.split('/').every(segment => segment !== '.' && segment !== '..')
+  )
+}
+
+// One `refine`, and short-circuited, because zod runs every check after a failed one: a bound of
+// its own would still let a 5 MB string be split, two thousand at a time via `folderPaths`.
+const folderPath = z.string().refine(isProjectRelativeFolder)
 
 export function parseFolderPath(value: unknown): string {
   return folderPath.parse(value)

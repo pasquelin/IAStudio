@@ -1303,13 +1303,23 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
 }
 
 /**
- * 🛑 The scope a KIND edits through, read before the space.
+ * 🛑 The scope a KIND edits through, read before the space. `null` inherits the space's, which is
+ * right for every kind a space opens alone — the 3D space opens both a scene and the interfaces
+ * shown over it, and ⌘Z on an interface would otherwise pop the scene's history.
  *
- * A space named one scope while it opened one kind. The 3D space now opens a scene and the
- * interfaces shown over it: ⌘Z on an interface would otherwise pop the scene's history, and the
- * native menu would offer the scene's Undo over a GUI.
+ * Total, not partial, and that is the guard: the next kind added does not COMPILE until someone
+ * answers for it, the way `SCOPE_BY_WORKSPACE` above is total for the same reason.
  */
-const SCOPE_BY_KIND: Partial<Record<DocumentKind, CommandScope>> = { gui: 'gui' }
+const SCOPE_BY_KIND: Record<DocumentKind, CommandScope | null> = {
+  image: null,
+  scene: null,
+  sequence: null,
+  audio: null,
+  skybox: null,
+  material: null,
+  script: null,
+  gui: 'gui',
+}
 
 /**
  * The surface a workspace edits through, or `null` where nothing is undoable — which the home
