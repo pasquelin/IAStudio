@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { LandingTarget } from '@/stores/generationLanding'
+import type { LandingTarget } from '@shared/domain/landingTarget'
 import { Dialog } from '@/app/Dialog'
 import { fieldHandle } from '@/design/scHandle'
 

@@ -19,11 +19,15 @@
       },
       "generatorPrepare": {
         "title": "Préparer une génération",
-        "description": "Remplit le formulaire du Générateur avec un modèle et ses paramètres, puis l’affiche. Rien n’est envoyé, et la génération reste à lancer."
+        "description": "Remplit le formulaire du Générateur avec un modèle et ses paramètres, puis l’affiche. Rien n’est envoyé."
+      },
+      "generatorArmed": {
+        "title": "Lire ce qui est armé",
+        "description": "Rend le modèle, l’opération, les sources et la destination du Générateur tel qu’il est armé, sans rien envoyer ni rien dépenser."
       },
       "generatorSubmit": {
         "title": "Lancer la génération préparée",
-        "description": "Envoie le formulaire tel qu’il est affiché. Consomme des unités créatives, dont le montant estimé est annoncé avant d’être engagé."
+        "description": "Envoie le formulaire tel qu’il est affiché. Consomme des unités créatives, dont l’estimation est annoncée d’abord."
       },
       "jobsList": {
         "title": "Lister les tâches",
@@ -1120,6 +1124,7 @@
       "noWindow": "Aucune fenêtre du studio n’était au premier plan pour exécuter cette action.",
       "timedOut": "La demande est restée à l’écran sans réponse, et a été abandonnée.",
       "noReference": "Le formulaire ne porte aucune image de référence dont lire le style.",
+      "ambiguousLanding": "Deux destinations possibles et le studio aurait posé la question. Nommez-en une : le mauvais choix écrase un fichier ouvert.",
       "formChanged": "Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre.",
       "notFound": "Rien de ce nom n’est là pour recevoir cette action. L’appel, lui, était bien formé.",
       "notAllowed": "Le studio ne laisse pas un appel venu de l’extérieur changer cela. Seule sa propre fenêtre le fait.",
@@ -1139,7 +1144,9 @@
       "query": "Mots-clés",
       "family": "Famille de génération",
       "modelId": "Identifiant du modèle",
+      "operation": "Emploi, ex. code2code",
       "parameters": "Paramètres du modèle",
+      "landing": "Où va le résultat",
       "draft": "Phrase à retravailler",
       "text": "Texte à traduire",
       "documentId": "Identifiant du document",

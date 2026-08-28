@@ -125,7 +125,8 @@ export const GENERATION_SCENARIOS: readonly Scenario[] = [
         modelId: 'model-3d',
         parameters: { prompt: 'a wooden chest' },
       })
-      await studio.run('generator.submit', {})
+      // The decor wants it in the scene it just laid out — named, since the studio would ask.
+      await studio.run('generator.submit', { landing: 'document' })
     },
     passed: run => read.nodesOfKind(run, 'model').length === 1,
   },

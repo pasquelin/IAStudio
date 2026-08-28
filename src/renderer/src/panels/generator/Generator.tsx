@@ -1,8 +1,9 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useShallow } from 'zustand/react/shallow'
 import { isFinished, type Job } from '@shared/domain/job'
-import { partsOfRole } from '@shared/domain/aiRole'
+import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import { CATALOGUE_FAMILIES } from '@shared/domain/model'
 import type { ContextUse } from '@shared/domain/projectContext'
 import { useDescriptor } from '@/hooks/useDescriptor'
@@ -14,15 +15,18 @@ import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
 import { fillSourceFields } from '@/spaces/image/aiFields'
 import { withBodyExtras } from '@/generation/bodyExtras'
+import { landingChoiceOf, landingCreatesOf, landingSiblingsOf } from '@/generation/landingChoice'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
 import { useJobs } from '@/stores/jobs'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
+import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit, documentAwaits } from '@/stores/generationClaims'
-import type { LandingTarget } from '@/stores/generationLanding'
+import type { LandingTarget } from '@shared/domain/landingTarget'
+import { GeneratorLanding } from './Generator/GeneratorLanding'
 import { GeneratorLandingDialog } from './Generator/GeneratorLandingDialog'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
@@ -64,10 +68,11 @@ export function Generator() {
     capability.chosen ? state.preset[capability.chosen] : undefined,
   )
   const modelId = useModelForCapability(capability.chosen)
-  const family = (capability.chosen && partsOfRole(capability.chosen)?.family) ?? null
+  const role = capability.chosen
+  const family = (role && partsOfRole(role)?.family) ?? null
 
   const authenticated = useSettings(state => state.auth.authenticated)
-  const landing = useSettings(state => state.settings.generation.landing)
+  const landingChoice = useSettings(state => state.settings.generation.landing)
   const setValue = useSettings(state => state.setValue)
   const project = useProject(state => state.project)
   // 🛑 The ANSWER, never `state.overview`: the manager republishes the whole overview per percent
@@ -100,6 +105,19 @@ export function Generator() {
    * aside, not once.
    */
   const [contextUse, setContextUse] = useState<ContextUse>('apply')
+
+  /** Where this shot lands and the files it names — composed once, and read by the bridge too. */
+  const choice = useDocuments(
+    useShallow(state => landingChoiceOf(role, state, landingChoice, documentAwaits())),
+  )
+  /**
+   * The deviation carries the OPERATION it was made against, so it never reaches another one. It
+   * is MASKED, not dropped: coming back to the same operation restores it, as `contextUse` does.
+   * Keyed on what the operation DERIVED, two operations deriving the same answer shared it.
+   */
+  const [deviated, setDeviated] = useState<{ from: AiRoleId; to: LandingTarget } | null>(null)
+  const offered = choice.derived
+  const landing = role !== null && deviated?.from === role ? deviated.to : offered
 
   // Before the guards below return early: a hook cannot be called conditionally.
   const cost = useCostEstimate(modelId, descriptor.data?.fields, contextUse)
@@ -142,12 +160,12 @@ export function Generator() {
   const runGeneration = useCallback(
     async (values: FormValues, into?: LandingTarget): Promise<Job | null> => {
       if (!modelId) return null
-      const claim = claimOnSubmit(into)
+      const claim = claimOnSubmit(into, role)
       setSubmitting(true)
 
       try {
         // What the workspace holds and no model schema publishes — `bodyExtras` owns the table.
-        const job = await submit({ id: modelId }, withBodyExtras(family, values), contextUse)
+        const job = await submit({ id: modelId }, withBodyExtras(role, values), contextUse)
         claim(job)
         setRunningId(job?.id ?? null)
         return job
@@ -155,20 +173,41 @@ export function Generator() {
         setSubmitting(false)
       }
     },
-    [modelId, submit, contextUse, family],
+    [modelId, submit, contextUse, role],
   )
 
-  useEffect(
-    () =>
-      registerGenerator({
-        body: () => (modelId ? { modelId, values: body.current } : null),
-        submit: () => runGeneration(body.current),
-        // Which fields hold a picture is a fact of the model's schema, and this panel is the
-        // only place that has it — see `GeneratorBridge`.
-        references: () => referencePictures(descriptor.data?.fields ?? [], body.current),
-      }),
-    [modelId, runGeneration, descriptor.data],
-  )
+  useEffect(() => {
+    const armedBody = (): { modelId: string; values: FormValues } | null =>
+      modelId ? { modelId, values: body.current } : null
+
+    return registerGenerator({
+      body: armedBody,
+      armed: () => {
+        const armed = armedBody()
+        if (!armed || !role) return null
+
+        return {
+          modelId: armed.modelId,
+          operation: role,
+          family,
+          sources: inputs,
+          // 🛑 `landing` over `choice.target`: what the control shows is what the button sends,
+          // and `null` is kept for the one case a caller must answer rather than inherit.
+          landing: {
+            ...choice,
+            target: landing ?? choice.target,
+            // On DEMAND, never on the render path — `landingCreatesOf` says what it costs.
+            creates: landingCreatesOf(role, landingSiblingsOf(role, useDocuments.getState())),
+          },
+          parameters: armed.values,
+        }
+      },
+      submit: into => runGeneration(body.current, into),
+      // Which fields hold a picture is a fact of the model's schema, and this panel is the
+      // only place that has it — see `GeneratorBridge`.
+      references: () => referencePictures(descriptor.data?.fields ?? [], body.current),
+    })
+  }, [modelId, role, family, inputs, choice, landing, runGeneration, descriptor.data])
 
   const watchValues = cost.onValuesChange
   const onValuesChange = useCallback(
@@ -218,8 +257,11 @@ export function Generator() {
    * a question raised when the picture arrives is one nobody is still watching for.
    */
   const generate = (values: FormValues): void => {
-    if (landing === 'ask' && documentAwaits()) return setAsking(values)
-    void runGeneration(values, landing === 'newTab' ? 'newTab' : undefined)
+    // The operation's own answer wins over the preference: where a script goes is a property of
+    // the request, and asking again what `code2code` settles is a question with one answer.
+    const target = landing ?? choice.target
+    if (target === null) return setAsking(values)
+    void runGeneration(values, target)
   }
 
   return (
@@ -266,6 +308,16 @@ export function Generator() {
             role={capability.chosen}
             use={contextUse}
             onUse={setContextUse}
+          />
+        )}
+        {/* Below the sources and above the run: what is sent, then where it lands, then the
+            generation itself — the order the eye reads the panel in. */}
+        {role !== null && offered !== null && landing !== null && (
+          <GeneratorLanding
+            role={role}
+            choice={choice}
+            landing={landing}
+            onLanding={target => setDeviated({ from: role, to: target })}
           />
         )}
         <GeneratorRun job={running} />

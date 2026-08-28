@@ -89,6 +89,39 @@ describe('jobs store', () => {
     expect(stopChanges).toHaveBeenCalledOnce()
   })
 
+  /**
+   * 🛑 `generationOf` finds a body through an ASSET's `jobId`, so a job that finished with
+   * nothing on the shelf holds one nobody can ever reach again. Measured on the Code space, whose
+   * bodies carry `studio.d.ts`: 20 generations retained 254 527 B until the reload.
+   */
+  it('drops the body of a job that settled with nothing on the shelf', async () => {
+    installFakeBridge({
+      provider: {
+        generate: () => Promise.resolve(job({ id: 'job_code', status: 'queued', progress: 0 })),
+      },
+    })
+
+    await useJobs.getState().submit({ id: 'cloud:anthropic' }, { prompt: 'a spin', api: 'x' })
+    expect(useJobs.getState().bodies['job_code']).toBeDefined()
+
+    useJobs.getState().apply({ id: 'job_code', status: 'succeeded', progress: 1 })
+    expect(useJobs.getState().bodies['job_code']).toBeUndefined()
+  })
+
+  /** The inspector reads it back to show what an asset was made from — and to run it again. */
+  it('keeps the body of a job that produced something', async () => {
+    installFakeBridge({
+      provider: {
+        generate: () => Promise.resolve(job({ id: 'job_img', status: 'queued', progress: 0 })),
+      },
+    })
+
+    await useJobs.getState().submit({ id: 'model_flux' }, { prompt: 'a rock' })
+    useJobs.getState().apply({ id: 'job_img', status: 'succeeded', progress: 1, assetIds: ['a_1'] })
+
+    expect(useJobs.getState().bodies['job_img']).toEqual({ prompt: 'a rock' })
+  })
+
   it('puts a freshly submitted job at the top of the list', async () => {
     installFakeBridge({
       provider: {

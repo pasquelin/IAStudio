@@ -12,7 +12,7 @@ import { useModels } from '@/stores/models'
 import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
-import { registerGenerator, type GeneratorBridge } from './generatorBridge'
+import { registerGenerator, type ArmedGeneration, type GeneratorBridge } from './generatorBridge'
 import { ACTION_REGISTRY, commitmentOfCall } from '@shared/domain/assistant'
 import { registerConfirmer } from './confirm'
 import {
@@ -50,8 +50,18 @@ const aModel = (id: string, name: string): ModelSummary => ({
 const aJob = (id: string): Job => jobOf({ id, label: 'Knight', progress: 0.5 })
 
 /** A mounted generator, armed on a model and carrying no references unless a case says so. */
+const ARMED: ArmedGeneration = {
+  modelId: 'm',
+  operation: 'image/txt2img',
+  family: 'image',
+  sources: [],
+  landing: { target: 'newTab', derived: 'newTab', into: null, creates: null, sends: null },
+  parameters: {},
+}
+
 const aGenerator = (overrides: Partial<GeneratorBridge> = {}): GeneratorBridge => ({
   body: () => ({ modelId: 'm', values: {} }),
+  armed: () => ARMED,
   submit: () => Promise.resolve(null),
   references: () => [],
   ...overrides,
@@ -277,9 +287,57 @@ describe('submitting what was prepared', () => {
 
     expect(await runAction('generator.submit', {})).toEqual({
       ok: true,
-      data: { jobId: 'job_1' },
+      data: { jobId: 'job_1', landing: 'newTab' },
     })
-    expect(submit).toHaveBeenCalled()
+    // What the panel shows, when the call names nothing: the destination is not re-decided here.
+    expect(submit).toHaveBeenCalledWith('newTab')
+    stop()
+  })
+
+  it('sends it where the call says, over what the panel shows', async () => {
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    const stop = registerGenerator(aGenerator({ submit }))
+
+    await runAction('generator.submit', { landing: 'document' })
+
+    expect(submit).toHaveBeenCalledWith('document')
+    stop()
+  })
+
+  /**
+   * 🛑 Refused rather than guessed: the studio itself would have put the question on screen, and
+   * a call from outside cannot answer it — the wrong half writes over a file being edited.
+   */
+  it('refuses, naming the options, where the studio would have asked', async () => {
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    const stop = registerGenerator(
+      aGenerator({
+        submit,
+        armed: () => ({ ...ARMED, landing: { ...ARMED.landing, target: null } }),
+      }),
+    )
+
+    const outcome = await runAction('generator.submit', {})
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'ambiguousLanding' })
+    expect(outcome).toMatchObject({ detail: expect.stringContaining('newTab') })
+    expect(submit).not.toHaveBeenCalled()
+    stop()
+  })
+
+  /** The same call, with the destination named, goes through: the refusal is repairable. */
+  it('goes through once the ambiguity is named', async () => {
+    const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
+    const stop = registerGenerator(
+      aGenerator({
+        submit,
+        armed: () => ({ ...ARMED, landing: { ...ARMED.landing, target: null } }),
+      }),
+    )
+
+    await runAction('generator.submit', { landing: 'newTab' })
+
+    expect(submit).toHaveBeenCalledWith('newTab')
     stop()
   })
 
@@ -290,8 +348,23 @@ describe('submitting what was prepared', () => {
     expect(revealTool).toHaveBeenCalledWith('generator')
   })
 
+  /** Read before the spend: what a client sees instead of paying to find out. */
+  it('answers the model, the operation and the destination that are armed', async () => {
+    const stop = registerGenerator(aGenerator())
+
+    expect(await runAction('generator.armed', {})).toEqual({ ok: true, data: ARMED })
+    stop()
+  })
+
+  it('refuses to say what is armed with no panel mounted', async () => {
+    expect(await runAction('generator.armed', {})).toEqual({
+      ok: false,
+      refusal: 'generatorClosed',
+    })
+  })
+
   it('refuses when the panel is up but nothing is armed', async () => {
-    const stop = registerGenerator(aGenerator({ body: () => null }))
+    const stop = registerGenerator(aGenerator({ armed: () => null }))
 
     expect(await runAction('generator.submit', {})).toEqual({
       ok: false,

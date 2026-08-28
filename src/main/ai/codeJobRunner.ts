@@ -160,6 +160,13 @@ export function createCodeJobRunner(deps: CodeJobDeps): CodeJobRunner {
   return {
     owns: jobId => jobs.has(jobId),
 
+    // The identity is what routes a poll and a collection; the script is what weighed — the 64
+    // remembered ones measured 1 024 000 B at the 4 096-token ceiling.
+    forget: jobId => {
+      const job = jobs.get(jobId)
+      if (job) job.answer = ''
+    },
+
     submit: async (target, body) => {
       const jobId = `code_${deps.newId()}`
       const cloud = cloudOfModelId(target.id)

@@ -1,6 +1,7 @@
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { DocumentKind } from '@shared/domain/document'
 import { isFinished, type Job } from '@shared/domain/job'
+import type { LandingTarget } from '@shared/domain/landingTarget'
 import type { LogScope } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -36,9 +37,6 @@ export type GenerationLanding = {
   scope: LogScope
   land: (documentId: string, asset: Asset) => void
 }
-
-/** Where one generation was asked to go. `newTab` is also what an empty workspace answers. */
-export type LandingTarget = 'document' | 'newTab'
 
 /** Hands over the jobs that SUCCEEDED, each with the document it was claimed for. */
 type Landed = (jobs: ReadonlyMap<string, string | null>) => void

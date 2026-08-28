@@ -1,4 +1,6 @@
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
+import { reworksItsOutput } from '@shared/domain/aiCapability'
+import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import type { ModelFamily } from '@shared/domain/model'
 import { CODE_API_FIELD, CODE_SOURCE_FIELD } from '@shared/domain/codeGeneration'
 import type { FormValues } from '@/helpers/dynamicForm'
@@ -11,19 +13,19 @@ import { activeScriptId, useDocuments } from '@/stores/documents'
  * A table rather than a branch in the panel, which serves every family and knows none:
  * `Record<ModelFamily, …>` makes the compiler ask for the line of the family that arrives.
  */
-const EXTRAS: Record<ModelFamily, ((values: FormValues) => FormValues) | null> = {
+const EXTRAS: Record<ModelFamily, ((role: AiRoleId, values: FormValues) => FormValues) | null> = {
   image: null,
   video: null,
   '3d': null,
   audio: null,
   material: null,
   skybox: null,
-  code: values => {
+  code: (role, values) => {
     const documentId = activeScriptId(useDocuments.getState())
-    const source = documentId === null ? undefined : codeFileOf(documentId)?.source
+    // 🛑 Gated on the OPERATION, not on a script being open — see `landingOfRole`.
+    const source = reworksItsOutput(role) && documentId ? codeFileOf(documentId)?.source : undefined
 
-    // Absent rather than empty with no script in front: what tells `code2code` from `txt2code` is
-    // whether there is one to rework, and an empty string is a script that says nothing.
+    // Absent rather than empty: an empty string is a script that says nothing.
     return {
       ...values,
       [CODE_API_FIELD]: STUDIO_TYPES,
@@ -37,10 +39,8 @@ const EXTRAS: Record<ModelFamily, ((values: FormValues) => FormValues) | null> =
 }
 
 /** The body as it is sent: the form, plus whatever the family adds to it. */
-export function withBodyExtras(
-  family: ModelFamily | null | undefined,
-  values: FormValues,
-): FormValues {
+export function withBodyExtras(role: AiRoleId | null, values: FormValues): FormValues {
+  const family = role === null ? null : partsOfRole(role)?.family
   const extras = family ? EXTRAS[family] : null
-  return extras ? extras(values) : values
+  return extras && role ? extras(role, values) : values
 }

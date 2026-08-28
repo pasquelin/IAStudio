@@ -517,6 +517,51 @@ describe('job manager', () => {
     expect(manager.list()[0]?.status).toBe('succeeded')
   })
 
+  /**
+   * 🛑 A runner may keep what it answered WITH — `codeJobRunner` holds a whole script — and only
+   * the manager knows when it will never poll again. Told on the poll instead, the script would
+   * be gone by the resume the step-aside below needs.
+   */
+  it('tells the runner it is done with a job once the outcome is settled', async () => {
+    const forget = vi.fn()
+    const { manager } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => Promise.resolve(remote('success', { assetIds: ['r_1'] })),
+        cancel: () => Promise.resolve(),
+        forget,
+      },
+    })
+
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    await settled()
+
+    expect(forget).toHaveBeenCalledWith('job_remote')
+  })
+
+  /** The step aside settles nothing, so what the runner kept has to outlive it — see the resume. */
+  it('tells it nothing when the job steps aside for a project that closed', async () => {
+    let open: string | null = '/projects/kingdom'
+    const forget = vi.fn()
+    const { manager } = harness({
+      projectPath: () => open,
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => {
+          open = null
+          return Promise.resolve(remote('success', { assetIds: ['r_1'] }))
+        },
+        cancel: () => Promise.resolve(),
+        forget,
+      },
+    })
+
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
+    await settled()
+
+    expect(forget).not.toHaveBeenCalled()
+  })
+
   it('gives up on an error a retry cannot fix', async () => {
     const submit = vi.fn(() =>
       Promise.reject(APIError.generate(400, undefined, 'bad body', new Headers())),

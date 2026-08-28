@@ -338,6 +338,9 @@ export const ROW_DETAIL = 'flex flex-col pb-1 pl-4'
  */
 export const PANEL_HEAD = 'border-border flex flex-col gap-2 border-b p-2'
 
+/** A block set off from the one above it — the same boundary as `PANEL_HEAD`, drawn on top. */
+export const PANEL_SECTION = 'border-border flex flex-col gap-2 border-t pt-2'
+
 /**
  * The same boundary as `PANEL_HEAD`, drawn across ONE line. The room around it stays with the
  * caller: no two that wear it pad alike.

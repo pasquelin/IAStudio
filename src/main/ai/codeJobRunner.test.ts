@@ -96,6 +96,34 @@ describe('a script written by a chat cloud', () => {
     expect(runner.owns('local_1')).toBe(false)
   })
 
+  /**
+   * 🛑 Not on the poll that answered: `follow` leaves WITHOUT settling when the project changed
+   * under it, and the resume that follows polls the same job again — a script let go there would
+   * settle succeeded with nothing. Held to the end, the 64 remembered ones measured 1 024 000 B.
+   */
+  it('still answers the script on a second poll, until the manager says it is done', async () => {
+    const runner = runnerWith(answering({ content: [{ text: 'export const x = 1' }] }))
+
+    const submitted = await runner.submit({ id: ANTHROPIC }, { prompt: 'a spin' })
+    expect((await finished(runner, submitted.jobId)).text).toBe('export const x = 1')
+
+    expect((await runner.poll(submitted.jobId)).text).toBe('export const x = 1')
+  })
+
+  it('lets go of the script once the manager has it, and still owns the job', async () => {
+    const runner = runnerWith(answering({ content: [{ text: 'export const x = 1' }] }))
+
+    const submitted = await runner.submit({ id: ANTHROPIC }, { prompt: 'a spin' })
+    await finished(runner, submitted.jobId)
+    runner.forget?.(submitted.jobId)
+
+    const again = await runner.poll(submitted.jobId)
+    expect(again.status).toBe('success')
+    expect(again.text).toBeUndefined()
+    // The identity is what routes a poll and a collection; the script is what weighed.
+    expect(runner.owns(submitted.jobId)).toBe(true)
+  })
+
   it('reports the refusal of a cloud as a failure rather than an empty script', async () => {
     const runner = runnerWith(answering({ error: { message: 'nope' } }, 401))
 

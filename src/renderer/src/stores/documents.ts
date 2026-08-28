@@ -109,6 +109,9 @@ type DocumentsState = {
 
 export type DocumentsSlice = Pick<DocumentsState, 'documents' | 'activeId'>
 
+/** The slice a reader outside the store needs to answer about the FOLDER as well as the tabs. */
+export type DocumentsRead = Pick<DocumentsState, 'documents' | 'stored' | 'activeId'>
+
 /**
  * The document in front, when it is one of a given kind. A scene panel handed an image
  * document would give `useScenes` a state and a history for a document that has no scene.
@@ -549,7 +552,10 @@ export function takenDocumentNames(
  * Named after its KIND rather than « Sans titre », and the folder is why: the number is free per
  * FILE name, so the six kinds each held a « Sans titre 1 » a glyph alone told apart.
  */
-export function untitledDocumentName(taken: readonly NamedDocument[], kind: DocumentKind): string {
+export function untitledDocumentName(
+  taken: readonly Pick<NamedDocument, 'fileName'>[],
+  kind: DocumentKind,
+): string {
   const names = new Set(taken.map(document => foldForFileName(document.fileName)))
   // Composed, hence `COMPOSED_KEYS` — and read once, the word being the same at every number.
   const called = i18next.t(`documents.kinds.${kind}`)
