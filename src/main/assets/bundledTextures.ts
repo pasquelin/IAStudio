@@ -27,9 +27,8 @@ type BundledTextureDeps = {
   /** The open project's folder, which is what a stored path is relative to. */
   projectPath: () => string
   /**
-   * Where each role's folder sits — `ProjectStore.roles`. A LOOKUP here rather than a landing:
-   * the row the catalogue already holds names the folder the materials were filed in, and this
-   * has to ask the same question the write asked.
+   * Where each role's folder sits — `ProjectStore.roles`. A LOOKUP rather than a landing: the row
+   * the catalogue holds names the folder the write chose, and this has to ask the same question.
    */
   roles: () => RoleFolders
   /** Whether a file is still there. Injected, exactly as `assets:absent` takes it. */

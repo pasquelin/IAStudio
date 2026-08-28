@@ -7,9 +7,8 @@ import {
   MANIFEST_FILE,
   MANIFEST_VERSION,
   MACHINE_FOLDERS,
-  STARTER_FOLDERS,
 } from '@shared/domain/project'
-import { ROLE_MARKER } from '@shared/domain/folderRole'
+import { DEFAULT_ROLE_PATHS, ROLE_MARKER } from '@shared/domain/folderRole'
 import { isRecord } from '@shared/guards'
 import {
   createProjectStore,
@@ -74,7 +73,7 @@ describe('project store', () => {
     // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
     // a subfolder put a project inside the folder the user had just made for it.
     expect(project.path).toBe(root)
-    for (const folder of [...MACHINE_FOLDERS, ...STARTER_FOLDERS]) {
+    for (const folder of [...MACHINE_FOLDERS, ...Object.values(DEFAULT_ROLE_PATHS)]) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
 
@@ -105,7 +104,7 @@ describe('project store', () => {
   })
 
   it('leaves no folder behind that nothing writes to', () => {
-    expect([...MACHINE_FOLDERS, ...STARTER_FOLDERS]).not.toContain('layouts')
+    expect([...MACHINE_FOLDERS, ...Object.values(DEFAULT_ROLE_PATHS)]).not.toContain('layouts')
   })
 
   /**

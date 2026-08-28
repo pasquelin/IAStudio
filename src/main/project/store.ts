@@ -107,11 +107,8 @@ export type ProjectStoreDeps = {
   now: () => string
   onChange: (project: Project | null) => void
   /**
-   * Announces where the roles sit, whenever that changes — another project, or a write that had
-   * to lay a missing folder back down.
-   *
-   * Apart from `onChange`, which means "another project is in front now" and resumes jobs and
-   * re-arms the folder watch. A folder appearing must not cost that.
+   * Where the roles sit, whenever that changes. Apart from `onChange`, which resumes jobs and
+   * re-arms the folder watch: a folder appearing must not cost that.
    */
   onRoles: (roles: RoleFolders) => void
   /** Writes out whatever still belongs to the project being closed, before its catalogue goes. */
@@ -150,16 +147,9 @@ export type ProjectStore = {
   path: () => string
   /** The open project's catalogue. Throws rather than answering an empty one. */
   catalog: () => AsyncCatalog
-  /**
-   * Where each role's folder sits in the open project — empty while none is open, and PARTIAL
-   * while a role's folder is gone. Read by whoever composes a path; whoever WRITES one calls
-   * `folderFor` instead, which lays the folder down.
-   */
+  /** Where each role's folder sits — for DRAWING. A write asks `folderFor`, which lays it down. */
   roles: () => RoleFolders
-  /**
-   * The folder a role names, laid down with its marker if the project has none — what a write
-   * asks for. Remembers what it made, so the next caller of `roles` sees it.
-   */
+  /** The folder a role names, laid down with its marker if the project has none. */
   folderFor: (role: FolderRole) => Promise<string>
   /**
    * Stamps the manifest with the moment the project last did some work. Called on every document
@@ -413,12 +403,8 @@ export function createProjectStore({
     return opened
   }
 
-  /**
-   * Where the roles sit, and the cache rewritten when the walk had to go out.
-   *
-   * Never fatal: a project whose roles cannot be read opens with none, and the first write lays
-   * the folder it needs back down at its default. Losing a role costs a folder, never a project.
-   */
+  /** Never fatal: a project whose roles cannot be read opens with none, and the first write lays
+   * the folder it needs back down. Losing a role costs a folder, never a project. */
   const readRoles = async (root: string): Promise<RoleFolders> => {
     try {
       const { roles, walked } = await resolveRoleFolders(root)

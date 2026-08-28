@@ -26,11 +26,7 @@ export type EntryRowProps = {
    * draws it: the file is still there and still opens, and the gesture is not finished.
    */
   waiting?: boolean
-  /**
-   * What the row has to say that the name does not — which section a folder serves, for one.
-   * A folder is the user's to rename, so the NAME on screen is always the disk's; this is where
-   * the role gets said, in words, translated.
-   */
+  /** What the row says that the name does not — which section a folder serves, for one. */
   hint?: string
   /** Fired with the new name, or with the old one when the edit was abandoned. */
   onRename?: (name: string) => void

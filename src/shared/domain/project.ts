@@ -1,7 +1,6 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
 import { parentOf } from './folder'
-import { DEFAULT_ROLE_PATHS } from './folderRole'
 
 export const MANIFEST_VERSION = 1
 
@@ -297,17 +296,6 @@ export const MACHINE_FOLDERS: readonly string[] = [
   POSTERS_FOLDER,
   THUMBNAILS_FOLDER,
 ]
-
-/**
- * What a new project opens with — ORDINARY folders from the first second, renamed, filled and
- * thrown away like any the user makes. What binds one to what it holds is the marker inside it,
- * never this list, so a folder moved out of here goes on serving.
- *
- * Derived from `DEFAULT_ROLE_PATHS` rather than relisted, so adding a role cannot leave the writer
- * pointing at a folder this never created. Nested entries come with their parent: `mkdir` is
- * recursive, and the order of the list decides nothing.
- */
-export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ROLE_PATHS)
 
 /**
  * The one folder every asset used to be filed under, back when the tree was the studio's.

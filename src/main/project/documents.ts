@@ -115,11 +115,8 @@ export type DocumentFilesDeps = {
    */
   folderNames: (relative: string) => Promise<readonly string[] | null>
   /**
-   * The folder a role names, laid down with its marker if the project has none —
-   * `ProjectStore.folderFor`.
-   *
-   * Where a first save goes when its caller names no folder. Asked rather than composed: a
-   * project whose `Modelling/Scenes` was renamed in the Finder goes on filing scenes there.
+   * Where a first save goes when its caller names none — `ProjectStore.folderFor`. Asked rather
+   * than composed: only the main process reads the markers a rename leaves in place.
    */
   folderFor: (role: FolderRole) => Promise<string>
 }

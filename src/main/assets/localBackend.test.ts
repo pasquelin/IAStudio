@@ -9,7 +9,7 @@ import type { AsyncCatalog } from '@main/project/catalogClient'
 import { hashOrNull, hashSource } from '@main/media/runner'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import { isHiddenEntry } from '@shared/domain/folder'
-import { ensureRoleFolder } from '@main/project/folderRoles'
+import { roleFolderAt } from '@main/project/project-fixtures'
 import {
   createLocalBackend,
   extensionFromUrl,
@@ -54,7 +54,7 @@ describe('local backend', () => {
     backend = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -83,7 +83,7 @@ describe('local backend', () => {
     const probing = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -108,7 +108,7 @@ describe('local backend', () => {
     const probing = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -462,7 +462,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -490,7 +490,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -513,7 +513,7 @@ describe('local backend', () => {
     const failing = createLocalBackend({
       download: vi.fn(() => Promise.reject(new Error('offline'))),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -680,7 +680,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -741,7 +741,7 @@ describe('the still brought down beside the bytes', () => {
     backend = createLocalBackend({
       download,
       projectPath: () => root,
-      folderFor: role => ensureRoleFolder(root, {}, role),
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,

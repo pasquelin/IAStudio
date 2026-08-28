@@ -1,5 +1,5 @@
 import type { FileKind } from '@shared/domain/folder'
-import { STARTER_FOLDERS } from '@shared/domain/project'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { barrelDocument } from '@/engines/scene/prefab-fixtures'
 
 /** One stamp for everything the bench dates: nothing in it reads a clock. */
@@ -15,7 +15,7 @@ type Seeded = { path: string; kind: FileKind }
 const seededFolder = (path: string): Seeded => ({ path, kind: 'folder' })
 
 export const PROJECT: readonly Seeded[] = [
-  ...STARTER_FOLDERS.map(seededFolder),
+  ...Object.values(DEFAULT_ROLE_PATHS).map(seededFolder),
   { path: 'Images/a beautiful sailing ship, sailboat, on the open sea, green.png', kind: 'file' },
   { path: 'Images/a beautiful sailing ship, sailboat, on the open sea.png', kind: 'file' },
   { path: 'Images/fais moi un chateau.png', kind: 'file' },

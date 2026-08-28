@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parentOf } from '@shared/domain/folder'
-import { STARTER_FOLDERS } from '@shared/domain/project'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { PROJECT } from './project'
 
 /**
@@ -11,7 +11,7 @@ import { PROJECT } from './project'
 describe('the project the bench lays down', () => {
   it('holds every folder a real project is given', () => {
     const laid = PROJECT.filter(entry => entry.kind === 'folder').map(entry => entry.path)
-    expect([...laid].sort()).toEqual([...STARTER_FOLDERS].sort())
+    expect([...laid].sort()).toEqual(Object.values(DEFAULT_ROLE_PATHS).sort())
   })
 
   it('seeds no file into a folder the project does not have', () => {

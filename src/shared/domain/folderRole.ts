@@ -1,4 +1,5 @@
 import { byCodeUnit } from '../text'
+import type { WorkspaceId } from './workspace'
 
 /**
  * What a folder is FOR, told by a marker inside it rather than by its name.
@@ -86,6 +87,26 @@ export const ROLE_MARKER = '.ia-studio-role'
  * an entry that is absent.
  */
 export type RoleFolders = Partial<Record<FolderRole, string>>
+
+/**
+ * The workspace each role serves. Four answer `3d`: Modelling files three things, and the folder
+ * above them is the section itself.
+ *
+ * Here rather than beside the icons, because it is what lets a folder's glyph and its label both
+ * be READ off the workspace tables instead of relisted — one glyph per section, changed once.
+ */
+export const WORKSPACE_BY_ROLE: Record<FolderRole, WorkspaceId> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  materials: 'materials',
+  skyboxes: 'skyboxes',
+  code: 'code',
+  modelling: '3d',
+  scenes: '3d',
+  models: '3d',
+  animations: '3d',
+}
 
 /**
  * The folder a role names in THIS project, falling back to where the role starts.

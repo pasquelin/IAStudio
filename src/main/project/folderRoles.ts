@@ -28,37 +28,45 @@ async function readMarker(root: string, folder: string): Promise<FolderRole | nu
   }
 }
 
-/** Lays a folder down and says what it is for. The marker is written after the folder appears. */
+/** Lays a folder down and says what it is for, leaving Windows its attribute to the caller. */
+async function writeMarker(root: string, folder: string, role: FolderRole): Promise<string> {
+  const marker = join(root, folder, ROLE_MARKER)
+  await mkdir(join(root, folder), { recursive: true })
+  await writeAtomic(marker, `${role}\n`)
+  return marker
+}
+
+/** One folder, marked and hidden — the single-shelf door, for a role coming back on a write. */
 export async function markRoleFolder(
   root: string,
   folder: string,
   role: FolderRole,
 ): Promise<void> {
-  await mkdir(join(root, folder), { recursive: true })
-  await writeAtomic(join(root, folder, ROLE_MARKER), `${role}\n`)
-  await hideFromExplorer(join(root, folder, ROLE_MARKER))
+  await hideFromExplorer(await writeMarker(root, folder, role))
 }
 
-/**
- * The tree a new project is given, each folder carrying the marker that says what it is for.
- *
- * Ordinary folders from the first second: renamed, moved, filled or thrown away like any the user
- * makes, and it is the marker rather than this layout that keeps a role bound to one.
- */
+/** The tree a new project is given, each folder carrying the marker that says what it is for. */
 export async function layRoleFolders(root: string): Promise<void> {
   // Three rounds, not ten: `Modelling` has to exist before its children claim their own markers,
   // and the six roots depend on nothing.
   const under: readonly FolderRole[] = ['scenes', 'models', 'animations']
   const roots = FOLDER_ROLES.filter(role => role !== 'modelling' && !under.includes(role))
 
-  await Promise.all(roots.map(role => markRoleFolder(root, DEFAULT_ROLE_PATHS[role], role)))
-  await markRoleFolder(root, DEFAULT_ROLE_PATHS.modelling, 'modelling')
-  await Promise.all(under.map(role => markRoleFolder(root, DEFAULT_ROLE_PATHS[role], role)))
+  const laid = await Promise.all(
+    roots.map(role => writeMarker(root, DEFAULT_ROLE_PATHS[role], role)),
+  )
+  laid.push(await writeMarker(root, DEFAULT_ROLE_PATHS.modelling, 'modelling'))
+  laid.push(
+    ...(await Promise.all(under.map(role => writeMarker(root, DEFAULT_ROLE_PATHS[role], role)))),
+  )
+
+  // ONE `attrib` for the ten, which is what `hideFromExplorer` promises — one process per
+  // project. Ten spawns, serialised, on the path that creates a project is a tenth of a second
+  // of Windows for a file attribute.
+  await hideFromExplorer(...laid)
 }
 
 /**
- * What the last resolution settled, checked rather than trusted — a file on a disk anyone may edit.
- *
  * `absent` is what keeps the walk rare: a role no folder carries has to be REMEMBERED as absent,
  * or every open of a project made before the roles pays a full traversal, for ever.
  */
@@ -90,18 +98,12 @@ async function readCache(root: string): Promise<RoleCache> {
 export type RoleResolution = { roles: RoleFolders; walked: boolean }
 
 /**
- * Where each role sits in this project, and whether finding out cost a walk.
- *
- * Two steps, so an ordinary open pays ten reads rather than a traversal: what the cache claims is
- * VERIFIED against the marker, and only a role the cache has settled neither way sends the walk
- * out. A folder renamed in the Finder is therefore found — at the price of one walk, once.
- *
- * A role nothing carries is left OUT of the map rather than pointed at its default: absent says
- * "nowhere yet", where a default would say "here", and one of the two is written into.
+ * Where each role sits, and whether finding out cost a walk. A role nothing carries is left OUT
+ * rather than pointed at its default: absent says "nowhere yet", a default says "here", and what
+ * is here gets written into.
  *
  * 🛑 The blind spot of remembering an absence: a folder that gains a marker without the studio
- * writing it — a shelf copied in from another project — is not seen until something else sends
- * the walk out. `folderFor` is the door for every marker the studio lays itself.
+ * writing it — a shelf copied in from another project — waits for the next walk.
  */
 export async function resolveRoleFolders(root: string): Promise<RoleResolution> {
   const cached = await readCache(root)
@@ -175,10 +177,8 @@ export async function writeRoleCache(root: string, roles: RoleFolders): Promise<
 }
 
 /**
- * The folder a role names, laid down with its marker if the project has none.
- *
- * Called by whoever is about to WRITE, which is the only moment a missing folder matters — and
- * the one door every marker the studio lays goes through.
+ * The folder a role names, laid down with its marker if the project has none — the one door
+ * every marker the studio lays goes through, and only ever on a write.
  */
 export async function ensureRoleFolder(
   root: string,

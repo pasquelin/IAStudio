@@ -11,11 +11,11 @@ const execFile = promisify(execFileCallback)
  * Failures are swallowed on purpose: a manifest the Explorer happens to show is a cosmetic
  * problem, and refusing to open the project over it would be a real one.
  */
-export async function hideFromExplorer(path: string): Promise<void> {
-  if (process.platform !== 'win32') return
+export async function hideFromExplorer(...paths: string[]): Promise<void> {
+  if (process.platform !== 'win32' || paths.length === 0) return
 
   try {
-    await execFile('attrib', ['+h', path])
+    await execFile('attrib', ['+h', ...paths])
   } catch {
     return
   }

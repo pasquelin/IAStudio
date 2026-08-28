@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ROLE_PATHS, FOLDER_ROLES } from './folderRole'
 import type { AccountSummary } from './account'
 import {
   listedAt,
   planProjectAccount,
-  STARTER_FOLDERS,
   projectPickerFolder,
   landedInDefaultFolder,
   projectsByCreation,
@@ -285,18 +283,5 @@ describe('an asset filed in the default folder of its kind', () => {
   // An asset linked where the user left it, or one that lives in the library alone.
   it('is not an asset with no file in the project', () => {
     expect(landedInDefaultFolder(undefined, 'Images')).toBe(false)
-  })
-})
-
-describe('the folders a new project is laid out with', () => {
-  it('holds one per role, so nothing the writer files has nowhere to go', () => {
-    for (const role of FOLDER_ROLES) {
-      expect(STARTER_FOLDERS).toContain(DEFAULT_ROLE_PATHS[role])
-    }
-  })
-
-  it('lays down the folder above a nested one as well', () => {
-    expect(STARTER_FOLDERS).toContain('Modelling')
-    expect(STARTER_FOLDERS).toContain('Modelling/Models')
   })
 })

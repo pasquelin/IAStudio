@@ -13,7 +13,7 @@ import { kindForExtension, type DocumentDescriptor } from '@shared/domain/docume
 import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
-import { roleOfFolder } from '@shared/domain/folderRole'
+import { FOLDER_ROLES, WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
 import { Collection } from '@/design/Collection/Collection'
 import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
@@ -27,8 +27,7 @@ import { renameAsset, renameDocument } from '@/helpers/rename'
 import { startSceneDrag } from '@/helpers/sceneDrag'
 import { openProjectFile } from '@/helpers/openProjectFile'
 import { applySelection } from '@/helpers/selection'
-import { ROLE_ICONS } from '@/helpers/roleIcons'
-import { workspaceById } from '@/helpers/workspaces'
+import { roleIcon, roleLabelKey, workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDomainTree } from '@/hooks/useDomainTree'
 import { useFolderSearch } from '@/hooks/useFolderSearch'
 import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
@@ -78,6 +77,10 @@ export function Explorer() {
   const language = i18n.language
   const projectPath = useProject(state => state.project?.path ?? null)
   const roles = useFolderRoles(state => state.roles)
+  const byFolder: Map<string, FolderRole> = useMemo(
+    () => new Map(FOLDER_ROLES.flatMap(role => (roles[role] ? [[roles[role], role]] : []))),
+    [roles],
+  )
   const stored = useDocuments(state => state.stored)
   const open = useDocuments(state => state.documents)
   const collection = useExplorerView(state => state.collection)
@@ -456,6 +459,13 @@ export function Explorer() {
   // search that matches nothing would otherwise take the field it was typed in off the screen,
   // and leave no way back to the folder.
   /**
+   * Read off the RESOLVED map, never off the name: a fresh folder wearing the old default name is
+   * an ordinary folder. Inverted once — the panel asks it twice per row.
+   */
+  const roleOf = (node: FolderNode): FolderRole | null =>
+    node.kind === 'folder' ? (byFolder.get(node.path) ?? null) : null
+
+  /**
    * The glyph an entry wears. The descriptor is asked FIRST: an image document is a directory, and
    * answering the folder question first showed a folder over every other space's own glyph.
    */
@@ -464,28 +474,18 @@ export function Explorer() {
     if (document) return workspaceById(document.workspace).icon
     if (node.kind !== 'folder') return mdiFileOutline
 
-    // Read off the RESOLVED map rather than off the name: the folder serving a section is the
-    // one carrying the marker, wherever the user has since renamed or moved it — and a fresh
-    // folder wearing the old default name is an ordinary folder, which is why it answers null.
-    const role = roleOfFolder(node.path, roles)
-    if (role) return ROLE_ICONS[role]
+    const role = roleOf(node)
+    if (role) return roleIcon(role)
 
     return expanded ? mdiFolderOpenOutline : mdiFolderOutline
   }
 
-  /**
-   * What a row says beyond its name — which section a folder serves.
-   *
-   * In WORDS and translated, where the folder's own name is the disk's and never is: that split
-   * is the whole answer to « a folder cannot be named in two languages ». Nothing for an
-   * ordinary folder: a hint echoing what is already on screen is noise, on screen and to a
-   * reader alike.
-   */
+  /** Which section a folder SERVES, in words — its NAME is the disk's and never translated. */
   const hintFor = (node: FolderNode): string | undefined => {
-    if (node.kind !== 'folder') return undefined
+    const role = roleOf(node)
+    if (!role) return undefined
 
-    const role = roleOfFolder(node.path, roles)
-    return role ? t(`folderRoles.${role}`) : undefined
+    return t(roleLabelKey(role), { label: t(workspaceLabelKey(WORKSPACE_BY_ROLE[role])) })
   }
 
   /**

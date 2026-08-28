@@ -30,10 +30,7 @@ export type LocalBackendDeps = {
   download: Download
   projectPath: () => string
   /**
-   * The folder a role names, laid down with its marker if the project has none —
-   * `ProjectStore.folderFor`.
-   *
-   * Asked rather than composed: where a role sits is what the marker in the folder says, so a
+   * Where an asset of this role lands — `ProjectStore.folderFor`. Asked rather than composed: a
    * project whose `Modelling/Models` was renamed in the Finder goes on filing meshes there.
    */
   folderFor: (role: FolderRole) => Promise<string>
