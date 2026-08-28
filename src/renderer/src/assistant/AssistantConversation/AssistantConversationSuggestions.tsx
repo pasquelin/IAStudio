@@ -1,0 +1,73 @@
+import { MENU_SURFACE, rowSkin } from '@/design/styles'
+import { cn } from '@/helpers/cn'
+import { HINT_TOP } from '@/helpers/tooltip'
+
+export type AssistantConversationSuggestionsProps = {
+  /** The sentences that match what is being typed, already translated. */
+  matches: readonly string[]
+  /** Which one the keyboard holds, or `-1` while the hand is still writing its own sentence. */
+  active: number
+  /** Names the list for a reader — one with no name is announced as "list box". */
+  label: string
+  hint: string
+  id: string
+  onChoose: (sentence: string) => void
+}
+
+/** The id of one line, composed HERE so the field naming it cannot spell it differently. */
+export function suggestionId(listId: string, index: number): string {
+  return `${listId}-${index}`
+}
+
+/**
+ * What one can ask, filtered as it is typed. In flow under the field and never over it, as the
+ * model picker is: a floating panel does not follow the form it belongs to. Bounded, so a run of
+ * matches does not push the send button away from the pointer while one writes.
+ */
+export function AssistantConversationSuggestions({
+  matches,
+  active,
+  label,
+  hint,
+  id,
+  onChoose,
+}: AssistantConversationSuggestionsProps) {
+  return (
+    <div
+      id={id}
+      role="listbox"
+      aria-label={label}
+      className={cn(MENU_SURFACE, 'max-h-40 shrink-0 overflow-y-auto rounded-(--radius-sc-sm)')}
+    >
+      {matches.map((sentence, index) => (
+        <button
+          key={sentence}
+          type="button"
+          role="option"
+          id={suggestionId(id, index)}
+          aria-selected={index === active}
+          // Both, and on the same element: `aria-selected` is what a reader hears, `data-selected`
+          // is what lifts a row's own words out of `muted` on the picked fill.
+          data-selected={index === active ? '' : undefined}
+          // The caret never leaves the field — that is what `aria-activedescendant` means — so
+          // these are not tab stops, and Tab goes on to the model picker as it did before.
+          tabIndex={-1}
+          // What a visible imperative cannot say on its own: it WRITES, and sends nothing.
+          {...HINT_TOP(hint)}
+          // The pointer must not take the caret out of the field: a press that blurred it closed
+          // the very list it was pressing.
+          onMouseDown={event => event.preventDefault()}
+          onClick={() => onChoose(sentence)}
+          className={cn(
+            // A row, so no fill under the pointer — the studio keeps that for tiles. What answers
+            // the hand here is the caret walking the list, and the pointer shape.
+            rowSkin(index === active),
+            'w-full cursor-pointer border-none bg-transparent px-2 py-1 text-left text-xs',
+          )}
+        >
+          {sentence}
+        </button>
+      ))}
+    </div>
+  )
+}
