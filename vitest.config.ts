@@ -242,7 +242,8 @@ export default defineConfig({
           // The same split as the tests, and it has to be stated: a project with no benchmark
           // glob of its own keeps the unanchored default and runs EVERY bench of the tree —
           // this one was measuring the main process's, under jsdom, on top of the `node` project
-          // already doing it. No `.bench.tsx` exists today; the day one does, it lands here.
+          // already doing it. A `.bench.tsx` lands HERE, and `tools.bench.tsx` is one on purpose:
+          // it needs the `localStorage` that `persist` writes to, which `node` does not have.
           benchmark: { include: ['src/renderer/**/*.bench.tsx'] },
           // Stylesheets are stubbed to an empty string by default, `?raw` included — which
           // silently empties the checks that read a rule back. Only the raw reads are spared;
