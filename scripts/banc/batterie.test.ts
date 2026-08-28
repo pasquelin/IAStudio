@@ -154,7 +154,7 @@ describe('a scenario played out', () => {
     expect(played.called[0]?.input).toEqual({ folder: 'Images' })
     // 🛑 The file gesture answers `ok` and NAMES its refusal — a `FileOutcome`, never a bare
     // refusal. The bench answered `ok` on a path nothing held for a whole session.
-    expect(played.called[0]?.answer).toBe('found 6')
+    expect(played.called[0]?.answer).toBe('found 7')
     expect(played.called[1]?.answer).toMatch(/^ok \{"done":\[\],"refused":\[\{/)
     expect(played.refused).toBe(0)
     expect(played.said).toContain('Liste mes fichiers.')

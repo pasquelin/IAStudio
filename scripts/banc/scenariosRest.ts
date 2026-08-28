@@ -50,20 +50,20 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '41.4 closes Scène Finale and deletes its file',
     said: ['Ferme Scène Finale et supprime son fichier du projet.'],
     setup: async studio => {
-      await studio.run('file.open', { path: 'documents/Scène 1.gltf' })
+      await studio.run('file.open', { path: 'Modelling/Scenes/Scène 1.gltf' })
       await studio.run('document.rename', {
         documentId: studio.front()?.id ?? '',
         title: 'Scène Finale',
       })
     },
     passed: run =>
-      read.titled(run, 'Scène Finale') === undefined && !read.holds(run, 'documents/Scène 1.gltf'),
+      read.titled(run, 'Scène Finale') === undefined && !read.holds(run, 'Modelling/Scenes/Scène 1.gltf'),
   },
   {
     name: '41.5 exports the open scene into the documents folder',
     said: ['Exporte la scène ouverte dans mon dossier documents.'],
     setup: scene('Export Test'),
-    passed: run => read.files(run).some(one => one.startsWith('documents/Export Test.')),
+    passed: run => read.files(run).some(one => one.startsWith('Modelling/Scenes/Export Test.')),
   },
   {
     name: '41.6 makes a project called Démo Assistant',

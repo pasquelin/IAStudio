@@ -1,7 +1,7 @@
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
-import { DEFAULT_ASSET_FOLDERS, MATERIALS_FOLDER } from './asset'
 import { parentOf } from './folder'
+import { DEFAULT_ROLE_PATHS } from './folderRole'
 
 export const MANIFEST_VERSION = 1
 
@@ -290,19 +290,14 @@ export const MACHINE_FOLDERS: readonly string[] = [
 
 /**
  * What a new project opens with — ORDINARY folders from the first second, renamed, filled and
- * thrown away like any the user makes. They are a starting point, not a layout the studio reads
- * anything back from.
+ * thrown away like any the user makes. What binds one to what it holds is the marker inside it,
+ * never this list, so a folder moved out of here goes on serving.
  *
- * Derived from `DEFAULT_ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the
- * writer pointing at a folder this never created — plus the ONE entry no kind derives,
- * `MATERIALS_FOLDER`, which holds the `.mtlx` documents and the pictures that serve one. `assets/` and `documents/` are no longer among
- * them: a document lands in `documents/` when nothing says otherwise and the folder appears with
- * the first save, exactly as an import recreates `Images/`.
+ * Derived from `DEFAULT_ROLE_PATHS` rather than relisted, so adding a role cannot leave the writer
+ * pointing at a folder this never created. Nested entries come with their parent: `mkdir` is
+ * recursive, and the order of the list decides nothing.
  */
-export const STARTER_FOLDERS: readonly string[] = [
-  ...Object.values(DEFAULT_ASSET_FOLDERS),
-  MATERIALS_FOLDER,
-]
+export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ROLE_PATHS)
 
 /**
  * The one folder every asset used to be filed under, back when the tree was the studio's.

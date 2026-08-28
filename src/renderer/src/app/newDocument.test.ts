@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentDescriptor } from '@shared/domain/document'
+import { documentFolderOf, type DocumentDescriptor } from '@shared/domain/document'
 import type { FileFacts } from '@shared/domain/fileInfo'
 import type { NamedDocumentPlace, NewDocumentAsk } from '@shared/domain/newDocument'
 import { CHECKER_TEXTURE_IDS } from '@shared/domain/checkerTexture'
@@ -19,7 +19,7 @@ const stored = (title: string, fileName: string): DocumentDescriptor => ({
   kind: 'scene',
   workspace: '3d',
   title,
-  path: `documents/${fileName}`,
+  path: `${documentFolderOf('scene')}/${fileName}`,
 })
 
 const FILE_FACTS: FileFacts = {
@@ -66,14 +66,14 @@ describe('createDocumentIn', () => {
   })
 
   it('calls the document what the window answers, and opens it', async () => {
-    answering({ title: 'Niveau', folder: 'documents' })
+    answering({ title: 'Niveau', folder: 'Modelling/Scenes' })
 
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(created()).toHaveLength(1))
     expect(created()[0]?.title).toBe('Niveau')
     // The name is the file name: there is only ever one name to change afterwards.
-    expect(created()[0]?.path).toBe('documents/Niveau.gltf')
+    expect(created()[0]?.path).toBe('Modelling/Scenes/Niveau.gltf')
     expect(openDocument).toHaveBeenCalledWith(created()[0])
   })
 
@@ -100,7 +100,9 @@ describe('createDocumentIn', () => {
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(asks).toHaveLength(1))
-    expect(asks[0]?.open.map(document => document.path)).toEqual(['documents/Brouillon.gltf'])
+    expect(asks[0]?.open.map(document => document.path)).toEqual([
+      'Modelling/Scenes/Brouillon.gltf',
+    ])
   })
 
   // Where the Explorer is pointing, which is where a user looking at a folder means to create.
@@ -124,19 +126,18 @@ describe('createDocumentIn', () => {
     expect(asks[0]?.folder).toBe('Images/Croquis')
   })
 
-  it('falls back to the documents folder when nothing is picked', async () => {
+  it("falls back to the kind's own folder when nothing is picked", async () => {
     answering(null)
 
     createDocumentIn('3d')
 
     await vi.waitFor(() => expect(asks).toHaveLength(1))
-    expect(asks[0]?.folder).toBe('documents')
+    expect(asks[0]?.folder).toBe('Modelling/Scenes')
   })
 
   /**
-   * The one kind with a folder of its own: a material is a DOCUMENT, and the pictures that serve
-   * one land beside it. Every other kind falls back to `documents/`, which is the shelf for what
-   * has no folder to be looked for under.
+   * A material is a DOCUMENT, and the pictures that serve one land beside it — the one shelf the
+   * two vocabularies share.
    */
   it('falls back to the materials folder for a material', async () => {
     answering(null)
@@ -195,7 +196,7 @@ describe('createDocumentIn', () => {
   // person closed is the one answer it must never give.
   describe('what it answers', () => {
     it('the document, once the window is filled', async () => {
-      answering({ title: 'Niveau', folder: 'documents' })
+      answering({ title: 'Niveau', folder: 'Modelling/Scenes' })
 
       expect(await createDocumentIn('3d')).toMatchObject({ title: 'Niveau', kind: 'scene' })
     })
@@ -229,7 +230,7 @@ describe('createDocumentIn', () => {
     it('files it in the documents folder when no folder is named', async () => {
       const made = await createDocumentIn('3d', { title: 'Niveau' })
 
-      expect(made?.path).toBe('documents/Niveau.gltf')
+      expect(made?.path).toBe('Modelling/Scenes/Niveau.gltf')
     })
   })
 
@@ -255,7 +256,7 @@ describe('createDocumentIn', () => {
 
       await createDocumentIn('code', { title: 'Niveau/../secret' })
 
-      expect(asked).toEqual(['scripts/Niveau .. secret.ts'])
+      expect(asked).toEqual(['Scripts/Niveau .. secret.ts'])
     })
 
     it('files a plain title where its author asked for it', async () => {
@@ -271,7 +272,7 @@ describe('createDocumentIn', () => {
   // `restoreDocument`, and the template would be lost between the window and the viewport.
   describe('what a new scene opens on', () => {
     it('holds the template the window answered with', async () => {
-      answering({ title: 'Plateau', folder: 'documents', template: 'topDown' })
+      answering({ title: 'Plateau', folder: 'Modelling/Scenes', template: 'topDown' })
 
       const made = await createDocumentIn('3d')
 

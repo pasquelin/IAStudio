@@ -8,7 +8,8 @@ import {
   type CheckerTextureId,
   type InstalledCheckerTexture,
 } from '@shared/domain/checkerTexture'
-import { MATERIALS_FOLDER, withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { folderForRole } from '@shared/domain/folderRole'
 import { pathIn } from '@shared/domain/folder'
 import { CHANNELS } from '@shared/ipc'
 import { ownFileOf } from './protocol'
@@ -31,7 +32,7 @@ type BundledTextureDeps = {
 
 /** Where one lands in the project, and where it is looked for before being copied again. */
 function pathOf(id: CheckerTextureId): string {
-  return pathIn(MATERIALS_FOLDER, checkerTextureFile(id))
+  return pathIn(folderForRole('materials'), checkerTextureFile(id))
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ASSET_FOLDERS, MATERIALS_FOLDER } from './asset'
+import { DEFAULT_ROLE_PATHS, FOLDER_ROLES } from './folderRole'
 import type { AccountSummary } from './account'
 import {
   listedAt,
@@ -289,14 +289,14 @@ describe('an asset filed in the default folder of its kind', () => {
 })
 
 describe('the folders a new project is laid out with', () => {
-  it('holds one for the materials, which no asset type answers for', () => {
-    expect(STARTER_FOLDERS).toContain(MATERIALS_FOLDER)
-    expect(Object.values(DEFAULT_ASSET_FOLDERS)).not.toContain(MATERIALS_FOLDER)
+  it('holds one per role, so nothing the writer files has nowhere to go', () => {
+    for (const role of FOLDER_ROLES) {
+      expect(STARTER_FOLDERS).toContain(DEFAULT_ROLE_PATHS[role])
+    }
   })
 
-  it('holds one per asset kind beside it', () => {
-    for (const folder of Object.values(DEFAULT_ASSET_FOLDERS)) {
-      expect(STARTER_FOLDERS).toContain(folder)
-    }
+  it('lays down the folder above a nested one as well', () => {
+    expect(STARTER_FOLDERS).toContain('Modelling')
+    expect(STARTER_FOLDERS).toContain('Modelling/Models')
   })
 })

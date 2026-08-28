@@ -1,5 +1,5 @@
 import {
-  DOCUMENTS_FOLDER,
+  documentFolderOf,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -408,7 +408,10 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
     const title =
       of?.title ??
-      untitledDocumentName(takenDocumentNames({ documents: get().documents, stored }), kind)
+      untitledDocumentName(
+        takenDocumentNames({ documents: get().documents, stored }, documentFolderOf(kind)),
+        kind,
+      )
 
     const document: DocumentDescriptor = {
       id: newId(),
@@ -526,11 +529,10 @@ export function takenDocumentNames(
     documents: Record<string, DocumentDescriptor>
     stored: readonly DocumentDescriptor[]
   },
-  folder: string = DOCUMENTS_FOLDER,
+  folder: string,
 ): NamedDocument[] {
   // One folder, never the project: two folders may each hold a `Niveau.gltf` and the disk is
-  // happy with both, so a name taken elsewhere in the tree is not taken here. The default is
-  // where a document nobody has placed goes, which is what every caller of this asks about.
+  // happy with both, so a name taken elsewhere in the tree is not taken here.
   return [...state.stored, ...Object.values(state.documents)]
     .filter(document => (parentOf(document.path) ?? '') === folder)
     .map(({ id, path }) => ({ id, fileName: nameOf(path) }))

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { documentFolderOf } from '@shared/domain/document'
 import { createInertPhysics } from '@game/host/inertPhysics'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
@@ -12,6 +13,8 @@ import { useCode } from '@/stores/code'
 import { installDocument } from '@/stores/document-fixtures'
 import { usePlay } from '@/stores/play'
 import { PlayBar } from './PlayBar'
+
+const WALK = `script:${documentFolderOf('script')}/Walk.ts`
 
 /** 2,7 Mo of WebAssembly for a bar that draws four buttons — see `play.test.ts`. */
 vi.mock('@game/host/rapierPhysics', () => ({
@@ -111,7 +114,7 @@ describe('a game whose systems are failing', () => {
           veil: 0,
           errors: [
             {
-              script: 'script:scripts/Walk.ts',
+              script: WALK,
               entity: null,
               message: 'cannot import node:fs',
               line: 3,
@@ -141,7 +144,7 @@ describe('a game whose systems are failing', () => {
           veil: 0,
           errors: [
             {
-              script: 'script:scripts/Walk.ts',
+              script: WALK,
               entity: null,
               message: 'no',
               line: 7,
@@ -161,7 +164,7 @@ describe('a game whose systems are failing', () => {
     await userEvent.click(screen.getByText('1 erreur'))
 
     expect(useCode.getState().goto).toEqual({
-      script: 'script:scripts/Walk.ts',
+      script: WALK,
       line: 7,
       column: 3,
     })

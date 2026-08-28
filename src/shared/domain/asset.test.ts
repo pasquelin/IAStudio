@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assetBadgeOf,
   assetIdFromUrl,
-  DEFAULT_ASSET_FOLDERS,
   defaultAssetFolder,
-  MATERIALS_FOLDER,
   assetMasterUrl,
   assetUrl,
   hostedParts,
@@ -14,11 +12,13 @@ import {
   isTimeless,
   mediaDuration,
   posterUrl,
+  roleForAsset,
   withoutSourcePath,
   MASTER_HOST,
   POSTER_HOST,
   type Asset,
 } from './asset'
+import { DEFAULT_ROLE_PATHS } from './folderRole'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -242,29 +242,42 @@ describe('the badge an asset wears', () => {
 })
 
 /**
- * The one folder that is not an asset TYPE's. A material is a document, and the pictures that
+ * The one role that is not an asset TYPE's. A material is a document, and the pictures that
  * serve one are still pictures — what files them apart is what they are FOR, which their channel
  * is the only thing left to say since the studio stopped filing a channel under a kind.
  */
-describe('where an asset lands by default', () => {
+describe('the role an asset is filed under', () => {
   it('files a picture that holds a channel with the materials', () => {
-    expect(defaultAssetFolder({ type: 'image', map: 'normal' })).toBe(MATERIALS_FOLDER)
-    expect(defaultAssetFolder({ type: 'image', map: 'baseColor' })).toBe(MATERIALS_FOLDER)
+    expect(roleForAsset({ type: 'image', map: 'normal' })).toBe('materials')
+    expect(roleForAsset({ type: 'image', map: 'baseColor' })).toBe('materials')
   })
 
   /** An ORM packs two channels and claims neither — and it is what the unpack gesture reads. */
   it('files a picture out of a packed glTF slot with the materials', () => {
-    expect(defaultAssetFolder({ type: 'image', packedSlot: 'metallicRoughnessTexture' })).toBe(
-      MATERIALS_FOLDER,
+    expect(roleForAsset({ type: 'image', packedSlot: 'metallicRoughnessTexture' })).toBe(
+      'materials',
     )
   })
 
   it('files a picture that holds none with the pictures', () => {
-    expect(defaultAssetFolder({ type: 'image' })).toBe(DEFAULT_ASSET_FOLDERS.image)
+    expect(roleForAsset({ type: 'image' })).toBe('image')
   })
 
-  it('leaves every other kind on its own shelf', () => {
-    expect(defaultAssetFolder({ type: 'mesh' })).toBe(DEFAULT_ASSET_FOLDERS.mesh)
-    expect(defaultAssetFolder({ type: 'skybox' })).toBe(DEFAULT_ASSET_FOLDERS.skybox)
+  it('tells a mesh from the motion that drives it', () => {
+    expect(roleForAsset({ type: 'mesh' })).toBe('models')
+    expect(roleForAsset({ type: 'animation' })).toBe('animations')
+  })
+})
+
+describe('where an asset lands', () => {
+  it('takes the folder the role was resolved to, wherever the user moved it', () => {
+    expect(defaultAssetFolder({ type: 'mesh' }, { models: 'Mes modèles/Maillages' })).toBe(
+      'Mes modèles/Maillages',
+    )
+  })
+
+  it('falls back to where the role starts when nothing has been resolved', () => {
+    expect(defaultAssetFolder({ type: 'mesh' })).toBe(DEFAULT_ROLE_PATHS.models)
+    expect(defaultAssetFolder({ type: 'skybox' })).toBe(DEFAULT_ROLE_PATHS.skyboxes)
   })
 })

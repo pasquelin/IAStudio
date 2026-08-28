@@ -1,4 +1,5 @@
 import { FILE_NAME_MAX_LENGTH } from './fileName'
+import { folderForRole, type FolderRole, type RoleFolders } from './folderRole'
 import type { PbrChannel } from './material'
 
 export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'skybox' | 'animation'
@@ -33,44 +34,29 @@ export function isAssetType(value: unknown): value is AssetType {
 }
 
 /**
- * Where each kind lands when nothing says otherwise — a DEFAULT, no longer a law.
+ * The role each kind is filed under when nothing says otherwise.
  *
- * It used to be both: the folder a file sat in is what said what the file was, so leaving one
- * meant ceasing to be a picture. Nothing reads a role off a folder any more (`natureOf` reads
- * the extension, the catalogue overrules it), so these are ordinary folders the user may rename,
- * fill with something else, or throw away — and the writer recreates the one it needs rather
- * than failing, which is the whole difference between a default and a law.
+ * A ROLE rather than a folder name: where the role sits is the user's business — renamed, moved,
+ * nested — and only the marker inside the folder says which one it is. `DEFAULT_ROLE_PATHS` holds
+ * the names a fresh project starts with.
  *
- * The names are English and fixed, never translated: a folder whose name followed the interface
- * language would be renamed on disk at every language change, and every catalogue row under it
- * would point beside the file.
- *
- * `Record<AssetType, string>` still makes a new kind a compile error rather than a surprise.
+ * `Record<AssetType, FolderRole>` still makes a new kind a compile error rather than a surprise.
  *
  * A DEFAULT and nothing more, which is what made dropping `Textures` safe: a project that filed
  * pictures there keeps them — every row carries its own path — and only what it takes in from now
- * on lands under `Images` with the rest.
+ * on lands with the rest.
  */
-export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
-  image: 'Images',
-  video: 'Video',
-  audio: 'Audio',
-  mesh: '3D',
-  skybox: 'Sky',
-  animation: 'Animations',
+const ROLE_BY_ASSET_TYPE: Record<AssetType, FolderRole> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  mesh: 'models',
+  skybox: 'skyboxes',
+  animation: 'animations',
 }
 
 /**
- * Where the materials go — the `.mtlx` documents, and the pictures that serve one.
- *
- * Beside `DEFAULT_ASSET_FOLDERS` rather than in it: `material` is not an asset TYPE, and this
- * folder is the one place the two vocabularies meet. A document lands here because it IS one; a
- * picture lands here because of what it is FOR, which its channel is what says.
- */
-export const MATERIALS_FOLDER = 'Materials'
-
-/**
- * Where an asset of this shape lands when nothing else says otherwise.
+ * The role an asset of this shape is filed under.
  *
  * A picture that serves a MATERIAL is filed with the materials rather than with the pictures. It
  * is still a picture — the kind says so, and every shelf that draws one draws this — but what a
@@ -81,14 +67,22 @@ export const MATERIALS_FOLDER = 'Materials'
  * into one image and claims neither, and it is the very picture the unpack gesture starts from —
  * leaving it behind files a model's maps over two folders.
  */
-export function defaultAssetFolder(asset: {
+export function roleForAsset(asset: {
   type: AssetType
   map?: PbrChannel
   packedSlot?: string
-}): string {
+}): FolderRole {
   const servesAMaterial = asset.map !== undefined || asset.packedSlot !== undefined
 
-  return servesAMaterial ? MATERIALS_FOLDER : DEFAULT_ASSET_FOLDERS[asset.type]
+  return servesAMaterial ? 'materials' : ROLE_BY_ASSET_TYPE[asset.type]
+}
+
+/** Where an asset of this shape lands, in the project as it stands. */
+export function defaultAssetFolder(
+  asset: { type: AssetType; map?: PbrChannel; packedSlot?: string },
+  roles?: RoleFolders,
+): string {
+  return folderForRole(roleForAsset(asset), roles)
 }
 
 /**

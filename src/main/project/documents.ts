@@ -3,7 +3,8 @@ import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   documentPath,
-  DOCUMENTS_FOLDER,
+  documentFolderOf,
+  LEGACY_DOCUMENTS_FOLDER,
   DOCUMENT_VERSION,
   isStagingName,
   isDocumentExtension,
@@ -441,7 +442,7 @@ export function createDocumentFiles({
      * a document — one or two in an ordinary project — rather than a second walk.
      */
     const folders = new Set(candidates.map(path => parentOf(path) ?? ''))
-    folders.add(DOCUMENTS_FOLDER)
+    folders.add(LEGACY_DOCUMENTS_FOLDER)
 
     const staged = await Promise.all(
       [...folders].map(async folder => {
@@ -533,9 +534,9 @@ export function createDocumentFiles({
 
   /**
    * Where a document written for the first time goes: under its own name, in the folder its
-   * author picked. `DOCUMENTS_FOLDER` is the fallback for a caller that names none — a default,
-   * not where documents live: they live wherever the user put them, which is what `walkFiles`
-   * finds.
+   * author picked. The kind's own folder is the fallback for a caller that names none — a
+   * default, not where documents live: they live wherever the user put them, which is what
+   * `walkFiles` finds.
    *
    * Suffixed rather than refused when the folder already holds that name — this is the studio
    * naming a document nobody has named yet ("Scène 2", the title of an asset opened twice),
@@ -548,7 +549,7 @@ export function createDocumentFiles({
   const freshFile = async (
     kind: DocumentKind,
     title: string,
-    folder = DOCUMENTS_FOLDER,
+    folder = documentFolderOf(kind),
   ): Promise<string> => {
     const taken = await namesIn(folder)
     return join(

@@ -246,9 +246,9 @@ describe('local backend', () => {
       return asset.path
     }
 
-    expect(await landed('mesh')).toBe('3D/Prise.bin')
+    expect(await landed('mesh')).toBe('Modelling/Models/Prise.bin')
     expect(await landed('audio')).toBe('Audio/Prise.bin')
-    expect(await landed('skybox')).toBe('Sky/Prise.bin')
+    expect(await landed('skybox')).toBe('Skyboxes/Prise.bin')
   })
 
   /**
@@ -807,7 +807,7 @@ describe('the still brought down beside the bytes', () => {
       thumbnailUrl: 'https://cdn.example/thumb/gone.jpg',
     })
 
-    expect(asset.path).toBe('3D/Skeleton.glb')
+    expect(asset.path).toBe('Modelling/Models/Skeleton.glb')
     expect(asset.posterPath).toBeUndefined()
   })
 
