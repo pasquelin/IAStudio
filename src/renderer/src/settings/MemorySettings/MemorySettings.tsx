@@ -3,13 +3,8 @@ import { useDebounced, SEARCH_DELAY_MS } from '@/hooks/useDebounced'
 import { useRowHeight } from '@/hooks/useRowHeight'
 import { useTranslation } from 'react-i18next'
 import { mdiBrain } from '@mdi/js'
-import {
-  MEMORY_STATES,
-  MEMORY_TYPES,
-  type MemoryScope,
-  type MemoryState,
-  type MemoryType,
-} from '@shared/domain/assistantMemory'
+import { MEMORY_TYPES, type MemoryScope, type MemoryType } from '@shared/domain/assistantMemory'
+import { MEMORY_SHOWN } from './memoryShown'
 import { Collection } from '@/design/Collection/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { WindowChip } from '@/design/WindowChip'
@@ -41,9 +36,6 @@ const OPEN_ROW_ROOM = 220
 /** Past this the list scrolls rather than the page: a settings section is not a whole screen. */
 const LIST_CAP = 320
 
-/** Archived rows are listed too — the point of archiving is that it stays readable. */
-const SHOWN: readonly MemoryState[] = MEMORY_STATES.filter(one => one !== 'dropped')
-
 export function MemorySettings() {
   const { t } = useTranslation()
   const memories = useAssistantMemory(state => state.memories)
@@ -71,7 +63,7 @@ export function MemorySettings() {
     // The one place a listing is asked for. `look` carries the scope AND the filters, so the
     // panel never holds a query the store disagrees with.
     void look(scope, {
-      states: SHOWN,
+      states: MEMORY_SHOWN,
       ...(searched ? { text: searched } : {}),
       ...(type ? { types: [type] } : {}),
     })

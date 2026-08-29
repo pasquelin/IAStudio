@@ -1,20 +1,17 @@
+import type { MemoryType } from '@shared/domain/assistantMemory'
+
 /**
  * Where the memories of a project land when nothing places them by hand.
  *
- * A force layout, written here rather than taken from a library, and the reason is the size: a
- * settings section shows what ONE project holds — tens of memories, not the thousands
- * ForceAtlas2 and its Barnes-Hut approximation exist for. Reach for `graphology` on the day this
- * panel is asked to draw a graph it cannot draw in a frame; until then this is forty lines that
- * need no dependency and no worker.
- *
- * 🛑 Arithmetic alone, and no canvas: what places a point is testable without a browser, which
- * is the studio's rule for every engine. What draws it is the panel's business.
+ * Written here rather than taken from `graphology`: a settings section shows what ONE project
+ * holds, not the thousands ForceAtlas2 exists for. Arithmetic alone, so it tests without a
+ * browser — what draws it is the panel's business.
  */
 
 export type MemoryGraphNode = {
   id: string
   /** What the point is coloured by — a memory's own sort. */
-  type: string
+  type: MemoryType
   /** What the reader is shown on hover. Already the memory's own words. */
   label: string
 }
@@ -43,16 +40,19 @@ const PULL = 0.0016
 const CENTRE = 0.0022
 
 /**
- * The layout, run to a standstill.
+ * The layout, run to a standstill AROUND THE ORIGIN — the host translates.
  *
- * The repulsion grows with the count so a bigger graph opens out rather than balling up, and
- * every pair is compared: at the scale a settings panel shows, `n²` is cheaper than the tree an
- * approximation would build.
+ * 🛑 The surface is not an argument, and that is the point: it only ever set the centre, so a
+ * panel that grew by a pixel re-solved the whole graph for a translation. `[M]` two solves of 60
+ * nodes at widths 56 px apart agree to 1,5 × 10⁻⁵ px once translated.
+ *
+ * `[M]` 260 passes is barely enough, not generous: at 100 nodes the worst point still sits 62 px
+ * from its place after 200. What moves next is the solve itself, never the pass count — 0,20 ms
+ * at 10 nodes, 7,99 at 100, 27,97 at 200 on this Mac.
  */
 export function memoryLayoutOf(
   nodes: readonly MemoryGraphNode[],
   edges: readonly MemoryGraphEdge[],
-  size: { width: number; height: number },
 ): MemoryLayout {
   const held = new Map<string, Body>()
   const bodies = nodes.map((one, index) => {
@@ -62,8 +62,8 @@ export function memoryLayoutOf(
     const spread = 40 + Math.sqrt(nodes.length) * 9
     const body: Body = {
       ...one,
-      x: size.width / 2 + Math.cos(angle) * spread,
-      y: size.height / 2 + Math.sin(angle) * spread,
+      x: Math.cos(angle) * spread,
+      y: Math.sin(angle) * spread,
       vx: 0,
       vy: 0,
       degree: 0,
@@ -96,8 +96,8 @@ export function memoryLayoutOf(
       edge.to.vy -= dy * PULL
     })
     bodies.forEach(body => {
-      body.vx = (body.vx + (size.width / 2 - body.x) * CENTRE) * DAMPING
-      body.vy = (body.vy + (size.height / 2 - body.y) * CENTRE) * DAMPING
+      body.vx = (body.vx - body.x * CENTRE) * DAMPING
+      body.vy = (body.vy - body.y * CENTRE) * DAMPING
       body.x += body.vx
       body.y += body.vy
     })
@@ -107,11 +107,8 @@ export function memoryLayoutOf(
 }
 
 /**
- * Two bodies pushed apart.
- *
  * 🛑 `nudge` and not `Math.random()`: two memories at the same point have no direction to part
- * along, and a random one would place the graph differently on every open — the very thing the
- * ring above is for.
+ * along, and a random one would redraw the graph differently on every open.
  */
 function push(one: Body | undefined, other: Body | undefined, force: number, nudge: number): void {
   if (!one || !other) return

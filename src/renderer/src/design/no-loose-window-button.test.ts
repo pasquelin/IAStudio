@@ -21,8 +21,12 @@ import { WINDOW_SOURCES } from '../windowSources'
  *   harmless row is a defect only a reader catches — that half is `/loop-design`'s PASS 0.
  */
 
-/** Where the roles are declared, and the one file allowed to spell them out. */
-const HOME = 'windowStyles.ts'
+/**
+ * Where a role may be spelt out. Two, and the second earns it: `WindowIconButton` keeps its skin
+ * UNEXPORTED so that no caller can wear the glyph without the tooltip the component makes
+ * compulsory — publishing it from `windowStyles.ts` would reopen exactly that door.
+ */
+const HOMES: readonly string[] = ['windowStyles.ts', 'WindowIconButton.tsx']
 
 /** Comments talk ABOUT the classes — this guard's own prose would fail it otherwise. */
 function withoutComments(code: string): string {
@@ -41,7 +45,7 @@ function findingsOf(): string[] {
   const loose: string[] = []
 
   for (const [path, code] of Object.entries(WINDOW_SOURCES)) {
-    if (path.endsWith(HOME)) continue
+    if (HOMES.some(home => path.endsWith(home))) continue
 
     withoutComments(code)
       .split('\n')
@@ -53,7 +57,7 @@ function findingsOf(): string[] {
 }
 
 describe('a window button wears a role, never a class string', () => {
-  it('is what every site outside `windowStyles.ts` does', () => {
+  it('is what every site outside the two files above does', () => {
     expect(findingsOf()).toEqual([])
   })
 

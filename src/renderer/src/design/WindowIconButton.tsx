@@ -1,6 +1,12 @@
 import { UiIcon } from './UiIcon'
-import { WINDOW_ICON_ACTION } from './windowStyles'
 import { cn } from '@/helpers/cn'
+
+/**
+ * 🛑 Not exported, and that is the point: a caller wearing this skin on a bare `<button>` would
+ * have the glyph without the tooltip this component makes compulsory, and the loose-button guard
+ * would not see it — its regex only catches literals holding the `btn` token.
+ */
+const ICON_ACTION = 'btn btn-ghost btn-xs btn-square'
 
 /** The glyph size these rows carry. Beside the skin rather than at each call, for one reason. */
 const WINDOW_ICON_SIZE = 14
@@ -14,10 +20,8 @@ export type WindowIconButtonProps = {
    */
   label: string
   /**
-   * What the gesture DOES, shown under the pointer — the attributes a `TooltipFactory` returns.
-   * REQUIRED, like `ToolButton`'s: a glyph with no tooltip names nothing to anyone.
-   *
-   * The placement comes from the host, never from here — `TIP_LEFT`, `HINT_LEFT`, `tipFor(…)`.
+   * What the gesture DOES — the attributes a `TooltipFactory` returns, placement chosen by the
+   * HOST (`TIP_LEFT`, `HINT_LEFT`, `tipFor(…)`). Required, like `ToolButton`'s.
    */
   tooltip: Record<string, string>
   disabled?: boolean
@@ -28,13 +32,10 @@ export type WindowIconButtonProps = {
 }
 
 /**
- * A glyph alone at the end of a row of these windows — the way Git, MCP and Storage already end
- * theirs, and now the way a memory does.
+ * A glyph alone at the end of a row of these windows — the way Git, MCP and Storage end theirs.
  *
- * 🛑 The skin was spelt at one site and copied nowhere, which is what let a second family of row
- * actions grow up in `btn-xs` TEXT instead: four labels took half the width and the summary they
- * act on was truncated to nothing. A component rather than a class string is what makes the
- * tooltip unforgettable — a glyph without one names nothing.
+ * 🛑 A component rather than a class string, and that is what makes the tooltip unforgettable:
+ * a glyph without one names nothing to a screen reader or to a script.
  */
 export function WindowIconButton({
   path,
@@ -50,7 +51,7 @@ export function WindowIconButton({
       type="button"
       aria-label={label}
       {...tooltip}
-      className={cn(WINDOW_ICON_ACTION, className)}
+      className={cn(ICON_ACTION, className)}
       disabled={disabled}
       onClick={onClick}
     >

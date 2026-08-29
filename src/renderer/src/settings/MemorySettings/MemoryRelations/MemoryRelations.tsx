@@ -8,10 +8,8 @@ import { MemoryRelationsRow } from './MemoryRelationsRow'
 /**
  * One hop around the chosen memory: what it is about, what it points to, what it replaced.
  *
- * 🛑 Sections rather than a tree, and the titles are whole SENTENCES — « Elle parle de », not
- * « désigne ». The tree named the edge of a graph on every row, so its second level inherited the
- * first one's word and read backwards; a title carries the relation once, and a row is then free
- * to be nothing but the thing it names.
+ * 🛑 Sections with whole SENTENCES for titles. The tree named a graph edge on every row, so its
+ * second level inherited the first one's word and read backwards.
  */
 
 const TIE_KEYS: Readonly<Record<MemoryTie, string>> = {

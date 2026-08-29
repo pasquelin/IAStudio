@@ -10,6 +10,7 @@ import {
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
 import { CLOUD_ORDERS, type CloudOrder } from './cloudAsset'
+import { SETTINGS_SECTION_IDS, type SettingsSectionId } from './settings'
 import {
   ACTION_COMMITMENTS,
   ACTION_REACHES,
@@ -60,6 +61,45 @@ describe('the lists that stand for a union', () => {
     const all: Record<TargetKind, true> = { layer: true, node: true, clip: true, track: true }
 
     expect(sorted(TARGET_KINDS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * 🛑 Two doors read this list, and both fail at RUNTIME on a section the union knows and the
+   * list forgot: `z.enum(SETTINGS_SECTION_IDS)` refuses `settings.open`, and the MCP action
+   * publishes an option it will not accept. `readonly SettingsSectionId[]` accepts a short list,
+   * so the compiler says nothing — this was live for the sub-section added on 2026-08-29.
+   */
+  it('names every section the settings window can open', () => {
+    const all: Record<SettingsSectionId, true> = {
+      general: true,
+      account: true,
+      appearance: true,
+      generation: true,
+      ai: true,
+      'ai.image': true,
+      'ai.video': true,
+      'ai.3d': true,
+      'ai.audio': true,
+      'ai.material': true,
+      'ai.skybox': true,
+      'ai.code': true,
+      'ai.upscale': true,
+      'ai.background-removal': true,
+      'ai.vectorization': true,
+      spaces: true,
+      'spaces.three': true,
+      shortcuts: true,
+      dictation: true,
+      media: true,
+      git: true,
+      mcp: true,
+      memory: true,
+      'memory.graph': true,
+      storage: true,
+      advanced: true,
+    }
+
+    expect(sorted(SETTINGS_SECTION_IDS)).toEqual(sorted(Object.keys(all)))
   })
 
   it('names every asset type', () => {

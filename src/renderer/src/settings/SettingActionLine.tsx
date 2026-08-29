@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import {
   WINDOW_ACTION,
@@ -18,7 +17,10 @@ export type SettingActionLineProps = {
   /** The word on the button, already translated. */
   button: string
   disabled?: boolean
-  /** The sentence a destructive gesture asks first. Its presence is what paints the button. */
+  /**
+   * The sentence a destructive gesture asks first, ALREADY TRANSLATED like the three above —
+   * a factory of this window takes words, never keys. Its presence is what paints the button.
+   */
   confirm?: string
   tone?: SettingActionTone
   onRun: () => void
@@ -27,13 +29,9 @@ export type SettingActionLineProps = {
 /**
  * A line that ACTS: a title, a sentence saying what there is to do, and one button.
  *
- * 🛑 Written once because it was written three times, and the three had already drifted —
- * `SettingActionsRow` painted primary where `MemoryAction` painted plain, and `MemoryUpkeep`
- * spelt a fourth inline. Nothing read those class strings, so nothing went red: the section that
- * reindexes and compacts read as a run of cancellations for as long as it stood.
- *
- * The tooltip is posed HERE and not left to the caller, for the same reason: one of the three
- * carried it and the other two did not, and `CLAUDE.md` asks every button to explain itself.
+ * 🛑 The tooltip and the confirming are posed HERE, never left to the caller: of the three
+ * writings this replaced, one carried a tooltip and two did not, and asking on both sides put
+ * the same question up twice.
  */
 export function SettingActionLine({
   title,
@@ -44,8 +42,6 @@ export function SettingActionLine({
   tone = 'action',
   onRun,
 }: SettingActionLineProps) {
-  const { t } = useTranslation()
-
   return (
     <SettingLine title={title} help={<p className={WINDOW_HELP}>{help}</p>}>
       <button
@@ -59,7 +55,7 @@ export function SettingActionLine({
         disabled={disabled}
         // Asked for once, plainly: what these erase no Cancel button covers.
         onClick={() => {
-          if (confirm === undefined || window.confirm(t(confirm))) onRun()
+          if (confirm === undefined || window.confirm(confirm)) onRun()
         }}
       >
         {button}

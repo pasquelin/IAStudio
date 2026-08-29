@@ -49,38 +49,22 @@ export function windowControl(active: boolean): string {
 }
 
 /**
- * 🛑 The buttons of these windows, by ROLE — the vocabulary a caller picks from, never a class
- * string written by hand. `no-loose-window-button.test.ts` holds every site to one of them.
+ * 🛑 The buttons of these windows, by ROLE — never a class string written by hand.
+ * `no-loose-window-button.test.ts` holds every site to one of them, which nothing did before.
  *
- * Named after the roles were MEASURED across the window rather than invented: nine spellings for
- * six roles, and two components rendering the same action row had already drifted apart, for no
- * rule anyone could state. Nothing read these strings, so nothing went red.
- *
- * This one is what the row or the section EXISTS for — the commonest by far, and the default.
+ * This one is what the row or the section EXISTS for: the commonest, and the default in doubt.
  */
 export const WINDOW_ACTION = 'btn btn-sm btn-primary'
 
 /** Beside a primary one, or on its own where nothing is being urged: cancel, rename, sign out. */
 export const WINDOW_ACTION_SECONDARY = 'btn btn-sm btn-ghost'
 
-/**
- * Stops what is RUNNING — an indexing, a scan. Neither urged nor destructive, and it takes the
- * place of the primary it replaces, which is why it is not a ghost.
- */
+/** Stops what is RUNNING. It takes the primary's place, which is why it is not a ghost. */
 export const WINDOW_ACTION_QUIET = 'btn btn-sm'
 
 /** What cannot be undone. Outlined rather than filled: this is not what a window is FOR. */
 export const WINDOW_ACTION_DANGER = 'btn btn-sm btn-error btn-outline'
 
-/**
- * A glyph alone, at the end of a row — `WindowIconButton` is what wears it, and it carries the
- * tooltip the missing label owes the reader.
- */
-export const WINDOW_ICON_ACTION = 'btn btn-ghost btn-xs btn-square'
-
-/**
- * The foot of a `Dialog`, which is the one place these windows go larger: a modal asks a question
- * and its answers are the only thing on screen. Deliberately not `…-sm`.
- */
+/** The foot of a `Dialog` — the one place these windows go larger. Deliberately not `…-sm`. */
 export const DIALOG_ACTION = 'btn btn-primary'
 export const DIALOG_ACTION_SECONDARY = 'btn'

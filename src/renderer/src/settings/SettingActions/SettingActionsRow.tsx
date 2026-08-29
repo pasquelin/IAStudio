@@ -12,10 +12,9 @@ export function SettingActionsRow({ action }: { action: SettingAction }) {
   const { t } = useTranslation()
   const cancel = useSettingsDraft(state => state.cancel)
 
+  // 🛑 No confirming here: `SettingActionLine` owns that gesture, and asking on both sides put
+  // the same question up twice in a row on `advanced.reset` and on the Resolve bridge.
   const run = (): void => {
-    // Asked for once, plainly: these cannot be taken back, and no Cancel button covers them.
-    if (action.confirmKey && !window.confirm(t(action.confirmKey))) return
-
     // A reset would be immediately overwritten by whatever the buffer still holds.
     if (action.id === 'advanced.reset') cancel()
 
@@ -27,7 +26,7 @@ export function SettingActionsRow({ action }: { action: SettingAction }) {
       title={t(action.titleKey)}
       help={t(action.helpKey)}
       button={t(action.buttonKey)}
-      {...(action.confirmKey ? { confirm: action.confirmKey } : {})}
+      {...(action.confirmKey ? { confirm: t(action.confirmKey) } : {})}
       onRun={run}
     />
   )

@@ -68,33 +68,33 @@ function byId(among: readonly Memory[], id: string): MemoryNeighbour {
   return { label: held?.summary ?? id, memoryId: held ? held.id : null, alsoAbout: [] }
 }
 
-export type MemoryGraphEdgeKind = 'about' | 'link' | 'replaces'
-
 /** One tie between two memories, for the whole-project view rather than the one-hop one. */
-export type MemoryEdge = { from: string; to: string; kind: MemoryGraphEdgeKind }
+export type MemoryEdge = { from: string; to: string }
 
 /**
  * Every memory of a scope, and what ties them — what a graph of the WHOLE project draws.
  *
  * 🛑 Two memories about one reference make ONE tie, not a star through the file: the file is not
  * a memory, and drawing it as a point would put half the graph's dots on things the assistant
- * never learned. What the reader is shown is what it KNOWS, and what holds together.
+ * never learned.
+ *
+ * What KIND of tie it is goes unsaid, deliberately: nothing draws it, and a pair tied both by a
+ * shared file and by a link is one line either way.
  */
 export function memoryEdgesOf(memories: readonly Memory[]): readonly MemoryEdge[] {
   const held = new Set(memories.map(one => one.id))
   const edges: MemoryEdge[] = []
   const seen = new Set<string>()
 
-  const add = (from: string, to: string, kind: MemoryGraphEdgeKind): void => {
+  const add = (from: string, to: string): void => {
     if (from === to || !held.has(from) || !held.has(to)) return
 
-    // Undirected for the purpose of drawing: a pair tied twice is one line, not two on top.
     // Compared rather than sorted — these are ids, and a locale has no business ordering them.
-    const key = (from < to ? `${from} ${to}` : `${to} ${from}`) + ' ' + kind
+    const key = from < to ? `${from} ${to}` : `${to} ${from}`
     if (seen.has(key)) return
 
     seen.add(key)
-    edges.push({ from, to, kind })
+    edges.push({ from, to })
   }
 
   const byRef = new Map<string, string[]>()
@@ -107,12 +107,12 @@ export function memoryEdgesOf(memories: readonly Memory[]): readonly MemoryEdge[
   // A chain and not every pair: five memories on one file are four lines, not ten, and the eye
   // reads the cluster either way.
   for (const group of byRef.values()) {
-    for (let i = 1; i < group.length; i += 1) add(group[i - 1] ?? '', group[i] ?? '', 'about')
+    for (let i = 1; i < group.length; i += 1) add(group[i - 1] ?? '', group[i] ?? '')
   }
 
   for (const one of memories) {
-    for (const linked of one.links) add(one.id, linked, 'link')
-    if (one.supersedes) add(one.id, one.supersedes, 'replaces')
+    for (const linked of one.links) add(one.id, linked)
+    if (one.supersedes) add(one.id, one.supersedes)
   }
 
   return edges

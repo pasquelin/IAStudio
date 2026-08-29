@@ -99,7 +99,7 @@ export function MemoryUpkeep({ memories }: { memories: readonly Memory[] }) {
         title={t('settings.memoryPurge')}
         help={t('settings.memoryPurgeHelp')}
         button={t('settings.memoryPurge')}
-        confirm="settings.memoryPurgeConfirm"
+        confirm={t('settings.memoryPurgeConfirm')}
         onRun={() => void reset()}
       />
     </section>

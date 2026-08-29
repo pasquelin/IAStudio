@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { memoryLayoutOf, type MemoryGraphNode } from './memoryLayout'
 
-const SIZE = { width: 600, height: 400 }
-
 const node = (id: string): MemoryGraphNode => ({ id, type: 'script', label: id })
 
 const spread = (nodes: readonly { x: number; y: number }[]): number => {
@@ -16,7 +14,7 @@ const between = (a: { x: number; y: number }, b: { x: number; y: number }): numb
 
 describe('placing the memories of a project', () => {
   it('places nothing for nothing', () => {
-    expect(memoryLayoutOf([], [], SIZE)).toEqual({ nodes: [], edges: [] })
+    expect(memoryLayoutOf([], [])).toEqual({ nodes: [], edges: [] })
   })
 
   it('counts how many links reach each memory, which is what sizes it', () => {
@@ -26,7 +24,6 @@ describe('placing the memories of a project', () => {
         { from: 'a', to: 'b' },
         { from: 'a', to: 'c' },
       ],
-      SIZE,
     )
 
     expect(placed.nodes.map(one => one.degree)).toEqual([2, 1, 1])
@@ -34,11 +31,7 @@ describe('placing the memories of a project', () => {
 
   // The whole point of a force layout: what is tied lands together, what is not lands apart.
   it('holds linked memories closer than unlinked ones', () => {
-    const placed = memoryLayoutOf(
-      [node('a'), node('b'), node('far')],
-      [{ from: 'a', to: 'b' }],
-      SIZE,
-    )
+    const placed = memoryLayoutOf([node('a'), node('b'), node('far')], [{ from: 'a', to: 'b' }])
     const [a, b, far] = placed.nodes
     if (!a || !b || !far) throw new Error('three were placed')
 
@@ -49,8 +42,8 @@ describe('placing the memories of a project', () => {
     const many = Array.from({ length: 40 }, (_, i) => node(`n${i}`))
     const few = [node('a'), node('b'), node('c')]
 
-    expect(spread(memoryLayoutOf(many, [], SIZE).nodes)).toBeGreaterThan(
-      spread(memoryLayoutOf(few, [], SIZE).nodes),
+    expect(spread(memoryLayoutOf(many, []).nodes)).toBeGreaterThan(
+      spread(memoryLayoutOf(few, []).nodes),
     )
   })
 
@@ -65,22 +58,21 @@ describe('placing the memories of a project', () => {
       { from: 'c', to: 'd' },
     ]
 
-    expect(memoryLayoutOf(nodes, edges, SIZE)).toEqual(memoryLayoutOf(nodes, edges, SIZE))
+    expect(memoryLayoutOf(nodes, edges)).toEqual(memoryLayoutOf(nodes, edges))
   })
 
   // An edge naming a memory that is gone — a link outlives its target — must not place a ghost.
   it('drops an edge whose ends it cannot find', () => {
-    const placed = memoryLayoutOf([node('a')], [{ from: 'a', to: 'gone' }], SIZE)
+    const placed = memoryLayoutOf([node('a')], [{ from: 'a', to: 'gone' }])
 
     expect(placed.edges).toEqual([])
     expect(placed.nodes[0]?.degree).toBe(0)
   })
 
-  it('keeps every memory on the surface it was given', () => {
+  it('places every memory somewhere real, whatever the count', () => {
     const placed = memoryLayoutOf(
       Array.from({ length: 24 }, (_, i) => node(`n${i}`)),
       [],
-      SIZE,
     )
 
     expect(placed.nodes.every(one => Number.isFinite(one.x) && Number.isFinite(one.y))).toBe(true)

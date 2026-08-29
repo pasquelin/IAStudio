@@ -1,9 +1,8 @@
 import type { MemoryNeighbour } from '@shared/domain/memoryGraph'
 
 /**
- * One neighbour. A button only where there is somewhere to go: a reference names a file, and a
- * link whose memory is gone names an id — neither opens anything, and neither should look as if
- * it did.
+ * One neighbour. A button only where there is somewhere to go: a reference names a file and a
+ * dead link names an id — neither opens anything, and neither should look as if it did.
  */
 export function MemoryRelationsRow({
   row,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Memory } from './assistantMemory'
+import type { Memory, MemoryRef } from './assistantMemory'
 import { memoryEdgesOf, neighboursOf } from './memoryGraph'
 
 const memory = (fields: Partial<Memory> = {}): Memory => ({
@@ -88,7 +88,7 @@ describe('what ties the memories of a whole project', () => {
     const one = memory({ id: 'm_one', refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
     const two = memory({ id: 'm_two', refs: [{ kind: 'file', ref: 'Scripts/Cam.ts' }] })
 
-    expect(memoryEdgesOf([one, two])).toEqual([{ from: 'm_one', to: 'm_two', kind: 'about' }])
+    expect(memoryEdgesOf([one, two])).toEqual([{ from: 'm_one', to: 'm_two' }])
   })
 
   /** 🛑 A chain, not every pair: five memories on one file are four lines rather than ten. */
@@ -106,12 +106,21 @@ describe('what ties the memories of a whole project', () => {
 
   it('ties what one links to and what it replaced', () => {
     const root = memory({ id: 'm_root', links: ['m_two'], supersedes: 'm_old' })
-    const kinds = memoryEdgesOf([root, memory({ id: 'm_two' }), memory({ id: 'm_old' })])
+    const tied = memoryEdgesOf([root, memory({ id: 'm_two' }), memory({ id: 'm_old' })])
 
-    expect(kinds.map(one => one.kind).sort((a, b) => a.localeCompare(b, 'en'))).toEqual([
-      'link',
-      'replaces',
+    expect(tied).toEqual([
+      { from: 'm_root', to: 'm_two' },
+      { from: 'm_root', to: 'm_old' },
     ])
+  })
+
+  // A pair tied by a shared file AND by a link is one line: nothing draws the kind of tie.
+  it('draws a pair tied two different ways as one line', () => {
+    const ref: MemoryRef = { kind: 'file', ref: 'Scripts/Cam.ts' }
+    const one = memory({ id: 'm_one', refs: [ref], links: ['m_two'] })
+    const two = memory({ id: 'm_two', refs: [ref] })
+
+    expect(memoryEdgesOf([one, two])).toHaveLength(1)
   })
 
   /** A link may outlive its target: a tie to a memory nobody holds would place a ghost. */
