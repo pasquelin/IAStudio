@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises'
-import { chunksOf } from '@main/netStream'
+import { linesOf } from '@main/netStream'
+import { assistantProgress, type AssistantProgress } from '@shared/domain/assistant'
 import type { DownloadProgress } from '@shared/domain/localModel'
 import { ollamaModel, type OllamaTag } from '@shared/domain/ollamaModel'
 import { isRecord } from '@shared/guards'
@@ -35,28 +36,14 @@ const FRESH_MS = 3_000
 
 /** Ollama answers a stream as one JSON object per line. A truncated last frame is ordinary. */
 async function* eventsOf(body: ReadableStream<Uint8Array> | null): AsyncIterable<unknown> {
-  const decoder = new TextDecoder()
-  let rest = ''
-
-  function* framesIn(text: string, last: boolean): Iterable<unknown> {
-    const lines = (rest + text).split('\n')
-    // 🛑 The tail is only held back while more is coming: a stream whose last frame carries no
-    // newline is what generate ends with, and holding it there would drop the image.
-    rest = last ? '' : (lines.pop() ?? '')
-    for (const line of lines) {
-      if (line.trim() === '') continue
-      try {
-        yield JSON.parse(line)
-      } catch {
-        // A truncated frame is ordinary on a cancelled pull.
-      }
+  for await (const line of linesOf(body)) {
+    if (line.trim() === '') continue
+    try {
+      yield JSON.parse(line)
+    } catch {
+      // A truncated frame is ordinary on a cancelled pull.
     }
   }
-
-  for await (const chunk of chunksOf(body)) {
-    yield* framesIn(decoder.decode(chunk, { stream: true }), false)
-  }
-  yield* framesIn(decoder.decode(), true)
 }
 
 /**
@@ -70,6 +57,21 @@ function windowOf(details: unknown): { contextTokens?: number } {
 
   const held = details.context_length
   return typeof held === 'number' && held > 0 ? { contextTokens: held } : {}
+}
+
+/** A count this door publishes only on its last frame, absent everywhere else. */
+const countIn = (frame: Record<string, unknown>, key: string): number | undefined =>
+  typeof frame[key] === 'number' ? frame[key] : undefined
+
+function chatProgressIn(frame: unknown): AssistantProgress | null {
+  if (!isRecord(frame)) return null
+
+  const said = isRecord(frame.message) ? frame.message.content : undefined
+  return assistantProgress(
+    typeof said === 'string' ? said : '',
+    countIn(frame, 'prompt_eval_count'),
+    countIn(frame, 'eval_count'),
+  )
 }
 
 export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): OllamaPort {
@@ -128,6 +130,8 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
       if (!response.ok) throw new Error(`ollama /api/delete ${response.status}`)
     },
 
+    // 🛑 Streamed only for a watcher: `localJobRunner` and the image door call this too, and
+    // hundreds of small `JSON.parse` for an answer nobody reads is work paid for nothing.
     chat: async request => {
       const response = await send(url('/api/chat'), {
         method: 'POST',
@@ -135,7 +139,7 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
         body: JSON.stringify({
           model: request.model,
           messages: request.messages,
-          stream: false,
+          stream: request.onProgress !== undefined,
           keep_alive: '5m',
           options: {
             num_ctx: request.contextTokens,
@@ -149,9 +153,21 @@ export function ollamaHttpPort(origin = ORIGIN, send: typeof fetch = fetch): Oll
       })
       if (!response.ok) throw new Error(`ollama /api/chat ${response.status}`)
 
-      const body: unknown = await response.json()
-      if (!isRecord(body) || !isRecord(body.message)) return ''
-      return typeof body.message.content === 'string' ? body.message.content : ''
+      // 🛑 Not the streamed reader on a whole body: this door answers ONE object, and nothing
+      // promises it on one line — every line failing to parse would answer the empty string.
+      const watching = request.onProgress
+      if (!watching) return chatProgressIn(await response.json())?.delta ?? ''
+
+      let written = ''
+      for await (const frame of eventsOf(response.body)) {
+        const progress = chatProgressIn(frame)
+        if (progress === null) continue
+
+        written += progress.delta
+        watching(progress)
+      }
+
+      return written
     },
 
     generateImage: async request => {

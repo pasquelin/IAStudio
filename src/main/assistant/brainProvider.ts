@@ -3,7 +3,7 @@ import type { Job } from '@shared/domain/job'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
 import type { AssistantBrain, NotReady } from './brainPort'
-import { answeredTurn, turnsWith, type BrainAttempt } from './brainTurn'
+import { answeredTurn, turnsWith, TurnStopped, type BrainAttempt } from './brainTurn'
 import { briefingFor, instructionFor, type Briefing } from './instruction'
 
 /**
@@ -43,7 +43,7 @@ export type BrainDeps = {
    * model and under what label is settled where this is wired, not here: this file knows how to
    * ask a question, not which catalogue entry answers it.
    */
-  run: (body: Record<string, unknown>) => Promise<Job>
+  run: (body: Record<string, unknown>, signal?: AbortSignal) => Promise<Job>
   /** The text an output asset holds. */
   readText: (assetId: string) => Promise<string>
   /** Which language model answers. Read on each turn: it is a setting, and settings change. */
@@ -89,9 +89,14 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
     chosen: AssistantModel,
     briefing: Briefing,
     complaint?: string,
+    signal?: AbortSignal,
   ): Promise<BrainAttempt> => {
-    const job = await run(bodyFor(request, chosen, briefing.text, complaint))
+    const job = await run(bodyFor(request, chosen, briefing.text, complaint), signal)
     const cost = job.cost ?? 0
+
+    // 🛑 Raised and never answered empty: read as an unreadable answer, a stopped turn asked the
+    // door a SECOND time — a second billed job — and the window then called it lost, not stopped.
+    if (job.status === 'cancelled') throw new TurnStopped()
 
     if (job.status !== 'succeeded') {
       log.warn('assistant', `thinking failed: ${job.error ?? job.status}`)
@@ -102,14 +107,16 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
   }
 
   return {
-    think: async request => {
+    // 🛑 No words at the wheel: this door answers through a JOB, so the text exists only once the
+    // asset is written. What a stop reaches is the job, which is billed and outlives the ask.
+    think: async (request, watch = {}) => {
       // Read once, outside the retry: a setting changed between two attempts would have the model
       // complained to be a different one from the model that answered.
       const chosen = model()
       const briefing = await briefingFor(request, BRIEFING_ROOM, notReady)
 
       return await answeredTurn(briefing, (shown, complaint) =>
-        ask(request, chosen, shown, complaint),
+        ask(request, chosen, shown, complaint, watch.signal),
       )
     },
   }

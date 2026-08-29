@@ -197,6 +197,62 @@ describe('ollamaHttpPort', () => {
     ])
   })
 
+  it('assembles a streamed answer, and reports it as it arrives', async () => {
+    const seen: string[] = []
+    const answer = await ollamaHttpPort(
+      'http://x',
+      streaming([
+        '{"message":{"content":"{\\"say\\":"}}\n{"message":{"content":"\\"hi\\"}"',
+        '}}\n{"message":{"content":""},"done":true,"prompt_eval_count":2366,"eval_count":18}\n',
+      ]),
+    ).chat({
+      model: 'qwen3:8b',
+      contextTokens: 4096,
+      messages: [{ role: 'user', content: 'hi' }],
+      json: true,
+      onProgress: progress => seen.push(progress.delta),
+    })
+
+    expect(answer).toBe('{"say":"hi"}')
+    expect(seen).toEqual(['{"say":', '"hi"}', ''])
+  })
+
+  // What the person watches beside the words: a count nothing else on this door publishes.
+  it('reports what the prompt and the answer cost', async () => {
+    const seen: { promptTokens?: number; replyTokens?: number }[] = []
+    await ollamaHttpPort(
+      'http://x',
+      streaming([
+        '{"message":{"content":"x"},"done":true,"prompt_eval_count":2366,"eval_count":18}\n',
+      ]),
+    ).chat({
+      model: 'qwen3:8b',
+      contextTokens: 4096,
+      messages: [{ role: 'user', content: 'hi' }],
+      json: false,
+      onProgress: progress => seen.push(progress),
+    })
+
+    expect(seen.at(-1)).toMatchObject({ promptTokens: 2366, replyTokens: 18 })
+  })
+
+  // `localJobRunner` and the image door call this too: hundreds of parses for nobody is waste.
+  it('reads a whole body, and asks for no stream, when nobody is watching', async () => {
+    const post = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({ message: { content: 'answered whole' } }),
+    ) as unknown as typeof fetch
+
+    const answer = await ollamaHttpPort('http://x', post).chat({
+      model: 'qwen3:8b',
+      contextTokens: 4096,
+      messages: [{ role: 'user', content: 'hi' }],
+      json: false,
+    })
+
+    expect(answer).toBe('answered whole')
+    expect(String(vi.mocked(post).mock.calls[0]?.[1]?.body)).toContain('"stream":false')
+  })
+
   it('keeps the image of a last frame that carries no newline', async () => {
     const images = await ollamaHttpPort(
       'http://x',

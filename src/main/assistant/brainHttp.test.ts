@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { HttpChat } from '@shared/domain/aiCloud'
 import type { AssistantThought } from '@shared/domain/assistant'
 import { createHttpChatBrain } from './brainHttp'
 
@@ -10,6 +11,127 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   })
 }
+
+/** A `text/event-stream`, chunked wherever a real one would chunk. */
+function streamResponse(chunks: readonly string[]): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk))
+        controller.close()
+      },
+    }),
+    { status: 200, headers: { 'content-type': 'text/event-stream' } },
+  )
+}
+
+/**
+ * 🛑 A cloud streams only when somebody is watching, and the three doors ask for it in three
+ * different places: a field of the body for two of them, and the METHOD for Gemini.
+ */
+describe('a cloud that is being watched', () => {
+  const watched = (kind: 'openai' | 'anthropic' | 'gemini', chunks: readonly string[]) => {
+    const seen: string[] = []
+    const post = vi.fn(async (_url: string, _init?: RequestInit) => streamResponse(chunks))
+    const chats: Record<typeof kind, HttpChat> = {
+      openai: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      anthropic: { kind: 'anthropic', model: 'a-model' },
+      gemini: { kind: 'gemini', model: 'a-model' },
+    }
+
+    const brain = createHttpChatBrain({
+      chat: chats[kind],
+      model: () => 'a-model',
+      credentials: () => ({ key: 'sk-test', secret: '' }),
+      fetch: post,
+    })
+
+    return { brain, post, seen, watch: (delta: string) => seen.push(delta) }
+  }
+
+  it('assembles an OpenAI stream and reports what it cost', async () => {
+    const counts: { promptTokens?: number; replyTokens?: number }[] = []
+    const { brain, post, seen, watch } = watched('openai', [
+      'data: {"choices":[{"delta":{"content":"{\\"say\\":\\"h"}}]}\n',
+      'data: {"choices":[{"delta":{"content":"i\\",\\"calls\\":[]}"}}]}\n',
+      'data: {"choices":[],"usage":{"prompt_tokens":2366,"completion_tokens":18}}\ndata: [DONE]\n',
+    ])
+
+    const answer = await brain.think(thought, {
+      onProgress: progress => {
+        watch(progress.delta)
+        counts.push(progress)
+      },
+    })
+
+    expect(answer.say).toBe('hi')
+    expect(seen.join('')).toBe('{"say":"hi","calls":[]}')
+    expect(counts.at(-1)).toMatchObject({ promptTokens: 2366, replyTokens: 18 })
+    expect(String(post.mock.calls[0]?.[1]?.body)).toContain('"include_usage":true')
+  })
+
+  /** The counts arrive in TWO frames on this door: the prompt's at the start, the answer's at the end. */
+  it('assembles an Anthropic stream, whose counts come in two frames', async () => {
+    const counts: { promptTokens?: number; replyTokens?: number }[] = []
+    const { brain } = watched('anthropic', [
+      'data: {"type":"message_start","message":{"usage":{"input_tokens":2366}}}\n',
+      'data: {"type":"content_block_delta","delta":{"text":"{\\"say\\":\\"hi\\",\\"calls\\":[]}"}}\n',
+      'data: {"type":"message_delta","usage":{"output_tokens":18}}\n',
+    ])
+
+    const answer = await brain.think(thought, { onProgress: progress => counts.push(progress) })
+
+    expect(answer.say).toBe('hi')
+    expect(counts.map(one => one.promptTokens).filter(Boolean)).toEqual([2366])
+    expect(counts.map(one => one.replyTokens).filter(Boolean)).toEqual([18])
+  })
+
+  it('asks Gemini by the streaming METHOD, which is not a field of its body', async () => {
+    const { brain, post } = watched('gemini', [
+      'data: {"candidates":[{"content":{"parts":[{"text":"{\\"say\\":\\"hi\\",\\"calls\\":[]}"}]}}]}\n',
+    ])
+
+    await brain.think(thought, { onProgress: () => {} })
+
+    expect(post.mock.calls[0]?.[0]).toContain(':streamGenerateContent')
+    expect(post.mock.calls[0]?.[0]).toContain('alt=sse')
+  })
+
+  // 🛑 A gateway is free to ignore `stream: true`: read as a stream, a whole body yields no
+  // `data:` line at all, and the turn failed on an answer that parses fine.
+  it('reads a whole body from a door that ignored the stream it was asked for', async () => {
+    const post = vi.fn(async (_url: string, _init?: RequestInit) =>
+      jsonResponse({ choices: [{ message: { content: '{"say":"hi","calls":[]}' } }] }),
+    )
+    const brain = createHttpChatBrain({
+      chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      model: () => 'gpt-4o-mini',
+      credentials: () => ({ key: 'sk-test', secret: '' }),
+      fetch: post,
+    })
+
+    const answer = await brain.think(thought, { onProgress: () => {} })
+
+    expect(answer.say).toBe('hi')
+  })
+
+  // Watched by nobody, the door answers whole — the path every other case here exercises.
+  it('does not ask for a stream when nobody is watching', async () => {
+    const post = vi.fn(async (_url: string, _init?: RequestInit) =>
+      jsonResponse({ choices: [{ message: { content: '{"say":"hi","calls":[]}' } }] }),
+    )
+    const brain = createHttpChatBrain({
+      chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      model: () => 'gpt-4o-mini',
+      credentials: () => ({ key: 'sk-test', secret: '' }),
+      fetch: post,
+    })
+
+    await brain.think(thought)
+
+    expect(String(post.mock.calls[0]?.[1]?.body)).not.toContain('"stream"')
+  })
+})
 
 describe('createHttpChatBrain', () => {
   it('refuses to think when no key is held', async () => {

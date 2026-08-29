@@ -3,8 +3,9 @@ import { ACTION_FAMILIES, ACTION_REGISTRY } from '@shared/domain/assistant'
 import { GENERATIVE_WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
+import { machineFolders } from './machineFolders'
 import { studioBriefing } from './instruction'
-import { roomFor } from './promptWindow'
+import { ASSISTANT_WINDOW_MAX, roomFor } from './promptWindow'
 import { STATE_MAX } from './studioState'
 
 /**
@@ -47,6 +48,38 @@ describe('what the model is told about the studio', () => {
 })
 
 describe('how much of the catalogue the model is shown', () => {
+  /**
+   * 🛑 `[M]` Every Ollama tag declares 4 096, where the short catalogue alone runs 7 098 against
+   * a room of 7 116 — the folders overran it by 146, and a runtime cuts from the HEAD (ADR-18),
+   * so what a silent overrun costs is the preamble rather than the block that caused it.
+   */
+  it('drops the machine folders rather than overrun the room they do not fit in', () => {
+    const folders = machineFolders(name => `/Users/someone/${name}`)
+    const briefing = studioBriefing({ room: roomFor(4096), folders })
+
+    expect(briefing.text).not.toContain('Folders on this machine:')
+    expect(briefing.text.length).toBeLessThanOrEqual(roomFor(4096))
+  })
+
+  it('carries the machine folders wherever they fit', () => {
+    const folders = machineFolders(name => `/Users/someone/${name}`)
+    const briefing = studioBriefing({ room: roomFor(ASSISTANT_WINDOW_MAX), folders })
+
+    expect(briefing.text).toContain('downloads: /Users/someone/downloads')
+  })
+
+  /**
+   * 🛑 The switch is `room < wholeShare().text.length`, a figure that MOVES with the registry —
+   * so a ceiling chosen against today's 90 298 characters stops holding the day the registry
+   * shrinks, and every local turn pays for the whole catalogue again with nothing saying so.
+   */
+  it('keeps the assistant window under what would show it the whole registry', () => {
+    const briefing = studioBriefing({ room: roomFor(ASSISTANT_WINDOW_MAX) })
+
+    expect(briefing.text).not.toContain('  git.checkout —')
+    expect(briefing.expand).not.toBeNull()
+  })
+
   /**
    * A door with room is shown everything — two hundred and twenty-five actions — where before it
    * was shown eleven because ONE door could not hold more.

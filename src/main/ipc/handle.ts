@@ -191,6 +191,7 @@ type ChannelMethod = {
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
 
   [CHANNELS.assistantThink]: StudioBridge['assistant']['think']
+  [CHANNELS.assistantStop]: StudioBridge['assistant']['stop']
   [CHANNELS.assistantActionResult]: StudioBridge['assistant']['actionResult']
 
   [CHANNELS.aiOverview]: StudioBridge['ai']['overview']

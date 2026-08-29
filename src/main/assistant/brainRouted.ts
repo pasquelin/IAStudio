@@ -40,6 +40,9 @@ export type RoutedBrainDeps = {
    * ask — and the model pays for a recall only when it decides to.
    */
   memoriesOf: () => Promise<number>
+  // Read here for the same reason as the context: a path the window named is a path the window
+  // chose, and `project.create` acts on it.
+  foldersOf: () => string
 }
 
 /** The brain and, when there is none, the reason — which is the only thing left to say. */
@@ -64,7 +67,7 @@ function brainFor(
  */
 export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
   return {
-    think: async (request, signal) => {
+    think: async (request, watch) => {
       // The four together: WHICH brain answers probes the runtimes, and none of the other three
       // depends on the answer. Serially, the person waited for their sum.
       const [provider, context, state, memories] = await Promise.all([
@@ -77,7 +80,10 @@ export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
       const [brain, why] = brainFor(deps, provider)
       if (brain === null) throw new Error(`nothing serves the assistant: ${why}`)
 
-      return await brain.think({ ...request, context, state, memories }, signal)
+      return await brain.think(
+        { ...request, context, state, memories, folders: deps.foldersOf() },
+        watch,
+      )
     },
   }
 }

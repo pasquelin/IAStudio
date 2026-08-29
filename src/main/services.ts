@@ -78,6 +78,7 @@ const MCP_CLIENT = clientName(APP_NAME)
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createLocalBrain } from './assistant/brainLocal'
+import { machineFolders } from './assistant/machineFolders'
 import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
@@ -1979,7 +1980,7 @@ export function createServices(settings: SettingsStore): Services {
    * answers out of the asset browser — see `JobManager.run`.
    */
   const providerBrain = createProviderBrain({
-    run: body => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body),
+    run: (body, signal) => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body, signal),
     readText: createAssetText({
       retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,
       // The signed CDN url the asset carries, for the rare answer too long to have been
@@ -2030,6 +2031,9 @@ export function createServices(settings: SettingsStore): Services {
     // A count and never a recall: the briefing says a memory EXISTS, the model asks it if it
     // wants to. `held` opens nothing when no project is open.
     memoriesOf: () => memoryVectors.held('project'),
+    // Read on every turn rather than once: `app.getPath` answers the live OS folders, which a
+    // person can move.
+    foldersOf: () => machineFolders(name => app.getPath(name)),
   })
 
   const checkout = checkoutOf(app.getAppPath())

@@ -17,6 +17,7 @@ import type { Settings } from '@shared/domain/settings'
 import type { Language } from '@shared/i18n/languages'
 import type { UpdateState } from '@shared/domain/update'
 import type { WindowState } from '@shared/domain/window'
+import type { AssistantProgress } from '@shared/domain/assistant'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import {
   CHANNELS,
@@ -286,7 +287,9 @@ const bridge: StudioBridge = {
   },
   assistant: {
     think: request => ipcRenderer.invoke(CHANNELS.assistantThink, request),
+    stop: () => ipcRenderer.invoke(CHANNELS.assistantStop),
     onAction: callback => subscribe<AssistantActionRequest>(EVENTS.assistantAction, callback),
+    onStream: callback => subscribe<AssistantProgress>(EVENTS.assistantStream, callback),
     actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
   },
   ai: {

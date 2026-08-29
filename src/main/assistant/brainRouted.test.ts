@@ -21,10 +21,31 @@ const routed = (over: Partial<RoutedBrainDeps> = {}) =>
     contextOf: () => Promise.resolve(''),
     stateOf: () => Promise.resolve(''),
     memoriesOf: () => Promise.resolve(0),
+    foldersOf: () => 'home: /Users/someone',
     ...over,
   })
 
 describe('the routed brain', () => {
+  // Read here and never taken from the window, as the context and the state are: `project.create`
+  // acts on the path this block spells.
+  it('fills in where this machine keeps its folders', async () => {
+    const seen: AssistantThought[] = []
+    const brain = routed({
+      providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
+      localBrain: () => ({
+        think: request => {
+          seen.push(request)
+          return Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 })
+        },
+      }),
+      foldersOf: () => 'downloads: /Users/someone/Downloads',
+    })
+
+    await brain.think(thought)
+
+    expect(seen[0]?.folders).toBe('downloads: /Users/someone/Downloads')
+  })
+
   it('thinks on the model the manager chose', async () => {
     const brain = routed({
       providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),

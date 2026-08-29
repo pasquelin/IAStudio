@@ -34,16 +34,41 @@ describe('the local brain', () => {
   })
 
   /**
-   * What a local model is shown follows from ITS window and from nothing else — the same
-   * arithmetic that decides how much history fits. A three-billion model on eight thousand
-   * tokens gets the short list; one with a hundred and thirty thousand gets the registry.
+   * 🛑 `[M]` A huge window is not an invitation to fill it: 262 144 composed a 90 298-character
+   * briefing, ~30 100 tokens re-read on every round of the chain, for five minutes on one
+   * sentence. The short share runs 7 098 and reaches the rest through `actions.find`.
    */
-  it('is shown the whole registry when its window holds it', async () => {
-    const { brain, asked } = brainAnswering([REPLY], 131_072)
+  it('is shown the short list however large its window', async () => {
+    const { brain, asked } = brainAnswering([REPLY], 262_144)
 
     await brain.think({ utterance: 'hello', history: [] })
 
-    expect(briefingOf(asked)).toContain('  git.checkout —')
+    expect(briefingOf(asked)).not.toContain('  git.checkout —')
+    expect(briefingOf(asked)).toContain('"actions.find"')
+  })
+
+  /**
+   * `project.create` takes an ABSOLUTE path and the briefing spelled none, so the model answered
+   * "what is your login name?" to a request it could otherwise have run.
+   */
+  it('shows the model where this machine keeps its folders', async () => {
+    const { brain, asked } = brainAnswering([REPLY])
+
+    await brain.think({
+      utterance: 'hello',
+      history: [],
+      folders: 'downloads: /Users/someone/Downloads',
+    })
+
+    expect(briefingOf(asked)).toContain('downloads: /Users/someone/Downloads')
+  })
+
+  it('asks a huge model for the capped window rather than its own', async () => {
+    const { brain, asked } = brainAnswering([REPLY], 262_144)
+
+    await brain.think({ utterance: 'hello', history: [] })
+
+    expect(asked[0]).toMatchObject({ contextTokens: 8192 })
   })
 
   it('is shown the short list, and the way to ask for the rest, in a small window', async () => {
@@ -134,9 +159,29 @@ describe('the local brain', () => {
     const { brain, asked } = brainAnswering([REPLY])
     const abort = new AbortController()
 
-    await brain.think({ utterance: 'hello', history: [] }, abort.signal)
+    await brain.think({ utterance: 'hello', history: [] }, { signal: abort.signal })
 
     expect(asked[0]?.signal).toBe(abort.signal)
+  })
+
+  /**
+   * 🛑 A stop is not a failed attempt to swallow: swallowed, the turn answers an empty sentence
+   * and the window reads it as LOST rather than as stopped.
+   */
+  it('raises rather than answering empty when the stop lands on the second attempt', async () => {
+    let turn = 0
+    const abort = () => {
+      const error = new Error('aborted')
+      error.name = 'AbortError'
+      return error
+    }
+    const brain = createLocalBrain({
+      chat: () => (turn++ === 0 ? Promise.resolve('not json') : Promise.reject(abort())),
+      modelId: 'llama3.2:3b',
+      contextTokens: 8192,
+    })
+
+    await expect(brain.think({ utterance: 'hello', history: [] })).rejects.toThrow(/aborted/)
   })
 
   // A person is waiting, and "I did not understand" beats a stack trace.

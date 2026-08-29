@@ -1,4 +1,5 @@
 import { runtimeEndpointId, type RuntimeEndpointId } from '@shared/domain/aiRuntime'
+import type { AssistantProgress } from '@shared/domain/assistant'
 import type { ProducingModality } from '@shared/domain/localFields'
 import {
   MODEL_LOADERS,
@@ -112,6 +113,11 @@ export type ChatRequest = {
    * generating to its ceiling with nobody to answer.
    */
   readonly signal?: AbortSignal
+  /**
+   * What the model has written so far. Absent where nobody watches, which is what leaves a
+   * runtime free to answer whole — the returned string is the same either way.
+   */
+  readonly onProgress?: (progress: AssistantProgress) => void
 }
 
 /** What a generation on this machine is asked for. The fields a modality does not use are absent. */

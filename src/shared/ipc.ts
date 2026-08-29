@@ -31,6 +31,7 @@ import type {
   ActionOutcome,
   AssistantAnswer,
   AssistantCall,
+  AssistantProgress,
   AssistantThought,
 } from './domain/assistant'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
@@ -265,6 +266,7 @@ export type Channels = {
   mediaAvailable: 'media:available'
 
   assistantThink: 'assistant:think'
+  assistantStop: 'assistant:stop'
   assistantActionResult: 'assistant:action-result'
 
   dictationState: 'dictation:state'
@@ -504,6 +506,7 @@ export const CHANNELS: Channels = {
   mediaAvailable: 'media:available',
 
   assistantThink: 'assistant:think',
+  assistantStop: 'assistant:stop',
   assistantActionResult: 'assistant:action-result',
 
   dictationState: 'dictation:state',
@@ -968,6 +971,7 @@ export const EVENTS = {
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
   assistantAction: 'evt:assistant-action',
+  assistantStream: 'evt:assistant-stream',
   dictation: 'evt:dictation',
   ai: 'evt:ai',
   log: 'evt:log',
@@ -1951,11 +1955,24 @@ export type StudioBridge = {
      */
     think: (request: AssistantThought) => Promise<AssistantAnswer>
     /**
+     * 🛑 Stops the round IN FLIGHT, which the chain's own stop cannot: that one is read BETWEEN
+     * two rounds, and a local model holds one for minutes with the machine at full tilt. The
+     * pending `think` then rejects, which the window reads as the end of the chain.
+     */
+    stop: () => Promise<void>
+    /**
      * An action the main process is asking THIS window to run, because it came from outside it.
      * Sent to the window in front alone — running it in every window at once is the trap the
      * native menu already avoids.
      */
     onAction: (callback: (request: AssistantActionRequest) => void) => Unsubscribe
+    /**
+     * What the model is writing, while it writes it — this window's turn alone.
+     *
+     * The answer still arrives whole through `think`; this is what makes the wait readable. A
+     * door that cannot stream simply never calls it, and the window then shows what it always did.
+     */
+    onStream: (callback: (progress: AssistantProgress) => void) => Unsubscribe
     /** What that window made of it, quoting the `callId` it was asked under. */
     actionResult: (result: AssistantActionResult) => Promise<void>
   }

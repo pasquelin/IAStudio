@@ -1,5 +1,5 @@
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant'
+import type { AssistantAnswer, AssistantProgress, AssistantThought } from '@shared/domain/assistant'
 
 /**
  * What the assistant asks of whatever is doing its thinking.
@@ -14,14 +14,18 @@ import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant
  * keep in step, and the drift would be silent.
  */
 export type AssistantBrain = {
+  think: (request: AssistantThought, watch?: TurnWatch) => Promise<AssistantAnswer>
+}
+
+/** What follows a turn while it runs: what ends it, and what it is writing. */
+export type TurnWatch = {
   /**
-   * `signal` stops a turn that nobody is waiting for any more — a window closed mid-answer.
-   *
-   * Optional because a cloud brain has nothing to stop that matters: the request is already paid
-   * for. A turn run in THIS process is the one invariant 6 is about, and it is the one that would
-   * otherwise generate to its ceiling with no reader.
+   * Stops a turn nobody waits for any more — a window closed mid-answer, or a stop pressed. A
+   * local model would otherwise run to its ceiling, and a cloud job is billed until cancelled.
    */
-  think: (request: AssistantThought, signal?: AbortSignal) => Promise<AssistantAnswer>
+  signal?: AbortSignal
+  /** The words as they are written. A door that answers whole never calls it. */
+  onProgress?: (progress: AssistantProgress) => void
 }
 
 /**
