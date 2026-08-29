@@ -3,14 +3,10 @@
 import type { UiElement, UiScreen } from '@shared/domain/ui'
 
 /**
- * Walking an interface, and rebuilding it around one change.
+ * Walking an interface, and rebuilding it around one change. Nested rather than the flat list a
+ * scene keeps: a `.ui.json` is read by eye and diffed in a commit, which `parentId` does not give.
  *
- * A nested tree rather than the flat list a scene keeps, and the trade is deliberate: a
- * `.ui.json` is meant to be read by eye and diffed in a commit, which nesting gives and
- * `parentId` does not. The price is these functions, written once.
- *
- * Every one of them REBUILDS: nothing here mutates, so a command can hold the tree it replaced
- * and hand it back on undo without having copied anything.
+ * Every one of them REBUILDS, so a command hands back the tree it replaced without copying it.
  */
 export function childrenOf(element: UiElement): readonly UiElement[] {
   return 'children' in element ? element.children : []
@@ -36,27 +32,14 @@ export function parentOf(root: UiElement, id: string): UiElement | null {
   return null
 }
 
-/** The root, then every element down to this one — what a layout and a pick both walk. */
-export function pathTo(root: UiElement, id: string): readonly UiElement[] {
-  if (root.id === id) return [root]
-
-  for (const child of childrenOf(root)) {
-    const below = pathTo(child, id)
-    if (below.length > 0) return [root, ...below]
-  }
-  return []
-}
-
 /** Depth first, parents before children — the order a renderer paints in. */
 export function flattened(root: UiElement): readonly UiElement[] {
   return [root, ...childrenOf(root).flatMap(flattened)]
 }
 
 /**
- * Every element with the id of the one holding it — `null` for the root.
- *
- * One descent rather than a `parentOf` per element: `parentOf` re-walks the whole tree, so the
- * pair costs O(n²) on a list an outliner rebuilds after every edit.
+ * Every element with the id of the one holding it — `null` for the root. One descent: `parentOf`
+ * re-walks the whole tree, so calling it per element costs O(n²) on every outliner rebuild.
  */
 export function flattenedWithParents(
   root: UiElement,
@@ -76,8 +59,7 @@ export function contains(root: UiElement, ancestorId: string, id: string): boole
 
 /**
  * The tree with one element replaced by what `change` makes of it, or dropped when it makes
- * nothing. One walk serves insert, remove and edit alike, which is what keeps their three
- * behaviours from drifting.
+ * nothing. One walk for insert, remove and edit alike, so the three cannot drift apart.
  */
 export function mapped(
   root: UiScreen,
@@ -133,15 +115,11 @@ export function withElement(
 }
 
 /**
- * One element moved under another, at a given index.
+ * 🛑 **The index counts positions in the tree as it stands NOW** — the gap the pointer is over.
+ * Moving a row down inside its own parent is where that matters: the element leaves before it
+ * lands, so the index is decremented, and reading it post-removal lands every such drag short.
  *
- * 🛑 **The index counts positions in the tree as it stands NOW**, which is the gap the pointer
- * is over — so a drop is expressed by what the person sees. Moving a row down inside its own
- * parent is where that matters: the element leaves before it lands, and the index is decremented
- * to answer for it. Reading the index post-removal instead lands every such drag one short.
- *
- * Refused where the target sits inside what is moving: a parent dropped into its own child
- * would take the whole subtree out of the document, and nothing on screen would say so.
+ * Refused where the target sits inside what is moving: that would take the subtree out for good.
  */
 export function reparented(
   root: UiScreen,

@@ -6,7 +6,7 @@ import { cn } from '@/helpers/cn'
 import { HINT_LEFT, HINT_TOP } from '@/helpers/tooltip'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
 import { useCredits } from '@/stores/credits'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_ACTION, WINDOW_ACTION_SECONDARY, WINDOW_CAPTION } from '@/design/windowStyles'
 import { describeCredit } from '@/helpers/describeCredit'
 import { FAILURE_KEYS } from './failureKeys'
 
@@ -59,7 +59,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
           />
           <button
             type="submit"
-            className="btn btn-sm btn-primary"
+            className={WINDOW_ACTION}
             {...HINT_TOP(t('accounts.saveHint'))}
             disabled={checkAccountName(draft, accounts, account.id) !== null}
           >
@@ -67,7 +67,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
           </button>
           <button
             type="button"
-            className="btn btn-sm btn-ghost"
+            className={WINDOW_ACTION_SECONDARY}
             {...HINT_TOP(t('accounts.cancelHint'))}
             onClick={stopEditing}
           >
@@ -98,7 +98,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
         {!account.active && (
           <button
             type="button"
-            className="btn btn-sm btn-primary"
+            className={WINDOW_ACTION}
             {...HINT_LEFT(t('accounts.useHint'))}
             onClick={() => void activate(account.id)}
           >
@@ -108,7 +108,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
 
         <button
           type="button"
-          className="btn btn-sm btn-ghost"
+          className={WINDOW_ACTION_SECONDARY}
           {...HINT_LEFT(t('accounts.renameHint'))}
           onClick={() => setDraft(account.name)}
         >
@@ -116,7 +116,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
         </button>
         <button
           type="button"
-          className="btn btn-sm btn-ghost text-error"
+          className={cn(WINDOW_ACTION_SECONDARY, 'text-error')}
           {...HINT_LEFT(t('accounts.removeHint'))}
           onClick={() => void remove(account.id)}
         >

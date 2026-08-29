@@ -26,6 +26,14 @@ const byWorthKeeping = (one: Memory, other: Memory): number => {
  * The keeper is the most important, then the most recent: importance is what somebody decided,
  * where a date is only what happened last. Groups of one are left out.
  */
+type Saying = { type: Memory['type']; summary: string }
+
+/**
+ * 🛑 What « these two say the same thing » MEANS, spelt once: a duplicate and an already-said
+ * answering differently would have a promotion mint what the merge then refuses to see.
+ */
+const sayingOf = (one: Saying): string => `${one.type} ${plainly(one.summary)}`
+
 export function duplicatesIn(memories: readonly Memory[]): readonly (readonly Memory[])[] {
   const bySaying = new Map<string, Memory[]>()
 
@@ -35,7 +43,7 @@ export function duplicatesIn(memories: readonly Memory[]): readonly (readonly Me
     // Pinned ones are a decision to always give them — see `staleIn`.
     if (memory.state !== 'live') continue
 
-    const saying = `${memory.type} ${plainly(memory.summary)}`
+    const saying = sayingOf(memory)
     const held = bySaying.get(saying) ?? []
     held.push(memory)
     bySaying.set(saying, held)
@@ -52,17 +60,14 @@ export function duplicatesIn(memories: readonly Memory[]): readonly (readonly Me
  * The same judgement `duplicatesIn` makes, exported because promoting a memory to the machine's
  * own asks it of a list the panel is not showing: clicking twice must add nothing the second time.
  */
-export function alreadySaid(
-  memories: readonly Memory[],
-  draft: { type: Memory['type']; summary: string },
-): boolean {
-  const saying = `${draft.type} ${plainly(draft.summary)}`
+export function alreadySaid(memories: readonly Memory[], draft: Saying): boolean {
+  const saying = sayingOf(draft)
 
-  return memories.some(one => `${one.type} ${plainly(one.summary)}` === saying)
+  return memories.some(one => sayingOf(one) === saying)
 }
 
 /** After how long unused a memory is offered for archiving. Two seasons of a project. */
-export const MEMORY_STALE_DAYS = 180
+const MEMORY_STALE_DAYS = 180
 
 const DAY_MS = 86_400_000
 

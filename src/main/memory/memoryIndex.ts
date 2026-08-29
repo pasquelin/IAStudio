@@ -13,7 +13,7 @@ import {
 import { oneOf } from '@shared/guards'
 import { askExpression, matchExpression } from '@main/project/ftsMatch'
 import { chunk } from '@shared/collections'
-import type { SqliteDriver, SqlRow, SqlValue } from '@main/project/sqlite'
+import type { SqliteDriver, SqliteStatement, SqlRow, SqlValue } from '@main/project/sqlite'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { escapeLike, holes } from '@main/project/sqlText'
 import { bytes, number, optionalText, text } from '@main/project/sqlRow'
@@ -28,12 +28,8 @@ import {
 import { rankedRecall, type RecallCandidate } from './recallScore'
 
 /**
- * The searchable half of the memory — DERIVED, and thrown away without a second thought.
- *
- * The file (`memoryStore.ts`) is what HOLDS the memories; this only answers questions about them.
- * That is why it lives under `.index/`, which the studio's own `.gitignore` excludes: a project
- * cloned without this opens and rebuilds it, where a project cloned without the file has lost
- * something no rebuild can recover.
+ * The searchable half — DERIVED, and thrown away without a second thought. `memoryStore.ts` is
+ * what HOLDS the memories, which is why this lives under the `.index/` the `.gitignore` excludes.
  */
 
 /**
@@ -138,12 +134,9 @@ const MIGRATIONS: readonly string[] = [
 ]
 
 /**
- * What the index believes the file to be. Compared before anything is read back from it.
- *
- * A `stat` rather than a digest: hashing the file on every write would read all of it to add one
- * line. 🛑 Its blind spot, written rather than hidden — a rewrite of the SAME size within the same
- * millisecond is not seen. The file only ever grows between compactions, and a compaction changes
- * its size, so nothing the studio itself does can land there.
+ * What the index believes the file to be — a `stat`, since hashing would read the whole file to
+ * add one line. 🛑 Its blind spot: a rewrite of the SAME size in the same millisecond is not seen.
+ * The file only grows between compactions, and a compaction changes its size.
  */
 export type MemoryStamp = {
   bytes: number
@@ -160,11 +153,8 @@ export type MemoryIndex = {
   /** How many it holds, without reading a single one of them back. */
   count: () => number
   /**
-   * The LIVE memory of this type anchored on this very reference, if one stands.
-   *
-   * What `supersedes` is drawn from: a rule firing twice on one script must amend what it said,
-   * not leave two memories contradicting each other. 🛑 `live` alone — a pinned memory is a
-   * decision to always give it, and archiving it automatically would undo that decision.
+   * The LIVE memory of this type on this very reference — what `supersedes` is drawn from.
+   * 🛑 `live` alone: a pinned memory is a decision to always give it, never one to undo here.
    */
   standingOn: (type: MemoryType, ref: MemoryRef) => Memory | null
   list: (query: MemoryQuery) => readonly Memory[]
@@ -305,11 +295,8 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
   )
   // Held like the five above: the SQL of all of them is fixed, and `catalog.ts` draws the line
   // in the same place — only a query whose number of `?` varies is compiled per call.
-  /**
-   * 🛑 The ANSWERABLE states, not every row. The briefing's signal is driven by this count, and a
-   * project whose memories were all archived told the model « memory.recall answers it » for a
-   * recall that answers nothing — a wasted round trip on every conversation.
-   */
+  // 🛑 The ANSWERABLE states, not every row: the briefing's signal is driven by this count, and a
+  // project whose memories were all archived promised the model a recall that answers nothing.
   const countMemories = driver.prepare(
     `SELECT count(*) AS held FROM memories WHERE state IN ('live', 'pinned')`,
   )
@@ -395,58 +382,61 @@ export function createMemoryIndex(driver: SqliteDriver): MemoryIndex {
   }
 
   /**
-   * The refs and the links of a whole page, in two queries rather than two per row: a listing of
-   * a hundred memories was otherwise two hundred round trips through the driver.
-   *
-   * Ordered outright, and not left to the query plan: an anchor list that comes back in a
-   * different order from one read to the next is a panel row that redraws for no reason.
+   * One anchor table for a page, grouped by the column naming the memory it hangs off. Ordered
+   * outright: an anchor list whose order moves between reads is a panel row redrawing for nothing.
    */
+  const anchors = <T>(
+    ids: readonly string[],
+    one: SqliteStatement,
+    key: string,
+    many: (holders: string) => string,
+    read: (row: SqlRow) => T | null,
+  ): Map<string, T[]> => {
+    const held = new Map<string, T[]>()
+    const rows = byBatch(ids, batch =>
+      batch.length === 1
+        ? one.all(...batch)
+        : driver.prepare(many(holes(batch.length))).all(...batch),
+    )
+
+    for (const row of rows) {
+      const value = read(row)
+      if (value === null) continue
+
+      const id = text(row, key)
+      const kept = held.get(id) ?? []
+      kept.push(value)
+      held.set(id, kept)
+    }
+    return held
+  }
+
+  /** The refs and the links of a whole page, in two queries rather than two per row. */
   const attach = (rows: readonly SqlRow[]): readonly Memory[] => {
     if (rows.length === 0) return []
 
     const ids = rows.map(row => text(row, 'id'))
-    const refs = new Map<string, MemoryRef[]>()
-    const links = new Map<string, string[]>()
 
-    const refRows = byBatch(ids, batch =>
-      batch.length === 1
-        ? readOneRefs.all(...batch)
-        : driver
-            .prepare(
-              `SELECT memory_id, kind, ref FROM memory_refs
-               WHERE memory_id IN (${holes(batch.length)})
-               ORDER BY memory_id, kind, ref`,
-            )
-            .all(...batch),
+    const refs = anchors(
+      ids,
+      readOneRefs,
+      'memory_id',
+      holders => `SELECT memory_id, kind, ref FROM memory_refs
+                  WHERE memory_id IN (${holders}) ORDER BY memory_id, kind, ref`,
+      row => {
+        const kind = text(row, 'kind')
+        return isRefKind(kind) ? { kind, ref: text(row, 'ref') } : null
+      },
     )
 
-    for (const row of refRows) {
-      const kind = text(row, 'kind')
-      if (!isRefKind(kind)) continue
-
-      const id = text(row, 'memory_id')
-      const held = refs.get(id) ?? []
-      held.push({ kind, ref: text(row, 'ref') })
-      refs.set(id, held)
-    }
-
-    const linkRows = byBatch(ids, batch =>
-      batch.length === 1
-        ? readOneLinks.all(...batch)
-        : driver
-            .prepare(
-              `SELECT from_id, to_id FROM memory_links WHERE from_id IN (${holes(batch.length)})
-               ORDER BY from_id, to_id`,
-            )
-            .all(...batch),
+    const links = anchors(
+      ids,
+      readOneLinks,
+      'from_id',
+      holders => `SELECT from_id, to_id FROM memory_links
+                  WHERE from_id IN (${holders}) ORDER BY from_id, to_id`,
+      row => text(row, 'to_id'),
     )
-
-    for (const row of linkRows) {
-      const id = text(row, 'from_id')
-      const held = links.get(id) ?? []
-      held.push(text(row, 'to_id'))
-      links.set(id, held)
-    }
 
     return rows.map(row =>
       memoryOf(row, refs.get(text(row, 'id')) ?? [], links.get(text(row, 'id')) ?? []),

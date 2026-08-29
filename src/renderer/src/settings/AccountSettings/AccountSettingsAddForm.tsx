@@ -1,4 +1,6 @@
 import { useId, useState, type SubmitEvent } from 'react'
+import { cn } from '@/helpers/cn'
+import { WINDOW_ACTION } from '@/design/windowStyles'
 import { useTranslation } from 'react-i18next'
 import { FormField } from '@/design/FormField'
 import { checkAccountName } from '@shared/domain/account'
@@ -112,7 +114,7 @@ export function AccountSettingsAddForm() {
 
       <button
         type="submit"
-        className="btn btn-primary btn-sm mt-1"
+        className={cn(WINDOW_ACTION, 'mt-1')}
         {...HINT_TOP(t('accounts.addHint'))}
         disabled={busy || !complete}
       >

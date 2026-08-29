@@ -16,23 +16,19 @@ import type {
 import { childrenOf } from './uiTree'
 
 /**
- * How wide a word is in a given face at a given size — the one question a layout cannot answer
- * on its own, and the reason it is handed in rather than imported.
- *
- * `available` is what the element has to spill into, which is what a wrapping text needs.
+ * How wide a word is in a given face — the one question a layout cannot answer on its own, hence
+ * handed in. `available` is the room to spill into, which is what a wrapping text needs.
  */
 export type UiMeasure = (element: UiElement, available: UiSize) => UiSize
 
 /**
  * Where every element of an interface lands, in the space it is solved against.
  *
- * 🛑 **Pure, and that is the whole point.** No DOM, no measuring of a live tree, no second
- * answer: a renderer poses these boxes and computes none of its own, so a Pixi or a
- * world-space one draws the same document the same way. It is also what lets the editor snap
- * and drag against exact numbers instead of what a browser reports one frame late.
+ * 🛑 **Pure, and that is the whole point**: a renderer poses these boxes and computes none of its
+ * own, so a Pixi or world-space one draws the same document the same way — and the editor snaps
+ * against exact numbers rather than what a browser reports a frame late.
  *
- * The viewport is handed in rather than read off `document.design`: the anchors are what absorb
- * a screen of another shape, and solving against the design resolution would defeat them.
+ * The viewport is handed in, never read off `design`: the anchors are what absorb another shape.
  */
 export function layoutOf(root: UiScreen, viewport: UiSize, measure: UiMeasure): UiBoxes {
   const boxes = new Map<string, UiBox>()
@@ -82,10 +78,8 @@ function arrange(
 }
 
 /**
- * An element hung on a point of its parent by a point of itself, then nudged.
- *
- * Anchor and pivot rather than one or the other: a badge that must keep its right edge on its
- * parent's right edge needs both, and either alone leaves it drifting as it grows.
+ * An element hung on a point of its parent by a point of itself, then nudged. Both, never one: a
+ * badge keeping its right edge on its parent's needs the pair, or it drifts as it grows.
  */
 function freely(element: UiElement, content: UiBox, measure: UiMeasure): UiBox {
   // The margin comes off the room FIRST and is never added back: taking it twice put a
@@ -136,6 +130,8 @@ function stacked(
         : Math.max(0, ...line.map(index => spanCross(children, sizes, index, across)))
     const grown = grownAlong(line, children, sizes, content, stack, across)
     let along = startOf(grown.spare, line.length, stack.justify)
+    // Invariant across the line: its three arguments do not move once the line is grown.
+    const spread = gapOf(grown.spare, line.length, stack.justify)
 
     for (const [rank, index] of line.entries()) {
       const child = children[index]
@@ -146,8 +142,7 @@ function stacked(
         child,
         laid(child, size, content, along, offCross, thickness, stack.align, across),
       ])
-      along +=
-        spanMain(child, size, across) + stack.gap + gapOf(grown.spare, line.length, stack.justify)
+      along += spanMain(child, size, across) + stack.gap + spread
     }
     offCross += thickness + stack.gap
   }
@@ -223,10 +218,8 @@ function grownAlong(
 }
 
 /**
- * What a child asks for of the room nothing fixed has claimed.
- *
- * `stretch` ALONG a stack counts as one share rather than as the whole room: taking the room
- * whole gave every sibling all of it, and they landed on top of one another.
+ * What a child asks for of the room nothing fixed has claimed. `stretch` ALONG a stack counts as
+ * one share, never the whole room — taken whole, every sibling landed on top of the others.
  */
 function shareOf(child: UiElement | undefined, across: boolean): number {
   if (!child) return 0
@@ -364,11 +357,9 @@ function gapOf(spare: number, count: number, justify: UiJustify): number {
 }
 
 /**
- * How big one element is, before its parent has any say in where it goes.
- *
- * An `auto` container is measured by laying its children out in the room it was offered and
- * taking what they cover — the same code, run once for the answer. A leaf falls to `measure`,
- * which is the only thing here that knows what a font does.
+ * How big one element is, before its parent has any say. An `auto` container is measured by
+ * laying its children out and taking what they cover; a leaf falls to `measure`, the only thing
+ * here that knows what a font does.
  */
 function sizeOf(element: UiElement, available: UiSize, measure: UiMeasure): UiSize {
   const place = element.place

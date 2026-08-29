@@ -28,7 +28,7 @@ const selectedIn = (documentId: string): readonly string[] =>
   guiOf(useGuis.getState(), documentId).selectedIds
 
 /** Where an added element hangs: inside what is selected when it holds children, beside it if not. */
-export function addTargetIn(documentId: string): string {
+function addTargetIn(documentId: string): string {
   const state = guiOf(useGuis.getState(), documentId)
   const picked = state.selectedIds.at(-1)
   const element = picked ? elementById(state.document.root, picked) : null

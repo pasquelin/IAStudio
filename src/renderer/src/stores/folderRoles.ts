@@ -1,4 +1,5 @@
 import { orElse } from '@shared/promises'
+import { documentFolderOf, roleForKind, type DocumentKind } from '@shared/domain/document'
 import type { RoleFolders } from '@shared/domain/folderRole'
 import { create } from 'zustand'
 import { connectThroughBridge } from '@/services/bridge'
@@ -25,3 +26,12 @@ export const useFolderRoles = create<FolderRolesState>()(set => ({
     return stop
   }),
 }))
+
+/**
+ * Where documents of a kind START in the OPEN project, falling back to the default layout.
+ *
+ * For drawing and for naming, never for deciding where to write: `project.folderFor` is what a
+ * write asks, and it is the gesture that lays the folder back down when it has been removed.
+ */
+export const roleFolderOf = (state: FolderRolesState, kind: DocumentKind): string =>
+  state.roles[roleForKind(kind)] ?? documentFolderOf(kind)

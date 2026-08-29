@@ -125,7 +125,7 @@ function jobFailureOf(error: unknown): JobFailure {
  * The three knobs `localFieldsOf('text', …)` publishes, as the form filled them. Absent stays
  * absent, so a door keeps its own default rather than one written here.
  */
-function knobsIn(body: Record<string, unknown>): {
+export function knobsIn(body: Record<string, unknown>): {
   maxTokens?: number
   temperature?: number
   topP?: number

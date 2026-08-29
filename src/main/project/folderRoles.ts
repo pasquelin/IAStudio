@@ -19,6 +19,7 @@ import { exists, writeAtomic } from '@main/persistence'
 import { log } from '@main/log'
 import { createFolderReader } from './folder'
 import { hideFromExplorer } from './hideFromExplorer'
+import { isProjectRelativeFolder } from './validation'
 
 /** The role a folder claims, or nothing — the one place the marker's bytes are read. */
 async function readMarker(root: string, folder: string): Promise<FolderRole | null> {
@@ -91,17 +92,11 @@ type RoleCache = { roles: RoleFolders; absent: readonly FolderRole[] }
 
 /**
  * 🛑 A path this cache names is WRITTEN INTO, and the cache arrives off a disk anyone may edit —
- * a project received from someone else, a zip, a corrupted file. `../../Desktop` is refused here
- * rather than handed to `freeAssetPath`, the same shape `parseFolderPath` demands of a window.
+ * a project received from someone else, a zip, a corrupted file. Held to the shape a window's
+ * paths answer to, plus the root itself: no role folder is the project's own directory.
  */
 function isInsideProject(folder: string): boolean {
-  return (
-    folder.length > 0 &&
-    !folder.startsWith('/') &&
-    !folder.includes('\\') &&
-    !/(^|\/)\.\.(\/|$)/.test(folder) &&
-    !/^[A-Za-z]:/.test(folder)
-  )
+  return folder.length > 0 && isProjectRelativeFolder(folder)
 }
 
 function parseCache(body: string): RoleCache {

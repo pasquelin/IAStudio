@@ -1,4 +1,5 @@
 import { mdiAlertCircleOutline } from '@mdi/js'
+import { WINDOW_ACTION_QUIET } from '@/design/windowStyles'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type BindingOverrides, type CommandDescriptor } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
@@ -65,8 +66,11 @@ export function ShortcutsSettingsCommandRow({
           aria-label={t(descriptor.titleKey)}
           {...HINT_LEFT(t('settings.captureHint'))}
           onClick={onCapture}
+          // The base is the role; the two words after it are STATE, which no role names — see the
+          // blind spot `no-loose-window-button.test.ts` writes out.
           className={cn(
-            'btn btn-sm w-40 font-mono',
+            WINDOW_ACTION_QUIET,
+            'w-40 font-mono',
             capturing && 'btn-primary',
             clashing && !capturing && 'btn-error btn-outline',
           )}

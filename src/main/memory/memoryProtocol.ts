@@ -1,13 +1,9 @@
-import type {
-  Memory,
-  MemoryDraft,
-  MemoryPatch,
-  MemoryQuery,
-  MemoryTrouble,
-} from '@shared/domain/assistantMemory'
+import type { MemoryDraft, MemoryPatch, MemoryQuery } from '@shared/domain/assistantMemory'
+import { isRecord } from '@shared/guards'
 import type { ThreadReady } from '@main/threadReady'
 import type { RecallAsk } from './memoryIndex'
-import type { MemoryVector, PendingVector } from './vectors'
+import type { MemoryStore } from './memoryStore'
+import type { MemoryVector } from './vectors'
 
 /**
  * What the main process and the memory thread say to each other.
@@ -42,24 +38,7 @@ export type MemoryRequest =
 
 /** What each operation answers, so the client types its promise without a cast. */
 export type MemoryResults = {
-  remember: Memory
-  amend: Memory | null
-  forget: boolean
-  read: Memory | null
-  list: readonly Memory[]
-  count: number
-  markUsed: void
-  rebuild: number
-  refresh: number
-  compact: number
-  reset: void
-  trouble: MemoryTrouble | null
-  recall: readonly Memory[]
-  writeVectors: void
-  withoutVector: readonly PendingVector[]
-  pendingVectors: number
-  dropOtherVectors: void
-  close: void
+  [Op in keyof MemoryStore]: Awaited<ReturnType<MemoryStore[Op]>>
 }
 
 export type MemoryOp = MemoryRequest['op']
@@ -71,5 +50,5 @@ export type MemoryResponse =
 export type MemoryReady = ThreadReady
 
 export function isMemoryReady(message: unknown): message is MemoryReady {
-  return typeof message === 'object' && message !== null && 'ready' in message
+  return isRecord(message) && 'ready' in message
 }

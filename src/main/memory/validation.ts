@@ -69,16 +69,14 @@ const memoryDraft = z.object({
   state: z.enum(MEMORY_STATES).optional(),
 })
 
-const memoryPatch = z.object({
-  type: z.enum(MEMORY_TYPES).optional(),
-  summary: z.string().trim().min(1).max(MEMORY_SUMMARY_MAX).optional(),
-  body: z.string().max(MEMORY_BODY_MAX).optional(),
-  importance: z.number().int().min(MEMORY_IMPORTANCE_MIN).max(MEMORY_IMPORTANCE_MAX).optional(),
-  refs: z.array(memoryRef).optional(),
-  links: z.array(z.string().min(1)).optional(),
-  state: z.enum(MEMORY_STATES).optional(),
-  linkTo: z.array(z.string().min(1)).optional(),
-})
+/**
+ * The draft's own bounds, each one optional — spelling them again is how a bound raised in one
+ * place goes on being enforced in the other. `source` says who learned it and never changes.
+ */
+const memoryPatch = memoryDraft
+  .omit({ source: true })
+  .partial()
+  .extend({ linkTo: z.array(z.string().min(1)).optional() })
 
 /** Bounded here rather than trusted: a window asking for every memory at once is a frozen window. */
 const memoryQuery = z.object({

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/design/windowStyles'
 import type { ModelSummary } from '@shared/domain/model'
 import { useAiModels } from '@/stores/aiModels'
 import { Dialog } from '@/app/Dialog'
@@ -24,12 +25,12 @@ export function ModelDownloadDialog({
       title={t('models.downloadThis')}
       actions={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className={DIALOG_ACTION_SECONDARY} onClick={onClose}>
             {t('actions.cancel')}
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className={DIALOG_ACTION}
             onClick={() => {
               void installAiModel(model.id)
               onClose()

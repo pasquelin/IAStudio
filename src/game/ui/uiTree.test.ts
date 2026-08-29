@@ -15,7 +15,6 @@ import {
   flattened,
   mapped,
   parentOf,
-  pathTo,
   reparented,
   withElement,
   withoutElement,
@@ -63,11 +62,6 @@ describe('walking an interface', () => {
   it('names the parent of an element, and none for the root', () => {
     expect(parentOf(tree(), 'a1')?.id).toBe('a')
     expect(parentOf(tree(), 'root')).toBeNull()
-  })
-
-  it('walks the path down to an element', () => {
-    expect(pathTo(tree(), 'a1').map(one => one.id)).toEqual(['root', 'a', 'a1'])
-    expect(pathTo(tree(), 'nowhere')).toEqual([])
   })
 
   it('flattens parents before their children, which is the order a renderer paints in', () => {

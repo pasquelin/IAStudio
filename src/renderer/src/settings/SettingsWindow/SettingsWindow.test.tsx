@@ -131,6 +131,7 @@ describe('SettingsWindow', () => {
       'Versions',
       'Point d’entrée (MCP)',
       'Mémoire de l’assistant',
+      'Graphe',
       'Stockage',
       'Avancé',
     ])

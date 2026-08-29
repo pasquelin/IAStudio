@@ -16,6 +16,7 @@ import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
 import { fillSourceFields } from '@/spaces/image/aiFields'
 import { withBodyExtras } from '@/generation/bodyExtras'
 import { landingChoiceOf, landingCreatesOf, landingSiblingsOf } from '@/generation/landingChoice'
+import { roleFolderOf, useFolderRoles } from '@/stores/folderRoles'
 import { registerGenerator } from '@/assistant/generatorBridge'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { failureKeyOf } from '@/services/failureMessage'
@@ -197,7 +198,14 @@ export function Generator() {
             ...choice,
             target: landing ?? choice.target,
             // On DEMAND, never on the render path — `landingCreatesOf` says what it costs.
-            creates: landingCreatesOf(role, landingSiblingsOf(role, useDocuments.getState())),
+            creates: landingCreatesOf(
+              role,
+              landingSiblingsOf(
+                role,
+                useDocuments.getState(),
+                roleFolderOf(useFolderRoles.getState(), 'script'),
+              ),
+            ),
           },
           parameters: armed.values,
         }

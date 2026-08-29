@@ -1,4 +1,3 @@
-import { documentFolderOf } from '@shared/domain/document'
 import { documentFileName } from '@shared/domain/documentName'
 import { nameOf } from '@shared/domain/folder'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
@@ -42,7 +41,7 @@ type LandingNames = {
   /** The file a `document` landing writes into, and what travels when the operation reworks one. */
   held: (role: AiRoleId, state: DocumentsRead) => { into: string | null; sends: string | null }
   /** The names the destination folder already holds — cheap, unlike what is built from them. */
-  siblings: (state: DocumentsRead) => readonly string[]
+  siblings: (state: DocumentsRead, folder: string) => readonly string[]
   creates: (siblings: readonly string[]) => string
 }
 
@@ -64,8 +63,8 @@ const LANDINGS: Record<ModelFamily, LandingNames | null> = {
         sends: reworksItsOutput(role) && into !== null ? nameOf(into) : null,
       }
     },
-    siblings: state =>
-      takenDocumentNames(state, documentFolderOf('script')).map(document => document.fileName),
+    siblings: (state, folder) =>
+      takenDocumentNames(state, folder).map(document => document.fileName),
     creates: siblings =>
       documentFileName(
         untitledDocumentName(
@@ -112,9 +111,18 @@ export function landingChoiceOf(
   }
 }
 
-/** The names the destination folder already holds — what the naming below memoises on. */
-export function landingSiblingsOf(role: AiRoleId | null, state: DocumentsRead): readonly string[] {
-  return namesOf(role)?.siblings(state) ?? []
+/**
+ * The names the destination folder already holds — what the naming below memoises on.
+ *
+ * 🛑 The folder is PASSED, never composed: a project whose code folder has been renamed keeps its
+ * scripts there, and a name counted against the default layout would clash with a real sibling.
+ */
+export function landingSiblingsOf(
+  role: AiRoleId | null,
+  state: DocumentsRead,
+  folder: string,
+): readonly string[] {
+  return namesOf(role)?.siblings(state, folder) ?? []
 }
 
 /**

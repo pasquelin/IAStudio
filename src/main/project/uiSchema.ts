@@ -238,8 +238,6 @@ const element: z.ZodType<UiElement> = z
   )
   .meta({ id: 'UiElement' })
 
-const screen = VARIANTS.screen
-
 const binding = z.object({
   element: z.string(),
   property: z.string(),
@@ -264,7 +262,7 @@ export const uiDocumentSchema = z.object({
   version: z.number().int().min(1).max(UI_VERSION),
   mode: z.enum(UI_MODES),
   design: size,
-  root: screen,
+  root: VARIANTS.screen,
   bindings: z.array(binding),
 }) satisfies z.ZodType<UiDocument>
 

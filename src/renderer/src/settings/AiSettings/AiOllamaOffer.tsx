@@ -2,7 +2,7 @@ import { mdiInformationOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { OllamaOffer } from '@shared/domain/aiOverview'
 import { UiIcon } from '@/design/UiIcon'
-import { WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_ACTION, WINDOW_HELP } from '@/design/windowStyles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAiModels } from '@/stores/aiModels'
 import { AiFlightRow } from './AiFlightRow'
@@ -56,7 +56,7 @@ export function AiOllamaOffer({ offer, busy }: AiOllamaOfferProps) {
         </span>
         <button
           type="button"
-          className="btn btn-sm btn-primary"
+          className={WINDOW_ACTION}
           disabled={busy}
           {...HINT_LEFT(t('aiModels.installOllamaHint'))}
           onClick={() => void installOllama()}

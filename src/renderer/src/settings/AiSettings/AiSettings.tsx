@@ -11,7 +11,12 @@ import {
 } from '@shared/domain/aiOverview'
 import { isGenerationRole, partsOfRole } from '@shared/domain/aiRole'
 import type { ModelFamily } from '@shared/domain/model'
-import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
+import {
+  WINDOW_ACTION,
+  WINDOW_CAPTION,
+  WINDOW_GROUP_LABEL,
+  WINDOW_HELP,
+} from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useBytes } from '@/hooks/useBytes'
 import { useModelFit } from '@/hooks/useModelFit'
@@ -188,7 +193,7 @@ export function AiSettings({ family }: AiSettingsProps) {
             <button
               type="button"
               data-sc="field:ai.ownModel"
-              className="btn btn-sm btn-primary"
+              className={WINDOW_ACTION}
               onClick={() => void addOwnAiModel()}
             >
               {t('aiModels.addOwnModel')}

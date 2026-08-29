@@ -100,13 +100,7 @@ type Posed = {
  * strings meant composing them for all of them, every frame, only to throw them away — measured
  * at 0,267 ms for 200 elements against 0,020 ms for this walk.
  */
-type Held = {
-  node: HTMLElement
-  element: UiElement
-  box: UiBox
-  opacity: number
-  values: UiValues
-}
+type Held = { node: HTMLElement; posed: Posed }
 
 function laidOut(frames: readonly UiFrame[]): readonly Posed[] {
   const posed: Posed[] = []
@@ -144,27 +138,21 @@ function held(
   one: Posed,
 ): HTMLElement {
   const last = memory.get(one.key)
-  if (last && unchanged(last, one)) return last.node
+  if (last && unchanged(last.posed, one)) return last.node
 
   // Rebuilt only when what it IS changed: the inner parts of a bar or a tick follow from the
   // type, and rebuilding them every frame is what a drag cannot afford.
-  const node = last && last.element.type === one.element.type ? last.node : made(owner, one)
+  const node = last && last.posed.element.type === one.element.type ? last.node : made(owner, one)
   if (last && node !== last.node) last.node.replaceWith(node)
 
   node.style.cssText = cssOf(one, assets)
   inscribe(node, one)
-  memory.set(one.key, {
-    node,
-    element: one.element,
-    box: one.box,
-    opacity: one.opacity,
-    values: one.values,
-  })
+  memory.set(one.key, { node, posed: one })
 
   return node
 }
 
-const unchanged = (last: Held, one: Posed): boolean =>
+const unchanged = (last: Posed, one: Posed): boolean =>
   last.element === one.element &&
   last.opacity === one.opacity &&
   last.values === one.values &&

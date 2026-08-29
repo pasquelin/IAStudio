@@ -160,6 +160,12 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     descriptionKey: 'settings.memoryDescription',
   },
   {
+    id: 'memory.graph',
+    labelKey: 'settings.memoryGraph',
+    descriptionKey: 'settings.memoryGraphDescription',
+    parent: 'memory',
+  },
+  {
     id: 'storage',
     labelKey: 'settings.storage',
     descriptionKey: 'settings.storageDescription',

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/design/windowStyles'
 import { useTranslation } from 'react-i18next'
 import type { LandingTarget } from '@shared/domain/landingTarget'
 import { Dialog } from '@/app/Dialog'
@@ -23,15 +24,19 @@ export function GeneratorLandingDialog({ onAnswer, onCancel }: GeneratorLandingD
       title={t('generation.landingTitle')}
       actions={
         <>
-          <button type="button" className="btn" onClick={onCancel}>
+          <button type="button" className={DIALOG_ACTION_SECONDARY} onClick={onCancel}>
             {t('actions.cancel')}
           </button>
-          <button type="button" className="btn" onClick={() => onAnswer('newTab', remember)}>
+          <button
+            type="button"
+            className={DIALOG_ACTION_SECONDARY}
+            onClick={() => onAnswer('newTab', remember)}
+          >
             {t('settings.landing.newTab')}
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className={DIALOG_ACTION}
             onClick={() => onAnswer('document', remember)}
           >
             {t('settings.landing.document')}

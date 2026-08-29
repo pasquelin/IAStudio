@@ -20,6 +20,10 @@ export type UiImageSizes = (assetId: string) => UiSize | null
 export const UI_LINE_HEIGHT = 1.25
 
 export function createCanvasUiMeasure(ruler: UiTextRuler, imageSizeOf: UiImageSizes): UiMeasure {
+  // 🛑 Nothing is cached ACROSS solves: `document.fonts` is global, so an embedded face landing
+  // for another document changes what this ruler answers. `layoutOf` memoises within one solve.
+  let posed = ''
+
   return (element: UiElement, available: UiSize): UiSize => {
     const intrinsic = intrinsicSizeOf(element.type)
     if (intrinsic) return intrinsic
@@ -30,6 +34,13 @@ export function createCanvasUiMeasure(ruler: UiTextRuler, imageSizeOf: UiImageSi
       return imageSizeOf(element.image.assetId) ?? { width: 0, height: 0 }
     }
     if (element.type === 'text' || element.type === 'button') {
+      const font = cssFontOf(element.text)
+      // Posed only where the face changed: 450 captions of one font wrote it 900 times, and each
+      // write has the engine reparse a CSS shorthand.
+      if (posed !== font) {
+        ruler.font = font
+        posed = font
+      }
       return textSize(ruler, element.text, available)
     }
 
@@ -43,9 +54,8 @@ export function cssFontOf(text: UiText): string {
   return `${text.weight} ${text.size}px "${text.font.family}"`
 }
 
+/** The face is posed by the caller, which is what keeps one font from being written per call. */
 function textSize(ruler: UiTextRuler, text: UiText, available: UiSize): UiSize {
-  ruler.font = cssFontOf(text)
-
   const lines = linesOf(ruler, text, available.width)
   const width = lines.reduce((widest, line) => Math.max(widest, ruler.measureText(line).width), 0)
 

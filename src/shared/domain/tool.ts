@@ -124,6 +124,14 @@ export type ToolPlacement = {
    * alone.
    */
   solo?: true
+  /**
+   * What the zone opens at while this tool leads it, where the zone's own width does not suit it.
+   * A width the reader dragged wins over it.
+   *
+   * On the PLACEMENT and not on the tool: the room a panel needs is a fact of the ZONE it is in,
+   * and a tool placed in two of them would otherwise have one answer for both.
+   */
+  opens?: number
 }
 
 export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
@@ -194,6 +202,8 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     surfaces: [...WORKSPACE_IDS, HOME_SURFACE],
     requires: 'centreTaken',
     solo: true,
+    // A conversation at the column's own 260 wraps every sentence onto three lines.
+    opens: 460,
   },
   { id: 'layers', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // Beside the stack rather than inside the inspector: what a caption is SET IN is read while it

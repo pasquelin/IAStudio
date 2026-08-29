@@ -13,19 +13,34 @@ import { orElse } from '@shared/promises'
 import { connectThroughBridge, memoryBridge } from '@/services/bridge'
 
 /**
- * One amendment, against a scope the caller NAMES — what a burst holds on to while the person is
- * free to move the pill. `orElse` and not `!== null`: with no bridge the call answers `undefined`,
- * and a window was told its amendment had gone through.
+ * One amendment, against a scope the caller NAMES — what a burst holds while the person is free
+ * to move the pill. `orElse`: with no bridge the call answers `undefined`, which read as success.
  */
 const amendedIn = async (scope: MemoryScope, id: string, patch: MemoryPatch): Promise<boolean> =>
   (await orElse(memoryBridge()?.amend(scope, id, patch), null)) !== null
 
 /**
- * 🛑 Whether an upkeep burst is running, and it is what makes « one reload at the end » true.
- *
- * The main process broadcasts a change per amendment and this window hears its OWN: a merge of a
- * hundred memories set off a full listing per amendment, in every open window, for a result one
- * final read describes. Held at the module rather than in the state: it must not draw anything.
+ * 🛑 The scope is read ONCE, and `amendedIn` is what makes that possible: `amend` reads
+ * `get().scope` on every call, so moving the pill mid-run sent the rest of the burst at the other
+ * memory — the run stopped half done and reported a figure that was not true.
+ */
+type MemoryAmendment = readonly [id: string, patch: MemoryPatch]
+
+const amendedAll = async (
+  scope: MemoryScope,
+  patches: readonly MemoryAmendment[],
+): Promise<number> =>
+  await burst(async () => {
+    let done = 0
+    for (const [id, patch] of patches) {
+      if (await amendedIn(scope, id, patch)) done += 1
+    }
+    return done
+  })
+
+/**
+ * 🛑 What makes « one reload at the end » true: this window hears its OWN amendments, so a merge
+ * set off a full listing per memory, in every open window. At the module — it must not draw.
  */
 let bursting = false
 
@@ -40,10 +55,8 @@ async function burst<T>(run: () => Promise<T>): Promise<T> {
 }
 
 /**
- * What the window holds of the two memories.
- *
- * A listing rather than the whole of either: the file may hold years of a project, and nothing on
- * screen ever wants all of it at once — see `MEMORY_PAGE`.
+ * What the window holds of the two memories: a listing, never the whole of either — the file may
+ * hold years of a project and nothing on screen wants all of it. See `MEMORY_PAGE`.
  */
 type AssistantMemoryState = {
   memories: readonly Memory[]
@@ -64,20 +77,15 @@ type AssistantMemoryState = {
   /** Everything forgotten, the file included. The one gesture that erases rather than writes. */
   reset: () => Promise<void>
   /**
-   * Keeps the best of each group of duplicates, links the rest to it and archives them.
-   *
-   * Archived and not forgotten: what said the same thing twice still says where it came from,
-   * and merging is a tidying, not a judgement about what was true.
+   * Keeps the best of each group of duplicates, links the rest to it and archives them. Archived
+   * and not forgotten: merging is a tidying, not a judgement about what was true.
    */
   mergeDuplicates: () => Promise<number>
   /** Archives what nothing has drawn on for a season. Pinned memories are never touched. */
   archiveStale: (now: string) => Promise<number>
   /**
-   * Copies one memory of a project into the machine's own, so it serves every project.
-   *
-   * 🛑 The ONE way anything reaches the machine's memory, and it is a gesture the person makes:
-   * no automatic rule and no MCP client writes there, or one project's habits would land in what
-   * follows the person everywhere. Answers false when there was nothing to copy.
+   * 🛑 The ONE way anything reaches the machine's memory, and a gesture the person makes: no rule
+   * and no MCP client writes there, or one project's habits follow the person everywhere.
    */
   promote: (memory: Memory) => Promise<boolean>
   /** Rewrites the file with one line per standing memory. Answers how many lines it saved. */
@@ -100,11 +108,8 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
   indexing: null,
 
   connect: connectThroughBridge(async bridge => {
-    // Every window follows every write: two replicas of one file is one too many, and a memory
-    // written by the assistant in one window belongs on screen in the other.
-    // 🛑 Reloaded only once the panel has ASKED. Subscribing costs nothing; reading opens a
-    // thread and a database, and the settings window connects this from its root — so a change
-    // announced while the reader is on another section must not pay for one.
+    // 🛑 Subscribing costs nothing; reloading opens a thread and a database, and the settings
+    // window connects this from its root — hence only once the panel has ASKED.
     const stopChanges = bridge.memory.onChanged(scope => {
       if (bursting || scope !== get().scope || !get().loaded) return
       void get().reload()
@@ -142,12 +147,8 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     // saying true about them is a panel claiming they are the answer.
     set({ loaded: false })
 
-    /**
-     * 🛑 The listing alone. `pending` is a `LEFT JOIN` over EVERY memory of the scope and does
-     * not depend on the query, so counting it here made each keystroke of the search pay a scan
-     * whose answer could not have moved. It is read when the scope does — see `look` — and
-     * published live by `onIndexed` while a run is going.
-     */
+    // 🛑 The listing alone: `pending` is a `LEFT JOIN` over EVERY memory of the scope and ignores
+    // the query, so counting it here made each keystroke pay a scan. Read when the scope moves.
     const memories = await orElse(memoryBridge()?.list(scope, query), [])
 
     // 🛑 Dropped when the question moved on: two reads in flight — a scope switch, or a write
@@ -184,45 +185,28 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     await orElse(memoryBridge()?.reset(get().scope), undefined)
   },
 
-  /**
-   * 🛑 The scope is read ONCE, and `amendedIn` is what makes that possible: `amend` reads
-   * `get().scope` on every call, so moving the pill mid-run sent the rest of the burst at the
-   * other memory — where the ids do not exist, so nothing was written wrongly, but the merge
-   * stopped half done and reported a figure that was not true.
-   *
-   * One reload at the end and not one per memory, for the same reason.
-   */
+  /** One reload at the end and not one per memory — see `amendedAll`. */
   mergeDuplicates: async () => {
-    const scope = get().scope
-    const merged = await burst(async () => {
-      let done = 0
-      for (const group of duplicatesIn(get().memories)) {
-        const [keeper, ...rest] = group
-        if (!keeper) continue
-
-        for (const one of rest) {
-          // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
-          // `linkTo` and not `links`: the union is computed in the store, over what stands there.
-          const patch: MemoryPatch = { state: 'archived', linkTo: [keeper.id] }
-          if (await amendedIn(scope, one.id, patch)) done += 1
-        }
-      }
-      return done
-    })
+    // Linked BEFORE it is archived, so what was tidied away still says what it stood beside.
+    // `linkTo` and not `links`: the union is computed in the store, over what stands there.
+    const merged = await amendedAll(
+      get().scope,
+      duplicatesIn(get().memories).flatMap(([keeper, ...rest]) =>
+        keeper
+          ? rest.map((one): MemoryAmendment => [one.id, { state: 'archived', linkTo: [keeper.id] }])
+          : [],
+      ),
+    )
 
     await get().reload()
     return merged
   },
 
   archiveStale: async now => {
-    const scope = get().scope
-    const archived = await burst(async () => {
-      let done = 0
-      for (const one of staleIn(get().memories, now)) {
-        if (await amendedIn(scope, one.id, { state: 'archived' })) done += 1
-      }
-      return done
-    })
+    const archived = await amendedAll(
+      get().scope,
+      staleIn(get().memories, now).map((one): MemoryAmendment => [one.id, { state: 'archived' }]),
+    )
 
     await get().reload()
     return archived
@@ -234,10 +218,9 @@ export const useAssistantMemory = create<AssistantMemoryState>()((set, get) => (
     if (alreadySaid(standing, memory)) return true
 
     /**
-     * 🛑 Neither `refs` nor `links` travel. A ref is a path or an id INSIDE the project, which
-     * names nothing once the project is closed — and `supersededBy` picks what a draft replaces
-     * by its first ref, so carrying one would have a promoted memory replace another over a path
-     * that means nothing there. What travels is what was learned, not where it was learned.
+     * 🛑 Neither `refs` nor `links` travel: a ref names something INSIDE the project, and
+     * `supersededBy` picks what a draft replaces by its first one — a carried ref would have a
+     * promoted memory replace another over a path that means nothing there.
      */
     const written = await orElse(
       memoryBridge()?.remember('global', {

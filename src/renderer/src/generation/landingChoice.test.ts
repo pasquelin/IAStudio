@@ -71,14 +71,20 @@ describe('where a shot lands, said before the click', () => {
 describe('the file a new-tab landing creates', () => {
   it('names one the folder does not already hold', () => {
     installDocument('Script 1', 'code')
-    const siblings = landingSiblingsOf(CODE2CODE, useDocuments.getState())
+    const siblings = landingSiblingsOf(CODE2CODE, useDocuments.getState(), 'Scripts')
 
     expect(siblings).toEqual(['Script 1.ts'])
     expect(landingCreatesOf(CODE2CODE, siblings)).toBe('Script 2.ts')
   })
 
+  it('counts the siblings of the folder it is given, not of the default layout', () => {
+    installDocument('Script 1', 'code')
+
+    expect(landingSiblingsOf(CODE2CODE, useDocuments.getState(), 'Sources')).toEqual([])
+  })
+
   it('names nothing for a family that lands a row of the shelf', () => {
-    expect(landingSiblingsOf(IMG2IMG, useDocuments.getState())).toEqual([])
+    expect(landingSiblingsOf(IMG2IMG, useDocuments.getState(), 'Scripts')).toEqual([])
     expect(landingCreatesOf(IMG2IMG, [])).toBeNull()
   })
 })

@@ -1,57 +1,19 @@
-import type {
-  Memory,
-  MemoryDraft,
-  MemoryPatch,
-  MemoryQuery,
-  MemoryTrouble,
-} from '@shared/domain/assistantMemory'
-import type { RecallAsk } from './memoryIndex'
+import type { ProcessPort } from '@main/processClient'
 import type { MemoryOp, MemoryRequest, MemoryResponse, MemoryResults } from './memoryProtocol'
-import type { MemoryVector, PendingVector } from './vectors'
+import type { MemoryStore } from './memoryStore'
 
-/**
- * The thread, reduced to what the client needs. Injected rather than imported so the protocol
- * can be tested against a real store without spawning anything.
- */
-export type MemoryPort = {
-  postMessage: (message: MemoryRequest) => void
-  onMessage: (listener: (response: MemoryResponse) => void) => void
-  /** The thread died. Whatever it was asked will never be answered. */
-  onFailure: (listener: (error: Error) => void) => void
+/** Injected rather than imported so the protocol can be tested without spawning a thread. */
+export type MemoryPort = ProcessPort<MemoryRequest, MemoryResponse> & {
   terminate: () => Promise<void>
 }
 
 export const MEMORY_CLOSED = 'the memory is closed'
 
-/** The store as the main process sees it: the same operations, each a promise. */
+/** The store as the main process sees it: every operation of `MemoryStore`, each a promise. */
 export type AsyncMemory = {
-  remember: (draft: MemoryDraft) => Promise<Memory>
-  amend: (id: string, patch: MemoryPatch) => Promise<Memory | null>
-  forget: (id: string) => Promise<boolean>
-  read: (id: string) => Promise<Memory | null>
-  list: (query: MemoryQuery) => Promise<readonly Memory[]>
-  /**
-   * How many memories stand. One `count(*)`, no row read and no vector compared — what a briefing
-   * pays to say a memory exists.
-   */
-  count: () => Promise<number>
-  markUsed: (ids: readonly string[]) => Promise<void>
-  /** What answers a question, best first — gathered and ranked on the thread. */
-  recall: (ask: RecallAsk) => Promise<readonly Memory[]>
-  /** The embeddings, which live in the index alone and never in the file — see `MemoryStore`. */
-  writeVectors: (vectors: readonly MemoryVector[]) => Promise<void>
-  withoutVector: (model: string, limit: number) => Promise<readonly PendingVector[]>
-  pendingVectors: (model: string) => Promise<number>
-  dropOtherVectors: (model: string) => Promise<void>
-  /** Reads the file into the index, whatever it already holds. */
-  rebuild: () => Promise<number>
-  /** Reads it only if it has changed since the index was built — what an opening runs. */
-  refresh: () => Promise<number>
-  /** Rewrites the file with one line per standing memory. Answers how many it saved. */
-  compact: () => Promise<number>
-  reset: () => Promise<void>
-  trouble: () => Promise<MemoryTrouble | null>
-  close: () => Promise<void>
+  [Op in keyof MemoryStore]: (
+    ...args: Parameters<MemoryStore[Op]>
+  ) => Promise<Awaited<ReturnType<MemoryStore[Op]>>>
 }
 
 type Waiting = {

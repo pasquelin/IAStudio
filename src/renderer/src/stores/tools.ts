@@ -10,6 +10,7 @@ import {
   isHorizontal,
   placementIn,
   placementOf,
+  placementsOf,
   SURFACE_FAMILIES,
   workspacePlacementsOf,
   TOOL_SLOTS,
@@ -112,21 +113,12 @@ export const DEFAULT_SIZES: Record<ToolZone, number> = {
   bottomRight: 240,
 }
 
-/**
- * What a TOOL opens its zone at, where the zone's own width does not suit it.
- *
- * The assistant alone today, and the two numbers say why one table was not enough: a conversation
- * at 260 wraps every sentence onto three lines, and the layer stack at 460 is mostly gutter.
- * Read only while nothing has been dragged — a width the reader chose wins over both.
- */
-const TOOL_SIZES: Partial<Record<ToolId, number>> = { assistant: 460 }
-
 /** Every surface a zone is drawn on. Two families, but seven of them resolve an unnamed half. */
 const ALL_SURFACES: readonly ToolSurface[] = [...WORKSPACE_IDS, HOME_SURFACE]
 
 /** What a zone opens at, the tool it is showing first. */
 export function defaultSizeOf(zone: ToolZone, shown: ToolId | null): number {
-  return (shown === null ? undefined : TOOL_SIZES[shown]) ?? DEFAULT_SIZES[zone]
+  return placementsOf(shown).find(one => one.zone === zone)?.opens ?? DEFAULT_SIZES[zone]
 }
 
 /**
