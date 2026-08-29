@@ -68,6 +68,7 @@ beforeEach(() => {
     streamed: '',
     promptTokens: 0,
     replyTokens: 0,
+    windowTokens: 0,
   })
 })
 
@@ -169,6 +170,28 @@ describe('watching the model write', () => {
     noteProgress({ delta: 'the real one' })
 
     expect(useAssistant.getState().streamed).toBe('the real one')
+  })
+
+  /**
+   * 🛑 The counts OUTLIVE the round: cleared with the streamed text they blinked to zero between
+   * two rounds, and were gone the moment the composer had a reader for them.
+   */
+  it('keeps what the last round read once the turn is over', async () => {
+    brain(answer({ say: 'done', calls: [] }))
+    await useAssistant.getState().say('hello')
+    useAssistant.getState().noteProgress({ delta: '', promptTokens: 2116, windowTokens: 8192 })
+
+    expect(useAssistant.getState()).toMatchObject({ promptTokens: 2116, windowTokens: 8192 })
+  })
+
+  // A new SENTENCE starts them over: what the last turn read is not what this one will read.
+  it('starts a new sentence from nothing read', async () => {
+    brain(answer({ say: 'done', calls: [] }))
+    useAssistant.setState({ promptTokens: 2116, windowTokens: 8192 })
+
+    await useAssistant.getState().say('hello')
+
+    expect(useAssistant.getState().promptTokens).toBe(0)
   })
 
   it('starts each round from nothing, so one round never reads as the next', async () => {

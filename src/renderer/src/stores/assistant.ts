@@ -26,9 +26,15 @@ import { useSettings } from './settings'
 /** What of a streamed answer is kept: only its tail is ever shown — see `noteProgress`. */
 const STREAM_TAIL = 240
 
-// One list, spread wherever a round starts over: written out per site, one of the three was
-// already missing from one of them and nothing on screen said so.
-const NOTHING_WRITTEN = { streamed: '', promptTokens: 0, replyTokens: 0 }
+/**
+ * 🛑 What a ROUND starts over, and the counts are NOT in it: they say what the last round read,
+ * and the composer shows them once it is over — cleared per round, the figure blinked to zero
+ * between two rounds and was gone the moment there was time to read it.
+ */
+const NOTHING_WRITTEN = { streamed: '' }
+
+/** What a new SENTENCE starts over: the counts belong to the turn that just ran, not the next. */
+const NOTHING_READ = { ...NOTHING_WRITTEN, promptTokens: 0, replyTokens: 0, windowTokens: 0 }
 
 /** A question on screen and the promise waiting on it — see `ask`. */
 type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) => void }
@@ -58,9 +64,11 @@ type AssistantState = {
    * is the point: what makes the wait readable is that it MOVES, not that it parses.
    */
   streamed: string
-  /** What this round's prompt cost and what its answer has cost. Zero where the door says nothing. */
+  /** What the last round read and wrote. Zero where the door says nothing, and kept once it ends. */
   promptTokens: number
   replyTokens: number
+  /** What that door reads in one go, so the composer can show the prompt as a share of it. */
+  windowTokens: number
   /** One frame of what the model is writing — see `connectThoughtStream`. */
   noteProgress: (progress: AssistantProgress) => void
   /** Asks the chain to stop after what is already running. Nothing in flight is undone. */
@@ -155,7 +163,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   busy: false,
   round: 0,
   stopping: false,
-  ...NOTHING_WRITTEN,
+  ...NOTHING_READ,
   asked: null,
   choosing: null,
   spent: 0,
@@ -177,6 +185,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       // Zero on a restart: what the attempt just thrown away cost is not what this one costs.
       promptTokens: progress.promptTokens ?? (progress.restart === true ? 0 : state.promptTokens),
       replyTokens: progress.replyTokens ?? (progress.restart === true ? 0 : state.replyTokens),
+      windowTokens: progress.windowTokens ?? state.windowTokens,
     })),
 
   /**
@@ -279,7 +288,13 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
     const id = (lastTurnId += 1)
     const turn: AssistantTurn = { id, said, answered: '', steps: [], lost: false }
-    set(state => ({ turns: [...state.turns, turn], busy: true, stopping: false, round: 0 }))
+    set(state => ({
+      turns: [...state.turns, turn],
+      busy: true,
+      stopping: false,
+      round: 0,
+      ...NOTHING_READ,
+    }))
 
     // A turn without its targets is a turn that still answers: a chunk that fails to load must
     // not leave `busy` true for the session, which is what an unhandled rejection here would do.

@@ -63,6 +63,27 @@ describe('the local brain', () => {
     expect(briefingOf(asked)).toContain('downloads: /Users/someone/Downloads')
   })
 
+  /**
+   * 🛑 The window is CAPPED here, so nothing downstream can derive it: without it travelling with
+   * the frames, the composer shows a count with nothing to read it against.
+   */
+  it('names the window its frames were read in', async () => {
+    const seen: (number | undefined)[] = []
+    const chat = (request: ChatRequest) => {
+      request.onProgress?.({ delta: 'x', promptTokens: 2116 })
+      return Promise.resolve(REPLY)
+    }
+    const brain = createLocalBrain({ chat, modelId: 'llama3.2:3b', contextTokens: 262_144 })
+
+    await brain.think(
+      { utterance: 'hello', history: [] },
+      { onProgress: progress => seen.push(progress.windowTokens) },
+    )
+
+    // Both of them: the restart `answeredTurn` emits, and the frame the runtime wrote.
+    expect(seen).toEqual([8192, 8192])
+  })
+
   it('asks a huge model for the capped window rather than its own', async () => {
     const { brain, asked } = brainAnswering([REPLY], 262_144)
 

@@ -73,6 +73,7 @@ export function AssistantConversation() {
   const streamed = useAssistant(state => state.streamed)
   const promptTokens = useAssistant(state => state.promptTokens)
   const replyTokens = useAssistant(state => state.replyTokens)
+  const windowTokens = useAssistant(state => state.windowTokens)
   const stop = useAssistant(state => state.stop)
   const asked = useAssistant(state => state.asked)
   const choosing = useAssistant(state => state.choosing)
@@ -500,6 +501,16 @@ export function AssistantConversation() {
               {/* Down here from the header, beside the sentence it will read: the moment one wants
                 another brain is the middle of writing, not a trip to a preferences window. */}
               <AssistantConversationPicker />
+
+              {/* Beside the field it measures, and it OUTLIVES the turn: what one wants to know
+                  before typing is how much room the last exchange left. */}
+              {promptTokens > 0 && (
+                <span className="text-muted text-mini" {...HINT_TOP(t('assistant.contextHint'))}>
+                  {windowTokens > 0
+                    ? t('assistant.contextOf', { read: promptTokens, window: windowTokens })
+                    : t('assistant.contextRead', { read: promptTokens })}
+                </span>
+              )}
 
               {/* Beside the button it shares a job with: this pair is "how the sentence gets in". */}
               <span className="ml-auto flex items-center gap-2">

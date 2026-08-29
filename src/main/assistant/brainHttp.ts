@@ -1,5 +1,5 @@
 import type { HttpChat } from '@shared/domain/aiCloud'
-import type { AssistantThought } from '@shared/domain/assistant'
+import type { AssistantProgress, AssistantThought } from '@shared/domain/assistant'
 import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
@@ -50,6 +50,12 @@ function messagesFor(
   ]
 }
 
+/** Relays a frame with the window it was budgeted against — see `AssistantProgress.windowTokens`. */
+const told =
+  (onProgress: (progress: AssistantProgress) => void, windowTokens: number) =>
+  (progress: AssistantProgress): void =>
+    onProgress({ ...progress, windowTokens })
+
 /**
  * A chat cloud reached over HTTP. Same briefing and same JSON parse as the local brain;
  * only the round trip differs, and nothing is billed in studio units.
@@ -97,7 +103,17 @@ export function createHttpChatBrain({
           messages,
           json: true,
           maxTokens: ASK_TOKENS,
-          ...defined({ signal: watch.signal, onProgress: watch.onProgress }),
+          ...defined({ signal: watch.signal }),
+          // The window this door was BUDGETED against, which is what the briefing was cut to —
+          // the cloud's own is unknown here, the model being typed by hand.
+          ...(watch.onProgress
+            ? {
+                onProgress: told(
+                  watch.onProgress,
+                  narrowed ? CLOUD_FALLBACK_TOKENS : CLOUD_CONTEXT_TOKENS,
+                ),
+              }
+            : {}),
         },
         send,
       )

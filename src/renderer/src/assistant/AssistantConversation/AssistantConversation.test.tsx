@@ -539,6 +539,7 @@ describe('while the assistant is working', () => {
       streamed: '',
       promptTokens: 0,
       replyTokens: 0,
+      windowTokens: 0,
       turns: [{ id: 1, said: 'ouvre le voilier vert', answered: '', steps: [], lost: false }],
     })
 
@@ -564,6 +565,28 @@ describe('while the assistant is working', () => {
     // testing-library folds to an ordinary one before it compares.
     const grouped = new Intl.NumberFormat('fr').format(12_366).replace(/\s/g, '\\s')
     expect(screen.getByText(new RegExp(`${grouped}.*18`))).toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 It OUTLIVES the turn, unlike the working line: what one wants to know before typing is how
+   * much room the last exchange left, and cleared per round the figure was gone the moment there
+   * was time to read it.
+   */
+  it('shows what the last exchange read, once it is over', () => {
+    useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 8192 })
+    render(<AssistantConversation />)
+
+    const grouped = (value: number): string =>
+      new Intl.NumberFormat('fr').format(value).replace(/\s/g, '\\s')
+    expect(screen.getByText(new RegExp(`${grouped(2116)}.*${grouped(8192)}`))).toBeInTheDocument()
+  })
+
+  // A door that names no window shows the count alone rather than a ratio against a guess.
+  it('shows the count alone where the door named no window', () => {
+    useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 0 })
+    render(<AssistantConversation />)
+
+    expect(screen.getByText(/2\s?116 jetons lus/)).toBeInTheDocument()
   })
 
   // In the thread and last of it, where the answer itself will appear: what one watches while

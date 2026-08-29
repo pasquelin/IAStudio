@@ -242,6 +242,11 @@ export type AssistantProgress = {
   /** What the answer has cost. Absent for a door that counts nothing. */
   replyTokens?: number
   /**
+   * What the door reads in one go, so `promptTokens` can be read as a share of it. Absent for a
+   * door that names no window — the window then shows the count alone rather than a wrong ratio.
+   */
+  windowTokens?: number
+  /**
    * A new attempt is starting: what was shown so far belongs to an answer that was thrown away.
    * One sentence may cost four round trips (`TURN_ATTEMPTS`), and appending them reads as one
    * long answer contradicting itself.
