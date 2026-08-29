@@ -65,6 +65,87 @@ beforeEach(() => {
     spent: 0,
     draft: '',
     staged: 0,
+    streamed: '',
+    promptTokens: 0,
+    replyTokens: 0,
+  })
+})
+
+describe('stopping a sentence', () => {
+  /**
+   * 🛑 Both halves: the flag ends the chain BETWEEN two rounds, and a local model holds one round
+   * for minutes at full tilt — the flag alone left "stopping…" on screen with the fans up.
+   */
+  it('cuts the round in flight, not only the chain', () => {
+    const stop = vi.fn(() => Promise.resolve())
+    installFakeBridge({ assistant: { stop } })
+    useAssistant.setState({ busy: true })
+
+    useAssistant.getState().stop()
+
+    expect(useAssistant.getState().stopping).toBe(true)
+    expect(stop).toHaveBeenCalled()
+  })
+
+  it('reaches for nothing while nothing runs', () => {
+    const stop = vi.fn(() => Promise.resolve())
+    installFakeBridge({ assistant: { stop } })
+
+    useAssistant.getState().stop()
+
+    expect(stop).not.toHaveBeenCalled()
+  })
+
+  // Cut on purpose is not LOST: the person is the one who cut it, and "lost" reads as a failure.
+  it('reads a cut round as stopped rather than as lost', async () => {
+    installFakeBridge({
+      assistant: {
+        think: () => {
+          useAssistant.getState().stop()
+          return Promise.reject(new Error('aborted'))
+        },
+      },
+    })
+
+    await useAssistant.getState().say('hello')
+
+    expect(useAssistant.getState().turns[0]).toMatchObject({ ending: 'stopped', lost: false })
+  })
+})
+
+describe('watching the model write', () => {
+  it('appends what arrives and keeps the counts the door reported', () => {
+    const { noteProgress } = useAssistant.getState()
+    noteProgress({ delta: '{"say":' })
+    noteProgress({ delta: '"hi"}', promptTokens: 2366, replyTokens: 18 })
+
+    expect(useAssistant.getState()).toMatchObject({
+      streamed: '{"say":"hi"}',
+      promptTokens: 2366,
+      replyTokens: 18,
+    })
+  })
+
+  /**
+   * One sentence may cost four round trips, and a rejected answer is thrown away whole: appended
+   * to the next, it reads as one long answer contradicting itself.
+   */
+  it('drops what a thrown-away attempt had written', () => {
+    const { noteProgress } = useAssistant.getState()
+    noteProgress({ delta: 'half an answ' })
+    noteProgress({ delta: '', restart: true })
+    noteProgress({ delta: 'the real one' })
+
+    expect(useAssistant.getState().streamed).toBe('the real one')
+  })
+
+  it('starts each round from nothing, so one round never reads as the next', async () => {
+    brain(answer({ say: 'done', calls: [] }))
+    useAssistant.setState({ streamed: 'left over', promptTokens: 99 })
+
+    await useAssistant.getState().say('hello')
+
+    expect(useAssistant.getState()).toMatchObject({ streamed: '', promptTokens: 0 })
   })
 })
 

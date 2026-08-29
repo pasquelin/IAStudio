@@ -5,6 +5,7 @@ import {
   refused,
   type AssistantCall,
   type AssistantModel,
+  type AssistantProgress,
 } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
@@ -17,8 +18,16 @@ import {
   type AssistantTurn,
 } from '@/assistant/conversation'
 import { closeTool } from '@/helpers/revealPanel'
+import { traceFailure } from '@/services/diagnostics'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
+
+/** What of a streamed answer is kept: only its tail is ever shown — see `noteProgress`. */
+const STREAM_TAIL = 240
+
+// One list, spread wherever a round starts over: written out per site, one of the three was
+// already missing from one of them and nothing on screen said so.
+const NOTHING_WRITTEN = { streamed: '', promptTokens: 0, replyTokens: 0 }
 
 /** A question on screen and the promise waiting on it — see `ask`. */
 type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) => void }
@@ -36,6 +45,16 @@ type AssistantState = {
   round: number
   /** Asked to stop between two rounds. Cleared when the turn ends, whichever way it ended. */
   stopping: boolean
+  /**
+   * What the model is writing THIS round, its tail only — see `STREAM_TAIL`. Raw JSON, and that
+   * is the point: what makes the wait readable is that it MOVES, not that it parses.
+   */
+  streamed: string
+  /** What this round's prompt cost and what its answer has cost. Zero where the door says nothing. */
+  promptTokens: number
+  replyTokens: number
+  /** One frame of what the model is writing — see `connectThoughtStream`. */
+  noteProgress: (progress: AssistantProgress) => void
   /** Asks the chain to stop after what is already running. Nothing in flight is undone. */
   stop: () => void
   asked: AssistantQuestion | null
@@ -119,6 +138,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   busy: false,
   round: 0,
   stopping: false,
+  ...NOTHING_WRITTEN,
   asked: null,
   spent: 0,
   seen: 0,
@@ -127,6 +147,19 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   hearing: false,
 
   setDraft: draft => set({ draft }),
+
+  noteProgress: progress =>
+    set(state => ({
+      // 🛑 Cut HERE and not at the render: only the tail is ever shown, and slicing a rope that
+      // has grown by one token flattens it — `[M]` 6,6 ms per frame at 8 000 tokens, 65,8 at
+      // 32 000. A restart still keeps what follows it, both arriving in one coalesced frame.
+      streamed: ((progress.restart === true ? '' : state.streamed) + progress.delta).slice(
+        -STREAM_TAIL,
+      ),
+      // Zero on a restart: what the attempt just thrown away cost is not what this one costs.
+      promptTokens: progress.promptTokens ?? (progress.restart === true ? 0 : state.promptTokens),
+      replyTokens: progress.replyTokens ?? (progress.restart === true ? 0 : state.replyTokens),
+    })),
 
   /**
    * Coming on screen IS reading — but only of what there is to read.
@@ -184,7 +217,15 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   stop: () => {
     // Only while there is something to stop: setting it idle would arm the next sentence with a
     // refusal it never asked for.
-    if (get().busy) set({ stopping: true })
+    if (!get().busy) return
+
+    set({ stopping: true })
+    // 🛑 Both halves: the flag ends the CHAIN between two rounds, and this ends the round in
+    // flight — a local model holds one for minutes at full tilt. Swallowed with a word, never
+    // bare: a rejected channel is an unhandled rejection, and there is nothing to await here.
+    void getBridge()
+      ?.assistant.stop()
+      .catch(reason => traceFailure('shell.dropped', 'assistant stop', reason))
   },
 
   say: async utterance => {
@@ -207,7 +248,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       // Every way out, including a throw from an IPC channel that genuinely rejects: unguarded,
       // one such throw left `busy` true for the rest of the session — the field disabled, the
       // spinner turning, nothing on screen saying why.
-      set({ busy: false, stopping: false, round: 0 })
+      set({ busy: false, stopping: false, round: 0, ...NOTHING_WRITTEN })
     }
 
     // Read, if a surface was there to read it: the other half of the `busy` guard in `show`.
@@ -242,7 +283,9 @@ async function chainOn(
   const ceiling = assistantStepsWithin(useSettings.getState().settings.assistant.steps)
 
   for (let round = 1; round <= ceiling; round += 1) {
-    set({ round })
+    // Emptied here and not when the answer lands: what a round wrote belongs to that round, and
+    // the actions it decided on run after it — with the words that decided them still on screen.
+    set({ round, ...NOTHING_WRITTEN })
 
     // The turn itself is in `turns`, so a round after the first reads what it has just done and
     // what each action answered. Left out of the FIRST, where it would only repeat the sentence
@@ -259,8 +302,9 @@ async function chainOn(
 
     if (!answer) {
       // A round that came back with nothing is the end of the chain: asking again would send the
-      // same request to the same door that just failed to answer it.
-      patch(set, id, { lost: true })
+      // same request to the same door that just failed to answer it. Cut on purpose it is not
+      // LOST — the person is the one who cut it, and reading "lost" back is reading a failure.
+      patch(set, id, get().stopping ? { ending: 'stopped' } : { lost: true })
       return
     }
 

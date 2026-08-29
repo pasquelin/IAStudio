@@ -1,10 +1,11 @@
 import type { AssistantThought } from '@shared/domain/assistant'
 import { log } from '@main/log'
 import type { ChatRequest, ChatTurn } from '@main/ai/localRuntimes'
-import type { AssistantBrain, NotReady } from './brainPort'
+import { defined } from '@shared/guards'
+import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
 import { answeredTurn, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
-import { promptWindow, roomFor, sentenceWithin } from './promptWindow'
+import { assistantWindow, promptWindow, roomFor, sentenceWithin } from './promptWindow'
 
 /**
  * The assistant's thinking, run on a model on this machine. Same catalogue and same parsing as the
@@ -42,13 +43,17 @@ function messagesFor(
 export function createLocalBrain({
   chat,
   modelId,
-  contextTokens,
+  contextTokens: declared,
   notReady,
 }: LocalBrainDeps): AssistantBrain {
+  // Once, here: this figure both sizes the briefing and becomes `num_ctx`, and capping only one
+  // of the two would either allocate a window nothing fills or compose a briefing nothing holds.
+  const contextTokens = assistantWindow(declared)
+
   const ask = async (
     request: AssistantThought,
     briefing: Briefing,
-    signal?: AbortSignal,
+    watch: TurnWatch,
     complaint?: string,
   ) => {
     // Cut to THIS window and no longer to Scenario's — `sentenceWithin` holds the arithmetic.
@@ -71,18 +76,20 @@ export function createLocalBrain({
         messages: messagesFor(briefing.text, window.history, said),
         contextTokens,
         json: true,
-        ...(signal ? { signal } : {}),
+        ...defined({ signal: watch.signal, onProgress: watch.onProgress }),
       }),
       cost: 0,
     }
   }
 
   return {
-    think: async (request, signal) => {
+    think: async (request, watch = {}) => {
       const briefing = await briefingFor(request, roomFor(contextTokens), notReady)
 
-      return await answeredTurn(briefing, (shown, complaint) =>
-        ask(request, shown, signal, complaint),
+      return await answeredTurn(
+        briefing,
+        (shown, complaint) => ask(request, shown, watch, complaint),
+        watch.onProgress,
       )
     },
   }

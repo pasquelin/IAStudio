@@ -536,8 +536,35 @@ describe('while the assistant is working', () => {
       busy: true,
       round,
       stopping,
+      streamed: '',
+      promptTokens: 0,
+      replyTokens: 0,
       turns: [{ id: 1, said: 'ouvre le voilier vert', answered: '', steps: [], lost: false }],
     })
+
+  /**
+   * 🛑 A local door answers in minutes and the thread showed a spinner alone: nothing said the
+   * model was writing rather than dead, and the only way to know was to watch the machine's fans.
+   */
+  it('shows what the model is writing, and its tail rather than its head', () => {
+    working(1)
+    useAssistant.setState({ streamed: `${'x'.repeat(400)}the last words` })
+    render(<AssistantConversation />)
+
+    expect(screen.getByText(/the last words/)).toBeInTheDocument()
+  })
+
+  // Grouped as the language groups them: a five-figure count read as one run of digits.
+  it('says what the round has cost, in the reader’s own digits', () => {
+    working(1)
+    useAssistant.setState({ promptTokens: 12_366, replyTokens: 18 })
+    render(<AssistantConversation />)
+
+    // 🛑 `\s` and not the separator itself: French groups with a narrow no-break space, which
+    // testing-library folds to an ordinary one before it compares.
+    const grouped = new Intl.NumberFormat('fr').format(12_366).replace(/\s/g, '\\s')
+    expect(screen.getByText(new RegExp(`${grouped}.*18`))).toBeInTheDocument()
+  })
 
   // In the thread and last of it, where the answer itself will appear: what one watches while
   // waiting is the place the words are going to land, never a line down by the field.

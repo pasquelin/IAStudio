@@ -1467,6 +1467,7 @@
     "placeholder": "Ouvre un fichier 3D, cherche un modèle, prépare une génération…",
     "send": "Envoyer",
     "sendHint": "Envoie la phrase à l’assistant, qui choisit les actions et les exécute",
+    "tokens": "{{prompt, number}} jetons lus · {{reply, number}} écrits",
     "thinking": "L’assistant réfléchit…",
     "workingRound": "L’assistant travaille — étape {{round}}",
     "stopping": "Arrêt demandé — le studio finit ce qui tourne…",

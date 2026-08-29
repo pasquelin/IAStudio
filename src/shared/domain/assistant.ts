@@ -1,3 +1,4 @@
+import { defined } from '../guards'
 import { englishText } from '../i18n'
 import type { Target } from './target'
 import { searchWords } from '../text'
@@ -212,6 +213,15 @@ export type AssistantThought = {
    */
   memories?: number
   /**
+   * Where this machine keeps a person's folders, absolute — `project.create` and `project.open`
+   * take an absolute path (`fileActions.ts`) and nothing else in the briefing spells one, so a
+   * model shown neither asked for the login name instead of acting.
+   *
+   * 🛑 Filled in the MAIN process, for the same reason as `context` and `state`: a renderer that
+   * could name a path is a renderer that could aim one.
+   */
+  folders?: string
+  /**
    * What the open document can be aimed at, narrowed by the window — see `target.ts`.
    *
    * Unlike `context` and `state` this one IS the renderer's to name: it describes its own window,
@@ -219,6 +229,41 @@ export type AssistantThought = {
    */
   targets?: readonly Target[]
 }
+
+/**
+ * What a turn is writing, as it writes it — the frames a window shows while the model works.
+ *
+ * Shared because it crosses the boundary unchanged: the runtime that produces it, the brain that
+ * relays it and the window that renders it read the same shape, and a second one would drift.
+ */
+export type AssistantProgress = {
+  /** What the model just wrote, to be appended. Empty on a frame that carries only the counts. */
+  delta: string
+  /** What the prompt cost. Absent until the door says, which is at the end of the answer. */
+  promptTokens?: number
+  /** What the answer has cost. Absent for a door that counts nothing. */
+  replyTokens?: number
+  /**
+   * A new attempt is starting: what was shown so far belongs to an answer that was thrown away.
+   * One sentence may cost four round trips (`TURN_ATTEMPTS`), and appending them reads as one
+   * long answer contradicting itself.
+   */
+  restart?: boolean
+}
+
+/**
+ * 🛑 Nothing to report is `null`, never an empty frame: a door sends protocol frames of its own —
+ * `ping`, `content_block_start`, `message_stop` — and each one relayed is an IPC message and a
+ * render for no words.
+ */
+export const assistantProgress = (
+  delta: string,
+  promptTokens?: number,
+  replyTokens?: number,
+): AssistantProgress | null =>
+  delta === '' && promptTokens === undefined && replyTokens === undefined
+    ? null
+    : { delta, ...defined({ promptTokens, replyTokens }) }
 
 export type AssistantAnswer = {
   /** What to say to the person. Empty when the actions speak for themselves. */

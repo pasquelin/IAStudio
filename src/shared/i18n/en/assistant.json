@@ -1467,6 +1467,7 @@
     "placeholder": "Open a 3D file, find a model, prepare a generation…",
     "send": "Send",
     "sendHint": "Sends the sentence to the assistant, which picks the actions and runs them",
+    "tokens": "{{prompt, number}} tokens read · {{reply, number}} written",
     "thinking": "The assistant is thinking…",
     "workingRound": "The assistant is working — step {{round}}",
     "stopping": "Stopping — the studio is finishing what is running…",

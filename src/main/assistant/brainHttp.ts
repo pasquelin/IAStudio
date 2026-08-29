@@ -4,7 +4,8 @@ import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
-import type { AssistantBrain, NotReady } from './brainPort'
+import { defined } from '@shared/guards'
+import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
 import { answeredTurn, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
 import { roomFor } from './promptWindow'
@@ -71,7 +72,7 @@ export function createHttpChatBrain({
   const round = async (
     request: AssistantThought,
     briefing: Briefing,
-    signal?: AbortSignal,
+    watch: TurnWatch,
     complaint?: string,
   ) => {
     const held = credentials()
@@ -96,7 +97,7 @@ export function createHttpChatBrain({
           messages,
           json: true,
           maxTokens: ASK_TOKENS,
-          ...(signal ? { signal } : {}),
+          ...defined({ signal: watch.signal, onProgress: watch.onProgress }),
         },
         send,
       )
@@ -109,7 +110,7 @@ export function createHttpChatBrain({
   }
 
   return {
-    think: async (request, signal) => {
+    think: async (request, watch = {}) => {
       // Once this door has refused the whole catalogue and answered the short one, it is asked
       // narrow from the start: the wide briefing is 70 000 characters it would refuse again.
       const briefing = await briefingFor(
@@ -119,8 +120,10 @@ export function createHttpChatBrain({
         roomFor(CLOUD_FALLBACK_TOKENS),
       )
 
-      return await answeredTurn(briefing, (shown, complaint) =>
-        round(request, shown, signal, complaint),
+      return await answeredTurn(
+        briefing,
+        (shown, complaint) => round(request, shown, watch, complaint),
+        watch.onProgress,
       )
     },
   }

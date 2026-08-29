@@ -168,7 +168,12 @@ export type JobManager = {
    * The job carries the API's own asset ids rather than local ones, because nothing was
    * downloaded: the answer is read from the asset itself.
    */
-  run: (target: JobTarget, label: string, body: Record<string, unknown>) => Promise<Job>
+  run: (
+    target: JobTarget,
+    label: string,
+    body: Record<string, unknown>,
+    signal?: AbortSignal,
+  ) => Promise<Job>
   cancel: (jobId: string) => Promise<void>
   list: () => Job[]
   /**
@@ -790,12 +795,72 @@ export function createJobManager({
     return job
   }
 
+  async function cancelJob(jobId: string): Promise<void> {
+    const entry = entries.get(jobId)
+    if (!entry || isFinished(entry.job.status)) return
+    // Asked twice — a double click, two windows on one project — and the first is still in
+    // flight: everything up to the API call is synchronous, so the second would find the job
+    // gone from the queue, fall through to the running branch, and spend a second cancel on
+    // the same job. Whoever is following it will try again from `entry.cancelled` if the API
+    // refuses this one.
+    if (entry.cancelled) return
+
+    entry.cancelled = true
+
+    // Out of the queue first, so nothing picks it up while the API is being told.
+    const position = queue.indexOf(jobId)
+    if (position >= 0) {
+      queue.splice(position, 1)
+
+      const { account, remoteId } = entry
+      // Queued is not the same as never submitted: a job resumed from a previous session waits
+      // its turn with a remote id already set. Dropped from the queue alone, it would keep
+      // running and being charged for — and `settle` releases the account, so nothing left in
+      // the studio could ever cancel it.
+      if (account && remoteId) return await abandon(entry, account, remoteId)
+
+      settle(entry, 'cancelled')
+      return
+    }
+
+    // On the account that submitted it, whichever one is active now. The note goes with the
+    // API taking it, and not before: refused, the job is still running and still being paid
+    // for, so it has to outlive the session that gave up on it.
+    // 🛑 Read out FIRST because `?.` short-circuited the WHOLE chain: an entry with no account
+    // never reached the two lines below, and a `try` around `runner?.cancel(…)` would run them.
+    // No real entry seems to get here — a `remoteId` implies an account — but this keeps the
+    // rewrite from betting on it, and the suite is green either way.
+    const runner = entry.account?.runner
+    if (entry.remoteId && runner) {
+      try {
+        await runner.cancel(entry.remoteId)
+        entry.done = true
+        remember()
+      } catch {
+        // Same as `abandon`: refused, the job outlives the session that gave up on it.
+      }
+    }
+  }
+
+  // 🛑 An already-aborted signal is not an edge: a stop pressed while the queue was full arrives
+  // before this job is submitted, and a listener alone would never hear it.
+  function watchForAbort(jobId: string, signal?: AbortSignal): void {
+    if (!signal) return
+    if (signal.aborted) void cancelJob(jobId)
+    else signal.addEventListener('abort', () => void cancelJob(jobId), { once: true })
+  }
+
   return {
     submit: (target, label, body, authored) =>
       enqueue(target, label, body, false, null, authored ?? null),
 
-    run: (target, label, body) =>
-      new Promise<Job>(resolve => void enqueue(target, label, body, true, resolve, null)),
+    run: (target, label, body, signal) =>
+      new Promise<Job>(resolve => {
+        const job = enqueue(target, label, body, true, resolve, null)
+        // 🛑 The id exists only once it is queued, so the stop is armed HERE and nowhere higher:
+        // the assistant's stop must reach a billed job that nobody is watching any more.
+        watchForAbort(job.id, signal)
+      }),
 
     resume: stored => {
       let added = false
@@ -844,52 +909,7 @@ export function createJobManager({
       pump()
     },
 
-    cancel: async jobId => {
-      const entry = entries.get(jobId)
-      if (!entry || isFinished(entry.job.status)) return
-      // Asked twice — a double click, two windows on one project — and the first is still in
-      // flight: everything up to the API call is synchronous, so the second would find the job
-      // gone from the queue, fall through to the running branch, and spend a second cancel on
-      // the same job. Whoever is following it will try again from `entry.cancelled` if the API
-      // refuses this one.
-      if (entry.cancelled) return
-
-      entry.cancelled = true
-
-      // Out of the queue first, so nothing picks it up while the API is being told.
-      const position = queue.indexOf(jobId)
-      if (position >= 0) {
-        queue.splice(position, 1)
-
-        const { account, remoteId } = entry
-        // Queued is not the same as never submitted: a job resumed from a previous session waits
-        // its turn with a remote id already set. Dropped from the queue alone, it would keep
-        // running and being charged for — and `settle` releases the account, so nothing left in
-        // the studio could ever cancel it.
-        if (account && remoteId) return await abandon(entry, account, remoteId)
-
-        settle(entry, 'cancelled')
-        return
-      }
-
-      // On the account that submitted it, whichever one is active now. The note goes with the
-      // API taking it, and not before: refused, the job is still running and still being paid
-      // for, so it has to outlive the session that gave up on it.
-      // 🛑 Read out FIRST because `?.` short-circuited the WHOLE chain: an entry with no account
-      // never reached the two lines below, and a `try` around `runner?.cancel(…)` would run them.
-      // No real entry seems to get here — a `remoteId` implies an account — but this keeps the
-      // rewrite from betting on it, and the suite is green either way.
-      const runner = entry.account?.runner
-      if (entry.remoteId && runner) {
-        try {
-          await runner.cancel(entry.remoteId)
-          entry.done = true
-          remember()
-        } catch {
-          // Same as `abandon`: refused, the job outlives the session that gave up on it.
-        }
-      }
-    },
+    cancel: cancelJob,
 
     list: listed,
 

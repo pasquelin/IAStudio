@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { connectRemoteActions } from '@/assistant/remoteActions'
+import { connectThoughtStream } from '@/assistant/thoughtStream'
 import { useAccountChange } from '@/hooks/useAccountChange'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useMainLogs } from '@/hooks/useMainLogs'
@@ -104,6 +105,7 @@ export function Application() {
   // An action asked for from outside the application lands on the same gate the modal uses, so
   // a generation started from a terminal still asks on this screen before it spends.
   useEffect(() => connectRemoteActions(), [])
+  useEffect(() => connectThoughtStream(), [])
 
   // Same reason again: a scene selects from four doors — the outliner, the viewport, the node
   // panels and its own COMMANDS — and only the inspector needs to hear about all four.

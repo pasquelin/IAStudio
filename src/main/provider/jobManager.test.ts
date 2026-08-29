@@ -1607,6 +1607,47 @@ describe('a job nobody asked to see', () => {
     expect(job.assetIds).toEqual(['asset_reply'])
   })
 
+  /**
+   * 🛑 The assistant's stop must reach a job that is BILLED and that nobody is watching: without
+   * this, pressing stop left the sentence running to its end and paid for it.
+   */
+  it('is cancelled by the signal the caller armed it with', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    const { manager } = harness({
+      runner: {
+        cancel,
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => new Promise(() => {}),
+      },
+    })
+    const stopping = new AbortController()
+
+    void manager.run({ id: 'model_scenario-llm' }, 'Assistant', {}, stopping.signal)
+    await settled()
+    stopping.abort()
+    await settled()
+
+    expect(cancel).toHaveBeenCalled()
+  })
+
+  // A stop pressed while the queue was full arrives before the job is ever submitted.
+  it('is cancelled by a signal that was already aborted when it was queued', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    const { manager } = harness({
+      runner: {
+        cancel,
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => new Promise(() => {}),
+      },
+    })
+    const stopping = new AbortController()
+    stopping.abort()
+
+    const job = await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {}, stopping.signal)
+
+    expect(job.status).toBe('cancelled')
+  })
+
   it('never reaches the jobs bar', async () => {
     const { manager, progress, announced } = harness()
 

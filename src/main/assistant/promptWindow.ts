@@ -21,6 +21,17 @@ const REPLY_TOKENS = 1024
  */
 const TURN_TOKENS = 700
 
+/**
+ * `[M]` The window the assistant ASKS for, however large the model's own is. Measured 2026-08-29:
+ * a 262 144 window composes a 90 298-character briefing — 281 actions, ~30 100 tokens re-read on
+ * EVERY round — where 8 192 composes 7 098 and reaches the rest through `actions.find`.
+ */
+export const ASSISTANT_WINDOW_MAX = 8_192
+
+/** A model's window, capped to what one turn is worth. Never above what the model itself holds. */
+export const assistantWindow = (contextTokens: number): number =>
+  Math.min(contextTokens, ASSISTANT_WINDOW_MAX)
+
 const estimatedTokens = (text: string): number => Math.ceil(text.length / CHARS_PER_TOKEN)
 
 /**

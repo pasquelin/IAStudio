@@ -133,11 +133,15 @@ export function registerIpc(services: Services): void {
     newFavoriteId: () => `favorite_${randomUUID()}`,
     now: () => new Date().toISOString(),
   })
+  // One table for every long task of this process: the caller names it, this side runs it under
+  // that name, and the stop reaches it by the same name. Built here so no handler owns the door.
+  const running = createRunningTasks()
   registerStyleHandlers(services.styles)
   registerMediaHandlers(services)
   registerAssistantHandlers({
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
+    running,
   })
   registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
   registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
@@ -150,9 +154,6 @@ export function registerIpc(services: Services): void {
   registerPostPresetHandlers(services)
   registerExportHandlers(services)
   registerGameExportHandler(services)
-  // One table for both: the window names a task, this side runs it under that name, and the stop
-  // button reaches it by the same name. Built here so neither handler owns the other's door.
-  const running = createRunningTasks()
   registerMontageHandlers({ ...services, running })
   // The same table both ways: an unpack is as long as a pack, and the stop button is one button.
   registerMontageImportHandlers({ ...services, running })

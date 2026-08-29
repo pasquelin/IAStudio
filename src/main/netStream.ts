@@ -27,3 +27,23 @@ export async function* chunksOf(
     reader.releaseLock()
   }
 }
+
+/**
+ * The same body, cut into lines — every streaming door here answers one object per line. A tail
+ * with no newline is held to the end, where it is the last frame rather than a loss.
+ */
+export async function* linesOf(body: ReadableStream<Uint8Array> | null): AsyncIterable<string> {
+  const decoder = new TextDecoder()
+  let rest = ''
+
+  function* linesIn(text: string, last: boolean): Iterable<string> {
+    const lines = (rest + text).split('\n')
+    rest = last ? '' : (lines.pop() ?? '')
+    yield* lines
+  }
+
+  for await (const chunk of chunksOf(body)) {
+    yield* linesIn(decoder.decode(chunk, { stream: true }), false)
+  }
+  yield* linesIn(decoder.decode(), true)
+}

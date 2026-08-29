@@ -280,6 +280,8 @@ export type BriefingParts = {
    * thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
    */
   memories?: number
+  /** Where this machine keeps a person's folders, absolute — see `AssistantThought.folders`. */
+  folders?: string
   /** What the open document can be aimed at, narrowed by the window — see `target.ts`. */
   targets?: readonly Target[]
   /**
@@ -361,14 +363,16 @@ function briefingText(
    * against a room of 8 000, and the catalogue is the one part that never gives ground.
    */
   const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
-  return composed(
-    { ...parts, context: linesWithin(parts.context ?? '', room) },
-    catalogue,
-    rules,
-    found,
-    short,
-    aimed,
-  )
+  const trimmedContext = { ...parts, context: linesWithin(parts.context ?? '', room) }
+  const last = composed(trimmedContext, catalogue, rules, found, short, aimed)
+  if (last.length <= parts.room) return last
+
+  /**
+   * 🛑 `[M]` The folders go WHOLE or not at all, and they are the last thing to go: at 4 096
+   * tokens — what every Ollama tag declares — the short catalogue alone runs 7 098 against a room
+   * of 7 116, so the 137-character block overruns by 146 with nothing else left to give.
+   */
+  return composed({ ...trimmedContext, folders: '' }, catalogue, rules, found, short, aimed)
 }
 
 function targetsWithin(targets: readonly Target[], over: number): readonly Target[] {
@@ -398,6 +402,9 @@ function composed(
   // Before the catalogue rather than after it: what the project IS frames every action the model
   // might pick, where a note under the list reads as a footnote to the last one.
   const about = parts.context ? ['Project context:', parts.context, ''] : []
+  // Before the catalogue, with the rest of what is TRUE of this machine: read after the actions
+  // it serves, an absolute path reads as an example rather than as this person's own folder.
+  const where = parts.folders ? ['Folders on this machine:', parts.folders, ''] : []
   const now = state ? [state, ''] : []
   // After the catalogue rather than before it: `target.select` is what these ids are for, and a
   // list read before the action that consumes them reads as facts about nothing.
@@ -410,6 +417,7 @@ function composed(
     roleWith(rules),
     '',
     ...about,
+    ...where,
     ...now,
     ...idle,
     'Catalogue:',
@@ -537,6 +545,7 @@ export async function briefingFor(
     continuing: request.continuing === true,
     notReady: await notReady?.(),
     context: request.context,
+    folders: request.folders,
     memories: request.memories,
     state: request.state,
     targets: request.targets,

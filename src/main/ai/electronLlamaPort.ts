@@ -151,6 +151,11 @@ export function electronLlamaPort(): LlamaPort {
           ...(request.topP === undefined ? {} : { topP: request.topP }),
           ...(request.maxTokens === undefined ? {} : { maxTokens: request.maxTokens }),
           ...(request.signal ? { signal: request.signal } : {}),
+          // Text and not tokens: `onToken` hands back ids this port would have to detokenise,
+          // and what a window shows is words. No count — this door publishes none.
+          ...(request.onProgress
+            ? { onTextChunk: (delta: string) => request.onProgress?.({ delta }) }
+            : {}),
           // A grammar for JSON at large, never the assistant's own shape: a port that knew what
           // `say` and `calls` are would be a port that only one caller could use.
           ...(request.json ? { grammar: await jsonGrammar() } : {}),
