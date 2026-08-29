@@ -103,19 +103,14 @@ export const familyOfAction: ReadonlyMap<string, string> = new Map(
 )
 
 /**
- * The share of the registry one door offers. `mcp` is everything; `both` is the short list.
+ * What one door carries: what is marked for it, plus what every door shares.
  *
- * A `switch` rather than a ternary: `reach === 'mcp' ? ALL : …` made publishing EVERYTHING the
- * fallback, so a third value would have gone out on the MCP wire with nothing red. Here it leaves
- * the function without a return path, and the compiler says so.
+ * 🛑 Marked-for-it and never a fallback: publishing EVERYTHING by default is what would send a
+ * fourth reach out on the MCP wire with nothing red. `window` is out of `'mcp'` by this rule
+ * alone — and the LISTING is only half of it, see `remoteActions.ts`.
  */
 export function actionsReaching(reach: ActionReach): readonly AssistantAction[] {
-  switch (reach) {
-    case 'both':
-      return ACTION_REGISTRY.filter(entry => entry.reach === 'both')
-    case 'mcp':
-      return ACTION_REGISTRY
-  }
+  return ACTION_REGISTRY.filter(entry => entry.reach === 'both' || entry.reach === reach)
 }
 
 /**
@@ -165,6 +160,9 @@ const scoreOf = (wanted: readonly string[], found: readonly string[]): number =>
  * of what they search, and a name spelled twice is a name that drifts.
  */
 export const DISCOVERY_ACTION: ActionName = 'actions.find'
+
+/** The one action that asks the PERSON — named by a rule rather than listed, for the same reason. */
+export const ASK_ACTION: ActionName = 'chat.ask'
 
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }

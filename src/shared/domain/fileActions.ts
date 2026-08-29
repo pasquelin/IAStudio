@@ -5,8 +5,9 @@ import { action, type ActionField, type AssistantAction } from './assistantActio
  *
  * Paths are relative to the project root with `/` between segments on every platform — the same
  * spelling `FolderEntry` uses, so a listing's `path` is what every other action here takes.
- * `project.open` and `project.create` are the exception and take an absolute one: there is no
- * project yet to be relative to.
+ * `project.open` takes an absolute one: there is no project yet to be relative to. So does
+ * `project.create` — but a NAME is enough there, and the studio puts it where this person keeps
+ * projects: asked for a path, a model asked the person to type one.
  *
  * The native pickers stay where they are. `project.new` and `project.open` as COMMANDS raise a
  * system dialog nobody outside the machine can fill, so a client that called them would hang the

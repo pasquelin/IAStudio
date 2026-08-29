@@ -3,6 +3,7 @@ import type { AccountSummary } from './account'
 import {
   listedAt,
   planProjectAccount,
+  projectPathFor,
   projectPickerFolder,
   landedInDefaultFolder,
   projectsByCreation,
@@ -283,5 +284,30 @@ describe('an asset filed in the default folder of its kind', () => {
   // An asset linked where the user left it, or one that lives in the library alone.
   it('is not an asset with no file in the project', () => {
     expect(landedInDefaultFolder(undefined, 'Images')).toBe(false)
+  })
+})
+
+describe('projectPathFor', () => {
+  it('puts a bare name under the projects folder', () => {
+    expect(projectPathFor('test3', '/Users/x/Projets')).toBe('/Users/x/Projets/test3')
+  })
+
+  /**
+   * 🛑 The main process only checks that what it receives is ABSOLUTE, and `..` passes that: the
+   * folder was created outside the projects folder, on a yes that never named it.
+   */
+  it('refuses a name that would leave the folder it is put in', () => {
+    expect(projectPathFor('../Secret', '/Users/x/Projets')).toBeUndefined()
+    expect(projectPathFor('a/b', '/Users/x/Projets')).toBeUndefined()
+    expect(projectPathFor('~/ailleurs', '/Users/x/Projets')).toBeUndefined()
+  })
+
+  it('leaves an absolute path where it points', () => {
+    expect(projectPathFor('/tmp/Ailleurs', '/Users/x/Projets')).toBe('/tmp/Ailleurs')
+  })
+
+  // The first project of a machine: no folder is known, so nothing can be composed.
+  it('answers nothing where no folder is known', () => {
+    expect(projectPathFor('test3', undefined)).toBeUndefined()
   })
 })

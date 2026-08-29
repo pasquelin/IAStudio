@@ -1,5 +1,7 @@
 import {
+  ACTION_REGISTRY,
   actionsReaching,
+  ASK_ACTION,
   DISCOVERY_ACTION,
   familyOfAction,
   findActions,
@@ -91,21 +93,27 @@ let wholeHeld: Share | null = null
 let shortHeld: Share | null = null
 
 const wholeShare = (): Share =>
-  // Dropped from the wide list on purpose: a model shown everything has nothing left to find.
+  /**
+   * 🛑 The REGISTRY, never `actionsReaching('mcp')`: that one answers what the WIRE carries, and
+   * a door with room must be shown what the window can do — `chat.ask` included, or the studio
+   * could ask with buttons on a small model and not on a large one.
+   */
   (wholeHeld ??= shareOf(
-    actionsReaching('mcp').filter(action => action.name !== DISCOVERY_ACTION),
+    ACTION_REGISTRY.filter(action => action.name !== DISCOVERY_ACTION),
     true,
   ))
 
 /**
- * The spoken vocabulary, MINUS the discovery action: `FIND_RULE` already spells that call whole,
- * and a block describing it a second time is 165 characters the sentence pays for. It stays in
- * `allowed`, because being unlisted is not the same as being refused.
+ * The spoken vocabulary, MINUS the two actions a RULE already spells whole — describing either a
+ * second time costs characters this share does not have. Both stay in `allowed`: being unlisted
+ * is not the same as being refused, and `parseReply` refuses a reply naming anything else.
  */
+const UNLISTED: readonly ActionName[] = [DISCOVERY_ACTION, ASK_ACTION]
+
 const shortShare = (): Share =>
   (shortHeld ??= {
-    ...shareOf(actionsReaching('both').filter(one => one.name !== DISCOVERY_ACTION)),
-    allowed: namesOf(actionsReaching('both')),
+    ...shareOf(actionsReaching('both').filter(one => !UNLISTED.includes(one.name))),
+    allowed: namesOf(actionsReaching('window')),
   })
 
 /**
@@ -223,6 +231,15 @@ const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTION} answ
 
 /** The same, for a door shown a catalogue that does not hold it — `FIND_RULE` is how it gets it. */
 const MEMORY_FIND = '  - This project has a memory: search "memory" to reach what reads it.'
+
+/**
+ * 🛑 A SIGNAL and not a rule: it gives ground with the memory line when the room runs out, and
+ * the studio then reads as it did before — the question goes in "say" and costs a round of
+ * typing. Named rather than listed, for the reason `FIND_RULE` is: the block costs 373 characters.
+ */
+const ASK_SIGNAL =
+  `  - To ask WITH answers to press: {"action":"${ASK_ACTION}",` +
+  `"input":{"question":"…","choices":["a","b"]}}. What is pressed comes back next step.`
 
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */
 const FIND_RULE =
@@ -515,12 +532,10 @@ function narrowBriefing(declared: BriefingParts): Briefing {
   const short = shortShare()
 
   return {
-    text: composedWithSignal(
-      parts,
-      short.text,
-      NARROW_RULES,
-      memorySignal(parts, short.allowed, true),
-    ),
+    text: composedWithSignal(parts, short.text, NARROW_RULES, [
+      ...memorySignal(parts, short.allowed, true),
+      ASK_SIGNAL,
+    ]),
     allowed: short.allowed,
     // Offered once, and only from here: an expansion of an expansion is a conversation with
     // itself, paid for by the person waiting — see `expandedWith`.

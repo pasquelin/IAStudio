@@ -176,6 +176,37 @@ function parentFolder(path: string): string | undefined {
 }
 
 /**
+ * Whether a path names a place on this disk, or only a folder to be put somewhere.
+ *
+ * 🛑 Both shapes, and Windows too: a model that answers `test3` means a NAME, and one that
+ * answers `C:\\Projets\\test3` or `/Users/…/test3` means a place. Read wrong either way, the
+ * studio writes a project where nobody asked for one.
+ */
+function isAbsolutePath(path: string): boolean {
+  return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\')
+}
+
+/**
+ * Where a project called `name` goes when the model named no place: under the folder this person
+ * keeps projects in. Nothing where none is known yet, which is the first project of a machine.
+ */
+export function projectPathFor(name: string, within: string | undefined): string | undefined {
+  if (isAbsolutePath(name)) return name
+  if (!within) return undefined
+
+  /**
+   * 🛑 A NAME, never a path: `../Secret` joined to the projects folder leaves it, and the main
+   * process only checks that what it receives is absolute — `..` passes that. A model that means
+   * somewhere else says so absolutely, where a person can read it in the question.
+   */
+  if (/[\\/]/.test(name) || name.split(/[\\/]/).includes('..') || name.startsWith('~')) {
+    return undefined
+  }
+
+  return `${within.replace(/[\\/]$/, '')}/${name}`
+}
+
+/**
  * The list after a project has been opened: most recently opened first, one entry per path,
  * bounded. This is STORAGE order — what gets evicted — and not what any screen draws; see
  * `projectsByCreation`.

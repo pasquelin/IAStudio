@@ -1,11 +1,13 @@
 import { refused, type ActionOutcome, type ActionRefusal } from '@shared/domain/assistant'
 import { documentExtensionOf, isDocumentExtension } from '@shared/domain/document'
 import { FOLDER_ROOT } from '@shared/domain/folder'
+import { projectPathFor, projectPickerFolder } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { openProjectFile, type FileOpening } from '@/helpers/openProjectFile'
 import { documentAtPath, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, textOf, textsOf } from './actionInputs'
 
@@ -117,8 +119,19 @@ async function closeProject(): Promise<ActionOutcome> {
 }
 
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
-  const path = textOf(input, 'path')
-  if (path === null) return refused('badInput')
+  const asked = textOf(input, 'path')
+  if (asked === null) return refused('badInput')
+
+  /**
+   * 🛑 A NAME is enough, and that is the whole point: asked for an absolute path, the model asked
+   * the person for one — which is a line nobody wants to type. Where this machine keeps projects
+   * is the studio's to know, never the model's.
+   */
+  const { projectsFolder, recentProjects } = useSettings.getState().settings.storage
+  const path = projectPathFor(asked, projectPickerFolder(projectsFolder, recentProjects))
+  // The first project of a machine: nothing has been created yet, so there is no folder to put a
+  // name under. Answered rather than guessed — `~/Documents` is a place nobody asked for.
+  if (path === undefined) return refused('badInput')
 
   // Through the store, which is what makes this the FOURTH way out of a project rather than the
   // one that slipped past its questions: it left the open project without asking about the

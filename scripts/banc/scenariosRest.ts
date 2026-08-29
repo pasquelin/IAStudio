@@ -260,6 +260,15 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     said: ['Décris-moi le style de mon image du bateau, en une phrase réutilisable comme prompt.'],
     passed: run => read.spoke(run) && read.answeredWith(run, 'prompt.describeStyle'),
   },
+  {
+    /**
+     * 🛑 The QUESTION is what is measured, not the answer: written into a `say` it costs the
+     * person a round of typing, where a pressed button comes back as this action's outcome.
+     */
+    name: '45.8 asks which space to work in, offering the three',
+    said: ['Demande-moi dans quel espace travailler, en me proposant Image, Vidéo ou Audio.'],
+    passed: run => read.answeredWith(run, 'chat.ask'),
+  },
 
   {
     name: '46.1 turns the cube into a cylinder',

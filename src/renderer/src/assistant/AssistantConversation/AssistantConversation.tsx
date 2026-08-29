@@ -34,6 +34,7 @@ import { registerChatPanel } from '../chatPanel'
 import { ASSISTANT_STARTERS, starterKey } from '../starters'
 import { AssistantConversationSuggestions, suggestionId } from './AssistantConversationSuggestions'
 import { AssistantConversationPicker } from './AssistantConversationPicker'
+import { AssistantConversationChoice } from './AssistantConversationChoice'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
 import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
@@ -74,6 +75,7 @@ export function AssistantConversation() {
   const replyTokens = useAssistant(state => state.replyTokens)
   const stop = useAssistant(state => state.stop)
   const asked = useAssistant(state => state.asked)
+  const choosing = useAssistant(state => state.choosing)
   const micOpen = useDictation(store => store.state === 'listening')
   const draft = useAssistant(state => state.draft)
   const setDraft = useAssistant(state => state.setDraft)
@@ -328,7 +330,7 @@ export function AssistantConversation() {
 
           {/* IN the thread, last of it — where the answer itself will appear, and never down by
               the field: what one watches while waiting is the place the words will land. */}
-          {busy && !asked && (
+          {busy && !asked && !choosing && (
             <li className="text-muted text-mini m-0 flex flex-col gap-1.5">
               <span className="flex items-center gap-1.5">
                 <Spinner label={t('assistant.thinking')} size={14} />
@@ -350,6 +352,7 @@ export function AssistantConversation() {
       )}
 
       {asked && <AssistantConversationQuestion request={asked.request} />}
+      {choosing && <AssistantConversationChoice {...choosing} />}
 
       {/* The running hypothesis, above the field it will land in. The label is what makes it
           this window's: it says where the words are going, which "Listening…" does not — the

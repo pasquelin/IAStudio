@@ -218,6 +218,12 @@ export type CommandDescriptor = {
    */
   defaultBinding: Signature | null
   /**
+   * 🛑 It raises a system dialogue, so `command.run` refuses it: the assistant cannot fill a
+   * native modal, cannot read what was chosen in it, and re-ran the command on its next round —
+   * a second Finder over the first. The action taking a path is what does this deliberately.
+   */
+  raisesDialog?: true
+  /**
    * Held rather than tapped: it reports pressed and released instead of firing once.
    *
    * A held command is heard by the window even when its scope is `global`, which is the one
@@ -239,6 +245,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'project.new',
     scope: 'global',
+    raisesDialog: true,
     titleKey: 'commands.projectNew.title',
     helpKey: 'commands.projectNew.help',
     defaultBinding: 'Meta+KeyN',
@@ -246,6 +253,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'project.open',
     scope: 'global',
+    raisesDialog: true,
     titleKey: 'commands.projectOpen.title',
     helpKey: 'commands.projectOpen.help',
     defaultBinding: 'Meta+KeyO',
@@ -269,6 +277,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'montage.import',
     scope: 'global',
+    raisesDialog: true,
     titleKey: 'commands.montageImport.title',
     helpKey: 'commands.montageImport.help',
     defaultBinding: null,
@@ -994,6 +1003,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'canvas.export',
     scope: 'canvas',
+    raisesDialog: true,
     titleKey: 'commands.canvasExport.title',
     helpKey: 'commands.canvasExport.help',
     defaultBinding: 'Shift+Meta+KeyE',
@@ -1002,6 +1012,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     /** The stack rather than the flatten — no default binding, ⇧⌘E being the flatten's. */
     id: 'canvas.exportLayered',
     scope: 'canvas',
+    raisesDialog: true,
     titleKey: 'commands.canvasExportLayered.title',
     helpKey: 'commands.canvasExportLayered.help',
     defaultBinding: null,

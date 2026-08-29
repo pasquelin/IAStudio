@@ -23,10 +23,11 @@ rend « on en est où ? » répondable.
 
 ## Ce que la batterie mesure
 
-Le registre publie **230 actions**, et **toutes** partent sur le fil MCP : `mcpTools()` liste
-`actionsReaching('mcp')`, qui est le registre entier. `coverage.ts` dit, action par action, quelle
-demande l'exerce — **les 230 en ont une**, et il n'y a plus rien à modéliser : le banc appelle
-`runConfirmedAction`, la porte que la fenêtre ET le serveur MCP franchissent.
+Le banc appelle `runConfirmedAction`, la porte que la fenêtre ET le serveur MCP franchissent, donc
+il mesure le registre **entier** — y compris ce que le fil MCP ne porte pas. `coverage.ts` dit,
+action par action, quelle demande l'exerce, et le compilateur refuse une action qui n'y répond pas.
+**Le compte se rejoue, il ne se recopie pas** : `reach: 'window'` en retire du fil, et une action
+neuve l'ajoute des deux côtés.
 
 🛑 **Un outil qu'aucune phrase n'atteint est un outil que personne n'a vu marcher.** La table est
 un `Record<ActionName, …>` : une action ajoutée au registre **ne compile plus** tant qu'elle n'y
@@ -719,6 +720,7 @@ Après une génération lancée :
 - [ ] « Propose-moi trois prompts pour générer un port au coucher du soleil. »
 - [x] « Traduis ce prompt en anglais avant de le lancer : un bateau en bois sur une mer calme. »
 - [ ] « Décris-moi le style de mon image du bateau, en une phrase réutilisable comme prompt. »
+- [ ] « Demande-moi dans quel espace travailler, en me proposant Image, Vidéo ou Audio. »
 
 ## 46. Formes, chemins et texte 3D
 

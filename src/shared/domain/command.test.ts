@@ -260,3 +260,22 @@ describe('the scope a document edits through', () => {
     expect(scopeOfWorkspace(null, 'gui')).toBeNull()
   })
 })
+
+describe('the commands that raise a system dialogue', () => {
+  /**
+   * 🛑 A LIST, and it is an opt-in flag on 131 entries: written out so a sixth dialogue shows up
+   * here as a name rather than as a count nobody can act on. **Blind spot**: nothing detects a
+   * command that starts raising one later — this list is held by reading, not by the machine.
+   */
+  it('names the five, so a sixth is a change somebody has to make on purpose', () => {
+    const raising = COMMAND_REGISTRY.filter(one => one.raisesDialog).map(one => one.id)
+
+    expect([...raising].sort()).toEqual([
+      'canvas.export',
+      'canvas.exportLayered',
+      'montage.import',
+      'project.new',
+      'project.open',
+    ])
+  })
+})

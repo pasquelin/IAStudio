@@ -71,6 +71,38 @@ beforeEach(() => {
   })
 })
 
+describe('a question the model asked', () => {
+  /**
+   * 🛑 « Laisser tomber » ENDS the chain, which is what the button promises. Read as an ordinary
+   * refusal, the model was handed "declined" and asked again on the next BILLED round.
+   */
+  it('ends the chain when the person lets the question go', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: false, refusal: 'declined' })
+    brain(answer({ say: 'Où ?', calls: [{ action: 'chat.ask', input: {} }] }), answer())
+
+    await useAssistant.getState().say('crée un projet')
+
+    expect(useAssistant.getState().turns[0]).toMatchObject({ ending: 'stopped' })
+    expect(runConfirmedAction).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * 🛑 The chain parks inside the action while the card stands: unsettled by the stop, the field
+   * stays disabled and Stop greys itself out — the only way out was answering the question one
+   * had just asked to stop.
+   */
+  it('settles the question the stop is stopping', async () => {
+    installFakeBridge({ assistant: { stop: () => Promise.resolve() } })
+    useAssistant.setState({ busy: true })
+    const answered = useAssistant.getState().askChoice('Où ?', ['Image'])
+
+    useAssistant.getState().stop()
+
+    await expect(answered).resolves.toBeNull()
+    expect(useAssistant.getState().choosing).toBeNull()
+  })
+})
+
 describe('stopping a sentence', () => {
   /**
    * 🛑 Both halves: the flag ends the chain BETWEEN two rounds, and a local model holds one round

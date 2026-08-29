@@ -18,12 +18,27 @@ const frenchText = (key: string): string => {
 }
 
 describe('the registry, published as tools', () => {
-  it('offers every action, and nothing else', () => {
+  it('offers every action of the wire, and nothing else', () => {
+    const carried = ACTION_REGISTRY.filter(action => action.reach !== 'window')
+
     expect(
       mcpTools()
         .map(tool => tool.name)
         .sort(),
-    ).toEqual(ACTION_REGISTRY.map(action => toolName(action.name)).sort())
+    ).toEqual(carried.map(action => toolName(action.name)).sort())
+  })
+
+  /**
+   * 🛑 `reach: 'window'` is the one that never leaves this machine's screen: it waits for a
+   * person to press something, and a client on a socket would hold the call open until it timed
+   * out — the very way a native modal froze the studio before `project.create` took a path.
+   */
+  it('carries no action that waits for somebody in front of the screen', () => {
+    const waiting = ACTION_REGISTRY.filter(action => action.reach === 'window')
+    const published = new Set(mcpTools().map(tool => tool.name))
+
+    expect(waiting.length).toBeGreaterThan(0)
+    expect(waiting.filter(action => published.has(toolName(action.name)))).toEqual([])
   })
 
   /**

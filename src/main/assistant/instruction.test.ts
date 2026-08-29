@@ -54,7 +54,7 @@ describe('how much of the catalogue the model is shown', () => {
    * so what a silent overrun costs is the preamble rather than the block that caused it.
    */
   it('drops the machine folders rather than overrun the room they do not fit in', () => {
-    const folders = machineFolders(name => `/Users/someone/${name}`)
+    const folders = machineFolders(name => `/Users/someone/${name}`, undefined)
     const briefing = studioBriefing({ room: roomFor(4096), folders })
 
     expect(briefing.text).not.toContain('Folders on this machine:')
@@ -62,10 +62,32 @@ describe('how much of the catalogue the model is shown', () => {
   })
 
   it('carries the machine folders wherever they fit', () => {
-    const folders = machineFolders(name => `/Users/someone/${name}`)
+    const folders = machineFolders(name => `/Users/someone/${name}`, undefined)
     const briefing = studioBriefing({ room: roomFor(ASSISTANT_WINDOW_MAX), folders })
 
     expect(briefing.text).toContain('downloads: /Users/someone/downloads')
+  })
+
+  /**
+   * 🛑 `[M]` The short share runs 7 098 against a room of 7 116 at 4 096 tokens: LISTING this
+   * action costs 373 characters and overruns it, so it is named in one line and stays in
+   * `allowed` — unlisted is not refused, and `parseReply` would drop the whole turn otherwise.
+   */
+  it('names the way to ask the person, without listing it', () => {
+    const briefing = studioBriefing({ room: roomFor(ASSISTANT_WINDOW_MAX) })
+
+    expect(briefing.text).toContain('"action":"chat.ask"')
+    expect(briefing.text).not.toContain('  chat.ask —')
+    expect(briefing.allowed.has('chat.ask')).toBe(true)
+  })
+
+  // It gives ground with the memory line: the studio then reads as it did, the question in `say`.
+  it('drops that line rather than overrun a room too small for it', () => {
+    const briefing = studioBriefing({ room: roomFor(4096) })
+
+    expect(briefing.text).not.toContain('"action":"chat.ask"')
+    expect(briefing.text.length).toBeLessThanOrEqual(roomFor(4096))
+    expect(briefing.allowed.has('chat.ask')).toBe(true)
   })
 
   /**
@@ -306,12 +328,12 @@ describe('what a briefing says about the memory', () => {
   })
 
   /**
-   * 🛑 The whole point of deciding on `allowed` rather than on room: a briefing naming an action
-   * the model was neither SHOWN nor told how to ask for costs the WHOLE turn — `parseReply`
-   * refuses a reply the moment one call names an unlisted action.
+   * 🛑 Decided on `allowed` rather than on room: a briefing naming an action the model was
+   * neither SHOWN nor told how to ask for costs the WHOLE turn. The margin covers BOTH signals,
+   * which give ground together — a room holding only the memory line holds neither.
    */
   it('names the word to search for where the catalogue does not hold the action', () => {
-    const room = bareShort() + 200
+    const room = bareShort() + 400
     const text = studioBriefing({ memories: 12, room }).text
 
     expect(studioBriefing({ room, memories: 0 }).allowed.has('memory.recall')).toBe(false)

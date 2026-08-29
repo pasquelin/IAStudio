@@ -213,10 +213,21 @@ describe('running a command', () => {
   // The catalogue offers these to the model, so refusing them all was the assistant announcing
   // "creating a new project" and then doing nothing at all.
   it('runs the application’s own commands, through the path the native menu takes', async () => {
-    const outcome = await runAction('command.run', { command: 'project.new' })
+    const outcome = await runAction('command.run', { command: 'app.settings' })
 
     expect(outcome).toEqual({ ok: true })
-    expect(createPicked).toHaveBeenCalled()
+  })
+
+  /**
+   * 🛑 Measured on screen: the Finder opened, the person answered it, and the NEXT round ran the
+   * same command again — a second Finder over the first, because nothing came back saying what
+   * had been chosen. `project.create` takes a name and answers what it made.
+   */
+  it('refuses a command that raises a system dialogue', async () => {
+    const outcome = await runAction('command.run', { command: 'project.new' })
+
+    expect(outcome).toEqual({ ok: false, refusal: 'notAllowed' })
+    expect(createPicked).not.toHaveBeenCalled()
   })
 })
 

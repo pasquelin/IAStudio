@@ -45,6 +45,10 @@
         "title": "Find actions",
         "description": "Searches by keywords across every action the studio publishes and hands back the ones that match, with their fields. Changes nothing on screen."
       },
+      "chatAsk": {
+        "title": "Ask a question with choices",
+        "description": "Asks the person a question and offers answers to click. Use this rather than writing the question into the reply: what is clicked comes back on the next step, where a sentence would wait for another round of typing. Changes nothing on screen and spends nothing."
+      },
       "chatClose": {
         "title": "Close the conversation",
         "description": "Clears the conversation off the screen so the result can be seen. Call it last, and only once the result is there — never when the answer is the words themselves, nor while permission is being asked."
@@ -99,7 +103,7 @@
       },
       "projectCreate": {
         "title": "Create a project folder",
-        "description": "Makes a new project at an absolute path on this machine and opens it, without raising the system dialogue a person would use."
+        "description": "Makes a project and opens it, without raising the system dialogue a person would use. A NAME is enough — the studio puts it where this person keeps projects, named above. An absolute path goes where it says."
       },
       "fileOpen": {
         "title": "Open a file of the project",
@@ -1162,6 +1166,8 @@
       "workspace": "Workspace",
       "createDocument": "Create a document",
       "query": "Keywords",
+      "question": "Question asked",
+      "choices": "Answers offered",
       "family": "Generation family",
       "modelId": "Model identifier",
       "operation": "Employment, e.g. code2code",
@@ -1468,6 +1474,9 @@
     "send": "Send",
     "sendHint": "Sends the sentence to the assistant, which picks the actions and runs them",
     "tokens": "{{prompt, number}} tokens read · {{reply, number}} written",
+    "chooseHint": "Answers the question and lets the assistant carry on",
+    "skipChoice": "Never mind",
+    "skipChoiceHint": "Closes the question unanswered: the assistant stops there",
     "thinking": "The assistant is thinking…",
     "workingRound": "The assistant is working — step {{round}}",
     "stopping": "Stopping — the studio is finishing what is running…",

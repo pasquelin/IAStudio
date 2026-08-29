@@ -7,6 +7,7 @@ import { FOLDER_ROOT, type FolderEntry } from '@shared/domain/folder'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
 import { runAction } from './executor'
 
 const openDocument = vi.hoisted(() => vi.fn())
@@ -232,6 +233,56 @@ describe('opening and making a project', () => {
     })
     expect(createAt).toHaveBeenCalledWith('/tmp/Neuf')
     expect(useProject.getState().project?.path).toBe('/tmp/Film')
+  })
+
+  /**
+   * 🛑 A NAME is enough: asked for an absolute path, the model asked the PERSON to type one —
+   * "quel chemin absolu pour le nouveau projet ?" is not a question anyone wants to answer.
+   */
+  it('puts a bare name where this person keeps projects', async () => {
+    const createAt = vi.fn(async () => null)
+    withProject()
+    useProject.setState({ createAt })
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, projectsFolder: '/Users/someone/Mes Projets' },
+      },
+    }))
+
+    await runAction('project.create', { path: 'test3' })
+
+    expect(createAt).toHaveBeenCalledWith('/Users/someone/Mes Projets/test3')
+  })
+
+  // An absolute path still goes where it says: a model that knows the place names it.
+  it('leaves an absolute path where it points', async () => {
+    const createAt = vi.fn(async () => null)
+    withProject()
+    useProject.setState({ createAt })
+
+    await runAction('project.create', { path: '/tmp/Ailleurs' })
+
+    expect(createAt).toHaveBeenCalledWith('/tmp/Ailleurs')
+  })
+
+  /**
+   * The first project of a machine: nothing says where projects go, and `~/Documents` is a place
+   * nobody asked for. Refused, so the model asks — which `chat.ask` now lets it do with choices.
+   */
+  it('refuses a bare name where no folder is known yet', async () => {
+    withProject()
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, projectsFolder: undefined, recentProjects: [] },
+      },
+    }))
+
+    expect(await runAction('project.create', { path: 'test3' })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 
   /**

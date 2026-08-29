@@ -16,6 +16,7 @@ import type { Job } from '@shared/domain/job'
 import type { ModelFamily } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
 import { describeStudio } from '@main/assistant/studioState'
+import { registerChooser } from '@/assistant/chooser'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
@@ -288,6 +289,9 @@ export async function createStudio(
   // The person, who typed the sentence: a headless run has nobody to ask, and refusing every
   // spend would score the whole of sections 20 to 22 on a studio never asked to generate.
   const closeConfirmer = registerConfirmer(() => Promise.resolve(true))
+  // The same person, answering a question with choices: the first offer, which is what a model
+  // puts first. Unmounted, `chat.ask` refuses and every scenario reaching it scores a refusal.
+  const closeChooser = registerChooser(request => Promise.resolve(request.choices[0] ?? null))
 
   const refusals: string[] = []
   const poses = new Map<string, string>()
@@ -442,6 +446,7 @@ export async function createStudio(
         usePlay.getState().stop(documentId)
       }
       closeConfirmer()
+      closeChooser()
       closeGenerator()
       giveBackMeasure()
       leaveTheDock()

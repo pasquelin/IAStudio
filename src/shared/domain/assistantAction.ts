@@ -30,6 +30,7 @@ export type ActionName =
   | 'prompt.suggest'
   | 'prompt.translate'
   | 'prompt.describeStyle'
+  | 'chat.ask'
   | 'chat.close'
   | 'actions.find'
   | 'target.select'
@@ -345,10 +346,13 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
  * A brain with room is shown ALL of it and may name any of it: what a model may call follows
  * what `studioBriefing` showed it, which `parseReply` is held to — not this. An action marked
  * `mcp` is out of a small model's first sight, never out of its reach.
+ *
+ * 🛑 `window` is the ONE that does not reach the MCP wire at all — every other value does. It is
+ * for what needs a person in front of the screen: nobody presses a button on a socket.
  */
-export type ActionReach = 'both' | 'mcp'
+export type ActionReach = 'both' | 'mcp' | 'window'
 
-export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
+export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp', 'window']
 
 /**
  * One input of an action.

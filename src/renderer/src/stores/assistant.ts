@@ -7,6 +7,7 @@ import {
   type AssistantModel,
   type AssistantProgress,
 } from '@shared/domain/assistant'
+import { ASK_ACTION } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
 import type { ConfirmRequest } from '@/assistant/confirm'
@@ -31,6 +32,13 @@ const NOTHING_WRITTEN = { streamed: '', promptTokens: 0, replyTokens: 0 }
 
 /** A question on screen and the promise waiting on it — see `ask`. */
 type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) => void }
+
+/** What the model asked the person, and the promise its answer settles — see `askChoice`. */
+export type AssistantChoiceQuestion = {
+  question: string
+  choices: readonly string[]
+  answer: (chosen: string | null) => void
+}
 
 type AssistantState = {
   turns: AssistantTurn[]
@@ -58,6 +66,15 @@ type AssistantState = {
   /** Asks the chain to stop after what is already running. Nothing in flight is undone. */
   stop: () => void
   asked: AssistantQuestion | null
+  /**
+   * The question the model asked, with the answers it offered. One at a time, like `asked`: two
+   * sets of buttons on one thread answer each other's question.
+   */
+  choosing: AssistantChoiceQuestion | null
+  /** Asks the person, and answers what they pressed — `null` where they dismissed it. */
+  askChoice: (question: string, choices: readonly string[]) => Promise<string | null>
+  /** What was pressed. Nothing where no question is up: a late click settles nothing twice. */
+  choose: (chosen: string | null) => void
   /**
    * What this conversation has spent thinking, in creative units.
    *
@@ -140,6 +157,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   stopping: false,
   ...NOTHING_WRITTEN,
   asked: null,
+  choosing: null,
   spent: 0,
   seen: 0,
   draft: '',
@@ -198,13 +216,35 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
        *
        * Refusing the newcomer is the safe end of that: nothing is spent, and the caller hears why.
        */
-      if (get().asked) {
+      // 🛑 `choosing` as well as `asked`: two slots, each blind to the other, put two sets of
+      // buttons on one thread — and the danger this guard exists for is between them too.
+      if (get().asked || get().choosing) {
         resolve(false)
         return
       }
 
       set(state => ({ seen: lastSeen(state), asked: { request, answer: resolve } }))
     }),
+
+  askChoice: (question, choices) =>
+    new Promise<string | null>(resolve => {
+      // Refused rather than shown, for the same reason `ask` refuses a second confirmation: the
+      // buttons on screen would answer the newcomer while the person reads the first question.
+      if (get().choosing || get().asked) {
+        resolve(null)
+        return
+      }
+
+      set(state => ({ seen: lastSeen(state), choosing: { question, choices, answer: resolve } }))
+    }),
+
+  choose: chosen => {
+    const choosing = get().choosing
+    if (!choosing) return
+
+    set({ choosing: null })
+    choosing.answer(chosen)
+  },
 
   answer: granted => {
     const asked = get().asked
@@ -220,6 +260,9 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     if (!get().busy) return
 
     set({ stopping: true })
+    // 🛑 The question the chain is parked on: unsettled, the field stays disabled, Stop greys
+    // itself out, and the only way out is answering the question one just asked to stop.
+    get().choose(null)
     // 🛑 Both halves: the flag ends the CHAIN between two rounds, and this ends the round in
     // flight — a local model holds one for minutes at full tilt. Swallowed with a word, never
     // bare: a rejected channel is an unhandled rejection, and there is nothing to await here.
@@ -399,6 +442,16 @@ async function ranAll(
         ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
       })
       patch(set, id, { steps: [...steps] })
+
+      /**
+       * 🛑 « Laisser tomber » ENDS it, which is what the button promises. Read as an ordinary
+       * refusal the model was handed "declined" and asked again on the next billed round — the
+       * one button that costs nothing was the one that could cost the most.
+       */
+      if (call.action === ASK_ACTION && !outcome.ok && outcome.refusal === 'declined') {
+        patch(set, id, { steps: [...steps], ending: 'stopped' })
+        return false
+      }
     }
   } catch {
     patch(set, id, { lost: true })

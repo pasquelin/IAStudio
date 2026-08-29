@@ -78,6 +78,7 @@ const MCP_CLIENT = clientName(APP_NAME)
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
 import { createLocalBrain } from './assistant/brainLocal'
+import { projectPickerFolder } from '@shared/domain/project'
 import { machineFolders } from './assistant/machineFolders'
 import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
@@ -2033,7 +2034,13 @@ export function createServices(settings: SettingsStore): Services {
     memoriesOf: () => memoryVectors.held('project'),
     // Read on every turn rather than once: `app.getPath` answers the live OS folders, which a
     // person can move.
-    foldersOf: () => machineFolders(name => app.getPath(name)),
+    foldersOf: () => {
+      const { projectsFolder, recentProjects } = settings.read().storage
+      return machineFolders(
+        name => app.getPath(name),
+        projectPickerFolder(projectsFolder, recentProjects),
+      )
+    },
   })
 
   const checkout = checkoutOf(app.getAppPath())

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { actionsReaching, type ActionName } from '@shared/domain/assistant'
+import { ACTION_REGISTRY, type ActionName } from '@shared/domain/assistant'
 import { COVERAGE, rankOf, uncoveredActions } from './coverage'
 import { SCENARIOS } from './scenarios'
 
@@ -16,11 +16,16 @@ import { SCENARIOS } from './scenarios'
 const AWAITING: readonly ActionName[] = []
 
 describe('the MCP surface and the batterie', () => {
-  it('names every action the MCP server publishes', () => {
-    const published = actionsReaching('mcp').map(one => one.name)
+  /**
+   * 🛑 The whole REGISTRY, not the MCP wire: the bench drives `runConfirmedAction`, so it
+   * measures actions the wire never carries too — `reach: 'window'` is one, and left out here it
+   * would be the only action of the studio nothing has to answer for.
+   */
+  it('names every action the registry holds', () => {
+    const held = ACTION_REGISTRY.map(one => one.name)
     const named = Object.keys(COVERAGE)
 
-    expect([...named].sort()).toEqual([...published].sort())
+    expect([...named].sort()).toEqual([...held].sort())
   })
 
   it('cites only ranks the batterie actually carries', () => {
