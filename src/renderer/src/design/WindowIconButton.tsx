@@ -53,7 +53,12 @@ export function WindowIconButton({
       {...tooltip}
       className={cn(ICON_ACTION, className)}
       disabled={disabled}
-      onClick={onClick}
+      // 🛑 Swallowed: these sit inside rows whose whole width opens a detail, and a glyph that
+      // amends a row must not also toggle it — `RowChevron` stops its own click for this reason.
+      onClick={event => {
+        event.stopPropagation()
+        onClick()
+      }}
     >
       <UiIcon path={path} size={WINDOW_ICON_SIZE} className={faded ? 'opacity-0' : ''} />
     </button>

@@ -33,6 +33,9 @@ const LIST_PAD = 16
 /** What one open row's detail is given before the list starts scrolling instead of the page. */
 const OPEN_ROW_ROOM = 220
 
+/** What the empty state needs to be read: its glyph, its padding and a sentence on two lines. */
+const EMPTY_ROOM = 160
+
 /** Past this the list scrolls rather than the page: a settings section is not a whole screen. */
 const LIST_CAP = 320
 
@@ -57,7 +60,9 @@ export function MemorySettings() {
   // Room for the open row's own detail, so opening one does not put a scrollbar inside a page
   // that already scrolls. Past the cap the list scrolls, which is what a cap is for.
   const shown = memories.length * rowHeight + (openId === null ? 0 : OPEN_ROW_ROOM)
-  const listHeight = Math.min(Math.max(shown + LIST_PAD, rowHeight + LIST_PAD), LIST_CAP)
+  // 🛑 The empty arm is not the floor: `EmptyState` is a 32 px glyph inside `p-6`, so a list
+  // sized for one row clipped the very sentence a project with no memories exists to show.
+  const listHeight = memories.length === 0 ? EMPTY_ROOM : Math.min(shown + LIST_PAD, LIST_CAP)
 
   useEffect(() => {
     // The one place a listing is asked for. `look` carries the scope AND the filters, so the

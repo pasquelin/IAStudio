@@ -27,9 +27,6 @@ import { MemoryGraphReading } from './MemoryGraphReading'
 
 const STAGE_HEIGHT = 360
 
-/** Before the first measure, and under jsdom, which reports every box at zero. */
-const FALLBACK_WIDTH = 560
-
 const DOT = 3.2
 const DOT_PER_LINK = 1.15
 const DOT_CAP = 9
@@ -40,9 +37,6 @@ export function MemoryGraph() {
   const [memories, setMemories] = useState<readonly Memory[]>([])
   const canvas = useRef<HTMLCanvasElement>(null)
   const [hovered, setHovered] = useState<PlacedNode | null>(null)
-  // 🛑 Held rather than derived at each pointer move: `getBoundingClientRect` forces a layout
-  // pass, and the box only moves when the panel is resized — which is what repaints anyway.
-  const box = useRef({ left: 0, top: 0, width: FALLBACK_WIDTH, height: STAGE_HEIGHT })
 
   useEffect(() => {
     let watching = true
@@ -78,9 +72,6 @@ export function MemoryGraph() {
 
   const paint = useCallback(() => {
     paintOn(canvas.current, (context, surface) => {
-      const held = canvas.current?.getBoundingClientRect()
-      if (held) box.current = { left: held.left, top: held.top, ...surface }
-
       context.clearRect(0, 0, surface.width, surface.height)
       context.translate(surface.width / 2, surface.height / 2)
 
@@ -123,7 +114,7 @@ export function MemoryGraph() {
             aria-label={counted}
             className="border-base-300 block w-full rounded-lg border"
             style={{ height: STAGE_HEIGHT }}
-            onPointerMove={event => setHovered(under(event, layout.nodes, box.current))}
+            onPointerMove={event => setHovered(under(event, layout.nodes))}
             onPointerLeave={() => setHovered(null)}
           />
 
@@ -145,13 +136,15 @@ function radiusOf(node: PlacedNode): number {
 /**
  * The dot under the pointer, or nothing. Generous by six pixels: a 3px target is unaimable.
  *
- * The centre is subtracted here because the layout is solved around the origin — see `paint`.
+ * 🛑 The box is read on every move rather than held: the settings pane SCROLLS, which moves
+ * `top` without firing the resize a cached one would have waited for. The centre is subtracted
+ * because the layout is solved around the origin — see `paint`.
  */
 function under(
-  event: { clientX: number; clientY: number },
+  event: { clientX: number; clientY: number; currentTarget: HTMLCanvasElement },
   nodes: readonly PlacedNode[],
-  box: { left: number; top: number; width: number; height: number },
 ): PlacedNode | null {
+  const box = event.currentTarget.getBoundingClientRect()
   const x = event.clientX - box.left - box.width / 2
   const y = event.clientY - box.top - box.height / 2
 

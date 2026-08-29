@@ -364,8 +364,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
-    // Code alone reaches this, and by design: a script is already a `.ts` of the project, so the
-    // Export row is absent rather than empty — `menu/template.test.ts` asserts both halves.
+    // Code and an interface reach this, both by design: a `.ts` and a `.ui.json` ARE already
+    // files of the project, so the row is absent rather than empty. An interface opens in the 3D
+    // space, hence the `surface` above rather than the workspace — `menu/template.test.ts` holds
+    // both halves.
     return []
   }
 

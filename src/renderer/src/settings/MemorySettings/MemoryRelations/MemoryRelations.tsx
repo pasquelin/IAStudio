@@ -44,8 +44,10 @@ export function MemoryRelations({
           <p className={cn(WINDOW_CAPTION, 'm-0')}>{t(TIE_KEYS[section.tie])}</p>
 
           <ul className="m-0 flex list-none flex-col gap-1.5 pl-3">
-            {section.rows.map(row => (
-              <li key={row.label} className="flex flex-col gap-1.5">
+            {/* The rank, because a label is not unique: one memory anchored on a file AND on an
+                asset of the same name gives two rows one key. */}
+            {section.rows.map((row, rank) => (
+              <li key={rank} className="flex flex-col gap-1.5">
                 <MemoryRelationsRow row={row} onOpen={onOpen} />
 
                 {row.alsoAbout.length > 0 && (

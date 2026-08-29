@@ -646,6 +646,18 @@ describe('the export menu', () => {
     }
   })
 
+  /**
+   * 🛑 The 3D space opens two KINDS, and the row follows the kind rather than the space: a
+   * `.ui.json` is already a file of the project, like a script, so there is nothing to export.
+   */
+  it('drops the row for an interface, which the 3D space opens beside its scenes', () => {
+    const file = (kind: DocumentKind) =>
+      submenuOf(menuTemplate(options({ workspace: '3d', kind })), 'Fichier').map(one => one.label)
+
+    expect(file('scene')).toContain('Exporter')
+    expect(file('gui')).not.toContain('Exporter')
+  })
+
   it('offers every declared format, for the scene and for the selection', () => {
     const exports = exportsIn(menuTemplate(options()))
 
