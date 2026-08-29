@@ -12,6 +12,15 @@ import { parseReply, type Reply } from './reply'
  */
 export class TurnStopped extends Error {}
 
+/**
+ * Relays a frame with the window it was read in — a door caps or budgets its own, and nothing
+ * downstream can derive it. See `AssistantProgress.windowTokens`.
+ */
+export const inWindow =
+  (onProgress: (progress: AssistantProgress) => void, windowTokens: number) =>
+  (progress: AssistantProgress): void =>
+    onProgress({ ...progress, windowTokens })
+
 /** What one round trip came back with, and what it cost. Zero for a model on this machine. */
 export type BrainAttempt = { answer: string; cost: number }
 

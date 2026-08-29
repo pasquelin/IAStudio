@@ -36,6 +36,29 @@ describe('connectThoughtStream', () => {
   })
 
   /**
+   * 🛑 This file is the ONLY one that crosses the joint: the store's suite calls `noteProgress`,
+   * the composer's calls `setState`, and the brain's asserts on its own callback. A field the
+   * coalescer forgets to rebuild is dropped here with all three of them green.
+   */
+  it('carries every field of the frame, not only the ones it was written for', () => {
+    const pushes: ((progress: AssistantProgress) => void)[] = []
+    installFakeBridge({
+      assistant: {
+        onStream: (callback: (progress: AssistantProgress) => void) => {
+          pushes.push(callback)
+          return () => {}
+        },
+      },
+    })
+    useAssistant.setState({ streamed: '', promptTokens: 0, replyTokens: 0, windowTokens: 0 })
+
+    connectThoughtStream(paintEveryFrame())
+    pushes[0]?.({ delta: 'writing', promptTokens: 2116, windowTokens: 8192 })
+
+    expect(useAssistant.getState().windowTokens).toBe(8192)
+  })
+
+  /**
    * 🛑 What `schedule` keeps is the LAST value it was given, so the tokens between two painted
    * frames have to be joined before they get there — relayed one by one they were a render each,
    * and kept naively only the last of each frame would reach the thread.

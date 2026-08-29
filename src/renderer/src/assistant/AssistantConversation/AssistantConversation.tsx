@@ -505,7 +505,7 @@ export function AssistantConversation() {
               {/* Beside the field it measures, and it OUTLIVES the turn: what one wants to know
                   before typing is how much room the last exchange left. */}
               {promptTokens > 0 && (
-                <span className="text-muted text-mini" {...HINT_TOP(t('assistant.contextHint'))}>
+                <span className="text-muted text-tiny" {...HINT_TOP(t('assistant.contextHint'))}>
                   {windowTokens > 0
                     ? t('assistant.contextOf', { read: promptTokens, window: windowTokens })
                     : t('assistant.contextRead', { read: promptTokens })}

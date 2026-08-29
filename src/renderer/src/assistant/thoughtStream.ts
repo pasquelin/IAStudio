@@ -17,9 +17,12 @@ export function connectThoughtStream(frames: FrameCoalesce = createFrameCoalesce
   const stop = bridge.assistant.onStream(progress => {
     held = {
       delta: progress.restart === true ? '' : held.delta + progress.delta,
+      // 🛑 Every field the frame carries, listed: rebuilt from a literal, a field added upstream
+      // is dropped HERE in silence — `windowTokens` was, and the whole ratio never rendered.
       ...defined({
         promptTokens: progress.promptTokens ?? held.promptTokens,
         replyTokens: progress.replyTokens ?? held.replyTokens,
+        windowTokens: progress.windowTokens ?? held.windowTokens,
       }),
       // 🛑 `held`, not just this frame: a throttled window coalesces the whole turn into one, and
       // a restart read off the last frame alone leaves the thrown-away attempt on screen.

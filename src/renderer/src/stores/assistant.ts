@@ -26,11 +26,7 @@ import { useSettings } from './settings'
 /** What of a streamed answer is kept: only its tail is ever shown — see `noteProgress`. */
 const STREAM_TAIL = 240
 
-/**
- * 🛑 What a ROUND starts over, and the counts are NOT in it: they say what the last round read,
- * and the composer shows them once it is over — cleared per round, the figure blinked to zero
- * between two rounds and was gone the moment there was time to read it.
- */
+/** What a ROUND starts over — the counts are not in it: they outlive it, for the composer. */
 const NOTHING_WRITTEN = { streamed: '' }
 
 /** What a new SENTENCE starts over: the counts belong to the turn that just ran, not the next. */

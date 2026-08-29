@@ -1,9 +1,9 @@
-import type { AssistantProgress, AssistantThought } from '@shared/domain/assistant'
+import type { AssistantThought } from '@shared/domain/assistant'
 import { log } from '@main/log'
 import type { ChatRequest, ChatTurn } from '@main/ai/localRuntimes'
 import { defined } from '@shared/guards'
 import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
-import { answeredTurn, turnsWith } from './brainTurn'
+import { answeredTurn, inWindow, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
 import { assistantWindow, promptWindow, roomFor, sentenceWithin } from './promptWindow'
 
@@ -39,12 +39,6 @@ function messagesFor(
     { role: 'user', content: utterance },
   ]
 }
-
-/** Relays a frame with the window it was read in — see `AssistantProgress.windowTokens`. */
-const told =
-  (onProgress: (progress: AssistantProgress) => void, windowTokens: number) =>
-  (progress: AssistantProgress): void =>
-    onProgress({ ...progress, windowTokens })
 
 export function createLocalBrain({
   chat,
@@ -82,10 +76,12 @@ export function createLocalBrain({
         messages: messagesFor(briefing.text, window.history, said),
         contextTokens,
         json: true,
-        ...defined({ signal: watch.signal }),
-        // The window travels WITH the frames: it is capped here, so the window has no other way
-        // to know what `promptTokens` is a share of.
-        ...(watch.onProgress ? { onProgress: told(watch.onProgress, contextTokens) } : {}),
+        // The window travels WITH the frames: it is capped here, so nothing downstream can
+        // derive what `promptTokens` is a share of.
+        ...defined({
+          signal: watch.signal,
+          onProgress: watch.onProgress && inWindow(watch.onProgress, contextTokens),
+        }),
       }),
       cost: 0,
     }
@@ -98,7 +94,7 @@ export function createLocalBrain({
         briefing,
         (shown, complaint) => ask(request, shown, watch, complaint),
         // Every frame of this door names its window, the restart `answeredTurn` emits included.
-        watch.onProgress && told(watch.onProgress, contextTokens),
+        watch.onProgress && inWindow(watch.onProgress, contextTokens),
       )
     },
   }

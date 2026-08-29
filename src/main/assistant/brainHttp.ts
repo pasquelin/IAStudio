@@ -1,12 +1,12 @@
 import type { HttpChat } from '@shared/domain/aiCloud'
-import type { AssistantProgress, AssistantThought } from '@shared/domain/assistant'
+import type { AssistantThought } from '@shared/domain/assistant'
 import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
 import { defined } from '@shared/guards'
 import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
-import { answeredTurn, turnsWith } from './brainTurn'
+import { answeredTurn, inWindow, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
 import { roomFor } from './promptWindow'
 
@@ -50,11 +50,17 @@ function messagesFor(
   ]
 }
 
-/** Relays a frame with the window it was budgeted against — see `AssistantProgress.windowTokens`. */
-const told =
-  (onProgress: (progress: AssistantProgress) => void, windowTokens: number) =>
-  (progress: AssistantProgress): void =>
-    onProgress({ ...progress, windowTokens })
+/**
+ * 🛑 The window THIS briefing was cut to, read off the briefing and never off `narrowed`: that
+ * flag flips only after a door has refused once, so the narrow retry of the very turn proving
+ * 32 000 too much reported 32 000 — eight times what it had just been cut to.
+ */
+const seen = (watch: TurnWatch, briefing: Briefing) =>
+  watch.onProgress &&
+  inWindow(
+    watch.onProgress,
+    briefing.narrow === null ? CLOUD_FALLBACK_TOKENS : CLOUD_CONTEXT_TOKENS,
+  )
 
 /**
  * A chat cloud reached over HTTP. Same briefing and same JSON parse as the local brain;
@@ -103,17 +109,7 @@ export function createHttpChatBrain({
           messages,
           json: true,
           maxTokens: ASK_TOKENS,
-          ...defined({ signal: watch.signal }),
-          // The window this door was BUDGETED against, which is what the briefing was cut to —
-          // the cloud's own is unknown here, the model being typed by hand.
-          ...(watch.onProgress
-            ? {
-                onProgress: told(
-                  watch.onProgress,
-                  narrowed ? CLOUD_FALLBACK_TOKENS : CLOUD_CONTEXT_TOKENS,
-                ),
-              }
-            : {}),
+          ...defined({ signal: watch.signal, onProgress: seen(watch, briefing) }),
         },
         send,
       )
@@ -139,7 +135,7 @@ export function createHttpChatBrain({
       return await answeredTurn(
         briefing,
         (shown, complaint) => round(request, shown, watch, complaint),
-        watch.onProgress,
+        seen(watch, briefing),
       )
     },
   }
