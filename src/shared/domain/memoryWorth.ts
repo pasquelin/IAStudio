@@ -75,7 +75,6 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'prompt.suggest': null,
   'prompt.translate': null,
   'prompt.describeStyle': null,
-  'chat.ask': null,
   'chat.close': null,
   'actions.find': null,
   'target.select': null,

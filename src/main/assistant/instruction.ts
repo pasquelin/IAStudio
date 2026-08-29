@@ -1,7 +1,6 @@
 import {
   ACTION_REGISTRY,
   actionsReaching,
-  ASK_ACTION,
   DISCOVERY_ACTION,
   familyOfAction,
   findActions,
@@ -95,8 +94,7 @@ let shortHeld: Share | null = null
 const wholeShare = (): Share =>
   /**
    * 🛑 The REGISTRY, never `actionsReaching('mcp')`: that one answers what the WIRE carries, and
-   * a door with room must be shown what the window can do — `chat.ask` included, or the studio
-   * could ask with buttons on a small model and not on a large one.
+   * a door with room must be shown everything the window can do.
    */
   (wholeHeld ??= shareOf(
     ACTION_REGISTRY.filter(action => action.name !== DISCOVERY_ACTION),
@@ -104,16 +102,18 @@ const wholeShare = (): Share =>
   ))
 
 /**
- * The spoken vocabulary, MINUS the two actions a RULE already spells whole — describing either a
- * second time costs characters this share does not have. Both stay in `allowed`: being unlisted
+ * The spoken vocabulary, MINUS the one action a RULE already spells whole — describing it a
+ * second time costs characters this share does not have. It stays in `allowed`: being unlisted
  * is not the same as being refused, and `parseReply` refuses a reply naming anything else.
  */
-const UNLISTED: readonly ActionName[] = [DISCOVERY_ACTION, ASK_ACTION]
+const UNLISTED: readonly ActionName[] = [DISCOVERY_ACTION]
 
 const shortShare = (): Share =>
   (shortHeld ??= {
-    ...shareOf(actionsReaching('both').filter(one => !UNLISTED.includes(one.name))),
-    allowed: namesOf(actionsReaching('window')),
+    text: cataloguePrinted(actionsReaching('both').filter(one => !UNLISTED.includes(one.name))),
+    // 🛑 The unlisted one is ALLOWED all the same: `parseReply` refuses a reply naming an action
+    // outside this set, so a door told to answer with `actions.find` would lose the whole turn.
+    allowed: namesOf(actionsReaching('both')),
   })
 
 /**
@@ -125,13 +125,18 @@ const shortShare = (): Share =>
  */
 const FORMAT = [
   'Answer with one JSON object and nothing else. No prose around it, no code fence.',
-  'The object has exactly two keys:',
+  'The object has exactly three keys:',
   '  "say": a short sentence for the person, in their language. May be empty.',
+  // 🛑 Two lines of the FORMAT and never a rule of the catalogue: named by a rule, this was
+  // described to every model and called by none — the question went in "say" and the calls went
+  // out beside it. What gives ground when the room runs out is never this block.
+  '  "ask": {"question":"…","choices":[…]} to ask the person, or null. It RUNS NOTHING:',
+  '    the calls wait, their answer comes back next round. Ask rather than act halfway.',
   '  "calls": a list of actions to run, in order. May be empty.',
   'Each call is {"action": "<name from the catalogue>", "input": {<the fields above>}}.',
   // 🛑 A LITERAL id: the example spelled `"<the armed model>"` and the model copied the shape —
   // twenty-three calls over five passes carried `<shotId>` or `<path found>` where a value goes.
-  'Example: {"say":"Making an image.","calls":[{"action":"generator.prepare",',
+  'Example: {"say":"Making an image.","ask":null,"calls":[{"action":"generator.prepare",',
   '"input":{"family":"image","modelId":"flux.1-dev","parameters":{"prompt":"a bicycle"}}},',
   '{"action":"generator.submit","input":{"landing":"document"}}]}',
 ].join('\n')
@@ -139,9 +144,7 @@ const FORMAT = [
 const RULES = [
   '  - Only use actions from the catalogue below. Never invent one.',
   '  - One request often needs several calls, in order. Carry it to its end.',
-  '  - Ask rather than act halfway: no calls, and the question in "say".',
   '  - generator.prepare fills the form and stops. generator.submit sends it and spends credits.',
-  '  - If nothing in the catalogue fits, return no calls and say so in "say".',
   // The state below is what the person is looking at. Written as a rule rather than left to be
   // inferred: a model handed a space and a document still opened a second one for the subject of
   // the sentence, which is where "make me a bicycle" became a document named Bicycle.
@@ -163,6 +166,10 @@ const RULES = [
  * thousands, where the short share lives against 8 000.
  */
 const WIDE_RULES = [
+  // 🛑 Here rather than in `RULES`, and it is not a preference: a narrow door is told to answer
+  // `actions.find` instead (`FIND_RULE`), so telling it both is a contradiction — and a line the
+  // tightest door pays for twice, its expansion being budgeted against what is left.
+  '  - If nothing in the catalogue fits, return no calls and say so in "say".',
   /**
    * The three that place a NAMED file, and they are one story: a model shown two hundred actions
    * reached for documents.list, which holds documents alone, then said it had found a picture.
@@ -176,7 +183,7 @@ const WIDE_RULES = [
    */
   '  - Nothing found by name? List the folders YOURSELF and read the names in them, in this same',
   '    answer. Never ask to be allowed: a name follows the prompt that made it, not what is spoken.',
-  '  - Several files match? Choose none: name them in "say" and ask which.',
+  '  - Several files match? Choose none: "ask" which, with their names as the choices.',
   // Four requests of the batterie died on a bare name — `files.move ["bateau-test.png"]` for a
   // file sitting in `Images/` — each answered `refused: missing`.
   '  - A path is the WHOLE path inside the project, folders and all: "Images/x.png", never',
@@ -232,15 +239,6 @@ const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTION} answ
 /** The same, for a door shown a catalogue that does not hold it — `FIND_RULE` is how it gets it. */
 const MEMORY_FIND = '  - This project has a memory: search "memory" to reach what reads it.'
 
-/**
- * 🛑 A SIGNAL and not a rule: it gives ground with the memory line when the room runs out, and
- * the studio then reads as it did before — the question goes in "say" and costs a round of
- * typing. Named rather than listed, for the reason `FIND_RULE` is: the block costs 373 characters.
- */
-const ASK_SIGNAL =
-  `  - To ask WITH answers to press: {"action":"${ASK_ACTION}",` +
-  `"input":{"question":"…","choices":["a","b"]}}. What is pressed comes back next step.`
-
 /** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */
 const FIND_RULE =
   `  - Nothing in the catalogue fits? Answer with that ONE call and nothing else: ` +
@@ -256,8 +254,8 @@ const FIND_RULE =
 const CONTINUING = [
   'You are still working on the same request. What you have already done is in the history',
   'above, with what each action answered — build on it, and never redo a call that has answered.',
-  'Answer with NO calls when the request is done, or when you need something only the person',
-  'can tell you: your "say" is then what they read.',
+  'Answer with NO calls when the request is done. When you need something only the person can',
+  'tell you, that is what "ask" is for.',
 ].join('\n')
 
 const roleWith = (rules: readonly string[]): string =>
@@ -293,8 +291,8 @@ export type BriefingParts = {
    *
    * 🛑 A COUNT, never a recall — see `memorySignal`. Injecting summaries paid an embedding and a
    * vector scan on every single turn for a block that four doors of five threw away whole: the
-   * short briefing runs 7 008 characters against a room of 7 116, and the memory was the first
-   * thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
+   * short briefing ran 7 008 characters against the 7 116 a 4 096-token door left, and the memory
+   * was the first thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
    */
   memories?: number
   /** Where this machine keeps a person's folders, absolute — see `AssistantThought.folders`. */
@@ -339,9 +337,9 @@ export type Briefing = {
 }
 
 /**
- * 🛑 What GIVES GROUND when the room runs out, in order: the state, then the targets, then the
- * project context. Never the sentence, which `instructionFor` guarantees, and never the
- * catalogue, without which nothing can be named.
+ * 🛑 What GIVES GROUND when the room runs out, in order: the state, the targets, the project
+ * context, the folders, and — last of all — the catalogue. Never the sentence, which
+ * `instructionFor` guarantees.
  *
  * The memory is not on this list any more, and that is the point: it is one line naming a way to
  * ask, not a block of summaries to be cut down.
@@ -352,15 +350,25 @@ function briefingText(
   rules: readonly string[],
   found: string,
 ): string {
+  return briefingWithin(parts, catalogue, rules, found).text
+}
+
+/** The same, saying whether the catalogue had to give ground — what the signal yields to. */
+function briefingWithin(
+  parts: BriefingParts,
+  catalogue: string,
+  rules: readonly string[],
+  found: string,
+): { text: string; cut: boolean } {
   const state = parts.state ?? ''
   const targets = parts.targets ?? []
   const full = composed(parts, catalogue, rules, found, state, targets)
-  if (full.length <= parts.room) return full
+  if (full.length <= parts.room) return { text: full, cut: false }
 
   // The state gives ground first — it is prose, and its lines are ranked from the most useful.
   const short = linesWithin(state, Math.max(0, state.length - (full.length - parts.room)))
   const trimmed = composed(parts, catalogue, rules, found, short, targets)
-  if (trimmed.length <= parts.room) return trimmed
+  if (trimmed.length <= parts.room) return { text: trimmed, cut: false }
 
   /**
    * Then the TAIL of the target list, which is the loss the window already designed for: it ranks
@@ -370,7 +378,7 @@ function briefingText(
   const over = trimmed.length - parts.room
   const aimed = targetsWithin(targets, over)
   const cut = composed(parts, catalogue, rules, found, short, aimed)
-  if (cut.length <= parts.room) return cut
+  if (cut.length <= parts.room) return { text: cut, cut: false }
 
   /**
    * 🛑 Last, the project context — and it is a THIRD step because the two above can both run out:
@@ -382,14 +390,40 @@ function briefingText(
   const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
   const trimmedContext = { ...parts, context: linesWithin(parts.context ?? '', room) }
   const last = composed(trimmedContext, catalogue, rules, found, short, aimed)
-  if (last.length <= parts.room) return last
+  if (last.length <= parts.room) return { text: last, cut: false }
+
+  // 🛑 `[M]` The folders go WHOLE or not at all: the short briefing runs 7 405 characters on
+  // 2026-08-29, so the 137-character block overruns any door leaving it less than that.
+  const bare = { ...trimmedContext, folders: '' }
+  const dropped = composed(bare, catalogue, rules, found, short, aimed)
+  if (dropped.length <= parts.room) return { text: dropped, cut: false }
 
   /**
-   * 🛑 `[M]` The folders go WHOLE or not at all, and they are the last thing to go: at 4 096
-   * tokens — what every Ollama tag declares — the short catalogue alone runs 7 098 against a room
-   * of 7 116, so the 137-character block overruns by 146 with nothing else left to give.
+   * 🛑 Last of all the CATALOGUE, by whole actions from the END — the one part that used to give
+   * no ground, and the reason a 4 096-token model overran by 289 with nothing left to cut. What
+   * is dropped is not lost: only the narrow door ever reaches here, and `FIND_RULE` is how it
+   * asks for the rest. Overrunning is NOT the milder failure — a runtime cuts from the HEAD,
+   * where the preamble sits (ADR-18).
+   *
+   * Its blind spot, and it is real: the share reads in registry order, so what goes first is
+   * `file.open` and `project.create` — the two most spoken. On that door they cost one round.
    */
-  return composed({ ...trimmedContext, folders: '' }, catalogue, rules, found, short, aimed)
+  const blocks = catalogueBlocks(catalogue)
+  let left = dropped.length - parts.room
+  while (left > 0 && blocks.length > 1) left -= (blocks.pop()?.length ?? 0) + 1
+
+  return { text: composed(bare, blocks.join('\n'), rules, found, short, aimed), cut: true }
+}
+
+/** The catalogue as whole actions: a name line, and the field lines indented under it. */
+function catalogueBlocks(catalogue: string): string[] {
+  const blocks: string[] = []
+  for (const line of catalogue.split('\n')) {
+    if (line.startsWith('    ') && blocks.length > 0) blocks[blocks.length - 1] += `\n${line}`
+    else blocks.push(line)
+  }
+
+  return blocks
 }
 
 function targetsWithin(targets: readonly Target[], over: number): readonly Target[] {
@@ -471,10 +505,10 @@ function memorySignal(
  *
  * 🛑 The LAST thing to give ground — after the state, the targets and the project context, and
  * before the catalogue, which never does: on the wide door those characters would otherwise take
- * the whole registry down to the spoken vocabulary. Measured, the short share alone runs 7 078
- * against `roomFor(4096)` = 7 116, so one `both` action added upstream takes the room this line
- * needs. Overrunning is not the milder failure — a runtime truncates from the HEAD, where the
- * preamble sits (ADR-18).
+ * the whole registry down to the spoken vocabulary. The tightest door is Scenario's, which leaves
+ * 8 000 characters against a short share of 7 405, so two `both` actions added upstream take the
+ * room this line needs. Overrunning is not the milder failure — a runtime truncates from
+ * the HEAD, where the preamble sits (ADR-18).
  */
 function composedWithSignal(
   parts: BriefingParts,
@@ -482,14 +516,18 @@ function composedWithSignal(
   base: readonly string[],
   signal: readonly string[],
 ): string {
-  const text = briefingText(parts, catalogue, [...base, ...signal], '')
-  if (signal.length === 0 || text.length <= parts.room) return text
+  const written = briefingWithin(parts, catalogue, [...base, ...signal], '')
+  // 🛑 `cut` as well as the length: the catalogue gives ground now, so a briefing that FITS may
+  // have paid for this line with an action — and the signal is the cheaper of the two to lose.
+  if (signal.length === 0 || (written.text.length <= parts.room && !written.cut)) {
+    return written.text
+  }
 
   // 🛑 Retried only where the signal is what tipped it over: a briefing that overruns by tens of
   // thousands is heading for `narrowBriefing` anyway, and composing a 69 000-character catalogue
   // a second time to learn that is the very waste this file's history records having removed.
-  const over = text.length - parts.room
-  return over > signalCost(signal) ? text : briefingText(parts, catalogue, base, '')
+  const over = written.text.length - parts.room
+  return over > signalCost(signal) ? written.text : briefingText(parts, catalogue, base, '')
 }
 
 /** What the signal adds to a briefing: its own line, and the newline that joins it. */
@@ -504,7 +542,7 @@ const signalCost = (signal: readonly string[]): number =>
 export function studioBriefing(parts: BriefingParts): Briefing {
   const whole = wholeShare()
   // The catalogue alone settles it for a narrow door, and settles it without composing: Scenario
-  // and every 4 096-token model would otherwise join 69 000 characters on every sentence typed.
+  // and every capped local model would otherwise join 69 000 characters on every sentence typed.
   if (parts.room < whole.text.length) return narrowBriefing(parts)
 
   // `canFind` is false: `DISCOVERY_ACTION` is dropped from the wide share, so nothing to find with.
@@ -532,10 +570,12 @@ function narrowBriefing(declared: BriefingParts): Briefing {
   const short = shortShare()
 
   return {
-    text: composedWithSignal(parts, short.text, NARROW_RULES, [
-      ...memorySignal(parts, short.allowed, true),
-      ASK_SIGNAL,
-    ]),
+    text: composedWithSignal(
+      parts,
+      short.text,
+      NARROW_RULES,
+      memorySignal(parts, short.allowed, true),
+    ),
     allowed: short.allowed,
     // Offered once, and only from here: an expansion of an expansion is a conversation with
     // itself, paid for by the person waiting — see `expandedWith`.
@@ -575,10 +615,10 @@ const nothingFound = (query: string): string =>
   `Nothing in the catalogue matches "${query}". Say so rather than inventing an action.`
 
 /**
- * 🛑 NOT the same sentence as `nothingFound`, and the difference is the whole point: every Ollama
- * model declares a 4 096-token window, which leaves 7 116 characters against a short briefing of
- * 7 343 with a full project context — so the room is negative and NOTHING fits. Told "nothing
- * matches", the model says so to the person, about nineteen actions that do.
+ * 🛑 NOT the same sentence as `nothingFound`, and the difference is the whole point: a door whose
+ * room barely covers the short briefing plus a full project context has NOTHING left, so not one
+ * found action fits. Told "nothing matches", the model says so to the person, about nineteen
+ * actions that do.
  */
 const noRoomFound = (query: string, hits: number): string =>
   `${hits} actions match "${query}", and this briefing has no room to describe them. ` +

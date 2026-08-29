@@ -24,10 +24,9 @@ rend « on en est où ? » répondable.
 ## Ce que la batterie mesure
 
 Le banc appelle `runConfirmedAction`, la porte que la fenêtre ET le serveur MCP franchissent, donc
-il mesure le registre **entier** — y compris ce que le fil MCP ne porte pas. `coverage.ts` dit,
-action par action, quelle demande l'exerce, et le compilateur refuse une action qui n'y répond pas.
-**Le compte se rejoue, il ne se recopie pas** : `reach: 'window'` en retire du fil, et une action
-neuve l'ajoute des deux côtés.
+il mesure le registre **entier**, que le fil porte désormais en entier lui aussi. `coverage.ts`
+dit, action par action, quelle demande l'exerce, et le compilateur refuse une action qui n'y
+répond pas. **Le compte se rejoue, il ne se recopie pas.**
 
 🛑 **Un outil qu'aucune phrase n'atteint est un outil que personne n'a vu marcher.** La table est
 un `Record<ActionName, …>` : une action ajoutée au registre **ne compile plus** tant qu'elle n'y
@@ -677,6 +676,7 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 - [ ] « Rouvre mon projet Démo. »
 - [ ] « Renomme mon projet Démo Assistant. »
 - [ ] « Ferme le projet ouvert. »
+- [ ] « Crée un nouveau projet. »
 
 ## 42. Fichiers — le reste
 
@@ -968,8 +968,8 @@ fait écrire par un **modèle** — un cloud de discussion ou un modèle de code
 Ce que l'assistant a appris vit dans `<projet>/.ia-studio/memory.ndjson` et voyage avec le
 dossier. 🛑 **Rien n'est injecté dans le briefing** : il ne porte qu'un signal d'une ligne, et
 seulement si la mémoire n'est pas vide — c'est le modèle qui va la chercher. Les cinq actions
-sont en `reach: 'mcp'` : mesuré, le briefing court laisse 108 caractères, et le plus petit de ces
-blocs est plus long, donc une porte étroite les atteint par `actions.find`.
+sont en `reach: 'mcp'` : elles ne sont pas dans la part courte, donc une porte étroite les atteint
+par `actions.find`.
 
 Ce que la section mesure au-delà de son décor : que le modèle DEMANDE ce qu'il ne sait pas.
 

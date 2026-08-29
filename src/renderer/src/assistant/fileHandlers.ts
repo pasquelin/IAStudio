@@ -119,6 +119,8 @@ async function closeProject(): Promise<ActionOutcome> {
 }
 
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
+  // Bare on purpose: `path` is `required`, so `runAction` refuses a call without it — and names
+  // the field — before this ever runs.
   const asked = textOf(input, 'path')
   if (asked === null) return refused('badInput')
 
@@ -131,7 +133,13 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
   const path = projectPathFor(asked, projectPickerFolder(projectsFolder, recentProjects))
   // The first project of a machine: nothing has been created yet, so there is no folder to put a
   // name under. Answered rather than guessed — `~/Documents` is a place nobody asked for.
-  if (path === undefined) return refused('badInput')
+  if (path === undefined) {
+    return refused(
+      'badInput',
+      'no folder is known to put a project in yet, and none can be guessed. Give "path" a whole ' +
+        'absolute path this time.',
+    )
+  }
 
   // Through the store, which is what makes this the FOURTH way out of a project rather than the
   // one that slipped past its questions: it left the open project without asking about the

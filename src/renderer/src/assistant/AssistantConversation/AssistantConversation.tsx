@@ -252,8 +252,9 @@ export function AssistantConversation() {
     return registerDictationTarget(text => {
       const assistant = useAssistant.getState()
       // While a plan is running the assistant takes no new sentence — but the words were spoken,
-      // and dropping them left no trace at all. They land in the field instead.
-      if (assistant.busy) {
+      // and dropping them left no trace at all. They land in the field instead. A question
+      // STANDING is the exception: `say` reads what is spoken as its answer, as it does typing.
+      if (assistant.busy && !assistant.choosing) {
         assistant.setDraft(assistant.draft === '' ? text : `${assistant.draft} ${text}`)
         return
       }
@@ -439,8 +440,10 @@ export function AssistantConversation() {
                 // a grey tail reads as text already written until one is told what takes it.
                 {...HINT_TOP(t('assistant.completeHint', { accept: keyLabel('Tab') }))}
                 // While a plan is running: a second sentence would interleave two plans over one
-                // generator form, and the question on screen belongs to the first of them.
-                disabled={busy}
+                // generator form, and the question on screen belongs to the first of them. A
+                // question STANDING is the exception, and the reason this is not just `busy`:
+                // what is typed under it is that question's answer — see `say`.
+                disabled={busy && !choosing}
                 onChange={event => {
                   setDraft(event.target.value)
                   setCaretAtEnd(atEnd(event.currentTarget))
@@ -518,7 +521,7 @@ export function AssistantConversation() {
 
                 {/* Where Send was, and never beside it: the same corner the eye already goes to
                     for "act on this", and a chain one cannot stop is one nobody dares start. */}
-                {busy ? (
+                {busy && !choosing ? (
                   <Button
                     type="button"
                     onClick={stop}

@@ -92,6 +92,18 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     // The decor holds one open, so the empty name is the model's doing and not the bench's.
     passed: run => run.studio.projectName() === '',
   },
+  {
+    // 🛑 The gesture the `ask` key was built for, end to end: no name until the person gives one,
+    // so the model must STOP, ask, and build on the answer.
+    name: '41.10 asks what to call the project it was told to create',
+    said: ['Crée un nouveau projet.'],
+    // Closed first, so the name read below is one the MODEL obtained — and never the answer the
+    // stand-in gave, which is `choices[0]` for a model that asked with buttons.
+    setup: async studio => {
+      await studio.run('project.close', {})
+    },
+    passed: run => read.asked(run) && run.studio.projectName() !== '',
+  },
 
   {
     name: '42.1 copies the boat picture into Materials without moving it',
@@ -261,13 +273,11 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     passed: run => read.spoke(run) && read.answeredWith(run, 'prompt.describeStyle'),
   },
   {
-    /**
-     * 🛑 The QUESTION is what is measured, not the answer: written into a `say` it costs the
-     * person a round of typing, where a pressed button comes back as this action's outcome.
-     */
+    // 🛑 The QUESTION, and that NOTHING ran beside it: written into a `say`, the studio carried
+    // on regardless — see `41.10`, which measures the same rule on a request with no name.
     name: '45.8 asks which space to work in, offering the three',
     said: ['Demande-moi dans quel espace travailler, en me proposant Image, Vidéo ou Audio.'],
-    passed: run => read.answeredWith(run, 'chat.ask'),
+    passed: run => read.asked(run) && read.changedNothing(run),
   },
 
   {

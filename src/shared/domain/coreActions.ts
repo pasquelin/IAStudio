@@ -52,6 +52,12 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.command',
         required: true,
+        /**
+         * 🛑 The WHOLE registry, the five that raise a native picker included — leaving them out
+         * was tried and is worse: `options` is what the validator holds an input to, so
+         * `command.run project.new` came back `badInput` quoting the 126 remaining names, where
+         * the handler answers `nativeDialog` and says to use the action taking a path.
+         */
         options: COMMAND_REGISTRY.map(descriptor => descriptor.id),
       },
     ],
@@ -238,28 +244,6 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     reach: 'both',
     fields: [],
-  }),
-  /**
-   * 🛑 The one action that asks the PERSON something, and the only one of the registry a socket
-   * never sees (`reach: 'window'`): nobody is there to press a button on the MCP wire, and an
-   * action that waits for one would hang a client exactly as a native modal does.
-   */
-  action({
-    name: 'chat.ask',
-    titleKey: 'assistant.actions.chatAsk.title',
-    descriptionKey: 'assistant.actions.chatAsk.description',
-    commitment: 'none',
-    reach: 'window',
-    fields: [
-      { key: 'question', kind: 'text', labelKey: 'assistant.fields.question', required: true },
-      {
-        key: 'choices',
-        kind: 'text',
-        labelKey: 'assistant.fields.choices',
-        required: true,
-        repeated: true,
-      },
-    ],
   }),
   /**
    * How a model too small to be shown the whole registry asks for the rest of it.

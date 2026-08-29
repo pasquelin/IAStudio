@@ -226,7 +226,7 @@ describe('running a command', () => {
   it('refuses a command that raises a system dialogue', async () => {
     const outcome = await runAction('command.run', { command: 'project.new' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'notAllowed' })
+    expect(outcome).toEqual({ ok: false, refusal: 'nativeDialog' })
     expect(createPicked).not.toHaveBeenCalled()
   })
 })

@@ -267,8 +267,23 @@ describe('opening and making a project', () => {
   })
 
   /**
+   * 🛑 `inputProblem` answers this, above the handler — the case is here because the sentence the
+   * MODEL reads is what makes it repair rather than repeat, and nothing else in this file would
+   * notice the field losing its `required`.
+   */
+  it('says which field is missing rather than refusing bare', async () => {
+    withProject()
+
+    expect(await runAction('project.create', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+      detail: expect.stringContaining('"path"'),
+    })
+  })
+
+  /**
    * The first project of a machine: nothing says where projects go, and `~/Documents` is a place
-   * nobody asked for. Refused, so the model asks — which `chat.ask` now lets it do with choices.
+   * nobody asked for. Refused, so the model asks the person instead — see the `ask` key.
    */
   it('refuses a bare name where no folder is known yet', async () => {
     withProject()

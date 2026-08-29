@@ -30,7 +30,6 @@ export type ActionName =
   | 'prompt.suggest'
   | 'prompt.translate'
   | 'prompt.describeStyle'
-  | 'chat.ask'
   | 'chat.close'
   | 'actions.find'
   | 'target.select'
@@ -350,9 +349,9 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
  * 🛑 `window` is the ONE that does not reach the MCP wire at all — every other value does. It is
  * for what needs a person in front of the screen: nobody presses a button on a socket.
  */
-export type ActionReach = 'both' | 'mcp' | 'window'
+export type ActionReach = 'both' | 'mcp'
 
-export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp', 'window']
+export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
 
 /**
  * One input of an action.
@@ -480,6 +479,14 @@ export type ActionRefusal =
   | 'notFound'
   /** A call from outside may not do this at all. Never a person's refusal — that is `declined`. */
   | 'notAllowed'
+  /**
+   * The command raises a native picker, which nothing here can fill or read back.
+   *
+   * 🛑 Its own reason and never `notAllowed`, whose sentence says "an appeal from outside": the
+   * caller refused was the WINDOW's own assistant, and a refusal that misnames who was refused
+   * teaches the model nothing it can act on. This one names the way through instead.
+   */
+  | 'nativeDialog'
   /** The document in front carries nothing to render. Three causes, one honest answer. */
   | 'notRenderable'
   /** It was tried and it did not go through. The journal holds the reason; the input was not it. */
@@ -503,6 +510,7 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'formChanged',
   'notFound',
   'notAllowed',
+  'nativeDialog',
   'notRenderable',
   'failed',
 ]

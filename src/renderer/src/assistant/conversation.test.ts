@@ -13,6 +13,7 @@ const turn = (fields: Partial<AssistantTurn> = {}): AssistantTurn => ({
   said: 'ouvre un fichier 3D',
   answered: '',
   steps: [],
+  asks: [],
   lost: false,
   ...fields,
 })
@@ -37,6 +38,26 @@ describe('the conversation the model reads', () => {
     expect(blocks[0]).toContain('workspace.open')
     expect(blocks[0]).toContain('models.search')
     expect(blocks[1]).toContain('et maintenant génère')
+  })
+
+  /**
+   * 🛑 What makes the chain WAIT worth anything: without these two lines the answer never reaches
+   * the round that asked for it, and the model asks the same question on the next one.
+   */
+  it('carries what was asked and what came back', () => {
+    const [block] = assistantHistory([
+      turn({ asks: [{ question: 'Quel nom ?', answer: 'Bateaux' }] }),
+    ])
+
+    expect(block).toContain('You asked: Quel nom ?')
+    expect(block).toContain('The person answered: Bateaux')
+  })
+
+  // Dismissing is the one answer that ends the chain, and the model reads that it did.
+  it('says when the question was left unanswered', () => {
+    const [block] = assistantHistory([turn({ asks: [{ question: 'Lequel ?', answer: null }] })])
+
+    expect(block).toContain('The person did not answer')
   })
 
   /**

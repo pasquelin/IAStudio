@@ -51,23 +51,6 @@ describe('an action asked for from outside the window', () => {
     expect(answers[0]).toEqual({ callId: 'call_1', outcome: { ok: true } })
   })
 
-  /**
-   * 🛑 `mcpTools()` decides only what is LISTED — a client may call a name it never saw, and
-   * `studio.batch` carries one too. Listed-only, the choice card was drawn on this screen while
-   * the client was told `timedOut` two seconds later, and the click was dropped in silence.
-   */
-  it('refuses one that would wait for somebody in front of the screen', async () => {
-    const { push, answers } = connected()
-    push({
-      callId: 'call_9',
-      call: { action: 'chat.ask', input: { question: 'Which?', choices: ['a'] } },
-    })
-    await vi.waitFor(() => expect(answers).toHaveLength(1))
-
-    expect(answers[0]).toEqual({ callId: 'call_9', outcome: { ok: false, refusal: 'notAllowed' } })
-    expect(runConfirmedAction).not.toHaveBeenCalled()
-  })
-
   it('answers under the id it was asked, refusal and all', async () => {
     runConfirmedAction.mockResolvedValue({ ok: false, refusal: 'declined' })
     const { push, answers } = connected()

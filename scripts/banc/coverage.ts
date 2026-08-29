@@ -3,11 +3,9 @@ import type { ActionName } from '@shared/domain/assistant'
 /**
  * Which requests of the batterie exercise which MCP action, named by their rank.
  *
- * 🛑 `Record<ActionName, …>` on purpose, and it is the whole point of the file: the bench drives
- * `runConfirmedAction`, so it measures the WHOLE registry — including what the MCP wire never
- * carries (`reach: 'window'`). An action added without a scenario is one nobody has seen work;
- * named here, the compiler refuses it until « what measures it? » has an answer, even an empty
- * list.
+ * 🛑 `Record<ActionName, …>` on purpose, and it is the whole point of the file: an action added
+ * without a scenario is one nobody has seen work; named here, the compiler refuses it until
+ * « what measures it? » has an answer, even an empty list.
  *
  * An intention, not a prescription: the model picks its own calls and the oracles read the
  * studio, never the calls. A rank listed against an action says « this request is why that tool
@@ -44,7 +42,6 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'prompt.suggest': ['45.5'],
   'prompt.translate': ['45.6'],
   'prompt.describeStyle': ['45.7'],
-  'chat.ask': ['45.8'],
   'chat.close': ['45.3'],
   'actions.find': ['45.2'],
   'target.select': ['45.4'],
@@ -60,7 +57,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'document.export': ['41.5'],
   'activity.recent': ['42.3'],
   'project.open': ['41.7'],
-  'project.create': ['41.6'],
+  'project.create': ['41.6', '41.10'],
   'project.close': ['41.9'],
 
   'file.open': ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '22.3', '66.2'],

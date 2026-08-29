@@ -368,6 +368,7 @@ describe('the lists that stand for a union', () => {
       formChanged: true,
       notFound: true,
       notAllowed: true,
+      nativeDialog: true,
       notRenderable: true,
       failed: true,
     }
@@ -409,7 +410,6 @@ describe('the lists that stand for a union', () => {
     const all: Record<ActionReach, true> = {
       both: true,
       mcp: true,
-      window: true,
     }
 
     expect(sorted(ACTION_REACHES)).toEqual(sorted(Object.keys(all)))
@@ -436,7 +436,6 @@ describe('the lists that stand for a union', () => {
       'prompt.suggest': true,
       'prompt.translate': true,
       'prompt.describeStyle': true,
-      'chat.ask': true,
       'chat.close': true,
       'actions.find': true,
       'target.select': true,

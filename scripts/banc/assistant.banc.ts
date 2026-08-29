@@ -141,19 +141,23 @@ describe.skipIf(KEY === '' || chat === null)(`what ${PROVIDER} does with a real 
 
     for (let run = 0; run < RUNS; run += 1) {
       const played = await play(scenario, request => brain.think(request))
-      tally.rounds += played.rounds
-      tally.refused += played.refused
+      // 🛑 In a `finally`: the surfaces this run stood in for include a store SUBSCRIPTION, which
+      // piles up rather than being replaced — a run that throws would leave every later scenario
+      // paying it, once per streamed token.
+      try {
+        tally.rounds += played.rounds
+        tally.refused += played.refused
 
-      // What it CHOSE is the whole finding: a bare `false` sends the reader back to spend the
-      // same money again to learn what this line already holds. Names alone are not enough —
-      // "searched, then stopped" and "searched with the wrong words" read identically.
-      if (scenario.passed(played)) tally.passed += 1
-      else missed.push(transcriptOf(played))
+        // What it CHOSE is the whole finding: a bare `false` sends the reader back to spend the
+        // same money again to learn what this line already holds. Names alone are not enough —
+        // "searched, then stopped" and "searched with the wrong words" read identically.
+        if (scenario.passed(played)) tally.passed += 1
+        else missed.push(transcriptOf(played))
 
-      // The three surfaces this run stood in for, given back before the next one takes them.
-      played.studio.close()
-
-      for (const one of played.called) touched.add(one.action)
+        for (const one of played.called) touched.add(one.action)
+      } finally {
+        played.studio.close()
+      }
     }
 
     measured.push(tally)

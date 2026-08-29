@@ -3,7 +3,12 @@ import { ACTION_REGISTRY, actionsReaching, type ActionName } from '@shared/domai
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
-import { createProviderBrain, INSTRUCTION_MAX } from './brainProvider'
+import {
+  BRIEFING_ROOM,
+  createProviderBrain,
+  INSTRUCTION_MAX,
+  UTTERANCE_ROOM,
+} from './brainProvider'
 import { recentHistory, studioBriefing } from './instruction'
 import { STATE_MAX } from './studioState'
 import { jsonIn, parseReply } from './reply'
@@ -13,7 +18,7 @@ const SHOWN: ReadonlySet<ActionName> = new Set(actionsReaching('both').map(actio
 
 /** The briefing this door actually composes: too narrow for the whole registry, by design. */
 const shortBriefing = (context = ''): string =>
-  studioBriefing({ context, room: INSTRUCTION_MAX - 2_000 }).text
+  studioBriefing({ context, room: BRIEFING_ROOM }).text
 
 /** The instruction one turn of the Scenario door sends, sentence included. */
 async function instructionSent(utterance: string, context = '', state = ''): Promise<string> {
@@ -127,14 +132,14 @@ describe('what the model is told', () => {
    * that matters and the other one moved: 5 110 characters on 2026-08-15, **5 915 on 2026-08-25**,
    * most of it `command.run` enumerating a hundred command ids — which is what makes it usable.
    *
-   * The floor was four thousand and is two. At 5 915 the old one left EIGHTY-FIVE characters free,
-   * and a full project context costs 619 — so the context could not have been added at all, and
-   * the case below would have failed at 3 466. Two thousand is some three hundred words, still far
-   * past anything anyone says to an assistant, and the guarantee is unchanged: a long paste is
-   * cut, the instructions always arrive whole.
+   * The floor was four thousand, then two, and is 1 500 — `UTTERANCE_ROOM` says which, so this
+   * reads the constant rather than a number to be edited in three places. At 5 915 the four
+   * thousand left EIGHTY-FIVE characters free, and a full project context costs 619 — so the
+   * context could not have been added at all. The guarantee is unchanged whatever the figure: a
+   * long paste is cut, the instructions always arrive whole.
    */
   it('leaves the person’s own sentence room to be long', async () => {
-    expect(await instructionSent('x'.repeat(3_000))).toContain('x'.repeat(2_000))
+    expect(await instructionSent('x'.repeat(3_000))).toContain('x'.repeat(UTTERANCE_ROOM))
   })
 
   /** What the model is told about the project it is working in. */
@@ -152,7 +157,7 @@ describe('what the model is told', () => {
   it('leaves that room even under a project context of the full size', async () => {
     const sent = await instructionSent('y'.repeat(3_000), 'x'.repeat(CONTEXT_COMPOSED_MAX))
 
-    expect(sent).toContain('y'.repeat(2_000))
+    expect(sent).toContain('y'.repeat(UTTERANCE_ROOM))
   })
 
   /**
@@ -167,7 +172,7 @@ describe('what the model is told', () => {
       'z'.repeat(STATE_MAX),
     )
 
-    expect(sent).toContain('y'.repeat(2_000))
+    expect(sent).toContain('y'.repeat(UTTERANCE_ROOM))
   })
 
   it('keeps the last turns, not the first', () => {
@@ -234,6 +239,41 @@ describe('reading what came back', () => {
   // Shape answered, nothing said, nothing done — which is not an answer a person can be shown.
   it('refuses a reply that neither speaks nor acts', () => {
     expect(parseReply('{"say":"","calls":[]}', SHOWN)).toBeNull()
+  })
+
+  // 🛑 The defect the `ask` key exists for, measured where the rule lives — see `parseReply`.
+  it('drops the calls an answer that asks came with', () => {
+    const text =
+      '{"say":"","ask":{"question":"Quel nom ?","choices":[]},' +
+      '"calls":[{"action":"workspace.open","input":{"workspace":"3d"}}]}'
+
+    expect(parseReply(text, SHOWN)).toEqual({
+      say: '',
+      ask: { question: 'Quel nom ?', choices: [] },
+      calls: [],
+    })
+  })
+
+  // A question is an answer on its own: nothing was said and nothing was done, and the person
+  // still has something to read.
+  it('takes a question as the whole answer', () => {
+    const text = '{"say":"","ask":{"question":"Lequel ?","choices":["a","b"]},"calls":[]}'
+
+    expect(parseReply(text, SHOWN)?.ask).toEqual({ question: 'Lequel ?', choices: ['a', 'b'] })
+  })
+
+  /**
+   * A button with no words on it is no button, and losing the turn over one teaches nobody
+   * anything: the choices are filtered where the QUESTION is what has to be there.
+   */
+  it('keeps a question whose choices are half empty, and refuses one with no question', () => {
+    const half = '{"say":"","ask":{"question":"Lequel ?","choices":["a","",3]},"calls":[]}'
+    expect(parseReply(half, SHOWN)?.ask?.choices).toEqual(['a'])
+
+    expect(parseReply('{"say":"ok","ask":{"question":"  "},"calls":[]}', SHOWN)).toEqual({
+      say: 'ok',
+      calls: [],
+    })
   })
 
   it('takes an action with no input at all', () => {

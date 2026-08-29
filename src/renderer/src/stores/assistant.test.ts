@@ -72,19 +72,81 @@ beforeEach(() => {
   })
 })
 
+/** Answers whatever question is standing, as a person pressing a button or typing would. */
+async function answering(chosen: string | null): Promise<void> {
+  await vi.waitFor(() => expect(useAssistant.getState().choosing).not.toBeNull())
+  useAssistant.getState().choose(chosen)
+}
+
 describe('a question the model asked', () => {
   /**
+   * 🛑 The defect this whole key exists for: asked to ask, a model asked AND acted in the same
+   * breath — measured on qwen3.8, « Crée un nouveau projet » came back with the question in `say`
+   * and `command.run` beside it, and both calls were run against a name nobody had given.
+   */
+  it('runs nothing of the round that asked', async () => {
+    brain(
+      answer({ say: '', ask: { question: 'Quel nom ?', choices: [] }, calls: [] }),
+      answer({ calls: [] }),
+    )
+
+    const said = useAssistant.getState().say('crée un projet')
+    await answering('Bateaux')
+    await said
+
+    expect(runConfirmedAction).not.toHaveBeenCalled()
+    expect(useAssistant.getState().turns[0]?.asks).toEqual([
+      { question: 'Quel nom ?', answer: 'Bateaux' },
+    ])
+  })
+
+  /** What the wait is worth: the answer reaches the round that asked for it, or it asks again. */
+  it('carries the answer into the next round', async () => {
+    const { asked } = brain(
+      answer({ say: '', ask: { question: 'Quel nom ?', choices: [] }, calls: [] }),
+      answer({ calls: [] }),
+    )
+
+    const said = useAssistant.getState().say('crée un projet')
+    await answering('Bateaux')
+    await said
+
+    expect(asked).toHaveLength(2)
+    expect(asked[1]?.history.join('\n')).toContain('The person answered: Bateaux')
+  })
+
+  /** The composer is the only way to answer a question with no choices — see `say`. */
+  it('takes what is typed as the answer rather than as a new sentence', async () => {
+    const { asked } = brain(
+      answer({ say: '', ask: { question: 'Quel nom ?', choices: [] }, calls: [] }),
+      answer({ calls: [] }),
+    )
+
+    const said = useAssistant.getState().say('crée un projet')
+    await vi.waitFor(() => expect(useAssistant.getState().choosing).not.toBeNull())
+    await useAssistant.getState().say('Bateaux')
+    await said
+
+    expect(useAssistant.getState().turns).toHaveLength(1)
+    expect(asked[1]?.history.join('\n')).toContain('The person answered: Bateaux')
+  })
+
+  /**
    * 🛑 « Laisser tomber » ENDS the chain, which is what the button promises. Read as an ordinary
-   * refusal, the model was handed "declined" and asked again on the next BILLED round.
+   * answer, the model was handed nothing and asked again on the next BILLED round.
    */
   it('ends the chain when the person lets the question go', async () => {
-    runConfirmedAction.mockResolvedValue({ ok: false, refusal: 'declined' })
-    brain(answer({ say: 'Où ?', calls: [{ action: 'chat.ask', input: {} }] }), answer())
+    const { asked } = brain(
+      answer({ say: 'Où ?', ask: { question: 'Où ?', choices: ['Image'] }, calls: [] }),
+      answer(),
+    )
 
-    await useAssistant.getState().say('crée un projet')
+    const said = useAssistant.getState().say('crée un projet')
+    await answering(null)
+    await said
 
     expect(useAssistant.getState().turns[0]).toMatchObject({ ending: 'stopped' })
-    expect(runConfirmedAction).toHaveBeenCalledTimes(1)
+    expect(asked).toHaveLength(1)
   })
 
   /**

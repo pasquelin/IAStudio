@@ -3,6 +3,7 @@ import { ACTION_FAMILIES, ACTION_REGISTRY } from '@shared/domain/assistant'
 import { GENERATIVE_WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
+import { BRIEFING_ROOM } from './brainProvider'
 import { machineFolders } from './machineFolders'
 import { studioBriefing } from './instruction'
 import { ASSISTANT_WINDOW_MAX, roomFor } from './promptWindow'
@@ -24,8 +25,12 @@ const SATURATED: readonly Target[] = [...Array(TARGETS_MAX).keys()].map((at): Ta
 /** Past the whole registry, which was 68 991 characters on 2026-08-25. */
 const WIDE = 200_000
 
-/** What Scenario's door leaves the briefing — narrow enough that the short list is what fits. */
-const NARROW = 8_000
+/**
+ * What Scenario's door leaves the briefing — narrow enough that the short list is what fits, and
+ * the tightest room any door composes against. Read off the door rather than copied: the number
+ * moved once and three cases went on measuring the one before it.
+ */
+const NARROW = BRIEFING_ROOM
 
 describe('what the model is told about the studio', () => {
   /**
@@ -49,16 +54,38 @@ describe('what the model is told about the studio', () => {
 
 describe('how much of the catalogue the model is shown', () => {
   /**
-   * 🛑 `[M]` Every Ollama tag declares 4 096, where the short catalogue alone runs 7 098 against
-   * a room of 7 116 — the folders overran it by 146, and a runtime cuts from the HEAD (ADR-18),
-   * so what a silent overrun costs is the preamble rather than the block that caused it.
+   * 🛑 `[M]` The one a whole lot walked past: at 4 096 tokens — what `ollamaModel` gives a tag
+   * declaring none — the room is 7 116 against a short briefing of 7 405, and nothing was left to
+   * give. The catalogue gives ground now, and `actions.find` reaches what was cut.
+   *
+   * Every room rather than one: a case pinned to a figure goes green the day the briefing shrinks.
+   */
+  it.each([roomFor(4096), roomFor(8192), NARROW, WIDE])('fits the room it was given: %i', room => {
+    expect(
+      studioBriefing({
+        room,
+        folders: machineFolders(name => `/Users/someone/${name}`, undefined),
+        context: 'x'.repeat(CONTEXT_COMPOSED_MAX),
+        state: 'z'.repeat(STATE_MAX),
+        targets: SATURATED,
+      }).text.length,
+    ).toBeLessThanOrEqual(room)
+  })
+
+  /**
+   * 🛑 They go before the catalogue does, and a runtime cuts from the HEAD (ADR-18) — so what a
+   * silent overrun costs is the preamble rather than the block that caused it.
+   *
+   * The room is MEASURED here, never a door's: written as a figure this case would go green the
+   * day the catalogue shrinks, testing a ladder nothing climbs.
    */
   it('drops the machine folders rather than overrun the room they do not fit in', () => {
     const folders = machineFolders(name => `/Users/someone/${name}`, undefined)
-    const briefing = studioBriefing({ room: roomFor(4096), folders })
+    const exact = studioBriefing({ room: NARROW }).text.length
+    const briefing = studioBriefing({ room: exact, folders })
 
     expect(briefing.text).not.toContain('Folders on this machine:')
-    expect(briefing.text.length).toBeLessThanOrEqual(roomFor(4096))
+    expect(briefing.text.length).toBeLessThanOrEqual(exact)
   })
 
   it('carries the machine folders wherever they fit', () => {
@@ -69,25 +96,18 @@ describe('how much of the catalogue the model is shown', () => {
   })
 
   /**
-   * 🛑 `[M]` The short share runs 7 098 against a room of 7 116 at 4 096 tokens: LISTING this
-   * action costs 373 characters and overruns it, so it is named in one line and stays in
-   * `allowed` — unlisted is not refused, and `parseReply` would drop the whole turn otherwise.
+   * 🛑 The way to ask is in the FORMAT and never in the catalogue, and this is what that buys:
+   * the block is composed on EVERY briefing, so the narrowest room the studio ships for still
+   * carries it. Named as an action it was described by a rule that gave ground with the memory
+   * line — a way of asking that disappeared exactly where a small model needed it most.
    */
-  it('names the way to ask the person, without listing it', () => {
-    const briefing = studioBriefing({ room: roomFor(ASSISTANT_WINDOW_MAX) })
+  it('tells every door how to ask the person, whatever room it has', () => {
+    for (const room of [NARROW, roomFor(ASSISTANT_WINDOW_MAX), WIDE]) {
+      const briefing = studioBriefing({ room })
 
-    expect(briefing.text).toContain('"action":"chat.ask"')
-    expect(briefing.text).not.toContain('  chat.ask —')
-    expect(briefing.allowed.has('chat.ask')).toBe(true)
-  })
-
-  // It gives ground with the memory line: the studio then reads as it did, the question in `say`.
-  it('drops that line rather than overrun a room too small for it', () => {
-    const briefing = studioBriefing({ room: roomFor(4096) })
-
-    expect(briefing.text).not.toContain('"action":"chat.ask"')
-    expect(briefing.text.length).toBeLessThanOrEqual(roomFor(4096))
-    expect(briefing.allowed.has('chat.ask')).toBe(true)
+      expect(briefing.text, `room ${room}`).toContain('"ask": {"question"')
+      expect(briefing.text, `room ${room}`).toContain('RUNS NOTHING')
+    }
   })
 
   /**
@@ -251,10 +271,9 @@ describe('asking for the rest of the catalogue', () => {
   })
 
   /**
-   * 🛑 The two are NOT one sentence. Every Ollama model declares a 4 096-token window, which
-   * leaves 7 116 characters against a short briefing of 7 343 with a full project context — so
-   * on the default local door nothing ever fits, and "nothing matches" would be said to the
-   * person about nineteen actions that do.
+   * 🛑 The two are NOT one sentence. A door whose room barely covers the short briefing plus a
+   * full project context has nothing left for one found action — and "nothing matches" would then
+   * be said to the person about nineteen actions that do.
    */
   it('says there was no ROOM, which is not the same as nothing matching', () => {
     const briefing = studioBriefing({ room: 1 }).expand?.('layer')
@@ -307,7 +326,7 @@ describe('a door that refused the whole catalogue', () => {
  * The short briefing with nothing else in it — measured rather than written down, because it
  * moves whenever a `both` action's description does.
  */
-const bareShort = (): number => studioBriefing({ room: roomFor(4096), memories: 0 }).text.length
+const bareShort = (): number => studioBriefing({ room: NARROW, memories: 0 }).text.length
 
 describe('what a briefing says about the memory', () => {
   /**
@@ -349,10 +368,9 @@ describe('what a briefing says about the memory', () => {
   })
 
   /**
-   * 🛑 The signal is the LAST thing to give ground, and it does give ground: the short share is
-   * 7 078 characters against a room of 7 116, so one `both` action added upstream takes the room
-   * this line needs. Overrunning is not the milder failure — a runtime truncates from the HEAD,
-   * where the preamble sits (ADR-18). Measured when `generator.armed` joined the spoken catalogue.
+   * 🛑 The signal is the LAST thing to give ground, and it does: the short share is 7 405
+   * characters against the 8 000 Scenario's door leaves. Overrunning is not the milder failure —
+   * a runtime truncates from the HEAD, where the preamble sits (ADR-18).
    */
   it('gives the signal up rather than overrun a door that has no room for it', () => {
     const room = bareShort() + 10

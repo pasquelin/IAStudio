@@ -45,10 +45,6 @@
         "title": "Chercher des actions",
         "description": "Cherche par mots-clés dans toutes les actions que le studio publie et rend celles qui correspondent, avec leurs champs. Ne change rien à l’écran."
       },
-      "chatAsk": {
-        "title": "Poser une question au choix",
-        "description": "Pose une question à la personne et lui propose des réponses à cliquer. À utiliser plutôt que d’écrire la question dans la réponse : ce qui est cliqué revient à l’étape suivante, là où une phrase attend un nouveau tour de clavier. Ne change rien à l’écran et ne consomme rien."
-      },
       "chatClose": {
         "title": "Refermer la conversation",
         "description": "Retire la conversation de l’écran pour laisser voir le résultat. À appeler en dernier, et seulement une fois le résultat visible — jamais quand la réponse est les mots eux-mêmes, ni pendant qu’une permission est demandée."
@@ -1152,6 +1148,7 @@
       "formChanged": "Le formulaire a changé depuis l’annonce du coût. Rien n’a été envoyé — redemandez pour obtenir un nouveau chiffre.",
       "notFound": "Rien de ce nom n’est là pour recevoir cette action. L’appel, lui, était bien formé.",
       "notAllowed": "Le studio ne laisse pas un appel venu de l’extérieur changer cela. Seule sa propre fenêtre le fait.",
+      "nativeDialog": "Cette commande ouvre une fenêtre du système : l’assistant ne peut ni la remplir ni la lire. Utilise l’action qui prend un chemin.",
       "notRenderable": "Le document au premier plan n’a rien que ceci puisse rendre — un ciel vide, une matière sans canal, ou un moteur qui n’est pas monté.",
       "failed": "Le studio a essayé et cela n’est pas passé. La raison est dans son journal, et ce ne sont pas les paramètres."
     },
@@ -1166,8 +1163,6 @@
       "workspace": "Espace de travail",
       "createDocument": "Créer un document",
       "query": "Mots-clés",
-      "question": "Question posée",
-      "choices": "Réponses proposées",
       "family": "Famille de génération",
       "modelId": "Identifiant du modèle",
       "operation": "Emploi, ex. code2code",
@@ -1475,6 +1470,7 @@
     "sendHint": "Envoie la phrase à l’assistant, qui choisit les actions et les exécute",
     "tokens": "{{prompt, number}} jetons lus · {{reply, number}} écrits",
     "chooseHint": "Répond à la question et laisse l’assistant continuer",
+    "answerBelow": "Réponds en dessous, dans le champ",
     "skipChoice": "Laisser tomber",
     "skipChoiceHint": "Ferme la question sans répondre : l’assistant s’arrête là",
     "contextOf": "{{read, number}} / {{window, number}} jetons",

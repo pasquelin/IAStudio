@@ -6,9 +6,9 @@ import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
 import { defined } from '@shared/guards'
 import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
-import { answeredTurn, inWindow, turnsWith } from './brainTurn'
+import { answeredTurn, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
-import { roomFor } from './promptWindow'
+import { ASSISTANT_WINDOW_MAX, roomFor } from './promptWindow'
 
 const ASK_TOKENS = 4096
 
@@ -20,12 +20,16 @@ const ASK_TOKENS = 4096
 const CLOUD_CONTEXT_TOKENS = 32_000
 
 /**
- * And what one that REFUSED that is taken to hold — the narrowest window the studio ships for,
- * which is what an Ollama model declares. Through `roomFor` like the other two doors: the reply
- * and the sentence get their room from the same arithmetic, rather than from a number written
- * here that reserved neither.
+ * And what one that REFUSED that is taken to hold — `ASSISTANT_WINDOW_MAX`, the window the short
+ * briefing is composed against everywhere else. Through `roomFor` like the other two doors: the
+ * reply and the sentence get their room from the same arithmetic, rather than from a number
+ * written here that reserved neither.
+ *
+ * 🛑 `[M]` It was 4 096 — an Ollama TAG's figure, on a door no Ollama model reaches — leaving the
+ * briefing 7 116 characters against a catalogue costing 7 098: eighteen of margin, and the folders
+ * block dropped whole. No chat cloud here holds under 8 192.
  */
-const CLOUD_FALLBACK_TOKENS = 4_096
+const CLOUD_FALLBACK_TOKENS = ASSISTANT_WINDOW_MAX
 
 export type HttpBrainDeps = {
   chat: HttpChat
@@ -49,18 +53,6 @@ function messagesFor(
     { role: 'user', content: prior + utterance },
   ]
 }
-
-/**
- * 🛑 The window THIS briefing was cut to, read off the briefing and never off `narrowed`: that
- * flag flips only after a door has refused once, so the narrow retry of the very turn proving
- * 32 000 too much reported 32 000 — eight times what it had just been cut to.
- */
-const seen = (watch: TurnWatch, briefing: Briefing) =>
-  watch.onProgress &&
-  inWindow(
-    watch.onProgress,
-    briefing.narrow === null ? CLOUD_FALLBACK_TOKENS : CLOUD_CONTEXT_TOKENS,
-  )
 
 /**
  * A chat cloud reached over HTTP. Same briefing and same JSON parse as the local brain;
@@ -109,7 +101,7 @@ export function createHttpChatBrain({
           messages,
           json: true,
           maxTokens: ASK_TOKENS,
-          ...defined({ signal: watch.signal, onProgress: seen(watch, briefing) }),
+          ...defined({ signal: watch.signal, onProgress: watch.onProgress }),
         },
         send,
       )
@@ -132,10 +124,13 @@ export function createHttpChatBrain({
         roomFor(CLOUD_FALLBACK_TOKENS),
       )
 
+      // 🛑 No window travels with these frames: the composer shows the count ALONE, as it does
+      // for Scenario. Both figures above are assumptions — `2 067 / 4 096` was shown for DeepSeek,
+      // whose window is far larger, off a number that only ever budgeted the briefing.
       return await answeredTurn(
         briefing,
         (shown, complaint) => round(request, shown, watch, complaint),
-        seen(watch, briefing),
+        watch.onProgress,
       )
     },
   }

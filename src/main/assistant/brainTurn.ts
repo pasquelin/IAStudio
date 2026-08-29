@@ -38,8 +38,8 @@ const stopped = (error: unknown): boolean =>
 /** Quoting the answer back is what works; bounded so an essay does not eat the history budget. */
 function complaintAbout(answer: string): string {
   return [
-    'Your previous answer could not be read. It must be one JSON object with the keys "say" and',
-    '"calls", and nothing else around it. This is what you sent:',
+    'Your previous answer could not be read. It must be one JSON object with the keys "say",',
+    '"ask" and "calls", and nothing else around it. This is what you sent:',
     answer.slice(0, 500),
   ].join('\n')
 }
@@ -131,8 +131,8 @@ async function readOrNarrow(
 
 /**
  * The one thing a model may ask for rather than do: the rest of the catalogue — and only when it
- * is the WHOLE answer. A plan that also acts is run ENTIRE, find call included, because
- * `parseReply` never filters a reply down to the calls it likes.
+ * is the WHOLE answer. A plan that also acts is run ENTIRE, find call included: `parseReply`
+ * drops calls for one reason only, an `ask` beside them, and an asking answer has none to find.
  */
 function discoveryIn(reply: Reply | null): string | null {
   const only = reply?.calls.length === 1 ? reply.calls[0] : undefined

@@ -51,6 +51,16 @@ describe('a question the model asked', () => {
     ])
   })
 
+  // 🛑 A question with NO choices is the ordinary case: a card drawing buttons alone could not
+  // serve the very question the `ask` key was built for.
+  it('sends a question with nothing to press to the field below', () => {
+    void useAssistant.getState().askChoice('Quel nom ?', [])
+    drawn()
+
+    expect(screen.getByText(/dans le champ/)).toBeInTheDocument()
+    expect(screen.getAllByRole('button').map(one => one.textContent)).toEqual(['Laisser tomber'])
+  })
+
   // One at a time, and ACROSS the two kinds: two slots blind to each other put two sets of
   // buttons on one thread, and the danger the guard exists for is between them too.
   it('refuses a second question rather than replacing the one on screen', async () => {

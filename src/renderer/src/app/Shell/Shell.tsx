@@ -10,7 +10,6 @@ import { showWorkspace } from '../dockviewApi'
 import { guardUnsavedWork } from '../unsavedGuard'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useGitWatch } from '@/hooks/useGitWatch'
-import { holdChooser } from '@/assistant/holdChooser'
 import { holdConfirmer } from '@/assistant/holdConfirmer'
 import { AssistantStatus } from '@/assistant/AssistantStatus'
 import { AssistantToast } from '@/assistant/AssistantToast'
@@ -52,7 +51,6 @@ export function Shell() {
 
   // The window's confirmer: it outlives either host of the conversation, and brings one up.
   useEffect(holdConfirmer, [])
-  useEffect(holdChooser, [])
   useAutosave()
 
   // Here rather than in the two panels that draw it: whether git holds the folder decides whether

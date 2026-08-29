@@ -17,3 +17,11 @@ export const CONVERSATION_CARD =
  * grey tail lands a character off the writing it continues.
  */
 export const CONVERSATION_FIELD_TYPE = 'px-1 text-xs'
+
+/**
+ * What the PERSON said, on the right: their sentence, and the answer they gave a question.
+ * Bounded because a dictated request runs long, and a bubble the width of the thread stops
+ * reading as one side of an exchange.
+ */
+export const CONVERSATION_BUBBLE =
+  'bg-surface text-text m-0 max-w-4/5 rounded-(--radius-sc-sm) px-2 py-1 text-xs'
