@@ -64,11 +64,16 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
+    /**
+     * `both`, and the second of this family to be: « crée un nouveau projet » is the plainest
+     * thing anyone says to a studio, and shown the short share alone a model reached for
+     * `command.run project.new` — the one command it may not run, since it raises a picker.
+     */
     name: 'project.create',
     titleKey: 'assistant.actions.projectCreate.title',
     descriptionKey: 'assistant.actions.projectCreate.description',
     commitment: 'studio',
-    reach: 'mcp',
+    reach: 'both',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
     ],

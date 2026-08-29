@@ -106,8 +106,7 @@ export const familyOfAction: ReadonlyMap<string, string> = new Map(
  * What one door carries: what is marked for it, plus what every door shares.
  *
  * 🛑 Marked-for-it and never a fallback: publishing EVERYTHING by default is what would send a
- * fourth reach out on the MCP wire with nothing red. `window` is out of `'mcp'` by this rule
- * alone — and the LISTING is only half of it, see `remoteActions.ts`.
+ * third reach out on the MCP wire with nothing red.
  */
 export function actionsReaching(reach: ActionReach): readonly AssistantAction[] {
   return ACTION_REGISTRY.filter(entry => entry.reach === 'both' || entry.reach === reach)
@@ -160,9 +159,6 @@ const scoreOf = (wanted: readonly string[], found: readonly string[]): number =>
  * of what they search, and a name spelled twice is a name that drifts.
  */
 export const DISCOVERY_ACTION: ActionName = 'actions.find'
-
-/** The one action that asks the PERSON — named by a rule rather than listed, for the same reason. */
-export const ASK_ACTION: ActionName = 'chat.ask'
 
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
@@ -268,9 +264,31 @@ export const assistantProgress = (
     ? null
     : { delta, ...defined({ promptTokens, replyTokens }) }
 
+/**
+ * What the assistant asks the PERSON before it does anything — the second half of an answer, and
+ * a shape the FORMAT block describes rather than an action of the registry.
+ *
+ * 🛑 An action is the wrong place for it, and it was measured there: named by a rule that gives
+ * ground when the room runs out, `chat.ask` was described to a model that then never called it —
+ * it wrote the question in `say` and sent its calls in the same breath. Here it cannot be cut.
+ *
+ * `choices` may be empty, and that is the ordinary case rather than the edge: "what shall the
+ * project be called" has no answers to press, and the person types it into the composer.
+ */
+export type AssistantAsk = {
+  question: string
+  choices: readonly string[]
+}
+
 export type AssistantAnswer = {
   /** What to say to the person. Empty when the actions speak for themselves. */
   say: string
+  /**
+   * 🛑 Filled means the turn STOPS: `calls` is empty by construction — `parseReply` refuses an
+   * answer that asks and acts at once — and the chain waits for the answer, which enters the
+   * history of the round after it.
+   */
+  ask?: AssistantAsk
   calls: readonly AssistantCall[]
   /**
    * What the turn cost, in creative units.

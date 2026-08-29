@@ -5,10 +5,8 @@ import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
 import { CONVERSATION_CARD } from './conversationStyles'
 
 /**
- * What the model asked, with the answers it offered.
- *
- * Buttons rather than a sentence to type back: what is pressed returns as the action's outcome,
- * so the chain carries on with it — a typed answer would cost the person another round.
+ * What the assistant asked, with the answers it offered — and often none: « quel nom ? » has
+ * nothing to press, so the composer below takes the answer and the card says where.
  */
 export function AssistantConversationChoice({ question, choices }: AssistantChoiceQuestion) {
   const { t } = useTranslation()
@@ -17,6 +15,10 @@ export function AssistantConversationChoice({ question, choices }: AssistantChoi
   return (
     <div className={CONVERSATION_CARD}>
       <p className="text-text m-0 text-xs font-medium">{question}</p>
+
+      {choices.length === 0 && (
+        <p className="text-muted text-mini m-0">{t('assistant.answerBelow')}</p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         {choices.map(choice => (

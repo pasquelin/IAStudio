@@ -8,6 +8,7 @@ const turn = {
   said: 'prépare une génération de casque',
   answered: '',
   steps: [],
+  asks: [],
   lost: false,
 }
 

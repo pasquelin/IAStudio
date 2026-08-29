@@ -8,10 +8,11 @@
 import {
   type ActionName,
   assistantAction,
+  type AssistantAsk,
   type AssistantCall,
   type AssistantAnswer,
 } from '@shared/domain/assistant'
-import { isRecord } from '@shared/guards'
+import { isRecord, readText } from '@shared/guards'
 
 /** What `parseReply` answers: the reply without the cost, which only the caller knows. */
 export type Reply = Omit<AssistantAnswer, 'cost'>
@@ -41,6 +42,24 @@ export function jsonIn(text: string): unknown {
       return null
     }
   }
+}
+
+/**
+ * The question, or nothing where the key is absent, null, or carries no question to read.
+ *
+ * The choices are FILTERED rather than refused: losing a turn over an empty button teaches
+ * nobody anything, and an empty list is legitimate — the answer is then typed.
+ */
+function askIn(value: unknown): AssistantAsk | null {
+  if (!isRecord(value)) return null
+
+  const question = readText(value, 'question')
+  if (question === null) return null
+
+  const raw = Array.isArray(value.choices) ? value.choices : []
+  const choices = raw.filter((one): one is string => typeof one === 'string' && one.trim() !== '')
+
+  return { question, choices }
 }
 
 function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall | null {
@@ -82,6 +101,14 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
   // Absent is allowed and means none; present and not a list is a shape nobody meant.
   if (rawCalls !== undefined && !Array.isArray(rawCalls)) return null
 
+  /**
+   * 🛑 Asking WINS, before the calls are even read: told to ask, a model asks and acts in the same
+   * breath — `[M]` on qwen3.8, « Crée un nouveau projet » came back with the question and a
+   * `command.run` beside it. A plan written before the answer was known is written against a guess.
+   */
+  const ask = askIn(parsed.ask)
+  if (ask) return { say, ask, calls: [] }
+
   const calls: AssistantCall[] = []
   for (const raw of Array.isArray(rawCalls) ? rawCalls : []) {
     const call = callIn(raw, shown)
@@ -89,13 +116,7 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
     calls.push(call)
   }
 
-  /**
-   * Neither a word nor a deed, which is not an answer a person can be shown — and the check that
-   * has to sit at the end of EVERY path rather than at the end of the happy one. An early return
-   * for the no-calls case let `[1,2,3]` and `{}` through as an empty reply, which the caller
-   * would have shown as the assistant having nothing to say.
-   */
-  if (say.trim() === '' && calls.length === 0) return null
-
-  return { say, calls }
+  // Neither a word nor a deed, which is not an answer a person can be shown — and the check has
+  // to sit at the end of EVERY path: an early return let `[1,2,3]` and `{}` through as empty.
+  return say.trim() === '' && calls.length === 0 ? null : { say, calls }
 }

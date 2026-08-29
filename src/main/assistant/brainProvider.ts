@@ -33,9 +33,13 @@ export const INSTRUCTION_MAX = 10_000
  * What the sentence is guaranteed, whatever the catalogue grows to. The briefing gets the rest,
  * and at eight thousand characters the whole registry does not fit — so this door is shown the
  * short list and asks for the rest when it needs it.
+ *
+ * 🛑 A FLOOR, not a share: `instructionFor` cuts against `INSTRUCTION_MAX`, so the sentence really
+ * gets ten thousand minus the briefing — 2 595 today. `[M]` At 2 000 the EXPANSION was left 595,
+ * and « switch to main » found `git.checkout` without room to be shown it.
  */
-const UTTERANCE_ROOM = 2_000
-const BRIEFING_ROOM = INSTRUCTION_MAX - UTTERANCE_ROOM
+export const UTTERANCE_ROOM = 1_500
+export const BRIEFING_ROOM = INSTRUCTION_MAX - UTTERANCE_ROOM
 
 export type BrainDeps = {
   /**

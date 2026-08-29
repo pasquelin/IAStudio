@@ -107,7 +107,7 @@ describe('the batterie and the bench', () => {
   it('leaves no scenario a model could pass by doing nothing', async () => {
     const vacuous = await overEachScenario((scenario, studio) => {
       studio.settle()
-      const run = { studio, called: [], refused: 0, said: '' }
+      const run = { studio, called: [], refused: 0, said: '', asks: [] }
       return scenario.passed(run) ? scenario.name : null
     })
 

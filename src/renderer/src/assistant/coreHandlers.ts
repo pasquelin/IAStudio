@@ -10,13 +10,12 @@ import { showWorkspace } from '@/app/dockviewApi'
 import { createDocumentIn } from '@/app/newDocument'
 import { openGeneratorOn } from '@/helpers/openGenerator'
 import { revealTool } from '@/helpers/revealPanel'
-import { mountedChooser } from './chooser'
 import { routeCommand, type CommandRouting } from '@/services/commandRouter'
 import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { withBridge, type ActionHandlers } from './actionHandler'
-import { boolOf, oneOf, recordOf, textOf, textsOf } from './actionInputs'
+import { boolOf, oneOf, recordOf, textOf } from './actionInputs'
 import { mountedGenerator } from './generatorBridge'
 
 /**
@@ -48,7 +47,7 @@ function runCommand(input: Record<string, unknown>): ActionOutcome {
   if (!descriptor) return refused('unknownCommand')
   // 🛑 A native modal cannot be filled from here, cannot be read back, and the next round ran the
   // command again — a second Finder over the first. The action that takes a path does this.
-  if (descriptor.raisesDialog) return refused('notAllowed')
+  if (descriptor.raisesDialog) return refused('nativeDialog')
 
   return ROUTED[routeCommand(descriptor.id)]
 }
@@ -234,20 +233,4 @@ export const CORE_HANDLERS: ActionHandlers = {
    * into it would close the loop between the two.
    */
   'chat.close': () => ({ ok: true }),
-
-  /**
-   * 🛑 The answer is the OUTCOME, so it reaches the next round through the history every action
-   * already writes — said in a `say` instead, it would wait for the person to type it back.
-   */
-  'chat.ask': async input => {
-    const question = textOf(input, 'question')
-    const choices = textsOf(input, 'choices')
-    if (question === null || choices.length === 0) return refused('badInput')
-
-    const ask = mountedChooser()
-    if (!ask) return refused('noConfirmer')
-
-    const chosen = await ask({ question, choices })
-    return chosen === null ? refused('declined') : { ok: true, data: { chosen } }
-  },
 }

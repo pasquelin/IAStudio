@@ -16,7 +16,6 @@ import type { Job } from '@shared/domain/job'
 import type { ModelFamily } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
 import { describeStudio } from '@main/assistant/studioState'
-import { registerChooser } from '@/assistant/chooser'
 import { registerConfirmer } from '@/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
@@ -27,6 +26,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { lendPictureMeasure } from '@/spaces/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
+import { useAssistant } from '@/stores/assistant'
 import { useJobs } from '@/stores/jobs'
 import { unsavedDocumentIds } from '@/app/documentIo'
 import type { PlayState } from '@shared/domain/gameRuntime'
@@ -117,6 +117,9 @@ function descriptorsOf(folder: MemoryFolder): DocumentDescriptor[] {
 /** jsdom decodes nothing — `file.open` on a photo hung for the whole timeout. Not 1024²: a
  * document that took its picture's size has to be tellable from one that fell back. */
 const PICTURE = { width: 1024, height: 768 }
+
+/** What the stand-in TYPES where a question offers nothing to press — a name, most often. */
+const TYPED_ANSWER = 'Banc'
 
 /** The brain the window asks, which the MAIN process holds — the door, never the loop. */
 export type Think = StudioBridge['assistant']['think']
@@ -289,9 +292,17 @@ export async function createStudio(
   // The person, who typed the sentence: a headless run has nobody to ask, and refusing every
   // spend would score the whole of sections 20 to 22 on a studio never asked to generate.
   const closeConfirmer = registerConfirmer(() => Promise.resolve(true))
-  // The same person, answering a question with choices: the first offer, which is what a model
-  // puts first. Unmounted, `chat.ask` refuses and every scenario reaching it scores a refusal.
-  const closeChooser = registerChooser(request => Promise.resolve(request.choices[0] ?? null))
+  /**
+   * 🛑 Not optional: the chain WAITS on an `ask`, so a headless run with nobody to answer hangs on
+   * the first question instead of scoring one. The first offer, which is what a model puts first;
+   * a question with nothing to press is answered by a word, as a person would type one.
+   */
+  const closeChooser = useAssistant.subscribe((state, before) => {
+    // Against `before`: this fires on EVERY set, and `noteProgress` runs once per streamed token.
+    if (state.choosing && state.choosing !== before.choosing) {
+      state.choose(state.choosing.choices[0] ?? TYPED_ANSWER)
+    }
+  })
 
   const refusals: string[] = []
   const poses = new Map<string, string>()

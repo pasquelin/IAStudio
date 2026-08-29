@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { AssistantTurn } from '../conversation'
 import { AssistantConversationStep } from './AssistantConversationStep'
+import { CONVERSATION_BUBBLE } from './conversationStyles'
 
 /** One exchange: what was asked, what came back, and what each action actually did. */
 export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
@@ -8,13 +9,9 @@ export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
 
   return (
     <li className="flex flex-col gap-2">
-      {/* What one said, in a bubble, on the right — the side a chat has always put it. It is
-          bounded because a dictated request runs long, and a bubble the width of the thread
-          stops reading as one side of an exchange. */}
+      {/* On the right — the side a chat has always put what one said. */}
       <div className="flex justify-end">
-        <p className="bg-surface text-text m-0 max-w-4/5 rounded-(--radius-sc-sm) px-2 py-1 text-xs">
-          {turn.said}
-        </p>
+        <p className={CONVERSATION_BUBBLE}>{turn.said}</p>
       </div>
 
       {/* What came back carries no bubble, and the asymmetry is the point: one side of this
@@ -26,6 +23,19 @@ export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
         // Keyed by position: the same action can legitimately run twice in one plan, and the
         // list only ever grows to the end.
         <AssistantConversationStep key={index} step={step} />
+      ))}
+
+      {/* Once the card that asked is gone: the question drew the whole turn to a halt, and a
+          thread keeping no trace of it reads as an answer given for no reason. */}
+      {turn.asks.map((asked, index) => (
+        <div key={index} className="flex flex-col gap-2">
+          <p className="text-text m-0 text-xs">{asked.question}</p>
+          {asked.answer !== null && (
+            <div className="flex justify-end">
+              <p className={CONVERSATION_BUBBLE}>{asked.answer}</p>
+            </div>
+          )}
+        </div>
       ))}
 
       {turn.lost && <p className="text-warning text-mini m-0">{t('assistant.lost')}</p>}

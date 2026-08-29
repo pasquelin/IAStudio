@@ -86,6 +86,24 @@ describe('a cloud that is being watched', () => {
     expect(counts.map(one => one.replyTokens).filter(Boolean)).toEqual([18])
   })
 
+  /**
+   * 🛑 The composer shows the count ALONE for these doors, as it does for Scenario's: both
+   * figures this file holds are ASSUMPTIONS about a model typed by hand, and reported as a window
+   * they read as measured — `2 067 / 4 096` was shown for DeepSeek, whose own window is far
+   * larger, off a number that only ever budgeted the briefing.
+   */
+  it('names no window for a cloud, whose window nothing here knows', async () => {
+    const counts: { windowTokens?: number }[] = []
+    const { brain } = watched('anthropic', [
+      'data: {"type":"message_start","message":{"usage":{"input_tokens":2366}}}\n',
+      'data: {"type":"content_block_delta","delta":{"text":"{\\"say\\":\\"hi\\",\\"calls\\":[]}"}}\n',
+    ])
+
+    await brain.think(thought, { onProgress: progress => counts.push(progress) })
+
+    expect(counts.filter(one => one.windowTokens !== undefined)).toEqual([])
+  })
+
   it('asks Gemini by the streaming METHOD, which is not a field of its body', async () => {
     const { brain, post } = watched('gemini', [
       'data: {"candidates":[{"content":{"parts":[{"text":"{\\"say\\":\\"hi\\",\\"calls\\":[]}"}]}}]}\n',

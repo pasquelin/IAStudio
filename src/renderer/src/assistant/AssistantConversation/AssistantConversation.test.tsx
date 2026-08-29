@@ -98,6 +98,7 @@ describe('the assistant conversation', () => {
       turns: [
         {
           id: 1,
+          asks: [],
           said: 'génère un casque',
           answered: 'Je prépare la génération.',
           steps: [{ action: 'generator.submit', refusal: 'declined' }],
@@ -452,7 +453,7 @@ describe('the assistant conversation', () => {
   it('still shows a question, and the thread, when nothing answers', () => {
     unserved()
     useAssistant.setState({
-      turns: [{ id: 1, said: 'génère un casque', answered: '', steps: [], lost: false }],
+      turns: [{ id: 1, said: 'génère un casque', answered: '', steps: [], asks: [], lost: false }],
       asked: {
         request: { action: 'generator.submit', commitment: 'credits', estimate: 12 },
         answer: vi.fn(),
@@ -483,7 +484,7 @@ describe('the assistant conversation', () => {
    */
   it('still answers a sentence begun in the middle of a conversation', async () => {
     useAssistant.setState({
-      turns: [{ id: 1, said: 'bonjour', answered: 'Bonjour.', steps: [], lost: false }],
+      turns: [{ id: 1, said: 'bonjour', answered: 'Bonjour.', steps: [], asks: [], lost: false }],
     })
     render(<AssistantConversation />)
 
@@ -504,6 +505,7 @@ describe('what a step shows of what it did', () => {
       turns: [
         {
           id: 1,
+          asks: [],
           said: 'ouvre l’image du bateau',
           answered: '',
           steps: [{ action: 'files.search', refusal: null, data }],
@@ -540,7 +542,9 @@ describe('while the assistant is working', () => {
       promptTokens: 0,
       replyTokens: 0,
       windowTokens: 0,
-      turns: [{ id: 1, said: 'ouvre le voilier vert', answered: '', steps: [], lost: false }],
+      turns: [
+        { id: 1, said: 'ouvre le voilier vert', answered: '', steps: [], asks: [], lost: false },
+      ],
     })
 
   /**
@@ -587,6 +591,18 @@ describe('while the assistant is working', () => {
     render(<AssistantConversation />)
 
     expect(screen.getByText(/2\s?116 jetons lus/)).toBeInTheDocument()
+  })
+
+  // 🛑 The one exception to "a plan is running, the field is shut": a question with nothing to
+  // press can only be answered by typing, and a shut field left the chain parked.
+  it('keeps the field open under a question, and offers Send rather than Stop', () => {
+    working(1)
+    void useAssistant.getState().askChoice('Quel nom ?', [])
+    render(<AssistantConversation />)
+
+    expect(screen.getByRole('textbox')).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /Arrêter/ })).not.toBeInTheDocument()
+    useAssistant.getState().choose(null)
   })
 
   // In the thread and last of it, where the answer itself will appear: what one watches while

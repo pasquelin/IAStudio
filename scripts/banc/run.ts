@@ -15,6 +15,11 @@ export type Run = {
   refused: number
   /** Everything the model said to the person, every turn joined. */
   said: string
+  /**
+   * The questions it put to the person, in order — the `ask` half of an answer. What a scenario
+   * about asking measures is that the studio STOPPED, not that a sentence carried a `?`.
+   */
+  asks: readonly string[]
 }
 
 export type Scenario = {

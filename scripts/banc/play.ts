@@ -52,6 +52,7 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
     called,
     refused: steps.filter(one => one.refusal !== null).length,
     said: turns.map(one => one.answered).join('\n'),
+    asks: turns.flatMap(one => one.asks.map(asked => asked.question)),
     rounds,
   }
 }

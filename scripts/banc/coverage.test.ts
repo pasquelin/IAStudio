@@ -17,9 +17,8 @@ const AWAITING: readonly ActionName[] = []
 
 describe('the MCP surface and the batterie', () => {
   /**
-   * 🛑 The whole REGISTRY, not the MCP wire: the bench drives `runConfirmedAction`, so it
-   * measures actions the wire never carries too — `reach: 'window'` is one, and left out here it
-   * would be the only action of the studio nothing has to answer for.
+   * 🛑 The whole REGISTRY, not the MCP wire: the bench drives `runConfirmedAction`, so an action
+   * the wire never carries still has to answer for itself here.
    */
   it('names every action the registry holds', () => {
     const held = ACTION_REGISTRY.map(one => one.name)

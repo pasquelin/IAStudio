@@ -11,6 +11,7 @@ const turn = (id: number, lost = false) => ({
   said: 'ouvre un nouveau fichier 3D',
   answered: '',
   steps: [],
+  asks: [],
   lost,
 })
 

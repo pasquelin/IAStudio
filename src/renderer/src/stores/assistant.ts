@@ -3,11 +3,11 @@ import { create } from 'zustand'
 import {
   HISTORY_MAX,
   refused,
+  type AssistantAsk,
   type AssistantCall,
   type AssistantModel,
   type AssistantProgress,
 } from '@shared/domain/assistant'
-import { ASK_ACTION } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
 import type { ConfirmRequest } from '@/assistant/confirm'
@@ -18,6 +18,7 @@ import {
   type AssistantStep,
   type AssistantTurn,
 } from '@/assistant/conversation'
+import { revealChat } from '@/assistant/revealChat'
 import { closeTool } from '@/helpers/revealPanel'
 import { traceFailure } from '@/services/diagnostics'
 import { getBridge } from '@/services/bridge'
@@ -278,12 +279,21 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
   say: async utterance => {
     const said = utterance.trim()
+    if (said === '') return
+
+    // 🛑 A standing question takes what is typed as its ANSWER — « quel nom ? » has nothing to
+    // press. Before the `busy` guard, which would otherwise drop that answer on the floor.
+    if (get().choosing) {
+      get().choose(said)
+      return
+    }
+
     // A second sentence while the first is still running would interleave two plans against one
     // generator form, and the confirmation on screen belongs to the first of them.
-    if (said === '' || get().busy) return
+    if (get().busy) return
 
     const id = (lastTurnId += 1)
-    const turn: AssistantTurn = { id, said, answered: '', steps: [], lost: false }
+    const turn: AssistantTurn = { id, said, answered: '', steps: [], asks: [], lost: false }
     set(state => ({
       turns: [...state.turns, turn],
       busy: true,
@@ -367,9 +377,15 @@ async function chainOn(
     // is the chain as the person read it happening.
     patch(set, id, { answered: alsoSaid(get(), id, answer.say) })
 
+    // 🛑 Before the "no calls" ending below, and that ORDER is the rule: an asking answer carries
+    // none, so read the other way round a question would end the turn as done.
+    if (answer.ask) {
+      if (!(await parkedOn(set, get, id, answer.ask))) return
+      continue
+    }
+
     if (answer.calls.length === 0) {
-      // The one way a model says a request is done — and the way it asks a question, its `say`
-      // being what the person then answers. Nothing was lost either way.
+      // The one way a model says a request is done. Nothing was lost.
       patch(set, id, { lost: answer.say === '' && round === 1 })
       return
     }
@@ -392,6 +408,36 @@ async function chainOn(
   // Reached rather than chosen: the model still had calls to make and the budget ran out. Said
   // on the turn, because a chain cut here looks exactly like one that finished.
   patch(set, id, { ending: 'halted' })
+}
+
+/**
+ * Puts the question on screen and waits on it. Answers whether the chain may go on — the answer
+ * written on the TURN, which is the history the next round reads.
+ */
+async function parkedOn(set: Setter, get: Getter, id: number, ask: AssistantAsk): Promise<boolean> {
+  /**
+   * 🛑 For effect, never for its answer — a review asked for the opposite and it is wrong here:
+   * `revealChat` says false wherever no shell is mounted, which is the BENCH, and refusing there
+   * would end every asking turn of `pnpm banc` as stopped. What the deleted `chat.ask` guarded by
+   * `noConfirmer` is guarded by reachability instead: `say` is only called from a surface that
+   * has a shell, or from the bench, which answers through the store.
+   */
+  revealChat()
+
+  const answer = await get().askChoice(ask.question, ask.choices)
+  set(state => ({
+    turns: state.turns.map(turn =>
+      turn.id === id ? { ...turn, asks: [...turn.asks, { question: ask.question, answer }] } : turn,
+    ),
+  }))
+
+  // 🛑 Dismissing ENDS the turn, which is what the button promises: read as an ordinary answer,
+  // the model was handed nothing and asked again on the next BILLED round. A stop pressed while
+  // the question stood arrives the same way, `stop` settling it with nothing.
+  if (answer !== null && !get().stopping) return true
+
+  patch(set, id, { ending: 'stopped' })
+  return false
 }
 
 /** What the turn says once this round has spoken too — blank rounds add no empty lines. */
@@ -453,16 +499,6 @@ async function ranAll(
         ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
       })
       patch(set, id, { steps: [...steps] })
-
-      /**
-       * 🛑 « Laisser tomber » ENDS it, which is what the button promises. Read as an ordinary
-       * refusal the model was handed "declined" and asked again on the next billed round — the
-       * one button that costs nothing was the one that could cost the most.
-       */
-      if (call.action === ASK_ACTION && !outcome.ok && outcome.refusal === 'declined') {
-        patch(set, id, { steps: [...steps], ending: 'stopped' })
-        return false
-      }
     }
   } catch {
     patch(set, id, { lost: true })

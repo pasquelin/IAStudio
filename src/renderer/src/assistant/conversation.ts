@@ -73,6 +73,12 @@ function listWithin(items: readonly unknown[]): string {
 }
 
 /**
+ * One question the assistant put to the person, and what came back — `null` where they dismissed
+ * it, which is what ends the chain.
+ */
+export type AssistantAsked = { question: string; answer: string | null }
+
+/**
  * One exchange: what was said, what came back, and what it actually did.
  *
  * The steps are kept apart from the sentence rather than folded into it, because the two are
@@ -86,6 +92,12 @@ export type AssistantTurn = {
   /** What the assistant answered. Empty when the actions speak for themselves. */
   answered: string
   steps: readonly AssistantStep[]
+  /**
+   * 🛑 Read back AFTER the steps, whatever round each happened in: a question asked at round two
+   * and calls run at round three read in the wrong order. What the model needs — that it asked,
+   * and what it got — survives; exact order would cost one list of two shapes.
+   */
+  asks: readonly AssistantAsked[]
   /** Nothing readable came back — the model gave up after its retry, or the studio never answered. */
   lost: boolean
   /**
@@ -167,6 +179,15 @@ function blockOf(turn: AssistantTurn): string {
       step.data === undefined
         ? `You ran ${step.action}.`
         : `You ran ${step.action}. It answered: ${resultLine(step.data)}`,
+    )
+  }
+
+  // 🛑 What makes the wait worth anything: without these the answer never reaches the round that
+  // asked for it, and the model asks the same question again on the next one.
+  for (const asked of turn.asks) {
+    lines.push(`You asked: ${asked.question}`)
+    lines.push(
+      asked.answer === null ? 'The person did not answer.' : `The person answered: ${asked.answer}`,
     )
   }
 

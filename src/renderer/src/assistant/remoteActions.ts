@@ -37,13 +37,6 @@ async function runFor(action: string, input: Record<string, unknown>): Promise<A
   const known = assistantAction(action)
   if (!known) return { ok: false, refusal: 'badInput' }
 
-  /**
-   * 🛑 Here and not only in `mcpTools()`: a client may CALL a name it never saw listed, and
-   * `studio.batch` carries one too. Listed-only, the question was drawn on this screen, the
-   * client was told `timedOut` after two seconds, and the click was dropped in silence.
-   */
-  if (known.reach === 'window') return { ok: false, refusal: 'notAllowed' }
-
   try {
     /**
      * Loaded on the call rather than at launch, and this is the one edge that decides it: the
