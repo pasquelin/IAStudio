@@ -24,8 +24,7 @@ import { INSTRUCTION_FALLBACK, type ProviderLimits } from './providerLimits'
 
 /**
  * What the sentence is guaranteed, whatever the catalogue grows to. The briefing gets the rest,
- * and at eight thousand characters the whole registry does not fit — so this door is shown the
- * short list and asks for the rest when it needs it.
+ * and at eight thousand characters it holds every action's NAME and the manuals a chain opens.
  *
  * `[M]` At 2 000 the EXPANSION was left 595, and « switch to main » found `git.checkout` without
  * room to be shown it.

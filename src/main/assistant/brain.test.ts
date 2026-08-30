@@ -1,16 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  ACTION_REGISTRY,
-  actionsReaching,
-  assistantAction,
-  type ActionName,
-} from '@shared/domain/assistant'
+import { ACTION_REGISTRY, type ActionName } from '@shared/domain/assistant'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
 import { BRIEFING_ROOM, createProviderBrain, UTTERANCE_ROOM } from './brainProvider'
 import type { ProviderLimits } from './providerLimits'
-import { recentHistory, studioBriefing, UNLISTED } from './instruction'
+import { recentHistory, studioBriefing } from './instruction'
 import { STATE_MAX } from './studioState'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import { answeredTurn } from './brainTurn'
@@ -32,10 +27,10 @@ const reading =
   () =>
     Promise.resolve(limits)
 
-/** What the short list shows, which is what an answer to it is held to. */
-const SHOWN: ReadonlySet<ActionName> = new Set(actionsReaching('both').map(action => action.name))
+/** Every name the catalogue shows, which is what an answer is held to — see `parseReply`. */
+const SHOWN: ReadonlySet<ActionName> = new Set(ACTION_REGISTRY.map(action => action.name))
 
-/** The briefing this door actually composes: too narrow for the whole registry, by design. */
+/** The briefing this door actually composes: the narrowest room the studio ships. */
 const shortBriefing = (context = ''): string =>
   studioBriefing({ context, room: BRIEFING_ROOM }).text
 
@@ -110,44 +105,30 @@ const succeeded = (assetIds: string[] = ['asset_reply'], cost = 0.75): Job => ({
 
 describe('what the model is told', () => {
   /**
-   * The share of the registry a spoken sentence can reach, and NOT the whole of it — the budget
-   * below is what forces the split. Both directions, because either miss is silent: an action
-   * left out is one the assistant will swear it cannot do, and one let in that reaches `mcp`
-   * alone eats the room the person's own sentence needs.
+   * 🛑 The whole registry by NAME on the tightest door there is, where the same door used to be
+   * shown eleven actions of 283 — and swore it could not do the other 272.
    */
-  it('names every action reaching both doors, and none of the others', () => {
+  it('names every action of the registry, on the narrowest door', () => {
     const briefing = shortBriefing()
 
     for (const action of ACTION_REGISTRY) {
-      const listed = action.reach === 'both' && !UNLISTED.includes(action.name)
-      expect(briefing.includes(`  ${action.name} —`), action.name).toBe(listed)
+      expect(briefing.includes(action.name), action.name).toBe(true)
     }
   })
 
   /**
-   * 🛑 Unlisted is not unreachable, and this is the half that matters: a block skipped to save
-   * room must be SPELLED by a RULE — its name AND every field it requires, or a model composes
-   * `{"projectPath":…}` for a `path` it was never shown and loses the turn.
+   * The other half, and the reason the names fit: what an action IS and what it takes costs
+   * 90 994 characters for the registry, and is paid for only where a chain asked for it.
+   *
+   * The values a field closes over are the difference between a workspace that opens and one the
+   * model invented — so a manual carries them, in English, from the bundle.
    */
-  it('spells every action whose block it skips, fields and all', () => {
-    const briefing = shortBriefing()
+  it('says what an action is for and what it takes, once it has been opened', () => {
+    const opened = studioBriefing({ room: BRIEFING_ROOM, loaded: ['workspace.open'] }).text
 
-    for (const name of UNLISTED) {
-      expect(briefing.includes(name), name).toBe(true)
-      for (const field of assistantAction(name)?.fields.filter(one => one.required) ?? []) {
-        expect(briefing.includes(field.key), `${name}.${field.key}`).toBe(true)
-      }
-    }
-  })
-
-  // The values a field closes over are the difference between a workspace that opens and one the
-  // model invented. Left out, `workspace.open` is a name with no idea what to put in it.
-  it('spells out the values a closed field accepts', () => {
-    expect(shortBriefing()).toContain('one of: image, video, 3d, code, audio, materials, skyboxes')
-  })
-
-  it('says what each action is for, in English, from the bundle', () => {
-    expect(shortBriefing()).toContain('Switches to a workspace')
+    expect(shortBriefing()).not.toContain('Switches to a workspace')
+    expect(opened).toContain('Switches to a workspace')
+    expect(opened).toContain('one of: image, video, 3d, code, audio, materials, skyboxes')
   })
 
   /**
@@ -263,15 +244,27 @@ describe('reading what came back', () => {
   })
 
   /**
-   * Held to the share the model was SHOWN, not to the registry. The catalogue lists it eleven
-   * actions; the other seventy-six exist for a program that read `tools/list`. Checking against
-   * the whole registry let a name the model had never been given through on its own plausibility
-   * — and `git.checkout` rewrites the working tree.
+   * 🛑 Still refused, and this is what the names did NOT loosen: what the briefing showed is now
+   * the whole registry, so a call is held to a name that exists. A hallucinated `git.branch` went
+   * through once on the strength of its resemblance, and `git.checkout` rewrites the working tree.
    */
-  it('refuses a call naming an action the model was never shown', () => {
-    const text = '{"say":"","calls":[{"action":"git.checkout","input":{"name":"main"}}]}'
+  it('refuses a call naming an action the registry does not declare', () => {
+    const text = '{"say":"","calls":[{"action":"git.branch","input":{"name":"main"}}]}'
 
     expect(parseReply(text, SHOWN)).toBeNull()
+  })
+
+  /**
+   * 🛑 Defect 2, at the seam it was measured on: a name of the registry the briefing had not
+   * DESCRIBED used to be refused here, taking the whole reply with it. Reading it is what lets
+   * `answeredTurn` open its manual instead of losing the turn.
+   */
+  it('reads a call whose manual the briefing had not opened', () => {
+    const text = '{"say":"","calls":[{"action":"git.checkout","input":{"name":"main"}}]}'
+
+    expect(parseReply(text, SHOWN)?.calls).toEqual([
+      { action: 'git.checkout', input: { name: 'main' } },
+    ])
   })
 
   /**
@@ -581,11 +574,10 @@ describe('thinking', () => {
   })
 
   /**
-   * Defect 3, on the door that cannot be shown the whole registry: a model that answers with the
-   * one question it is allowed gets asked again, with what its query found, and can then act on
-   * an action it was never listed. Two round trips, both billed — the price of the narrow door.
+   * A word rather than a name: `actions.find` is still what a model reaches for when it cannot
+   * name what it needs, and what its query finds is OPENED — fields and all — for the next round.
    */
-  it('asks again with what a query found when the model asks what else there is', async () => {
+  it('opens what a query found when the model asks what else there is', async () => {
     const answers = [
       '{"say":"","calls":[{"action":"actions.find","input":{"query":"git branch"}}]}',
       '{"say":"Switching.","calls":[{"action":"git.checkout","input":{"name":"main"}}]}',
@@ -600,32 +592,87 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'switch to main', history: [] })
 
-    expect(outcome).toEqual({
-      say: 'Switching.',
-      calls: [{ action: 'git.checkout', input: { name: 'main' } }],
-      cost: 1.5,
+    expect(outcome.calls).toEqual([{ action: 'git.checkout', input: { name: 'main' } }])
+    expect(outcome.cost).toBe(1.5)
+    expect(String(run.mock.calls[1]?.[0]?.['instruction'])).toContain('  git.checkout —')
+  })
+
+  /**
+   * 🛑 Defect 2: one name the briefing had not described used to refuse the WHOLE reply, and the
+   * retry beside it complained about unreadable JSON — 25 refusals and as many turns lost. The
+   * manual is opened instead, and the model writes its call again with the fields in front of it.
+   */
+  it('opens the manual of an action the answer named, rather than losing the answer', async () => {
+    const answers = [
+      '{"say":"","calls":[{"action":"git.checkout","input":{"branch":"main"}}]}',
+      '{"say":"Switching.","calls":[{"action":"git.checkout","input":{"name":"main"}}]}',
+    ]
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
+    const brain = createProviderBrain({
+      limits: reading(),
+      run,
+      readText: () => Promise.resolve(answers.shift() ?? ''),
+      model: () => 'claude-haiku-4-5',
     })
+
+    const outcome = await brain.think({ utterance: 'switch to main', history: [] })
+
+    expect(outcome.calls).toEqual([{ action: 'git.checkout', input: { name: 'main' } }])
+    expect(outcome.loaded).toEqual(['git.checkout'])
+    expect(String(run.mock.calls[0]?.[0]?.['instruction'])).not.toContain('  git.checkout —')
     expect(String(run.mock.calls[1]?.[0]?.['instruction'])).toContain('  git.checkout —')
   })
 
   /**
    * A plan that finds AND acts was written before the finding, so its other calls are the ones a
-   * blind model made. Running them is exactly what asking was supposed to avoid.
+   * blind model made. Neither is run: both manuals are opened and the plan is written again.
    */
   it('does not treat a plan that also acts as a question', async () => {
     const answers = [
       '{"say":"","calls":[{"action":"actions.find","input":{"query":"git"}},' +
         '{"action":"jobs.list","input":{}}]}',
-      '{"say":"unreached","calls":[]}',
+      '{"say":"Looking.","calls":[{"action":"jobs.list","input":{}}]}',
     ]
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
       limits: reading(),
-      run: () => Promise.resolve(succeeded()),
+      run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
     })
 
-    expect((await brain.think({ utterance: 'anything', history: [] })).cost).toBe(0.75)
+    const outcome = await brain.think({ utterance: 'anything', history: [] })
+
+    expect(outcome.calls).toEqual([{ action: 'jobs.list', input: {} }])
+    // The manuals, never a query: a plan that acts is not a question, whatever it named first.
+    const second = String(run.mock.calls[1]?.[0]?.['instruction'])
+    expect(second).toContain('  jobs.list —')
+    expect(second).not.toContain('The manual above now holds')
+  })
+
+  /**
+   * 🛑 What a chain hands back to the window, and what the window hands back on the next round:
+   * without it every round reopens the same manuals, at a billed round trip each.
+   */
+  it('starts a round with the manuals the window says are already open', async () => {
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
+    const brain = createProviderBrain({
+      limits: reading(),
+      run,
+      readText: () =>
+        Promise.resolve('{"say":"Switching.","calls":[{"action":"git.checkout","input":{}}]}'),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    const outcome = await brain.think({
+      utterance: 'switch to main',
+      history: [],
+      loaded: ['git.checkout'],
+    })
+
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(outcome.loaded).toEqual(['git.checkout'])
+    expect(String(run.mock.calls[0]?.[0]?.['instruction'])).toContain('  git.checkout —')
   })
 
   it('gives up after the second, saying nothing rather than throwing', async () => {

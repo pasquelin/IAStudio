@@ -335,26 +335,38 @@ one family per `*Actions.ts` module, their fields, **what each one commits** (`n
 here**: it rises with every batch, and `exhaustive.test.ts` holds it to the `ActionName` union. It
 has two readers, and **neither of them decides**:
 
-- **the assistant**, inside the window, which lists its model **as much as its brain has room
-  for**;
-- **`main/mcp/tools.ts`**, which republishes **all** of it as MCP tools for a client outside.
+- **the assistant**, inside the window, whose briefing carries **every NAME** and nothing else;
+- **`main/mcp/tools.ts`**, which republishes **all** of it, fields included, as MCP tools for a
+  client outside.
 
-**The asymmetry is not a written rule: it is arithmetic, door by door.** Each brain declares the
-room it holds — Scenario ten thousand characters, the `instruction` field of its generation
-endpoint (`brainProvider.ts`) · a chat cloud its own (`brainHttp.ts`) · a local model whatever its
-window leaves (`roomFor`, `promptWindow.ts`). `studioBriefing` puts the whole registry there when
-it fits, and otherwise the `both` share **plus the way to ask for the rest**: `actions.find`, which
-the brain runs itself before asking once more with what the search found (`answeredTurn`,
-`brainTurn.ts`).
+**The briefing carries the names, never the manuals.** The 283 actions grouped by family cost
+4 225 characters, where their descriptions and their fields cost 90 994 — which only the widest
+door could hold, on every single turn. What an action IS and what it takes is composed only for
+those a chain has opened (`loaded`).
+
+**Naming an action without its manual no longer costs the answer: it opens it.** The model writes
+its call, `answeredTurn` (`brainTurn.ts`) sees the fields are missing, adds them to the briefing
+and asks again inside the same turn — the budget is `TURN_ATTEMPTS`. `actions.find` is the same
+move by a WORD rather than a name. **What is opened stays open until the request ends**: the window
+hands `AssistantThought.loaded` from one round to the next and starts empty when the chain
+finishes — the main process keeps nothing between two turns.
+
+**What the room decides is no longer the catalogue but the RULES.** Each brain declares the room it
+holds — Scenario ten thousand characters, the `instruction` field of its generation endpoint
+(`brainProvider.ts`) · a chat cloud its own (`brainHttp.ts`) · a local model whatever its window
+leaves (`roomFor`, `promptWindow.ts`). Below the floor the wide rules ask for, `studioBriefing`
+gives only their core and keeps its state, its context and its manuals.
 
 **`studio` was born of that widening**: the assistant's model is now shown actions that change the
 settings, the account that answers, or the project that is open — none of them undoable by ⌘Z, and
 the account decides whose library and whose invoice the next generation lands on. It is the only
 level with no delegation switch, and that is the point.
 
-**What a model may name follows what it was SHOWN**, no longer `reach`: the briefing carries the
-allowed set and `parseReply` holds to it. A shared ceiling did the opposite — `INSTRUCTION_MAX`
-lived in `shared/` and applied to the seven HTTP clouds, which accept dozens of times more.
+**What a model may name is the whole registry**, and `parseReply` holds to it: a name the registry
+does not declare is refused, a name it does declare but the briefing has not described is not.
+`reach` therefore decides nothing about the briefing any more; only `actionsReaching('mcp')` still
+reads it. A shared ceiling did the opposite — `INSTRUCTION_MAX` lived in `shared/` and applied to
+the seven HTTP clouds, which accept dozens of times more.
 
 **`validatesInput` (`assistantAction.ts`) is the whole of the input validation**, derived from the
 fields and sitting on `runConfirmedAction`. Nothing upstream does it: the IPC boundary checks the

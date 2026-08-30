@@ -589,6 +589,36 @@ describe('chaining rounds on one sentence', () => {
   const searched = answer({ say: 'Je cherche.', calls: [{ action: 'files.search', input: {} }] })
   const done = answer({ say: 'Voici le voilier vert.', calls: [] })
 
+  /**
+   * 🛑 Defect 1: the manuals a round opened are the WINDOW's to carry — the main process keeps
+   * nothing between two turns. Without this every round reopened the same fields, at a billed
+   * round trip each, and a model that had just been given `files.search` was blind to it again.
+   */
+  it('hands back the manuals a round opened, so the next round starts with them', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: true, data: [] })
+    const { asked } = brain({ ...searched, loaded: ['files.search'] }, done)
+
+    await useAssistant.getState().say('cherche le voilier vert')
+
+    expect(asked[0]?.loaded).toEqual([])
+    expect(asked[1]?.loaded).toEqual(['files.search'])
+  })
+
+  /**
+   * 🛑 And they die WITH the chain: kept across sentences they would grow to the whole registry,
+   * which is the 90 994-character briefing this whole mechanism replaced.
+   */
+  it('starts the next sentence with nothing open', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: true, data: [] })
+    const { asked } = brain({ ...searched, loaded: ['files.search'] }, done, done)
+
+    await useAssistant.getState().say('cherche le voilier vert')
+    await useAssistant.getState().say('et maintenant')
+
+    expect(asked[1]?.loaded).toEqual(['files.search'])
+    expect(asked[2]?.loaded).toEqual([])
+  })
+
   it('asks again with what the action answered, so the next call can use it', async () => {
     runConfirmedAction.mockResolvedValue({ ok: true, data: ['Images/Voilier vert.png'] })
     const { asked } = brain(searched, done)

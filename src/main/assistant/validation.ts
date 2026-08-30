@@ -1,8 +1,11 @@
 import { z } from 'zod'
 import {
   ACTION_REFUSALS,
+  type ActionName,
+  assistantAction,
   HISTORY_BLOCK_MAX,
   HISTORY_MAX,
+  MOST_LOADED,
   type AssistantThought,
 } from '@shared/domain/assistant'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
@@ -20,6 +23,9 @@ import { clipped } from '@shared/text'
  * door refuses past it: what each brain can hold is now the brain's to say — see `BriefingParts`.
  */
 const UTTERANCE_MAX = 10_000
+
+/** Longer than any name the registry declares — a bound on the string, never on the set. */
+const ACTION_NAME_MAX = 64
 
 /**
  * What a window may ask the assistant to think about.
@@ -43,11 +49,24 @@ const THOUGHT = z.object({
    * too: the briefing has some three thousand characters of room and this is what could eat them.
    */
   targets: z.array(TARGET).max(TARGETS_MAX).default([]),
+  /**
+   * 🛑 DECLARED, or zod strips it and every round reopens the manuals the round before it opened
+   * — the very defect this field exists to end. BOUNDED for the other half: the briefing prints a
+   * block per name, so an unbounded list is a briefing a renderer can grow without limit.
+   */
+  loaded: z.array(z.string().max(ACTION_NAME_MAX)).max(MOST_LOADED).default([]),
 })
 
+/**
+ * A name the registry does not declare is DROPPED, never refused: the list is composed over the
+ * rounds of a chain, and one stale name would cost the whole turn rather than one manual.
+ */
 export function parseThought(value: unknown): AssistantThought {
-  return THOUGHT.parse(value)
+  const read = THOUGHT.parse(value)
+  return { ...read, loaded: read.loaded.filter(isActionName) }
 }
+
+const isActionName = (name: string): name is ActionName => assistantAction(name) !== null
 
 /**
  * What a window answers when it has run — or refused — an action asked for from outside.
