@@ -3,6 +3,7 @@ import { ACTION_FAMILIES, ACTION_REGISTRY } from '@shared/domain/assistant'
 import { GENERATIVE_WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
+import { CLOUD_CONTEXT_TOKENS } from './brainHttp'
 import { BRIEFING_ROOM } from './brainProvider'
 import { machineFolders } from './machineFolders'
 import { studioBriefing } from './instruction'
@@ -70,6 +71,36 @@ describe('how much of the catalogue the model is shown', () => {
         targets: SATURATED,
       }).text.length,
     ).toBeLessThanOrEqual(room)
+  })
+
+  /**
+   * 🛑 `[M]` The guard nothing held: at `roomFor(32 000)` = 90 828 the whole share costs 90 994,
+   * so the state, the project context and the folders were cut AND `panel.close` fell off the
+   * tail — 521 rounds and 227 refusals a run, every gate green.
+   *
+   * 🛑 `allowed` against the TEXT, never one action's name: the catalogue is cut from the END, so
+   * naming any action but the last leaves a tail of them free to vanish. And a name in `allowed`
+   * that the text does not carry is worse than a missing one — the wide share offers no
+   * `actions.find`, so the model can neither see it nor ask for it, and `parseReply` accepts a
+   * call it was never shown how to write.
+   */
+  it('shows every action it allows, and what is on screen beside them', () => {
+    const briefing = studioBriefing({
+      room: roomFor(CLOUD_CONTEXT_TOKENS),
+      folders: machineFolders(name => `/Users/someone/${name}`, undefined),
+      context: 'a project about sailing boats',
+      state: 'The Image space is in front, on document "Voilier vert".',
+      targets: [{ id: 'sky-2', kind: 'layer', name: 'Sky', selected: true }],
+    })
+
+    const unwritten = [...briefing.allowed].filter(
+      name => !briefing.text.includes(`\n  ${name} — `),
+    )
+    expect(unwritten).toEqual([])
+    expect(briefing.text).toContain('The Image space is in front')
+    expect(briefing.text).toContain('a project about sailing boats')
+    expect(briefing.text).toContain('/Users/someone/')
+    expect(briefing.text).toContain('sky-2 — layer "Sky"')
   })
 
   /**
