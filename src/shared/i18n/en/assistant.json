@@ -1513,6 +1513,8 @@
       "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
       "studio": "This changes the studio’s own state, and no ⌘Z comes back from it. It spends no creative units.",
       "yes": "Allow",
+      "pickFolder": "Choose…",
+      "pickFolderHint": "Opens the system picker, and what the assistant runs is the folder chosen there",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",
       "noHint": "Runs nothing, and the assistant takes it into account for what follows",

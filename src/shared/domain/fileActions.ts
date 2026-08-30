@@ -33,6 +33,15 @@ const FOLDER: ActionField = {
   required: false,
 }
 
+/** The project folder an action names, which the question offers to point at. */
+const PROJECT_FOLDER: ActionField = {
+  key: 'path',
+  kind: 'text',
+  labelKey: 'assistant.fields.folderPath',
+  required: true,
+  picks: 'folder',
+}
+
 export const FILE_ACTIONS: readonly AssistantAction[] = [
   action({
     /**
@@ -60,9 +69,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     // `both` so a spoken sentence may call it, and UNLISTED so nobody pays for its block — the
     // rule that spells it is in `instruction.ts`.
     reach: 'both',
-    fields: [
-      { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
-    ],
+    fields: [PROJECT_FOLDER],
   }),
   action({
     /**
@@ -94,9 +101,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     descriptionKey: 'assistant.actions.projectCreate.description',
     commitment: 'studio',
     reach: 'both',
-    fields: [
-      { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
-    ],
+    fields: [PROJECT_FOLDER],
   }),
   action({
     /**
@@ -240,7 +245,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     reach: 'mcp',
     fields: [
-      { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
+      PROJECT_FOLDER,
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
     ],
   }),

@@ -130,6 +130,7 @@ describe('the assistant conversation', () => {
   it('says what the action was called with, field by field', () => {
     useAssistant.setState({
       asked: {
+        id: 1,
         request: { action: 'project.create', input: { path: 'Bateaux' }, commitment: 'studio' },
         answer: vi.fn(),
       },
@@ -143,6 +144,7 @@ describe('the assistant conversation', () => {
     const answered = vi.fn()
     useAssistant.setState({
       asked: {
+        id: 1,
         request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: 12 },
         answer: answered,
       },
@@ -152,13 +154,45 @@ describe('the assistant conversation', () => {
     expect(screen.getByText(/~12 UC/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Autoriser' }))
 
-    expect(answered).toHaveBeenCalledWith(true)
+    expect(answered).toHaveBeenCalledWith({ granted: true, input: {} })
+  })
+
+  /**
+   * 🛑 A folder is a place only the PERSON knows: « Nouveau projet » is a name the model guessed,
+   * and the card was a yes-or-no on it. What leaves with the yes is what they pointed at.
+   */
+  it('lets the person point at a folder, and sends that one', async () => {
+    const answered = vi.fn()
+    installFakeBridge({ dialog: { pickPath: () => Promise.resolve('/Projets/Bateaux') } })
+    useAssistant.setState({
+      asked: {
+        id: 1,
+        request: {
+          action: 'project.create',
+          input: { path: 'Nouveau projet' },
+          commitment: 'studio',
+        },
+        answer: answered,
+      },
+    })
+    render(<AssistantConversation />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Choisir/ }))
+    expect(screen.getByText(/\/Projets\/Bateaux/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Autoriser' }))
+
+    expect(answered).toHaveBeenCalledWith({
+      granted: true,
+      input: { path: '/Projets/Bateaux' },
+    })
   })
 
   /** Inventing a figure to fill the sentence would be worse than admitting there is none. */
   it('says the cost is unknown rather than making one up', () => {
     useAssistant.setState({
       asked: {
+        id: 1,
         request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: null },
         answer: vi.fn(),
       },
@@ -472,6 +506,7 @@ describe('the assistant conversation', () => {
     useAssistant.setState({
       turns: [{ id: 1, said: 'génère un casque', answered: '', steps: [], asks: [], lost: false }],
       asked: {
+        id: 1,
         request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: 12 },
         answer: vi.fn(),
       },

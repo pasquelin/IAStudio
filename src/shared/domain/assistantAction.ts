@@ -371,6 +371,14 @@ export type ActionField = {
    * translated labels: these are read by a model and by an MCP client, never shown as-is.
    */
   options?: readonly string[]
+  /**
+   * This value names a FOLDER of the machine, so the question can offer to point at one — the
+   * model guesses a name where only the person knows where their work lives.
+   *
+   * 🛑 Not `PathKind`: the button's label says « dossier », and nothing would rougir on a field
+   * that asked for a FILE under it. A second kind comes with a second label.
+   */
+  picks?: 'folder'
   min?: number
   max?: number
   /** A list of `kind` rather than one of it. `raw` stays a single value — it is already open. */

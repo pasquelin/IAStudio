@@ -13,7 +13,7 @@ import {
 } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
-import type { ConfirmRequest } from '@/assistant/confirm'
+import type { ConfirmAnswer, ConfirmRequest } from '@/assistant/confirm'
 import {
   assistantHistory,
   repeatedRelative,
@@ -40,7 +40,12 @@ const NOTHING_WRITTEN = { streamed: '' }
 const NOTHING_READ = { ...NOTHING_WRITTEN, promptTokens: 0, replyTokens: 0, windowTokens: 0 }
 
 /** A question on screen and the promise waiting on it — see `ask`. */
-type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) => void }
+type AssistantQuestion = {
+  /** Its own, so the card that draws it starts over on the next one — see the `key`. */
+  id: number
+  request: ConfirmRequest
+  answer: (given: ConfirmAnswer) => void
+}
 
 /** What the model asked the person, and the promise its answers settle — see `askChoice`. */
 export type AssistantChoiceQuestion = AssistantAsk & {
@@ -131,8 +136,10 @@ type AssistantState = {
   /** Sends one sentence, then runs what came back, in order. */
   say: (utterance: string) => Promise<void>
   /** Asks the person, on screen. Registered as the studio's confirmer by the shell. */
-  ask: (request: ConfirmRequest) => Promise<boolean>
-  answer: (granted: boolean) => void
+  ask: (request: ConfirmRequest) => Promise<ConfirmAnswer>
+  /** The yes, with the input as the card LEFT it — a folder the person pointed at, where the
+   * model had guessed a name. Absent where the card never held one. */
+  answer: (granted: boolean, input?: Record<string, unknown>) => void
   setModel: (model: AssistantModel) => void
 }
 
@@ -222,7 +229,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   markSeen: () => set(state => ({ seen: lastSeen(state) })),
 
   ask: request =>
-    new Promise<boolean>(resolve => {
+    new Promise<ConfirmAnswer>(resolve => {
       /**
        * One question at a time, and a second one is REFUSED rather than shown.
        *
@@ -238,7 +245,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       // 🛑 `choosing` as well as `asked`: two slots, each blind to the other, put two sets of
       // buttons on one thread — and the danger this guard exists for is between them too.
       if (get().asked || get().choosing) {
-        resolve(false)
+        resolve({ granted: false, input: request.input ?? {} })
         return
       }
 
@@ -247,7 +254,11 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
        * calls approving a category — and `executor.ts` is loaded by a dynamic import, so an HMR
        * reload leaves an old one filling this. Measured 2026-08-30, it threw instead.
        */
-      const asked = { request: { ...request, input: request.input ?? {} }, answer: resolve }
+      const asked = {
+        id: (lastAskId += 1),
+        request: { ...request, input: request.input ?? {} },
+        answer: resolve,
+      }
       set(state => ({ seen: lastSeen(state), asked }))
     }),
 
@@ -271,13 +282,13 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     choosing.answer(given)
   },
 
-  answer: granted => {
+  answer: (granted, input) => {
     const asked = get().asked
     if (!asked) return
 
     // The queue waits on this door too: a confirmation held the screen while a question waited.
     set(state => (state.choosing ? { asked: null } : { asked: null, ...showNext(state) }))
-    asked.answer(granted)
+    asked.answer({ granted, input: input ?? asked.request.input })
   },
 
   stop: () => {

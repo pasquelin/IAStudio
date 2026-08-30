@@ -29,7 +29,13 @@ export type ConfirmRequest = {
   estimate?: number | null
 }
 
-export type Confirmer = (request: ConfirmRequest) => Promise<boolean>
+/**
+ * The yes, and the input as the person LEFT it — a folder they pointed at rather than the one the
+ * model guessed. `input` is what runs; a refusal carries the request's own, unread.
+ */
+export type ConfirmAnswer = { granted: boolean; input: Record<string, unknown> }
+
+export type Confirmer = (request: ConfirmRequest) => Promise<ConfirmAnswer>
 
 const host = createMountedHost<Confirmer>()
 
