@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { HELP_PAGES } from '@shared/domain/window'
+import { WINDOW_PAGES } from '@shared/domain/window'
 import { CHANNELS } from '@shared/ipc'
 
 const handlers = vi.hoisted(
@@ -17,22 +17,23 @@ vi.mock('./windows', () => ({
   openManualWindow: () => void opened.push('manual'),
   openLicencesWindow: () => void opened.push('licences'),
   openUsageWindow: () => void opened.push('usage'),
+  openJournalWindow: () => void opened.push('journal'),
 }))
 
 const { registerHelpWindows } = await import('./help')
 
-describe('the three windows of the Help menu', () => {
+describe('the windows a renderer may raise', () => {
   /**
-   * One name, one window. A table read by key rather than a chain of `if`, so the day a fourth
-   * page joins the union it fails to compile — but nothing would catch two names crossed, which
-   * is what this walks the whole union for.
+   * One name, one window. A table read by key rather than a chain of `if`, so a page joining the
+   * union fails to compile — but nothing would catch two names crossed, which is what this walks
+   * the whole union for.
    */
   it('opens the window each page names, and no other', async () => {
     registerHelpWindows()
     const open = handlers.get(CHANNELS.helpOpen)
 
-    for (const page of HELP_PAGES) await open?.(null, ...([page] as never[]))
+    for (const page of WINDOW_PAGES) await open?.(null, ...([page] as never[]))
 
-    expect(opened).toEqual([...HELP_PAGES])
+    expect(opened).toEqual([...WINDOW_PAGES])
   })
 })

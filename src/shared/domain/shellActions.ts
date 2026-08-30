@@ -1,7 +1,7 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { SETTINGS_SECTION_IDS } from './settings'
 import { TOOL_IDS } from './tool'
-import { HELP_PAGES } from './window'
+import { WINDOW_PAGES } from './window'
 
 const PANEL: ActionField = {
   key: 'panel',
@@ -147,9 +147,9 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * The three of the Help menu, which are windows of the main process and not panels — so no
-     * command of the registry reaches them, and this was the whole of what an outside client
-     * could not open.
+     * Windows of the main process and not panels — so no command of the registry reaches them,
+     * and this was the whole of what an outside client could not open. Named for the Help menu,
+     * which three of the four belong to; see `WindowPage`.
      */
     name: 'help.open',
     titleKey: 'assistant.actions.helpOpen.title',
@@ -162,7 +162,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.helpPage',
         required: true,
-        options: HELP_PAGES,
+        options: WINDOW_PAGES,
       },
     ],
   }),

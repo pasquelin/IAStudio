@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type { ActivityEntry, ActivityParams } from '@shared/domain/activity'
 import { isWorkspaceId } from '@shared/domain/workspace'
+import { cn } from '@/helpers/cn'
 import { formatList } from '@/helpers/format'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 
@@ -42,7 +43,19 @@ function namedParams(
  * The detail is `persistableFailure` output — a status and a parsed body, never a stack and
  * never credentials. Small and dim: it is for whoever is asked what went wrong, not for the eye.
  */
-export function ActivityListMessage({ entry }: { entry: ActivityEntry }) {
+export function ActivityListMessage({
+  entry,
+  clamp,
+}: {
+  entry: ActivityEntry
+  /**
+   * 🛑 `[M]` Cuts the detail to three lines. Asked for rather than defaulted: this is shared with
+   * the toasts, which have neither a virtualiser nor a height to hold to, and are the one surface
+   * where what broke is read. A detail runs to 2 000 characters since the assistant writes what a
+   * model answered — measured 2026-08-30.
+   */
+  clamp: boolean
+}) {
   const { t, i18n } = useTranslation()
 
   return (
@@ -51,7 +64,14 @@ export function ActivityListMessage({ entry }: { entry: ActivityEntry }) {
         {t(entry.messageKey, namedParams(entry.params, t, i18n.language))}
       </span>
       {entry.detail && (
-        <span className="text-muted text-mini font-mono break-all">{entry.detail}</span>
+        <span
+          className={cn(
+            'text-muted text-mini font-mono break-all',
+            clamp ? 'line-clamp-3' : 'whitespace-pre-wrap',
+          )}
+        >
+          {entry.detail}
+        </span>
       )}
     </div>
   )

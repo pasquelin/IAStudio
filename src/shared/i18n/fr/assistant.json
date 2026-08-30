@@ -550,8 +550,8 @@
         "description": "Ouvre la fenêtre de retour, ou la ramène devant si elle est déjà là. Elle montre ce que le montage joue, sans rien porter du travail."
       },
       "helpOpen": {
-        "title": "Ouvrir une fenêtre d’aide",
-        "description": "Ouvre le manuel utilisateur, la fenêtre des licences ou celle de la consommation, ou la ramène devant si elle est déjà là. Ce sont les trois entrées du menu Aide, et aucune commande du registre ne les atteint."
+        "title": "Ouvrir une fenêtre du studio",
+        "description": "Ouvre le manuel utilisateur, la fenêtre des licences, celle de la consommation ou le journal — ou la ramène devant si elle est déjà là. Ce sont des fenêtres du processus principal, et aucune commande du registre ne les atteint."
       },
       "updatesInstall": {
         "title": "Installer la mise à jour téléchargée",

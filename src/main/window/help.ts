@@ -1,18 +1,19 @@
 import { CHANNELS } from '@shared/ipc'
-import type { HelpPage } from '@shared/domain/window'
+import type { WindowPage } from '@shared/domain/window'
 import { handle } from '@main/ipc/handle'
-import { openLicencesWindow, openManualWindow, openUsageWindow } from './windows'
+import { openJournalWindow, openLicencesWindow, openManualWindow, openUsageWindow } from './windows'
 
 /**
- * The three windows of the Help menu, opened from anywhere rather than from that menu alone.
+ * The windows a renderer may raise, opened from anywhere rather than from a menu alone.
  *
  * Its own module for the reason `mirror.ts` gives: `windows.ts` already imports `controls.ts`,
  * and putting a handler there closes a cycle the main process reads at load time.
  */
-const OPENERS: Record<HelpPage, () => void> = {
+const OPENERS: Record<WindowPage, () => void> = {
   manual: () => void openManualWindow(),
   licences: () => void openLicencesWindow(),
   usage: () => void openUsageWindow(),
+  journal: () => void openJournalWindow(),
 }
 
 export function registerHelpWindows(): void {

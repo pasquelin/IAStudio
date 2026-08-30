@@ -103,6 +103,29 @@ describe('the journal, drawn', () => {
 
     expect(screen.getByText('HTTP 429')).toBeInTheDocument()
   })
+
+  // 🛑 The flyout cuts a detail to three lines; its own window does not. See `ActivityListMessage`.
+  it('clamps a long detail in the flyout, and lets the window show it whole', () => {
+    const detail = 'x'.repeat(2_000)
+    useActivity.setState({ entries: [entry({ detail })] })
+
+    const { unmount } = render(<ActivityList />)
+    expect(screen.getByText(detail)).toHaveClass('line-clamp-3')
+    unmount()
+
+    render(<ActivityList whole />)
+    expect(screen.getByText(detail)).not.toHaveClass('line-clamp-3')
+  })
+
+  // Not in the window it opens: a button raising what one is already reading is a dead end.
+  it('offers its own window from the flyout, and not from that window', () => {
+    const { unmount } = render(<ActivityList />)
+    expect(screen.getByRole('button', { name: /fenêtre/ })).toBeInTheDocument()
+    unmount()
+
+    render(<ActivityList whole />)
+    expect(screen.queryByRole('button', { name: /fenêtre/ })).not.toBeInTheDocument()
+  })
 })
 
 describe('the filters of the journal', () => {
@@ -153,7 +176,8 @@ describe('the filters of the journal', () => {
 
     const row = button.closest('div.flex')
     expect(row).not.toHaveClass('flex-col')
-    expect(row?.querySelectorAll('button')).toHaveLength(2)
+    // The two menus and the button that raises the journal's own window.
+    expect(row?.querySelectorAll('button')).toHaveLength(3)
   })
 
   // The summary is TEXT on the button, not only its accessible name: read by the eye, it is what

@@ -550,8 +550,8 @@
         "description": "Opens the return window, or brings it to the front when it is already there. It shows what the edit plays, and carries none of the editing."
       },
       "helpOpen": {
-        "title": "Open a help window",
-        "description": "Opens the user manual, the licences window or the one showing what has been spent, or brings it to the front when it is already there. These are the three entries of the Help menu, and no command of the registry reaches them."
+        "title": "Open a studio window",
+        "description": "Opens the user manual, the licences window, the usage window or the journal — or brings it to the front if it is already there. These are windows of the main process, and no command of the registry reaches them."
       },
       "updatesInstall": {
         "title": "Install the downloaded update",

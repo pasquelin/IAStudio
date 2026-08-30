@@ -1,6 +1,7 @@
 import { orElse } from '@shared/promises'
 import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import { isJournalRoute } from '@shared/domain/activity'
 import { isFileInfoRoute } from '@shared/domain/fileInfo'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
@@ -44,6 +45,11 @@ const LicencesWindow = lazy(async () => ({
   default: (await import('@/licences/LicencesWindow')).LicencesWindow,
 }))
 
+/** Split like its neighbours: opened on purpose, and rarely. */
+const JournalWindow = lazy(async () => ({
+  default: (await import('@/journal/JournalWindow')).JournalWindow,
+}))
+
 /** Split like its neighbours: the return is opened on purpose, and rarely. */
 const MirrorWindow = lazy(async () => ({
   default: (await import('@/spaces/video/MirrorWindow')).MirrorWindow,
@@ -83,6 +89,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <SettingsWindow />
+      </Suspense>
+    )
+  }
+  if (isJournalRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <JournalWindow />
       </Suspense>
     )
   }

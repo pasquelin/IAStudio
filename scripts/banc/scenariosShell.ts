@@ -372,6 +372,13 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     },
     passed: run => shellOf(run).favorites().length === 0,
   },
+  {
+    // 🛑 A value of an option list, not an action — so the compiler asks nothing, and the journal
+    // would have gone out on the MCP wire with no phrase reaching it.
+    name: '55.12 opens the journal in its own window',
+    said: ['Ouvre le journal du studio dans sa fenêtre.'],
+    passed: run => shellOf(run).helpAt() === 'journal',
+  },
 
   {
     name: '56.1 says whether an update is available',

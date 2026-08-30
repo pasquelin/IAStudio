@@ -39,7 +39,7 @@ export function ActivityToasts() {
           dismissLabel={t('activity.dismiss')}
           onDismiss={() => useActivity.getState().dismiss(entry.id)}
         >
-          <ActivityListMessage entry={entry} />
+          <ActivityListMessage entry={entry} clamp={false} />
         </Toast>
       ))}
     </ToastStack>

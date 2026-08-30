@@ -1,7 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { isSettingsSection } from '@shared/domain/settings'
 import { TOOL_IDS, type ToolId } from '@shared/domain/tool'
-import { HELP_PAGES } from '@shared/domain/window'
+import { WINDOW_PAGES } from '@shared/domain/window'
 import { closeTool, revealTool, toolIsShown } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
@@ -46,7 +46,7 @@ export const SHELL_HANDLERS: ActionHandlers = {
   'mirror.open': () => withBridge(bridge => bridge.mirror.open()),
 
   'help.open': input => {
-    const page = oneOf(input, 'page', HELP_PAGES)
+    const page = oneOf(input, 'page', WINDOW_PAGES)
     return page ? withBridge(bridge => bridge.help.open(page)) : refused('badInput')
   },
 

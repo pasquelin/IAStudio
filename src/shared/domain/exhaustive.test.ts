@@ -11,6 +11,7 @@ import {
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
 import { CLOUD_ORDERS, type CloudOrder } from './cloudAsset'
 import { SETTINGS_SECTION_IDS, type SettingsSectionId } from './settings'
+import { WINDOW_PAGES, type WindowPage } from './window'
 import {
   ACTION_COMMITMENTS,
   ACTION_REACHES,
@@ -405,6 +406,22 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(ACTION_COMMITMENTS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * 🛑 `WINDOW_PAGES` is the `options` list of `help.open`, so a page added to the union and
+   * forgotten here compiles, is never published on the MCP wire, and nothing says so — the
+   * `Record<WindowPage, …>` in `help.ts` only catches an opener that is missing.
+   */
+  it('names every window a renderer may raise', () => {
+    const all: Record<WindowPage, true> = {
+      manual: true,
+      licences: true,
+      usage: true,
+      journal: true,
+    }
+
+    expect(sorted(WINDOW_PAGES)).toEqual(sorted(Object.keys(all)))
   })
 
   /**

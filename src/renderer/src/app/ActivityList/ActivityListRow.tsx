@@ -17,7 +17,16 @@ import { ActivityListMessage } from './ActivityListMessage'
  * `time` is handed over already written: an hour and an "how long ago" are the same row said to
  * two different readers.
  */
-export function ActivityListRow({ entry, time }: { entry: ActivityEntry; time: string }) {
+export function ActivityListRow({
+  entry,
+  time,
+  clamp,
+}: {
+  entry: ActivityEntry
+  time: string
+  /** Cuts the detail short — the flyout does, its own window does not. */
+  clamp: boolean
+}) {
   return (
     <div role="listitem" className="flex items-start gap-2 px-2 py-1.5">
       <UiIcon
@@ -25,7 +34,7 @@ export function ActivityListRow({ entry, time }: { entry: ActivityEntry; time: s
         size={14}
         className={cn('mt-px shrink-0', TONE_TEXT[TONES[entry.level]])}
       />
-      <ActivityListMessage entry={entry} />
+      <ActivityListMessage entry={entry} clamp={clamp} />
       <span className="text-muted text-tiny shrink-0 tabular-nums">{time}</span>
     </div>
   )
