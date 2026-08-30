@@ -583,7 +583,7 @@
       },
       "panelClose": {
         "title": "Close a panel",
-        "description": "Empties the half the surface in front keeps that panel in. The arrangement of the other panels does not move."
+        "description": "Clears the half the surface in front keeps that panel in. The arrangement of the other panels does not move."
       },
       "sceneState": {
         "title": "Read the scene being edited",
