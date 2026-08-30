@@ -302,7 +302,7 @@ describe('asking for the rest of the catalogue', () => {
   it('says there was no ROOM, which is not the same as nothing matching', () => {
     const briefing = studioBriefing({ room: 1 }).expand?.('layer')
 
-    expect(briefing?.text).toContain('actions match "layer"')
+    expect(briefing?.text).toContain('matching "layer"')
     expect(briefing?.text).not.toContain('Nothing in the catalogue matches')
   })
 
@@ -342,9 +342,31 @@ describe('asking for the rest of the catalogue', () => {
    * next turn, the cut takes it again, and the chain rediscovers the same action every round.
    */
   it('carries what a query opened back over the boundary', async () => {
-    const door = await briefingFor({ utterance: 'branch', history: [] }, NARROW)
+    for (const room of [NARROW, roomFor(CLOUD_CONTEXT_TOKENS)]) {
+      const door = await briefingFor({ utterance: 'branch', history: [] }, room)
 
-    expect(door.expand?.('git branch')?.opened).toContain('git.checkout')
+      expect(door.expand?.('git branch')?.opened).toContain('git.checkout')
+    }
+  })
+
+  /**
+   * 🛑 A match already printed is ranked to the back too, or the found block's own 150 characters
+   * push it out of a cut that bites from the front: asking about a topic then printed FEWER of its
+   * manuals than not asking — 16 rooms between 20 000 and 30 000, measured 2026-08-31.
+   */
+  it('never prints fewer manuals for a topic than before it was asked about', () => {
+    const loaded = ACTION_REGISTRY.map(one => one.name)
+    const matched = findActions('git branch').map(one => one.name)
+
+    for (let room = 20_000; room <= 30_000; room += 71) {
+      const before = studioBriefing({ room, loaded, opened: [] })
+      const held = matched.filter(name => before.loaded.includes(name)).length
+      const after = before.expand?.('git branch')
+
+      expect(matched.filter(name => after?.loaded.includes(name)).length).toBeGreaterThanOrEqual(
+        held,
+      )
+    }
   })
 
   /**

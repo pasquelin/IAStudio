@@ -518,7 +518,7 @@ function briefingOf(one: Composition): Briefing {
     loaded: written.held,
     opened,
     withLoaded: names => briefingOf(askedFor(one, names)),
-    expand: one.found === undefined ? query => expandedWith(one, query, written.held) : null,
+    expand: one.found === undefined ? query => expandedWith(one, query) : null,
     narrow: one.narrow,
   }
 }
@@ -628,8 +628,8 @@ const nothingFound = (query: string): string =>
  * manual fits. Told "nothing matches", the model says so to the person, about actions that exist.
  */
 const noRoomFound = (query: string, matched: number): string =>
-  `${actionsCounted(matched)} match "${query}", and this briefing has no room for their fields. ` +
-  `Say so rather than guessing at one.`
+  `The catalogue has ${actionsCounted(matched)} matching "${query}", and this briefing has no ` +
+  `room for the fields. Say so rather than guessing at one.`
 
 /** The middle of the two above: a narrow door describes a share, and the rest stay out of reach. */
 const partlyFound = (query: string, kept: number, matched: number): string =>
@@ -666,17 +666,20 @@ const widestFound = (query: string, matched: readonly ActionName[]): string =>
  * Cut by blocks rather than by characters: half a field line is an action the model cannot call
  * and cannot see is truncated, which is the one failure this whole mechanism exists to avoid.
  */
-function expandedWith(one: Composition, query: string, held: readonly ActionName[]): Briefing {
+function expandedWith(one: Composition, query: string): Briefing {
   const matched = findActions(query).map(action => action.name)
   if (matched.length === 0) return briefingOf({ ...one, found: nothingFound(query) })
 
   /**
-   * 🛑 What the briefing PRINTS, never what it was handed: every manual is loaded from the start
-   * and the cut leaves what the room allows. Worst to best, because the cut keeps the TAIL — the
-   * other way round, what room was left described the poorest answers.
+   * 🛑 ALL of them to the back, not merely the ones missing: a match already printed stays where
+   * the cut can take it, so asking about a topic printed FEWER of its manuals than not asking —
+   * 16 rooms between 20 000 and 30 000. And only `askedFor` fills `opened`, so a match that was
+   * already held never crossed back and the chain rediscovered it every turn.
+   *
+   * Worst to best, because the cut keeps the TAIL: the other way round, what room was left
+   * described the poorest answers.
    */
-  const missing = matched.filter(name => !held.includes(name))
-  const asked = missing.length === 0 ? one : askedFor(one, [...missing].reverse())
+  const asked = askedFor(one, [...matched].reverse())
   const widest = widestFound(query, matched)
   const probe = briefingOf({ ...asked, found: widest })
   const kept = matched.filter(name => probe.loaded.includes(name)).length
