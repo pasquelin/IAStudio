@@ -28,6 +28,13 @@ const reading =
     Promise.resolve(limits)
 
 /**
+ * 🛑 Une porte ÉTROITE, et c'est la seule où le chargement à la demande vit encore : à
+ * `instructionMax` = 10 000 la place laisse six manuels sur 283, donc le modèle doit demander.
+ * Sur une porte large tout est décrit d'emblée et `actions.find` n'a rien à trouver.
+ */
+const TIGHT: ProviderLimits = { ...SCHEMA, instructionMax: 10_000, assumed: true }
+
+/**
  * 🛑 `[M]` The room follows the bound the SCHEMA answers, and that is what makes the manuals
  * reachable: held to the 8 500 of the fallback, seven of forty printed and the other 33 were cut
  * in silence — `loaded` reported forty all the same, so nothing reopened them.
@@ -613,7 +620,7 @@ describe('thinking', () => {
     ]
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
-      limits: reading(),
+      limits: reading(TIGHT),
       run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
@@ -638,7 +645,7 @@ describe('thinking', () => {
     ]
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
-      limits: reading(),
+      limits: reading(TIGHT),
       run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
@@ -664,7 +671,7 @@ describe('thinking', () => {
     ]
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
-      limits: reading(),
+      limits: reading(TIGHT),
       run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',

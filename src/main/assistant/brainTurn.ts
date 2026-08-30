@@ -184,7 +184,7 @@ const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonl
 // is a better answer than a stack trace — and the cost was still incurred.
 const answerOf = (read: Read, spentBefore: number, shown: Briefing): AssistantAnswer => {
   const cost = read.cost + spentBefore
-  const opened = shown.loaded.length > 0 ? { loaded: shown.loaded } : {}
+  const opened = shown.opened.length > 0 ? { loaded: shown.opened } : {}
   return read.reply ? { ...read.reply, ...opened, cost } : { say: '', calls: [], ...opened, cost }
 }
 
