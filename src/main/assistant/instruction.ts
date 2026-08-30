@@ -9,6 +9,7 @@ import {
   type ActionName,
   type AssistantAction,
   HISTORY_MAX,
+  MOST_QUESTIONS,
 } from '@shared/domain/assistant'
 import { MEMORY_RECALL_ACTION } from '@shared/domain/memoryActions'
 import type { Target } from '@shared/domain/target'
@@ -132,6 +133,7 @@ const FORMAT = [
   // out beside it. What gives ground when the room runs out is never this block.
   '  "ask": {"question":"…","choices":[…]} to ask the person, or null. It RUNS NOTHING:',
   '    the calls wait, their answer comes back next round. Ask rather than act halfway.',
+  `    Several: {"questions":[{"question":"…","choices":[…],"note":true},…]}, ${MOST_QUESTIONS} max ("note" = a free line).`,
   '  "calls": a list of actions to run, in order. May be empty.',
   'Each call is {"action": "<name from the catalogue>", "input": {<the fields above>}}.',
   // 🛑 A LITERAL id: the example spelled `"<the armed model>"` and the model copied the shape —

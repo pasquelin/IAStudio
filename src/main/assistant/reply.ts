@@ -7,7 +7,9 @@
  */
 import {
   type ActionName,
+  type AskedQuestion,
   assistantAction,
+  MOST_QUESTIONS,
   type AssistantAsk,
   type AssistantCall,
   type AssistantAnswer,
@@ -45,21 +47,63 @@ export function jsonIn(text: string): unknown {
 }
 
 /**
- * The question, or nothing where the key is absent, null, or carries no question to read.
- *
- * The choices are FILTERED rather than refused: losing a turn over an empty button teaches
- * nobody anything, and an empty list is legitimate — the answer is then typed.
+ * 🛑 An empty PLACEHOLDER is not a question: `""`, `{}`, `[]`, `false` and `{"questions":[]}` all
+ * mean « none ». Refusing the whole reply over one costs two billed rounds on a shape the retry
+ * cannot even name — it only ever complains about the three keys, which such an answer has.
  */
-function askIn(value: unknown): AssistantAsk | null {
-  if (!isRecord(value)) return null
+function asksNothing(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0
+  if (isRecord(value)) {
+    return (
+      Object.keys(value).length === 0 ||
+      (Array.isArray(value.questions) && value.questions.length === 0)
+    )
+  }
 
-  const question = readText(value, 'question')
+  return typeof value !== 'string' || value.trim() === ''
+}
+
+/** The question or questions, or nothing where the key carries none to read. */
+function askIn(value: unknown): AssistantAsk | null {
+  const listed = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.questions)
+      ? value.questions
+      : null
+
+  if (listed) {
+    if (listed.length === 0 || listed.length > MOST_QUESTIONS) return null
+
+    const questions: AskedQuestion[] = []
+    for (const one of listed) {
+      const question = questionIn(one)
+      if (!question) return null
+      questions.push(question)
+    }
+    return { questions }
+  }
+
+  const one = questionIn(value)
+  return one ? { questions: [one] } : null
+}
+
+/**
+ * 🛑 A bare STRING is recovered, not dropped: it was thrown in silence and the calls beside it
+ * sent. Wrapped rather than read apart, so both spellings yield the same question.
+ *
+ * The choices are FILTERED rather than refused: an empty list is legitimate — the answer is typed.
+ */
+function questionIn(value: unknown): AskedQuestion | null {
+  const held = typeof value === 'string' ? { question: value } : value
+  if (!isRecord(held)) return null
+
+  const question = readText(held, 'question')
   if (question === null) return null
 
-  const raw = Array.isArray(value.choices) ? value.choices : []
+  const raw = Array.isArray(held.choices) ? held.choices : []
   const choices = raw.filter((one): one is string => typeof one === 'string' && one.trim() !== '')
 
-  return { question, choices }
+  return { question, choices, ...(held.note === true ? { note: true } : {}) }
 }
 
 function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall | null {
@@ -108,6 +152,10 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
    */
   const ask = askIn(parsed.ask)
   if (ask) return { say, ask, calls: [] }
+
+  // 🛑 Content that cannot be read REFUSES the whole reply rather than running what stood beside
+  // it: a model that meant to stop and ask had its question dropped and its plan carried out.
+  if (!asksNothing(parsed.ask)) return null
 
   const calls: AssistantCall[] = []
   for (const raw of Array.isArray(rawCalls) ? rawCalls : []) {

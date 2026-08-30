@@ -45,7 +45,7 @@ function saidOf(note: AssistantNote): Said {
       return {
         messageKey: 'activity.assistantAsked',
         params: { question: note.question },
-        detail: note.answer ?? '',
+        detail: askedDetail(note),
       }
     case 'ran':
       return {
@@ -59,6 +59,10 @@ function saidOf(note: AssistantNote): Said {
   }
 }
 
+/** The note travels with the answer: for a question that offered one, it IS the answer. */
+const askedDetail = (note: Extract<AssistantNote, { kind: 'asked' }>): string =>
+  note.note === undefined ? (note.answer ?? '') : `${note.answer ?? ''} (${note.note})`.trim()
+
 /** The same note as a sentence — cut for `main.log`, whole for the transcript. */
 export function lineOfNote(note: AssistantNote): string {
   switch (note.kind) {
@@ -67,7 +71,7 @@ export function lineOfNote(note: AssistantNote): string {
     case 'answered':
       return `answered:\n${note.text}`
     case 'asked':
-      return `asked "${note.question}" → ${note.answer ?? 'dismissed'}`
+      return `asked "${note.question}" → ${askedDetail(note) || 'dismissed'}`
     case 'ran':
       return `${note.action} ${note.input} → ${note.answer}`
   }

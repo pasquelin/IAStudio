@@ -1,8 +1,11 @@
 import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import {
+  answeredByComposer,
   HISTORY_MAX,
   refused,
+  type AskedAnswer,
+  type AskedQuestion,
   type AssistantAsk,
   type AssistantCall,
   type AssistantModel,
@@ -16,6 +19,7 @@ import {
   repeatedRelative,
   repeatKeyOf,
   resultLine,
+  type AssistantAsked,
   type AssistantStep,
   type AssistantTurn,
 } from '@/assistant/conversation'
@@ -38,11 +42,11 @@ const NOTHING_READ = { ...NOTHING_WRITTEN, promptTokens: 0, replyTokens: 0, wind
 /** A question on screen and the promise waiting on it — see `ask`. */
 type AssistantQuestion = { request: ConfirmRequest; answer: (granted: boolean) => void }
 
-/** What the model asked the person, and the promise its answer settles — see `askChoice`. */
-export type AssistantChoiceQuestion = {
-  question: string
-  choices: readonly string[]
-  answer: (chosen: string | null) => void
+/** What the model asked the person, and the promise its answers settle — see `askChoice`. */
+export type AssistantChoiceQuestion = AssistantAsk & {
+  /** Its own, so the card that draws it starts over when the queue rotates — see the `key`. */
+  id: number
+  answer: (given: readonly AskedAnswer[] | null) => void
 }
 
 type AssistantState = {
@@ -78,10 +82,13 @@ type AssistantState = {
    * sets of buttons on one thread answer each other's question.
    */
   choosing: AssistantChoiceQuestion | null
-  /** Asks the person, and answers what they pressed — `null` where they dismissed it. */
-  askChoice: (question: string, choices: readonly string[]) => Promise<string | null>
-  /** What was pressed. Nothing where no question is up: a late click settles nothing twice. */
-  choose: (chosen: string | null) => void
+  /** 🛑 What is asked while the screen is TAKEN, in order. Answered `null` on the spot, such a
+   * question was read as a dismissal and its chain ended with nobody shown a thing. */
+  queued: readonly AssistantChoiceQuestion[]
+  /** Asks the person, and answers one entry per question — `null` where they dismissed it all. */
+  askChoice: (questions: readonly AskedQuestion[]) => Promise<readonly AskedAnswer[] | null>
+  /** What was answered. Nothing where no question is up: a late click settles nothing twice. */
+  choose: (given: readonly AskedAnswer[] | null) => void
   /**
    * What this conversation has spent thinking, in creative units.
    *
@@ -135,6 +142,9 @@ type AssistantState = {
  */
 let lastTurnId = 0
 
+/** So the card that draws a question starts over when the queue rotates — see the `key`. */
+let lastAskId = 0
+
 /**
  * Loaded on the turn, as the handler table is: it reaches the space modules, which
  * `eager-graph.test.ts` holds out of what a launch pays for. Narrowed against the sentence — a
@@ -165,6 +175,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   ...NOTHING_READ,
   asked: null,
   choosing: null,
+  queued: [],
   spent: 0,
   seen: 0,
   draft: '',
@@ -240,31 +251,32 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       set(state => ({ seen: lastSeen(state), asked }))
     }),
 
-  askChoice: (question, choices) =>
-    new Promise<string | null>(resolve => {
-      // Refused rather than shown, for the same reason `ask` refuses a second confirmation: the
+  askChoice: questions =>
+    new Promise<readonly AskedAnswer[] | null>(resolve => {
+      // Queued rather than answered, for the reason `ask` refuses a second confirmation: the
       // buttons on screen would answer the newcomer while the person reads the first question.
-      if (get().choosing || get().asked) {
-        resolve(null)
-        return
-      }
-
-      set(state => ({ seen: lastSeen(state), choosing: { question, choices, answer: resolve } }))
+      const asking = { id: (lastAskId += 1), questions, answer: resolve }
+      set(state =>
+        state.choosing || state.asked
+          ? { queued: [...state.queued, asking] }
+          : { seen: lastSeen(state), choosing: asking },
+      )
     }),
 
-  choose: chosen => {
+  choose: given => {
     const choosing = get().choosing
     if (!choosing) return
 
-    set({ choosing: null })
-    choosing.answer(chosen)
+    set(showNext)
+    choosing.answer(given)
   },
 
   answer: granted => {
     const asked = get().asked
     if (!asked) return
 
-    set({ asked: null })
+    // The queue waits on this door too: a confirmation held the screen while a question waited.
+    set(state => (state.choosing ? { asked: null } : { asked: null, ...showNext(state) }))
     asked.answer(granted)
   },
 
@@ -274,9 +286,12 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
     if (!get().busy) return
 
     set({ stopping: true })
-    // 🛑 The question the chain is parked on: unsettled, the field stays disabled, Stop greys
-    // itself out, and the only way out is answering the question one just asked to stop.
-    get().choose(null)
+    // 🛑 The screen AND the queue, in one go: unsettled, the field stays disabled and Stop greys
+    // itself out. Draining through `choosing` alone missed the queue that fills behind a
+    // CONFIRMATION, whose chains then waited on a person who had just stopped everything.
+    const { choosing, queued } = get()
+    set({ choosing: null, queued: [] })
+    for (const one of [...(choosing ? [choosing] : []), ...queued]) one.answer(null)
     // 🛑 Both halves: the flag ends the CHAIN between two rounds, and this ends the round in
     // flight — a local model holds one for minutes at full tilt. Swallowed with a word, never
     // bare: a rejected channel is an unhandled rejection, and there is nothing to await here.
@@ -291,8 +306,9 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
     // 🛑 A standing question takes what is typed as its ANSWER — « quel nom ? » has nothing to
     // press. Before the `busy` guard, which would otherwise drop that answer on the floor.
-    if (get().choosing) {
-      get().choose(said)
+    const choosing = get().choosing
+    if (choosing && answeredByComposer(choosing.questions)) {
+      get().choose([{ answer: said }])
       return
     }
 
@@ -418,8 +434,15 @@ async function chainOn(
   patch(set, id, { ending: 'halted' })
 }
 
+/** The next question of the queue takes the screen the moment the one on it is settled. */
+function showNext(state: AssistantState): Partial<AssistantState> {
+  const [next, ...rest] = state.queued
+
+  return next ? { choosing: next, queued: rest, seen: lastSeen(state) } : { choosing: null }
+}
+
 /**
- * Puts the question on screen and waits on it. Answers whether the chain may go on — the answer
+ * Puts the question on screen and waits on it. Answers whether the chain may go on — the answers
  * written on the TURN, which is the history the next round reads.
  */
 async function parkedOn(set: Setter, get: Getter, id: number, ask: AssistantAsk): Promise<boolean> {
@@ -432,22 +455,43 @@ async function parkedOn(set: Setter, get: Getter, id: number, ask: AssistantAsk)
    */
   revealChat()
 
-  const answer = await get().askChoice(ask.question, ask.choices)
-  noteAssistant({ kind: 'asked', question: ask.question, answer })
+  const given = await get().askChoice(ask.questions)
+  // One entry per question, dismissal included: a questionnaire answered by halves is still a
+  // questionnaire, and the round after it reads what came back question by question.
+  const asks = ask.questions.map((one, at) => askedOf(one, given?.[at], given === null))
+  for (const asked of asks) {
+    noteAssistant({
+      kind: 'asked',
+      question: asked.question,
+      answer: asked.answer,
+      ...(asked.note === undefined ? {} : { note: asked.note }),
+    })
+  }
   set(state => ({
     turns: state.turns.map(turn =>
-      turn.id === id ? { ...turn, asks: [...turn.asks, { question: ask.question, answer }] } : turn,
+      turn.id === id ? { ...turn, asks: [...turn.asks, ...asks] } : turn,
     ),
   }))
 
   // 🛑 Dismissing ENDS the turn, which is what the button promises: read as an ordinary answer,
   // the model was handed nothing and asked again on the next BILLED round. A stop pressed while
   // the question stood arrives the same way, `stop` settling it with nothing.
-  if (answer !== null && !get().stopping) return true
+  if (given !== null && !get().stopping) return true
 
   patch(set, id, { ending: 'stopped' })
   return false
 }
+
+const askedOf = (
+  asked: AskedQuestion,
+  given: AskedAnswer | undefined,
+  dismissed: boolean,
+): AssistantAsked => ({
+  question: asked.question,
+  answer: given?.answer ?? null,
+  ...(given?.note ? { note: given.note } : {}),
+  ...(dismissed ? { dismissed: true } : {}),
+})
 
 /** What the turn says once this round has spoken too — blank rounds add no empty lines. */
 function alsoSaid(state: AssistantState, id: number, say: string): string {

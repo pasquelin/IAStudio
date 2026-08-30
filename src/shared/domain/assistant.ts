@@ -276,8 +276,41 @@ export const assistantProgress = (
  * project be called" has no answers to press, and the person types it into the composer.
  */
 export type AssistantAsk = {
+  /**
+   * 🛑 One is the ordinary case and stays the light one — a single question with no note is
+   * answered from the composer, as it always was. A list is a QUESTIONNAIRE, answered in its own
+   * card because one typed line cannot say which question it belongs to.
+   */
+  questions: readonly AskedQuestion[]
+}
+
+/** One question of an ask: what is asked, what may be pressed, and whether a note may come with
+ * the answer. */
+export type AskedQuestion = {
   question: string
   choices: readonly string[]
+  /** A free note beside the answer. Absent is the ordinary case. */
+  note?: true
+}
+
+/**
+ * 🛑 Whether the COMPOSER answers this ask, which is the light case and the ordinary one: ONE
+ * question with no note, exactly as it was before there were several. Anything more is a form —
+ * a line typed below says nothing about which question it belongs to.
+ */
+export const answeredByComposer = (questions: readonly AskedQuestion[]): boolean =>
+  questions.length === 1 && questions[0]?.note !== true
+
+/**
+ * 🛑 What one card may hold. Beyond it a reply is REFUSED rather than trimmed: a model told its
+ * question went through, having asked eight things and got six, plans against answers it never had.
+ */
+export const MOST_QUESTIONS = 6
+
+/** What came back for one question: what was pressed or typed, and the note beside it. */
+export type AskedAnswer = {
+  answer: string | null
+  note?: string
 }
 
 export type AssistantAnswer = {

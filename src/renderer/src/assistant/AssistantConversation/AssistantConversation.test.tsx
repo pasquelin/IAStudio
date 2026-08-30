@@ -614,11 +614,53 @@ describe('while the assistant is working', () => {
   // press can only be answered by typing, and a shut field left the chain parked.
   it('keeps the field open under a question, and offers Send rather than Stop', () => {
     working(1)
-    void useAssistant.getState().askChoice('Quel nom ?', [])
+    void useAssistant.getState().askChoice([{ question: 'Quel nom ?', choices: [] }])
     render(<AssistantConversation />)
 
     expect(screen.getByRole('textbox')).toBeEnabled()
     expect(screen.queryByRole('button', { name: /Arrêter/ })).not.toBeInTheDocument()
+    useAssistant.getState().choose(null)
+  })
+
+  /** 🛑 And NOT under a questionnaire, which is answered in its own card: an open field there
+   * takes a line that answers no question in particular, and drops it without a word. */
+  it('shuts the field again under a questionnaire, and offers Stop', () => {
+    working(1)
+    void useAssistant.getState().askChoice([
+      { question: 'Lequel ?', choices: ['Bateau'] },
+      { question: 'Pourquoi ?', choices: ['Pour voir'] },
+    ])
+    render(<AssistantConversation />)
+
+    expect(screen.getByRole('textbox')).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Arrêter/ })).toBeInTheDocument()
+    useAssistant.getState().choose(null)
+  })
+
+  /**
+   * 🛑 The card is KEYED on the ask it draws: unkeyed, the queue rotating reused the instance and
+   * the next questionnaire opened on the answers of the one before it.
+   */
+  it('opens a queued questionnaire blank rather than on the one before it', async () => {
+    working(1)
+    const first = useAssistant.getState().askChoice([
+      { question: 'Lequel ?', choices: ['Bateau', 'Avion'] },
+      { question: 'Pourquoi ?', choices: ['Pour voir'] },
+    ])
+    void useAssistant.getState().askChoice([
+      { question: 'Et après ?', choices: ['Avion', 'Autre'] },
+      { question: 'Sûr ?', choices: ['Oui'] },
+    ])
+    render(<AssistantConversation />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Avion' }))
+    expect(screen.getByRole('button', { name: 'Avion' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(screen.getByRole('button', { name: /Envoyer les réponses/ }))
+    await first
+
+    // Same word offered by the question that waited, and nothing pressed on it.
+    expect(screen.getByRole('button', { name: 'Avion' })).toHaveAttribute('aria-pressed', 'false')
     useAssistant.getState().choose(null)
   })
 
