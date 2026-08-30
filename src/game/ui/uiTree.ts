@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { UiElement, UiScreen } from '@shared/domain/ui'
+import { clamp } from '../numeric'
 
 /**
  * Walking an interface, and rebuilding it around one change. Nested rather than the flat list a
@@ -109,7 +110,7 @@ export function withElement(
     if (!('children' in parent)) return parent
 
     const children = [...parent.children]
-    children.splice(Math.max(0, Math.min(index, children.length)), 0, element)
+    children.splice(clamp(index, 0, children.length), 0, element)
     return { ...parent, children }
   })
 }

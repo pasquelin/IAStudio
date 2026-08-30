@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Vector3 } from '@shared/domain/transform'
+import { clamp } from '../numeric'
 
 export type Quaternion = { x: number; y: number; z: number; w: number }
 
@@ -53,7 +54,7 @@ export function eulerFromQuaternion(rotation: Quaternion, into: Vector3): Vector
   const m32 = yz + wx
   const m33 = 1 - (xx + yy)
 
-  into.y = Math.asin(Math.max(-1, Math.min(1, m13)))
+  into.y = Math.asin(clamp(m13, -1, 1))
   // Straight up or straight down: the first and third angles turn about the SAME axis there, so
   // only their sum is defined. three.js hands the whole of it to the first, and so does this.
   if (Math.abs(m13) < 0.9999999) {
