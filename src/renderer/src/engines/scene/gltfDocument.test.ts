@@ -52,11 +52,16 @@ describe('gltfDocumentOf', () => {
 
   it('leaves out a placement that is the default, and writes one that is not', () => {
     const moved = meshNode('moved')
-    moved.transform = { ...moved.transform, position: { x: 1, y: 2, z: 3 } }
+    moved.transform = {
+      ...moved.transform,
+      position: { x: 1, y: 2, z: 3 },
+      scale: { x: 2, y: 2, z: 2 },
+    }
     const document = write({ ...EMPTY_SCENE, nodes: [meshNode('still'), moved] })
 
     expect(nodesOf(document)[0]).toEqual({ name: 'still' })
     expect(nodesOf(document)[1]?.translation).toEqual([1, 2, 3])
+    expect(nodesOf(document)[1]?.scale).toEqual([2, 2, 2])
   })
 
   it('writes a rotation as a quaternion, four numbers where the descriptor holds three', () => {
@@ -101,6 +106,7 @@ describe('gltfDocumentOf', () => {
     const lights = isRecord(extensions) ? extensions.lights : null
     const light = Array.isArray(lights) && isRecord(lights[0]) ? lights[0] : {}
     expect(light.type).toBe('spot')
+    expect(light.color).toEqual([1, 1, 1])
     expect(light.intensity).toBe(2)
     expect(light.range).toBe(8)
     expect(light.spot).toEqual({ innerConeAngle: 0.5, outerConeAngle: 1 })

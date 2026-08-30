@@ -31,6 +31,9 @@ export const GLTF_HEAD_LIMIT = 16 * 1024
 /** A rotation, in the order glTF stores one: x, y, z, w. */
 export type GltfQuaternion = readonly [number, number, number, number]
 
+/** A translation, a scale, a linear colour: what glTF calls a VEC3, and always three numbers. */
+export type GltfVec3 = readonly [number, number, number]
+
 export type GltfExtras = Record<string, unknown>
 
 export type GltfAsset = { version: string; generator?: string; extras?: GltfExtras }

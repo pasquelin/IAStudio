@@ -28,6 +28,7 @@ import {
   KHR_LIGHTS_PUNCTUAL,
   type GltfNode,
   type GltfPunctualLight,
+  type GltfVec3,
 } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import { isComponentType } from '@shared/domain/componentRegistry'
@@ -36,11 +37,10 @@ import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload, timelineRowsLost } from './sceneDocument'
 import type { SceneState } from './sceneState'
 
-/** Translation and scale are three numbers each — a length neither type holds. */
 type WrittenNode = GltfNode & {
   name: string
-  translation?: readonly number[]
-  scale?: readonly number[]
+  translation?: GltfVec3
+  scale?: GltfVec3
   camera?: number
   extensions?: { [KHR_LIGHTS_PUNCTUAL]: { light: number } }
 }
@@ -58,7 +58,7 @@ type GltfCamera = {
  */
 type GltfLight = GltfPunctualLight & {
   name: string
-  color: readonly [number, number, number]
+  color: GltfVec3
   intensity: number
   range?: number
   spot?: { innerConeAngle: number; outerConeAngle: number }
