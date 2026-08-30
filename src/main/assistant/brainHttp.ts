@@ -1,4 +1,4 @@
-import type { HttpChat } from '@shared/domain/aiCloud'
+import type { CloudProviderId, HttpChat } from '@shared/domain/aiCloud'
 import type { AssistantThought } from '@shared/domain/assistant'
 import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
 import type { ChatTurn } from '@main/ai/localRuntimes'
@@ -33,6 +33,8 @@ const CLOUD_FALLBACK_TOKENS = ASSISTANT_WINDOW_MAX
 
 export type HttpBrainDeps = {
   chat: HttpChat
+  /** The provider — see the `sent` note, which says why it is not `chat.kind`. */
+  cloud: CloudProviderId
   credentials: () => Credentials | null
   /** Which model of that cloud answers. Read on each turn: it is a setting, and settings change. */
   model: () => string
@@ -60,6 +62,7 @@ function messagesFor(
  */
 export function createHttpChatBrain({
   chat,
+  cloud,
   credentials,
   model,
   fetch: post,
@@ -131,7 +134,7 @@ export function createHttpChatBrain({
         briefing,
         (shown, complaint) => round(request, shown, watch, complaint),
         watch.onProgress,
-        notesFor(`${chat.kind} — ${model()}`, watch),
+        notesFor(cloud, model(), watch),
       )
     },
   }

@@ -3,6 +3,7 @@ import type { Job } from '@shared/domain/job'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
 import type { AssistantBrain, NotReady } from './brainPort'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { answeredTurn, notesFor, turnsWith, TurnStopped, type BrainAttempt } from './brainTurn'
 import { briefingFor, instructionFor, type Briefing } from './instruction'
 
@@ -123,7 +124,7 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
         briefing,
         (shown, complaint) => ask(request, chosen, shown, complaint, watch.signal),
         undefined,
-        notesFor(`Scenario — ${chosen}`, watch),
+        notesFor(SCENARIO_CLOUD, chosen, watch),
       )
     },
   }

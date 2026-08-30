@@ -10,8 +10,13 @@ import { clipped } from '../text'
  * its own, which would be a second place to look.
  */
 export type AssistantNote =
-  /** A round trip leaving: which door carries it, and the WHOLE of what it carries. */
-  | { kind: 'sent'; door: string; text: string }
+  /**
+   * A round trip leaving, and the WHOLE of what it carries.
+   *
+   * 🛑 `door` is the PROVIDER, never the protocol: DeepSeek speaks OpenAI's, so the journal read
+   * « Envoyé à openai — deepseek-chat » for a door nobody calls openai.
+   */
+  | { kind: 'sent'; door: string; model: string; text: string }
   /** What came back, raw — before `parseReply` has had its say. */
   | { kind: 'answered'; text: string }
   /** One call of the plan, and what the studio answered it. */

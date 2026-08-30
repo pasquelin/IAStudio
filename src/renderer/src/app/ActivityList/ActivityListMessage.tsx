@@ -4,6 +4,7 @@ import type { ActivityEntry, ActivityParams } from '@shared/domain/activity'
 import { isWorkspaceId } from '@shared/domain/workspace'
 import { cn } from '@/helpers/cn'
 import { formatList } from '@/helpers/format'
+import { doorLabelKey } from '@/helpers/assistantDoor'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 
 /**
@@ -23,6 +24,11 @@ function namedParams(
 
   const named: Record<string, string | number> = {}
   for (const [name, value] of Object.entries(params)) {
+    // The door is a PROVIDER id, named by the bundle like every other id here.
+    if (name === 'door' && typeof value === 'string') {
+      named[name] = t(doorLabelKey(value))
+      continue
+    }
     // Narrowed by what it is not: `Array.isArray` leaves a `readonly string[]` unnarrowed.
     named[name] =
       typeof value === 'string' || typeof value === 'number'

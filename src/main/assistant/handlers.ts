@@ -10,6 +10,7 @@ import type { RunningTasks } from '@main/task/runningTasks'
 import { sendToSender } from '@main/ipc/broadcast'
 import type { AssistantBrain } from './brainPort'
 import { lineOfNote, reportOfNote } from './noteJournal'
+import type { Said } from './said'
 import { parseActionResult, parseNote, parseThought } from './validation'
 
 export type AssistantHandlerDeps = {
@@ -22,6 +23,8 @@ export type AssistantHandlerDeps = {
   journal: () => ActivityLog
   /** Where the WHOLE of a round trip goes — see `transcript.ts`. */
   transcribe: Transcript
+  /** What the last prompts carried, for a reader who unfolds one — see `said.ts`. */
+  said: Said
 }
 
 /**
@@ -51,6 +54,7 @@ export function registerAssistantHandlers({
   running,
   journal,
   transcribe,
+  said,
 }: AssistantHandlerDeps): void {
   /**
    * 🛑 The one funnel both sides pass through — see `AssistantNote`. Its blind spot: `say` holds
@@ -58,7 +62,8 @@ export function registerAssistantHandlers({
    * journal with nothing naming which turn a line belongs to.
    */
   const note = (one: AssistantNote): void => {
-    const report = reportOfNote(one)
+    // The prompt alone: everything else the journal already carries whole.
+    const report = reportOfNote(one, one.kind === 'sent' ? said.keep(one.text) : undefined)
     /**
      * 🛑 The round trips ALONE reach the transcript, and that is what keeps a synchronous disk
      * write off a channel a renderer drives: `ran` and `asked` arrive over IPC at whatever rate a
@@ -97,4 +102,14 @@ export function registerAssistantHandlers({
   handle(CHANNELS.assistantNote, (_event, one) => {
     note(parseNote(one))
   })
+
+  /**
+   * 🛑 Not scoped to its sender, and that is a decision: any window of this studio may read any
+   * turn's prompt. A briefing holds no secret — the key never leaves `askCloudChat` — but it does
+   * hold this machine's folders and the open project's context, so a window on another project
+   * reads them.
+   */
+  handle(CHANNELS.assistantSaid, (_event, key) =>
+    Promise.resolve(typeof key === 'string' ? said.at(key) : null),
+  )
 }

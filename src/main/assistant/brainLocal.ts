@@ -12,6 +12,9 @@ import { assistantWindow, promptWindow, roomFor, sentenceWithin } from './prompt
  * cloud brain; only the round trip differs, and nothing was billed.
  */
 
+/** What the journal names a model running HERE — no provider answers for it. */
+const LOCAL_DOOR = 'local'
+
 export type LocalBrainDeps = {
   /** The one round trip. Hands back the model's raw text, which `parseReply` reads. */
   chat: (request: ChatRequest) => Promise<string>
@@ -95,7 +98,7 @@ export function createLocalBrain({
         (shown, complaint) => ask(request, shown, watch, complaint),
         // Every frame of this door names its window, the restart `answeredTurn` emits included.
         watch.onProgress && inWindow(watch.onProgress, contextTokens),
-        notesFor(modelId, watch),
+        notesFor(LOCAL_DOOR, modelId, watch),
       )
     },
   }
