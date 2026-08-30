@@ -32,10 +32,13 @@ import { INSTRUCTION_FALLBACK, type ProviderLimits } from './providerLimits'
 export const UTTERANCE_ROOM = 1_500
 
 /**
- * 🛑 What the briefing may cost — a BUDGET, deliberately not what the door accepts: the schema
- * answers 100 000, at which the whole registry fits and ~70 000 characters are re-read and BILLED
- * every round. What the real bound buys is spent on the sentence, which costs nothing to keep.
+ * 🛑 What the briefing may cost, taken from the bound the SCHEMA answers — the reason it is no
+ * longer a budget: the catalogue is 4 225 characters of names, and the briefing grows only by the
+ * manuals a chain opens. Held to 8 500, three of them fitted and the rest were cut in silence.
  */
+const briefingRoom = (bounds: ProviderLimits): number => bounds.instructionMax - UTTERANCE_ROOM
+
+/** The same against the fallback, for a door that has not read its schema yet. */
 export const BRIEFING_ROOM = INSTRUCTION_FALLBACK - UTTERANCE_ROOM
 
 export type BrainDeps = {
@@ -159,7 +162,7 @@ export function createProviderBrain({
       // complained to be a different one from the model that answered.
       const bounds = await limits()
       const chosen = askedModel(model(), bounds, substituted)
-      const briefing = await briefingFor(request, BRIEFING_ROOM, notReady)
+      const briefing = await briefingFor(request, briefingRoom(bounds), notReady)
 
       return await answeredTurn(
         briefing,

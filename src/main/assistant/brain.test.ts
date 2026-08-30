@@ -27,6 +27,35 @@ const reading =
   () =>
     Promise.resolve(limits)
 
+/**
+ * 🛑 `[M]` The room follows the bound the SCHEMA answers, and that is what makes the manuals
+ * reachable: held to the 8 500 of the fallback, seven of forty printed and the other 33 were cut
+ * in silence — `loaded` reported forty all the same, so nothing reopened them.
+ */
+it('takes its room from the bound the schema answers, not from the fallback', async () => {
+  const sent: string[] = []
+  const brain = createProviderBrain({
+    limits: reading(),
+    run: body => {
+      sent.push(String(body['instruction']))
+      return Promise.resolve(succeeded())
+    },
+    readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
+    model: () => 'claude-haiku-4-5',
+  })
+
+  await brain.think({
+    utterance: 'anything',
+    history: [],
+    loaded: ACTION_REGISTRY.slice(0, 40).map(one => one.name),
+  })
+
+  const printed = ACTION_REGISTRY.slice(0, 40).filter(one =>
+    (sent[0] ?? '').includes(`\n  ${one.name} — `),
+  )
+  expect(printed).toHaveLength(40)
+})
+
 /** Every name the catalogue shows, which is what an answer is held to — see `parseReply`. */
 const SHOWN: ReadonlySet<ActionName> = new Set(ACTION_REGISTRY.map(action => action.name))
 

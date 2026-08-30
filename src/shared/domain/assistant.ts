@@ -58,7 +58,7 @@ export { commitmentOfCommand } from './coreActions'
  *
  * 🛑 The families are DATA, not a spread: the briefing heads its catalogue with them, and read
  * off the first token of a name instead it cut 231 actions into 83 headings that grouped nothing
- * — `models.readGenerationModelFields` and `model.textures` belong to two families and shared a heading.
+ * — two actions of different families shared a heading.
  */
 export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'core', actions: CORE_ACTIONS },

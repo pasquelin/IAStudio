@@ -480,13 +480,20 @@ const withParts = (one: Composition, patched: Partial<BriefingParts>): Compositi
 })
 
 function briefingOf(one: Composition): Briefing {
-  const loaded = one.parts.loaded ?? []
+  const asked = one.parts.loaded ?? []
+  const text = composedWithSignal(one, manualPrinted(asked), one.found ?? '')
+  /**
+   * 🛑 What the text CARRIES, never what was asked for: the manuals give ground last, so a room
+   * too tight prints a share of them. Reported as asked, `unloadedIn` sees nothing to reopen and
+   * the call goes out on guessed fields — 40 asked, 7 printed, and every gate green.
+   */
+  const loaded = asked.filter(name => text.includes(`\n  ${name} — `))
 
   return {
-    text: composedWithSignal(one, manualPrinted(loaded), one.found ?? ''),
+    text,
     allowed: allNames(),
     loaded,
-    withLoaded: names => briefingOf(withParts(one, { loaded: loadedWith(loaded, names) })),
+    withLoaded: names => briefingOf(withParts(one, { loaded: loadedWith(asked, names) })),
     expand: one.found === undefined ? query => expandedWith(one, query) : null,
     narrow: one.narrow,
   }

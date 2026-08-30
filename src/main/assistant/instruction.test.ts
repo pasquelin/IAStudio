@@ -101,10 +101,10 @@ describe('how much of the catalogue the model is shown', () => {
 
     // 🛑 `allowed` contre le TEXTE, jamais un nom choisi : une action autorisée que le briefing
     // n'écrit pas est pire qu'une absente — le modèle peut la nommer sans jamais l'avoir lue.
-    const names = briefing.text.slice(
-      0,
-      briefing.text.indexOf('\n\n', briefing.text.indexOf('[core]')),
-    )
+    // 🛑 Du BLOC des noms seul : lu depuis l'index 0, la tranche portait aussi les règles, où
+    // treize actions sont citées — la garde ne pouvait plus rougir pour aucune d'elles.
+    const at = briefing.text.indexOf('[core]')
+    const names = briefing.text.slice(at, briefing.text.indexOf('\n\n', at))
     const unwritten = [...briefing.allowed].filter(name => !names.includes(name))
     expect(unwritten).toEqual([])
     expect(briefing.text).toContain('The Image space is in front')

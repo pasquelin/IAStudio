@@ -17,11 +17,14 @@ const ASK_TOKENS = 4096
  * BY HAND and none of these clouds publishes its window over the API, so the defaults bound
  * nothing. What degrades when it is wrong is `CLOUD_FALLBACK_TOKENS`, one round trip.
  *
- * 🛑 `[M]` At 32 000 it gave `roomFor` 90 828 characters against a whole share costing 90 994:
- * the state, the project context and the folders were all cut, and `panel.close` fell off the
- * tail. Measured 2026-08-31 on the 437 scenarios of `pnpm banc` against deepseek-chat — 55% →
- * 61% passed, 2 069 → 1 548 rounds, 496 → 269 refusals, 25% fewer tokens overall though the
- * prefix cache fell 98% → 88%.
+ * 🛑 `[M]` It was 32 000, which gave `roomFor` 90 828 characters against a catalogue costing
+ * 90 994 — the state, the context and the folders were all cut to fit it. Measured 2026-08-31 on
+ * the 437 scenarios of `pnpm banc` against deepseek-chat: 55% → 61% passed, 2 069 → 1 548 rounds,
+ * 496 → 269 refusals.
+ *
+ * 🛑 That catalogue is GONE — the briefing now carries names and the manuals a chain opens, and
+ * the widest one reachable runs 23 607 characters. Nothing is cut above 8 192 tokens, so this
+ * number no longer constrains anything: it is what the door ASKS for, not what it needs.
  *
  * 🛑 It budgets the BRIEFING and nothing else: `messagesFor` sends the history unbounded, where
  * `brainLocal` trims it through `promptWindow`. Ten blocks and a paste can add 110 020 characters
