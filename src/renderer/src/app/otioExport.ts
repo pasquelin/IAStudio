@@ -10,6 +10,7 @@ import { runTask } from '@/stores/tasks'
 import { useProject } from '@/stores/project'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { montageStemsFiles } from './montageStemsFiles'
+import { runDocumentExport } from './documentExport'
 import { otioTimelineFor, serializeSequencePayload } from './sequenceDocument'
 
 /**
@@ -109,16 +110,11 @@ export async function exportCutAs(
  * export here that is minutes rather than milliseconds, and it is stoppable for the same reason.
  */
 export async function exportStems(documentId: string): Promise<void> {
-  const bridge = getBridge()
-  if (!bridge) return
-
-  try {
-    await runTask(documentExportName(useDocuments.getState(), documentId, 'edit'), (_id, watch) =>
-      montageStemsFiles(documentId, watch).then(request => bridge.montage.stems(request)),
-    )
-  } catch (error) {
-    reportFailure('sequence.export', documentId, error)
-  }
+  await runDocumentExport(
+    documentId,
+    { kind: 'edit', scope: 'sequence.export', label: documentId },
+    async (bridge, watch) => bridge.montage.stems(await montageStemsFiles(documentId, watch)),
+  )
 }
 
 /**

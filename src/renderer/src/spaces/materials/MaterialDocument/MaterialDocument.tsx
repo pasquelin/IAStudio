@@ -8,12 +8,9 @@ import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { editPixelsOf } from '@/helpers/openAsset'
 import { TIP_TOP } from '@/helpers/tooltip'
-import { getBridge } from '@/services/bridge'
-import { reportFailure } from '@/services/diagnostics'
 import { useExportMenu } from '@/hooks/useExportMenu'
 import { useShortcuts } from '@/hooks/useShortcuts'
-import { documentExportName, useDocumentIsInFront, useDocuments } from '@/stores/documents'
-import { runTask } from '@/stores/tasks'
+import { useDocumentIsInFront } from '@/stores/documents'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { loadTexture } from '@/engines/scene/textureCache'
@@ -28,6 +25,7 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useSkyRefresh } from '@/hooks/useSkyRefresh'
 import { useMountedEngine } from '@/hooks/useMountedEngine'
+import { runDocumentExport } from '@/app/documentExport'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
 import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
@@ -41,20 +39,14 @@ import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
  * material tab, and it is only ever read by somebody who exports one.
  */
 async function exportMaterial(documentId: string, target: MaterialExportTarget): Promise<void> {
-  const bridge = getBridge()
-  if (!bridge) return
-
-  try {
-    await runTask(
-      documentExportName(useDocuments.getState(), documentId, 'material'),
-      // The baking is `materialExportFiles`, which the outside door shares — including its refusal
-      // of a material with no channel, which throws before any dialog is raised.
-      async (_id, watch) =>
-        bridge.material.export(await materialExportFiles(documentId, target, watch)),
-    )
-  } catch (error) {
-    reportFailure('material.export', target, error)
-  }
+  await runDocumentExport(
+    documentId,
+    { kind: 'material', scope: 'material.export', label: target },
+    // The baking is `materialExportFiles`, which the outside door shares — including its refusal
+    // of a material with no channel, which throws before any dialog is raised.
+    async (bridge, watch) =>
+      bridge.material.export(await materialExportFiles(documentId, target, watch)),
+  )
 }
 
 /**

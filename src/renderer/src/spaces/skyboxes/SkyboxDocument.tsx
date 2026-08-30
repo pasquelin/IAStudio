@@ -7,8 +7,6 @@ import { PICTURES, type Asset } from '@shared/domain/asset'
 import { EmptyState } from '@/design/EmptyState'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar/Toolbar'
-import { getBridge } from '@/services/bridge'
-import { reportFailure } from '@/services/diagnostics'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
@@ -16,8 +14,7 @@ import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useExportMenu } from '@/hooks/useExportMenu'
 import { isSkyboxDirty, setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { documentExportName, useDocumentIsInFront, useDocuments } from '@/stores/documents'
-import { runTask } from '@/stores/tasks'
+import { useDocumentIsInFront } from '@/stores/documents'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
@@ -27,6 +24,7 @@ import { livePreviewOf } from '@/stores/livePreviews'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useMountedEngine } from '@/hooks/useMountedEngine'
+import { runDocumentExport } from '@/app/documentExport'
 import { useBindingOverrides } from '@/stores/bindings'
 import { skyboxExportFiles } from './skyboxExportFiles'
 import { SKYBOX_TOOLS, skyboxViewFrom } from './skyboxTools'
@@ -39,25 +37,19 @@ import { SKYBOX_TOOLS, skyboxViewFrom } from './skyboxTools'
  * who opens a sky, and it is only ever read by somebody who exports one.
  */
 async function exportSkybox(documentId: string, command: SkyboxExportCommand): Promise<void> {
-  const bridge = getBridge()
-  if (!bridge) return
-
-  try {
-    await runTask(
-      documentExportName(useDocuments.getState(), documentId, 'skybox'),
-      // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no
-      // picture throws THERE, before any dialog: a folder chooser opened to write six files of
-      // nothing is a question nobody can answer.
-      async (_id, watch) =>
-        bridge.skybox.export(await skyboxExportFiles(documentId, command, watch)),
-    )
-  } catch (error) {
-    reportFailure(
-      'skybox.export',
-      command.kind === 'faces' ? String(command.size) : command.target,
-      error,
-    )
-  }
+  await runDocumentExport(
+    documentId,
+    {
+      kind: 'skybox',
+      scope: 'skybox.export',
+      label: command.kind === 'faces' ? String(command.size) : command.target,
+    },
+    // The rendering is `skyboxExportFiles`, which the outside door shares. A sky with no picture
+    // throws THERE, before any dialog: a folder chooser opened to write six files of nothing is a
+    // question nobody can answer.
+    async (bridge, watch) =>
+      bridge.skybox.export(await skyboxExportFiles(documentId, command, watch)),
+  )
 }
 
 export function SkyboxDocument({ documentId }: { documentId: string }) {
