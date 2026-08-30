@@ -14,11 +14,16 @@ import { messageOf } from '@shared/guards'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
-  'game.export': async input => {
+  'game.export': async (input, wire) => {
     const project = useProject.getState().project
     const bridge = getBridge()
     if (!bridge) return refused('noBridge')
     if (!project) return refused('noProject')
+
+    // 🛑 Refused BEFORE the scenes are composed: with no folder named, the main process raises a
+    // system picker, which a caller on the wire can neither fill in nor see.
+    const folder = textOf(input, 'folder')
+    if (wire && !folder) return refused('nativeDialog')
 
     let scenes: GameExportRequest['scenes']
     try {
@@ -41,6 +46,7 @@ export const EXPORT_HANDLERS: ActionHandlers = {
       entryScene: entry.id,
       scenes,
       scripts: compiled.modules.map(one => ({ script: one.script, code: one.code })),
+      ...(folder ? { folder } : {}),
     }
 
     // 🛑 Caught like the listing above: the main process THROWS `no game runtime is built` — the
@@ -52,7 +58,14 @@ export const EXPORT_HANDLERS: ActionHandlers = {
     } catch (error) {
       return refused('failed', messageOf(error))
     }
-    if (!outcome) return refused('declined', 'no folder was picked')
+    // The main process answers `null` for both, and a caller that NAMED a folder has to be told
+    // the name may be what was refused — one folder, inside the project.
+    if (!outcome) {
+      return refused(
+        'declined',
+        'no folder was picked, or the name is not one folder of the project',
+      )
+    }
 
     // 🛑 What would NOT compile, said: a script missing from a game with no word about why is
     // the defect this whole family exists to make impossible.

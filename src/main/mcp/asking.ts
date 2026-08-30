@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  assistantAction,
   commitmentOfCall,
   needsConfirmation,
   type ActionOutcome,
@@ -34,6 +35,20 @@ const ANSWER_TIMEOUT_MS = 120_000
  * makes against a window that happens to be reloading.
  */
 const READ_TIMEOUT_MS = 2_000
+
+/**
+ * 🛑 Whether an answer may be a long time coming, which `commitment` alone does not say: a lot
+ * engages nothing of its own and runs up to fifty calls that each may engage, price and ask.
+ */
+const mayOutlastARead = (call: AssistantCall): boolean => {
+  const action = assistantAction(call.action)
+
+  return (
+    needsConfirmation(commitmentOfCall(call.action, call.input)) ||
+    action?.asksItself === true ||
+    action?.runsOthers === true
+  )
+}
 
 export type RemoteActionDeps = {
   /** Sends to the window in front, answering `false` when there is none — see `sendToFront`. */
@@ -76,9 +91,7 @@ export function createRemoteActions({
             resolve({ ok: false, refusal: 'timedOut' })
             // Capped rather than replaced, so a decor that shortens the wait shortens both.
           },
-          needsConfirmation(commitmentOfCall(call.action, call.input))
-            ? timeoutMs
-            : Math.min(timeoutMs, READ_TIMEOUT_MS),
+          mayOutlastARead(call) ? timeoutMs : Math.min(timeoutMs, READ_TIMEOUT_MS),
         )
 
         // The wait must not be a reason the application stays alive at quit.

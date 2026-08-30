@@ -227,6 +227,7 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
     // at the worst of what it holds, then asking once, collapsed five independent delegation
     // switches into one — see `runBatch`, which carries the whole reasoning.
     commitment: 'none',
+    runsOthers: true,
     reach: 'mcp',
     fields: [
       { key: 'calls', kind: 'longText', labelKey: 'assistant.fields.batchCalls', required: true },
@@ -383,11 +384,17 @@ export const EXPORT_ACTIONS: readonly AssistantAction[] = [
     name: 'game.export',
     titleKey: 'assistant.actions.gameExport.title',
     descriptionKey: 'assistant.actions.gameExport.description',
+    /**
+     * 🛑 `none` only while the native picker is what asks. Named a folder, nothing raises a
+     * dialog and the yes has to come from somewhere: `files`, like every other write.
+     */
     commitment: 'none',
+    raises: input => (typeof input.folder === 'string' && input.folder !== '' ? 'files' : 'none'),
     reach: 'mcp',
     fields: [
       { key: 'entryScene', kind: 'text', labelKey: 'assistant.fields.entryScene', required: false },
       { key: 'title', kind: 'text', labelKey: 'assistant.fields.gameTitle', required: false },
+      { key: 'folder', kind: 'text', labelKey: 'assistant.fields.exportFolder', required: false },
     ],
   }),
 ]

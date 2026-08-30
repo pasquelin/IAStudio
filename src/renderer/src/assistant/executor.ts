@@ -5,14 +5,25 @@ import {
   inputProblem,
   readInput,
   refused,
+  type ActionCommitment,
   type ActionName,
   type ActionOutcome,
 } from '@shared/domain/assistant'
 import { delegated } from '@shared/domain/delegation'
+import { englishText, fillHoles } from '@shared/i18n'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
 import type { ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
+import { confirmSentence, type Translate } from './confirmSentence'
+import {
+  holdsConsent,
+  mintConsent,
+  splitConsent,
+  takeConsent,
+  type QuotedBody,
+  type WireCall,
+} from './wireConsent'
 import { ASSEMBLY_HANDLERS } from './assemblyHandlers'
 import { EXPORT_HANDLERS } from './exportHandlers'
 import { ASSET_HANDLERS } from './assetHandlers'
@@ -35,7 +46,7 @@ import { PLAY_HANDLERS } from './playHandlers'
 import { SCRIPT_HANDLERS } from './scriptHandlers'
 import { STUDIO_HANDLERS } from './studioHandlers'
 import { TIMELINE_HANDLERS } from './timelineHandlers'
-import { readBatch } from './batch'
+import { readBatch, type BatchedCall } from './batch'
 import { rememberOutcome } from './rememberOutcome'
 import { SETTINGS_HANDLERS } from './settingsHandlers'
 import { SHELL_HANDLERS } from './shellHandlers'
@@ -89,6 +100,9 @@ export function handledActions(): readonly string[] {
 /**
  * What this window has already spent WITHOUT asking, against the delegated budget.
  *
+ * Both doors feed it: the delegation checkbox, and a consent token — nobody at the screen was
+ * asked in either case, and a ledger that only saw one of them would bound neither.
+ *
  * Its blind spot, written rather than hidden: the ledger is per WINDOW and per launch. Two windows
  * open at once each carry the whole budget, so an armed studio with two windows may spend twice
  * what was armed. It is here rather than in the main process because the figure it counts — the
@@ -129,6 +143,7 @@ function readOrRefusal(
 export async function runAction(
   name: ActionName,
   input: Record<string, unknown>,
+  wire?: WireCall,
 ): Promise<ActionOutcome> {
   const handler = HANDLERS[name]
   if (!handler) return refused('badInput')
@@ -136,7 +151,7 @@ export async function runAction(
   const read = readOrRefusal(name, input)
   if ('refusal' in read) return read.refusal
 
-  const outcome = await handler(read.listed)
+  const outcome = await handler(read.listed, wire)
   // Not awaited, and the input READ rather than the one sent: what a memory anchors on must be
   // what the action actually acted on. A memory that will not persist must not turn a call that
   // changed the studio into a refusal.
@@ -159,21 +174,105 @@ export async function runAction(
  * The price is a question per engaging call rather than one for the lot; what is kept is one MCP
  * round trip, the order, and the stop at the first refusal. A single question for a whole lot
  * needs the question itself to LIST what it holds, which `ConfirmRequest` does not carry.
+ *
+ * From the wire, every call is cleared before any of them runs — see `lotCleared`.
  */
-async function runBatch(input: Record<string, unknown>): Promise<ActionOutcome> {
+async function runBatch(input: Record<string, unknown>, wire?: WireCall): Promise<ActionOutcome> {
   const read = readBatch(input)
   if ('refusal' in read) return read.refusal
 
+  const lot = wire ? await lotCleared(read.calls) : null
+  if (lot && 'refusal' in lot) return lot.refusal
+
   const done: unknown[] = []
-  for (const call of read.calls) {
-    const outcome = await runConfirmedAction(call.action, call.input)
-    // The RANK is what a client repairs from — one-based, as a person counts a list.
-    if (!outcome.ok) {
-      return { ...outcome, detail: `call ${done.length + 1}: ${outcome.detail ?? outcome.refusal}` }
-    }
+  for (const [at, call] of read.calls.entries()) {
+    const planned = lot?.plan[at]
+    const outcome = planned
+      ? await runPlanned(planned, wire)
+      : await runConfirmedAction(call.action, call.input)
+    if (!outcome.ok) return ranked(at, outcome)
     done.push(outcome.data ?? null)
   }
   return { ok: true, data: { ran: done.length, results: done } }
+}
+
+/**
+ * 🛑 A token is spent as its own call goes, never when the lot cleared: a lot stopping at call
+ * three left the tokens of the seven it never ran burnt, and the retry had to ask for all of them.
+ */
+async function runPlanned(planned: Planned, wire: WireCall | undefined): Promise<ActionOutcome> {
+  if (planned.token) takeConsent(planned.token, planned.name, planned.listed)
+
+  return runCleared(planned.name, planned.listed, planned.cleared, wire)
+}
+
+/** The RANK a client repairs from — one-based, as a person counts a list. */
+const ranked = (at: number, outcome: ActionOutcome): ActionOutcome =>
+  outcome.ok
+    ? outcome
+    : { ...outcome, detail: `call ${at + 1}: ${outcome.detail ?? outcome.refusal}` }
+
+/** One call of a wire lot, read and cleared before any of them runs. */
+type Planned = {
+  name: ActionName
+  listed: Record<string, unknown>
+  cleared: Cleared
+  /** The token that answered for it, spent when this call runs and not before. */
+  token?: string
+}
+
+/**
+ * 🛑 A lot from the wire clears EVERY call before it runs any, and refuses whole.
+ *
+ * Stopping at the first call wanting a token had the ones before it ACT, and the client sending
+ * the lot back with that token replayed them. The refusal names one token per call missing one.
+ */
+async function lotCleared(
+  calls: readonly BatchedCall[],
+): Promise<{ plan: readonly Planned[] } | { refusal: ActionOutcome }> {
+  const plan: Planned[] = []
+  // 🛑 A token answers for ONE call. `holdsConsent` does not spend, so the same one offered on
+  // five identical calls of a lot cleared all five on a single yes — measured 2026-08-30.
+  const claimed = new Set<string>()
+  const asked: string[] = []
+  // The ledger as the lot would leave it, so a budget spent by call two is not offered to call
+  // three — which is what running the calls one after another does.
+  let spent = spentUnasked
+  const price = pricedOnce()
+
+  for (const [at, call] of calls.entries()) {
+    const { given, wire } = splitConsent(call.input)
+    const read = readOrRefusal(call.action, given)
+    if ('refusal' in read) return { refusal: ranked(at, read.refusal) }
+
+    const engaged = await engagementOf(call.action, read.listed, spent, price)
+    const step = { name: call.action, listed: read.listed }
+    const token =
+      wire.consent !== undefined && !claimed.has(wire.consent) ? wire.consent : undefined
+
+    if (!engaged || engaged.armed) {
+      if (engaged && token !== undefined) takeConsent(token, call.action, read.listed)
+      const cleared = clearedWithoutAsking(engaged)
+      spent += cleared.debit
+      plan.push({ ...step, cleared })
+      continue
+    }
+
+    const held = token === undefined ? null : holdsConsent(token, call.action, read.listed)
+    // Nothing pushed, and the plan stops counting: `asked` is not empty, so the lot is refused.
+    if (token === undefined || !held) {
+      asked.push(`call ${at + 1}: ${consentAsked(call.action, read.listed, engaged, ASK_IN_LOT)}`)
+      continue
+    }
+
+    claimed.add(token)
+    spent += engaged.estimate ?? 0
+    plan.push({ ...step, cleared: { quoted: held.quoted, debit: engaged.estimate ?? 0 }, token })
+  }
+
+  if (asked.length > 0) return { refusal: refused('needsConsent', asked.join('\n')) }
+
+  return { plan }
 }
 
 /**
@@ -183,62 +282,176 @@ async function runBatch(input: Record<string, unknown>): Promise<ActionOutcome> 
  * comes from the form the window is showing, which the main process cannot see, and the question
  * is asked on a screen only the window has. It also means there is one gate rather than two —
  * whether the call came from the conversation or from an MCP client on the other side of the
- * machine,
- * it arrives at this function and is treated the same way.
+ * machine, it arrives at this function and is treated the same way.
  */
 export async function runConfirmedAction(
   name: ActionName,
   input: Record<string, unknown>,
+  wire?: WireCall,
 ): Promise<ActionOutcome> {
   // Checked before the question as well as inside `runAction`: a bad input asked about first
   // would have the person approve a spend that was never going to happen.
   const read = readOrRefusal(name, input)
   if ('refusal' in read) return read.refusal
 
-  const listed = read.listed
+  const cleared = await clearance(name, read.listed, wire, spentUnasked, estimateOfSubmission)
+  if ('refusal' in cleared) return cleared.refusal
+
+  return runCleared(name, read.listed, cleared.cleared, wire)
+}
+
+/** What a call cleared with: the form its spend was priced against, and what the delegated
+ * ledger owes for it. */
+type Cleared = { quoted: QuotedBody | null; debit: number }
+
+type Clearance = { cleared: Cleared } | { refusal: ActionOutcome }
+
+/** What a call engages, priced once, and whether the studio was armed to let it through. */
+type Engagement = { commitment: ActionCommitment; estimate: number | null; armed: boolean }
+
+async function engagementOf(
+  name: ActionName,
+  listed: Record<string, unknown>,
+  spent: number,
+  price: () => Promise<number | null>,
+): Promise<Engagement | null> {
   const commitment = commitmentOfCall(name, listed)
-  if (!needsConfirmation(commitment)) return runAction(name, listed)
+  if (!needsConfirmation(commitment)) return null
 
   // Read once, before the question and before the delegation is consulted: both read the same
   // figure, and a form moved between the two would price one thing and send another.
-  const estimate = commitment === 'credits' ? await estimateOfSubmission() : null
+  const estimate = commitment === 'credits' ? await price() : null
 
-  if (delegated(useSettings.getState().settings.mcp, commitment, estimate, spentUnasked)) {
-    // Debited BEFORE the run and never given back: an action that failed halfway may already have
-    // spent, and a ledger that only counted successes would let a run of failures spend forever.
-    if (estimate !== null) spentUnasked += estimate
-    return runAction(name, listed)
+  return {
+    commitment,
+    estimate,
+    armed: delegated(useSettings.getState().settings.mcp, commitment, estimate, spent),
+  }
+}
+
+/** Nothing engaged, or the studio armed for it — and then the ledger owes what was quoted. */
+const clearedWithoutAsking = (engaged: Engagement | null): Cleared => ({
+  quoted: null,
+  debit: engaged?.estimate ?? 0,
+})
+
+/** The yes a call needs before it runs, from whichever door it came through. */
+async function clearance(
+  name: ActionName,
+  listed: Record<string, unknown>,
+  wire: WireCall | undefined,
+  spent: number,
+  price: () => Promise<number | null>,
+): Promise<Clearance> {
+  const engaged = await engagementOf(name, listed, spent, price)
+  if (!engaged) return { cleared: clearedWithoutAsking(null) }
+
+  // 🛑 A token offered for a call the delegation already covers is spent all the same: left
+  // standing it answers a second time, for a spend the ceiling no longer covers.
+  if (engaged.armed) {
+    if (wire?.consent !== undefined) takeConsent(wire.consent, name, listed)
+    return { cleared: clearedWithoutAsking(engaged) }
   }
 
+  // A caller with no screen here is asked across the boundary instead of on the glass: same gate,
+  // same figure, and nothing runs before a yes comes back either way.
+  if (!wire) return consentedOnScreen(name, listed, engaged)
+
+  // A token is one round trip — never a standing permission, which is what `delegated()` is for.
+  const held = wire.consent === undefined ? null : takeConsent(wire.consent, name, listed)
+
+  // 🛑 Debited like a delegated call: a token spends with nobody at the screen either, and a
+  // ceiling counted on one door alone bounds nothing the moment a second opens beside it.
+  return held
+    ? { cleared: { quoted: held.quoted, debit: engaged.estimate ?? 0 } }
+    : { refusal: refused('needsConsent', consentAsked(name, listed, engaged, ASK_ALONE)) }
+}
+
+async function consentedOnScreen(
+  name: ActionName,
+  listed: Record<string, unknown>,
+  engaged: Engagement,
+): Promise<Clearance> {
   const ask = mountedConfirmer()
   // No one to ask. Refusing is the only honest answer: the alternative is spending on a question
   // nobody was shown.
-  if (!ask) return refused('noConfirmer')
+  if (!ask) return { refusal: refused('noConfirmer') }
 
   // Read BEFORE the question and compared after it — see `unchangedSince`.
-  const quoted = commitment === 'credits' ? mountedGenerator()?.body() : null
+  const quoted = quotedNow(engaged.commitment)
 
   const granted = await ask({
     action: name,
     input: listed,
-    commitment,
-    ...(commitment === 'credits' ? { estimate } : {}),
+    commitment: engaged.commitment,
+    ...(engaged.commitment === 'credits' ? { estimate: engaged.estimate } : {}),
   })
 
-  if (!granted) return refused('declined')
+  // Nothing debited: somebody SAW this one, and the ledger counts what went out unwatched.
+  return granted ? { cleared: { quoted, debit: 0 } } : { refusal: refused('declined') }
+}
 
-  /**
-   * What was priced is what goes out, or nothing does.
-   *
-   * The question may stand for two minutes — that is what an MCP client is given — and the
-   * generator panel stays live behind it. Raising `numImages` from one to ten while "~4 CU" is on
-   * screen used to send the ten: the figure was read before the question and the form re-read
-   * after the yes, with nothing tying the two together. The yes belongs to a body, not to a
-   * moment.
-   */
-  if (quoted && !unchangedSince(quoted)) return refused('formChanged')
+/**
+ * What was priced is what goes out, or nothing does.
+ *
+ * The question may stand for two minutes — that is what an MCP client is given — and the
+ * generator panel stays live behind it. Raising `numImages` from one to ten while "~4 CU" is on
+ * screen used to send the ten: the figure was read before the question and the form re-read
+ * after the yes, with nothing tying the two together. The yes belongs to a body, not to a moment.
+ */
+async function runCleared(
+  name: ActionName,
+  listed: Record<string, unknown>,
+  cleared: Cleared,
+  wire: WireCall | undefined,
+): Promise<ActionOutcome> {
+  if (cleared.quoted && !unchangedSince(cleared.quoted)) return refused('formChanged')
 
-  return runAction(name, listed)
+  // Debited BEFORE the run and never given back: an action that failed halfway may already have
+  // spent, and a ledger that only counted successes would let a run of failures spend forever.
+  spentUnasked += cleared.debit
+
+  return runAction(name, listed, wire)
+}
+
+/** What the generation panel holds, read before a spend is priced against it. */
+const quotedNow = (commitment: ActionCommitment): QuotedBody | null =>
+  commitment === 'credits' ? (mountedGenerator()?.body() ?? null) : null
+
+/** `detail` is read by a machine and never shown, so the English bundle rather than a locale. */
+const inEnglish: Translate = (key, holes) =>
+  holes ? fillHoles(englishText(key), holes, 'en') : englishText(key)
+
+/**
+ * 🛑 Where the token goes is not the same on the two doors, and `studio.batch` publishes no
+ * `consent` of its own: a lot carries it inside the input of the call it answers for.
+ */
+const ASK_ALONE = 'assistant.consent.ask'
+const ASK_IN_LOT = 'assistant.consent.askInLot'
+
+/** The token, and the same sentence the modal shows — what a call engages does not depend on
+ * which door asked. */
+function consentAsked(
+  name: ActionName,
+  listed: Record<string, unknown>,
+  engaged: Engagement,
+  askKey: string,
+): string {
+  // Priced as the token is minted, so the yes that comes back answers for THIS form.
+  const token = mintConsent(name, listed, quotedNow(engaged.commitment))
+  const engages = confirmSentence(engaged.commitment, engaged.estimate, inEnglish, 'en')
+
+  return `${engages}${inEnglish(askKey, { token })}`
+}
+
+/**
+ * 🛑 One price for a whole lot: `estimateOfSubmission` reads the panel, not the call, and no call
+ * of the lot has run yet. Asked per call, a full lot was fifty identical round trips to the API.
+ */
+function pricedOnce(): () => Promise<number | null> {
+  let asked: Promise<number | null> | null = null
+
+  return () => (asked ??= estimateOfSubmission())
 }
 
 /** Whether the form still holds exactly what was priced. */

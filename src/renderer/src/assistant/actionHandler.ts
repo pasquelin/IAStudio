@@ -2,6 +2,7 @@ import type { Asset } from '@shared/domain/asset'
 import { refused, type ActionName, type ActionOutcome } from '@shared/domain/assistant'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
+import type { WireCall } from './wireConsent'
 
 /**
  * What one action does, once `validatesInput` has agreed its input fits the registry.
@@ -12,6 +13,11 @@ import { getBridge } from '@/services/bridge'
  */
 export type ActionHandler = (
   input: Record<string, unknown>,
+  /**
+   * Where the call came from, which one handler needs and the rest ignore: `studio.batch` runs
+   * calls of its own, and they engage on the terms of the door the LOT came through.
+   */
+  wire?: WireCall,
 ) => ActionOutcome | Promise<ActionOutcome>
 
 /**

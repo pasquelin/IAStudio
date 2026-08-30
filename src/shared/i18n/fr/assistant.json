@@ -1130,6 +1130,10 @@
         "description": "Ajoute un lien d’une mémoire vers une autre, pour dire que l’une éclaire l’autre."
       }
     },
+    "consent": {
+      "ask": " Demandez à la personne pour qui vous agissez, puis renvoyez le même appel avec son paramètre consent réglé sur {{token}}. Le jeton est à usage unique, dure 5 minutes, et ne répond que pour cet appel.",
+      "askInLot": " Demandez à la personne pour qui vous agissez, puis renvoyez le même lot avec un champ consent réglé sur {{token}} dans l’input de CET appel. Le jeton est à usage unique, dure 5 minutes, et ne répond que pour cet appel."
+    },
     "refusals": {
       "unknownCommand": "Cette commande n’existe pas dans le studio.",
       "wrongSurface": "Aucune surface du studio n’était là pour prendre cette commande. Ouvrez le document ou le panneau auquel elle s’adresse.",
@@ -1150,6 +1154,7 @@
       "notAllowed": "Le studio ne laisse pas un appel venu de l’extérieur changer cela. Seule sa propre fenêtre le fait.",
       "nativeDialog": "Cette commande ouvre une fenêtre du système : l’assistant ne peut ni la remplir ni la lire. Utilise l’action qui prend un chemin.",
       "notRenderable": "Le document au premier plan n’a rien que ceci puisse rendre — un ciel vide, une matière sans canal, ou un moteur qui n’est pas monté.",
+      "needsConsent": "Rien n’a été engagé : cet appel demande un jeton d’accord. Le refus en porte un neuf, et le même appel renvoyé avec lui s’exécute.",
       "failed": "Le studio a essayé et cela n’est pas passé. La raison est dans son journal, et ce ne sont pas les paramètres."
     },
     "models": {
@@ -1160,6 +1165,7 @@
     },
     "fields": {
       "command": "Identifiant de la commande",
+      "consent": "Jeton d’un refus needsConsent précédent. À usage unique, 5 minutes, ne répond que pour cet appel",
       "workspace": "Espace de travail",
       "createDocument": "Créer un document",
       "query": "Mots-clés",
@@ -1203,7 +1209,7 @@
       "alsoRemote": "Retirer aussi de la bibliothèque distante",
       "layerId": "Identifiant du calque",
       "layerIds": "Identifiants des calques",
-      "exportFolder": "Dossier du projet où écrire, à défaut le titre",
+      "exportFolder": "Nom d’un dossier du projet où écrire, à défaut un sélecteur demande",
       "exportFormat": "Format du fichier 3D",
       "exportScope": "Toute la scène ou la sélection",
       "exportTarget": "Moteur visé par l’export de matière",

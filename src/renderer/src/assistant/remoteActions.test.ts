@@ -47,8 +47,24 @@ describe('an action asked for from outside the window', () => {
     push({ callId: 'call_1', call: { action: 'workspace.open', input: { workspace: '3d' } } })
     await vi.waitFor(() => expect(answers).toHaveLength(1))
 
-    expect(runConfirmedAction).toHaveBeenCalledWith('workspace.open', { workspace: '3d' })
+    // The third argument is what says the call came from the wire — see `wireConsent`.
+    expect(runConfirmedAction).toHaveBeenCalledWith('workspace.open', { workspace: '3d' }, {})
     expect(answers[0]).toEqual({ callId: 'call_1', outcome: { ok: true } })
+  })
+
+  it('hands the gate the token a client carried, apart from what the action reads', async () => {
+    const { push, answers } = connected()
+    push({
+      callId: 'call_2',
+      call: { action: 'document.save', input: { documentId: 'd1', consent: 'tok-9' } },
+    })
+    await vi.waitFor(() => expect(answers).toHaveLength(1))
+
+    expect(runConfirmedAction).toHaveBeenCalledWith(
+      'document.save',
+      { documentId: 'd1' },
+      { consent: 'tok-9' },
+    )
   })
 
   it('answers under the id it was asked, refusal and all', async () => {

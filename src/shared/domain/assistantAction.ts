@@ -397,6 +397,11 @@ export type AssistantAction = {
    * no SECOND question is raised, which is what made the tool announce "Runs straight away".
    */
   asksItself?: true
+  /**
+   * This one RUNS other actions, so an answer takes as long as everything it holds — pricing and
+   * questions included. Read by `asking.ts`, which owes it the long wait, and by `tools.ts`.
+   */
+  runsOthers?: true
   reach: ActionReach
   fields: readonly ActionField[]
 }
@@ -489,6 +494,15 @@ export type ActionRefusal =
   | 'nativeDialog'
   /** The document in front carries nothing to render. Three causes, one honest answer. */
   | 'notRenderable'
+  /**
+   * A call from the wire that engages something, met without a consent token. `detail` carries a
+   * fresh one and what it covers, and the same call sent back with it runs.
+   *
+   * 🛑 The blind spot, and it is not closable from this side: the token proves the caller was
+   * TOLD what the call engages, never that a person agreed. What it buys is that nothing engages
+   * by accident, and that every engagement is named once in the open before it happens.
+   */
+  | 'needsConsent'
   /** It was tried and it did not go through. The journal holds the reason; the input was not it. */
   | 'failed'
 
@@ -512,6 +526,7 @@ export const ACTION_REFUSALS: readonly ActionRefusal[] = [
   'notAllowed',
   'nativeDialog',
   'notRenderable',
+  'needsConsent',
   'failed',
 ]
 

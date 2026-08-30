@@ -64,6 +64,8 @@ describe('the registry, published as tools', () => {
       'assets.remove',
       'command.run',
       'context.write',
+      // Named a folder, it writes without a picker to ask first — see `gameActions`.
+      'game.export',
       'git.commit',
       'settings.action',
     ])
@@ -96,6 +98,23 @@ describe('the registry, published as tools', () => {
       expect(action.commitment, action.name).toBe('none')
       expect(tool?.description, action.name).not.toContain('Runs straight away')
       expect(tool?.description, action.name).toContain('wait on the person at the screen')
+    }
+  })
+
+  /**
+   * Named rather than counted, like the two flags above. A lot engages nothing of its OWN, so
+   * `commitment` alone announced "Runs straight away" for fifty calls that may each engage.
+   */
+  it('says so when a call carries other calls', () => {
+    const marked = ACTION_REGISTRY.filter(entry => entry.runsOthers)
+
+    expect(marked.map(action => action.name)).toEqual(['studio.batch'])
+    for (const action of marked) {
+      const tool = mcpTools().find(one => one.name === toolName(action.name))
+
+      expect(action.commitment, action.name).toBe('none')
+      expect(tool?.description, action.name).not.toContain('Runs straight away')
+      expect(tool?.description, action.name).toContain('cleared on its own terms')
     }
   })
 

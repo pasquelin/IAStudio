@@ -59,6 +59,43 @@ describe('the door onto a game written out of the studio', () => {
     expect(await readdir(chosen)).toEqual(['evil'])
   })
 
+  /**
+   * The half a caller with no screen needs: a folder NAMED rather than picked. What guards it is
+   * the project's own boundary, since nobody is there to choose one outside.
+   */
+  describe('a folder the caller names', () => {
+    it('writes there without raising a picker', async () => {
+      const pickFolder = vi.fn(() => Promise.resolve<string | null>(chosen))
+      resetHandlers()
+      registerGameExportHandler({
+        pickFolder,
+        projectPath: () => project,
+        assetsById: () => Promise.resolve([]),
+        runtimeFolder: () => runtime,
+      })
+
+      expect(await exporting({ folder: 'Builds' })).toMatchObject({ folder: 'Demo' })
+      expect(await readdir(join(project, 'Builds', 'Demo'))).toContain('index.html')
+      expect(pickFolder).not.toHaveBeenCalled()
+    })
+
+    it('refuses a folder that climbs out of the project', async () => {
+      expect(await exporting({ folder: '../elsewhere' })).toBeNull()
+    })
+
+    /** 🛑 ONE folder, which is what `folderInsideProject` says its own safety rests on: it reads
+     * what the disk resolves to and refuses nothing about the SHAPE of a name. */
+    it('refuses a path where a folder name was asked for', async () => {
+      expect(await exporting({ folder: 'Builds/Nested' })).toBeNull()
+    })
+
+    it('picks as before when the folder is empty', async () => {
+      await exporting({ folder: '' })
+
+      expect(await readdir(chosen)).toEqual(['Demo'])
+    })
+  })
+
   it('answers nothing when nobody picked a folder, and asks nothing with no project', async () => {
     resetHandlers()
     registerGameExportHandler({

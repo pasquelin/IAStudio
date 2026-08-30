@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { assistantAction, confirmKey } from '@shared/domain/assistant'
+import { assistantAction } from '@shared/domain/assistant'
 import { clipped } from '@shared/text'
 import { Button } from '@/design/Button'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
-import { formatList, formatUnits } from '@/helpers/format'
+import { formatList } from '@/helpers/format'
+import { confirmSentence } from '../confirmSentence'
 import type { ConfirmRequest } from '../confirm'
 import { CONVERSATION_CARD } from './conversationStyles'
 
@@ -42,21 +43,6 @@ export function AssistantConversationQuestion({ request }: { request: ConfirmReq
     return clipped(written, VALUE_MAX)
   }
 
-  /**
-   * Keyed off the commitment rather than branched on it, so a fifth level cannot fall silently
-   * into the wrong sentence — which a chain of `if` ending on credits would let it do.
-   */
-  const reason = (): string => {
-    if (request.commitment !== 'credits') return t(confirmKey(request.commitment))
-    if (typeof request.estimate !== 'number') return t('assistant.confirm.unknownCost')
-
-    return t('assistant.confirm.credits', {
-      cost: t('generation.estimatedCost', {
-        units: formatUnits(request.estimate, i18n.language),
-      }),
-    })
-  }
-
   return (
     <div className={CONVERSATION_CARD}>
       <p className="text-text m-0 text-xs font-medium">
@@ -75,7 +61,9 @@ export function AssistantConversationQuestion({ request }: { request: ConfirmReq
         ),
       )}
 
-      <p className="text-muted text-mini m-0">{reason()}</p>
+      <p className="text-muted text-mini m-0">
+        {confirmSentence(request.commitment, request.estimate, t, i18n.language)}
+      </p>
 
       <div className="flex items-center gap-2">
         <Button

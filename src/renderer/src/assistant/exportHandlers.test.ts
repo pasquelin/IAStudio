@@ -60,6 +60,27 @@ describe('a game written out of the studio', () => {
     expect(await runAction('game.export', {})).toMatchObject({ ok: false, refusal: 'declined' })
   })
 
+  /**
+   * 🛑 With no folder named, the main process raises a system picker — which a caller on the wire
+   * can neither fill in nor see. It stood on screen while the client counted its two minutes out.
+   */
+  it('refuses to raise a picker for a caller with no screen', async () => {
+    const asked = exporting()
+
+    expect(await runAction('game.export', {}, {})).toMatchObject({
+      ok: false,
+      refusal: 'nativeDialog',
+    })
+    expect(asked).toEqual([])
+  })
+
+  it('writes where that caller named, no picker involved', async () => {
+    const asked = exporting()
+
+    expect(await runAction('game.export', { folder: 'Builds' }, {})).toMatchObject({ ok: true })
+    expect(asked[0]?.folder).toBe('Builds')
+  })
+
   /** 🛑 `resources/gameRuntime` is git-ignored, so the main process throws where an assistant is
    * owed an answer. */
   it('answers a refusal when the main process throws instead of writing', async () => {

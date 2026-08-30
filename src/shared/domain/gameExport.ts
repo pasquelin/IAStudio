@@ -55,6 +55,12 @@ export type GameExportRequest = {
   entryScene: string
   scenes: readonly SceneToExport[]
   scripts: readonly ScriptToExport[]
+  /**
+   * Where to write, INSIDE the project and relative to its root. Absent, a folder picker asks —
+   * which is the only way a person at the window ever does it, and the only way a caller with no
+   * screen never can.
+   */
+  folder?: string
 }
 
 export type GameExportOutcome = {
