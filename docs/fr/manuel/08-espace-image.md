@@ -125,8 +125,8 @@ Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 
 ### Le menu **Image**
 
-Six entrées. Les quatre dernières agissent sur **tout le document**, calques compris — pas sur le
-calque actif :
+**Douze entrées.** Les six premières travaillent le document lui-même, et les quatre dernières
+d’entre elles agissent sur **tout le document**, calques compris — pas sur le calque actif :
 
 | Entrée | Ce qu’elle fait |
 |---|---|
@@ -137,8 +137,9 @@ calque actif :
 | **Rotation horaire** | un quart de tour vers la droite ; **le cadre pivote avec** — un portrait devient un paysage |
 | **Rotation antihoraire** | un quart de tour vers la gauche, même chose |
 
-Aucune n’a de raccourci par défaut : le menu est leur seule porte. Vous pouvez leur en donner un
-dans les [réglages](14-reglages.md), comme à n’importe quelle commande.
+**Seule Fusionner porte un raccourci par défaut** — `⌘E`. Pour les cinq autres, le menu est la
+seule porte ; vous pouvez leur en donner un dans les [réglages](14-reglages.md), comme à n’importe
+quelle commande.
 
 > **Un miroir suivi du même miroir rend exactement l’image de départ.** Ce n’est pas une évidence :
 > le studio retourne le calque plutôt que de réécrire ses pixels, et c’est ce qui évite qu’un
@@ -150,6 +151,16 @@ dans les [réglages](14-reglages.md), comme à n’importe quelle commande.
 **Fusionner et Aplatir écrivent vraiment des pixels**, à la différence du reste du menu : le calque
 qui reste reçoit l’image composée de ce qui disparaît. `⌘Z` rend la pile — et l’image avec, tant que
 le document n’a pas changé de taille entre-temps.
+
+**La septième entrée est seule dans son bloc** : **Faire un masque de la sélection**, qui masque
+le calque actif hors de la zone tracée. Elle est grise tant qu’il n’y a pas à la fois une zone et
+un calque actif. Le panneau des calques porte la même action.
+
+**Les cinq dernières demandent au modèle** : **Régénérer la zone**, **Étendre**, **Détourer**,
+**Agrandir**, **Vectoriser**. Aucune ne part toute seule — elle remplit le formulaire du panneau
+Génération et vous le montre. **Le menu n’est pas leur seule porte** : la barre d’outils les porte
+aussi, dans son groupe Retouches par modèle, décrit plus bas.
+[Tous les raccourcis](15-raccourcis.md) dit ce que chacune envoie.
 
 ### Groupe Cadre
 
@@ -259,6 +270,30 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 > sélectionnée, cette zone seulement**. C’est ce qui donne un fond uni en un geste, et une zone sa
 > couleur plate ; ce n’est pas le remplissage par proximité de couleur que vous connaissez
 > peut-être ailleurs.
+
+### Groupe Retouches par modèle
+
+Après les outils, séparé d’eux par un trait, un groupe qui n’en est pas un : **ses lignes ne
+s’arment pas, elles agissent.** Cliquer le bouton ouvre la liste au lieu de reprendre un outil.
+Après lui viennent les deux boutons du recadrage, gris tant qu’aucun cadre n’est tracé, puis la
+couleur et les réglages du pinceau.
+
+| Ligne | Ce qu’elle envoie |
+|---|---|
+| **Régénérer la zone** | la région masquée du calque actif, à repeindre |
+| **Étendre** | l’image aplatie, à prolonger au-delà de ses bords |
+| **Détourer** | l’image aplatie, dont retirer l’arrière-plan |
+| **Agrandir** | l’image aplatie, à redéfinir plus finement |
+| **Vectoriser** | l’image aplatie, à convertir en tracés |
+
+Ce sont les cinq entrées du bas du menu **Image** : deux portes, une seule action. Le groupe est
+gris le temps qu’une retouche se prépare — aplatir puis téléverser prend ce que prend le réseau, et
+un bouton qui ne dit rien pendant ce temps-là laisse croire que le clic est passé à côté.
+
+**Aucune ne part toute seule** : chacune remplit le formulaire du panneau Génération et vous le
+montre. Détourer, Agrandir et Vectoriser demandent en plus un modèle réglé dans
+**Réglages ▸ Modèles d’IA** ; sans lui, l’édition ouvre l’écran où en choisir un plutôt que de
+partir. [Les modèles](05-modeles.md) dit quelle famille chacune attend.
 
 ### Les réglages du pinceau
 

@@ -119,7 +119,8 @@ In other words: an armed tool never needs the menu to be taken up again.
 
 ### The **Image** menu
 
-Six entries. The last four act on the **whole document**, layers included — not on the active layer:
+**Twelve entries.** The first six work the document itself, and the last four of those act on the
+**whole document**, layers included — not on the active layer:
 
 | Entry | What it does |
 |---|---|
@@ -130,8 +131,8 @@ Six entries. The last four act on the **whole document**, layers included — no
 | **Rotate clockwise** | a quarter turn to the right; **the frame turns with it** — a portrait becomes a landscape |
 | **Rotate counter-clockwise** | a quarter turn to the left, same thing |
 
-None ships with a shortcut: the menu is their only way in. You can give them one in
-[settings](14-settings.md), as with any other command.
+**Only Merge down ships with a shortcut** — `⌘E`. For the other five the menu is the only way in;
+you can give them one in [settings](14-settings.md), as with any other command.
 
 > **A mirror followed by the same mirror gives back exactly the picture you started from.** That is
 > not a given: the studio turns the layer rather than rewriting its pixels, which is what keeps a
@@ -143,6 +144,15 @@ None ships with a shortcut: the menu is their only way in. You can give them one
 **Merge down and Flatten really do write pixels**, unlike the rest of the menu: the layer that stays
 receives the picture composed from what disappears. `⌘Z` gives the stack back — and the picture with
 it, as long as the document has not changed size in between.
+
+**The seventh entry sits alone in its block**: **Make a mask of the selection**, which hides the
+active layer outside the drawn area. It is greyed until there is both an area and an active layer.
+The layers panel carries the same action.
+
+**The last five ask the model**: **Regenerate the region**, **Extend**, **Cut out**, **Upscale**,
+**Vectorise**. None of them leaves on its own — each fills in the Generation panel's form and shows
+it to you. **The menu is not their only door**: the toolbar carries them too, in its Model edits
+group, described below. [All the shortcuts](15-shortcuts.md) says what each one sends.
 
 ### Frame group
 
@@ -249,6 +259,29 @@ The eraser erases **to transparency**; it does not paint white.
 > pointer: it fills **the whole layer**, edge to edge — or, **if an area is selected, that area
 > alone**. That is what gives a plain background in one gesture, and a region its flat colour; it
 > is not the colour-proximity fill you may know from elsewhere.
+
+### Model edits group
+
+After the tools, separated from them by a rule, a group that is not one: **its rows do not arm,
+they act.** Clicking the button opens the list rather than taking an armed tool back up. After it
+come the two crop buttons, greyed until a frame is drawn, then the colour and the brush settings.
+
+| Row | What it sends |
+|---|---|
+| **Regenerate the region** | the masked region of the active layer, to be repainted |
+| **Extend** | the flattened image, to be carried beyond its edges |
+| **Cut out** | the flattened image, to have its background removed |
+| **Upscale** | the flattened image, to be redefined more finely |
+| **Vectorise** | the flattened image, to be turned into paths |
+
+These are the five entries at the bottom of the **Image** menu: two doors, one action. The group is
+greyed while an edit is being prepared — flattening then uploading takes what the network takes, and
+a button that says nothing meanwhile makes you think the click was missed.
+
+**None of them leaves on its own**: each fills in the Generation panel's form and shows it to you.
+Cut out, Upscale and Vectorise also want a model set in **Settings ▸ AI models**; without one, the
+edit opens the screen where you choose it rather than leaving. [The models](05-models.md) says which
+family each one expects.
 
 ### The brush settings
 

@@ -468,8 +468,9 @@ du crédit, et une touche pressée par mégarde n’a pas à en dépenser.
 formulaire du panneau Génération** et vous le montre. C’est vous qui appuyez sur Générer, après
 avoir vu ce qui part et avec quels réglages.
 
-**Elles vivent dans le menu Image**, et nulle part ailleurs : sans raccourci par défaut, c’est la
-seule porte. Détourer, Agrandir et Vectoriser demandent chacune un modèle d’une famille qui n’a pas
+**Elles ont deux portes, et aucune n’est le clavier** : les cinq dernières entrées du menu
+**Image**, et le groupe **Retouches par modèle** de la barre d’outils — la même action des deux
+côtés. Détourer, Agrandir et Vectoriser demandent chacune un modèle d’une famille qui n’a pas
 d’espace à elle ; il se règle dans **Réglages ▸ Modèles d’IA**. Tant qu’aucun n’est réglé, l’édition
 ne part pas et ouvre l’écran où en choisir un.
 

@@ -457,10 +457,11 @@ key pressed by mistake has no business spending any.
 Generation panel's form** and shows it to you. You are the one who presses Generate, having seen
 what is going and with which settings.
 
-**They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
-door. Cut out, Upscale and Vectorise each ask for a model of a family that has no workspace of its
-own; it is set in **Settings ▸ AI models**. Until one is set, the edit request does not leave and
-opens the screen where you choose it.
+**They have two doors, and neither is the keyboard**: the last five entries of the **Image** menu,
+and the **Model edits** group in the toolbar — the same action on both sides. Cut out, Upscale and
+Vectorise each ask for a model of a family that has no workspace of its own; it is set in
+**Settings ▸ AI models**. Until one is set, the edit request does not leave and opens the screen
+where you choose it.
 
 ### Exporting
 
