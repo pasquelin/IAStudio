@@ -20,7 +20,7 @@ const PANEL: ActionField = {
  * takes nothing away from anyone.
  *
  * Two of them answer a command as well — `settings.open` and `window.fullScreen` — and are here
- * all the same: a program asks for a capability by name, and finding it under `command.run` means
+ * all the same: a program asks for a capability by name, and finding it under `command.runStudioCommand` means
  * knowing the id of a menu row first.
  */
 
@@ -92,9 +92,9 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
      * The path-taking half of `media.ingest`, whose own channel raises the native picker no client
      * can fill. Adds a row, takes nothing away — hence `none`, like a new folder.
      */
-    name: 'media.adopt',
-    titleKey: 'assistant.actions.mediaAdopt.title',
-    descriptionKey: 'assistant.actions.mediaAdopt.description',
+    name: 'media.indexFileInPlace',
+    titleKey: 'assistant.actions.mediaIndexFileInPlace.title',
+    descriptionKey: 'assistant.actions.mediaIndexFileInPlace.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -110,18 +110,18 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
-    name: 'favorites.list',
-    titleKey: 'assistant.actions.favoritesList.title',
-    descriptionKey: 'assistant.actions.favoritesList.description',
+    name: 'favorites.listPinnedRecipes',
+    titleKey: 'assistant.actions.favoritesListPinnedRecipes.title',
+    descriptionKey: 'assistant.actions.favoritesListPinnedRecipes.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'favorite.pin',
-    titleKey: 'assistant.actions.favoritePin.title',
-    descriptionKey: 'assistant.actions.favoritePin.description',
+    name: 'favorite.pinAssetRecipe',
+    titleKey: 'assistant.actions.favoritePinAssetRecipe.title',
+    descriptionKey: 'assistant.actions.favoritePinAssetRecipe.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
@@ -130,9 +130,9 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'favorite.unpin',
-    titleKey: 'assistant.actions.favoriteUnpin.title',
-    descriptionKey: 'assistant.actions.favoriteUnpin.description',
+    name: 'favorite.unpinAssetRecipe',
+    titleKey: 'assistant.actions.favoriteUnpinAssetRecipe.title',
+    descriptionKey: 'assistant.actions.favoriteUnpinAssetRecipe.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
@@ -141,18 +141,18 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'fileInfo.open',
-    titleKey: 'assistant.actions.fileInfoOpen.title',
-    descriptionKey: 'assistant.actions.fileInfoOpen.description',
+    name: 'fileInfo.openWindow',
+    titleKey: 'assistant.actions.fileInfoOpenWindow.title',
+    descriptionKey: 'assistant.actions.fileInfoOpenWindow.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
     fields: [{ key: 'path', kind: 'text', labelKey: 'assistant.fields.filePath', required: true }],
   }),
   action({
-    name: 'mirror.open',
-    titleKey: 'assistant.actions.mirrorOpen.title',
-    descriptionKey: 'assistant.actions.mirrorOpen.description',
+    name: 'mirror.openVideoReturnWindow',
+    titleKey: 'assistant.actions.mirrorOpenVideoReturnWindow.title',
+    descriptionKey: 'assistant.actions.mirrorOpenVideoReturnWindow.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
@@ -164,9 +164,9 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
      * and this was the whole of what an outside client could not open. Named for the Help menu,
      * which three of the four belong to; see `WindowPage`.
      */
-    name: 'help.open',
-    titleKey: 'assistant.actions.helpOpen.title',
-    descriptionKey: 'assistant.actions.helpOpen.description',
+    name: 'help.openStudioWindow',
+    titleKey: 'assistant.actions.helpOpenStudioWindow.title',
+    descriptionKey: 'assistant.actions.helpOpenStudioWindow.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',

@@ -204,7 +204,7 @@ describe('putting a document in front', () => {
     retitleDocument('doc-a', 'Château')
     retitleDocument('doc-b', 'Château')
 
-    expect(await runAction('document.activate', { documentId: 'Château' })).toEqual({
+    expect(await runAction('document.activate', { documentId: 'Château' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -214,7 +214,7 @@ describe('putting a document in front', () => {
   it('refuses an id no tab holds rather than clearing the centre', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
-    expect(await runAction('document.activate', { documentId: 'doc-z' })).toEqual({
+    expect(await runAction('document.activate', { documentId: 'doc-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -256,7 +256,7 @@ describe('putting a document in front', () => {
   it('says the document is not there rather than blaming the parameters', async () => {
     installDocuments({}, '')
 
-    expect(await runAction('document.open', { path: 'Nowhere/Absent.ora' })).toEqual({
+    expect(await runAction('document.open', { path: 'Nowhere/Absent.ora' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -277,7 +277,7 @@ describe('closing and renaming', () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
     closeDocument.mockResolvedValue(false)
 
-    expect(await runAction('document.close', { documentId: 'doc-a' })).toEqual({
+    expect(await runAction('document.close', { documentId: 'doc-a' })).toMatchObject({
       ok: false,
       refusal: 'declined',
     })
@@ -413,7 +413,7 @@ describe('exporting the document in front', () => {
     const exportInto = vi.fn(async () => null)
     installFakeBridge({ project: { exportInto } })
 
-    expect(await runAction('document.export', {})).toEqual({
+    expect(await runAction('document.export', {})).toMatchObject({
       ok: false,
       refusal: 'notRenderable',
     })
@@ -427,7 +427,7 @@ describe('exporting the document in front', () => {
     const exportInto = vi.fn(async () => null)
     installFakeBridge({ project: { exportInto } })
 
-    expect(await runAction('document.export', {})).toEqual({
+    expect(await runAction('document.export', {})).toMatchObject({
       ok: false,
       refusal: 'notRenderable',
     })
@@ -437,7 +437,10 @@ describe('exporting the document in front', () => {
   it('refuses with no document in front at all', async () => {
     installDocuments({}, '')
 
-    expect(await runAction('document.export', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
+    expect(await runAction('document.export', {})).toMatchObject({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
   })
 })
 
@@ -478,7 +481,7 @@ describe('saving a document from outside the window', () => {
   it('refuses for a document no tab holds', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
-    expect(await runAction('document.save', { documentId: 'ghost' })).toEqual({
+    expect(await runAction('document.save', { documentId: 'ghost' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -494,7 +497,7 @@ describe('saving a document from outside the window', () => {
     installDocuments({ 'doc-b': 'image' }, 'doc-b')
     saveDocument.mockRejectedValue(new Error('its pixels cannot be read'))
 
-    expect(await runAction('document.save', {})).toEqual({
+    expect(await runAction('document.save', {})).toMatchObject({
       ok: false,
       refusal: 'notRenderable',
     })
@@ -510,14 +513,16 @@ describe('deleting a document from outside the window', () => {
   it('deletes without raising a dialog nobody can answer', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
-    expect(await runAction('document.remove', { documentId: 'doc-a' })).toEqual({ ok: true })
+    expect(await runAction('document.deleteFromDisk', { documentId: 'doc-a' })).toEqual({
+      ok: true,
+    })
     expect(dropDocument).toHaveBeenCalledWith('doc-a')
   })
 
   it('refuses for a document no tab holds', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
-    expect(await runAction('document.remove', { documentId: 'ghost' })).toEqual({
+    expect(await runAction('document.deleteFromDisk', { documentId: 'ghost' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -528,7 +533,7 @@ describe('deleting a document from outside the window', () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
     dropDocument.mockResolvedValue(false)
 
-    expect(await runAction('document.remove', { documentId: 'doc-a' })).toEqual({
+    expect(await runAction('document.deleteFromDisk', { documentId: 'doc-a' })).toMatchObject({
       ok: false,
       refusal: 'failed',
     })

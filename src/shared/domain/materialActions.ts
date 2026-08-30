@@ -44,9 +44,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
      * in it. Session state, exactly as `view.display` is in the 3D space: none of it is saved with
      * the document and ⌘Z never touches it.
      */
-    name: 'skybox.view',
-    titleKey: 'assistant.actions.skyboxView.title',
-    descriptionKey: 'assistant.actions.skyboxView.description',
+    name: 'skybox.setViewOptions',
+    titleKey: 'assistant.actions.skyboxSetViewOptions.title',
+    descriptionKey: 'assistant.actions.skyboxSetViewOptions.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
@@ -64,12 +64,12 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * Every dial optional, like `layer.style`: a client changing the exposure alone must not have
+     * Every dial optional, like `layer.setOpacityBlendAndVisibility`: a client changing the exposure alone must not have
      * to restate a temperature it never read.
      */
-    name: 'skybox.adjust',
-    titleKey: 'assistant.actions.skyboxAdjust.title',
-    descriptionKey: 'assistant.actions.skyboxAdjust.description',
+    name: 'skybox.adjustImage',
+    titleKey: 'assistant.actions.skyboxAdjustImage.title',
+    descriptionKey: 'assistant.actions.skyboxAdjustImage.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -93,9 +93,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
-    name: 'skybox.sun',
-    titleKey: 'assistant.actions.skyboxSun.title',
-    descriptionKey: 'assistant.actions.skyboxSun.description',
+    name: 'skybox.setSun',
+    titleKey: 'assistant.actions.skyboxSetSun.title',
+    descriptionKey: 'assistant.actions.skyboxSetSun.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -107,9 +107,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'skybox.environment',
-    titleKey: 'assistant.actions.skyboxEnvironment.title',
-    descriptionKey: 'assistant.actions.skyboxEnvironment.description',
+    name: 'skybox.setPreviewLighting',
+    titleKey: 'assistant.actions.skyboxSetPreviewLighting.title',
+    descriptionKey: 'assistant.actions.skyboxSetPreviewLighting.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -124,9 +124,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'skybox.source',
-    titleKey: 'assistant.actions.skyboxSource.title',
-    descriptionKey: 'assistant.actions.skyboxSource.description',
+    name: 'skybox.setSourceImage',
+    titleKey: 'assistant.actions.skyboxSetSourceImage.title',
+    descriptionKey: 'assistant.actions.skyboxSetSourceImage.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -144,9 +144,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
-    name: 'material.material',
-    titleKey: 'assistant.actions.materialSettings.title',
-    descriptionKey: 'assistant.actions.materialSettings.description',
+    name: 'material.setSurfaceSettings',
+    titleKey: 'assistant.actions.materialSetSurfaceSettings.title',
+    descriptionKey: 'assistant.actions.materialSetSurfaceSettings.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -180,9 +180,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'material.preview',
-    titleKey: 'assistant.actions.materialPreview.title',
-    descriptionKey: 'assistant.actions.materialPreview.description',
+    name: 'material.setPreviewDisplay',
+    titleKey: 'assistant.actions.materialSetPreviewDisplay.title',
+    descriptionKey: 'assistant.actions.materialSetPreviewDisplay.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
@@ -221,13 +221,13 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * The sibling of `world.environment`, and it names its sources the same way: a PICTURE by asset
+     * The sibling of `world.setSceneLighting`, and it names its sources the same way: a PICTURE by asset
      * id, a sky DOCUMENT by title. A preview judged under a different world than the scene it is
      * headed for is a preview that decided nothing.
      */
-    name: 'material.environment',
-    titleKey: 'assistant.actions.materialEnvironment.title',
-    descriptionKey: 'assistant.actions.materialEnvironment.description',
+    name: 'material.setPreviewEnvironment',
+    titleKey: 'assistant.actions.materialSetPreviewEnvironment.title',
+    descriptionKey: 'assistant.actions.materialSetPreviewEnvironment.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -238,9 +238,9 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
      * No `assetId` means EMPTY the channel, which is the one thing an optional field can say here
      * that a required one cannot — clearing a map is a real gesture of the panel.
      */
-    name: 'material.channel',
-    titleKey: 'assistant.actions.materialChannel.title',
-    descriptionKey: 'assistant.actions.materialChannel.description',
+    name: 'material.setChannelImage',
+    titleKey: 'assistant.actions.materialSetChannelImage.title',
+    descriptionKey: 'assistant.actions.materialSetChannelImage.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

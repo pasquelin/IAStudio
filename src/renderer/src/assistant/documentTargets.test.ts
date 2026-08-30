@@ -38,7 +38,7 @@ describe('what the document in front can be aimed at', () => {
   })
 
   it('refuses an id the document does not hold', () => {
-    expect(aimAt('gone')).toEqual({ ok: false, refusal: 'notFound' })
+    expect(aimAt('gone')).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 })
 
@@ -101,6 +101,6 @@ describe('what a scene and a montage can be aimed at', () => {
 
     expect(aimAt('A1')).toEqual({ ok: true })
     expect(sequenceOf(useSequences.getState(), MONTAGE).selectedTrackId).toBe('A1')
-    expect(aimAt('gone')).toEqual({ ok: false, refusal: 'notFound' })
+    expect(aimAt('gone')).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 })

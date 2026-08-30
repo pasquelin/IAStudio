@@ -4,7 +4,7 @@ import { withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
- * The library, queried and corrected from outside the window — the other half of `job.wait`:
+ * The library, queried and corrected from outside the window — the other half of `job.waitForCloudGeneration`:
  * the ids a finished generation hands back are looked up here.
  */
 
@@ -38,7 +38,13 @@ function update(input: Record<string, unknown>): Promise<ActionOutcome> {
     ...(type ? { type } : {}),
   }
 
-  if (Object.keys(changes).length === 0) return Promise.resolve(refused('badInput'))
+  if (Object.keys(changes).length === 0)
+    return Promise.resolve(
+      refused(
+        'badInput',
+        `this call named nothing to change — it writes "name", "tags" or "type", and "type" wants one of: ${ASSET_TYPES.join(', ')}`,
+      ),
+    )
   return withBridge(bridge => bridge.assets.update(textOf(input, 'assetId') ?? '', changes))
 }
 
@@ -58,12 +64,12 @@ async function searchAssets(input: Record<string, unknown>): Promise<ActionOutco
 }
 
 export const ASSET_HANDLERS: ActionHandlers = {
-  'assets.search': input => searchAssets(input),
+  'assets.searchProjectCatalogue': input => searchAssets(input),
   'assets.counts': () => withBridge(bridge => bridge.assets.counts()),
   'asset.update': update,
 
   /**
-   * Through the catalogue, NOT through `assets.describe` — that one is the captioning channel and
+   * Through the catalogue, NOT through `assets.captionImages` — that one is the captioning channel and
    * calls the API. Reading a generation's output must cost nothing.
    */
   'asset.get': input => {
@@ -71,12 +77,12 @@ export const ASSET_HANDLERS: ActionHandlers = {
     return withBridge(bridge => bridge.assets.search({ ids, limit: ids.length }))
   },
 
-  'assets.remove': input =>
+  'assets.removeFromLibrary': input =>
     withBridge(bridge =>
       bridge.assets.remove(textsOf(input, 'assetIds'), boolOf(input, 'alsoRemote')),
     ),
 
-  'assets.describe': input =>
+  'assets.captionImages': input =>
     withBridge(bridge => bridge.assets.describe(textsOf(input, 'assetIds'))),
 
   'assets.absent': input => withBridge(bridge => bridge.assets.absent(textsOf(input, 'assetIds'))),
@@ -88,6 +94,11 @@ export const ASSET_HANDLERS: ActionHandlers = {
   // rather than a failure — hence `notFound` and not `failed`.
   'asset.reveal': async input => {
     const outcome = await withBridge(bridge => bridge.assets.reveal(textOf(input, 'assetId') ?? ''))
-    return outcome.ok && outcome.data === false ? refused('notFound') : outcome
+    return outcome.ok && outcome.data === false
+      ? refused(
+          'notFound',
+          `asset "${textOf(input, 'assetId') ?? ''}" has no file on this machine to show — assets.search answers what the library holds, and assets.absent says which have no file yet`,
+        )
+      : outcome
   },
 }

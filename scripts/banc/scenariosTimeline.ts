@@ -26,7 +26,12 @@ export const TIMELINE_SCENARIOS: readonly Scenario[] = [
     said: ['Retire le fondu que tu viens de poser.'],
     setup: async studio => {
       await cubeScene(studio)
-      await studio.run('timeline.cue', { list: 'transitions', at: 0, what: 'fade', duration: 1 })
+      await studio.run('timeline.addSceneCue', {
+        list: 'transitions',
+        at: 0,
+        what: 'fade',
+        duration: 1,
+      })
     },
     passed: run => (read.animation(run)?.transitions ?? []).length === 0,
   },

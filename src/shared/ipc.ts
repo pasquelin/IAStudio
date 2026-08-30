@@ -34,6 +34,7 @@ import type {
   AssistantCall,
   AssistantProgress,
   AssistantThought,
+  AssistantWindow,
 } from './domain/assistant'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
@@ -271,6 +272,7 @@ export type Channels = {
   assistantActionResult: 'assistant:action-result'
   assistantNote: 'assistant:note'
   assistantSaid: 'assistant:said'
+  assistantWindow: 'assistant:window'
 
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'
@@ -513,6 +515,7 @@ export const CHANNELS: Channels = {
   assistantActionResult: 'assistant:action-result',
   assistantNote: 'assistant:note',
   assistantSaid: 'assistant:said',
+  assistantWindow: 'assistant:window',
 
   dictationState: 'dictation:state',
   dictationStart: 'dictation:start',
@@ -1987,6 +1990,11 @@ export type StudioBridge = {
      * read over there, and a reader following a turn needs both sides in one order.
      */
     note: (note: WindowNote) => Promise<void>
+    /**
+     * What the door in front reads in ONE go, asked before a turn rather than learned from one.
+     * `null` where it names no window — which the composer says, rather than inventing a ratio.
+     */
+    window: () => Promise<AssistantWindow | null>
     /**
      * What a round trip carried, whole — the journal keeps only its size, and a briefing is
      * 90 505 characters. `null` for a line older than the ring, or written by another launch.

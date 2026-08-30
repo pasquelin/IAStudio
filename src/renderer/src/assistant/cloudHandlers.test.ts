@@ -8,7 +8,7 @@ beforeEach(() => {
 
 describe('the remote library', () => {
   /**
-   * Every narrowing is asked affirmatively and omitted when absent, exactly as `assets.search`
+   * Every narrowing is asked affirmatively and omitted when absent, exactly as `assets.searchProjectCatalogue`
    * does: an empty list of kinds is not "everything of no kind", it is a question the API does
    * not answer.
    */
@@ -16,10 +16,14 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    await runAction('cloud.browse', { text: 'stone', types: ['skybox'], pageSize: 20 })
+    await runAction('cloud.browseAccountLibrary', {
+      text: 'stone',
+      types: ['skybox'],
+      pageSize: 20,
+    })
     expect(browse).toHaveBeenCalledWith({ text: 'stone', types: ['skybox'], pageSize: 20 })
 
-    await runAction('cloud.browse', {})
+    await runAction('cloud.browseAccountLibrary', {})
     expect(browse).toHaveBeenLastCalledWith({})
   })
 
@@ -27,12 +31,14 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    await runAction('cloud.browse', { text: 'stone', order: 'relevance' })
+    await runAction('cloud.browseAccountLibrary', { text: 'stone', order: 'relevance' })
     expect(browse).toHaveBeenCalledWith({ text: 'stone', order: 'relevance' })
 
     // An order nobody offers is refused rather than dropped, as a kind nobody has is: answering
     // a search the client did not ask for is worse than telling it the word means nothing here.
-    expect(await runAction('cloud.browse', { text: 'stone', order: 'cheapest' })).toMatchObject({
+    expect(
+      await runAction('cloud.browseAccountLibrary', { text: 'stone', order: 'cheapest' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -45,7 +51,9 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    expect(await runAction('cloud.browse', { tags: ['stone'], order: 'relevance' })).toMatchObject({
+    expect(
+      await runAction('cloud.browseAccountLibrary', { tags: ['stone'], order: 'relevance' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -61,7 +69,9 @@ describe('the remote library', () => {
     const browse = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { browse } })
 
-    expect(await runAction('cloud.browse', { types: ['skybox', 'hologram'] })).toMatchObject({
+    expect(
+      await runAction('cloud.browseAccountLibrary', { types: ['skybox', 'hologram'] }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -72,10 +82,10 @@ describe('the remote library', () => {
     const explore = vi.fn(async () => ({ assets: [], cursor: null }))
     installFakeBridge({ cloud: { explore } })
 
-    await runAction('cloud.explore', { type: 'image', cursor: 'page-2' })
+    await runAction('cloud.explorePublicFeed', { type: 'image', cursor: 'page-2' })
     expect(explore).toHaveBeenCalledWith({ type: 'image', cursor: 'page-2' })
 
-    expect(await runAction('cloud.explore', { type: 'hologram' })).toMatchObject({
+    expect(await runAction('cloud.explorePublicFeed', { type: 'hologram' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -88,7 +98,7 @@ describe('the remote library', () => {
     }))
     installFakeBridge({ cloud: { plan } })
 
-    await runAction('cloud.plan', { assetIds: ['asset-1'], policy: 'two-way' })
+    await runAction('cloud.previewSync', { assetIds: ['asset-1'], policy: 'two-way' })
     expect(plan).toHaveBeenCalledWith(['asset-1'], 'two-way')
   })
 

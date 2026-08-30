@@ -1,5 +1,10 @@
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { AssistantAnswer, AssistantProgress, AssistantThought } from '@shared/domain/assistant'
+import type {
+  AssistantAnswer,
+  AssistantProgress,
+  AssistantThought,
+  AssistantWindow,
+} from '@shared/domain/assistant'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 
 /**
@@ -16,6 +21,11 @@ import type { AssistantNote } from '@shared/domain/assistantNote'
  */
 export type AssistantBrain = {
   think: (request: AssistantThought, watch?: TurnWatch) => Promise<AssistantAnswer>
+  /**
+   * What this door reads in one go, asked BEFORE a turn — `null` from a door that names none.
+   * Required rather than optional, so a door added later cannot stay silent by omission.
+   */
+  window: () => Promise<AssistantWindow | null>
 }
 
 /** What follows a turn while it runs: what ends it, and what it is writing. */

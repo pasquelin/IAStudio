@@ -76,6 +76,11 @@ import { boolOf, composedNumber, numberOf, oneOf, textOf, textsOf } from './acti
 
 type Commands = readonly Command<CanvasState>[]
 
+/** What a caller does about it, spelled once for the eight sites that answer `wrongSurface`. */
+const NO_IMAGE =
+  'the document in front is no image — documents.list answers what is open and of which kind, and ' +
+  'document.activate brings an image forward'
+
 /** The image in front and its state, or nothing — which reads as `wrongSurface`. */
 function mounted(): { documentId: string; state: CanvasState } | null {
   const documentId = activeImageId(useDocuments.getState())
@@ -89,8 +94,13 @@ function mounted(): { documentId: string; state: CanvasState } | null {
  * sharing an `id`, keeping the FIRST one's `revert`: a gesture around three different dials would
  * undo the opacity and leave the blend mode set.
  */
-function run(documentId: string, commands: Commands): ActionOutcome {
-  if (commands.length === 0) return refused('badInput')
+function run(
+  documentId: string,
+  commands: Commands,
+  /** What a caller does when the builder declines — only the caller knows what it was after. */
+  nothing: string,
+): ActionOutcome {
+  if (commands.length === 0) return refused('badInput', nothing)
 
   const store = useCanvases.getState()
   for (const command of commands) store.runCommand(documentId, command)
@@ -101,9 +111,14 @@ function run(documentId: string, commands: Commands): ActionOutcome {
  * Edits the image in front, whatever the stack holds. The document's id is handed to the builder
  * as well as its state: a command that reaches the ENGINE — a quarter turn — needs to say which.
  */
-function edit(build: (state: CanvasState, documentId: string) => Commands): ActionOutcome {
+function edit(
+  build: (state: CanvasState, documentId: string) => Commands,
+  nothing: string,
+): ActionOutcome {
   const open = mounted()
-  return open ? run(open.documentId, build(open.state, open.documentId)) : refused('wrongSurface')
+  return open
+    ? run(open.documentId, build(open.state, open.documentId), nothing)
+    : refused('wrongSurface', NO_IMAGE)
 }
 
 /**
@@ -115,13 +130,23 @@ function edit(build: (state: CanvasState, documentId: string) => Commands): Acti
 function editLayer(
   input: Record<string, unknown>,
   build: (layer: Layer, state: CanvasState) => Commands,
+  /** What a caller does when the layer IS there and the builder still declines. */
+  nothing: string,
 ): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_IMAGE)
 
-  const layer = layerAimed(open.state, textOf(input, 'layerId'))
-  return layer ? run(open.documentId, build(layer, open.state)) : refused('notFound')
+  const named = textOf(input, 'layerId')
+  const layer = layerAimed(open.state, named)
+  return layer
+    ? run(open.documentId, build(layer, open.state), nothing)
+    : refused('notFound', noLayer(named))
 }
+
+/** What a caller does about a layer nobody answers to — spelled once for the two sites. */
+const noLayer = (named: string | null): string =>
+  `no layer "${named ?? ''}" in the image in front, by id or name — canvas.state answers "layers" ` +
+  'with their ids and their names'
 
 /** The layer a caller meant, by id or by the name the briefing showed it under. */
 function layerAimed(state: CanvasState, given: string | null): Layer | undefined {
@@ -130,7 +155,7 @@ function layerAimed(state: CanvasState, given: string | null): Layer | undefined
 
 function readState(): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_IMAGE)
 
   return {
     ok: true,
@@ -249,9 +274,13 @@ function newLayer(input: Record<string, unknown>): ActionOutcome {
   const name = textOf(input, 'name')
   const id = newId()
   const layer = name === null ? null : born(input, id, name)
-  if (!layer) return refused('badInput')
+  if (!layer)
+    return refused(
+      'badInput',
+      '"name" is required, and "kind" must be one of: pixel, text, adjustment, shape — a shape also wants "shape" and a "width" and "height" above zero, an adjustment wants "adjustment"',
+    )
 
-  const outcome = edit(() => [addLayer(layer)])
+  const outcome = edit(() => [addLayer(layer)], 'the new layer built no command to run')
   return outcome.ok ? { ok: true, data: { layerId: id } } : outcome
 }
 
@@ -260,13 +289,17 @@ function style(input: Record<string, unknown>): ActionOutcome {
   const fillOpacity = numberOf(input, 'fillOpacity')
   const blend = oneOf(input, 'blend', BLEND_MODES)
 
-  return editLayer(input, ({ id }) => [
-    ...(opacity === null ? [] : [setLayerOpacity(id, opacity)]),
-    ...(fillOpacity === null ? [] : [setLayerFillOpacity(id, fillOpacity)]),
-    ...(blend ? [setLayerBlend(id, blend)] : []),
-    ...(input.visible === undefined ? [] : [setLayerVisible(id, boolOf(input, 'visible'))]),
-    ...(input.clipped === undefined ? [] : [setLayerClipped(id, boolOf(input, 'clipped'))]),
-  ])
+  return editLayer(
+    input,
+    ({ id }) => [
+      ...(opacity === null ? [] : [setLayerOpacity(id, opacity)]),
+      ...(fillOpacity === null ? [] : [setLayerFillOpacity(id, fillOpacity)]),
+      ...(blend ? [setLayerBlend(id, blend)] : []),
+      ...(input.visible === undefined ? [] : [setLayerVisible(id, boolOf(input, 'visible'))]),
+      ...(input.clipped === undefined ? [] : [setLayerClipped(id, boolOf(input, 'clipped'))]),
+    ],
+    'this call named nothing to set: opacity, fillOpacity, blend, visible or clipped',
+  )
 }
 
 function transform(input: Record<string, unknown>): ActionOutcome {
@@ -276,23 +309,27 @@ function transform(input: Record<string, unknown>): ActionOutcome {
   const shifted = (key: string, held: number, how: 'add' | 'multiply'): number =>
     composedNumber(held, numberOf(input, key), by, how)
 
-  return editLayer(input, layer => [
-    setLayerTransform(layer.id, {
-      ...layer.transform,
-      x: shifted('x', layer.transform.x, 'add'),
-      y: shifted('y', layer.transform.y, 'add'),
-      scaleX: shifted('scaleX', layer.transform.scaleX, 'multiply'),
-      scaleY: shifted('scaleY', layer.transform.scaleY, 'multiply'),
-      // Degrees in, radians stored: a client writing 90 for a quarter turn is right more often
-      // than one writing 1.5707963.
-      rotation: composedNumber(
-        layer.transform.rotation,
-        degrees === null ? null : toRadians(degrees),
-        by,
-        'add',
-      ),
-    }),
-  ])
+  return editLayer(
+    input,
+    layer => [
+      setLayerTransform(layer.id, {
+        ...layer.transform,
+        x: shifted('x', layer.transform.x, 'add'),
+        y: shifted('y', layer.transform.y, 'add'),
+        scaleX: shifted('scaleX', layer.transform.scaleX, 'multiply'),
+        scaleY: shifted('scaleY', layer.transform.scaleY, 'multiply'),
+        // Degrees in, radians stored: a client writing 90 for a quarter turn is right more often
+        // than one writing 1.5707963.
+        rotation: composedNumber(
+          layer.transform.rotation,
+          degrees === null ? null : toRadians(degrees),
+          by,
+          'add',
+        ),
+      }),
+    ],
+    'nothing to move: this layer takes x, y, scaleX, scaleY or rotation',
+  )
 }
 
 /**
@@ -319,47 +356,58 @@ function text(input: Record<string, unknown>): ActionOutcome {
   const font = family === null ? null : fontRefOf(input, family)
   // An `embedded` face the studio does not ship: refused rather than written as a reference that
   // will not resolve on the next machine.
-  if (family !== null && font === null) return refused('badInput')
+  if (family !== null && font === null)
+    return refused(
+      'badInput',
+      `no embedded face "${family ?? ''}" ships with the studio — fonts.list answers which do, or send fontSource "system" to use one of this machine's`,
+    )
 
-  return editLayer(input, layer =>
-    // The command only touches a text layer, so a pixel layer named here would be reported as
-    // done while nothing changed.
-    layer.kind === 'text'
-      ? [
-          setLayerText(layer.id, {
-            ...(written === null ? {} : { text: written }),
-            ...(font === null ? {} : { font }),
-            ...(size === null ? {} : { size }),
-            ...(colour === null ? {} : { color: colour }),
-            ...(align === null ? {} : { align }),
-            ...(lineHeight === null ? {} : { lineHeight }),
-            ...(tracking === null ? {} : { tracking }),
-            // One axis at a time: a client naming only a width must not flatten the height. A
-            // POINT caption has no box at all, so naming one is what gives it a box — and
-            // `DEFAULT_PARAGRAPH` is what the other axis then starts at.
-            ...(width === null && height === null
-              ? {}
-              : {
-                  box: {
-                    width: width ?? layer.box?.width ?? DEFAULT_PARAGRAPH.width,
-                    height: height ?? layer.box?.height ?? DEFAULT_PARAGRAPH.height,
-                  },
-                }),
-          }),
-        ]
-      : [],
+  return editLayer(
+    input,
+    layer =>
+      // The command only touches a text layer, so a pixel layer named here would be reported as
+      // done while nothing changed.
+      layer.kind === 'text'
+        ? [
+            setLayerText(layer.id, {
+              ...(written === null ? {} : { text: written }),
+              ...(font === null ? {} : { font }),
+              ...(size === null ? {} : { size }),
+              ...(colour === null ? {} : { color: colour }),
+              ...(align === null ? {} : { align }),
+              ...(lineHeight === null ? {} : { lineHeight }),
+              ...(tracking === null ? {} : { tracking }),
+              // One axis at a time: a client naming only a width must not flatten the height. A
+              // POINT caption has no box at all, so naming one is what gives it a box — and
+              // `DEFAULT_PARAGRAPH` is what the other axis then starts at.
+              ...(width === null && height === null
+                ? {}
+                : {
+                    box: {
+                      width: width ?? layer.box?.width ?? DEFAULT_PARAGRAPH.width,
+                      height: height ?? layer.box?.height ?? DEFAULT_PARAGRAPH.height,
+                    },
+                  }),
+            }),
+          ]
+        : [],
+    'only a text layer takes this — canvas.state answers "layers" with each one\'s "kind"',
   )
 }
 
 function locks(input: Record<string, unknown>): ActionOutcome {
-  return editLayer(input, layer => {
-    const named = LOCK_KEYS.filter(padlock => input[padlock] !== undefined)
-    // A call naming no padlock at all is a refusal, which `run` makes of an empty list.
-    if (named.length === 0) return []
+  return editLayer(
+    input,
+    layer => {
+      const named = LOCK_KEYS.filter(padlock => input[padlock] !== undefined)
+      // A call naming no padlock at all is a refusal, which `run` makes of an empty list.
+      if (named.length === 0) return []
 
-    const wanted = Object.fromEntries(named.map(padlock => [padlock, boolOf(input, padlock)]))
-    return [setLayerLocks(layer.id, { ...layer.locked, ...wanted })]
-  })
+      const wanted = Object.fromEntries(named.map(padlock => [padlock, boolOf(input, padlock)]))
+      return [setLayerLocks(layer.id, { ...layer.locked, ...wanted })]
+    },
+    `this call named no padlock — it takes ${LOCK_KEYS.join(', ')}`,
+  )
 }
 
 function shape(input: Record<string, unknown>): ActionOutcome {
@@ -370,37 +418,41 @@ function shape(input: Record<string, unknown>): ActionOutcome {
   const filled = input.filled === undefined ? null : boolOf(input, 'filled')
   const stroked = input.stroked === undefined ? null : boolOf(input, 'stroked')
 
-  return editLayer(input, layer => {
-    // A line and an arrow have no inside, and the panel hides the switch for them: filling one
-    // from outside would answer `ok` for paint nobody can see.
-    if (layer.kind !== 'shape') return []
-    if (isOpenShape(layer.shape) && (filled !== null || fill !== null)) return []
+  return editLayer(
+    input,
+    layer => {
+      // A line and an arrow have no inside, and the panel hides the switch for them: filling one
+      // from outside would answer `ok` for paint nobody can see.
+      if (layer.kind !== 'shape') return []
+      if (isOpenShape(layer.shape) && (filled !== null || fill !== null)) return []
 
-    const painted =
-      filled === null ? (fill ?? layer.fill) : filled ? (fill ?? layer.fill ?? SHAPE_INK) : null
-    const keeps = stroked === null && stroke === null && strokeWidth === null
-    const outlined =
-      stroked === false
-        ? null
-        : keeps
-          ? layer.stroke
-          : {
-              color: stroke ?? layer.stroke?.color ?? SHAPE_INK,
-              width: strokeWidth ?? layer.stroke?.width ?? DEFAULT_STROKE_WIDTH,
-            }
+      const painted =
+        filled === null ? (fill ?? layer.fill) : filled ? (fill ?? layer.fill ?? SHAPE_INK) : null
+      const keeps = stroked === null && stroke === null && strokeWidth === null
+      const outlined =
+        stroked === false
+          ? null
+          : keeps
+            ? layer.stroke
+            : {
+                color: stroke ?? layer.stroke?.color ?? SHAPE_INK,
+                width: strokeWidth ?? layer.stroke?.width ?? DEFAULT_STROKE_WIDTH,
+              }
 
-    // The panel answers this by switching the other one back on, which is right under a finger
-    // and wrong here: a client that asked for both to go hears that it cannot have that.
-    if (painted === null && outlined === null) return []
+      // The panel answers this by switching the other one back on, which is right under a finger
+      // and wrong here: a client that asked for both to go hears that it cannot have that.
+      if (painted === null && outlined === null) return []
 
-    return [
-      setLayerShape(layer.id, {
-        fill: painted,
-        stroke: outlined,
-        ...(sides === null ? {} : { sides }),
-      }),
-    ]
-  })
+      return [
+        setLayerShape(layer.id, {
+          fill: painted,
+          stroke: outlined,
+          ...(sides === null ? {} : { sides }),
+        }),
+      ]
+    },
+    'only a shape layer takes this; an open shape (line, arrow) has no inside to fill, and no shape may lose both its fill and its stroke',
+  )
 }
 
 /**
@@ -408,43 +460,59 @@ function shape(input: Record<string, unknown>): ActionOutcome {
  * into the stack it would be carried, neutral and invisible, by a pass that never reads it.
  */
 function adjustment(input: Record<string, unknown>): ActionOutcome {
-  return editLayer(input, layer => {
-    if (layer.kind !== 'adjustment') return []
+  return editLayer(
+    input,
+    layer => {
+      if (layer.kind !== 'adjustment') return []
 
-    const named = ADJUSTMENT_KINDS.filter(kind => input[kind] !== undefined)
-    if (named.length !== 1 || named[0] !== layer.adjustment) return []
+      const named = ADJUSTMENT_KINDS.filter(kind => input[kind] !== undefined)
+      if (named.length !== 1 || named[0] !== layer.adjustment) return []
 
-    const value = numberOf(input, layer.adjustment)
-    return value === null
-      ? []
-      : [setLayerAdjustment(layer.id, { ...layer.values, [layer.adjustment]: value })]
-  })
+      const value = numberOf(input, layer.adjustment)
+      return value === null
+        ? []
+        : [setLayerAdjustment(layer.id, { ...layer.values, [layer.adjustment]: value })]
+    },
+    'only an adjustment layer takes this, and the one dial named must be the one it carries — canvas.state answers "adjustment" on each such layer',
+  )
 }
 
 function duplicate(input: Record<string, unknown>): ActionOutcome {
   const copyId = newId()
-  const outcome = editLayer(input, layer => [
-    duplicateLayer(layer.id, copyId, textOf(input, 'name') ?? layer.name, newId),
-  ])
+  const outcome = editLayer(
+    input,
+    layer => [duplicateLayer(layer.id, copyId, textOf(input, 'name') ?? layer.name, newId)],
+    'this layer built no copy',
+  )
 
   return outcome.ok ? { ok: true, data: { layerId: copyId } } : outcome
 }
 
 function group(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_IMAGE)
 
   const layerIds = textsOf(input, 'layerIds')
   const name = textOf(input, 'name')
-  if (layerIds.length === 0 || name === null) return refused('badInput')
+  if (layerIds.length === 0 || name === null)
+    return refused('badInput', '"layerIds" wants at least one layer, and "name" is required')
 
   // Top level only, which is all `groupLayers` gathers: an id that names nothing, or one that sits
   // INSIDE a group, would otherwise be dropped in silence and the group answered for regardless.
   const top = new Set(open.state.layers.map(layer => layer.id))
-  if (layerIds.some(id => !top.has(id))) return refused('notFound')
+  const outside = layerIds.filter(id => !top.has(id))
+  if (outside.length > 0)
+    return refused(
+      'notFound',
+      `only layers at the top of the stack can be grouped, and ${outside.join(', ')} is not one — canvas.state answers "layers" with their ids`,
+    )
 
   const groupId = newId()
-  const outcome = run(open.documentId, [groupLayers(layerIds, groupId, name)])
+  const outcome = run(
+    open.documentId,
+    [groupLayers(layerIds, groupId, name)],
+    'those layers built no group',
+  )
   return outcome.ok ? { ok: true, data: { layerId: groupId } } : outcome
 }
 
@@ -469,10 +537,11 @@ export function layerTargets(): readonly Target[] {
 
 export function selectLayer(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_IMAGE)
 
-  const layer = layerAimed(open.state, textOf(input, 'layerId'))
-  if (!layer) return refused('notFound')
+  const named = textOf(input, 'layerId')
+  const layer = layerAimed(open.state, named)
+  if (!layer) return refused('notFound', noLayer(named))
 
   // Not a command: arming a layer is a way of looking at the stack, not an edit of it.
   selectLayerIn(open.documentId, layer.id)
@@ -482,13 +551,17 @@ export function selectLayer(input: Record<string, unknown>): ActionOutcome {
 function resize(input: Record<string, unknown>): ActionOutcome {
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
-  if (width === null || height === null) return refused('badInput')
+  if (width === null || height === null)
+    return refused('badInput', '"width" and "height" are both wanted, in pixels')
 
-  return edit(() => [
-    boolOf(input, 'scalePixels')
-      ? resizeImage(width, height)
-      : resizeCanvas(width, height, { x: 0, y: 0 }),
-  ])
+  return edit(
+    () => [
+      boolOf(input, 'scalePixels')
+        ? resizeImage(width, height)
+        : resizeCanvas(width, height, { x: 0, y: 0 }),
+    ],
+    'this size built no resize',
+  )
 }
 
 function crop(input: Record<string, unknown>): ActionOutcome {
@@ -496,9 +569,10 @@ function crop(input: Record<string, unknown>): ActionOutcome {
   const y = numberOf(input, 'y')
   const width = numberOf(input, 'width')
   const height = numberOf(input, 'height')
-  if (x === null || y === null || width === null || height === null) return refused('badInput')
+  if (x === null || y === null || width === null || height === null)
+    return refused('badInput', '"x", "y", "width" and "height" are all wanted, in pixels')
 
-  return edit(() => [cropToRect({ x, y, width, height })])
+  return edit(() => [cropToRect({ x, y, width, height })], 'this rectangle built no crop')
 }
 
 /**
@@ -520,23 +594,32 @@ function mask(input: Record<string, unknown>): ActionOutcome {
   const named = ['enabled', 'linked'].some(key => input[key] !== undefined)
   // Taking a mask away and saying what it does are two different calls: one of them would be
   // written into a record the other has just dropped.
-  if (remove && named) return refused('badInput')
+  if (remove && named)
+    return refused(
+      'badInput',
+      '"remove" cannot travel with "enabled" or "linked" — take the mask off in one call, set what it does in another',
+    )
 
-  return editLayer(input, layer => {
-    if (!layer.mask || (!remove && !named)) return []
+  return editLayer(
+    input,
+    layer => {
+      if (!layer.mask || (!remove && !named)) return []
 
-    return [
-      setLayerMask(
-        layer.id,
-        remove
-          ? undefined
-          : {
-              enabled: input.enabled === undefined ? layer.mask.enabled : boolOf(input, 'enabled'),
-              linked: input.linked === undefined ? layer.mask.linked : boolOf(input, 'linked'),
-            },
-      ),
-    ]
-  })
+      return [
+        setLayerMask(
+          layer.id,
+          remove
+            ? undefined
+            : {
+                enabled:
+                  input.enabled === undefined ? layer.mask.enabled : boolOf(input, 'enabled'),
+                linked: input.linked === undefined ? layer.mask.linked : boolOf(input, 'linked'),
+              },
+        ),
+      ]
+    },
+    'this layer wears no mask, or the call named none of remove, enabled, linked — canvas.state answers "mask" on the layers that carry one, and a mask is carved from a selection in the app',
+  )
 }
 
 /** The guide named, so an id nobody answers to is a refusal rather than a command that writes
@@ -544,67 +627,91 @@ function mask(input: Record<string, unknown>): ActionOutcome {
 function editGuide(
   input: Record<string, unknown>,
   build: (guide: Guide) => Commands,
+  nothing: string,
 ): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_IMAGE)
 
-  const guide = open.state.guides.find(held => held.id === textOf(input, 'guideId'))
-  return guide ? run(open.documentId, build(guide)) : refused('notFound')
+  const named = textOf(input, 'guideId') ?? ''
+  const guide = open.state.guides.find(held => held.id === named)
+  return guide
+    ? run(open.documentId, build(guide), nothing)
+    : refused(
+        'notFound',
+        `no guide "${named}" in the image in front — canvas.state answers "guides" with their ids`,
+      )
 }
 
 export const CANVAS_HANDLERS: ActionHandlers = {
   'canvas.state': readState,
   'canvas.resize': resize,
   'canvas.crop': crop,
-  'canvas.orient': input => {
+  'canvas.flipOrRotate': input => {
     const turn = TURNS[textOf(input, 'turn') ?? '']
-    return turn ? edit((_state, documentId) => [turn(documentId)]) : refused('badInput')
+    return turn
+      ? edit((_state, documentId) => [turn(documentId)], 'that turn built no command')
+      : refused('badInput', `"turn" wants one of: ${Object.keys(TURNS).join(', ')}`)
   },
   'layer.add': newLayer,
-  'layer.remove': input => editLayer(input, layer => [removeLayer(layer.id)]),
+  'layer.remove': input =>
+    editLayer(input, layer => [removeLayer(layer.id)], 'that layer built no removal'),
   'layer.select': selectLayer,
   'layer.rename': input => {
     const name = textOf(input, 'name')
     return name === null
-      ? refused('badInput')
-      : editLayer(input, layer => [renameLayer(layer.id, name)])
+      ? refused('badInput', '"name" is required — the new name of the layer')
+      : editLayer(input, layer => [renameLayer(layer.id, name)], 'that layer built no rename')
   },
-  'layer.style': style,
+  'layer.setOpacityBlendAndVisibility': style,
   'layer.lock': locks,
-  'layer.shape': shape,
-  'layer.adjustment': adjustment,
+  'layer.editShapeLayer': shape,
+  'layer.setAdjustmentAmount': adjustment,
   'layer.transform': transform,
-  'layer.text': text,
-  'layer.move': input => {
+  'layer.editTextLayer': text,
+  'layer.reorderInStack': input => {
     const index = numberOf(input, 'index')
-    if (index === null) return refused('badInput')
+    if (index === null)
+      return refused(
+        'badInput',
+        '"index" is required — the place among the new siblings, counted from 0',
+      )
 
     const parentId = textOf(input, 'parentId')
     // `moveLayer` refuses a parent that is not a group, the layer itself, or one of its own
     // descendants by handing the state back untouched — all three would read as done.
-    return editLayer(input, (layer, state) =>
-      canMoveLayer(state, layer.id, parentId) ? [moveLayer(layer.id, parentId, index)] : [],
+    return editLayer(
+      input,
+      (layer, state) =>
+        canMoveLayer(state, layer.id, parentId) ? [moveLayer(layer.id, parentId, index)] : [],
+      '"parentId" must name a group that is neither this layer nor one of its own children — canvas.state answers "layers" with each one\'s "kind"',
     )
   },
   'layer.duplicate': duplicate,
   'layer.group': group,
-  'layer.ungroup': input => editLayer(input, layer => [ungroupLayer(layer.id)]),
-  'layer.mergeDown': input => editLayer(input, layer => [mergeDown(layer.id)]),
-  'layer.mask': mask,
+  'layer.ungroup': input =>
+    editLayer(input, layer => [ungroupLayer(layer.id)], 'that layer built no ungroup'),
+  'layer.mergeDown': input =>
+    editLayer(input, layer => [mergeDown(layer.id)], 'that layer built no merge'),
+  'layer.setMaskOptions': mask,
 
   'guide.add': input => {
     const open = mounted()
     const axis = oneOf(input, 'axis', GUIDE_AXES)
-    if (!open) return refused('wrongSurface')
-    if (!axis) return refused('badInput')
+    if (!open) return refused('wrongSurface', NO_IMAGE)
+    if (!axis) return refused('badInput', `"axis" wants one of: ${GUIDE_AXES.join(', ')}`)
 
     const guide = { id: newId(), axis, position: numberOf(input, 'position') ?? 0 }
-    const outcome = run(open.documentId, [addGuide(guide)])
+    const outcome = run(open.documentId, [addGuide(guide)], 'that guide built no command')
     return outcome.ok ? { ok: true, data: { guideId: guide.id } } : outcome
   },
 
   'guide.move': input =>
-    editGuide(input, guide => [moveGuide(guide.id, numberOf(input, 'position') ?? guide.position)]),
+    editGuide(
+      input,
+      guide => [moveGuide(guide.id, numberOf(input, 'position') ?? guide.position)],
+      'that guide built no move',
+    ),
 
-  'guide.remove': input => editGuide(input, guide => [removeGuide(guide.id)]),
+  'guide.remove': input =>
+    editGuide(input, guide => [removeGuide(guide.id)], 'that guide built no removal'),
 }

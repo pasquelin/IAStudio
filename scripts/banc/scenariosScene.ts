@@ -130,7 +130,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ["Sépare ce solide et rends-moi les formes d'origine."],
     setup: async studio => {
       await wallAndCube(studio)
-      await studio.run('node.carve', {
+      await studio.run('node.combineIntoSolid', {
         nodeIds: [named(studio, 'Mur'), named(studio, 'Cube')],
         operation: 'subtract',
       })
@@ -156,7 +156,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ["Retire au cube sa marque d'outil."],
     setup: async studio => {
       await wallAndCube(studio)
-      await studio.run('node.negate', { nodeIds: [named(studio, 'Cube')] })
+      await studio.run('node.markAsCuttingTool', { nodeIds: [named(studio, 'Cube')] })
     },
     passed: run => read.isNegative(read.nodeNamed(run, 'Cube')) === false,
   },
@@ -169,7 +169,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ["Ce pli est parti à l'envers, refais-le dans l'autre sens."],
     setup: async studio => {
       await wallAndCube(studio)
-      await studio.run('node.carve', {
+      await studio.run('node.combineIntoSolid', {
         nodeIds: [named(studio, 'Mur'), named(studio, 'Cube')],
         operation: 'subtract',
       })
@@ -276,7 +276,10 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['Augmente son intensité de 25 %.'],
     setup: async studio => {
       await litScene(studio)
-      await studio.run('node.light', { nodeId: named(studio, 'Soleil Test'), intensity: 2 })
+      await studio.run('node.setLightSettings', {
+        nodeId: named(studio, 'Soleil Test'),
+        intensity: 2,
+      })
     },
     passed: run =>
       read.near(read.lightOf(read.nodeNamed(run, 'Soleil Test'))?.intensity ?? 0, 2.5, 0.01),
@@ -293,7 +296,10 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     setup: async studio => {
       await cubeScene(studio)
       await studio.run('node.add', { kind: 'point', name: 'Ponctuelle' })
-      await studio.run('node.light', { nodeId: named(studio, 'Ponctuelle'), intensity: 4 })
+      await studio.run('node.setLightSettings', {
+        nodeId: named(studio, 'Ponctuelle'),
+        intensity: 4,
+      })
     },
     passed: run =>
       read.near(read.lightOf(read.nodeNamed(run, 'Ponctuelle'))?.intensity ?? 0, 2, 0.01),
@@ -309,7 +315,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['Réactive Soleil Test.'],
     setup: async studio => {
       await litScene(studio)
-      await studio.run('node.visible', { nodeId: named(studio, 'Soleil Test'), visible: false })
+      await studio.run('node.setVisible', { nodeId: named(studio, 'Soleil Test'), visible: false })
     },
     passed: run => read.nodeNamed(run, 'Soleil Test')?.visible === true,
   },
@@ -331,7 +337,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     name: '9.3 aims Camera Test at Cube Test',
     said: ["Oriente Camera Test pour qu'elle regarde Cube Test."],
     setup: cameraScene,
-    // A target is set on a SHOT, so the plan is `camera.shot` then `camera.target` — the model
+    // A target is set on a SHOT, so the plan is `camera.addShot` then `camera.aimShotAt` — the model
     // has to find that out, which is the whole of what this scenario measures.
     passed: run => {
       const cube = read.nodeNamed(run, 'Cube Test')
@@ -345,8 +351,8 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
       await cameraScene(studio)
       const camera = named(studio, 'Camera Test')
       await studio.run('node.transform', { nodeId: camera, positionZ: 5 })
-      const shot = await studio.run('camera.shot', { nodeId: camera })
-      await studio.run('camera.target', {
+      const shot = await studio.run('camera.addShot', { nodeId: camera })
+      await studio.run('camera.aimShotAt', {
         shotId: shot.ok && isRecord(shot.data) ? String(shot.data['shotId']) : '',
         targetId: named(studio, 'Cube Test'),
       })
@@ -363,7 +369,8 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['Fais de Camera Test la caméra active.'],
     setup: cameraScene,
     // The camera stands there already: what is measured is the call that arms it, not its being.
-    passed: run => read.answeredWith(run, 'node.camera') || read.answeredWith(run, 'camera.shot'),
+    passed: run =>
+      read.answeredWith(run, 'node.setCameraLens') || read.answeredWith(run, 'camera.addShot'),
   },
   {
     name: '9.6 gives its position and rotation back',
@@ -396,9 +403,10 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     name: '10.4 turns the shadows on',
     said: ['Active les ombres.'],
     setup: cubeScene,
-    // Per node (`node.shadow`) or on the ground, and as a three setting — never a world switch.
+    // Per node (`node.setShadowCastAndReceive`) or on the ground, and as a three setting — never a world switch.
     // Not `castShadow`: a fresh mesh and a fresh sun both throw one already.
-    passed: run => read.wrote(run, 'three', 'shadow') || read.answeredWith(run, 'node.shadow'),
+    passed: run =>
+      read.wrote(run, 'three', 'shadow') || read.answeredWith(run, 'node.setShadowCastAndReceive'),
   },
   {
     name: '10.5 puts the shadow quality at its highest',
@@ -411,7 +419,11 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ["Change l'arrière-plan sans changer l'éclairage de la scène."],
     setup: async studio => {
       await cubeScene(studio)
-      await studio.run('world.environment', { kind: 'skybox', assetId: 'asset-1', intensity: 1 })
+      await studio.run('world.setSceneLighting', {
+        kind: 'skybox',
+        assetId: 'asset-1',
+        intensity: 1,
+      })
     },
     passed: run => {
       const world = read.world(run)
@@ -519,7 +531,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['Remets le matériau dans son état précédent.'],
     setup: async studio => {
       await blockScene(studio)
-      await studio.run('node.material', { nodeId: named(studio, 'Bloc'), color: '#ff0000' })
+      await studio.run('node.setMeshMaterial', { nodeId: named(studio, 'Bloc'), color: '#ff0000' })
     },
     passed: run => read.spoke(run),
   },
@@ -527,7 +539,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     /**
      * An imported model, NOT a primitive: it WEARS a material document rather than holding a
      * finish of its own, so editing that material reaches it — which is what the reference is
-     * for. `node.material` still refuses a model.
+     * for. `node.setMeshMaterial` still refuses a model.
      */
     name: '12.8 dresses an imported model in a material of the project',
     said: ['Habille ce modèle importé avec la matière nommée Pierre.'],
@@ -605,7 +617,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['À 10 secondes, fais-le revenir à sa position initiale.'],
     setup: async studio => {
       await cubeScene(studio)
-      await studio.run('key.pose', { nodeId: named(studio, 'Cube Test'), timeSeconds: 0 })
+      await studio.run('key.writePoseKeys', { nodeId: named(studio, 'Cube Test'), timeSeconds: 0 })
     },
     passed: run => {
       const back = read.keys(run).find(one => read.near(one.time, 10))
@@ -634,11 +646,11 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     setup: async studio => {
       await cubeScene(studio)
       const cube = named(studio, 'Cube Test')
-      await studio.run('key.pose', { nodeId: cube, timeSeconds: 0, property: 'position' })
+      await studio.run('key.writePoseKeys', { nodeId: cube, timeSeconds: 0, property: 'position' })
       await studio.run('node.transform', { nodeId: cube, positionY: 5 })
-      await studio.run('key.pose', { nodeId: cube, timeSeconds: 5, property: 'position' })
+      await studio.run('key.writePoseKeys', { nodeId: cube, timeSeconds: 5, property: 'position' })
       await studio.run('node.transform', { nodeId: cube, rotationY: read.radians(360) })
-      await studio.run('key.pose', { nodeId: cube, timeSeconds: 5, property: 'rotation' })
+      await studio.run('key.writePoseKeys', { nodeId: cube, timeSeconds: 5, property: 'rotation' })
     },
     passed: run =>
       read.keys(run).some(one => one.channel.endsWith('position')) &&
@@ -672,7 +684,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     setup: async studio => {
       await cameraScene(studio)
       const camera = named(studio, 'Camera Test')
-      await studio.run('camera.shot', { nodeId: camera })
+      await studio.run('camera.addShot', { nodeId: camera })
     },
     passed: run => read.spoke(run) && read.answeredWith(run, 'scene.state'),
   },

@@ -1,7 +1,7 @@
 {
   "assistant": {
     "actions": {
-      "commandRun": {
+      "commandRunStudioCommand": {
         "title": "Run a command",
         "description": "Fires a studio command by its identifier, exactly as a keyboard shortcut or a menu item would. The document it applies to has to be in front."
       },
@@ -21,7 +21,7 @@
         "title": "Prepare a generation",
         "description": "Fills the Generator’s form with a model and its parameters, then shows it. Nothing is sent."
       },
-      "generatorArmed": {
+      "generatorReadArmedGeneration": {
         "title": "Read what is armed",
         "description": "Answers the Generator’s model, operation, sources and destination as it stands. Sends nothing and spends nothing."
       },
@@ -81,7 +81,7 @@
         "title": "Save a document",
         "description": "Writes the named document into the project and waits for it to land. Without an id, the one in front. Answers whether anything was written: an untouched tab has nothing to write, and that is not a failure."
       },
-      "documentRemove": {
+      "documentDeleteFromDisk": {
         "title": "Delete a document",
         "description": "Takes the document’s file out of the project, then closes its tab. Unsaved work goes with it: the file is leaving, and saving it before destroying it would mean nothing."
       },
@@ -145,15 +145,15 @@
         "title": "Create a folder",
         "description": "Makes a new folder inside a folder of the open project. Answers with the path it was given, which may differ if the name was taken."
       },
-      "filesUndo": {
+      "filesUndoFileOperation": {
         "title": "Undo the last batch of file changes",
         "description": "Takes back the last move, rename or duplication of project files. The stack lives in the main process and covers every window, but a trashing is not taken back."
       },
-      "filesRedo": {
+      "filesRedoFileOperation": {
         "title": "Redo the last batch of file changes",
         "description": "Replays the batch of file changes that was just undone, exactly as the Explorer does. Answers with what moved and what was refused."
       },
-      "filesHistory": {
+      "filesReadUndoStack": {
         "title": "Read the file undo stack",
         "description": "Says whether undoing or redoing would do anything, without attempting either. It is what greys out the two menu rows before they are clicked."
       },
@@ -165,27 +165,27 @@
         "title": "Rename a project",
         "description": "Changes the name a project carries in its manifest, never touching the folder holding it — the catalogue and the recent projects are keyed on that. Named by its own absolute path, so a closed one can be renamed too."
       },
-      "modelSchema": {
+      "modelsReadGenerationModelFields": {
         "title": "Read a model’s own inputs",
         "description": "Returns the fields one generation model accepts, with their kinds and bounds, as the studio builds its form from. This is what to fill the parameters of a prepared generation with."
       },
       "costEstimate": {
         "title": "Estimate what a generation would cost",
-        "description": "Prices a model and a set of parameters without running anything. Its parameters take the shape model_schema answers with. Answers nothing at all where the API declines to price that model, rather than inventing a figure."
+        "description": "Prices a model and a set of parameters without running anything. Its parameters take the shape models_readGenerationModelFields answers with. Answers nothing at all where the API declines to price that model, rather than inventing a figure."
       },
-      "jobGet": {
+      "jobReadCloudGeneration": {
         "title": "Read one job",
         "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did."
       },
-      "jobWait": {
+      "jobWaitForCloudGeneration": {
         "title": "Wait for a job to finish",
         "description": "Waits until a generation succeeds, fails or is cancelled, then returns it with the assets it produced. Returns the job as it stands if the wait runs out, which is an answer rather than a failure."
       },
-      "jobCancel": {
+      "jobCancelCloudGeneration": {
         "title": "Cancel a job",
         "description": "Stops a generation that is still queued or running. What has already been spent is not given back."
       },
-      "taskCancel": {
+      "taskCancelLocalTask": {
         "title": "Cancel a local task",
         "description": "Stops a task the studio is running on this machine — a render, an import, an indexing pass — half-written file and all. Answers whether one was still running, which an id that already finished is not."
       },
@@ -193,7 +193,7 @@
         "title": "Read the usage report",
         "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it."
       },
-      "assetsSearch": {
+      "assetsSearchProjectCatalogue": {
         "title": "Search the project’s catalogue",
         "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The catalogue holds assets, not the project’s files: a file the person names is found by searching the project’s files. The account’s remote library is elsewhere again."
       },
@@ -209,11 +209,11 @@
         "title": "Correct an asset",
         "description": "Changes an asset’s name, its tags, or the kind the studio read from its extension. Tags are replaced whole, so an empty list genuinely clears them."
       },
-      "assetsRemove": {
+      "assetsRemoveFromLibrary": {
         "title": "Remove assets",
         "description": "Takes assets out of the project’s library, and out of the remote one when asked to. What it removed is listed in the recent activity."
       },
-      "assetsDescribe": {
+      "assetsCaptionImages": {
         "title": "Caption images",
         "description": "Has the API read the named images and writes what it sees there as the asset’s name. Only images the library already knows can be captioned, so a purely local selection answers zero."
       },
@@ -241,11 +241,11 @@
         "title": "Crop the image",
         "description": "Closes the frame onto a rectangle given in document coordinates. The layers keep their place, so what falls outside is what is cut away."
       },
-      "canvasOrient": {
+      "canvasFlipOrRotate": {
         "title": "Flip or turn the image",
         "description": "Mirrors the image across an axis, or turns it a quarter turn either way. A turn swaps the frame’s width and height, so a portrait becomes a landscape."
       },
-      "layerMask": {
+      "layerSetMaskOptions": {
         "title": "Set a layer’s mask",
         "description": "Says whether a mask hides what it covers and whether it travels with the layer, or takes it off altogether. A layer wearing none is refused — carving a mask belongs to the engine, through the command that makes one from the selection."
       },
@@ -277,7 +277,7 @@
         "title": "Rename a layer",
         "description": "Calls one layer of the image in front something else. The id does not change, so nothing that referred to it is lost."
       },
-      "layerStyle": {
+      "layerSetOpacityBlendAndVisibility": {
         "title": "Set how a layer is composited",
         "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was."
       },
@@ -285,11 +285,11 @@
         "title": "Place a layer",
         "description": "Moves, scales or turns one layer inside the frame. The rotation is given in degrees, and every field left out keeps the value the layer already had."
       },
-      "layerText": {
+      "layerEditTextLayer": {
         "title": "Set a text layer’s words",
         "description": "Changes what a text layer says, the typeface and size it says it at, its colour, its alignment and its box. Refuses a layer that holds pixels rather than words, which the command would otherwise leave untouched."
       },
-      "layerMove": {
+      "layerReorderInStack": {
         "title": "Reorder a layer",
         "description": "Moves a layer to another place in the stack, and into or out of a group. Index zero is the bottom of the stack, which is what the eye sees last."
       },
@@ -365,7 +365,7 @@
         "title": "Remove a track",
         "description": "Takes a track off the edit, and every clip it carried with it. A locked track is not removed."
       },
-      "trackMove": {
+      "trackReorderTracks": {
         "title": "Reorder the tracks",
         "description": "Raises or lowers a track by the given number of rows, which changes what covers what. A negative number lowers it, a positive one raises it."
       },
@@ -373,7 +373,7 @@
         "title": "Rename a track",
         "description": "Gives a track the name the header column shows. Its identifier never changes."
       },
-      "trackAdjust": {
+      "trackSetMuteSoloLockHeight": {
         "title": "Set how a track is worked",
         "description": "Changes a track’s mute, solo, lock or height. Those four say how one works rather than what one made, and so never enter the history."
       },
@@ -381,11 +381,11 @@
         "title": "Read the sky being edited",
         "description": "Answers the sky in front — its equirectangular source, its image settings, where its sun sits and what colour it is, and what its environment lights — plus what produced it when it came from a generation."
       },
-      "skyboxView": {
+      "skyboxSetViewOptions": {
         "title": "Set how a sky is looked at",
         "description": "Chooses the projection the sky is drawn under, how wide the lens opens, and whether the test objects stand in it. It is session state, as every way of looking at a document is, and none of it is saved."
       },
-      "skyboxAdjust": {
+      "skyboxAdjustImage": {
         "title": "Adjust a sky’s image",
         "description": "Changes exposure, contrast, saturation, temperature, tint, horizon rotation or blur. Every field is optional, and what is not given is left as it was."
       },
@@ -393,15 +393,15 @@
         "title": "Bring the image settings back to neutral",
         "description": "Returns every image setting of the sky to its neutral value at once, in a single history entry. The source and the sun are left alone."
       },
-      "skyboxSun": {
+      "skyboxSetSun": {
         "title": "Place and set the sun",
         "description": "Changes the elevation, azimuth, intensity or colour of the sun in the sky in front. Both angles are in radians, as everywhere else in the scene."
       },
-      "skyboxEnvironment": {
+      "skyboxSetPreviewLighting": {
         "title": "Set what the sky lights",
         "description": "Changes how strongly the sky lights the test objects, and decides whether the image is drawn behind them or merely lights them."
       },
-      "skyboxSource": {
+      "skyboxSetSourceImage": {
         "title": "Choose a sky’s image",
         "description": "Hangs an equirectangular image from the library in the sky in front. The asset must have a file on this machine, one still in the cloud having nothing to decode."
       },
@@ -409,19 +409,19 @@
         "title": "Read the material being edited",
         "description": "Answers the material in front — the eight channels and what fills them, every render setting such as colour, roughness and tiling, and how the preview is presented."
       },
-      "materialSettings": {
+      "materialSetSurfaceSettings": {
         "title": "Set a material",
         "description": "Changes the tint, roughness, metalness, relief, occlusion, emission, tiling, offset or rotation of the material in front. Every field is optional."
       },
-      "materialEnvironment": {
+      "materialSetPreviewEnvironment": {
         "title": "Choose what lights a material preview",
         "description": "Lights the preview by the procedural studio, by an image of the project named by its asset identifier, or by a sky document named by its title — the preview then takes its graded image and its intensity, as a scene does."
       },
-      "materialPreview": {
+      "materialSetPreviewDisplay": {
         "title": "Set a material’s preview",
         "description": "Changes the strength and rotation of the environment lighting the preview, whether the background is drawn, the automatic spin and the seam highlight."
       },
-      "materialChannel": {
+      "materialSetChannelImage": {
         "title": "Fill or empty a channel",
         "description": "Puts an image from the library into one of the eight channels of the material in front. With no asset named, the channel is emptied rather than filled."
       },
@@ -461,19 +461,19 @@
         "title": "Publish to the remote repository",
         "description": "Sends the current branch to the remote repository. It is the only gesture of the studio that leaves this machine, and nothing here takes it back."
       },
-      "cloudBrowse": {
+      "cloudBrowseAccountLibrary": {
         "title": "Browse the remote library",
         "description": "Answers one page of the account’s library, narrowed by text, tags or kind. Paging is by cursor, and there is no total — the API gives none."
       },
-      "cloudExplore": {
+      "cloudExplorePublicFeed": {
         "title": "Browse what everyone published",
         "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them."
       },
-      "cloudSimilar": {
+      "cloudFindSimilarPublished": {
         "title": "Find what resembles an asset",
         "description": "Answers published assets that resemble the one named, that one taken out of its own results. The reference is the caller’s to choose."
       },
-      "cloudPlan": {
+      "cloudPreviewSync": {
         "title": "See what a synchronisation would do",
         "description": "Says what a push or a pull would do to each asset named, before it costs a single request. Nothing is sent and nothing is fetched."
       },
@@ -525,7 +525,7 @@
         "title": "Tell what the studio can decode",
         "description": "Says what this machine is capable of on the media side, which depends on ffmpeg being there. Without it importing still works and the interface says what it cannot do."
       },
-      "mediaAdopt": {
+      "mediaIndexFileInPlace": {
         "title": "Give a file a catalogue row",
         "description": "Brings a file the project folder already holds into the catalogue, without copying it. It is the half of importing that raises no system dialogue."
       },
@@ -533,27 +533,27 @@
         "title": "List the installed fonts",
         "description": "Answers the typefaces a text can be set in, the ones that ship with the studio first, then the ones installed on this machine. Each comes with where it is from, which setting a face needs as much as its name."
       },
-      "favoritesList": {
+      "favoritesListPinnedRecipes": {
         "title": "List the pinned recipes",
         "description": "Answers the recipes put aside, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
       },
-      "favoritePin": {
+      "favoritePinAssetRecipe": {
         "title": "Pin what produced an asset",
         "description": "Puts aside what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
       },
-      "favoriteUnpin": {
+      "favoriteUnpinAssetRecipe": {
         "title": "Remove a pinned recipe",
         "description": "Takes a recipe off the pinned list. The asset it had produced is left alone."
       },
-      "fileInfoOpen": {
+      "fileInfoOpenWindow": {
         "title": "Open a file’s information",
         "description": "Opens the window describing a file of the project — its size, its kind, its history and what the catalogue knows of it."
       },
-      "mirrorOpen": {
+      "mirrorOpenVideoReturnWindow": {
         "title": "Open the video return",
         "description": "Opens the return window, or brings it to the front when it is already there. It shows what the edit plays, and carries none of the editing."
       },
-      "helpOpen": {
+      "helpOpenStudioWindow": {
         "title": "Open a studio window",
         "description": "Opens the user manual, the licences window, the usage window or the journal — or brings it to the front if it is already there. These are windows of the main process, and no command of the registry reaches them."
       },
@@ -609,31 +609,31 @@
         "title": "Place an object",
         "description": "Moves, turns or scales one object. Rotations are Euler angles in radians, and every axis left out keeps the value the object already had."
       },
-      "nodeVisible": {
+      "nodeSetVisible": {
         "title": "Show or hide an object",
         "description": "Takes one object out of what is drawn, or puts it back. It stays in the scene either way, which is what tells hiding from removing."
       },
-      "nodeMaterial": {
+      "nodeSetMeshMaterial": {
         "title": "Set an object’s material",
         "description": "Changes the colour, roughness, metalness, tiling density and five maps of a mesh or a text. A slot named with an empty id is a map taken off. Tiling is refused on a text, whose outline is not a primitive."
       },
-      "nodeGeometry": {
+      "nodeSetPrimitiveParameters": {
         "title": "Set the parameters of a primitive",
         "description": "Changes the measurements and segment counts of the shape a mesh was built from. Each primitive carries its own, which reading the scene hands over — a field that does not belong to the shape is refused rather than ignored."
       },
-      "nodeShadow": {
+      "nodeSetShadowCastAndReceive": {
         "title": "Set an object’s shadows",
         "description": "Says whether an object throws a shadow and whether it catches the ones others throw. A light catches none, a sprite does neither, and the field the object cannot hold is refused."
       },
-      "nodeSprite": {
+      "nodeSetSpriteSettings": {
         "title": "Set a sprite",
         "description": "Changes the tint, the opacity and the image of a sprite, which always faces the camera. An empty id takes the image off and leaves the plain coloured quad."
       },
-      "nodeText": {
+      "nodeSetTextSettings": {
         "title": "Set a 3D text",
         "description": "Changes the words, the typeface, the size, the depth out of its own plane and the curve fineness of a text. Its material is set through the material action, like a mesh’s."
       },
-      "nodePath": {
+      "nodeSetPathShape": {
         "title": "Set the shape of a rail",
         "description": "Changes the tension of a rail, from 0 angular to 1 round, and whether it closes back on itself. Its control points are added, moved and dropped by the three actions beside this one."
       },
@@ -653,23 +653,23 @@
         "title": "Dress a model in a material",
         "description": "Makes an imported model wear a material of the project, named by the title of its document. The model then follows that material, so editing one of its channels or dials repaints it, with nothing asked here again. An empty title takes it off, and the model goes back to what its own file carries."
       },
-      "nodeLight": {
+      "nodeSetLightSettings": {
         "title": "Set a light",
         "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused."
       },
-      "nodeCamera": {
+      "nodeSetCameraLens": {
         "title": "Set a camera lens",
         "description": "Changes the field of view and the near and far distances of a camera. Where it stands is set by its transform, like anything else in the tree."
       },
-      "cameraShot": {
+      "cameraAddShot": {
         "title": "Put a camera on air",
         "description": "Opens a shot for this camera, from the given instant in seconds, and answers its id. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
       },
-      "cameraRail": {
+      "cameraBindPathToShot": {
         "title": "Run a camera along a path",
         "description": "Binds a path to the named shot: the camera travels it for the whole of the shot, at a steady speed along its length. With no path, the shot no longer moves the camera. A start past the end runs the path backwards."
       },
-      "cameraAddRail": {
+      "cameraCreateAndBindPath": {
         "title": "Lay a rail under a camera",
         "description": "Makes a rail where the camera stands, aimed down its line of sight, and binds it to the shot in one gesture. The action beside it binds a rail that already exists; this one makes it, because a rail drives nothing without a shot to run it."
       },
@@ -677,7 +677,7 @@
         "title": "Move a camera’s line on the band",
         "description": "Takes a camera’s line up or down, which settles what the film looks through where two shots overlap. The number is a count of rows, negative to go down, and the answer says how far the line could actually move."
       },
-      "cameraTarget": {
+      "cameraAimShotAt": {
         "title": "Give a camera something to aim at",
         "description": "Aims the camera of the named shot at an object — which it follows even when animated — or at a fixed point. With neither, the camera stays aimed by its own rotation alone."
       },
@@ -737,19 +737,19 @@
         "title": "List what a character can play",
         "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps — then the blocks already laid on its band."
       },
-      "animationAdd": {
+      "animationAddBlock": {
         "title": "Lay an animation block",
         "description": "Lays on a character’s band a motion from one of the three sources. The id names an asset of the library, the name names the two others, and exactly one of them belongs to a call. The band is made if the character had none."
       },
-      "animationBlock": {
+      "animationSetBlockSettings": {
         "title": "Set an animation block",
         "description": "Changes where a block sits on the band, where playback starts inside the motion, its speed, its looping, the length of its fades, what it does with the movement of the root, and the part of the body it drives. The block is rewritten in place, every other lane left untouched."
       },
-      "animationRemove": {
+      "animationRemoveBlock": {
         "title": "Take an animation block off",
         "description": "Removes a block from the band, wherever it sat. The band stays, empty if it has to."
       },
-      "animationSettings": {
+      "animationSetBandLengthAndRate": {
         "title": "Set the animation band",
         "description": "Changes the band’s length, its rate in frames per second, or both. Whatever is not named is left alone."
       },
@@ -757,15 +757,15 @@
         "title": "Turn automatic keying on",
         "description": "Decides whether moving a bone writes a key as it goes. It is session state, as every way of looking at a scene is, and none of it is saved with the document."
       },
-      "keyPose": {
+      "keyWritePoseKeys": {
         "title": "Key a subject",
         "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose it stands in. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
       },
-      "keyClear": {
+      "keyRemoveSubjectKeys": {
         "title": "Take a subject’s keys off",
         "description": "Takes back the key every channel of an object or a bone holds at that instant. Without this a pose would be one nobody could undo, and nothing else in the panel removes one."
       },
-      "keyAll": {
+      "keyWriteKeysOnOpenChannels": {
         "title": "Key everything animated",
         "description": "Writes a key on every channel the scene has already opened, at the instant given or at the playhead. It opens none, which is what tells this apart from keying one subject."
       },
@@ -777,7 +777,7 @@
         "title": "Remove an animation channel",
         "description": "Takes a channel away, and the keys it carried with it. A locked channel is refused rather than silently left standing."
       },
-      "channelFlags": {
+      "channelSetMuteSoloLock": {
         "title": "Set a channel’s flags",
         "description": "Mutes a channel, plays it alone, or locks it. It is how one WORKS rather than a change to the document, so nothing is added to the history."
       },
@@ -789,7 +789,7 @@
         "title": "Take a still of the 3D view",
         "description": "Writes a still of what the view shows into the project’s images, at the size asked for. The framing never changes — only the pixel count does, or the capture would show something other than the screen."
       },
-      "worldPreset": {
+      "worldApplyPreset": {
         "title": "Apply a ready-made world",
         "description": "Sets the lighting, the backdrop, the haze and the grading of a scene in one call, for a kind of look. Each one writes only the fields it is about and leaves the rest as they were, so a ground somebody turned on stays on."
       },
@@ -797,31 +797,31 @@
         "title": "Lock a layer",
         "description": "Sets or lifts the three padlocks of a layer, the one on its pixels, the one on its place and the one on its transparency. They stop the hand on the canvas; a value written by another action goes through, as it does from the panels."
       },
-      "layerShape": {
+      "layerEditShapeLayer": {
         "title": "Repaint a shape",
         "description": "Changes the fill, the outline, the stroke width and the number of sides of a shape already drawn, without drawing it again. Taking away the fill and the outline at once is refused, as it would leave nothing to see."
       },
-      "layerAdjustment": {
+      "layerSetAdjustmentAmount": {
         "title": "Set an adjustment layer",
         "description": "Moves the one dial an adjustment layer carries — exposure, contrast, saturation or temperature. Naming any dial other than its own is refused rather than quietly dropped on the floor."
       },
-      "worldEnvironment": {
+      "worldSetSceneLighting": {
         "title": "Choose what lights the scene",
         "description": "Lights the scene by the procedural studio, by an image of the project named by its asset identifier, or by a sky document named by its title — the scene then takes its graded image, its sun and its intensity. Also sets how strong that lighting is and how far it is turned about the vertical, laid over what the sky says."
       },
-      "worldBackground": {
+      "worldSetBackground": {
         "title": "Choose what hangs behind the scene",
         "description": "Puts the environment itself behind the scene, a flat colour, or nothing at all — the last leaving the background transparent, which is what a capture meant to be laid over something else needs."
       },
-      "worldFog": {
+      "worldSetFog": {
         "title": "Set the haze of the scene",
         "description": "Turns the haze off, fades it between two distances, or thickens it with depth. The colour and the distances belong to the shape that was chosen, and are left exactly as they were otherwise."
       },
-      "worldGround": {
+      "worldSetGroundPlane": {
         "title": "Set the ground of the scene",
         "description": "Shows or hides the ground the scene owns, and sets its colour, its side, its opacity and whether shadows land on it. That ground belongs to the document, unlike the grid, which is a setting of the application."
       },
-      "worldRender": {
+      "worldSetToneMapping": {
         "title": "Set how the scene is rendered",
         "description": "Chooses how high dynamic range is brought down to the screen, and by how many stops it is exposed. Both belong to the document rather than to the window that happens to be looking at it."
       },
@@ -833,7 +833,7 @@
         "title": "Read the history",
         "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one."
       },
-      "gitCommitFiles": {
+      "gitListCommitFiles": {
         "title": "Read what a version changed",
         "description": "Returns the files one recorded version touched, and how each was touched — added, changed, removed or renamed."
       },
@@ -909,19 +909,19 @@
         "title": "Rename an account",
         "description": "Changes the label an account appears under in the studio. Neither the key nor the secret crosses this boundary, in either direction."
       },
-      "settingsAction": {
+      "settingsPressButton": {
         "title": "Press a settings button",
         "description": "Fires one of the buttons of the settings window — show a file, open the developer tools, copy the connection command, install the bridge, reset everything. The last two leave something behind and are asked about on screen."
       },
-      "contextRead": {
+      "contextReadProjectCards": {
         "title": "Read the project’s context",
         "description": "Answers the open project’s context cards, with their title, their text and whether they apply."
       },
-      "contextWrite": {
+      "contextWriteProjectCard": {
         "title": "Write a context card",
         "description": "Adds a card to the project’s context, or replaces the title, the text or the state of the one an id names."
       },
-      "contextRemove": {
+      "contextDeleteProjectCard": {
         "title": "Delete a context card",
         "description": "Takes the card an id names out of the project’s context. Its text is lost."
       },
@@ -929,15 +929,15 @@
         "title": "Aim at a target",
         "description": "Points at what the next step will act on in the open document — a layer, a scene object, a clip. Take the identifier from the target list in this briefing; without that list there is nothing to aim at."
       },
-      "nodeNegate": {
+      "nodeMarkAsCuttingTool": {
         "title": "Mark objects as tools",
         "description": "Marks objects of the scene in front, or takes the mark off: a marked object is CUT OUT of the others at the next fold, whichever fold is asked for and whatever the order of the ids. With no mark, the biggest shape is the matter."
       },
-      "nodeCarve": {
+      "nodeCombineIntoSolid": {
         "title": "Carve, join or intersect objects",
-        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.negate is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.markAsCuttingTool is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
       },
-      "nodeCarveInvert": {
+      "nodeSwapSolidMatterAndTool": {
         "title": "Flip a fold",
         "description": "Folds a solid of the scene in front the other way round: what had been carved becomes the matter, and the matter becomes the tool. For the fold that ran backwards, with no undo."
       },
@@ -969,25 +969,25 @@
         "title": "Set one parameter of an effect",
         "description": "Writes a value onto one parameter of an instance, held to the bounds the catalogue declares for that parameter. Which field to fill depends on its nature — a number, a switch or a word."
       },
-      "postEnable": {
+      "postSetEffectEnabled": {
         "title": "Switch one effect on or off",
         "description": "Turns an instance off without removing it, which takes it out of the computation and not merely out of the image. Its parameters stay where they are, ready to be turned back on."
       },
-      "postSwitch": {
+      "postSetWholeStackEnabled": {
         "title": "Switch the whole composition off",
         "description": "Turns the entire stack off or back on in one go, losing nothing — the Before/After, as a value of the document that undo can take back."
       },
-      "postPreset": {
+      "postApplyPreset": {
         "title": "Apply a post-processing preset",
         "description": "Replaces the stack with a ready-made composition — a set of effects, in an order, on values that agree with one another. The document receives the stack itself, never a reference to the preset."
       },
-      "postCamera": {
+      "postSetCameraStackMode": {
         "title": "Say what a camera does with post-processing",
         "description": "Chooses whether this camera follows the scene’s composition, carries its own, or applies none at all. Moving it to its own starts it from what it was already filming."
       },
-      "postPresets": {
+      "postListPresets": {
         "title": "List the post-processing presets",
-        "description": "Answers the ready-made compositions the studio ships and the ones saved on this machine, by name. This is the list post.preset accepts."
+        "description": "Answers the ready-made compositions the studio ships and the ones saved on this machine, by name. This is the list post.applyPreset accepts."
       },
       "postDuplicate": {
         "title": "Duplicate a post-processing effect",
@@ -1005,15 +1005,15 @@
         "title": "Take a post-processing key off",
         "description": "Removes the key standing at the head on that parameter. The channel stays, exactly as when a key is taken off from the band."
       },
-      "postSave": {
+      "postSavePreset": {
         "title": "Save the composition as a preset",
         "description": "Keeps the stack in front under a name, on this machine. Nothing is written into the document or the project."
       },
-      "postRename": {
+      "postRenamePreset": {
         "title": "Rename a saved preset",
         "description": "Changes the name of a preset on this machine, named by its id or by the name it holds. What it contains does not move."
       },
-      "postForget": {
+      "postDeleteSavedPreset": {
         "title": "Forget a saved preset",
         "description": "Takes a saved preset off this machine. Compositions already applied do not change: a document holds its stack, never a reference."
       },
@@ -1085,19 +1085,19 @@
         "title": "Run a batch of calls",
         "description": "Runs a batch of calls as one, with a single question. Stops at the first refusal."
       },
-      "timelineCue": {
+      "timelineAddSceneCue": {
         "title": "Cue something on the timeline",
         "description": "Adds an event, a sound, a video or a transition to the timeline of the scene. What the third field names depends on the list — an event name, an asset id, or a kind of transition."
       },
-      "timelineRemove": {
+      "timelineRemoveSceneCue": {
         "title": "Take a cue off the timeline",
         "description": "Removes the row of that list carrying that id."
       },
-      "timelineTemplate": {
+      "timelineSetPanelRows": {
         "title": "Choose what the timeline offers",
         "description": "Decides which rows the panel proposes. It never takes anything away from the engine, which plays the whole timeline regardless."
       },
-      "gameTemplate": {
+      "gameApplyTemplate": {
         "title": "Lay out a game template",
         "description": "Lays the floor, the character and the objects of a kind of game into the open scene, and sets the camera and the gravity with them. One undo takes all of it back."
       },
@@ -1488,8 +1488,14 @@
     "skipChoice": "Never mind",
     "skipChoiceHint": "Closes the question unanswered: the assistant stops there",
     "contextOf": "{{read, number}} / {{window, number}} tokens",
-    "contextRead": "{{read, number}} tokens read",
+    "contextOfChars": "{{read, number}} / {{window, number}} characters",
+    "contextUnknown": "{{read, number}} tokens read · window unknown",
+    "contextNoWindow": "Window unknown",
+    "contextGauge": "Context read",
     "contextHint": "What the last exchange had the model read, out of what it reads in one go",
+    "contextHintChars": "What the last exchange sent, out of what this door accepts in one go — in characters, not in tokens",
+    "contextHintUnknown": "This door does not say what it reads in one go: the count is real, the ratio would be invented",
+    "contextHintAssumed": "This bound is a declared fallback: the door could not read its own schema",
     "thinking": "The assistant is thinking…",
     "workingRound": "The assistant is working — step {{round}}",
     "stopping": "Stopping — the studio is finishing what is running…",

@@ -96,14 +96,17 @@ describe('reading the montage in front', () => {
   })
 
   /**
-   * The rule `command.run` already follows, and the reason the family names no document: it speaks
+   * The rule `command.runStudioCommand` already follows, and the reason the family names no document: it speaks
    * to the montage in front, whichever workspace shows it.
    */
   it('refuses every action of the family while no montage is in front', async () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
-    expect(await runAction('sequence.state', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
-    expect(await runAction('clip.remove', { clipId: 'clip-a' })).toEqual({
+    expect(await runAction('sequence.state', {})).toMatchObject({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+    expect(await runAction('clip.remove', { clipId: 'clip-a' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -153,7 +156,7 @@ describe('laying clips down', () => {
   it('refuses an asset the library does not hold', async () => {
     installFakeBridge({ assets: { search: vi.fn(async () => []) } })
 
-    expect(await runAction('clip.add', { assetId: 'asset-z' })).toEqual({
+    expect(await runAction('clip.add', { assetId: 'asset-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -185,7 +188,7 @@ describe('editing a clip', () => {
    * every miss would be reported as done — the same reason the layer family looks its id up first.
    */
   it('refuses a clip the montage does not hold rather than reporting a no-op as done', async () => {
-    expect(await runAction('clip.gain', { clipId: 'clip-z', gain: -6 })).toEqual({
+    expect(await runAction('clip.gain', { clipId: 'clip-z', gain: -6 })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -232,7 +235,11 @@ describe('the tracks', () => {
    * `writeTrack` and never enter the history — exactly as the header column writes them.
    */
   it('sets the four dials of a row without touching the undo stack', async () => {
-    await runAction('track.adjust', { trackId: 'track-video', muted: true, height: 120 })
+    await runAction('track.setMuteSoloLockHeight', {
+      trackId: 'track-video',
+      muted: true,
+      height: 120,
+    })
 
     expect(sequence().tracks[0]).toMatchObject({ muted: true, height: 120 })
     expect(sequenceHistoryOf(useSequences.getState(), DOCUMENT).past).toEqual([])
@@ -252,7 +259,7 @@ describe('the playhead and the selection', () => {
     expect(await runAction('clip.select', { clipId: 'clip-a' })).toEqual({ ok: true })
     expect(sequence().selectedId).toBe('clip-a')
 
-    expect(await runAction('clip.select', { clipId: 'clip-z' })).toEqual({
+    expect(await runAction('clip.select', { clipId: 'clip-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })

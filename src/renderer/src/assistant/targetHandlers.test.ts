@@ -22,7 +22,7 @@ describe('target.select', () => {
   it('answers what the space answered, refusal and all', () => {
     aimAt.mockReturnValue(refused('notFound'))
 
-    expect(aim({ aimId: 'gone' })).toEqual({ ok: false, refusal: 'notFound' })
+    expect(aim({ aimId: 'gone' })).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 
   it('refuses a call that names nothing, without reaching a space', () => {

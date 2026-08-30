@@ -273,7 +273,7 @@ describe('a call that sets a named state, sent twice in one turn', () => {
     const between = settledKeyOf('layer.select', { layerId: 'b' })
     const steps: AssistantStep[] = [
       { action: 'layer.select', refusal: null, settledKey: first ?? '' },
-      { action: 'layer.style', refusal: null },
+      { action: 'layer.setOpacityBlendAndVisibility', refusal: null },
       { action: 'layer.select', refusal: null, settledKey: between ?? '' },
     ]
 

@@ -1,9 +1,10 @@
 import {
+  ACTION_FAMILIES,
   ACTION_REGISTRY,
-  actionsReaching,
+  assistantAction,
   DISCOVERY_ACTION,
-  familyOfAction,
   findActions,
+  loadedWith,
   type AssistantThought,
   type ActionField,
   type ActionName,
@@ -12,9 +13,10 @@ import {
   MOST_QUESTIONS,
 } from '@shared/domain/assistant'
 import { MEMORY_RECALL_ACTION } from '@shared/domain/memoryActions'
+import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Target } from '@shared/domain/target'
 import { englishText } from '@shared/i18n'
-import { linesWithin } from './studioState'
+import { linesWithin, STATE_MAX } from './studioState'
 
 /**
  * What the model is told before it answers.
@@ -47,75 +49,39 @@ function fieldLine(field: ActionField): string {
   return `    - ${parts.join(' — ')}`
 }
 
+/** One action's MANUAL: what it is for, and every field it takes. */
 function actionBlock(action: AssistantAction): string {
   const lines = [`  ${action.name} — ${englishText(action.descriptionKey)}`]
   for (const field of action.fields) lines.push(fieldLine(field))
   return lines.join('\n')
 }
 
-/**
- * The catalogue, with a heading each time the family changes.
- *
- * 🛑 The WIDE share alone: 230 actions read flat is a list a model gives up on — « nomme les
- * mises de côté » reached `favorites.list` on the bench pass of 2026-08-26. The short share pays
- * 8 000 characters for eleven actions and can afford no heading at all.
- */
-function cataloguePrinted(actions: readonly AssistantAction[], grouped = false): string {
-  const lines: string[] = []
-  let family = ''
-
-  for (const action of actions) {
-    const next = familyOfAction.get(action.name) ?? ''
-    if (grouped && next !== family) lines.push(`  [${next}]`)
-    family = next
-    lines.push(actionBlock(action))
-  }
-
-  return lines.join('\n')
-}
-
-const namesOf = (actions: readonly AssistantAction[]): ReadonlySet<ActionName> =>
-  new Set(actions.map(action => action.name))
-
-/** One share of the registry, and everything a briefing needs of it. */
-type Share = {
-  readonly text: string
-  readonly allowed: ReadonlySet<ActionName>
-}
-
-const shareOf = (actions: readonly AssistantAction[], grouped = false): Share => ({
-  text: cataloguePrinted(actions, grouped),
-  allowed: namesOf(actions),
-})
-
-/** 🛑 Held for the process: the whole registry is 69 000 characters and 225 bundle lookups. */
-let wholeHeld: Share | null = null
-let shortHeld: Share | null = null
-
-const wholeShare = (): Share =>
-  /**
-   * 🛑 The REGISTRY, never `actionsReaching('mcp')`: that one answers what the WIRE carries, and
-   * a door with room must be shown everything the window can do.
-   */
-  (wholeHeld ??= shareOf(
-    ACTION_REGISTRY.filter(action => action.name !== DISCOVERY_ACTION),
-    true,
-  ))
+/** The manuals a briefing carries, in the order the chain opened them. */
+const manualPrinted = (loaded: readonly ActionName[]): string =>
+  loaded
+    .flatMap(name => assistantAction(name) ?? [])
+    .map(actionBlock)
+    .join('\n')
 
 /**
- * The spoken vocabulary, MINUS what a RULE already spells whole — describing either a second time
- * costs characters this share does not have. All three stay in `allowed`: being unlisted is not
- * the same as being refused, and `parseReply` refuses a reply naming anything else.
+ * 🛑 The whole registry as NAMES, headed by the family that publishes it — 4 225 characters where
+ * the manuals of the same 283 actions run to 90 994, which no door but the widest could hold.
  */
-export const UNLISTED: readonly ActionName[] = [DISCOVERY_ACTION, 'projects.list', 'project.open']
+let namesHeld: string | null = null
 
-const shortShare = (): Share =>
-  (shortHeld ??= {
-    text: cataloguePrinted(actionsReaching('both').filter(one => !UNLISTED.includes(one.name))),
-    // 🛑 The unlisted one is ALLOWED all the same: `parseReply` refuses a reply naming an action
-    // outside this set, so a door told to answer with `actions.find` would lose the whole turn.
-    allowed: namesOf(actionsReaching('both')),
-  })
+const namesPrinted = (): string =>
+  (namesHeld ??= ACTION_FAMILIES.map(
+    family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
+  ).join('\n'))
+
+/**
+ * 🛑 Every name of the registry, and that is the point of showing names: a model may call anything
+ * it can read. `parseReply` still refuses what the registry does not declare.
+ */
+let allowedHeld: ReadonlySet<ActionName> | null = null
+
+const allNames = (): ReadonlySet<ActionName> =>
+  (allowedHeld ??= new Set(ACTION_REGISTRY.map(action => action.name)))
 
 /**
  * The shape the answer has to take.
@@ -143,6 +109,17 @@ const FORMAT = [
   '{"action":"generator.submit","input":{"landing":"document"}}]}',
 ].join('\n')
 
+/**
+ * 🛑 What replaced the eleven-action catalogue, and the whole reason the names fit: an action the
+ * briefing did not spell used to cost the entire answer, so a model was told to ask before acting
+ * — and, measured, answered « je ne peux pas » instead.
+ */
+const NAMES_RULE = [
+  '  - The catalogue is EVERY action there is, names alone. "Manual" below holds the fields of',
+  '    the ones already opened. Name an action that is not there and its fields come back to you',
+  '    in the same turn — so call what you mean. Never invent a name, never say you cannot.',
+]
+
 const RULES = [
   '  - Only use actions from the catalogue below. Never invent one.',
   '  - One request often needs several calls, in order. Carry it to its end.',
@@ -154,26 +131,18 @@ const RULES = [
   // 🛑 A RULE and not two catalogue blocks: printed they cost 158 characters, and a block is the
   // first thing dropped when the room runs out — leaving `project.open` allowed and unspelt.
   '  - Opening a project: projects.list gives their paths, then project.open with {"path":"…"}.',
+  ...NAMES_RULE,
+  `  - A word rather than a name: ${DISCOVERY_ACTION} with {"query":"…"} answers with what matches.`,
 ]
 
 /**
- * 🛑 The rules that NAME an action of the wide catalogue, and are therefore given only to a door
- * that holds it.
+ * 🛑 The rules a door has to have ROOM for, and nothing more: naming an action is safe everywhere
+ * now that every name is shown, so what sets them apart is the 2 320 characters they cost.
  *
- * Told to a narrow door, they are worse than useless: `parseReply` refuses a reply WHOLE the
- * moment one call names an action the briefing did not show, so a model obeying "list the folder"
- * with `files.list` loses its entire answer — twice, since the retry only complains about JSON —
- * and the turn dies as "I did not manage to answer that one", two billed round trips spent.
- * `FIND_RULE` does not rescue it either: `discoveryIn` only reads a reply whose SINGLE call is
- * `actions.find`.
- *
- * They cost nothing here: a door shown the whole registry has room measured in the hundred
- * thousands, where the short share lives against 8 000.
+ * Scenario's door leaves 8 500 for the whole briefing and the names alone take 4 225, so it is
+ * shown `RULES` and these are what it does without — see `studioBriefing`, which decides on room.
  */
 const WIDE_RULES = [
-  // 🛑 Here rather than in `RULES`, and it is not a preference: a narrow door is told to answer
-  // `actions.find` instead (`FIND_RULE`), so telling it both is a contradiction — and a line the
-  // tightest door pays for twice, its expansion being budgeted against what is left.
   '  - If nothing in the catalogue fits, return no calls and say so in "say".',
   /**
    * The three that place a NAMED file, and they are one story: a model shown two hundred actions
@@ -201,10 +170,10 @@ const WIDE_RULES = [
   // Five requests died on it: the decor had just generated a picture, and the model answered
   // « je ne vois aucune image générée » — nothing in the studio block says one was made.
   '  - "that picture", "the result", "the generated model": what a generation made is in the',
-  '    project catalogue. assets.search with generated finds it; nothing else announces it.',
+  '    project catalogue. assets.searchProjectCatalogue with generated finds it; nothing else announces it.',
   // Twice over, a reference travelled as a PATH under a key nobody reads. The field belongs to
   // the model's own schema, and the value is an asset id.
-  '  - To work FROM a picture, read model.schema first and fill the field it names with an ASSET',
+  '  - To work FROM a picture, read models.readGenerationModelFields first and fill the field it names with an ASSET',
   '    ID — never a path, and never a key you chose yourself.',
   // A plan that reads well and cannot run: opening the picture is what put the Image space in
   // front, and every scene call after it was refused.
@@ -214,10 +183,6 @@ const WIDE_RULES = [
   // Narrowed to the repair alone: rule 3 above is what makes a model ask, and it must keep doing
   // so for what the person alone knows.
   '  - Never ask to be allowed to repair your OWN order: do it, and say what you did.',
-  /**
-   * 🛑 The five below name no action and belong here all the same: the short share runs 8 022
-   * characters against a room of 8 000, so a line added there takes an action off the catalogue.
-   */
   // Twelve requests died on a question the studio answers — « sur quel clip ? » to a montage
   // holding one, « quel modèle 3D ? » to a project holding two.
   '  - Rule 3 is for what the person ALONE knows. ONE thing of that kind in front of you is the',
@@ -227,7 +192,7 @@ const WIDE_RULES = [
   '  - Never say a thing is done unless a call in this conversation did it.',
   '  - Reading is not doing: the request is done once the change it asked for has been WRITTEN.',
   // The same call sent four times after it answered ok, one refusal collected eight times on
-  // arguments that never changed. Here and not in CONTINUING, which the narrow door also shows.
+  // arguments that never changed.
   '  - A call that answered ok has HAPPENED — sending it again does it twice. A refused call is',
   '    refused again on the same arguments: change them, or do something else.',
 ]
@@ -240,14 +205,6 @@ const WIDE_RULES = [
  * every vector on every turn, for a block the room threw away whole on four doors of five.
  */
 const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTION} answers it. Ask before guessing.`
-
-/** The same, for a door shown a catalogue that does not hold it — `FIND_RULE` is how it gets it. */
-const MEMORY_FIND = '  - This project has a memory: search "memory" to reach what reads it.'
-
-/** What the short list cannot say, and how the model asks for the rest — see `answeredTurn`. */
-const FIND_RULE =
-  `  - Nothing in the catalogue fits? Answer with that ONE call and nothing else: ` +
-  `{"action":"${DISCOVERY_ACTION}","input":{"query":"<a word for what you need>"}}.`
 
 /**
  * 🛑 What a round after the first is told, and every line of it earns its place.
@@ -295,9 +252,7 @@ export type BriefingParts = {
    * How many memories this project holds. What the briefing pays instead of the memories.
    *
    * 🛑 A COUNT, never a recall — see `memorySignal`. Injecting summaries paid an embedding and a
-   * vector scan on every single turn for a block that four doors of five threw away whole: the
-   * short briefing ran 7 008 characters against the 7 116 a 4 096-token door left, and the memory
-   * was the first thing `briefingText` cut. Nothing is pushed at the model now; it goes and asks.
+   * vector scan on every single turn for a block that four doors of five threw away whole.
    */
   memories?: number
   /** Where this machine keeps a person's folders, absolute — see `AssistantThought.folders`. */
@@ -305,19 +260,26 @@ export type BriefingParts = {
   /** What the open document can be aimed at, narrowed by the window — see `target.ts`. */
   targets?: readonly Target[]
   /**
+   * 🛑 Ce que la CHAÎNE a réclamé, jamais les manuels que le studio charge d'office : ce sont les
+   * seuls noms qui doivent revenir par la frontière, et les seuls placés en QUEUE de `loaded` pour
+   * survivre à la coupe, qui mord par l'avant.
+   */
+  opened?: readonly ActionName[]
+
+  /** Whose MANUAL this briefing carries — see `AssistantThought.loaded`. */
+  loaded?: readonly ActionName[]
+  /**
    * 🛑 How much briefing the brain about to carry it can hold — a number that belongs to the
-   * BRAIN and not to this file. What the model is SHOWN of the catalogue follows from it.
+   * BRAIN and not to this file. What the model is SHOWN of the manuals follows from it.
    *
-   * Not a ceiling on the whole: the short share plus a full project context and a full state
-   * block runs to 8 232 characters against `roomFor(4096)` = 7 116, measured on 2026-08-26 —
-   * a figure that moves whenever a `both` action's description does. What gives ground there is
-   * the sentence (`sentenceWithin`), never the instructions.
+   * Not a ceiling on the whole: the names, the rules and the FORMAT are what never give ground,
+   * and a door too tight for them is told fewer rules (`studioBriefing`) rather than fewer names.
    */
   room: number
   /**
-   * What the SHORT share is budgeted against when this door refused the wide one — a fact of the
+   * What the briefing is budgeted against when this door refused the first one — a fact of the
    * door, which has just disproved its own `room`. Defaults to `room`, which is right for a door
-   * that was never shown the whole catalogue in the first place.
+   * that was never shown the wide rules in the first place.
    */
   fallbackRoom?: number
 }
@@ -325,105 +287,104 @@ export type BriefingParts = {
 /**
  * What the model is shown, and what an answer is then held to.
  *
- * `allowed` travels with the text because the two are one decision: `parseReply` refuses a call
- * naming an action the model was not SHOWN, and what it was shown now depends on the room.
+ * 🛑 `allowed` is the whole registry now that the catalogue names it whole, and `loaded` is the
+ * narrower thing: what the model has the FIELDS of. A call naming an action outside `loaded` is
+ * not refused — `answeredTurn` opens its manual and asks again.
  */
 export type Briefing = {
   readonly text: string
   readonly allowed: ReadonlySet<ActionName>
-  /** The same briefing with what a query found added, or nothing when there is no room to expand. */
+  /** The manuals this briefing CARRIES, oldest first — what has fields, for `unloadedIn`. */
+  readonly loaded: readonly ActionName[]
+  /** Of those, the ones the CHAIN asked for: what travels back, never the default load. */
+  readonly opened: readonly ActionName[]
+  /** The same briefing with these manuals opened as well. */
+  readonly withLoaded: (names: readonly ActionName[]) => Briefing
+  /** The same briefing with what a query found opened, or nothing once one has been answered. */
   readonly expand: ((query: string) => Briefing) | null
   /**
-   * The short share of the same parts, for a door that REFUSED this one — `BRIEFING_ROOM` is an
-   * assumption about a hand-typed cloud model's window, and nothing else would degrade when the
-   * assumption is wrong. `null` once it is already the short share.
+   * The same parts with the wide rules dropped, for a door that REFUSED this one — a door's room
+   * is an assumption about a hand-typed model's window. `null` once they are already dropped.
    */
   readonly narrow: (() => Briefing) | null
 }
 
 /**
  * 🛑 What GIVES GROUND when the room runs out, in order: the state, the targets, the project
- * context, the folders, and — last of all — the catalogue. Never the sentence, which
- * `instructionFor` guarantees.
- *
- * The memory is not on this list any more, and that is the point: it is one line naming a way to
- * ask, not a block of summaries to be cut down.
+ * context, the folders, and — last of all — the manuals. Never the names, never the rules, and
+ * never the sentence, which `instructionFor` guarantees.
  */
-function briefingText(
-  parts: BriefingParts,
-  catalogue: string,
-  rules: readonly string[],
-  found: string,
-): string {
-  return briefingWithin(parts, catalogue, rules, found).text
+function briefingText(one: Composition, manual: string, found: string): string {
+  return briefingWithin(one, manual, found).text
 }
 
-/** The same, saying whether the catalogue had to give ground — what the signal yields to. */
+/** The same, saying whether the manuals had to give ground — what the memory signal yields to. */
 function briefingWithin(
-  parts: BriefingParts,
-  catalogue: string,
-  rules: readonly string[],
+  one: Composition,
+  manual: string,
   found: string,
 ): { text: string; cut: boolean } {
+  const parts = one.parts
   const state = parts.state ?? ''
   const targets = parts.targets ?? []
-  const full = composed(parts, catalogue, rules, found, state, targets)
+  const full = composed(one, manual, found, state, targets)
   if (full.length <= parts.room) return { text: full, cut: false }
 
-  // The state gives ground first — it is prose, and its lines are ranked from the most useful.
-  const short = linesWithin(state, Math.max(0, state.length - (full.length - parts.room)))
-  const trimmed = composed(parts, catalogue, rules, found, short, targets)
-  if (trimmed.length <= parts.room) return { text: trimmed, cut: false }
+  /**
+   * 🛑 The MANUALS give ground FIRST, and the order is the whole lesson of 2026-08-31: they are
+   * the only block a chain can ask back (`withLoaded`), and the only one worth 24 000 characters.
+   * What is in front of the person is worth a few hundred and cannot be asked back at all —
+   * dropped for them, the bench lost six points and 227 turns to refusals.
+   *
+   * By whole actions and from the FRONT: what a chain opened last is what it is about to call,
+   * and half a field line is an action the model cannot see is truncated.
+   */
+  const blocks = manualBlocks(manual)
+  const held = blocks.length
+  let over = full.length - parts.room
+  while (over > 0 && blocks.length > 0) over -= (blocks.shift()?.length ?? 0) + 1
+  const manuals = blocks.join('\n')
+  const thinner = composed(one, manuals, found, state, targets)
+  if (thinner.length <= parts.room) return { text: thinner, cut: blocks.length < held }
+
+  // Then the state, whose lines are ranked from the most useful — it is prose, and it gives by
+  // whole lines where the blocks above gave by whole actions.
+  const short = linesWithin(state, Math.max(0, state.length - (thinner.length - parts.room)))
+  const trimmed = composed(one, manuals, found, short, targets)
+  if (trimmed.length <= parts.room) return { text: trimmed, cut: blocks.length < held }
 
   /**
    * Then the TAIL of the target list, which is the loss the window already designed for: it ranks
-   * them selection first, then the names the sentence spells, then the rest. Dropping from the
-   * end is dropping what the sentence never mentioned.
+   * them selection first, then the names the sentence spells, then the rest.
    */
-  const over = trimmed.length - parts.room
-  const aimed = targetsWithin(targets, over)
-  const cut = composed(parts, catalogue, rules, found, short, aimed)
-  if (cut.length <= parts.room) return { text: cut, cut: false }
+  const aimed = targetsWithin(targets, trimmed.length - parts.room)
+  const cut = composed(one, manuals, found, short, aimed)
+  if (cut.length <= parts.room) return { text: cut, cut: blocks.length < held }
 
   /**
-   * 🛑 Last, the project context — and it is a THIRD step because the two above can both run out:
-   * the state is cut by whole lines and the targets by whole entries, so a saturated briefing
-   * settles a couple of dozen characters over the room with nothing left to give. Measured when
-   * Code gained a family: seven unserved spaces instead of six put the widest briefing at 8 022
-   * against a room of 8 000, and the catalogue is the one part that never gives ground.
+   * 🛑 Then the project context — a FOURTH step because the two above can both run out: the state
+   * is cut by whole lines and the targets by whole entries, so a saturated briefing settles a
+   * couple of dozen characters over the room with nothing left to give.
    */
   const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
-  const trimmedContext = { ...parts, context: linesWithin(parts.context ?? '', room) }
-  const last = composed(trimmedContext, catalogue, rules, found, short, aimed)
-  if (last.length <= parts.room) return { text: last, cut: false }
+  const trimmedContext = withParts(one, { context: linesWithin(parts.context ?? '', room) })
+  const last = composed(trimmedContext, manuals, found, short, aimed)
+  if (last.length <= parts.room) return { text: last, cut: blocks.length < held }
 
-  // 🛑 `[M]` The folders go WHOLE or not at all: the short briefing runs 7 405 characters on
-  // 2026-08-29, so the 137-character block overruns any door leaving it less than that.
-  const bare = { ...trimmedContext, folders: '' }
-  const dropped = composed(bare, catalogue, rules, found, short, aimed)
-  if (dropped.length <= parts.room) return { text: dropped, cut: false }
+  // 🛑 `[M]` The folders go WHOLE or not at all: the briefing runs thousands of characters, so the
+  // 137-character block overruns any door leaving it less than that.
+  const bare = withParts(trimmedContext, { folders: '' })
 
-  /**
-   * 🛑 Last of all the CATALOGUE, by whole actions from the END — the one part that used to give
-   * no ground, and the reason a 4 096-token model overran by 289 with nothing left to cut. What
-   * is dropped is not lost: only the narrow door ever reaches here, and `FIND_RULE` is how it
-   * asks for the rest. Overrunning is NOT the milder failure — a runtime cuts from the HEAD,
-   * where the preamble sits (ADR-18).
-   *
-   * Its blind spot, and it is real: the share reads in registry order, so what goes first is
-   * `file.open` and `project.create` — the two most spoken. On that door they cost one round.
-   */
-  const blocks = catalogueBlocks(catalogue)
-  let left = dropped.length - parts.room
-  while (left > 0 && blocks.length > 1) left -= (blocks.pop()?.length ?? 0) + 1
-
-  return { text: composed(bare, blocks.join('\n'), rules, found, short, aimed), cut: true }
+  return {
+    text: composed(bare, manuals, found, short, aimed),
+    cut: blocks.length < held,
+  }
 }
 
-/** The catalogue as whole actions: a name line, and the field lines indented under it. */
-function catalogueBlocks(catalogue: string): string[] {
+/** The manuals as whole actions: a name line, and the field lines indented under it. */
+function manualBlocks(manual: string): string[] {
   const blocks: string[] = []
-  for (const line of catalogue.split('\n')) {
+  for (const line of manual === '' ? [] : manual.split('\n')) {
     if (line.startsWith('    ') && blocks.length > 0) blocks[blocks.length - 1] += `\n${line}`
     else blocks.push(line)
   }
@@ -442,14 +403,17 @@ function targetsWithin(targets: readonly Target[], over: number): readonly Targe
   return targets.slice(0, targets.length - dropped)
 }
 
+/** The heading the manuals sit under — named, so a model does not read them as the catalogue. */
+const MANUAL_HEAD = 'Manual — the fields of the actions opened so far:'
+
 function composed(
-  parts: BriefingParts,
-  catalogue: string,
-  rules: readonly string[],
+  one: Composition,
+  manual: string,
   found: string,
   state: string,
   targets: readonly Target[],
 ): string {
+  const parts = one.parts
   // Silent when everything is served: a line saying nothing is worth no characters.
   const idle =
     parts.notReady && parts.notReady.length > 0
@@ -470,15 +434,16 @@ function composed(
       : []
 
   return [
-    roleWith(rules),
+    roleWith(one.rules),
     '',
     ...about,
     ...where,
     ...now,
     ...idle,
     'Catalogue:',
-    catalogue,
+    namesPrinted(),
     '',
+    ...(manual === '' ? [] : [MANUAL_HEAD, manual, '']),
     ...aim,
     ...(found ? [found, ''] : []),
     ...(parts.continuing ? [CONTINUING, ''] : []),
@@ -486,107 +451,133 @@ function composed(
   ].join('\n')
 }
 
-/**
- * The signal, in the form the door can ACT on — and nothing at all where it can act on neither.
- *
- * 🛑 A briefing naming an action the model was neither shown nor told how to ask for costs the
- * WHOLE turn: `parseReply` refuses a reply the moment one call names an unlisted action. The wide
- * share holds `memory.recall`, so it is named; the short share reaches it through `FIND_RULE`, so
- * the word is named instead; an EXPANSION has neither, and gets nothing.
- */
-function memorySignal(
-  parts: BriefingParts,
-  allowed: ReadonlySet<ActionName>,
-  canFind: boolean,
-): readonly string[] {
-  if ((parts.memories ?? 0) === 0) return []
-  if (allowed.has(MEMORY_RECALL_ACTION)) return [MEMORY_CALL]
-
-  return canFind ? [MEMORY_FIND] : []
-}
+/** What the memory costs a briefing, and only where there is something to find. */
+const memorySignal = (parts: BriefingParts): readonly string[] =>
+  (parts.memories ?? 0) > 0 ? [MEMORY_CALL] : []
 
 /**
  * The briefing with the signal, or without it when it does not FIT.
  *
  * 🛑 The LAST thing to give ground — after the state, the targets and the project context, and
- * before the catalogue, which never does: on the wide door those characters would otherwise take
- * the whole registry down to the spoken vocabulary. The tightest door is Scenario's, which leaves
- * 8 000 characters against a short share of 7 405, so two `both` actions added upstream take the
- * room this line needs. Overrunning is not the milder failure — a runtime truncates from
- * the HEAD, where the preamble sits (ADR-18).
+ * before the manuals: overrunning is not the milder failure, a runtime truncating from the HEAD,
+ * where the preamble sits (ADR-18).
  */
-function composedWithSignal(
-  parts: BriefingParts,
-  catalogue: string,
-  base: readonly string[],
-  signal: readonly string[],
-): string {
-  const written = briefingWithin(parts, catalogue, [...base, ...signal], '')
-  // 🛑 `cut` as well as the length: the catalogue gives ground now, so a briefing that FITS may
-  // have paid for this line with an action — and the signal is the cheaper of the two to lose.
-  if (signal.length === 0 || (written.text.length <= parts.room && !written.cut)) {
+function composedWithSignal(one: Composition, manual: string, found: string): string {
+  const signal = memorySignal(one.parts)
+  const withSignal = { ...one, rules: [...one.rules, ...signal] }
+  const written = briefingWithin(withSignal, manual, found)
+  // 🛑 `cut` as well as the length: the manuals give ground now, so a briefing that FITS may have
+  // paid for this line with one — and the signal is the cheaper of the two to lose.
+  if (signal.length === 0 || (written.text.length <= one.parts.room && !written.cut)) {
     return written.text
   }
 
-  // 🛑 Retried only where the signal is what tipped it over: a briefing that overruns by tens of
-  // thousands is heading for `narrowBriefing` anyway, and composing a 69 000-character catalogue
-  // a second time to learn that is the very waste this file's history records having removed.
-  const over = written.text.length - parts.room
-  return over > signalCost(signal) ? written.text : briefingText(parts, catalogue, base, '')
+  // Retried only where the signal is what tipped it over: a briefing over by thousands is over
+  // for another reason, and composing it a second time to learn that is waste.
+  const over = written.text.length - one.parts.room
+  return over > MEMORY_CALL.length + 1 ? written.text : briefingText(one, manual, found)
 }
 
-/** What the signal adds to a briefing: its own line, and the newline that joins it. */
-const signalCost = (signal: readonly string[]): number =>
-  signal.reduce((sum, line) => sum + line.length + 1, 0)
+/** One briefing's whole decision: the parts, which rules it was given, and what it may fall to. */
+type Composition = {
+  readonly parts: BriefingParts
+  readonly rules: readonly string[]
+  readonly narrow: (() => Briefing) | null
+  /** Set once a query has been answered: an expansion of an expansion talks to itself. */
+  readonly found?: string
+}
 
-/**
- * Everything but the person's sentence, sized to the room the brain has: the whole registry when
- * it fits, and the spoken vocabulary plus the way to ask for the rest when it does not. Nothing
- * here names a cloud or a runtime.
- */
-export function studioBriefing(parts: BriefingParts): Briefing {
-  const whole = wholeShare()
-  // The catalogue alone settles it for a narrow door, and settles it without composing: Scenario
-  // and every capped local model would otherwise join 69 000 characters on every sentence typed.
-  if (parts.room < whole.text.length) return narrowBriefing(parts)
+const withParts = (one: Composition, patched: Partial<BriefingParts>): Composition => ({
+  ...one,
+  parts: { ...one.parts, ...patched },
+})
 
-  // `canFind` is false: `DISCOVERY_ACTION` is dropped from the wide share, so nothing to find with.
-  const wide = composedWithSignal(
-    parts,
-    whole.text,
-    WIDE_ALL,
-    memorySignal(parts, whole.allowed, false),
-  )
-  if (wide.length > parts.room) return narrowBriefing(parts)
+function briefingOf(one: Composition): Briefing {
+  const asked = one.parts.loaded ?? []
+  const text = composedWithSignal(one, manualPrinted(asked), one.found ?? '')
+  /**
+   * 🛑 What the text CARRIES, never what was asked for: the manuals give ground last, so a room
+   * too tight prints a share of them. Reported as asked, `unloadedIn` sees nothing to reopen and
+   * the call goes out on guessed fields — 40 asked, 7 printed, and every gate green.
+   */
+  const printed = (name: ActionName): boolean => text.includes(`\n  ${name} — `)
+  /**
+   * 🛑 Deux lectures, et les confondre coûte un tour : `unloadedIn` demande ce qui a des CHAMPS,
+   * donc tout ce qui est imprimé ; la frontière ne doit rendre que ce que la CHAÎNE a réclamé,
+   * sinon 283 noms traversent à chaque tour. Sans `opened`, l'appelant EST la chaîne.
+   */
+  const loaded = asked.filter(printed)
+  const opened = (one.parts.opened ?? asked).filter(printed)
 
   return {
-    text: wide,
-    allowed: whole.allowed,
-    expand: null,
-    narrow: () => narrowBriefing(parts),
+    text,
+    allowed: allNames(),
+    loaded,
+    opened,
+    /**
+     * 🛑 Les noms demandés vont en QUEUE, même déjà présents : la coupe mord par l'avant, donc
+     * `loadedWith` — qui déduplique en gardant la position — laissait un manuel réclamé se faire
+     * couper une seconde fois, et la boucle le redemandait jusqu'au budget.
+     */
+    withLoaded: names =>
+      briefingOf(
+        withParts(one, {
+          loaded: [...asked.filter(name => !names.includes(name)), ...names],
+          opened: loadedWith(one.parts.opened ?? [], names),
+        }),
+      ),
+    expand: one.found === undefined ? query => expandedWith(one, query) : null,
+    narrow: one.narrow,
   }
+}
+
+/**
+ * Everything but the person's sentence, sized to the room the brain has: the names of every action
+ * whatever the door, and as many rules as the room holds. Nothing here names a cloud or a runtime.
+ */
+export function studioBriefing(parts: BriefingParts): Briefing {
+  const narrow = (): Briefing => narrowBriefing(parts)
+  // The rules alone settle it, and settle it without composing: a door too tight for them keeps
+  // its state and its context instead, which are what the wide set would take.
+  if (parts.room < wideFloor()) return narrow()
+
+  const wide = briefingOf({ parts, rules: WIDE_ALL, narrow })
+
+  return wide.text.length > parts.room ? narrow() : wide
 }
 
 const WIDE_ALL: readonly string[] = [...RULES, ...WIDE_RULES]
-const NARROW_RULES: readonly string[] = [...RULES, FIND_RULE]
+
+/**
+ * The room the wide rules ASK FOR: their own bare briefing, plus what has to fit beside it — the
+ * studio's state, the project context, and three manuals at the registry's own average.
+ *
+ * 🛑 The reserve is the whole point and it is measured: budgeted on the bare cost alone,
+ * Scenario's door took the wide set at 8 364 of its 8 500 and then dropped its state, its context
+ * and every manual to fit — a briefing that can never open a field.
+ */
+let floorHeld: number | null = null
+
+const wideFloor = (): number =>
+  (floorHeld ??=
+    composed({ parts: { room: 0 }, rules: WIDE_ALL, narrow: null }, '', '', '', []).length +
+    STATE_MAX +
+    CONTEXT_COMPOSED_MAX +
+    3 * meanManual())
+
+/** What one manual typically costs — read off the registry, never written down. */
+const meanManual = (): number =>
+  Math.ceil(
+    ACTION_REGISTRY.reduce((sum, one) => sum + actionBlock(one).length + 1, 0) /
+      ACTION_REGISTRY.length,
+  )
 
 function narrowBriefing(declared: BriefingParts): Briefing {
-  const parts = { ...declared, room: declared.fallbackRoom ?? declared.room }
-  const short = shortShare()
-
-  return {
-    text: composedWithSignal(
-      parts,
-      short.text,
-      NARROW_RULES,
-      memorySignal(parts, short.allowed, true),
-    ),
-    allowed: short.allowed,
-    // Offered once, and only from here: an expansion of an expansion is a conversation with
-    // itself, paid for by the person waiting — see `expandedWith`.
-    expand: query => expandedWith(parts, query),
+  return briefingOf({
+    parts: { ...declared, room: declared.fallbackRoom ?? declared.room },
+    rules: RULES,
     narrow: null,
-  }
+  })
 }
 
 /**
@@ -609,74 +600,76 @@ export async function briefingFor(
     memories: request.memories,
     state: request.state,
     targets: request.targets,
+    /**
+     * 🛑 EVERY manual, and the room decides how many survive — `briefingWithin` cuts them first
+     * and `loaded` reports what it printed, so a narrow door asks the rest back. Measured
+     * 2026-08-31 over the 437 scenarios of `pnpm banc`: opened on demand instead, the same
+     * scenarios passed 56% against 65%, and reached 214 actions against 243.
+     */
+    loaded: withChainLast(request.loaded ?? []),
+    opened: request.loaded ?? [],
     room,
     fallbackRoom,
   })
 }
 
-const foundHeader = (query: string): string => `Also available, found for "${query}":`
+/**
+ * Every manual, with the ones the chain asked for LAST: `briefingWithin` cuts from the front, so
+ * what was asked for is what survives a room too tight to hold them all.
+ */
+const withChainLast = (opened: readonly ActionName[]): readonly ActionName[] => [
+  ...ACTION_REGISTRY.map(one => one.name).filter(name => !opened.includes(name)),
+  ...opened,
+]
+
+const foundHeader = (query: string): string => `The manual above now holds what "${query}" found.`
 
 const nothingFound = (query: string): string =>
   `Nothing in the catalogue matches "${query}". Say so rather than inventing an action.`
 
 /**
  * 🛑 NOT the same sentence as `nothingFound`, and the difference is the whole point: a door whose
- * room barely covers the short briefing plus a full project context has NOTHING left, so not one
- * found action fits. Told "nothing matches", the model says so to the person, about nineteen
- * actions that do.
+ * room barely covers the names plus a full project context has NOTHING left, so not one found
+ * manual fits. Told "nothing matches", the model says so to the person, about actions that exist.
  */
 const noRoomFound = (query: string, hits: number): string =>
-  `${hits} actions match "${query}", and this briefing has no room to describe them. ` +
+  `${hits} actions match "${query}", and this briefing has no room for their fields. ` +
   `Say so rather than guessing at one.`
 
-function foundBlock(query: string, hits: number, kept: readonly AssistantAction[]): string {
-  if (hits === 0) return nothingFound(query)
-  if (kept.length === 0) return noRoomFound(query, hits)
-
-  return [foundHeader(query), cataloguePrinted(kept)].join('\n')
-}
-
-/** The longest of the three, in characters: the room is budgeted for whichever is emitted. */
-const footerRoom = (query: string, hits: number): number =>
-  Math.max(foundHeader(query).length, nothingFound(query).length, noRoomFound(query, hits).length)
+const foundBlock = (query: string, hits: number, kept: number): string =>
+  hits === 0 ? nothingFound(query) : kept === 0 ? noRoomFound(query, hits) : foundHeader(query)
 
 /**
- * The short briefing plus what one query found, cut to the room by whole ACTIONS.
+ * The same briefing with what one query found opened, cut to the room by whole ACTIONS.
  *
  * Cut by blocks rather than by characters: half a field line is an action the model cannot call
  * and cannot see is truncated, which is the one failure this whole mechanism exists to avoid.
  */
-function expandedWith(parts: BriefingParts, query: string): Briefing {
-  const short = shortShare()
-  const hits = findActions(query).filter(action => !short.allowed.has(action.name))
-  // Composed once: measuring by joining a second copy of the same 6 500 characters is the very
-  // waste this file's own history records having removed.
+function expandedWith(one: Composition, query: string): Briefing {
+  const loaded = one.parts.loaded ?? []
   /**
-   * 🛑 Neither `FIND_RULE` nor the memory signal, and neither is an omission: this briefing IS the
-   * answer to a find, so there is no second one to offer — and a signal naming an action that is
-   * in neither `short.allowed` nor `kept` would cost the whole turn.
+   * 🛑 Ce qui est IMPRIMÉ, jamais ce qui est chargé : tous les manuels le sont d'office et la
+   * coupe en laisse ce que la place permet. Filtré sur `loaded`, « rien ne correspond » sortait
+   * pour une action décrite trois lignes plus haut.
    */
-  const fixed = briefingText(parts, short.text, RULES, '').length + footerRoom(query, hits.length)
-  let left = parts.room - fixed
+  const shown = briefingText(one, manualPrinted(loaded), '')
+  const hits = findActions(query)
+    .filter(action => !shown.includes(`\n  ${action.name} — `))
+    .map(action => action.name)
 
-  const kept: AssistantAction[] = []
-  for (const hit of hits) {
-    const cost = actionBlock(hit).length + 1
-    // Passed over rather than stopped at: the list is ranked, and one long block is no reason to
-    // drop every shorter one behind it.
-    if (cost > left) continue
-    left -= cost
-    kept.push(hit)
-  }
+  /**
+   * 🛑 Aucun budget ici, et c'en est un de moins qui se trompe : un manuel mis en QUEUE ne
+   * s'ajoute pas, il DÉPLACE un plus ancien — la place calculée comme un ajout rendait « pas de
+   * place pour leurs champs » sur une porte qui en avait pour eux tous.
+   */
+  // 🛑 Du PIRE au meilleur : la coupe garde la fin, donc le mieux classé doit être le dernier.
+  // Mis dans l'ordre du rang, la place qui restait décrivait les sept plus mauvaises réponses.
+  const ranked = [...loaded.filter(n => !hits.includes(n)), ...[...hits].reverse()]
+  const asked = { ...withParts(one, { loaded: ranked }) }
+  const written = briefingText(asked, manualPrinted(asked.parts.loaded ?? []), '')
+  const kept = hits.filter(name => written.includes(`\n  ${name} — `)).length
 
-  return {
-    text: briefingText(parts, short.text, RULES, foundBlock(query, hits.length, kept)),
-    allowed: new Set([...short.allowed, ...kept.map(one => one.name)]),
-    expand: null,
-    // An expansion is longer than the briefing that just went through, so it is the read most
-    // likely to be refused for its size — and what it falls back on is that same briefing.
-    narrow: () => narrowBriefing(parts),
-  }
+  return briefingOf({ ...asked, found: foundBlock(query, hits.length, kept) })
 }
 
 /**

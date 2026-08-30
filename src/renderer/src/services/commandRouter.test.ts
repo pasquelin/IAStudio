@@ -166,7 +166,7 @@ describe('moving a space along the bar', () => {
 
 /**
  * The point of the whole module, and the one thing no other case would catch: the schema of
- * `command.run` offers every id the registry declares, so an id nothing routes is a promise the
+ * `command.runStudioCommand` offers every id the registry declares, so an id nothing routes is a promise the
  * studio cannot keep. Fourteen of the hundred and twenty were in that state.
  */
 describe('the registry as a whole', () => {

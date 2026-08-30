@@ -3,13 +3,16 @@ import { create } from 'zustand'
 import {
   answeredByComposer,
   HISTORY_MAX,
+  loadedWith,
   refused,
+  type ActionName,
   type AskedAnswer,
   type AskedQuestion,
   type AssistantAsk,
   type AssistantCall,
   type AssistantModel,
   type AssistantProgress,
+  type AssistantWindow,
 } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
@@ -39,7 +42,13 @@ const STREAM_TAIL = 240
 const NOTHING_WRITTEN = { streamed: '' }
 
 /** What a new SENTENCE starts over: the counts belong to the turn that just ran, not the next. */
-const NOTHING_READ = { ...NOTHING_WRITTEN, promptTokens: 0, replyTokens: 0, windowTokens: 0 }
+const NOTHING_READ = {
+  ...NOTHING_WRITTEN,
+  promptTokens: 0,
+  promptChars: 0,
+  replyTokens: 0,
+  windowTokens: 0,
+}
 
 /** A question on screen and the promise waiting on it — see `ask`. */
 type AssistantQuestion = {
@@ -77,8 +86,17 @@ type AssistantState = {
   /** What the last round read and wrote. Zero where the door says nothing, and kept once it ends. */
   promptTokens: number
   replyTokens: number
+  /** The same round in CHARACTERS, for a door bounded by a length — see `AssistantProgress`. */
+  promptChars: number
   /** What that door reads in one go, so the composer can show the prompt as a share of it. */
   windowTokens: number
+  /**
+   * What the door in front says of its own bound, asked before a turn — `null` where it names
+   * none, `undefined` while nothing has answered yet. The two are not the same on screen: one
+   * says the window is unknown, the other has nothing to say at all.
+   */
+  door: AssistantWindow | null | undefined
+  noteDoor: (door: AssistantWindow | null | undefined) => void
   /** One frame of what the model is writing — see `connectThoughtStream`. */
   noteProgress: (progress: AssistantProgress) => void
   /** Asks the chain to stop after what is already running. Nothing in flight is undone. */
@@ -181,6 +199,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   busy: false,
   round: 0,
   stopping: false,
+  door: undefined,
   ...NOTHING_READ,
   asked: null,
   choosing: null,
@@ -193,6 +212,8 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
   setDraft: draft => set({ draft }),
 
+  noteDoor: door => set({ door }),
+
   noteProgress: progress =>
     set(state => ({
       // 🛑 Cut HERE and not at the render: only the tail is ever shown, and slicing a rope that
@@ -203,6 +224,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       ),
       // Zero on a restart: what the attempt just thrown away cost is not what this one costs.
       promptTokens: progress.promptTokens ?? (progress.restart === true ? 0 : state.promptTokens),
+      promptChars: progress.promptChars ?? (progress.restart === true ? 0 : state.promptChars),
       replyTokens: progress.replyTokens ?? (progress.restart === true ? 0 : state.replyTokens),
       windowTokens: progress.windowTokens ?? state.windowTokens,
     })),
@@ -382,6 +404,10 @@ async function chainOn(
 ): Promise<void> {
   const bridge = getBridge()
   const ceiling = assistantStepsWithin(useSettings.getState().settings.assistant.steps)
+  // 🛑 For exactly as long as the CHAIN: the main process keeps nothing between two turns, so a
+  // round that did not carry this back reopened every manual, at a billed round trip each. It
+  // dies with the loop, which is what makes the next sentence start on names alone.
+  let loaded: readonly ActionName[] = []
 
   for (let round = 1; round <= ceiling; round += 1) {
     // Emptied here and not when the answer lands: what a round wrote belongs to that round, and
@@ -397,7 +423,7 @@ async function chainOn(
     // No model in the request: the main process reads the setting on each turn, so the one this
     // window would send could only be a copy going stale between two windows.
     const answer = await orElse(
-      bridge?.assistant.think({ utterance: said, history, targets, continuing: round > 1 }),
+      bridge?.assistant.think({ utterance: said, history, targets, loaded, continuing: round > 1 }),
       null,
     )
 
@@ -410,6 +436,7 @@ async function chainOn(
     }
 
     set(state => ({ spent: state.spent + answer.cost }))
+    loaded = loadedWith(loaded, answer.loaded ?? [])
     // Every round's sentence is kept, not just the last: "I am looking for it" then "here it is"
     // is the chain as the person read it happening.
     patch(set, id, { answered: alsoSaid(get(), id, answer.say) })

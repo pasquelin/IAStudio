@@ -97,7 +97,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     /**
      * `both`, and the second of this family to be: « crée un nouveau projet » is the plainest
      * thing anyone says to a studio, and shown the short share alone a model reached for
-     * `command.run project.new` — the one command it may not run, since it raises a picker.
+     * `command.runStudioCommand project.new` — the one command it may not run, since it raises a picker.
      */
     name: 'project.create',
     titleKey: 'assistant.actions.projectCreate.title',
@@ -220,27 +220,27 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
    * made in one window is taken back from another, and from here.
    */
   action({
-    name: 'files.undo',
-    titleKey: 'assistant.actions.filesUndo.title',
-    descriptionKey: 'assistant.actions.filesUndo.description',
+    name: 'files.undoFileOperation',
+    titleKey: 'assistant.actions.filesUndoFileOperation.title',
+    descriptionKey: 'assistant.actions.filesUndoFileOperation.description',
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'files.redo',
-    titleKey: 'assistant.actions.filesRedo.title',
-    descriptionKey: 'assistant.actions.filesRedo.description',
+    name: 'files.redoFileOperation',
+    titleKey: 'assistant.actions.filesRedoFileOperation.title',
+    descriptionKey: 'assistant.actions.filesRedoFileOperation.description',
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'files.history',
-    titleKey: 'assistant.actions.filesHistory.title',
-    descriptionKey: 'assistant.actions.filesHistory.description',
+    name: 'files.readUndoStack',
+    titleKey: 'assistant.actions.filesReadUndoStack.title',
+    descriptionKey: 'assistant.actions.filesReadUndoStack.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

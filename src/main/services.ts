@@ -77,6 +77,7 @@ import {
 const MCP_CLIENT = clientName(APP_NAME)
 import type { AssistantBrain } from './assistant/brainPort'
 import { createProviderBrain } from './assistant/brainProvider'
+import { providerLimits } from './assistant/providerLimits'
 import { createLocalBrain } from './assistant/brainLocal'
 import { projectPickerFolder } from '@shared/domain/project'
 import { machineFolders } from './assistant/machineFolders'
@@ -1995,6 +1996,11 @@ export function createServices(settings: SettingsStore): Services {
    */
   const providerBrain = createProviderBrain({
     run: (body, signal) => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body, signal),
+    // Invariant 5, applied to the one form of this studio that was written by hand: what the
+    // door accepts is read off the model, once, rather than declared here and left to rot.
+    limits: providerLimits(
+      async () => (await catalogOf(client.require()).retrieve(ASSISTANT_MODEL_ID)).model.inputs,
+    ),
     readText: createAssetText({
       retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,
       // The signed CDN url the asset carries, for the rare answer too long to have been

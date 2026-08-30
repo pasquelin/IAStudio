@@ -105,6 +105,17 @@ describe('a cloud that is being watched', () => {
     expect(counts.filter(one => one.windowTokens !== undefined)).toEqual([])
   })
 
+  /**
+   * 🛑 The same refusal, said BEFORE a turn: the composer asks every door for its bound so it can
+   * show one with nothing typed, and a figure invented here would be shown for the whole session
+   * rather than for one turn.
+   */
+  it('names no window when asked for one outright', async () => {
+    const { brain } = watched('anthropic', [])
+
+    expect(await brain.window()).toBeNull()
+  })
+
   it('asks Gemini by the streaming METHOD, which is not a field of its body', async () => {
     const { brain, post } = watched('gemini', [
       'data: {"candidates":[{"content":{"parts":[{"text":"{\\"say\\":\\"hi\\",\\"calls\\":[]}"}]}}]}\n',
@@ -198,7 +209,7 @@ describe('createHttpChatBrain', () => {
    * Scenario's ten thousand characters, so a nine-thousand-character paste came out cut to four
    * and the catalogue could never grow past eleven actions.
    */
-  it('shows a chat cloud the whole registry, and sends the sentence uncut', async () => {
+  it('shows a chat cloud every name, and sends the sentence uncut', async () => {
     let sent = ''
     const post = vi.fn(async (_url: string, init?: RequestInit) => {
       sent = String(init?.body)
@@ -216,15 +227,15 @@ describe('createHttpChatBrain', () => {
 
     const body: unknown = JSON.parse(sent)
     const messages = (body as { messages: { content: string }[] }).messages
-    expect(messages[0]?.content).toContain('  git.checkout —')
+    expect(messages[0]?.content).toContain('git.checkout')
     expect(messages[1]?.content).toContain('x'.repeat(9_000))
   })
 
   /**
-   * The room a cloud holds is an ASSUMPTION — the model is typed by hand, and a small one named
-   * there refuses 70 000 characters of catalogue. What degrades is one round trip, not the turn.
+   * The room a cloud holds is an ASSUMPTION — the model is typed by hand. What degrades is one
+   * round trip and the wide rules, never the names: a briefing without them is a blind model.
    */
-  it('asks again with the short list when the cloud refused the whole catalogue', async () => {
+  it('asks again with fewer rules when the cloud refused the first briefing', async () => {
     const sent: string[] = []
     let first = true
     const post = vi.fn(async (_url: string, init?: RequestInit) => {
@@ -244,8 +255,40 @@ describe('createHttpChatBrain', () => {
     })
 
     await expect(brain.think(thought)).resolves.toMatchObject({ say: 'ok' })
-    expect(sent[0]).toContain('git.checkout')
-    expect(sent[1]).not.toContain('git.checkout')
+    expect(sent[0]).toContain('List the folders YOURSELF')
+    expect(sent[1]).not.toContain('List the folders YOURSELF')
+    expect(sent[1]).toContain('git.checkout')
+  })
+
+  /**
+   * 🛑 The half a room-based memory cannot hold: the names fit every door, so a briefing composed
+   * on room alone would hand this door the wide rules again on the very next sentence — and it
+   * would refuse them again, one billed round trip per turn, for ever.
+   */
+  it('asks short from the start once it has refused a briefing', async () => {
+    const sent: string[] = []
+    let first = true
+    const post = vi.fn(async (_url: string, init?: RequestInit) => {
+      sent.push(String(init?.body))
+      if (first) {
+        first = false
+        return jsonResponse({ error: { message: 'context length exceeded' } }, 400)
+      }
+      return jsonResponse({ choices: [{ message: { content: '{"say":"ok","calls":[]}' } }] })
+    })
+    const brain = createHttpChatBrain({
+      cloud: 'deepseek',
+      chat: { kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', model: 'tiny' },
+      model: () => 'tiny',
+      credentials: () => ({ key: 'sk-test', secret: '' }),
+      fetch: post,
+    })
+
+    await brain.think(thought)
+    await brain.think(thought)
+
+    expect(sent).toHaveLength(3)
+    expect(sent[2]).not.toContain('List the folders YOURSELF')
   })
 
   /**

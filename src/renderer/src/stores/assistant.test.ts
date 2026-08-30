@@ -145,7 +145,7 @@ describe('a question the model asked', () => {
   /**
    * 🛑 The defect this whole key exists for: asked to ask, a model asked AND acted in the same
    * breath — measured on qwen3.8, « Crée un nouveau projet » came back with the question in `say`
-   * and `command.run` beside it, and both calls were run against a name nobody had given.
+   * and `command.runStudioCommand` beside it, and both calls were run against a name nobody had given.
    */
   it('runs nothing of the round that asked', async () => {
     brain(answer({ say: '', ask: asking('Quel nom ?'), calls: [] }), answer({ calls: [] }))
@@ -566,13 +566,13 @@ describe('the question asked before anything is engaged', () => {
   it('refuses a second question rather than replacing the one on screen', async () => {
     const first = useAssistant
       .getState()
-      .ask({ action: 'command.run', input: {}, commitment: 'asset' })
+      .ask({ action: 'command.runStudioCommand', input: {}, commitment: 'asset' })
     const second = useAssistant
       .getState()
       .ask({ action: 'generator.submit', input: {}, commitment: 'credits' })
 
     await expect(second).resolves.toMatchObject({ granted: false })
-    expect(useAssistant.getState().asked?.request.action).toBe('command.run')
+    expect(useAssistant.getState().asked?.request.action).toBe('command.runStudioCommand')
 
     useAssistant.getState().answer(true)
     await expect(first).resolves.toMatchObject({ granted: true })
@@ -588,6 +588,36 @@ describe('the question asked before anything is engaged', () => {
 describe('chaining rounds on one sentence', () => {
   const searched = answer({ say: 'Je cherche.', calls: [{ action: 'files.search', input: {} }] })
   const done = answer({ say: 'Voici le voilier vert.', calls: [] })
+
+  /**
+   * 🛑 Defect 1: the manuals a round opened are the WINDOW's to carry — the main process keeps
+   * nothing between two turns. Without this every round reopened the same fields, at a billed
+   * round trip each, and a model that had just been given `files.search` was blind to it again.
+   */
+  it('hands back the manuals a round opened, so the next round starts with them', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: true, data: [] })
+    const { asked } = brain({ ...searched, loaded: ['files.search'] }, done)
+
+    await useAssistant.getState().say('cherche le voilier vert')
+
+    expect(asked[0]?.loaded).toEqual([])
+    expect(asked[1]?.loaded).toEqual(['files.search'])
+  })
+
+  /**
+   * 🛑 And they die WITH the chain: kept across sentences they would grow to the whole registry,
+   * which is the 90 994-character briefing this whole mechanism replaced.
+   */
+  it('starts the next sentence with nothing open', async () => {
+    runConfirmedAction.mockResolvedValue({ ok: true, data: [] })
+    const { asked } = brain({ ...searched, loaded: ['files.search'] }, done, done)
+
+    await useAssistant.getState().say('cherche le voilier vert')
+    await useAssistant.getState().say('et maintenant')
+
+    expect(asked[1]?.loaded).toEqual(['files.search'])
+    expect(asked[2]?.loaded).toEqual([])
+  })
 
   it('asks again with what the action answered, so the next call can use it', async () => {
     runConfirmedAction.mockResolvedValue({ ok: true, data: ['Images/Voilier vert.png'] })
@@ -738,7 +768,14 @@ describe('a call that sets a named state, asked for twice', () => {
   it('lets one turn come back to a state it set before another', async () => {
     const arm = (layerId: string): AssistantCall => ({ action: 'layer.select', input: { layerId } })
     brain(
-      answer({ calls: [arm('a'), { action: 'layer.style', input: {} }, arm('b'), arm('a')] }),
+      answer({
+        calls: [
+          arm('a'),
+          { action: 'layer.setOpacityBlendAndVisibility', input: {} },
+          arm('b'),
+          arm('a'),
+        ],
+      }),
       answer(),
     )
     chainCeiling(2)

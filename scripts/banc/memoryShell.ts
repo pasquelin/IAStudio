@@ -26,7 +26,7 @@ export type MemoryShell = {
   pushed: () => readonly string[]
   /** A project as its folder names it — one maker, so the manifest version is never restated. */
   projectAt: (path: string, name: string) => Project
-  /** Files handed to the window from outside — a drop, or `media.adopt`. */
+  /** Files handed to the window from outside — a drop, or `media.indexFileInPlace`. */
   adopted: () => readonly string[]
   adopt: (relative: string) => void
   settingsOpen: () => boolean

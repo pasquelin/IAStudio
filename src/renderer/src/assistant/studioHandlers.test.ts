@@ -113,7 +113,9 @@ describe('what keeps a model from guessing', () => {
     })
 
     it('refuses calls that are not a JSON array of calls', async () => {
-      expect(await runAction('studio.batch', { calls: 'not json' })).toMatchObject({ ok: false })
+      expect(await runAction('studio.batch', { calls: 'not json' })).toMatchObject({
+        ok: false,
+      })
       expect(await runAction('studio.batch', { calls: '[]' })).toMatchObject({ ok: false })
     })
 

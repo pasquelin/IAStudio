@@ -50,7 +50,9 @@ export function ActivityListSaid({ said }: { said: string }) {
         (shown.text === null ? (
           <p className="text-muted text-mini m-0">{t('activity.saidGone')}</p>
         ) : (
-          <pre className="text-muted text-mini bg-panel max-h-96 overflow-auto p-2 font-mono break-all whitespace-pre-wrap">
+          // No height of its own and no scroller: a pane that scrolls inside a pane traps the
+          // wheel, and the journal already scrolls. The text unfolds whole.
+          <pre className="text-muted text-mini bg-panel p-2 font-mono break-all whitespace-pre-wrap">
             {shown.text}
           </pre>
         ))}

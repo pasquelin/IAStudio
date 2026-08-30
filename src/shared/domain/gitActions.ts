@@ -54,9 +54,9 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'git.commitFiles',
-    titleKey: 'assistant.actions.gitCommitFiles.title',
-    descriptionKey: 'assistant.actions.gitCommitFiles.description',
+    name: 'git.listCommitFiles',
+    titleKey: 'assistant.actions.gitListCommitFiles.title',
+    descriptionKey: 'assistant.actions.gitListCommitFiles.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

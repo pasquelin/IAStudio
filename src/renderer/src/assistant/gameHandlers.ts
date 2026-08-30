@@ -25,7 +25,11 @@ type Aimed = { node: SceneNode; type: ComponentType; documentId: string }
 
 function aim(input: Record<string, unknown>): Aimed | ActionOutcome {
   const documentId = activeSceneId(useDocuments.getState())
-  if (documentId === null) return refused('wrongSurface')
+  if (documentId === null)
+    return refused(
+      'wrongSurface',
+      'the document in front is no scene — documents.list answers what is open and of which kind, and document.activate brings a scene forward',
+    )
 
   const named = textOf(input, 'nodeId') ?? ''
   const node = nodeAimed(sceneOf(useScenes.getState(), documentId), named)

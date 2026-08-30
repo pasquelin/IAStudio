@@ -110,10 +110,9 @@ function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall |
   if (!isRecord(value)) return null
 
   /**
-   * Held to the share the model was SHOWN, which is now a decision of the briefing rather than a
-   * fact of the registry: a brain with room is shown everything, and a brain without is shown the
-   * eleven. Read off `reach` instead, a model with the whole catalogue had every call refused —
-   * and before that, a hallucinated `git.checkout` went through on the strength of its name.
+   * 🛑 Held to what the briefing NAMED, which is the whole registry now that the catalogue is
+   * names alone — a hallucinated action is still refused. Whether the model had that action's
+   * FIELDS is a different question, and one `answeredTurn` answers by opening them.
    */
   const action = assistantAction(typeof value.action === 'string' ? value.action : '')
   if (!action || !shown.has(action.name)) return null
@@ -148,7 +147,7 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
   /**
    * 🛑 Asking WINS, before the calls are even read: told to ask, a model asks and acts in the same
    * breath — `[M]` on qwen3.8, « Crée un nouveau projet » came back with the question and a
-   * `command.run` beside it. A plan written before the answer was known is written against a guess.
+   * `command.runStudioCommand` beside it. A plan written before the answer was known is written against a guess.
    */
   const ask = askIn(parsed.ask)
   if (ask) return { say, ask, calls: [] }

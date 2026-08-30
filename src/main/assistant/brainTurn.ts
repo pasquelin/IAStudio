@@ -1,4 +1,9 @@
-import type { AssistantAnswer, AssistantProgress } from '@shared/domain/assistant'
+import {
+  DISCOVERY_ACTION,
+  type ActionName,
+  type AssistantAnswer,
+  type AssistantProgress,
+} from '@shared/domain/assistant'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import { OversizedRequest } from '@main/ai/cloudChat'
 import { log } from '@main/log'
@@ -125,7 +130,7 @@ async function readOnce(
 }
 
 /**
- * One reading, and the short share when the door refused the whole one.
+ * One reading, and the shorter rules when the door refused the briefing it was given.
  *
  * The room a chat cloud holds is an assumption — the model is typed by hand — so this is what
  * degrades when the assumption is wrong: a refusal costs one round trip, not the turn.
@@ -141,40 +146,53 @@ async function readOrNarrow(
     return [briefing, await readOnce(briefing, round, budget, restart, notes)]
   } catch (error) {
     // Only a refusal of SIZE narrows. A missing key, a quota, a dropped network and a stopped
-    // turn all reach here too, and none of them is answered by a shorter catalogue.
+    // turn all reach here too, and none of them is answered by a shorter briefing.
     if (briefing.narrow === null || budget.left <= 0 || !(error instanceof OversizedRequest)) {
       throw error
     }
 
-    log.warn('assistant', `too much for this door, asking with the short list: ${String(error)}`)
+    log.warn('assistant', `too much for this door, asking with fewer rules: ${String(error)}`)
     const narrow = briefing.narrow()
     return [narrow, await readOnce(narrow, round, budget, restart, notes)]
   }
 }
 
 /**
- * The one thing a model may ask for rather than do: the rest of the catalogue — and only when it
- * is the WHOLE answer. A plan that also acts is run ENTIRE, find call included: `parseReply`
- * drops calls for one reason only, an `ask` beside them, and an asking answer has none to find.
+ * A query for manuals rather than a plan, and only when it is the WHOLE answer: a plan that also
+ * acts is one a blind model wrote, so its manuals are opened and it is written again instead.
  */
 function discoveryIn(reply: Reply | null): string | null {
   const only = reply?.calls.length === 1 ? reply.calls[0] : undefined
-  if (only?.action !== 'actions.find') return null
+  if (only?.action !== DISCOVERY_ACTION) return null
 
   const query = only.input['query']
   return typeof query === 'string' && query.trim() !== '' ? query : null
 }
 
+/**
+ * 🛑 The actions a reply named without having their FIELDS — the catalogue is names alone, so this
+ * is the ordinary way a model reaches something new rather than a fault.
+ *
+ * Refusing the reply over one was measured at 25 refusals and as many turns lost, and the retry
+ * beside it complained about unreadable JSON — which was never what was wrong.
+ */
+const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonly ActionName[] => [
+  ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !loaded.includes(name))),
+]
+
 // Said plainly rather than thrown: the caller has a person waiting, and "I did not understand"
 // is a better answer than a stack trace — and the cost was still incurred.
-const answerOf = (read: Read, spentBefore = 0): AssistantAnswer => {
+const answerOf = (read: Read, spentBefore: number, shown: Briefing): AssistantAnswer => {
   const cost = read.cost + spentBefore
-  return read.reply ? { ...read.reply, cost } : { say: '', calls: [], cost }
+  const opened = shown.opened.length > 0 ? { loaded: shown.opened } : {}
+  return read.reply ? { ...read.reply, ...opened, cost } : { say: '', calls: [], ...opened, cost }
 }
 
 /**
- * One answer for one sentence, whoever is doing the thinking: at most two briefings — the one the
- * room allowed, and the same one with what a query found — inside `TURN_ATTEMPTS` round trips.
+ * One answer for one sentence, whoever is doing the thinking, inside `TURN_ATTEMPTS` round trips.
+ *
+ * A round that names what it has no fields for is not an answer: its manuals are opened and the
+ * model is asked again with them. `actions.find` is the same move by a WORD rather than a name.
  */
 export async function answeredTurn(
   briefing: Briefing,
@@ -186,15 +204,29 @@ export async function answeredTurn(
   // 🛑 Here and in no brain: this is what KNOWS an attempt is starting, and an answer thrown away
   // appended to the one that replaces it reads as one answer contradicting itself.
   const restart = () => onProgress?.({ delta: '', restart: true })
+  let shown = briefing
+  let spent = 0
 
-  const [shown, first] = await readOrNarrow(briefing, round, budget, restart, notes)
-  const query = discoveryIn(first.reply)
-  if (query === null || shown.expand === null || budget.left <= 0) return answerOf(first)
+  for (;;) {
+    // Through the same fallback every time: a briefing that has grown by a manual is longer than
+    // the one that just went through, so it is the read most likely to be refused for its size.
+    const [used, read] = await readOrNarrow(shown, round, budget, restart, notes)
+    shown = used
+    const before = spent
+    spent += read.cost
+    if (budget.left <= 0) return answerOf(read, before, shown)
 
-  log.info('assistant', `the model asked what else there is: "${query}"`)
-  // Through the same fallback: an expansion is longer than the briefing that just went through,
-  // so it is the one read most likely to be refused for its size.
-  const [, second] = await readOrNarrow(shown.expand(query), round, budget, restart, notes)
+    const query = discoveryIn(read.reply)
+    if (query !== null && shown.expand !== null) {
+      log.info('assistant', `the model asked what else there is: "${query}"`)
+      shown = shown.expand(query)
+      continue
+    }
 
-  return answerOf(second, first.cost)
+    const missing = unloadedIn(read.reply, shown.loaded)
+    if (missing.length === 0) return answerOf(read, before, shown)
+
+    log.info('assistant', `opening the manual of ${missing.join(', ')}`)
+    shown = shown.withLoaded(missing)
+  }
 }

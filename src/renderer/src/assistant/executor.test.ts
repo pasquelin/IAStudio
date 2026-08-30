@@ -161,7 +161,9 @@ describe('opening a workspace', () => {
   it('refuses when the name field is called off', async () => {
     createDocumentIn.mockResolvedValue(null)
 
-    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+    expect(
+      await runAction('workspace.open', { workspace: '3d', createDocument: true }),
+    ).toMatchObject({
       ok: false,
       refusal: 'declined',
     })
@@ -170,7 +172,9 @@ describe('opening a workspace', () => {
   it('refuses to make one with no project to write it in', async () => {
     useProject.setState({ project: null })
 
-    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+    expect(
+      await runAction('workspace.open', { workspace: '3d', createDocument: true }),
+    ).toMatchObject({
       ok: false,
       refusal: 'noProject',
     })
@@ -191,7 +195,9 @@ describe('running a command', () => {
     const stop = subscribeToCommands(command => heard.push(command) > 0)
     const disarm = armCommandScope('canvas')
 
-    expect(await runAction('command.run', { command: 'canvas.zoomIn' })).toEqual({ ok: true })
+    expect(await runAction('command.runStudioCommand', { command: 'canvas.zoomIn' })).toEqual({
+      ok: true,
+    })
 
     expect(heard).toEqual(['canvas.zoomIn'])
     disarm()
@@ -207,9 +213,9 @@ describe('running a command', () => {
     const heard: string[] = []
     const stop = subscribeToCommands(command => heard.push(command) > 0)
 
-    const outcome = await runAction('command.run', { command: 'scene.frame' })
+    const outcome = await runAction('command.runStudioCommand', { command: 'scene.frame' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'wrongSurface' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'wrongSurface' })
     expect(heard).toEqual([])
     stop()
   })
@@ -221,7 +227,7 @@ describe('running a command', () => {
    * registry and the field parted company.
    */
   it('refuses a command nothing declares, at the schema rather than at the surface', async () => {
-    const outcome = await runAction('command.run', { command: 'canvas.summonADragon' })
+    const outcome = await runAction('command.runStudioCommand', { command: 'canvas.summonADragon' })
 
     expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
   })
@@ -229,7 +235,7 @@ describe('running a command', () => {
   // The catalogue offers these to the model, so refusing them all was the assistant announcing
   // "creating a new project" and then doing nothing at all.
   it('runs the application’s own commands, through the path the native menu takes', async () => {
-    const outcome = await runAction('command.run', { command: 'app.settings' })
+    const outcome = await runAction('command.runStudioCommand', { command: 'app.settings' })
 
     expect(outcome).toEqual({ ok: true })
   })
@@ -240,9 +246,9 @@ describe('running a command', () => {
    * had been chosen. `project.create` takes a name and answers what it made.
    */
   it('refuses a command that raises a system dialogue', async () => {
-    const outcome = await runAction('command.run', { command: 'project.new' })
+    const outcome = await runAction('command.runStudioCommand', { command: 'project.new' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'nativeDialog' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'nativeDialog' })
     expect(createPicked).not.toHaveBeenCalled()
   })
 })
@@ -371,7 +377,7 @@ describe('submitting what was prepared', () => {
   it('opens the generator, and refuses, when no panel is mounted', async () => {
     const outcome = await runAction('generator.submit', {})
 
-    expect(outcome).toEqual({ ok: false, refusal: 'generatorClosed' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'generatorClosed' })
     expect(revealTool).toHaveBeenCalledWith('generator')
   })
 
@@ -379,12 +385,12 @@ describe('submitting what was prepared', () => {
   it('answers the model, the operation and the destination that are armed', async () => {
     const stop = registerGenerator(aGenerator())
 
-    expect(await runAction('generator.armed', {})).toEqual({ ok: true, data: ARMED })
+    expect(await runAction('generator.readArmedGeneration', {})).toEqual({ ok: true, data: ARMED })
     stop()
   })
 
   it('refuses to say what is armed with no panel mounted', async () => {
-    expect(await runAction('generator.armed', {})).toEqual({
+    expect(await runAction('generator.readArmedGeneration', {})).toMatchObject({
       ok: false,
       refusal: 'generatorClosed',
     })
@@ -393,7 +399,7 @@ describe('submitting what was prepared', () => {
   it('refuses when the panel is up but nothing is armed', async () => {
     const stop = registerGenerator(aGenerator({ armed: () => null }))
 
-    expect(await runAction('generator.submit', {})).toEqual({
+    expect(await runAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'nothingPrepared',
     })
@@ -422,7 +428,7 @@ describe('the prompt assistance, now asked for', () => {
   it('refuses to suggest with no model armed', async () => {
     installFakeBridge()
 
-    expect(await runAction('prompt.suggest', { draft: 'un chevalier' })).toEqual({
+    expect(await runAction('prompt.suggest', { draft: 'un chevalier' })).toMatchObject({
       ok: false,
       refusal: 'generatorClosed',
     })
@@ -457,7 +463,7 @@ describe('the prompt assistance, now asked for', () => {
     installFakeBridge()
     const stop = registerGenerator(aGenerator())
 
-    expect(await runAction('prompt.describeStyle', {})).toEqual({
+    expect(await runAction('prompt.describeStyle', {})).toMatchObject({
       ok: false,
       refusal: 'noReference',
     })
@@ -503,7 +509,7 @@ describe('asking before acting', () => {
       Promise.resolve({ granted: true, input: { command: 'canvas.enlarge' } }),
     )
 
-    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    await runConfirmedAction('command.runStudioCommand', { command: 'canvas.cutout' })
     stop()
     disarm()
     stopHearing()
@@ -518,7 +524,9 @@ describe('asking before acting', () => {
   it('refuses an amendment the question was not asked about', async () => {
     const stop = registerConfirmer(() => Promise.resolve({ granted: true, input: { nothing: 1 } }))
 
-    const outcome = await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    const outcome = await runConfirmedAction('command.runStudioCommand', {
+      command: 'canvas.cutout',
+    })
     stop()
 
     expect(outcome).toMatchObject({ ok: false, refusal: 'formChanged' })
@@ -553,7 +561,7 @@ describe('asking before acting', () => {
     const stopGenerator = registerGenerator(aGenerator({ submit }))
     const stopConfirmer = registerConfirmer(saying(false))
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'declined',
     })
@@ -571,7 +579,7 @@ describe('asking before acting', () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
     const stop = registerGenerator(aGenerator({ submit }))
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -602,7 +610,7 @@ describe('asking before acting', () => {
       return saying(true)(request)
     })
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'formChanged',
     })
@@ -617,10 +625,10 @@ describe('asking before acting', () => {
     const ask = vi.fn(saying(false))
     const stop = registerConfirmer(ask)
 
-    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    await runConfirmedAction('command.runStudioCommand', { command: 'canvas.cutout' })
 
     expect(ask).toHaveBeenCalledWith({
-      action: 'command.run',
+      action: 'command.runStudioCommand',
       input: { command: 'canvas.cutout' },
       commitment: 'asset',
     })
@@ -677,22 +685,32 @@ describe('asking across the wire', () => {
 
   it('runs the same call when it comes back with the token', async () => {
     const cutout = { command: 'canvas.cutout' }
-    const first = await runConfirmedAction('command.run', cutout, {})
+    const first = await runConfirmedAction('command.runStudioCommand', cutout, {})
     const consent = tokenOf(refusalDetail(first))
 
     // Past the gate, which is the whole of what a token buys. What the surface then makes of the
     // command is `coreHandlers`' own case, not this one's.
-    expect(await runConfirmedAction('command.run', cutout, { consent })).not.toMatchObject({
+    expect(
+      await runConfirmedAction('command.runStudioCommand', cutout, { consent }),
+    ).not.toMatchObject({
       refusal: 'needsConsent',
     })
   })
 
   it('does not let a token answer for a call it was not minted for', async () => {
-    const first = await runConfirmedAction('command.run', { command: 'canvas.cutout' }, {})
+    const first = await runConfirmedAction(
+      'command.runStudioCommand',
+      { command: 'canvas.cutout' },
+      {},
+    )
     const consent = tokenOf(refusalDetail(first))
 
     expect(
-      await runConfirmedAction('command.run', { command: 'canvas.enlarge' }, { consent }),
+      await runConfirmedAction(
+        'command.runStudioCommand',
+        { command: 'canvas.enlarge' },
+        { consent },
+      ),
     ).toMatchObject({ ok: false, refusal: 'needsConsent' })
   })
 
@@ -702,7 +720,9 @@ describe('asking across the wire', () => {
    */
   it('carries the door down into a lot, so its calls are asked across the wire too', async () => {
     const stop = registerConfirmer(saying(true))
-    const calls = JSON.stringify([{ action: 'command.run', input: { command: 'canvas.cutout' } }])
+    const calls = JSON.stringify([
+      { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } },
+    ])
 
     const outcome = await runConfirmedAction('studio.batch', { calls }, {})
 
@@ -718,7 +738,7 @@ describe('asking across the wire', () => {
   it('runs nothing at all when a later call of a lot wants a token', async () => {
     const calls = JSON.stringify([
       { action: 'workspace.open', input: { workspace: '3d' } },
-      { action: 'command.run', input: { command: 'canvas.cutout' } },
+      { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } },
     ])
 
     expect(await runConfirmedAction('studio.batch', { calls }, {})).toMatchObject({
@@ -731,7 +751,7 @@ describe('asking across the wire', () => {
   /** One round trip rather than one per engaging call, which is the whole point of a lot. */
   it('hands back a token for every call of the lot that was missing one', async () => {
     const calls = [
-      { action: 'command.run', input: { command: 'canvas.cutout' } },
+      { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } },
       { action: 'project.create', input: { path: '/tmp/p' } },
     ]
 
@@ -754,7 +774,7 @@ describe('asking across the wire', () => {
    * still stand, or the lot comes back one token short of a different call every round.
    */
   it('leaves a token standing when the lot it answered for is refused', async () => {
-    const one = { action: 'command.run', input: { command: 'canvas.cutout' } }
+    const one = { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } }
     const two = { action: 'project.create', input: { path: '/tmp/p' } }
 
     const first = await runConfirmedAction('studio.batch', { calls: JSON.stringify([one]) }, {})
@@ -778,7 +798,7 @@ describe('asking across the wire', () => {
   /** 🛑 One yes, one call: `holdsConsent` does not spend, so the same token offered twice in a
    * lot cleared both calls. */
   it('refuses a lot that offers one token for two calls', async () => {
-    const call = { action: 'command.run', input: { command: 'canvas.cutout' } }
+    const call = { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } }
     const first = await runConfirmedAction('studio.batch', { calls: JSON.stringify([call]) }, {})
     const armed = { ...call, input: { ...call.input, consent: tokenOf(refusalDetail(first)) } }
 
@@ -875,7 +895,7 @@ describe('asking across the wire', () => {
     const ask = vi.fn(saying(false))
     const stop = registerConfirmer(ask)
 
-    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    await runConfirmedAction('command.runStudioCommand', { command: 'canvas.cutout' })
 
     expect(ask).toHaveBeenCalled()
     stop()
@@ -902,7 +922,7 @@ describe('what an armed studio lets through without asking', () => {
     const ask = vi.fn(saying(false))
     const stop = registerConfirmer(ask)
 
-    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    await runConfirmedAction('command.runStudioCommand', { command: 'canvas.cutout' })
 
     expect(ask).toHaveBeenCalled()
     stop()
@@ -913,7 +933,9 @@ describe('what an armed studio lets through without asking', () => {
 
     // No confirmer registered: without the delegation this is `noConfirmer`, which is the whole
     // of what "a client working while nobody is at the machine" used to run into.
-    expect(await runConfirmedAction('command.run', { command: 'canvas.cutout' })).not.toEqual({
+    expect(
+      await runConfirmedAction('command.runStudioCommand', { command: 'canvas.cutout' }),
+    ).not.toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -929,7 +951,7 @@ describe('what an armed studio lets through without asking', () => {
     // Three of five: through. Three more is six, which is past five — so the second one asks, and
     // with nobody registered to ask it refuses.
     expect(await runConfirmedAction('generator.submit', {})).toMatchObject({ ok: true })
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -942,7 +964,7 @@ describe('what an armed studio lets through without asking', () => {
     installFakeBridge({ provider: { estimateCost: () => Promise.reject(new Error('no price')) } })
     const stopGenerator = registerGenerator(aGenerator())
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -1005,8 +1027,8 @@ describe('what a call engages', () => {
   })
 
   it('reads the commitment of the command a run names, not of the action', () => {
-    expect(commitmentOfCall('command.run', { command: 'canvas.cutout' })).toBe('asset')
-    expect(commitmentOfCall('command.run', { command: 'canvas.zoomIn' })).toBe('none')
+    expect(commitmentOfCall('command.runStudioCommand', { command: 'canvas.cutout' })).toBe('asset')
+    expect(commitmentOfCall('command.runStudioCommand', { command: 'canvas.zoomIn' })).toBe('none')
   })
 
   // Recording a version adds one; amending REPLACES the one already there, message and parent

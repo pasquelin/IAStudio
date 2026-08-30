@@ -63,5 +63,11 @@ export function frontDocument(): { id: string; path: string } | null {
 
 /** Aiming, whichever space holds the document. `target.select` is the one spoken door to it. */
 export function aimAt(id: string): ActionOutcome {
-  return frontTargets()?.select(id) ?? refused('wrongSurface')
+  return (
+    frontTargets()?.select(id) ??
+    refused(
+      'wrongSurface',
+      'the document in front has nothing that can be aimed at — documents.list answers what is open and of which kind, and only an image, a scene and a montage carry targets',
+    )
+  )
 }

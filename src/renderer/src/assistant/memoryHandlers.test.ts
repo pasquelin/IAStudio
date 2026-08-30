@@ -111,6 +111,6 @@ describe('what a client reaches the memory by', () => {
   })
 
   it('refuses a recall with no question in it', async () => {
-    expect(await run('memory.recall', {})).toEqual({ ok: false, refusal: 'badInput' })
+    expect(await run('memory.recall', {})).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 })

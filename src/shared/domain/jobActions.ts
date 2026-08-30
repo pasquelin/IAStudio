@@ -17,9 +17,9 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
      * goes and asks Scenario's own MCP — which is not this studio, and would not see what the
      * form on screen already holds.
      */
-    name: 'model.schema',
-    titleKey: 'assistant.actions.modelSchema.title',
-    descriptionKey: 'assistant.actions.modelSchema.description',
+    name: 'models.readGenerationModelFields',
+    titleKey: 'assistant.actions.modelsReadGenerationModelFields.title',
+    descriptionKey: 'assistant.actions.modelsReadGenerationModelFields.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -40,9 +40,9 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'job.get',
-    titleKey: 'assistant.actions.jobGet.title',
-    descriptionKey: 'assistant.actions.jobGet.description',
+    name: 'job.readCloudGeneration',
+    titleKey: 'assistant.actions.jobReadCloudGeneration.title',
+    descriptionKey: 'assistant.actions.jobReadCloudGeneration.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -53,9 +53,9 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
      * Bounded under the two minutes a remote call is given: a wait that outlived its own answer
      * would hand the client a timeout instead of the job it was watching.
      */
-    name: 'job.wait',
-    titleKey: 'assistant.actions.jobWait.title',
-    descriptionKey: 'assistant.actions.jobWait.description',
+    name: 'job.waitForCloudGeneration',
+    titleKey: 'assistant.actions.jobWaitForCloudGeneration.title',
+    descriptionKey: 'assistant.actions.jobWaitForCloudGeneration.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -72,9 +72,9 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'job.cancel',
-    titleKey: 'assistant.actions.jobCancel.title',
-    descriptionKey: 'assistant.actions.jobCancel.description',
+    name: 'job.cancelCloudGeneration',
+    titleKey: 'assistant.actions.jobCancelCloudGeneration.title',
+    descriptionKey: 'assistant.actions.jobCancelCloudGeneration.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -85,9 +85,9 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
      * The studio's OWN long tasks — an ffmpeg render, an ingest, an index — which are not jobs:
      * a job runs on Scenario's side and is cancelled there. Both are followed by a task id.
      */
-    name: 'task.cancel',
-    titleKey: 'assistant.actions.taskCancel.title',
-    descriptionKey: 'assistant.actions.taskCancel.description',
+    name: 'task.cancelLocalTask',
+    titleKey: 'assistant.actions.taskCancelLocalTask.title',
+    descriptionKey: 'assistant.actions.taskCancelLocalTask.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

@@ -79,7 +79,7 @@ describe('the settings', () => {
       { delegateFiles: true },
       { delegateRemote: true },
     ]) {
-      expect(await runAction('settings.write', { settings: { mcp: change } })).toEqual({
+      expect(await runAction('settings.write', { settings: { mcp: change } })).toMatchObject({
         ok: false,
         refusal: 'notAllowed',
       })
@@ -125,7 +125,7 @@ describe('the accounts', () => {
     expect(await runAction('accounts.activate', { accountId: 'acc-2' })).toMatchObject({ ok: true })
     expect(activate).toHaveBeenCalledWith('acc-2')
 
-    expect(await runAction('accounts.activate', { accountId: 'acc-9' })).toEqual({
+    expect(await runAction('accounts.activate', { accountId: 'acc-9' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -148,12 +148,16 @@ describe('the buttons of the settings window', () => {
     const runSettingAction = vi.fn(async () => {})
     installFakeBridge({ settings: { runAction: runSettingAction } })
 
-    expect(await runAction('settings.action', { action: 'advanced.openLogFolder' })).toMatchObject({
+    expect(
+      await runAction('settings.pressButton', { action: 'advanced.openLogFolder' }),
+    ).toMatchObject({
       ok: true,
     })
     expect(runSettingAction).toHaveBeenCalledWith('advanced.openLogFolder')
 
-    expect(await runAction('settings.action', { action: 'advanced.selfDestruct' })).toMatchObject({
+    expect(
+      await runAction('settings.pressButton', { action: 'advanced.selfDestruct' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -164,10 +168,12 @@ describe('the buttons of the settings window', () => {
    * setting back to its default — are asked about, and the four others are not.
    */
   it('asks first for the two nothing takes back', () => {
-    expect(commitmentOfCall('settings.action', { action: 'advanced.reset' })).toBe('files')
-    expect(commitmentOfCall('settings.action', { action: 'advanced.installResolveBridge' })).toBe(
-      'files',
+    expect(commitmentOfCall('settings.pressButton', { action: 'advanced.reset' })).toBe('files')
+    expect(
+      commitmentOfCall('settings.pressButton', { action: 'advanced.installResolveBridge' }),
+    ).toBe('files')
+    expect(commitmentOfCall('settings.pressButton', { action: 'advanced.openDevtools' })).toBe(
+      'none',
     )
-    expect(commitmentOfCall('settings.action', { action: 'advanced.openDevtools' })).toBe('none')
   })
 })

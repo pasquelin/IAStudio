@@ -123,7 +123,7 @@ export const ADJUSTMENT_KINDS: readonly AdjustmentKind[] = [
 
 /**
  * How far each dial swings. Beside the kinds rather than in the panel that draws them: the slider
- * and the schema of `layer.adjustment` publish the same range, and a second copy would drift.
+ * and the schema of `layer.setAdjustmentAmount` publish the same range, and a second copy would drift.
  */
 export const DIAL_RANGE: Readonly<Record<AdjustmentKind, { min: number; max: number }>> = {
   // Stops, so ±3 is the range a photograph is recoverable within.

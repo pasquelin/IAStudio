@@ -8,7 +8,7 @@ import { numberOf, oneOf, textOf, textsOf } from './actionInputs'
 /**
  * The Scenario library on the other side of the wire.
  *
- * Every narrowing is asked affirmatively and omitted when absent, exactly as `assets.search` does:
+ * Every narrowing is asked affirmatively and omitted when absent, exactly as `assets.searchProjectCatalogue` does:
  * an empty list is not "everything of no kind", it is a question the API does not answer.
  */
 
@@ -38,20 +38,28 @@ function browseQuery(input: Record<string, unknown>): CloudQuery {
 }
 
 export const CLOUD_HANDLERS: ActionHandlers = {
-  'cloud.browse': input => {
+  'cloud.browseAccountLibrary': input => {
     const query = browseQuery(input)
     // Refused rather than answered in another order, as a kind the studio does not have is: with
     // no words to rank by, relevance is whatever order the shard replies in.
     if (query.order === 'relevance' && query.text === undefined) {
-      return Promise.resolve(refused('badInput'))
+      return Promise.resolve(
+        refused(
+          'badInput',
+          `order "relevance" wants "text" to rank against — give the words, or ask for one of: ${CLOUD_ORDERS.filter(one => one !== 'relevance').join(', ')}`,
+        ),
+      )
     }
 
     return withBridge(bridge => bridge.cloud.browse(query))
   },
 
-  'cloud.explore': input => {
+  'cloud.explorePublicFeed': input => {
     const type = oneOf(input, 'type', CLOUD_ASSET_TYPES)
-    if (!type) return Promise.resolve(refused('badInput'))
+    if (!type)
+      return Promise.resolve(
+        refused('badInput', `"type" wants one of: ${CLOUD_ASSET_TYPES.join(', ')}`),
+      )
 
     const cursor = textOf(input, 'cursor')
     const pageSize = numberOf(input, 'pageSize')
@@ -63,14 +71,14 @@ export const CLOUD_HANDLERS: ActionHandlers = {
     return withBridge(bridge => bridge.cloud.explore(query))
   },
 
-  'cloud.similar': input =>
+  'cloud.findSimilarPublished': input =>
     withBridge(bridge => bridge.cloud.similar(textOf(input, 'assetId') ?? '')),
 
-  'cloud.plan': input => {
+  'cloud.previewSync': input => {
     const policy = oneOf(input, 'policy', SYNC_POLICIES)
     return policy
       ? withBridge(bridge => bridge.cloud.plan(textsOf(input, 'assetIds'), policy))
-      : Promise.resolve(refused('badInput'))
+      : Promise.resolve(refused('badInput', `"policy" wants one of: ${SYNC_POLICIES.join(', ')}`))
   },
 
   'cloud.pull': input => withBridge(bridge => bridge.cloud.pull(textsOf(input, 'remoteAssetIds'))),

@@ -41,9 +41,8 @@ import { STATE_ACTIONS } from './stateActions'
  * the model that chooses it — see spec § 9.
  *
  * One table, read by two surfaces that must never disagree: the assistant inside the window,
- * which lists the model as much of it as its brain has room for, and the MCP server, which
- * publishes all of it as tools. What the assistant is SHOWN is decided by that room —
- * `studioBriefing` — and `reach` only names the short share it falls back to.
+ * which is shown every NAME and asks for the manuals it needs — `studioBriefing` — and the MCP
+ * server, which publishes all of it as tools.
  */
 
 export * from './assistantAction'
@@ -59,7 +58,7 @@ export { commitmentOfCommand } from './coreActions'
  *
  * 🛑 The families are DATA, not a spread: the briefing heads its catalogue with them, and read
  * off the first token of a name instead it cut 231 actions into 83 headings that grouped nothing
- * — `model.schema` and `model.textures` belong to two families and shared a heading.
+ * — two actions of different families shared a heading.
  */
 export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'core', actions: CORE_ACTIONS },
@@ -97,11 +96,6 @@ export const ACTION_REGISTRY: readonly AssistantAction[] = ACTION_FAMILIES.flatM
   family => family.actions,
 )
 
-/** Which family publishes each action — what the catalogue's headings are read from. */
-export const familyOfAction: ReadonlyMap<string, string> = new Map(
-  ACTION_FAMILIES.flatMap(family => family.actions.map(one => [one.name, family.name])),
-)
-
 /**
  * What one door carries: what is marked for it, plus what every door shares.
  *
@@ -129,8 +123,8 @@ const searchable = (): readonly Searchable[] =>
   ))
 
 /**
- * The actions a word or two points at, best first — how a model shown the short list asks for
- * the rest of the registry.
+ * The actions a word or two points at, best first — how a model that cannot name what it needs
+ * asks for the manuals anyway.
  *
  * Matched on the name and on the ENGLISH description, which is what a model is shown of an
  * action it can already see: one text for both, or a search would find what the catalogue does
@@ -154,11 +148,29 @@ const scoreOf = (wanted: readonly string[], found: readonly string[]): number =>
   wanted.filter(word => found.some(one => one.startsWith(word))).length
 
 /**
- * The action a brain answers ITSELF, to hand a model the share of the catalogue it was not shown
- * — see `answeredTurn`. Named here because two modules must leave it out of what they list and
- * of what they search, and a name spelled twice is a name that drifts.
+ * The action a brain answers ITSELF, to open the manuals a WORD points at where the model cannot
+ * name what it needs — see `answeredTurn`. Named here because two modules must leave it out of
+ * what they search, and a name spelled twice is a name that drifts.
  */
 export const DISCOVERY_ACTION: ActionName = 'actions.find'
+
+/**
+ * 🛑 How many manuals one chain may carry, and it is a BOUND on the briefing rather than a taste:
+ * the window names them, so without this a renderer could grow the catalogue block without limit.
+ */
+export const MOST_LOADED = 40
+
+/**
+ * What a chain carries forward: the manuals already open, plus what the last round opened.
+ *
+ * The NEWEST survive the cap: what a round has just asked for is what it is about to call.
+ */
+export function loadedWith(
+  held: readonly ActionName[],
+  added: readonly ActionName[],
+): readonly ActionName[] {
+  return [...held, ...added.filter(name => !held.includes(name))].slice(-MOST_LOADED)
+}
 
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
@@ -222,6 +234,16 @@ export type AssistantThought = {
    * and every id is checked against the live document by the handler before anything moves.
    */
   targets?: readonly Target[]
+  /**
+   * The actions whose MANUAL — description and fields — the briefing already carries in this
+   * chain. The catalogue itself is names alone, so this is what the model can actually fill in.
+   *
+   * 🛑 The window's to say, unlike `context` and `state`: what one round opened has to survive
+   * into the next, and the main process keeps nothing between two turns. Declared and BOUNDED in
+   * `parseThought` — a field the schema does not name is stripped, and one it does not bound is a
+   * briefing a renderer can inflate. Unknown names are dropped rather than refused.
+   */
+  loaded?: readonly ActionName[]
 }
 
 /**
@@ -235,6 +257,11 @@ export type AssistantProgress = {
   delta: string
   /** What the prompt cost. Absent until the door says, which is at the end of the answer. */
   promptTokens?: number
+  /**
+   * What the prompt carried in CHARACTERS, for a door bounded in characters rather than in
+   * tokens — Scenario's `instruction` field is one. Never comparable to `promptTokens`.
+   */
+  promptChars?: number
   /** What the answer has cost. Absent for a door that counts nothing. */
   replyTokens?: number
   /**
@@ -251,9 +278,29 @@ export type AssistantProgress = {
 }
 
 /**
+ * What the door in front reads in ONE go — asked BEFORE a turn, so the composer can show the
+ * bound with nothing typed yet. `null` from a door that names none, which the screen says rather
+ * than dresses up as a ratio.
+ *
+ * 🛑 The unit is part of the answer and is never assumed: Scenario bounds its `instruction` field
+ * in CHARACTERS while a local runtime bounds its window in TOKENS, and reading one against the
+ * other is exactly the `2 067 / 4 096` once shown for DeepSeek — a briefing budget worn as a
+ * window.
+ */
+export type AssistantWindow = {
+  size: number
+  unit: 'tokens' | 'characters'
+  /** True when the figure is a DECLARED fallback, the door having failed to read its own. */
+  assumed: boolean
+}
+
+/**
  * 🛑 Nothing to report is `null`, never an empty frame: a door sends protocol frames of its own —
  * `ping`, `content_block_start`, `message_stop` — and each one relayed is an IPC message and a
  * render for no words.
+ *
+ * 🛑 It counts in TOKENS and knows nothing of `promptChars`: a door bounded by a length composes
+ * its own frame, or this would answer `null` for the one frame it has to send.
  */
 export const assistantProgress = (
   delta: string,
@@ -324,6 +371,13 @@ export type AssistantAnswer = {
   ask?: AssistantAsk
   calls: readonly AssistantCall[]
   /**
+   * Which manuals the briefing held by the end of this turn — see `AssistantThought.loaded`.
+   *
+   * Absent where nothing was opened, which is the ordinary turn. The window hands it back on the
+   * next round of the SAME chain and drops it when the chain ends.
+   */
+  loaded?: readonly ActionName[]
+  /**
    * What the turn cost, in creative units.
    *
    * On the answer rather than reported separately: the modal shows a running total, and a figure
@@ -337,7 +391,7 @@ export function assistantAction(name: string): AssistantAction | null {
 }
 
 /**
- * What one particular call would engage, which for `command.run` is a fact of the command named
+ * What one particular call would engage, which for `command.runStudioCommand` is a fact of the command named
  * rather than of the action.
  *
  * Shared because both sides ask: the window asks before it acts, and the MCP server asks before

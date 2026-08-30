@@ -49,7 +49,7 @@ export const SKY_SCENARIOS: readonly Scenario[] = [
     // nothing at all would pass.
     setup: async studio => {
       await sky()(studio)
-      await studio.run('skybox.adjust', { contrast: 1.4, saturation: 1.2 })
+      await studio.run('skybox.adjustImage', { contrast: 1.4, saturation: 1.2 })
     },
     passed: run => !read.adjusted(run),
   },
@@ -59,7 +59,7 @@ export const SKY_SCENARIOS: readonly Scenario[] = [
     // Put out first: a sky opens with its probes ON, so « affiche-les » asks for nothing.
     setup: async studio => {
       await sky()(studio)
-      await studio.run('skybox.view', { probes: false })
+      await studio.run('skybox.setViewOptions', { probes: false })
     },
     passed: run => read.skyView(run)?.probes === true,
   },
@@ -89,7 +89,7 @@ export const SKY_SCENARIOS: readonly Scenario[] = [
     // One channel already filled, so « la normal map » is a SECOND one and not the first.
     setup: async studio => {
       await material()(studio)
-      await studio.run('material.channel', {
+      await studio.run('material.setChannelImage', {
         channel: 'baseColor',
         assetId: assetOf(studio, 'weathered oak planks, seamless.png'),
       })

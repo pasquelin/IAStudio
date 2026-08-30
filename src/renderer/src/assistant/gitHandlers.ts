@@ -28,7 +28,7 @@ export const GIT_HANDLERS: ActionHandlers = {
   'git.log': input =>
     git(port => port.log(numberOf(input, 'limit') ?? DEFAULT_LOG, numberOf(input, 'skip') ?? 0)),
 
-  'git.commitFiles': input => git(port => port.commitFiles(textOf(input, 'hash') ?? '')),
+  'git.listCommitFiles': input => git(port => port.commitFiles(textOf(input, 'hash') ?? '')),
 
   // A null commit is the working tree against the last recorded version, which is what a client
   // that named none means — not a missing argument.
@@ -60,7 +60,7 @@ export const GIT_HANDLERS: ActionHandlers = {
     const side = oneOf(input, 'side', CONFLICT_SIDES)
     return side
       ? git(port => port.resolve(textsOf(input, 'paths'), side))
-      : Promise.resolve(refused('badInput'))
+      : Promise.resolve(refused('badInput', `"side" wants one of: ${CONFLICT_SIDES.join(', ')}`))
   },
 
   'git.fetch': () => git(port => port.fetch()),

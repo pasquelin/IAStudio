@@ -34,7 +34,7 @@ async function cameraId(): Promise<string> {
   return added.ok ? (added.data as { nodeId: string }).nodeId : ''
 }
 
-/** What the catalogue holds for this suite: `node.addModel` and `world.environment` read it. */
+/** What the catalogue holds for this suite: `node.addModel` and `world.setSceneLighting` read it. */
 const inCatalogue = (id: string, type: Asset['type']): Asset => ({
   id,
   name: id,
@@ -72,8 +72,8 @@ describe('reading the scene in front', () => {
   it('refuses every action of the family while no scene is in front', async () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
-    expect(await runAction('scene.state', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
-    expect(await runAction('node.add', { kind: 'box' })).toEqual({
+    expect(await runAction('scene.state', {})).toMatchObject({ ok: false, refusal: 'wrongSurface' })
+    expect(await runAction('node.add', { kind: 'box' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -126,7 +126,7 @@ describe('building a scene', () => {
     await runAction('node.rename', { nodeId, name: 'Socle' })
     expect(nodeNamed('Socle')).toBeTruthy()
 
-    await runAction('node.visible', { nodeId, visible: false })
+    await runAction('node.setVisible', { nodeId, visible: false })
     expect(nodeNamed('Socle')?.visible).toBe(false)
 
     await runAction('node.remove', { nodeId })
@@ -165,10 +165,12 @@ describe('placing and dressing an object', () => {
     const lamp = await runAction('node.add', { kind: 'point', name: 'Lampe' })
     const lampId = lamp.ok ? (lamp.data as { nodeId: string }).nodeId : ''
 
-    await runAction('node.material', { nodeId: meshId, color: '#ff8800', roughness: 0.2 })
+    await runAction('node.setMeshMaterial', { nodeId: meshId, color: '#ff8800', roughness: 0.2 })
     expect(nodeNamed('Caisse')).toMatchObject({ material: { color: '#ff8800', roughness: 0.2 } })
 
-    expect(await runAction('node.material', { nodeId: lampId, color: '#ffffff' })).toMatchObject({
+    expect(
+      await runAction('node.setMeshMaterial', { nodeId: lampId, color: '#ffffff' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -180,10 +182,12 @@ describe('placing and dressing an object', () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const meshId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
 
-    await runAction('node.light', { nodeId: lampId, color: '#ffeedd', intensity: 4 })
+    await runAction('node.setLightSettings', { nodeId: lampId, color: '#ffeedd', intensity: 4 })
     expect(nodeNamed('Lampe')).toMatchObject({ light: { color: '#ffeedd', intensity: 4 } })
 
-    expect(await runAction('node.light', { nodeId: meshId, intensity: 2 })).toMatchObject({
+    expect(
+      await runAction('node.setLightSettings', { nodeId: meshId, intensity: 2 }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -197,14 +201,14 @@ describe('placing and dressing an object', () => {
     const added = await runAction('node.add', { kind: 'hemisphere', name: 'Ciel' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('node.light', { nodeId, color: '#ff0000', intensity: 3 })).toMatchObject(
-      {
-        ok: false,
-        refusal: 'badInput',
-      },
-    )
+    expect(
+      await runAction('node.setLightSettings', { nodeId, color: '#ff0000', intensity: 3 }),
+    ).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
 
-    await runAction('node.light', { nodeId, skyColor: '#ff0000', intensity: 3 })
+    await runAction('node.setLightSettings', { nodeId, skyColor: '#ff0000', intensity: 3 })
 
     const light = nodeNamed('Ciel')
     expect(light).toMatchObject({
@@ -220,7 +224,7 @@ describe('placing and dressing an object', () => {
     const spotId = spot.ok ? (spot.data as { nodeId: string }).nodeId : ''
     const pointId = point.ok ? (point.data as { nodeId: string }).nodeId : ''
 
-    await runAction('node.light', {
+    await runAction('node.setLightSettings', {
       nodeId: spotId,
       angle: 0.4,
       penumbra: 0.25,
@@ -231,10 +235,12 @@ describe('placing and dressing an object', () => {
     expect(nodeNamed('Poursuite')).toMatchObject({
       light: { kind: 'spot', angle: 0.4, penumbra: 0.25, distance: 12, target: { y: 2 } },
     })
-    expect(await runAction('node.light', { nodeId: pointId, angle: 0.4 })).toMatchObject({
-      ok: false,
-      refusal: 'badInput',
-    })
+    expect(await runAction('node.setLightSettings', { nodeId: pointId, angle: 0.4 })).toMatchObject(
+      {
+        ok: false,
+        refusal: 'badInput',
+      },
+    )
   })
 })
 
@@ -245,10 +251,10 @@ describe('a camera driven by value', () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const meshId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
 
-    await runAction('node.camera', { nodeId, fov: 24 })
+    await runAction('node.setCameraLens', { nodeId, fov: 24 })
 
     expect(nodeNamed('Caméra')).toMatchObject({ camera: { fov: 24, near: 0.1, far: 1000 } })
-    expect(await runAction('node.camera', { nodeId: meshId, fov: 24 })).toMatchObject({
+    expect(await runAction('node.setCameraLens', { nodeId: meshId, fov: 24 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -259,7 +265,7 @@ describe('a camera driven by value', () => {
     const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    await runAction('camera.shot', { nodeId, startSeconds: 2 })
+    await runAction('camera.addShot', { nodeId, startSeconds: 2 })
 
     expect(scene().animation.shots).toHaveLength(1)
     expect(scene().animation.shots[0]).toMatchObject({ cameraId: nodeId, start: 2 * SECOND })
@@ -269,7 +275,7 @@ describe('a camera driven by value', () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const nodeId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('camera.shot', { nodeId })).toMatchObject({
+    expect(await runAction('camera.addShot', { nodeId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -277,14 +283,14 @@ describe('a camera driven by value', () => {
   })
 
   it('holds a frame of length for a duration asked for below one', async () => {
-    await runAction('camera.shot', { nodeId: await cameraId(), durationSeconds: 0 })
+    await runAction('camera.addShot', { nodeId: await cameraId(), durationSeconds: 0 })
 
     expect(scene().animation.shots[0]?.duration).toBeGreaterThan(0)
   })
 
   /** The id is the whole of what makes the two edits below reachable at all. */
   it('answers the id of the shot it opened, and edits it by that id', async () => {
-    const opened = await runAction('camera.shot', { nodeId: await cameraId(), startSeconds: 1 })
+    const opened = await runAction('camera.addShot', { nodeId: await cameraId(), startSeconds: 1 })
     const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
 
     expect(scene().animation.shots[0]?.id).toBe(shotId)
@@ -293,7 +299,7 @@ describe('a camera driven by value', () => {
 
 describe('what a shot does with its camera', () => {
   async function shotOnRail(): Promise<{ shotId: string; pathId: string }> {
-    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const opened = await runAction('camera.addShot', { nodeId: await cameraId() })
     const rail = await runAction('node.add', { kind: 'path', name: 'Rail' })
 
     return {
@@ -304,10 +310,10 @@ describe('what a shot does with its camera', () => {
 
   /** The inspector's own button: one gesture makes the rail AND binds it, so one ⌘Z takes both. */
   it('lays a rail where the camera stands and binds it in one entry', async () => {
-    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const opened = await runAction('camera.addShot', { nodeId: await cameraId() })
     const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
 
-    expect(await runAction('camera.addRail', { shotId })).toEqual({ ok: true })
+    expect(await runAction('camera.createAndBindPath', { shotId })).toEqual({ ok: true })
 
     const laid = scene().nodes.find(node => node.type === 'path')
     expect(scene().animation.shots[0]?.motion).toMatchObject({ pathId: laid?.id })
@@ -320,8 +326,8 @@ describe('what a shot does with its camera', () => {
   it('takes a camera’s line up the band, and refuses one that cannot move', async () => {
     const first = await cameraId()
     const second = await cameraId()
-    await runAction('camera.shot', { nodeId: first })
-    await runAction('camera.shot', { nodeId: second })
+    await runAction('camera.addShot', { nodeId: first })
+    await runAction('camera.addShot', { nodeId: second })
 
     // The stack decides what the film looks through, and a camera new to the band arrives on top:
     // the first one is at the bottom, so the only way it can go is up.
@@ -339,7 +345,7 @@ describe('what a shot does with its camera', () => {
   it('binds a rail to a shot, taking the whole of it forwards by default', async () => {
     const { shotId, pathId } = await shotOnRail()
 
-    expect(await runAction('camera.rail', { shotId, pathId })).toEqual({ ok: true })
+    expect(await runAction('camera.bindPathToShot', { shotId, pathId })).toEqual({ ok: true })
     expect(scene().animation.shots[0]?.motion).toEqual({
       pathId,
       from: 0,
@@ -351,7 +357,13 @@ describe('what a shot does with its camera', () => {
   it('takes the stretch and the speed curve it was given', async () => {
     const { shotId, pathId } = await shotOnRail()
 
-    await runAction('camera.rail', { shotId, pathId, from: 1, to: 0.25, easing: 'easeInOut' })
+    await runAction('camera.bindPathToShot', {
+      shotId,
+      pathId,
+      from: 1,
+      to: 0.25,
+      easing: 'easeInOut',
+    })
 
     // `from` past `to` is left alone rather than reordered: that is what runs a rail backwards.
     expect(scene().animation.shots[0]?.motion).toMatchObject({
@@ -363,9 +375,9 @@ describe('what a shot does with its camera', () => {
 
   it('lets a shot go of its rail, leaving the camera where its own transform puts it', async () => {
     const { shotId, pathId } = await shotOnRail()
-    await runAction('camera.rail', { shotId, pathId })
+    await runAction('camera.bindPathToShot', { shotId, pathId })
 
-    await runAction('camera.rail', { shotId, pathId: '' })
+    await runAction('camera.bindPathToShot', { shotId, pathId: '' })
 
     expect(scene().animation.shots[0]?.motion).toBeUndefined()
   })
@@ -375,7 +387,7 @@ describe('what a shot does with its camera', () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
 
     expect(
-      await runAction('camera.rail', {
+      await runAction('camera.bindPathToShot', {
         shotId,
         pathId: mesh.ok ? (mesh.data as { nodeId: string }).nodeId : '',
       }),
@@ -388,36 +400,41 @@ describe('what a shot does with its camera', () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Statue' })
     const nodeId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
 
-    await runAction('camera.target', { shotId, targetId: nodeId })
+    await runAction('camera.aimShotAt', { shotId, targetId: nodeId })
     expect(scene().animation.shots[0]?.target).toEqual({ kind: 'node', nodeId })
 
-    await runAction('camera.target', { shotId, atX: 1, atZ: -3 })
+    await runAction('camera.aimShotAt', { shotId, atX: 1, atZ: -3 })
     expect(scene().animation.shots[0]?.target).toEqual({
       kind: 'point',
       at: { x: 1, y: 0, z: -3 },
     })
 
-    await runAction('camera.target', { shotId })
+    await runAction('camera.aimShotAt', { shotId })
     expect(scene().animation.shots[0]?.target).toBeUndefined()
   })
 
   // `aimCamera` drops a camera watching itself, since `lookAt` on no direction hands back the
   // identity — a shot silently aimed down the Z axis.
   it('refuses to have a camera watch itself, or a node the scene has not got', async () => {
-    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const opened = await runAction('camera.addShot', { nodeId: await cameraId() })
     const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
 
     expect(
-      await runAction('camera.target', { shotId, targetId: scene().animation.shots[0]?.cameraId }),
+      await runAction('camera.aimShotAt', {
+        shotId,
+        targetId: scene().animation.shots[0]?.cameraId,
+      }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
-    expect(await runAction('camera.target', { shotId, targetId: 'nowhere' })).toMatchObject({
+    expect(await runAction('camera.aimShotAt', { shotId, targetId: 'nowhere' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
   })
 
   it('refuses an edit naming a shot the document has not got', async () => {
-    expect(await runAction('camera.rail', { shotId: 'nowhere', pathId: '' })).toMatchObject({
+    expect(
+      await runAction('camera.bindPathToShot', { shotId: 'nowhere', pathId: '' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -462,7 +479,7 @@ describe('hierarchy and selection', () => {
     const child = await runAction('node.add', { kind: 'sphere', name: 'Enfant' })
     const nodeId = child.ok ? (child.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('node.reparent', { nodeId, parentId: 'node-z' })).toEqual({
+    expect(await runAction('node.reparent', { nodeId, parentId: 'node-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -499,7 +516,7 @@ describe('hierarchy and selection', () => {
     expect(await runAction('node.select', { nodeIds: [nodeId] })).toEqual({ ok: true })
     expect(scene().selectedIds).toEqual([nodeId])
 
-    expect(await runAction('node.select', { nodeIds: [nodeId, 'node-z'] })).toEqual({
+    expect(await runAction('node.select', { nodeIds: [nodeId, 'node-z'] })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -521,9 +538,9 @@ describe('a still of the view, and a world in one call', () => {
   }
 
   it('writes what a preset is about and leaves the rest of the world alone', async () => {
-    await runAction('world.ground', { visible: true, size: 12 })
+    await runAction('world.setGroundPlane', { visible: true, size: 12 })
 
-    expect(await runAction('world.preset', { preset: 'night' })).toEqual({ ok: true })
+    expect(await runAction('world.applyPreset', { preset: 'night' })).toEqual({ ok: true })
 
     expect(scene().world).toMatchObject({ envIntensity: 0.15, exposure: 1.6 })
     // `night` says nothing about a ground, so the one turned on stays exactly as it was.
@@ -541,7 +558,7 @@ describe('a still of the view, and a world in one call', () => {
     expect(savePicture).toHaveBeenCalled()
 
     forgetSceneEngine(DOCUMENT)
-    expect(await runAction('scene.capture', {})).toEqual({ ok: false, refusal: 'failed' })
+    expect(await runAction('scene.capture', {})).toMatchObject({ ok: false, refusal: 'failed' })
   })
 })
 
@@ -561,7 +578,7 @@ describe('how the scene is looked at', () => {
   it('refuses a side while no viewport is mounted', async () => {
     forgetSceneEngine(DOCUMENT)
 
-    expect(await runAction('view.direction', { direction: 'top' })).toEqual({
+    expect(await runAction('view.direction', { direction: 'top' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -578,8 +595,8 @@ describe('how the scene is looked at', () => {
 /** The half of the document that belongs to no node — lit, backed, floored and graded. */
 describe('the world of the scene', () => {
   it('reads back every part of it, and not the environment alone', async () => {
-    await runAction('world.fog', { kind: 'exp2', density: 0.05 })
-    await runAction('world.render', { toneMapping: 'aces', exposure: 1.4 })
+    await runAction('world.setFog', { kind: 'exp2', density: 0.05 })
+    await runAction('world.setToneMapping', { toneMapping: 'aces', exposure: 1.4 })
 
     const outcome = await runAction('scene.state', {})
     const read = outcome.ok ? (outcome.data as { world: SceneWorld }).world : null
@@ -591,13 +608,15 @@ describe('the world of the scene', () => {
   })
 
   it('lights the scene by a named sky, and puts it back out', async () => {
-    expect(await runAction('world.environment', { assetId: 'sky-1', intensity: 1.5 })).toEqual({
-      ok: true,
-    })
+    expect(await runAction('world.setSceneLighting', { assetId: 'sky-1', intensity: 1.5 })).toEqual(
+      {
+        ok: true,
+      },
+    )
     expect(scene().world.environment).toEqual({ kind: 'skybox', assetId: 'sky-1' })
     expect(scene().world.envIntensity).toBe(1.5)
 
-    await runAction('world.environment', { kind: 'studio' })
+    await runAction('world.setSceneLighting', { kind: 'studio' })
 
     expect(scene().world.environment).toEqual({ kind: 'studio' })
   })
@@ -607,7 +626,7 @@ describe('the world of the scene', () => {
    * a reference nobody picked, so the call is refused rather than guessed at.
    */
   it('refuses a sky nobody named', async () => {
-    expect(await runAction('world.environment', { kind: 'skybox' })).toMatchObject({
+    expect(await runAction('world.setSceneLighting', { kind: 'skybox' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -620,12 +639,12 @@ describe('the world of the scene', () => {
   it('follows a sky document named by its title', async () => {
     installDocuments({ 'sky-doc': 'skyboxes', [DOCUMENT]: '3d' }, DOCUMENT)
 
-    expect(await runAction('world.environment', { sky: 'sky-doc' })).toEqual({ ok: true })
+    expect(await runAction('world.setSceneLighting', { sky: 'sky-doc' })).toEqual({ ok: true })
     expect(scene().world.environment).toEqual({ kind: 'sky', documentId: 'sky-doc' })
   })
 
   it('refuses a sky document the project does not hold', async () => {
-    expect(await runAction('world.environment', { sky: 'Nulle part' })).toMatchObject({
+    expect(await runAction('world.setSceneLighting', { sky: 'Nulle part' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -634,12 +653,12 @@ describe('the world of the scene', () => {
   // A scene is lit by ONE prefiltered map, so naming both is a request with two answers.
   it('refuses a picture and a sky document at once', async () => {
     expect(
-      await runAction('world.environment', { assetId: 'sky-1', sky: 'sky-doc' }),
+      await runAction('world.setSceneLighting', { assetId: 'sky-1', sky: 'sky-doc' }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   it('refuses a sky document nobody named', async () => {
-    expect(await runAction('world.environment', { kind: 'sky' })).toMatchObject({
+    expect(await runAction('world.setSceneLighting', { kind: 'sky' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -650,21 +669,21 @@ describe('the world of the scene', () => {
    * nothing behind the subject. The colour is written by the same call rather than by a second.
    */
   it('paints the backdrop, and takes it away entirely', async () => {
-    await runAction('world.background', { kind: 'color', color: '#123456' })
+    await runAction('world.setBackground', { kind: 'color', color: '#123456' })
 
     expect(scene().world.background).toEqual({ kind: 'color', color: '#123456' })
 
-    await runAction('world.background', { kind: 'transparent' })
+    await runAction('world.setBackground', { kind: 'transparent' })
 
     expect(scene().world.background).toEqual({ kind: 'transparent' })
   })
 
   it('takes the distances of a linear haze, and forgets them when it is turned off', async () => {
-    await runAction('world.fog', { kind: 'linear', color: '#334455', near: 5, far: 90 })
+    await runAction('world.setFog', { kind: 'linear', color: '#334455', near: 5, far: 90 })
 
     expect(scene().world.fog).toEqual({ kind: 'linear', color: '#334455', near: 5, far: 90 })
 
-    await runAction('world.fog', { kind: 'none' })
+    await runAction('world.setFog', { kind: 'none' })
 
     expect(scene().world.fog).toEqual({ kind: 'none' })
   })
@@ -674,34 +693,34 @@ describe('the world of the scene', () => {
    * the shape in hand to change one value took the other two back to 10 and 60 in silence.
    */
   it('keeps the distances when only the colour of the same haze is named', async () => {
-    await runAction('world.fog', { kind: 'linear', near: 5, far: 90 })
-    await runAction('world.fog', { kind: 'linear', color: '#ff0000' })
+    await runAction('world.setFog', { kind: 'linear', near: 5, far: 90 })
+    await runAction('world.setFog', { kind: 'linear', color: '#ff0000' })
 
     expect(scene().world.fog).toEqual({ kind: 'linear', color: '#ff0000', near: 5, far: 90 })
   })
 
   it('keeps the softening of a backdrop re-asserted as itself', async () => {
-    await runAction('world.background', { kind: 'environment', blur: 0.5 })
-    await runAction('world.background', { kind: 'environment' })
+    await runAction('world.setBackground', { kind: 'environment', blur: 0.5 })
+    await runAction('world.setBackground', { kind: 'environment' })
 
     expect(scene().world.background).toEqual({ kind: 'environment', blur: 0.5 })
   })
 
   /** A key a client believes took must never get a silent yes — the rule of `validatesInput`. */
   it('refuses a value that belongs to another shape, rather than dropping it', async () => {
-    expect(await runAction('world.fog', { kind: 'exp2', near: 5 })).toMatchObject({
+    expect(await runAction('world.setFog', { kind: 'exp2', near: 5 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
     expect(
-      await runAction('world.background', { kind: 'transparent', color: '#000000' }),
+      await runAction('world.setBackground', { kind: 'transparent', color: '#000000' }),
     ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
     // Both readings of this call contradict each other: putting the sky out, and naming one.
     expect(
-      await runAction('world.environment', { kind: 'studio', assetId: 'sky-1' }),
+      await runAction('world.setSceneLighting', { kind: 'studio', assetId: 'sky-1' }),
     ).toMatchObject({
       ok: false,
       refusal: 'badInput',
@@ -710,16 +729,22 @@ describe('the world of the scene', () => {
 
   /** The trap of an optional boolean: read as `false`, a call about the size would hide the floor. */
   it('leaves the ground showing when only its size is named', async () => {
-    await runAction('world.ground', { visible: true })
-    await runAction('world.ground', { size: 60 })
+    await runAction('world.setGroundPlane', { visible: true })
+    await runAction('world.setGroundPlane', { size: 60 })
 
     expect(scene().world.ground).toMatchObject({ visible: true, size: 60 })
   })
 
   it('refuses a call that names nothing at all', async () => {
-    expect(await runAction('world.ground', {})).toMatchObject({ ok: false, refusal: 'badInput' })
-    expect(await runAction('world.render', {})).toMatchObject({ ok: false, refusal: 'badInput' })
-    expect(await runAction('world.environment', {})).toMatchObject({
+    expect(await runAction('world.setGroundPlane', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runAction('world.setToneMapping', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(await runAction('world.setSceneLighting', {})).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -732,11 +757,11 @@ describe('the world of the scene', () => {
    */
   it('names the members of the world nothing can write', async () => {
     const world: readonly ActionName[] = [
-      'world.environment',
-      'world.background',
-      'world.fog',
-      'world.ground',
-      'world.render',
+      'world.setSceneLighting',
+      'world.setBackground',
+      'world.setFog',
+      'world.setGroundPlane',
+      'world.setToneMapping',
     ]
     const written = new Set(
       world.flatMap(name => assistantAction(name)?.fields ?? []).map(field => field.key),
@@ -763,7 +788,7 @@ describe('the world of the scene', () => {
       Object.entries(reached)
         .filter(([, held]) => !held)
         .map(([member]) => member),
-      // `post` is written by the composition's own actions — `post.add`, `post.set`, `post.preset`
+      // `post` is written by the composition's own actions — `post.add`, `post.set`, `post.applyPreset`
       // — which name an effect and a parameter rather than a field of the world. `play` is
       // written by nothing at all; see `ScenePlay`, whose own note says why.
     ).toEqual(['post', 'play'])
@@ -802,7 +827,7 @@ describe('what the registry offers a node', () => {
 
   it('bounds every primitive parameter as the union of what the kinds declare', () => {
     for (const [name, specs] of specsByName()) {
-      const field = fieldOf('node.geometry', name)
+      const field = fieldOf('node.setPrimitiveParameters', name)
 
       expect({ min: field?.min, max: field?.max }, name).toEqual({
         min: across(specs, 'min'),
@@ -820,12 +845,14 @@ describe('what the registry offers a node', () => {
     )
 
     expect(
-      [...new Set(counted)].filter(key => fieldOf('node.geometry', key)?.kind !== 'integer'),
+      [...new Set(counted)].filter(
+        key => fieldOf('node.setPrimitiveParameters', key)?.kind !== 'integer',
+      ),
     ).toEqual([])
   })
 
   it('names every map slot the material holds, on the action that takes one', () => {
-    expect([...(fieldOf('node.material', 'textures')?.options ?? [])].sort()).toEqual(
+    expect([...(fieldOf('node.setMeshMaterial', 'textures')?.options ?? [])].sort()).toEqual(
       [...TEXTURE_SLOTS].sort(),
     )
   })
@@ -840,7 +867,7 @@ describe('what a node is made of', () => {
   it('writes the parameters of the primitive it was built from', async () => {
     const nodeId = await meshNamed('torusKnot', 'Nœud')
 
-    await runAction('node.geometry', { nodeId, radius: 2, p: 3, q: 5 })
+    await runAction('node.setPrimitiveParameters', { nodeId, radius: 2, p: 3, q: 5 })
 
     expect(nodeNamed('Nœud')).toMatchObject({
       geometry: { kind: 'torusKnot', radius: 2, p: 3, q: 5, tube: 0.2 },
@@ -850,7 +877,7 @@ describe('what a node is made of', () => {
   it('refuses a parameter the shape has not got, rather than filing it', async () => {
     const nodeId = await meshNamed('box', 'Caisse')
 
-    expect(await runAction('node.geometry', { nodeId, radius: 2 })).toMatchObject({
+    expect(await runAction('node.setPrimitiveParameters', { nodeId, radius: 2 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -865,11 +892,15 @@ describe('what a node is made of', () => {
     const capsule = await meshNamed('capsule', 'Gélule')
     const torus = await meshNamed('torus', 'Anneau')
 
-    expect(await runAction('node.geometry', { nodeId: capsule, radialSegments: 1 })).toMatchObject({
+    expect(
+      await runAction('node.setPrimitiveParameters', { nodeId: capsule, radialSegments: 1 }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
-    expect(await runAction('node.geometry', { nodeId: torus, radialSegments: 1 })).toMatchObject({
+    expect(
+      await runAction('node.setPrimitiveParameters', { nodeId: torus, radialSegments: 1 }),
+    ).toMatchObject({
       ok: true,
     })
   })
@@ -878,12 +909,18 @@ describe('what a node is made of', () => {
     const mesh = await meshNamed('box', 'Caisse')
     const lamp = await meshNamed('point', 'Lampe')
 
-    await runAction('node.shadow', { nodeId: mesh, castShadow: true, receiveShadow: true })
-    await runAction('node.shadow', { nodeId: lamp, castShadow: true })
+    await runAction('node.setShadowCastAndReceive', {
+      nodeId: mesh,
+      castShadow: true,
+      receiveShadow: true,
+    })
+    await runAction('node.setShadowCastAndReceive', { nodeId: lamp, castShadow: true })
 
     expect(nodeNamed('Caisse')).toMatchObject({ castShadow: true, receiveShadow: true })
     expect(nodeNamed('Lampe')).toMatchObject({ castShadow: true })
-    expect(await runAction('node.shadow', { nodeId: lamp, receiveShadow: true })).toMatchObject({
+    expect(
+      await runAction('node.setShadowCastAndReceive', { nodeId: lamp, receiveShadow: true }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -892,7 +929,7 @@ describe('what a node is made of', () => {
   it('dresses a mesh in the project’s own maps, and takes one back off', async () => {
     const nodeId = await meshNamed('plane', 'Mur')
 
-    await runAction('node.material', {
+    await runAction('node.setMeshMaterial', {
       nodeId,
       tilesPerMetre: 2,
       textures: { map: 'asset-albedo', normalMap: 'asset-normal' },
@@ -901,7 +938,7 @@ describe('what a node is made of', () => {
       material: { tilesPerMetre: 2, map: { assetId: 'asset-albedo' } },
     })
 
-    await runAction('node.material', { nodeId, textures: { normalMap: '' } })
+    await runAction('node.setMeshMaterial', { nodeId, textures: { normalMap: '' } })
     expect(nodeNamed('Mur')).toMatchObject({
       material: { map: { assetId: 'asset-albedo' }, normalMap: null },
     })
@@ -910,10 +947,10 @@ describe('what a node is made of', () => {
   it('paints a text with the very action a mesh takes, minus the tiling', async () => {
     const nodeId = await meshNamed('text', 'Titre')
 
-    await runAction('node.material', { nodeId, color: '#00ff00' })
+    await runAction('node.setMeshMaterial', { nodeId, color: '#00ff00' })
     expect(nodeNamed('Titre')).toMatchObject({ material: { color: '#00ff00' } })
 
-    expect(await runAction('node.material', { nodeId, tilesPerMetre: 2 })).toMatchObject({
+    expect(await runAction('node.setMeshMaterial', { nodeId, tilesPerMetre: 2 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -922,7 +959,7 @@ describe('what a node is made of', () => {
   it('sets the words, the face and the shape of a text', async () => {
     const nodeId = await meshNamed('text', 'Titre')
 
-    await runAction('node.text', {
+    await runAction('node.setTextSettings', {
       nodeId,
       value: 'Bonjour',
       fontFamily: 'IBM Plex Mono',
@@ -938,12 +975,12 @@ describe('what a node is made of', () => {
   it('tints and fades a sprite, and takes its picture away', async () => {
     const nodeId = await meshNamed('sprite', 'Panneau')
 
-    await runAction('node.sprite', { nodeId, opacity: 0.5, map: 'asset-picture' })
+    await runAction('node.setSpriteSettings', { nodeId, opacity: 0.5, map: 'asset-picture' })
     expect(nodeNamed('Panneau')).toMatchObject({
       sprite: { opacity: 0.5, map: { assetId: 'asset-picture' } },
     })
 
-    await runAction('node.sprite', { nodeId, map: '' })
+    await runAction('node.setSpriteSettings', { nodeId, map: '' })
     expect(nodeNamed('Panneau')).toMatchObject({ sprite: { map: null } })
   })
 
@@ -955,7 +992,10 @@ describe('what a node is made of', () => {
     const added = await runAction('node.addModel', { assetId: 'asset-mesh', name: 'Chevalier' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    const missing = await runAction('model.wearMaterial', { nodeId, material: 'Aucune matière' })
+    const missing = await runAction('model.wearMaterial', {
+      nodeId,
+      material: 'Aucune matière',
+    })
     expect(missing.ok).toBe(false)
 
     await runAction('model.wearMaterial', { nodeId, material: '' })
@@ -980,10 +1020,10 @@ describe('the shape of a rail', () => {
   it('sets the tension and the closing, and refuses a call that names neither', async () => {
     const nodeId = await railId()
 
-    await runAction('node.path', { nodeId, tension: 0, closed: true })
+    await runAction('node.setPathShape', { nodeId, tension: 0, closed: true })
     expect(nodeNamed('Rail')).toMatchObject({ path: { tension: 0, closed: true } })
 
-    expect(await runAction('node.path', { nodeId })).toMatchObject({
+    expect(await runAction('node.setPathShape', { nodeId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -1041,7 +1081,7 @@ describe('the shape of a rail', () => {
 })
 
 /**
- * The half of `node.transform` and `node.camera` that no other test reaches: tracks ADD to what
+ * The half of `node.transform` and `node.setCameraLens` that no other test reaches: tracks ADD to what
  * is underneath, so a value written raw onto a keyed node springs back the moment it is played.
  */
 describe('a node an animation already drives', () => {
@@ -1134,7 +1174,7 @@ describe('a node an animation already drives', () => {
     })
     await runAction('animation.autoKey', { on: true })
 
-    await runAction('node.camera', { nodeId, fov: 30, near: 0.5 })
+    await runAction('node.setCameraLens', { nodeId, fov: 30, near: 0.5 })
 
     const written = nodeNamed('Caméra')
     expect(written?.type === 'camera' && written.camera).toMatchObject({ fov: 50, near: 0.5 })
@@ -1146,7 +1186,7 @@ describe('a node an animation already drives', () => {
     const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('node.camera', { nodeId, near: 0 })).toMatchObject({
+    expect(await runAction('node.setCameraLens', { nodeId, near: 0 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -1202,14 +1242,14 @@ describe('folding shapes through the outside door', () => {
 
   it('elects the same matter whichever order the ids are named in', async () => {
     const { wall, cube } = await shapes()
-    await runAction('node.carve', { nodeIds: [cube, wall], operation: 'subtract' })
+    await runAction('node.combineIntoSolid', { nodeIds: [cube, wall], operation: 'subtract' })
 
     expect(solid()?.name).toBe('Mur')
   })
 
   it('lets a client name the matter outright', async () => {
     const { wall, cube } = await shapes()
-    await runAction('node.carve', {
+    await runAction('node.combineIntoSolid', {
       nodeIds: [wall, cube],
       operation: 'subtract',
       matterId: cube,
@@ -1220,8 +1260,8 @@ describe('folding shapes through the outside door', () => {
 
   it('marks a shape as a tool, so joining it pierces instead', async () => {
     const { wall, cube } = await shapes()
-    await runAction('node.negate', { nodeIds: [cube] })
-    await runAction('node.carve', { nodeIds: [wall, cube], operation: 'unite' })
+    await runAction('node.markAsCuttingTool', { nodeIds: [cube] })
+    await runAction('node.combineIntoSolid', { nodeIds: [wall, cube], operation: 'unite' })
 
     const cut = solid()
     expect(cut?.type === 'carved' && cut.carved.steps[0]?.operation).toBe('subtract')
@@ -1229,8 +1269,8 @@ describe('folding shapes through the outside door', () => {
 
   it('takes the mark off when asked', async () => {
     const { cube } = await shapes()
-    await runAction('node.negate', { nodeIds: [cube] })
-    await runAction('node.negate', { nodeIds: [cube], negative: false })
+    await runAction('node.markAsCuttingTool', { nodeIds: [cube] })
+    await runAction('node.markAsCuttingTool', { nodeIds: [cube], negative: false })
 
     const shape = nodeNamed('Cube')
     expect(shape?.type === 'mesh' && shape.negative).toBe(false)
@@ -1239,11 +1279,11 @@ describe('folding shapes through the outside door', () => {
   /** The repair a client reaches for when the fold ran backwards — one call, no undo. */
   it('folds a solid the other way round', async () => {
     const { wall, cube } = await shapes()
-    await runAction('node.carve', { nodeIds: [wall, cube], operation: 'subtract' })
+    await runAction('node.combineIntoSolid', { nodeIds: [wall, cube], operation: 'subtract' })
     const made = scene().nodes.find(node => node.type === 'carved')
     expect(made?.name).toBe('Mur')
 
-    await runAction('node.carveInvert', { nodeId: made?.id ?? '' })
+    await runAction('node.swapSolidMatterAndTool', { nodeId: made?.id ?? '' })
 
     expect(scene().nodes.find(node => node.type === 'carved')?.name).toBe('Cube')
   })
@@ -1251,7 +1291,7 @@ describe('folding shapes through the outside door', () => {
   it('refuses to flip what is not a solid', async () => {
     const { wall } = await shapes()
 
-    expect(await runAction('node.carveInvert', { nodeId: wall })).toMatchObject({
+    expect(await runAction('node.swapSolidMatterAndTool', { nodeId: wall })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -1261,7 +1301,43 @@ describe('folding shapes through the outside door', () => {
     await runAction('node.add', { kind: 'point', name: 'Lampe' })
 
     expect(
-      await runAction('node.negate', { nodeIds: [nodeNamed('Lampe')?.id ?? ''] }),
+      await runAction('node.markAsCuttingTool', { nodeIds: [nodeNamed('Lampe')?.id ?? ''] }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+})
+
+/**
+ * 🛑 Measured on the bench pass of 2026-08-31 against deepseek-chat: `camera.target` was refused
+ * 28 times on a bare `badInput`, and the model answered the same call again word for word.
+ */
+describe('what a refused aim tells the caller', () => {
+  const detailOf = (outcome: { ok: boolean; detail?: string }): string => outcome.detail ?? ''
+
+  it('names the shot it could not find, and the call that answers one', async () => {
+    const outcome = await runAction('camera.aimShotAt', { shotId: 'shot-nowhere', targetId: 'x' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('shot-nowhere')
+    expect(detailOf(outcome)).toContain('scene.state')
+  })
+
+  it('names the field to repair, and the other way of aiming', async () => {
+    const opened = await runAction('camera.addShot', { nodeId: await cameraId() })
+    const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
+
+    const outcome = await runAction('camera.aimShotAt', { shotId, targetId: 'nowhere' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('targetId')
+    expect(detailOf(outcome)).toContain('atX')
+  })
+
+  it('says which document has to be in front when none is', async () => {
+    useDocuments.setState({ activeId: null })
+
+    const outcome = await runAction('camera.aimShotAt', { shotId: 'anything' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'wrongSurface' })
+    expect(detailOf(outcome)).toContain('document.activate')
   })
 })

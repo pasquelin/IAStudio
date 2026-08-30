@@ -13,11 +13,25 @@ import { ASSISTANT_WINDOW_MAX, roomFor } from './promptWindow'
 const ASK_TOKENS = 4096
 
 /**
- * The window a chat cloud is taken to hold — an ASSUMPTION, said as one: the model is typed by
- * hand here and none of these clouds publishes its window over the API, so there is nothing to
- * measure. 32 000 tokens is the smallest the eight defaults are believed to have.
+ * The window a chat cloud is taken to hold — an ASSUMPTION, said as one: the model here is TYPED
+ * BY HAND and none of these clouds publishes its window over the API, so the defaults bound
+ * nothing. What degrades when it is wrong is `CLOUD_FALLBACK_TOKENS`, one round trip.
+ *
+ * 🛑 `[M]` It was 32 000, which gave `roomFor` 90 828 characters against a catalogue costing
+ * 90 994 — the state, the context and the folders were all cut to fit it. Measured 2026-08-31 on
+ * the 437 scenarios of `pnpm banc` against deepseek-chat: 55% → 61% passed, 2 069 → 1 548 rounds,
+ * 496 → 269 refusals.
+ *
+ * 🛑 That catalogue is GONE — the briefing now carries names and the manuals a chain opens, and
+ * the widest one reachable runs 23 607 characters. Nothing is cut above 8 192 tokens, so this
+ * number no longer constrains anything: it is what the door ASKS for, not what it needs.
+ *
+ * 🛑 It budgets the BRIEFING and nothing else: `messagesFor` sends the history unbounded, where
+ * `brainLocal` trims it through `promptWindow`. Ten blocks and a paste can add 110 020 characters
+ * — a real overrun comes back a 400 and `readOrNarrow` answers it, which is why it costs a round
+ * trip rather than the turn.
  */
-const CLOUD_CONTEXT_TOKENS = 32_000
+export const CLOUD_CONTEXT_TOKENS = 64_000
 
 /**
  * And what one that REFUSED that is taken to hold — `ASSISTANT_WINDOW_MAX`, the window the short
@@ -117,15 +131,21 @@ export function createHttpChatBrain({
   }
 
   return {
+    // 🛑 None, and INVENTING one is the defect this says no to: neither figure below is a window,
+    // both are briefing budgets, and one worn as a window is the `2 067 / 4 096` shown for
+    // DeepSeek. No chat cloud here publishes its window over the API, so there is nothing to read.
+    window: () => Promise.resolve(null),
     think: async (request, watch = {}) => {
-      // Once this door has refused the whole catalogue and answered the short one, it is asked
-      // narrow from the start: the wide briefing is 70 000 characters it would refuse again.
-      const briefing = await briefingFor(
+      const composed = await briefingFor(
         request,
-        narrowed ? roomFor(CLOUD_FALLBACK_TOKENS) : roomFor(CLOUD_CONTEXT_TOKENS),
+        roomFor(CLOUD_CONTEXT_TOKENS),
         notReady,
         roomFor(CLOUD_FALLBACK_TOKENS),
       )
+      // 🛑 Narrowed by the DOOR, not by the room: the names fit everywhere, so a door that has
+      // already refused once would be composed the wide rules again and refuse them again — one
+      // billed round trip per turn, for ever. Asking short from the start is what that buys.
+      const briefing = narrowed ? (composed.narrow?.() ?? composed) : composed
 
       // 🛑 No window travels with these frames: the composer shows the count ALONE, as it does
       // for Scenario. Both figures above are assumptions — `2 067 / 4 096` was shown for DeepSeek,

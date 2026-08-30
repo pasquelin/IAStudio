@@ -459,11 +459,11 @@ describe('the translation bundles', () => {
           'objects.pathHint',
           'animation.addShotHint',
           'animation.addShotNeedsCamera',
-          'assistant.actions.cameraShot.description',
-          'assistant.actions.cameraRail.description',
-          'assistant.actions.cameraAddRail.description',
+          'assistant.actions.cameraAddShot.description',
+          'assistant.actions.cameraBindPathToShot.description',
+          'assistant.actions.cameraCreateAndBindPath.description',
           'assistant.actions.cameraReorder.description',
-          'assistant.actions.cameraTarget.description',
+          'assistant.actions.cameraAimShotAt.description',
           // The same sense as the three above: `scene.state` hands back the shots, and says so.
           'assistant.actions.sceneState.description',
           'assistant.fields.startSeconds',
@@ -555,7 +555,7 @@ describe('the translation bundles', () => {
    * The negative half. Each word matches its reading once the boundary is dropped, which is what
    * makes it worth asserting — a sample no reading could ever touch is green by construction.
    * `preferences?` has none: no English word carries `preference` inside a longer one.
-   * `node.negate` proves the other half — what rejects it is the LOOKAHEAD, not the boundary. Which is
+   * `node.markAsCuttingTool` proves the other half — what rejects it is the LOOKAHEAD, not the boundary. Which is
    * the blind spot — a reading added tomorrow without a near miss of its own stays green.
    */
   const ENGLISH_NEAR_MISSES = [
@@ -566,7 +566,7 @@ describe('the translation bundles', () => {
     'revealed',
     'textured',
     'anode',
-    'node.negate',
+    'node.markAsCuttingTool',
   ]
 
   it.each(CODES)('says one thing one way in %s', code => {
@@ -1786,7 +1786,7 @@ const borrowedWords = (english: Map<string, string>, french: Map<string, string>
 
 describe('a word one surface owns', () => {
   /**
-   * `assistant.actions.cameraShot.description` told an assistant which `layer` a camera shot
+   * `assistant.actions.cameraAddShot.description` told an assistant which `layer` a camera shot
    * lands on, where the French said `étage` and the manual says `line` — `layer` naming a sheet
    * of the image stack everywhere else. `TWO_THINGS` cannot see it: it reads labels, and drops
    * anything ending in a full stop.

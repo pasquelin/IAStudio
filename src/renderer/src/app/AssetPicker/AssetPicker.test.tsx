@@ -9,7 +9,7 @@ import { AssetPicker } from './AssetPicker'
 /**
  * Local, every one of them, and that is not a shortcut: no writer in the app puts a
  * `location: 'cloud'` row in the catalogue, so a fixture that did was describing a state the
- * handler behind `assets.search` cannot produce — and four cases of this file passed on it.
+ * handler behind `assets.searchProjectCatalogue` cannot produce — and four cases of this file passed on it.
  */
 const asset = (id: string, name: string): Asset => ({
   id,

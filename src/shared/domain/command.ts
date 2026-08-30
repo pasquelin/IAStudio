@@ -218,7 +218,7 @@ export type CommandDescriptor = {
    */
   defaultBinding: Signature | null
   /**
-   * 🛑 It raises a system dialogue, so `command.run` refuses it: the assistant cannot fill a
+   * 🛑 It raises a system dialogue, so `command.runStudioCommand` refuses it: the assistant cannot fill a
    * native modal, cannot read what was chosen in it, and re-ran the command on its next round —
    * a second Finder over the first. The action taking a path is what does this deliberately.
    */

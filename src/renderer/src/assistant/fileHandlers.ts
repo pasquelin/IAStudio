@@ -1,4 +1,4 @@
-import { refused, type ActionOutcome, type ActionRefusal } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { documentExtensionOf, isDocumentExtension } from '@shared/domain/document'
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import { projectPathFor, projectPickerFolder, projectsByCreation } from '@shared/domain/project'
@@ -24,9 +24,16 @@ import { boolOf, textOf, textsOf } from './actionInputs'
  * The two were answered as `noBridge` together at first, which told a client its window was
  * unreachable when the real answer was that a relative path had nothing to be relative to.
  */
+const NO_PROJECT =
+  'no project is open, and a path is relative to one — projects.list answers the ones this machine ' +
+  'knows, project.open opens one and project.create makes one'
+
 function inProject(run: (bridge: StudioBridge) => Promise<unknown>): Promise<ActionOutcome> {
-  if (!getBridge()) return Promise.resolve(refused('noBridge'))
-  if (!useProject.getState().project) return Promise.resolve(refused('noProject'))
+  if (!getBridge())
+    return Promise.resolve(
+      refused('noBridge', 'this window is not connected to the studio process'),
+    )
+  if (!useProject.getState().project) return Promise.resolve(refused('noProject', NO_PROJECT))
 
   return withBridge(run)
 }
@@ -62,27 +69,42 @@ async function facts(input: Record<string, unknown>): Promise<ActionOutcome> {
 
   // `null` is the channel's answer for an entry that is not there. `notFound` rather than
   // `badInput`: the path was a well-formed string, and a client told otherwise retries the call.
-  return outcome.ok && outcome.data === null ? refused('notFound') : outcome
+  return outcome.ok && outcome.data === null
+    ? refused(
+        'notFound',
+        `nothing at "${textOf(input, 'path') ?? FOLDER_ROOT}" in the open project — files.list walks a folder and files.search finds by name`,
+      )
+    : outcome
 }
 
 /**
  * The endings that are refusals. The three that are not — a tab, an editor, another program —
  * answer `ok` and NAME which one: a model told `ok` alone reports a tab that is not there.
  */
-const REFUSAL_OF_OPENING: Record<FileOpening, ActionRefusal | null> = {
+const REFUSAL_OF_OPENING: Record<FileOpening, ActionOutcome | null> = {
   document: null,
   asset: null,
   system: null,
-  folder: 'badInput',
-  missing: 'notFound',
-  unreachable: 'noBridge',
-  failed: 'failed',
+  folder: refused(
+    'badInput',
+    '"path" names a folder, and this opens a file — files.list walks one instead',
+  ),
+  missing: refused(
+    'notFound',
+    'nothing at that path in the open project — files.list answers what is there, and files.search finds by name',
+  ),
+  unreachable: refused('noBridge', 'this window is not connected to the studio process'),
+  failed: refused('failed', 'the studio could not open that file — the journal holds why'),
 }
 
 async function openFile(input: Record<string, unknown>): Promise<ActionOutcome> {
   const path = textOf(input, 'path')
-  if (path === null) return refused('badInput')
-  if (!useProject.getState().project) return refused('noProject')
+  if (path === null)
+    return refused(
+      'badInput',
+      '"path" is wanted — a path relative to the open project, as files.list answers it',
+    )
+  if (!useProject.getState().project) return refused('noProject', NO_PROJECT)
 
   /**
    * The same re-read `document.open` does — a listing the client holds may predate a file that
@@ -97,32 +119,49 @@ async function openFile(input: Record<string, unknown>): Promise<ActionOutcome> 
   }
 
   const opening = await openProjectFile(path)
-  const refusal = REFUSAL_OF_OPENING[opening]
-
-  return refusal ? refused(refusal) : { ok: true, data: { opened: opening } }
+  return REFUSAL_OF_OPENING[opening] ?? { ok: true, data: { opened: opening } }
 }
 
 async function openProject(input: Record<string, unknown>): Promise<ActionOutcome> {
   const path = textOf(input, 'path')
-  if (path === null) return refused('badInput')
+  if (path === null)
+    return refused(
+      'badInput',
+      '"path" is wanted — the whole path of a project folder, as projects.list answers it',
+    )
 
-  return (await useProject.getState().open(path)) ? { ok: true } : refused('badInput')
+  return (await useProject.getState().open(path))
+    ? { ok: true }
+    : refused(
+        'badInput',
+        `no project opened at "${path}" — projects.list answers the ones this machine knows, each with its path`,
+      )
 }
 
 async function closeProject(): Promise<ActionOutcome> {
   const { project, close } = useProject.getState()
-  if (!project) return refused('noProject')
+  if (!project)
+    return refused('noProject', 'no project is open — projects.list answers what there is to open')
 
   // Same shape as `document.close`, and for the same reason: the store raises the only question
   // that knows whether any work is at stake, so this action commits `none` and answers its no.
-  return (await close()) ? { ok: true } : refused('declined')
+  return (await close())
+    ? { ok: true }
+    : refused(
+        'declined',
+        'the person at the screen kept the project open — a generation may be running, or a document may hold unsaved work',
+      )
 }
 
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
   // Bare on purpose: `path` is `required`, so `runAction` refuses a call without it — and names
   // the field — before this ever runs.
   const asked = textOf(input, 'path')
-  if (asked === null) return refused('badInput')
+  if (asked === null)
+    return refused(
+      'badInput',
+      '"path" is wanted — a name for the new project, which the studio puts where it keeps them, or a whole absolute path',
+    )
 
   /**
    * 🛑 A NAME is enough, and that is the whole point: asked for an absolute path, the model asked
@@ -148,7 +187,11 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
   // `declined` rather than `badInput`, and it covers both nos: the question on the way out, and
   // the main process asking about a folder that already holds files. A client told its input was
   // wrong would retry a path that was never the problem.
-  if (!created) return refused('declined')
+  if (!created)
+    return refused(
+      'declined',
+      'the new project was turned down — either by the person at the screen, or because that folder already holds files',
+    )
 
   return { ok: true, data: created }
 }
@@ -203,11 +246,11 @@ export const FILE_HANDLERS: ActionHandlers = {
       bridge.project.newFolder(textOf(input, 'folder') ?? '', textOf(input, 'name') ?? ''),
     ),
 
-  'files.undo': () => changing(bridge => bridge.project.undoFile()),
+  'files.undoFileOperation': () => changing(bridge => bridge.project.undoFile()),
 
-  'files.redo': () => changing(bridge => bridge.project.redoFile()),
+  'files.redoFileOperation': () => changing(bridge => bridge.project.redoFile()),
 
-  'files.history': () => inProject(bridge => bridge.project.fileHistory()),
+  'files.readUndoStack': () => inProject(bridge => bridge.project.fileHistory()),
 
   'file.reveal': input =>
     inProject(bridge => bridge.project.revealFile(textOf(input, 'path') ?? '')),
@@ -223,6 +266,11 @@ export const FILE_HANDLERS: ActionHandlers = {
       .getState()
       .rename(textOf(input, 'path') ?? '', textOf(input, 'name') ?? '')
 
-    return renamed ? { ok: true } : refused('failed')
+    return renamed
+      ? { ok: true }
+      : refused(
+          'failed',
+          '"path" must name a project folder this machine knows and "name" must be free — projects.list answers the ones it knows',
+        )
   },
 }

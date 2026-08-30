@@ -17,7 +17,7 @@ export const INITIAL_WINDOW_STATE: WindowState = {
  * a panel; `openManualWindow` and its neighbours say why.
  *
  * 🛑 Named for the WINDOW and no longer for the menu: three of these four are the Help menu's,
- * and the journal is not. The channel and the action stay `help.open` — an action published on
+ * and the journal is not. The channel and the action stay `help.openStudioWindow` — an action published on
  * the MCP wire is a name clients hold us to.
  */
 export type WindowPage = 'manual' | 'licences' | 'usage' | 'journal'

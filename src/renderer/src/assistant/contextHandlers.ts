@@ -13,18 +13,31 @@ import { boolOf, textOf } from './actionInputs'
 
 /** The project's context, driven from outside. Every gesture stores the whole list. */
 
+const unreadable = (trouble: string): string =>
+  `this project's context file reads "${trouble}", so nothing may be written over it — context.readProjectCards answers what the studio could make of it`
+
+const noCard = (id: string): string =>
+  `no context card "${id}" in this project — context.readProjectCards answers the cards it holds, each with its id`
+
+const NOT_STORED =
+  'the context was not written into the project folder — the journal holds why, and context.readProjectCards says what stands there now'
+
 /**
  * A card id nothing holds is refused rather than created under it: a client naming one it
  * remembers from another project would write into this one under a name of its own.
  */
 async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   const { context, write: store } = useProjectContext.getState()
-  if (context.trouble !== null) return refused('notAllowed')
+  if (context.trouble !== null) return refused('notAllowed', unreadable(context.trouble))
 
   const id = textOf(input, 'cardId')
   const held = id === null ? null : (context.cards.find(card => card.id === id) ?? null)
-  if (id !== null && held === null) return refused('notFound')
-  if (held === null && context.cards.length >= CONTEXT_CARDS_MAX) return refused('notAllowed')
+  if (id !== null && held === null) return refused('notFound', noCard(id))
+  if (held === null && context.cards.length >= CONTEXT_CARDS_MAX)
+    return refused(
+      'notAllowed',
+      `this project already holds ${CONTEXT_CARDS_MAX} context cards, which is all it takes — context.deleteProjectCard frees one first`,
+    )
 
   const card: ContextCard = {
     ...(held ?? blankCard(newId())),
@@ -33,21 +46,25 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
     ...('active' in input ? { active: boolOf(input, 'active') } : {}),
   }
 
-  return (await store(withCard(context.cards, card))) ? { ok: true, data: card } : refused('failed')
+  return (await store(withCard(context.cards, card)))
+    ? { ok: true, data: card }
+    : refused('failed', NOT_STORED)
 }
 
 async function remove(input: Record<string, unknown>): Promise<ActionOutcome> {
   const { context, write: store } = useProjectContext.getState()
-  if (context.trouble !== null) return refused('notAllowed')
+  if (context.trouble !== null) return refused('notAllowed', unreadable(context.trouble))
 
   const id = textOf(input, 'cardId') ?? ''
-  if (!context.cards.some(card => card.id === id)) return refused('notFound')
+  if (!context.cards.some(card => card.id === id)) return refused('notFound', noCard(id))
 
-  return (await store(withoutCard(context.cards, id))) ? { ok: true } : refused('failed')
+  return (await store(withoutCard(context.cards, id)))
+    ? { ok: true }
+    : refused('failed', NOT_STORED)
 }
 
 export const CONTEXT_HANDLERS: ActionHandlers = {
-  'context.read': () => ({ ok: true, data: useProjectContext.getState().context }),
-  'context.write': write,
-  'context.remove': remove,
+  'context.readProjectCards': () => ({ ok: true, data: useProjectContext.getState().context }),
+  'context.writeProjectCard': write,
+  'context.deleteProjectCard': remove,
 }

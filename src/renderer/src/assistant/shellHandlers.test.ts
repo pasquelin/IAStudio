@@ -23,7 +23,7 @@ describe('what surrounds the documents', () => {
   })
 
   /**
-   * The three faces that ship, which bare families left unnameable: `layer.text` takes a source
+   * The three faces that ship, which bare families left unnameable: `layer.editTextLayer` takes a source
    * as well, and a machine that has one of them installed offers it under the very same name.
    */
   it('names the shipped typefaces beside the installed ones, each with where it comes from', async () => {
@@ -56,7 +56,7 @@ describe('what surrounds the documents', () => {
     installFakeBridge({ window: { toggleFullScreen }, mirror: { open } })
 
     await runAction('window.fullScreen', {})
-    await runAction('mirror.open', {})
+    await runAction('mirror.openVideoReturnWindow', {})
 
     expect(toggleFullScreen).toHaveBeenCalled()
     expect(open).toHaveBeenCalled()
@@ -67,10 +67,10 @@ describe('what surrounds the documents', () => {
     const open = vi.fn(async () => {})
     installFakeBridge({ help: { open } })
 
-    expect(await runAction('help.open', { page: 'manual' })).toMatchObject({ ok: true })
+    expect(await runAction('help.openStudioWindow', { page: 'manual' })).toMatchObject({ ok: true })
     expect(open).toHaveBeenCalledWith('manual')
 
-    expect(await runAction('help.open', { page: 'about' })).toMatchObject({
+    expect(await runAction('help.openStudioWindow', { page: 'about' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -94,8 +94,8 @@ describe('what surrounds the documents', () => {
     const unpin = vi.fn(async () => [])
     installFakeBridge({ favorites: { pin, unpin } })
 
-    await runAction('favorite.pin', { assetId: 'asset-1' })
-    await runAction('favorite.unpin', { favoriteId: 'recipe-1' })
+    await runAction('favorite.pinAssetRecipe', { assetId: 'asset-1' })
+    await runAction('favorite.unpinAssetRecipe', { favoriteId: 'recipe-1' })
 
     expect(pin).toHaveBeenCalledWith('asset-1')
     expect(unpin).toHaveBeenCalledWith('recipe-1')
@@ -108,7 +108,7 @@ describe('what surrounds the documents', () => {
   it('refuses a file the catalogue would not take rather than reporting it adopted', async () => {
     installFakeBridge({ media: { adopt: vi.fn(async () => null) } })
 
-    expect(await runAction('media.adopt', { path: 'Plans/a.raw' })).toMatchObject({
+    expect(await runAction('media.indexFileInPlace', { path: 'Plans/a.raw' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -128,7 +128,7 @@ describe('what surrounds the documents', () => {
     expect(install).toHaveBeenCalled()
 
     installFakeBridge({ updates: { install, state: vi.fn(async () => idle) } })
-    expect(await runAction('updates.install', {})).toEqual({
+    expect(await runAction('updates.install', {})).toMatchObject({
       ok: false,
       refusal: 'nothingPrepared',
     })
@@ -164,7 +164,7 @@ describe('the panels of the surface in front', () => {
 
   // The Explorer sits on the home and in no space: naming it here is a refusal, not a no-op.
   it('refuses a panel this surface does not serve', async () => {
-    expect(await runAction('panel.open', { panel: 'projects' })).toEqual({
+    expect(await runAction('panel.open', { panel: 'projects' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -177,7 +177,7 @@ describe('the panels of the surface in front', () => {
   it('closes the panel named, or nothing at all', async () => {
     await runAction('panel.open', { panel: 'generator' })
 
-    expect(await runAction('panel.close', { panel: 'assets' })).toEqual({
+    expect(await runAction('panel.close', { panel: 'assets' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -187,7 +187,7 @@ describe('the panels of the surface in front', () => {
   // A placement `requires` a project or a repository, and opening one without it put a DIFFERENT
   // panel on screen while answering yes — `panels.list` filtered on the very same question.
   it('refuses a panel this surface cannot offer yet', async () => {
-    expect(await runAction('panel.open', { panel: 'history' })).toEqual({
+    expect(await runAction('panel.open', { panel: 'history' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -215,10 +215,13 @@ describe('the microphone', () => {
     useDictation.setState({ start: vi.fn(async () => {}) })
 
     installFakeBridge({ dictation: { state: snapshot('permissionRequired') } })
-    expect(await runAction('dictation.start', {})).toEqual({ ok: false, refusal: 'notAllowed' })
+    expect(await runAction('dictation.start', {})).toMatchObject({
+      ok: false,
+      refusal: 'notAllowed',
+    })
 
     installFakeBridge({ dictation: { state: snapshot('modelMissing') } })
-    expect(await runAction('dictation.start', {})).toEqual({ ok: false, refusal: 'failed' })
+    expect(await runAction('dictation.start', {})).toMatchObject({ ok: false, refusal: 'failed' })
   })
 
   /** The two ways of ending differ exactly there: one keeps what was heard, the other drops it. */

@@ -355,7 +355,7 @@ export async function createStudio(
   /**
    * 🛑 The one scope a headless run can stand in for, and it delegates rather than reimplements:
    * `runSceneCommand` is the function the viewport itself calls. The other scopes stay unarmed —
-   * their commands live inside components, so `command.run` still answers `wrongSurface` there.
+   * their commands live inside components, so `command.runStudioCommand` still answers `wrongSurface` there.
    */
   const followTheCommandBus = (): (() => void) => {
     const disarm = armCommandScope('scene')

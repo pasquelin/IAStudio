@@ -22,6 +22,7 @@ import { completionFor, foldForSearch, matchesWords, searchWords } from '@shared
 import { answeredByComposer } from '@shared/domain/assistant'
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
 import { HINT_TOP, TIP_TOP } from '@/helpers/tooltip'
+import { useAssistantDoor } from '@/hooks/useAssistantDoor'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
@@ -36,6 +37,7 @@ import { ASSISTANT_STARTERS, starterKey } from '../starters'
 import { AssistantConversationSuggestions, suggestionId } from './AssistantConversationSuggestions'
 import { AssistantConversationPicker } from './AssistantConversationPicker'
 import { AssistantConversationChoice } from './AssistantConversationChoice'
+import { AssistantConversationGauge } from './AssistantConversationGauge'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
 import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
@@ -78,7 +80,6 @@ export function AssistantConversation() {
   const streamed = useAssistant(state => state.streamed)
   const promptTokens = useAssistant(state => state.promptTokens)
   const replyTokens = useAssistant(state => state.replyTokens)
-  const windowTokens = useAssistant(state => state.windowTokens)
   const stop = useAssistant(state => state.stop)
   const asked = useAssistant(state => state.asked)
   const choosing = useAssistant(state => state.choosing)
@@ -90,6 +91,7 @@ export function AssistantConversation() {
   const setDraft = useAssistant(state => state.setDraft)
   const surface = useToolSurface()
   const offer = useAssistantOffer()
+  useAssistantDoor()
   const openSection = useSettings(state => state.openSection)
   const keyLabel = useShortcutLabel()
 
@@ -514,14 +516,8 @@ export function AssistantConversation() {
               <AssistantConversationPicker />
 
               {/* Beside the field it measures, and it OUTLIVES the turn: what one wants to know
-                  before typing is how much room the last exchange left. */}
-              {promptTokens > 0 && (
-                <span className="text-muted text-tiny" {...HINT_TOP(t('assistant.contextHint'))}>
-                  {windowTokens > 0
-                    ? t('assistant.contextOf', { read: promptTokens, window: windowTokens })
-                    : t('assistant.contextRead', { read: promptTokens })}
-                </span>
-              )}
+                  before typing is how much room is left — bound included, turn or no turn. */}
+              <AssistantConversationGauge />
 
               {/* Beside the button it shares a job with: this pair is "how the sentence gets in". */}
               <span className="ml-auto flex items-center gap-2">

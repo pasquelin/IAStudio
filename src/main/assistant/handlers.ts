@@ -90,6 +90,10 @@ export function registerAssistantHandlers({
     ),
   )
 
+  // Not scoped to its sender, and nothing about it is: what a door reads in one go is the same
+  // answer for every window of this studio.
+  handle(CHANNELS.assistantWindow, () => brain.window())
+
   handle(CHANNELS.assistantStop, event => {
     running.cancel(turnOf(event.sender))
     return Promise.resolve()
