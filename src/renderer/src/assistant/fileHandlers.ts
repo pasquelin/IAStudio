@@ -1,7 +1,7 @@
 import { refused, type ActionOutcome, type ActionRefusal } from '@shared/domain/assistant'
 import { documentExtensionOf, isDocumentExtension } from '@shared/domain/document'
 import { FOLDER_ROOT } from '@shared/domain/folder'
-import { projectPathFor, projectPickerFolder } from '@shared/domain/project'
+import { projectPathFor, projectPickerFolder, projectsByCreation } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { openProjectFile, type FileOpening } from '@/helpers/openProjectFile'
@@ -154,6 +154,16 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
 }
 
 export const FILE_HANDLERS: ActionHandlers = {
+  // 🛑 `projectsByCreation`, the order the two shelves the person LOOKS at are drawn in — the
+  // stored order reshuffles on every opening, and « the first one » must mean one row.
+  'projects.list': () => ({
+    ok: true,
+    data: projectsByCreation(useSettings.getState().settings.storage.recentProjects).map(one => ({
+      name: one.name,
+      path: one.path,
+    })),
+  }),
+
   'project.open': openProject,
   'project.close': closeProject,
   'project.create': createProject,

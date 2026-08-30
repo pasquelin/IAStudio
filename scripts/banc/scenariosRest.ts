@@ -2,7 +2,17 @@ import type { Studio } from './studio'
 import type { Scenario } from './run'
 import { ENVIRONMENT_PRESETS, matchesPreset } from '@/engines/scene/environmentPresets'
 import * as read from './oracle'
-import { cameraScene, cubeScene, madeCar, named, overlay, scene, testFolders } from './setups'
+import {
+  cameraScene,
+  cubeScene,
+  madeCar,
+  named,
+  overlay,
+  scene,
+  shelved,
+  testFolders,
+} from './setups'
+import { WHEN } from './project'
 
 /** Sections 41 to 57 — the studio around the documents, and the machine around the studio. */
 
@@ -103,6 +113,20 @@ export const REST_SCENARIOS: readonly Scenario[] = [
       await studio.run('project.close', {})
     },
     passed: run => read.asked(run) && run.studio.projectName() !== '',
+  },
+  {
+    // 🛑 The gesture that had NO answer at all before `projects.list`: the path is nowhere in the
+    // sentence, so the model must LIST to learn one — see `fileActions.ts` for the measure.
+    name: '41.11 opens a recent project it had to list first',
+    said: ['Ouvre un projet récent.'],
+    // 🛑 Seeded LAST: the shelf is written by the main process, which the bench fakes, so opening
+    // or closing a project answers `DEFAULT_SETTINGS` and wipes what was sown before it.
+    setup: async studio => {
+      await studio.run('project.close', {})
+      shelved([{ path: '/projets/Voilier', name: 'Voilier', openedAt: WHEN, createdAt: WHEN }])
+    },
+    passed: run =>
+      read.answeredWith(run, 'projects.list') && run.studio.projectName() === 'Voilier',
   },
 
   {

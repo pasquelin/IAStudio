@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ACTION_REGISTRY, actionsReaching, type ActionName } from '@shared/domain/assistant'
+import {
+  ACTION_REGISTRY,
+  actionsReaching,
+  assistantAction,
+  type ActionName,
+} from '@shared/domain/assistant'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
@@ -9,7 +14,7 @@ import {
   INSTRUCTION_MAX,
   UTTERANCE_ROOM,
 } from './brainProvider'
-import { recentHistory, studioBriefing } from './instruction'
+import { recentHistory, studioBriefing, UNLISTED } from './instruction'
 import { STATE_MAX } from './studioState'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import { answeredTurn } from './brainTurn'
@@ -99,10 +104,24 @@ describe('what the model is told', () => {
     const briefing = shortBriefing()
 
     for (const action of ACTION_REGISTRY) {
-      // `actions.find` is the exception, and it is spelled by a RULE instead: a block describing
-      // the call a rule already writes out whole costs 165 characters of the sentence's room.
-      const listed = action.reach === 'both' && action.name !== 'actions.find'
+      const listed = action.reach === 'both' && !UNLISTED.includes(action.name)
       expect(briefing.includes(`  ${action.name} —`), action.name).toBe(listed)
+    }
+  })
+
+  /**
+   * 🛑 Unlisted is not unreachable, and this is the half that matters: a block skipped to save
+   * room must be SPELLED by a RULE — its name AND every field it requires, or a model composes
+   * `{"projectPath":…}` for a `path` it was never shown and loses the turn.
+   */
+  it('spells every action whose block it skips, fields and all', () => {
+    const briefing = shortBriefing()
+
+    for (const name of UNLISTED) {
+      expect(briefing.includes(name), name).toBe(true)
+      for (const field of assistantAction(name)?.fields.filter(one => one.required) ?? []) {
+        expect(briefing.includes(field.key), `${name}.${field.key}`).toBe(true)
+      }
     }
   })
 

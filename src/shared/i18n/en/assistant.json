@@ -89,6 +89,10 @@
         "title": "Read the recent activity",
         "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did."
       },
+      "projectsList": {
+        "title": "List the recent projects",
+        "description": "Answers the recent projects in the order the studio shows them, each with the absolute path that opens it — pass that path to project.open."
+      },
       "projectOpen": {
         "title": "Open a project folder",
         "description": "Opens a project from an absolute path on this machine, without raising the system dialogue a person would use. Answers whether the folder was a project."

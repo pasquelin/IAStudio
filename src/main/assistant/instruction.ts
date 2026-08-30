@@ -103,11 +103,11 @@ const wholeShare = (): Share =>
   ))
 
 /**
- * The spoken vocabulary, MINUS the one action a RULE already spells whole — describing it a
- * second time costs characters this share does not have. It stays in `allowed`: being unlisted
- * is not the same as being refused, and `parseReply` refuses a reply naming anything else.
+ * The spoken vocabulary, MINUS what a RULE already spells whole — describing either a second time
+ * costs characters this share does not have. All three stay in `allowed`: being unlisted is not
+ * the same as being refused, and `parseReply` refuses a reply naming anything else.
  */
-const UNLISTED: readonly ActionName[] = [DISCOVERY_ACTION]
+export const UNLISTED: readonly ActionName[] = [DISCOVERY_ACTION, 'projects.list', 'project.open']
 
 const shortShare = (): Share =>
   (shortHeld ??= {
@@ -151,6 +151,9 @@ const RULES = [
   // inferred: a model handed a space and a document still opened a second one for the subject of
   // the sentence, which is where "make me a bicycle" became a document named Bicycle.
   '  - Act on what is in front of the person. Only make a document when asked for a new one.',
+  // 🛑 A RULE and not two catalogue blocks: printed they cost 158 characters, and a block is the
+  // first thing dropped when the room runs out — leaving `project.open` allowed and unspelt.
+  '  - Opening a project: projects.list gives their paths, then project.open with {"path":"…"}.',
 ]
 
 /**

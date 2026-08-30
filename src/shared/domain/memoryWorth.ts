@@ -88,6 +88,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'document.remove': null,
   'document.export': null,
   'activity.recent': null,
+  'projects.list': null,
   'project.open': null,
   'project.close': null,
   'project.create': null,
