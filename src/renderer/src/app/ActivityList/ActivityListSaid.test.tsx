@@ -25,6 +25,17 @@ describe('what a round trip carried', () => {
     expect(said).toHaveBeenCalledWith('r:7')
   })
 
+  /** Unfolded whole: a scroller inside the journal's own scroller traps the wheel. */
+  it('unfolds without a scroller of its own', async () => {
+    installFakeBridge({ assistant: { said: () => Promise.resolve('You drive IA Studio') } })
+    render(<ActivityListSaid said="r:7" />)
+
+    await userEvent.click(screen.getByRole('button', { name: /envoyé/ }))
+
+    const pane = await screen.findByText('You drive IA Studio')
+    expect(pane.className).not.toMatch(/max-h-|overflow-/)
+  })
+
   /** A line older than the ring is not a round trip that carried nothing — it says which. */
   it('says the text is gone rather than showing an empty pane', async () => {
     installFakeBridge({ assistant: { said: () => Promise.resolve(null) } })
