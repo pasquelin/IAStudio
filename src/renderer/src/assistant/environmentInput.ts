@@ -5,7 +5,7 @@ import { withAsset } from './actionHandler'
 import { oneOf, textOf } from './actionInputs'
 
 /**
- * What lights a surface, named as `world.environment` names it: a PICTURE by asset id, a sky
+ * What lights a surface, named as `world.setSceneLighting` names it: a PICTURE by asset id, a sky
  * DOCUMENT by title, `studio` to put both out. Naming one is enough — `kind` is what a client
  * says only to go back to the procedural room.
  *

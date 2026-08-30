@@ -59,7 +59,7 @@ export { commitmentOfCommand } from './coreActions'
  *
  * 🛑 The families are DATA, not a spread: the briefing heads its catalogue with them, and read
  * off the first token of a name instead it cut 231 actions into 83 headings that grouped nothing
- * — `model.schema` and `model.textures` belong to two families and shared a heading.
+ * — `models.readGenerationModelFields` and `model.textures` belong to two families and shared a heading.
  */
 export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'core', actions: CORE_ACTIONS },
@@ -362,7 +362,7 @@ export function assistantAction(name: string): AssistantAction | null {
 }
 
 /**
- * What one particular call would engage, which for `command.run` is a fact of the command named
+ * What one particular call would engage, which for `command.runStudioCommand` is a fact of the command named
  * rather than of the action.
  *
  * Shared because both sides ask: the window asks before it acts, and the MCP server asks before

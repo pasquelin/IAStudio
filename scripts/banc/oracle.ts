@@ -124,8 +124,8 @@ export const shots = (run: Run): readonly CameraShot[] =>
   inSpace(run, '3d').flatMap(one => sceneOf(useScenes.getState(), one.id).animation.shots)
 
 /**
- * Whether a camera is AIMED rather than left free. A target is set on a SHOT — `camera.shot`
- * then `camera.target` — which is exactly what « fais-la regarder » has to find out.
+ * Whether a camera is AIMED rather than left free. A target is set on a SHOT — `camera.addShot`
+ * then `camera.aimShotAt` — which is exactly what « fais-la regarder » has to find out.
  */
 export const aimsAt = (run: Run, at?: string): boolean =>
   shots(run).some(
@@ -441,7 +441,7 @@ export const wrote = (run: Run, section: string, key: string): boolean =>
 export const searched = (run: Run, word: string): boolean =>
   run.called.some(
     one =>
-      (one.action === 'files.search' || one.action === 'assets.search') &&
+      (one.action === 'files.search' || one.action === 'assets.searchProjectCatalogue') &&
       Object.values(one.input).some(
         value => typeof value === 'string' && value.toLowerCase().includes(word),
       ),

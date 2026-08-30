@@ -143,7 +143,7 @@ function readSky(): ActionOutcome {
       adjustments: open.state.adjustments,
       sun: open.state.sun,
       environment: open.state.environment,
-      // How it is being LOOKED at, which `skybox.view` writes: a client that could write it
+      // How it is being LOOKED at, which `skybox.setViewOptions` writes: a client that could write it
       // without reading it back would be half served.
       view: skyboxViewOf(useSkyboxViews.getState(), open.documentId),
       ...(open.state.generation === undefined ? {} : { generation: open.state.generation }),
@@ -325,13 +325,13 @@ async function channel(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 export const MATERIAL_HANDLERS: ActionHandlers = {
   'skybox.state': readSky,
-  'skybox.view': skyboxView,
-  'skybox.adjust': adjust,
+  'skybox.setViewOptions': skyboxView,
+  'skybox.adjustImage': adjust,
   'skybox.resetAdjustments': () => runSky([resetAdjustments()]),
-  'skybox.sun': sun,
-  'skybox.environment': environment,
+  'skybox.setSun': sun,
+  'skybox.setPreviewLighting': environment,
 
-  'skybox.source': input => {
+  'skybox.setSourceImage': input => {
     const open = skyOpen()
     if (!open) return refused('wrongSurface')
 
@@ -346,10 +346,10 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
   },
 
   'material.state': readMaterial,
-  'material.material': material,
-  'material.environment': environmentOf,
-  'material.preview': preview,
-  'material.channel': channel,
+  'material.setSurfaceSettings': material,
+  'material.setPreviewEnvironment': environmentOf,
+  'material.setPreviewDisplay': preview,
+  'material.setChannelImage': channel,
 
   'styles.list': async () => {
     await useStyles.getState().load()

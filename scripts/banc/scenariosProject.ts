@@ -43,7 +43,8 @@ export const PROJECT_SCENARIOS: readonly Scenario[] = [
     "Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D et de skyboxes ?",
     run =>
       read.idle(run) &&
-      (read.answeredWith(run, 'assets.counts') || read.answeredWith(run, 'assets.search')),
+      (read.answeredWith(run, 'assets.counts') ||
+        read.answeredWith(run, 'assets.searchProjectCatalogue')),
   ),
   {
     name: '1.4 names the active document',

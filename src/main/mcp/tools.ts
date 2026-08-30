@@ -164,7 +164,7 @@ export type McpTool = {
 /**
  * The tool name for an action.
  *
- * The dot has to go: an action is `command.run` here, and the tool-name grammar clients hold us
+ * The dot has to go: an action is `command.runStudioCommand` here, and the tool-name grammar clients hold us
  * to accepts letters, digits, underscore and dash only. One substitution, reversed by
  * `actionOfTool`, rather than a second column in the registry that could drift from the first.
  */

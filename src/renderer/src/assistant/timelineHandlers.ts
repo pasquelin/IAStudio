@@ -25,7 +25,7 @@ import { mounted } from './sceneHandlers'
  * schemas apart before asking for anything is a model that asks for nothing.
  */
 export const TIMELINE_HANDLERS: ActionHandlers = {
-  'timeline.cue': input => {
+  'timeline.addSceneCue': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
@@ -89,7 +89,7 @@ export const TIMELINE_HANDLERS: ActionHandlers = {
     return { ok: true, data: { id } }
   },
 
-  'timeline.remove': input => {
+  'timeline.removeSceneCue': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
@@ -100,7 +100,7 @@ export const TIMELINE_HANDLERS: ActionHandlers = {
     return runOrRefuse(open.documentId, removeTimelineRow(listOf(list), id), `no row "${id}"`)
   },
 
-  'timeline.template': input => {
+  'timeline.setPanelRows': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 

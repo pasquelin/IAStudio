@@ -45,7 +45,7 @@ export type StudioSnapshot = {
    */
   projectKnown: boolean
   workspace: WorkspaceId
-  /** The surface, and the scope it puts a command in — the two facts `command.run` refuses on. */
+  /** The surface, and the scope it puts a command in — the two facts `command.runStudioCommand` refuses on. */
   surface: string
   /** `null` for a surface no command scope covers — the home, for one. */
   commandScope: string | null

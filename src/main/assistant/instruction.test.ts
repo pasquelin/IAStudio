@@ -168,7 +168,7 @@ describe('how much of the catalogue the model is shown', () => {
   /**
    * 🛑 Headed by the FAMILY the registry publishes, not by the first token of a name: read off
    * the name, 231 actions cut into 83 headings for 65 prefixes — a heading every 2.8 actions,
-   * grouping nothing. `model.schema` and `model.textures` are two families under one prefix.
+   * grouping nothing. `models.readGenerationModelFields` and `model.textures` are two families under one prefix.
    */
   it('heads the catalogue with the families the registry publishes', () => {
     const { text } = studioBriefing({ room: WIDE })
@@ -205,7 +205,7 @@ describe('how much of the catalogue the model is shown', () => {
    */
   it('names no action the short list does not show', () => {
     const briefing = studioBriefing({ room: NARROW })
-    // The RULES alone: the catalogue below them lists `command.run`'s own options, and a studio
+    // The RULES alone: the catalogue below them lists `command.runStudioCommand`'s own options, and a studio
     // command legitimately shares a name with an action — `document.save` is both.
     const rules = briefing.text.slice(0, briefing.text.indexOf('Catalogue:'))
     const unshown = ACTION_REGISTRY.filter(action => !briefing.allowed.has(action.name))
@@ -231,7 +231,7 @@ describe('how much of the catalogue the model is shown', () => {
     expect(wide.text).toContain('the WHOLE path inside the project')
     expect(wide.text).toContain('Never write <something> where an id goes')
     expect(wide.text).toContain('what a generation made is in the')
-    expect(wide.text).toContain('read model.schema first')
+    expect(wide.text).toContain('read models.readGenerationModelFields first')
   })
 
   it('stays inside the room it was given', () => {

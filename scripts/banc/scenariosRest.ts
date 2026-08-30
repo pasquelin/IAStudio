@@ -19,7 +19,7 @@ import { WHEN } from './project'
 /** A camera with a shot already cut, which is what a rail is hung on. */
 const shotScene = async (studio: Studio): Promise<void> => {
   await cameraScene(studio)
-  await studio.run('camera.shot', { nodeId: named(studio, 'Camera Test') })
+  await studio.run('camera.addShot', { nodeId: named(studio, 'Camera Test') })
 }
 
 /** A scene with a path node in it — every `path.*` call refuses on anything else. */
@@ -31,9 +31,9 @@ const pathScene = async (studio: Studio): Promise<void> => {
 /** A cube carrying two keys, so « efface la clé de 5 secondes » sorts one and leaves one. */
 const keyedCube = async (studio: Studio): Promise<void> => {
   await cubeScene(studio)
-  await studio.run('key.pose', { nodeId: named(studio, 'Cube Test'), timeSeconds: 0 })
+  await studio.run('key.writePoseKeys', { nodeId: named(studio, 'Cube Test'), timeSeconds: 0 })
   await studio.run('node.transform', { nodeId: named(studio, 'Cube Test'), positionY: 4 })
-  await studio.run('key.pose', { nodeId: named(studio, 'Cube Test'), timeSeconds: 5 })
+  await studio.run('key.writePoseKeys', { nodeId: named(studio, 'Cube Test'), timeSeconds: 5 })
 }
 
 export const REST_SCENARIOS: readonly Scenario[] = [
@@ -140,7 +140,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '42.2 gives the history of the last file operations',
     said: ['Montre-moi l’historique de mes dernières opérations sur les fichiers.'],
     setup: testFolders,
-    passed: run => read.spoke(run) && read.answeredWith(run, 'files.history'),
+    passed: run => read.spoke(run) && read.answeredWith(run, 'files.readUndoStack'),
   },
   {
     name: '42.3 says what was opened recently',
@@ -153,7 +153,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     // Made, then taken back: the folder has to be absent when the person speaks and back after.
     setup: async studio => {
       await studio.run('folder.new', { folder: '', name: 'Tests Assistant' })
-      await studio.run('files.undo', {})
+      await studio.run('files.undoFileOperation', {})
     },
     passed: run => read.holds(run, 'Tests Assistant'),
   },
@@ -232,7 +232,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '44.2 gives the result of the last generation',
     said: ['Donne-moi le résultat de ma dernière génération.'],
     setup: madeCar,
-    passed: run => read.idle(run) && read.answeredWith(run, 'job.get'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'job.readCloudGeneration'),
   },
   {
     name: '44.3 cancels the generation under way',
@@ -243,12 +243,12 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '44.4 stops the indexing task that is running',
     said: ["Arrête la tâche d'indexation qui tourne."],
-    passed: run => read.answeredWith(run, 'task.cancel'),
+    passed: run => read.answeredWith(run, 'task.cancelLocalTask'),
   },
   {
     name: '44.5 names the settings the armed image model accepts',
     said: ["Quels réglages accepte le modèle image que j'ai armé ?"],
-    passed: run => read.idle(run) && read.answeredWith(run, 'model.schema'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'models.readGenerationModelFields'),
   },
   {
     name: '44.6 estimates what a generation would cost before it runs',
@@ -259,7 +259,8 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '45.1 opens the preferences through the menu command',
     said: ['Ouvre les préférences par le menu, comme si je cliquais dessus.'],
-    passed: run => read.answeredWith(run, 'command.run') || run.studio.shell.settingsOpen(),
+    passed: run =>
+      read.answeredWith(run, 'command.runStudioCommand') || run.studio.shell.settingsOpen(),
   },
   {
     name: '45.2 says what it can do about layers',
@@ -330,7 +331,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     said: ['Trace un chemin fermé qui part du cube et va vers la droite.'],
     setup: cubeScene,
     // Closed, and not merely there: adding the node is `node.add`'s doing, and the request says
-    // « fermé », which is the only part `node.path` answers.
+    // « fermé », which is the only part `node.setPathShape` answers.
     passed: run => read.nodesOfKind(run, 'path').some(one => read.pathOf(one)?.closed === true),
   },
   {
@@ -489,7 +490,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     said: ['Découpe cette animation en un bloc de 0 à 5 secondes.'],
     setup: async studio => {
       await keyedCube(studio)
-      await studio.run('key.pose', { nodeId: named(studio, 'Cube Test'), timeSeconds: 9 })
+      await studio.run('key.writePoseKeys', { nodeId: named(studio, 'Cube Test'), timeSeconds: 9 })
     },
     passed: run => !read.keys(run).some(one => one.time > 5 * read.SECOND),
   },
@@ -503,7 +504,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '49.4 clears the key sitting at 5 seconds',
     said: ['Efface la clé posée à 5 secondes.'],
     setup: keyedCube,
-    // Three left of six: `key.pose` writes position, rotation AND scale, so the decor lays two
+    // Three left of six: `key.writePoseKeys` writes position, rotation AND scale, so the decor lays two
     // keys on each of the three channels.
     passed: run => {
       const left = read.keys(run)
@@ -526,6 +527,6 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '49.7 loops the rotation channel of Cube Test',
     said: ['Boucle le canal de rotation de Cube Test.'],
     setup: keyedCube,
-    passed: run => read.answeredWith(run, 'channel.flags'),
+    passed: run => read.answeredWith(run, 'channel.setMuteSoloLock'),
   },
 ]

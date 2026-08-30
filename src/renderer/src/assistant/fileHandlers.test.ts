@@ -368,8 +368,8 @@ describe('the file undo stack, which lives in the main process', () => {
     const redoFile = vi.fn(async () => BATCH)
     withProject({ project: { undoFile, redoFile } })
 
-    expect(await runAction('files.undo', {})).toEqual({ ok: true, data: BATCH })
-    expect(await runAction('files.redo', {})).toEqual({ ok: true, data: BATCH })
+    expect(await runAction('files.undoFileOperation', {})).toEqual({ ok: true, data: BATCH })
+    expect(await runAction('files.redoFileOperation', {})).toEqual({ ok: true, data: BATCH })
     // The listing a write owes its next reader: a client asking straight after would otherwise
     // read the folder from before its own undo.
     expect(relist).toHaveBeenCalledTimes(2)
@@ -380,7 +380,7 @@ describe('the file undo stack, which lives in the main process', () => {
     const fileHistory = vi.fn(async () => history)
     withProject({ project: { fileHistory } })
 
-    expect(await runAction('files.history', {})).toEqual({ ok: true, data: history })
+    expect(await runAction('files.readUndoStack', {})).toEqual({ ok: true, data: history })
     expect(relist).not.toHaveBeenCalled()
   })
 
@@ -388,7 +388,9 @@ describe('the file undo stack, which lives in the main process', () => {
     const revealFile = vi.fn(async () => {})
     withProject({ project: { revealFile } })
 
-    expect(await runAction('file.reveal', { path: 'Plans/a.png' })).toMatchObject({ ok: true })
+    expect(await runAction('file.reveal', { path: 'Plans/a.png' })).toMatchObject({
+      ok: true,
+    })
     expect(revealFile).toHaveBeenCalledWith('Plans/a.png')
   })
 
@@ -396,8 +398,11 @@ describe('the file undo stack, which lives in the main process', () => {
     installFakeBridge()
     useProject.setState({ project: null })
 
-    expect(await runAction('files.undo', {})).toEqual({ ok: false, refusal: 'noProject' })
-    expect(await runAction('files.history', {})).toEqual({ ok: false, refusal: 'noProject' })
+    expect(await runAction('files.undoFileOperation', {})).toEqual({
+      ok: false,
+      refusal: 'noProject',
+    })
+    expect(await runAction('files.readUndoStack', {})).toEqual({ ok: false, refusal: 'noProject' })
   })
 })
 

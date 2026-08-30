@@ -59,12 +59,12 @@ scénario impassable ou récompensait une mauvaise réponse :
 - **La rotation d'un NŒUD est en radians** — le banc la lisait en degrés (voir ci-dessous).
 - **Les actions fichier répondaient `ok` nu** sur un chemin absent, là où le studio répond un
   `FileOutcome` qui NOMME le refus. Le modèle annonçait un déplacement qui n'avait pas eu lieu.
-- **`command.run` n'était pas modélisée** : `scene.undo` et `scene.duplicate` répondaient `ok` et
+- **`command.runStudioCommand` n'était pas modélisée** : `scene.undo` et `scene.duplicate` répondaient `ok` et
   ne faisaient rien. Huit scénarios étaient scorés sur du vide. 🛑 **Le remède a créé l'inverse** —
   la passe du 25/08 le mesure plus haut : le vrai routeur refuse tout, faute de surface armée.
 - **`target.select` lisait `targetId`**, un champ que le registre ne déclare pas — l'appel correct
   (`aimId`) armait donc l'id vide et répondait `ok`.
-- **`model.schema` ne nommait que `prompt`** : « utilise cette image comme référence » était
+- **`models.readGenerationModelFields` ne nommait que `prompt`** : « utilise cette image comme référence » était
   littéralement impossible, et quatre demandes tournaient dessus.
 
 **Les cibles étaient l'inverse — le banc en donnait PLUS que l'app.** `TARGETS_BY_KIND` n'en
@@ -132,11 +132,11 @@ qu'un scénario tiendra demain.
 
 **`MCP reached: 200/230`.** Les trente actions que `coverage.ts` déclarait couvertes et qu'aucun
 run n'a touchées — chacune est un outil publié sur le fil MCP que personne n'a vu marcher :
-`prompt.describeStyle`, `actions.find`, `files.undo`, `files.redo`, `files.history`,
-`cost.estimate`, `job.cancel`, `asset.reveal`, `layer.shape`, `guide.remove`, `clip.speed`,
-`track.add`, `skybox.source`, `cloud.explore`, `cloud.pull`, `node.geometry`, `model.textures`,
-`bone.remove`, `animation.remove`, `animation.block`, `key.all`, `git.diff`, `git.stage`,
-`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.remove`, `settings.action`,
+`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.readUndoStack`,
+`cost.estimate`, `job.cancelCloudGeneration`, `asset.reveal`, `layer.editShapeLayer`, `guide.remove`, `clip.speed`,
+`track.add`, `skybox.setSourceImage`, `cloud.explorePublicFeed`, `cloud.pull`, `node.setPrimitiveParameters`, `model.textures`,
+`bone.remove`, `animation.removeBlock`, `animation.setBlockSettings`, `key.writeKeysOnOpenChannels`, `git.diff`, `git.stage`,
+`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.pressButton`,
 `accounts.activate`.
 
 ### Ce que les chaînes disent, par volume
@@ -162,7 +162,7 @@ Ces comptes portent sur les **runs RATÉS seuls** — le rapport n'imprime la ch
 
 ### Trois nids de refus, et aucun n'est la faute du modèle
 
-🛑 **`command.run` ne peut PAS marcher au banc, et c'est un mensonge du banc, pas un progrès.**
+🛑 **`command.runStudioCommand` ne peut PAS marcher au banc, et c'est un mensonge du banc, pas un progrès.**
 86 refus `wrongSurface` sur 13 scénarios, **2 succès sur 88 appels** — et les deux étaient
 `window.fullScreen`. Le fake d'avant répondait `ok` sans rien faire ; le vrai passe par
 `commandRouter`, qui publie sur un bus auquel les **surfaces montées** s'abonnent. Sans fenêtre,
@@ -180,7 +180,7 @@ parce que la cible est une sphère. Le refus envoie le modèle réparer ce qui n
 réactive le document, rouvre l'espace 3D, recommence. `notFound` est le mot juste et il existe
 déjà. 36 refus sur 4 scénarios.
 
-**`camera.target` exige un `shotId` que rien ne publie.** Même motif que celui qui a fait publier
+**`camera.aimShotAt` exige un `shotId` que rien ne publie.** Même motif que celui qui a fait publier
 les nœuds et les pistes : le briefing ne nomme aucun plan de caméra, donc le modèle envoie l'id du
 nœud caméra, ou `shotId=shotId`. 15 `badInput`. Les plans sont restés hors de ce qui a été
 publié avec les nœuds et les clips — à arbitrer.
@@ -200,7 +200,7 @@ réécrit.
   quand un seul nœud le porte — deux qui le partagent n'en désignent aucun, un choix silencieux
   éditant le mauvais objet.
 - **`wrongSurface` disait « ce nœud n'est pas un modèle »** (`rigHandlers`). C'est `notFound`.
-- **`node.addModel` et `world.environment` acceptaient un asset INEXISTANT** — `<skyboxId>`, le
+- **`node.addModel` et `world.setSceneLighting` acceptaient un asset INEXISTANT** — `<skyboxId>`, le
   placeholder épelé, était écrit dans la scène et le client répondu `ok`. Les deux passent par
   `withAsset`.
 - **`scene.undo` et `scene.redo` vivaient dans le composant du viewport** : hors de portée du menu
@@ -214,15 +214,15 @@ réécrit.
 
 🛑 **Ce qui reste et qui n'a pas été tranché** — chacun est une décision, pas un oubli :
 
-- **`command.run` répond `ok` quand la commande n'a rien à faire.** `scene.undo` sur une pile vide
+- **`command.runStudioCommand` répond `ok` quand la commande n'a rien à faire.** `scene.undo` sur une pile vide
   est un `ok`, donc un modèle en envoie neuf et défait le décor. Le faire savoir demande que le
   BUS de commandes remonte une réponse, ce qu'il ne fait pas : il publie et n'écoute rien.
 - **Les autres scopes du bus restent hors de portée sans fenêtre** — `canvas`, `sequence`,
   `material`, `skybox`. Leur logique vit dans des composants, contrairement à `runSceneCommand`.
-- **Les plans de caméra ne sont publiés nulle part**, d'où `camera.target shotId=shotId`.
+- **Les plans de caméra ne sont publiés nulle part**, d'où `camera.aimShotAt shotId=shotId`.
 - **Une skybox du dossier `Skyboxes/` est indexée `image`** — son extension est `.png`, et
-  `assets.search type=skybox` ne trouve rien. Vrai dans le studio comme au banc.
-- **`activity.read`, `assets.describe` et les canaux `provider.*` ne sont pas modélisés** : les
+  `assets.searchProjectCatalogue type=skybox` ne trouve rien. Vrai dans le studio comme au banc.
+- **`activity.read`, `assets.captionImages` et les canaux `provider.*` ne sont pas modélisés** : les
   scénarios qui les exercent mesurent un port vide.
 
 ## Quatre unités que le banc a d'abord lues de travers

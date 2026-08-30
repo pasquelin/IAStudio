@@ -254,7 +254,7 @@ export function iconOf(node: SceneNode): string {
   if (node.type === 'path') return PATH_ICON
   if (node.type === 'carved') return CARVED_ICON
 
-  // Named rather than assumed: the fallthrough used to read `node.geometry` on anything that was
+  // Named rather than assumed: the fallthrough used to read `node.setPrimitiveParameters` on anything that was
   // not a light, so the next member of the union would have crashed here instead of taking the
   // default glyph.
   if (node.type === 'light') return lightByKind(node.light.kind)?.icon ?? mdiCubeOutline

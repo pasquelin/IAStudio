@@ -56,7 +56,7 @@ export function AssistantConversationQuestion({ request }: { request: ConfirmReq
     if (typeof value === 'boolean')
       return t(value ? 'assistant.confirm.on' : 'assistant.confirm.off')
 
-    // Clipped on EVERY path: `assets.remove` takes a repeated field, and two hundred ids joined
+    // Clipped on EVERY path: `assets.removeFromLibrary` takes a repeated field, and two hundred ids joined
     // by « et » is a card taller than the thread, with Allow and Refuse off the bottom of it.
     const written = Array.isArray(value)
       ? formatList(value.map(String), i18n.language, 'conjunction')

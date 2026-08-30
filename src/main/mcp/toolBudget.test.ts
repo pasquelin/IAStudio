@@ -41,10 +41,10 @@ describe('what the registry costs a client', () => {
       .filter(one => one.size > 2_000)
       .map(one => one.name)
 
-    // 🛑 ONE exception, named rather than absorbed by a higher bound: `command.run` publishes
+    // 🛑 ONE exception, named rather than absorbed by a higher bound: `command.runStudioCommand` publishes
     // every command of the studio as an enum, which is what makes it worth its size — and what
     // makes a SECOND tool of that shape the thing to notice.
-    expect(heavy).toEqual(['command_run'])
+    expect(heavy).toEqual(['command_runStudioCommand'])
   })
 
   it('says the names of this lot, so a client can reach the loop at all', () => {

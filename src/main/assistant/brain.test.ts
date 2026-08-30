@@ -166,7 +166,7 @@ describe('what the model is told', () => {
   /**
    * Stated as what is LEFT rather than as what the preamble costs, because that is the property
    * that matters and the other one moved: 5 110 characters on 2026-08-15, **5 915 on 2026-08-25**,
-   * most of it `command.run` enumerating a hundred command ids — which is what makes it usable.
+   * most of it `command.runStudioCommand` enumerating a hundred command ids — which is what makes it usable.
    *
    * The floor was four thousand, then two, and is 1 500 — `UTTERANCE_ROOM` says which, so this
    * reads the constant rather than a number to be edited in three places. At 5 915 the four

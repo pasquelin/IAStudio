@@ -63,7 +63,7 @@ export const SETTINGS_HANDLERS: ActionHandlers = {
     return result.failure ? refused('notAllowed') : { ok: true, data: result.accounts }
   },
 
-  'settings.action': input => {
+  'settings.pressButton': input => {
     const id = oneOf(input, 'action', SETTING_ACTION_IDS)
     return id
       ? withBridge(bridge => bridge.settings.runAction(id))

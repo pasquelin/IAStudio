@@ -107,9 +107,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'post.enable',
-    titleKey: 'assistant.actions.postEnable.title',
-    descriptionKey: 'assistant.actions.postEnable.description',
+    name: 'post.setEffectEnabled',
+    titleKey: 'assistant.actions.postSetEffectEnabled.title',
+    descriptionKey: 'assistant.actions.postSetEffectEnabled.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -120,9 +120,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'post.switch',
-    titleKey: 'assistant.actions.postSwitch.title',
-    descriptionKey: 'assistant.actions.postSwitch.description',
+    name: 'post.setWholeStackEnabled',
+    titleKey: 'assistant.actions.postSetWholeStackEnabled.title',
+    descriptionKey: 'assistant.actions.postSetWholeStackEnabled.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -132,14 +132,14 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   /**
-   * By id OR by name, like every node-facing action of the registry: `post.presets` publishes
+   * By id OR by name, like every node-facing action of the registry: `post.listPresets` publishes
    * both families, and a preset somebody saved on this machine is reachable by the name they
    * gave it. A `choice` on the shipped ids alone would have made the saved ones unreachable.
    */
   action({
-    name: 'post.preset',
-    titleKey: 'assistant.actions.postPreset.title',
-    descriptionKey: 'assistant.actions.postPreset.description',
+    name: 'post.applyPreset',
+    titleKey: 'assistant.actions.postApplyPreset.title',
+    descriptionKey: 'assistant.actions.postApplyPreset.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -149,9 +149,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'post.presets',
-    titleKey: 'assistant.actions.postPresets.title',
-    descriptionKey: 'assistant.actions.postPresets.description',
+    name: 'post.listPresets',
+    titleKey: 'assistant.actions.postListPresets.title',
+    descriptionKey: 'assistant.actions.postListPresets.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -204,9 +204,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     fields: [CAMERA, EFFECT, PARAM],
   }),
   action({
-    name: 'post.save',
-    titleKey: 'assistant.actions.postSave.title',
-    descriptionKey: 'assistant.actions.postSave.description',
+    name: 'post.savePreset',
+    titleKey: 'assistant.actions.postSavePreset.title',
+    descriptionKey: 'assistant.actions.postSavePreset.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -216,9 +216,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'post.rename',
-    titleKey: 'assistant.actions.postRename.title',
-    descriptionKey: 'assistant.actions.postRename.description',
+    name: 'post.renamePreset',
+    titleKey: 'assistant.actions.postRenamePreset.title',
+    descriptionKey: 'assistant.actions.postRenamePreset.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -229,9 +229,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
   }),
   /** It leaves this MACHINE, and no document holds it: `studio` rather than `none`. */
   action({
-    name: 'post.forget',
-    titleKey: 'assistant.actions.postForget.title',
-    descriptionKey: 'assistant.actions.postForget.description',
+    name: 'post.deleteSavedPreset',
+    titleKey: 'assistant.actions.postDeleteSavedPreset.title',
+    descriptionKey: 'assistant.actions.postDeleteSavedPreset.description',
     commitment: 'studio',
     repeatable: true,
     reach: 'mcp',
@@ -240,9 +240,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'post.camera',
-    titleKey: 'assistant.actions.postCamera.title',
-    descriptionKey: 'assistant.actions.postCamera.description',
+    name: 'post.setCameraStackMode',
+    titleKey: 'assistant.actions.postSetCameraStackMode.title',
+    descriptionKey: 'assistant.actions.postSetCameraStackMode.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

@@ -62,7 +62,7 @@ export const GENERATION_SCENARIOS: readonly Scenario[] = [
     // Kept means neither was removed AND the model went and checked — the decor made them both.
     passed: run =>
       read.assets(run).filter(one => one.jobId !== undefined).length === 2 &&
-      !read.tried(run, 'assets.remove') &&
+      !read.tried(run, 'assets.removeFromLibrary') &&
       run.called.length > 0,
   },
 

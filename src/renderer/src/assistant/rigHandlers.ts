@@ -398,10 +398,10 @@ export const RIG_HANDLERS: ActionHandlers = {
     }),
 
   'animations.list': listAnimations,
-  'animation.add': addAnimation,
-  'animation.block': editBlock,
+  'animation.addBlock': addAnimation,
+  'animation.setBlockSettings': editBlock,
 
-  'animation.remove': input =>
+  'animation.removeBlock': input =>
     editModelOf(input, node => {
       const clipId = textOf(input, 'clipId') ?? ''
       return node.model.lanes?.some(lane => lane.clips.some(clip => clip.id === clipId))
@@ -409,7 +409,7 @@ export const RIG_HANDLERS: ActionHandlers = {
         : null
     }),
 
-  'animation.settings': timelineSettings,
+  'animation.setBandLengthAndRate': timelineSettings,
 
   'animation.autoKey': input => {
     const documentId = activeSceneId(useDocuments.getState())
@@ -419,13 +419,13 @@ export const RIG_HANDLERS: ActionHandlers = {
     return { ok: true }
   },
 
-  'key.pose': keyPose,
+  'key.writePoseKeys': keyPose,
 
   /**
    * 🛑 No instant named clears them ALL, and that is the difference from the window's own diamond:
    * a client cannot see the playhead, so « efface toutes les clés » had no call to make.
    */
-  'key.clear': input =>
+  'key.removeSubjectKeys': input =>
     editKeys(input, ({ state, at }) => {
       const tracks = tracksOfSubject(state, subjectOf(input))
       return numberOf(input, 'timeSeconds') === null
@@ -433,7 +433,7 @@ export const RIG_HANDLERS: ActionHandlers = {
         : unkeySubject(state, tracks, at)
     }),
 
-  'key.all': input =>
+  'key.writeKeysOnOpenChannels': input =>
     editKeys(input, ({ state, at }) =>
       keySubject(
         state,
@@ -465,7 +465,7 @@ export const RIG_HANDLERS: ActionHandlers = {
       return { ok: true }
     }),
 
-  'channel.flags': input =>
+  'channel.setMuteSoloLock': input =>
     editTrack(input, (track, documentId) => {
       const flags = {
         ...flagNamed(input, 'muted'),

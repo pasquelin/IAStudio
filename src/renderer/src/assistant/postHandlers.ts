@@ -47,7 +47,7 @@ import { mounted } from './sceneHandlers'
  * 🛑 The one gesture of the panel with no action here is the FILE — `post.export` and
  * `post.import` open a native dialog, which waits on somebody at the screen. Nothing is out of
  * reach for all that: `post.state` reads a whole stack out and `post.add`/`post.set` build one
- * back, and `post.save` keeps a look on this machine without a file at all.
+ * back, and `post.savePreset` keeps a look on this machine without a file at all.
  */
 
 /**
@@ -211,14 +211,14 @@ export const POST_HANDLERS: ActionHandlers = {
       return setPostParam(target, effectId, param, boundParam(spec, given))
     }),
 
-  'post.enable': input =>
+  'post.setEffectEnabled': input =>
     editPost(input, (target, stack) => {
       const effectId = effectIn(stack, input)
       const enabled = maybeBoolOf(input, 'enabled')
       return effectId && enabled !== null ? setPostEffectEnabled(target, effectId, enabled) : null
     }),
 
-  'post.switch': input =>
+  'post.setWholeStackEnabled': input =>
     editPost(input, target => {
       const enabled = maybeBoolOf(input, 'enabled')
       return enabled === null ? null : setPostEnabled(target, enabled)
@@ -229,14 +229,14 @@ export const POST_HANDLERS: ActionHandlers = {
    * is the very resolution the panel's picker goes through, so a client and a hand reach the
    * same eleven-plus-N looks.
    */
-  'post.preset': input =>
+  'post.applyPreset': input =>
     editPost(input, target => {
       const next = stackOfPreset(textOf(input, 'preset') ?? '', savedPresets(), newId)
       return next ? applyPostStack(target, next) : null
     }),
 
-  /** What `post.preset` will answer to. Without it a client cannot know a saved look exists. */
-  'post.presets': () => ({
+  /** What `post.applyPreset` will answer to. Without it a client cannot know a saved look exists. */
+  'post.listPresets': () => ({
     ok: true,
     data: {
       shipped: POST_PRESET_IDS,
@@ -295,14 +295,14 @@ export const POST_HANDLERS: ActionHandlers = {
    * answer without a command and outside the history — forgetting a preset is not an edit ⌘Z
    * could take back.
    */
-  'post.save': input =>
+  'post.savePreset': input =>
     withStack(input, ({ stack }) => {
       const saved = usePostPresets.getState().savePostPreset(textOf(input, 'name') ?? '', stack)
       // The store is what refuses a blank name — see `savePostPreset`, which trims it too.
       return saved ? { ok: true, data: { presetId: saved } } : refused('badInput')
     }),
 
-  'post.rename': input => {
+  'post.renamePreset': input => {
     const preset = savedNamed(textOf(input, 'preset') ?? '')
     if (!preset) return refused('notFound', 'no preset of that id or name is saved here')
 
@@ -312,7 +312,7 @@ export const POST_HANDLERS: ActionHandlers = {
     return renamed ? { ok: true } : refused('badInput')
   },
 
-  'post.forget': input => {
+  'post.deleteSavedPreset': input => {
     const preset = savedNamed(textOf(input, 'preset') ?? '')
     if (!preset) return refused('notFound', 'no preset of that id or name is saved here')
 
@@ -320,7 +320,7 @@ export const POST_HANDLERS: ActionHandlers = {
     return { ok: true }
   },
 
-  'post.camera': input => {
+  'post.setCameraStackMode': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 

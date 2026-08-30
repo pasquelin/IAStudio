@@ -50,7 +50,9 @@ describe('what the registry offers a layer', () => {
     [...(assistantAction(name)?.fields.find(field => field.key === key)?.options ?? [])].sort()
 
   it('is exactly what the engine declares', () => {
-    expect(optionsOf('layer.style', 'blend')).toEqual([...BLEND_MODES].sort())
+    expect(optionsOf('layer.setOpacityBlendAndVisibility', 'blend')).toEqual(
+      [...BLEND_MODES].sort(),
+    )
     expect(optionsOf('layer.add', 'adjustment')).toEqual([...ADJUSTMENT_KINDS].sort())
     // Every kind but `group`, which is made by grouping a selection rather than added.
     expect(optionsOf('layer.add', 'kind')).toEqual(
@@ -69,10 +71,10 @@ describe('what the registry offers a layer', () => {
     }
 
     for (const kind of ADJUSTMENT_KINDS) {
-      expect(boundsOf('layer.adjustment', kind), kind).toEqual(DIAL_RANGE[kind])
+      expect(boundsOf('layer.setAdjustmentAmount', kind), kind).toEqual(DIAL_RANGE[kind])
     }
 
-    expect(boundsOf('layer.shape', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
+    expect(boundsOf('layer.editShapeLayer', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
     expect(boundsOf('layer.add', 'sides')).toEqual({ min: MIN_SIDES, max: MAX_SIDES })
   })
 })
@@ -90,7 +92,7 @@ describe('reading the image in front', () => {
   })
 
   /**
-   * The rule `command.run` already follows: an action of this family speaks to the image tab in
+   * The rule `command.runStudioCommand` already follows: an action of this family speaks to the image tab in
    * front, and there is no second way of naming a document. Without a check the commands would
    * run against a default state and report success.
    */
@@ -200,7 +202,7 @@ describe('building a stack', () => {
       box: null,
     })
 
-    await runAction('layer.text', { layerId: id, width: 900, align: 'center' })
+    await runAction('layer.editTextLayer', { layerId: id, width: 900, align: 'center' })
 
     const written = canvas().layers.at(-1)
     if (written?.kind !== 'text') throw new Error('the layer is not a caption')
@@ -213,9 +215,9 @@ describe('building a stack', () => {
   it('resizes a caption box on the axis it names, and on that one only', async () => {
     await runAction('layer.add', { kind: 'text', name: 'Titre', text: 'Bonjour' })
     const id = canvas().layers.at(-1)?.id
-    await runAction('layer.text', { layerId: id, width: 900, height: 400 })
+    await runAction('layer.editTextLayer', { layerId: id, width: 900, height: 400 })
 
-    await runAction('layer.text', { layerId: id, width: 500 })
+    await runAction('layer.editTextLayer', { layerId: id, width: 500 })
 
     const written = canvas().layers.at(-1)
     if (written?.kind !== 'text') throw new Error('the layer is not a caption')
@@ -235,7 +237,7 @@ describe('building a stack', () => {
     await runAction('layer.rename', { layerId: 'layer-a', name: 'Ciel' })
     expect(canvas().layers[0]?.name).toBe('Ciel')
 
-    await runAction('layer.move', { layerId: 'layer-a', index: 1 })
+    await runAction('layer.reorderInStack', { layerId: 'layer-a', index: 1 })
     expect(layerIds()).toEqual(['layer-b', 'layer-a'])
 
     await runAction('layer.remove', { layerId: 'layer-b' })
@@ -285,7 +287,11 @@ describe('building a stack', () => {
   /** `moveLayer` refuses a parent that is no group by handing the state back — done, said twice. */
   it('refuses a move under something that is not a group', async () => {
     expect(
-      await runAction('layer.move', { layerId: 'layer-a', parentId: 'layer-b', index: 0 }),
+      await runAction('layer.reorderInStack', {
+        layerId: 'layer-a',
+        parentId: 'layer-b',
+        index: 0,
+      }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(layerIds()).toEqual(['layer-a', 'layer-b'])
   })
@@ -300,7 +306,7 @@ describe('building a stack', () => {
 
 describe('styling and placing a layer', () => {
   it('changes only the dials it was given', async () => {
-    await runAction('layer.style', { layerId: 'layer-a', opacity: 0.5 })
+    await runAction('layer.setOpacityBlendAndVisibility', { layerId: 'layer-a', opacity: 0.5 })
 
     expect(canvas().layers[0]).toMatchObject({ opacity: 0.5, blend: 'normal', visible: true })
   })
@@ -311,7 +317,7 @@ describe('styling and placing a layer', () => {
    * around three different dials would undo the opacity and leave the blend mode set.
    */
   it('takes several dials in one call, each undoable on its own', async () => {
-    await runAction('layer.style', {
+    await runAction('layer.setOpacityBlendAndVisibility', {
       layerId: 'layer-a',
       opacity: 0.2,
       blend: 'multiply',
@@ -333,10 +339,12 @@ describe('styling and placing a layer', () => {
   it('writes a text layer’s words, and refuses one that holds pixels', async () => {
     withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }), pixelLayer('layer-p', 'Fond'))
 
-    await runAction('layer.text', { layerId: 'layer-t', text: 'Générique', size: 64 })
+    await runAction('layer.editTextLayer', { layerId: 'layer-t', text: 'Générique', size: 64 })
     expect(canvas().layers[0]).toMatchObject({ text: 'Générique', size: 64 })
 
-    expect(await runAction('layer.text', { layerId: 'layer-p', text: 'Rien' })).toMatchObject({
+    expect(
+      await runAction('layer.editTextLayer', { layerId: 'layer-p', text: 'Rien' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -345,7 +353,7 @@ describe('styling and placing a layer', () => {
   it('reads a colour written as #rrggbb', async () => {
     withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
 
-    await runAction('layer.text', { layerId: 'layer-t', color: '#ff8800' })
+    await runAction('layer.editTextLayer', { layerId: 'layer-t', color: '#ff8800' })
     expect(canvas().layers[0]).toMatchObject({ color: 0xff8800 })
   })
 
@@ -356,13 +364,13 @@ describe('styling and placing a layer', () => {
   it('sets the typeface, telling a shipped face from an installed one', async () => {
     withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
 
-    await runAction('layer.text', { layerId: 'layer-t', fontFamily: 'Helvetica Neue' })
+    await runAction('layer.editTextLayer', { layerId: 'layer-t', fontFamily: 'Helvetica Neue' })
     expect(canvas().layers[0]).toMatchObject({
       font: { source: 'system', family: 'Helvetica Neue' },
     })
 
     const shipped = EMBEDDED_FONTS[0]?.family ?? ''
-    await runAction('layer.text', { layerId: 'layer-t', fontFamily: shipped })
+    await runAction('layer.editTextLayer', { layerId: 'layer-t', fontFamily: shipped })
 
     expect(canvas().layers[0]).toMatchObject({ font: { source: 'embedded', family: shipped } })
   })
@@ -374,7 +382,7 @@ describe('styling and placing a layer', () => {
   it('refuses a face claimed as shipped that the studio does not ship', async () => {
     withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }))
 
-    const outcome = await runAction('layer.text', {
+    const outcome = await runAction('layer.editTextLayer', {
       layerId: 'layer-t',
       fontFamily: 'Helvetica Neue',
       fontSource: 'embedded',
@@ -418,7 +426,7 @@ describe('repainting a shape long after it was drawn', () => {
   it('changes the fill and the outline of a shape already on the stack', async () => {
     const layerId = await drawn()
 
-    await runAction('layer.shape', {
+    await runAction('layer.editShapeLayer', {
       layerId,
       fill: '#ff0000',
       stroke: '#0000ff',
@@ -443,7 +451,7 @@ describe('repainting a shape long after it was drawn', () => {
     })
     const layerId = made.ok ? (made.data as { layerId: string }).layerId : ''
 
-    expect(await runAction('layer.shape', { layerId, filled: true })).toMatchObject({
+    expect(await runAction('layer.editShapeLayer', { layerId, filled: true })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -456,9 +464,9 @@ describe('repainting a shape long after it was drawn', () => {
    */
   it('refuses to leave a shape with neither fill nor outline', async () => {
     const layerId = await drawn()
-    await runAction('layer.shape', { layerId, filled: true, stroked: false })
+    await runAction('layer.editShapeLayer', { layerId, filled: true, stroked: false })
 
-    expect(await runAction('layer.shape', { layerId, filled: false })).toMatchObject({
+    expect(await runAction('layer.editShapeLayer', { layerId, filled: false })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -479,7 +487,7 @@ describe('the dial of an adjustment layer', () => {
   it('moves the dial the layer carries', async () => {
     const layerId = await adjusting()
 
-    await runAction('layer.adjustment', { layerId, exposure: 1.5 })
+    await runAction('layer.setAdjustmentAmount', { layerId, exposure: 1.5 })
 
     expect(layerNamed('Expo')).toMatchObject({ values: { exposure: 1.5, contrast: 1 } })
   })
@@ -489,7 +497,7 @@ describe('the dial of an adjustment layer', () => {
   it('refuses a dial that is not the layer’s own', async () => {
     const layerId = await adjusting()
 
-    expect(await runAction('layer.adjustment', { layerId, contrast: 1.4 })).toMatchObject({
+    expect(await runAction('layer.setAdjustmentAmount', { layerId, contrast: 1.4 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -509,7 +517,7 @@ describe('the frame itself', () => {
     await runAction('canvas.crop', { x: 0, y: 0, width: 100, height: 200 })
     expect(canvas()).toMatchObject({ width: 100, height: 200 })
 
-    await runAction('canvas.orient', { turn: 'rotateClockwise' })
+    await runAction('canvas.flipOrRotate', { turn: 'rotateClockwise' })
     expect(canvas()).toMatchObject({ width: 200, height: 100 })
   })
 })
@@ -523,7 +531,7 @@ describe('what a mask does, once the engine has carved one', () => {
   it('says whether it hides and whether it travels, one field at a time', async () => {
     withLayers(masked(), pixelLayer('layer-b', 'Sujet'))
 
-    expect(await runAction('layer.mask', { layerId: 'layer-a', linked: false })).toEqual({
+    expect(await runAction('layer.setMaskOptions', { layerId: 'layer-a', linked: false })).toEqual({
       ok: true,
     })
     expect(canvas().layers[0]?.mask).toEqual({ enabled: true, linked: false })
@@ -533,10 +541,10 @@ describe('what a mask does, once the engine has carved one', () => {
     withLayers(masked())
 
     expect(
-      await runAction('layer.mask', { layerId: 'layer-a', remove: true, enabled: false }),
+      await runAction('layer.setMaskOptions', { layerId: 'layer-a', remove: true, enabled: false }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
 
-    expect(await runAction('layer.mask', { layerId: 'layer-a', remove: true })).toEqual({
+    expect(await runAction('layer.setMaskOptions', { layerId: 'layer-a', remove: true })).toEqual({
       ok: true,
     })
     expect(canvas().layers[0]?.mask).toBeUndefined()
@@ -544,7 +552,9 @@ describe('what a mask does, once the engine has carved one', () => {
 
   /** Carving one is the engine's, through a command: a record with no pixels behind it hides all. */
   it('refuses a layer wearing none rather than giving it an empty one', async () => {
-    expect(await runAction('layer.mask', { layerId: 'layer-a', enabled: false })).toMatchObject({
+    expect(
+      await runAction('layer.setMaskOptions', { layerId: 'layer-a', enabled: false }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

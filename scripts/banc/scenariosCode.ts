@@ -46,7 +46,9 @@ export const CODE_SCENARIOS: readonly Scenario[] = [
     // Read and said, and NOTHING else: the question exists so a client can see the destination
     // before the spend, and an answer paid for is not an answer.
     passed: run =>
-      read.answeredWith(run, 'generator.armed') && read.spoke(run) && read.lookedOnly(run),
+      read.answeredWith(run, 'generator.readArmedGeneration') &&
+      read.spoke(run) &&
+      read.lookedOnly(run),
   },
   {
     name: '66.4 writes a new script without touching the one in front',

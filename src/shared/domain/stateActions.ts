@@ -5,7 +5,7 @@ import { MATERIAL_EXPORT_TARGETS } from './materialExport'
 /**
  * What the studio is, and which document is in front.
  *
- * The family that had to come first: `command.run` refuses anything whose surface is not
+ * The family that had to come first: `command.runStudioCommand` refuses anything whose surface is not
  * active, and before these there was no way to ask which one WAS. A client that cannot read
  * state does not drive the studio, it guesses at it — and a guess that reaches
  * `generator.submit` spends.
@@ -82,7 +82,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * ⌘S on a NAMED document, awaited — which is what `command.run('document.save')` could not
+     * ⌘S on a NAMED document, awaited — which is what `command.runStudioCommand('document.save')` could not
      * be. That route saves whatever tab is in front and answers before the write lands, so a
      * client had no way to save a document it was not looking at, nor to know it was written.
      *
@@ -108,9 +108,9 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
      * this one must not — nobody on the other side of the machine can answer it, and the call
      * would stand there for good. The assistant's own gate is what stands in front of this.
      */
-    name: 'document.remove',
-    titleKey: 'assistant.actions.documentRemove.title',
-    descriptionKey: 'assistant.actions.documentRemove.description',
+    name: 'document.deleteFromDisk',
+    titleKey: 'assistant.actions.documentDeleteFromDisk.title',
+    descriptionKey: 'assistant.actions.documentDeleteFromDisk.description',
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',

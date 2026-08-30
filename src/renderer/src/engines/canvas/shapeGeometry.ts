@@ -29,7 +29,7 @@ export const MAX_SIDES = 12
 
 /**
  * Whether the shape has no inside. `paintShape` leaves these two open, so a fill on one paints
- * nothing at all — which is why the panel hides the switch and `layer.shape` refuses it.
+ * nothing at all — which is why the panel hides the switch and `layer.editShapeLayer` refuses it.
  */
 export function isOpenShape(kind: ShapeKind): boolean {
   return kind === 'line' || kind === 'arrow'

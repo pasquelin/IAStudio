@@ -39,9 +39,9 @@ export function commitmentOfCommand(id: string): ActionCommitment {
  */
 export const CORE_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'command.run',
-    titleKey: 'assistant.actions.commandRun.title',
-    descriptionKey: 'assistant.actions.commandRun.description',
+    name: 'command.runStudioCommand',
+    titleKey: 'assistant.actions.commandRunStudioCommand.title',
+    descriptionKey: 'assistant.actions.commandRunStudioCommand.description',
     commitment: 'none',
     repeatable: true,
     raises: input =>
@@ -56,7 +56,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         /**
          * 🛑 The WHOLE registry, the five that raise a native picker included — leaving them out
          * was tried and is worse: `options` is what the validator holds an input to, so
-         * `command.run project.new` came back `badInput` quoting the 126 remaining names, where
+         * `command.runStudioCommand project.new` came back `badInput` quoting the 126 remaining names, where
          * the handler answers `nativeDialog` and says to use the action taking a path.
          */
         options: COMMAND_REGISTRY.map(descriptor => descriptor.id),
@@ -160,7 +160,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
        */
       { key: 'operation', kind: 'text', labelKey: 'assistant.fields.operation', required: false },
       // `raw`, because the shape is the target model's own and is only known once
-      // `GET /models/{id}` has answered — which `model.schema` is there to ask.
+      // `GET /models/{id}` has answered — which `models.readGenerationModelFields` is there to ask.
       { key: 'parameters', kind: 'raw', labelKey: 'assistant.fields.parameters', required: true },
     ],
   }),
@@ -170,9 +170,9 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
    * reach — and the narrow briefing is 8 000 characters that the catalogue never gives ground on.
    */
   action({
-    name: 'generator.armed',
-    titleKey: 'assistant.actions.generatorArmed.title',
-    descriptionKey: 'assistant.actions.generatorArmed.description',
+    name: 'generator.readArmedGeneration',
+    titleKey: 'assistant.actions.generatorReadArmedGeneration.title',
+    descriptionKey: 'assistant.actions.generatorReadArmedGeneration.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

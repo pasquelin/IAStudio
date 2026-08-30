@@ -276,9 +276,9 @@ const timelineListField: ActionField = {
  */
 export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'timeline.cue',
-    titleKey: 'assistant.actions.timelineCue.title',
-    descriptionKey: 'assistant.actions.timelineCue.description',
+    name: 'timeline.addSceneCue',
+    titleKey: 'assistant.actions.timelineAddSceneCue.title',
+    descriptionKey: 'assistant.actions.timelineAddSceneCue.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -299,9 +299,9 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'timeline.remove',
-    titleKey: 'assistant.actions.timelineRemove.title',
-    descriptionKey: 'assistant.actions.timelineRemove.description',
+    name: 'timeline.removeSceneCue',
+    titleKey: 'assistant.actions.timelineRemoveSceneCue.title',
+    descriptionKey: 'assistant.actions.timelineRemoveSceneCue.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -312,9 +312,9 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /** 🛑 A filter of VIEW: it decides what the panel offers, never what the engine can do. */
-    name: 'timeline.template',
-    titleKey: 'assistant.actions.timelineTemplate.title',
-    descriptionKey: 'assistant.actions.timelineTemplate.description',
+    name: 'timeline.setPanelRows',
+    titleKey: 'assistant.actions.timelineSetPanelRows.title',
+    descriptionKey: 'assistant.actions.timelineSetPanelRows.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -350,9 +350,9 @@ const axisField = (axis: 'X' | 'Y' | 'Z'): ActionField => ({
  */
 export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'game.template',
-    titleKey: 'assistant.actions.gameTemplate.title',
-    descriptionKey: 'assistant.actions.gameTemplate.description',
+    name: 'game.applyTemplate',
+    titleKey: 'assistant.actions.gameApplyTemplate.title',
+    descriptionKey: 'assistant.actions.gameApplyTemplate.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

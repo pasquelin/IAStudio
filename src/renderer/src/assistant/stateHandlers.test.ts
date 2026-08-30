@@ -61,7 +61,7 @@ beforeEach(() => {
 
 describe('reading what the studio is', () => {
   /**
-   * The one action every other one depends on: `command.run` refuses anything whose surface is
+   * The one action every other one depends on: `command.runStudioCommand` refuses anything whose surface is
    * not active, and before this there was no way to ask which one was. The scope is answered
    * beside the surface for exactly that reason — a refusal a client cannot act on is noise.
    */
@@ -457,7 +457,7 @@ describe('saving a document from outside the window', () => {
     expect(saveDocument).toHaveBeenCalledWith('doc-a')
   })
 
-  // `command.run('document.save')` could only ever reach the tab in front, and answered before
+  // `command.runStudioCommand('document.save')` could only ever reach the tab in front, and answered before
   // the write landed. Naming one is the whole point of this action.
   it('falls back on the document in front when none is named', async () => {
     installDocuments({ 'doc-a': '3d', 'doc-b': 'image' }, 'doc-b')
@@ -510,14 +510,16 @@ describe('deleting a document from outside the window', () => {
   it('deletes without raising a dialog nobody can answer', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
-    expect(await runAction('document.remove', { documentId: 'doc-a' })).toEqual({ ok: true })
+    expect(await runAction('document.deleteFromDisk', { documentId: 'doc-a' })).toEqual({
+      ok: true,
+    })
     expect(dropDocument).toHaveBeenCalledWith('doc-a')
   })
 
   it('refuses for a document no tab holds', async () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
 
-    expect(await runAction('document.remove', { documentId: 'ghost' })).toEqual({
+    expect(await runAction('document.deleteFromDisk', { documentId: 'ghost' })).toEqual({
       ok: false,
       refusal: 'notFound',
     })
@@ -528,7 +530,7 @@ describe('deleting a document from outside the window', () => {
     installDocuments({ 'doc-a': '3d' }, 'doc-a')
     dropDocument.mockResolvedValue(false)
 
-    expect(await runAction('document.remove', { documentId: 'doc-a' })).toEqual({
+    expect(await runAction('document.deleteFromDisk', { documentId: 'doc-a' })).toEqual({
       ok: false,
       refusal: 'failed',
     })

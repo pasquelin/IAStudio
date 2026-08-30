@@ -280,10 +280,10 @@ function readState(): ActionOutcome {
       // grading are document values, and a client that can write them has to be able to read them.
       world: open.state.world,
       // What drives the cameras: without them a client can open a shot and never edit one, since
-      // `camera.rail` and `camera.target` name it by the id only this list hands over.
+      // `camera.bindPathToShot` and `camera.aimShotAt` name it by the id only this list hands over.
       shots: open.state.animation.shots,
       // The band's own half. `channel.remove` and `key.move` name a channel by the id only this
-      // hands over, and `animation.settings` writes the two numbers beside it.
+      // hands over, and `animation.setBandLengthAndRate` writes the two numbers beside it.
       fps: open.state.animation.fps,
       duration: open.state.animation.duration,
       // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
@@ -311,7 +311,7 @@ function readState(): ActionOutcome {
         ...(node.type === 'light' ? { light: node.light } : {}),
         ...(node.type === 'model' ? { model: node.model } : {}),
         ...(node.type === 'camera' ? { camera: node.camera } : {}),
-        // The points of a rail, so binding one is not done blind — `camera.rail` takes the id
+        // The points of a rail, so binding one is not done blind — `camera.bindPathToShot` takes the id
         // from here, and what the rail looks like decides which one a client wants.
         ...(node.type === 'path' ? { path: node.path } : {}),
         // The recipe and the material: without them a solid reads as a bare `type` and a client
@@ -572,12 +572,12 @@ function worldGround(input: Record<string, unknown>): ActionOutcome {
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
 
-  'world.environment': worldEnvironment,
-  'world.background': worldBackground,
-  'world.fog': worldFog,
-  'world.ground': worldGround,
+  'world.setSceneLighting': worldEnvironment,
+  'world.setBackground': worldBackground,
+  'world.setFog': worldFog,
+  'world.setGroundPlane': worldGround,
 
-  'world.render': input => {
+  'world.setToneMapping': input => {
     const toneMapping = oneOf(input, 'toneMapping', TONE_MAPPINGS)
     const exposure = numberOf(input, 'exposure')
 
@@ -606,7 +606,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
    * Marks shapes as tools for the next fold, or takes the mark off. The same command the toolbar
    * runs, so both doors read one rule — `carvePlan` says what a mark means.
    */
-  'node.negate': input => {
+  'node.markAsCuttingTool': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
@@ -630,7 +630,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
    * volume — `carvePlan` is where both rules live, and the toolbar reads the same one. `matterId`
    * names the matter outright, for the rare cut that runs the other way.
    */
-  'node.carve': input => {
+  'node.combineIntoSolid': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 
@@ -656,7 +656,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     return { ok: true, data: { nodeId: solid?.id ?? '' } }
   },
 
-  'node.carveInvert': input =>
+  'node.swapSolidMatterAndTool': input =>
     editNode(input, (node, documentId) =>
       node.type === 'carved'
         ? invertCarve(node, sceneOf(useScenes.getState(), documentId).nodes)
@@ -681,7 +681,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'node.rename': input =>
     editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),
 
-  'node.visible': input =>
+  'node.setVisible': input =>
     editNode(input, node => setNodeVisible(node.id, boolOf(input, 'visible'))),
 
   /**
@@ -712,7 +712,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       )
     }),
 
-  'node.material': input =>
+  'node.setMeshMaterial': input =>
     editNode(input, node => {
       if (!carriesMaterial(node)) return null
       // Neither a text's outline nor a cut result is a primitive, so their UVs never go through
@@ -739,7 +739,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       return Object.keys(changes).length === 0 ? null : setMaterialOn([node], changes)
     }),
 
-  'node.geometry': input =>
+  'node.setPrimitiveParameters': input =>
     editNode(input, node => {
       if (node.type !== 'mesh') return null
 
@@ -758,7 +758,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       )
     }),
 
-  'node.shadow': input =>
+  'node.setShadowCastAndReceive': input =>
     editNode(input, node => {
       const changes = {
         ...(input.castShadow === undefined ? {} : { castShadow: boolOf(input, 'castShadow') }),
@@ -773,7 +773,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       return canShadow(node, changes) ? setShadowOn([node], changes) : null
     }),
 
-  'node.sprite': input =>
+  'node.setSpriteSettings': input =>
     editNode(input, node => {
       if (node.type !== 'sprite') return null
 
@@ -789,7 +789,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       return Object.keys(changes).length === 0 ? null : setSpriteOn([node], changes)
     }),
 
-  'node.text': input =>
+  'node.setTextSettings': input =>
     editNode(input, node => {
       if (node.type !== 'text') return null
 
@@ -812,7 +812,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       return Object.keys(changes).length === 0 ? null : setTextOn([node], changes)
     }),
 
-  'node.path': input =>
+  'node.setPathShape': input =>
     editPath(input, path => {
       const tension = numberOf(input, 'tension')
       // The same rail back is what `editPath` reads as a refusal: a call that named nothing meant
@@ -872,7 +872,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       return wanted ? wearMaterialAt(node.id, slot, wanted) : null
     }),
 
-  /** The picture must EXIST, or the model holds a reference nothing resolves — see `world.environment`. */
+  /** The picture must EXIST, or the model holds a reference nothing resolves — see `world.setSceneLighting`. */
   'model.wearImage': input => {
     const assetId = textOf(input, 'assetId')
     const write = (): ActionOutcome =>
@@ -890,7 +890,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
    * never are. The lens handed over keeps the fov it ALREADY holds: that value is what its key is
    * measured against, and a new one there moves the rest pose under every other key.
    */
-  'node.camera': input =>
+  'node.setCameraLens': input =>
     editNode(input, (node, documentId) => {
       if (node.type !== 'camera') return null
 
@@ -922,11 +922,11 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   // Seconds here, microseconds in the timeline: a client counting a shot in `Us` would be one
   // unit away from a film six orders of magnitude too long, with nothing on screen to say so.
-  'camera.shot': input => openShot(input),
+  'camera.addShot': input => openShot(input),
 
   // Through the very command the inspector's own select goes through, so a rail bound from here
   // takes the whole of itself forwards exactly as one bound on screen does.
-  'camera.rail': input =>
+  'camera.bindPathToShot': input =>
     editShot(input, (shot, state) => {
       const pathId = textOf(input, 'pathId') ?? ''
       if (pathId === '') return bindRailToShot(shot, '')
@@ -945,7 +945,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   // Through the panel's own command, which lays the rail AND binds it in one entry: a rail added
   // without its shot would be a line nothing runs on.
-  'camera.addRail': input =>
+  'camera.createAndBindPath': input =>
     editShot(input, (shot, state) => {
       const camera = nodeById(state, shot.cameraId)
       return camera?.type === 'camera' ? railForShot(camera, shot) : null
@@ -969,7 +969,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     return { ok: true, data: { steps: moved.steps } }
   },
 
-  'camera.target': input =>
+  'camera.aimShotAt': input =>
     editShot(input, (shot, state) => {
       const targetId = textOf(input, 'targetId') ?? ''
       if (targetId !== '') {
@@ -994,7 +994,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
   // A field the shape has no room for is refused rather than filed: `withField` writes by
   // computed key without checking, and a light given a `penumbra` it never had is a document
   // that no longer describes anything.
-  'node.light': input =>
+  'node.setLightSettings': input =>
     editNode(input, node => {
       if (node.type !== 'light') return null
 
@@ -1058,7 +1058,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     return (await captureSceneView(open.documentId, quality)) ? { ok: true } : refused('failed')
   },
 
-  'world.preset': input => {
+  'world.applyPreset': input => {
     const preset = oneOf(input, 'preset', ENVIRONMENT_PRESETS)
     return preset === null ? refused('badInput') : editWorld(() => presetPatch(preset))
   },

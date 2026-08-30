@@ -138,7 +138,7 @@ export const useCloud = create<CloudState>()((set, get) => ({
     await get().pull([remoteAssetId])
 
     // The transfer ended on an `invalidate`, which ARMS a coalesced read; reading now without
-    // disarming it sends a second `assets.search` — a synchronous SQLite query in the main
+    // disarming it sends a second `assets.searchProjectCatalogue` — a synchronous SQLite query in the main
     // process — right behind the one just awaited, on every double-click and every drop.
     useAssets.getState().cancelInvalidate()
     // Read back rather than assumed: the row the import wrote is not in `items` until a read

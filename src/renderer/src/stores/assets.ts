@@ -72,7 +72,7 @@ type AssetsState = {
    */
   connect: () => Promise<() => void>
   /**
-   * Says the catalogue changed and lets this store decide when to read it. `assets.search` is
+   * Says the catalogue changed and lets this store decide when to read it. `assets.searchProjectCatalogue` is
    * a synchronous SQLite query in the main process: forty rushes finishing their ingest would
    * otherwise freeze every window forty times over.
    */
@@ -297,7 +297,7 @@ export const useAssets = create<AssetsState>()(
         },
 
         // Callers that need the rows NOW share the read already in flight rather than opening a
-        // second one: `assets.search` is a synchronous SQLite query in the main process, and
+        // second one: `assets.searchProjectCatalogue` is a synchronous SQLite query in the main process, and
         // three generations finishing together asked for the same answer three times over.
         refresh: async () => {
           // Shared only when it answers the same question. A read in flight for the previous

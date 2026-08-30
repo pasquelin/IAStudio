@@ -130,7 +130,7 @@ function studioState(): ActionOutcome {
     projectKnown: project.known,
     workspace: useLayouts.getState().activeWorkspace,
     /**
-     * The surface, and the scope it puts a command in — the two facts `command.run` refuses on.
+     * The surface, and the scope it puts a command in — the two facts `command.runStudioCommand` refuses on.
      * A client that reads `wrongSurface` needs the SCOPE to know what to activate, and deriving
      * it here rather than leaving it to be looked up is what makes the refusal actionable.
      */
@@ -235,7 +235,7 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
 }
 
 /**
- * ⌘S on a named document, AWAITED — the difference from `command.run('document.save')`, which
+ * ⌘S on a named document, AWAITED — the difference from `command.runStudioCommand('document.save')`, which
  * saves whatever is in front and answers before the write lands.
  *
  * A throw is a refusal rather than an exception across the boundary: an image whose engine is
@@ -365,7 +365,7 @@ export const STATE_HANDLERS: ActionHandlers = {
   'document.close': close,
   'document.rename': rename,
   'document.save': save,
-  'document.remove': remove,
+  'document.deleteFromDisk': remove,
 
   // The same gesture as opening it: naming the tab in the store alone left an image in front of
   // a sky's panels, which no click can produce — the state this action exists to repair.

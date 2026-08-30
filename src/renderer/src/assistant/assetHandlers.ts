@@ -4,7 +4,7 @@ import { withBridge, type ActionHandlers } from './actionHandler'
 import { boolOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
- * The library, queried and corrected from outside the window — the other half of `job.wait`:
+ * The library, queried and corrected from outside the window — the other half of `job.waitForCloudGeneration`:
  * the ids a finished generation hands back are looked up here.
  */
 
@@ -58,12 +58,12 @@ async function searchAssets(input: Record<string, unknown>): Promise<ActionOutco
 }
 
 export const ASSET_HANDLERS: ActionHandlers = {
-  'assets.search': input => searchAssets(input),
+  'assets.searchProjectCatalogue': input => searchAssets(input),
   'assets.counts': () => withBridge(bridge => bridge.assets.counts()),
   'asset.update': update,
 
   /**
-   * Through the catalogue, NOT through `assets.describe` — that one is the captioning channel and
+   * Through the catalogue, NOT through `assets.captionImages` — that one is the captioning channel and
    * calls the API. Reading a generation's output must cost nothing.
    */
   'asset.get': input => {
@@ -71,12 +71,12 @@ export const ASSET_HANDLERS: ActionHandlers = {
     return withBridge(bridge => bridge.assets.search({ ids, limit: ids.length }))
   },
 
-  'assets.remove': input =>
+  'assets.removeFromLibrary': input =>
     withBridge(bridge =>
       bridge.assets.remove(textsOf(input, 'assetIds'), boolOf(input, 'alsoRemote')),
     ),
 
-  'assets.describe': input =>
+  'assets.captionImages': input =>
     withBridge(bridge => bridge.assets.describe(textsOf(input, 'assetIds'))),
 
   'assets.absent': input => withBridge(bridge => bridge.assets.absent(textsOf(input, 'assetIds'))),

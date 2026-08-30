@@ -413,7 +413,7 @@ le parseur de réponse vérifie le NOM, et le serveur MCP passe `params.argument
 la question de confirmation, sinon une entrée fautive ferait demander à la personne d’autoriser une
 dépense qui n’allait pas partir.
 
-Le nom change de dialecte au passage — `command.run` devient `command_run`, parce que la grammaire
+Le nom change de dialecte au passage — `command.runStudioCommand` devient `command_runStudioCommand`, parce que la grammaire
 des noms d’outils n’accepte pas le point — et `actionOfTool` fait le chemin inverse. **Une seule
 substitution, jamais une seconde colonne dans le registre** : elle dériverait de la première.
 
@@ -425,7 +425,7 @@ file. `main/mcp/asking.ts` compose l’aller-retour que l’IPC n’a pas dans c
 parce qu’à l’autre bout il y a un client qui attendrait sinon.
 
 **Le niveau déclaré n’est qu’un plancher.** `raises` l’élève depuis l’entrée de l’appel —
-`commitmentOfCommand` pour `command.run`, un `amend` pour `git.commit` — et `asksItself` marque
+`commitmentOfCommand` pour `command.runStudioCommand`, un `amend` pour `git.commit` — et `asksItself` marque
 l’action dont le gestionnaire pose sa PROPRE question, ce qui est la raison pour laquelle son
 niveau reste au plancher. `commitmentOfCommand` est le seul gardé commande par commande : cinq
 commandes du canevas aplatissent et téléversent l’image, ce qui crée un asset permanent. Un oubli

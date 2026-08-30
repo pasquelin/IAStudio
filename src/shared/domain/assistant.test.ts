@@ -70,7 +70,7 @@ describe('the action registry', () => {
 
   it('lets a command be named only if the registry declares it', () => {
     const ids: readonly string[] = COMMAND_REGISTRY.map(descriptor => descriptor.id)
-    const offered = assistantAction('command.run')?.fields[0]?.options ?? []
+    const offered = assistantAction('command.runStudioCommand')?.fields[0]?.options ?? []
 
     expect(offered).toHaveLength(ids.length)
     for (const id of offered) expect(ids, id).toContain(id)
@@ -176,7 +176,7 @@ describe('what a second identical call can bring', () => {
       'accounts.activate',
       'animation.autoKey',
       'asset.reveal',
-      'channel.flags',
+      'channel.setMuteSoloLock',
       'chat.close',
       'clip.select',
       'dictation.start',
@@ -184,15 +184,15 @@ describe('what a second identical call can bring', () => {
       'document.activate',
       'document.close',
       'document.open',
-      'favorite.pin',
-      'favorite.unpin',
+      'favorite.pinAssetRecipe',
+      'favorite.unpinAssetRecipe',
       'file.open',
       'file.reveal',
-      'fileInfo.open',
-      'help.open',
+      'fileInfo.openWindow',
+      'help.openStudioWindow',
       'layer.select',
-      'material.preview',
-      'mirror.open',
+      'material.setPreviewDisplay',
+      'mirror.openVideoReturnWindow',
       'models.select',
       'node.select',
       'panel.close',
@@ -204,7 +204,7 @@ describe('what a second identical call can bring', () => {
       'project.close',
       'project.open',
       'settings.open',
-      'skybox.view',
+      'skybox.setViewOptions',
       'target.select',
       'view.direction',
       'view.display',
@@ -213,9 +213,9 @@ describe('what a second identical call can bring', () => {
 
   /**
    * The four the measured loop was written against, spelled out: each ANSWERS differently on a
-   * second call, and `job.wait` says in its own description that it is made to be called again.
+   * second call, and `job.waitForCloudGeneration` says in its own description that it is made to be called again.
    */
-  it.each(['jobs.list', 'job.wait', 'activity.recent', 'files.list'])(
+  it.each(['jobs.list', 'job.waitForCloudGeneration', 'activity.recent', 'files.list'])(
     'leaves %s callable as many times as a plan needs',
     name => {
       expect(assistantAction(name)?.repeatable).toBe(true)

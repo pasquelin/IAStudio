@@ -203,11 +203,11 @@ export const FILE_HANDLERS: ActionHandlers = {
       bridge.project.newFolder(textOf(input, 'folder') ?? '', textOf(input, 'name') ?? ''),
     ),
 
-  'files.undo': () => changing(bridge => bridge.project.undoFile()),
+  'files.undoFileOperation': () => changing(bridge => bridge.project.undoFile()),
 
-  'files.redo': () => changing(bridge => bridge.project.redoFile()),
+  'files.redoFileOperation': () => changing(bridge => bridge.project.redoFile()),
 
-  'files.history': () => inProject(bridge => bridge.project.fileHistory()),
+  'files.readUndoStack': () => inProject(bridge => bridge.project.fileHistory()),
 
   'file.reveal': input =>
     inProject(bridge => bridge.project.revealFile(textOf(input, 'path') ?? '')),

@@ -84,15 +84,15 @@ async function asking(run: () => Promise<ActionOutcome>): Promise<ActionOutcome>
 }
 
 export const JOB_HANDLERS: ActionHandlers = {
-  'job.wait': waitForJob,
-  'job.cancel': cancelJob,
+  'job.waitForCloudGeneration': waitForJob,
+  'job.cancelCloudGeneration': cancelJob,
 
-  'job.get': input => {
+  'job.readCloudGeneration': input => {
     const job = jobOf(textOf(input, 'jobId') ?? '')
     return job ? { ok: true, data: job } : refused('notFound')
   },
 
-  'model.schema': input =>
+  'models.readGenerationModelFields': input =>
     asking(() =>
       withBridge(bridge => bridge.provider.describeModel(textOf(input, 'modelId') ?? '')),
     ),
@@ -116,5 +116,6 @@ export const JOB_HANDLERS: ActionHandlers = {
 
   // `false` says nothing was running under that id, which is a click that arrived late rather
   // than a failure — so it travels as the answer it is.
-  'task.cancel': input => withBridge(bridge => bridge.tasks.cancel(textOf(input, 'taskId') ?? '')),
+  'task.cancelLocalTask': input =>
+    withBridge(bridge => bridge.tasks.cancel(textOf(input, 'taskId') ?? '')),
 }

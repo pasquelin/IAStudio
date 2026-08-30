@@ -17,7 +17,7 @@ import { messageOf } from '@shared/guards'
 
 /** What puts a whole game together in one gesture — a template, or a prefab of the project. */
 export const ASSEMBLY_HANDLERS: ActionHandlers = {
-  'game.template': input => {
+  'game.applyTemplate': input => {
     const open = mounted()
     if (!open) return refused('wrongSurface')
 

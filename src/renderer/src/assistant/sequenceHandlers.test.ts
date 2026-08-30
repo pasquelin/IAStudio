@@ -96,7 +96,7 @@ describe('reading the montage in front', () => {
   })
 
   /**
-   * The rule `command.run` already follows, and the reason the family names no document: it speaks
+   * The rule `command.runStudioCommand` already follows, and the reason the family names no document: it speaks
    * to the montage in front, whichever workspace shows it.
    */
   it('refuses every action of the family while no montage is in front', async () => {
@@ -232,7 +232,11 @@ describe('the tracks', () => {
    * `writeTrack` and never enter the history — exactly as the header column writes them.
    */
   it('sets the four dials of a row without touching the undo stack', async () => {
-    await runAction('track.adjust', { trackId: 'track-video', muted: true, height: 120 })
+    await runAction('track.setMuteSoloLockHeight', {
+      trackId: 'track-video',
+      muted: true,
+      height: 120,
+    })
 
     expect(sequence().tracks[0]).toMatchObject({ muted: true, height: 120 })
     expect(sequenceHistoryOf(useSequences.getState(), DOCUMENT).past).toEqual([])

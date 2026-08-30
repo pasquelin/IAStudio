@@ -63,7 +63,7 @@ const withPanel = async (studio: Studio): Promise<void> => {
 
 const remembered = async (studio: Studio): Promise<void> => {
   // No `cardId`: naming one the project does not hold is refused, which is the channel's contract.
-  await studio.run('context.write', { title: 'Style', body: 'rendu photoréaliste' })
+  await studio.run('context.writeProjectCard', { title: 'Style', body: 'rendu photoréaliste' })
 }
 
 export const SHELL_SCENARIOS: readonly Scenario[] = [
@@ -202,7 +202,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     name: '51.8 turns the document 90 degrees clockwise',
     said: ['Fais pivoter le document de 90 degrés vers la droite.'],
     setup: boatImage,
-    passed: run => read.answeredWith(run, 'canvas.orient') && read.canvas(run)?.width === 768,
+    passed: run => read.answeredWith(run, 'canvas.flipOrRotate') && read.canvas(run)?.width === 768,
   },
   {
     name: '51.9 lays a vertical guide down the middle',
@@ -274,24 +274,25 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
   {
     name: '54.1 shows what the online library holds',
     said: ['Montre-moi ce que contient ma bibliothèque en ligne.'],
-    passed: run => read.idle(run) && read.answeredWith(run, 'cloud.browse'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'cloud.browseAccountLibrary'),
   },
   {
     name: '54.2 searches the online library for red cars',
     said: ['Cherche des voitures rouges dans ma bibliothèque en ligne.'],
     passed: run =>
       read.idle(run) &&
-      (read.answeredWith(run, 'cloud.explore') || read.answeredWith(run, 'cloud.browse')),
+      (read.answeredWith(run, 'cloud.explorePublicFeed') ||
+        read.answeredWith(run, 'cloud.browseAccountLibrary')),
   },
   {
     name: '54.3 finds online pictures close to the boat',
     said: ['Trouve-moi en ligne des images qui ressemblent à mon bateau.'],
-    passed: run => read.idle(run) && read.answeredWith(run, 'cloud.similar'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'cloud.findSimilarPublished'),
   },
   {
     name: '54.4 says what a sync would bring, before running it',
     said: ['Dis-moi ce que téléchargerait une synchronisation, avant de la lancer.'],
-    passed: run => read.idle(run) && read.answeredWith(run, 'cloud.plan'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'cloud.previewSync'),
   },
   {
     name: '54.5 pulls the online pictures missing here',
@@ -355,7 +356,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
   {
     name: '55.9 names the favourites',
     said: ['Quels sont mes favoris ?'],
-    passed: run => read.idle(run) && read.answeredWith(run, 'favorites.list'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'favorites.listPinnedRecipes'),
   },
   {
     name: '55.10 pins the boat picture as a favourite',
@@ -366,7 +367,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     name: '55.11 unpins the boat picture',
     said: ["Retire l'image du bateau de mes favoris."],
     setup: async studio => {
-      await studio.run('favorite.pin', {
+      await studio.run('favorite.pinAssetRecipe', {
         assetId: assetOf(studio, 'fais moi un bateau.png'),
       })
     },
@@ -432,13 +433,13 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
   {
     name: '57.2 puts the display settings back to their defaults',
     said: ["Remets les réglages d'affichage à leurs valeurs par défaut."],
-    passed: run => read.tried(run, 'settings.action') || read.tried(run, 'settings.write'),
+    passed: run => read.tried(run, 'settings.pressButton') || read.tried(run, 'settings.write'),
   },
   {
     name: '57.3 says what it has remembered about the project',
     said: ["Qu'as-tu retenu de ce projet jusqu'ici ?"],
     setup: remembered,
-    passed: run => read.idle(run) && read.answeredWith(run, 'context.read'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'context.readProjectCards'),
   },
   {
     name: '57.4 remembers the project aims at photoreal marine work',

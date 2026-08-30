@@ -43,7 +43,7 @@ describe('a game put together in one gesture', () => {
   })
 
   it('lays a template down into the scene in front', async () => {
-    const outcome = await runAction('game.template', { template: 'thirdPerson' })
+    const outcome = await runAction('game.applyTemplate', { template: 'thirdPerson' })
 
     expect(outcome).toMatchObject({ ok: true, data: { template: 'thirdPerson' } })
     expect(scene().nodes.map(node => node.name)).toContain('Character')
@@ -52,7 +52,7 @@ describe('a game put together in one gesture', () => {
 
   /** The choice field is what refuses it, and it names the three — so the caller can repair. */
   it('refuses a template the studio does not carry, listing the ones it has', async () => {
-    const outcome = await runAction('game.template', { template: 'metroidvania' })
+    const outcome = await runAction('game.applyTemplate', { template: 'metroidvania' })
 
     expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(outcome.ok ? '' : outcome.detail).toContain('thirdPerson')
@@ -145,7 +145,7 @@ describe('a game put together in one gesture', () => {
   it('refuses both when no scene is in front', async () => {
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
 
-    expect(await runAction('game.template', { template: 'thirdPerson' })).toMatchObject({
+    expect(await runAction('game.applyTemplate', { template: 'thirdPerson' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })

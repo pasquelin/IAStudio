@@ -148,7 +148,7 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
   /**
    * 🛑 Asking WINS, before the calls are even read: told to ask, a model asks and acts in the same
    * breath — `[M]` on qwen3.8, « Crée un nouveau projet » came back with the question and a
-   * `command.run` beside it. A plan written before the answer was known is written against a guess.
+   * `command.runStudioCommand` beside it. A plan written before the answer was known is written against a guess.
    */
   const ask = askIn(parsed.ask)
   if (ask) return { say, ask, calls: [] }
