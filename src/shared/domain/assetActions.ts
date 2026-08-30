@@ -38,6 +38,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetsSearch.title',
     descriptionKey: 'assistant.actions.assetsSearch.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'text', kind: 'text', labelKey: 'assistant.fields.query', required: false },
@@ -73,6 +74,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetsCounts.title',
     descriptionKey: 'assistant.actions.assetsCounts.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -81,6 +83,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetGet.title',
     descriptionKey: 'assistant.actions.assetGet.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [ASSET_IDS],
   }),
@@ -91,6 +94,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetUpdate.title',
     descriptionKey: 'assistant.actions.assetUpdate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -104,6 +108,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetsRemove.title',
     descriptionKey: 'assistant.actions.assetsRemove.description',
     commitment: 'files',
+    repeatable: true,
     // Reaches the library when `alsoRemote` is set, which nothing on this machine takes back.
     raises: input => (input.alsoRemote === true ? 'remote' : 'files'),
     reach: 'mcp',
@@ -124,6 +129,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetsDescribe.title',
     descriptionKey: 'assistant.actions.assetsDescribe.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [ASSET_IDS],
   }),
@@ -132,6 +138,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetExtractTextures.title',
     descriptionKey: 'assistant.actions.assetExtractTextures.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -142,6 +149,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetReveal.title',
     descriptionKey: 'assistant.actions.assetReveal.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -152,6 +160,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.assetsAbsent.title',
     descriptionKey: 'assistant.actions.assetsAbsent.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [ASSET_IDS],
   }),

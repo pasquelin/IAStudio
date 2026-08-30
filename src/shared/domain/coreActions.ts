@@ -43,6 +43,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.commandRun.title',
     descriptionKey: 'assistant.actions.commandRun.description',
     commitment: 'none',
+    repeatable: true,
     raises: input =>
       typeof input.command === 'string' ? commitmentOfCommand(input.command) : 'none',
     reach: 'both',
@@ -67,6 +68,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.workspaceOpen.title',
     descriptionKey: 'assistant.actions.workspaceOpen.description',
     commitment: 'none',
+    repeatable: true,
     asksItself: true,
     reach: 'both',
     fields: [
@@ -101,6 +103,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelsSearch.title',
     descriptionKey: 'assistant.actions.modelsSearch.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [
       { key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true },
@@ -118,6 +121,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelsSelect.title',
     descriptionKey: 'assistant.actions.modelsSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'both',
     fields: [
       {
@@ -135,6 +139,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.generatorPrepare.title',
     descriptionKey: 'assistant.actions.generatorPrepare.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [
       {
@@ -169,6 +174,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.generatorArmed.title',
     descriptionKey: 'assistant.actions.generatorArmed.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -177,6 +183,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.generatorSubmit.title',
     descriptionKey: 'assistant.actions.generatorSubmit.description',
     commitment: 'credits',
+    repeatable: true,
     reach: 'both',
     fields: [
       {
@@ -193,6 +200,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.jobsList.title',
     descriptionKey: 'assistant.actions.jobsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [],
   }),
@@ -207,6 +215,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.promptSuggest.title',
     descriptionKey: 'assistant.actions.promptSuggest.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [
       { key: 'draft', kind: 'longText', labelKey: 'assistant.fields.draft', required: true },
@@ -217,6 +226,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.promptTranslate.title',
     descriptionKey: 'assistant.actions.promptTranslate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [{ key: 'text', kind: 'longText', labelKey: 'assistant.fields.text', required: true }],
   }),
@@ -227,6 +237,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.promptDescribeStyle.title',
     descriptionKey: 'assistant.actions.promptDescribeStyle.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [],
   }),
@@ -242,6 +253,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.chatClose.title',
     descriptionKey: 'assistant.actions.chatClose.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'both',
     fields: [],
   }),
@@ -257,6 +269,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.actionsFind.title',
     descriptionKey: 'assistant.actions.actionsFind.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [{ key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true }],
   }),

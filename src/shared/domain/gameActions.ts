@@ -30,6 +30,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.componentAttach.title',
     descriptionKey: 'assistant.actions.componentAttach.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [nodeIdField, componentTypeField],
   }),
@@ -38,6 +39,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.componentDetach.title',
     descriptionKey: 'assistant.actions.componentDetach.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [nodeIdField, componentTypeField],
   }),
@@ -51,6 +53,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.componentSet.title',
     descriptionKey: 'assistant.actions.componentSet.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       nodeIdField,
@@ -76,6 +79,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.playStart.title',
     descriptionKey: 'assistant.actions.playStart.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [],
   }),
@@ -84,6 +88,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.playStop.title',
     descriptionKey: 'assistant.actions.playStop.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [],
   }),
@@ -92,6 +97,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.playPause.title',
     descriptionKey: 'assistant.actions.playPause.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [],
   }),
@@ -100,6 +106,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.playResume.title',
     descriptionKey: 'assistant.actions.playResume.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [],
   }),
@@ -109,6 +116,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.playStep.title',
     descriptionKey: 'assistant.actions.playStep.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'steps', kind: 'integer', labelKey: 'assistant.fields.fixedSteps', required: false },
@@ -120,6 +128,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.playLoadScene.title',
     descriptionKey: 'assistant.actions.playLoadScene.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'scene', kind: 'text', labelKey: 'assistant.fields.sceneToLoad', required: true },
@@ -131,6 +140,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.runtimeReport.title',
     descriptionKey: 'assistant.actions.runtimeReport.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -140,6 +150,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.runtimeErrors.title',
     descriptionKey: 'assistant.actions.runtimeErrors.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -152,6 +163,7 @@ export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.scriptList.title',
     descriptionKey: 'assistant.actions.scriptList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -160,6 +172,7 @@ export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.scriptRead.title',
     descriptionKey: 'assistant.actions.scriptRead.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.scriptPath', required: true },
@@ -174,6 +187,7 @@ export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.scriptWrite.title',
     descriptionKey: 'assistant.actions.scriptWrite.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.scriptPath', required: true },
@@ -198,6 +212,7 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.studioDescribe.title',
     descriptionKey: 'assistant.actions.studioDescribe.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'ref', kind: 'text', labelKey: 'assistant.fields.describeRef', required: false },
@@ -209,6 +224,7 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.studioDocs.title',
     descriptionKey: 'assistant.actions.studioDocs.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'topic', kind: 'text', labelKey: 'assistant.fields.docsTopic', required: false },
@@ -227,6 +243,7 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
     // at the worst of what it holds, then asking once, collapsed five independent delegation
     // switches into one — see `runBatch`, which carries the whole reasoning.
     commitment: 'none',
+    repeatable: true,
     runsOthers: true,
     reach: 'mcp',
     fields: [
@@ -263,6 +280,7 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.timelineCue.title',
     descriptionKey: 'assistant.actions.timelineCue.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       timelineListField,
@@ -285,6 +303,7 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.timelineRemove.title',
     descriptionKey: 'assistant.actions.timelineRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       timelineListField,
@@ -297,6 +316,7 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.timelineTemplate.title',
     descriptionKey: 'assistant.actions.timelineTemplate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -334,6 +354,7 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gameTemplate.title',
     descriptionKey: 'assistant.actions.gameTemplate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -356,6 +377,7 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.prefabDefine.title',
     descriptionKey: 'assistant.actions.prefabDefine.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.prefabName', required: true },
@@ -368,6 +390,7 @@ export const ASSEMBLY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.prefabInstantiate.title',
     descriptionKey: 'assistant.actions.prefabInstantiate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'prefab', kind: 'text', labelKey: 'assistant.fields.prefabRef', required: true },
@@ -389,6 +412,7 @@ export const EXPORT_ACTIONS: readonly AssistantAction[] = [
      * dialog and the yes has to come from somewhere: `files`, like every other write.
      */
     commitment: 'none',
+    repeatable: true,
     raises: input => (typeof input.folder === 'string' && input.folder !== '' ? 'files' : 'none'),
     reach: 'mcp',
     fields: [

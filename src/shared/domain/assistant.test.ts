@@ -162,3 +162,63 @@ describe('what an action engages', () => {
     }
   })
 })
+
+describe('what a second identical call can bring', () => {
+  /**
+   * Named rather than counted, like `raises` and `asksItself`: a count stays green the day one
+   * action is freed while another is pinned, and a reading action pinned by mistake tells a model
+   * to stop watching its own generation.
+   */
+  it('names every action a turn refuses to run twice', () => {
+    const pinned = ACTION_REGISTRY.filter(entry => !entry.repeatable)
+
+    expect(pinned.map(entry => entry.name).sort()).toEqual([
+      'accounts.activate',
+      'animation.autoKey',
+      'asset.reveal',
+      'channel.flags',
+      'chat.close',
+      'clip.select',
+      'dictation.start',
+      'dictation.stop',
+      'document.activate',
+      'document.close',
+      'document.open',
+      'favorite.pin',
+      'favorite.unpin',
+      'file.open',
+      'file.reveal',
+      'fileInfo.open',
+      'help.open',
+      'layer.select',
+      'material.preview',
+      'mirror.open',
+      'models.select',
+      'node.select',
+      'panel.close',
+      'panel.open',
+      'play.pause',
+      'play.resume',
+      'play.start',
+      'play.stop',
+      'project.close',
+      'project.open',
+      'settings.open',
+      'skybox.view',
+      'target.select',
+      'view.direction',
+      'view.display',
+    ])
+  })
+
+  /**
+   * The four the measured loop was written against, spelled out: each ANSWERS differently on a
+   * second call, and `job.wait` says in its own description that it is made to be called again.
+   */
+  it.each(['jobs.list', 'job.wait', 'activity.recent', 'files.list'])(
+    'leaves %s callable as many times as a plan needs',
+    name => {
+      expect(assistantAction(name)?.repeatable).toBe(true)
+    },
+  )
+})

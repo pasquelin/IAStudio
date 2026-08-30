@@ -47,6 +47,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasState.title',
     descriptionKey: 'assistant.actions.canvasState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -55,6 +56,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerAdd.title',
     descriptionKey: 'assistant.actions.layerAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -101,6 +103,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerRemove.title',
     descriptionKey: 'assistant.actions.layerRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -109,6 +112,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerSelect.title',
     descriptionKey: 'assistant.actions.layerSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -117,6 +121,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerRename.title',
     descriptionKey: 'assistant.actions.layerRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -132,6 +137,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerStyle.title',
     descriptionKey: 'assistant.actions.layerStyle.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -167,6 +173,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerTransform.title',
     descriptionKey: 'assistant.actions.layerTransform.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -185,6 +192,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerText.title',
     descriptionKey: 'assistant.actions.layerText.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -245,6 +253,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerMove.title',
     descriptionKey: 'assistant.actions.layerMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -257,6 +266,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerDuplicate.title',
     descriptionKey: 'assistant.actions.layerDuplicate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -268,6 +278,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerGroup.title',
     descriptionKey: 'assistant.actions.layerGroup.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -285,6 +296,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerUngroup.title',
     descriptionKey: 'assistant.actions.layerUngroup.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -293,6 +305,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerMergeDown.title',
     descriptionKey: 'assistant.actions.layerMergeDown.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -301,6 +314,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasResize.title',
     descriptionKey: 'assistant.actions.canvasResize.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'width', kind: 'integer', labelKey: 'assistant.fields.width', required: true, min: 1 },
@@ -326,6 +340,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasCrop.title',
     descriptionKey: 'assistant.actions.canvasCrop.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'x', kind: 'number', labelKey: 'assistant.fields.x', required: true },
@@ -349,6 +364,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerLock.title',
     descriptionKey: 'assistant.actions.layerLock.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -371,6 +387,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerShape.title',
     descriptionKey: 'assistant.actions.layerShape.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -409,6 +426,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerAdjustment.title',
     descriptionKey: 'assistant.actions.layerAdjustment.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -451,6 +469,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasOrient.title',
     descriptionKey: 'assistant.actions.canvasOrient.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -472,6 +491,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerMask.title',
     descriptionKey: 'assistant.actions.layerMask.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -492,6 +512,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.guideAdd.title',
     descriptionKey: 'assistant.actions.guideAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -514,6 +535,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.guideMove.title',
     descriptionKey: 'assistant.actions.guideMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       GUIDE,
@@ -530,6 +552,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.guideRemove.title',
     descriptionKey: 'assistant.actions.guideRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [GUIDE],
   }),

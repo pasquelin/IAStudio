@@ -43,6 +43,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postState.title',
     descriptionKey: 'assistant.actions.postState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CAMERA],
   }),
@@ -51,6 +52,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postAdd.title',
     descriptionKey: 'assistant.actions.postAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -68,6 +70,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postRemove.title',
     descriptionKey: 'assistant.actions.postRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CAMERA, EFFECT],
   }),
@@ -76,6 +79,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postMove.title',
     descriptionKey: 'assistant.actions.postMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -88,6 +92,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postSet.title',
     descriptionKey: 'assistant.actions.postSet.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -106,6 +111,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postEnable.title',
     descriptionKey: 'assistant.actions.postEnable.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -118,6 +124,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postSwitch.title',
     descriptionKey: 'assistant.actions.postSwitch.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -134,6 +141,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postPreset.title',
     descriptionKey: 'assistant.actions.postPreset.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -145,6 +153,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postPresets.title',
     descriptionKey: 'assistant.actions.postPresets.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -153,6 +162,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postDuplicate.title',
     descriptionKey: 'assistant.actions.postDuplicate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CAMERA, EFFECT],
   }),
@@ -161,6 +171,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postReset.title',
     descriptionKey: 'assistant.actions.postReset.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CAMERA, EFFECT],
   }),
@@ -174,6 +185,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postKey.title',
     descriptionKey: 'assistant.actions.postKey.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -187,6 +199,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postUnkey.title',
     descriptionKey: 'assistant.actions.postUnkey.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CAMERA, EFFECT, PARAM],
   }),
@@ -195,6 +208,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postSave.title',
     descriptionKey: 'assistant.actions.postSave.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CAMERA,
@@ -206,6 +220,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postRename.title',
     descriptionKey: 'assistant.actions.postRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'preset', kind: 'text', labelKey: 'assistant.fields.postPreset', required: true },
@@ -218,6 +233,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postForget.title',
     descriptionKey: 'assistant.actions.postForget.description',
     commitment: 'studio',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'preset', kind: 'text', labelKey: 'assistant.fields.postPreset', required: true },
@@ -228,6 +244,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.postCamera.title',
     descriptionKey: 'assistant.actions.postCamera.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },

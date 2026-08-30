@@ -56,6 +56,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.sequenceState.title',
     descriptionKey: 'assistant.actions.sequenceState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -64,6 +65,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.sequenceSeek.title',
     descriptionKey: 'assistant.actions.sequenceSeek.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'time', kind: 'integer', labelKey: 'assistant.fields.time', required: true, min: 0 },
@@ -78,6 +80,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipAdd.title',
     descriptionKey: 'assistant.actions.clipAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -96,6 +99,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipRemove.title',
     descriptionKey: 'assistant.actions.clipRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CLIP],
   }),
@@ -104,6 +108,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipMove.title',
     descriptionKey: 'assistant.actions.clipMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CLIP,
@@ -116,6 +121,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipTrim.title',
     descriptionKey: 'assistant.actions.clipTrim.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CLIP,
@@ -128,6 +134,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipSplit.title',
     descriptionKey: 'assistant.actions.clipSplit.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CLIP,
@@ -139,6 +146,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipFade.title',
     descriptionKey: 'assistant.actions.clipFade.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CLIP,
@@ -157,6 +165,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipGain.title',
     descriptionKey: 'assistant.actions.clipGain.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CLIP,
@@ -175,6 +184,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipSpeed.title',
     descriptionKey: 'assistant.actions.clipSpeed.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       CLIP,
@@ -193,6 +203,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipUnlink.title',
     descriptionKey: 'assistant.actions.clipUnlink.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [CLIP],
   }),
@@ -201,6 +212,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.clipSelect.title',
     descriptionKey: 'assistant.actions.clipSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [CLIP],
   }),
@@ -209,6 +221,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.trackAdd.title',
     descriptionKey: 'assistant.actions.trackAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -225,6 +238,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.trackRemove.title',
     descriptionKey: 'assistant.actions.trackRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [TRACK],
   }),
@@ -233,6 +247,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.trackMove.title',
     descriptionKey: 'assistant.actions.trackMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       TRACK,
@@ -244,6 +259,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.trackRename.title',
     descriptionKey: 'assistant.actions.trackRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       TRACK,
@@ -259,6 +275,7 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.trackAdjust.title',
     descriptionKey: 'assistant.actions.trackAdjust.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       TRACK,

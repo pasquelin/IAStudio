@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { HISTORY_BLOCK_MAX } from '@shared/domain/assistant'
 import {
+  alreadySettled,
   assistantHistory,
   repeatedRelative,
   repeatKeyOf,
+  settledKeyOf,
   type AssistantStep,
   type AssistantTurn,
 } from './conversation'
@@ -225,5 +227,57 @@ describe('a relative call sent twice in one turn', () => {
     expect(repeatedRelative(ran, key)).toBe(true)
     expect(repeatedRelative(missed, key)).toBe(false)
     expect(repeatedRelative([], key)).toBe(false)
+  })
+})
+
+describe('a call that sets a named state, sent twice in one turn', () => {
+  it('is keyed for what sets a state, and for nothing that reads or edits', () => {
+    expect(settledKeyOf('panel.open', { panel: 'projects' })).toBeTruthy()
+    expect(settledKeyOf('jobs.list', {})).toBeNull()
+    expect(settledKeyOf('layer.add', { name: 'ciel' })).toBeNull()
+  })
+
+  // What a JSON round trip does not preserve, and a model rewriting its own call would hit.
+  it('keys the same call written in either order to one string', () => {
+    expect(settledKeyOf('document.open', { path: 'a.ora', space: 'image' })).toBe(
+      settledKeyOf('document.open', { space: 'image', path: 'a.ora' }),
+    )
+  })
+
+  it('is seen as already set, and only once it has actually run', () => {
+    const key = settledKeyOf('panel.open', { panel: 'projects' })
+    const step = (refusal: AssistantStep['refusal']): AssistantStep => ({
+      action: 'panel.open',
+      refusal,
+      settledKey: key ?? '',
+    })
+
+    expect(alreadySettled([step(null)], 'panel.open', key)).toBe(true)
+    expect(alreadySettled([step('wrongSurface')], 'panel.open', key)).toBe(false)
+    expect(alreadySettled([], 'panel.open', key)).toBe(false)
+  })
+
+  /** Keyed on the INPUT: two different panels brought up is a plan, not a loop. */
+  it('leaves another panel of the same action through', () => {
+    const opened = settledKeyOf('panel.open', { panel: 'projects' })
+    const step: AssistantStep = { action: 'panel.open', refusal: null, settledKey: opened ?? '' }
+
+    expect(
+      alreadySettled([step], 'panel.open', settledKeyOf('panel.open', { panel: 'layers' })),
+    ).toBe(false)
+  })
+
+  /** The plan a naive guard would have cut: arm A, act, arm B, act, come back to A. */
+  it('lets a turn come back to a state it set before another', () => {
+    const first = settledKeyOf('layer.select', { layerId: 'a' })
+    const between = settledKeyOf('layer.select', { layerId: 'b' })
+    const steps: AssistantStep[] = [
+      { action: 'layer.select', refusal: null, settledKey: first ?? '' },
+      { action: 'layer.style', refusal: null },
+      { action: 'layer.select', refusal: null, settledKey: between ?? '' },
+    ]
+
+    expect(alreadySettled(steps, 'layer.select', first)).toBe(false)
+    expect(alreadySettled(steps, 'layer.select', between)).toBe(true)
   })
 })

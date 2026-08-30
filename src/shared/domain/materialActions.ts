@@ -34,6 +34,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxState.title',
     descriptionKey: 'assistant.actions.skyboxState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -47,6 +48,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxView.title',
     descriptionKey: 'assistant.actions.skyboxView.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -69,6 +71,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxAdjust.title',
     descriptionKey: 'assistant.actions.skyboxAdjust.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NUMBER('exposure', 'assistant.fields.exposure'),
@@ -85,6 +88,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxResetAdjustments.title',
     descriptionKey: 'assistant.actions.skyboxResetAdjustments.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -93,6 +97,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxSun.title',
     descriptionKey: 'assistant.actions.skyboxSun.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NUMBER('elevation', 'assistant.fields.elevation'),
@@ -106,6 +111,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxEnvironment.title',
     descriptionKey: 'assistant.actions.skyboxEnvironment.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NUMBER('intensity', 'assistant.fields.intensity', 0),
@@ -122,6 +128,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxSource.title',
     descriptionKey: 'assistant.actions.skyboxSource.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -132,6 +139,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.materialState.title',
     descriptionKey: 'assistant.actions.materialState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -140,6 +148,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.materialSettings.title',
     descriptionKey: 'assistant.actions.materialSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
@@ -175,6 +184,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.materialPreview.title',
     descriptionKey: 'assistant.actions.materialPreview.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       NUMBER('envIntensity', 'assistant.fields.intensity', 0),
@@ -219,6 +229,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.materialEnvironment.title',
     descriptionKey: 'assistant.actions.materialEnvironment.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: ENVIRONMENT_FIELDS,
   }),
@@ -231,6 +242,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.materialChannel.title',
     descriptionKey: 'assistant.actions.materialChannel.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -248,6 +260,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.stylesList.title',
     descriptionKey: 'assistant.actions.stylesList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -260,6 +273,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.styleSave.title',
     descriptionKey: 'assistant.actions.styleSave.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true }],
   }),
@@ -268,6 +282,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.styleRename.title',
     descriptionKey: 'assistant.actions.styleRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'styleId', kind: 'text', labelKey: 'assistant.fields.styleId', required: true },
@@ -283,6 +298,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.styleRemove.title',
     descriptionKey: 'assistant.actions.styleRemove.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'styleId', kind: 'text', labelKey: 'assistant.fields.styleId', required: true },

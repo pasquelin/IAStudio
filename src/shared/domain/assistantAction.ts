@@ -393,6 +393,17 @@ export type AssistantAction = {
   /** The floor. What one CALL engages may be higher — see `raises`. */
   commitment: ActionCommitment
   /**
+   * Whether a SECOND identical call, in one turn, can bring anything the first did not. False is
+   * for what sets a surface or a session to a NAMED state; everything else is true, reading
+   * included — `jobs.list` answers empty for a generation that has not registered yet, and a
+   * model told not to repeat it would stop watching its own.
+   *
+   * 🛑 Blind spot, assumed: the guard reads this action's own last state and never its OPPOSITE,
+   * so open/close/open of one panel — and pause/resume/pause, start/stop/start, pin/unpin/pin —
+   * is refused on the third call, with a sentence saying the state stands when it no longer does.
+   */
+  repeatable: boolean
+  /**
    * What this call engages, when its own input decides — a command that uploads, an amend that
    * rewrites a version, a removal that reaches the remote library.
    *
