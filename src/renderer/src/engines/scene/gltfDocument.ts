@@ -26,6 +26,7 @@ import {
   gltfStudioMetadata,
   isGltfDocument,
   KHR_LIGHTS_PUNCTUAL,
+  type GltfNode,
   type GltfPunctualLight,
 } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
@@ -35,13 +36,11 @@ import type { LightDescriptor, Transform } from '@shared/domain/scene'
 import { scenePayload, sceneFromPayload, timelineRowsLost } from './sceneDocument'
 import type { SceneState } from './sceneState'
 
-type GltfNode = {
+/** Translation and scale are three numbers each — a length neither type holds. */
+type WrittenNode = GltfNode & {
   name: string
-  /** Three numbers, four for the quaternion — the format's own lengths, not restated as tuples. */
   translation?: readonly number[]
-  rotation?: readonly number[]
   scale?: readonly number[]
-  children?: readonly number[]
   camera?: number
   extensions?: { [KHR_LIGHTS_PUNCTUAL]: { light: number } }
 }
@@ -93,7 +92,7 @@ export function gltfDocumentOf(
   })
 
   const nodes = state.nodes.map(node => {
-    const written: GltfNode = { name: node.name, ...placement(node.transform) }
+    const written: WrittenNode = { name: node.name, ...placement(node.transform) }
 
     const children = childrenOfNode.get(node.id)
     if (children) written.children = children
@@ -251,7 +250,7 @@ function unknownComponents(document: Record<string, unknown>): string[] {
 }
 
 /** Fields at their default are left out. The rotation is Euler here, a quaternion there. */
-function placement({ position, rotation, scale }: Transform): Partial<GltfNode> {
+function placement({ position, rotation, scale }: Transform): Partial<WrittenNode> {
   const quaternion = new Quaternion().setFromEuler(new Euler(rotation.x, rotation.y, rotation.z))
 
   return {
