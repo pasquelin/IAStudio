@@ -79,7 +79,7 @@ describe('the settings', () => {
       { delegateFiles: true },
       { delegateRemote: true },
     ]) {
-      expect(await runAction('settings.write', { settings: { mcp: change } })).toEqual({
+      expect(await runAction('settings.write', { settings: { mcp: change } })).toMatchObject({
         ok: false,
         refusal: 'notAllowed',
       })
@@ -125,7 +125,7 @@ describe('the accounts', () => {
     expect(await runAction('accounts.activate', { accountId: 'acc-2' })).toMatchObject({ ok: true })
     expect(activate).toHaveBeenCalledWith('acc-2')
 
-    expect(await runAction('accounts.activate', { accountId: 'acc-9' })).toEqual({
+    expect(await runAction('accounts.activate', { accountId: 'acc-9' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })

@@ -7,6 +7,8 @@ import { oneOf, recordOf, textOf } from './actionInputs'
 
 /** The settings and the account, read and set from outside the window. */
 
+const NO_BRIDGE = 'this window is not connected to the studio process'
+
 /**
  * The section names are checked by `validatesInput`, from the `record` field's own key list —
  * `write` takes a `PartialSettings` the main process merges branch by branch, and a branch it
@@ -19,13 +21,24 @@ import { oneOf, recordOf, textOf } from './actionInputs'
  */
 function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   const asked: PartialSettings | null = recordOf(input, 'settings')
-  if (!asked) return Promise.resolve(refused('badInput'))
+  if (!asked)
+    return Promise.resolve(
+      refused(
+        'badInput',
+        '"settings" is wanted, as a record of settings sections — settings.read answers the shape it takes',
+      ),
+    )
 
   // The one branch this action may not touch, and the reason the delegation is worth anything: a
   // client that could raise its own budget or tick its own boxes would be asking itself. Only the
   // settings window arms it — `settings.open` is published, and that is the whole of the way in.
   if (Object.keys(asked.mcp ?? {}).some(key => key.startsWith('delegate'))) {
-    return Promise.resolve(refused('notAllowed'))
+    return Promise.resolve(
+      refused(
+        'notAllowed',
+        'the "delegate" switches of the mcp section are not writable from here — only the settings window arms them, and settings.open raises it',
+      ),
+    )
   }
 
   return withBridge(bridge => bridge.settings.write(asked))
@@ -33,11 +46,15 @@ function write(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 async function activate(input: Record<string, unknown>): Promise<ActionOutcome> {
   const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
+  if (!bridge) return refused('noBridge', NO_BRIDGE)
 
   const accountId = textOf(input, 'accountId') ?? ''
   const known = await bridge.accounts.list()
-  if (!known.some(account => account.id === accountId)) return refused('notFound')
+  if (!known.some(account => account.id === accountId))
+    return refused(
+      'notFound',
+      `no account "${accountId}" on this machine — accounts.list answers which there are, with their ids`,
+    )
 
   return { ok: true, data: await bridge.accounts.activate(accountId) }
 }
@@ -54,19 +71,26 @@ export const SETTINGS_HANDLERS: ActionHandlers = {
    */
   'accounts.rename': async input => {
     const bridge = getBridge()
-    if (!bridge) return refused('noBridge')
+    if (!bridge) return refused('noBridge', NO_BRIDGE)
 
     const result = await bridge.accounts.rename(
       textOf(input, 'accountId') ?? '',
       textOf(input, 'name') ?? '',
     )
-    return result.failure ? refused('notAllowed') : { ok: true, data: result.accounts }
+    return result.failure
+      ? refused(
+          'notAllowed',
+          `the account was not renamed: ${result.failure} — accounts.list answers which there are, with their ids and their names`,
+        )
+      : { ok: true, data: result.accounts }
   },
 
   'settings.pressButton': input => {
     const id = oneOf(input, 'action', SETTING_ACTION_IDS)
     return id
       ? withBridge(bridge => bridge.settings.runAction(id))
-      : Promise.resolve(refused('badInput'))
+      : Promise.resolve(
+          refused('badInput', `"action" wants one of: ${SETTING_ACTION_IDS.join(', ')}`),
+        )
   },
 }

@@ -102,8 +102,11 @@ describe('reading the montage in front', () => {
   it('refuses every action of the family while no montage is in front', async () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
-    expect(await runAction('sequence.state', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
-    expect(await runAction('clip.remove', { clipId: 'clip-a' })).toEqual({
+    expect(await runAction('sequence.state', {})).toMatchObject({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+    expect(await runAction('clip.remove', { clipId: 'clip-a' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -153,7 +156,7 @@ describe('laying clips down', () => {
   it('refuses an asset the library does not hold', async () => {
     installFakeBridge({ assets: { search: vi.fn(async () => []) } })
 
-    expect(await runAction('clip.add', { assetId: 'asset-z' })).toEqual({
+    expect(await runAction('clip.add', { assetId: 'asset-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -185,7 +188,7 @@ describe('editing a clip', () => {
    * every miss would be reported as done — the same reason the layer family looks its id up first.
    */
   it('refuses a clip the montage does not hold rather than reporting a no-op as done', async () => {
-    expect(await runAction('clip.gain', { clipId: 'clip-z', gain: -6 })).toEqual({
+    expect(await runAction('clip.gain', { clipId: 'clip-z', gain: -6 })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -256,7 +259,7 @@ describe('the playhead and the selection', () => {
     expect(await runAction('clip.select', { clipId: 'clip-a' })).toEqual({ ok: true })
     expect(sequence().selectedId).toBe('clip-a')
 
-    expect(await runAction('clip.select', { clipId: 'clip-z' })).toEqual({
+    expect(await runAction('clip.select', { clipId: 'clip-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })

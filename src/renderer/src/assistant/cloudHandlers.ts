@@ -43,7 +43,12 @@ export const CLOUD_HANDLERS: ActionHandlers = {
     // Refused rather than answered in another order, as a kind the studio does not have is: with
     // no words to rank by, relevance is whatever order the shard replies in.
     if (query.order === 'relevance' && query.text === undefined) {
-      return Promise.resolve(refused('badInput'))
+      return Promise.resolve(
+        refused(
+          'badInput',
+          `order "relevance" wants "text" to rank against — give the words, or ask for one of: ${CLOUD_ORDERS.filter(one => one !== 'relevance').join(', ')}`,
+        ),
+      )
     }
 
     return withBridge(bridge => bridge.cloud.browse(query))
@@ -51,7 +56,10 @@ export const CLOUD_HANDLERS: ActionHandlers = {
 
   'cloud.explorePublicFeed': input => {
     const type = oneOf(input, 'type', CLOUD_ASSET_TYPES)
-    if (!type) return Promise.resolve(refused('badInput'))
+    if (!type)
+      return Promise.resolve(
+        refused('badInput', `"type" wants one of: ${CLOUD_ASSET_TYPES.join(', ')}`),
+      )
 
     const cursor = textOf(input, 'cursor')
     const pageSize = numberOf(input, 'pageSize')
@@ -70,7 +78,7 @@ export const CLOUD_HANDLERS: ActionHandlers = {
     const policy = oneOf(input, 'policy', SYNC_POLICIES)
     return policy
       ? withBridge(bridge => bridge.cloud.plan(textsOf(input, 'assetIds'), policy))
-      : Promise.resolve(refused('badInput'))
+      : Promise.resolve(refused('badInput', `"policy" wants one of: ${SYNC_POLICIES.join(', ')}`))
   },
 
   'cloud.pull': input => withBridge(bridge => bridge.cloud.pull(textsOf(input, 'remoteAssetIds'))),

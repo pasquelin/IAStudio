@@ -96,7 +96,10 @@ describe('the sky', () => {
   it('refuses every action of the family while no sky is in front', async () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
-    expect(await runAction('skybox.state', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
+    expect(await runAction('skybox.state', {})).toMatchObject({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
   })
 })
 
@@ -208,7 +211,7 @@ describe('the material', () => {
     )
 
     useDocuments.setState({ documents: {}, activeId: null })
-    expect(await runAction('style.save', { name: 'Pierre' })).toEqual({
+    expect(await runAction('style.save', { name: 'Pierre' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })

@@ -60,7 +60,7 @@ export const GIT_HANDLERS: ActionHandlers = {
     const side = oneOf(input, 'side', CONFLICT_SIDES)
     return side
       ? git(port => port.resolve(textsOf(input, 'paths'), side))
-      : Promise.resolve(refused('badInput'))
+      : Promise.resolve(refused('badInput', `"side" wants one of: ${CONFLICT_SIDES.join(', ')}`))
   },
 
   'git.fetch': () => git(port => port.fetch()),

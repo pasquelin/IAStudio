@@ -17,13 +17,21 @@ export const EXPORT_HANDLERS: ActionHandlers = {
   'game.export': async (input, wire) => {
     const project = useProject.getState().project
     const bridge = getBridge()
-    if (!bridge) return refused('noBridge')
-    if (!project) return refused('noProject')
+    if (!bridge) return refused('noBridge', 'this window is not connected to the studio process')
+    if (!project)
+      return refused(
+        'noProject',
+        'no project is open, and a game is exported out of one — projects.list answers what there is, and project.open opens one',
+      )
 
     // 🛑 Refused BEFORE the scenes are composed: with no folder named, the main process raises a
     // system picker, which a caller on the wire can neither fill in nor see.
     const folder = textOf(input, 'folder')
-    if (wire && !folder) return refused('nativeDialog')
+    if (wire && !folder)
+      return refused(
+        'nativeDialog',
+        'with no "folder" named the studio raises a picker of the operating system, which a caller on the wire can neither fill nor read — name "folder" and send this again',
+      )
 
     let scenes: GameExportRequest['scenes']
     try {

@@ -165,7 +165,11 @@ function listDocuments(): ActionOutcome {
 
 async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome> {
   const path = textOf(input, 'path')
-  if (path === null) return refused('badInput')
+  if (path === null)
+    return refused(
+      'badInput',
+      '"path" is wanted — the path of a document inside the open project, as documents.list answers it',
+    )
 
   // Re-read first: the listing a client holds may predate a file that has since arrived, and
   // answering "no such document" for one sitting on the disk is the least useful refusal there is.
@@ -176,7 +180,11 @@ async function openByPath(input: Record<string, unknown>): Promise<ActionOutcome
   }
 
   const document = documentAtPath(useDocuments.getState(), path)
-  if (!document) return refused('notFound')
+  if (!document)
+    return refused(
+      'notFound',
+      `no document at "${path}" in this project — documents.list answers what is there, each with its path`,
+    )
 
   openDocument(document)
   return { ok: true, data: { documentId: document.id } }
@@ -206,22 +214,32 @@ function named(input: Record<string, unknown>): string | null {
   return namedDocument(input)?.id ?? null
 }
 
+/** What a caller does about a document nobody answers to — spelled once for the five sites. */
+const noDocument = (input: Record<string, unknown>): string =>
+  `no open document answers to "${textOf(input, 'documentId') ?? ''}" — documents.list answers what ` +
+  'is open, by id, by path and by title, and a title two documents share resolves to neither'
+
 async function close(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documentId = named(input)
-  if (documentId === null) return refused('notFound')
+  if (documentId === null) return refused('notFound', noDocument(input))
 
   /**
    * The same path the tab's cross takes, question about unsaved work included — and the reason
    * this action commits `none`: `closeDocument` raises the only question that knows whether
    * there is anything at stake, so a second one before it would ask twice for one gesture.
    */
-  return (await closeDocument(documentId)) ? { ok: true } : refused('declined')
+  return (await closeDocument(documentId))
+    ? { ok: true }
+    : refused(
+        'declined',
+        'the person at the screen kept the document open rather than lose its unsaved work — document.save writes it first',
+      )
 }
 
 async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documentId = named(input)
   const title = textOf(input, 'title') ?? ''
-  if (documentId === null) return refused('notFound')
+  if (documentId === null) return refused('notFound', noDocument(input))
 
   const failure = await useDocuments.getState().rename(documentId, title)
   if (failure) {
@@ -245,22 +263,31 @@ async function rename(input: Record<string, unknown>): Promise<ActionOutcome> {
 async function save(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documents = useDocuments.getState()
   const documentId = textOf(input, 'documentId') ?? documents.activeId
-  if (documentId === null || !documents.documents[documentId]) return refused('notFound')
+  if (documentId === null || !documents.documents[documentId])
+    return refused(
+      'notFound',
+      `no open document answers to "${textOf(input, 'documentId') ?? ''}", and nothing is in front to save — documents.list answers what is open`,
+    )
 
   try {
     return { ok: true, data: { written: await saveDocument(documentId) } }
   } catch (error) {
     reportFailure('document.save', documentId, error)
-    return refused('notRenderable')
+    return refused(
+      'notRenderable',
+      'the document could not be composed for writing — its engine may still be starting; the journal holds the cause',
+    )
   }
 }
 
 /** Deletes the document's file and closes its tab — see `dropDocument` for why nothing is asked. */
 async function remove(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documentId = named(input)
-  if (documentId === null) return refused('notFound')
+  if (documentId === null) return refused('notFound', noDocument(input))
 
-  return (await dropDocument(documentId)) ? { ok: true } : refused('failed')
+  return (await dropDocument(documentId))
+    ? { ok: true }
+    : refused('failed', 'the studio did not delete that document — the journal holds why')
 }
 
 /**
@@ -339,17 +366,28 @@ async function exportOf(
 async function exportDocument(input: Record<string, unknown>): Promise<ActionOutcome> {
   const documents = useDocuments.getState()
   const document = documents.activeId ? documents.documents[documents.activeId] : undefined
-  if (!document) return refused('wrongSurface')
+  if (!document)
+    return refused(
+      'wrongSurface',
+      'nothing is in front to export — documents.list answers what is open, and document.activate brings one forward',
+    )
 
   let request
   try {
     request = await exportOf(document, input)
   } catch (error) {
     reportFailure('document.export', document.id, error)
-    return refused('notRenderable')
+    return refused(
+      'notRenderable',
+      'the document could not be rendered for export — a sky with no picture, a material with no channel, an engine not yet mounted; the journal holds which',
+    )
   }
   // A kind that sends nothing out, which is Code alone — told apart from a rendering that failed.
-  if (request === null) return refused('wrongSurface')
+  if (request === null)
+    return refused(
+      'wrongSurface',
+      `a "${document.kind}" document sends nothing out of the studio — it is already a file of the project`,
+    )
 
   const folder = textOf(input, 'folder')
   return withBridge(bridge =>
@@ -371,7 +409,7 @@ export const STATE_HANDLERS: ActionHandlers = {
   // a sky's panels, which no click can produce — the state this action exists to repair.
   'document.activate': input => {
     const document = namedDocument(input)
-    if (document === null) return refused('notFound')
+    if (document === null) return refused('notFound', noDocument(input))
 
     // Named here as well as opened: behind the home there is no centre to announce the tab, and
     // the state a client reads next would still be describing the document it just left.

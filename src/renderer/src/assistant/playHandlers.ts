@@ -16,7 +16,11 @@ import { numberOf, textOf } from './actionInputs'
 /** The scene in front, or the one reason there is none to play. */
 function playing(): string | ActionOutcome {
   const documentId = activeSceneId(useDocuments.getState())
-  if (documentId === null) return refused('wrongSurface')
+  if (documentId === null)
+    return refused(
+      'wrongSurface',
+      'the document in front is no scene, and a game is played in one — documents.list answers what is open, and document.activate brings a scene forward',
+    )
   // The runtime draws through the engine a viewport owns: with none, a game would run unseen.
   if (!sceneEngineOf(documentId)) return refused('wrongSurface', 'no viewport draws this scene')
   return documentId

@@ -122,7 +122,13 @@ function readOrRefusal(
   input: Record<string, unknown>,
 ): { listed: Record<string, unknown> } | { refusal: ActionOutcome } {
   const action = assistantAction(name)
-  if (!action) return { refusal: refused('badInput') }
+  if (!action)
+    return {
+      refusal: refused(
+        'badInput',
+        `no action named "${name}" in this studio — actions.find answers what it publishes`,
+      ),
+    }
 
   const listed = readInput(action.fields, input)
   return listed
@@ -146,7 +152,11 @@ export async function runAction(
   wire?: WireCall,
 ): Promise<ActionOutcome> {
   const handler = HANDLERS[name]
-  if (!handler) return refused('badInput')
+  if (!handler)
+    return refused(
+      'badInput',
+      `the action "${name}" is published, and nothing behind it answers — actions.find lists the ones that do`,
+    )
 
   const read = readOrRefusal(name, input)
   if ('refusal' in read) return read.refusal
@@ -381,7 +391,13 @@ async function consentedOnScreen(
   const ask = mountedConfirmer()
   // No one to ask. Refusing is the only honest answer: the alternative is spending on a question
   // nobody was shown.
-  if (!ask) return { refusal: refused('noConfirmer') }
+  if (!ask)
+    return {
+      refusal: refused(
+        'noConfirmer',
+        'this call engages something, and no window is up to put the question to anybody — nothing engaging ever runs unasked',
+      ),
+    }
 
   // Read BEFORE the question and compared after it — see `unchangedSince`.
   const quoted = quotedNow(engaged.commitment)
@@ -392,12 +408,18 @@ async function consentedOnScreen(
     commitment: engaged.commitment,
     ...(engaged.commitment === 'credits' ? { estimate: engaged.estimate } : {}),
   })
-  if (!given.granted) return { refusal: refused('declined') }
+  if (!given.granted)
+    return { refusal: refused('declined', 'the person at the screen said no to this call') }
 
   // 🛑 What the card SHOWED is what runs: `raises` reads the input, so a value amended on the
   // card could lift the level above the sentence the person read before saying yes.
   if (commitmentOfCall(name, given.input) !== engaged.commitment) {
-    return { refusal: refused('formChanged') }
+    return {
+      refusal: refused(
+        'formChanged',
+        'the card was amended into a call that engages more than the sentence the person read — send the call again as it stood',
+      ),
+    }
   }
 
   // Nothing debited: somebody SAW this one, and the ledger counts what went out unwatched.
@@ -418,7 +440,11 @@ async function runCleared(
   cleared: Cleared,
   wire: WireCall | undefined,
 ): Promise<ActionOutcome> {
-  if (cleared.quoted && !unchangedSince(cleared.quoted)) return refused('formChanged')
+  if (cleared.quoted && !unchangedSince(cleared.quoted))
+    return refused(
+      'formChanged',
+      'the generation form moved between the figure being quoted and the yes, and what was priced is what goes out — generator.readArmedGeneration says what stands now, then send this again',
+    )
 
   // Debited BEFORE the run and never given back: an action that failed halfway may already have
   // spent, and a ledger that only counted successes would let a run of failures spend forever.

@@ -17,6 +17,10 @@ const DEFAULT_WAIT_MS = 60_000
 /** The three windows the API prices, keyed by what a client writes. */
 const PERIODS = new Map<string, UsagePeriod>(USAGE_PERIODS.map(period => [String(period), period]))
 
+/** What a caller does about a job nobody answers to — spelled once for the three sites. */
+const noJob = (jobId: string): string =>
+  `no generation "${jobId}" in this studio — jobs.list answers the ones it holds, each with its id`
+
 function jobOf(jobId: string): Job | null {
   return useJobs.getState().jobs.find(job => job.id === jobId) ?? null
 }
@@ -30,7 +34,7 @@ function jobOf(jobId: string): Job | null {
 function waitForJob(input: Record<string, unknown>): Promise<ActionOutcome> {
   const jobId = textOf(input, 'jobId') ?? ''
   const job = jobOf(jobId)
-  if (!job) return Promise.resolve(refused('notFound'))
+  if (!job) return Promise.resolve(refused('notFound', noJob(jobId)))
   if (isFinished(job.status)) return Promise.resolve({ ok: true, data: job })
 
   return new Promise(resolve => {
@@ -63,7 +67,7 @@ function waitForJob(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 async function cancelJob(input: Record<string, unknown>): Promise<ActionOutcome> {
   const jobId = textOf(input, 'jobId') ?? ''
-  if (!jobOf(jobId)) return refused('notFound')
+  if (!jobOf(jobId)) return refused('notFound', noJob(jobId))
 
   await useJobs.getState().cancel(jobId)
   return { ok: true }
@@ -79,7 +83,10 @@ async function asking(run: () => Promise<ActionOutcome>): Promise<ActionOutcome>
   try {
     return await run()
   } catch {
-    return refused('failed')
+    return refused(
+      'failed',
+      'the provider did not answer — the model id may name nothing it publishes, or the network dropped; models.search answers which ids there are',
+    )
   }
 }
 
@@ -89,7 +96,7 @@ export const JOB_HANDLERS: ActionHandlers = {
 
   'job.readCloudGeneration': input => {
     const job = jobOf(textOf(input, 'jobId') ?? '')
-    return job ? { ok: true, data: job } : refused('notFound')
+    return job ? { ok: true, data: job } : refused('notFound', noJob(textOf(input, 'jobId') ?? ''))
   },
 
   'models.readGenerationModelFields': input =>

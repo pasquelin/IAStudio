@@ -4,7 +4,7 @@ import { COMPONENTS, COMPONENT_TYPES, descriptorOf } from '@shared/domain/compon
 import { isComponentType } from '@shared/domain/componentRegistry'
 import { refFromString } from '@shared/domain/ref'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
-import { mounted } from './sceneHandlers'
+import { mounted, NO_SCENE } from './sceneHandlers'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
@@ -13,7 +13,7 @@ import { nodeAimed } from './nodeAimed'
 export const STUDIO_HANDLERS: ActionHandlers = {
   'studio.describe': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const named = textOf(input, 'ref') ?? ''
     const scene = open.state

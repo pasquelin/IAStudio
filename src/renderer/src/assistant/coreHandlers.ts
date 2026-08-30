@@ -29,11 +29,17 @@ import { mountedGenerator } from './generatorBridge'
 /** What the router made of it, in the assistant's own words. */
 const ROUTED: Record<CommandRouting, ActionOutcome> = {
   ran: { ok: true },
-  noSurface: refused('wrongSurface'),
+  noSurface: refused(
+    'wrongSurface',
+    'nothing in front can carry that command out — documents.list and panels.list answer what is up, and workspace.open brings the space it belongs to forward',
+  ),
   // What the command names is there, and there is nothing left for it to do — a space already at
   // the end of the bar. `failed` would blame the studio for what is a fact of the input.
-  nothingToDo: refused('notFound'),
-  noBridge: refused('noBridge'),
+  nothingToDo: refused(
+    'notFound',
+    'that command has nothing left to do — what it names already stands the way it asks for',
+  ),
+  noBridge: refused('noBridge', 'this window is not connected to the studio process'),
 }
 
 /**
@@ -44,10 +50,18 @@ const ROUTED: Record<CommandRouting, ActionOutcome> = {
  */
 function runCommand(input: Record<string, unknown>): ActionOutcome {
   const descriptor = commandDescriptor(textOf(input, 'command') ?? '')
-  if (!descriptor) return refused('unknownCommand')
+  if (!descriptor)
+    return refused(
+      'unknownCommand',
+      `no command "${textOf(input, 'command') ?? ''}" in this studio — the "command" field of this action lists every id it takes`,
+    )
   // 🛑 A native modal cannot be filled from here, cannot be read back, and the next round ran the
   // command again — a second Finder over the first. The action that takes a path does this.
-  if (descriptor.raisesDialog) return refused('nativeDialog')
+  if (descriptor.raisesDialog)
+    return refused(
+      'nativeDialog',
+      `"${descriptor.id}" raises a dialog of the operating system, which nothing here can fill or read back — use the action that takes a path instead: file.open, project.open, document.open or document.export, depending on what was meant`,
+    )
 
   return ROUTED[routeCommand(descriptor.id)]
 }
@@ -58,11 +72,18 @@ async function submitPrepared(input: Record<string, unknown>): Promise<ActionOut
     // Opened rather than merely refused: the next attempt then has somewhere to land, and the
     // panel is what the person needs to see to judge what is about to be sent.
     revealTool('generator')
-    return refused('generatorClosed')
+    return refused(
+      'generatorClosed',
+      'the generation panel was not open; it has just been raised — generator.prepare arms a model and its parameters, then send this again',
+    )
   }
 
   const armed = generator.armed()
-  if (!armed) return refused('nothingPrepared')
+  if (!armed)
+    return refused(
+      'nothingPrepared',
+      'the generation panel holds nothing armed — generator.prepare arms a model and its parameters first',
+    )
 
   // 🛑 What the call names, else what the panel shows — and a refusal rather than a default
   // where the studio itself would have asked. Its options travel in `detail`, the half a client
@@ -73,13 +94,22 @@ async function submitPrepared(input: Record<string, unknown>): Promise<ActionOut
   }
 
   const job = await generator.submit(into)
-  return job ? { ok: true, data: { jobId: job.id, landing: into } } : refused('notSubmitted')
+  return job
+    ? { ok: true, data: { jobId: job.id, landing: into } }
+    : refused(
+        'notSubmitted',
+        'the studio did not take this generation — generator.readArmedGeneration says what stands on the form, and the journal holds why it was turned back',
+      )
 }
 
 /** What is armed, before a call may quote a cost or spend one — model, operation, sources, where. */
 function armedGeneration(): ActionOutcome {
   const armed = mountedGenerator()?.armed()
-  if (!armed) return refused('generatorClosed')
+  if (!armed)
+    return refused(
+      'generatorClosed',
+      'the generation panel is not open, or holds nothing armed — generator.prepare opens it on a model',
+    )
 
   return { ok: true, data: armed }
 }
@@ -87,7 +117,11 @@ function armedGeneration(): ActionOutcome {
 function prepareGenerator(input: Record<string, unknown>): ActionOutcome {
   const family = oneOf(input, 'family', MODEL_FAMILIES)
   const parameters = recordOf(input, 'parameters')
-  if (!family || !parameters) return refused('badInput')
+  if (!family || !parameters)
+    return refused(
+      'badInput',
+      `"family" wants one of: ${MODEL_FAMILIES.join(', ')}, and "parameters" a record of the model's own inputs — models.readGenerationModelFields answers which those are`,
+    )
 
   openGeneratorOn(
     family,
@@ -102,7 +136,8 @@ function prepareGenerator(input: Record<string, unknown>): ActionOutcome {
 // filled told a client "done" about one the person then called off.
 async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutcome> {
   const workspace = oneOf(input, 'workspace', WORKSPACE_IDS)
-  if (!workspace) return refused('badInput')
+  if (!workspace)
+    return refused('badInput', `"workspace" wants one of: ${WORKSPACE_IDS.join(', ')}`)
 
   if (!boolOf(input, 'createDocument')) {
     showWorkspace(workspace)
@@ -111,7 +146,11 @@ async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutc
 
   // Asked here although the creation asks it too: from there it answers `null`, which is the
   // person's own refusal — and "you turned that down" for a studio with no project open is a lie.
-  if (!useProject.getState().project) return refused('noProject')
+  if (!useProject.getState().project)
+    return refused(
+      'noProject',
+      'no project is open, and a document is made inside one — projects.list answers what there is, project.open opens one and project.create makes one',
+    )
 
   const title = textOf(input, 'title')
   const folder = textOf(input, 'folder')
@@ -128,7 +167,9 @@ async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutc
           ...(template === null ? {} : { template }),
         },
   )
-  return created ? { ok: true, data: { documentId: created.id } } : refused('declined')
+  return created
+    ? { ok: true, data: { documentId: created.id } }
+    : refused('declined', 'the person at the screen turned the new document down')
 }
 
 /**
@@ -137,7 +178,13 @@ async function openWorkspace(input: Record<string, unknown>): Promise<ActionOutc
  */
 function suggestPrompts(input: Record<string, unknown>): Promise<ActionOutcome> {
   const prepared = mountedGenerator()?.body()
-  if (!prepared) return Promise.resolve(refused('generatorClosed'))
+  if (!prepared)
+    return Promise.resolve(
+      refused(
+        'generatorClosed',
+        'a suggestion is written for the model armed in the generation panel, and none is — generator.prepare arms one first',
+      ),
+    )
 
   return withBridge(bridge =>
     bridge.provider.suggestPrompts({
@@ -149,12 +196,24 @@ function suggestPrompts(input: Record<string, unknown>): Promise<ActionOutcome> 
 
 function describeStyle(): Promise<ActionOutcome> {
   const generator = mountedGenerator()
-  if (!generator) return Promise.resolve(refused('generatorClosed'))
+  if (!generator)
+    return Promise.resolve(
+      refused(
+        'generatorClosed',
+        'a style is read off the pictures on the generation form, and the panel is not open — generator.prepare opens it',
+      ),
+    )
 
   const references = generator.references()
   // Not a failure and not a guess: with nothing on the form there is no style to read, and the
   // channel refuses an empty list anyway.
-  if (references.length === 0) return Promise.resolve(refused('noReference'))
+  if (references.length === 0)
+    return Promise.resolve(
+      refused(
+        'noReference',
+        'the generation form carries no reference picture to read a style from — put one on it first',
+      ),
+    )
 
   return withBridge(bridge => bridge.provider.describeStyle(references))
 }
@@ -167,7 +226,11 @@ function describeStyle(): Promise<ActionOutcome> {
  */
 function findInCatalogue(input: Record<string, unknown>): ActionOutcome {
   const query = textOf(input, 'query')
-  if (query === null) return refused('badInput')
+  if (query === null)
+    return refused(
+      'badInput',
+      '"query" is wanted — the words to look for among the studio\'s actions',
+    )
 
   return {
     ok: true,
@@ -205,13 +268,17 @@ export const CORE_HANDLERS: ActionHandlers = {
 
   'models.select': input => {
     const family = oneOf(input, 'family', MODEL_FAMILIES)
-    if (!family) return refused('badInput')
+    if (!family) return refused('badInput', `"family" wants one of: ${MODEL_FAMILIES.join(', ')}`)
 
     // The door names a family, which is what an MCP client can be expected to know. The pick
     // arms its FIRST employment — the one that family generates with when nothing narrower is
     // asked for, and the one this call armed before choices were filed per employment.
     const role = primaryRoleOf(family)
-    if (!role) return refused('badInput')
+    if (!role)
+      return refused(
+        'badInput',
+        `the "${family}" family generates through no model this studio arms`,
+      )
 
     useModels.getState().select(role, textOf(input, 'modelId') ?? '')
     return { ok: true }

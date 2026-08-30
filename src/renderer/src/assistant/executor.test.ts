@@ -161,7 +161,9 @@ describe('opening a workspace', () => {
   it('refuses when the name field is called off', async () => {
     createDocumentIn.mockResolvedValue(null)
 
-    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+    expect(
+      await runAction('workspace.open', { workspace: '3d', createDocument: true }),
+    ).toMatchObject({
       ok: false,
       refusal: 'declined',
     })
@@ -170,7 +172,9 @@ describe('opening a workspace', () => {
   it('refuses to make one with no project to write it in', async () => {
     useProject.setState({ project: null })
 
-    expect(await runAction('workspace.open', { workspace: '3d', createDocument: true })).toEqual({
+    expect(
+      await runAction('workspace.open', { workspace: '3d', createDocument: true }),
+    ).toMatchObject({
       ok: false,
       refusal: 'noProject',
     })
@@ -211,7 +215,7 @@ describe('running a command', () => {
 
     const outcome = await runAction('command.runStudioCommand', { command: 'scene.frame' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'wrongSurface' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'wrongSurface' })
     expect(heard).toEqual([])
     stop()
   })
@@ -244,7 +248,7 @@ describe('running a command', () => {
   it('refuses a command that raises a system dialogue', async () => {
     const outcome = await runAction('command.runStudioCommand', { command: 'project.new' })
 
-    expect(outcome).toEqual({ ok: false, refusal: 'nativeDialog' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'nativeDialog' })
     expect(createPicked).not.toHaveBeenCalled()
   })
 })
@@ -300,10 +304,7 @@ describe('choosing and preparing a model', () => {
       },
     })
 
-    const outcome = await runAction('models.search', {
-      query: 'knight',
-      family: '3d',
-    })
+    const outcome = await runAction('models.search', { query: 'knight', family: '3d' })
 
     expect(outcome).toEqual({
       ok: true,
@@ -376,7 +377,7 @@ describe('submitting what was prepared', () => {
   it('opens the generator, and refuses, when no panel is mounted', async () => {
     const outcome = await runAction('generator.submit', {})
 
-    expect(outcome).toEqual({ ok: false, refusal: 'generatorClosed' })
+    expect(outcome).toMatchObject({ ok: false, refusal: 'generatorClosed' })
     expect(revealTool).toHaveBeenCalledWith('generator')
   })
 
@@ -389,7 +390,7 @@ describe('submitting what was prepared', () => {
   })
 
   it('refuses to say what is armed with no panel mounted', async () => {
-    expect(await runAction('generator.readArmedGeneration', {})).toEqual({
+    expect(await runAction('generator.readArmedGeneration', {})).toMatchObject({
       ok: false,
       refusal: 'generatorClosed',
     })
@@ -398,7 +399,7 @@ describe('submitting what was prepared', () => {
   it('refuses when the panel is up but nothing is armed', async () => {
     const stop = registerGenerator(aGenerator({ armed: () => null }))
 
-    expect(await runAction('generator.submit', {})).toEqual({
+    expect(await runAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'nothingPrepared',
     })
@@ -427,7 +428,7 @@ describe('the prompt assistance, now asked for', () => {
   it('refuses to suggest with no model armed', async () => {
     installFakeBridge()
 
-    expect(await runAction('prompt.suggest', { draft: 'un chevalier' })).toEqual({
+    expect(await runAction('prompt.suggest', { draft: 'un chevalier' })).toMatchObject({
       ok: false,
       refusal: 'generatorClosed',
     })
@@ -462,7 +463,7 @@ describe('the prompt assistance, now asked for', () => {
     installFakeBridge()
     const stop = registerGenerator(aGenerator())
 
-    expect(await runAction('prompt.describeStyle', {})).toEqual({
+    expect(await runAction('prompt.describeStyle', {})).toMatchObject({
       ok: false,
       refusal: 'noReference',
     })
@@ -560,7 +561,7 @@ describe('asking before acting', () => {
     const stopGenerator = registerGenerator(aGenerator({ submit }))
     const stopConfirmer = registerConfirmer(saying(false))
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'declined',
     })
@@ -578,7 +579,7 @@ describe('asking before acting', () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
     const stop = registerGenerator(aGenerator({ submit }))
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -609,7 +610,7 @@ describe('asking before acting', () => {
       return saying(true)(request)
     })
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'formChanged',
     })
@@ -934,7 +935,7 @@ describe('what an armed studio lets through without asking', () => {
     // of what "a client working while nobody is at the machine" used to run into.
     expect(
       await runConfirmedAction('command.runStudioCommand', { command: 'canvas.cutout' }),
-    ).not.toEqual({
+    ).not.toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -950,7 +951,7 @@ describe('what an armed studio lets through without asking', () => {
     // Three of five: through. Three more is six, which is past five — so the second one asks, and
     // with nobody registered to ask it refuses.
     expect(await runConfirmedAction('generator.submit', {})).toMatchObject({ ok: true })
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })
@@ -963,7 +964,7 @@ describe('what an armed studio lets through without asking', () => {
     installFakeBridge({ provider: { estimateCost: () => Promise.reject(new Error('no price')) } })
     const stopGenerator = registerGenerator(aGenerator())
 
-    expect(await runConfirmedAction('generator.submit', {})).toEqual({
+    expect(await runConfirmedAction('generator.submit', {})).toMatchObject({
       ok: false,
       refusal: 'noConfirmer',
     })

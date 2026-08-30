@@ -12,19 +12,23 @@ import { documentById, sceneDocumentNamed, useDocuments } from '@/stores/documen
 import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
-import { mounted } from './sceneHandlers'
+import { mounted, NO_SCENE } from './sceneHandlers'
 import { messageOf } from '@shared/guards'
 
 /** What puts a whole game together in one gesture — a template, or a prefab of the project. */
 export const ASSEMBLY_HANDLERS: ActionHandlers = {
   'game.applyTemplate': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     // The choice field has already refused anything else, and names the three in doing so; this
     // is the narrowing TypeScript asks for, not a second gate.
     const wanted = textOf(input, 'template') ?? ''
-    if (!isSceneTemplateId(wanted)) return refused('badInput')
+    if (!isSceneTemplateId(wanted))
+      return refused(
+        'badInput',
+        `no scene template "${wanted}" — the "template" field of this action lists the ones it takes`,
+      )
 
     const before = open.state.nodes.length
     useScenes.getState().runCommand(open.documentId, layOutTemplate(wanted))
@@ -51,7 +55,7 @@ export const ASSEMBLY_HANDLERS: ActionHandlers = {
     }
 
     const bridge = getBridge()
-    if (!bridge) return refused('noBridge')
+    if (!bridge) return refused('noBridge', 'this window is not connected to the studio process')
 
     // 🛑 Read, changed and written whole, and nothing serialises it: two calls in flight, or a
     // script renamed at the same moment (`main/project/scriptPaths.ts` writes the same file),
@@ -72,7 +76,7 @@ export const ASSEMBLY_HANDLERS: ActionHandlers = {
   },
 
   'prefab.instantiate': async input => {
-    if (!mounted()) return refused('wrongSurface')
+    if (!mounted()) return refused('wrongSurface', NO_SCENE)
 
     const named = textOf(input, 'prefab') ?? ''
     const documentId = await prefabDocument(named)
@@ -83,7 +87,7 @@ export const ASSEMBLY_HANDLERS: ActionHandlers = {
     // Read AGAIN after the await: an MCP call is not user-driven, and a tab switched while the
     // disk answered would have the nodes land in the document that WAS in front.
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
     if (open.documentId === documentId) {
       return refused('badInput', `"${named}" is the scene in front: it cannot instance itself`)
     }
@@ -114,7 +118,8 @@ async function prefabRead(
   }
 
   const bridge = getBridge()
-  if (!bridge) return { refusal: refused('noBridge') }
+  if (!bridge)
+    return { refusal: refused('noBridge', 'this window is not connected to the studio process') }
 
   try {
     const file = await bridge.documents.read(documentId, 'scene')

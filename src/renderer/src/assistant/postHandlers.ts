@@ -37,7 +37,7 @@ import { useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
-import { mounted } from './sceneHandlers'
+import { mounted, NO_SCENE } from './sceneHandlers'
 
 /**
  * The composition, driven by value. Nothing here knows what a bloom is: both the effect and the
@@ -47,7 +47,7 @@ import { mounted } from './sceneHandlers'
  * 🛑 The one gesture of the panel with no action here is the FILE — `post.export` and
  * `post.import` open a native dialog, which waits on somebody at the screen. Nothing is out of
  * reach for all that: `post.state` reads a whole stack out and `post.add`/`post.set` build one
- * back, and `post.savePreset` keeps a look on this machine without a file at all.
+ * back, and `post.save` keeps a look on this machine without a file at all.
  */
 
 /**
@@ -95,13 +95,17 @@ function withStack(
   }) => ActionOutcome,
 ): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   const target = targetOf(input, open.state)
   if (typeof target === 'string') return lookupRefusal(target)
 
   const stack = postStackOf(open.state, target)
-  if (!stack) return refused('notFound')
+  if (!stack)
+    return refused(
+      'notFound',
+      'nothing here owns a composition to edit — post.state answers who owns the one in force',
+    )
 
   return answer({ target, stack, state: open.state, documentId: open.documentId })
 }
@@ -110,10 +114,12 @@ function withStack(
 function editPost(
   input: Record<string, unknown>,
   build: (target: PostTargetRef, stack: PostStack, state: SceneState) => Command<SceneState> | null,
+  /** What a caller does when the composition IS found and the build still declines. */
+  nothing: string,
 ): ActionOutcome {
   return withStack(input, ({ target, stack, state, documentId }) => {
     const command = build(target, stack, state)
-    if (!command) return refused('badInput')
+    if (!command) return refused('badInput', nothing)
 
     useScenes.getState().runCommand(documentId, command)
     return { ok: true }
@@ -141,7 +147,7 @@ export const POST_HANDLERS: ActionHandlers = {
   /** The ids of the instances, what each one is, and which of them the plan actually runs. */
   'post.state': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const target = targetOf(input, open.state)
     // A READ, so a camera composing through nothing is answered rather than refused — with the
@@ -149,7 +155,11 @@ export const POST_HANDLERS: ActionHandlers = {
     // does not run.
     if (target === 'disabled')
       return { ok: true, data: { owner: 'camera', enabled: false, effects: [] } }
-    if (target === 'unknown') return refused('notFound')
+    if (target === 'unknown')
+      return refused(
+        'notFound',
+        `no camera "${textOf(input, 'cameraId') ?? ''}" in the scene in front, by id or name — scene.state answers "nodes", the ones of type "camera"`,
+      )
 
     // `targetOf` only answers a camera that OWNS a stack, so this is never `null` here — it is
     // the scene's otherwise, which is what the camera would be filming through anyway.
@@ -174,55 +184,80 @@ export const POST_HANDLERS: ActionHandlers = {
 
   'post.add': input => {
     const effect = textOf(input, 'effect') ?? ''
-    if (!isPostEffectId(effect)) return refused('badInput')
-    return editPost(input, target => addPostEffect(target, effect, newId()))
+    if (!isPostEffectId(effect))
+      return refused('badInput', `"effect" wants one of: ${Object.keys(POST_EFFECTS).join(', ')}`)
+    return editPost(
+      input,
+      target => addPostEffect(target, effect, newId()),
+      'that effect built no command on this composition',
+    )
   },
 
   'post.remove': input =>
-    editPost(input, (target, stack, state) => {
-      const effectId = effectIn(stack, input)
-      return effectId ? removePostEffectWholly(state, target, effectId) : null
-    }),
+    editPost(
+      input,
+      (target, stack, state) => {
+        const effectId = effectIn(stack, input)
+        return effectId ? removePostEffectWholly(state, target, effectId) : null
+      },
+      '"effectId" must name an instance of this composition — post.state answers "effects" with their ids',
+    ),
 
   'post.move': input =>
-    editPost(input, (target, stack) => {
-      const effectId = effectIn(stack, input)
-      const by = numberOf(input, 'by')
-      return effectId && by !== null ? movePostEffect(target, effectId, by) : null
-    }),
+    editPost(
+      input,
+      (target, stack) => {
+        const effectId = effectIn(stack, input)
+        const by = numberOf(input, 'by')
+        return effectId && by !== null ? movePostEffect(target, effectId, by) : null
+      },
+      '"effectId" must name an instance of this composition and "by" is wanted — post.state answers "effects" in the order they run',
+    ),
 
   /** Which of the three value fields a call may use is the SPEC's to say, never a coercion. */
   'post.set': input =>
-    editPost(input, (target, stack) => {
-      const effectId = effectIn(stack, input)
-      const effect = stack.effects.find(one => one.id === effectId)
-      const param = textOf(input, 'param') ?? ''
-      const spec = effect ? POST_EFFECTS[effect.effect].params[param] : undefined
-      if (!effectId || !spec) return null
+    editPost(
+      input,
+      (target, stack) => {
+        const effectId = effectIn(stack, input)
+        const effect = stack.effects.find(one => one.id === effectId)
+        const param = textOf(input, 'param') ?? ''
+        const spec = effect ? POST_EFFECTS[effect.effect].params[param] : undefined
+        if (!effectId || !spec) return null
 
-      const given =
-        spec.control === 'toggle'
-          ? maybeBoolOf(input, 'on')
-          : spec.control === 'number' || spec.control === 'slider'
-            ? numberOf(input, 'value')
-            : textOf(input, 'text')
-      if (given === null) return null
+        const given =
+          spec.control === 'toggle'
+            ? maybeBoolOf(input, 'on')
+            : spec.control === 'number' || spec.control === 'slider'
+              ? numberOf(input, 'value')
+              : textOf(input, 'text')
+        if (given === null) return null
 
-      return setPostParam(target, effectId, param, boundParam(spec, given))
-    }),
+        return setPostParam(target, effectId, param, boundParam(spec, given))
+      },
+      '"effectId" must name an instance of this composition and "param" one of that effect\'s parameters, with the value in "on" for a toggle, "value" for a number or a slider, "text" otherwise — post.state answers "effects" with their ids and their "params"',
+    ),
 
   'post.setEffectEnabled': input =>
-    editPost(input, (target, stack) => {
-      const effectId = effectIn(stack, input)
-      const enabled = maybeBoolOf(input, 'enabled')
-      return effectId && enabled !== null ? setPostEffectEnabled(target, effectId, enabled) : null
-    }),
+    editPost(
+      input,
+      (target, stack) => {
+        const effectId = effectIn(stack, input)
+        const enabled = maybeBoolOf(input, 'enabled')
+        return effectId && enabled !== null ? setPostEffectEnabled(target, effectId, enabled) : null
+      },
+      '"effectId" must name an instance of this composition and "enabled" is wanted — post.state answers "effects" with their ids',
+    ),
 
   'post.setWholeStackEnabled': input =>
-    editPost(input, target => {
-      const enabled = maybeBoolOf(input, 'enabled')
-      return enabled === null ? null : setPostEnabled(target, enabled)
-    }),
+    editPost(
+      input,
+      target => {
+        const enabled = maybeBoolOf(input, 'enabled')
+        return enabled === null ? null : setPostEnabled(target, enabled)
+      },
+      '"enabled" is wanted, true or false',
+    ),
 
   /**
    * By id or by NAME, the shipped ones and the ones saved on this machine alike — `stackOfPreset`
@@ -230,12 +265,16 @@ export const POST_HANDLERS: ActionHandlers = {
    * same eleven-plus-N looks.
    */
   'post.applyPreset': input =>
-    editPost(input, target => {
-      const next = stackOfPreset(textOf(input, 'preset') ?? '', savedPresets(), newId)
-      return next ? applyPostStack(target, next) : null
-    }),
+    editPost(
+      input,
+      target => {
+        const next = stackOfPreset(textOf(input, 'preset') ?? '', savedPresets(), newId)
+        return next ? applyPostStack(target, next) : null
+      },
+      `"preset" names none of the looks this studio holds — post.listPresets answers "shipped" and "saved", by id and by name`,
+    ),
 
-  /** What `post.applyPreset` will answer to. Without it a client cannot know a saved look exists. */
+  /** What `post.preset` will answer to. Without it a client cannot know a saved look exists. */
   'post.listPresets': () => ({
     ok: true,
     data: {
@@ -245,16 +284,24 @@ export const POST_HANDLERS: ActionHandlers = {
   }),
 
   'post.duplicate': input =>
-    editPost(input, (target, stack) => {
-      const effectId = effectIn(stack, input)
-      return effectId ? duplicatePostEffect(target, effectId, newId()) : null
-    }),
+    editPost(
+      input,
+      (target, stack) => {
+        const effectId = effectIn(stack, input)
+        return effectId ? duplicatePostEffect(target, effectId, newId()) : null
+      },
+      '"effectId" must name an instance of this composition — post.state answers "effects" with their ids',
+    ),
 
   'post.reset': input =>
-    editPost(input, (target, stack) => {
-      const effectId = effectIn(stack, input)
-      return effectId ? resetPostEffect(target, effectId) : null
-    }),
+    editPost(
+      input,
+      (target, stack) => {
+        const effectId = effectIn(stack, input)
+        return effectId ? resetPostEffect(target, effectId) : null
+      },
+      '"effectId" must name an instance of this composition — post.state answers "effects" with their ids',
+    ),
 
   /**
    * The ABSOLUTE value the panel shows, at the head — `keyPostParam` writes the delta against the
@@ -262,33 +309,41 @@ export const POST_HANDLERS: ActionHandlers = {
    * call animatable is refused rather than written where nothing reads.
    */
   'post.key': input =>
-    editPost(input, (target, stack, state) => {
-      const effectId = effectIn(stack, input)
-      const param = textOf(input, 'param') ?? ''
-      const value = numberOf(input, 'value')
-      const effect = stack.effects.find(one => one.id === effectId)
-      if (!effectId || !effect || value === null) return null
+    editPost(
+      input,
+      (target, stack, state) => {
+        const effectId = effectIn(stack, input)
+        const param = textOf(input, 'param') ?? ''
+        const value = numberOf(input, 'value')
+        const effect = stack.effects.find(one => one.id === effectId)
+        if (!effectId || !effect || value === null) return null
 
-      return keyPostParam(
-        state,
-        target,
-        effectId,
-        param,
-        headAt(),
-        value,
-        // A channel name is screen text: one opened from outside must read like one the diamond
-        // opened. `i18next` answers nothing before a window has initialised it — a test.
-        postChannelName(speaksBundle(), effect.effect, param),
-      )
-    }),
+        return keyPostParam(
+          state,
+          target,
+          effectId,
+          param,
+          headAt(),
+          value,
+          // A channel name is screen text: one opened from outside must read like one the diamond
+          // opened. `i18next` answers nothing before a window has initialised it — a test.
+          postChannelName(speaksBundle(), effect.effect, param),
+        )
+      },
+      '"effectId" must name an instance of this composition and "value" is wanted, with "param" one of that effect\'s animatable parameters — post.state answers "effects" with their ids and their "params"',
+    ),
 
   'post.unkey': input =>
-    editPost(input, (target, stack, state) => {
-      const effectId = effectIn(stack, input)
-      return effectId
-        ? unkeyPostParam(state, target, effectId, textOf(input, 'param') ?? '', headAt())
-        : null
-    }),
+    editPost(
+      input,
+      (target, stack, state) => {
+        const effectId = effectIn(stack, input)
+        return effectId
+          ? unkeyPostParam(state, target, effectId, textOf(input, 'param') ?? '', headAt())
+          : null
+      },
+      '"effectId" must name an instance of this composition — post.state answers "effects" with their ids',
+    ),
 
   /**
    * On this MACHINE, beside the ones the studio ships. The three below touch no document, so they
@@ -299,7 +354,9 @@ export const POST_HANDLERS: ActionHandlers = {
     withStack(input, ({ stack }) => {
       const saved = usePostPresets.getState().savePostPreset(textOf(input, 'name') ?? '', stack)
       // The store is what refuses a blank name — see `savePostPreset`, which trims it too.
-      return saved ? { ok: true, data: { presetId: saved } } : refused('badInput')
+      return saved
+        ? { ok: true, data: { presetId: saved } }
+        : refused('badInput', '"name" is wanted, and a name of nothing but spaces is not one')
     }),
 
   'post.renamePreset': input => {
@@ -309,7 +366,9 @@ export const POST_HANDLERS: ActionHandlers = {
     const renamed = usePostPresets
       .getState()
       .renamePostPreset(preset.id, textOf(input, 'name') ?? '')
-    return renamed ? { ok: true } : refused('badInput')
+    return renamed
+      ? { ok: true }
+      : refused('badInput', '"name" is wanted, and a name of nothing but spaces is not one')
   },
 
   'post.deleteSavedPreset': input => {
@@ -322,13 +381,19 @@ export const POST_HANDLERS: ActionHandlers = {
 
   'post.setCameraStackMode': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
-    const node = nodeAimed(open.state, textOf(input, 'nodeId') ?? '')
-    if (node?.type !== 'camera') return refused('notFound')
+    const named = textOf(input, 'nodeId') ?? ''
+    const node = nodeAimed(open.state, named)
+    if (node?.type !== 'camera')
+      return refused(
+        'notFound',
+        `no camera "${named}" in the scene in front, by id or name — scene.state answers "nodes", the ones of type "camera"`,
+      )
 
     const mode = oneOf(input, 'mode', CAMERA_POST_MODES)
-    if (mode === null) return refused('badInput')
+    if (mode === null)
+      return refused('badInput', `"mode" wants one of: ${CAMERA_POST_MODES.join(', ')}`)
 
     useScenes.getState().runCommand(open.documentId, setCameraPostMode(open.state, node.id, mode))
     return { ok: true }

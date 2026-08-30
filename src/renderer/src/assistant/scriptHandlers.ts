@@ -16,7 +16,12 @@ import { textOf } from './actionInputs'
  */
 
 const noProject = (): ActionOutcome | null =>
-  useProject.getState().project === null ? refused('noProject') : null
+  useProject.getState().project === null
+    ? refused(
+        'noProject',
+        'no project is open, and a script is a file of one — projects.list answers what there is, and project.open opens one',
+      )
+    : null
 
 export const SCRIPT_HANDLERS: ActionHandlers = {
   'script.list': async () => {
