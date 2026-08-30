@@ -4,7 +4,7 @@ import {
   assistantAction,
   DISCOVERY_ACTION,
   findActions,
-  loadedWith,
+  MOST_LOADED,
   type AssistantThought,
   type ActionField,
   type ActionName,
@@ -56,12 +56,20 @@ function actionBlock(action: AssistantAction): string {
   return lines.join('\n')
 }
 
+/**
+ * 🛑 One manual and WHOSE it is, carried together rather than re-derived: a scan of the composed
+ * text for `\n  <name> — ` also matches a project context that happens to be shaped that way, and
+ * a block split by position breaks the day a translated label carries a newline.
+ */
+type Manual = { readonly name: ActionName; readonly text: string }
+
 /** The manuals a briefing carries, in the order the chain opened them. */
-const manualPrinted = (loaded: readonly ActionName[]): string =>
+const manualPrinted = (loaded: readonly ActionName[]): readonly Manual[] =>
   loaded
     .flatMap(name => assistantAction(name) ?? [])
-    .map(actionBlock)
-    .join('\n')
+    .map(action => ({ name: action.name, text: actionBlock(action) }))
+
+const manualText = (manuals: readonly Manual[]): string => manuals.map(one => one.text).join('\n')
 
 /**
  * 🛑 The whole registry as NAMES, headed by the family that publishes it — 4 225 characters where
@@ -260,9 +268,9 @@ export type BriefingParts = {
   /** What the open document can be aimed at, narrowed by the window — see `target.ts`. */
   targets?: readonly Target[]
   /**
-   * 🛑 Ce que la CHAÎNE a réclamé, jamais les manuels que le studio charge d'office : ce sont les
-   * seuls noms qui doivent revenir par la frontière, et les seuls placés en QUEUE de `loaded` pour
-   * survivre à la coupe, qui mord par l'avant.
+   * 🛑 What the CHAIN asked for, never the manuals the studio loads from the start: they are the
+   * only names that must cross back over the boundary, and the only ones put at the BACK of
+   * `loaded` to survive the cut, which bites from the front.
    */
   opened?: readonly ActionName[]
 
@@ -309,26 +317,20 @@ export type Briefing = {
   readonly narrow: (() => Briefing) | null
 }
 
-/**
- * 🛑 What GIVES GROUND when the room runs out, in order: the state, the targets, the project
- * context, the folders, and — last of all — the manuals. Never the names, never the rules, and
- * never the sentence, which `instructionFor` guarantees.
- */
-function briefingText(one: Composition, manual: string, found: string): string {
-  return briefingWithin(one, manual, found).text
-}
+/** A composed briefing and the manuals it KEPT — what the cut decided, not a scan of its text. */
+type Written = { readonly text: string; readonly held: readonly ActionName[] }
 
-/** The same, saying whether the manuals had to give ground — what the memory signal yields to. */
-function briefingWithin(
-  one: Composition,
-  manual: string,
-  found: string,
-): { text: string; cut: boolean } {
+/**
+ * 🛑 What GIVES GROUND when the room runs out, in order: the manuals, the state, the targets, the
+ * project context, and the folders. Never the names, never the rules, and never the sentence,
+ * which `instructionFor` guarantees.
+ */
+function briefingText(one: Composition, manual: readonly Manual[], found: string): Written {
   const parts = one.parts
   const state = parts.state ?? ''
   const targets = parts.targets ?? []
-  const full = composed(one, manual, found, state, targets)
-  if (full.length <= parts.room) return { text: full, cut: false }
+  const full = composed(one, manualText(manual), found, state, targets)
+  if (full.length <= parts.room) return { text: full, held: manual.map(one => one.name) }
 
   /**
    * 🛑 The MANUALS give ground FIRST, and the order is the whole lesson of 2026-08-31: they are
@@ -339,19 +341,19 @@ function briefingWithin(
    * By whole actions and from the FRONT: what a chain opened last is what it is about to call,
    * and half a field line is an action the model cannot see is truncated.
    */
-  const blocks = manualBlocks(manual)
-  const held = blocks.length
+  const blocks = [...manual]
   let over = full.length - parts.room
-  while (over > 0 && blocks.length > 0) over -= (blocks.shift()?.length ?? 0) + 1
-  const manuals = blocks.join('\n')
+  while (over > 0 && blocks.length > 0) over -= (blocks.shift()?.text.length ?? 0) + 1
+  const held = blocks.map(one => one.name)
+  const manuals = manualText(blocks)
   const thinner = composed(one, manuals, found, state, targets)
-  if (thinner.length <= parts.room) return { text: thinner, cut: blocks.length < held }
+  if (thinner.length <= parts.room) return { text: thinner, held }
 
   // Then the state, whose lines are ranked from the most useful — it is prose, and it gives by
   // whole lines where the blocks above gave by whole actions.
   const short = linesWithin(state, Math.max(0, state.length - (thinner.length - parts.room)))
   const trimmed = composed(one, manuals, found, short, targets)
-  if (trimmed.length <= parts.room) return { text: trimmed, cut: blocks.length < held }
+  if (trimmed.length <= parts.room) return { text: trimmed, held }
 
   /**
    * Then the TAIL of the target list, which is the loss the window already designed for: it ranks
@@ -359,7 +361,7 @@ function briefingWithin(
    */
   const aimed = targetsWithin(targets, trimmed.length - parts.room)
   const cut = composed(one, manuals, found, short, aimed)
-  if (cut.length <= parts.room) return { text: cut, cut: blocks.length < held }
+  if (cut.length <= parts.room) return { text: cut, held }
 
   /**
    * 🛑 Then the project context — a FOURTH step because the two above can both run out: the state
@@ -369,27 +371,13 @@ function briefingWithin(
   const room = Math.max(0, (parts.context ?? '').length - (cut.length - parts.room))
   const trimmedContext = withParts(one, { context: linesWithin(parts.context ?? '', room) })
   const last = composed(trimmedContext, manuals, found, short, aimed)
-  if (last.length <= parts.room) return { text: last, cut: blocks.length < held }
+  if (last.length <= parts.room) return { text: last, held }
 
   // 🛑 `[M]` The folders go WHOLE or not at all: the briefing runs thousands of characters, so the
   // 137-character block overruns any door leaving it less than that.
   const bare = withParts(trimmedContext, { folders: '' })
 
-  return {
-    text: composed(bare, manuals, found, short, aimed),
-    cut: blocks.length < held,
-  }
-}
-
-/** The manuals as whole actions: a name line, and the field lines indented under it. */
-function manualBlocks(manual: string): string[] {
-  const blocks: string[] = []
-  for (const line of manual === '' ? [] : manual.split('\n')) {
-    if (line.startsWith('    ') && blocks.length > 0) blocks[blocks.length - 1] += `\n${line}`
-    else blocks.push(line)
-  }
-
-  return blocks
+  return { text: composed(bare, manuals, found, short, aimed), held }
 }
 
 function targetsWithin(targets: readonly Target[], over: number): readonly Target[] {
@@ -458,24 +446,22 @@ const memorySignal = (parts: BriefingParts): readonly string[] =>
 /**
  * The briefing with the signal, or without it when it does not FIT.
  *
- * 🛑 The LAST thing to give ground — after the state, the targets and the project context, and
- * before the manuals: overrunning is not the milder failure, a runtime truncating from the HEAD,
- * where the preamble sits (ADR-18).
+ * 🛑 It yields to OVERRUNNING alone, and to nothing else: the manuals give ground first and every
+ * real door cuts some, so yielding to a cut manual dropped this line from every door under
+ * ~97 400 — measured 2026-08-31. What it costs there is the WORST-ranked manual of a queue of 283.
  */
-function composedWithSignal(one: Composition, manual: string, found: string): string {
+function composedWithSignal(one: Composition, manual: readonly Manual[], found: string): Written {
   const signal = memorySignal(one.parts)
-  const withSignal = { ...one, rules: [...one.rules, ...signal] }
-  const written = briefingWithin(withSignal, manual, found)
-  // 🛑 `cut` as well as the length: the manuals give ground now, so a briefing that FITS may have
-  // paid for this line with one — and the signal is the cheaper of the two to lose.
-  if (signal.length === 0 || (written.text.length <= one.parts.room && !written.cut)) {
-    return written.text
-  }
+  if (signal.length === 0) return briefingText(one, manual, found)
+
+  const written = briefingText({ ...one, rules: [...one.rules, ...signal] }, manual, found)
+  if (written.text.length <= one.parts.room) return written
 
   // Retried only where the signal is what tipped it over: a briefing over by thousands is over
   // for another reason, and composing it a second time to learn that is waste.
-  const over = written.text.length - one.parts.room
-  return over > MEMORY_CALL.length + 1 ? written.text : briefingText(one, manual, found)
+  return written.text.length - one.parts.room > signal.join('\n').length + 1
+    ? written
+    : briefingText(one, manual, found)
 }
 
 /** One briefing's whole decision: the parts, which rules it was given, and what it may fall to. */
@@ -492,41 +478,47 @@ const withParts = (one: Composition, patched: Partial<BriefingParts>): Compositi
   parts: { ...one.parts, ...patched },
 })
 
+/**
+ * 🛑 The names asked for go to the BACK, even ones already there: the cut bites from the front,
+ * so `loadedWith` — which dedupes by keeping the position — let a manual that was asked for be
+ * cut a second time, and the loop asked for it again until the budget ran out.
+ */
+const atBack = (
+  held: readonly ActionName[],
+  names: readonly ActionName[],
+): readonly ActionName[] => [...held.filter(name => !names.includes(name)), ...names]
+
+const askedFor = (one: Composition, names: readonly ActionName[]): Composition =>
+  withParts(one, {
+    loaded: atBack(one.parts.loaded ?? [], names),
+    // 🛑 The same move, and `loadedWith` was the wrong one: it dedupes by KEEPING the position, so
+    // a re-asked manual crossed the turn boundary still at the front, where the next cut took it.
+    opened: atBack(one.parts.opened ?? [], names).slice(-MOST_LOADED),
+  })
+
 function briefingOf(one: Composition): Briefing {
   const asked = one.parts.loaded ?? []
-  const text = composedWithSignal(one, manualPrinted(asked), one.found ?? '')
   /**
-   * 🛑 What the text CARRIES, never what was asked for: the manuals give ground last, so a room
+   * 🛑 What the text CARRIES, never what was asked for: the manuals give ground first, so a room
    * too tight prints a share of them. Reported as asked, `unloadedIn` sees nothing to reopen and
    * the call goes out on guessed fields — 40 asked, 7 printed, and every gate green.
    */
-  const printed = (name: ActionName): boolean => text.includes(`\n  ${name} — `)
+  const written = composedWithSignal(one, manualPrinted(asked), one.found ?? '')
+  const held = new Set(written.held)
   /**
-   * 🛑 Deux lectures, et les confondre coûte un tour : `unloadedIn` demande ce qui a des CHAMPS,
-   * donc tout ce qui est imprimé ; la frontière ne doit rendre que ce que la CHAÎNE a réclamé,
-   * sinon 283 noms traversent à chaque tour. Sans `opened`, l'appelant EST la chaîne.
+   * 🛑 Two readings, and confusing them costs a turn: `unloadedIn` asks for what has FIELDS, so
+   * everything printed; the boundary must return only what the CHAIN asked for, or 283 names
+   * cross it every turn. Without `opened`, the caller IS the chain.
    */
-  const loaded = asked.filter(printed)
-  const opened = (one.parts.opened ?? asked).filter(printed)
+  const opened = (one.parts.opened ?? asked).filter(name => held.has(name))
 
   return {
-    text,
+    text: written.text,
     allowed: allNames(),
-    loaded,
+    loaded: written.held,
     opened,
-    /**
-     * 🛑 Les noms demandés vont en QUEUE, même déjà présents : la coupe mord par l'avant, donc
-     * `loadedWith` — qui déduplique en gardant la position — laissait un manuel réclamé se faire
-     * couper une seconde fois, et la boucle le redemandait jusqu'au budget.
-     */
-    withLoaded: names =>
-      briefingOf(
-        withParts(one, {
-          loaded: [...asked.filter(name => !names.includes(name)), ...names],
-          opened: loadedWith(one.parts.opened ?? [], names),
-        }),
-      ),
-    expand: one.found === undefined ? query => expandedWith(one, query) : null,
+    withLoaded: names => briefingOf(askedFor(one, names)),
+    expand: one.found === undefined ? query => expandedWith(one, query, written.held) : null,
     narrow: one.narrow,
   }
 }
@@ -601,7 +593,7 @@ export async function briefingFor(
     state: request.state,
     targets: request.targets,
     /**
-     * 🛑 EVERY manual, and the room decides how many survive — `briefingWithin` cuts them first
+     * 🛑 EVERY manual, and the room decides how many survive — `briefingText` cuts them first
      * and `loaded` reports what it printed, so a narrow door asks the rest back. Measured
      * 2026-08-31 over the 437 scenarios of `pnpm banc`: opened on demand instead, the same
      * scenarios passed 56% against 65%, and reached 214 actions against 243.
@@ -614,7 +606,7 @@ export async function briefingFor(
 }
 
 /**
- * Every manual, with the ones the chain asked for LAST: `briefingWithin` cuts from the front, so
+ * Every manual, with the ones the chain asked for LAST: `briefingText` cuts from the front, so
  * what was asked for is what survives a room too tight to hold them all.
  */
 const withChainLast = (opened: readonly ActionName[]): readonly ActionName[] => [
@@ -622,22 +614,51 @@ const withChainLast = (opened: readonly ActionName[]): readonly ActionName[] => 
   ...opened,
 ]
 
-const foundHeader = (query: string): string => `The manual above now holds what "${query}" found.`
+const actionsCounted = (many: number): string => (many === 1 ? '1 action' : `${many} actions`)
+
+const foundHeader = (query: string): string =>
+  `The manual above holds every action matching "${query}". Call one rather than asking again.`
 
 const nothingFound = (query: string): string =>
   `Nothing in the catalogue matches "${query}". Say so rather than inventing an action.`
 
 /**
  * 🛑 NOT the same sentence as `nothingFound`, and the difference is the whole point: a door whose
- * room barely covers the names plus a full project context has NOTHING left, so not one found
+ * room barely covers the names plus a full project context has NOTHING left, so not one matched
  * manual fits. Told "nothing matches", the model says so to the person, about actions that exist.
  */
-const noRoomFound = (query: string, hits: number): string =>
-  `${hits} actions match "${query}", and this briefing has no room for their fields. ` +
+const noRoomFound = (query: string, matched: number): string =>
+  `${actionsCounted(matched)} match "${query}", and this briefing has no room for their fields. ` +
   `Say so rather than guessing at one.`
 
-const foundBlock = (query: string, hits: number, kept: number): string =>
-  hits === 0 ? nothingFound(query) : kept === 0 ? noRoomFound(query, hits) : foundHeader(query)
+/** The middle of the two above: a narrow door describes a share, and the rest stay out of reach. */
+const partlyFound = (query: string, kept: number, matched: number): string =>
+  `The manual above holds ${kept} of the ${actionsCounted(matched)} matching "${query}", and has ` +
+  `no room for the rest. Call one of those rather than guessing at another.`
+
+/**
+ * 🛑 Counted on `matched` throughout, never on what was left to OPEN: a wide door prints every
+ * manual from the start, so nothing is ever left to open — and read that way the block said
+ * "nothing matches" about 28 actions described three lines above (measured 2026-08-31).
+ */
+const foundBlock = (query: string, matched: readonly ActionName[], kept: number): string => {
+  if (matched.length === 0) return nothingFound(query)
+  if (kept === 0) return noRoomFound(query, matched.length)
+
+  return kept < matched.length ? partlyFound(query, kept, matched.length) : foundHeader(query)
+}
+
+/**
+ * 🛑 The LONGEST sentence this block can end on. Counted against a shorter one, the delivered text
+ * holds one manual FEWER than announced — 946 lying rooms measured 2026-08-31, telling the model
+ * to call one of a set it cannot read. Against this one the count can only understate.
+ */
+const widestFound = (query: string, matched: readonly ActionName[]): string =>
+  [
+    foundHeader(query),
+    noRoomFound(query, matched.length),
+    partlyFound(query, matched.length, matched.length),
+  ].reduce((one, other) => (one.length >= other.length ? one : other))
 
 /**
  * The same briefing with what one query found opened, cut to the room by whole ACTIONS.
@@ -645,31 +666,29 @@ const foundBlock = (query: string, hits: number, kept: number): string =>
  * Cut by blocks rather than by characters: half a field line is an action the model cannot call
  * and cannot see is truncated, which is the one failure this whole mechanism exists to avoid.
  */
-function expandedWith(one: Composition, query: string): Briefing {
-  const loaded = one.parts.loaded ?? []
-  /**
-   * 🛑 Ce qui est IMPRIMÉ, jamais ce qui est chargé : tous les manuels le sont d'office et la
-   * coupe en laisse ce que la place permet. Filtré sur `loaded`, « rien ne correspond » sortait
-   * pour une action décrite trois lignes plus haut.
-   */
-  const shown = briefingText(one, manualPrinted(loaded), '')
-  const hits = findActions(query)
-    .filter(action => !shown.includes(`\n  ${action.name} — `))
-    .map(action => action.name)
+function expandedWith(one: Composition, query: string, held: readonly ActionName[]): Briefing {
+  const matched = findActions(query).map(action => action.name)
+  if (matched.length === 0) return briefingOf({ ...one, found: nothingFound(query) })
 
   /**
-   * 🛑 Aucun budget ici, et c'en est un de moins qui se trompe : un manuel mis en QUEUE ne
-   * s'ajoute pas, il DÉPLACE un plus ancien — la place calculée comme un ajout rendait « pas de
-   * place pour leurs champs » sur une porte qui en avait pour eux tous.
+   * 🛑 What the briefing PRINTS, never what it was handed: every manual is loaded from the start
+   * and the cut leaves what the room allows. Worst to best, because the cut keeps the TAIL — the
+   * other way round, what room was left described the poorest answers.
    */
-  // 🛑 Du PIRE au meilleur : la coupe garde la fin, donc le mieux classé doit être le dernier.
-  // Mis dans l'ordre du rang, la place qui restait décrivait les sept plus mauvaises réponses.
-  const ranked = [...loaded.filter(n => !hits.includes(n)), ...[...hits].reverse()]
-  const asked = { ...withParts(one, { loaded: ranked }) }
-  const written = briefingText(asked, manualPrinted(asked.parts.loaded ?? []), '')
-  const kept = hits.filter(name => written.includes(`\n  ${name} — `)).length
+  const missing = matched.filter(name => !held.includes(name))
+  const asked = missing.length === 0 ? one : askedFor(one, [...missing].reverse())
+  const widest = widestFound(query, matched)
+  const probe = briefingOf({ ...asked, found: widest })
+  const kept = matched.filter(name => probe.loaded.includes(name)).length
+  const found = foundBlock(query, matched, kept)
+  if (found === widest) return probe
 
-  return briefingOf({ ...asked, found: foundBlock(query, hits.length, kept) })
+  // 🛑 The room the count was taken in, kept: composed against its own shorter footer the text
+  // frees one more manual, and the sentence then says "no room for their fields" about a manual
+  // printed above it — eight rooms measured 2026-08-31.
+  const spare = widest.length - found.length
+
+  return briefingOf({ ...withParts(asked, { room: asked.parts.room - spare }), found })
 }
 
 /**
