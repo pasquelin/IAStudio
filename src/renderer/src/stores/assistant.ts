@@ -10,6 +10,7 @@ import {
   type AssistantCall,
   type AssistantModel,
   type AssistantProgress,
+  type AssistantWindow,
 } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
@@ -39,7 +40,13 @@ const STREAM_TAIL = 240
 const NOTHING_WRITTEN = { streamed: '' }
 
 /** What a new SENTENCE starts over: the counts belong to the turn that just ran, not the next. */
-const NOTHING_READ = { ...NOTHING_WRITTEN, promptTokens: 0, replyTokens: 0, windowTokens: 0 }
+const NOTHING_READ = {
+  ...NOTHING_WRITTEN,
+  promptTokens: 0,
+  promptChars: 0,
+  replyTokens: 0,
+  windowTokens: 0,
+}
 
 /** A question on screen and the promise waiting on it — see `ask`. */
 type AssistantQuestion = {
@@ -77,8 +84,17 @@ type AssistantState = {
   /** What the last round read and wrote. Zero where the door says nothing, and kept once it ends. */
   promptTokens: number
   replyTokens: number
+  /** The same round in CHARACTERS, for a door bounded by a length — see `AssistantProgress`. */
+  promptChars: number
   /** What that door reads in one go, so the composer can show the prompt as a share of it. */
   windowTokens: number
+  /**
+   * What the door in front says of its own bound, asked before a turn — `null` where it names
+   * none, `undefined` while nothing has answered yet. The two are not the same on screen: one
+   * says the window is unknown, the other has nothing to say at all.
+   */
+  door: AssistantWindow | null | undefined
+  noteDoor: (door: AssistantWindow | null | undefined) => void
   /** One frame of what the model is writing — see `connectThoughtStream`. */
   noteProgress: (progress: AssistantProgress) => void
   /** Asks the chain to stop after what is already running. Nothing in flight is undone. */
@@ -181,6 +197,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
   busy: false,
   round: 0,
   stopping: false,
+  door: undefined,
   ...NOTHING_READ,
   asked: null,
   choosing: null,
@@ -193,6 +210,8 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
 
   setDraft: draft => set({ draft }),
 
+  noteDoor: door => set({ door }),
+
   noteProgress: progress =>
     set(state => ({
       // 🛑 Cut HERE and not at the render: only the tail is ever shown, and slicing a rope that
@@ -203,6 +222,7 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
       ),
       // Zero on a restart: what the attempt just thrown away cost is not what this one costs.
       promptTokens: progress.promptTokens ?? (progress.restart === true ? 0 : state.promptTokens),
+      promptChars: progress.promptChars ?? (progress.restart === true ? 0 : state.promptChars),
       replyTokens: progress.replyTokens ?? (progress.restart === true ? 0 : state.replyTokens),
       windowTokens: progress.windowTokens ?? state.windowTokens,
     })),

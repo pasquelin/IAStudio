@@ -35,6 +35,7 @@ beforeEach(() => {
     asked: null,
     spent: 0,
     draft: '',
+    door: undefined,
     say,
     stop,
   })
@@ -629,7 +630,12 @@ describe('while the assistant is working', () => {
    * was time to read it.
    */
   it('shows what the last exchange read, once it is over', () => {
-    useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 8192 })
+    useAssistant.setState({
+      busy: false,
+      promptTokens: 2116,
+      windowTokens: 8192,
+      door: { size: 8192, unit: 'tokens', assumed: false },
+    })
     render(<AssistantConversation />)
 
     const grouped = (value: number): string =>
@@ -637,12 +643,84 @@ describe('while the assistant is working', () => {
     expect(screen.getByText(new RegExp(`${grouped(2116)}.*${grouped(8192)}`))).toBeInTheDocument()
   })
 
-  // A door that names no window shows the count alone rather than a ratio against a guess.
-  it('shows the count alone where the door named no window', () => {
-    useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 0 })
+  /**
+   * 🛑 A door that names no window shows the count alone AND says the window is unknown: a ratio
+   * against a guess is the `2 067 / 4 096` once shown for DeepSeek, whose window is far wider.
+   */
+  it('says the window is unknown where the door named none', () => {
+    useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 0, door: null })
     render(<AssistantConversation />)
 
     expect(screen.getByText(/2\s?116 jetons lus/)).toBeInTheDocument()
+    expect(screen.getByText(/fenêtre inconnue/)).toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 A door that answered `null` names NO window, and the count a PREVIOUS door left must not
+   * become its denominator — that is `2 067 / 4 096` all over again.
+   */
+  it('drops the window of the door before it when the new one names none', () => {
+    useAssistant.setState({
+      busy: false,
+      promptTokens: 2116,
+      windowTokens: 8192,
+      door: null,
+    })
+    render(<AssistantConversation />)
+
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.getByText(/fenêtre inconnue/)).toBeInTheDocument()
+  })
+
+  /** 🛑 A declared fallback is not a window: no gauge is painted against a made-up denominator. */
+  it('shows no ratio for a bound the door could not read', () => {
+    useAssistant.setState({
+      busy: false,
+      promptTokens: 0,
+      promptChars: 4200,
+      windowTokens: 0,
+      door: { size: 10_000, unit: 'characters', assumed: true },
+    })
+    render(<AssistantConversation />)
+
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.getByText(/Fenêtre inconnue/)).toBeInTheDocument()
+  })
+
+  /**
+   * 🛑 What Alban asked for: the bound is what one wants to know while deciding how much to
+   * paste, and before this the zone was empty until a turn had already been paid for.
+   */
+  it('shows the bound of the door before a single turn has run', () => {
+    useAssistant.setState({
+      busy: false,
+      promptTokens: 0,
+      promptChars: 0,
+      windowTokens: 0,
+      door: { size: 100_000, unit: 'characters', assumed: false },
+    })
+    render(<AssistantConversation />)
+
+    const grouped = new Intl.NumberFormat('fr').format(100_000).replace(/\s/g, '\\s')
+    expect(screen.getByText(new RegExp(`0.*${grouped} caractères`))).toBeInTheDocument()
+  })
+
+  // Characters against characters: the door is bounded by a LENGTH, and tokens here would be an
+  // estimate shown beside a measurement.
+  it('counts against a character bound in characters, never in tokens', () => {
+    useAssistant.setState({
+      busy: false,
+      promptTokens: 2116,
+      promptChars: 7400,
+      door: { size: 100_000, unit: 'characters', assumed: false },
+    })
+    render(<AssistantConversation />)
+
+    const grouped = (value: number): string =>
+      new Intl.NumberFormat('fr').format(value).replace(/\s/g, '\\s')
+    expect(
+      screen.getByText(new RegExp(`${grouped(7400)}.*${grouped(100_000)} caractères`)),
+    ).toBeInTheDocument()
   })
 
   // 🛑 The one exception to "a plan is running, the field is shut": a question with nothing to

@@ -91,6 +91,8 @@ export function createLocalBrain({
   }
 
   return {
+    // The same figure the frames carry, said before a turn rather than only during one.
+    window: () => Promise.resolve({ size: contextTokens, unit: 'tokens', assumed: false }),
     think: async (request, watch = {}) => {
       const briefing = await briefingFor(request, roomFor(contextTokens), notReady)
       return await answeredTurn(

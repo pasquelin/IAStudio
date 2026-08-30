@@ -7,6 +7,7 @@ import { createRoutedBrain, type RoutedBrainDeps } from './brainRouted'
 const llama = localModel({ id: 'llama3.2:3b', loader: 'ollama', files: [] })
 
 const answering = (say: string): AssistantBrain => ({
+  window: () => Promise.resolve(null),
   think: () => Promise.resolve<AssistantAnswer>({ say, calls: [], cost: 0 }),
 })
 
@@ -33,6 +34,7 @@ describe('the routed brain', () => {
     const brain = routed({
       providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
       localBrain: () => ({
+        window: () => Promise.resolve(null),
         think: request => {
           seen.push(request)
           return Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 })
@@ -89,7 +91,7 @@ describe('the routed brain', () => {
     const think = vi.fn(() => Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 }))
     const brain = routed({
       providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
-      localBrain: () => ({ think }),
+      localBrain: () => ({ think, window: () => Promise.resolve(null) }),
       contextOf: () => Promise.resolve('World: a forest'),
       stateOf: () => Promise.resolve('Studio now:\n  Space: image.'),
     })

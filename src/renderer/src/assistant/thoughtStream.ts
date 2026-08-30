@@ -21,6 +21,7 @@ export function connectThoughtStream(frames: FrameCoalesce = createFrameCoalesce
       // is dropped HERE in silence — `windowTokens` was, and the whole ratio never rendered.
       ...defined({
         promptTokens: progress.promptTokens ?? held.promptTokens,
+        promptChars: progress.promptChars ?? held.promptChars,
         replyTokens: progress.replyTokens ?? held.replyTokens,
         windowTokens: progress.windowTokens ?? held.windowTokens,
       }),

@@ -8,17 +8,29 @@ import {
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
-import {
-  BRIEFING_ROOM,
-  createProviderBrain,
-  INSTRUCTION_MAX,
-  UTTERANCE_ROOM,
-} from './brainProvider'
+import { BRIEFING_ROOM, createProviderBrain, UTTERANCE_ROOM } from './brainProvider'
+import type { ProviderLimits } from './providerLimits'
 import { recentHistory, studioBriefing, UNLISTED } from './instruction'
 import { STATE_MAX } from './studioState'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import { answeredTurn } from './brainTurn'
 import { jsonIn, parseReply } from './reply'
+
+/**
+ * What `GET /models/model_scenario-llm` answers, `[M]` 2026-08-30 against the real account: the
+ * `instruction` field takes 100 000 CHARACTERS, ten times what this file used to declare.
+ */
+const SCHEMA: ProviderLimits = {
+  instructionMax: 100_000,
+  models: ['claude-haiku-4-5', 'gemini-3.5-flash-lite'],
+  defaultModel: 'gemini-3.5-flash-lite',
+  assumed: false,
+}
+
+const reading =
+  (limits: ProviderLimits = SCHEMA) =>
+  () =>
+    Promise.resolve(limits)
 
 /** What the short list shows, which is what an answer to it is held to. */
 const SHOWN: ReadonlySet<ActionName> = new Set(actionsReaching('both').map(action => action.name))
@@ -31,6 +43,7 @@ const shortBriefing = (context = ''): string =>
 async function instructionSent(utterance: string, context = '', state = ''): Promise<string> {
   const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
   const brain = createProviderBrain({
+    limits: reading(),
     run,
     readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
     model: () => 'claude-haiku-4-5',
@@ -50,6 +63,7 @@ describe('stopping a turn on the Scenario door', () => {
       Promise.resolve(succeeded()),
     )
     const brain = createProviderBrain({
+      limits: reading(),
       run,
       readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
       model: () => 'claude-haiku-4-5',
@@ -72,6 +86,7 @@ describe('stopping a turn on the Scenario door', () => {
       Promise.resolve(cancelled),
     )
     const brain = createProviderBrain({
+      limits: reading(),
       run,
       readText: () => Promise.resolve(''),
       model: () => 'claude-haiku-4-5',
@@ -141,9 +156,9 @@ describe('what the model is told', () => {
    * answered and leave the catalogue whole.
    */
   it('cuts an over-long sentence rather than the instructions', async () => {
-    const instruction = await instructionSent('x'.repeat(INSTRUCTION_MAX * 2))
+    const instruction = await instructionSent('x'.repeat(SCHEMA.instructionMax * 2))
 
-    expect(instruction.length).toBe(INSTRUCTION_MAX)
+    expect(instruction.length).toBe(SCHEMA.instructionMax)
     expect(instruction).toContain('Catalogue:')
     expect(instruction).toContain('workspace.open')
   })
@@ -424,9 +439,95 @@ describe('reading the asset the model wrote', () => {
   })
 })
 
+describe('what this door says of its own bound', () => {
+  /**
+   * 🛑 In CHARACTERS, and never dressed as tokens: `instruction` is bounded by a length, and a
+   * count of tokens shown against it would be an estimate beside a measurement.
+   */
+  it('names its window in the unit the schema names it in', async () => {
+    const brain = createProviderBrain({
+      limits: reading(),
+      run: () => Promise.resolve(succeeded()),
+      readText: () => Promise.resolve(''),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    expect(await brain.window()).toEqual({ size: 100_000, unit: 'characters', assumed: false })
+  })
+
+  /** A fallback that says so: the composer must not show it as something that was read. */
+  it('marks a bound it could not read as an assumption', async () => {
+    const brain = createProviderBrain({
+      limits: reading({ instructionMax: 10_000, models: [], defaultModel: null, assumed: true }),
+      run: () => Promise.resolve(succeeded()),
+      readText: () => Promise.resolve(''),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    expect(await brain.window()).toMatchObject({ assumed: true })
+  })
+
+  /** What the person is spending, in the same unit as the bound it is spent against. */
+  it('reports what the prompt carried, in characters', async () => {
+    const frames: number[] = []
+    const brain = createProviderBrain({
+      limits: reading(),
+      run: () => Promise.resolve(succeeded()),
+      readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    await brain.think(
+      { utterance: 'hello', history: [] },
+      {
+        onProgress: progress => {
+          if (progress.promptChars !== undefined) frames.push(progress.promptChars)
+        },
+      },
+    )
+
+    expect(frames[0]).toBeGreaterThan(0)
+  })
+})
+
+describe('which language model is asked for', () => {
+  /**
+   * 🛑 Three of the four models this studio declares had already left the schema's list, and the
+   * call was refused with nothing on screen saying why.
+   */
+  it('asks the schema’s own default where the chosen model has left the list', async () => {
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
+    const brain = createProviderBrain({
+      limits: reading(),
+      run,
+      readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
+      model: () => 'claude-opus-4-8',
+    })
+
+    await brain.think({ utterance: 'hello', history: [] })
+
+    expect(run.mock.calls[0]?.[0]?.['model']).toBe('gemini-3.5-flash-lite')
+  })
+
+  it('leaves the choice alone where the schema still lists it', async () => {
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
+    const brain = createProviderBrain({
+      limits: reading(),
+      run,
+      readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    await brain.think({ utterance: 'hello', history: [] })
+
+    expect(run.mock.calls[0]?.[0]?.['model']).toBe('claude-haiku-4-5')
+  })
+})
+
 describe('thinking', () => {
   it('answers the reply and what it cost', async () => {
     const brain = createProviderBrain({
+      limits: reading(),
       run: () => Promise.resolve(succeeded()),
       readText: () => Promise.resolve('{"say":"Opening.","calls":[]}'),
       model: () => 'claude-haiku-4-5',
@@ -442,6 +543,7 @@ describe('thinking', () => {
   it('sends the history as text inputs, capped at what the API takes', async () => {
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
+      limits: reading(),
       run,
       readText: () => Promise.resolve('{"say":"ok","calls":[]}'),
       model: () => 'claude-haiku-4-5',
@@ -465,6 +567,7 @@ describe('thinking', () => {
     const answers = ['I think you want a 3D file!', '{"say":"Opening.","calls":[]}']
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
+      limits: reading(),
       run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
@@ -489,6 +592,7 @@ describe('thinking', () => {
     ]
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
+      limits: reading(),
       run,
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
@@ -515,6 +619,7 @@ describe('thinking', () => {
       '{"say":"unreached","calls":[]}',
     ]
     const brain = createProviderBrain({
+      limits: reading(),
       run: () => Promise.resolve(succeeded()),
       readText: () => Promise.resolve(answers.shift() ?? ''),
       model: () => 'claude-haiku-4-5',
@@ -525,6 +630,7 @@ describe('thinking', () => {
 
   it('gives up after the second, saying nothing rather than throwing', async () => {
     const brain = createProviderBrain({
+      limits: reading(),
       run: () => Promise.resolve(succeeded()),
       readText: () => Promise.resolve('still not JSON'),
       model: () => 'claude-haiku-4-5',
@@ -538,6 +644,7 @@ describe('thinking', () => {
   // A job that failed was still paid for, and the total the modal shows has to say so.
   it('counts what a failed job cost', async () => {
     const brain = createProviderBrain({
+      limits: reading(),
       run: () => Promise.resolve({ ...succeeded([], 0.75), status: 'failed', error: 'rejected' }),
       readText: () => Promise.resolve(''),
       model: () => 'claude-haiku-4-5',
@@ -549,6 +656,7 @@ describe('thinking', () => {
   it('reads no asset when the job produced none', async () => {
     const readText = vi.fn(() => Promise.resolve(''))
     const brain = createProviderBrain({
+      limits: reading(),
       run: () => Promise.resolve(succeeded([])),
       readText,
       model: () => 'claude-haiku-4-5',

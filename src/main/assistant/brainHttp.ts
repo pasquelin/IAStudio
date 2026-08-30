@@ -117,6 +117,10 @@ export function createHttpChatBrain({
   }
 
   return {
+    // 🛑 None, and INVENTING one is the defect this says no to: neither figure below is a window,
+    // both are briefing budgets, and one worn as a window is the `2 067 / 4 096` shown for
+    // DeepSeek. No chat cloud here publishes its window over the API, so there is nothing to read.
+    window: () => Promise.resolve(null),
     think: async (request, watch = {}) => {
       // Once this door has refused the whole catalogue and answered the short one, it is asked
       // narrow from the start: the wide briefing is 70 000 characters it would refuse again.
