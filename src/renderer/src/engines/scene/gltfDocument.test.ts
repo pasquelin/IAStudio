@@ -59,6 +59,14 @@ describe('gltfDocumentOf', () => {
     expect(nodesOf(document)[1]?.translation).toEqual([1, 2, 3])
   })
 
+  it('writes a rotation as a quaternion, four numbers where the descriptor holds three', () => {
+    const turned = meshNode('turned')
+    turned.transform = { ...turned.transform, rotation: { x: 0, y: Math.PI / 2, z: 0 } }
+
+    const quarterTurn = [0, Math.sin(Math.PI / 4), 0, Math.cos(Math.PI / 4)]
+    expect(nodesOf(write({ ...EMPTY_SCENE, nodes: [turned] }))[0]?.rotation).toEqual(quarterTurn)
+  })
+
   it('writes a camera the standard way, its angle in radians', () => {
     const document = write({ ...EMPTY_SCENE, nodes: [cameraNodeFixture('cam', { fov: 90 })] })
     const cameras = document.cameras
