@@ -55,12 +55,20 @@ export function parseThought(value: unknown): AssistantThought {
  * `data` is left as `unknown`: it is whatever the action had to say, a list of models or a job
  * id, and the shape belongs to the action rather than to this boundary. It reaches an MCP
  * client as JSON and nothing here reads it.
+ *
+ * 🛑 `detail` has to be DECLARED or zod strips it, and nothing rougit: the type says it is there,
+ * `refusalText` composes with it, and a client still reads a bare reason. Measured on the wire
+ * 2026-08-29 — `call 2: no action "…"` never left the window. It also carries the consent token.
  */
 const ACTION_RESULT = z.object({
   callId: z.string().min(1),
   outcome: z.union([
     z.object({ ok: z.literal(true), data: z.unknown().optional() }),
-    z.object({ ok: z.literal(false), refusal: z.enum(ACTION_REFUSALS) }),
+    z.object({
+      ok: z.literal(false),
+      refusal: z.enum(ACTION_REFUSALS),
+      detail: z.string().optional(),
+    }),
   ]),
 })
 

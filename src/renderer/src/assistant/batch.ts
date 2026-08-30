@@ -11,7 +11,7 @@ import type { BatchCall } from '@shared/domain/gameActions'
 export type BatchRead = { refusal: ActionOutcome } | { calls: readonly BatchedCall[] }
 
 /** One call of a lot, its name already held against the registry. */
-type BatchedCall = { action: ActionName; input: Record<string, unknown> }
+export type BatchedCall = { action: ActionName; input: Record<string, unknown> }
 
 /**
  * 🛑 Every entry checked, and a malformed one REFUSES rather than being dropped.
@@ -56,7 +56,7 @@ export function readBatch(input: Record<string, unknown>): BatchRead {
  * 🛑 What one call may hold. The thread runs them one after another with nothing to report its
  * progress and nothing to cancel it — invariant 6 — so a thousand would freeze the window.
  */
-const MOST_CALLS = 50
+export const MOST_CALLS = 50
 
 const isBatchCall = (value: unknown): value is BatchCall =>
   isRecord(value) && typeof value.action === 'string' && isRecord(value.input)

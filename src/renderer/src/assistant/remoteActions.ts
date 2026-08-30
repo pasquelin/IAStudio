@@ -1,6 +1,7 @@
 import { assistantAction } from '@shared/domain/assistant'
 import type { ActionOutcome } from '@shared/domain/assistant'
 import { getBridge } from '@/services/bridge'
+import { splitConsent } from './wireConsent'
 
 /**
  * Actions asked for from OUTSIDE this window — today, by an MCP client.
@@ -37,6 +38,8 @@ async function runFor(action: string, input: Record<string, unknown>): Promise<A
   const known = assistantAction(action)
   if (!known) return { ok: false, refusal: 'badInput' }
 
+  const { given, wire } = splitConsent(input)
+
   try {
     /**
      * Loaded on the call rather than at launch, and this is the one edge that decides it: the
@@ -44,7 +47,7 @@ async function runFor(action: string, input: Record<string, unknown>): Promise<A
      * thirty modules the opening chunk has no use for, on a door that is off by default.
      */
     const { runConfirmedAction } = await import('./executor')
-    return await runConfirmedAction(known.name, input)
+    return await runConfirmedAction(known.name, given, wire)
   } catch {
     // Nothing may leave this window unanswered: the client on the other end waits two minutes
     // for a reply it would otherwise never get. `failed` rather than `badInput`, which named a

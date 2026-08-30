@@ -376,6 +376,7 @@ describe('the lists that stand for a union', () => {
       notAllowed: true,
       nativeDialog: true,
       notRenderable: true,
+      needsConsent: true,
       failed: true,
     }
 

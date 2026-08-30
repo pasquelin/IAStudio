@@ -6,6 +6,8 @@ import { nameOf } from '@shared/domain/folder'
 import type { GameExportOutcome, GameExportRequest } from '@shared/domain/gameExport'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { folderInsideProject } from '@main/project/folderInsideProject'
+import { pathSegment } from '@main/validation'
 import { writeExportedGame, type ExportedAsset, type GameExportPorts } from './gameExport'
 import { pathIsInside } from './pathIsInside'
 
@@ -27,7 +29,7 @@ export function registerGameExportHandler(deps: GameExportDeps): void {
     const project = deps.projectPath()
     if (!project) return null
 
-    const chosen = await deps.pickFolder()
+    const chosen = await folderFor(request.folder, project, deps.pickFolder)
     if (!chosen) return null
 
     const root = join(chosen, safeFileName(request.title, 'game'))
@@ -36,6 +38,21 @@ export function registerGameExportHandler(deps: GameExportDeps): void {
     // The NAME, never the path: where a folder sits is this side's business, as everywhere else.
     return { folder: basename(root), ...report } satisfies GameExportOutcome
   })
+}
+
+/**
+ * 🛑 `pathSegment` FIRST: `folderInsideProject` says its own safety rests on that pre-check, and
+ * refuses nothing about the SHAPE of a name. A picker is the one way OUTSIDE may be chosen.
+ */
+async function folderFor(
+  folder: string | undefined,
+  project: string,
+  pickFolder: () => Promise<string | null>,
+): Promise<string | null> {
+  if (!folder) return pickFolder()
+
+  const named = pathSegment.safeParse(folder)
+  return named.success ? folderInsideProject(project, named.data) : null
 }
 
 function portsFor(deps: GameExportDeps, project: string, root: string): GameExportPorts {

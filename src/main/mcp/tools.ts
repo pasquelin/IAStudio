@@ -1,5 +1,6 @@
 import {
   actionsReaching,
+  needsConfirmation,
   type ActionCommitment,
   type ActionField,
   type ActionName,
@@ -115,32 +116,38 @@ export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
 /**
  * What the client is told an action engages, appended to its own description.
  *
- * On the tool rather than left to be discovered: a client that knows a call will ask the person
- * first can say so before making it, instead of appearing to hang for the two minutes the
- * question is allowed to stand.
+ * 🛑 It says what THIS door does, which is no longer what the window does: a client is refused
+ * with a consent token, never shown a modal it cannot see. Saying "asks the person on screen"
+ * described a wait that never comes.
  */
 const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   none: 'Runs straight away.',
-  files: 'Asks the person on screen first: it changes files in their project folder.',
-  asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
+  files: 'Refuses with a consent token first: it changes files in the project folder.',
+  asset: 'Refuses with a consent token first: it uploads an image that stays in the library.',
   remote:
-    'Asks the person on screen first: it publishes to a server, and nothing here undoes that.',
+    'Refuses with a consent token first: it publishes to a server, and nothing here undoes that.',
   studio:
-    'Asks the person on screen first, and cannot be delegated: it changes the settings, the ' +
-    'account that answers, or the project that is open.',
-  credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
+    'Refuses with a consent token first, and no setting ever waives that: it changes the ' +
+    'settings, the account that answers, or the project that is open.',
+  credits: 'Refuses with a consent token first, with an estimate: it spends creative units.',
 }
 
-// The two ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`
-// marks a handler that raises the studio's own question, which is WHY its commitment is `none`.
-// Read alone, `commitment` sent both out as "Runs straight away".
+// The three ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`
+// marks a handler that raises the studio's own question; `runsOthers` marks one that engages
+// nothing of its own and carries calls that do. Read alone, `commitment` sent all three out as
+// "Runs straight away".
 const OVERRIDE_NOTE = {
   asksItself:
     'Some calls wait on the person at the screen: the studio raises its own question rather than a confirmation.',
-  raises: 'What one call engages depends on what is given: it may ask the person on screen first.',
+  raises:
+    'What one call engages depends on what is given: it may be refused with a consent token first.',
+  runsOthers:
+    'It engages nothing of its own, and every call it carries is cleared on its own terms: one ' +
+    'of them needing a consent token refuses the whole lot, having run none of it.',
 }
 
 function noteOf(action: AssistantAction): string {
+  if (action.runsOthers) return OVERRIDE_NOTE.runsOthers
   if (action.asksItself) return OVERRIDE_NOTE.asksItself
   if (action.raises) return OVERRIDE_NOTE.raises
 
@@ -169,12 +176,30 @@ export function actionOfTool(name: string): AssistantAction | null {
   return assistantAction(name.replace('_', '.'))
 }
 
+/**
+ * 🛑 Declared, or `additionalProperties: false` makes the way through unusable by a strict client.
+ *
+ * On the 40 that can engage and no others — measured 2026-08-29, `raises` included: an action
+ * whose floor rises from its input engages without saying so in its `commitment`.
+ */
+const CONSENT_FIELD: ActionField = {
+  key: 'consent',
+  kind: 'text',
+  labelKey: 'assistant.fields.consent',
+  required: false,
+}
+
+const canEngage = (action: AssistantAction): boolean =>
+  needsConfirmation(action.commitment) || action.raises !== undefined
+
 function toolOf(action: AssistantAction): McpTool {
   return {
     name: toolName(action.name),
     title: englishText(action.titleKey),
     description: `${englishText(action.descriptionKey)} ${noteOf(action)}`,
-    inputSchema: schemaOfFields(action.fields),
+    inputSchema: schemaOfFields(
+      canEngage(action) ? [...action.fields, CONSENT_FIELD] : action.fields,
+    ),
   }
 }
 

@@ -1130,6 +1130,10 @@
         "description": "Adds a link from one memory to another, to say that one sheds light on the other."
       }
     },
+    "consent": {
+      "ask": " Ask whoever you are acting for, then send this same call again, its consent parameter set to {{token}}. The token is single-use, lasts 5 minutes, and answers for this call alone.",
+      "askInLot": " Ask whoever you are acting for, then send this same lot again with a consent field set to {{token}} inside THIS call’s own input. The token is single-use, lasts 5 minutes, and answers for this call alone."
+    },
     "refusals": {
       "unknownCommand": "No such command exists in the studio.",
       "wrongSurface": "No surface of the studio was there to take that command. Open the document or the panel it speaks to.",
@@ -1150,6 +1154,7 @@
       "notAllowed": "The studio does not let a call from outside change that. Only its own window does.",
       "nativeDialog": "This command raises a system dialogue: the assistant can neither fill it in nor read it back. Use the action that takes a path.",
       "notRenderable": "The document in front has nothing this can render — an empty sky, a material with no channel, or an engine that is not mounted.",
+      "needsConsent": "Nothing engaged: that call needs a consent token. The refusal carries a fresh one, and the same call sent back with it runs.",
       "failed": "The studio tried and it did not go through. The reason is in its activity journal, and it was not the parameters."
     },
     "models": {
@@ -1160,6 +1165,7 @@
     },
     "fields": {
       "command": "Command identifier",
+      "consent": "Token from an earlier needsConsent refusal. Single-use, 5 minutes, answers for this call alone",
       "workspace": "Workspace",
       "createDocument": "Create a document",
       "query": "Keywords",
@@ -1203,7 +1209,7 @@
       "alsoRemote": "Remove from the remote library too",
       "layerId": "Layer identifier",
       "layerIds": "Layer identifiers",
-      "exportFolder": "Folder of the project to write into, the title by default",
+      "exportFolder": "One folder name inside the project to write into, or a picker asks when it is left out",
       "exportFormat": "Format of the 3D file",
       "exportScope": "The whole scene, or the selection",
       "exportTarget": "Which engine the material export is for",
