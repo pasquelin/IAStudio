@@ -231,24 +231,20 @@ règle le **contenu**, le **corps** et la **police**.
 d’abord, puis celles de votre machine. Ce que dit
 [l’espace Modélisation](09-espace-modelisation.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
 
-### Groupe Gomme
-
-| Outil | Raccourci | Ce qu’il fait |
-|---|---|---|
-| **Gomme ponctuelle** | `E` | efface au passage du pointeur |
-| **Gomme sélective** | — | efface l’intérieur de la sélection d’un geste |
-
-La gomme efface **vers la transparence**, elle ne peint pas en blanc.
-
 ### Outils isolés
+
+Ceux-là n’ont pas de groupe : le bouton arme l’outil, il n’y a pas de menu à ouvrir.
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Commentaire** | — | *pas encore disponible* |
+| **Gomme** | `E` | efface au passage du pointeur |
 | **Pot de peinture** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
 | **Réglages du pinceau** | `[` et `]` | la taille, la dureté et l’opacité |
+
+La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 > **Ces deux contrôles suivent l’outil armé, et disparaissent quand il ne les lit pas.** La
 > pipette, le pointeur, le recadrage et la légende ne peignent aucun pixel : la barre n’affiche

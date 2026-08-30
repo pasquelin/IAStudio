@@ -377,8 +377,9 @@ Every tool in the bar is a command: its key arms it, and remaps like the rest.
 | `G` | Paint bucket | | `E` | Eraser |
 |  |  | | `I` | Eyedropper |
 
-**Four tools have no default key** — elliptical selection, polygon, star, selection eraser — and you can
-give them one in the settings.
+**Three tools have no default key** — elliptical selection, polygon and star — and you can give
+them one in the settings. **Image…**, in the Shapes group, has none either, but for another
+reason: it is not a command, so it does not appear in the list to remap.
 
 > **Five tools carry the key they carry elsewhere.** Brush is on `B` and Pencil on `⇧B` as in
 > every image editor, Crop on `C`, the shapes on `U` and `⇧U`. `R`, `F` and `P` are free in the

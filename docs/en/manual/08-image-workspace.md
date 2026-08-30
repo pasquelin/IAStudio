@@ -223,24 +223,20 @@ sets its **content**, its **size** and its **font**.
 machine's. What [the Modelling workspace](09-modelling-workspace.md#the-fonts-on-offer) says about missing fonts
 holds word for word here.
 
-### Eraser group
-
-| Tool | Shortcut | What it does |
-|---|---|---|
-| **Point eraser** | `E` | erases as the pointer passes |
-| **Selective eraser** | — | erases the inside of the selection in one gesture |
-
-The eraser erases **to transparency**; it does not paint white.
-
 ### Standalone tools
+
+These have no group: the button arms the tool, there is no menu to open.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
 | **Comment** | — | *not available yet* |
+| **Eraser** | `E` | erases as the pointer passes |
 | **Paint bucket** | `G` | fills the active layer — or the **selected area**, if there is one |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the pencil, the shapes and the fill |
 | **Brush settings** | `[` and `]` | the size, the hardness and the opacity |
+
+The eraser erases **to transparency**; it does not paint white.
 
 > **These two follow the armed tool, and leave when it does not read them.** The eyedropper, the
 > pointer, the crop frame and the caption tool paint no pixel: the bar then shows neither colour
