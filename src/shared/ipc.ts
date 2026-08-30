@@ -270,6 +270,7 @@ export type Channels = {
   assistantStop: 'assistant:stop'
   assistantActionResult: 'assistant:action-result'
   assistantNote: 'assistant:note'
+  assistantSaid: 'assistant:said'
 
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'
@@ -511,6 +512,7 @@ export const CHANNELS: Channels = {
   assistantStop: 'assistant:stop',
   assistantActionResult: 'assistant:action-result',
   assistantNote: 'assistant:note',
+  assistantSaid: 'assistant:said',
 
   dictationState: 'dictation:state',
   dictationStart: 'dictation:start',
@@ -1985,6 +1987,11 @@ export type StudioBridge = {
      * read over there, and a reader following a turn needs both sides in one order.
      */
     note: (note: WindowNote) => Promise<void>
+    /**
+     * What a round trip carried, whole — the journal keeps only its size, and a briefing is
+     * 90 505 characters. `null` for a line older than the ring, or written by another launch.
+     */
+    said: (key: string) => Promise<string | null>
   }
   /**
    * The model manager: which AI serves each role, what the machine can hold, and what to install.

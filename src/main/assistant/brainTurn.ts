@@ -27,11 +27,11 @@ export const inWindow =
 export type BrainAttempt = { answer: string; cost: number }
 
 /** Where a turn's round trips are written down, and which door they went through. */
-export type TurnNotes = { door: string; note: (note: AssistantNote) => void }
+export type TurnNotes = { door: string; model: string; note: (note: AssistantNote) => void }
 
 /** The same, or nothing where nobody is watching — written once for the three doors. */
-export const notesFor = (door: string, watch: TurnWatch): TurnNotes | undefined =>
-  watch.onNote && { door, note: watch.onNote }
+export const notesFor = (door: string, model: string, watch: TurnWatch): TurnNotes | undefined =>
+  watch.onNote && { door, model, note: watch.onNote }
 
 /** One round trip against one briefing, complaint included — what every brain hands over. */
 export type BrainRound = (briefing: Briefing, complaint?: string) => Promise<BrainAttempt>
@@ -90,7 +90,7 @@ async function readOnce(
 ): Promise<Read> {
   budget.left -= 1
   restart()
-  notes?.note({ kind: 'sent', door: notes.door, text: briefing.text })
+  notes?.note({ kind: 'sent', door: notes.door, model: notes.model, text: briefing.text })
   const first = await round(briefing)
   notes?.note({ kind: 'answered', text: first.answer })
   const reply = parseReply(first.answer, briefing.allowed)
@@ -102,7 +102,12 @@ async function readOnce(
   const complaint = complaintAbout(first.answer)
   // The briefing goes out AGAIN beside it, so the note carries both — a reader chasing an
   // oversized request would otherwise read the retry as the cheap round.
-  notes?.note({ kind: 'sent', door: notes.door, text: `${briefing.text}\n\n${complaint}` })
+  notes?.note({
+    kind: 'sent',
+    door: notes.door,
+    model: notes.model,
+    text: `${briefing.text}\n\n${complaint}`,
+  })
   let second
   try {
     second = await round(briefing, complaint)

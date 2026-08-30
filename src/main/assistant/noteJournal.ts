@@ -1,5 +1,6 @@
 import type { ActivityReport } from '@main/project/activityLog'
 import { noteText, type AssistantNote } from '@shared/domain/assistantNote'
+import { defined } from '@shared/guards'
 
 /**
  * One note as the journal keeps it.
@@ -7,34 +8,36 @@ import { noteText, type AssistantNote } from '@shared/domain/assistantNote'
  * 🛑 The HEAD of a prompt and never the whole — see `NOTE_TEXT_MAX`. The whole is in the
  * transcript file.
  */
-export function reportOfNote(note: AssistantNote): ActivityReport {
-  const said = saidOf(note)
+export function reportOfNote(note: AssistantNote, said?: string): ActivityReport {
+  const shown = saidOf(note, said)
   // Cut ONCE, here: an arm left unbounded is a row of a database nothing holds back.
   return {
     topic: 'assistant',
     level: 'info',
-    ...said,
-    ...(said.detail === undefined ? {} : { detail: noteText(said.detail) }),
+    ...shown,
+    ...(shown.detail === undefined ? {} : { detail: noteText(shown.detail) }),
   }
 }
 
 type Said = Omit<ActivityReport, 'topic' | 'level'> & { level?: ActivityReport['level'] }
 
-function saidOf(note: AssistantNote): Said {
+function saidOf(note: AssistantNote, said?: string): Said {
   switch (note.kind) {
     case 'sent':
-      /**
-       * 🛑 NO detail, and it is not a matter of size: the head of a briefing carries
-       * `Folders on this machine:` — this person's home, Desktop, Documents — and the journal
-       * lives in `<project>/.index/catalog.db`, which travels with a project they may share.
-       * `detail` carries `describeFailure` output by contract. The whole prompt is in the
-       * transcript, which stays in the log folder.
-       */
+      // 🛑 A KEY and no detail — see `StudioBridge.assistant.said` for why a prompt does not
+      // enter a database the project carries.
       return {
         messageKey: 'activity.assistantSent',
-        params: { door: note.door, chars: note.text.length },
+        params: {
+          door: note.door,
+          model: note.model,
+          chars: note.text.length,
+          ...defined({ said }),
+        },
       }
     case 'answered':
+      // 🛑 No key: an answer is short and its whole text is the `detail` right here. Given one,
+      // the row grew a « see what was SENT » button that unfolded the answer a second time.
       return {
         messageKey: 'activity.assistantAnswered',
         params: { chars: note.text.length },

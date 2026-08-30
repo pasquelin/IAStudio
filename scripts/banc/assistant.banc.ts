@@ -133,6 +133,7 @@ describe.skipIf(KEY === '' || chat === null)(`what ${PROVIDER} does with a real 
     const missed: string[] = []
 
     const brain = createHttpChatBrain({
+      cloud: PROVIDER,
       chat: chat ?? { kind: 'openai', baseUrl: '', model: '' },
       credentials: () => ({ key: KEY, secret: '' }),
       model: () => MODEL,

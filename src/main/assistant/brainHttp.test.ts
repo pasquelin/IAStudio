@@ -40,6 +40,7 @@ describe('a cloud that is being watched', () => {
     }
 
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: chats[kind],
       model: () => 'a-model',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -122,6 +123,7 @@ describe('a cloud that is being watched', () => {
       jsonResponse({ choices: [{ message: { content: '{"say":"hi","calls":[]}' } }] }),
     )
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
       model: () => 'gpt-4o-mini',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -139,6 +141,7 @@ describe('a cloud that is being watched', () => {
       jsonResponse({ choices: [{ message: { content: '{"say":"hi","calls":[]}' } }] }),
     )
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
       model: () => 'gpt-4o-mini',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -154,6 +157,7 @@ describe('a cloud that is being watched', () => {
 describe('createHttpChatBrain', () => {
   it('refuses to think when no key is held', async () => {
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
       model: () => 'gpt-4o-mini',
       credentials: () => null,
@@ -170,6 +174,7 @@ describe('createHttpChatBrain', () => {
       }),
     )
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
       model: () => 'gpt-4o-mini',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -200,6 +205,7 @@ describe('createHttpChatBrain', () => {
       return jsonResponse({ choices: [{ message: { content: '{"say":"ok","calls":[]}' } }] })
     })
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
       model: () => 'deepseek-chat',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -230,6 +236,7 @@ describe('createHttpChatBrain', () => {
       return jsonResponse({ choices: [{ message: { content: '{"say":"ok","calls":[]}' } }] })
     })
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', model: 'tiny' },
       model: () => 'tiny',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -249,6 +256,7 @@ describe('createHttpChatBrain', () => {
   it('does not narrow on a refusal that says nothing about the size', async () => {
     const post = vi.fn(async () => jsonResponse({ error: { message: 'rate limited' } }, 429))
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
       model: () => 'deepseek-chat',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -268,6 +276,7 @@ describe('createHttpChatBrain', () => {
       })
     })
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
       model: () => 'gpt-4o-mini',
       credentials: () => ({ key: 'sk-test', secret: '' }),
@@ -286,6 +295,7 @@ describe('createHttpChatBrain', () => {
       jsonResponse({ content: [{ type: 'text', text: '{"say":"ok","calls":[]}' }] }),
     )
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'anthropic', model: 'claude-sonnet-4-5' },
       model: () => 'claude-sonnet-4-5',
       credentials: () => ({ key: 'ant-key', secret: '' }),
@@ -308,6 +318,7 @@ describe('createHttpChatBrain', () => {
       }),
     )
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'gemini', model: 'gemini-2.0-flash' },
       model: () => 'gemini-2.0-flash',
       credentials: () => ({ key: 'gem-key', secret: '' }),
@@ -329,6 +340,7 @@ describe('createHttpChatBrain', () => {
     })
     let chosen = 'deepseek-chat'
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'openai', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
       model: () => chosen,
       credentials: () => ({ key: 'ds-key', secret: '' }),
@@ -348,6 +360,7 @@ describe('createHttpChatBrain', () => {
       jsonResponse({ candidates: [{ content: { parts: [{ text: '{"say":"ok","calls":[]}' }] } }] }),
     )
     const brain = createHttpChatBrain({
+      cloud: 'deepseek',
       chat: { kind: 'gemini', model: 'gemini-2.0-flash' },
       model: () => 'models/one#two',
       credentials: () => ({ key: 'gem-key', secret: '' }),

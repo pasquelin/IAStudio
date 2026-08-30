@@ -4,6 +4,7 @@ import { TONE_TEXT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { GLYPHS, TONES } from './activityLevels'
 import { ActivityListMessage } from './ActivityListMessage'
+import { ActivityListSaid } from './ActivityListSaid'
 
 /**
  * One journal line. Written twice once — the panel had `tabular-nums` but no `shrink-0`, so a
@@ -34,7 +35,14 @@ export function ActivityListRow({
         size={14}
         className={cn('mt-px shrink-0', TONE_TEXT[TONES[entry.level]])}
       />
-      <ActivityListMessage entry={entry} clamp={clamp} />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <ActivityListMessage entry={entry} clamp={clamp} />
+        {/* Only where there is room: the flyout cuts a detail to three lines, and a toast has
+            neither a virtualiser nor a height to hold to. */}
+        {!clamp && typeof entry.params?.['said'] === 'string' && (
+          <ActivityListSaid said={entry.params['said']} />
+        )}
+      </div>
       <span className="text-muted text-tiny shrink-0 tabular-nums">{time}</span>
     </div>
   )

@@ -40,6 +40,8 @@ import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
 import { CHOICE_SCOPES } from '@shared/domain/aiOverview'
 import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
+import { CLOUD_IDS } from '@shared/domain/aiCloud'
+import { doorLabelKey } from '@/helpers/assistantDoor'
 import { ASSISTANT_STARTERS, starterKey } from '@/assistant/starters'
 import { SOURCES } from '@/panels/assets/facets'
 
@@ -77,6 +79,10 @@ const COMPOSED_KEYS: readonly string[] = [
   // lives in the renderer, so its check does too — beside the list it derives from.
   ...TRACK_KINDS.map(kind => `timeline.addTrack.${kind}`),
   ...TRACK_KINDS.map(kind => `timeline.addTrackHint.${kind}`),
+  // What answered a turn, in the journal — a cloud's name, or this machine. Missing, the line
+  // reads « Envoyé à deepseek » where every other surface says « DeepSeek ».
+  ...CLOUD_IDS.map(doorLabelKey),
+  doorLabelKey('local'),
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}`),
   // What a format could not carry, named in the flatten dialogue. The PICTURE traits alone: the
   // image is the one kind with a `traitsOf`, so no other family can reach that sentence — the day

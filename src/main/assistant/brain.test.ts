@@ -196,7 +196,7 @@ describe('what a turn writes down', () => {
       briefing,
       () => Promise.resolve({ answer: '{"say":"ok","calls":[]}', cost: 0 }),
       undefined,
-      { door: 'deepseek', note: one => notes.push(one) },
+      { door: 'deepseek', model: 'deepseek-chat', note: one => notes.push(one) },
     )
 
     expect(notes.find(one => one.kind === 'sent')?.text).toBe(briefing.text)
