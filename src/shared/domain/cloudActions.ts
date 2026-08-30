@@ -29,6 +29,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cloudBrowse.title',
     descriptionKey: 'assistant.actions.cloudBrowse.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'text', kind: 'text', labelKey: 'assistant.fields.query', required: false },
@@ -75,6 +76,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cloudExplore.title',
     descriptionKey: 'assistant.actions.cloudExplore.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -99,6 +101,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cloudSimilar.title',
     descriptionKey: 'assistant.actions.cloudSimilar.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -113,6 +116,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cloudPlan.title',
     descriptionKey: 'assistant.actions.cloudPlan.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       ASSET_IDS,
@@ -134,6 +138,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cloudPull.title',
     descriptionKey: 'assistant.actions.cloudPull.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -151,6 +156,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cloudPush.title',
     descriptionKey: 'assistant.actions.cloudPush.description',
     commitment: 'asset',
+    repeatable: true,
     reach: 'mcp',
     fields: [ASSET_IDS],
   }),

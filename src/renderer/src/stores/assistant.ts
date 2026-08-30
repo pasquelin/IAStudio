@@ -16,8 +16,10 @@ import { narrowTargets, type Target } from '@shared/domain/target'
 import type { ConfirmAnswer, ConfirmRequest } from '@/assistant/confirm'
 import {
   assistantHistory,
+  alreadySettled,
   repeatedRelative,
   repeatKeyOf,
+  settledKeyOf,
   resultLine,
   type AssistantAsked,
   type AssistantStep,
@@ -551,9 +553,19 @@ async function ranAll(
        * what this whole field was measured against.
        */
       const key = repeatKeyOf(call.action, call.input)
-      const outcome = repeatedRelative(steps, key)
-        ? refused('badInput', ALREADY_APPLIED)
-        : await runConfirmedAction(call.action, call.input)
+      // Beside it, another defect: a state asked for twice in one turn is a model looping.
+      // Measured on deepseek-chat the 2026-08-30 — `panel.open {panel:'projects'}` on three of
+      // four billed rounds.
+      const settled = settledKeyOf(call.action, call.input)
+      const already = repeatedRelative(steps, key)
+        ? ALREADY_APPLIED
+        : alreadySettled(steps, call.action, settled)
+          ? ALREADY_SETTLED
+          : null
+      const outcome =
+        already === null
+          ? await runConfirmedAction(call.action, call.input)
+          : refused('badInput', already)
 
       noteAssistant({
         kind: 'ran',
@@ -569,6 +581,7 @@ async function ranAll(
         refusal: outcome.ok ? null : outcome.refusal,
         ...(!outcome.ok && outcome.detail !== undefined ? { detail: outcome.detail } : {}),
         ...(outcome.ok && key !== null ? { repeatKey: key } : {}),
+        ...(outcome.ok && settled !== null ? { settledKey: settled } : {}),
         ...(outcome.ok && outcome.data !== undefined ? { data: outcome.data } : {}),
       })
       patch(set, id, { steps: [...steps] })
@@ -585,6 +598,11 @@ async function ranAll(
 function lastSeen(state: Pick<AssistantState, 'turns'>): number {
   return state.turns.at(-1)?.id ?? 0
 }
+
+/** What a call that sets a state already reached is told — the fix is to read, not to re-set. */
+const ALREADY_SETTLED =
+  'that exact call already ran in this turn and left the studio in the state it asked for. ' +
+  'Read what stands and take the next step, rather than asking for it again.'
 
 /** What a repeated relative call is told — it names the fix, since the value itself was right. */
 const ALREADY_APPLIED =

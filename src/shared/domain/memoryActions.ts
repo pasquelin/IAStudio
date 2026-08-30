@@ -31,6 +31,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.memoryRecall.title',
     descriptionKey: 'assistant.actions.memoryRecall.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'query', kind: 'text', labelKey: 'assistant.fields.memoryQuery', required: true },
@@ -49,6 +50,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.memoryRead.title',
     descriptionKey: 'assistant.actions.memoryRead.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'memoryId', kind: 'text', labelKey: 'assistant.fields.memoryId', required: true },
@@ -64,6 +66,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.memoryWrite.title',
     descriptionKey: 'assistant.actions.memoryWrite.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -103,6 +106,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.memoryForget.title',
     descriptionKey: 'assistant.actions.memoryForget.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'memoryId', kind: 'text', labelKey: 'assistant.fields.memoryId', required: true },
@@ -113,6 +117,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.memoryLink.title',
     descriptionKey: 'assistant.actions.memoryLink.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'memoryId', kind: 'text', labelKey: 'assistant.fields.memoryId', required: true },

@@ -21,6 +21,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelSchema.title',
     descriptionKey: 'assistant.actions.modelSchema.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
@@ -31,6 +32,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.costEstimate.title',
     descriptionKey: 'assistant.actions.costEstimate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
@@ -42,6 +44,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.jobGet.title',
     descriptionKey: 'assistant.actions.jobGet.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'jobId', kind: 'text', labelKey: 'assistant.fields.jobId', required: true }],
   }),
@@ -54,6 +57,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.jobWait.title',
     descriptionKey: 'assistant.actions.jobWait.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'jobId', kind: 'text', labelKey: 'assistant.fields.jobId', required: true },
@@ -72,6 +76,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.jobCancel.title',
     descriptionKey: 'assistant.actions.jobCancel.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'jobId', kind: 'text', labelKey: 'assistant.fields.jobId', required: true }],
   }),
@@ -84,6 +89,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.taskCancel.title',
     descriptionKey: 'assistant.actions.taskCancel.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'taskId', kind: 'text', labelKey: 'assistant.fields.taskId', required: true }],
   }),
@@ -92,6 +98,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.usageReport.title',
     descriptionKey: 'assistant.actions.usageReport.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       // A closed set rather than a bounded number: the API takes three windows and nothing

@@ -1,10 +1,12 @@
 import {
+  assistantAction,
   type AskedAnswer,
   HISTORY_BLOCK_MAX,
   type ActionName,
   type ActionRefusal,
   refusalKey,
 } from '@shared/domain/assistant'
+import { stableKey } from '@shared/hash'
 import { englishText } from '@shared/i18n'
 
 /**
@@ -21,6 +23,8 @@ export type AssistantStep = {
   detail?: string
   /** Set for a RELATIVE call alone — see `repeatedRelative`, which is what it exists for. */
   repeatKey?: string
+  /** Set for a call whose action is not `repeatable` — see `alreadySettled`. */
+  settledKey?: string
   data?: unknown
 }
 
@@ -236,4 +240,28 @@ export function repeatKeyOf(action: ActionName, input: Record<string, unknown>):
  */
 export function repeatedRelative(steps: readonly AssistantStep[], key: string | null): boolean {
   return key !== null && steps.some(one => one.repeatKey === key && one.refusal === null)
+}
+
+/**
+ * What a call that sets a NAMED state is keyed by, so one turn cannot set it twice. Apart from
+ * `repeatKeyOf`: a relative call repeated ADDS, where this one asks again for what already
+ * stands. `stableKey` so a call re-serialised in another key order keys to the same string.
+ */
+export function settledKeyOf(action: ActionName, input: Record<string, unknown>): string | null {
+  return assistantAction(action)?.repeatable === false ? `${action} ${stableKey(input)}` : null
+}
+
+/**
+ * Whether that state is the one this action LAST set in the turn — never merely one it once set:
+ * arming A, then B, then A again is a plan, and only asking twice for the state that already
+ * stands is the loop.
+ */
+export function alreadySettled(
+  steps: readonly AssistantStep[],
+  action: ActionName,
+  key: string | null,
+): boolean {
+  const last = steps.filter(one => one.action === action && one.refusal === null).at(-1)
+
+  return key !== null && last?.settledKey === key
 }

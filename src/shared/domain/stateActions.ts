@@ -18,6 +18,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.studioState.title',
     descriptionKey: 'assistant.actions.studioState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -26,6 +27,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentsList.title',
     descriptionKey: 'assistant.actions.documentsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -34,6 +36,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentOpen.title',
     descriptionKey: 'assistant.actions.documentOpen.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [{ key: 'path', kind: 'text', labelKey: 'assistant.fields.filePath', required: true }],
   }),
@@ -42,6 +45,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentActivate.title',
     descriptionKey: 'assistant.actions.documentActivate.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },
@@ -57,6 +61,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentClose.title',
     descriptionKey: 'assistant.actions.documentClose.description',
     commitment: 'none',
+    repeatable: false,
     asksItself: true,
     reach: 'mcp',
     fields: [
@@ -68,6 +73,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentRename.title',
     descriptionKey: 'assistant.actions.documentRename.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },
@@ -87,6 +93,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentSave.title',
     descriptionKey: 'assistant.actions.documentSave.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: false },
@@ -105,6 +112,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentRemove.title',
     descriptionKey: 'assistant.actions.documentRemove.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'documentId', kind: 'text', labelKey: 'assistant.fields.documentId', required: true },
@@ -127,6 +135,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.documentExport.title',
     descriptionKey: 'assistant.actions.documentExport.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'folder', kind: 'text', labelKey: 'assistant.fields.exportFolder', required: false },
@@ -165,6 +174,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.activityRecent.title',
     descriptionKey: 'assistant.actions.activityRecent.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {

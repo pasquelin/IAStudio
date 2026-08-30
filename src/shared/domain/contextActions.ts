@@ -17,6 +17,7 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.contextRead.title',
     descriptionKey: 'assistant.actions.contextRead.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -30,6 +31,7 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.contextWrite.title',
     descriptionKey: 'assistant.actions.contextWrite.description',
     commitment: 'none',
+    repeatable: true,
     raises: input => ('title' in input || 'body' in input ? 'files' : 'none'),
     reach: 'mcp',
     fields: [
@@ -66,6 +68,7 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.contextRemove.title',
     descriptionKey: 'assistant.actions.contextRemove.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {

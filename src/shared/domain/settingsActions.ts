@@ -19,6 +19,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.settingsRead.title',
     descriptionKey: 'assistant.actions.settingsRead.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -33,6 +34,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.settingsWrite.title',
     descriptionKey: 'assistant.actions.settingsWrite.description',
     commitment: 'studio',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -49,6 +51,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.accountsList.title',
     descriptionKey: 'assistant.actions.accountsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -57,6 +60,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.accountsActivate.title',
     descriptionKey: 'assistant.actions.accountsActivate.description',
     commitment: 'studio',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
@@ -69,6 +73,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.accountsRename.title',
     descriptionKey: 'assistant.actions.accountsRename.description',
     commitment: 'studio',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
@@ -84,6 +89,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.settingsAction.title',
     descriptionKey: 'assistant.actions.settingsAction.description',
     commitment: 'none',
+    repeatable: true,
     raises: input => (IRREVERSIBLE.some(id => id === input.action) ? 'files' : 'none'),
     reach: 'mcp',
     fields: [

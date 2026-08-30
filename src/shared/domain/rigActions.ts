@@ -48,6 +48,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigState.title',
     descriptionKey: 'assistant.actions.rigState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -60,6 +61,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigFit.title',
     descriptionKey: 'assistant.actions.rigFit.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -68,6 +70,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigClear.title',
     descriptionKey: 'assistant.actions.rigClear.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -76,6 +79,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigHands.title',
     descriptionKey: 'assistant.actions.rigHands.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -86,6 +90,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneAdd.title',
     descriptionKey: 'assistant.actions.boneAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, { ...BONE, key: 'parent', labelKey: 'assistant.fields.parentBone' }],
   }),
@@ -94,6 +99,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneRemove.title',
     descriptionKey: 'assistant.actions.boneRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, BONE],
   }),
@@ -102,6 +108,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneRename.title',
     descriptionKey: 'assistant.actions.boneRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -116,6 +123,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneRole.title',
     descriptionKey: 'assistant.actions.boneRole.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -134,6 +142,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.ikAdd.title',
     descriptionKey: 'assistant.actions.ikAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, BONE],
   }),
@@ -142,6 +151,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.ikRemove.title',
     descriptionKey: 'assistant.actions.ikRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -157,6 +167,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationsList.title',
     descriptionKey: 'assistant.actions.animationsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -169,6 +180,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationAdd.title',
     descriptionKey: 'assistant.actions.animationAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -188,6 +200,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationRemove.title',
     descriptionKey: 'assistant.actions.animationRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -207,6 +220,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationBlock.title',
     descriptionKey: 'assistant.actions.animationBlock.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -265,6 +279,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationSettings.title',
     descriptionKey: 'assistant.actions.animationSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -284,6 +299,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationAutoKey.title',
     descriptionKey: 'assistant.actions.animationAutoKey.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [{ key: 'on', kind: 'boolean', labelKey: 'assistant.fields.autoKey', required: true }],
   }),
@@ -299,6 +315,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.keyPose.title',
     descriptionKey: 'assistant.actions.keyPose.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       ...SUBJECT,
@@ -324,6 +341,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.keyClear.title',
     descriptionKey: 'assistant.actions.keyClear.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       ...SUBJECT,
@@ -343,6 +361,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.keyAll.title',
     descriptionKey: 'assistant.actions.keyAll.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -359,6 +378,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.keyMove.title',
     descriptionKey: 'assistant.actions.keyMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       TRACK,
@@ -385,6 +405,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.channelRemove.title',
     descriptionKey: 'assistant.actions.channelRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [TRACK],
   }),
@@ -397,6 +418,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.channelFlags.title',
     descriptionKey: 'assistant.actions.channelFlags.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       TRACK,

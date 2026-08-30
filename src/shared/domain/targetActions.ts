@@ -16,6 +16,7 @@ export const TARGET_ACTIONS: readonly AssistantAction[] = [
     // Aiming is a way of looking, not an edit: nothing is written, and the pick is not undoable
     // because there is nothing to undo.
     commitment: 'none',
+    repeatable: false,
     reach: 'both',
     fields: [{ key: 'aimId', kind: 'text', labelKey: 'assistant.fields.aimId', required: true }],
   }),

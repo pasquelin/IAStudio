@@ -4,6 +4,7 @@ import type {
   ActionOutcome,
   AssistantAnswer,
   AssistantAsk,
+  AssistantCall,
   AssistantThought,
 } from '@shared/domain/assistant'
 import type { AssistantNote } from '@shared/domain/assistantNote'
@@ -699,5 +700,63 @@ describe('chaining rounds on one sentence', () => {
     useAssistant.getState().stop()
 
     expect(useAssistant.getState().stopping).toBe(false)
+  })
+})
+
+describe('a call that sets a named state, asked for twice', () => {
+  /**
+   * The measured loop: `panel.open {panel:'projects'}` on three of four billed rounds, the same
+   * sentence under each. Refused on the second round rather than run, and the executor never
+   * sees it.
+   */
+  it('runs it once across the rounds of one turn', async () => {
+    const call: AssistantCall = { action: 'panel.open', input: { panel: 'projects' } }
+    brain(answer({ calls: [call] }), answer({ calls: [call] }), answer())
+    chainCeiling(3)
+
+    await useAssistant.getState().say('ouvre un projet récent')
+
+    expect(runConfirmedAction).toHaveBeenCalledTimes(1)
+    expect(useAssistant.getState().turns[0]?.steps.map(one => one.refusal)).toEqual([
+      null,
+      'badInput',
+    ])
+  })
+
+  /** Reading is what the refusal must never reach — a plan watches its own generation. */
+  it('leaves a reading action callable on every round', async () => {
+    const call: AssistantCall = { action: 'jobs.list', input: {} }
+    brain(answer({ calls: [call] }), answer({ calls: [call] }), answer())
+    chainCeiling(3)
+
+    await useAssistant.getState().say('où en sont mes générations')
+
+    expect(runConfirmedAction).toHaveBeenCalledTimes(2)
+  })
+
+  /** The plan a naive guard would have cut: arm one layer, act, arm another, come back. */
+  it('lets one turn come back to a state it set before another', async () => {
+    const arm = (layerId: string): AssistantCall => ({ action: 'layer.select', input: { layerId } })
+    brain(
+      answer({ calls: [arm('a'), { action: 'layer.style', input: {} }, arm('b'), arm('a')] }),
+      answer(),
+    )
+    chainCeiling(2)
+
+    await useAssistant.getState().say('stylise le premier calque, puis reviens dessus')
+
+    expect(runConfirmedAction).toHaveBeenCalledTimes(4)
+  })
+
+  /** The second turn is a second intention, and the studio may have been left elsewhere since. */
+  it('lets the next turn set it again', async () => {
+    const call: AssistantCall = { action: 'panel.open', input: { panel: 'projects' } }
+    brain(answer({ calls: [call] }), answer(), answer({ calls: [call] }), answer())
+    chainCeiling(2)
+
+    await useAssistant.getState().say('ouvre le panneau des projets')
+    await useAssistant.getState().say('remets-le devant')
+
+    expect(runConfirmedAction).toHaveBeenCalledTimes(2)
   })
 })

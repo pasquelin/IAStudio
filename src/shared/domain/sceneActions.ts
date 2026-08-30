@@ -149,6 +149,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.sceneState.title',
     descriptionKey: 'assistant.actions.sceneState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -157,6 +158,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeAdd.title',
     descriptionKey: 'assistant.actions.nodeAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -182,6 +184,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeAddModel.title',
     descriptionKey: 'assistant.actions.nodeAddModel.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -197,6 +200,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeNegate.title',
     descriptionKey: 'assistant.actions.nodeNegate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -218,6 +222,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeCarve.title',
     descriptionKey: 'assistant.actions.nodeCarve.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -246,6 +251,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeCarveInvert.title',
     descriptionKey: 'assistant.actions.nodeCarveInvert.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true }],
   }),
@@ -255,6 +261,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeSeparate.title',
     descriptionKey: 'assistant.actions.nodeSeparate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -263,6 +270,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeRemove.title',
     descriptionKey: 'assistant.actions.nodeRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -271,6 +279,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeRename.title',
     descriptionKey: 'assistant.actions.nodeRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -282,6 +291,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeTransform.title',
     descriptionKey: 'assistant.actions.nodeTransform.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -302,6 +312,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeVisible.title',
     descriptionKey: 'assistant.actions.nodeVisible.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -318,6 +329,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeMaterial.title',
     descriptionKey: 'assistant.actions.nodeMaterial.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -333,6 +345,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeGeometry.title',
     descriptionKey: 'assistant.actions.nodeGeometry.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, ...GEOMETRY_FIELDS],
   }),
@@ -346,6 +359,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeShadow.title',
     descriptionKey: 'assistant.actions.nodeShadow.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -368,6 +382,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeSprite.title',
     descriptionKey: 'assistant.actions.nodeSprite.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -386,6 +401,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeText.title',
     descriptionKey: 'assistant.actions.nodeText.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -409,6 +425,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodePath.title',
     descriptionKey: 'assistant.actions.nodePath.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -426,6 +443,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.pathAddPoint.title',
     descriptionKey: 'assistant.actions.pathAddPoint.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -440,6 +458,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.pathMovePoint.title',
     descriptionKey: 'assistant.actions.pathMovePoint.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, POINT_INDEX, vector('x', 'point'), vector('y', 'point'), vector('z', 'point')],
   }),
@@ -449,6 +468,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.pathRemovePoint.title',
     descriptionKey: 'assistant.actions.pathRemovePoint.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, POINT_INDEX],
   }),
@@ -465,6 +485,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelWearMaterial.title',
     descriptionKey: 'assistant.actions.modelWearMaterial.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -494,6 +515,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelWearImage.title',
     descriptionKey: 'assistant.actions.modelWearImage.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -511,6 +533,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeLight.title',
     descriptionKey: 'assistant.actions.nodeLight.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -544,6 +567,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeCamera.title',
     descriptionKey: 'assistant.actions.nodeCamera.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -569,6 +593,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cameraShot.title',
     descriptionKey: 'assistant.actions.cameraShot.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
@@ -597,6 +622,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cameraRail.title',
     descriptionKey: 'assistant.actions.cameraRail.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
@@ -623,6 +649,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cameraAddRail.title',
     descriptionKey: 'assistant.actions.cameraAddRail.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true }],
   }),
@@ -635,6 +662,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cameraReorder.title',
     descriptionKey: 'assistant.actions.cameraReorder.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, { key: 'by', kind: 'integer', labelKey: 'assistant.fields.by', required: true }],
   }),
@@ -647,6 +675,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cameraTarget.title',
     descriptionKey: 'assistant.actions.cameraTarget.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
@@ -661,6 +690,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeReparent.title',
     descriptionKey: 'assistant.actions.nodeReparent.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -681,6 +711,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeSelect.title',
     descriptionKey: 'assistant.actions.nodeSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -701,6 +732,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.viewDirection.title',
     descriptionKey: 'assistant.actions.viewDirection.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -717,6 +749,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.viewDisplay.title',
     descriptionKey: 'assistant.actions.viewDisplay.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -741,6 +774,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.sceneCapture.title',
     descriptionKey: 'assistant.actions.sceneCapture.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -761,6 +795,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.worldPreset.title',
     descriptionKey: 'assistant.actions.worldPreset.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -783,6 +818,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.worldEnvironment.title',
     descriptionKey: 'assistant.actions.worldEnvironment.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       ...ENVIRONMENT_FIELDS,
@@ -802,6 +838,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.worldBackground.title',
     descriptionKey: 'assistant.actions.worldBackground.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -827,6 +864,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.worldFog.title',
     descriptionKey: 'assistant.actions.worldFog.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -854,6 +892,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.worldGround.title',
     descriptionKey: 'assistant.actions.worldGround.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'visible', kind: 'boolean', labelKey: 'assistant.fields.visible', required: false },
@@ -887,6 +926,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.worldRender.title',
     descriptionKey: 'assistant.actions.worldRender.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
