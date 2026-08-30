@@ -16,8 +16,9 @@ export type AssistantNote =
   | { kind: 'answered'; text: string }
   /** One call of the plan, and what the studio answered it. */
   | { kind: 'ran'; action: string; input: string; answer: string; refused: boolean }
-  /** A question put to the person, and what they answered — `null` where they dismissed it. */
-  | { kind: 'asked'; question: string; answer: string | null }
+  /** A question put to the person, what they answered — `null` where they dismissed it — and the
+   * free note beside it, which for some questions IS the answer. */
+  | { kind: 'asked'; question: string; answer: string | null; note?: string }
 
 /** What the window sends of its own accord. The two the brain writes never cross the boundary. */
 export type WindowNote = Extract<AssistantNote, { kind: 'ran' | 'asked' }>

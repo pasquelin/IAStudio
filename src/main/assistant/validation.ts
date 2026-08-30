@@ -91,7 +91,12 @@ const NOTE = z.discriminatedUnion('kind', [
     answer: said,
     refused: z.boolean(),
   }),
-  z.object({ kind: z.literal('asked'), question: said, answer: said.nullable() }),
+  z.object({
+    kind: z.literal('asked'),
+    question: said,
+    answer: said.nullable(),
+    note: said.optional(),
+  }),
 ]) satisfies z.ZodType<WindowNote>
 
 export function parseNote(value: unknown): WindowNote {

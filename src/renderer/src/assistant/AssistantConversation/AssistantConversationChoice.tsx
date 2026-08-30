@@ -1,30 +1,39 @@
 import { useTranslation } from 'react-i18next'
+import { answeredByComposer } from '@shared/domain/assistant'
 import { Button } from '@/design/Button'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
+import { AssistantConversationChoiceForm } from './AssistantConversationChoiceForm'
 import { CONVERSATION_CARD } from './conversationStyles'
 
 /**
  * What the assistant asked, with the answers it offered — and often none: « quel nom ? » has
  * nothing to press, so the composer below takes the answer and the card says where.
  */
-export function AssistantConversationChoice({ question, choices }: AssistantChoiceQuestion) {
+export function AssistantConversationChoice({ questions }: AssistantChoiceQuestion) {
   const { t } = useTranslation()
   const choose = useAssistant(state => state.choose)
+  const only = questions[0]
+
+  // Anything the composer cannot answer is a form: a line typed below says nothing about which
+  // question it belongs to.
+  if (!only || !answeredByComposer(questions)) {
+    return <AssistantConversationChoiceForm questions={questions} />
+  }
 
   return (
     <div className={CONVERSATION_CARD}>
-      <p className="text-text m-0 text-xs font-medium">{question}</p>
+      <p className="text-text m-0 text-xs font-medium">{only.question}</p>
 
-      {choices.length === 0 && (
+      {only.choices.length === 0 && (
         <p className="text-muted text-mini m-0">{t('assistant.answerBelow')}</p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {choices.map(choice => (
+        {only.choices.map(choice => (
           <Button
             key={choice}
-            onClick={() => choose(choice)}
+            onClick={() => choose([{ answer: choice }])}
             {...HINT_TOP(t('assistant.chooseHint'))}
           >
             {choice}

@@ -19,11 +19,12 @@ import { Spinner } from '@/design/Spinner'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { completionFor, foldForSearch, matchesWords, searchWords } from '@shared/text'
+import { answeredByComposer } from '@shared/domain/assistant'
 import { AI_SECTION } from '@/helpers/aiSectionLazy'
 import { HINT_TOP, TIP_TOP } from '@/helpers/tooltip'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import { useAssistant } from '@/stores/assistant'
+import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useToolSurface } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
@@ -53,6 +54,10 @@ function tailOf(
   return tail === undefined ? undefined : { sentence, tail }
 }
 
+/** Whether what is typed — or spoken — is the answer to the question standing. */
+const typedInto = (choosing: AssistantChoiceQuestion | null): boolean =>
+  choosing !== null && answeredByComposer(choosing.questions)
+
 /**
  * The conversation: what has been said, what is asked, and the place one writes. Two hosts — the
  * right column's panel and the empty centre — one store, one thread, never both at once. It
@@ -77,6 +82,9 @@ export function AssistantConversation() {
   const stop = useAssistant(state => state.stop)
   const asked = useAssistant(state => state.asked)
   const choosing = useAssistant(state => state.choosing)
+  // 🛑 The exception to "a plan is running, the field is shut": ONE question with nothing to press
+  // is answered by typing. A questionnaire is answered in its own card, so the field shuts again.
+  const typing = typedInto(choosing)
   const micOpen = useDictation(store => store.state === 'listening')
   const draft = useAssistant(state => state.draft)
   const setDraft = useAssistant(state => state.setDraft)
@@ -254,7 +262,7 @@ export function AssistantConversation() {
       // While a plan is running the assistant takes no new sentence — but the words were spoken,
       // and dropping them left no trace at all. They land in the field instead. A question
       // STANDING is the exception: `say` reads what is spoken as its answer, as it does typing.
-      if (assistant.busy && !assistant.choosing) {
+      if (assistant.busy && !typedInto(assistant.choosing)) {
         assistant.setDraft(assistant.draft === '' ? text : `${assistant.draft} ${text}`)
         return
       }
@@ -354,7 +362,7 @@ export function AssistantConversation() {
       )}
 
       {asked && <AssistantConversationQuestion request={asked.request} />}
-      {choosing && <AssistantConversationChoice {...choosing} />}
+      {choosing && <AssistantConversationChoice key={choosing.id} {...choosing} />}
 
       {/* The running hypothesis, above the field it will land in. The label is what makes it
           this window's: it says where the words are going, which "Listening…" does not — the
@@ -443,7 +451,7 @@ export function AssistantConversation() {
                 // generator form, and the question on screen belongs to the first of them. A
                 // question STANDING is the exception, and the reason this is not just `busy`:
                 // what is typed under it is that question's answer — see `say`.
-                disabled={busy && !choosing}
+                disabled={busy && !typing}
                 onChange={event => {
                   setDraft(event.target.value)
                   setCaretAtEnd(atEnd(event.currentTarget))
@@ -521,7 +529,7 @@ export function AssistantConversation() {
 
                 {/* Where Send was, and never beside it: the same corner the eye already goes to
                     for "act on this", and a chain one cannot stop is one nobody dares start. */}
-                {busy && !choosing ? (
+                {busy && !typing ? (
                   <Button
                     type="button"
                     onClick={stop}

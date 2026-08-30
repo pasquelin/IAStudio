@@ -41,23 +41,52 @@ describe('the conversation the model reads', () => {
   })
 
   /**
-   * 🛑 What makes the chain WAIT worth anything: without these two lines the answer never reaches
-   * the round that asked for it, and the model asks the same question on the next one.
+   * 🛑 What makes the chain WAIT worth anything: without this the answer never reaches the round
+   * that asked for it. ONE line for the pair — see `blockWithin`.
    */
-  it('carries what was asked and what came back', () => {
+  it('carries what was asked and what came back, on one line', () => {
     const [block] = assistantHistory([
-      turn({ asks: [{ question: 'Quel nom ?', answer: 'Bateaux' }] }),
+      turn({ asks: [{ question: 'Quel nom ?', answer: 'Bateaux', note: 'court' }] }),
     ])
 
-    expect(block).toContain('You asked: Quel nom ?')
-    expect(block).toContain('The person answered: Bateaux')
+    expect(block).toContain('You asked: Quel nom ? — the person answered: Bateaux (court)')
   })
 
-  // Dismissing is the one answer that ends the chain, and the model reads that it did.
-  it('says when the question was left unanswered', () => {
-    const [block] = assistantHistory([turn({ asks: [{ question: 'Lequel ?', answer: null }] })])
+  /**
+   * 🛑 Left BLANK and let GO read differently: one chain carries on, the other stops, and told
+   * the same sentence a model has no reason to do either.
+   */
+  it('tells a question left blank from a card let go', () => {
+    const [blank] = assistantHistory([turn({ asks: [{ question: 'Lequel ?', answer: null }] })])
+    const [gone] = assistantHistory([
+      turn({ asks: [{ question: 'Lequel ?', answer: null, dismissed: true }] }),
+    ])
 
-    expect(block).toContain('The person did not answer')
+    expect(blank).toContain('You asked: Lequel ? — the person left it blank.')
+    expect(gone).toContain('You asked: Lequel ? — the person dismissed the question.')
+  })
+
+  /** 🛑 A question that offered a note and got nothing else is one answered by its note alone. */
+  it('carries a note written where nothing was pressed', () => {
+    const [block] = assistantHistory([
+      turn({ asks: [{ question: 'Pourquoi ?', answer: null, note: 'pour un test' }] }),
+    ])
+
+    expect(block).toContain('the person left it blank (pour un test).')
+  })
+
+  /**
+   * 🛑 The pair travels together or NOT AT ALL. Written as two lines, a question past the bound
+   * was cut while its answer stayed, and the round read « the person answered: Bateaux » with
+   * nothing saying what had been asked.
+   */
+  it('drops a question too long to keep along with its answer', () => {
+    const [block] = assistantHistory([
+      turn({ asks: [{ question: 'q'.repeat(50_000), answer: 'Bateaux' }] }),
+    ])
+
+    expect(block).not.toContain('Bateaux')
+    expect(block).toContain('not shown')
   })
 
   /**

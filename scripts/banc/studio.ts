@@ -300,7 +300,11 @@ export async function createStudio(
   const closeChooser = useAssistant.subscribe((state, before) => {
     // Against `before`: this fires on EVERY set, and `noteProgress` runs once per streamed token.
     if (state.choosing && state.choosing !== before.choosing) {
-      state.choose(state.choosing.choices[0] ?? TYPED_ANSWER)
+      // One answer per question, the questionnaire included: half a form answered is a chain
+      // still parked.
+      state.choose(
+        state.choosing.questions.map(one => ({ answer: one.choices[0] ?? TYPED_ANSWER })),
+      )
     }
   })
 

@@ -90,4 +90,18 @@ describe('what a note becomes in the journal', () => {
     expect(reportOfNote(answered).detail).toBe('Bateaux')
     expect(lineOfNote(dismissed)).toContain('dismissed')
   })
+
+  /** 🛑 The note travels with the answer: for a question that offered one it IS the answer, and
+   * the journal showed such a question as one the person had walked away from. */
+  it('keeps the note the person wrote beside their answer', () => {
+    const noted: AssistantNote = {
+      kind: 'asked',
+      question: 'Pourquoi ?',
+      answer: null,
+      note: 'pour un test',
+    }
+
+    expect(reportOfNote(noted).detail).toBe('(pour un test)')
+    expect(lineOfNote(noted)).toContain('pour un test')
+  })
 })

@@ -1,18 +1,21 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { MOST_QUESTIONS, type AskedAnswer } from '@shared/domain/assistant'
 import { useAssistant } from '@/stores/assistant'
 import { AssistantConversationChoice } from './AssistantConversationChoice'
 
-const asked = (): Promise<string | null> =>
-  useAssistant.getState().askChoice('Dans quel espace ?', ['Image', 'Vidéo', 'Audio'])
+const asked = (): Promise<readonly AskedAnswer[] | null> =>
+  useAssistant
+    .getState()
+    .askChoice([{ question: 'Dans quel espace ?', choices: ['Image', 'Vidéo', 'Audio'] }])
 
 const drawn = (): void => {
   const choosing = useAssistant.getState().choosing
   if (choosing) render(<AssistantConversationChoice {...choosing} />)
 }
 
-beforeEach(() => useAssistant.setState({ choosing: null }))
+beforeEach(() => useAssistant.setState({ choosing: null, queued: [], asked: null }))
 
 describe('a question the model asked', () => {
   /**
@@ -25,7 +28,7 @@ describe('a question the model asked', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Vidéo' }))
 
-    await expect(answer).resolves.toBe('Vidéo')
+    await expect(answer).resolves.toEqual([{ answer: 'Vidéo' }])
     expect(useAssistant.getState().choosing).toBeNull()
   })
 
@@ -54,23 +57,101 @@ describe('a question the model asked', () => {
   // 🛑 A question with NO choices is the ordinary case: a card drawing buttons alone could not
   // serve the very question the `ask` key was built for.
   it('sends a question with nothing to press to the field below', () => {
-    void useAssistant.getState().askChoice('Quel nom ?', [])
+    void useAssistant.getState().askChoice([{ question: 'Quel nom ?', choices: [] }])
     drawn()
 
     expect(screen.getByText(/dans le champ/)).toBeInTheDocument()
     expect(screen.getAllByRole('button').map(one => one.textContent)).toEqual(['Laisser tomber'])
   })
 
-  // One at a time, and ACROSS the two kinds: two slots blind to each other put two sets of
-  // buttons on one thread, and the danger the guard exists for is between them too.
-  it('refuses a second question rather than replacing the one on screen', async () => {
+  /**
+   * 🛑 One at a time, and QUEUED rather than answered `null`: read as a dismissal, a question
+   * that arrived beside another ended its chain as stopped with nobody ever shown a thing.
+   */
+  it('queues a second question rather than replacing the one on screen', async () => {
     const first = asked()
-    const second = useAssistant.getState().askChoice('Autre chose ?', ['Oui'])
+    const second = useAssistant
+      .getState()
+      .askChoice([{ question: 'Autre chose ?', choices: ['Oui'] }])
 
-    await expect(second).resolves.toBeNull()
-    expect(useAssistant.getState().choosing?.question).toBe('Dans quel espace ?')
+    expect(useAssistant.getState().choosing?.questions[0]?.question).toBe('Dans quel espace ?')
+
     useAssistant.getState().choose(null)
-    await first
+    await expect(first).resolves.toBeNull()
+
+    // The one that waited takes the screen the moment the first is settled.
+    expect(useAssistant.getState().choosing?.questions[0]?.question).toBe('Autre chose ?')
+    useAssistant.getState().choose([{ answer: 'Oui' }])
+    await expect(second).resolves.toEqual([{ answer: 'Oui' }])
+  })
+
+  /** 🛑 Six fields all named « Réponse » say nothing about WHICH question they answer: the group
+   * carries the question, which is what a reader is told before the field it holds. */
+  it('names each field by the question it answers', () => {
+    void useAssistant.getState().askChoice([
+      { question: 'Lequel ?', choices: [] },
+      { question: 'Pourquoi ?', choices: [] },
+    ])
+    drawn()
+
+    expect(screen.getByRole('group', { name: 'Lequel ?' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Pourquoi ?' })).toBeInTheDocument()
+    useAssistant.getState().choose(null)
+  })
+
+  /**
+   * 🛑 The bound is claimed as "what one card may hold" and enforced in the PARSER: drawn here so
+   * the claim is measured where it is made.
+   */
+  it('draws a full card of questions', () => {
+    void useAssistant.getState().askChoice(
+      Array.from({ length: MOST_QUESTIONS }, (_unused, at) => ({
+        question: `q${at}`,
+        choices: ['a'],
+      })),
+    )
+    drawn()
+
+    expect(screen.getAllByRole('button', { name: 'a' })).toHaveLength(MOST_QUESTIONS)
+    useAssistant.getState().choose(null)
+  })
+
+  /** 🛑 Several questions in one breath: the composer answers ONE, so a form collects the rest
+   * and hands them all back together. */
+  it('hands back one answer per question of a questionnaire', async () => {
+    const answers = useAssistant.getState().askChoice([
+      { question: 'Lequel ?', choices: ['Bateau', 'Avion'] },
+      { question: 'Pourquoi ?', choices: [], note: true },
+    ])
+    drawn()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Avion' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Réponse' }), 'plus rapide')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Note' }), 'pour un test')
+    await userEvent.click(screen.getByRole('button', { name: /Envoyer les réponses/ }))
+
+    await expect(answers).resolves.toEqual([
+      { answer: 'Avion' },
+      { answer: 'plus rapide', note: 'pour un test' },
+    ])
+  })
+
+  /** 🛑 The queue waits on the confirmation door too: a modal held the screen while a question,
+   * answered `null` on the spot, ended its chain with nobody shown a thing. */
+  it('shows a question that waited behind a confirmation', async () => {
+    const granted = useAssistant
+      .getState()
+      .ask({ action: 'project.create', input: {}, commitment: 'studio' })
+    const waited = asked()
+
+    expect(useAssistant.getState().choosing).toBeNull()
+
+    useAssistant.getState().answer(true)
+    await expect(granted).resolves.toBe(true)
+    expect(useAssistant.getState().choosing?.questions[0]?.question).toBe('Dans quel espace ?')
+
+    useAssistant.getState().choose(null)
+    await expect(waited).resolves.toBeNull()
   })
 
   it('refuses a confirmation while a question of its own stands', async () => {

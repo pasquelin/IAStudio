@@ -1,4 +1,5 @@
 import {
+  type AskedAnswer,
   HISTORY_BLOCK_MAX,
   type ActionName,
   type ActionRefusal,
@@ -76,7 +77,11 @@ function listWithin(items: readonly unknown[]): string {
  * One question the assistant put to the person, and what came back — `null` where they dismissed
  * it, which is what ends the chain.
  */
-export type AssistantAsked = { question: string; answer: string | null }
+export type AssistantAsked = AskedAnswer & {
+  question: string
+  /** The card was LET GO rather than this question left blank — see `cameBack`. */
+  dismissed?: true
+}
 
 /**
  * One exchange: what was said, what came back, and what it actually did.
@@ -153,6 +158,22 @@ function blockWithin(block: string): string {
   return [said, `(${rest.length - kept.length} earlier steps not shown)`, ...kept].join('\n')
 }
 
+/**
+ * 🛑 Left BLANK and let GO read differently: one chain carries on, the other stops, and told the
+ * same sentence a model has no reason to do either.
+ */
+function cameBack(asked: AssistantAsked): string {
+  if (asked.dismissed) return 'the person dismissed the question.'
+
+  // 🛑 On BOTH branches: a question that offered a note and got nothing else is one answered by
+  // its note alone, and dropping it there drops what the question existed to collect.
+  const note = asked.note === undefined ? '' : ` (${asked.note})`
+
+  return asked.answer === null
+    ? `the person left it blank${note}.`
+    : `the person answered: ${asked.answer}${note}`
+}
+
 function blockOf(turn: AssistantTurn): string {
   const lines = [`The person said: ${turn.said}`]
   if (turn.answered !== '') lines.push(`You answered: ${turn.answered}`)
@@ -182,14 +203,9 @@ function blockOf(turn: AssistantTurn): string {
     )
   }
 
-  // 🛑 What makes the wait worth anything: without these the answer never reaches the round that
-  // asked for it, and the model asks the same question again on the next one.
-  for (const asked of turn.asks) {
-    lines.push(`You asked: ${asked.question}`)
-    lines.push(
-      asked.answer === null ? 'The person did not answer.' : `The person answered: ${asked.answer}`,
-    )
-  }
+  // 🛑 ONE line for the pair: `blockWithin` keeps a contiguous TAIL, so split in two a long
+  // question was cut while its answer stayed, and the round read an answer to nothing.
+  for (const asked of turn.asks) lines.push(`You asked: ${asked.question} — ${cameBack(asked)}`)
 
   // Said rather than left out: a turn that shows as nothing at all would have the model repeat
   // the sentence it already failed on, instead of trying it another way.

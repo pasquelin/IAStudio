@@ -272,7 +272,7 @@ describe('reading what came back', () => {
 
     expect(parseReply(text, SHOWN)).toEqual({
       say: '',
-      ask: { question: 'Quel nom ?', choices: [] },
+      ask: { questions: [{ question: 'Quel nom ?', choices: [] }] },
       calls: [],
     })
   })
@@ -282,21 +282,71 @@ describe('reading what came back', () => {
   it('takes a question as the whole answer', () => {
     const text = '{"say":"","ask":{"question":"Lequel ?","choices":["a","b"]},"calls":[]}'
 
-    expect(parseReply(text, SHOWN)?.ask).toEqual({ question: 'Lequel ?', choices: ['a', 'b'] })
+    expect(parseReply(text, SHOWN)?.ask).toEqual({
+      questions: [{ question: 'Lequel ?', choices: ['a', 'b'] }],
+    })
   })
 
   /**
    * A button with no words on it is no button, and losing the turn over one teaches nobody
    * anything: the choices are filtered where the QUESTION is what has to be there.
    */
-  it('keeps a question whose choices are half empty, and refuses one with no question', () => {
+  it('keeps a question whose choices are half empty', () => {
     const half = '{"say":"","ask":{"question":"Lequel ?","choices":["a","",3]},"calls":[]}'
-    expect(parseReply(half, SHOWN)?.ask?.choices).toEqual(['a'])
 
-    expect(parseReply('{"say":"ok","ask":{"question":"  "},"calls":[]}', SHOWN)).toEqual({
-      say: 'ok',
+    expect(parseReply(half, SHOWN)?.ask?.questions[0]?.choices).toEqual(['a'])
+  })
+
+  /** 🛑 Measured on qwen3.8: the question went out as a bare string, was thrown in silence, and
+   * the calls beside it ran — the very thing asking exists to stop. */
+  it('recovers a question written as a bare string', () => {
+    const text = '{"say":"","ask":"Quel nom ?","calls":[{"action":"project.create","input":{}}]}'
+
+    expect(parseReply(text, SHOWN)).toEqual({
+      say: '',
+      ask: { questions: [{ question: 'Quel nom ?', choices: [] }] },
       calls: [],
     })
+  })
+
+  it('takes a questionnaire, each question with its own choices and its own note', () => {
+    const text =
+      '{"say":"","ask":{"questions":[{"question":"Lequel ?","choices":["a"]},' +
+      '{"question":"Pourquoi ?","note":true}]},"calls":[]}'
+
+    expect(parseReply(text, SHOWN)?.ask).toEqual({
+      questions: [
+        { question: 'Lequel ?', choices: ['a'] },
+        { question: 'Pourquoi ?', choices: [], note: true },
+      ],
+    })
+  })
+
+  /**
+   * 🛑 An empty PLACEHOLDER is not a question. `"ask":""` and `{}` are what a model writes for
+   * « none », and refusing the whole reply over one cost two billed rounds on a shape the retry
+   * cannot even name.
+   */
+  it('runs the calls beside an empty ask placeholder', () => {
+    for (const placeholder of ['""', '{}', '[]', 'false', '{"questions":[]}']) {
+      const text = `{"say":"Voici.","ask":${placeholder},"calls":[{"action":"workspace.open","input":{"workspace":"3d"}}]}`
+
+      expect(parseReply(text, SHOWN)?.calls, placeholder).toHaveLength(1)
+    }
+  })
+
+  /**
+   * 🛑 An `ask` nobody can read REFUSES the whole reply rather than letting the calls beside it
+   * through: a model that meant to stop and ask had its question dropped and its plan carried out.
+   */
+  it('refuses a reply whose question is there but unreadable', () => {
+    const blank = '{"say":"ok","ask":{"question":"  "},"calls":[]}'
+    expect(parseReply(blank, SHOWN)).toBeNull()
+
+    const tooMany = `{"say":"","ask":{"questions":${JSON.stringify(
+      Array.from({ length: 7 }, (_unused, at) => ({ question: `q${at}` })),
+    )}},"calls":[]}`
+    expect(parseReply(tooMany, SHOWN)).toBeNull()
   })
 
   it('takes an action with no input at all', () => {

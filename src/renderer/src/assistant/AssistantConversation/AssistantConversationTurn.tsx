@@ -30,10 +30,16 @@ export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
       {turn.asks.map((asked, index) => (
         <div key={index} className="flex flex-col gap-2">
           <p className="text-text m-0 text-xs">{asked.question}</p>
-          {asked.answer !== null && (
-            <div className="flex justify-end">
-              <p className={CONVERSATION_BUBBLE}>{asked.answer}</p>
-            </div>
+          {/* The note as well: for a question that offered one it IS the answer, and shown
+              nowhere it read as a question the person had walked away from. */}
+          {[asked.answer, asked.note].map(
+            (said, at) =>
+              said !== null &&
+              said !== undefined && (
+                <div key={at} className="flex justify-end">
+                  <p className={CONVERSATION_BUBBLE}>{said}</p>
+                </div>
+              ),
           )}
         </div>
       ))}

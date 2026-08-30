@@ -3,12 +3,18 @@ import type {
   ActionName,
   ActionOutcome,
   AssistantAnswer,
+  AssistantAsk,
   AssistantThought,
 } from '@shared/domain/assistant'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from './settings'
 import { useAssistant } from './assistant'
+
+/** One question, the ordinary shape — the questionnaire is `AssistantConversationChoice`'s case. */
+const asking = (question: string, choices: readonly string[] = []): AssistantAsk => ({
+  questions: [{ question, choices }],
+})
 
 /** The ceiling a case is about, without waiting for twelve rounds to reach it. */
 function chainCeiling(steps: number): void {
@@ -111,7 +117,7 @@ describe('what a turn writes down', () => {
   it('notes the question and what was answered', async () => {
     const notes: AssistantNote[] = []
     // Two answers, never one repeated: a door that asks for ever parks the chain on every round.
-    const replies = [answer({ ask: { question: 'Quel nom ?', choices: [] }, calls: [] }), answer()]
+    const replies = [answer({ ask: asking('Quel nom ?'), calls: [] }), answer()]
     installFakeBridge({
       assistant: {
         think: () => Promise.resolve(replies.shift() ?? answer()),
@@ -121,7 +127,7 @@ describe('what a turn writes down', () => {
 
     const said = useAssistant.getState().say('crée un projet')
     await vi.waitFor(() => expect(useAssistant.getState().choosing).not.toBeNull())
-    useAssistant.getState().choose('Bateaux')
+    useAssistant.getState().choose([{ answer: 'Bateaux' }])
     await said
 
     expect(notes).toContainEqual({ kind: 'asked', question: 'Quel nom ?', answer: 'Bateaux' })
@@ -131,7 +137,7 @@ describe('what a turn writes down', () => {
 /** Answers whatever question is standing, as a person pressing a button or typing would. */
 async function answering(chosen: string | null): Promise<void> {
   await vi.waitFor(() => expect(useAssistant.getState().choosing).not.toBeNull())
-  useAssistant.getState().choose(chosen)
+  useAssistant.getState().choose(chosen === null ? null : [{ answer: chosen }])
 }
 
 describe('a question the model asked', () => {
@@ -141,10 +147,7 @@ describe('a question the model asked', () => {
    * and `command.run` beside it, and both calls were run against a name nobody had given.
    */
   it('runs nothing of the round that asked', async () => {
-    brain(
-      answer({ say: '', ask: { question: 'Quel nom ?', choices: [] }, calls: [] }),
-      answer({ calls: [] }),
-    )
+    brain(answer({ say: '', ask: asking('Quel nom ?'), calls: [] }), answer({ calls: [] }))
 
     const said = useAssistant.getState().say('crée un projet')
     await answering('Bateaux')
@@ -159,7 +162,7 @@ describe('a question the model asked', () => {
   /** What the wait is worth: the answer reaches the round that asked for it, or it asks again. */
   it('carries the answer into the next round', async () => {
     const { asked } = brain(
-      answer({ say: '', ask: { question: 'Quel nom ?', choices: [] }, calls: [] }),
+      answer({ say: '', ask: asking('Quel nom ?'), calls: [] }),
       answer({ calls: [] }),
     )
 
@@ -168,13 +171,13 @@ describe('a question the model asked', () => {
     await said
 
     expect(asked).toHaveLength(2)
-    expect(asked[1]?.history.join('\n')).toContain('The person answered: Bateaux')
+    expect(asked[1]?.history.join('\n')).toContain('the person answered: Bateaux')
   })
 
   /** The composer is the only way to answer a question with no choices — see `say`. */
   it('takes what is typed as the answer rather than as a new sentence', async () => {
     const { asked } = brain(
-      answer({ say: '', ask: { question: 'Quel nom ?', choices: [] }, calls: [] }),
+      answer({ say: '', ask: asking('Quel nom ?'), calls: [] }),
       answer({ calls: [] }),
     )
 
@@ -184,7 +187,7 @@ describe('a question the model asked', () => {
     await said
 
     expect(useAssistant.getState().turns).toHaveLength(1)
-    expect(asked[1]?.history.join('\n')).toContain('The person answered: Bateaux')
+    expect(asked[1]?.history.join('\n')).toContain('the person answered: Bateaux')
   })
 
   /**
@@ -193,7 +196,7 @@ describe('a question the model asked', () => {
    */
   it('ends the chain when the person lets the question go', async () => {
     const { asked } = brain(
-      answer({ say: 'Où ?', ask: { question: 'Où ?', choices: ['Image'] }, calls: [] }),
+      answer({ say: 'Où ?', ask: asking('Où ?', ['Image']), calls: [] }),
       answer(),
     )
 
@@ -213,12 +216,76 @@ describe('a question the model asked', () => {
   it('settles the question the stop is stopping', async () => {
     installFakeBridge({ assistant: { stop: () => Promise.resolve() } })
     useAssistant.setState({ busy: true })
-    const answered = useAssistant.getState().askChoice('Où ?', ['Image'])
+    const answered = useAssistant.getState().askChoice([{ question: 'Où ?', choices: ['Image'] }])
 
     useAssistant.getState().stop()
 
     await expect(answered).resolves.toBeNull()
     expect(useAssistant.getState().choosing).toBeNull()
+  })
+
+  /** 🛑 The queued ones too: one left standing keeps its own chain waiting on a person who has
+   * just asked everything to stop. */
+  it('settles the question that was waiting behind it as well', async () => {
+    installFakeBridge({ assistant: { stop: () => Promise.resolve() } })
+    useAssistant.setState({ busy: true })
+    const first = useAssistant.getState().askChoice([{ question: 'Où ?', choices: ['Image'] }])
+    const waited = useAssistant.getState().askChoice([{ question: 'Et ensuite ?', choices: [] }])
+
+    useAssistant.getState().stop()
+
+    await expect(first).resolves.toBeNull()
+    await expect(waited).resolves.toBeNull()
+    expect(useAssistant.getState().choosing).toBeNull()
+  })
+
+  /** 🛑 The queue fills behind a CONFIRMATION too, which `choose` cannot see: draining through
+   * the question on screen alone left those chains waiting on a person who had just stopped. */
+  it('settles a question queued behind a confirmation', async () => {
+    installFakeBridge({ assistant: { stop: () => Promise.resolve() } })
+    useAssistant.setState({ busy: true })
+    const granted = useAssistant
+      .getState()
+      .ask({ action: 'project.create', input: {}, commitment: 'studio' })
+    const waited = useAssistant.getState().askChoice([{ question: 'Où ?', choices: [] }])
+
+    useAssistant.getState().stop()
+
+    await expect(waited).resolves.toBeNull()
+    useAssistant.getState().answer(false)
+    await granted
+  })
+
+  /**
+   * 🛑 A line typed below says nothing about WHICH question it answers, so a questionnaire is
+   * answered in its own card — and every answer reaches the round that asked for it.
+   */
+  it('does not take what is typed as the answer to a questionnaire', async () => {
+    const { asked } = brain(
+      answer({
+        say: '',
+        ask: {
+          questions: [
+            { question: 'Lequel ?', choices: [] },
+            { question: 'Pourquoi ?', choices: [] },
+          ],
+        },
+        calls: [],
+      }),
+      answer({ calls: [] }),
+    )
+
+    const said = useAssistant.getState().say('crée un projet')
+    await vi.waitFor(() => expect(useAssistant.getState().choosing).not.toBeNull())
+    await useAssistant.getState().say('Bateaux')
+
+    expect(useAssistant.getState().choosing).not.toBeNull()
+    useAssistant.getState().choose([{ answer: 'un bateau' }, { answer: 'pour voir' }])
+    await said
+
+    expect(asked[1]?.history.join('\n')).toContain(
+      'You asked: Pourquoi ? — the person answered: pour voir',
+    )
   })
 })
 
