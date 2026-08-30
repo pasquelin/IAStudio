@@ -568,18 +568,33 @@ Un échec fait apparaître une **bulle** dans le coin bas-droit, au-dessus de la
 
 Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre ailleurs.
 
+**Trois d’entre eux n’apparaissent que dans l’espace qui les emploie** : Outils et Image quand
+vous éditez une image, Ajouter quand vous éditez une scène. Un menu absent n’est pas un menu grisé
+— il n’est pas là.
+
 | Menu | Ce qu’on y trouve |
 |---|---|
-| **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Réglages… |
+| **IA Studio** | *macOS seulement* : À propos, **Réglages…**, et les commandes du système |
+| **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Enregistrer sous…, Importer ▸, Exporter ▸. **Hors macOS, Réglages… est ici** |
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
-| **Affichage** | Modules, Réinitialiser la disposition, Plein écran, zoom de l’image |
-| **Objets** | **Ajouter ▸ Maille**, **Ajouter ▸ Lumière** — dans l’espace Modélisation |
+| **Outils** | *espace Image* : les dix-huit outils de la barre, plus **Réduire** et **Agrandir le pinceau** |
+| **Image** | *espace Image* : les douze entrées décrites dans [l’espace Image](08-espace-image.md) |
+| **Ajouter** | *espace Modélisation* : **Maille ▸**, **Lumière ▸**, **Objet ▸** |
+| **Affichage** | **Assistant**, Modules ▸, Réinitialiser la disposition, Plein écran — plus ce que l’espace ajoute |
 | **Fenêtre** | les commandes de fenêtre du système |
-| **Aide** | À propos d’IA Studio, Consommation…, Licences |
+| **Aide** | **Manuel utilisateur**, Consommation…, Licences. **Hors macOS, À propos est ici** |
 
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**.
 
 **Affichage ▸ Modules** ne liste que ce que l’espace peut ouvrir, comme le rail.
+
+**Affichage change de longueur selon ce que vous éditez.** Une image y ajoute les quatre zooms,
+les Règles, les Repères, Effacer les repères et le Magnétisme ; une scène y ajoute **Mode de
+rendu ▸**, **Point de vue ▸**, **Capturer la vue ▸**, puis la projection, les quatre vues, les
+arêtes en quads, les squelettes et le mode pose.
+
+> **Assistant est la seule porte de `⌘K`.** La commande est globale : elle est déclenchée par ce
+> menu et non par la fenêtre, donc sans cette ligne le raccourci n’atteindrait rien.
 
 ### La fenêtre de consommation
 
