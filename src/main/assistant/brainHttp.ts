@@ -118,14 +118,16 @@ export function createHttpChatBrain({
 
   return {
     think: async (request, watch = {}) => {
-      // Once this door has refused the whole catalogue and answered the short one, it is asked
-      // narrow from the start: the wide briefing is 70 000 characters it would refuse again.
-      const briefing = await briefingFor(
+      const composed = await briefingFor(
         request,
-        narrowed ? roomFor(CLOUD_FALLBACK_TOKENS) : roomFor(CLOUD_CONTEXT_TOKENS),
+        roomFor(CLOUD_CONTEXT_TOKENS),
         notReady,
         roomFor(CLOUD_FALLBACK_TOKENS),
       )
+      // 🛑 Narrowed by the DOOR, not by the room: the names fit everywhere, so a door that has
+      // already refused once would be composed the wide rules again and refuse them again — one
+      // billed round trip per turn, for ever. Asking short from the start is what that buys.
+      const briefing = narrowed ? (composed.narrow?.() ?? composed) : composed
 
       // 🛑 No window travels with these frames: the composer shows the count ALONE, as it does
       // for Scenario. Both figures above are assumptions — `2 067 / 4 096` was shown for DeepSeek,

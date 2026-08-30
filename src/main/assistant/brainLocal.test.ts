@@ -36,15 +36,15 @@ describe('the local brain', () => {
   /**
    * 🛑 `[M]` A huge window is not an invitation to fill it: 262 144 composed a 90 298-character
    * briefing, ~30 100 tokens re-read on every round of the chain, for five minutes on one
-   * sentence. The short share runs 7 098 and reaches the rest through `actions.find`.
+   * sentence. The names of all 283 run to 4 225, and the manuals are paid for when asked.
    */
-  it('is shown the short list however large its window', async () => {
+  it('is shown the names however large its window, and no manual it did not ask for', async () => {
     const { brain, asked } = brainAnswering([REPLY], 262_144)
 
     await brain.think({ utterance: 'hello', history: [] })
 
+    expect(briefingOf(asked)).toContain('git.checkout')
     expect(briefingOf(asked)).not.toContain('  git.checkout —')
-    expect(briefingOf(asked)).toContain('"actions.find"')
   })
 
   /**
@@ -92,13 +92,12 @@ describe('the local brain', () => {
     expect(asked[0]).toMatchObject({ contextTokens: 8192 })
   })
 
-  it('is shown the short list, and the way to ask for the rest, in a small window', async () => {
+  it('carries the manuals the round before it opened', async () => {
     const { brain, asked } = brainAnswering([REPLY])
 
-    await brain.think({ utterance: 'hello', history: [] })
+    await brain.think({ utterance: 'hello', history: [], loaded: ['git.checkout'] })
 
-    expect(briefingOf(asked)).not.toContain('  git.checkout —')
-    expect(briefingOf(asked)).toContain('"actions.find"')
+    expect(briefingOf(asked)).toContain('  git.checkout —')
   })
 
   /**

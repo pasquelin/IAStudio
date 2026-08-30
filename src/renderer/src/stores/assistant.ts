@@ -3,7 +3,9 @@ import { create } from 'zustand'
 import {
   answeredByComposer,
   HISTORY_MAX,
+  loadedWith,
   refused,
+  type ActionName,
   type AskedAnswer,
   type AskedQuestion,
   type AssistantAsk,
@@ -382,6 +384,10 @@ async function chainOn(
 ): Promise<void> {
   const bridge = getBridge()
   const ceiling = assistantStepsWithin(useSettings.getState().settings.assistant.steps)
+  // 🛑 For exactly as long as the CHAIN: the main process keeps nothing between two turns, so a
+  // round that did not carry this back reopened every manual, at a billed round trip each. It
+  // dies with the loop, which is what makes the next sentence start on names alone.
+  let loaded: readonly ActionName[] = []
 
   for (let round = 1; round <= ceiling; round += 1) {
     // Emptied here and not when the answer lands: what a round wrote belongs to that round, and
@@ -397,7 +403,7 @@ async function chainOn(
     // No model in the request: the main process reads the setting on each turn, so the one this
     // window would send could only be a copy going stale between two windows.
     const answer = await orElse(
-      bridge?.assistant.think({ utterance: said, history, targets, continuing: round > 1 }),
+      bridge?.assistant.think({ utterance: said, history, targets, loaded, continuing: round > 1 }),
       null,
     )
 
@@ -410,6 +416,7 @@ async function chainOn(
     }
 
     set(state => ({ spent: state.spent + answer.cost }))
+    loaded = loadedWith(loaded, answer.loaded ?? [])
     // Every round's sentence is kept, not just the last: "I am looking for it" then "here it is"
     // is the chain as the person read it happening.
     patch(set, id, { answered: alsoSaid(get(), id, answer.say) })

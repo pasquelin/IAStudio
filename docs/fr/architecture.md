@@ -384,27 +384,39 @@ une famille par module `*Actions.ts`, leurs champs, **ce que chacune engage** (`
 ici** : il monte à chaque lot, et `exhaustive.test.ts` le tient contre l’union `ActionName`. Il a
 deux lecteurs, et **aucun des deux ne décide** :
 
-- **l’assistant**, dans la fenêtre, qui liste à son modèle **ce que la place de son cerveau
-  permet** ;
-- **`main/mcp/tools.ts`**, qui republie **tout** en outils MCP pour un client extérieur.
+- **l’assistant**, dans la fenêtre, à qui le briefing donne **tous les NOMS** et rien d’autre ;
+- **`main/mcp/tools.ts`**, qui republie **tout**, champs compris, en outils MCP pour un client
+  extérieur.
 
-**L’asymétrie n’est pas une règle écrite : elle est arithmétique, porte par porte.** Chaque cerveau
-déclare la place qu’il tient — Scenario dix mille caractères, le champ `instruction` de son endpoint
-de génération (`brainProvider.ts`) · un nuage de discussion la sienne (`brainHttp.ts`) · un modèle
-local ce que sa fenêtre laisse (`roomFor`, `promptWindow.ts`). `studioBriefing` y met le registre
-entier quand il tient, et sinon la part `both` **plus la façon de demander le reste** :
-`actions.find`, que le cerveau exécute lui-même avant de redemander une fois, avec ce que la
-recherche a trouvé (`answeredTurn`, `brainTurn.ts`).
+**Le briefing porte les noms, jamais les modes d’emploi.** Les 283 actions groupées par famille
+coûtent 4 225 caractères, là où leurs descriptions et leurs champs en coûtent 90 994 — que seule la
+porte la plus large tenait, à chaque tour. Ce qu’une action EST et ce qu’elle prend n’est composé
+que pour celles qu’une chaîne a ouvertes (`loaded`).
+
+**Une action nommée sans son mode d’emploi ne coûte plus la réponse : elle l’ouvre.** Le modèle
+écrit son appel, `answeredTurn` (`brainTurn.ts`) voit que les champs manquent, les ajoute au
+briefing et redemande dans le même tour — le budget est `TURN_ATTEMPTS`. `actions.find` reste la
+même manœuvre par un MOT plutôt que par un nom. **Ce qui est ouvert le reste jusqu’à la fin de la
+demande** : la fenêtre renvoie `AssistantThought.loaded` d’un tour au suivant et repart à vide
+quand la chaîne se termine — le principal ne garde rien entre deux tours.
+
+**Ce que la place décide n’est plus le catalogue mais les RÈGLES.** Chaque cerveau déclare la place
+qu’il tient — Scenario dix mille caractères, le champ `instruction` de son endpoint de génération
+(`brainProvider.ts`) · un nuage de discussion la sienne (`brainHttp.ts`) · un modèle local ce que sa
+fenêtre laisse (`roomFor`, `promptWindow.ts`). En dessous du plancher que réclament les règles
+larges, `studioBriefing` n’en donne que le noyau et garde son état, son contexte et ses modes
+d’emploi.
 
 **`studio` est né de cet élargissement** : le modèle de l’assistant voit désormais des actions qui
 changent les réglages, le compte qui répond ou le projet ouvert — aucune n’est annulable par ⌘Z, et
 le compte décide de quelle bibliothèque et de quelle facture relève la génération suivante. C’est
 le seul niveau sans interrupteur de délégation, et c’est le propos.
 
-**Ce qu’un modèle a le droit de nommer suit ce qu’il a été MONTRÉ**, et non plus `reach` : le
-briefing porte l’ensemble autorisé, `parseReply` s’y tient. Un plafond partagé faisait l’inverse —
-`INSTRUCTION_MAX` vivait dans `shared/` et s’appliquait aux sept nuages HTTP, qui acceptent des
-dizaines de fois plus.
+**Ce qu’un modèle a le droit de nommer est le registre entier**, et `parseReply` s’y tient : un nom
+que le registre ne déclare pas est refusé, un nom qu’il déclare mais que le briefing n’a pas décrit
+ne l’est plus. `reach` ne décide donc plus rien du briefing ; il ne reste lu que par
+`actionsReaching('mcp')`. Un plafond partagé faisait l’inverse — `INSTRUCTION_MAX` vivait dans
+`shared/` et s’appliquait aux sept nuages HTTP, qui acceptent des dizaines de fois plus.
 
 **`validatesInput` (`assistantAction.ts`) est la seule validation d’entrée du dispositif**, dérivée
 des champs et posée sur `runConfirmedAction`. Rien en amont ne la fait : l’IPC vérifie l’enveloppe,

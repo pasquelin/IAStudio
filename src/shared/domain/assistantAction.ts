@@ -339,16 +339,12 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
 ]
 
 /**
- * 🛑 Which share this action belongs to when a door is too NARROW for the whole registry — no
- * longer "which door offers it", and the difference matters to whoever adds an action.
+ * 🛑 VESTIGIAL, and said so rather than left to be discovered: the briefing shows every NAME on
+ * every door since `studioBriefing` stopped composing manuals it was not asked for, so nothing
+ * reads this but `actionsReaching('mcp')` — which both values answer. The wire carries all of it.
  *
- * `both` is the vocabulary of a spoken request, `mcp` everything a program drives deliberately.
- * A brain with room is shown ALL of it and may name any of it: what a model may call follows
- * what `studioBriefing` showed it, which `parseReply` is held to — not this. An action marked
- * `mcp` is out of a small model's first sight, never out of its reach.
- *
- * 🛑 `window` is the ONE that does not reach the MCP wire at all — every other value does. It is
- * for what needs a person in front of the screen: nobody presses a button on a socket.
+ * `both` still reads as "the vocabulary of a spoken request" and `mcp` as "what a program drives",
+ * but neither decides anything today. A new action may be marked either way without a consequence.
  */
 export type ActionReach = 'both' | 'mcp'
 

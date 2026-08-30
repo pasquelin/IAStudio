@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACTION_FAMILIES, ACTION_REGISTRY } from '@shared/domain/assistant'
+import { ACTION_FAMILIES, ACTION_REGISTRY, MOST_LOADED } from '@shared/domain/assistant'
 import { GENERATIVE_WORKSPACE_IDS } from '@shared/domain/workspace'
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import { TARGET_ID_MAX, TARGET_NAME_MAX, TARGETS_MAX, type Target } from '@shared/domain/target'
@@ -22,12 +22,15 @@ const SATURATED: readonly Target[] = [...Array(TARGETS_MAX).keys()].map((at): Ta
   selected: true,
 }))
 
-/** Past the whole registry, which was 68 991 characters on 2026-08-25. */
+/** Past anything any door holds — what a briefing composes against when nothing squeezes it. */
 const WIDE = 200_000
 
+/** The manuals of one whole family, which is what a chain that settles on git ends up carrying. */
+const GIT = (ACTION_FAMILIES.find(one => one.name === 'git')?.actions ?? []).map(one => one.name)
+
 /**
- * What Scenario's door leaves the briefing — narrow enough that the short list is what fits, and
- * the tightest room any door composes against. Read off the door rather than copied: the number
+ * What Scenario's door leaves the briefing — the tightest room any door composes against, and
+ * narrow enough that the wide rules do not fit. Read off the door rather than copied: the number
  * moved once and three cases went on measuring the one before it.
  */
 const NARROW = BRIEFING_ROOM
@@ -68,6 +71,9 @@ describe('how much of the catalogue the model is shown', () => {
         context: 'x'.repeat(CONTEXT_COMPOSED_MAX),
         state: 'z'.repeat(STATE_MAX),
         targets: SATURATED,
+        // 🛑 The manuals at their bound as well: they are what a chain ADDS to a briefing that
+        // already fitted, and the only part of it a window names.
+        loaded: ACTION_REGISTRY.slice(0, MOST_LOADED).map(one => one.name),
       }).text.length,
     ).toBeLessThanOrEqual(room)
   })
@@ -111,27 +117,30 @@ describe('how much of the catalogue the model is shown', () => {
   })
 
   /**
-   * 🛑 The switch is `room < wholeShare().text.length`, a figure that MOVES with the registry —
-   * so a ceiling chosen against today's 90 298 characters stops holding the day the registry
-   * shrinks, and every local turn pays for the whole catalogue again with nothing saying so.
+   * 🛑 The point of the whole mechanism, on the tightest door the studio ships: every name, on
+   * every door. Before this, the narrow ones were shown eleven actions of 283 and answered « je
+   * ne peux pas » about the other 272.
    */
-  it('keeps the assistant window under what would show it the whole registry', () => {
-    const briefing = studioBriefing({ room: roomFor(ASSISTANT_WINDOW_MAX) })
+  it.each([roomFor(4096), NARROW, roomFor(ASSISTANT_WINDOW_MAX), WIDE])(
+    'names every action of the registry, whatever room it has: %i',
+    room => {
+      const briefing = studioBriefing({ room })
 
-    expect(briefing.text).not.toContain('  git.checkout —')
-    expect(briefing.expand).not.toBeNull()
-  })
+      for (const action of ACTION_REGISTRY) {
+        expect(briefing.text.includes(action.name), action.name).toBe(true)
+        expect(briefing.allowed.has(action.name), action.name).toBe(true)
+      }
+    },
+  )
 
-  /**
-   * A door with room is shown everything — two hundred and twenty-five actions — where before it
-   * was shown eleven because ONE door could not hold more.
-   */
-  it('shows the whole registry to a brain with room for it', () => {
-    const briefing = studioBriefing({ room: WIDE })
+  /** And the names ALONE: a manual nobody asked for is what put 90 994 characters on every turn. */
+  it('describes no action until one is opened', () => {
+    const bare = studioBriefing({ room: WIDE })
+    const opened = studioBriefing({ room: WIDE, loaded: ['git.checkout'] })
 
-    expect(briefing.text).toContain('  git.checkout —')
-    expect(briefing.allowed.has('git.checkout')).toBe(true)
-    expect(briefing.expand).toBeNull()
+    expect(bare.text).not.toContain('  git.checkout —')
+    expect(opened.text).toContain('  git.checkout —')
+    expect(opened.loaded).toEqual(['git.checkout'])
   })
 
   /**
@@ -139,47 +148,26 @@ describe('how much of the catalogue the model is shown', () => {
    * the name, 231 actions cut into 83 headings for 65 prefixes — a heading every 2.8 actions,
    * grouping nothing. `model.schema` and `model.textures` are two families under one prefix.
    */
-  it('heads the catalogue with the families the registry publishes', () => {
+  it('heads the names with the families the registry publishes', () => {
     const { text } = studioBriefing({ room: WIDE })
-    const headings = text.split('\n').filter(one => /^ {2}\[[a-z]+\]$/.test(one))
+    const headings = text.split('\n').flatMap(one => /^ {2}(\[[a-z]+\]) /.exec(one)?.[1] ?? [])
 
     expect(headings).toHaveLength(ACTION_FAMILIES.length)
     expect(new Set(headings).size).toBe(headings.length)
-    expect(headings).toContain('  [scene]')
-    expect(headings).not.toContain('  [model]')
-  })
-
-  /** And nothing to find, since there is nothing left it has not been shown. */
-  it('does not offer the way to ask for more when it has shown everything', () => {
-    expect(studioBriefing({ room: WIDE }).text).not.toContain('actions.find')
-  })
-
-  it('shows the short list and the way to ask for the rest to a brain without', () => {
-    const briefing = studioBriefing({ room: NARROW })
-
-    expect(briefing.text).toContain('  workspace.open —')
-    expect(briefing.text).not.toContain('  git.checkout —')
-    expect(briefing.text).toContain('"actions.find"')
-    expect(briefing.allowed.has('git.checkout')).toBe(false)
+    expect(headings).toContain('[scene]')
+    expect(headings).not.toContain('[model]')
   })
 
   /**
-   * 🛑 A briefing may not NAME an action it did not show. `parseReply` refuses a reply WHOLE the
-   * moment one call names an unshown action, so a rule telling a narrow door to `files.list`
-   * costs it the entire answer — twice, the retry only complaining about JSON — and the turn
-   * dies as "I did not manage to answer that one" with two billed round trips spent.
-   *
-   * The whole registry's names, not a list written here: a rule added tomorrow naming a fifth
-   * action is caught by the same case.
+   * 🛑 What the wide door pays 2 400 characters for, and the tight one does not: naming an action
+   * is safe on every door now, so what separates the two rule sets is room and nothing else.
    */
-  it('names no action the short list does not show', () => {
-    const briefing = studioBriefing({ room: NARROW })
-    // The RULES alone: the catalogue below them lists `command.run`'s own options, and a studio
-    // command legitimately shares a name with an action — `document.save` is both.
-    const rules = briefing.text.slice(0, briefing.text.indexOf('Catalogue:'))
-    const unshown = ACTION_REGISTRY.filter(action => !briefing.allowed.has(action.name))
+  it('drops the wide rules on a door too tight for them, and keeps every name', () => {
+    const tight = studioBriefing({ room: NARROW })
 
-    expect(unshown.filter(action => rules.includes(action.name)).map(one => one.name)).toEqual([])
+    expect(tight.text).not.toContain('List the folders YOURSELF')
+    expect(tight.text).toContain('git.checkout')
+    expect(studioBriefing({ room: WIDE }).text).toContain('List the folders YOURSELF')
   })
 
   // The other half: a rule dropped from the wide door would be as silent as one wrongly kept.
@@ -232,8 +220,8 @@ describe('how much of the catalogue the model is shown', () => {
       })
 
       expect(briefing.text.length).toBeLessThanOrEqual(NARROW)
-      // The catalogue never gives ground, whatever else had to.
-      expect(briefing.text).toContain('  workspace.open —')
+      // The names never give ground, whatever else had to.
+      expect(briefing.text).toContain('workspace.open')
     },
   )
 
@@ -252,16 +240,12 @@ describe('how much of the catalogue the model is shown', () => {
 describe('asking for the rest of the catalogue', () => {
   const expanded = (query: string) => studioBriefing({ room: NARROW }).expand?.(query)
 
-  /**
-   * The two halves of one answer: the words the model reads, and the set a call is then held to.
-   * Adding one without the other is either a model shown what it may not call, or a call refused
-   * for naming what it was just shown.
-   */
-  it('adds what a query found, and lets the model call it', () => {
+  /** A word rather than a name: what `actions.find` is still for once every name is shown. */
+  it('opens the manual of what a query found', () => {
     const briefing = expanded('git branch')
 
     expect(briefing?.text).toContain('  git.checkout —')
-    expect(briefing?.allowed.has('git.checkout')).toBe(true)
+    expect(briefing?.loaded).toContain('git.checkout')
   })
 
   it('says so rather than inventing when a query found nothing', () => {
@@ -293,7 +277,7 @@ describe('asking for the rest of the catalogue', () => {
     expect(briefing?.text.length).toBeLessThanOrEqual(NARROW)
     for (const action of ACTION_REGISTRY) {
       const shown = briefing?.text.includes(`  ${action.name} —`) ?? false
-      if (shown) expect(briefing?.allowed.has(action.name)).toBe(true)
+      if (shown) expect(briefing?.text).toContain(`  ${action.name} —`)
     }
   })
 
@@ -303,28 +287,28 @@ describe('asking for the rest of the catalogue', () => {
   })
 })
 
-describe('a door that refused the whole catalogue', () => {
+describe('a door that refused the briefing it was given', () => {
   /**
    * The room a chat cloud holds is an assumption — its model is typed by hand — so the wide
-   * briefing carries the way back to the short one. Without it, a small model named by hand
-   * fails on every sentence with nothing to fall back on.
+   * briefing carries the way back to a shorter one. What gives ground is the RULES: the names
+   * are 4 225 characters no door has ever refused, and dropping them would blind the model.
    */
-  it('has the short share to fall back on', () => {
+  it('has the rules to give up, and never the names', () => {
     const narrow = studioBriefing({ room: WIDE }).narrow?.()
 
-    expect(narrow?.text).not.toContain('  git.checkout —')
-    expect(narrow?.allowed.has('git.checkout')).toBe(false)
+    expect(narrow?.text).not.toContain('List the folders YOURSELF')
+    expect(narrow?.text).toContain('git.checkout')
     expect(narrow?.expand).not.toBeNull()
   })
 
-  it('does not offer to narrow what is already the short share', () => {
+  it('does not offer to narrow what is already narrow', () => {
     expect(studioBriefing({ room: NARROW }).narrow).toBeNull()
   })
 })
 
 /**
- * The short briefing with nothing else in it — measured rather than written down, because it
- * moves whenever a `both` action's description does.
+ * The narrow briefing with nothing else in it — measured rather than written down, because it
+ * moves whenever a rule or an action name does.
  */
 const bareShort = (): number => studioBriefing({ room: NARROW, memories: 0 }).text.length
 
@@ -347,30 +331,8 @@ describe('what a briefing says about the memory', () => {
   })
 
   /**
-   * 🛑 Decided on `allowed` rather than on room: a briefing naming an action the model was
-   * neither SHOWN nor told how to ask for costs the WHOLE turn. The margin covers BOTH signals,
-   * which give ground together — a room holding only the memory line holds neither.
-   */
-  it('names the word to search for where the catalogue does not hold the action', () => {
-    const room = bareShort() + 400
-    const text = studioBriefing({ memories: 12, room }).text
-
-    expect(studioBriefing({ room, memories: 0 }).allowed.has('memory.recall')).toBe(false)
-    expect(text).toContain('search "memory"')
-    expect(text).not.toContain('memory.recall answers it')
-  })
-
-  /** An expansion holds neither the action nor a second `actions.find`: it says nothing at all. */
-  it('says nothing in a briefing that answers a find', () => {
-    const expanded = studioBriefing({ memories: 12, room: bareShort() + 400 }).expand?.('layers')
-
-    expect(expanded?.text).not.toContain('has a memory')
-  })
-
-  /**
-   * 🛑 The signal is the LAST thing to give ground, and it does: the short share is 7 405
-   * characters against the 8 000 Scenario's door leaves. Overrunning is not the milder failure —
-   * a runtime truncates from the HEAD, where the preamble sits (ADR-18).
+   * 🛑 The signal is the LAST thing to give ground before the manuals, and it does. Overrunning is
+   * not the milder failure — a runtime truncates from the HEAD, where the preamble sits (ADR-18).
    */
   it('gives the signal up rather than overrun a door that has no room for it', () => {
     const room = bareShort() + 10
@@ -381,13 +343,16 @@ describe('what a briefing says about the memory', () => {
   })
 
   /**
-   * 🛑 What the wide door would otherwise pay for 78 characters: `studioBriefing` falls back to
-   * the spoken vocabulary whole, so the signal would cost 267 actions to say one sentence.
+   * 🛑 What it would otherwise cost: the manuals give ground BEFORE this line does, so a briefing
+   * squeezed by 78 characters would drop the fields the model is about to fill in.
    */
-  it('never costs the wide door its catalogue', () => {
-    const bare = studioBriefing({ memories: 0, room: WIDE })
-    const signalled = studioBriefing({ memories: 12, room: bare.text.length + 10 })
+  it('gives the signal up rather than a manual it was asked for', () => {
+    // A whole family, so the room stays above what the wide rules ask for: below it the briefing
+    // drops those instead, and the signal then fits for a reason this case is not about.
+    const room = studioBriefing({ memories: 0, room: WIDE, loaded: GIT }).text.length + 10
+    const signalled = studioBriefing({ memories: 12, room, loaded: GIT })
 
-    expect(signalled.allowed.size).toBe(bare.allowed.size)
+    expect(signalled.text).toContain('  git.checkout —')
+    expect(signalled.text).not.toContain('has a memory')
   })
 })

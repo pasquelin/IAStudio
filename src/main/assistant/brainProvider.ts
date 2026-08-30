@@ -32,8 +32,7 @@ export const INSTRUCTION_MAX = 10_000
 
 /**
  * What the sentence is guaranteed, whatever the catalogue grows to. The briefing gets the rest,
- * and at eight thousand characters the whole registry does not fit — so this door is shown the
- * short list and asks for the rest when it needs it.
+ * and at eight thousand characters it holds every action's NAME and the manuals a chain opens.
  *
  * 🛑 A FLOOR, not a share: `instructionFor` cuts against `INSTRUCTION_MAX`, so the sentence really
  * gets ten thousand minus the briefing — 2 595 today. `[M]` At 2 000 the EXPANSION was left 595,
