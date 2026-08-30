@@ -13,11 +13,22 @@ import { ASSISTANT_WINDOW_MAX, roomFor } from './promptWindow'
 const ASK_TOKENS = 4096
 
 /**
- * The window a chat cloud is taken to hold — an ASSUMPTION, said as one: the model is typed by
- * hand here and none of these clouds publishes its window over the API, so there is nothing to
- * measure. 32 000 tokens is the smallest the eight defaults are believed to have.
+ * The window a chat cloud is taken to hold — an ASSUMPTION, said as one: the model here is TYPED
+ * BY HAND and none of these clouds publishes its window over the API, so the defaults bound
+ * nothing. What degrades when it is wrong is `CLOUD_FALLBACK_TOKENS`, one round trip.
+ *
+ * 🛑 `[M]` At 32 000 it gave `roomFor` 90 828 characters against a whole share costing 90 994:
+ * the state, the project context and the folders were all cut, and `panel.close` fell off the
+ * tail. Measured 2026-08-31 on the 437 scenarios of `pnpm banc` against deepseek-chat — 55% →
+ * 61% passed, 2 069 → 1 548 rounds, 496 → 269 refusals, 25% fewer tokens overall though the
+ * prefix cache fell 98% → 88%.
+ *
+ * 🛑 It budgets the BRIEFING and nothing else: `messagesFor` sends the history unbounded, where
+ * `brainLocal` trims it through `promptWindow`. Ten blocks and a paste can add 110 020 characters
+ * — a real overrun comes back a 400 and `readOrNarrow` answers it, which is why it costs a round
+ * trip rather than the turn.
  */
-const CLOUD_CONTEXT_TOKENS = 32_000
+export const CLOUD_CONTEXT_TOKENS = 64_000
 
 /**
  * And what one that REFUSED that is taken to hold — `ASSISTANT_WINDOW_MAX`, the window the short
