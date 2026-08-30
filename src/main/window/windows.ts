@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, screen, type WebPreferences } from 'electron'
 import { join } from 'node:path'
 import { chromeColor } from './theme'
 import { MIRROR_BACKGROUND } from '@shared/constants'
+import { JOURNAL_ROUTE } from '@shared/domain/activity'
 import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
@@ -284,6 +285,19 @@ export function openLicencesWindow(): BrowserWindow {
     height: 600,
     minWidth: 480,
     minHeight: 360,
+  })
+}
+
+/**
+ * The journal at length, as its own window: the flyout it is read from hangs off the status line
+ * and closes on the next press, where this stays open beside the work it reports on.
+ */
+export function openJournalWindow(): BrowserWindow {
+  return openAuxiliaryWindow(JOURNAL_ROUTE, {
+    width: 760,
+    height: 720,
+    minWidth: 420,
+    minHeight: 320,
   })
 }
 

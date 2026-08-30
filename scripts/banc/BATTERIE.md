@@ -831,6 +831,7 @@ Sur l'image du bateau, avec deux calques :
 - [x] « Quels sont mes favoris ? »
 - [x] « Mets l'image du bateau en favori. »
 - [ ] « Retire l'image du bateau de mes favoris. »
+- [ ] « Ouvre le journal du studio dans sa fenêtre. »
 
 ## 56. Le système
 

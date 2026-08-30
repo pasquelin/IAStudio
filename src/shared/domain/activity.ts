@@ -286,3 +286,14 @@ export function matchesActivity(entry: ActivityDraft, filter: ActivityFilter): b
     (topics.length === 0 || topics.includes(entry.topic))
   )
 }
+
+/**
+ * Where the journal is read at length, as its own window rather than a bigger flyout: the flyout
+ * hangs from the status line and is closed by the next press, which is exactly wrong for a text
+ * one reads line by line while the studio keeps working.
+ */
+export const JOURNAL_ROUTE = 'journal'
+
+export function isJournalRoute(hash: string): boolean {
+  return hash.replace(/^#/, '') === JOURNAL_ROUTE
+}

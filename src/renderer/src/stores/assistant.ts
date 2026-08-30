@@ -231,7 +231,13 @@ export const useAssistant = create<AssistantState>()((set, get) => ({
         return
       }
 
-      set(state => ({ seen: lastSeen(state), asked: { request, answer: resolve } }))
+      /**
+       * 🛑 `input` filled at the door: a card drawn without it names no value, which `confirm.ts`
+       * calls approving a category — and `executor.ts` is loaded by a dynamic import, so an HMR
+       * reload leaves an old one filling this. Measured 2026-08-30, it threw instead.
+       */
+      const asked = { request: { ...request, input: request.input ?? {} }, answer: resolve }
+      set(state => ({ seen: lastSeen(state), asked }))
     }),
 
   askChoice: (question, choices) =>

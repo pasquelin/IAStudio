@@ -1,9 +1,12 @@
-import { mdiHistory } from '@mdi/js'
+import { mdiHistory, mdiOpenInNew } from '@mdi/js'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '@shared/domain/activity'
 import { EmptyState } from '@/design/EmptyState'
+import { ToolButton } from '@/design/ToolButton'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { getBridge } from '@/services/bridge'
 import { kept } from '@/helpers/format'
 import { useRemeasure } from '@/hooks/useRemeasure'
 import { useRowHeight } from '@/hooks/useRowHeight'
@@ -30,7 +33,7 @@ function timeOf(at: string, language: string): string {
   ).format(stamp)
 }
 
-export function ActivityList() {
+export function ActivityList({ whole }: { whole?: boolean }) {
   const { t, i18n } = useTranslation()
   const entries = useActivity(state => state.entries)
   const levels = useActivity(state => state.levels)
@@ -72,6 +75,19 @@ export function ActivityList() {
           label={topic => t(`activity.topics.${topic}`)}
           onChange={next => setFilters({ topics: next })}
         />
+
+        {/* Not in the window it opens: a button that raises what one is already reading. */}
+        {!whole && (
+          <ToolButton
+            icon={mdiOpenInNew}
+            label={t('activity.openWindow')}
+            description={t('activity.openWindowHint')}
+            tooltip={TIP_BOTTOM}
+            variant="header"
+            className="ml-auto"
+            onClick={() => void getBridge()?.help.open('journal')}
+          />
+        )}
       </div>
 
       {visible.length === 0 ? (
@@ -94,13 +110,21 @@ export function ActivityList() {
               if (!entry) return null
               return (
                 <div
-                  key={entry.id}
+                  // 🛑 The pair, as the toasts key: `id` is a rowid of the OPEN project's
+                  // catalogue and restarts at 1 for each one. Reused, React hands one line's
+                  // node to another — and `measureElement` then files that height under the
+                  // WRONG index, which is how rows came to draw over each other.
+                  key={`${entry.at}-${entry.id}`}
                   data-index={item.index}
                   ref={virtualizer.measureElement}
                   className="absolute top-0 left-0 w-full"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
-                  <ActivityListRow entry={entry} time={timeOf(entry.at, i18n.language)} />
+                  <ActivityListRow
+                    entry={entry}
+                    time={timeOf(entry.at, i18n.language)}
+                    clamp={!whole}
+                  />
                 </div>
               )
             })}

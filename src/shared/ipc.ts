@@ -87,7 +87,7 @@ import type { PbrChannel } from './domain/material'
 import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
-import type { HelpPage, WindowState } from './domain/window'
+import type { WindowPage, WindowState } from './domain/window'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -2128,7 +2128,7 @@ export type StudioBridge = {
    * for itself, and the only thing this side owns is opening the window.
    */
   help: {
-    open: (page: HelpPage) => Promise<void>
+    open: (page: WindowPage) => Promise<void>
   }
   /**
    * One file's information, as a window of its own — the studio's ⌘I.

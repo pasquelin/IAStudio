@@ -50,6 +50,7 @@ export function AssistantConversationQuestion({ request }: { request: ConfirmReq
       </p>
 
       {/* 🛑 What it was called WITH — the half that was missing. See `ConfirmRequest.input`. */}
+      {/* 🛑 What it was called WITH — the half that was missing. See `ConfirmRequest.input`. */}
       {(action?.fields ?? []).map(field =>
         request.input[field.key] === undefined ? null : (
           <p key={field.key} className="text-text text-mini m-0">

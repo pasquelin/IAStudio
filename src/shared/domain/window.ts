@@ -13,9 +13,13 @@ export const INITIAL_WINDOW_STATE: WindowState = {
 }
 
 /**
- * The three the Help menu offers, each a window of its own rather than a panel — see
- * `openManualWindow` and its two neighbours, which say why each one is not a dock.
+ * The windows a renderer — or the assistant — may raise. Each is a window of its own rather than
+ * a panel; `openManualWindow` and its neighbours say why.
+ *
+ * 🛑 Named for the WINDOW and no longer for the menu: three of these four are the Help menu's,
+ * and the journal is not. The channel and the action stay `help.open` — an action published on
+ * the MCP wire is a name clients hold us to.
  */
-export type HelpPage = 'manual' | 'licences' | 'usage'
+export type WindowPage = 'manual' | 'licences' | 'usage' | 'journal'
 
-export const HELP_PAGES: readonly HelpPage[] = ['manual', 'licences', 'usage']
+export const WINDOW_PAGES: readonly WindowPage[] = ['manual', 'licences', 'usage', 'journal']

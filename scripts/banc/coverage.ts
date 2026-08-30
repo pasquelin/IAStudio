@@ -181,7 +181,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'favorite.unpin': ['55.11'],
   'fileInfo.open': ['42.6'],
   'mirror.open': ['55.7'],
-  'help.open': ['55.8'],
+  'help.open': ['55.8', '55.12'],
 
   'scene.state': ['1.5', '1.6', '1.7', '9.6', '12.1', '14.4', '26.1', '26.3', '27.1', '27.4'],
   'node.add': ['6.1', '6.6', '6.8', '8.1', '8.4', '9.1', '25.1', '25.3', '31.1'],
