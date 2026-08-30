@@ -1492,15 +1492,18 @@
     "refused": "{{action}} — {{reason}}",
     "confirm": {
       "credits": "Cette action va dépenser {{cost}}.",
+      "value": "{{label}} : {{value}}",
       "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
       "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne coûte aucune unité créative.",
       "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
       "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
-      "studio": "Cette action change ce qu’est le studio : ses réglages, le compte qui répond ou le projet ouvert. Aucun ⌘Z ne revient dessus, et elle ne coûte aucune unité créative.",
+      "studio": "Cette action change l’état du studio, et aucun ⌘Z ne revient dessus. Elle ne coûte aucune unité créative.",
       "yes": "Autoriser",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
       "no": "Refuser",
-      "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite"
+      "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite",
+      "on": "Oui",
+      "off": "Non"
     },
     "starters": {
       "projectOpen": "Ouvre un projet récent",

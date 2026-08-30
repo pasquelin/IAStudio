@@ -220,6 +220,7 @@ export async function runConfirmedAction(
 
   const granted = await ask({
     action: name,
+    input: listed,
     commitment,
     ...(commitment === 'credits' ? { estimate } : {}),
   })

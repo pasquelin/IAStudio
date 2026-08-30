@@ -10,6 +10,8 @@ import { TARGET_ID_MAX, TARGET_KINDS, TARGET_NAME_MAX, TARGETS_MAX } from '@shar
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import type { AssistantActionResult } from '@shared/ipc'
+import { NOTE_TEXT_MAX, type WindowNote } from '@shared/domain/assistantNote'
+import { clipped } from '@shared/text'
 
 /**
  * How long a sentence this channel carries — the BOUNDARY's own bound, and no longer a model's.
@@ -64,6 +66,28 @@ const ACTION_RESULT = z.object({
 
 export function parseActionResult(value: unknown): AssistantActionResult {
   return ACTION_RESULT.parse(value)
+}
+
+/**
+ * What a window says its chain just did — CUT rather than refused, as `diagnostics/validation.ts`
+ * cuts its message: an over-long line is ordinary, and refusing it would make the channel meant
+ * to explain a turn fail silently on the turn worth explaining.
+ */
+const said = z.string().transform(value => clipped(value, NOTE_TEXT_MAX))
+
+const NOTE = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('ran'),
+    action: said,
+    input: said,
+    answer: said,
+    refused: z.boolean(),
+  }),
+  z.object({ kind: z.literal('asked'), question: said, answer: said.nullable() }),
+]) satisfies z.ZodType<WindowNote>
+
+export function parseNote(value: unknown): WindowNote {
+  return NOTE.parse(value)
 }
 
 /**

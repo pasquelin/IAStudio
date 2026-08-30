@@ -11,6 +11,8 @@ import {
 } from './brainProvider'
 import { recentHistory, studioBriefing } from './instruction'
 import { STATE_MAX } from './studioState'
+import { NOTE_TEXT_MAX, type AssistantNote } from '@shared/domain/assistantNote'
+import { answeredTurn } from './brainTurn'
 import { jsonIn, parseReply } from './reply'
 
 /** What the short list shows, which is what an answer to it is held to. */
@@ -177,6 +179,29 @@ describe('what the model is told', () => {
 
   it('keeps the last turns, not the first', () => {
     expect(recentHistory(['a', 'b', 'c', 'd'], 2)).toEqual(['c', 'd'])
+  })
+})
+
+describe('what a turn writes down', () => {
+  /**
+   * 🛑 The SIZE is the whole reason a `sent` line exists, and it is measured before the cut: read
+   * off the clipped text, every line of the journal reported `NOTE_TEXT_MAX` and nothing else.
+   */
+  it('says how big the briefing was, not how much of it was kept', async () => {
+    const notes: AssistantNote[] = []
+    // Past the whole registry, so the briefing is the 90 000-character one.
+    const briefing = studioBriefing({ room: 200_000 })
+
+    await answeredTurn(
+      briefing,
+      () => Promise.resolve({ answer: '{"say":"ok","calls":[]}', cost: 0 }),
+      undefined,
+      { door: 'deepseek', note: one => notes.push(one) },
+    )
+
+    const sent = notes.find(one => one.kind === 'sent')
+    expect(sent?.chars).toBe(briefing.text.length)
+    expect(sent?.text.length).toBe(NOTE_TEXT_MAX + 1)
   })
 })
 

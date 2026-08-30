@@ -1,5 +1,6 @@
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { AssistantAnswer, AssistantProgress, AssistantThought } from '@shared/domain/assistant'
+import type { AssistantNote } from '@shared/domain/assistantNote'
 
 /**
  * What the assistant asks of whatever is doing its thinking.
@@ -26,6 +27,8 @@ export type TurnWatch = {
   signal?: AbortSignal
   /** The words as they are written. A door that answers whole never calls it. */
   onProgress?: (progress: AssistantProgress) => void
+  /** What went out and what came back, kept rather than shown — see `AssistantNote`. */
+  onNote?: (note: AssistantNote) => void
 }
 
 /**

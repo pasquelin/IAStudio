@@ -79,3 +79,13 @@ export function completionFor(sentence: string, typed: string): string | undefin
 export function byCodeUnit(one: string, other: string): number {
   return one < other ? -1 : one > other ? 1 : 0
 }
+
+/**
+ * A text cut to a length, with an ellipsis saying it was cut — never a silent truncation.
+ *
+ * Here rather than beside its callers: four other places hand-roll it — a contact sheet caption,
+ * a memory summary, an action's result, a history block — and each RESERVES the ellipsis inside
+ * its bound, which this does not. They are worth folding in the day that difference is settled.
+ */
+export const clipped = (text: string, max: number): string =>
+  text.length <= max ? text : `${text.slice(0, max)}…`

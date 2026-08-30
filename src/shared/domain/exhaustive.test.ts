@@ -177,6 +177,7 @@ describe('the lists that stand for a union', () => {
       document: true,
       project: true,
       shell: true,
+      assistant: true,
     }
 
     expect(sorted(ACTIVITY_LEVELS)).toEqual(sorted(Object.keys(levels)))
@@ -187,6 +188,11 @@ describe('the lists that stand for a union', () => {
   it('names every line the main process can write', () => {
     const messages: Record<ActivityMessage, true> = {
       apiRefused: true,
+      assistantAnswered: true,
+      assistantAsked: true,
+      assistantRan: true,
+      assistantRefused: true,
+      assistantSent: true,
       captionFailed: true,
       captioned: true,
       extractFailed: true,

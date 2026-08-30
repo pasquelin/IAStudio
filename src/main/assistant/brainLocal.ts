@@ -3,7 +3,7 @@ import { log } from '@main/log'
 import type { ChatRequest, ChatTurn } from '@main/ai/localRuntimes'
 import { defined } from '@shared/guards'
 import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
-import { answeredTurn, inWindow, turnsWith } from './brainTurn'
+import { answeredTurn, inWindow, notesFor, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
 import { assistantWindow, promptWindow, roomFor, sentenceWithin } from './promptWindow'
 
@@ -95,6 +95,7 @@ export function createLocalBrain({
         (shown, complaint) => ask(request, shown, watch, complaint),
         // Every frame of this door names its window, the restart `answeredTurn` emits included.
         watch.onProgress && inWindow(watch.onProgress, contextTokens),
+        notesFor(modelId, watch),
       )
     },
   }

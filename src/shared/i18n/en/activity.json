@@ -28,7 +28,8 @@
       "library": "Library",
       "document": "Document",
       "project": "Project",
-      "shell": "Interface"
+      "shell": "Interface",
+      "assistant": "Assistant"
     },
     "projectNotAProject": "This folder is not an IA Studio project",
     "projectUnreadable": "This project’s manifest cannot be read: it was truncated or edited by hand",
@@ -84,6 +85,11 @@
     "captionFailed": "Naming failed",
     "tagsNotSynced": "The tags of “{{name}}” did not reach the library",
     "apiRefused": "The generation API refused a request",
+    "assistantSent": "Sent to {{door}} — {{chars, number}} characters",
+    "assistantAnswered": "Answer read — {{chars, number}} characters",
+    "assistantRan": "{{action}} ran",
+    "assistantRefused": "{{action}} refused",
+    "assistantAsked": "Asked: {{question}}",
     "scope": {
       "scene.model": "A 3D model could not be loaded",
       "scene.bvh": "A 3D model could not be prepared for picking",

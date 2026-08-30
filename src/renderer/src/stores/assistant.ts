@@ -15,10 +15,12 @@ import {
   assistantHistory,
   repeatedRelative,
   repeatKeyOf,
+  resultLine,
   type AssistantStep,
   type AssistantTurn,
 } from '@/assistant/conversation'
 import { revealChat } from '@/assistant/revealChat'
+import { noteAssistant } from '@/assistant/noteAssistant'
 import { closeTool } from '@/helpers/revealPanel'
 import { traceFailure } from '@/services/diagnostics'
 import { getBridge } from '@/services/bridge'
@@ -425,6 +427,7 @@ async function parkedOn(set: Setter, get: Getter, id: number, ask: AssistantAsk)
   revealChat()
 
   const answer = await get().askChoice(ask.question, ask.choices)
+  noteAssistant({ kind: 'asked', question: ask.question, answer })
   set(state => ({
     turns: state.turns.map(turn =>
       turn.id === id ? { ...turn, asks: [...turn.asks, { question: ask.question, answer }] } : turn,
@@ -491,6 +494,15 @@ async function ranAll(
         ? refused('badInput', ALREADY_APPLIED)
         : await runConfirmedAction(call.action, call.input)
 
+      noteAssistant({
+        kind: 'ran',
+        action: call.action,
+        input: JSON.stringify(call.input),
+        // `resultLine` rather than a second stringify: a listing of a whole project is thousands
+        // of entries, and it is what already bounds them by whole items for the model.
+        answer: outcome.ok ? resultLine(outcome.data) : outcome.refusal,
+        refused: !outcome.ok,
+      })
       steps.push({
         action: call.action,
         refusal: outcome.ok ? null : outcome.refusal,

@@ -77,7 +77,7 @@ describe('a question the model asked', () => {
     const first = asked()
 
     await expect(
-      useAssistant.getState().ask({ action: 'project.create', commitment: 'studio' }),
+      useAssistant.getState().ask({ action: 'project.create', input: {}, commitment: 'studio' }),
     ).resolves.toBe(false)
     useAssistant.getState().choose(null)
     await first

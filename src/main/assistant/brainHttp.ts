@@ -6,7 +6,7 @@ import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
 import { defined } from '@shared/guards'
 import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
-import { answeredTurn, turnsWith } from './brainTurn'
+import { answeredTurn, notesFor, turnsWith } from './brainTurn'
 import { briefingFor, type Briefing } from './instruction'
 import { ASSISTANT_WINDOW_MAX, roomFor } from './promptWindow'
 
@@ -131,6 +131,7 @@ export function createHttpChatBrain({
         briefing,
         (shown, complaint) => round(request, shown, watch, complaint),
         watch.onProgress,
+        notesFor(`${chat.kind} — ${model()}`, watch),
       )
     },
   }

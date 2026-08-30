@@ -28,7 +28,8 @@
       "library": "Bibliothèque",
       "document": "Document",
       "project": "Projet",
-      "shell": "Interface"
+      "shell": "Interface",
+      "assistant": "Assistant"
     },
     "projectNotAProject": "Ce dossier n’est pas un projet IA Studio",
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
@@ -84,6 +85,11 @@
     "captionFailed": "Le nommage a échoué",
     "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
     "apiRefused": "L’API de génération a refusé une requête",
+    "assistantSent": "Envoyé à {{door}} — {{chars, number}} caractères",
+    "assistantAnswered": "Réponse reçue — {{chars, number}} caractères",
+    "assistantRan": "{{action}} exécutée",
+    "assistantRefused": "{{action}} refusée",
+    "assistantAsked": "Question posée : {{question}}",
     "scope": {
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
       "scene.bvh": "Un modèle 3D n’a pas pu être préparé pour la sélection",

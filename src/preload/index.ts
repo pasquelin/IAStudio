@@ -291,6 +291,7 @@ const bridge: StudioBridge = {
     onAction: callback => subscribe<AssistantActionRequest>(EVENTS.assistantAction, callback),
     onStream: callback => subscribe<AssistantProgress>(EVENTS.assistantStream, callback),
     actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
+    note: note => ipcRenderer.invoke(CHANNELS.assistantNote, note),
   },
   ai: {
     overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),
