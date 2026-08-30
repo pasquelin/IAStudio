@@ -25,7 +25,15 @@ export const ACTIVITY_LEVELS: readonly ActivityLevel[] = ['info', 'warn', 'error
  * bundle and renders through the one root, so a render that threw in the preferences would read
  * as a document's failure under any other topic.
  */
-export type ActivityTopic = 'generation' | 'import' | 'library' | 'document' | 'project' | 'shell'
+export type ActivityTopic =
+  | 'generation'
+  | 'import'
+  | 'library'
+  | 'document'
+  | 'project'
+  | 'shell'
+  /** What the assistant sent, read back, ran and asked — one round of a turn per few lines. */
+  | 'assistant'
 
 export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
   'generation',
@@ -34,6 +42,7 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
   'document',
   'project',
   'shell',
+  'assistant',
 ]
 
 /**
@@ -46,6 +55,11 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
  */
 export type ActivityMessage =
   | 'apiRefused'
+  | 'assistantAnswered'
+  | 'assistantAsked'
+  | 'assistantRan'
+  | 'assistantRefused'
+  | 'assistantSent'
   | 'captionFailed'
   | 'captioned'
   | 'extractFailed'
@@ -85,6 +99,11 @@ export type ActivityMessage =
 
 export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'apiRefused',
+  'assistantAnswered',
+  'assistantAsked',
+  'assistantRan',
+  'assistantRefused',
+  'assistantSent',
   'captionFailed',
   'captioned',
   'extractFailed',

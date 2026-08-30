@@ -4,6 +4,7 @@ import type { AiOverview, ChoiceScope } from './domain/aiOverview'
 import type { AiRoleId, RoleProvider } from './domain/aiRole'
 import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
+import type { WindowNote } from './domain/assistantNote'
 import type {
   Memory,
   MemoryDraft,
@@ -268,6 +269,7 @@ export type Channels = {
   assistantThink: 'assistant:think'
   assistantStop: 'assistant:stop'
   assistantActionResult: 'assistant:action-result'
+  assistantNote: 'assistant:note'
 
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'
@@ -508,6 +510,7 @@ export const CHANNELS: Channels = {
   assistantThink: 'assistant:think',
   assistantStop: 'assistant:stop',
   assistantActionResult: 'assistant:action-result',
+  assistantNote: 'assistant:note',
 
   dictationState: 'dictation:state',
   dictationStart: 'dictation:start',
@@ -1975,6 +1978,13 @@ export type StudioBridge = {
     onStream: (callback: (progress: AssistantProgress) => void) => Unsubscribe
     /** What that window made of it, quoting the `callId` it was asked under. */
     actionResult: (result: AssistantActionResult) => Promise<void>
+    /**
+     * What the chain just did, for the journal — a call run, a refusal, a question answered.
+     *
+     * 🛑 Through the MAIN and not written here: the prompt and the raw answer are composed and
+     * read over there, and a reader following a turn needs both sides in one order.
+     */
+    note: (note: WindowNote) => Promise<void>
   }
   /**
    * The model manager: which AI serves each role, what the machine can hold, and what to install.

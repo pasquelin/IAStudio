@@ -493,6 +493,7 @@ describe('asking before acting', () => {
 
     expect(ask).toHaveBeenCalledWith({
       action: 'generator.submit',
+      input: {},
       commitment: 'credits',
       estimate: 4,
     })
@@ -572,7 +573,11 @@ describe('asking before acting', () => {
 
     await runConfirmedAction('command.run', { command: 'canvas.cutout' })
 
-    expect(ask).toHaveBeenCalledWith({ action: 'command.run', commitment: 'asset' })
+    expect(ask).toHaveBeenCalledWith({
+      action: 'command.run',
+      input: { command: 'canvas.cutout' },
+      commitment: 'asset',
+    })
     stop()
   })
 
@@ -586,6 +591,7 @@ describe('asking before acting', () => {
 
     expect(ask).toHaveBeenCalledWith({
       action: 'generator.submit',
+      input: {},
       commitment: 'credits',
       estimate: null,
     })

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -196,6 +197,35 @@ describe('Flyout', () => {
       return { onDismiss }
     }
 
+    /**
+     * A menu raised from INSIDE the surface — and the inner one takes its OWN dismiss, which is
+     * what tells « the menu answered » from « nobody answered at all ».
+     */
+    const nested = () => {
+      const anchor = document.createElement('div')
+      document.body.appendChild(anchor)
+      const onDismiss = vi.fn()
+      const onInner = vi.fn()
+      const Nested = () => {
+        const [opener, setOpener] = useState<HTMLButtonElement | null>(null)
+        return (
+          <Flyout anchor={anchor} onDismiss={onDismiss}>
+            <button type="button" ref={setOpener}>
+              Niveau
+            </button>
+            {opener && (
+              <Flyout anchor={opener} onDismiss={onInner}>
+                <button type="button">Information</button>
+              </Flyout>
+            )}
+          </Flyout>
+        )
+      }
+      render(<Nested />)
+
+      return { onDismiss, onInner }
+    }
+
     it('dismisses on a press outside it', async () => {
       const { onDismiss } = show()
 
@@ -204,8 +234,60 @@ describe('Flyout', () => {
       expect(onDismiss).toHaveBeenCalled()
     })
 
+    // 🛑 The journal closed the moment a row of its own filter menu was pressed — see
+    // `portalAnchors.ts` for why a portalled surface is a sibling and not a child.
+    it('survives a press in a menu raised from inside it', async () => {
+      const { onDismiss } = nested()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Information' }))
+
+      expect(onDismiss).not.toHaveBeenCalled()
+    })
+
     it('dismisses on Escape', async () => {
       const { onDismiss } = show()
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(onDismiss).toHaveBeenCalled()
+    })
+
+    // 🛑 The other half of the same defect: the pointer was taught to walk the chain and the key
+    // was not, so Escape in the journal's own filter menu closed the journal underneath it.
+    it('leaves Escape to the menu raised from inside it', async () => {
+      const { onDismiss, onInner } = nested()
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(onInner).toHaveBeenCalled()
+      expect(onDismiss).not.toHaveBeenCalled()
+    })
+
+    /**
+     * 🛑 The register answers « is one open », so a flyout with no dismiss of its own — the hover
+     * preview of a link field is one — silenced Escape for the surface it sits in and answered it
+     * for nobody.
+     */
+    it('still answers Escape under a menu that takes no dismiss of its own', async () => {
+      const anchor = document.createElement('div')
+      document.body.appendChild(anchor)
+      const onDismiss = vi.fn()
+      const Preview = () => {
+        const [opener, setOpener] = useState<HTMLButtonElement | null>(null)
+        return (
+          <Flyout anchor={anchor} onDismiss={onDismiss}>
+            <button type="button" ref={setOpener}>
+              Lien
+            </button>
+            {opener && (
+              <Flyout anchor={opener}>
+                <span>Aperçu</span>
+              </Flyout>
+            )}
+          </Flyout>
+        )
+      }
+      render(<Preview />)
 
       await userEvent.keyboard('{Escape}')
 

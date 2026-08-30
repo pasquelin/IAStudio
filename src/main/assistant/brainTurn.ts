@@ -1,6 +1,8 @@
 import type { AssistantAnswer, AssistantProgress } from '@shared/domain/assistant'
+import { noteText, type AssistantNote } from '@shared/domain/assistantNote'
 import { OversizedRequest } from '@main/ai/cloudChat'
 import { log } from '@main/log'
+import type { TurnWatch } from './brainPort'
 import type { Briefing } from './instruction'
 import { recentHistory } from './instruction'
 import { parseReply, type Reply } from './reply'
@@ -23,6 +25,27 @@ export const inWindow =
 
 /** What one round trip came back with, and what it cost. Zero for a model on this machine. */
 export type BrainAttempt = { answer: string; cost: number }
+
+/** Where a turn's round trips are written down, and which door they went through. */
+export type TurnNotes = { door: string; note: (note: AssistantNote) => void }
+
+/** The same, or nothing where nobody is watching — written once for the three doors. */
+export const notesFor = (door: string, watch: TurnWatch): TurnNotes | undefined =>
+  watch.onNote && { door, note: watch.onNote }
+
+/** 🛑 `chars` off the WHOLE text, `text` off the cut: the size is what the journal line is for. */
+const sentNote = (door: string, text: string): AssistantNote => ({
+  kind: 'sent',
+  door,
+  chars: text.length,
+  text: noteText(text),
+})
+
+const answeredNote = (text: string): AssistantNote => ({
+  kind: 'answered',
+  chars: text.length,
+  text: noteText(text),
+})
 
 /** One round trip against one briefing, complaint included — what every brain hands over. */
 export type BrainRound = (briefing: Briefing, complaint?: string) => Promise<BrainAttempt>
@@ -77,19 +100,34 @@ async function readOnce(
   round: BrainRound,
   budget: Budget,
   restart: () => void,
+  notes?: TurnNotes,
 ): Promise<Read> {
   budget.left -= 1
   restart()
+  // 🛑 Cut HERE: a briefing runs to 90 000 characters, and what is downstream is a synchronous
+  // append to the log file on the main process, once per round trip.
+  notes?.note(sentNote(notes.door, briefing.text))
   const first = await round(briefing)
+  notes?.note(answeredNote(first.answer))
   const reply = parseReply(first.answer, briefing.allowed)
   if (reply || budget.left <= 0) return { reply, cost: first.cost }
 
   log.warn('assistant', 'unreadable answer, asking once more')
   budget.left -= 1
   restart()
+  const complaint = complaintAbout(first.answer)
+  // The briefing goes out AGAIN beside it, so the size says so — a reader chasing an oversized
+  // request would otherwise read the retry as the cheap round.
+  notes?.note({
+    kind: 'sent',
+    door: notes.door,
+    chars: briefing.text.length + complaint.length,
+    text: noteText(complaint),
+  })
   let second
   try {
-    second = await round(briefing, complaintAbout(first.answer))
+    second = await round(briefing, complaint)
+    notes?.note(answeredNote(second.answer))
   } catch (error) {
     // 🛑 A stop is not a failed attempt to swallow: swallowed, the turn answers an empty sentence
     // and the window reads it as lost — the one thing the stop path exists to avoid.
@@ -113,9 +151,10 @@ async function readOrNarrow(
   round: BrainRound,
   budget: Budget,
   restart: () => void,
+  notes?: TurnNotes,
 ): Promise<[Briefing, Read]> {
   try {
-    return [briefing, await readOnce(briefing, round, budget, restart)]
+    return [briefing, await readOnce(briefing, round, budget, restart, notes)]
   } catch (error) {
     // Only a refusal of SIZE narrows. A missing key, a quota, a dropped network and a stopped
     // turn all reach here too, and none of them is answered by a shorter catalogue.
@@ -125,7 +164,7 @@ async function readOrNarrow(
 
     log.warn('assistant', `too much for this door, asking with the short list: ${String(error)}`)
     const narrow = briefing.narrow()
-    return [narrow, await readOnce(narrow, round, budget, restart)]
+    return [narrow, await readOnce(narrow, round, budget, restart, notes)]
   }
 }
 
@@ -157,20 +196,21 @@ export async function answeredTurn(
   briefing: Briefing,
   round: BrainRound,
   onProgress?: (progress: AssistantProgress) => void,
+  notes?: TurnNotes,
 ): Promise<AssistantAnswer> {
   const budget: Budget = { left: TURN_ATTEMPTS }
   // 🛑 Here and in no brain: this is what KNOWS an attempt is starting, and an answer thrown away
   // appended to the one that replaces it reads as one answer contradicting itself.
   const restart = () => onProgress?.({ delta: '', restart: true })
 
-  const [shown, first] = await readOrNarrow(briefing, round, budget, restart)
+  const [shown, first] = await readOrNarrow(briefing, round, budget, restart, notes)
   const query = discoveryIn(first.reply)
   if (query === null || shown.expand === null || budget.left <= 0) return answerOf(first)
 
   log.info('assistant', `the model asked what else there is: "${query}"`)
   // Through the same fallback: an expansion is longer than the briefing that just went through,
   // so it is the one read most likely to be refused for its size.
-  const [, second] = await readOrNarrow(shown.expand(query), round, budget, restart)
+  const [, second] = await readOrNarrow(shown.expand(query), round, budget, restart, notes)
 
   return answerOf(second, first.cost)
 }

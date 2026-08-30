@@ -1,7 +1,8 @@
-import { useCallback, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { clampAtLeast } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
+import { holdPortalAnchor, PORTAL_MARK } from './portalAnchors'
 import { useDismiss } from '@/hooks/useDismiss'
 import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_FLOATING } from './styles'
@@ -90,6 +91,12 @@ export function Flyout({
 }: FlyoutProps) {
   const panel = useRef<HTMLDivElement | null>(null)
 
+  // Who raised it, for `useDismiss` — see `portalAnchors.ts`.
+  useEffect(() => {
+    const node = panel.current
+    return node && anchor ? holdPortalAnchor(node, anchor, Boolean(onDismiss)) : undefined
+  }, [anchor, onDismiss])
+
   useDismiss(onDismiss, panel, anchor, onWindowLeave)
   useMenuKeys(panel, onKeyClose)
 
@@ -138,6 +145,7 @@ export function Flyout({
   return createPortal(
     <div
       ref={place}
+      {...{ [PORTAL_MARK]: '' }}
       role={role}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}

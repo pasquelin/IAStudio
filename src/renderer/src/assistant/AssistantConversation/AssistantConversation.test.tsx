@@ -122,11 +122,28 @@ describe('the assistant conversation', () => {
     expect(screen.getByText('ouvre un fichier')).toBeInTheDocument()
   })
 
+  /**
+   * 🛑 The half that was missing: « Créer un dossier de projet » over « change ce qu'est le
+   * studio » named an action and a category, and nothing said WHICH project — approving that is
+   * approving a category.
+   */
+  it('says what the action was called with, field by field', () => {
+    useAssistant.setState({
+      asked: {
+        request: { action: 'project.create', input: { path: 'Bateaux' }, commitment: 'studio' },
+        answer: vi.fn(),
+      },
+    })
+    render(<AssistantConversation />)
+
+    expect(screen.getByText(/Bateaux/)).toBeInTheDocument()
+  })
+
   it('quotes what an action will cost before asking, and answers with the buttons', async () => {
     const answered = vi.fn()
     useAssistant.setState({
       asked: {
-        request: { action: 'generator.submit', commitment: 'credits', estimate: 12 },
+        request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: 12 },
         answer: answered,
       },
     })
@@ -142,7 +159,7 @@ describe('the assistant conversation', () => {
   it('says the cost is unknown rather than making one up', () => {
     useAssistant.setState({
       asked: {
-        request: { action: 'generator.submit', commitment: 'credits', estimate: null },
+        request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: null },
         answer: vi.fn(),
       },
     })
@@ -455,7 +472,7 @@ describe('the assistant conversation', () => {
     useAssistant.setState({
       turns: [{ id: 1, said: 'génère un casque', answered: '', steps: [], asks: [], lost: false }],
       asked: {
-        request: { action: 'generator.submit', commitment: 'credits', estimate: 12 },
+        request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: 12 },
         answer: vi.fn(),
       },
     })

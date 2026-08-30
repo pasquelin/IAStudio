@@ -5,6 +5,7 @@ import type {
   AssistantAnswer,
   AssistantThought,
 } from '@shared/domain/assistant'
+import type { AssistantNote } from '@shared/domain/assistantNote'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from './settings'
 import { useAssistant } from './assistant'
@@ -69,6 +70,61 @@ beforeEach(() => {
     promptTokens: 0,
     replyTokens: 0,
     windowTokens: 0,
+  })
+})
+
+/** The bridge's note channel, gathering what the chain wrote rather than dropping it. */
+const collecting =
+  (notes: AssistantNote[]) =>
+  (one: AssistantNote): Promise<void> => {
+    notes.push(one)
+    return Promise.resolve()
+  }
+
+describe('what a turn writes down', () => {
+  /**
+   * 🛑 Both sides of a turn in ONE order: the brain composes and reads in the main process, the
+   * calls run here, and a reader following a turn cannot piece it together from two places.
+   */
+  it('notes each call and what the studio answered it', async () => {
+    const notes: AssistantNote[] = []
+    installFakeBridge({
+      assistant: {
+        think: () => Promise.resolve(answer({ calls: [{ action: 'jobs.list', input: {} }] })),
+        note: collecting(notes),
+      },
+    })
+    runConfirmedAction.mockResolvedValue({ ok: false, refusal: 'noProject' })
+    chainCeiling(1)
+
+    await useAssistant.getState().say('où en sont mes générations')
+
+    expect(notes).toContainEqual({
+      kind: 'ran',
+      action: 'jobs.list',
+      input: '{}',
+      answer: 'noProject',
+      refused: true,
+    })
+  })
+
+  it('notes the question and what was answered', async () => {
+    const notes: AssistantNote[] = []
+    // Two answers, never one repeated: a door that asks for ever parks the chain on every round.
+    const replies = [answer({ ask: { question: 'Quel nom ?', choices: [] }, calls: [] }), answer()]
+    installFakeBridge({
+      assistant: {
+        think: () => Promise.resolve(replies.shift() ?? answer()),
+        note: collecting(notes),
+      },
+    })
+
+    const said = useAssistant.getState().say('crée un projet')
+    await vi.waitFor(() => expect(useAssistant.getState().choosing).not.toBeNull())
+    useAssistant.getState().choose('Bateaux')
+    await said
+
+    expect(notes).toContainEqual({ kind: 'asked', question: 'Quel nom ?', answer: 'Bateaux' })
   })
 })
 
@@ -402,7 +458,9 @@ describe('the question asked before anything is engaged', () => {
   // store's job is to hold the one question and the promise waiting on it.
   it('waits on the surface staging the thread', async () => {
     const unstage = useAssistant.getState().stage()
-    const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
+    const asked = useAssistant
+      .getState()
+      .ask({ action: 'generator.submit', input: {}, commitment: 'credits' })
 
     expect(useAssistant.getState().asked?.request.action).toBe('generator.submit')
 
@@ -418,7 +476,9 @@ describe('the question asked before anything is engaged', () => {
    */
   it('outlives the surface showing it, for the next one to show', async () => {
     const unstage = useAssistant.getState().stage()
-    const asked = useAssistant.getState().ask({ action: 'generator.submit', commitment: 'credits' })
+    const asked = useAssistant
+      .getState()
+      .ask({ action: 'generator.submit', input: {}, commitment: 'credits' })
     unstage()
 
     expect(useAssistant.getState().asked?.request.action).toBe('generator.submit')
@@ -436,10 +496,12 @@ describe('the question asked before anything is engaged', () => {
    * meant for "this uploads an image, it is free" would have started a paid generation.
    */
   it('refuses a second question rather than replacing the one on screen', async () => {
-    const first = useAssistant.getState().ask({ action: 'command.run', commitment: 'asset' })
+    const first = useAssistant
+      .getState()
+      .ask({ action: 'command.run', input: {}, commitment: 'asset' })
     const second = useAssistant
       .getState()
-      .ask({ action: 'generator.submit', commitment: 'credits' })
+      .ask({ action: 'generator.submit', input: {}, commitment: 'credits' })
 
     await expect(second).resolves.toBe(false)
     expect(useAssistant.getState().asked?.request.action).toBe('command.run')

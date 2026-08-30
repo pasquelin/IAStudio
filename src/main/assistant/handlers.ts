@@ -1,10 +1,14 @@
 import type { WebContents } from 'electron'
 import { CHANNELS, EVENTS, type AssistantActionResult } from '@shared/ipc'
+import type { AssistantNote } from '@shared/domain/assistantNote'
 import { handle } from '@main/ipc/handle'
+import { log } from '@main/log'
+import type { ActivityLog } from '@main/project/activityLog'
 import type { RunningTasks } from '@main/task/runningTasks'
 import { sendToSender } from '@main/ipc/broadcast'
 import type { AssistantBrain } from './brainPort'
-import { parseActionResult, parseThought } from './validation'
+import { lineOfNote, reportOfNote } from './noteJournal'
+import { parseActionResult, parseNote, parseThought } from './validation'
 
 export type AssistantHandlerDeps = {
   brain: AssistantBrain
@@ -12,6 +16,8 @@ export type AssistantHandlerDeps = {
   settleAction: (result: AssistantActionResult) => void
   /** The studio's one table of long tasks — the same the montage stop button reaches through. */
   running: RunningTasks
+  /** Where a turn is written down. Read per call: a project can be closed mid-conversation. */
+  journal: () => ActivityLog
 }
 
 /**
@@ -39,7 +45,18 @@ export function registerAssistantHandlers({
   brain,
   settleAction,
   running,
+  journal,
 }: AssistantHandlerDeps): void {
+  /**
+   * 🛑 The one funnel both sides pass through — see `AssistantNote`. Its blind spot: `say` holds
+   * one turn per WINDOW, not per process, so two windows conversing at once interleave into one
+   * journal with nothing naming which turn a line belongs to.
+   */
+  const note = (one: AssistantNote): void => {
+    const report = reportOfNote(one)
+    log[report.level]('assistant', lineOfNote(one))
+    journal().record(report)
+  }
   // The channel is typed, but TypeScript is gone at runtime and the sender is a renderer: what
   // arrives is `unknown` until this says otherwise.
   handle(CHANNELS.assistantThink, async (event, request) =>
@@ -48,6 +65,7 @@ export function registerAssistantHandlers({
     running.run(turnOf(event.sender), signal =>
       brain.think(parseThought(request), {
         signal: AbortSignal.any([whileAlive(event.sender), signal]),
+        onNote: note,
         // To the sender alone: a second window watching this one's turn would show words nobody
         // there typed. `sendToSender` is what guards a window closed mid-answer.
         onProgress: progress => sendToSender(event.sender, EVENTS.assistantStream, progress),
@@ -62,5 +80,9 @@ export function registerAssistantHandlers({
 
   handle(CHANNELS.assistantActionResult, (_event, result) => {
     settleAction(parseActionResult(result))
+  })
+
+  handle(CHANNELS.assistantNote, (_event, one) => {
+    note(parseNote(one))
   })
 }

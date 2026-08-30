@@ -1492,15 +1492,18 @@
     "refused": "{{action}} — {{reason}}",
     "confirm": {
       "credits": "This action will spend {{cost}}.",
+      "value": "{{label}}: {{value}}",
       "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
       "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
       "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
       "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
-      "studio": "This action changes what the studio is: its settings, the account that answers, or the project that is open. No ⌘Z takes it back, and it costs no creative units.",
+      "studio": "This changes the studio’s own state, and no ⌘Z comes back from it. It spends no creative units.",
       "yes": "Allow",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",
-      "noHint": "Runs nothing, and the assistant takes it into account for what follows"
+      "noHint": "Runs nothing, and the assistant takes it into account for what follows",
+      "on": "Yes",
+      "off": "No"
     },
     "starters": {
       "projectOpen": "Open a recent project",

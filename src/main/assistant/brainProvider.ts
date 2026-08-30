@@ -3,7 +3,7 @@ import type { Job } from '@shared/domain/job'
 import { log } from '@main/log'
 import type { AssistantThought } from '@shared/domain/assistant'
 import type { AssistantBrain, NotReady } from './brainPort'
-import { answeredTurn, turnsWith, TurnStopped, type BrainAttempt } from './brainTurn'
+import { answeredTurn, notesFor, turnsWith, TurnStopped, type BrainAttempt } from './brainTurn'
 import { briefingFor, instructionFor, type Briefing } from './instruction'
 
 /**
@@ -119,8 +119,11 @@ export function createProviderBrain({ run, readText, model, notReady }: BrainDep
       const chosen = model()
       const briefing = await briefingFor(request, BRIEFING_ROOM, notReady)
 
-      return await answeredTurn(briefing, (shown, complaint) =>
-        ask(request, chosen, shown, complaint, watch.signal),
+      return await answeredTurn(
+        briefing,
+        (shown, complaint) => ask(request, chosen, shown, complaint, watch.signal),
+        undefined,
+        notesFor(`Scenario — ${chosen}`, watch),
       )
     },
   }

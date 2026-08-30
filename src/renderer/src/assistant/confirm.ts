@@ -13,6 +13,14 @@ import { createMountedHost } from '@/helpers/hostRegistry'
  */
 export type ConfirmRequest = {
   action: ActionName
+  /**
+   * What it was called WITH, already checked against the fields that declare it.
+   *
+   * 🛑 Shown, and that is why it is here: the question named the action and the level it engages
+   * — « change ce qu'est le studio » over « Créer un dossier de projet » — and nothing said which
+   * project. Approving without seeing the values is approving a category.
+   */
+  input: Record<string, unknown>
   commitment: ActionCommitment
   /**
    * What it will cost, in creative units. Absent when nothing is spent; `null` when the API
