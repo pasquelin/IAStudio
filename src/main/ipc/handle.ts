@@ -195,6 +195,7 @@ type ChannelMethod = {
   [CHANNELS.assistantActionResult]: StudioBridge['assistant']['actionResult']
   [CHANNELS.assistantNote]: StudioBridge['assistant']['note']
   [CHANNELS.assistantSaid]: StudioBridge['assistant']['said']
+  [CHANNELS.assistantWindow]: StudioBridge['assistant']['window']
 
   [CHANNELS.aiOverview]: StudioBridge['ai']['overview']
   [CHANNELS.aiChoose]: StudioBridge['ai']['choose']

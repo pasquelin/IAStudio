@@ -293,6 +293,7 @@ const bridge: StudioBridge = {
     actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
     note: note => ipcRenderer.invoke(CHANNELS.assistantNote, note),
     said: key => ipcRenderer.invoke(CHANNELS.assistantSaid, key),
+    window: () => ipcRenderer.invoke(CHANNELS.assistantWindow),
   },
   ai: {
     overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),

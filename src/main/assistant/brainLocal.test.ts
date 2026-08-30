@@ -33,6 +33,13 @@ describe('the local brain', () => {
     })
   })
 
+  /** Asked before a turn, so the composer shows the bound with nothing typed yet. */
+  it('names its window in tokens, capped to what one turn is worth', async () => {
+    const { brain } = brainAnswering([REPLY], 262_144)
+
+    expect(await brain.window()).toEqual({ size: 8192, unit: 'tokens', assumed: false })
+  })
+
   /**
    * 🛑 `[M]` A huge window is not an invitation to fill it: 262 144 composed a 90 298-character
    * briefing, ~30 100 tokens re-read on every round of the chain, for five minutes on one

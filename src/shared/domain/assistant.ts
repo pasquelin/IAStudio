@@ -235,6 +235,11 @@ export type AssistantProgress = {
   delta: string
   /** What the prompt cost. Absent until the door says, which is at the end of the answer. */
   promptTokens?: number
+  /**
+   * What the prompt carried in CHARACTERS, for a door bounded in characters rather than in
+   * tokens — Scenario's `instruction` field is one. Never comparable to `promptTokens`.
+   */
+  promptChars?: number
   /** What the answer has cost. Absent for a door that counts nothing. */
   replyTokens?: number
   /**
@@ -251,9 +256,29 @@ export type AssistantProgress = {
 }
 
 /**
+ * What the door in front reads in ONE go — asked BEFORE a turn, so the composer can show the
+ * bound with nothing typed yet. `null` from a door that names none, which the screen says rather
+ * than dresses up as a ratio.
+ *
+ * 🛑 The unit is part of the answer and is never assumed: Scenario bounds its `instruction` field
+ * in CHARACTERS while a local runtime bounds its window in TOKENS, and reading one against the
+ * other is exactly the `2 067 / 4 096` once shown for DeepSeek — a briefing budget worn as a
+ * window.
+ */
+export type AssistantWindow = {
+  size: number
+  unit: 'tokens' | 'characters'
+  /** True when the figure is a DECLARED fallback, the door having failed to read its own. */
+  assumed: boolean
+}
+
+/**
  * 🛑 Nothing to report is `null`, never an empty frame: a door sends protocol frames of its own —
  * `ping`, `content_block_start`, `message_stop` — and each one relayed is an IPC message and a
  * render for no words.
+ *
+ * 🛑 It counts in TOKENS and knows nothing of `promptChars`: a door bounded by a length composes
+ * its own frame, or this would answer `null` for the one frame it has to send.
  */
 export const assistantProgress = (
   delta: string,

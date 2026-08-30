@@ -105,6 +105,17 @@ describe('a cloud that is being watched', () => {
     expect(counts.filter(one => one.windowTokens !== undefined)).toEqual([])
   })
 
+  /**
+   * 🛑 The same refusal, said BEFORE a turn: the composer asks every door for its bound so it can
+   * show one with nothing typed, and a figure invented here would be shown for the whole session
+   * rather than for one turn.
+   */
+  it('names no window when asked for one outright', async () => {
+    const { brain } = watched('anthropic', [])
+
+    expect(await brain.window()).toBeNull()
+  })
+
   it('asks Gemini by the streaming METHOD, which is not a field of its body', async () => {
     const { brain, post } = watched('gemini', [
       'data: {"candidates":[{"content":{"parts":[{"text":"{\\"say\\":\\"hi\\",\\"calls\\":[]}"}]}}]}\n',

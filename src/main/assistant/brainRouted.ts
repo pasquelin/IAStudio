@@ -67,6 +67,14 @@ function brainFor(
  */
 export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
   return {
+    /**
+     * Asked of whichever door serves TODAY, and answered `null` where none does — the composer
+     * shows the bound of the door in front, and nothing serving is not a window of zero.
+     */
+    window: async () => {
+      const [brain] = brainFor(deps, await deps.providerOf())
+      return brain === null ? null : await brain.window()
+    },
     think: async (request, watch) => {
       // The four together: WHICH brain answers probes the runtimes, and none of the other three
       // depends on the answer. Serially, the person waited for their sum.
