@@ -414,14 +414,14 @@ function extentOn(sizing: UiSizing, available: number, auto: number): number {
  * ratio and two bounds is never left between two answers — the bounds are re-applied after.
  */
 function heldTo(size: UiSize, place: UiPlacement): UiSize {
-  const width = clamp(size.width, place.min.width, place.max.width)
+  const width = heldBetween(size.width, place.min.width, place.max.width)
   const ratioed = place.aspect > 0 ? width / place.aspect : size.height
 
-  return { width, height: clamp(ratioed, place.min.height, place.max.height) }
+  return { width, height: heldBetween(ratioed, place.min.height, place.max.height) }
 }
 
 /** A `max` of zero is no maximum at all — an element cannot be told to have no width. */
-const clamp = (value: number, min: number, max: number): number =>
+const heldBetween = (value: number, min: number, max: number): number =>
   Math.max(min, max > 0 ? Math.min(max, value) : value)
 
 const main = (size: UiSize | undefined, across: boolean): number =>

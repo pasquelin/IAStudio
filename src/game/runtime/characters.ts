@@ -2,6 +2,7 @@
 
 import type { InputState } from '../ports/inputPort'
 import type { CharacterMove, CharacterMoved, CharacterSettings } from '../ports/physicsPort'
+import { clamp } from '../numeric'
 import { numberOf } from './componentFields'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
@@ -82,7 +83,7 @@ export function createCharacters(): Characters {
       // walks the yaw off into large floats, where a radian stops resolving a degree.
       look.yaw = (look.yaw - (input.pointer.x - dragged.x) * LOOK_PER_PIXEL) % FULL_TURN
       look.pitch -= (input.pointer.y - dragged.y) * LOOK_PER_PIXEL
-      look.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, look.pitch))
+      look.pitch = clamp(look.pitch, -PITCH_LIMIT, PITCH_LIMIT)
     }
     dragged = { x: input.pointer.x, y: input.pointer.y }
   }

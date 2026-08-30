@@ -3,6 +3,7 @@
 import type { AnimationTimeline, TimelineMedia, TimelineTransition } from '@shared/domain/animation'
 import type { Ref } from '@shared/domain/ref'
 import type { AudioVoice } from '../../ports/audioPort'
+import { clamp } from '../../numeric'
 import { sayCustom } from '../sayCustom'
 import type { System, World } from '../world'
 
@@ -146,7 +147,7 @@ const halfOf = (transition: TimelineTransition): number =>
  * from the first sample. The shorter of the two wins where they overlap, as a mixer does.
  */
 function levelOf(sound: TimelineMedia, now: number): number {
-  const gain = Number.isFinite(sound.gain) ? Math.min(Math.max(sound.gain ?? 1, 0), 1) : 1
+  const gain = Number.isFinite(sound.gain) ? clamp(sound.gain ?? 1, 0, 1) : 1
   const since = now - sound.start
   const until = sound.start + sound.duration - now
 

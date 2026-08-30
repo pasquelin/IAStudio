@@ -13,6 +13,7 @@ import type {
 } from '@shared/domain/ui'
 import type { AssetPort } from '../ports/assetPort'
 import type { UiFrame, UiHit, UiRenderPort, UiValue, UiValues } from '../ports/uiRenderPort'
+import { clamp } from '../numeric'
 import { childrenOf } from '../ui/uiTree'
 import { pickAt, piled, type UiPickOptions } from '../ui/uiPick'
 import { UI_LINE_HEIGHT, cssFontOf } from './canvasUiMeasure'
@@ -224,7 +225,7 @@ function shareOf(
 ): number {
   const value = typeof live === 'number' ? live : bounds.value
   if (bounds.max <= bounds.min) return 0
-  return Math.max(0, Math.min(1, (value - bounds.min) / (bounds.max - bounds.min)))
+  return clamp((value - bounds.min) / (bounds.max - bounds.min), 0, 1)
 }
 
 const barCss = (part: number, colour: string): string =>
