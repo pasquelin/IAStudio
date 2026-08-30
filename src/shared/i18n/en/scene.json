@@ -279,7 +279,7 @@
     "addToSheet": "Add to the band",
     "addToSheetHint": "Puts the selected objects on the band, so they can be animated",
     "removeFromSheet": "Take {{name}} off the band",
-    "removeFromSheetHint": "Removes the line. Keys already posed stay",
+    "removeFromSheetHint": "Removes the line. Keys already set stay",
     "unkeySubject": "Remove {{name}}’s key",
     "unkeySubjectHint": "Removes the key standing here, on every property of this object",
     "reorderRow": "Move the {{name}} line",
