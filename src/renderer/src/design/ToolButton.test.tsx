@@ -24,6 +24,23 @@ describe('ToolButton', () => {
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  /**
+   * 🛑 Only where BOTH are drawn: a square button holds one glyph and needs no gap, and the
+   * journal's filters read « ⩸Niveau » with the two touching.
+   */
+  it('spaces a glyph from the words beside it, and only then', () => {
+    const { unmount } = render(
+      <ToolButton icon={mdiPencil} label="Niveau" tooltip={TIP_TOP}>
+        <span>Niveau</span>
+      </ToolButton>,
+    )
+    expect(screen.getByRole('button', { name: 'Niveau' })).toHaveClass('gap-1.5')
+    unmount()
+
+    render(<ToolButton icon={mdiPencil} label="Brush" tooltip={TIP_TOP} />)
+    expect(screen.getByRole('button', { name: 'Brush' })).not.toHaveClass('gap-1.5')
+  })
+
   it('renders its children when no icon is provided', () => {
     render(
       <ToolButton label="Color" tooltip={TIP_TOP}>

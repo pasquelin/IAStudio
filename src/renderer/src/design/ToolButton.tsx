@@ -97,6 +97,9 @@ export function ToolButton({
       aria-pressed={acts ? undefined : (told ?? active)}
       className={cn(
         BUTTON_BASE,
+        // A glyph beside words needs the space a square button never did: the journal's filters
+        // read « ⩸Niveau », glyph glued to label. Only where BOTH are drawn.
+        icon !== undefined && children !== undefined && 'gap-1.5',
         'text-muted shrink-0 bg-transparent',
         HOSTS[variant].box,
         'hover:bg-elevated hover:text-text',
