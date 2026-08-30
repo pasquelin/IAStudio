@@ -57,7 +57,7 @@
     "pickPicture": "Choose an image",
     "pickPictureHint": "Opens the project’s image picker. A double-click opens this one where it is edited",
     "pickPictureAloneHint": "Opens the project’s image picker",
-    "clearTextureHint": "Empties this slot — the image stays in the project",
+    "clearTextureHint": "Clears this slot — the image stays in the project",
     "browseTexture": "Browse the images",
     "browseTextureHint": "Choose from the images this project holds, as thumbnails rather than a list",
     "openTextureHint": "Double-click to open this image in the space that edits it",
