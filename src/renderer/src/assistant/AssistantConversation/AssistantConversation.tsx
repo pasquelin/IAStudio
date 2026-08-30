@@ -361,7 +361,7 @@ export function AssistantConversation() {
         </ol>
       )}
 
-      {asked && <AssistantConversationQuestion request={asked.request} />}
+      {asked && <AssistantConversationQuestion key={asked.id} request={asked.request} />}
       {choosing && <AssistantConversationChoice key={choosing.id} {...choosing} />}
 
       {/* The running hypothesis, above the field it will land in. The label is what makes it

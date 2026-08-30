@@ -14,7 +14,7 @@ import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { registerGenerator, type ArmedGeneration, type GeneratorBridge } from './generatorBridge'
 import { ACTION_REGISTRY, commitmentOfCall, type ActionOutcome } from '@shared/domain/assistant'
-import { registerConfirmer } from './confirm'
+import { registerConfirmer, type ConfirmAnswer, type ConfirmRequest } from './confirm'
 import { forgetConsentsForTests } from './wireConsent'
 import {
   handledActions,
@@ -22,6 +22,12 @@ import {
   runAction,
   runConfirmedAction,
 } from './executor'
+
+/** A person at the screen: the yes or the no, and the input handed back as it came. */
+const saying =
+  (granted: boolean) =>
+  (request: ConfirmRequest): Promise<ConfirmAnswer> =>
+    Promise.resolve({ granted, input: request.input })
 
 /** The English half of a refusal, which is where the token and what it covers are spelled out. */
 const refusalDetail = (outcome: ActionOutcome): string => (outcome.ok ? '' : (outcome.detail ?? ''))
@@ -478,7 +484,7 @@ describe('listing the jobs', () => {
  */
 describe('asking before acting', () => {
   it('does not ask for what is free and undoable', async () => {
-    const ask = vi.fn(() => Promise.resolve(true))
+    const ask = vi.fn(saying(true))
     const stop = registerConfirmer(ask)
 
     await runConfirmedAction('workspace.open', { workspace: '3d' })
@@ -488,8 +494,38 @@ describe('asking before acting', () => {
     stop()
   })
 
+  /** 🛑 What RUNS is what the CARD left: the folder it names is a place only the person knows. */
+  it('runs the input the card amended', async () => {
+    const heard: string[] = []
+    const stopHearing = subscribeToCommands(command => heard.push(command) > 0)
+    const disarm = armCommandScope('canvas')
+    const stop = registerConfirmer(() =>
+      Promise.resolve({ granted: true, input: { command: 'canvas.enlarge' } }),
+    )
+
+    await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    stop()
+    disarm()
+    stopHearing()
+
+    expect(heard).toEqual(['canvas.enlarge'])
+  })
+
+  /**
+   * 🛑 What the card SHOWED is what runs: `raises` reads the input, so a value amended on the
+   * card could lift the level above the sentence the person read before saying yes.
+   */
+  it('refuses an amendment the question was not asked about', async () => {
+    const stop = registerConfirmer(() => Promise.resolve({ granted: true, input: { nothing: 1 } }))
+
+    const outcome = await runConfirmedAction('command.run', { command: 'canvas.cutout' })
+    stop()
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'formChanged' })
+  })
+
   it('asks before spending, and quotes what the form would cost', async () => {
-    const ask = vi.fn(() => Promise.resolve(true))
+    const ask = vi.fn(saying(true))
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
     installFakeBridge({
       provider: { estimateCost: () => Promise.resolve({ creativeUnits: 4 }) },
@@ -515,7 +551,7 @@ describe('asking before acting', () => {
   it('does not act when the answer is no', async () => {
     const submit = vi.fn(() => Promise.resolve(aJob('job_1')))
     const stopGenerator = registerGenerator(aGenerator({ submit }))
-    const stopConfirmer = registerConfirmer(() => Promise.resolve(false))
+    const stopConfirmer = registerConfirmer(saying(false))
 
     expect(await runConfirmedAction('generator.submit', {})).toEqual({
       ok: false,
@@ -561,9 +597,9 @@ describe('asking before acting', () => {
       aGenerator({ body: () => ({ modelId: 'model_x', values: { count } }), submit }),
     )
     // The hand that changes the form while the question is on screen.
-    const stopConfirmer = registerConfirmer(() => {
+    const stopConfirmer = registerConfirmer(request => {
       count = 10
-      return Promise.resolve(true)
+      return saying(true)(request)
     })
 
     expect(await runConfirmedAction('generator.submit', {})).toEqual({
@@ -578,7 +614,7 @@ describe('asking before acting', () => {
   // An upload is a permanent asset and earns the question, but there is no figure to quote for
   // it — and one invented to fill the sentence would be worse than none.
   it('asks about an upload without quoting a price', async () => {
-    const ask = vi.fn(() => Promise.resolve(false))
+    const ask = vi.fn(saying(false))
     const stop = registerConfirmer(ask)
 
     await runConfirmedAction('command.run', { command: 'canvas.cutout' })
@@ -592,7 +628,7 @@ describe('asking before acting', () => {
   })
 
   it('says the estimate is unknown rather than inventing one', async () => {
-    const ask = vi.fn(() => Promise.resolve(false))
+    const ask = vi.fn(saying(false))
     installFakeBridge({ provider: { estimateCost: () => Promise.reject(new Error('no price')) } })
     const stopGenerator = registerGenerator(aGenerator())
     const stopConfirmer = registerConfirmer(ask)
@@ -628,7 +664,7 @@ describe('asking across the wire', () => {
   })
 
   it('names what a call engages rather than asking a screen that is not there', async () => {
-    const ask = vi.fn(() => Promise.resolve(true))
+    const ask = vi.fn(saying(true))
     const stop = registerConfirmer(ask)
 
     const outcome = await runConfirmedAction('project.create', { path: '/tmp/p' }, {})
@@ -665,7 +701,7 @@ describe('asking across the wire', () => {
    * calls fell back on a modal no client can see, each holding the round trip for two minutes.
    */
   it('carries the door down into a lot, so its calls are asked across the wire too', async () => {
-    const stop = registerConfirmer(() => Promise.resolve(true))
+    const stop = registerConfirmer(saying(true))
     const calls = JSON.stringify([{ action: 'command.run', input: { command: 'canvas.cutout' } }])
 
     const outcome = await runConfirmedAction('studio.batch', { calls }, {})
@@ -836,7 +872,7 @@ describe('asking across the wire', () => {
 
   // The window's own door is untouched: no token reaches it, and it still asks its screen.
   it('leaves the window asking on the glass', async () => {
-    const ask = vi.fn(() => Promise.resolve(false))
+    const ask = vi.fn(saying(false))
     const stop = registerConfirmer(ask)
 
     await runConfirmedAction('command.run', { command: 'canvas.cutout' })
@@ -863,7 +899,7 @@ describe('what an armed studio lets through without asking', () => {
   })
 
   it('asks about everything while nothing is armed', async () => {
-    const ask = vi.fn(() => Promise.resolve(false))
+    const ask = vi.fn(saying(false))
     const stop = registerConfirmer(ask)
 
     await runConfirmedAction('command.run', { command: 'canvas.cutout' })
@@ -949,7 +985,7 @@ describe('an input the registry would not accept', () => {
   // A costly action with a bad input must not raise the question first: the person would be
   // asked to approve a spend that was never going to happen.
   it('is refused without anybody being asked', async () => {
-    const ask = vi.fn(async () => true)
+    const ask = vi.fn(saying(true))
     const stop = registerConfirmer(ask)
 
     expect(await runConfirmedAction('generator.submit', { unexpected: 1 })).toMatchObject({

@@ -147,7 +147,7 @@ describe('a question the model asked', () => {
     expect(useAssistant.getState().choosing).toBeNull()
 
     useAssistant.getState().answer(true)
-    await expect(granted).resolves.toBe(true)
+    await expect(granted).resolves.toMatchObject({ granted: true })
     expect(useAssistant.getState().choosing?.questions[0]?.question).toBe('Dans quel espace ?')
 
     useAssistant.getState().choose(null)
@@ -159,7 +159,7 @@ describe('a question the model asked', () => {
 
     await expect(
       useAssistant.getState().ask({ action: 'project.create', input: {}, commitment: 'studio' }),
-    ).resolves.toBe(false)
+    ).resolves.toMatchObject({ granted: false })
     useAssistant.getState().choose(null)
     await first
   })

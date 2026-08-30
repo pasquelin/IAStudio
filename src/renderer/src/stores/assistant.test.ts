@@ -532,7 +532,7 @@ describe('the question asked before anything is engaged', () => {
     expect(useAssistant.getState().asked?.request.action).toBe('generator.submit')
 
     useAssistant.getState().answer(true)
-    await expect(asked).resolves.toBe(true)
+    await expect(asked).resolves.toMatchObject({ granted: true })
     unstage()
   })
 
@@ -552,7 +552,7 @@ describe('the question asked before anything is engaged', () => {
 
     useAssistant.getState().stage()
     useAssistant.getState().answer(true)
-    await expect(asked).resolves.toBe(true)
+    await expect(asked).resolves.toMatchObject({ granted: true })
   })
 
   /**
@@ -570,11 +570,11 @@ describe('the question asked before anything is engaged', () => {
       .getState()
       .ask({ action: 'generator.submit', input: {}, commitment: 'credits' })
 
-    await expect(second).resolves.toBe(false)
+    await expect(second).resolves.toMatchObject({ granted: false })
     expect(useAssistant.getState().asked?.request.action).toBe('command.run')
 
     useAssistant.getState().answer(true)
-    await expect(first).resolves.toBe(true)
+    await expect(first).resolves.toMatchObject({ granted: true })
   })
 })
 

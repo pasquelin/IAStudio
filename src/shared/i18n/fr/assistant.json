@@ -1513,6 +1513,8 @@
       "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
       "studio": "Cette action change l’état du studio, et aucun ⌘Z ne revient dessus. Elle ne coûte aucune unité créative.",
       "yes": "Autoriser",
+      "pickFolder": "Choisir…",
+      "pickFolderHint": "Ouvre le sélecteur du système, et ce que l’assistant exécute est le dossier choisi là",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
       "no": "Refuser",
       "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite",

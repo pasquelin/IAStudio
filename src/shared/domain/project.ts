@@ -182,7 +182,7 @@ function parentFolder(path: string): string | undefined {
  * answers `C:\\Projets\\test3` or `/Users/…/test3` means a place. Read wrong either way, the
  * studio writes a project where nobody asked for one.
  */
-function isAbsolutePath(path: string): boolean {
+export function isAbsolutePath(path: string): boolean {
   return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\')
 }
 

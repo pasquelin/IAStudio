@@ -302,7 +302,13 @@ export async function runConfirmedAction(
 
 /** What a call cleared with: the form its spend was priced against, and what the delegated
  * ledger owes for it. */
-type Cleared = { quoted: QuotedBody | null; debit: number }
+type Cleared = {
+  quoted: QuotedBody | null
+  debit: number
+  /** The input as the CARD left it — a folder the person pointed at where the model guessed a
+   * name. Absent on every door but the screen. */
+  amended?: Record<string, unknown>
+}
 
 type Clearance = { cleared: Cleared } | { refusal: ActionOutcome }
 
@@ -380,15 +386,22 @@ async function consentedOnScreen(
   // Read BEFORE the question and compared after it — see `unchangedSince`.
   const quoted = quotedNow(engaged.commitment)
 
-  const granted = await ask({
+  const given = await ask({
     action: name,
     input: listed,
     commitment: engaged.commitment,
     ...(engaged.commitment === 'credits' ? { estimate: engaged.estimate } : {}),
   })
+  if (!given.granted) return { refusal: refused('declined') }
+
+  // 🛑 What the card SHOWED is what runs: `raises` reads the input, so a value amended on the
+  // card could lift the level above the sentence the person read before saying yes.
+  if (commitmentOfCall(name, given.input) !== engaged.commitment) {
+    return { refusal: refused('formChanged') }
+  }
 
   // Nothing debited: somebody SAW this one, and the ledger counts what went out unwatched.
-  return granted ? { cleared: { quoted, debit: 0 } } : { refusal: refused('declined') }
+  return { cleared: { quoted, debit: 0, amended: given.input } }
 }
 
 /**
@@ -411,7 +424,9 @@ async function runCleared(
   // spent, and a ledger that only counted successes would let a run of failures spend forever.
   spentUnasked += cleared.debit
 
-  return runAction(name, listed, wire)
+  // 🛑 What the CARD left, which `runAction` checks like any other input — a folder the person
+  // pointed at was never seen by the check at the door.
+  return runAction(name, cleared.amended ?? listed, wire)
 }
 
 /** What the generation panel holds, read before a spend is priced against it. */

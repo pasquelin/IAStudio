@@ -296,7 +296,11 @@ export async function createStudio(
   const closeGenerator = installGeneratorPanel(cloud.fieldsOf, given => references.push(...given))
   // The person, who typed the sentence: a headless run has nobody to ask, and refusing every
   // spend would score the whole of sections 20 to 22 on a studio never asked to generate.
-  const closeConfirmer = registerConfirmer(() => Promise.resolve(true))
+  // The input goes back as it came: a headless run points at no folder, so what gets scored is
+  // the model's own values.
+  const closeConfirmer = registerConfirmer(request =>
+    Promise.resolve({ granted: true, input: request.input }),
+  )
   /**
    * 🛑 Not optional: the chain WAITS on an `ask`, so a headless run with nobody to answer hangs on
    * the first question instead of scoring one. The first offer, which is what a model puts first;
