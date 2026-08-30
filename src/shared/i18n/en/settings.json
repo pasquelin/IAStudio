@@ -372,7 +372,7 @@
     "memoryUnmatched": "No memory answers that search.",
     "memoryNoProject": "Open a project to see what the assistant learned about it.",
     "memoryUnreadable": "The memory file could not be read whole. What follows may be incomplete.",
-    "memoryTooNew": "This file was written by a newer studio. Nothing has been changed.",
+    "memoryTooNew": "This file was written by a newer build of the studio. Nothing has been changed.",
     "memoryPin": "Pin",
     "memoryPinHint": "A pinned memory is always given to the assistant, whatever the question.",
     "memoryUnpin": "Unpin",

@@ -1082,8 +1082,8 @@
         "description": "Answers the slice of documentation that answers one question — a component, or the surface a script sees."
       },
       "studioBatch": {
-        "title": "Run a lot of calls",
-        "description": "Runs a run of calls as one, with a single question. Stops at the first refusal."
+        "title": "Run a batch of calls",
+        "description": "Runs a batch of calls as one, with a single question. Stops at the first refusal."
       },
       "timelineCue": {
         "title": "Cue something on the timeline",
@@ -1136,7 +1136,7 @@
     },
     "consent": {
       "ask": " Ask whoever you are acting for, then send this same call again, its consent parameter set to {{token}}. The token is single-use, lasts 5 minutes, and answers for this call alone.",
-      "askInLot": " Ask whoever you are acting for, then send this same lot again with a consent field set to {{token}} inside THIS call’s own input. The token is single-use, lasts 5 minutes, and answers for this call alone."
+      "askInLot": " Ask whoever you are acting for, then send this same batch again with a consent field set to {{token}} inside THIS call’s own input. The token is single-use, lasts 5 minutes, and answers for this call alone."
     },
     "refusals": {
       "unknownCommand": "No such command exists in the studio.",
@@ -1175,7 +1175,7 @@
       "query": "Keywords",
       "family": "Generation family",
       "modelId": "Model identifier",
-      "operation": "Employment, e.g. code2code",
+      "operation": "Operation, e.g. code2code",
       "parameters": "Model parameters",
       "landing": "Where the result goes",
       "draft": "Sentence to rework",
