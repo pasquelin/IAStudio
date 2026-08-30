@@ -386,8 +386,10 @@ Chaque outil de la barre est une commande : sa touche l’arme, et se remappe co
 | `G` | Pot de peinture | | `E` | Gomme |
 |  |  | | `I` | Pipette |
 
-**Quatre outils n’ont pas de touche par défaut** — sélection elliptique, polygone, étoile, gomme
-sélective — et vous pouvez leur en donner une dans les réglages.
+**Trois outils n’ont pas de touche par défaut** — sélection elliptique, polygone et étoile — et
+vous pouvez leur en donner une dans les réglages. **Image…**, dans le groupe Formes, n’en a pas
+non plus, mais pour une autre raison : il n’est pas une commande, et ne figure donc pas dans la
+liste à remapper.
 
 > **Cinq outils portent la touche qu’ils portent ailleurs.** Le Pinceau est sur `B` et le Crayon
 > sur `⇧B` comme dans tous les éditeurs d’images, le Recadrage sur `C`, les formes sur `U` et
