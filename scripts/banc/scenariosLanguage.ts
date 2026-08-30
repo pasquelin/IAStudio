@@ -57,7 +57,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
     // A model arrives already lit, so « mieux » is a light ADDED or one whose dial was turned.
     passed: run =>
       read.nodesOfKind(run, 'directional', 'point', 'spot', 'ambient').length >= 4 ||
-      read.answeredWith(run, 'node.light'),
+      read.answeredWith(run, 'node.setLightSettings'),
   },
   {
     name: '24.5 frames the character properly',
@@ -247,7 +247,7 @@ export const LANGUAGE_SCENARIOS: readonly Scenario[] = [
     ],
     setup: async studio => {
       await cubeScene(studio)
-      await studio.run('world.environment', {
+      await studio.run('world.setSceneLighting', {
         assetId: assetOf(studio, 'a clear blue sky at noon.png'),
       })
     },

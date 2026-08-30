@@ -25,7 +25,7 @@ describe('reading a generation', () => {
     const done = jobOf({ id: 'job-1', status: 'succeeded', progress: 1 })
     useJobs.setState({ jobs: [{ ...done, assetIds: ['asset-9'], cost: 4 }] })
 
-    expect(runAction('job.get', { jobId: 'job-1' })).resolves.toMatchObject({
+    expect(runAction('job.readCloudGeneration', { jobId: 'job-1' })).resolves.toMatchObject({
       ok: true,
       data: { assetIds: ['asset-9'], cost: 4, status: 'succeeded' },
     })
@@ -41,7 +41,7 @@ describe('reading a generation', () => {
   })
 
   it('refuses an id the studio is not following', async () => {
-    expect(await runAction('job.get', { jobId: 'job-none' })).toEqual({
+    expect(await runAction('job.readCloudGeneration', { jobId: 'job-none' })).toEqual({
       ok: false,
       refusal: 'notFound',
     })
@@ -52,7 +52,7 @@ describe('waiting for a generation', () => {
   it('answers at once when the job is already finished', async () => {
     useJobs.setState({ jobs: [jobOf({ id: 'job-1', status: 'succeeded', progress: 1 })] })
 
-    expect(await runAction('job.wait', { jobId: 'job-1' })).toMatchObject({
+    expect(await runAction('job.waitForCloudGeneration', { jobId: 'job-1' })).toMatchObject({
       ok: true,
       data: { status: 'succeeded' },
     })
@@ -61,7 +61,7 @@ describe('waiting for a generation', () => {
   // The store, not the API: one poller is the invariant, and it is the JobManager's.
   it('settles when the store carries the job to a terminal state', async () => {
     useJobs.setState({ jobs: [running('job-1')] })
-    const waiting = runAction('job.wait', { jobId: 'job-1' })
+    const waiting = runAction('job.waitForCloudGeneration', { jobId: 'job-1' })
 
     useJobs.setState({ jobs: [{ ...running('job-1'), status: 'succeeded', assetIds: ['a-1'] }] })
 
@@ -76,7 +76,7 @@ describe('waiting for a generation', () => {
     vi.useFakeTimers()
     useJobs.setState({ jobs: [running('job-1')] })
 
-    const waiting = runAction('job.wait', { jobId: 'job-1', timeoutMs: 1_000 })
+    const waiting = runAction('job.waitForCloudGeneration', { jobId: 'job-1', timeoutMs: 1_000 })
     await vi.advanceTimersByTimeAsync(1_100)
 
     expect(await waiting).toMatchObject({ ok: true, data: { status: 'running', progress: 0.4 } })
@@ -99,7 +99,7 @@ describe('before a generation', () => {
       fields: [],
     }
     installFakeBridge({ provider: { describeModel: vi.fn(async () => schema) } })
-    expect(await runAction('model.schema', { modelId: 'model-1' })).toEqual({
+    expect(await runAction('models.readGenerationModelFields', { modelId: 'model-1' })).toEqual({
       ok: true,
       data: schema,
     })
@@ -107,7 +107,7 @@ describe('before a generation', () => {
     installFakeBridge()
     // `failed`, not `notFound`: a rejection here is a model nothing declares AND a network that
     // dropped, and nothing at this level tells the two apart.
-    expect(await runAction('model.schema', { modelId: 'model-none' })).toEqual({
+    expect(await runAction('models.readGenerationModelFields', { modelId: 'model-none' })).toEqual({
       ok: false,
       refusal: 'failed',
     })
@@ -130,10 +130,10 @@ describe('cancelling and counting', () => {
     const cancel = vi.fn(async () => {})
     useJobs.setState({ jobs: [running('job-1')], cancel })
 
-    expect(await runAction('job.cancel', { jobId: 'job-1' })).toEqual({ ok: true })
+    expect(await runAction('job.cancelCloudGeneration', { jobId: 'job-1' })).toEqual({ ok: true })
     expect(cancel).toHaveBeenCalledWith('job-1')
 
-    expect(await runAction('job.cancel', { jobId: 'job-2' })).toEqual({
+    expect(await runAction('job.cancelCloudGeneration', { jobId: 'job-2' })).toEqual({
       ok: false,
       refusal: 'notFound',
     })
@@ -158,7 +158,7 @@ describe('cancelling and counting', () => {
     const cancel = vi.fn(async () => false)
     installFakeBridge({ tasks: { cancel } })
 
-    expect(await runAction('task.cancel', { taskId: 'render-1' })).toEqual({
+    expect(await runAction('task.cancelLocalTask', { taskId: 'render-1' })).toEqual({
       ok: true,
       data: false,
     })

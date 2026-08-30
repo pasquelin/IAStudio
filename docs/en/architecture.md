@@ -363,7 +363,7 @@ untouched — its `additionalProperties: false` is a promise to the client, not 
 refuses **before** the confirmation question, or a bad input would have the person asked to approve
 a spend that was never going to happen.
 
-The name changes dialect on the way — `command.run` becomes `command_run`, because the tool-name
+The name changes dialect on the way — `command.runStudioCommand` becomes `command_runStudioCommand`, because the tool-name
 grammar takes no dot — and `actionOfTool` walks it back. **One substitution, never a second column
 in the registry**: that column would drift from the first.
 
@@ -375,7 +375,7 @@ back, a `callId` sews the halves together, and **every way of failing answers**,
 other end there is a client that would otherwise sit there.
 
 **The declared level is only a floor.** `raises` lifts it from the call's own input —
-`commitmentOfCommand` for `command.run`, an `amend` for `git.commit` — and `asksItself` marks the
+`commitmentOfCommand` for `command.runStudioCommand`, an `amend` for `git.commit` — and `asksItself` marks the
 action whose handler raises its OWN question, which is why its level stays at the floor.
 `commitmentOfCommand` is the one guarded command by command: five canvas commands flatten and
 upload the picture, which creates a permanent asset. A miss there would go through with nothing

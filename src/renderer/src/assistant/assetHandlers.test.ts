@@ -21,7 +21,12 @@ describe('searching the library', () => {
     const search = vi.fn(async () => [])
     installFakeBridge({ assets: { search } })
 
-    await runAction('assets.search', { text: 'stone', type: 'image', tags: ['pbr'], limit: 10 })
+    await runAction('assets.searchProjectCatalogue', {
+      text: 'stone',
+      type: 'image',
+      tags: ['pbr'],
+      limit: 10,
+    })
     expect(search).toHaveBeenCalledWith({
       text: 'stone',
       type: 'image',
@@ -29,7 +34,7 @@ describe('searching the library', () => {
       limit: 10,
     })
 
-    await runAction('assets.search', {})
+    await runAction('assets.searchProjectCatalogue', {})
     expect(search).toHaveBeenLastCalledWith({})
   })
 
@@ -42,10 +47,10 @@ describe('searching the library', () => {
     const search = vi.fn(async () => [])
     installFakeBridge({ assets: { search } })
 
-    await runAction('assets.search', { generated: true })
+    await runAction('assets.searchProjectCatalogue', { generated: true })
     expect(search).toHaveBeenCalledWith({ generated: true })
 
-    await runAction('assets.search', { generated: false })
+    await runAction('assets.searchProjectCatalogue', { generated: false })
     expect(search).toHaveBeenLastCalledWith({})
   })
 
@@ -56,7 +61,7 @@ describe('searching the library', () => {
       assets: { search: vi.fn(async () => []), counts: vi.fn(async () => counts) },
     })
 
-    expect(await runAction('assets.search', { text: 'nothing' })).toEqual({
+    expect(await runAction('assets.searchProjectCatalogue', { text: 'nothing' })).toEqual({
       ok: true,
       data: { found: [], projectHolds: counts },
     })
@@ -72,7 +77,7 @@ describe('searching the library', () => {
 
 describe('reading and correcting an asset', () => {
   /**
-   * Through the catalogue, NOT through `assets.describe` — that one is the captioning channel
+   * Through the catalogue, NOT through `assets.captionImages` — that one is the captioning channel
    * and calls the API. Reading a generation's output must cost nothing.
    */
   it('reads the ids a finished generation handed back, out of the catalogue', async () => {
@@ -114,10 +119,10 @@ describe('reading and correcting an asset', () => {
     const remove = vi.fn(async () => {})
     installFakeBridge({ assets: { remove } })
 
-    await runAction('assets.remove', { assetIds: ['asset-1'] })
+    await runAction('assets.removeFromLibrary', { assetIds: ['asset-1'] })
     expect(remove).toHaveBeenCalledWith(['asset-1'], false)
 
-    await runAction('assets.remove', { assetIds: ['asset-1'], alsoRemote: true })
+    await runAction('assets.removeFromLibrary', { assetIds: ['asset-1'], alsoRemote: true })
     expect(remove).toHaveBeenLastCalledWith(['asset-1'], true)
   })
 
@@ -125,7 +130,7 @@ describe('reading and correcting an asset', () => {
     const remove = vi.fn(async () => {})
     installFakeBridge({ assets: { remove } })
 
-    expect(await runAction('assets.remove', { assetIds: [] })).toMatchObject({
+    expect(await runAction('assets.removeFromLibrary', { assetIds: [] })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -138,7 +143,7 @@ describe('correcting what the library holds', () => {
     const describe = vi.fn(async () => 2)
     installFakeBridge({ assets: { describe } })
 
-    expect(await runAction('assets.describe', { assetIds: ['a', 'b'] })).toEqual({
+    expect(await runAction('assets.captionImages', { assetIds: ['a', 'b'] })).toEqual({
       ok: true,
       data: 2,
     })

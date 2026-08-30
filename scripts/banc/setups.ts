@@ -29,7 +29,7 @@ export const shelved = (recent: readonly RecentProject[]): void => {
   }))
 }
 
-/** The id `assets.search` would hand back for a file, so a decor can name one. */
+/** The id `assets.searchProjectCatalogue` would hand back for a file, so a decor can name one. */
 export const assetOf = (studio: Studio, ending: string): string =>
   studio.assets().find(one => (one.path ?? '').endsWith(ending))?.id ?? ''
 
@@ -260,7 +260,7 @@ export const raisedCube = async (studio: Studio): Promise<void> => {
 /** Soleil Test at an intensity worth doubling — the other half of section 26. */
 export const namedSun = async (studio: Studio): Promise<void> => {
   await litScene(studio)
-  await studio.run('node.light', { nodeId: named(studio, 'Soleil Test'), intensity: 3 })
+  await studio.run('node.setLightSettings', { nodeId: named(studio, 'Soleil Test'), intensity: 3 })
 }
 
 /** A scene with a cube, PLAYED: every reading taken on it is taken on a game that is running. */

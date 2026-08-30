@@ -25,9 +25,9 @@ const ASSET_IDS: AssistantAction['fields'][number] = {
 
 export const CLOUD_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'cloud.browse',
-    titleKey: 'assistant.actions.cloudBrowse.title',
-    descriptionKey: 'assistant.actions.cloudBrowse.description',
+    name: 'cloud.browseAccountLibrary',
+    titleKey: 'assistant.actions.cloudBrowseAccountLibrary.title',
+    descriptionKey: 'assistant.actions.cloudBrowseAccountLibrary.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -72,9 +72,9 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
      * Answers assets this account does NOT own — the one read of the family that does. Looking
      * pulls nothing: a tile of the feed belongs to somebody else until it is fetched.
      */
-    name: 'cloud.explore',
-    titleKey: 'assistant.actions.cloudExplore.title',
-    descriptionKey: 'assistant.actions.cloudExplore.description',
+    name: 'cloud.explorePublicFeed',
+    titleKey: 'assistant.actions.cloudExplorePublicFeed.title',
+    descriptionKey: 'assistant.actions.cloudExplorePublicFeed.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -97,9 +97,9 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'cloud.similar',
-    titleKey: 'assistant.actions.cloudSimilar.title',
-    descriptionKey: 'assistant.actions.cloudSimilar.description',
+    name: 'cloud.findSimilarPublished',
+    titleKey: 'assistant.actions.cloudFindSimilarPublished.title',
+    descriptionKey: 'assistant.actions.cloudFindSimilarPublished.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -112,9 +112,9 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
      * The dry run, and the reason it is published beside the two that move: a client that has to
      * choose between pushing and pulling can ask what each would do before either costs a request.
      */
-    name: 'cloud.plan',
-    titleKey: 'assistant.actions.cloudPlan.title',
-    descriptionKey: 'assistant.actions.cloudPlan.description',
+    name: 'cloud.previewSync',
+    titleKey: 'assistant.actions.cloudPreviewSync.title',
+    descriptionKey: 'assistant.actions.cloudPreviewSync.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

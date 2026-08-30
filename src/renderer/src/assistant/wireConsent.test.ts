@@ -20,7 +20,7 @@ describe('wireConsent', () => {
   it('does not answer for another action', () => {
     const token = mintConsent('document.save', { documentId: 'a' }, null)
 
-    expect(takeConsent(token, 'document.remove', { documentId: 'a' })).toBeNull()
+    expect(takeConsent(token, 'document.deleteFromDisk', { documentId: 'a' })).toBeNull()
   })
 
   it('reads the same call however its keys were ordered', () => {

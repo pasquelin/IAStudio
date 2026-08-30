@@ -145,7 +145,12 @@ describe('the assistant conversation', () => {
     useAssistant.setState({
       asked: {
         id: 1,
-        request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: 12 },
+        request: {
+          action: 'generator.submit',
+          input: {},
+          commitment: 'credits',
+          estimate: 12,
+        },
         answer: answered,
       },
     })
@@ -193,7 +198,12 @@ describe('the assistant conversation', () => {
     useAssistant.setState({
       asked: {
         id: 1,
-        request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: null },
+        request: {
+          action: 'generator.submit',
+          input: {},
+          commitment: 'credits',
+          estimate: null,
+        },
         answer: vi.fn(),
       },
     })
@@ -507,7 +517,12 @@ describe('the assistant conversation', () => {
       turns: [{ id: 1, said: 'génère un casque', answered: '', steps: [], asks: [], lost: false }],
       asked: {
         id: 1,
-        request: { action: 'generator.submit', input: {}, commitment: 'credits', estimate: 12 },
+        request: {
+          action: 'generator.submit',
+          input: {},
+          commitment: 'credits',
+          estimate: 12,
+        },
         answer: vi.fn(),
       },
     })

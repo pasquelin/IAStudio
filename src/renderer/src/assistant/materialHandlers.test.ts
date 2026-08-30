@@ -50,7 +50,7 @@ describe('the sky', () => {
   })
 
   it('changes only the dials it was given, and puts them all back at once', async () => {
-    await runAction('skybox.adjust', { exposure: 1.5, blur: 0.25 })
+    await runAction('skybox.adjustImage', { exposure: 1.5, blur: 0.25 })
     expect(sky().adjustments).toMatchObject({ exposure: 1.5, blur: 0.25, contrast: 1 })
 
     await runAction('skybox.resetAdjustments', {})
@@ -58,15 +58,15 @@ describe('the sky', () => {
   })
 
   it('places the sun and sets what the image lights', async () => {
-    await runAction('skybox.sun', { elevation: 0.4, intensity: 2, color: '#ffddaa' })
+    await runAction('skybox.setSun', { elevation: 0.4, intensity: 2, color: '#ffddaa' })
     expect(sky().sun).toMatchObject({ elevation: 0.4, intensity: 2, color: '#ffddaa' })
 
-    await runAction('skybox.environment', { intensity: 0.5, showBackground: false })
+    await runAction('skybox.setPreviewLighting', { intensity: 0.5, showBackground: false })
     expect(sky().environment).toEqual({ intensity: 0.5, showBackground: false })
   })
 
   it('hangs a picture of the library in the sky', async () => {
-    expect(await runAction('skybox.source', { assetId: PICTURE.id })).toEqual({ ok: true })
+    expect(await runAction('skybox.setSourceImage', { assetId: PICTURE.id })).toEqual({ ok: true })
     expect(sky().source).toEqual({ assetId: PICTURE.id })
   })
 
@@ -78,7 +78,7 @@ describe('the sky', () => {
     const inCloud: Asset = { ...PICTURE, location: 'cloud' }
     installFakeBridge({ assets: { search: vi.fn(async () => [inCloud]) } })
 
-    expect(await runAction('skybox.source', { assetId: PICTURE.id })).toMatchObject({
+    expect(await runAction('skybox.setSourceImage', { assetId: PICTURE.id })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -87,7 +87,10 @@ describe('the sky', () => {
 
   // A call that names no dial at all would be an empty history entry.
   it('refuses a call that changes nothing', async () => {
-    expect(await runAction('skybox.adjust', {})).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('skybox.adjustImage', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 
   it('refuses every action of the family while no sky is in front', async () => {
@@ -110,21 +113,23 @@ describe('the material', () => {
     // Both tabs: `installIn` replaces the whole list, so the sky the decor opened is gone by here.
     installDocuments({ [SKY]: 'skyboxes', [MATERIAL]: 'materials' }, MATERIAL)
 
-    expect(await runAction('material.environment', { sky: SKY })).toEqual({ ok: true })
+    expect(await runAction('material.setPreviewEnvironment', { sky: SKY })).toEqual({ ok: true })
     expect(material().preview.environment).toEqual({ kind: 'sky', documentId: SKY })
   })
 
   it('hangs a picture of the project instead, and puts both out', async () => {
-    expect(await runAction('material.environment', { assetId: PICTURE.id })).toEqual({ ok: true })
+    expect(await runAction('material.setPreviewEnvironment', { assetId: PICTURE.id })).toEqual({
+      ok: true,
+    })
     expect(material().preview.environment).toEqual({ kind: 'skybox', assetId: PICTURE.id })
 
-    await runAction('material.environment', { kind: 'studio' })
+    await runAction('material.setPreviewEnvironment', { kind: 'studio' })
 
     expect(material().preview.environment).toEqual({ kind: 'studio' })
   })
 
   it('refuses a sky document the project does not hold', async () => {
-    expect(await runAction('material.environment', { sky: 'Nulle part' })).toMatchObject({
+    expect(await runAction('material.setPreviewEnvironment', { sky: 'Nulle part' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -133,7 +138,7 @@ describe('the material', () => {
   // A preview is lit by ONE prefiltered map, so naming both is a request with two answers.
   it('refuses a picture and a sky document at once', async () => {
     expect(
-      await runAction('material.environment', { assetId: PICTURE.id, sky: SKY }),
+      await runAction('material.setPreviewEnvironment', { assetId: PICTURE.id, sky: SKY }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
@@ -145,7 +150,7 @@ describe('the material', () => {
   })
 
   it('changes only the settings it was given', async () => {
-    await runAction('material.material', { roughness: 0.2, color: '#334455' })
+    await runAction('material.setSurfaceSettings', { roughness: 0.2, color: '#334455' })
 
     expect(material().material).toMatchObject({ roughness: 0.2, color: '#334455' })
     expect(material().material.metalness).toBe(newMaterial().material.metalness)
@@ -153,31 +158,35 @@ describe('the material', () => {
 
   /** `tiling` is one vector, so a call naming one axis has to carry the other one through. */
   it('keeps the axis a tiling call did not name', async () => {
-    await runAction('material.material', { tilingX: 4 })
+    await runAction('material.setSurfaceSettings', { tilingX: 4 })
 
     expect(material().material.tiling).toEqual({ x: 4, y: newMaterial().material.tiling.y })
   })
 
   it('sets how the preview is presented', async () => {
-    await runAction('material.preview', { envIntensity: 2, showSeam: true, autoSpin: false })
+    await runAction('material.setPreviewDisplay', {
+      envIntensity: 2,
+      showSeam: true,
+      autoSpin: false,
+    })
 
     expect(material().preview).toMatchObject({ envIntensity: 2, showSeam: true, autoSpin: false })
   })
 
   it('fills a channel from the library and empties it again', async () => {
-    expect(await runAction('material.channel', { channel: 'normal', assetId: PICTURE.id })).toEqual(
-      {
-        ok: true,
-      },
-    )
+    expect(
+      await runAction('material.setChannelImage', { channel: 'normal', assetId: PICTURE.id }),
+    ).toEqual({
+      ok: true,
+    })
     expect(material().channels.normal).toMatchObject({ assetId: PICTURE.id, width: 4096 })
 
-    await runAction('material.channel', { channel: 'normal' })
+    await runAction('material.setChannelImage', { channel: 'normal' })
     expect(material().channels.normal).toBeUndefined()
   })
 
   it('refuses a channel the material does not have', async () => {
-    expect(await runAction('material.channel', { channel: 'gloss' })).toMatchObject({
+    expect(await runAction('material.setChannelImage', { channel: 'gloss' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -191,7 +200,9 @@ describe('the material', () => {
     const save = vi.fn(async () => [])
     installFakeBridge({ styles: { save } })
 
-    expect(await runAction('style.save', { name: 'Pierre' })).toMatchObject({ ok: true })
+    expect(await runAction('style.save', { name: 'Pierre' })).toMatchObject({
+      ok: true,
+    })
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({ values: material().material, name: expect.any(String) }),
     )
@@ -220,7 +231,7 @@ describe('how a sky is looked at', () => {
   it('writes the projection, the lens and the probes, and reads them back', async () => {
     withSky()
 
-    expect(await runAction('skybox.view', { view: 'equirect', probes: false })).toEqual({
+    expect(await runAction('skybox.setViewOptions', { view: 'equirect', probes: false })).toEqual({
       ok: true,
     })
 
@@ -234,7 +245,10 @@ describe('how a sky is looked at', () => {
   it('refuses a call that names nothing at all', async () => {
     withSky()
 
-    expect(await runAction('skybox.view', {})).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('skybox.setViewOptions', {})).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 })
 
@@ -242,10 +256,12 @@ describe('the two halves of a material nothing could write', () => {
   it('remaps a channel one bound at a time, keeping the other', async () => {
     withMaterial()
 
-    expect(await runAction('material.material', { roughnessMin: 0.2 })).toEqual({ ok: true })
+    expect(await runAction('material.setSurfaceSettings', { roughnessMin: 0.2 })).toEqual({
+      ok: true,
+    })
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 1 })
 
-    await runAction('material.material', { roughnessMax: 0.8, metalnessMin: 0.1 })
+    await runAction('material.setSurfaceSettings', { roughnessMax: 0.8, metalnessMin: 0.1 })
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.8 })
     expect(material().material.metalnessRange).toEqual({ min: 0.1, max: 1 })
   })
@@ -254,8 +270,8 @@ describe('the two halves of a material nothing could write', () => {
   it('keeps the two handles in order when one is pushed past the other', async () => {
     withMaterial()
 
-    await runAction('material.material', { roughnessMax: 0.2 })
-    await runAction('material.material', { roughnessMin: 0.9 })
+    await runAction('material.setSurfaceSettings', { roughnessMax: 0.2 })
+    await runAction('material.setSurfaceSettings', { roughnessMin: 0.9 })
 
     expect(material().material.roughnessRange).toEqual({ min: 0.2, max: 0.9 })
   })
@@ -263,7 +279,9 @@ describe('the two halves of a material nothing could write', () => {
   it('judges the material on another shape, at another repeat', async () => {
     withMaterial()
 
-    expect(await runAction('material.preview', { shape: 'plane', tilingPreview: 4 })).toEqual({
+    expect(
+      await runAction('material.setPreviewDisplay', { shape: 'plane', tilingPreview: 4 }),
+    ).toEqual({
       ok: true,
     })
     expect(material().preview).toMatchObject({ shape: 'plane', tilingPreview: 4 })
@@ -273,7 +291,7 @@ describe('the two halves of a material nothing could write', () => {
   it('refuses a repeat the panel does not offer', async () => {
     withMaterial()
 
-    expect(await runAction('material.preview', { tilingPreview: 3 })).toMatchObject({
+    expect(await runAction('material.setPreviewDisplay', { tilingPreview: 3 })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

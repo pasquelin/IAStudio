@@ -133,7 +133,10 @@ describe('the skeleton', () => {
   it('refuses to fit one while nothing has been measured', async () => {
     const nodeId = installCharacter(undefined)
 
-    expect(await runAction('rig.fit', { nodeId })).toEqual({ ok: false, refusal: 'notFound' })
+    expect(await runAction('rig.fit', { nodeId })).toEqual({
+      ok: false,
+      refusal: 'notFound',
+    })
   })
 })
 
@@ -145,7 +148,9 @@ describe('the handles a joint reaches for', () => {
     const chain = character()?.model.rig?.ik?.[0]
     expect(chain?.effector).toBe('Spine')
 
-    expect(await runAction('ik.remove', { nodeId, chainId: chain?.id ?? '' })).toEqual({ ok: true })
+    expect(await runAction('ik.remove', { nodeId, chainId: chain?.id ?? '' })).toEqual({
+      ok: true,
+    })
     expect(character()?.model.rig?.ik).toEqual([])
     expect(character()?.model.rig?.bones.map(bone => bone.name)).toEqual(['Root', 'Spine'])
   })
@@ -164,11 +169,13 @@ describe('the band of a character', () => {
   it('lays a block from the library, and takes it off again', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('animation.add', { nodeId, assetId: 'asset-run' })).toEqual({ ok: true })
+    expect(await runAction('animation.addBlock', { nodeId, assetId: 'asset-run' })).toEqual({
+      ok: true,
+    })
     const clip = character()?.model.lanes?.[0]?.clips[0]
     expect(clip?.label).toBe('Course')
 
-    expect(await runAction('animation.remove', { nodeId, clipId: clip?.id ?? '' })).toEqual({
+    expect(await runAction('animation.removeBlock', { nodeId, clipId: clip?.id ?? '' })).toEqual({
       ok: true,
     })
     expect(character()?.model.lanes?.[0]?.clips).toEqual([])
@@ -177,7 +184,7 @@ describe('the band of a character', () => {
   it('refuses an animation the library does not hold', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('animation.add', { nodeId, assetId: 'asset-z' })).toEqual({
+    expect(await runAction('animation.addBlock', { nodeId, assetId: 'asset-z' })).toEqual({
       ok: false,
       refusal: 'notFound',
     })
@@ -187,11 +194,13 @@ describe('the band of a character', () => {
     installCharacter()
     const before = scene().animation.fps
 
-    expect(await runAction('animation.settings', { durationSeconds: 4 })).toEqual({ ok: true })
+    expect(await runAction('animation.setBandLengthAndRate', { durationSeconds: 4 })).toEqual({
+      ok: true,
+    })
     expect(scene().animation.fps).toBe(before)
     expect(scene().animation.duration).toBeGreaterThan(0)
 
-    expect(await runAction('animation.settings', {})).toMatchObject({
+    expect(await runAction('animation.setBandLengthAndRate', {})).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -229,7 +238,7 @@ describe('the three places a motion comes from', () => {
     useModelFiles.setState({ rigs: {}, clips: { [DOCUMENT]: { [nodeId]: ['Marche'] } } })
 
     expect(
-      await runAction('animation.add', { nodeId, source: 'embedded', clipName: 'Marche' }),
+      await runAction('animation.addBlock', { nodeId, source: 'embedded', clipName: 'Marche' }),
     ).toEqual({ ok: true })
     expect(character()?.model.lanes?.[0]?.clips[0]?.source).toEqual({
       kind: 'embedded',
@@ -241,7 +250,7 @@ describe('the three places a motion comes from', () => {
     const nodeId = installCharacter()
 
     expect(
-      await runAction('animation.add', { nodeId, source: 'bundled', clipName: 'Salut' }),
+      await runAction('animation.addBlock', { nodeId, source: 'bundled', clipName: 'Salut' }),
     ).toEqual({ ok: true })
     expect(character()?.model.lanes?.[0]?.clips[0]?.source).toEqual({
       kind: 'bundled',
@@ -249,7 +258,7 @@ describe('the three places a motion comes from', () => {
     })
 
     expect(
-      await runAction('animation.add', { nodeId, source: 'bundled', clipName: 'Néant' }),
+      await runAction('animation.addBlock', { nodeId, source: 'bundled', clipName: 'Néant' }),
     ).toEqual({ ok: false, refusal: 'notFound' })
   })
 
@@ -258,9 +267,9 @@ describe('the three places a motion comes from', () => {
     const nodeId = installCharacter()
 
     expect(
-      await runAction('animation.add', { nodeId, assetId: 'asset-run', clipName: 'Marche' }),
+      await runAction('animation.addBlock', { nodeId, assetId: 'asset-run', clipName: 'Marche' }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
-    expect(await runAction('animation.add', { nodeId, source: 'embedded' })).toMatchObject({
+    expect(await runAction('animation.addBlock', { nodeId, source: 'embedded' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -270,7 +279,7 @@ describe('the three places a motion comes from', () => {
 describe('what one block of the band plays', () => {
   async function laid(): Promise<{ nodeId: string; clipId: string }> {
     const nodeId = installCharacter()
-    await runAction('animation.add', { nodeId, assetId: 'asset-run' })
+    await runAction('animation.addBlock', { nodeId, assetId: 'asset-run' })
     return { nodeId, clipId: character()?.model.lanes?.[0]?.clips[0]?.id ?? '' }
   }
 
@@ -278,7 +287,7 @@ describe('what one block of the band plays', () => {
     const { nodeId, clipId } = await laid()
 
     expect(
-      await runAction('animation.block', {
+      await runAction('animation.setBlockSettings', {
         nodeId,
         clipId,
         speed: 2,
@@ -305,7 +314,9 @@ describe('what one block of the band plays', () => {
   it('refuses a block no lane carries', async () => {
     const { nodeId } = await laid()
 
-    expect(await runAction('animation.block', { nodeId, clipId: 'clip-z', speed: 2 })).toEqual({
+    expect(
+      await runAction('animation.setBlockSettings', { nodeId, clipId: 'clip-z', speed: 2 }),
+    ).toEqual({
       ok: false,
       refusal: 'notFound',
     })
@@ -319,10 +330,10 @@ describe('what one block of the band plays', () => {
     const { nodeId, clipId } = await laid()
     const band = scene().animation
 
-    await runAction('animation.block', { nodeId, clipId, startSeconds: 0.001 })
+    await runAction('animation.setBlockSettings', { nodeId, clipId, startSeconds: 0.001 })
     expect(character()?.model.lanes?.[0]?.clips[0]?.start).toBe(0)
 
-    await runAction('animation.block', { nodeId, clipId, startSeconds: 9999 })
+    await runAction('animation.setBlockSettings', { nodeId, clipId, startSeconds: 9999 })
     expect(character()?.model.lanes?.[0]?.clips[0]?.start).toBe(band.duration)
   })
 
@@ -331,7 +342,7 @@ describe('what one block of the band plays', () => {
   it('refuses a call that names the block and nothing else', async () => {
     const { nodeId, clipId } = await laid()
 
-    expect(await runAction('animation.block', { nodeId, clipId })).toMatchObject({
+    expect(await runAction('animation.setBlockSettings', { nodeId, clipId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -344,7 +355,7 @@ describe('the keys of the band', () => {
   it('opens the channels a subject lacks and keys them where it stands', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('key.pose', { nodeId })).toEqual({ ok: true })
+    expect(await runAction('key.writePoseKeys', { nodeId })).toEqual({ ok: true })
 
     expect(
       tracks()
@@ -358,9 +369,11 @@ describe('the keys of the band', () => {
 
   it('narrows to one channel when a property is named', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId })
+    await runAction('key.writePoseKeys', { nodeId })
 
-    expect(await runAction('key.pose', { nodeId, property: 'position', timeSeconds: 1 })).toEqual({
+    expect(
+      await runAction('key.writePoseKeys', { nodeId, property: 'position', timeSeconds: 1 }),
+    ).toEqual({
       ok: true,
     })
 
@@ -375,22 +388,24 @@ describe('the keys of the band', () => {
   it('opens the one channel it was asked for on a subject that has none', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('key.pose', { nodeId, property: 'rotation' })).toEqual({ ok: true })
+    expect(await runAction('key.writePoseKeys', { nodeId, property: 'rotation' })).toEqual({
+      ok: true,
+    })
 
     expect(tracks().map(track => track.target.property)).toEqual(['rotation'])
   })
 
   it('takes a subject’s keys back off at that instant', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId })
+    await runAction('key.writePoseKeys', { nodeId })
 
-    expect(await runAction('key.clear', { nodeId })).toEqual({ ok: true })
+    expect(await runAction('key.removeSubjectKeys', { nodeId })).toEqual({ ok: true })
     expect(tracks().every(track => track.keys.length === 0)).toBe(true)
   })
 
   it('slides a key along its channel, and refuses one that is not there', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId })
+    await runAction('key.writePoseKeys', { nodeId })
     const trackId = tracks()[0]?.id ?? ''
 
     expect(await runAction('key.move', { trackId, fromSeconds: 0, toSeconds: 2 })).toEqual({
@@ -406,26 +421,28 @@ describe('the keys of the band', () => {
 
   it('keys everything already open without opening one', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId })
-    await runAction('key.clear', { nodeId })
+    await runAction('key.writePoseKeys', { nodeId })
+    await runAction('key.removeSubjectKeys', { nodeId })
 
-    expect(await runAction('key.all', { timeSeconds: 1 })).toEqual({ ok: true })
+    expect(await runAction('key.writeKeysOnOpenChannels', { timeSeconds: 1 })).toEqual({ ok: true })
     expect(tracks()).toHaveLength(3)
     expect(tracks().every(track => track.keys.length === 1)).toBe(true)
   })
 
   it('takes a channel away, and refuses a locked one', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId })
+    await runAction('key.writePoseKeys', { nodeId })
     const trackId = tracks()[0]?.id ?? ''
 
-    expect(await runAction('channel.flags', { trackId, locked: true })).toEqual({ ok: true })
+    expect(await runAction('channel.setMuteSoloLock', { trackId, locked: true })).toEqual({
+      ok: true,
+    })
     expect(await runAction('channel.remove', { trackId })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
 
-    await runAction('channel.flags', { trackId, locked: false, muted: true })
+    await runAction('channel.setMuteSoloLock', { trackId, locked: false, muted: true })
     expect(tracks().find(track => track.id === trackId)).toMatchObject({
       locked: false,
       muted: true,
@@ -436,13 +453,17 @@ describe('the keys of the band', () => {
 
   it('refuses a channel the scene has not got, and a call naming no flag', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId })
+    await runAction('key.writePoseKeys', { nodeId })
 
-    expect(await runAction('channel.flags', { trackId: 'track-z', muted: true })).toEqual({
-      ok: false,
-      refusal: 'notFound',
-    })
-    expect(await runAction('channel.flags', { trackId: tracks()[0]?.id ?? '' })).toMatchObject({
+    expect(await runAction('channel.setMuteSoloLock', { trackId: 'track-z', muted: true })).toEqual(
+      {
+        ok: false,
+        refusal: 'notFound',
+      },
+    )
+    expect(
+      await runAction('channel.setMuteSoloLock', { trackId: tracks()[0]?.id ?? '' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -451,17 +472,19 @@ describe('the keys of the band', () => {
 
 /**
  * 🛑 A client cannot see the playhead, so « efface toutes les clés » had no call to make: the
- * same `key.clear` was sent over and over on the bench pass of 2026-08-26, each one clearing at
+ * same `key.removeSubjectKeys` was sent over and over on the bench pass of 2026-08-26, each one clearing at
  * most the key under the head.
  */
 describe('clearing the keys of a subject', () => {
   it('takes them all when no instant is named, and one when there is', async () => {
     const nodeId = installCharacter()
-    await runAction('key.pose', { nodeId, timeSeconds: 0 })
-    await runAction('key.pose', { nodeId, timeSeconds: 2 })
+    await runAction('key.writePoseKeys', { nodeId, timeSeconds: 0 })
+    await runAction('key.writePoseKeys', { nodeId, timeSeconds: 2 })
 
-    expect(await runAction('key.clear', { nodeId, timeSeconds: 0 })).toEqual({ ok: true })
-    expect(await runAction('key.clear', { nodeId })).toEqual({ ok: true })
-    expect(await runAction('key.clear', { nodeId })).toMatchObject({ ok: false })
+    expect(await runAction('key.removeSubjectKeys', { nodeId, timeSeconds: 0 })).toEqual({
+      ok: true,
+    })
+    expect(await runAction('key.removeSubjectKeys', { nodeId })).toEqual({ ok: true })
+    expect(await runAction('key.removeSubjectKeys', { nodeId })).toMatchObject({ ok: false })
   })
 })

@@ -24,7 +24,7 @@ export function openGeneratorOn(
   params: Record<string, unknown>,
   capability?: string,
 ): void {
-  // 🛑 Either spelling: `generator.armed` reports the ROLE (`code/code2code`), and a client
+  // 🛑 Either spelling: `generator.readArmedGeneration` reports the ROLE (`code/code2code`), and a client
   // feeding that back got the family's first employment instead — silently, and the wrong one.
   const named = capability?.slice(capability.indexOf('/') + 1)
   const role =

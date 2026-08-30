@@ -30,7 +30,7 @@ beforeEach(() => {
 describe('a camera that composes through nothing', () => {
   const disabled = async (name: string): Promise<string> => {
     const nodeId = await cameraNamed(name)
-    await runAction('post.camera', { nodeId, mode: 'disabled' })
+    await runAction('post.setCameraStackMode', { nodeId, mode: 'disabled' })
     return nodeId
   }
 
@@ -163,7 +163,7 @@ describe('the looks kept on this machine', () => {
   it('keeps the composition in front under a name', async () => {
     await withBloom()
 
-    expect((await runAction('post.save', { name: 'Aube grise' })).ok).toBe(true)
+    expect((await runAction('post.savePreset', { name: 'Aube grise' })).ok).toBe(true)
 
     expect(saved().map(one => one.name)).toEqual(['Aube grise'])
     expect(saved()[0]?.stack.effects.map(one => one.effect)).toEqual(['bloom'])
@@ -171,10 +171,10 @@ describe('the looks kept on this machine', () => {
 
   it('applies one back by the name it was given', async () => {
     await withBloom()
-    await runAction('post.save', { name: 'Aube grise' })
+    await runAction('post.savePreset', { name: 'Aube grise' })
     await runAction('post.remove', { effectId: scene().world.post.effects[0]?.id ?? '' })
 
-    expect((await runAction('post.preset', { preset: 'Aube grise' })).ok).toBe(true)
+    expect((await runAction('post.applyPreset', { preset: 'Aube grise' })).ok).toBe(true)
 
     expect(scene().world.post.effects.map(one => one.effect)).toEqual(['bloom'])
   })
@@ -186,25 +186,25 @@ describe('the looks kept on this machine', () => {
    */
   it('lets a shipped preset through when a saved one bears its name', async () => {
     await withBloom()
-    await runAction('post.save', { name: 'noir' })
+    await runAction('post.savePreset', { name: 'noir' })
     await runAction('post.remove', { effectId: scene().world.post.effects[0]?.id ?? '' })
 
-    await runAction('post.preset', { preset: 'noir' })
+    await runAction('post.applyPreset', { preset: 'noir' })
 
     expect(scene().world.post.effects.map(one => one.effect)).toContain('letterbox')
   })
 
   it('still applies one the studio ships, by its id', async () => {
-    expect((await runAction('post.preset', { preset: 'noir' })).ok).toBe(true)
+    expect((await runAction('post.applyPreset', { preset: 'noir' })).ok).toBe(true)
 
     expect(scene().world.post.effects.map(one => one.effect)).toContain('letterbox')
   })
 
   it('names both families, so a client can know a saved look exists', async () => {
     await withBloom()
-    await runAction('post.save', { name: 'Aube grise' })
+    await runAction('post.savePreset', { name: 'Aube grise' })
 
-    const outcome = await runAction('post.presets', {})
+    const outcome = await runAction('post.listPresets', {})
     const read = outcome.ok
       ? (outcome.data as { shipped: string[]; saved: { name: string }[] })
       : null
@@ -215,11 +215,11 @@ describe('the looks kept on this machine', () => {
 
   it('renames one, without touching what it holds', async () => {
     await withBloom()
-    await runAction('post.save', { name: 'Aube grise' })
+    await runAction('post.savePreset', { name: 'Aube grise' })
 
-    expect((await runAction('post.rename', { preset: 'Aube grise', name: 'Aube claire' })).ok).toBe(
-      true,
-    )
+    expect(
+      (await runAction('post.renamePreset', { preset: 'Aube grise', name: 'Aube claire' })).ok,
+    ).toBe(true)
 
     expect(saved().map(one => one.name)).toEqual(['Aube claire'])
     expect(saved()[0]?.stack.effects.map(one => one.effect)).toEqual(['bloom'])
@@ -227,15 +227,15 @@ describe('the looks kept on this machine', () => {
 
   it('forgets one', async () => {
     await withBloom()
-    await runAction('post.save', { name: 'Aube grise' })
+    await runAction('post.savePreset', { name: 'Aube grise' })
 
-    expect((await runAction('post.forget', { preset: 'Aube grise' })).ok).toBe(true)
+    expect((await runAction('post.deleteSavedPreset', { preset: 'Aube grise' })).ok).toBe(true)
 
     expect(saved()).toEqual([])
   })
 
   it('refuses to rename or forget a look nobody saved', async () => {
-    expect((await runAction('post.rename', { preset: 'Jamais', name: 'X' })).ok).toBe(false)
-    expect((await runAction('post.forget', { preset: 'Jamais' })).ok).toBe(false)
+    expect((await runAction('post.renamePreset', { preset: 'Jamais', name: 'X' })).ok).toBe(false)
+    expect((await runAction('post.deleteSavedPreset', { preset: 'Jamais' })).ok).toBe(false)
   })
 })

@@ -13,9 +13,9 @@ import { CONTEXT_BODY_MAX, CONTEXT_TITLE_MAX } from './projectContext'
  */
 export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'context.read',
-    titleKey: 'assistant.actions.contextRead.title',
-    descriptionKey: 'assistant.actions.contextRead.description',
+    name: 'context.readProjectCards',
+    titleKey: 'assistant.actions.contextReadProjectCards.title',
+    descriptionKey: 'assistant.actions.contextReadProjectCards.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -27,9 +27,9 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
      * adding a card takes nothing away, and turning one off is undone by a click. A studio asked
      * to confirm every card added learns to click Allow without reading.
      */
-    name: 'context.write',
-    titleKey: 'assistant.actions.contextWrite.title',
-    descriptionKey: 'assistant.actions.contextWrite.description',
+    name: 'context.writeProjectCard',
+    titleKey: 'assistant.actions.contextWriteProjectCard.title',
+    descriptionKey: 'assistant.actions.contextWriteProjectCard.description',
     commitment: 'none',
     repeatable: true,
     raises: input => ('title' in input || 'body' in input ? 'files' : 'none'),
@@ -64,9 +64,9 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'context.remove',
-    titleKey: 'assistant.actions.contextRemove.title',
-    descriptionKey: 'assistant.actions.contextRemove.description',
+    name: 'context.deleteProjectCard',
+    titleKey: 'assistant.actions.contextDeleteProjectCard.title',
+    descriptionKey: 'assistant.actions.contextDeleteProjectCard.description',
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',

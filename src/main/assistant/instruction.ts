@@ -57,7 +57,7 @@ function actionBlock(action: AssistantAction): string {
  * The catalogue, with a heading each time the family changes.
  *
  * 🛑 The WIDE share alone: 230 actions read flat is a list a model gives up on — « nomme les
- * mises de côté » reached `favorites.list` on the bench pass of 2026-08-26. The short share pays
+ * mises de côté » reached `favorites.listPinnedRecipes` on the bench pass of 2026-08-26. The short share pays
  * 8 000 characters for eleven actions and can afford no heading at all.
  */
 function cataloguePrinted(actions: readonly AssistantAction[], grouped = false): string {
@@ -201,10 +201,10 @@ const WIDE_RULES = [
   // Five requests died on it: the decor had just generated a picture, and the model answered
   // « je ne vois aucune image générée » — nothing in the studio block says one was made.
   '  - "that picture", "the result", "the generated model": what a generation made is in the',
-  '    project catalogue. assets.search with generated finds it; nothing else announces it.',
+  '    project catalogue. assets.searchProjectCatalogue with generated finds it; nothing else announces it.',
   // Twice over, a reference travelled as a PATH under a key nobody reads. The field belongs to
   // the model's own schema, and the value is an asset id.
-  '  - To work FROM a picture, read model.schema first and fill the field it names with an ASSET',
+  '  - To work FROM a picture, read models.readGenerationModelFields first and fill the field it names with an ASSET',
   '    ID — never a path, and never a key you chose yourself.',
   // A plan that reads well and cannot run: opening the picture is what put the Image space in
   // front, and every scene call after it was refused.

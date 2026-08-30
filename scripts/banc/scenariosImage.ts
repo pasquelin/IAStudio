@@ -109,7 +109,10 @@ export const IMAGE_SCENARIOS: readonly Scenario[] = [
     // nothing about showing the overlay.
     setup: async studio => {
       await overlay(studio)
-      await studio.run('layer.style', { layerId: layerAt(studio, 1), visible: false })
+      await studio.run('layer.setOpacityBlendAndVisibility', {
+        layerId: layerAt(studio, 1),
+        visible: false,
+      })
     },
     passed: run => read.layerNamed(run, 'Overlay Test')?.visible === true,
   },

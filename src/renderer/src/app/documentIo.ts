@@ -926,7 +926,7 @@ async function rewriteSourceAsset(
     // The tile still holds the bitmap it decoded: only a fresh `localChangedAt` moves the URL
     // `posterUrl` builds, and without it the overwrite looks like a gesture that did nothing.
     //
-    // `invalidate`, like every other site that says the catalogue changed: `assets.search` is a
+    // `invalidate`, like every other site that says the catalogue changed: `assets.searchProjectCatalogue` is a
     // synchronous SQLite query in the main process, and a held ⌘S would open one per keystroke
     // on the path of a shortcut.
     useAssets.getState().invalidate()

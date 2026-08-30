@@ -28,15 +28,15 @@ const KIND: ActionField = {
 /**
  * The library, as something a program can query and correct.
  *
- * What a generation produces lands here, so this is the other half of `job.wait`: the ids that
+ * What a generation produces lands here, so this is the other half of `job.waitForCloudGeneration`: the ids that
  * came back are looked up through `asset.get`, and everything a client wants to say about them
  * — a name, tags, a corrected kind — goes through `asset.update`.
  */
 export const ASSET_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'assets.search',
-    titleKey: 'assistant.actions.assetsSearch.title',
-    descriptionKey: 'assistant.actions.assetsSearch.description',
+    name: 'assets.searchProjectCatalogue',
+    titleKey: 'assistant.actions.assetsSearchProjectCatalogue.title',
+    descriptionKey: 'assistant.actions.assetsSearchProjectCatalogue.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -56,7 +56,7 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.limit',
         required: false,
         min: 1,
-        // The bound the main process holds this action to: `assets.search` reaches
+        // The bound the main process holds this action to: `assets.searchProjectCatalogue` reaches
         // `parseAssetQuery`, which REFUSES past it rather than trimming.
         max: ASSET_SEARCH_LIMIT_MAX,
       },
@@ -104,9 +104,9 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'assets.remove',
-    titleKey: 'assistant.actions.assetsRemove.title',
-    descriptionKey: 'assistant.actions.assetsRemove.description',
+    name: 'assets.removeFromLibrary',
+    titleKey: 'assistant.actions.assetsRemoveFromLibrary.title',
+    descriptionKey: 'assistant.actions.assetsRemoveFromLibrary.description',
     commitment: 'files',
     repeatable: true,
     // Reaches the library when `alsoRemote` is set, which nothing on this machine takes back.
@@ -125,9 +125,9 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
   action({
     // Reads what the API sees in a picture and writes it as the asset's name. Only assets the
     // library knows can be described, so a local-only selection comes back as zero.
-    name: 'assets.describe',
-    titleKey: 'assistant.actions.assetsDescribe.title',
-    descriptionKey: 'assistant.actions.assetsDescribe.description',
+    name: 'assets.captionImages',
+    titleKey: 'assistant.actions.assetsCaptionImages.title',
+    descriptionKey: 'assistant.actions.assetsCaptionImages.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

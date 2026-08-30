@@ -108,7 +108,10 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     // Overriding first, or « remets-la sur celui de la scène » asks for what is already true.
     setup: async studio => {
       await withCamera(studio)
-      await studio.run('post.camera', { nodeId: named(studio, 'Camera 01'), mode: 'override' })
+      await studio.run('post.setCameraStackMode', {
+        nodeId: named(studio, 'Camera 01'),
+        mode: 'override',
+      })
     },
     passed: run => read.cameraPostMode(run, 'Camera 01') === 'inherit',
   },
@@ -117,7 +120,10 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     said: ['Applique le préréglage horreur au post-traitement de Camera 01 seule.'],
     setup: async studio => {
       await withCamera(studio)
-      await studio.run('post.camera', { nodeId: named(studio, 'Camera 01'), mode: 'override' })
+      await studio.run('post.setCameraStackMode', {
+        nodeId: named(studio, 'Camera 01'),
+        mode: 'override',
+      })
     },
     passed: run =>
       (read.cameraPost(run, 'Camera 01')?.effects.length ?? 0) > 0 &&
@@ -156,7 +162,11 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     said: ['Retire la clé posée sur la force du halo lumineux.'],
     setup: async studio => {
       await composing(studio)
-      await studio.run('post.key', { effectId: effectAt(studio, 0), param: 'strength', value: 2 })
+      await studio.run('post.key', {
+        effectId: effectAt(studio, 0),
+        param: 'strength',
+        value: 2,
+      })
     },
     passed: run => read.postKeys(run, 'bloom', 'strength') === 0,
   },
@@ -164,7 +174,7 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     name: '59.17 says which looks are available',
     said: ['Quels préréglages de post-traitement puis-je appliquer ?'],
     setup: scene(),
-    passed: run => read.spoke(run) && read.answeredWith(run, 'post.presets'),
+    passed: run => read.spoke(run) && read.answeredWith(run, 'post.listPresets'),
   },
   {
     name: '59.18 keeps the composition under a name',
@@ -177,7 +187,7 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     said: ['Renomme le préréglage Nuit froide en Nuit polaire.'],
     setup: async studio => {
       await composingUnsaved(studio)
-      await studio.run('post.save', { name: 'Nuit froide' })
+      await studio.run('post.savePreset', { name: 'Nuit froide' })
     },
     passed: () => read.savedPresets().some(one => one.name === 'Nuit polaire'),
   },
@@ -186,7 +196,7 @@ export const POST_SCENARIOS: readonly Scenario[] = [
     said: ['Supprime le préréglage Nuit froide de cette machine.'],
     setup: async studio => {
       await composingUnsaved(studio)
-      await studio.run('post.save', { name: 'Nuit froide' })
+      await studio.run('post.savePreset', { name: 'Nuit froide' })
     },
     passed: () => !read.savedPresets().some(one => one.name === 'Nuit froide'),
   },

@@ -70,7 +70,7 @@ export const GIT_SCENARIOS: readonly Scenario[] = [
     name: '58.3 names the files the last version changed',
     said: ['Quels fichiers a changé ma dernière version ?'],
     setup: committed,
-    passed: run => read.spoke(run) && read.answeredWith(run, 'git.commitFiles'),
+    passed: run => read.spoke(run) && read.answeredWith(run, 'git.listCommitFiles'),
   },
   {
     name: '58.4 shows what changed in the boat picture since the last version',

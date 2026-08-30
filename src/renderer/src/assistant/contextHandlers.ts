@@ -47,7 +47,7 @@ async function remove(input: Record<string, unknown>): Promise<ActionOutcome> {
 }
 
 export const CONTEXT_HANDLERS: ActionHandlers = {
-  'context.read': () => ({ ok: true, data: useProjectContext.getState().context }),
-  'context.write': write,
-  'context.remove': remove,
+  'context.readProjectCards': () => ({ ok: true, data: useProjectContext.getState().context }),
+  'context.writeProjectCard': write,
+  'context.deleteProjectCard': remove,
 }

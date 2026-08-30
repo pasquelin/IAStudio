@@ -23,7 +23,7 @@ describe('what surrounds the documents', () => {
   })
 
   /**
-   * The three faces that ship, which bare families left unnameable: `layer.text` takes a source
+   * The three faces that ship, which bare families left unnameable: `layer.editTextLayer` takes a source
    * as well, and a machine that has one of them installed offers it under the very same name.
    */
   it('names the shipped typefaces beside the installed ones, each with where it comes from', async () => {
@@ -56,7 +56,7 @@ describe('what surrounds the documents', () => {
     installFakeBridge({ window: { toggleFullScreen }, mirror: { open } })
 
     await runAction('window.fullScreen', {})
-    await runAction('mirror.open', {})
+    await runAction('mirror.openVideoReturnWindow', {})
 
     expect(toggleFullScreen).toHaveBeenCalled()
     expect(open).toHaveBeenCalled()
@@ -67,10 +67,10 @@ describe('what surrounds the documents', () => {
     const open = vi.fn(async () => {})
     installFakeBridge({ help: { open } })
 
-    expect(await runAction('help.open', { page: 'manual' })).toMatchObject({ ok: true })
+    expect(await runAction('help.openStudioWindow', { page: 'manual' })).toMatchObject({ ok: true })
     expect(open).toHaveBeenCalledWith('manual')
 
-    expect(await runAction('help.open', { page: 'about' })).toMatchObject({
+    expect(await runAction('help.openStudioWindow', { page: 'about' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -94,8 +94,8 @@ describe('what surrounds the documents', () => {
     const unpin = vi.fn(async () => [])
     installFakeBridge({ favorites: { pin, unpin } })
 
-    await runAction('favorite.pin', { assetId: 'asset-1' })
-    await runAction('favorite.unpin', { favoriteId: 'recipe-1' })
+    await runAction('favorite.pinAssetRecipe', { assetId: 'asset-1' })
+    await runAction('favorite.unpinAssetRecipe', { favoriteId: 'recipe-1' })
 
     expect(pin).toHaveBeenCalledWith('asset-1')
     expect(unpin).toHaveBeenCalledWith('recipe-1')
@@ -108,7 +108,7 @@ describe('what surrounds the documents', () => {
   it('refuses a file the catalogue would not take rather than reporting it adopted', async () => {
     installFakeBridge({ media: { adopt: vi.fn(async () => null) } })
 
-    expect(await runAction('media.adopt', { path: 'Plans/a.raw' })).toMatchObject({
+    expect(await runAction('media.indexFileInPlace', { path: 'Plans/a.raw' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

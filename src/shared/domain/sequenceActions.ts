@@ -243,9 +243,9 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     fields: [TRACK],
   }),
   action({
-    name: 'track.move',
-    titleKey: 'assistant.actions.trackMove.title',
-    descriptionKey: 'assistant.actions.trackMove.description',
+    name: 'track.reorderTracks',
+    titleKey: 'assistant.actions.trackReorderTracks.title',
+    descriptionKey: 'assistant.actions.trackReorderTracks.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -271,9 +271,9 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
      * Mute, solo, lock and height are how one WORKS, not what one made: they stay off the undo
      * stack, exactly as the header column writes them.
      */
-    name: 'track.adjust',
-    titleKey: 'assistant.actions.trackAdjust.title',
-    descriptionKey: 'assistant.actions.trackAdjust.description',
+    name: 'track.setMuteSoloLockHeight',
+    titleKey: 'assistant.actions.trackSetMuteSoloLockHeight.title',
+    descriptionKey: 'assistant.actions.trackSetMuteSoloLockHeight.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

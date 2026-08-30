@@ -145,7 +145,7 @@ describe('a question the model asked', () => {
   /**
    * 🛑 The defect this whole key exists for: asked to ask, a model asked AND acted in the same
    * breath — measured on qwen3.8, « Crée un nouveau projet » came back with the question in `say`
-   * and `command.run` beside it, and both calls were run against a name nobody had given.
+   * and `command.runStudioCommand` beside it, and both calls were run against a name nobody had given.
    */
   it('runs nothing of the round that asked', async () => {
     brain(answer({ say: '', ask: asking('Quel nom ?'), calls: [] }), answer({ calls: [] }))
@@ -566,13 +566,13 @@ describe('the question asked before anything is engaged', () => {
   it('refuses a second question rather than replacing the one on screen', async () => {
     const first = useAssistant
       .getState()
-      .ask({ action: 'command.run', input: {}, commitment: 'asset' })
+      .ask({ action: 'command.runStudioCommand', input: {}, commitment: 'asset' })
     const second = useAssistant
       .getState()
       .ask({ action: 'generator.submit', input: {}, commitment: 'credits' })
 
     await expect(second).resolves.toMatchObject({ granted: false })
-    expect(useAssistant.getState().asked?.request.action).toBe('command.run')
+    expect(useAssistant.getState().asked?.request.action).toBe('command.runStudioCommand')
 
     useAssistant.getState().answer(true)
     await expect(first).resolves.toMatchObject({ granted: true })
@@ -738,7 +738,14 @@ describe('a call that sets a named state, asked for twice', () => {
   it('lets one turn come back to a state it set before another', async () => {
     const arm = (layerId: string): AssistantCall => ({ action: 'layer.select', input: { layerId } })
     brain(
-      answer({ calls: [arm('a'), { action: 'layer.style', input: {} }, arm('b'), arm('a')] }),
+      answer({
+        calls: [
+          arm('a'),
+          { action: 'layer.setOpacityBlendAndVisibility', input: {} },
+          arm('b'),
+          arm('a'),
+        ],
+      }),
       answer(),
     )
     chainCeiling(2)

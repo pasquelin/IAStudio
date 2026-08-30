@@ -556,7 +556,7 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   'canvas.state': readState,
   'canvas.resize': resize,
   'canvas.crop': crop,
-  'canvas.orient': input => {
+  'canvas.flipOrRotate': input => {
     const turn = TURNS[textOf(input, 'turn') ?? '']
     return turn ? edit((_state, documentId) => [turn(documentId)]) : refused('badInput')
   },
@@ -569,13 +569,13 @@ export const CANVAS_HANDLERS: ActionHandlers = {
       ? refused('badInput')
       : editLayer(input, layer => [renameLayer(layer.id, name)])
   },
-  'layer.style': style,
+  'layer.setOpacityBlendAndVisibility': style,
   'layer.lock': locks,
-  'layer.shape': shape,
-  'layer.adjustment': adjustment,
+  'layer.editShapeLayer': shape,
+  'layer.setAdjustmentAmount': adjustment,
   'layer.transform': transform,
-  'layer.text': text,
-  'layer.move': input => {
+  'layer.editTextLayer': text,
+  'layer.reorderInStack': input => {
     const index = numberOf(input, 'index')
     if (index === null) return refused('badInput')
 
@@ -590,7 +590,7 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   'layer.group': group,
   'layer.ungroup': input => editLayer(input, layer => [ungroupLayer(layer.id)]),
   'layer.mergeDown': input => editLayer(input, layer => [mergeDown(layer.id)]),
-  'layer.mask': mask,
+  'layer.setMaskOptions': mask,
 
   'guide.add': input => {
     const open = mounted()

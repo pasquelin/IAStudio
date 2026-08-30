@@ -183,11 +183,11 @@ function findInCatalogue(input: Record<string, unknown>): ActionOutcome {
 }
 
 export const CORE_HANDLERS: ActionHandlers = {
-  'command.run': runCommand,
+  'command.runStudioCommand': runCommand,
   'actions.find': findInCatalogue,
   'workspace.open': openWorkspace,
   'generator.prepare': prepareGenerator,
-  'generator.armed': armedGeneration,
+  'generator.readArmedGeneration': armedGeneration,
   'generator.submit': submitPrepared,
   'prompt.suggest': suggestPrompts,
   'prompt.describeStyle': describeStyle,

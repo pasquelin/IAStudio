@@ -27,7 +27,7 @@ describe('the registry, published as tools', () => {
   })
 
   /**
-   * The dot has to go: an action is `command.run`, and the tool-name grammar clients hold us to
+   * The dot has to go: an action is `command.runStudioCommand`, and the tool-name grammar clients hold us to
    * takes letters, digits, underscore and dash. A name that fails it is refused by the client
    * rather than by us, which is the hardest kind of failure to place.
    */
@@ -61,13 +61,13 @@ describe('the registry, published as tools', () => {
     // Named rather than counted: a `filter` that empties leaves the loop below green while every
     // tool it guarded goes back to announcing an immediate run.
     expect(marked.map(action => action.name).sort()).toEqual([
-      'assets.remove',
-      'command.run',
-      'context.write',
+      'assets.removeFromLibrary',
+      'command.runStudioCommand',
+      'context.writeProjectCard',
       // Named a folder, it writes without a picker to ask first — see `gameActions`.
       'game.export',
       'git.commit',
-      'settings.action',
+      'settings.pressButton',
     ])
     for (const action of marked) {
       const tool = mcpTools().find(one => one.name === toolName(action.name))
@@ -251,7 +251,7 @@ describe('an action’s inputs, as JSON Schema', () => {
     )
 
     // The two that legitimately have none: a generation model's own parameters, whose shape only
-    // `GET /models/{id}` knows — and `model_schema` is published so a client can ask.
+    // `GET /models/{id}` knows — and `models_readGenerationModelFields` is published so a client can ask.
     expect(untyped).toEqual(['generator_prepare.parameters', 'cost_estimate.parameters'])
   })
 })

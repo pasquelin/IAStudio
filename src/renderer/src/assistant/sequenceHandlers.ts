@@ -47,7 +47,7 @@ import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
  *
  * Every one of these runs a command of `engines/timeline/commands.ts` — the same ones the strip
  * runs, so an edit made from outside undoes exactly like one made with the mouse. The four dials
- * of `track.adjust` are the exception the header column already makes: they never enter the
+ * of `track.setMuteSoloLockHeight` are the exception the header column already makes: they never enter the
  * history.
  */
 
@@ -260,7 +260,7 @@ export const SEQUENCE_HANDLERS: ActionHandlers = {
   'clip.add': addClip,
   'clip.trim': trim,
   'clip.select': select,
-  'track.adjust': adjustTrack,
+  'track.setMuteSoloLockHeight': adjustTrack,
 
   'clip.remove': input => editClipOf(input, clip => removeClip(clip.id)),
   'clip.unlink': input => editClipOf(input, clip => unlinkClip(clip.id)),
@@ -312,7 +312,7 @@ export const SEQUENCE_HANDLERS: ActionHandlers = {
 
   'track.remove': input => editTrackOf(input, trackId => removeTrack(trackId)),
 
-  'track.move': input => {
+  'track.reorderTracks': input => {
     const by = numberOf(input, 'by')
     return editTrackOf(input, trackId => (by === null ? null : moveTrack(trackId, by)))
   },

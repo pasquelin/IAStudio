@@ -39,13 +39,13 @@ export const SHELL_HANDLERS: ActionHandlers = {
   'auth.state': () => withBridge(bridge => bridge.settings.authState()),
   'updates.state': () => withBridge(bridge => bridge.updates.state()),
   'media.capabilities': () => withBridge(bridge => bridge.media.capabilities()),
-  // The picker's own list, faces that ship included: `layer.text` takes a source as well as a
+  // The picker's own list, faces that ship included: `layer.editTextLayer` takes a source as well as a
   // family, and bare installed names left the three shipped ones unnameable.
   'fonts.list': () => withBridge(() => studioFonts.families()),
-  'favorites.list': () => withBridge(bridge => bridge.favorites.list()),
-  'mirror.open': () => withBridge(bridge => bridge.mirror.open()),
+  'favorites.listPinnedRecipes': () => withBridge(bridge => bridge.favorites.list()),
+  'mirror.openVideoReturnWindow': () => withBridge(bridge => bridge.mirror.open()),
 
-  'help.open': input => {
+  'help.openStudioWindow': input => {
     const page = oneOf(input, 'page', WINDOW_PAGES)
     return page ? withBridge(bridge => bridge.help.open(page)) : refused('badInput')
   },
@@ -74,18 +74,19 @@ export const SHELL_HANDLERS: ActionHandlers = {
    * studio cannot read, and a client told only "done" would go looking for an asset that was
    * never created.
    */
-  'media.adopt': async input => {
+  'media.indexFileInPlace': async input => {
     const outcome = await withBridge(bridge => bridge.media.adopt(textOf(input, 'path') ?? ''))
     return outcome.ok && outcome.data === null ? refused('badInput') : outcome
   },
 
-  'favorite.pin': input =>
+  'favorite.pinAssetRecipe': input =>
     withBridge(bridge => bridge.favorites.pin(textOf(input, 'assetId') ?? '')),
 
-  'favorite.unpin': input =>
+  'favorite.unpinAssetRecipe': input =>
     withBridge(bridge => bridge.favorites.unpin(textOf(input, 'favoriteId') ?? '')),
 
-  'fileInfo.open': input => withBridge(bridge => bridge.fileInfo.open(textOf(input, 'path') ?? '')),
+  'fileInfo.openWindow': input =>
+    withBridge(bridge => bridge.fileInfo.open(textOf(input, 'path') ?? '')),
 
   /**
    * Asked about because it quits the studio — so answering `ok` on a state that installs nothing

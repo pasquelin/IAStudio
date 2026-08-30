@@ -118,7 +118,7 @@ const COMBINATORS: readonly string[] = [
 const SPREAD_OVER_A_SELECTION: readonly string[] = ['setGeometryOn', 'setLightOn', 'setCameraOn']
 
 /**
- * Reached through `command.run` rather than by an action of its own — the OTHER door, which this
+ * Reached through `command.runStudioCommand` rather than by an action of its own — the OTHER door, which this
  * rule cannot see: a client fires the registry command beside each one and the surface in front
  * builds the edit. Listed so they do not read as gestures nothing can reach.
  */
@@ -134,7 +134,7 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
   // The same bargain for who is ON the animation band: the selection, then the command beside it.
   putOnAnimationSheet: 'scene.addToSheet',
   takeOffAnimationSheet: 'scene.removeFromSheet',
-  // The toggle half of the tool mark: `node.negate` publishes `setNodesNegative`, which SAYS
+  // The toggle half of the tool mark: `node.markAsCuttingTool` publishes `setNodesNegative`, which SAYS
   // which of the two it means, where a button has to read what is already marked.
   negateNodes: 'scene.negate',
 }
@@ -156,7 +156,7 @@ const NOT_PUBLISHED: readonly string[] = [
   // one entry keeps the last apply. An action names the transform whole and goes through
   // `setLayerTransform` — a second door onto the same edit is an edit published twice.
   'translateLayer',
-  // The grip's half of the pair `layer.text` and `layer.transform` already publish: it writes a
+  // The grip's half of the pair `layer.editTextLayer` and `layer.transform` already publish: it writes a
   // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
   // A call names them one after the other and pays two undos, which no hand can do.
   'resizeCaption',

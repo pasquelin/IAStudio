@@ -148,12 +148,16 @@ describe('the buttons of the settings window', () => {
     const runSettingAction = vi.fn(async () => {})
     installFakeBridge({ settings: { runAction: runSettingAction } })
 
-    expect(await runAction('settings.action', { action: 'advanced.openLogFolder' })).toMatchObject({
+    expect(
+      await runAction('settings.pressButton', { action: 'advanced.openLogFolder' }),
+    ).toMatchObject({
       ok: true,
     })
     expect(runSettingAction).toHaveBeenCalledWith('advanced.openLogFolder')
 
-    expect(await runAction('settings.action', { action: 'advanced.selfDestruct' })).toMatchObject({
+    expect(
+      await runAction('settings.pressButton', { action: 'advanced.selfDestruct' }),
+    ).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -164,10 +168,12 @@ describe('the buttons of the settings window', () => {
    * setting back to its default — are asked about, and the four others are not.
    */
   it('asks first for the two nothing takes back', () => {
-    expect(commitmentOfCall('settings.action', { action: 'advanced.reset' })).toBe('files')
-    expect(commitmentOfCall('settings.action', { action: 'advanced.installResolveBridge' })).toBe(
-      'files',
+    expect(commitmentOfCall('settings.pressButton', { action: 'advanced.reset' })).toBe('files')
+    expect(
+      commitmentOfCall('settings.pressButton', { action: 'advanced.installResolveBridge' }),
+    ).toBe('files')
+    expect(commitmentOfCall('settings.pressButton', { action: 'advanced.openDevtools' })).toBe(
+      'none',
     )
-    expect(commitmentOfCall('settings.action', { action: 'advanced.openDevtools' })).toBe('none')
   })
 })
