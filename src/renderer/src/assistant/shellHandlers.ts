@@ -1,5 +1,5 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
-import { isSettingsSection } from '@shared/domain/settings'
+import { isSettingsSection, SETTINGS_SECTION_IDS } from '@shared/domain/settings'
 import { TOOL_IDS, type ToolId } from '@shared/domain/tool'
 import { WINDOW_PAGES } from '@shared/domain/window'
 import { closeTool, revealTool, toolIsShown } from '@/helpers/revealPanel'
@@ -18,6 +18,8 @@ import { boolOf, oneOf, textOf } from './actionInputs'
  * what they are: the work already lives in the main process, it simply had no door.
  */
 
+const NO_BRIDGE = 'this window is not connected to the studio process'
+
 /**
  * Opens or closes the panel named, refused for one this surface cannot OFFER.
  *
@@ -27,12 +29,20 @@ import { boolOf, oneOf, textOf } from './actionInputs'
  */
 function showPanel(input: Record<string, unknown>, run: (panel: ToolId) => boolean): ActionOutcome {
   const panel = oneOf(input, 'panel', TOOL_IDS)
-  if (!panel) return refused('badInput')
+  if (!panel) return refused('badInput', `"panel" wants one of: ${TOOL_IDS.join(', ')}`)
   if (!availableToolIds(toolSurface()).some(offered => offered === panel)) {
-    return refused('wrongSurface')
+    return refused(
+      'wrongSurface',
+      `the surface in front does not carry the "${panel}" panel — panels.list answers which it does, and workspace.open brings another space forward`,
+    )
   }
 
-  return run(panel) ? { ok: true } : refused('wrongSurface')
+  return run(panel)
+    ? { ok: true }
+    : refused(
+        'wrongSurface',
+        `the studio did not move the "${panel}" panel — panels.list answers whether it already stands the way this call asks for`,
+      )
 }
 
 export const SHELL_HANDLERS: ActionHandlers = {
@@ -47,7 +57,9 @@ export const SHELL_HANDLERS: ActionHandlers = {
 
   'help.open': input => {
     const page = oneOf(input, 'page', WINDOW_PAGES)
-    return page ? withBridge(bridge => bridge.help.open(page)) : refused('badInput')
+    return page
+      ? withBridge(bridge => bridge.help.open(page))
+      : refused('badInput', `"page" wants one of: ${WINDOW_PAGES.join(', ')}`)
   },
 
   'window.fullScreen': () => withBridge(bridge => bridge.window.toggleFullScreen()),
@@ -66,7 +78,9 @@ export const SHELL_HANDLERS: ActionHandlers = {
     const section = textOf(input, 'section')
     return isSettingsSection(section)
       ? withBridge(bridge => bridge.settings.open(section))
-      : Promise.resolve(refused('badInput'))
+      : Promise.resolve(
+          refused('badInput', `"section" wants one of: ${SETTINGS_SECTION_IDS.join(', ')}`),
+        )
   },
 
   /**
@@ -76,7 +90,12 @@ export const SHELL_HANDLERS: ActionHandlers = {
    */
   'media.adopt': async input => {
     const outcome = await withBridge(bridge => bridge.media.adopt(textOf(input, 'path') ?? ''))
-    return outcome.ok && outcome.data === null ? refused('badInput') : outcome
+    return outcome.ok && outcome.data === null
+      ? refused(
+          'badInput',
+          '"path" names no file the studio can read as media — media.capabilities answers the kinds it takes, and file.facts says what is at a path',
+        )
+      : outcome
   },
 
   'favorite.pin': input =>
@@ -93,10 +112,14 @@ export const SHELL_HANDLERS: ActionHandlers = {
    */
   'updates.install': async () => {
     const bridge = getBridge()
-    if (!bridge) return refused('noBridge')
+    if (!bridge) return refused('noBridge', NO_BRIDGE)
 
     const update = await bridge.updates.state()
-    if (update.phase !== 'ready') return refused('nothingPrepared')
+    if (update.phase !== 'ready')
+      return refused(
+        'nothingPrepared',
+        `no update is ready to install — updates.state answers "phase", which reads "${update.phase}" and has to read "ready"`,
+      )
 
     await bridge.updates.install()
     return { ok: true }
@@ -122,7 +145,7 @@ export const SHELL_HANDLERS: ActionHandlers = {
    */
   'dictation.start': async () => {
     const bridge = getBridge()
-    if (!bridge) return refused('noBridge')
+    if (!bridge) return refused('noBridge', NO_BRIDGE)
 
     await useDictation.getState().start()
     const settled = await bridge.dictation.state()
@@ -130,7 +153,15 @@ export const SHELL_HANDLERS: ActionHandlers = {
 
     // `permissionRequired` is the person's own no; a model still missing or downloading is the
     // studio not being ready, which is not the same answer.
-    return refused(settled.state === 'permissionRequired' ? 'notAllowed' : 'failed')
+    return settled.state === 'permissionRequired'
+      ? refused(
+          'notAllowed',
+          'the microphone was refused to this app — the permission is granted in the system settings, and nothing here can grant it',
+        )
+      : refused(
+          'failed',
+          `dictation did not open: its state reads "${settled.state}" — the speech model may still be missing or downloading, and dictation.state answers where it stands`,
+        )
   },
 
   'dictation.stop': async input => {

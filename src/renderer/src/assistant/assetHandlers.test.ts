@@ -173,7 +173,7 @@ describe('correcting what the library holds', () => {
   it('says so rather than ok when there is no file to show', async () => {
     installFakeBridge({ assets: { reveal: vi.fn(async () => false) } })
 
-    expect(await runAction('asset.reveal', { assetId: 'asset-1' })).toEqual({
+    expect(await runAction('asset.reveal', { assetId: 'asset-1' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })

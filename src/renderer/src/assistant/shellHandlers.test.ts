@@ -128,7 +128,7 @@ describe('what surrounds the documents', () => {
     expect(install).toHaveBeenCalled()
 
     installFakeBridge({ updates: { install, state: vi.fn(async () => idle) } })
-    expect(await runAction('updates.install', {})).toEqual({
+    expect(await runAction('updates.install', {})).toMatchObject({
       ok: false,
       refusal: 'nothingPrepared',
     })
@@ -164,7 +164,7 @@ describe('the panels of the surface in front', () => {
 
   // The Explorer sits on the home and in no space: naming it here is a refusal, not a no-op.
   it('refuses a panel this surface does not serve', async () => {
-    expect(await runAction('panel.open', { panel: 'projects' })).toEqual({
+    expect(await runAction('panel.open', { panel: 'projects' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -177,7 +177,7 @@ describe('the panels of the surface in front', () => {
   it('closes the panel named, or nothing at all', async () => {
     await runAction('panel.open', { panel: 'generator' })
 
-    expect(await runAction('panel.close', { panel: 'assets' })).toEqual({
+    expect(await runAction('panel.close', { panel: 'assets' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -187,7 +187,7 @@ describe('the panels of the surface in front', () => {
   // A placement `requires` a project or a repository, and opening one without it put a DIFFERENT
   // panel on screen while answering yes — `panels.list` filtered on the very same question.
   it('refuses a panel this surface cannot offer yet', async () => {
-    expect(await runAction('panel.open', { panel: 'history' })).toEqual({
+    expect(await runAction('panel.open', { panel: 'history' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -215,10 +215,13 @@ describe('the microphone', () => {
     useDictation.setState({ start: vi.fn(async () => {}) })
 
     installFakeBridge({ dictation: { state: snapshot('permissionRequired') } })
-    expect(await runAction('dictation.start', {})).toEqual({ ok: false, refusal: 'notAllowed' })
+    expect(await runAction('dictation.start', {})).toMatchObject({
+      ok: false,
+      refusal: 'notAllowed',
+    })
 
     installFakeBridge({ dictation: { state: snapshot('modelMissing') } })
-    expect(await runAction('dictation.start', {})).toEqual({ ok: false, refusal: 'failed' })
+    expect(await runAction('dictation.start', {})).toMatchObject({ ok: false, refusal: 'failed' })
   })
 
   /** The two ways of ending differ exactly there: one keeps what was heard, the other drops it. */

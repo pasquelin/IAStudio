@@ -67,7 +67,7 @@ describe('reading a character', () => {
   it('refuses a node the scene does not hold as missing, not as the wrong surface', async () => {
     installCharacter()
 
-    expect(await runAction('rig.state', { nodeId: 'node-z' })).toEqual({
+    expect(await runAction('rig.state', { nodeId: 'node-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -96,7 +96,7 @@ describe('the skeleton', () => {
   it('refuses a rename onto a name already taken rather than answering ok', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('bone.rename', { nodeId, bone: 'Spine', name: 'Root' })).toEqual({
+    expect(await runAction('bone.rename', { nodeId, bone: 'Spine', name: 'Root' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -116,7 +116,7 @@ describe('the skeleton', () => {
   it('refuses a bone the skeleton does not hold', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('bone.remove', { nodeId, bone: 'Tail' })).toEqual({
+    expect(await runAction('bone.remove', { nodeId, bone: 'Tail' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -133,7 +133,7 @@ describe('the skeleton', () => {
   it('refuses to fit one while nothing has been measured', async () => {
     const nodeId = installCharacter(undefined)
 
-    expect(await runAction('rig.fit', { nodeId })).toEqual({ ok: false, refusal: 'notFound' })
+    expect(await runAction('rig.fit', { nodeId })).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 })
 
@@ -153,7 +153,7 @@ describe('the handles a joint reaches for', () => {
   it('refuses a chain the rig does not hold', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('ik.remove', { nodeId, chainId: 'chain-z' })).toEqual({
+    expect(await runAction('ik.remove', { nodeId, chainId: 'chain-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -177,7 +177,7 @@ describe('the band of a character', () => {
   it('refuses an animation the library does not hold', async () => {
     const nodeId = installCharacter()
 
-    expect(await runAction('animation.add', { nodeId, assetId: 'asset-z' })).toEqual({
+    expect(await runAction('animation.add', { nodeId, assetId: 'asset-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -250,7 +250,7 @@ describe('the three places a motion comes from', () => {
 
     expect(
       await runAction('animation.add', { nodeId, source: 'bundled', clipName: 'Néant' }),
-    ).toEqual({ ok: false, refusal: 'notFound' })
+    ).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 
   /** An id names one source and a name the two others: a call giving both named two things. */
@@ -305,7 +305,9 @@ describe('what one block of the band plays', () => {
   it('refuses a block no lane carries', async () => {
     const { nodeId } = await laid()
 
-    expect(await runAction('animation.block', { nodeId, clipId: 'clip-z', speed: 2 })).toEqual({
+    expect(
+      await runAction('animation.block', { nodeId, clipId: 'clip-z', speed: 2 }),
+    ).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -438,7 +440,7 @@ describe('the keys of the band', () => {
     const nodeId = installCharacter()
     await runAction('key.pose', { nodeId })
 
-    expect(await runAction('channel.flags', { trackId: 'track-z', muted: true })).toEqual({
+    expect(await runAction('channel.flags', { trackId: 'track-z', muted: true })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })

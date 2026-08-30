@@ -15,7 +15,7 @@ import { newId } from '@/helpers/ids'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { numberOf, textOf } from './actionInputs'
-import { mounted } from './sceneHandlers'
+import { mounted, NO_SCENE } from './sceneHandlers'
 
 /**
  * What a timeline CUES, driven from outside the window.
@@ -27,7 +27,7 @@ import { mounted } from './sceneHandlers'
 export const TIMELINE_HANDLERS: ActionHandlers = {
   'timeline.cue': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const list = textOf(input, 'list') ?? ''
     if (!TIMELINE_LISTS.includes(list)) return refused('badInput', `no list "${list}"`)
@@ -91,7 +91,7 @@ export const TIMELINE_HANDLERS: ActionHandlers = {
 
   'timeline.remove': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const list = textOf(input, 'list') ?? ''
     if (!TIMELINE_LISTS.includes(list)) return refused('badInput', `no list "${list}"`)
@@ -102,7 +102,7 @@ export const TIMELINE_HANDLERS: ActionHandlers = {
 
   'timeline.template': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const template = textOf(input, 'template') ?? ''
     if (!TIMELINE_TEMPLATES.includes(template as TimelineTemplate)) {

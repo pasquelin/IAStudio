@@ -72,8 +72,8 @@ describe('reading the scene in front', () => {
   it('refuses every action of the family while no scene is in front', async () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
-    expect(await runAction('scene.state', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
-    expect(await runAction('node.add', { kind: 'box' })).toEqual({
+    expect(await runAction('scene.state', {})).toMatchObject({ ok: false, refusal: 'wrongSurface' })
+    expect(await runAction('node.add', { kind: 'box' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -462,7 +462,7 @@ describe('hierarchy and selection', () => {
     const child = await runAction('node.add', { kind: 'sphere', name: 'Enfant' })
     const nodeId = child.ok ? (child.data as { nodeId: string }).nodeId : ''
 
-    expect(await runAction('node.reparent', { nodeId, parentId: 'node-z' })).toEqual({
+    expect(await runAction('node.reparent', { nodeId, parentId: 'node-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -499,7 +499,7 @@ describe('hierarchy and selection', () => {
     expect(await runAction('node.select', { nodeIds: [nodeId] })).toEqual({ ok: true })
     expect(scene().selectedIds).toEqual([nodeId])
 
-    expect(await runAction('node.select', { nodeIds: [nodeId, 'node-z'] })).toEqual({
+    expect(await runAction('node.select', { nodeIds: [nodeId, 'node-z'] })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -541,7 +541,7 @@ describe('a still of the view, and a world in one call', () => {
     expect(savePicture).toHaveBeenCalled()
 
     forgetSceneEngine(DOCUMENT)
-    expect(await runAction('scene.capture', {})).toEqual({ ok: false, refusal: 'failed' })
+    expect(await runAction('scene.capture', {})).toMatchObject({ ok: false, refusal: 'failed' })
   })
 })
 
@@ -561,7 +561,7 @@ describe('how the scene is looked at', () => {
   it('refuses a side while no viewport is mounted', async () => {
     forgetSceneEngine(DOCUMENT)
 
-    expect(await runAction('view.direction', { direction: 'top' })).toEqual({
+    expect(await runAction('view.direction', { direction: 'top' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -1263,5 +1263,41 @@ describe('folding shapes through the outside door', () => {
     expect(
       await runAction('node.negate', { nodeIds: [nodeNamed('Lampe')?.id ?? ''] }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+})
+
+/**
+ * 🛑 Measured on the bench pass of 2026-08-31 against deepseek-chat: `camera.target` was refused
+ * 28 times on a bare `badInput`, and the model answered the same call again word for word.
+ */
+describe('what a refused aim tells the caller', () => {
+  const detailOf = (outcome: { ok: boolean; detail?: string }): string => outcome.detail ?? ''
+
+  it('names the shot it could not find, and the call that answers one', async () => {
+    const outcome = await runAction('camera.target', { shotId: 'shot-nowhere', targetId: 'x' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('shot-nowhere')
+    expect(detailOf(outcome)).toContain('scene.state')
+  })
+
+  it('names the field to repair, and the other way of aiming', async () => {
+    const opened = await runAction('camera.shot', { nodeId: await cameraId() })
+    const shotId = opened.ok ? (opened.data as { shotId: string }).shotId : ''
+
+    const outcome = await runAction('camera.target', { shotId, targetId: 'nowhere' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('targetId')
+    expect(detailOf(outcome)).toContain('atX')
+  })
+
+  it('says which document has to be in front when none is', async () => {
+    useDocuments.setState({ activeId: null })
+
+    const outcome = await runAction('camera.target', { shotId: 'anything' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'wrongSurface' })
+    expect(detailOf(outcome)).toContain('document.activate')
   })
 })

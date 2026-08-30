@@ -115,6 +115,12 @@ import {
  * through — a second way of building a box is a second set of defaults to keep in step.
  */
 
+/** What a caller does about it, spelled once for every site that answers `wrongSurface` for want
+ * of a scene — five modules of this folder read it. */
+export const NO_SCENE =
+  'the document in front is no scene — documents.list answers what is open and of which kind, and ' +
+  'document.activate brings a scene forward'
+
 /** The scene in front and its state, or nothing — which reads as `wrongSurface`. */
 export function mounted(): { documentId: string; state: SceneState } | null {
   const documentId = activeSceneId(useDocuments.getState())
@@ -125,7 +131,7 @@ export function mounted(): { documentId: string; state: SceneState } | null {
 
 function edit(build: () => Command<SceneState>): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   useScenes.getState().runCommand(open.documentId, build())
   return { ok: true }
@@ -140,7 +146,7 @@ function editNode(
   build: (node: SceneNode, documentId: string) => Command<SceneState> | null,
 ): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   const named = textOf(input, 'nodeId') ?? ''
   const node = nodeAimed(open.state, named)
@@ -269,7 +275,7 @@ function texturesFrom(
 
 function readState(): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   return {
     ok: true,
@@ -346,13 +352,22 @@ function editPath(
 function editShot(
   input: Record<string, unknown>,
   build: (shot: CameraShot, state: SceneState) => Command<SceneState> | null,
+  /** What a caller does when the shot IS there and the build still declines. */
+  nothing: string,
 ): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
-  const shot = open.state.animation.shots.find(held => held.id === textOf(input, 'shotId'))
-  const command = shot && build(shot, open.state)
-  if (!command) return refused('badInput')
+  const shotId = textOf(input, 'shotId') ?? ''
+  const shot = open.state.animation.shots.find(held => held.id === shotId)
+  if (!shot)
+    return refused(
+      'badInput',
+      `no camera shot "${shotId}" on this scene's band — scene.state answers "shots" with their ids, and camera.shot opens one`,
+    )
+
+  const command = build(shot, open.state)
+  if (!command) return refused('badInput', nothing)
 
   useScenes.getState().runCommand(open.documentId, command)
   return { ok: true }
@@ -361,10 +376,15 @@ function editShot(
 /** A shot opened for a camera, answering the id it was born with — a client edits it by that. */
 function openShot(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   const nodeId = textOf(input, 'nodeId') ?? ''
-  if (nodeAimed(open.state, nodeId)?.type !== 'camera') return refused('badInput')
+  if (nodeAimed(open.state, nodeId)?.type !== 'camera') {
+    return refused(
+      'badInput',
+      `"nodeId" reads "${nodeId}", which is no camera of this scene — scene.state answers "nodes", and a shot needs one of type "camera"`,
+    )
+  }
 
   const seconds = numberOf(input, 'durationSeconds')
   const opened = newShotAt(
@@ -384,7 +404,7 @@ function openShot(input: Record<string, unknown>): ActionOutcome {
 
 /** Adds a node the caller built, answering the id it was born with. */
 function place(node: SceneNode | null): ActionOutcome {
-  if (!node) return refused('badInput')
+  if (!node) return refused('badInput', 'nothing to place — no node could be built from this call')
 
   const outcome = edit(() => addNode(node))
   return outcome.ok ? { ok: true, data: { nodeId: node.id } } : outcome
@@ -394,7 +414,11 @@ function add(input: Record<string, unknown>): ActionOutcome {
   // The factory answers `null` for a kind no registry declares, which is where it becomes a
   // refusal rather than a node that never arrived.
   const node = createNodeOf(textOf(input, 'kind') ?? '')
-  if (!node) return refused('badInput')
+  if (!node)
+    return refused(
+      'badInput',
+      `no node kind "${textOf(input, 'kind') ?? ''}" can be built — the "kind" field of this action lists the ones that can`,
+    )
 
   return place({
     ...node,
@@ -408,11 +432,16 @@ function add(input: Record<string, unknown>): ActionOutcome {
 
 function select(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   const known = new Set(open.state.nodes.map(node => node.id))
   const nodeIds = textsOf(input, 'nodeIds')
-  if (nodeIds.some(id => !known.has(id))) return refused('notFound')
+  const missing = nodeIds.filter(id => !known.has(id))
+  if (missing.length > 0)
+    return refused(
+      'notFound',
+      `the scene in front holds no node ${missing.join(', ')} — scene.state answers "nodes" with the ids it does hold`,
+    )
 
   // Selection is not a command: it stays out of the history, so `replace` writes the state.
   useScenes.getState().replace(open.documentId, setSelection(open.state, nodeIds))
@@ -446,10 +475,15 @@ export function selectNode(id: string): ActionOutcome {
 
 function reparent(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   const parentId = textOf(input, 'parentId')
-  if (parentId !== null && !nodeAimed(open.state, parentId)) return refused('notFound')
+  if (parentId !== null && !nodeAimed(open.state, parentId)) {
+    return refused(
+      'notFound',
+      `no node "${parentId}" in the scene in front, by id or name — scene.state answers "nodes"; send "" to hang this one at the root`,
+    )
+  }
 
   // A place among the new siblings, or none: hanging a node somewhere leaves it where it already
   // sits, which is what dropping a row ONTO another does on screen.
@@ -468,12 +502,16 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
 
 // `editNode`'s twin for the half of the document that belongs to no node. An empty patch is a
 // refusal rather than a no-op: a client that named nothing meant something.
-function editWorld(build: (world: SceneWorld) => Partial<SceneWorld>): ActionOutcome {
+function editWorld(
+  build: (world: SceneWorld) => Partial<SceneWorld>,
+  /** What a caller does when the patch comes back empty — the fields differ from action to action. */
+  nothing: string,
+): ActionOutcome {
   const open = mounted()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SCENE)
 
   const patch = build(open.state.world)
-  if (Object.keys(patch).length === 0) return refused('badInput')
+  if (Object.keys(patch).length === 0) return refused('badInput', nothing)
 
   useScenes.getState().runCommand(open.documentId, setWorld(patch))
   return { ok: true }
@@ -485,22 +523,33 @@ function worldEnvironment(input: Record<string, unknown>): ActionOutcome | Promi
   const rotation = numberOf(input, 'rotation')
 
   return environmentFromInput(input, environment =>
-    editWorld(() => ({
-      ...(environment === null ? {} : { environment }),
-      ...(intensity === null ? {} : { envIntensity: intensity }),
-      // Radians, as every other angle a document stores — the panel is what shows degrees.
-      ...(rotation === null ? {} : { envRotation: rotation }),
-    })),
+    editWorld(
+      () => ({
+        ...(environment === null ? {} : { environment }),
+        ...(intensity === null ? {} : { envIntensity: intensity }),
+        // Radians, as every other angle a document stores — the panel is what shows degrees.
+        ...(rotation === null ? {} : { envRotation: rotation }),
+      }),
+      'this call named no light: give assetId, sky or kind for the source, intensity or rotation for the dials',
+    ),
   )
 }
 
 function worldBackground(input: Record<string, unknown>): ActionOutcome {
   const kind = oneOf(input, 'kind', BACKGROUND_KINDS)
-  if (!kind) return refused('badInput')
+  if (!kind) return refused('badInput', `"kind" wants one of: ${BACKGROUND_KINDS.join(', ')}`)
   // `blur` belongs to one shape only, and a key a client believes took must never get a silent
   // yes — the very rule `validatesInput` is written for, one level down.
-  if (kind !== 'environment' && input.blur !== undefined) return refused('badInput')
-  if (kind !== 'color' && input.color !== undefined) return refused('badInput')
+  if (kind !== 'environment' && input.blur !== undefined)
+    return refused(
+      'badInput',
+      `"blur" belongs to the "environment" background alone, and this call says kind "${kind}"`,
+    )
+  if (kind !== 'color' && input.color !== undefined)
+    return refused(
+      'badInput',
+      `"color" belongs to the "color" background alone, and this call says kind "${kind}"`,
+    )
 
   return editWorld(world => {
     // The switch the panel uses, and ONLY when the shape changes: it answers with the defaults of
@@ -515,16 +564,21 @@ function worldBackground(input: Record<string, unknown>): ActionOutcome {
     return background.kind === 'environment'
       ? { background: { ...background, blur: numberOf(input, 'blur') ?? background.blur } }
       : { background }
-  })
+  }, `a "${kind}" background writes nothing from this call`)
 }
 
 function worldFog(input: Record<string, unknown>): ActionOutcome {
   const kind = oneOf(input, 'kind', FOG_KINDS)
-  if (!kind) return refused('badInput')
+  if (!kind) return refused('badInput', `"kind" wants one of: ${FOG_KINDS.join(', ')}`)
   const named = ['color', 'near', 'far', 'density'].filter(key => input[key] !== undefined)
   const belongs =
     kind === 'linear' ? ['color', 'near', 'far'] : kind === 'exp2' ? ['color', 'density'] : []
-  if (named.some(key => !belongs.includes(key))) return refused('badInput')
+  const stray = named.filter(key => !belongs.includes(key))
+  if (stray.length > 0)
+    return refused(
+      'badInput',
+      `a "${kind}" fog takes ${belongs.length === 0 ? 'no field but kind' : belongs.join(', ')}, and this call names ${stray.join(', ')}`,
+    )
 
   return editWorld(world => {
     // Switched only when the shape changes, for the reason `worldBackground` gives: `fogOfKind`
@@ -544,7 +598,7 @@ function worldFog(input: Record<string, unknown>): ActionOutcome {
             }
           : { ...painted, density: numberOf(input, 'density') ?? painted.density },
     }
-  })
+  }, `a "${kind}" fog writes nothing from this call`)
 }
 
 function worldGround(input: Record<string, unknown>): ActionOutcome {
@@ -566,7 +620,7 @@ function worldGround(input: Record<string, unknown>): ActionOutcome {
     }
 
     return Object.keys(written).length === 0 ? {} : { ground: { ...world.ground, ...written } }
-  })
+  }, 'this call named nothing to write on the ground: visible, color, size, opacity or receiveShadow')
 }
 
 export const SCENE_HANDLERS: ActionHandlers = {
@@ -581,10 +635,13 @@ export const SCENE_HANDLERS: ActionHandlers = {
     const toneMapping = oneOf(input, 'toneMapping', TONE_MAPPINGS)
     const exposure = numberOf(input, 'exposure')
 
-    return editWorld(() => ({
-      ...(toneMapping === null ? {} : { toneMapping }),
-      ...(exposure === null ? {} : { exposure }),
-    }))
+    return editWorld(
+      () => ({
+        ...(toneMapping === null ? {} : { toneMapping }),
+        ...(exposure === null ? {} : { exposure }),
+      }),
+      'this call named neither toneMapping nor exposure, and one of the two is what it writes',
+    )
   },
   'node.add': add,
   'node.select': select,
@@ -608,7 +665,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
    */
   'node.negate': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const named = textsOf(input, 'nodeIds')
     const picked = aimedNodes(open.state, input)
@@ -632,7 +689,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
    */
   'node.carve': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const operation = oneOf(input, 'operation', CSG_OPERATIONS)
     const command =
@@ -665,10 +722,14 @@ export const SCENE_HANDLERS: ActionHandlers = {
 
   'node.separate': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const node = nodeAimed(open.state, textOf(input, 'nodeId') ?? '')
-    if (node?.type !== 'carved') return refused('badInput')
+    if (node?.type !== 'carved')
+      return refused(
+        'badInput',
+        `"nodeId" must name a carved solid, which node.carve makes — scene.state answers "nodes", the ones with type "carved"`,
+      )
 
     useScenes.getState().runCommand(open.documentId, separateNode(node))
     // The shapes handed back, as the description promises — their ids are what a client aims at
@@ -831,8 +892,13 @@ export const SCENE_HANDLERS: ActionHandlers = {
     const aimed = POINT_AXES.filter(axis => input[axis] !== undefined)
     // A point AIMED at is laid past the last one, as a click in the viewport lays it; an index
     // says "halfway after this one" instead. Naming both would be naming two places at once.
-    if (aimed.length > 0 && index !== null) return refused('badInput')
-    if (aimed.length > 0 && aimed.length < POINT_AXES.length) return refused('badInput')
+    if (aimed.length > 0 && index !== null)
+      return refused(
+        'badInput',
+        'name a point with pointX, pointY and pointZ, or an "index" to lay one after — not both',
+      )
+    if (aimed.length > 0 && aimed.length < POINT_AXES.length)
+      return refused('badInput', 'a point wants all three of pointX, pointY, pointZ')
 
     return editPath(input, path => {
       if (aimed.length === 0)
@@ -927,33 +993,41 @@ export const SCENE_HANDLERS: ActionHandlers = {
   // Through the very command the inspector's own select goes through, so a rail bound from here
   // takes the whole of itself forwards exactly as one bound on screen does.
   'camera.rail': input =>
-    editShot(input, (shot, state) => {
-      const pathId = textOf(input, 'pathId') ?? ''
-      if (pathId === '') return bindRailToShot(shot, '')
-      if (nodeById(state, pathId)?.type !== 'path') return null
+    editShot(
+      input,
+      (shot, state) => {
+        const pathId = textOf(input, 'pathId') ?? ''
+        if (pathId === '') return bindRailToShot(shot, '')
+        if (nodeById(state, pathId)?.type !== 'path') return null
 
-      const from = numberOf(input, 'from')
-      const to = numberOf(input, 'to')
-      const easing = EASINGS.find(candidate => candidate === textOf(input, 'easing'))
+        const from = numberOf(input, 'from')
+        const to = numberOf(input, 'to')
+        const easing = EASINGS.find(candidate => candidate === textOf(input, 'easing'))
 
-      return bindRailToShot(shot, pathId, {
-        ...(from === null ? {} : { from }),
-        ...(to === null ? {} : { to }),
-        ...(easing === undefined ? {} : { easing }),
-      })
-    }),
+        return bindRailToShot(shot, pathId, {
+          ...(from === null ? {} : { from }),
+          ...(to === null ? {} : { to }),
+          ...(easing === undefined ? {} : { easing }),
+        })
+      },
+      '"pathId" must name a rail of this scene — scene.state answers "nodes", and a rail is one of type "path"; send "" to unbind the one in place',
+    ),
 
   // Through the panel's own command, which lays the rail AND binds it in one entry: a rail added
   // without its shot would be a line nothing runs on.
   'camera.addRail': input =>
-    editShot(input, (shot, state) => {
-      const camera = nodeById(state, shot.cameraId)
-      return camera?.type === 'camera' ? railForShot(camera, shot) : null
-    }),
+    editShot(
+      input,
+      (shot, state) => {
+        const camera = nodeById(state, shot.cameraId)
+        return camera?.type === 'camera' ? railForShot(camera, shot) : null
+      },
+      'the camera this shot was opened for is gone from the scene — scene.state answers "nodes" and "shots"',
+    ),
 
   'camera.reorder': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
     const nodeId = textOf(input, 'nodeId') ?? ''
     // `shotsWithCameraMoved` answers `null` for a camera with no line on the band, and reports
@@ -963,33 +1037,41 @@ export const SCENE_HANDLERS: ActionHandlers = {
       nodeId,
       numberOf(input, 'by') ?? 0,
     )
-    if (!moved || moved.steps === 0) return refused('badInput')
+    if (!moved || moved.steps === 0)
+      return refused(
+        'badInput',
+        `"${nodeId}" has no shot on the band, or "by" would move it past the end — scene.state answers "shots" and the camera each one holds`,
+      )
 
     useScenes.getState().runCommand(open.documentId, reorderCameraShots(nodeId, moved.shots))
     return { ok: true, data: { steps: moved.steps } }
   },
 
   'camera.target': input =>
-    editShot(input, (shot, state) => {
-      const targetId = textOf(input, 'targetId') ?? ''
-      if (targetId !== '') {
-        // A camera cannot watch itself: `aimCamera` drops that shot silently, and a refusal here
-        // is what says so.
-        if (targetId === shot.cameraId || !nodeById(state, targetId)) return null
-        return editCameraShot(shot.id, { target: { kind: 'node', nodeId: targetId } })
-      }
+    editShot(
+      input,
+      (shot, state) => {
+        const targetId = textOf(input, 'targetId') ?? ''
+        if (targetId !== '') {
+          // A camera cannot watch itself: `aimCamera` drops that shot silently, and a refusal here
+          // is what says so.
+          if (targetId === shot.cameraId || !nodeById(state, targetId)) return null
+          return editCameraShot(shot.id, { target: { kind: 'node', nodeId: targetId } })
+        }
 
-      // Naming no node and giving no point is FREE — the camera keeps its own rotation.
-      const aimed =
-        numberOf(input, 'atX') !== null ||
-        numberOf(input, 'atY') !== null ||
-        numberOf(input, 'atZ') !== null
-      return editCameraShot(shot.id, {
-        target: aimed
-          ? { kind: POINT_TARGET.kind, at: vectorOf(input, 'at', POINT_TARGET.at) }
-          : undefined,
-      })
-    }),
+        // Naming no node and giving no point is FREE — the camera keeps its own rotation.
+        const aimed =
+          numberOf(input, 'atX') !== null ||
+          numberOf(input, 'atY') !== null ||
+          numberOf(input, 'atZ') !== null
+        return editCameraShot(shot.id, {
+          target: aimed
+            ? { kind: POINT_TARGET.kind, at: vectorOf(input, 'at', POINT_TARGET.at) }
+            : undefined,
+        })
+      },
+      '"targetId" must name a node of this scene other than the shot\'s own camera — scene.state answers "nodes"; leave it out and give atX, atY, atZ to aim at a point instead',
+    ),
 
   // A field the shape has no room for is refused rather than filed: `withField` writes by
   // computed key without checking, and a light given a `penumbra` it never had is a document
@@ -1037,12 +1119,17 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'view.direction': input => {
     const open = mounted()
     const direction = oneOf(input, 'direction', VIEW_DIRECTIONS)
-    if (!open) return refused('wrongSurface')
-    if (!direction) return refused('badInput')
+    if (!open) return refused('wrongSurface', NO_SCENE)
+    if (!direction)
+      return refused('badInput', `"direction" wants one of: ${VIEW_DIRECTIONS.join(', ')}`)
 
     // A side to look from is a MOVE, not a state — see `PaneView` — so it goes to the engine.
     const engine = sceneEngineOf(open.documentId)
-    if (!engine) return refused('wrongSurface')
+    if (!engine)
+      return refused(
+        'wrongSurface',
+        'the scene in front has no viewport mounted to look through — panel.open the scene view, then send this again',
+      )
 
     engine.viewFrom(direction)
     return { ok: true }
@@ -1053,21 +1140,28 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'scene.capture': async input => {
     const open = mounted()
     const quality = oneOf(input, 'quality', CAPTURE_QUALITIES) ?? DEFAULT_CAPTURE_QUALITY
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SCENE)
 
-    return (await captureSceneView(open.documentId, quality)) ? { ok: true } : refused('failed')
+    return (await captureSceneView(open.documentId, quality))
+      ? { ok: true }
+      : refused(
+          'failed',
+          'the scene viewport gave back no still — it is not mounted, or it rendered nothing',
+        )
   },
 
   'world.preset': input => {
     const preset = oneOf(input, 'preset', ENVIRONMENT_PRESETS)
-    return preset === null ? refused('badInput') : editWorld(() => presetPatch(preset))
+    return preset === null
+      ? refused('badInput', `"preset" wants one of: ${ENVIRONMENT_PRESETS.join(', ')}`)
+      : editWorld(() => presetPatch(preset), `the preset "${preset}" writes nothing on this world`)
   },
 
   'view.display': input => {
     const open = mounted()
     const mode = oneOf(input, 'mode', DISPLAY_MODES)
-    if (!open) return refused('wrongSurface')
-    if (!mode) return refused('badInput')
+    if (!open) return refused('wrongSurface', NO_SCENE)
+    if (!mode) return refused('badInput', `"mode" wants one of: ${DISPLAY_MODES.join(', ')}`)
 
     useSceneViews.getState().setDisplay(open.documentId, MAIN_SCENE_PANE, mode)
     return { ok: true }

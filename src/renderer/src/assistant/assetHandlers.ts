@@ -38,7 +38,13 @@ function update(input: Record<string, unknown>): Promise<ActionOutcome> {
     ...(type ? { type } : {}),
   }
 
-  if (Object.keys(changes).length === 0) return Promise.resolve(refused('badInput'))
+  if (Object.keys(changes).length === 0)
+    return Promise.resolve(
+      refused(
+        'badInput',
+        `this call named nothing to change — it writes "name", "tags" or "type", and "type" wants one of: ${ASSET_TYPES.join(', ')}`,
+      ),
+    )
   return withBridge(bridge => bridge.assets.update(textOf(input, 'assetId') ?? '', changes))
 }
 
@@ -88,6 +94,11 @@ export const ASSET_HANDLERS: ActionHandlers = {
   // rather than a failure — hence `notFound` and not `failed`.
   'asset.reveal': async input => {
     const outcome = await withBridge(bridge => bridge.assets.reveal(textOf(input, 'assetId') ?? ''))
-    return outcome.ok && outcome.data === false ? refused('notFound') : outcome
+    return outcome.ok && outcome.data === false
+      ? refused(
+          'notFound',
+          `asset "${textOf(input, 'assetId') ?? ''}" has no file on this machine to show — assets.search answers what the library holds, and assets.absent says which have no file yet`,
+        )
+      : outcome
   },
 }

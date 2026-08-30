@@ -32,6 +32,15 @@ import { environmentFromInput } from './environmentInput'
  * revert, so one entry around three different dials would undo the exposure and leave the blur.
  */
 
+/** What a caller does about it — one sentence per surface, for the sites that answer `wrongSurface`. */
+const NO_SKY =
+  'the document in front is no sky — documents.list answers what is open and of which kind, and ' +
+  'document.activate brings a skybox forward'
+
+const NO_MATERIAL =
+  'the document in front is no material — documents.list answers what is open and of which kind, ' +
+  'and document.activate brings a material forward'
+
 /** The sky in front and its state, or nothing — which reads as `wrongSurface`. */
 function skyOpen(): { documentId: string; state: SkyboxContent } | null {
   const documentId = activeSkyboxId(useDocuments.getState())
@@ -47,19 +56,27 @@ function materialOpen(): { documentId: string; state: MaterialState } | null {
     : { documentId, state: materialOf(useMaterials.getState(), documentId) }
 }
 
-function runSky(commands: readonly Command<SkyboxContent>[]): ActionOutcome {
+function runSky(
+  commands: readonly Command<SkyboxContent>[],
+  /** What a caller does when it named nothing this sky could write. */
+  nothing: string,
+): ActionOutcome {
   const open = skyOpen()
-  if (!open) return refused('wrongSurface')
-  if (commands.length === 0) return refused('badInput')
+  if (!open) return refused('wrongSurface', NO_SKY)
+  if (commands.length === 0) return refused('badInput', nothing)
 
   for (const command of commands) useSkyboxes.getState().runCommand(open.documentId, command)
   return { ok: true }
 }
 
-function runMaterial(commands: readonly Command<MaterialState>[]): ActionOutcome {
+function runMaterial(
+  commands: readonly Command<MaterialState>[],
+  /** What a caller does when it named nothing this material could write. */
+  nothing: string,
+): ActionOutcome {
   const open = materialOpen()
-  if (!open) return refused('wrongSurface')
-  if (commands.length === 0) return refused('badInput')
+  if (!open) return refused('wrongSurface', NO_MATERIAL)
+  if (commands.length === 0) return refused('badInput', nothing)
 
   for (const command of commands) useMaterials.getState().runCommand(open.documentId, command)
   return { ok: true }
@@ -102,7 +119,10 @@ const ADJUSTMENTS: Dials<SkyboxContent> = {
 }
 
 const adjust = (input: Record<string, unknown>): ActionOutcome =>
-  runSky(dialsOf(input, ADJUSTMENTS))
+  runSky(
+    dialsOf(input, ADJUSTMENTS),
+    `this call named no dial — it takes ${Object.keys(ADJUSTMENTS).join(', ')}`,
+  )
 
 const SUN: Dials<SkyboxContent> = {
   elevation: value => setSunSetting('elevation', value),
@@ -113,27 +133,33 @@ const SUN: Dials<SkyboxContent> = {
 function sun(input: Record<string, unknown>): ActionOutcome {
   const colour = textOf(input, 'color')
 
-  return runSky([
-    ...dialsOf(input, SUN),
-    // The registry already refuses anything but a hex, so one that arrives here is readable.
-    ...(colour !== null && HEX_COLOR.test(colour) ? [setSunSetting('color', colour)] : []),
-  ])
+  return runSky(
+    [
+      ...dialsOf(input, SUN),
+      // The registry already refuses anything but a hex, so one that arrives here is readable.
+      ...(colour !== null && HEX_COLOR.test(colour) ? [setSunSetting('color', colour)] : []),
+    ],
+    `this call named no dial of the sun — it takes ${Object.keys(SUN).join(', ')}, color`,
+  )
 }
 
 function environment(input: Record<string, unknown>): ActionOutcome {
-  return runSky([
-    ...dialsOf<SkyboxContent>(input, {
-      intensity: value => setEnvironmentSetting('intensity', value),
-    }),
-    ...switchesOf<SkyboxContent>(input, {
-      showBackground: value => setEnvironmentSetting('showBackground', value),
-    }),
-  ])
+  return runSky(
+    [
+      ...dialsOf<SkyboxContent>(input, {
+        intensity: value => setEnvironmentSetting('intensity', value),
+      }),
+      ...switchesOf<SkyboxContent>(input, {
+        showBackground: value => setEnvironmentSetting('showBackground', value),
+      }),
+    ],
+    'this call named neither "intensity" nor "showBackground"',
+  )
 }
 
 function readSky(): ActionOutcome {
   const open = skyOpen()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SKY)
 
   return {
     ok: true,
@@ -219,47 +245,60 @@ function rangeCommands(
 
 function material(input: Record<string, unknown>): ActionOutcome {
   const open = materialOpen()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_MATERIAL)
 
   const colour = textOf(input, 'color')
   const emissive = textOf(input, 'emissive')
 
-  return runMaterial([
-    ...dialsOf(input, MATERIAL_DIALS),
-    ...vectorCommands(input, open.state),
-    ...rangeCommands(input, open.state),
-    ...(colour === null ? [] : [setMaterialSetting('color', colour)]),
-    ...(emissive === null ? [] : [setMaterialSetting('emissive', emissive)]),
-    ...switchesOf<MaterialState>(input, {
-      invertNormalGreen: value => setMaterialSetting('invertNormalGreen', value),
-    }),
-  ])
+  return runMaterial(
+    [
+      ...dialsOf(input, MATERIAL_DIALS),
+      ...vectorCommands(input, open.state),
+      ...rangeCommands(input, open.state),
+      ...(colour === null ? [] : [setMaterialSetting('color', colour)]),
+      ...(emissive === null ? [] : [setMaterialSetting('emissive', emissive)]),
+      ...switchesOf<MaterialState>(input, {
+        invertNormalGreen: value => setMaterialSetting('invertNormalGreen', value),
+      }),
+    ],
+    `this call named no setting — it takes ${Object.keys(MATERIAL_DIALS).join(', ')}, color, emissive, invertNormalGreen, tilingX, tilingY, offsetX, offsetY, roughnessMin, roughnessMax, metalnessMin, metalnessMax`,
+  )
 }
 
 function preview(input: Record<string, unknown>): ActionOutcome {
   const shape = oneOf(input, 'shape', PREVIEW_SHAPES)
   // One, two or four: a bound cannot say « three is not offered », so the refusal is here.
   const repeat = oneOf(input, 'tilingPreview', TILING_PREVIEWS)
-  if (input.tilingPreview !== undefined && repeat === null) return refused('badInput')
+  if (input.tilingPreview !== undefined && repeat === null)
+    return refused('badInput', `"tilingPreview" wants one of: ${TILING_PREVIEWS.join(', ')}`)
 
-  return runMaterial([
-    ...dialsOf(input, PREVIEW_DIALS),
-    ...switchesOf<MaterialState>(input, {
-      showBackground: value => setPreview('showBackground', value),
-      autoSpin: value => setPreview('autoSpin', value),
-      showSeam: value => setPreview('showSeam', value),
-    }),
-    ...(shape === null ? [] : [setPreview('shape', shape)]),
-    ...(repeat === null ? [] : [setPreview('tilingPreview', repeat)]),
-  ])
+  return runMaterial(
+    [
+      ...dialsOf(input, PREVIEW_DIALS),
+      ...switchesOf<MaterialState>(input, {
+        showBackground: value => setPreview('showBackground', value),
+        autoSpin: value => setPreview('autoSpin', value),
+        showSeam: value => setPreview('showSeam', value),
+      }),
+      ...(shape === null ? [] : [setPreview('shape', shape)]),
+      ...(repeat === null ? [] : [setPreview('tilingPreview', repeat)]),
+    ],
+    `this call named no setting of the preview — it takes ${Object.keys(PREVIEW_DIALS).join(', ')}, showBackground, autoSpin, showSeam, shape, tilingPreview`,
+  )
 }
 
 /** A preview needs a source: unlike a scene, there is no intensity to set on its own. */
 function environmentOf(input: Record<string, unknown>): ActionOutcome | Promise<ActionOutcome> {
   return environmentFromInput(input, environment =>
     environment === null
-      ? refused('badInput')
-      : runMaterial([setPreview('environment', environment)]),
+      ? refused(
+          'badInput',
+          'a preview is lit by a source, and this call named none — "assetId" for a picture of the library, "sky" for the title of a sky document, or kind "studio" for the room the studio ships',
+        )
+      : runMaterial(
+          [setPreview('environment', environment)],
+          'that source wrote nothing on the preview',
+        ),
   )
 }
 
@@ -267,7 +306,7 @@ function environmentOf(input: Record<string, unknown>): ActionOutcome | Promise<
 // exactly as the 3D space's own display mode is not.
 function skyboxView(input: Record<string, unknown>): ActionOutcome {
   const open = skyOpen()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_SKY)
 
   const view = oneOf(input, 'view', SKYBOX_VIEWS)
   const fieldOfView = numberOf(input, 'fieldOfView')
@@ -276,7 +315,11 @@ function skyboxView(input: Record<string, unknown>): ActionOutcome {
     ...(fieldOfView === null ? {} : { fieldOfView }),
     ...(input.probes === undefined ? {} : { probes: boolOf(input, 'probes') }),
   }
-  if (Object.keys(patch).length === 0) return refused('badInput')
+  if (Object.keys(patch).length === 0)
+    return refused(
+      'badInput',
+      `this call named none of view, fieldOfView, probes — "view" wants one of: ${SKYBOX_VIEWS.join(', ')}`,
+    )
 
   useSkyboxViews.getState().set(open.documentId, patch)
   return { ok: true }
@@ -284,7 +327,7 @@ function skyboxView(input: Record<string, unknown>): ActionOutcome {
 
 function readMaterial(): ActionOutcome {
   const open = materialOpen()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_MATERIAL)
 
   return {
     ok: true,
@@ -306,20 +349,26 @@ function readMaterial(): ActionOutcome {
  */
 async function channel(input: Record<string, unknown>): Promise<ActionOutcome> {
   const open = materialOpen()
-  if (!open) return refused('wrongSurface')
+  if (!open) return refused('wrongSurface', NO_MATERIAL)
 
   const which: PbrChannel | null = oneOf(input, 'channel', PBR_CHANNELS)
-  if (!which) return refused('badInput')
+  if (!which) return refused('badInput', `"channel" wants one of: ${PBR_CHANNELS.join(', ')}`)
 
   const assetId = textOf(input, 'assetId')
-  if (assetId === null) return runMaterial([setChannel(which, null)])
+  if (assetId === null)
+    return runMaterial([setChannel(which, null)], `emptying "${which}" wrote nothing`)
 
   // Loaded on the call rather than imported at the top: this table is evaluated by the first
   // screen, and `eager-graph.test.ts` holds that chunk to reaching no third module out of an
   // editor's folder.
   const { placeMaterialChannel } = await import('@/spaces/materials/placeChannel')
   return withAsset(assetId, asset =>
-    placeMaterialChannel(open.documentId, asset, which) ? { ok: true } : refused('badInput'),
+    placeMaterialChannel(open.documentId, asset, which)
+      ? { ok: true }
+      : refused(
+          'badInput',
+          `asset "${assetId}" has no file on this machine to fill a channel from — assets.search answers which do, and a generated one has to finish downloading first`,
+        ),
   )
 }
 
@@ -327,13 +376,13 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
   'skybox.state': readSky,
   'skybox.view': skyboxView,
   'skybox.adjust': adjust,
-  'skybox.resetAdjustments': () => runSky([resetAdjustments()]),
+  'skybox.resetAdjustments': () => runSky([resetAdjustments()], 'there was nothing to reset'),
   'skybox.sun': sun,
   'skybox.environment': environment,
 
   'skybox.source': input => {
     const open = skyOpen()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_SKY)
 
     return withAsset(textOf(input, 'assetId') ?? '', asset => {
       // Answers nothing, and refuses in silence for an asset with no local file — the same guard
@@ -341,7 +390,10 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
       setSkyboxSource(open.documentId, asset)
       return skyboxOf(useSkyboxes.getState(), open.documentId).source?.assetId === asset.id
         ? { ok: true }
-        : refused('badInput')
+        : refused(
+            'badInput',
+            `asset "${asset.id}" has no file on this machine to light a sky from — assets.search answers which do, and a generated one has to finish downloading first`,
+          )
     })
   },
 
@@ -362,10 +414,10 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
    */
   'style.save': async input => {
     const open = materialOpen()
-    if (!open) return refused('wrongSurface')
+    if (!open) return refused('wrongSurface', NO_MATERIAL)
 
     const name = textOf(input, 'name')
-    if (name === null) return refused('badInput')
+    if (name === null) return refused('badInput', '"name" is wanted — what to keep this look under')
 
     await useStyles.getState().save(open.state.material, name)
     return { ok: true, data: useStyles.getState().styles }
@@ -374,7 +426,11 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
   'style.rename': async input => {
     const name = textOf(input, 'name')
     const styleId = textOf(input, 'styleId')
-    if (name === null || styleId === null) return refused('badInput')
+    if (name === null || styleId === null)
+      return refused(
+        'badInput',
+        '"styleId" and "name" are both wanted — styles.list answers what is kept here, with their ids',
+      )
 
     await useStyles.getState().rename(styleId, name)
     return { ok: true, data: useStyles.getState().styles }
@@ -382,7 +438,11 @@ export const MATERIAL_HANDLERS: ActionHandlers = {
 
   'style.remove': async input => {
     const styleId = textOf(input, 'styleId')
-    if (styleId === null) return refused('badInput')
+    if (styleId === null)
+      return refused(
+        'badInput',
+        '"styleId" is wanted — styles.list answers what is kept here, with their ids',
+      )
 
     await useStyles.getState().remove(styleId)
     return { ok: true, data: useStyles.getState().styles }

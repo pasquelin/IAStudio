@@ -37,7 +37,7 @@ export async function withBridge(
   run: (bridge: StudioBridge) => Promise<unknown>,
 ): Promise<ActionOutcome> {
   const bridge = getBridge()
-  if (!bridge) return refused('noBridge')
+  if (!bridge) return refused('noBridge', 'this window is not connected to the studio process')
 
   return { ok: true, data: await run(bridge) }
 }
@@ -56,5 +56,10 @@ export async function withAsset(
   if (!found.ok) return found
 
   const asset = Array.isArray(found.data) ? found.data[0] : undefined
-  return asset ? run(asset) : refused('notFound')
+  return asset
+    ? run(asset)
+    : refused(
+        'notFound',
+        `no asset "${assetId}" in this library — assets.search answers what it holds, each with its id`,
+      )
 }

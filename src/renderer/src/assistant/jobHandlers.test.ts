@@ -41,7 +41,7 @@ describe('reading a generation', () => {
   })
 
   it('refuses an id the studio is not following', async () => {
-    expect(await runAction('job.get', { jobId: 'job-none' })).toEqual({
+    expect(await runAction('job.get', { jobId: 'job-none' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -107,7 +107,7 @@ describe('before a generation', () => {
     installFakeBridge()
     // `failed`, not `notFound`: a rejection here is a model nothing declares AND a network that
     // dropped, and nothing at this level tells the two apart.
-    expect(await runAction('model.schema', { modelId: 'model-none' })).toEqual({
+    expect(await runAction('model.schema', { modelId: 'model-none' })).toMatchObject({
       ok: false,
       refusal: 'failed',
     })
@@ -133,7 +133,7 @@ describe('cancelling and counting', () => {
     expect(await runAction('job.cancel', { jobId: 'job-1' })).toEqual({ ok: true })
     expect(cancel).toHaveBeenCalledWith('job-1')
 
-    expect(await runAction('job.cancel', { jobId: 'job-2' })).toEqual({
+    expect(await runAction('job.cancel', { jobId: 'job-2' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })

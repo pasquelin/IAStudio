@@ -43,7 +43,7 @@ describe('driving the project context from outside', () => {
    * under a name of its own — and a card nobody can find is not a card to create silently.
    */
   it('refuses a card id this project does not hold', async () => {
-    expect(await run('context.remove', { cardId: 'elsewhere' })).toEqual({
+    expect(await run('context.remove', { cardId: 'elsewhere' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -52,7 +52,7 @@ describe('driving the project context from outside', () => {
   it('refuses to touch a file it could not read', async () => {
     useProjectContext.setState({ context: { cards: [], trouble: 'unreadable' } })
 
-    expect(await run('context.write', { title: 'Look' })).toEqual({
+    expect(await run('context.write', { title: 'Look' })).toMatchObject({
       ok: false,
       refusal: 'notAllowed',
     })

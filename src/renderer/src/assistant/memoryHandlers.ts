@@ -52,6 +52,10 @@ type MemoryFound = {
 
 const isType = (value: string): value is MemoryType => MEMORY_TYPES.some(one => one === value)
 
+/** What a caller does about a memory nobody answers to — spelled once for the three sites. */
+const noMemory = (id: string): string =>
+  `no memory "${id}" in this project — memory.recall answers what it holds, each with its id`
+
 /**
  * 🛑 `recall` and not `list`, and the difference is the whole point: `list` is a FILTER, so it
  * demanded every word of « à quoi sert le script CameraRig ? » of a single memory. This is the
@@ -59,7 +63,11 @@ const isType = (value: string): value is MemoryType => MEMORY_TYPES.some(one => 
  */
 async function recall(input: Record<string, unknown>): Promise<ActionOutcome> {
   const query = textOf(input, 'query')
-  if (query === null) return refused('badInput')
+  if (query === null)
+    return refused(
+      'badInput',
+      '"query" is wanted — the question to search this project\'s memory with',
+    )
 
   const memories = await memoryBridge()?.recall('project', {
     text: query,
@@ -77,16 +85,21 @@ async function recall(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 async function read(input: Record<string, unknown>): Promise<ActionOutcome> {
   const id = textOf(input, 'memoryId')
-  if (id === null) return refused('badInput')
+  if (id === null)
+    return refused(
+      'badInput',
+      '"memoryId" is wanted — memory.recall answers memories with their ids',
+    )
 
   const memory = await memoryBridge()?.read('project', id)
-  return memory ? { ok: true, data: memory } : refused('notFound')
+  return memory ? { ok: true, data: memory } : refused('notFound', noMemory(id))
 }
 
 async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   const type = textOf(input, 'type')
   const summary = textOf(input, 'summary')
-  if (type === null || !isType(type) || summary === null) return refused('badInput')
+  if (type === null || !isType(type) || summary === null)
+    return refused('badInput', `"summary" is wanted, and "type" one of: ${MEMORY_TYPES.join(', ')}`)
 
   const file = textOf(input, 'file')
   const body = textOf(input, 'body')
@@ -102,7 +115,12 @@ async function write(input: Record<string, unknown>): Promise<ActionOutcome> {
   }
 
   const written = await memoryBridge()?.remember('project', draft)
-  return written ? { ok: true, data: found(written) } : refused('notAllowed')
+  return written
+    ? { ok: true, data: found(written) }
+    : refused(
+        'notAllowed',
+        'nothing was written: a memory is kept inside a project, and none is open — projects.list answers what there is and project.open opens one',
+      )
 }
 
 /** Named so the kind is a declared type rather than an `as const` the lint refuses. */
@@ -110,9 +128,15 @@ const fileRef = (ref: string): MemoryRef => ({ kind: 'file', ref })
 
 async function forget(input: Record<string, unknown>): Promise<ActionOutcome> {
   const id = textOf(input, 'memoryId')
-  if (id === null) return refused('badInput')
+  if (id === null)
+    return refused(
+      'badInput',
+      '"memoryId" is wanted — memory.recall answers memories with their ids',
+    )
 
-  return (await memoryBridge()?.forget('project', id)) ? { ok: true } : refused('notFound')
+  return (await memoryBridge()?.forget('project', id))
+    ? { ok: true }
+    : refused('notFound', noMemory(id))
 }
 
 /**
@@ -122,12 +146,16 @@ async function forget(input: Record<string, unknown>): Promise<ActionOutcome> {
 async function link(input: Record<string, unknown>): Promise<ActionOutcome> {
   const id = textOf(input, 'memoryId')
   const to = textOf(input, 'toMemoryId')
-  if (id === null || to === null) return refused('badInput')
+  if (id === null || to === null)
+    return refused(
+      'badInput',
+      '"memoryId" and "toMemoryId" are both wanted — memory.recall answers memories with their ids',
+    )
 
   // 🛑 ONE call, and the union is computed in the store's write queue. Read-then-write across the
   // boundary lost whatever the other window — or a merge — had linked in between.
   const amended = await memoryBridge()?.amend('project', id, { linkTo: [to] })
-  return amended ? { ok: true } : refused('notFound')
+  return amended ? { ok: true } : refused('notFound', noMemory(id))
 }
 
 export const MEMORY_HANDLERS: ActionHandlers = {

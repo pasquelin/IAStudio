@@ -239,3 +239,44 @@ describe('the looks kept on this machine', () => {
     expect((await runAction('post.forget', { preset: 'Jamais' })).ok).toBe(false)
   })
 })
+
+/**
+ * 🛑 Measured on the bench pass of 2026-08-31 against deepseek-chat: `post.set` and `post.preset`
+ * were refused eleven times each on a bare `badInput`, which names nothing a caller can change.
+ */
+describe('what a refused composition says', () => {
+  const detailOf = (outcome: { ok: boolean; detail?: string }): string => outcome.detail ?? ''
+
+  it('names the instance and the parameter, and where the value goes', async () => {
+    await runAction('post.add', { effect: 'bloom' })
+
+    const outcome = await runAction('post.set', {
+      effectId: 'effect-nowhere',
+      param: 'intensity',
+      value: 2,
+    })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('effectId')
+    expect(detailOf(outcome)).toContain('post.state')
+  })
+
+  it('names the parameter when the instance is real and the knob is not', async () => {
+    const added = await runAction('post.add', { effect: 'bloom' })
+    const stack = await runAction('post.state', {})
+    const effectId = stack.ok ? (stack.data as { effects: { id: string }[] }).effects[0]?.id : ''
+
+    const outcome = await runAction('post.set', { effectId, param: 'nothing', value: 1 })
+
+    expect(added.ok).toBe(true)
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('param')
+  })
+
+  it('sends a preset nobody holds back to the call that lists them', async () => {
+    const outcome = await runAction('post.preset', { preset: 'aucun' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('post.presets')
+  })
+})

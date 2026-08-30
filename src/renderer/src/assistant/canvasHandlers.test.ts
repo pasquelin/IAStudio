@@ -97,8 +97,11 @@ describe('reading the image in front', () => {
   it('refuses every action of the family while no image is in front', async () => {
     useDocuments.setState({ documents: {}, activeId: null })
 
-    expect(await runAction('canvas.state', {})).toEqual({ ok: false, refusal: 'wrongSurface' })
-    expect(await runAction('layer.remove', { layerId: 'layer-a' })).toEqual({
+    expect(await runAction('canvas.state', {})).toMatchObject({
+      ok: false,
+      refusal: 'wrongSurface',
+    })
+    expect(await runAction('layer.remove', { layerId: 'layer-a' })).toMatchObject({
       ok: false,
       refusal: 'wrongSurface',
     })
@@ -247,7 +250,7 @@ describe('building a stack', () => {
    * check every miss would be reported as done — the whole reason the id is looked up first.
    */
   it('refuses a layer the stack does not hold rather than reporting a no-op as done', async () => {
-    expect(await runAction('layer.rename', { layerId: 'layer-z', name: 'Rien' })).toEqual({
+    expect(await runAction('layer.rename', { layerId: 'layer-z', name: 'Rien' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -275,7 +278,7 @@ describe('building a stack', () => {
    * group no layer carries.
    */
   it('refuses to group an id that is not a layer of the top level', async () => {
-    expect(await runAction('layer.group', { layerIds: ['layer-z'], name: 'Décor' })).toEqual({
+    expect(await runAction('layer.group', { layerIds: ['layer-z'], name: 'Décor' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -572,13 +575,49 @@ describe('the guides of an image', () => {
   })
 
   it('refuses an id nothing answers to rather than writing nothing', async () => {
-    expect(await runAction('guide.move', { guideId: 'guide-z', position: 40 })).toEqual({
+    expect(await runAction('guide.move', { guideId: 'guide-z', position: 40 })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
-    expect(await runAction('guide.remove', { guideId: 'guide-z' })).toEqual({
+    expect(await runAction('guide.remove', { guideId: 'guide-z' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
+  })
+})
+
+/**
+ * 🛑 Measured on the bench pass of 2026-08-31 against deepseek-chat: `layer.mask` was refused
+ * twelve times on a bare `badInput`, and the very same call came back word for word.
+ */
+describe('what a refused mask says', () => {
+  const detailOf = (outcome: { ok: boolean; detail?: string }): string => outcome.detail ?? ''
+
+  it('says the layer wears no mask, and which fields it would have taken', async () => {
+    const outcome = await runAction('layer.mask', { layerId: 'layer-a', enabled: false })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('canvas.state')
+    expect(detailOf(outcome)).toContain('mask')
+  })
+
+  it('says the two halves cannot travel together', async () => {
+    const outcome = await runAction('layer.mask', {
+      layerId: 'layer-a',
+      remove: true,
+      linked: true,
+    })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(detailOf(outcome)).toContain('remove')
+    expect(detailOf(outcome)).toContain('linked')
+  })
+
+  it('names the layer it could not find, and the call that lists them', async () => {
+    const outcome = await runAction('layer.mask', { layerId: 'layer-nowhere', enabled: true })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
+    expect(detailOf(outcome)).toContain('layer-nowhere')
+    expect(detailOf(outcome)).toContain('canvas.state')
   })
 })

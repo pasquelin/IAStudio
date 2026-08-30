@@ -73,7 +73,10 @@ describe('an action asked for from outside the window', () => {
     push({ callId: 'call_7', call: { action: 'generator.submit', input: {} } })
     await vi.waitFor(() => expect(answers).toHaveLength(1))
 
-    expect(answers[0]).toEqual({ callId: 'call_7', outcome: { ok: false, refusal: 'declined' } })
+    expect(answers[0]).toMatchObject({
+      callId: 'call_7',
+      outcome: { ok: false, refusal: 'declined' },
+    })
   })
 
   /**
@@ -97,6 +100,6 @@ describe('an action asked for from outside the window', () => {
     push({ callId: 'call_3', call: { action: 'jobs.list', input: {} } })
     await vi.waitFor(() => expect(answers).toHaveLength(1))
 
-    expect(answers[0]?.outcome).toEqual({ ok: false, refusal: 'failed' })
+    expect(answers[0]?.outcome).toMatchObject({ ok: false, refusal: 'failed' })
   })
 })

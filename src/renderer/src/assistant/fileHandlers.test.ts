@@ -72,7 +72,7 @@ describe('walking the project folder', () => {
     })
 
     withProject({ project: { fileFacts: vi.fn(async () => null) } })
-    expect(await runAction('file.facts', { path: 'Plans/gone.png' })).toEqual({
+    expect(await runAction('file.facts', { path: 'Plans/gone.png' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -87,8 +87,8 @@ describe('walking the project folder', () => {
     installFakeBridge()
     useProject.setState({ project: null })
 
-    expect(await runAction('files.list', {})).toEqual({ ok: false, refusal: 'noProject' })
-    expect(await runAction('files.trash', { paths: ['a.png'] })).toEqual({
+    expect(await runAction('files.list', {})).toMatchObject({ ok: false, refusal: 'noProject' })
+    expect(await runAction('files.trash', { paths: ['a.png'] })).toMatchObject({
       ok: false,
       refusal: 'noProject',
     })
@@ -355,7 +355,7 @@ describe('opening and making a project', () => {
     expect(rename).toHaveBeenCalledWith('/tmp/Autre', 'Autre')
 
     useProject.setState({ rename: vi.fn(async () => false) })
-    expect(await runAction('project.rename', { path: '/tmp/X', name: 'X' })).toEqual({
+    expect(await runAction('project.rename', { path: '/tmp/X', name: 'X' })).toMatchObject({
       ok: false,
       refusal: 'failed',
     })
@@ -396,8 +396,8 @@ describe('the file undo stack, which lives in the main process', () => {
     installFakeBridge()
     useProject.setState({ project: null })
 
-    expect(await runAction('files.undo', {})).toEqual({ ok: false, refusal: 'noProject' })
-    expect(await runAction('files.history', {})).toEqual({ ok: false, refusal: 'noProject' })
+    expect(await runAction('files.undo', {})).toMatchObject({ ok: false, refusal: 'noProject' })
+    expect(await runAction('files.history', {})).toMatchObject({ ok: false, refusal: 'noProject' })
   })
 })
 
@@ -484,7 +484,7 @@ describe('opening a file of the project', () => {
     })
     useDocuments.setState({ stored: [], documents: {} })
 
-    expect(await runAction('file.open', { path: 'Images/Absent.png' })).toEqual({
+    expect(await runAction('file.open', { path: 'Images/Absent.png' })).toMatchObject({
       ok: false,
       refusal: 'notFound',
     })
@@ -500,7 +500,7 @@ describe('opening a file of the project', () => {
     })
     useDocuments.setState({ stored: [], documents: {} })
 
-    expect(await runAction('file.open', { path: 'documents/Notes.txt' })).toEqual({
+    expect(await runAction('file.open', { path: 'documents/Notes.txt' })).toMatchObject({
       ok: false,
       refusal: 'failed',
     })
@@ -531,7 +531,7 @@ describe('opening a file of the project', () => {
     installFakeBridge()
     useProject.setState({ project: null })
 
-    expect(await runAction('file.open', { path: 'Images/a.png' })).toEqual({
+    expect(await runAction('file.open', { path: 'Images/a.png' })).toMatchObject({
       ok: false,
       refusal: 'noProject',
     })
