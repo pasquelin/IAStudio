@@ -1,9 +1,11 @@
 import type { WebContents } from 'electron'
-import { CHANNELS, EVENTS, type AssistantActionResult } from '@shared/ipc'
+import { CHANNELS, EVENTS, MAX_LOG_MESSAGE, type AssistantActionResult } from '@shared/ipc'
 import type { AssistantNote } from '@shared/domain/assistantNote'
+import { clipped } from '@shared/text'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import type { ActivityLog } from '@main/project/activityLog'
+import type { Transcript } from './transcript'
 import type { RunningTasks } from '@main/task/runningTasks'
 import { sendToSender } from '@main/ipc/broadcast'
 import type { AssistantBrain } from './brainPort'
@@ -18,6 +20,8 @@ export type AssistantHandlerDeps = {
   running: RunningTasks
   /** Where a turn is written down. Read per call: a project can be closed mid-conversation. */
   journal: () => ActivityLog
+  /** Where the WHOLE of a round trip goes — see `transcript.ts`. */
+  transcribe: Transcript
 }
 
 /**
@@ -46,6 +50,7 @@ export function registerAssistantHandlers({
   settleAction,
   running,
   journal,
+  transcribe,
 }: AssistantHandlerDeps): void {
   /**
    * 🛑 The one funnel both sides pass through — see `AssistantNote`. Its blind spot: `say` holds
@@ -54,7 +59,14 @@ export function registerAssistantHandlers({
    */
   const note = (one: AssistantNote): void => {
     const report = reportOfNote(one)
-    log[report.level]('assistant', lineOfNote(one))
+    /**
+     * 🛑 The round trips ALONE reach the transcript, and that is what keeps a synchronous disk
+     * write off a channel a renderer drives: `ran` and `asked` arrive over IPC at whatever rate a
+     * window sends them, and both are short enough that the journal already holds them whole.
+     */
+    if (one.kind === 'sent' || one.kind === 'answered') transcribe(lineOfNote(one))
+    // Cut rather than keyed: `main.log` turns over at a megabyte, and its reader wants a sentence.
+    log[report.level]('assistant', clipped(lineOfNote(one), MAX_LOG_MESSAGE))
     journal().record(report)
   }
   // The channel is typed, but TypeScript is gone at runtime and the sender is a renderer: what

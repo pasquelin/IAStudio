@@ -1,5 +1,5 @@
 import type { AssistantAnswer, AssistantProgress } from '@shared/domain/assistant'
-import { noteText, type AssistantNote } from '@shared/domain/assistantNote'
+import type { AssistantNote } from '@shared/domain/assistantNote'
 import { OversizedRequest } from '@main/ai/cloudChat'
 import { log } from '@main/log'
 import type { TurnWatch } from './brainPort'
@@ -32,20 +32,6 @@ export type TurnNotes = { door: string; note: (note: AssistantNote) => void }
 /** The same, or nothing where nobody is watching — written once for the three doors. */
 export const notesFor = (door: string, watch: TurnWatch): TurnNotes | undefined =>
   watch.onNote && { door, note: watch.onNote }
-
-/** 🛑 `chars` off the WHOLE text, `text` off the cut: the size is what the journal line is for. */
-const sentNote = (door: string, text: string): AssistantNote => ({
-  kind: 'sent',
-  door,
-  chars: text.length,
-  text: noteText(text),
-})
-
-const answeredNote = (text: string): AssistantNote => ({
-  kind: 'answered',
-  chars: text.length,
-  text: noteText(text),
-})
 
 /** One round trip against one briefing, complaint included — what every brain hands over. */
 export type BrainRound = (briefing: Briefing, complaint?: string) => Promise<BrainAttempt>
@@ -104,11 +90,9 @@ async function readOnce(
 ): Promise<Read> {
   budget.left -= 1
   restart()
-  // 🛑 Cut HERE: a briefing runs to 90 000 characters, and what is downstream is a synchronous
-  // append to the log file on the main process, once per round trip.
-  notes?.note(sentNote(notes.door, briefing.text))
+  notes?.note({ kind: 'sent', door: notes.door, text: briefing.text })
   const first = await round(briefing)
-  notes?.note(answeredNote(first.answer))
+  notes?.note({ kind: 'answered', text: first.answer })
   const reply = parseReply(first.answer, briefing.allowed)
   if (reply || budget.left <= 0) return { reply, cost: first.cost }
 
@@ -116,18 +100,13 @@ async function readOnce(
   budget.left -= 1
   restart()
   const complaint = complaintAbout(first.answer)
-  // The briefing goes out AGAIN beside it, so the size says so — a reader chasing an oversized
-  // request would otherwise read the retry as the cheap round.
-  notes?.note({
-    kind: 'sent',
-    door: notes.door,
-    chars: briefing.text.length + complaint.length,
-    text: noteText(complaint),
-  })
+  // The briefing goes out AGAIN beside it, so the note carries both — a reader chasing an
+  // oversized request would otherwise read the retry as the cheap round.
+  notes?.note({ kind: 'sent', door: notes.door, text: `${briefing.text}\n\n${complaint}` })
   let second
   try {
     second = await round(briefing, complaint)
-    notes?.note(answeredNote(second.answer))
+    notes?.note({ kind: 'answered', text: second.answer })
   } catch (error) {
     // 🛑 A stop is not a failed attempt to swallow: swallowed, the turn answers an empty sentence
     // and the window reads it as lost — the one thing the stop path exists to avoid.

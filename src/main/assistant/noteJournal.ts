@@ -1,17 +1,21 @@
 import type { ActivityReport } from '@main/project/activityLog'
-import type { AssistantNote } from '@shared/domain/assistantNote'
+import { noteText, type AssistantNote } from '@shared/domain/assistantNote'
 
 /**
  * One note as the journal keeps it.
  *
- * 🛑 A prompt keeps NO detail, and that is the whole shape of this table: `chainOn` runs up to
- * forty rounds, each writing a `sent` and an `answered`, against a journal of 2 000 lines that
- * also holds what a person cannot afford to read later. Its SIZE is the finding; its text is the
- * same catalogue every round, and `detail` carries `describeFailure` output by contract — a raw
- * briefing there would widen a rule about what a file someone may send us is allowed to hold.
+ * 🛑 The HEAD of a prompt and never the whole — see `NOTE_TEXT_MAX`. The whole is in the
+ * transcript file.
  */
 export function reportOfNote(note: AssistantNote): ActivityReport {
-  return { topic: 'assistant', level: 'info', ...saidOf(note) }
+  const said = saidOf(note)
+  // Cut ONCE, here: an arm left unbounded is a row of a database nothing holds back.
+  return {
+    topic: 'assistant',
+    level: 'info',
+    ...said,
+    ...(said.detail === undefined ? {} : { detail: noteText(said.detail) }),
+  }
 }
 
 type Said = Omit<ActivityReport, 'topic' | 'level'> & { level?: ActivityReport['level'] }
@@ -19,14 +23,21 @@ type Said = Omit<ActivityReport, 'topic' | 'level'> & { level?: ActivityReport['
 function saidOf(note: AssistantNote): Said {
   switch (note.kind) {
     case 'sent':
+      /**
+       * 🛑 NO detail, and it is not a matter of size: the head of a briefing carries
+       * `Folders on this machine:` — this person's home, Desktop, Documents — and the journal
+       * lives in `<project>/.index/catalog.db`, which travels with a project they may share.
+       * `detail` carries `describeFailure` output by contract. The whole prompt is in the
+       * transcript, which stays in the log folder.
+       */
       return {
         messageKey: 'activity.assistantSent',
-        params: { door: note.door, chars: note.chars },
+        params: { door: note.door, chars: note.text.length },
       }
     case 'answered':
       return {
         messageKey: 'activity.assistantAnswered',
-        params: { chars: note.chars },
+        params: { chars: note.text.length },
         detail: note.text,
       }
     case 'asked':
@@ -48,7 +59,7 @@ function saidOf(note: AssistantNote): Said {
   }
 }
 
-/** The same note as the log keeps it, which is where the prompt itself goes. */
+/** The same note as a sentence — cut for `main.log`, whole for the transcript. */
 export function lineOfNote(note: AssistantNote): string {
   switch (note.kind) {
     case 'sent':

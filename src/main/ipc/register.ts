@@ -143,6 +143,7 @@ export function registerIpc(services: Services): void {
     settleAction: services.remoteActions.settle,
     running,
     journal: () => services.journal,
+    transcribe: services.transcribe,
   })
   registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
   registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })

@@ -255,7 +255,7 @@
     },
     "openLogFolder": {
       "title": "Technical log",
-      "help": "Opens the file manager on the log the studio writes on every launch. This is the file you will be asked for when something fails without saying anything on screen.",
+      "help": "Opens the file manager on the logs the studio writes on every launch: “main.log”, the one you will be asked for when something fails with nothing on screen, and “assistant.log”, which keeps in full what is sent to each model and what it answers.",
       "button": "Show the technical log"
     },
     "openSettingsFile": {

@@ -181,6 +181,8 @@ import { createPromptContext, type PromptContext } from '@main/provider/promptCo
 import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
+import { createTranscript, type Transcript } from './assistant/transcript'
+import { logsFolder } from './logFile'
 import { openCatalogThread } from './project/catalogThread'
 import { createEmbedder, EMBEDDER_IDLE_MS } from './memory/embedder'
 import { embedModelId, embedWeightsOf, type EmbedChoiceDeps } from './memory/embedChoice'
@@ -279,6 +281,8 @@ export type Services = {
   styles: StylesStore
   /** What the studio did, and what it failed to do — the surface it had none of. */
   journal: ActivityLog
+  /** The WHOLE of what the assistant sent and read back — see `assistant/transcript.ts`. */
+  transcribe: Transcript
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
   flushJobs: () => Promise<void>
   documents: DocumentFiles
@@ -969,6 +973,10 @@ export function createServices(settings: SettingsStore): Services {
     now: timestamp,
   })
   opened = journal
+
+  // Beside the journal and beside `main.log`, never inside either: a briefing is 90 505 characters
+  // on a door with room, and both are bounded far below one turn's worth of them.
+  const transcribe = createTranscript(logsFolder)
 
   // Every reduced API failure, from one place rather than from each handler that remembers to.
   // `describeFailure` is what `reducedBy` already holds — the only text allowed to travel.
@@ -2162,6 +2170,7 @@ export function createServices(settings: SettingsStore): Services {
     // here, and an export named against nothing is a refusal rather than a failure.
     projectPath: () => project.current()?.path ?? null,
     journal,
+    transcribe,
     flushJobs: () => jobStore.flush(),
     documents,
     assets,

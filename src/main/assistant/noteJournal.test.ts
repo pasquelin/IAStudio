@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { isToastWorthy } from '@shared/domain/activity'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
-import type { AssistantNote } from '@shared/domain/assistantNote'
+import { NOTE_TEXT_MAX, type AssistantNote } from '@shared/domain/assistantNote'
 import { lineOfNote, reportOfNote } from './noteJournal'
 
 /** Every note the union can carry, so the guard below reads them all rather than a sample. */
 const EVERY_NOTE: readonly AssistantNote[] = [
-  { kind: 'sent', door: 'deepseek — deepseek-chat', chars: 90_298, text: 'You drive' },
-  { kind: 'answered', chars: 21, text: '{"say":"","calls":[]}' },
+  { kind: 'sent', door: 'deepseek — deepseek-chat', text: 'You drive IA Studio' },
+  { kind: 'answered', text: '{"say":"","calls":[]}' },
   { kind: 'ran', action: 'jobs.list', input: '{}', answer: 'ok', refused: false },
   { kind: 'ran', action: 'project.create', input: '{}', answer: 'badInput', refused: true },
   { kind: 'asked', question: 'Quel nom ?', answer: 'Bateaux' },
@@ -45,15 +45,25 @@ describe('what a note becomes in the journal', () => {
   })
 
   /**
-   * 🛑 A prompt keeps NO detail: `chainOn` runs up to forty rounds, each writing a `sent`, against
-   * a journal of 2 000 lines that also holds what a person cannot afford to read later. Its SIZE
-   * is the finding — the text is the same catalogue every round.
+   * 🛑 A prompt leaves NOTHING here, and it is not a matter of size: its head carries
+   * `Folders on this machine:` — a home, a Desktop, a Documents — and this journal lives in
+   * `<project>/.index/catalog.db`, which travels with a project someone may share. Only its
+   * SIZE is kept; the text is in the transcript, which stays in the log folder.
    */
-  it('keeps a prompt out of the database, and says how big it was', () => {
-    const report = reportOfNote({ kind: 'sent', door: 'deepseek', chars: 90_298, text: 'You' })
+  it('keeps a prompt out of a file that travels with the project', () => {
+    const report = reportOfNote({
+      kind: 'sent',
+      door: 'deepseek',
+      text: `You drive IA Studio\n\nFolders on this machine:\nhome: /Users/someone\n`,
+    })
 
     expect(report.detail).toBeUndefined()
-    expect(report.params?.['chars']).toBe(90_298)
+    expect(report.params?.['chars']).toBe(67)
+  })
+
+  /** Every arm, not one: a single unbounded detail is a database row nothing holds back. */
+  it.each(EVERY_NOTE)('bounds what $kind writes to the database', note => {
+    expect((reportOfNote(note).detail ?? '').length).toBeLessThanOrEqual(NOTE_TEXT_MAX + 1)
   })
 
   /**
