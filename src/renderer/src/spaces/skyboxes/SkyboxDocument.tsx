@@ -1,5 +1,5 @@
 import { mdiCubeOutline } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SphericalAngles } from '@shared/domain/angles'
 import type { SkyboxExportCommand } from '@shared/ipc'
@@ -26,6 +26,7 @@ import { assetVersionOf } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
+import { useMountedEngine } from '@/hooks/useMountedEngine'
 import { useBindingOverrides } from '@/stores/bindings'
 import { skyboxExportFiles } from './skyboxExportFiles'
 import { SKYBOX_TOOLS, skyboxViewFrom } from './skyboxTools'
@@ -61,8 +62,6 @@ async function exportSkybox(documentId: string, command: SkyboxExportCommand): P
 
 export function SkyboxDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
-  const host = useRef<HTMLDivElement>(null)
-  const engine = useRef<SkyboxRenderer | null>(null)
 
   const content = useSkyboxes(state => skyboxOf(state, documentId))
   const active = useDocumentIsInFront(documentId)
@@ -87,44 +86,32 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
     }),
   )
 
-  useEffect(() => {
-    const element = host.current
-    if (!element) return
-
-    const renderer = new SkyboxRenderer({
-      loadTexture,
-      assetVersion: assetVersionOf,
-      livePreview: livePreviewOf,
-      onSunChange: (angles: SphericalAngles) =>
-        useSkyboxes.getState().runCommand(documentId, setSunAngles(angles)),
-    })
-
-    renderer.mount(element)
-    engine.current = renderer
-    return () => {
-      renderer.dispose()
-      engine.current = null
-    }
-  }, [documentId])
-
-  // The engine holds no truth: every change is pushed back into it.
-  useEffect(() => {
-    engine.current?.apply(content)
-  }, [content])
+  const { host, engine } = useMountedEngine(
+    documentId,
+    () =>
+      new SkyboxRenderer({
+        loadTexture,
+        assetVersion: assetVersionOf,
+        livePreview: livePreviewOf,
+        onSunChange: (angles: SphericalAngles) =>
+          useSkyboxes.getState().runCommand(documentId, setSunAngles(angles)),
+      }),
+    content,
+  )
 
   useShelfRefresh(() => engine.current?.refreshSource())
 
   useEffect(() => {
     engine.current?.setFieldOfView(fieldOfView)
-  }, [fieldOfView])
+  }, [fieldOfView, engine])
 
   useEffect(() => {
     engine.current?.setProbesVisible(probes)
-  }, [probes])
+  }, [probes, engine])
 
   useEffect(() => {
     engine.current?.setView(view)
-  }, [view])
+  }, [view, engine])
 
   // The panel above this viewport drives the field of view with a slider, so this document
   // re-renders on every frame of that drag — the bar must not be rebuilt with it.

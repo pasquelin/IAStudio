@@ -1,5 +1,5 @@
 import { mdiTextureBox } from '@mdi/js'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -27,6 +27,7 @@ import { MaterialToolbar } from './MaterialToolbar'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useSkyRefresh } from '@/hooks/useSkyRefresh'
+import { useMountedEngine } from '@/hooks/useMountedEngine'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
 import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
@@ -63,8 +64,6 @@ async function exportMaterial(documentId: string, target: MaterialExportTarget):
  */
 export function MaterialDocument({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
-  const host = useRef<HTMLDivElement>(null)
-  const engine = useRef<MaterialRenderer | null>(null)
 
   const texture = useMaterials(state => materialOf(state, documentId))
   const inspected = useMaterialViews(state => inspectedChannel(state, documentId))
@@ -96,29 +95,17 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
     }),
   )
 
-  useEffect(() => {
-    const element = host.current
-    if (!element) return
-
-    const renderer = new MaterialRenderer({
-      loadTexture,
-      assetVersion: assetVersionOf,
-      livePreview: livePreviewOf,
-      environmentDress: environmentDressOf,
-    })
-    renderer.mount(element)
-    engine.current = renderer
-
-    return () => {
-      renderer.dispose()
-      engine.current = null
-    }
-  }, [documentId])
-
-  // The engine holds no truth: every change is pushed back into it.
-  useEffect(() => {
-    engine.current?.apply(texture)
-  }, [texture])
+  const { host, engine } = useMountedEngine(
+    documentId,
+    () =>
+      new MaterialRenderer({
+        loadTexture,
+        assetVersion: assetVersionOf,
+        livePreview: livePreviewOf,
+        environmentDress: environmentDressOf,
+      }),
+    texture,
+  )
 
   useShelfRefresh(() => engine.current?.refreshMaps())
   // The sky the preview NAMES moved: no asset id changed, so the shelf says nothing.

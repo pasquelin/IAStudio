@@ -233,6 +233,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   useDocumentTitle(documentId, modified)
 
+  // Written out rather than through `useMountedEngine`: this mount registers the engine for other
+  // panels, and its teardown stops a running game BEFORE the dispose — an order the comment below
+  // defends, and one a hook would hide from the place it matters.
   useEffect(() => {
     const element = host.current
     if (!element) return
