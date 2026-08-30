@@ -554,18 +554,32 @@ A failure raises a **toast** in the bottom-right corner, above the status line.
 
 The system menu — at the top of the screen on macOS, at the top of the window elsewhere.
 
+**Three of them only appear in the workspace that uses them**: Tools and Image while you are
+editing a picture, Add while you are editing a scene. A missing menu is not a greyed menu — it is
+simply not there.
+
 | Menu | What is in it |
 |---|---|
-| **File** | New project…, Open project…, Save, Settings… |
+| **IA Studio** | *macOS only*: About, **Settings…**, and the system's commands |
+| **File** | New project…, Open project…, Save, Save as…, Import ▸, Export ▸. **Off macOS, Settings… is here** |
 | **Edit** | Undo, Redo, and the system's text commands |
-| **View** | Tool windows, Reset layout, Full screen, image zoom |
-| **Objects** | **Add ▸ Mesh**, **Add ▸ Light** — in the Modelling workspace |
+| **Tools** | *Image workspace*: the eighteen tools of the bar, plus **Smaller** and **Larger brush** |
+| **Image** | *Image workspace*: the twelve entries described in [the Image workspace](08-image-workspace.md) |
+| **Add** | *Modelling workspace*: **Mesh ▸**, **Light ▸**, **Object ▸** |
+| **View** | **Assistant**, Tool windows ▸, Reset layout, Full screen — plus whatever the workspace adds |
 | **Window** | the system's window commands |
-| **Help** | About IA Studio, Usage…, Licences |
+| **Help** | **User manual**, Usage…, Licences. **Off macOS, About is here** |
 
 The shortcuts shown in the menus are **the ones you have set**.
 
 **View ▸ Tool windows** only lists what the workspace can open, like the rail.
+
+**View changes length with what you are editing.** A picture adds the four zooms, Rulers, Guides,
+Clear guides and Snapping; a scene adds **Display mode ▸**, **Point of view ▸**, **Capture the
+view ▸**, then the projection, the four views, the quad edges, the skeletons and pose mode.
+
+> **Assistant is the only door to `⌘K`.** The command is global: it is fired by this menu rather
+> than by the window, so without that row the shortcut would reach nothing at all.
 
 ### The usage window
 
