@@ -56,7 +56,9 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'document.remove': ['41.4'],
   'document.export': ['41.5'],
   'activity.recent': ['42.3'],
-  'project.open': ['41.7'],
+  // 41.7 alone would be a lie: it has no shelf to read, and nothing else in the bench writes one.
+  'projects.list': ['41.11'],
+  'project.open': ['41.7', '41.11'],
   'project.create': ['41.6', '41.10'],
   'project.close': ['41.9'],
 

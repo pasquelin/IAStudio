@@ -168,6 +168,30 @@ describe('changing the project folder', () => {
 })
 
 describe('opening and making a project', () => {
+  /** 🛑 The half that was missing — see `fileActions.ts` for what it buys and what it costs. */
+  it('answers the recent projects with the path project.open needs, as the studio shows them', async () => {
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: {
+          ...state.settings.storage,
+          recentProjects: [
+            { path: '/projets/Voilier', name: 'Voilier', openedAt: '2026-08-30T10:00:00.000Z' },
+            { path: '/projets/Chantier', name: 'Chantier', openedAt: '2026-08-29T10:00:00.000Z' },
+          ],
+        },
+      },
+    }))
+
+    expect(await runAction('projects.list', {})).toEqual({
+      ok: true,
+      data: [
+        { name: 'Voilier', path: '/projets/Voilier' },
+        { name: 'Chantier', path: '/projets/Chantier' },
+      ],
+    })
+  })
+
   /**
    * The whole reason these exist beside the `project.new` and `project.open` COMMANDS: those
    * raise a system dialog nobody outside the machine can fill, so a client calling them hangs

@@ -473,6 +473,7 @@ describe('the lists that stand for a union', () => {
       'document.remove': true,
       'document.export': true,
       'activity.recent': true,
+      'projects.list': true,
       'project.open': true,
       'project.close': true,
       'project.create': true,

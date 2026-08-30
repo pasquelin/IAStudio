@@ -34,6 +34,8 @@ import { frontDocumentIn, useDocuments } from '@/stores/documents'
 import { playReportOf, usePlay } from '@/stores/play'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/spaces/three/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
@@ -282,6 +284,9 @@ export async function createStudio(
   resetDocumentStoresForTests()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
   useJobs.setState({ jobs: [], bodies: {} })
+  // 🛑 Settings too, and `shelved` is why: a scenario that sows the recent projects would leave
+  // them for every section after it, where an empty shelf is what makes `project.create` refuse.
+  useSettings.setState({ settings: DEFAULT_SETTINGS })
   // The project's own documents, read as the app reads them at open: without this every
   // `file.open` on a `.gltf` falls through to « hand it to the system ».
   await useDocuments.getState().relist()

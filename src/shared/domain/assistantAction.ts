@@ -43,6 +43,7 @@ export type ActionName =
   | 'document.remove'
   | 'document.export'
   | 'activity.recent'
+  | 'projects.list'
   | 'project.open'
   | 'project.close'
   | 'project.create'

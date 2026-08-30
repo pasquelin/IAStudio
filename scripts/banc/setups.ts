@@ -1,4 +1,6 @@
+import type { RecentProject } from '@shared/domain/project'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { useSettings } from '@/stores/settings'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -13,6 +15,19 @@ import type { Studio } from './studio'
  */
 
 const frontId = (studio: Studio): string => studio.front()?.id ?? ''
+
+/**
+ * 🛑 The shelf of recent projects, which the MAIN process writes and the bench fakes: seeded here
+ * or `projects.list` answers an empty list, and the scenario measures nothing at all.
+ */
+export const shelved = (recent: readonly RecentProject[]): void => {
+  useSettings.setState(state => ({
+    settings: {
+      ...state.settings,
+      storage: { ...state.settings.storage, recentProjects: [...recent] },
+    },
+  }))
+}
 
 /** The id `assets.search` would hand back for a file, so a decor can name one. */
 export const assetOf = (studio: Studio, ending: string): string =>

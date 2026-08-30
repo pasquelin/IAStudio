@@ -89,6 +89,10 @@
         "title": "Lire l’activité récente",
         "description": "Rend ce que le studio a consigné dernièrement — générations, opérations sur les fichiers, échecs — du plus récent au plus ancien. C’est ainsi qu’on apprend ce qu’une action a réellement fait."
       },
+      "projectsList": {
+        "title": "Lister les projets récents",
+        "description": "Rend les projets récents dans l’ordre où le studio les affiche, chacun avec le chemin absolu qui l’ouvre — passer ce chemin à project.open."
+      },
       "projectOpen": {
         "title": "Ouvrir un dossier de projet",
         "description": "Ouvre un projet depuis un chemin absolu de cette machine, sans lever le dialogue système qu’une personne utiliserait. Répond si le dossier était bien un projet."

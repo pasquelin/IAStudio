@@ -35,11 +35,31 @@ const FOLDER: ActionField = {
 
 export const FILE_ACTIONS: readonly AssistantAction[] = [
   action({
+    /**
+     * 🛑 Without it « Ouvre un projet récent » — a sentence the studio itself suggests — cannot be
+     * answered at all: `project.open` wants a WHOLE path and nothing else ever says one. Measured
+     * 2026-08-30, the model opened the projects panel and handed the request back, three rounds.
+     *
+     * 🛑 Neither this nor `project.open` is PRINTED: a RULE spells the pair, for 93 characters
+     * where their two blocks cost 158 — and a rule is never dropped, where a block is the first
+     * thing to go. Measured 2026-08-30: 7 510 of 8 500 became 7 603, and an expansion on « git
+     * branch » prints five of the twenty-four it finds where it printed six.
+     */
+    name: 'projects.list',
+    titleKey: 'assistant.actions.projectsList.title',
+    descriptionKey: 'assistant.actions.projectsList.description',
+    commitment: 'none',
+    reach: 'both',
+    fields: [],
+  }),
+  action({
     name: 'project.open',
     titleKey: 'assistant.actions.projectOpen.title',
     descriptionKey: 'assistant.actions.projectOpen.description',
     commitment: 'studio',
-    reach: 'mcp',
+    // `both` so a spoken sentence may call it, and UNLISTED so nobody pays for its block — the
+    // rule that spells it is in `instruction.ts`.
+    reach: 'both',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.folderPath', required: true },
     ],
