@@ -255,7 +255,7 @@
     },
     "openLogFolder": {
       "title": "Journal technique",
-      "help": "Ouvre le gestionnaire de fichiers sur le journal que le studio écrit à chaque lancement. C’est ce fichier qu’on vous demandera si quelque chose échoue sans rien afficher à l’écran.",
+      "help": "Ouvre le gestionnaire de fichiers sur les journaux que le studio écrit à chaque lancement : « main.log », celui qu’on vous demandera si quelque chose échoue sans rien afficher, et « assistant.log », qui garde en entier ce qui est envoyé à chaque modèle et ce qu’il répond.",
       "button": "Afficher le journal technique"
     },
     "openSettingsFile": {

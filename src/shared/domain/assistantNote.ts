@@ -10,10 +10,10 @@ import { clipped } from '../text'
  * its own, which would be a second place to look.
  */
 export type AssistantNote =
-  /** A round trip leaving: which door carries it, and how much it carries. */
-  | { kind: 'sent'; door: string; chars: number; text: string }
+  /** A round trip leaving: which door carries it, and the WHOLE of what it carries. */
+  | { kind: 'sent'; door: string; text: string }
   /** What came back, raw — before `parseReply` has had its say. */
-  | { kind: 'answered'; chars: number; text: string }
+  | { kind: 'answered'; text: string }
   /** One call of the plan, and what the studio answered it. */
   | { kind: 'ran'; action: string; input: string; answer: string; refused: boolean }
   /** A question put to the person, and what they answered — `null` where they dismissed it. */
@@ -23,17 +23,12 @@ export type AssistantNote =
 export type WindowNote = Extract<AssistantNote, { kind: 'ran' | 'asked' }>
 
 /**
- * 🛑 What ONE note may keep, on either destination. The prompt runs to 90 000 characters on a
- * door with room, and NEITHER can hold that: the journal is a database bounded at 2 000 lines,
- * and the log file rotates at a megabyte — three turns would have turned it over whole.
+ * 🛑 What one note keeps in the JOURNAL, which is a database bounded at 2 000 lines: the prompt
+ * runs to 90 505 characters on a door with room (measured 2026-08-30), and a turn writes a line
+ * per round trip. The whole of it lives in the transcript file — see `transcript.ts`.
  *
- * So the whole briefing is kept nowhere, and that is a decision rather than an oversight: its
- * catalogue is the same on every round, and what varies — the sentence, the history, the answer
- * — fits well inside this.
- *
- * 🛑 `chars` is measured BEFORE this cut and travels beside the text: read off the clipped text
- * instead, every line of the journal reported 2 001 characters — and the size is the whole reason
- * a `sent` line exists.
+ * The same bound holds the channel a window notes through: a renderer does not decide how much
+ * of a database it may take.
  */
 export const NOTE_TEXT_MAX = 2000
 

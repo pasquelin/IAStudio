@@ -15,7 +15,7 @@ import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo, recordLogsTo } from '@main/log'
-import { createLogFile } from '@main/logFile'
+import { createLogFile, logsFolder } from '@main/logFile'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
@@ -150,13 +150,7 @@ async function openWhenReady(): Promise<void> {
   await app.whenReady()
   // First, so what follows leaves a trace — but resolved on the first LINE, never here: a throw
   // on the way to the folder would take the splash and the permission lock with it.
-  // `setAppLogsPath()` is what defines the path at all on Linux and Windows.
-  recordLogsTo(
-    createLogFile(() => {
-      app.setAppLogsPath()
-      return app.getPath('logs')
-    }),
-  )
+  recordLogsTo(createLogFile(logsFolder))
   log.info('startup', `${APP_NAME} ${app.getVersion()} starting`)
 
   // The session only exists once ready, and no window may exist before it is locked: with no

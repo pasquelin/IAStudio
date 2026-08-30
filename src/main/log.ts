@@ -47,6 +47,12 @@ export function setLogVerbosity(verbosity: LogVerbosity): void {
   threshold = RANK_OF_VERBOSITY[verbosity]
 }
 
+/**
+ * Whether the person asked for no technical journal at all — read by whoever records BESIDE this
+ * one. 🛑 A recorder that ignored it would keep writing what the setting exists to stop.
+ */
+export const logsSilenced = (): boolean => threshold === RANK_OF_VERBOSITY.silent
+
 function write(level: LogLevel, scope: string, message: string): void {
   if (quiet || RANK[level] > threshold) return
 

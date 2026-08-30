@@ -11,7 +11,7 @@ import {
 } from './brainProvider'
 import { recentHistory, studioBriefing } from './instruction'
 import { STATE_MAX } from './studioState'
-import { NOTE_TEXT_MAX, type AssistantNote } from '@shared/domain/assistantNote'
+import type { AssistantNote } from '@shared/domain/assistantNote'
 import { answeredTurn } from './brainTurn'
 import { jsonIn, parseReply } from './reply'
 
@@ -184,10 +184,10 @@ describe('what the model is told', () => {
 
 describe('what a turn writes down', () => {
   /**
-   * 🛑 The SIZE is the whole reason a `sent` line exists, and it is measured before the cut: read
-   * off the clipped text, every line of the journal reported `NOTE_TEXT_MAX` and nothing else.
+   * 🛑 The WHOLE briefing travels on the note: it is what the transcript file exists to keep, and
+   * clipping it here would leave the one place it survives holding a head.
    */
-  it('says how big the briefing was, not how much of it was kept', async () => {
+  it('carries the whole briefing, not a head of it', async () => {
     const notes: AssistantNote[] = []
     // Past the whole registry, so the briefing is the 90 000-character one.
     const briefing = studioBriefing({ room: 200_000 })
@@ -199,9 +199,7 @@ describe('what a turn writes down', () => {
       { door: 'deepseek', note: one => notes.push(one) },
     )
 
-    const sent = notes.find(one => one.kind === 'sent')
-    expect(sent?.chars).toBe(briefing.text.length)
-    expect(sent?.text.length).toBe(NOTE_TEXT_MAX + 1)
+    expect(notes.find(one => one.kind === 'sent')?.text).toBe(briefing.text)
   })
 })
 
