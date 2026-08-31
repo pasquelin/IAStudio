@@ -3,8 +3,8 @@ import { EmptyState } from '@/components/EmptyState'
 import { toolIcon } from '@/helpers/toolRegistry'
 import { useGitHistory } from '@/hooks/useGitHistory'
 import { useGit } from '@/stores/git'
-import { CommitFiles } from './CommitFiles'
-import { DiffPane } from './DiffPane'
+import { CommitFiles } from '../Commit/CommitFiles'
+import { DiffPane } from '../Diff/DiffPane'
 import { HistoryList } from './HistoryList'
 
 /**

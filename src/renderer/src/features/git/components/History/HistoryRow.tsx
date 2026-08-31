@@ -7,7 +7,7 @@ import { cn } from '@/helpers/cn'
 import { formatMoment } from '@/helpers/format'
 import { useGit } from '@/stores/git'
 import { HistoryGraph } from './HistoryGraph'
-import { RefBadge } from './RefBadge'
+import { RefBadge } from '../RefBadge'
 
 export type HistoryRowProps = {
   row: GitLaneRow

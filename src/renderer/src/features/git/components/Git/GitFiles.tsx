@@ -1,5 +1,5 @@
 import { filesInStage, GIT_STAGES, type GitStatus } from '@shared/domain/git'
-import { GitFileGroup } from './GitFileGroup'
+import { GitFileGroup } from './File/GitFileGroup'
 
 /**
  * What has changed in the project folder, under one heading per half of git.

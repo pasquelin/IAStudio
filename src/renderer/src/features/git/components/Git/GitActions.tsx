@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useGit } from '@/stores/git'
-import { GitRefreshButton } from '@/panels/shared/GitRefreshButton'
+import { GitRefreshButton } from '@/features/git/components/Git/GitRefreshButton'
 
 /**
  * The panel's title row.

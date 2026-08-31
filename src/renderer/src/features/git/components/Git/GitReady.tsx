@@ -4,12 +4,12 @@ import { QuietNote } from '@/components/QuietNote'
 import { PANEL_BAR, PANEL_SCROLL } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { useGit } from '@/stores/git'
-import { CommitBox } from './CommitBox'
+import { CommitBox } from '../Commit/CommitBox'
 import { GitBranchButton } from './GitBranchButton'
 import { GitFiles } from './GitFiles'
-import { RemoteBar } from './RemoteBar'
-import { RemoteSetup } from './RemoteSetup'
-import { StashButton } from './StashButton'
+import { RemoteBar } from '../Remote/RemoteBar'
+import { RemoteSetup } from '../Remote/RemoteSetup'
+import { StashButton } from '../StashButton'
 
 /** The folder as git sees it: which branch, what to record, and what has moved since the last. */
 export function GitReady({ status }: { status: GitStatus }) {

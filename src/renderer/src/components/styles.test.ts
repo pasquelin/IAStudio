@@ -576,9 +576,9 @@ describe('the word that names a group in a panel', () => {
 
     expect(wearing.sort()).toEqual([
       '../features/generation/components/Generator/GeneratorSources.tsx',
-      '../panels/git/GitFileGroup.tsx',
-      '../panels/history/CommitFiles.tsx',
-      '../panels/history/DiffImages.tsx',
+      '../features/git/components/Commit/CommitFiles.tsx',
+      '../features/git/components/Diff/DiffImages.tsx',
+      '../features/git/components/Git/File/GitFileGroup.tsx',
       '../panels/inspector/ComponentsSection/ComponentsSection.tsx',
       './DynamicForm/DynamicForm.tsx',
     ])
@@ -613,12 +613,12 @@ describe('what a line names', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      '../features/git/components/Diff/DiffPane.tsx',
+      '../features/git/components/History/HistoryRow.tsx',
       '../features/material/components/StylesSection/StylesSectionRow.tsx',
       // A fourth on 2026-08-24: the home's models band names its sources the same way, and had
       // spelled the five words out before this rule said so.
       '../home/sections/ModelInventory/ModelInventoryMeans.tsx',
-      '../panels/history/DiffPane.tsx',
-      '../panels/history/HistoryRow.tsx',
     ])
   })
 })
@@ -653,7 +653,7 @@ describe('the box a panel puts above what it acts on', () => {
       // same trait, with the same room, and a fourth spelling of those five words is what the
       // rule above exists to prevent.
       '../features/context/components/Context/ContextCardRow.tsx',
-      '../panels/git/CommitBox.tsx',
+      '../features/git/components/Commit/CommitBox.tsx',
       './CollectionBar/CollectionBar.tsx',
     ])
   })
@@ -685,9 +685,9 @@ describe('the line a pane draws above what it shows', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
-      '../panels/git/GitReady.tsx',
-      '../panels/git/RemoteSetup.tsx',
-      '../panels/history/DiffPane.tsx',
+      '../features/git/components/Diff/DiffPane.tsx',
+      '../features/git/components/Git/GitReady.tsx',
+      '../features/git/components/Remote/RemoteSetup.tsx',
       './CollectionBar/CollectionBar.tsx',
       './FormHeader.tsx',
     ])

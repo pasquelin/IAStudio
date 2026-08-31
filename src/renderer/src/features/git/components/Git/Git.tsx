@@ -6,7 +6,7 @@ import { useGitStatus } from '@/hooks/useGitStatus'
 import { NoProject } from '@/panels/shared/NoProject'
 import { RefusedPanel } from '@/panels/shared/RefusedPanel'
 import { useGit } from '@/stores/git'
-import { CredentialField } from './CredentialField'
+import { CredentialField } from '../CredentialField'
 import { GitReady } from './GitReady'
 
 /**

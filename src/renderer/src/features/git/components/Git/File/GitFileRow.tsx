@@ -11,7 +11,7 @@ import { ToolButton } from '@/components/ToolButton'
 import { cn } from '@/helpers/cn'
 import { revealTool } from '@/helpers/revealPanel'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { ChangedFileRow } from '@/panels/shared/ChangedFileRow'
+import { ChangedFileRow } from '@/features/git/components/ChangedFileRow'
 import { useGit } from '@/stores/git'
 
 /**

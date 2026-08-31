@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next'
 import type { GitCommitFile } from '@shared/domain/git'
 import { QuietNote } from '@/components/QuietNote'
 import { PANEL_GROUP_LABEL_WIDE, PANEL_SCROLL } from '@/components/styles'
-import { ChangedFileRow } from '@/panels/shared/ChangedFileRow'
+import { ChangedFileRow } from '@/features/git/components/ChangedFileRow'
 import { useGit } from '@/stores/git'
-import { TagField } from './TagField'
+import { TagField } from '../TagField'
 
 export type CommitFilesProps = {
   files: readonly GitCommitFile[]
