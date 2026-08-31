@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { WindowNote } from '@/components/WindowNote'
 import type { UsageReport } from '@shared/domain/usage'
-import { UsageTable } from './UsageTable/UsageTable'
-import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'
-import { UsageTableRow } from './UsageTable/UsageTableRow'
+import { UsageTable } from './Table/UsageTable'
+import { UsageTableHeadCell } from './Table/UsageTableHeadCell'
+import { UsageTableRow } from './Table/UsageTableRow'
 import { formatUnits } from '@/helpers/format'
 import { shareOf } from './format'
 

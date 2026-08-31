@@ -2,12 +2,12 @@ import { useTranslation } from 'react-i18next'
 import { WindowFailure } from '@/components/WindowFailure'
 import { WindowNote } from '@/components/WindowNote'
 import type { UsagePeriod, UsageReport } from '@shared/domain/usage'
-import { UsageActivities } from '../UsageActivities/UsageActivities'
+import { UsageActivities } from '../Activities/UsageActivities'
 import { UsageJournal } from '../UsageJournal'
 import { UsageModels } from '../UsageModels'
 import { UsageNotes } from '../UsageNotes'
-import { UsageOverview } from '../UsageOverview/UsageOverview'
-import type { UsageSectionId } from '../sections'
+import { UsageOverview } from '../Overview/UsageOverview'
+import type { UsageSectionId } from './sections'
 
 export type UsageWindowBodyProps = {
   id: UsageSectionId

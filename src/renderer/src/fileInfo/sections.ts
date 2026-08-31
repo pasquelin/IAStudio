@@ -3,7 +3,7 @@ import type { Asset } from '@shared/domain/asset'
 /**
  * The four screens of a file's information window, in the order its column lists them.
  *
- * Here rather than in `FileInfoWindow.tsx` for the reason `usage/sections.ts` is: the body is a
+ * Here rather than in `FileInfoWindow.tsx` for the reason `features/usage/components/Usage/Window/sections.ts` is: the body is a
  * file of its own and shares this type, and importing it back from the parent makes a cycle.
  */
 export type FileInfoSectionId = 'general' | 'media' | 'catalogue' | 'git'

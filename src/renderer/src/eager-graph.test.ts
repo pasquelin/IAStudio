@@ -265,7 +265,7 @@ describe('the opening chunk', () => {
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `formatUnits` used to be the exception that let `./usage/format.ts` in: a job row prices a run
+  // `formatUnits` used to be the exception that let `./features/usage/components/Usage/format.ts` in: a job row prices a run
   // in the units the window totals, and the status bar carries those rows. It lives in
   // `helpers/format.ts` now, which the opening chunk already reaches — hence the second assertion,
   // without which moving it back would read as a win while only shifting the weight.

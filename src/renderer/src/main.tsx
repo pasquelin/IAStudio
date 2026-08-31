@@ -57,7 +57,7 @@ const MirrorWindow = lazy(async () => ({
 
 /** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
 const UsageWindow = lazy(async () => ({
-  default: (await import('@/usage/UsageWindow/UsageWindow')).UsageWindow,
+  default: (await import('@/features/usage/components/Usage/Window/UsageWindow')).UsageWindow,
 }))
 
 /**

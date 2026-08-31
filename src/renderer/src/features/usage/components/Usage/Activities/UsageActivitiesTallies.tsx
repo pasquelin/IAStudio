@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { UsageTally } from '@shared/domain/usage'
 import { formatUnits } from '@/helpers/format'
-import { UsageTable } from '../UsageTable/UsageTable'
-import { UsageTableHeadCell } from '../UsageTable/UsageTableHeadCell'
-import { UsageTableRow } from '../UsageTable/UsageTableRow'
+import { UsageTable } from '../Table/UsageTable'
+import { UsageTableHeadCell } from '../Table/UsageTableHeadCell'
+import { UsageTableRow } from '../Table/UsageTableRow'
 
 export type UsageActivitiesTalliesProps = {
   title: string
