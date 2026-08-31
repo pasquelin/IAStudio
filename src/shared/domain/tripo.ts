@@ -40,8 +40,10 @@ export const TRIPO_LANE_LIMITS: Record<TripoLane, number> = {
 /**
  * One runnable thing: an endpoint, and the model it is asked for when it takes one.
  *
- * `credits` is what the run costs before any knob is turned — a figure the studio quotes and
- * never bills. What a knob adds is on the knob itself, as `costImpact`.
+ * 🛑 Every endpoint, every `model` value and every REQUIRED input below was measured against the
+ * live service on 2026-08-31, by posting an incomplete body — refused, so no task was created and
+ * nothing was billed. Their reference contradicted itself on all of it: the model page spells
+ * `tripo-v3.1`, which the service refuses outright.
  */
 export type TripoEntry = {
   /** Path under `TRIPO_BASE_URL`, with no leading slash. */
@@ -54,8 +56,11 @@ export type TripoEntry = {
   readonly capability: string
   readonly lane: TripoLane
   /**
-   * 🛑 NOT MEASURED. Read off their documentation, never off a run — no generation has been
-   * launched. The one figure a real submission will correct, and it is quoted as an estimate.
+   * What the run costs with its knobs at their defaults; what a knob adds is on the knob.
+   *
+   * MEASURED on `text-to-model` alone: 10 credits with `texture:false` and `pbr:false`, which is
+   * the documented 20 less the 10 that dropping the texture saves. Every other figure here is
+   * still their documentation's.
    */
   readonly credits: number
   readonly fields: readonly LocalFieldTemplate[]
@@ -89,12 +94,16 @@ const NEGATIVE_PROMPT: LocalFieldTemplate = {
 }
 
 /**
- * The one input field of every endpoint that starts from something already made — a picture, or
- * a model a previous run produced. Their v3 unified five v2 field names into this one, which
- * takes a `task_id`, a URL or a `file_token` indifferently.
+ * What an endpoint starts FROM. 🛑 The plan promised one unified `input` everywhere; measured,
+ * four endpoints name it otherwise — `file`, `files`, `draft_model_task_id`,
+ * `original_model_task_id` — and sending `input` to those is refused with code 1004.
  */
-function input(kind: 'image' | 'mesh' | 'raw', labelKey: string): LocalFieldTemplate {
-  return { key: 'input', kind, labelKey, required: true }
+function input(
+  kind: 'image' | 'mesh' | 'raw',
+  labelKey: string,
+  key = 'input',
+): LocalFieldTemplate {
+  return { key, kind, labelKey, required: true }
 }
 
 function seed(key: string, labelKey: string): LocalFieldTemplate {
@@ -246,26 +255,39 @@ const MESH_KNOBS: readonly LocalFieldTemplate[] = [
 type TripoLine = { readonly model: string; readonly name: string; readonly lane: TripoLane }
 
 const LINES: readonly TripoLine[] = [
-  { model: 'tripo-v3.1', name: 'Tripo v3.1', lane: 'model-h' },
-  { model: 'tripo-p1', name: 'Tripo P1', lane: 'model-p' },
-  { model: 'tripo-v3.0', name: 'Tripo v3.0', lane: 'model-h' },
-  { model: 'tripo-v2.5', name: 'Tripo v2.5', lane: 'model-h' },
+  { model: 'v3.1-20260211', name: 'Tripo v3.1', lane: 'model-h' },
+  { model: 'v3.0-20250812', name: 'Tripo v3.0', lane: 'model-h' },
+  { model: 'v2.5-20250123', name: 'Tripo v2.5', lane: 'model-h' },
+  { model: 'P1-20260311', name: 'Tripo P1', lane: 'model-p' },
+  /**
+   * 🛑 Named by the service and by NOTHING else — neither their model page nor the plan this was
+   * written from mentions a P2. Its lane is the P one by its name alone, which is the only
+   * assumption left in this list.
+   */
+  { model: 'P2-20260801', name: 'Tripo P2', lane: 'model-p' },
 ]
 
 /**
- * The image models their v3 offers, every one of them a third party's. No line of ours: a name
- * the picker shows is the name the service publishes.
+ * The picture models, PER ENDPOINT: the service publishes a different list for each, and the
+ * plan's `gemini-*` exist nowhere. Measured — `text-to-image` takes `seedream_v4` where
+ * `image-to-image` refuses it, and `edit-multiview` takes two names of its own.
  */
-const IMAGE_MODELS: readonly string[] = [
+const TEXT_TO_IMAGE_MODELS: readonly string[] = [
   'seedream_v4',
   'seedream_v5',
-  'gemini-2.5-flash',
-  'gemini-3-pro',
-  'gemini-3.1-flash',
+  'banana',
+  'banana2',
+  'banana_pro',
   'chat_image_1',
   'chat_image_1.5',
   'chat_image_2',
 ]
+
+const IMAGE_TO_IMAGE_MODELS: readonly string[] = TEXT_TO_IMAGE_MODELS.filter(
+  model => model !== 'seedream_v4',
+)
+
+const EDIT_MULTIVIEW_MODELS: readonly string[] = ['seedream_v4', 'default']
 
 /** What one line offers, across the three endpoints that start a model from scratch. */
 function meshEntries(line: TripoLine): TripoEntry[] {
@@ -289,8 +311,9 @@ function meshEntries(line: TripoLine): TripoEntry[] {
       endpoint: 'generation/image-to-model',
       name: `${line.name} · Image`,
       capability: 'img23d',
+      // `file`, measured: « file is required for image_to_model ».
       fields: [
-        input('image', 'tripoFields.sourceImage'),
+        input('image', 'tripoFields.sourceImage', 'file'),
         AUTOFIX,
         TEXTURE_ALIGNMENT,
         ...MESH_KNOBS,
@@ -301,7 +324,13 @@ function meshEntries(line: TripoLine): TripoEntry[] {
       endpoint: 'generation/multiview-to-model',
       name: `${line.name} · Multiview`,
       capability: 'img23d',
-      fields: [input('raw', 'tripoFields.sourceViews'), AUTOFIX, TEXTURE_ALIGNMENT, ...MESH_KNOBS],
+      // `files`, measured: « files or inputs are required for multiview_to_model ».
+      fields: [
+        input('raw', 'tripoFields.sourceViews', 'files'),
+        AUTOFIX,
+        TEXTURE_ALIGNMENT,
+        ...MESH_KNOBS,
+      ],
     },
   ]
 }
@@ -336,7 +365,12 @@ const PROCESSING: readonly TripoEntry[] = [
     capability: '3d23d',
     lane: 'post-process',
     credits: 20,
-    fields: [input('mesh', 'tripoFields.sourceModel'), quality('geometry_quality'), FACE_LIMIT],
+    // `draft_model_task_id`, measured — and it takes a TASK, never a file.
+    fields: [
+      input('mesh', 'tripoFields.sourceModel', 'draft_model_task_id'),
+      quality('geometry_quality'),
+      FACE_LIMIT,
+    ],
   },
   {
     endpoint: 'models/stylize',
@@ -346,7 +380,8 @@ const PROCESSING: readonly TripoEntry[] = [
     lane: 'post-process',
     credits: 10,
     fields: [
-      input('mesh', 'tripoFields.sourceModel'),
+      // `original_model_task_id or file_token`, measured.
+      input('mesh', 'tripoFields.sourceModel', 'original_model_task_id'),
       {
         key: 'style',
         kind: 'text',
@@ -414,6 +449,8 @@ const PROCESSING: readonly TripoEntry[] = [
     capability: 'rig',
     lane: 'animation',
     credits: 10,
+    // 🛑 It takes a `model` of ITS OWN — measured: « allowed values: v1.0-20240301, v2.5-20260210 ».
+    model: 'v2.5-20260210',
     fields: [
       input('mesh', 'tripoFields.sourceModel'),
       {
@@ -459,52 +496,55 @@ const PROCESSING: readonly TripoEntry[] = [
   },
 ]
 
-/** What one image model offers, across the four endpoints their v3 serves pictures with. */
-function imageEntries(model: string): TripoEntry[] {
-  const common: Pick<TripoEntry, 'family' | 'model' | 'lane' | 'credits'> = {
-    family: 'image',
+/**
+ * A picture endpoint, once per model the service admits FOR THAT ENDPOINT — measured, the four
+ * lists differ, and a cartesian product over one of them offers runs that are refused.
+ */
+function imageEntries(
+  endpoint: string,
+  capability: string,
+  models: readonly string[],
+  fields: readonly LocalFieldTemplate[],
+): TripoEntry[] {
+  return models.map(model => ({
+    endpoint,
     model,
+    name: `${model} · ${endpoint.slice(endpoint.lastIndexOf('/') + 1)}`,
+    family: 'image',
+    capability,
     lane: 'image',
     credits: 5,
-  }
-
-  return [
-    {
-      ...common,
-      endpoint: 'generation/text-to-image',
-      name: `${model} · Text`,
-      capability: 'txt2img',
-      fields: [PROMPT, NEGATIVE_PROMPT],
-    },
-    {
-      ...common,
-      endpoint: 'generation/image-to-image',
-      name: `${model} · Image`,
-      capability: 'img2img',
-      fields: [PROMPT, input('image', 'tripoFields.sourceImage'), NEGATIVE_PROMPT],
-    },
-    {
-      ...common,
-      endpoint: 'generation/image-to-multiview',
-      name: `${model} · Multiview`,
-      capability: 'img2img',
-      fields: [input('image', 'tripoFields.sourceImage'), NEGATIVE_PROMPT],
-    },
-    {
-      ...common,
-      endpoint: 'generation/edit-multiview',
-      name: `${model} · Edit multiview`,
-      capability: 'img2img',
-      fields: [PROMPT, input('raw', 'tripoFields.sourceViews')],
-    },
-  ]
+    fields,
+  }))
 }
 
 /** Every runnable thing Tripo publishes, endpoint by model. */
 export const TRIPO_CATALOGUE: readonly TripoEntry[] = [
   ...LINES.flatMap(meshEntries),
   ...PROCESSING,
-  ...IMAGE_MODELS.flatMap(imageEntries),
+  ...imageEntries('generation/text-to-image', 'txt2img', TEXT_TO_IMAGE_MODELS, [
+    PROMPT,
+    NEGATIVE_PROMPT,
+  ]),
+  // `prompt` is required « when template is not set », measured — so it stays required here.
+  ...imageEntries('generation/image-to-image', 'img2img', IMAGE_TO_IMAGE_MODELS, [
+    PROMPT,
+    input('image', 'tripoFields.sourceImage'),
+    NEGATIVE_PROMPT,
+  ]),
+  /**
+   * 🛑 Its model list is the one thing the service would not name: it validates the input first,
+   * so an incomplete body never reaches the model. Left on the text-to-image list, which a real
+   * run will confirm or refuse — and a refusal costs nothing.
+   */
+  ...imageEntries('generation/image-to-multiview', 'img2img', TEXT_TO_IMAGE_MODELS, [
+    input('image', 'tripoFields.sourceImage'),
+    NEGATIVE_PROMPT,
+  ]),
+  ...imageEntries('generation/edit-multiview', 'img2img', EDIT_MULTIVIEW_MODELS, [
+    PROMPT,
+    input('raw', 'tripoFields.sourceViews'),
+  ]),
 ]
 
 const BY_ID = new Map(TRIPO_CATALOGUE.map(entry => [tripoModelId(entry), entry]))

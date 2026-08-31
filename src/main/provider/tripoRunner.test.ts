@@ -4,7 +4,9 @@ import { isRetryableTripo, type TripoApi, type TripoTask } from './tripoApi'
 import { createTripoRunner, tripoLaneOf, type TripoRunnerDeps } from './tripoRunner'
 
 const entryOn = (endpoint: string): TripoEntry => {
-  const entry = TRIPO_CATALOGUE.find(one => one.endpoint === endpoint && one.model === 'tripo-v3.1')
+  const entry = TRIPO_CATALOGUE.find(
+    one => one.endpoint === endpoint && one.model === 'v3.1-20260211',
+  )
   if (!entry) throw new Error(`no ${endpoint} in the catalogue`)
   return entry
 }
@@ -53,7 +55,7 @@ describe('submitting to Tripo', () => {
 
     expect(job).toEqual({ jobId: '9a1c-5248', status: 'queued', assetIds: [] })
     expect(api.create).toHaveBeenCalledWith('generation/text-to-model', {
-      model: 'tripo-v3.1',
+      model: 'v3.1-20260211',
       prompt: 'a hat',
       texture: false,
     })
@@ -65,7 +67,7 @@ describe('submitting to Tripo', () => {
 
     await runner.submit(TEXT_TARGET, { prompt: 'a hat', negative_prompt: '', face_limit: null })
 
-    expect(api.create.mock.calls[0]?.[1]).toEqual({ model: 'tripo-v3.1', prompt: 'a hat' })
+    expect(api.create.mock.calls[0]?.[1]).toEqual({ model: 'v3.1-20260211', prompt: 'a hat' })
   })
 
   it('carries nothing the entry does not publish as a field', async () => {
@@ -83,19 +85,19 @@ describe('submitting to Tripo', () => {
   it('sends a picture up to Tripo and puts its token in the body', async () => {
     const { runner, api } = harness()
 
-    await runner.submit(IMAGE_TARGET, { input: '/projects/kingdom/assets/hat.png' })
+    await runner.submit(IMAGE_TARGET, { file: '/projects/kingdom/assets/hat.png' })
 
     expect(api.upload).toHaveBeenCalledWith('hat.png', expect.anything(), 'image/png')
-    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ input: 'file-token-1' })
+    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: 'file-token-1' })
   })
 
   it('passes a value that is already theirs — a task id, a URL — as it stands', async () => {
     const { runner, api } = harness()
 
-    await runner.submit(IMAGE_TARGET, { input: 'https://theirs/hat.png' })
+    await runner.submit(IMAGE_TARGET, { file: 'https://theirs/hat.png' })
 
     expect(api.upload).not.toHaveBeenCalled()
-    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ input: 'https://theirs/hat.png' })
+    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: 'https://theirs/hat.png' })
   })
 
   /**
@@ -246,7 +248,7 @@ describe('following a Tripo task', () => {
 
 describe('the lane a target is counted in', () => {
   it('reads the category off the catalogue, and its published ceiling', () => {
-    const lowPoly = TRIPO_CATALOGUE.find(one => one.model === 'tripo-p1')
+    const lowPoly = TRIPO_CATALOGUE.find(one => one.model === 'P1-20260311')
     const picture = TRIPO_CATALOGUE.find(one => one.family === 'image')
 
     expect(tripoLaneOf(TEXT_TARGET.id)).toEqual({ name: 'model-h', limit: 10 })

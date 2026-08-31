@@ -225,3 +225,36 @@ describe('a balance that came back without one', () => {
     await expect(apiOn(get).balance()).rejects.toThrow(/unreadable/)
   })
 })
+
+/**
+ * 🛑 MEASURED 2026-08-31 against the live service: `data.tasks` is an OBJECT INDEXED BY TASK ID.
+ * Read as an array — which is what the plan and every neighbouring endpoint suggested — the
+ * grouped read answered nothing, and the studio quietly fell back to one request per task.
+ */
+describe('the shape their grouped read actually answers', () => {
+  it('reads the map they index by task id', async () => {
+    const get = vi.fn<TripoFetch>().mockResolvedValue(
+      ok({
+        tasks: {
+          'uuid-a': { status: 'success', progress: 100, credits_consumed: 10 },
+          'uuid-b': { status: 'running', progress: 40 },
+        },
+      }),
+    )
+
+    expect(await apiOn(get).status(['uuid-a', 'uuid-b'])).toEqual([
+      { taskId: 'uuid-a', status: 'success', progress: 1, credits: 10 },
+      { taskId: 'uuid-b', status: 'running', progress: 0.4 },
+    ])
+  })
+
+  // Kept for the day it follows its neighbours: nothing says the shape is settled.
+  it('reads a list too, and asks for no fallback either way', async () => {
+    const get = vi
+      .fn<TripoFetch>()
+      .mockResolvedValue(ok({ tasks: [{ task_id: 'uuid-a', status: 'queued' }] }))
+
+    expect(await apiOn(get).status(['uuid-a'])).toEqual([{ taskId: 'uuid-a', status: 'queued' }])
+    expect(get).toHaveBeenCalledTimes(1)
+  })
+})

@@ -145,12 +145,23 @@ export function taskOf(payload: unknown): TripoTask | null {
   }
 }
 
-/** Their listing answers under one of two names, and neither is measured — both are read. */
+/**
+ * What the grouped read answers.
+ *
+ * 🛑 MEASURED 2026-08-31: `data.tasks` is an OBJECT INDEXED BY TASK ID, not an array — read as
+ * one, this answered nothing and the studio fell back to a request per task for the session,
+ * with the whole point of the grouped read silently lost. Both shapes are taken: a list is what
+ * every neighbouring endpoint of theirs returns, and nothing says this one will not follow.
+ */
 function tasksIn(data: unknown): readonly TripoTask[] | null {
-  const list = Array.isArray(data) ? data : isRecord(data) ? data['tasks'] : null
-  if (!Array.isArray(list)) return null
+  const held = Array.isArray(data) ? data : isRecord(data) ? data['tasks'] : null
+  if (Array.isArray(held)) return held.flatMap(one => taskOf(one) ?? [])
+  if (!isRecord(held)) return null
 
-  return list.flatMap(one => taskOf(one) ?? [])
+  return Object.entries(held).flatMap(([taskId, task]) =>
+    // Their entries carry `task_id` inside too; the key is what answers if one ever does not.
+    isRecord(task) ? (taskOf({ task_id: taskId, ...task }) ?? []) : [],
+  )
 }
 
 export function createTripoApi({

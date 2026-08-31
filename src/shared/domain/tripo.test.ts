@@ -37,11 +37,58 @@ describe('the Tripo catalogue', () => {
     expect(isTripoModelId('model_scenario_flux')).toBe(false)
   })
 
-  it('serves the four lines their v3 kept, and no more', () => {
+  /**
+   * 🛑 MEASURED against the live service on 2026-08-31, by a body it refused: posting
+   * `tripo-v3.1` — the spelling their model page and the plan both use — answers
+   * « invalid model 'tripo-v3.1', allowed values: … ». There are FIVE lines, not four, and the
+   * P2 is named by the service alone.
+   */
+  it('serves the five lines the service names, spelled as it spells them', () => {
     const lines = new Set(
       TRIPO_CATALOGUE.filter(entry => entry.capability === 'txt23d').map(entry => entry.model),
     )
-    expect([...lines]).toEqual(['tripo-v3.1', 'tripo-p1', 'tripo-v3.0', 'tripo-v2.5'])
+
+    expect([...lines]).toEqual([
+      'v3.1-20260211',
+      'v3.0-20250812',
+      'v2.5-20250123',
+      'P1-20260311',
+      'P2-20260801',
+    ])
+  })
+
+  /**
+   * The plan promised one unified `input` on every endpoint. Measured, four name it otherwise,
+   * and sending `input` to those is refused with code 1004.
+   */
+  it('names each endpoint its own input field, as the service asks for it', () => {
+    const keyOf = (endpoint: string): string | undefined =>
+      TRIPO_CATALOGUE.find(one => one.endpoint === endpoint)?.fields.find(one => one.required)?.key
+
+    expect(keyOf('generation/image-to-model')).toBe('file')
+    expect(keyOf('generation/multiview-to-model')).toBe('files')
+    expect(keyOf('models/refine')).toBe('draft_model_task_id')
+    expect(keyOf('models/stylize')).toBe('original_model_task_id')
+    expect(keyOf('models/texture')).toBe('input')
+  })
+
+  /** Rigging takes a `model` of its own, on a list of its own — measured. */
+  it('asks rigging for its own line rather than a mesh one', () => {
+    const rig = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig')
+
+    expect(rig?.model).toBe('v2.5-20260210')
+  })
+
+  /** The four picture lists differ: a cartesian product offers runs the service refuses. */
+  it('offers each picture endpoint only the models it admits', () => {
+    const modelsOn = (endpoint: string): string[] =>
+      TRIPO_CATALOGUE.filter(one => one.endpoint === endpoint).flatMap(one => one.model ?? [])
+
+    expect(modelsOn('generation/text-to-image')).toContain('seedream_v4')
+    expect(modelsOn('generation/image-to-image')).not.toContain('seedream_v4')
+    expect(modelsOn('generation/edit-multiview')).toEqual(['seedream_v4', 'default'])
+    // The plan's own list: none of these three is a name the service knows.
+    expect(modelsOn('generation/text-to-image')).not.toContain('gemini-3-pro')
   })
 
   it('offers an employment the studio actually has a picker for', () => {

@@ -25,7 +25,7 @@ import { createTripoRunner, tripoLaneOf } from './tripoRunner'
 type Recorded = { path: string; body: unknown; authorization: string | null }
 
 const MESH_ENTRY = TRIPO_CATALOGUE.find(
-  one => one.endpoint === 'generation/text-to-model' && one.model === 'tripo-v3.1',
+  one => one.endpoint === 'generation/text-to-model' && one.model === 'v3.1-20260211',
 )
 const PICTURE_ENTRY = TRIPO_CATALOGUE.find(one => one.endpoint === 'generation/text-to-image')
 
@@ -69,10 +69,10 @@ function fakeTripo(state: { status: string; progress: number }) {
         return send({
           code: 0,
           status: 'success',
+          // Indexed by task id, as the live service answers — measured 2026-08-31.
           data: {
-            tasks: [
-              {
-                task_id: 'task-uuid-1',
+            tasks: {
+              'task-uuid-1': {
                 status: state.status,
                 progress: state.progress,
                 credits_consumed: 10,
@@ -80,7 +80,7 @@ function fakeTripo(state: { status: string; progress: number }) {
                   ? { output: { model_url: `http://127.0.0.1:${port()}/cdn/out.glb?X-Amz=1` } }
                   : {}),
               },
-            ],
+            },
           },
         })
 
@@ -193,7 +193,11 @@ describe('a Tripo generation, end to end over a real socket', () => {
     // 1. what LEFT: the endpoint the entry names, the model beside it, the key on the header.
     const created = service.seen.find(one => one.path.endsWith('/generation/text-to-model'))
     expect(created?.authorization).toBe('Bearer the-key')
-    expect(created?.body).toEqual({ model: 'tripo-v3.1', prompt: 'a wooden chest', texture: false })
+    expect(created?.body).toEqual({
+      model: 'v3.1-20260211',
+      prompt: 'a wooden chest',
+      texture: false,
+    })
 
     // 2. the FOLLOW went through the grouped read, never one request per task.
     expect(service.seen.some(one => one.path.endsWith('/tasks/list'))).toBe(true)
