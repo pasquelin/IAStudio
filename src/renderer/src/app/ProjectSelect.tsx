@@ -12,7 +12,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { revealTool } from '@/helpers/revealPanel'
 import { toolIcon } from '@/helpers/toolRegistry'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { projectsByCreation } from '@shared/domain/project'
+import { projectsByCreation, projectName } from '@shared/domain/project'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
@@ -46,7 +46,7 @@ export function ProjectSelect() {
   // one, and a screen reader reads that statement out before it is taken back.
   if (!known) return null
 
-  const name = project?.manifest.name ?? t('project.none')
+  const name = project ? projectName(project.path) : t('project.none')
 
   return (
     <TitleBarSelect
@@ -68,7 +68,7 @@ export function ProjectSelect() {
             return (
               <MenuRow
                 key={entry.path}
-                label={entry.name}
+                label={projectName(entry.path)}
                 icon={mdiFolderOutline}
                 checked={current}
                 tick="one-of"

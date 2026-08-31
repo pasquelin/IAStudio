@@ -47,6 +47,7 @@ import { createMemoryFiles } from './memoryFiles'
 import { createMemoryGit, type MemoryGit } from './memoryGit'
 import { createMemoryShell, type MemoryShell } from './memoryShell'
 import { createMemoryFolder, type MemoryFolder } from './memoryFolder'
+import { projectName } from '@shared/domain/project'
 
 /**
  * 🛑 Nothing here decides. Every call goes through `runConfirmedAction`, the door the window AND
@@ -277,7 +278,7 @@ export async function createStudio(
   })
 
   // The project the bench runs against, held open: every file action refuses `noProject` first.
-  useProject.setState({ project: shell.projectAt('/project', 'Démo'), known: true })
+  useProject.setState({ project: shell.projectAt('/projets/Démo'), known: true })
 
   // One studio per scenario: the stores are module singletons, and a document left open by the
   // scenario before would read as a second tab nobody opened.
@@ -428,7 +429,10 @@ export async function createStudio(
     references: () => references,
     git,
     shell,
-    projectName: () => useProject.getState().project?.manifest.name ?? '',
+    projectName: () => {
+      const open = useProject.getState().project
+      return open ? projectName(open.path) : ''
+    },
     familyOf: cloud.familyOf,
     sentBodies: () => useJobs.getState().bodies,
     changed: () => unsavedDocumentIds().some(one => !settled.has(one)) || ops.can().undo,

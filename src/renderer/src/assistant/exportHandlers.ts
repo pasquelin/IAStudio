@@ -11,6 +11,7 @@ import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { messageOf } from '@shared/guards'
+import { projectName } from '@shared/domain/project'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
@@ -50,7 +51,7 @@ export const EXPORT_HANDLERS: ActionHandlers = {
 
     const compiled = await compiledScripts()
     const request: GameExportRequest = {
-      title: textOf(input, 'title') ?? project.manifest.name,
+      title: textOf(input, 'title') ?? projectName(project.path),
       entryScene: entry.id,
       scenes,
       scripts: compiled.modules.map(one => ({ script: one.script, code: one.code })),

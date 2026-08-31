@@ -133,10 +133,10 @@ export type FolderVerdict = 'project' | 'occupied' | 'blank'
 
 export type ProjectStore = {
   /**
-   * Installs a project INTO `path`, which becomes its root — no folder is made from the name.
+   * Installs a project INTO `path`, which becomes its root AND its name — see `projectName`.
    * Call `inspect` first: this writes a manifest over whatever is there.
    */
-  create: (path: string, name: string) => Promise<Project>
+  create: (path: string) => Promise<Project>
   /**
    * What creating a project at `path` would mean, so nothing is written over.
    *
@@ -445,6 +445,11 @@ export function createProjectStore({
     catalog = opening
     project = opened
     roleFolders = resolved
+    /**
+     * 🛑 Fired for a RENAME too, and staying silent there cost more than it saved: `onChange` is
+     * the only thing that redirects the folder watch, follows the assistant's memory and settles
+     * the account link — all of which stayed on a folder that had just moved.
+     */
     onChange(opened)
     onRoles(resolved)
     return opened
@@ -474,7 +479,7 @@ export function createProjectStore({
   }
 
   return {
-    create: async (path, name) => {
+    create: async path => {
       await ensureMachineFolders(path)
       // Laid down once, and never put back on a later open: a user who threw `Images/` away
       // meant to, and a folder that came back would be the old layout wearing a new name.
@@ -485,7 +490,6 @@ export function createProjectStore({
         path,
         manifest: {
           version: MANIFEST_VERSION,
-          name,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -547,7 +551,7 @@ export function createProjectStore({
 
       const folder = join(dirname(path), name)
       const moved = await movedFolder(path, folder)
-      const renamed: Project = { path: moved, manifest: { ...manifest, name, updatedAt: now() } }
+      const renamed: Project = { path: moved, manifest: { ...manifest, updatedAt: now() } }
 
       // Through the queue, and it is not optional: `touch` writes this same file on every document
       // saved, so a rename racing a save would lose whichever landed first.

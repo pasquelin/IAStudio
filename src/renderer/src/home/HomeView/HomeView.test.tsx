@@ -33,7 +33,7 @@ const SECTION_TITLES: Record<HomeSectionId, string> = {
 }
 
 const PROJECT = {
-  path: '/projects/summer',
+  path: '/projects/Summer',
   manifest: {
     version: 1,
     name: 'Summer',

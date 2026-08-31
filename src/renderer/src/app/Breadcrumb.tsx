@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { projectName } from '@shared/domain/project'
 
 /** The status line's left: the open project, the document in front, or neither. */
 export function Breadcrumb() {
@@ -11,5 +12,7 @@ export function Breadcrumb() {
   )
 
   if (!project) return <>{t('project.none')}</>
-  return <>{title ? `${project.manifest.name} — ${title}` : project.manifest.name}</>
+  const name = projectName(project.path)
+
+  return <>{title ? `${name} — ${title}` : name}</>
 }

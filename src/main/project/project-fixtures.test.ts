@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { documentFolderOf, DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
 import { ORA_MERGED_PATH, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
+import { projectName } from '@shared/domain/project'
 
 const NOW = '2026-08-16T10:00:00.000Z'
 
@@ -64,7 +65,7 @@ describe('the project fixture', () => {
   it('creates a real project folder, and takes it away with the test', async () => {
     const { root, project } = await withTempProject('Mine')
 
-    expect(project.manifest.name).toBe('Mine')
+    expect(projectName(project.path)).toMatch(/^Mine-/)
     expect(await readdir(root)).toContain('.project.json')
   })
 

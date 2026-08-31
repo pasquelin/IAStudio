@@ -1,7 +1,7 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { projectsByCreation, type RecentProject } from '@shared/domain/project'
+import { projectName, projectsByCreation, type RecentProject } from '@shared/domain/project'
 import { Collection } from '@/design/Collection/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { reportFailure } from '@/services/diagnostics'
@@ -55,7 +55,7 @@ export function Projects() {
 
   const commitRename = useCallback((project: RecentProject, name: string): void => {
     setRenaming(null)
-    if (name !== project.name) void renameProject(project, name)
+    if (name !== projectName(project.path)) void renameProject(project, name)
   }, [])
 
   return (

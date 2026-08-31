@@ -72,7 +72,7 @@ const withProject = (): void => {
   useProject.setState({
     project: {
       path: '/projects/demo',
-      manifest: { version: 1, name: 'demo', createdAt: '', updatedAt: '' },
+      manifest: { version: 1, createdAt: '', updatedAt: '' },
     },
   })
 }
@@ -466,7 +466,7 @@ describe('the project explorer', () => {
       useProject.setState({
         project: {
           path: '/projects/other',
-          manifest: { version: 1, name: 'other', createdAt: '', updatedAt: '' },
+          manifest: { version: 1, createdAt: '', updatedAt: '' },
         },
       })
       rerender(<Explorer />)

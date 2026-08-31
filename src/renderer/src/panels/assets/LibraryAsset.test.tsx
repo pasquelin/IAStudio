@@ -41,9 +41,7 @@ function open(picked: readonly string[] = []) {
 const withProject = (path: string | null): void => {
   useProject.setState({
     project:
-      path === null
-        ? null
-        : { path, manifest: { version: 1, name: 'Reel', createdAt: '', updatedAt: '' } },
+      path === null ? null : { path, manifest: { version: 1, createdAt: '', updatedAt: '' } },
   })
 }
 

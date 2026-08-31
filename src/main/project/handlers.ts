@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { join } from 'node:path'
+import { projectName } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
@@ -141,9 +142,10 @@ export function registerProjectHandlers({
     try {
       // Inside, unlike the path above: this name comes from the FOLDER the user picked, not from
       // an argument, so a refusal is a sentence about their choice and owes them one. The root of
-      // a volume has no basename, and is turned away here by the rule that refuses a nameless
-      // rename — left outside, it failed in complete silence.
-      const named = parseProjectTitle(basename(root))
+      // a volume has no name, and is turned away here by the rule that refuses a nameless one —
+      // left outside, it failed in complete silence. Through `projectName`, never a second
+      // basename of its own: the dialog would then spell `Été` in a form nothing else uses.
+      const named = parseProjectTitle(projectName(root))
 
       const verdict = await project.inspect(root)
 
@@ -154,7 +156,7 @@ export function registerProjectHandlers({
       // The one refusal that is the user's to give, so it is asked before anything is written.
       if (verdict === 'occupied' && !(await askUseOccupiedFolder(askUser, named))) return null
 
-      return await project.create(root, named)
+      return await project.create(root)
     } catch (error) {
       // Same silence as opening: `createPicked` watches nothing either, so a folder that could
       // not be written said nothing at all. The path is left out — the user picked it from a
@@ -233,7 +235,7 @@ export function registerProjectHandlers({
   })
 
   /**
-   * The PROJECT's name, in its manifest. The folder is left where it is — see the channel's doc.
+   * The PROJECT's name, which is its FOLDER's — so the folder MOVES. See the channel's doc.
    *
    * Broadcast rather than answered alone, and only for the project that is open: every window
    * replicates it, and the title bar of a second one would go on naming the old name. The

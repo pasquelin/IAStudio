@@ -107,10 +107,7 @@ export type JobManagerDeps = {
   /** The project a job's outputs belong in, captured at submission like the account is. */
   projectPath: () => string | null
   /**
-   * What a project is CALLED — its manifest's name, which `recentProjects` stores. Never the
-   * folder: a rename writes the manifest and leaves the folder alone, so a project made as
-   * `nouveau-projet-3` and renamed « Chevalier Noir » would be named here by a word that appears
-   * nowhere else in the studio.
+   * What a project is CALLED — the name of its folder, and there is nowhere else to read it.
    */
   projectNameOf: (projectPath: string) => string
   /**

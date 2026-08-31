@@ -23,7 +23,7 @@ const document = (over: Partial<SnapshotDocument> = {}): SnapshotDocument => ({
 const studio = (over: Partial<StudioSnapshot> = {}): StudioSnapshot => ({
   project: {
     path: '/tmp/Film',
-    manifest: { version: 1, name: 'Film', createdAt: WHEN, updatedAt: WHEN },
+    manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
   },
   projectKnown: true,
   workspace: 'image',

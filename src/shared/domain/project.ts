@@ -1,4 +1,5 @@
 import { codeIn } from '../guards'
+import { pathBaseNameOf } from './fileName'
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
 import { parentOf } from './folder'
@@ -63,9 +64,17 @@ export const PENDING_FILES_FILE = `${INDEX_FOLDER}/pending-files.ndjson`
  */
 export const ROLE_CACHE_FILE = `${INDEX_FOLDER}/folder-roles.json`
 
+/**
+ * 🛑 NO name, and that is the whole point: a project is named by its FOLDER — see `projectName`.
+ * Held here as well, it was a second copy nothing kept aligned, and a folder renamed in Finder
+ * went on being drawn under the name this file remembered.
+ *
+ * What stays is what the disk cannot answer: `version` says whether this build can read the
+ * project at all, and `createdAt` is what both shelves order by — no file system gives a creation
+ * date that is portable and survives a copy.
+ */
 export type Manifest = {
   version: number
-  name: string
   createdAt: string
   updatedAt: string
 }
@@ -80,12 +89,15 @@ export type Project = {
  * the same reason it is: the settings are replicated in every window, so the home reads the
  * list without a channel of its own.
  *
- * The name is stored rather than derived from the folder: a project renamed in its manifest
- * would otherwise be listed under the name of the folder it happens to sit in.
+ * The NAME is not here — it is read off the path by `projectName`, and a rename moves the folder.
  */
 export type RecentProject = {
+  /**
+   * 🛑 The one identity, and the NAME is read off it — see `projectName`. Stored beside the path,
+   * the name was a third copy: a rename had to write it separately, and a shelf that kept the old
+   * one listed a project twice under two names for one folder.
+   */
   path: string
-  name: string
   /** ISO 8601, stamped when it was last opened. What decides which entry is evicted. */
   openedAt: string
   /**
@@ -156,6 +168,18 @@ export function projectPickerFolder(
 
   const [last] = projectsByCreation(recent)
   return last && parentFolder(last.path)
+}
+
+/**
+ * What a project is CALLED: the name of its folder, and nothing else — one source of truth.
+ *
+ * NFC like every other name this studio reads off the disk: macOS writes `Été` as two code
+ * points, and a name compared or drawn as it came would not match the same word typed here.
+ */
+export function projectName(path: string): string {
+  // 🛑 The trailing separator goes FIRST: `/Projets/jeu1/` is a path a model writes and a picker
+  // returns, and read as it came the name is the empty string — an unnamed project everywhere.
+  return pathBaseNameOf(path.replace(/[/\\]+$/, '')).normalize('NFC')
 }
 
 /**
@@ -258,7 +282,6 @@ export function withRecentProject(
 ): RecentProject[] {
   const entry: RecentProject = {
     path: project.path,
-    name: project.manifest.name,
     openedAt,
     createdAt: project.manifest.createdAt,
   }
@@ -301,22 +324,45 @@ export function planProjectAccount(
 }
 
 /**
- * The list with one entry wearing a new name AND its new folder, nothing else touched — not its
+ * A table keyed BY FOLDER, re-keyed onto the folder a project moved to.
+ *
+ * 🛑 Three of them exist — `storage.projectAccounts`, `ai.projectRoles`, and the layouts a window
+ * adopts — and a rename moves the key of all three since 2026-08-31. Left behind, the account link
+ * is orphaned and `planProjectAccount` answers `adopt`: the project silently comes back on
+ * whichever key is active, and the write that follows is destructive.
+ */
+export function movedProjectKey<T>(
+  held: Record<string, T>,
+  from: string,
+  to: string,
+): Record<string, T> {
+  const moving = held[from]
+  if (moving === undefined) return held
+
+  return {
+    ...Object.fromEntries(Object.entries(held).filter(([key]) => key !== from)),
+    [to]: moving,
+  }
+}
+
+/**
+ * The list with one entry moved to the folder it now lives in, and nothing else touched — not its
  * dates, and above all not its ORDER: a rename is not an opening.
  *
- * 🛑 The folder moves with the name since 2026-08-31, so an entry left at the old path points at
- * a folder that is no longer there: `projects.list` answered `{name: "Jeu2", path: ".../jeu1"}`,
- * and a model that rebuilt a path from the name got ENOENT. Both halves, or neither.
+ * 🛑 The destination is dropped FIRST. Left in, a rename onto a folder the shelf already knew
+ * listed it twice — two rows, one folder, measured 2026-08-31. The name is not written at all: it
+ * is read off the path, so moving the entry IS renaming it.
  *
  * A path the list does not hold is not an error: the open project need not be a remembered one.
  */
-export function renamedRecentProject(
+export function movedRecentProject(
   recent: readonly RecentProject[],
-  path: string,
-  name: string,
-  folder: string = path,
+  from: string,
+  to: string,
 ): RecentProject[] {
-  return recent.map(entry => (entry.path === path ? { ...entry, name, path: folder } : entry))
+  return recent
+    .filter(entry => entry.path !== to || entry.path === from)
+    .map(entry => (entry.path === from ? { ...entry, path: to } : entry))
 }
 
 /**

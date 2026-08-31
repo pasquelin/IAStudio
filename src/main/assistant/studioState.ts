@@ -6,6 +6,7 @@ import type {
 } from '@shared/domain/studioSnapshot'
 import { FAMILY_BY_WORKSPACE, isWorkspaceId } from '@shared/domain/workspace'
 import { parseSnapshot } from './validation'
+import { projectName } from '@shared/domain/project'
 
 /**
  * What the studio is, as sentences the model reads before it decides anything.
@@ -115,7 +116,7 @@ function armedLine(state: StudioSnapshot): string[] {
  * fired before the answer landed would tell the model there is no project over an open one.
  */
 function projectLine(state: StudioSnapshot): string[] {
-  if (state.project) return [`  Project: ${quoted(state.project.manifest.name)}.`]
+  if (state.project) return [`  Project: ${quoted(projectName(state.project.path))}.`]
 
   return state.projectKnown ? ['  No project is open, so no document can be created.'] : []
 }

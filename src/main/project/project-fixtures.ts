@@ -67,7 +67,8 @@ export async function withTempProject(
   name = 'Fixture',
   now = '2026-08-16T10:00:00.000Z',
 ): Promise<TempProject> {
-  const root = await mkdtemp(join(tmpdir(), 'scenario-fixture-'))
+  // The folder IS the name — `mkdtemp` suffixes it, so the project is named for the folder it got.
+  const root = await mkdtemp(join(tmpdir(), `${name}-`))
   const catalog = memoryCatalog()
 
   const store = createProjectStore({
@@ -82,7 +83,7 @@ export async function withTempProject(
     await rm(root, { recursive: true, force: true })
   })
 
-  const project = await store.create(root, name)
+  const project = await store.create(root)
   const documents = documentFilesAt(root, now)
 
   return { root, project, store, catalog, documents }

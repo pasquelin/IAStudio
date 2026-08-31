@@ -93,13 +93,18 @@ describe('parseDocumentEnvelope', () => {
 describe('parseManifest', () => {
   const manifest = {
     version: MANIFEST_VERSION,
-    name: 'Reel',
     createdAt: '2026-08-06T10:00:00.000Z',
     updatedAt: '2026-08-06T10:00:00.000Z',
   }
 
   it('reads a manifest this build wrote', () => {
     expect(parseManifest(manifest)).toEqual(manifest)
+  })
+
+  // A project written before the name left the manifest opens unchanged: the field is simply not
+  // read any more, so nothing has to be migrated.
+  it('reads a manifest written when the name still lived here', () => {
+    expect(parseManifest({ ...manifest, name: 'Reel' })).toEqual(manifest)
   })
 
   // The same cap `documentEnvelope` has always carried, and for a heavier reason: a document
@@ -111,7 +116,7 @@ describe('parseManifest', () => {
   })
 
   it('refuses a manifest a field short', () => {
-    expect(() => parseManifest({ version: MANIFEST_VERSION, name: 'Reel' })).toThrow()
+    expect(() => parseManifest({ version: MANIFEST_VERSION })).toThrow()
   })
 })
 

@@ -123,7 +123,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     // or closing a project answers `DEFAULT_SETTINGS` and wipes what was sown before it.
     setup: async studio => {
       await studio.run('project.close', {})
-      shelved([{ path: '/projets/Voilier', name: 'Voilier', openedAt: WHEN, createdAt: WHEN }])
+      shelved([{ path: '/projets/Voilier', openedAt: WHEN, createdAt: WHEN }])
     },
     passed: run =>
       read.answeredWith(run, 'projects.list') && run.studio.projectName() === 'Voilier',

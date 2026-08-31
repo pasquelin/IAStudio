@@ -3,7 +3,8 @@ import { messageOf } from '@shared/guards'
 import { create } from 'zustand'
 import {
   projectPickerFolder,
-  renamedRecentProject,
+  movedProjectKey,
+  movedRecentProject,
   withoutRecentProject,
   type Project,
 } from '@shared/domain/project'
@@ -76,17 +77,18 @@ type ProjectState = {
    */
   forget: (path: string) => Promise<void>
   /**
-   * Gives a project a new name — the one in its manifest, never its folder on disk.
+   * Gives a project a new name, which MOVES its folder — a project is named by its folder.
    *
-   * Two writes, and they belong together: the main process owns the manifest, and this owns the
-   * `recentProjects` entry, which stores the name rather than deriving it from the folder. Skipping
-   * the second would list the project under its old name until it was next opened.
+   * Two writes, and they belong together: the main process owns the folder, and this owns
+   * everything keyed on the path it just left — the shelf, `lastProject`, the account link, the
+   * per-project roles and the adopted layout. The folder moves FIRST, so nothing here ever claims
+   * a path the disk refused.
    *
    * Here rather than in the row that offered it, for the same reason the forgetting above is: two
    * surfaces list projects, and a rename wired into one of them would be missing from the other.
    *
-   * Answers whether it happened. The folder can have gone since the shelf last saw it, which is
-   * why the manifest is written FIRST: the settings must not claim a name the disk refused.
+   * 🛑 A refusal carries its REASON, never a bare no: told only that it failed, the assistant
+   * announced to the person that no rename was needed — measured 2026-08-31.
    */
   rename: (path: string, name: string) => Promise<ProjectRenamed>
 }
@@ -215,11 +217,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
       set({ project, known: true })
 
       /**
-       * Only when ANOTHER project is in front. The same folder announcing itself again is a
-       * manifest that changed under it — a rename is the one that does — and following that would
-       * empty the scene clipboard, dismiss every toast and refetch three lists in every window,
-       * to update a word. The main process already declines to fire its own `onChange` for a
-       * rename (`main/project/store.ts`); this is the same decision on the side that pays for it.
+       * Only when ANOTHER FOLDER is in front. A rename moves the folder, so it does follow — and
+       * it must: the layouts, the assets and the documents are all keyed on the path that just
+       * changed. The same folder announcing itself again is a manifest rewritten under it, and
+       * following that would dismiss every toast and refetch three lists to update nothing.
        */
       if (project?.path !== before) void followProject(project)
     })
@@ -346,23 +347,26 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const wasOpen = get().project?.path === path
     if (wasOpen) set({ project: renamed })
 
+    /**
+     * 🛑 Everything keyed BY FOLDER moves with it, and the account link above all: orphaned at the
+     * old path, `planProjectAccount` answers `adopt` and the project silently comes back on
+     * whichever key is active — a destructive write nobody asked for.
+     */
     const { settings, write } = useSettings.getState()
     await write({
       storage: {
-        // The name the MANIFEST took, not the one that was asked for: the main process trims it
-        // (`parseProjectTitle`), and the shelf storing what was typed would list a project under
-        // a name its own manifest does not carry.
-        recentProjects: renamedRecentProject(
-          settings.storage.recentProjects,
-          path,
-          renamed.manifest.name,
-          renamed.path,
-        ),
-        // 🛑 The pointer the next launch reopens, and it names a FOLDER: left at the old one the
-        // studio starts on a path nothing answers, and forgets the project on the way.
-        ...(wasOpen && settings.storage.lastProject === path ? { lastProject: renamed.path } : {}),
+        recentProjects: movedRecentProject(settings.storage.recentProjects, path, renamed.path),
+        projectAccounts: movedProjectKey(settings.storage.projectAccounts, path, renamed.path),
+        // The pointer the next launch reopens names a FOLDER: left at the old one the studio
+        // starts on a path nothing answers, and forgets the project on the way.
+        ...(settings.storage.lastProject === path ? { lastProject: renamed.path } : {}),
       },
+      ai: { projectRoles: movedProjectKey(settings.ai.projectRoles, path, renamed.path) },
     })
+
+    // The tabs a person arranged are adopted BY FOLDER too, and `adopt` blanks the layout when the
+    // path it holds is not the one in front — the arrangement would be lost at the next opening.
+    if (wasOpen) useLayouts.getState().adopt(renamed.path)
 
     return { ok: true, project: renamed }
   },

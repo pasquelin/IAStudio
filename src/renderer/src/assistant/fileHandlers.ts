@@ -3,6 +3,7 @@ import { documentExtensionOf, isDocumentExtension } from '@shared/domain/documen
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import {
   projectFailureIn,
+  projectName,
   projectRenameFailureIn,
   projectPathFor,
   projectPickerFolder,
@@ -268,8 +269,10 @@ export const FILE_HANDLERS: ActionHandlers = {
   // stored order reshuffles on every opening, and « the first one » must mean one row.
   'projects.list': () => ({
     ok: true,
+    // The name is READ off the path, never stored beside it: one folder, one name — see
+    // `projectName`. A model that rebuilt a path from a name got ENOENT.
     data: projectsByCreation(useSettings.getState().settings.storage.recentProjects).map(one => ({
-      name: one.name,
+      name: projectName(one.path),
       path: one.path,
     })),
   }),

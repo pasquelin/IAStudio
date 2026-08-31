@@ -59,8 +59,8 @@ describe('createDocumentIn', () => {
     const stamp = '2026-08-16T10:00:00.000Z'
     useProject.setState({
       project: {
-        path: '/projects/one',
-        manifest: { version: 1, name: 'One', createdAt: stamp, updatedAt: stamp },
+        path: '/projects/One',
+        manifest: { version: 1, createdAt: stamp, updatedAt: stamp },
       },
     })
   })

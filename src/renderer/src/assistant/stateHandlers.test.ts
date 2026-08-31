@@ -52,7 +52,7 @@ beforeEach(() => {
   useProject.setState({
     project: {
       path: '/tmp/Film',
-      manifest: { version: 1, name: 'Film', createdAt: WHEN, updatedAt: WHEN },
+      manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
     },
   })
   useLayouts.setState({ activeWorkspace: '3d', home: false })

@@ -29,7 +29,7 @@ describe('Rail', () => {
     useProject.setState({
       project: {
         path: '/projects/one',
-        manifest: { version: 1, name: 'One', createdAt: stamp, updatedAt: stamp },
+        manifest: { version: 1, createdAt: stamp, updatedAt: stamp },
       },
     })
   })
