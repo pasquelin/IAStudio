@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { registerChatPanel } from '@/assistant/chatPanel'
+import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useDictation } from '@/stores/dictation'

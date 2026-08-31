@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAssistant } from '@/stores/assistant'
-import type { AssistantTurn } from '../conversation'
+import type { AssistantTurn } from './conversation'
 import type * as ConversationStyles from './conversationStyles'
 import { AssistantConversation } from './AssistantConversation'
 

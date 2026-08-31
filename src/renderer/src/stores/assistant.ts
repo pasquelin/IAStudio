@@ -16,7 +16,7 @@ import {
 } from '@shared/domain/assistant'
 import { assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { narrowTargets, type Target } from '@shared/domain/target'
-import type { ConfirmAnswer, ConfirmRequest } from '@/assistant/confirm'
+import type { ConfirmAnswer, ConfirmRequest } from '@/features/assistant/confirm'
 import {
   assistantHistory,
   alreadySettled,
@@ -27,9 +27,9 @@ import {
   type AssistantAsked,
   type AssistantStep,
   type AssistantTurn,
-} from '@/assistant/conversation'
-import { revealChat } from '@/assistant/revealChat'
-import { noteAssistant } from '@/assistant/noteAssistant'
+} from '@/features/assistant/components/Assistant/Conversation/conversation'
+import { revealChat } from '@/features/assistant/components/Assistant/Toast/revealChat'
+import { noteAssistant } from '@/features/assistant/noteAssistant'
 import { closeTool } from '@/helpers/revealPanel'
 import { traceFailure } from '@/services/diagnostics'
 import { getBridge } from '@/services/bridge'
@@ -178,7 +178,7 @@ let lastAskId = 0
  * stack of two hundred layers would spend the room the sentence itself needs.
  */
 async function targetsFor(said: string): Promise<readonly Target[]> {
-  const { frontTargets } = await import('@/assistant/documentTargets')
+  const { frontTargets } = await import('@/features/assistant/documentTargets')
   return narrowTargets(frontTargets()?.targets() ?? [], said)
 }
 
@@ -564,7 +564,7 @@ async function ranAll(
   try {
     // On the turn rather than at launch, as `remoteActions.ts` loads it: the table reaches all
     // fourteen families, and a studio nobody speaks to has no use for any of them.
-    const { runConfirmedAction } = await import('@/assistant/executor')
+    const { runConfirmedAction } = await import('@/features/assistant/executor')
 
     for (const call of calls) {
       // Between two actions, not inside one: what is already running is left to finish, which is

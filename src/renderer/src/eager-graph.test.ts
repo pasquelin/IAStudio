@@ -224,7 +224,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.endsWith('Handlers.ts')).sort()).toEqual([])
-    expect(files).not.toContain('./assistant/executor.ts')
+    expect(files).not.toContain('./features/assistant/executor.ts')
   })
 
   // The heaviest row of the table, and the one that was described but never held: six editors,
@@ -256,7 +256,7 @@ describe('the opening chunk', () => {
    * `./spaces/` alone, and they sat under `./dictation/`. Widening the reading is what put them
    * in; they are the microphone of the composer, which is on the first screen.
    */
-  it('pulls only these five neighbours out of the features', () => {
+  it('pulls only these sixteen neighbours out of the features', () => {
     const { files } = GRAPH
 
     const neighbours = [...files].filter(
@@ -265,6 +265,19 @@ describe('the opening chunk', () => {
     )
 
     expect(neighbours.sort()).toEqual([
+      // The assistant's eleven, same day and same cause: the chat toast is on the first screen,
+      // and everything it composes a turn with came in behind it, unseen under `./assistant/`.
+      './features/assistant/batch.ts',
+      './features/assistant/chatPanel.ts',
+      './features/assistant/choices.ts',
+      './features/assistant/confirm.ts',
+      './features/assistant/confirmSentence.ts',
+      './features/assistant/holdConfirmer.ts',
+      './features/assistant/noteAssistant.ts',
+      './features/assistant/remoteActions.ts',
+      './features/assistant/starters.ts',
+      './features/assistant/thoughtStream.ts',
+      './features/assistant/wireConsent.ts',
       './features/dictation/capture.ts',
       './features/dictation/destination.ts',
       './features/dictation/insertAtCaret.ts',
@@ -294,6 +307,23 @@ describe('the opening chunk', () => {
     expect(
       [...files].filter(path => PANEL_TREES.some(tree => path.startsWith(tree))).sort(),
     ).toEqual([
+      // The conversation of the assistant, on the first screen because its toast is — read for
+      // the first time on 2026-08-31, when the tree became the features'.
+      './features/assistant/components/Assistant/AssistantStatus.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversation.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationGauge.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationPicker.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationQuestion.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationStep.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationSuggestions.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationTurn.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationWorking.tsx',
+      './features/assistant/components/Assistant/Conversation/Choice/AssistantConversationChoice.tsx',
+      './features/assistant/components/Assistant/Conversation/Choice/AssistantConversationChoiceForm.tsx',
+      './features/assistant/components/Assistant/Conversation/conversation.ts',
+      './features/assistant/components/Assistant/Conversation/conversationStyles.ts',
+      './features/assistant/components/Assistant/Toast/AssistantToast.tsx',
+      './features/assistant/components/Assistant/Toast/revealChat.ts',
       // The five of the dictation, on the first screen because the composer's microphone is:
       // invisible to this case while they sat under `./dictation/`, and read for the first time
       // the day the tree became the features'.

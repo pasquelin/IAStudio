@@ -9,8 +9,8 @@ import { getBridge } from '@/services/bridge'
 import { traceFailure } from '@/services/diagnostics'
 import { useAssistant } from '@/stores/assistant'
 import { formatList } from '@/helpers/format'
-import { confirmSentence } from '../confirmSentence'
-import type { ConfirmRequest } from '../confirm'
+import { confirmSentence } from '../../../confirmSentence'
+import type { ConfirmRequest } from '../../../confirm'
 import { CONVERSATION_CARD } from './conversationStyles'
 
 /**

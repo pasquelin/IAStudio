@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mountedConfirmer } from '@/assistant/confirm'
+import { mountedConfirmer } from '@/features/assistant/confirm'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installDocument } from '@/stores/document-fixtures'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'

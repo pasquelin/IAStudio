@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAssistant } from '@/stores/assistant'
-import { registerChatPanel } from './chatPanel'
+import { registerChatPanel } from '../../../chatPanel'
 import { AssistantToast } from './AssistantToast'
 
 const turn = (id: number, lost = false) => ({

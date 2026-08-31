@@ -6,7 +6,7 @@ import { Chip } from '@/components/Chip'
 import { TextField } from '@/components/TextField'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'
-import { CONVERSATION_CARD } from './conversationStyles'
+import { CONVERSATION_CARD } from '../conversationStyles'
 
 /**
  * Several questions in one breath, each answered on its own line and all handed back together.

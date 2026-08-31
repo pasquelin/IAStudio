@@ -1,6 +1,6 @@
 import { useAssistant } from '@/stores/assistant'
 import { registerConfirmer } from './confirm'
-import { revealChat } from './revealChat'
+import { revealChat } from './components/Assistant/Toast/revealChat'
 
 /**
  * The studio's confirmer, for as long as the shell is up — a question may come from outside this

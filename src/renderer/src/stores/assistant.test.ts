@@ -34,7 +34,7 @@ const NOT_ASKED_YET = (): void => {}
 const runConfirmedAction = vi.hoisted(() =>
   vi.fn<(name: ActionName, input: Record<string, unknown>) => Promise<ActionOutcome>>(),
 )
-vi.mock('@/assistant/executor', () => ({ runConfirmedAction }))
+vi.mock('@/features/assistant/executor', () => ({ runConfirmedAction }))
 
 const answer = (fields: Partial<AssistantAnswer> = {}): AssistantAnswer => ({
   say: 'J’ouvre un fichier 3D.',

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { assistantAction, refusalKey } from '@shared/domain/assistant'
-import type { AssistantStep } from '../conversation'
+import type { AssistantStep } from './conversation'
 
 export function AssistantConversationStep({ step }: { step: AssistantStep }) {
   const { t } = useTranslation()

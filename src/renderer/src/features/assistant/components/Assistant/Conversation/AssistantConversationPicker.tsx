@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { SelectField, type SelectOption } from '@/components/SelectField'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { useAssistantChoices } from '@/hooks/useAssistantChoices'
-import type { AssistantChoice, AssistantGroup } from '../choices'
+import type { AssistantChoice, AssistantGroup } from '../../../choices'
 
 const GROUP_KEYS: Record<AssistantGroup, string> = {
   machine: 'assistant.groupMachine',

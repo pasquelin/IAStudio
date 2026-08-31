@@ -1,6 +1,6 @@
 import type { IWatermarkPanelProps } from 'dockview-react'
 import { useTranslation } from 'react-i18next'
-import { AssistantConversation } from '@/assistant/AssistantConversation/AssistantConversation'
+import { AssistantConversation } from '@/features/assistant/components/Assistant/Conversation/AssistantConversation'
 import { useAssistantOffer } from '@/hooks/useAssistantOffer'
 import { DocumentsMessage } from '../DocumentsMessage'
 

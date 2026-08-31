@@ -3,7 +3,7 @@ import { spellsOut, WRITTEN_SOURCES } from '@/components/testHarness'
 import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
 
 /** As `WRITTEN_SOURCES` keys it: the glob resolves against `design/testHarness.ts`. */
-const GUARDED = '../assistant/AssistantConversation/conversationStyles.ts'
+const GUARDED = '../features/assistant/components/Assistant/Conversation/conversationStyles.ts'
 
 /**
  * The radius is left out on purpose: the two copies this constant replaces agreed on all eight
@@ -31,7 +31,7 @@ describe('the card of the assistant conversation', () => {
 })
 
 /** The conversation and its parts, as `WRITTEN_SOURCES` keys them. */
-const CONVERSATION = '../assistant/AssistantConversation/'
+const CONVERSATION = '../features/assistant/components/Assistant/Conversation/'
 
 /**
  * 🛑 The field and whatever mirrors it wear ONE constant: written out on either side they drift,

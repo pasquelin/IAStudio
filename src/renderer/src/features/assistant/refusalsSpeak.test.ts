@@ -6,7 +6,7 @@ import { WRITTEN_SOURCES } from '@/components/testHarness'
  * 2026-08-31 against deepseek-chat: 378 refusals, 234 of them with no `detail` at all — and the
  * model answered the very same call word for word. `detail` being optional is what let it happen.
  */
-const ASSISTANT = WRITTEN_SOURCES.filter(([path]) => path.startsWith('../assistant/'))
+const ASSISTANT = WRITTEN_SOURCES.filter(([path]) => path.startsWith('../features/assistant/'))
 
 /**
  * Prose, blanked rather than deleted, so a line number still names the line it came from. The

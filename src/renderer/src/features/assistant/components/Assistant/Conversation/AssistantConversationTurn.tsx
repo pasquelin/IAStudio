@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AssistantTurn } from '../conversation'
+import type { AssistantTurn } from './conversation'
 import { AssistantConversationStep } from './AssistantConversationStep'
 import { CONVERSATION_BUBBLE } from './conversationStyles'
 

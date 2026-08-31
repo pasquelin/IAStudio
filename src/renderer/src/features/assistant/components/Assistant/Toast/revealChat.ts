@@ -1,6 +1,6 @@
 import { revealTool } from '@/helpers/revealPanel'
-import { focusChat, mountedChatPanel } from './chatPanel'
-import { mountedConfirmer } from './confirm'
+import { focusChat, mountedChatPanel } from '../../../chatPanel'
+import { mountedConfirmer } from '../../../confirm'
 
 /**
  * Brings the conversation under the eye, and the caret into it. A host already on screen is

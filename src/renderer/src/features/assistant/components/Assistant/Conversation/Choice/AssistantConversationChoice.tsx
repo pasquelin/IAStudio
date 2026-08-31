@@ -4,7 +4,7 @@ import { Button } from '@/components/Button'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
 import { AssistantConversationChoiceForm } from './AssistantConversationChoiceForm'
-import { CONVERSATION_CARD } from './conversationStyles'
+import { CONVERSATION_CARD } from '../conversationStyles'
 
 /**
  * What the assistant asked, with the answers it offered — and often none: « quel nom ? » has
