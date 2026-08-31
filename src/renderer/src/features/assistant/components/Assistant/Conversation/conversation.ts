@@ -39,8 +39,9 @@ export type AssistantStep = {
  * 🛑 `[M]` Raised to 3 000 and put back: `scene.state` runs 1 740 to 3 006 characters on the bench
  * decors, so it looked like the cut that blinded a model. Measured 2026-08-31 over 120 runs of
  * sections 6, 7, 22 and 61 — 79 passed at 600, 79 at 3 000. It buys 10.7% fewer tokens sent and
- * costs turns of history nothing measured, so it is not a trade to make blind. Reorder
- * `scene.state` instead, which is free — `sceneHandlers.ts` says how.
+ * costs turns of history nothing measured, so it is not a trade to make blind. Reordering
+ * `scene.state` does not fix it either, and `sceneHandlers.ts` says why: no order makes `world`
+ * and `nodes` both fit, so it only chooses which of them is lost.
  */
 export const RESULT_MAX = 600
 

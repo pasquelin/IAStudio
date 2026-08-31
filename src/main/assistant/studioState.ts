@@ -1,6 +1,7 @@
 import { primaryRoleOf } from '@shared/domain/aiRole'
 import type {
   SnapshotDocument,
+  SnapshotTask,
   SnapshotSelection,
   StudioSnapshot,
 } from '@shared/domain/studioSnapshot'
@@ -22,6 +23,9 @@ const OTHERS_NAMED = 3
 
 /** How many selected things are named, for the same reason. */
 const SELECTED_NAMED = 4
+
+/** How many running tasks are named, for the same reason. */
+const TASKS_NAMED = 2
 
 /**
  * 🛑 What the whole block may cost the briefing. Its twin `context` is capped where it is composed
@@ -113,6 +117,25 @@ function armedLine(state: StudioSnapshot): string[] {
 }
 
 /**
+ * 🛑 The id and not the count: `task.cancelLocalTask` takes one, and nothing else in a briefing
+ * publishes it — « arrête la tâche d'indexation qui tourne » read `jobs.list`, which holds cloud
+ * generations alone, and answered that nothing was running.
+ */
+function taskLines(tasks: readonly SnapshotTask[]): string[] {
+  if (tasks.length === 0) return []
+
+  const named = tasks
+    .slice(0, TASKS_NAMED)
+    .map(one => `${quoted(one.label)} (${one.id}, ${Math.round(one.ratio * 100)}%)`)
+  const rest = tasks.length - named.length
+
+  return [
+    `  Running here: ${named.join(', ')}${rest > 0 ? `, and ${rest} more` : ''}.`,
+    '  task.cancelLocalTask stops one by its id.',
+  ]
+}
+
+/**
  * 🛑 Said only while a game is UNDER WAY, and it names the calls: nothing else in the briefing
  * announces one, so « où en est la partie ? » was answered off the document block and « reprends
  * la partie » without a single call. The tick stays out — `runtime.report` answers it, and a
@@ -156,6 +179,7 @@ export function describeStudio(data: unknown): string {
     // not fit, so a line placed ahead of those two takes them down on a saturated briefing — and
     // a generation run without the armed id is what `armedLine` exists to prevent.
     ...playLine(state.play),
+    ...taskLines(state.tasks),
     ...(state.authKnown && !state.authenticated
       ? ['  Not signed in: nothing can be generated.']
       : []),

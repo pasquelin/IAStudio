@@ -38,6 +38,17 @@ export type SnapshotSelection = {
   items: { id: string; name: string }[]
 }
 
+/** How many running tasks the snapshot names. Beyond this the list is noise in a briefing. */
+export const SNAPSHOT_TASKS_MAX = 4
+
+/** One long task in flight here, as the studio publishes it. */
+export type SnapshotTask = {
+  id: string
+  label: string
+  /** 0 to 1 across the whole task. */
+  ratio: number
+}
+
 export type StudioSnapshot = {
   project: Project | null
   /**
@@ -61,6 +72,12 @@ export type StudioSnapshot = {
    * partie » answered « Reprise de la partie. » without a single call — measured 2026-08-31.
    */
   play: PlayState
+  /**
+   * 🛑 The long tasks this window is running, with the id `task.cancelLocalTask` takes — nothing
+   * else publishes one, so « arrête la tâche d'indexation qui tourne » had no id to name and the
+   * model read `jobs.list`, which holds cloud generations and never a local task.
+   */
+  tasks: SnapshotTask[]
   authenticated: boolean
   /** Same reason as `projectKnown`: the window holds a separate flag for it. */
   authKnown: boolean

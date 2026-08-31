@@ -14,6 +14,7 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { NOT_PLAYING } from '@shared/domain/gameRuntime'
 import { usePlay } from '@/stores/play'
+import { useTasks } from '@/stores/tasks'
 import { useProject } from '@/stores/project'
 import { runAction } from './executor'
 
@@ -45,6 +46,7 @@ beforeEach(() => {
   installFakeBridge()
   // Left set, a paused game of one case is the state every case after it reads.
   usePlay.setState({ reports: {} })
+  useTasks.setState({ running: {} })
   openDocument.mockClear()
   closeDocument.mockClear()
   closeDocument.mockResolvedValue(true)
@@ -106,6 +108,14 @@ describe('reading what the studio is', () => {
     expect(outcome).toMatchObject({
       ok: true,
       data: { selection: { kind: 'node', items: [{ id: node?.id, name: node?.name }] } },
+    })
+  })
+
+  it('names the long tasks this window is running', async () => {
+    useTasks.getState().begin({ id: 'task-7', label: 'Indexing', ratio: 0.4 })
+
+    expect(await runAction('studio.state', {})).toMatchObject({
+      data: { tasks: [{ id: 'task-7', label: 'Indexing', ratio: 0.4 }] },
     })
   })
 

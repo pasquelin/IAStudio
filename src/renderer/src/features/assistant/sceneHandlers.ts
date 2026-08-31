@@ -281,12 +281,12 @@ function readState(): ActionOutcome {
     ok: true,
     data: {
       /**
-       * 🛑 The ID-BEARING members first and `world` LAST: `resultLine` drops whole members once
-       * past its ceiling, and `world` — 355 characters carrying no id — sat before the 2 414 of
-       * `nodes`, which a three-object scene answered as `(cut short: nodes)` on 2026-08-31.
-       * `nodes` stays LAST of the two lists: it fills whatever room is left, so a member behind
-       * it is dropped whole — which is what `tracks`, the only place a channel id is published,
-       * would be on a busy scene.
+       * 🛑 The small FIXED members first and `nodes` last, because it is the one that fills what
+       * is left: `resultLine` hands an over-long list all the remaining room, so every member
+       * behind it is dropped whole. Reordering does not fix the cut — `world` and `nodes` do not
+       * both fit under `RESULT_MAX`, whichever goes first — it only chooses which one is lost.
+       * Measured 2026-08-31: raising the ceiling instead moved the bench score by nothing at all,
+       * so `nodes` stays cut on a busy scene, and `conversation.ts` carries the figure.
        */
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
@@ -308,6 +308,9 @@ function readState(): ActionOutcome {
         video: open.state.animation.video ?? [],
         transitions: open.state.animation.transitions ?? [],
       },
+      // The whole world and not its environment alone: the fog, the backdrop, the ground and the
+      // grading are document values, and a client that can write them has to be able to read them.
+      world: open.state.world,
       // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
       // writes, and a ten-second take at every frame is a megabyte of it across the boundary.
       tracks: open.state.animation.tracks.map(track => ({
@@ -340,9 +343,6 @@ function readState(): ActionOutcome {
         // cannot tell a pierced wall from a welded one, nor know there is anything to separate.
         ...(node.type === 'carved' ? { carved: node.carved, material: node.material } : {}),
       })),
-      // The whole world and not its environment alone: the fog, the backdrop, the ground and the
-      // grading are document values, and a client that can write them has to be able to read them.
-      world: open.state.world,
     },
   }
 }

@@ -5,6 +5,8 @@ import * as read from './oracle'
 import {
   cameraScene,
   cubeScene,
+  generating,
+  indexing,
   madeCar,
   named,
   overlay,
@@ -180,12 +182,19 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '42.4 redoes what was just undone',
     said: ["Refais l'opération que je viens d'annuler."],
-    // Made, then taken back: the folder has to be absent when the person speaks and back after.
+    /**
+     * 🛑 A MOVE, never a creation: taking a `folder.new` back sends the folder to the trash, and
+     * `inverseOf` answers `null` for a trash — « undo deliberately stops at the trash », says
+     * `filePlan.ts`. Redoing one is a thing the studio does not do, so no model could win it.
+     */
     setup: async studio => {
-      await studio.run('folder.new', { folder: '', name: 'Tests Assistant' })
+      await studio.run('files.move', {
+        paths: ['Images/fais moi un bateau.png'],
+        folder: 'Materials',
+      })
       await studio.run('files.undoFileOperation', {})
     },
-    passed: run => read.holds(run, 'Tests Assistant'),
+    passed: run => read.holds(run, 'Materials/fais moi un bateau.png'),
   },
 
   {
@@ -267,12 +276,13 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '44.3 cancels the generation under way',
     said: ['Annule la génération en cours.'],
-    setup: madeCar,
+    setup: generating,
     passed: run => read.jobs(run).some(one => one.status === 'cancelled'),
   },
   {
     name: '44.4 stops the indexing task that is running',
     said: ["Arrête la tâche d'indexation qui tourne."],
+    setup: indexing,
     passed: run => read.answeredWith(run, 'task.cancelLocalTask'),
   },
   {

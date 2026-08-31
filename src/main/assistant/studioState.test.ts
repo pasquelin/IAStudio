@@ -27,6 +27,7 @@ const studio = (over: Partial<StudioSnapshot> = {}): StudioSnapshot => ({
   },
   projectKnown: true,
   play: 'edit',
+  tasks: [],
   workspace: 'image',
   surface: 'image',
   commandScope: 'canvas',
@@ -132,6 +133,19 @@ describe('what the studio is, said to the model', () => {
     const shown = describeStudio(studio({ play: 'edit' }))
 
     expect(shown).not.toContain('game')
+  })
+
+  /**
+   * 🛑 The ID, which `task.cancelLocalTask` takes: nothing else in a briefing publishes one, and
+   * « arrête la tâche d'indexation » read `jobs.list`, which holds cloud generations alone.
+   */
+  it('names a running task by the id that stops it', () => {
+    const said = describeStudio(
+      studio({ tasks: [{ id: 'task-7', label: 'Indexing', ratio: 0.4 }] }),
+    )
+
+    expect(said).toContain('"Indexing" (task-7, 40%)')
+    expect(said).toContain('task.cancelLocalTask')
   })
 
   /**

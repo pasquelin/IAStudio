@@ -14,6 +14,7 @@ import {
   type ModelQuery,
   type ModelSummary,
 } from '@shared/domain/model'
+import { useJobs } from '@/stores/jobs'
 import type { MemoryCatalog } from './memoryCatalog'
 import { WHEN } from './project'
 import type { MemoryFolder } from './memoryFolder'
@@ -27,6 +28,8 @@ export type MemoryCloud = {
   searchModels: (query?: ModelQuery) => Promise<ModelPage>
   describeModel: (modelId: string) => Promise<ModelDescriptor>
   generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+  /** Marks one cancelled in the store, which is where a real account's progress lands it. */
+  cancelJob: (jobId: string) => Promise<void>
   /** What family a job ran, which `Job` does not carry — an oracle asks it by `targetId`. */
   familyOf: (modelId: string) => ModelFamily | null
   /** The schema, read the way a mounted panel already holds it rather than fetched again. */
@@ -113,6 +116,20 @@ const nameOfRun = (label: string, body: Record<string, unknown>): string =>
 export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog): MemoryCloud {
   let runs = 0
 
+  /**
+   * 🛑 The store is where a cancellation LANDS: `useJobs.cancel` tells the provider and waits for
+   * the studio to be told back, which on a real account arrives as progress. Nothing wrote
+   * `cancelled` here, so « annule la génération en cours » could not be won by any model.
+   */
+  const cancelJob = (jobId: string): Promise<void> => {
+    useJobs.setState(state => ({
+      jobs: state.jobs.map(one =>
+        one.id === jobId ? { ...one, status: 'cancelled', finishedAt: WHEN } : one,
+      ),
+    }))
+    return Promise.resolve()
+  }
+
   return {
     searchModels: (query = {}) =>
       Promise.resolve({
@@ -128,6 +145,8 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
       const model = found(modelId)
       return model ? Promise.resolve(model) : Promise.reject(new Error(`no model ${modelId}`))
     },
+
+    cancelJob,
 
     familyOf: modelId => found(modelId)?.family ?? null,
 

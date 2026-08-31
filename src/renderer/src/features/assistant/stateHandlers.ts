@@ -7,6 +7,7 @@ import type {
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { PlayState } from '@shared/domain/gameRuntime'
+import { SNAPSHOT_TASKS_MAX } from '@shared/domain/studioSnapshot'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import type { FolderExportRequest } from '@shared/ipc'
@@ -33,6 +34,7 @@ import {
 } from '@/stores/documents'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { playReportOf, usePlay } from '@/stores/play'
+import { useTasks } from '@/stores/tasks'
 import { useSettings } from '@/stores/settings'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
@@ -156,6 +158,7 @@ function studioState(): ActionOutcome {
     // Off the scene IN FRONT: a game runs per document, and another tab's would aim
     // « reprends la partie » at a scene the person is not looking at.
     play: playAhead(documents),
+    tasks: Object.values(useTasks.getState().running).slice(0, SNAPSHOT_TASKS_MAX),
     authenticated: auth.auth.authenticated,
     // Same reason as `projectKnown`, and the store keeps the flag for it.
     authKnown: auth.authKnown,

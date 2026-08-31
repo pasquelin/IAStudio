@@ -26,7 +26,13 @@ export type MemoryFiles = {
   undo: () => Promise<FileOutcome>
   redo: () => Promise<FileOutcome>
   can: () => FileHistory
-  /** Empties both stacks, so what the DECOR did is not read as what the model did. */
+  /**
+   * Empties what the DECOR did, so it is not read as what the model did — and nothing else.
+   *
+   * 🛑 The stack of what is left to REDO survives: a decor that undoes on purpose is laying out
+   * a studio with something to redo, and emptying it made « refais l'opération que je viens
+   * d'annuler » unwinnable by any model, measured 2026-08-31.
+   */
   forget: () => void
 }
 
@@ -88,7 +94,7 @@ export function createMemoryFiles(folder: MemoryFolder, catalog: MemoryCatalog):
     redo: () => step('redo'),
     can: () => ({ undo: stacks.past.length > 0, redo: stacks.future.length > 0 }),
     forget: () => {
-      stacks = { past: [], future: [] }
+      stacks = { past: [], future: stacks.future }
     },
   }
 }
