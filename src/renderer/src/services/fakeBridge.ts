@@ -136,6 +136,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),
       rename: () => Promise.reject(new Error('no project')),
+      // Refuses by default, like the rename above it: a bin nobody stubbed must not read as a
+      // folder that went, which would have a suite believe someone's project was destroyed.
+      trash: () => Promise.reject(new Error('no project')),
       // Every file gesture answers "nothing happened, nothing refused" unless a test says
       // otherwise: an outcome nobody stubbed must not read as one that moved something, which
       // would have a suite believe the disk had agreed.

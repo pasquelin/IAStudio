@@ -36,6 +36,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { mergedSettings } from '@main/settings/store'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/features/scene/components/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
@@ -47,7 +48,7 @@ import { createMemoryFiles } from './memoryFiles'
 import { createMemoryGit, type MemoryGit } from './memoryGit'
 import { createMemoryShell, type MemoryShell } from './memoryShell'
 import { createMemoryFolder, type MemoryFolder } from './memoryFolder'
-import { projectName } from '@shared/domain/project'
+import { projectName, withRecentProject } from '@shared/domain/project'
 
 /**
  * 🛑 Nothing here decides. Every call goes through `runConfirmedAction`, the door the window AND
@@ -196,6 +197,15 @@ export async function createStudio(
         return Promise.resolve({ game: manifest, trouble: null })
       },
     },
+    /**
+     * 🛑 A PORT, and one the bench had wrong: the stub answered `DEFAULT_SETTINGS` to every write,
+     * and the store keeps what the channel hands back — so any preference written wiped the shelf
+     * the decor had just sown. Through the REAL `mergedSettings`, never a second merge of its own.
+     */
+    settings: {
+      write: partial => Promise.resolve(mergedSettings(useSettings.getState().settings, partial)),
+      read: () => Promise.resolve(useSettings.getState().settings),
+    },
     project: {
       ...shell.channels.project,
       listFolder: (relative, hidden) => folder.list(relative, hidden),
@@ -287,7 +297,26 @@ export async function createStudio(
   useJobs.setState({ jobs: [], bodies: {} })
   // 🛑 Settings too, and `shelved` is why: a scenario that sows the recent projects would leave
   // them for every section after it, where an empty shelf is what makes `project.create` refuse.
+  // It matters more since the port below MERGES a write rather than answering the defaults.
   useSettings.setState({ settings: DEFAULT_SETTINGS })
+  /**
+   * 🛑 The open project goes ON the shelf, as `settleOpenedProject` puts it there in the real
+   * studio. Left off, `projects.list` answered `found 0` over a project that was open, so no
+   * sentence naming it by path could be carried out at all — measured on 41.8, 0/3.
+   */
+  const open = useProject.getState().project
+  if (open) {
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: {
+          ...state.settings.storage,
+          lastProject: open.path,
+          recentProjects: withRecentProject(state.settings.storage.recentProjects, open, WHEN),
+        },
+      },
+    }))
+  }
   // The project's own documents, read as the app reads them at open: without this every
   // `file.open` on a `.gltf` falls through to « hand it to the system ».
   await useDocuments.getState().relist()

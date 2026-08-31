@@ -267,20 +267,20 @@
       "help": "Opens a way in on this machine alone, through which a client such as Claude Code can run the same actions the assistant runs. Anything that spends or uploads asks for a yes on screen, exactly as it does here. Switched off, nothing is listening."
     },
     "mcpDelegateFiles": {
-      "title": "Let it touch files without asking",
-      "help": "Moving, renaming, binning, putting a git-tracked file back. The Explorer takes some of those back, never all. Without this, each one is asked about."
+      "title": "Move and delete my files without asking me",
+      "help": "An outside client may move, rename or bin a file of your project, and put a git-tracked file back, without showing anything. The Explorer takes some of those back, never all. Unticked, every gesture is put in front of you first."
     },
     "mcpDelegateAsset": {
-      "title": "Let it upload without asking",
-      "help": "Sending an image to your library, where it stays. It costs no creative units. Without this, every upload is asked about."
+      "title": "Upload to my library without asking me",
+      "help": "An outside client may send an image to your library, where it stays. It costs no creative units. Unticked, every upload is put in front of you first."
     },
     "mcpDelegateRemote": {
-      "title": "Let it publish to a server without asking",
-      "help": "Sending a branch to a remote git repository. It is the only gesture that leaves this machine, and nothing here takes it back. Arm it knowingly."
+      "title": "Publish to a remote server without asking me",
+      "help": "An outside client may send a branch to a remote git repository. It is the only gesture that leaves this machine, and nothing here takes it back. Arm it knowingly."
     },
     "mcpDelegateBudget": {
-      "title": "Creative units spendable without asking",
-      "help": "What a client may spend in this window before the studio starts asking again. At zero, every spend is asked about. A generation the API declines to price is never started without you, whatever this holds."
+      "title": "Spend creative units without asking me",
+      "help": "What an outside client may spend in this window before the studio starts asking again. At zero, every spend is put in front of you first. A generation the API declines to price is never started without you, whatever this holds."
     },
     "copyMcpCommand": {
       "title": "Connection command",

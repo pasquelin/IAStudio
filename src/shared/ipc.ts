@@ -139,6 +139,7 @@ export type Channels = {
   projectRevealFile: 'project:reveal-file'
   projectRevealFolder: 'project:reveal-folder'
   projectRename: 'project:rename'
+  projectTrash: 'project:trash'
   projectRenameFile: 'project:rename-file'
   projectMoveFiles: 'project:move-files'
   projectTrashFiles: 'project:trash-files'
@@ -389,6 +390,7 @@ export const CHANNELS: Channels = {
   projectRevealFile: 'project:reveal-file',
   projectRevealFolder: 'project:reveal-folder',
   projectRename: 'project:rename',
+  projectTrash: 'project:trash',
   projectRenameFile: 'project:rename-file',
   projectMoveFiles: 'project:move-files',
   projectTrashFiles: 'project:trash-files',
@@ -1073,6 +1075,9 @@ export type SkyboxExportCommand =
  */
 export type McpState = { port: number | null }
 
+/** How binning a project folder ended — see `project.trash`. */
+export type ProjectBinned = 'trashed' | 'missing' | 'not-a-project'
+
 /**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
  * `CHANNELS`; every `on…` subscribes to exactly one entry of `EVENTS`.
@@ -1414,6 +1419,25 @@ export type StudioBridge = {
      * renamed out from under the studio is the same failure `open` reports.
      */
     rename: (path: string, name: string) => Promise<Project>
+    /**
+     * Puts a project's FOLDER, and everything in it, in the system's trash. Named by its own
+     * absolute path, as `rename` is, so a project that is not open can go.
+     *
+     * 🛑 The trash, never a delete: `shell.trashItem` leaves the person a way back, and nothing
+     * here has one. The project is closed first when it is the open one — its catalogue holds a
+     * file inside the folder that is about to leave.
+     *
+     * 🛑 What is keyed on the folder is the caller's half, exactly as for `rename`: the shelf,
+     * `storage.lastProject`, `storage.projectAccounts` and `ai.projectRoles`. Left behind, they
+     * point a live account key at a folder that is gone.
+     *
+     * 🛑 Answers WHICH ending, never a boolean: `missing` is a folder the disk no longer holds —
+     * an unplugged drive as much as a deletion — and `not-a-project` is a folder that is there and
+     * holds no project. Read as one `false`, a caller pruned the account link of a project sitting
+     * on a drive that was merely not plugged in, which is the one thing `projectAccounts` exists
+     * to prevent. Throws only when the system refused the move.
+     */
+    trash: (path: string) => Promise<ProjectBinned>
     /**
      * Renames in place — the name only, never the folder it sits in.
      *

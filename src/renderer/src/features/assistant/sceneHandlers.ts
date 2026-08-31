@@ -280,18 +280,34 @@ function readState(): ActionOutcome {
   return {
     ok: true,
     data: {
+      /**
+       * 🛑 The ID-BEARING members first, and the two big projections last: `resultLine` drops whole
+       * members once past its ceiling, so a busy scene spent the budget on `world` and `tracks` and
+       * cut the very lists a client needs an id from — which is what `cues` was added to fix.
+       */
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
-      // The whole world and not its environment alone: the fog, the backdrop, the ground and the
-      // grading are document values, and a client that can write them has to be able to read them.
-      world: open.state.world,
-      // What drives the cameras: without them a client can open a shot and never edit one, since
-      // `camera.rail` and `camera.target` name it by the id only this list hands over.
-      shots: open.state.animation.shots,
       // The band's own half. `channel.remove` and `key.move` name a channel by the id only this
       // hands over, and `animation.settings` writes the two numbers beside it.
       fps: open.state.animation.fps,
       duration: open.state.animation.duration,
+      // What drives the cameras: without them a client can open a shot and never edit one, since
+      // `camera.rail` and `camera.target` name it by the id only this list hands over.
+      shots: open.state.animation.shots,
+      /**
+       * 🛑 The four cued lists, by the same rule as `shots`: `timeline.removeSceneCue` names a row
+       * by the id ONLY this hands over, so a client could lay a cue and never take one back —
+       * « retire le fondu que tu viens de poser » had nothing to read, measured 2026-08-31.
+       */
+      cues: {
+        events: open.state.animation.events ?? [],
+        audio: open.state.animation.audio ?? [],
+        video: open.state.animation.video ?? [],
+        transitions: open.state.animation.transitions ?? [],
+      },
+      // The whole world and not its environment alone: the fog, the backdrop, the ground and the
+      // grading are document values, and a client that can write them has to be able to read them.
+      world: open.state.world,
       // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
       // writes, and a ten-second take at every frame is a megabyte of it across the boundary.
       tracks: open.state.animation.tracks.map(track => ({

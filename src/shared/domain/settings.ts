@@ -135,9 +135,10 @@ export type Settings = {
      * FAILS. A project on a drive that was not plugged in would have come back on someone else's
      * key, in silence, which is the one thing this exists to prevent.
      *
-     * Nothing prunes it, and `forget` deliberately leaves it alone for that same reason — pruning
-     * on the path an opening failed on is exactly the defect above. It grows by one short line per
-     * project ever opened, which is the cost of not losing a choice the user made.
+     * 🛑 Only a CONFIRMED bin prunes it — `project.trash` answering `trashed`, never `missing`.
+     * `forget`, a failed opening and a folder the disk cannot see right now all leave it alone:
+     * pruning on any of those is exactly the defect above. It grows by one short line per project
+     * ever opened, which is the cost of not losing a choice the user made.
      */
     projectAccounts: Record<string, string>
   }

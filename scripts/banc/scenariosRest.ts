@@ -36,6 +36,19 @@ const keyedCube = async (studio: Studio): Promise<void> => {
   await studio.run('key.writePoseKeys', { nodeId: named(studio, 'Cube Test'), timeSeconds: 5 })
 }
 
+/** Two projects on the shelf and none open — the decor the forget/trash pair is scored on. */
+const twoShelved = async (studio: Studio): Promise<void> => {
+  await studio.run('project.close', {})
+  shelved([
+    { path: '/projets/Voilier', openedAt: WHEN, createdAt: WHEN },
+    { path: '/projets/Démo', openedAt: WHEN, createdAt: WHEN },
+  ])
+}
+
+/** The row named by both sentences is off the shelf, and the other one is still on it. */
+const rowGone = (): boolean =>
+  !read.shelvedPaths().includes('/projets/Voilier') && read.shelvedPaths().includes('/projets/Démo')
+
 export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '41.1 opens the Scène 1 document of the documents folder',
@@ -119,14 +132,31 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     // sentence, so the model must LIST to learn one — see `fileActions.ts` for the measure.
     name: '41.11 opens a recent project it had to list first',
     said: ['Ouvre un projet récent.'],
-    // 🛑 Seeded LAST: the shelf is written by the main process, which the bench fakes, so opening
-    // or closing a project answers `DEFAULT_SETTINGS` and wipes what was sown before it.
+    // Sown after the close, so the shelf holds one row and one only — the close writes the
+    // settings on its way out, and the bench's port now merges it as the main process does.
     setup: async studio => {
       await studio.run('project.close', {})
       shelved([{ path: '/projets/Voilier', openedAt: WHEN, createdAt: WHEN }])
     },
     passed: run =>
       read.answeredWith(run, 'projects.list') && run.studio.projectName() === 'Voilier',
+  },
+
+  {
+    // 🛑 The gesture the model INVENTED a reason for: with no `project.forget` to reach, it
+    // answered that Voilier was not on the shelf — it was, on screen.
+    name: '41.12 drops a project from the recent ones without touching its folder',
+    said: ['Retire le projet Voilier de mes projets récents.'],
+    setup: twoShelved,
+    passed: run => rowGone() && read.trashedProjects(run).length === 0,
+  },
+  {
+    // The same decor, scored on the FOLDER: a model that merely forgot the row would pass a case
+    // that only read the shelf, and the pair exists to tell those two apart.
+    name: '41.13 puts a project folder in the trash',
+    said: ['Mets le projet Voilier à la corbeille.'],
+    setup: twoShelved,
+    passed: run => rowGone() && read.trashedProjects(run).includes('/projets/Voilier'),
   },
 
   {

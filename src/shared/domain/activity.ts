@@ -90,7 +90,9 @@ export type ActivityMessage =
   | 'projectNotCreated'
   | 'projectNotRenamed'
   | 'projectNotRevealed'
+  | 'projectNotTrashed'
   | 'projectTooNew'
+  | 'projectTrashed'
   | 'projectUnreadable'
   | 'pullFailed'
   | 'pulled'
@@ -136,7 +138,9 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'projectNotCreated',
   'projectNotRenamed',
   'projectNotRevealed',
+  'projectNotTrashed',
   'projectTooNew',
+  'projectTrashed',
   'projectUnreadable',
   'pullFailed',
   'pulled',

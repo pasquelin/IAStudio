@@ -16,7 +16,7 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **366 demandes, et le banc en joue 366** — une par case, dans cet ordre.
+La liste ci-dessous compte **439 demandes, et le banc en joue 439** (compté le 2026-08-31) — une par case, dans cet ordre.
 `batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une demande
 ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi. C'est ce qui
 rend « on en est où ? » répondable.
@@ -678,6 +678,8 @@ Sur un montage vidéo portant deux plans et un fond sonore :
 - [ ] « Ferme le projet ouvert. »
 - [ ] « Crée un nouveau projet. »
 - [ ] « Ouvre un projet récent. »
+- [ ] « Retire le projet Voilier de mes projets récents. »
+- [ ] « Mets le projet Voilier à la corbeille. »
 
 ## 42. Fichiers — le reste
 

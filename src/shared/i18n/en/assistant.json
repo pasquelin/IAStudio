@@ -105,6 +105,14 @@
         "title": "Create a project folder",
         "description": "Makes a project and opens it, without raising the system dialogue a person would use. A NAME is enough — the studio puts it where this person keeps projects, named above. The folder field says which folder to make it in, when the sentence names one."
       },
+      "projectForget": {
+        "title": "Drop a project from the recent ones",
+        "description": "Drops a project from the list of recent projects, which is a list of shortcuts and nothing more. THE FOLDER IS NOT TOUCHED and nothing is erased: reopening the project puts the row back. To put the folder in the trash, that is project.trash. Named by the absolute path projects.list answers."
+      },
+      "projectTrash": {
+        "title": "Move a project to the trash",
+        "description": "Moves the project FOLDER and everything in it — documents, assets, catalogue — to the system trash. Nothing in the studio undoes it: only the system trash can give it back. The project is closed if it was open, and its row leaves the recent projects. To drop the row alone without touching the folder, that is project.forget. Named by the absolute path projects.list answers."
+      },
       "fileOpen": {
         "title": "Open a file of the project",
         "description": "Opens any file the project folder holds — an image, a 3D model, a material, a document — in the space that edits it, the way a double-click in the Explorer does. A file no editor here takes is handed to the program that owns it."
@@ -163,7 +171,7 @@
       },
       "projectRename": {
         "title": "Rename a project",
-        "description": "Changes the name a project carries in its manifest, never touching the folder holding it — the catalogue and the recent projects are keyed on that. Named by its own absolute path, so a closed one can be renamed too."
+        "description": "Renames a project, which MOVES its folder: a project is named by its folder and by nothing else. What it holds travels with it, and nothing is erased. Named by the absolute path projects.list answers, so a closed one can be renamed too — and the path answered is the NEW one."
       },
       "modelsReadGenerationModelFields": {
         "title": "Read a model’s own inputs",
@@ -339,7 +347,7 @@
       },
       "clipFade": {
         "title": "Set a clip’s fade",
-        "description": "Gives a clip’s fade in or fade out the length asked for. Two ramps longer than the clip itself are brought back to what it can carry."
+        "description": "Gives a CLIP’s fade in or fade out the length asked for, so a video or audio edit has to be in front. Two ramps longer than the clip itself are brought back to what it can carry. For a fade in a 3D scene’s cinematic, that is timeline.addSceneCue."
       },
       "clipGain": {
         "title": "Set a clip’s level",
@@ -1087,11 +1095,11 @@
       },
       "timelineAddSceneCue": {
         "title": "Cue something on the timeline",
-        "description": "Adds an event, a sound, a video or a transition to the timeline of the scene. What the third field names depends on the list — an event name, an asset id, or a kind of transition."
+        "description": "Adds an event, a sound, a video or a transition to the timeline of the 3D SCENE. An event is a NAME put on the bus at the moment given, which a script hears through onMessage — that is how something is made to happen at a point of a cinematic, rather than by laying animation keys. A cinematic fade goes here, with list=transitions and what=fade. What the third field names depends on the list — an event name, an asset id, or a kind of transition. For a fade on a clip of an edit, that is clip.fade."
       },
       "timelineRemoveSceneCue": {
         "title": "Take a cue off the timeline",
-        "description": "Removes the row of that list carrying that id."
+        "description": "Takes one cue off the timeline of the 3D SCENE — an event, a sound, a video or a transition, a cinematic fade among them. The id is read from the cues member of what scene.state answers, and nowhere else. To take a fade off a clip of an edit, that is clip.fade with a length of zero."
       },
       "timelineSetPanelRows": {
         "title": "Choose what the timeline offers",

@@ -26,6 +26,7 @@ import type { MaterialState } from '@/engines/material/materialState'
 import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { usePostPresets } from '@/stores/postPresets'
+import { useSettings } from '@/stores/settings'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -43,6 +44,13 @@ export { SECOND }
  * for was announced as a success by the model itself. The units are the state's, not the
  * action's — a node's rotation and a LAYER's are both in radians here.
  */
+
+/** The shelf of recent projects, as the home draws it — a list of shortcuts, not of folders. */
+export const shelvedPaths = (): readonly string[] =>
+  useSettings.getState().settings.storage.recentProjects.map(one => one.path)
+
+/** The project folders sent to the system's trash — the FOLDER half, which the shelf never says. */
+export const trashedProjects = (run: Run): readonly string[] => run.studio.shell.trashedProjects()
 
 export const documents = (run: Run): readonly DocumentDescriptor[] => run.studio.documents()
 

@@ -630,15 +630,22 @@ function lastSeen(state: Pick<AssistantState, 'turns'>): number {
   return state.turns.at(-1)?.id ?? 0
 }
 
-/** What a call that sets a state already reached is told — the fix is to read, not to re-set. */
+/**
+ * 🛑 It points at the ANSWER, and it may: the guard only fires on a step that RAN, and `blockOf`
+ * writes every such step back into the history as « You ran X. It answered: … ». Told merely that
+ * the call had already run, the model re-ran the reading call instead of reading what came back —
+ * 23 refusals of the pass of 2026-08-31.
+ */
 const ALREADY_SETTLED =
-  'that exact call already ran in this turn and left the studio in the state it asked for. ' +
-  'Read what stands and take the next step, rather than asking for it again.'
+  'that exact call already ran in this turn and left the studio in the state it asked for. Its ' +
+  'answer is written above in this conversation — read it there and take the next step, rather ' +
+  'than asking for it again.'
 
-/** What a repeated relative call is told — it names the fix, since the value itself was right. */
+/** The same, for a relative change: repeating it would apply it twice, not settle it. */
 const ALREADY_APPLIED =
   'that exact relative change already ran in this turn, and running it again would apply it ' +
-  'twice. Read the value that stands before asking for another change.'
+  'twice. What it answered is written above in this conversation — read the value that stands ' +
+  'there before asking for another change.'
 
 /** Rewrites one turn in place, leaving the others as they were. */
 function patch(
