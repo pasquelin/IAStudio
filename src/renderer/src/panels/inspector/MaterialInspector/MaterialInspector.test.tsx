@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/material'
 import { TRANSLATIONS } from '@shared/i18n'
 import { installMaterial } from '@/stores/material-fixtures'
 import { materialHistoryOf, materialOf, useMaterials } from '@/stores/materials'
@@ -15,6 +17,13 @@ beforeEach(() => {
 const material = () => materialOf(useMaterials.getState(), DOCUMENT).material
 const preview = () => materialOf(useMaterials.getState(), DOCUMENT).preview
 const entries = () => materialHistoryOf(useMaterials.getState(), DOCUMENT).past.length
+
+/** The whole property line a control stands on, which is where its reset stands too. */
+function lineOf(name: string): HTMLElement {
+  const line = inSection('Matière').getByLabelText(name).closest('label')
+  if (!line) throw new Error(`no property line for ${name}`)
+  return line
+}
 
 const show = (): void => {
   render(<MaterialInspector documentId={DOCUMENT} />)
@@ -39,6 +48,31 @@ describe('MaterialInspector', () => {
 
     expect(screen.getByText('Plage de rugosité')).toBeInTheDocument()
     expect(screen.getByText('Plage de métal')).toBeInTheDocument()
+  })
+
+  /**
+   * Seven sliders of this face offer a reset, and none was covered. It goes through the same
+   * setter as a drag, which is what makes ⌘Z take it back the way it takes a drag back.
+   */
+  it('puts a roughness back at its default, and undoes like any other edit', async () => {
+    show()
+    fireEvent.change(inSection('Matière').getByLabelText('Rugosité'), { target: { value: '0.8' } })
+    const written = entries()
+
+    await userEvent.click(within(lineOf('Rugosité')).getByRole('button'))
+
+    expect(material().roughness).toBe(DEFAULT_TEXTURE_MATERIAL.roughness)
+    expect(entries()).toBe(written + 1)
+
+    useMaterials.getState().undo(DOCUMENT)
+
+    expect(material().roughness).toBeCloseTo(0.8)
+  })
+
+  it('leaves the reset of an untouched roughness inert', () => {
+    show()
+
+    expect(within(lineOf('Rugosité')).getByRole('button')).toBeDisabled()
   })
 
   it('writes a roughness onto the document', () => {

@@ -13,6 +13,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { SliderField } from '@/design/SliderField'
 import { ToggleField } from '@/design/ToggleField'
 import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/skybox/commands'
+import { resetTo } from '@/helpers/resetTo'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { SkyboxInspectorAdjustments } from './SkyboxInspectorAdjustments'
@@ -48,12 +49,10 @@ export function SkyboxInspector({ documentId }: SkyboxInspectorProps) {
 
   // Through the same setters, so ⌘Z takes a reset back the way it takes a drag back.
   const resetSun = <K extends keyof SunSettings>(key: K): (() => void) | undefined =>
-    content.sun[key] === DEFAULT_SUN[key] ? undefined : () => onSun(key, DEFAULT_SUN[key])
+    resetTo(content.sun[key], DEFAULT_SUN[key], value => onSun(key, value))
 
   const resetEnvironment = <K extends keyof SkyboxEnvironment>(key: K): (() => void) | undefined =>
-    content.environment[key] === DEFAULT_ENVIRONMENT[key]
-      ? undefined
-      : () => onEnvironment(key, DEFAULT_ENVIRONMENT[key])
+    resetTo(content.environment[key], DEFAULT_ENVIRONMENT[key], value => onEnvironment(key, value))
 
   const onAdjust = (key: keyof AdjustmentStack, value: number): void =>
     edit.run(setAdjustment(key, value))

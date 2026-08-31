@@ -6,6 +6,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { RangeField } from '@/design/RangeField'
 import { SelectField } from '@/design/SelectField'
 import { SliderField } from '@/design/SliderField'
+import { resetTo } from '@/helpers/resetTo'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
@@ -51,12 +52,10 @@ export function MaterialInspector({ documentId }: TextureInspectorProps) {
 
   // Through the same setter, so ⌘Z takes a reset back the way it takes a drag back.
   const resetMaterial = <K extends keyof typeof material>(key: K): (() => void) | undefined =>
-    material[key] === DEFAULT_TEXTURE_MATERIAL[key]
-      ? undefined
-      : () => onMaterial(key, DEFAULT_TEXTURE_MATERIAL[key])
+    resetTo(material[key], DEFAULT_TEXTURE_MATERIAL[key], value => onMaterial(key, value))
 
   const resetPreview = <K extends keyof typeof preview>(key: K): (() => void) | undefined =>
-    preview[key] === DEFAULT_PREVIEW[key] ? undefined : () => onPreview(key, DEFAULT_PREVIEW[key])
+    resetTo(preview[key], DEFAULT_PREVIEW[key], value => onPreview(key, value))
 
   /**
    * Stable, so the memo on `EnvironmentSection` can actually skip: a fresh arrow at the call site

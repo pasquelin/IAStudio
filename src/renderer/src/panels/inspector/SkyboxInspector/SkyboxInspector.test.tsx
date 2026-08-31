@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
@@ -22,6 +22,13 @@ beforeEach(() => {
  * which truncates in a span of its own — so the value is the label's next sibling, not the
  * word's.
  */
+/** The whole property line a control stands on, which is where its reset stands too. */
+function lineOf(name: string): HTMLElement {
+  const line = screen.getByLabelText(name).closest('label')
+  if (!line) throw new Error(`no property line for ${name}`)
+  return line
+}
+
 function valueOf(name: string): Element | null {
   return screen.getByText(name).closest('span')?.parentElement?.nextElementSibling ?? null
 }
@@ -87,6 +94,30 @@ describe('the skybox face of the inspector', () => {
     render(<SkyboxInspector documentId="doc-1" />)
 
     expect(screen.getByLabelText('Élévation')).toHaveValue('0.7')
+  })
+
+  /**
+   * Every slider of this face offers a reset, and none was covered. It goes through the same
+   * setter as a drag, which is what makes ⌘Z take it back the way it takes a drag back.
+   */
+  it('puts the sun back where it started, and undoes like any other edit', async () => {
+    installSkybox('doc-1', sky({ sun: { ...createSkyboxContent().sun, elevation: 0.7 } }))
+    render(<SkyboxInspector documentId="doc-1" />)
+
+    await userEvent.click(within(lineOf('Élévation')).getByRole('button'))
+
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun.elevation).toBeCloseTo(Math.PI / 6)
+
+    useSkyboxes.getState().undo('doc-1')
+
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun.elevation).toBeCloseTo(0.7)
+  })
+
+  it('leaves the reset of a sun at its default inert', () => {
+    installSkybox('doc-1')
+    render(<SkyboxInspector documentId="doc-1" />)
+
+    expect(within(lineOf('Élévation')).getByRole('button')).toBeDisabled()
   })
 
   it('writes a moved control into the document it belongs to', () => {
