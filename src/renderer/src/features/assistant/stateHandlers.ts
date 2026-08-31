@@ -6,6 +6,7 @@ import type {
 } from '@shared/domain/studioSnapshot'
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import type { PlayState } from '@shared/domain/gameRuntime'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import type { FolderExportRequest } from '@shared/ipc'
@@ -31,6 +32,7 @@ import {
   type DocumentsSlice,
 } from '@/stores/documents'
 import { toolSurface, useLayouts } from '@/stores/layouts'
+import { playReportOf, usePlay } from '@/stores/play'
 import { useSettings } from '@/stores/settings'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
@@ -112,6 +114,12 @@ function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
 const frontKind = (documents: DocumentsSlice): DocumentKind | null =>
   (documents.activeId ? documents.documents[documents.activeId] : undefined)?.kind ?? null
 
+/** The state of the game on the scene in front, or `edit` when none is in front at all. */
+function playAhead(documents: DocumentsSlice): PlayState {
+  const sceneId = activeSceneId(documents)
+  return sceneId === null ? 'edit' : playReportOf(usePlay.getState(), sceneId).state
+}
+
 /**
  * 🛑 Typed as `StudioSnapshot` rather than composed loose: this leaves the window as `unknown`
  * and is read key by key in the main process. Untyped, a field renamed here left `describeStudio`
@@ -145,6 +153,9 @@ function studioState(): ActionOutcome {
     // What the person has designated, which is what a spoken request most often means by "it".
     selection: selectionNow(documents),
     armedModels: useModels.getState().selected,
+    // Off the scene IN FRONT: a game runs per document, and another tab's would aim
+    // « reprends la partie » at a scene the person is not looking at.
+    play: playAhead(documents),
     authenticated: auth.auth.authenticated,
     // Same reason as `projectKnown`, and the store keeps the flag for it.
     authKnown: auth.authKnown,

@@ -12,6 +12,8 @@ import { installSequence } from '@/stores/sequence-fixtures'
 import { selectTrackIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { NOT_PLAYING } from '@shared/domain/gameRuntime'
+import { usePlay } from '@/stores/play'
 import { useProject } from '@/stores/project'
 import { runAction } from './executor'
 
@@ -41,6 +43,8 @@ const stored = (id: string, path: string): DocumentDescriptor => ({
 
 beforeEach(() => {
   installFakeBridge()
+  // Left set, a paused game of one case is the state every case after it reads.
+  usePlay.setState({ reports: {} })
   openDocument.mockClear()
   closeDocument.mockClear()
   closeDocument.mockResolvedValue(true)
@@ -103,6 +107,22 @@ describe('reading what the studio is', () => {
       ok: true,
       data: { selection: { kind: 'node', items: [{ id: node?.id, name: node?.name }] } },
     })
+  })
+
+  /**
+   * 🛑 Off the scene IN FRONT: a game runs per document, and another tab's would aim « reprends
+   * la partie » at a scene the person is not looking at.
+   */
+  it('says a game is under way on the scene in front', async () => {
+    installScene('doc-scene', createDefaultScene())
+    installDocuments({ 'doc-scene': '3d', 'doc-other': '3d' }, 'doc-scene')
+    usePlay.setState({ reports: { 'doc-other': { ...NOT_PLAYING, state: 'playing' } } })
+
+    expect(await runAction('studio.state', {})).toMatchObject({ data: { play: 'edit' } })
+
+    usePlay.setState({ reports: { 'doc-scene': { ...NOT_PLAYING, state: 'paused' } } })
+
+    expect(await runAction('studio.state', {})).toMatchObject({ data: { play: 'paused' } })
   })
 
   // Which TRACK is designated, not the clip that was designated before it: a briefing that read

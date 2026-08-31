@@ -26,6 +26,7 @@ const studio = (over: Partial<StudioSnapshot> = {}): StudioSnapshot => ({
     manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
   },
   projectKnown: true,
+  play: 'edit',
   workspace: 'image',
   surface: 'image',
   commandScope: 'canvas',
@@ -116,6 +117,21 @@ describe('what the studio is, said to the model', () => {
     )
 
     expect(said).toContain('Edits land on: one layer — "Fond".')
+  })
+
+  /**
+   * 🛑 Nothing else in the briefing announces a game, so a model asked « reprends la partie »
+   * answered « Reprise de la partie. » without a single call — measured 2026-08-31.
+   */
+  it('says a game is under way, and names the call that reads it', () => {
+    expect(describeStudio(studio({ play: 'playing' }))).toContain('runtime.report')
+    expect(describeStudio(studio({ play: 'paused' }))).toContain('play.resume')
+  })
+
+  it('says nothing about a game while the studio is being edited', () => {
+    const shown = describeStudio(studio({ play: 'edit' }))
+
+    expect(shown).not.toContain('game')
   })
 
   /**

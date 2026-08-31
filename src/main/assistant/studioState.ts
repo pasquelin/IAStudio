@@ -4,6 +4,7 @@ import type {
   SnapshotSelection,
   StudioSnapshot,
 } from '@shared/domain/studioSnapshot'
+import type { PlayState } from '@shared/domain/gameRuntime'
 import { FAMILY_BY_WORKSPACE, isWorkspaceId } from '@shared/domain/workspace'
 import { parseSnapshot } from './validation'
 import { projectName } from '@shared/domain/project'
@@ -112,6 +113,21 @@ function armedLine(state: StudioSnapshot): string[] {
 }
 
 /**
+ * 🛑 Said only while a game is UNDER WAY, and it names the calls: nothing else in the briefing
+ * announces one, so « où en est la partie ? » was answered off the document block and « reprends
+ * la partie » without a single call. The tick stays out — `runtime.report` answers it, and a
+ * number here would be read instead of called.
+ */
+function playLine(play: PlayState): string[] {
+  if (play === 'playing')
+    return ['  A game is RUNNING on the scene in front. runtime.report says where it is.']
+
+  return play === 'paused'
+    ? ['  A game is PAUSED on the scene in front. play.step advances it, play.resume carries on.']
+    : []
+}
+
+/**
  * 🛑 Said only once the window KNOWS. `project` starts `null` meaning "not asked yet", and a turn
  * fired before the answer landed would tell the model there is no project over an open one.
  */
@@ -136,6 +152,10 @@ export function describeStudio(data: unknown): string {
     ...selectionLine(state.selection),
     ...armedLine(state),
     ...projectLine(state),
+    // 🛑 BEHIND the armed model and the project: `linesWithin` breaks on the first line that does
+    // not fit, so a line placed ahead of those two takes them down on a saturated briefing — and
+    // a generation run without the armed id is what `armedLine` exists to prevent.
+    ...playLine(state.play),
     ...(state.authKnown && !state.authenticated
       ? ['  Not signed in: nothing can be generated.']
       : []),

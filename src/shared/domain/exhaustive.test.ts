@@ -33,6 +33,7 @@ import {
   type ModelSort,
 } from './model'
 import { FONT_SOURCES, type FontSource } from './font'
+import { PLAY_STATES, type PlayState } from './gameRuntime'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
 import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
@@ -62,6 +63,17 @@ describe('the lists that stand for a union', () => {
     const all: Record<TargetKind, true> = { layer: true, node: true, clip: true, track: true }
 
     expect(sorted(TARGET_KINDS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * 🛑 `z.enum(PLAY_STATES)` decides whether the WHOLE studio snapshot parses: a state added to
+   * the union and forgotten here makes `parseSnapshot` answer null, and the entire "Studio now:"
+   * block leaves every briefing without a word anywhere.
+   */
+  it('names every state a game can be in', () => {
+    const all: Record<PlayState, true> = { edit: true, playing: true, paused: true }
+
+    expect(sorted(PLAY_STATES)).toEqual(sorted(Object.keys(all)))
   })
 
   /**

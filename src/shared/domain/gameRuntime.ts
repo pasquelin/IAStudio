@@ -6,6 +6,9 @@
  */
 export type PlayState = 'edit' | 'playing' | 'paused'
 
+/** The values beside the type: the studio snapshot crosses a process boundary and is checked. */
+export const PLAY_STATES: readonly PlayState[] = ['edit', 'playing', 'paused']
+
 export type LogLevel = 'info' | 'warn' | 'error'
 
 export type LogEntry = { level: LogLevel; message: string; at: number }

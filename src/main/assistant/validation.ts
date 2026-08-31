@@ -9,6 +9,7 @@ import {
   type AssistantThought,
 } from '@shared/domain/assistant'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
+import { PLAY_STATES } from '@shared/domain/gameRuntime'
 import { TARGET_ID_MAX, TARGET_KINDS, TARGET_NAME_MAX, TARGETS_MAX } from '@shared/domain/target'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -163,6 +164,7 @@ const SNAPSHOT = z.object({
     })
     .nullable(),
   armedModels: z.record(z.string(), z.string()),
+  play: z.enum(PLAY_STATES),
   authenticated: z.boolean(),
   authKnown: z.boolean(),
 }) satisfies z.ZodType<StudioSnapshot>
