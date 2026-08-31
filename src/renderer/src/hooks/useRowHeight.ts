@@ -3,7 +3,7 @@ import {
   LIST_ROW_HEIGHT,
   MEDIA_ROW_HEIGHT,
   STACKED_ROW_HEIGHT,
-} from '@/design/styles'
+} from '@/components/styles'
 import { useGauge } from './useGauge'
 
 /**

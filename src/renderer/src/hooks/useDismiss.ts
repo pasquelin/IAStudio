@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from 'react'
-import { portalAnchorAbove, portalOpenInside } from '@/design/portalAnchors'
+import { portalAnchorAbove, portalOpenInside } from '@/components/portalAnchors'
 import { isComposing } from '@/helpers/composition'
 
 // 🛑 Through the surfaces a press crossed, not the DOM alone — see `portalAnchors.ts`.

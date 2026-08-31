@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { isFinished, JOB_STATUSES, type Job } from '@shared/domain/job'
-import { SUITE_SOURCES } from '@/design/testHarness'
+import { SUITE_SOURCES } from '@/components/testHarness'
 import { job } from './job-fixtures'
 
 const FINISHED = JOB_STATUSES.filter(isFinished)
@@ -172,7 +172,7 @@ describe('no suite of the renderer builds its own job', () => {
     // The floor is load-bearing, and these two do NOT replace it — they close what it alone
     // misses. One per extension, because a glob narrowed to `.tsx` keeps a `.tsx` anchor green
     // while 219 `.ts` suites go unread: measured by a reviewer, who built exactly that.
-    expect(opened).toContain('../app/JobsStatus.test.tsx')
+    expect(opened).toContain('../features/shell/components/JobsStatus.test.tsx')
     expect(opened).toContain('../helpers/generation.test.ts')
     // The sweep it borrows lives in `design/`, so THIS file is read like any other — its own
     // glob never yielded the module calling it, and left itself the one suite nobody walked.

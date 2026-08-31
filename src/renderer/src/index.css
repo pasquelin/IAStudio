@@ -332,6 +332,13 @@
   initial-value: 168px;
 }
 
+/* Its stand-in, registered for the same reason and derived for the same one. */
+@property --sc-spotlight-banner {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 76px;
+}
+
 /*
  * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
  * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
@@ -569,6 +576,9 @@
      no longer fit a 168px box, and `overflow` cuts the fourth through the middle — for exactly
      the readers who enlarged the text. Registered above, or `useGauge` reads the calc as text. */
   --sc-spotlight-card: calc(168px * var(--sc-font-scale));
+  /* The same band LAID DOWN — one card taking the width. Its stand-in reserved 76px flat, right
+     at scale 1 and short by a third at 1.4: the jump the stand-in exists to prevent. */
+  --sc-spotlight-banner: calc(76px * var(--sc-font-scale));
   /* The coverage bar of the home's models band. Bounded, and short on purpose: a bar running the
      width of the page reads as a download in progress rather than as a proportion. */
   --sc-verdict-bar: 320px;

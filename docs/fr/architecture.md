@@ -508,36 +508,19 @@ délégation restent à zéro des deux côtés.
 
 ```
 src/renderer/src/
-├── app/          le shell
-│   ├── Shell.tsx        rails, zones, poignées, espace des documents
-│   ├── Rail.tsx         les bandes d'icônes
-│   ├── ToolWindow.tsx   un outil ancré, mémoïsé
-│   ├── DocumentArea.tsx Dockview, documents uniquement
-│   ├── TitleBar.tsx     espaces de travail, feux natifs
-│   └── documents.tsx    quel éditeur rend quel type de document
-├── design/       le design system maison — voir plus bas
+├── components/   les formes visuelles que PLUSIEURS features se partagent — voir plus bas
+├── features/     un domaine par dossier, ses composants sous `components/`, ses outils de dock sous `tools/`
+│   ├── shell/      les rails, les zones, l'espace des documents — et `main.tsx`, l'entrée
+│   ├── image/ scene/ video/ audio/ code/ material/ skybox/ gui/   un éditeur par type de document
+│   ├── explorer/ assets/ models/ git/ inspector/ timeline/ animation/ …   les outils ancrables
+│   └── home/ settings/ usage/ manual/ document/ dictation/ assistant/ …   les surfaces hors dock
 ├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, et `core/` — ce que tous les moteurs partagent
-├── spaces/       un éditeur par type de document — SEPT, autant que d'espaces
-│   ├── image/      le canvas Pixi et ses outils
-│   ├── three/      la vue three.js et ses outils
-│   ├── video/      la timeline, le moniteur, ses outils
-│   ├── audio/      la forme d'onde, ses outils, le décodeur
-│   ├── code/       Monaco, monté sur un script du projet
-│   ├── materials/  les canaux d'une matière, et leur aperçu répété
-│   └── skyboxes/   le ciel immersif et ses trois projections à plat
-├── panels/       les vingt-sept outils ancrables
-├── home/         l'accueil et ses trois bandes — une page, pas une disposition
-├── settings/     la fenêtre des réglages, chargée à la demande
-├── usage/        la fenêtre de consommation, idem
-├── licences/     la fenêtre des licences, idem
-├── dictation/    ce que le renderer voit de la dictée : bouton, aperçu, niveau
 ├── stores/       zustand : documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        raccourcis, menu natif, densité, état de fenêtre, debounce…
 ├── helpers/      fonctions pures, toutes testées
 ├── services/     l'accès au pont et la traduction des échecs
 ├── i18n/         l'initialisation d'i18next côté fenêtre
 ├── types/        `window.studio`, déclaré en global — le seul fichier de types du renderer
-├── main.tsx      l'entrée — tout ce qu'elle atteint statiquement est dans le premier écran
 └── splash.ts     l'entrée de l'écran de démarrage, séparée pour ne jamais tirer le bundle
 ```
 
@@ -615,7 +598,7 @@ pour que cette mémoïsation morde.
 `sequence.mirror` ouvre une seconde fenêtre qui miroite le moniteur Programme, pour un second
 écran. **Le pont IPC n’y porte qu’une chose : l’ouverture de la fenêtre** (`main/window/mirror.ts`).
 Tout le reste — l’édition, le point de lecture, la lecture — voyage par un `BroadcastChannel`
-(`spaces/video/mirrorChannel.ts`).
+(`features/video/components/mirrorChannel.ts`).
 
 **Ce n’est pas un contournement de l’invariant 2**, qui garde la frontière entre PROCESSUS. Les
 deux fenêtres chargent le même bundle de rendu : elles partagent déjà `SequenceState` comme type,
@@ -1064,12 +1047,12 @@ hachages, URL de remote (`main/git/validation.ts`).
 
 **Si un composant vit dans un dock, il est maison.** Barres d’outils, inspecteurs, timeline,
 outliner, navigateur d’assets, barre de titre, onglets — tout cela dans
-`src/renderer/src/design/`.
+`src/renderer/src/components/`.
 
 DaisyUI est réservé aux surfaces où l’application redevient une application : préférences,
 dialogues, gestion des clés API, onboarding.
 
-Les primitives, toutes dans `design/` :
+Les primitives, toutes dans `components/` :
 
 | | |
 |---|---|
@@ -1081,7 +1064,6 @@ Les primitives, toutes dans `design/` :
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par le résumé des générations, sa liste dépliée et l’import de médias |
 | `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `PictureField`, `AssetDropField`, `PropertyRow` — ce dont l’inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
-| `FormHeader` | la ligne qui nomme ce que le formulaire sert — le modèle, dans Génération |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d’un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 
@@ -1506,8 +1488,8 @@ IPC, et les panneaux via Testing Library.
 | Un espace de travail | `WORKSPACE_IDS`, puis son icône et sa famille dans `helpers/workspaces.ts` — le compilateur réclame les deux |
 | Un canal IPC | `shared/ipc.ts` d’abord, le handler ensuite ; la signature en est dérivée, donc partez du contrat |
 | Un type de maillage ou de lumière | `meshPrimitives.ts` / `lightTypes.ts` — la barre d’outils, les panneaux et le menu natif lisent ces tables |
-| Un outil image | `spaces/image/imageTools.ts`, dans le bon groupe |
-| Une forme visuelle partagée | `design/`, un composant par fichier, avec son test |
+| Un outil image | `features/image/components/imageTools.ts`, dans le bon groupe |
+| Une forme visuelle partagée | `components/`, un composant par fichier, avec son test — et son nom porte le préfixe de ses dossiers |
 
 Deux règles qui font gagner le plus de temps : vérifier qu’un helper n’existe pas déjà avant d’en
 écrire un, et lire le voisinage avant d’y toucher. Les registres font que la plupart des ajouts

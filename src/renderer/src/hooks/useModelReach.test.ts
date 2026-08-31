@@ -48,6 +48,20 @@ describe('why a model is out of reach', () => {
     expect(reachOf(null, model({ installed: true })).refusal).toBeUndefined()
   })
 
+  /**
+   * The catalogue's tiles are memoised on this word, and a scroll asks it again for every one of
+   * them: a fresh object per model woke the whole grid on every frame of a scroll.
+   */
+  it('hands the same refusal to two models locked behind the same plan', () => {
+    const plan: PlanAccess = { name: 'cu-basic', level: 25 }
+    const { result } = renderHook(() => useModelReach(plan))
+
+    const one = result.current(model({ id: 'a', installed: true, requiredPlanLevel: 50 }))
+    const two = result.current(model({ id: 'b', installed: true, requiredPlanLevel: 50 }))
+
+    expect(one.refusal).toBe(two.refusal)
+  })
+
   it('still names the plan for a cloud model beyond it', () => {
     const plan: PlanAccess = { name: 'cu-basic', level: 25 }
     const reach = reachOf(plan, model({ runsOn: 'scenario', requiredPlanLevel: 50 }))

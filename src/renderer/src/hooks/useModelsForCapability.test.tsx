@@ -7,7 +7,7 @@ import {
   type ModelQuery,
   type ModelSummary,
 } from '@shared/domain/model'
-import { queryHost } from '@/app/query-fixtures'
+import { queryHost } from '@/features/shell/components/query-fixtures'
 import { useModelsForCapability } from './useModelsForCapability'
 
 const model = (id: string, runsOn: string): ModelSummary => ({

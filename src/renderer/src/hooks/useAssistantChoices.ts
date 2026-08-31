@@ -5,7 +5,7 @@ import {
   providerOfChoice,
   servingChoiceValue,
   type AssistantChoice,
-} from '@/assistant/choices'
+} from '@/features/assistant/choices'
 import { useAiModels } from '@/stores/aiModels'
 import { useAssistant } from '@/stores/assistant'
 import { useSettings } from '@/stores/settings'

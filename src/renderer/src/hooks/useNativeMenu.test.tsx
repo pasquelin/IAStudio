@@ -27,7 +27,7 @@ const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
 // What saving does is `documentIo`'s own suite; what this one is about is the menu reaching it.
-vi.mock('@/app/documentIo', () => ({
+vi.mock('@/features/shell/documentIo', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
   saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))

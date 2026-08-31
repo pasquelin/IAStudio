@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { DocumentKind } from '@shared/domain/document'
-import type { LinkOption } from '@/design/LinkField/LinkField'
+import type { LinkOption } from '@/components/LinkField/LinkField'
 import { documentsOfKind, useDocuments } from '@/stores/documents'
 
 /**

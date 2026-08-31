@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WRITTEN_SOURCES } from '@/design/testHarness'
+import { WRITTEN_SOURCES } from '@/components/testHarness'
 
 /**
  * The stores, as text. Taken from the renderer-wide sweep the other written-form guards read

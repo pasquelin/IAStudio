@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { refreshPalette } from '@/engines/core/palette'
-import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from '@/design/styles'
+import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from '@/components/styles'
 import { useRowHeight, type RowHeight } from './useRowHeight'
 
 function setGauge(gauge: string, value: string | null): void {

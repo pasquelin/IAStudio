@@ -49,39 +49,39 @@ const ALLOWED = new Map<string, string>([
     'hole: the export path reads the original the same way',
   ],
   [
-    'spaces/image/pictureSize.ts | const size = await measure(assetUrl(assetId))',
+    'features/image/pictureSize.ts | const size = await measure(assetUrl(assetId))',
     'hole: measures the picture the browser cached, not the file — so the drift notice can lie',
   ],
   [
-    'spaces/materials/deriveChannel.ts | const picture = await derive({ channel, sourceUrl: assetUrl(source.assetId) })',
+    'features/material/deriveChannel.ts | const picture = await derive({ channel, sourceUrl: assetUrl(source.assetId) })',
     'hole: derives a channel from whatever the browser already holds',
   ],
   [
-    'spaces/materials/unpackChannels.ts | const picture = await unpack({ channel, sourceUrl: assetUrl(asset.id) })',
+    'features/material/unpackChannels.ts | const picture = await unpack({ channel, sourceUrl: assetUrl(asset.id) })',
     'hole: same, when a packed picture is split',
   ],
   [
-    'spaces/materials/measureSeam.ts | const ratio = await measure(assetUrl(source.assetId))',
+    'features/material/measureSeam.ts | const ratio = await measure(assetUrl(source.assetId))',
     'hole: same, when a tile is measured',
   ],
   [
-    'design/AssetDropField.tsx | <Thumbnail url={poster ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />',
+    'components/AssetDropField.tsx | <Thumbnail url={poster ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />',
     'hole: the fallback when a row carries no poster — a thumbnail, so it costs a stale tile',
   ],
   [
-    'panels/context/ContextPictures.tsx | <Thumbnail url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
+    'features/context/components/Context/ContextPictures.tsx | <Thumbnail url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
     'hole: same, in the context strip',
   ],
   [
-    'panels/generator/Generator/GeneratorSources.tsx | <Thumbnail url={assetUrl(input.assetId)} />',
+    'features/generation/components/Generator/GeneratorSources.tsx | <Thumbnail url={assetUrl(input.assetId)} />',
     'hole: same, in the generator',
   ],
   [
-    'panels/generator/Generator/GeneratorContext.tsx | <Thumbnail key={id} url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
+    'features/generation/components/Generator/GeneratorContext.tsx | <Thumbnail key={id} url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
     'hole: same, in the generator',
   ],
   [
-    'spaces/materials/MaterialDocument/MaterialDocument.tsx | const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))',
+    'features/material/components/Material/MaterialDocument.tsx | const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))',
     'hole: same, the flat channel shown when a row carries no poster',
   ],
 ])

@@ -1,7 +1,7 @@
 import type { FieldDescriptor } from '@shared/domain/model'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 
-import { registerGenerator, type GeneratorBridge } from '@/assistant/generatorBridge'
+import { registerGenerator, type GeneratorBridge } from '@/features/assistant/generatorBridge'
 import { withBodyExtras } from '@/generation/bodyExtras'
 import {
   landingChoiceOf,

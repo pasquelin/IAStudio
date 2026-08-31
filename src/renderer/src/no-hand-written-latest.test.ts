@@ -13,8 +13,8 @@ import { WINDOW_SOURCES } from './windowSources'
  * offered here as the cause; what is established is the pair of lint verdicts.
  */
 const COMPILER_REFUSES = new Set([
-  './panels/timeline/AnimationCanvas.tsx',
-  './spaces/audio/ProgramMonitor.tsx',
+  './features/animation/components/Animation/AnimationCanvas.tsx',
+  './features/audio/components/ProgramMonitor.tsx',
 ])
 
 /** The hook itself, which is the four lines rather than a copy of them. */

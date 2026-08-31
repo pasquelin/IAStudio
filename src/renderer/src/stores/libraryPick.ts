@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { actedOn } from '@/helpers/selection'
-import { cloudIdOf, remoteRowId } from '@/panels/assets/rows'
+import { cloudIdOf, remoteRowId } from '@/features/assets/components/Asset/rows'
 
 type LibraryPickState = {
   /**

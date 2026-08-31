@@ -12,6 +12,8 @@ type PlaybackState = {
   heads: Record<string, Us>
   setRunning: (owner: string, running: boolean) => void
   setHead: (documentId: string, time: Us) => void
+  /** Hands the head back to the document. A head nobody is turning is not a head. */
+  clearHead: (documentId: string) => void
   forget: (owner: string) => void
 }
 
@@ -40,6 +42,11 @@ export const usePlayback = create<PlaybackState>()(set => ({
       state.heads[documentId] === time ? state : { heads: { ...state.heads, [documentId]: time } },
     ),
 
+  clearHead: documentId =>
+    set(state =>
+      documentId in state.heads ? { heads: withoutKey(state.heads, documentId) } : state,
+    ),
+
   forget: owner => set(state => ({ running: withoutKey(state.running, owner) })),
 }))
 
@@ -48,6 +55,11 @@ export function playbackOf(state: Pick<PlaybackState, 'running'>, owner: string)
   return state.running[owner] ?? false
 }
 
+/**
+ * Where a running clock has its head, and nothing once it has stopped — every surface reads it as
+ * `clockHead ?? sequence.playhead`, so a head left behind by a finished run would hide every
+ * later scrub of that document behind a stale number.
+ */
 export function playbackHeadOf(
   state: Pick<PlaybackState, 'heads'>,
   documentId: string,

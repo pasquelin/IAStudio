@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SUITE_SOURCES, WRITTEN_SOURCES } from '@/design/testHarness'
+import { SUITE_SOURCES, WRITTEN_SOURCES } from '@/components/testHarness'
 
 const SCENE = [...WRITTEN_SOURCES, ...SUITE_SOURCES].filter(
   ([path]) => path.startsWith('../engines/scene/') && !path.endsWith('no-layer-for-a-line.test.ts'),

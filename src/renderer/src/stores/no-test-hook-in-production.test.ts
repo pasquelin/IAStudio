@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WRITTEN_SOURCES } from '@/design/testHarness'
+import { WRITTEN_SOURCES } from '@/components/testHarness'
 
 /**
  * `resetForTests` is offered on `DocumentStore<S>`, the type `documentIo` receives — so it sits

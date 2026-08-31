@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createSkyboxContent } from '@shared/domain/skybox'
-import { skyboxPayload } from '@/app/skyboxDocument'
+import { skyboxPayload } from '@/features/shell/skyboxDocument'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetRememberedAssets, useAssets } from './assets'
 import { litSkyOf, loadSkySource } from './skyboxSources'

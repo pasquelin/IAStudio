@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react'
-import { columnsIn, type Columns } from '@/design/virtual'
+import { columnsIn, type Columns } from '@/components/virtual'
 
 /**
  * How the cards divide the available width.

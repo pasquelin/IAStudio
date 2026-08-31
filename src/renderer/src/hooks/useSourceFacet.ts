@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FacetDescriptor } from '@/helpers/collectionState'
-import { SOURCE_FACET, SOURCES } from '@/panels/assets/facets'
+import { SOURCE_FACET, SOURCES } from '@/features/assets/components/Asset/Browser/facets'
 
 /**
  * Narrowing by which library a line comes from. Nothing chosen reads the account's own; ticking

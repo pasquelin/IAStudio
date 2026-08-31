@@ -285,6 +285,7 @@
     "reorderRow": "Move the {{name}} line",
     "rowList": "Animation rows",
     "sceneSubject": "Scene composition",
+    "tools": "Animation tools",
     "addShot": "Put this camera on air",
     "addShotHint": "Opens a shot for the chosen camera, from the playhead onwards",
     "addShotNeedsCamera": "Choose a camera of the scene to open a shot for it",

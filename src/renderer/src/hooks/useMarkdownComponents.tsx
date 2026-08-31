@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { type Components } from 'react-markdown'
 import { manualTargetOf, type ManualTarget } from '@shared/domain/manual'
-import { ManualWindowHeading } from '@/manual/ManualWindow/ManualWindowHeading'
+import { ManualWindowHeading } from '@/features/manual/components/ManualWindow/ManualWindowHeading'
 
 /**
  * How the manual's markdown is dressed, in the vocabulary of an application window.

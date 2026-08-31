@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
@@ -31,6 +31,9 @@ const WITHIN: ModelReach = { refusal: undefined, fetchable: false }
 export function useModelReach(plan: PlanAccess | null): (model: ModelSummary) => ModelReach {
   const { t } = useTranslation()
   const refusalFor = usePlanRefusal(plan)
+  // Held rather than rebuilt: the catalogue memoises its tiles on this word and asks it again for
+  // every one of them, so a fresh object per model woke the whole grid on every frame of a scroll.
+  const locked = useRef<ModelRefusalWord | null>(null)
 
   return useMemo(() => {
     const absent = { word: t('models.notInstalled'), hint: t('models.notInstalledHint') }
@@ -47,9 +50,12 @@ export function useModelReach(plan: PlanAccess | null): (model: ModelSummary) =>
       }
 
       const beyond = refusalFor(model.requiredPlanLevel)
-      return beyond === undefined
-        ? WITHIN
-        : { refusal: { word: t('models.planLocked'), hint: beyond }, fetchable: false }
+      if (beyond === undefined) return WITHIN
+
+      if (locked.current?.hint !== beyond) {
+        locked.current = { word: t('models.planLocked'), hint: beyond }
+      }
+      return { refusal: locked.current, fetchable: false }
     }
   }, [refusalFor, t])
 }

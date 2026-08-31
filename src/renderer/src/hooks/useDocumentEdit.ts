@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { GestureProps } from '@/design/styles'
+import type { GestureProps } from '@/components/styles'
 import type { Command } from '@/engines/core/history'
 import type { DocumentStoreState } from '@/stores/documentStore'
 

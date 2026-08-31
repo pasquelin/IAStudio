@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { registerChatPanel } from '@/assistant/chatPanel'
+import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useDictation } from '@/stores/dictation'
@@ -15,8 +15,8 @@ const saveDocument = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const saveDocumentAs = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const importOtioz = vi.hoisted(() => vi.fn())
 
-vi.mock('@/app/documentIo', () => ({ saveDocument, saveDocumentAs }))
-vi.mock('@/app/otioImport', () => ({ importOtioz }))
+vi.mock('@/features/shell/documentIo', () => ({ saveDocument, saveDocumentAs }))
+vi.mock('@/features/shell/otioImport', () => ({ importOtioz }))
 
 const createPicked = vi.fn()
 const openPicked = vi.fn()

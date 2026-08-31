@@ -5,8 +5,8 @@ import { createSoundPort } from '@/engines/timeline/soundPort'
 import type { AudioTap, SoundPort } from '@/engines/timeline/soundSchedule'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timelineState'
+import { reportMontageHead } from '@/helpers/reportMontageHead'
 import { playbackOf, usePlayback } from '@/stores/playback'
-import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 
 /**
  * A sound montage needs one decoder for the take being scrubbed over — the schedule reads its
@@ -48,16 +48,9 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
   // Published rather than held: the bar of a montage reads it exactly as the monitor's does.
   const playing = usePlayback(state => playbackOf(state, documentId))
 
+  // This player registers under the document's own name — the picture pair is what runs two.
   const setTime = useCallback(
-    (playhead: Us): void => {
-      const store = useSequences.getState()
-      // Closing a tab drops the document BEFORE React unmounts this hook, and `dispose` pauses
-      // — which reports one last time. Writing then would build a montage back for a document
-      // that is gone, out of the store's default: a picture track, in the Audio workspace.
-      if (!sequenceStore.hasState(store, documentId)) return
-
-      store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
-    },
+    (playhead: Us): void => reportMontageHead(documentId, documentId, playhead),
     [documentId],
   )
 
@@ -74,7 +67,13 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
       maxPictures: MAX_PICTURES,
       owner: documentId,
       onTime: setTime,
-      onPlayingChange: running => usePlayback.getState().setRunning(documentId, running),
+      onPlayingChange: running => {
+        const playback = usePlayback.getState()
+        playback.setRunning(documentId, running)
+        // Here as well as in `reportMontageHead`, for the one path that never reaches it: a tab
+        // closed mid-play drops its document first, and the last time reported then writes nothing.
+        if (!running) playback.clearHead(documentId)
+      },
     })
 
     engine.current = created

@@ -8,11 +8,11 @@ import {
 import { workspaceOfType } from '@shared/domain/assetKind'
 import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { openDocument } from '@/app/dockviewApi'
-import { restoreDocument } from '@/app/documentIo'
-import { loadTake } from '@/spaces/audio/loadTake'
-import { becomeAsset, placeAsset } from '@/spaces/image/placeAsset'
-import { placeMaterialChannel } from '@/spaces/materials/placeChannel'
+import { openDocument } from '@/features/shell/components/dockviewApi'
+import { restoreDocument } from '@/features/shell/documentIo'
+import { loadTake } from '@/features/audio/components/TakeEditor/loadTake'
+import { becomeAsset, placeAsset } from '@/features/image/placeAsset'
+import { placeMaterialChannel } from '@/features/material/components/placeChannel'
 import { documentOfKind, useDocuments } from '@/stores/documents'
 import { addAnimationTo, addModelTo } from '@/stores/scenes'
 import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
@@ -216,7 +216,7 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     // the opening chunk's reach into the editors at two files, and nothing here runs before a
     // double-click lands on a picture.
     revisit: async (documentId, asset) => {
-      const { reportAssetDrift } = await import('@/spaces/image/assetFidelity')
+      const { reportAssetDrift } = await import('@/features/image/assetFidelity')
       await reportAssetDrift(documentId, asset.id, asset.name)
     },
     ...inDocument('image', placeAsset, isLocalPicture, becomeAsset),

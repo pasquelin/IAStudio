@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { useForgettableTimeout } from './useForgettableTimeout'
+import { useLatest } from './useLatest'
 
 export type HoverFlyout = {
   /** A single row is not a menu: the button acts directly, as map3D's toolbar does. */
@@ -78,11 +79,22 @@ const WALKING_KEYS: ReadonlySet<string> = new Set(['ArrowDown', 'ArrowUp', 'Home
 const opensWith = (event: KeyboardEvent<HTMLElement>): boolean =>
   event.key === 'ArrowDown' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
 
-export function useHoverFlyout(rowCount: number): HoverFlyout {
+/**
+ * `onShow` fires each time the rows go up, however they were asked for. Held through a ref rather
+ * than read as a dependency: two mountings had written the same effect, and a caller's inline
+ * arrow re-asks on every paint the menu survives — including the paints its own answer causes.
+ */
+export function useHoverFlyout(rowCount: number, onShow?: () => void): HoverFlyout {
   const [openedBy, setOpenedBy] = useState<Opening>(null)
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const timeout = useForgettableTimeout()
   const hasFlyout = rowCount > 1
+  const shown = useLatest(onShow)
+  const showing = hasFlyout && openedBy !== null
+
+  useEffect(() => {
+    if (showing) shown.current?.()
+  }, [showing, shown])
 
   // Never overwrites: the pointer crossing a menu that was asked for must not demote it to a
   // hovered one, which would take its keyboard away mid-walk.
@@ -150,7 +162,7 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
   return useMemo<HoverFlyout>(
     () => ({
       hasFlyout,
-      showing: hasFlyout && open,
+      showing,
       asked: askedFor,
       anchor,
       triggerProps: {
@@ -174,6 +186,18 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
       open: openByHand,
       close,
     }),
-    [anchor, askedFor, close, enter, hasFlyout, leave, onKeyDown, onRowsKeyDown, open, openByHand],
+    [
+      anchor,
+      askedFor,
+      close,
+      enter,
+      hasFlyout,
+      leave,
+      onKeyDown,
+      onRowsKeyDown,
+      open,
+      openByHand,
+      showing,
+    ],
   )
 }

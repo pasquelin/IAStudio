@@ -13,7 +13,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { lendPictureMeasure } from '@/spaces/image/pictureSize'
+import { lendPictureMeasure } from '@/features/image/pictureSize'
 import { editPixelsOf, openAsset } from './openAsset'
 
 /** Written out rather than taken from the home's fixture, which pulls in a DOM this never uses. */
@@ -350,7 +350,7 @@ describe('opening an asset', () => {
 
     // The tab is the asset's, so the second take reaches it the way a drop does. The head has
     // not moved, so it lands over the first block — what any drop at the head does.
-    const { loadTake } = await import('@/spaces/audio/loadTake')
+    const { loadTake } = await import('@/features/audio/components/TakeEditor/loadTake')
     loadTake(tab, asset({ id: 'asset-2' }))
 
     const edits = audioEditsOf(useAudioEdits.getState(), tab)

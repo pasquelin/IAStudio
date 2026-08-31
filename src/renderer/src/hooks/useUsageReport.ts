@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { UsagePeriod, UsageReport } from '@shared/domain/usage'
 import { getBridge } from '@/services/bridge'
-import { failureOf, type Answer } from '@/usage/answer'
+import { failureOf, type Answer } from '@/features/usage/answer'
 import { useReloadKey } from './useReloadKey'
 
 export type UsageState = {

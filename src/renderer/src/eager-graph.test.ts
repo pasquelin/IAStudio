@@ -95,7 +95,7 @@ async function walk(): Promise<Graph> {
   const packages = new Set<string>()
   const files = new Set<string>()
   const unresolved = new Set<string>()
-  const queue: string[] = ['./main.tsx']
+  const queue: string[] = ['./features/shell/components/main.tsx']
 
   while (queue.length > 0) {
     const key = queue.pop()
@@ -122,6 +122,33 @@ async function walk(): Promise<Graph> {
 }
 
 /**
+ * Where the panels live, DERIVED so the case below cannot go quiet over an empty prefix.
+ *
+ * `./panels/` was the whole answer until the panels moved under `features/<f>/components/`: a
+ * fixed prefix then matched fewer of them at every lot, and the case read a shorter and shorter
+ * list while staying green. `./panels/` no longer exists at all. The shell and the home are not
+ * panels — their components ARE the first screen, which is what the whole file is about.
+ */
+const FIRST_SCREEN: readonly string[] = ['./features/home/', './features/shell/']
+
+const drawsTheFirstScreen = (path: string): boolean =>
+  FIRST_SCREEN.some(feature => path.startsWith(feature))
+
+const PANEL_TREES: readonly string[] = [
+  ...new Set(
+    Object.keys(SOURCES)
+      .map(key => /^\.\/features\/[^/]+\/components\//.exec(key)?.[0])
+      .filter((tree): tree is string => tree !== undefined && !drawsTheFirstScreen(tree)),
+  ),
+]
+
+/**
+ * A module at the ROOT of a feature: the helper an editor keeps beside its components, which is
+ * exactly what the neighbours case below counts. `./spaces/` said this until the editors moved.
+ */
+const FEATURE_MODULE = /^\.\/features\/[^/]+\/[^/]+\.tsx?$/
+
+/**
  * Walked here rather than inside a case: the nine below ask the same question of the same tree,
  * and the first of them carried the whole reading on its own clock — 543 ms at best, 3 890 ms
  * on a machine at load 44, against a budget it cannot see. Module load is not timed, so a walk
@@ -129,6 +156,17 @@ async function walk(): Promise<Graph> {
  * all of them.
  */
 const GRAPH = await walk()
+
+/**
+ * What the chunk holds under a prefix — the prefix checked to still NAME something, since one that
+ * names nothing filters nothing and reads exactly as green. `./settings/`, `./licences/` and
+ * `./usage/` all went silent that way the day the tree became the features'.
+ */
+function deferredUnder(prefix: string): string[] {
+  expect(Object.keys(SOURCES).some(key => key.startsWith(prefix))).toBe(true)
+
+  return [...GRAPH.files].filter(path => path.startsWith(prefix))
+}
 
 describe('the opening chunk', () => {
   /**
@@ -143,19 +181,19 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./app/toolComponents.ts')
+    expect(files).toContain('./features/shell/components/ToolWindow/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
-    expect(files).toContain('./app/Shell/Shell.tsx')
-    expect(files).toContain('./home/HomeView/HomeView.tsx')
+    expect(files).toContain('./features/shell/components/Shell/Shell.tsx')
+    expect(files).toContain('./features/home/components/HomeView/HomeView.tsx')
   })
 
   // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.
   it('never reaches the generation form, nor what validates it', () => {
     const { files } = GRAPH
 
-    expect(files).not.toContain('./design/DynamicForm/DynamicForm.tsx')
+    expect(files).not.toContain('./components/DynamicForm/DynamicForm.tsx')
     expect(files).not.toContain('./helpers/dynamicFormSchema.ts')
   })
 
@@ -181,7 +219,7 @@ describe('the opening chunk', () => {
 
     // The whole folder, not a sample of it: naming files lets a sibling — `AccountSettings`
     // reused by an onboarding, say — walk back in with the guard still green.
-    expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
+    expect(deferredUnder('./features/settings/')).toEqual([])
     expect(files).not.toContain('./stores/settingsDraft.ts')
     expect(files).not.toContain('../../shared/domain/settingsRegistry.ts')
     expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
@@ -196,7 +234,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.endsWith('Handlers.ts')).sort()).toEqual([])
-    expect(files).not.toContain('./assistant/executor.ts')
+    expect(files).not.toContain('./features/assistant/executor.ts')
   })
 
   // The heaviest row of the table, and the one that was described but never held: six editors,
@@ -205,12 +243,12 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     const editors = [
-      './spaces/image/ImageDocument/ImageDocument.tsx',
-      './spaces/three/SceneDocument.tsx',
-      './spaces/video/SequenceDocument.tsx',
-      './spaces/audio/AudioDocument.tsx',
-      './spaces/skyboxes/SkyboxDocument.tsx',
-      './spaces/materials/MaterialDocument/MaterialDocument.tsx',
+      './features/image/components/ImageDocument/ImageDocument.tsx',
+      './features/scene/components/Scene/Document/SceneDocument.tsx',
+      './features/video/components/SequenceDocument.tsx',
+      './features/audio/components/AudioDocument.tsx',
+      './features/skybox/components/Skybox/Document/SkyboxDocument.tsx',
+      './features/material/components/Material/MaterialDocument.tsx',
     ]
 
     expect(editors.filter(editor => files.has(editor))).toEqual([])
@@ -221,58 +259,108 @@ describe('the opening chunk', () => {
    * screen does reach for a helper that happens to live next to one. Four of the six left when
    * the panels went lazy — they came in through a panel, not through the shell.
    *
-   * A budget rather than a ban — the list is allowed to shrink, never to grow, and a third entry
+   * A budget rather than a ban — the list is allowed to shrink, never to grow, and one entry more
    * means something on the first screen reached further than it needed.
+   *
+   * The dictation's three arrived on 2026-08-31 without the first screen changing: the case read
+   * `./spaces/` alone, and they sat under `./dictation/`. Widening the reading is what put them
+   * in; they are the microphone of the composer, which is on the first screen.
    */
-  it('pulls only these two neighbours out of the editors folders', () => {
+  it('pulls only these sixteen neighbours out of the features', () => {
     const { files } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/image/canvasHosts.ts',
-      './spaces/image/placeAsset.ts',
+    const neighbours = [...files].filter(
+      path => FEATURE_MODULE.test(path) && !drawsTheFirstScreen(path),
+    )
+
+    expect(neighbours.sort()).toEqual([
+      // The assistant's eleven, same day and same cause: the chat toast is on the first screen,
+      // and everything it composes a turn with came in behind it, unseen under `./assistant/`.
+      './features/assistant/batch.ts',
+      './features/assistant/chatPanel.ts',
+      './features/assistant/choices.ts',
+      './features/assistant/confirm.ts',
+      './features/assistant/confirmSentence.ts',
+      './features/assistant/holdConfirmer.ts',
+      './features/assistant/noteAssistant.ts',
+      './features/assistant/remoteActions.ts',
+      './features/assistant/starters.ts',
+      './features/assistant/thoughtStream.ts',
+      './features/assistant/wireConsent.ts',
+      './features/dictation/capture.ts',
+      './features/dictation/destination.ts',
+      './features/dictation/insertAtCaret.ts',
+      './features/image/canvasHosts.ts',
+      './features/image/placeAsset.ts',
     ])
   })
 
   /**
-   * Deferred by `app/toolComponents.ts` on 9 August: every panel of the table, the home screen's
+   * Deferred by `features/shell/components/ToolWindow/toolComponents.ts` on 9 August: every panel of the table, the home screen's
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *
-   * The three left are reached for something other than a zone: `panels/jobs/Jobs.tsx` and its row
+   * The three left are reached for something other than a zone: the jobs list and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
    * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
    * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
    * node kinds in behind it.
    *
-   * `panels/assets/facets.ts` was the fourth until 24 August, pulled in by `revealAssetsOfKind`
+   * The assets' `facets.ts` was the fourth until 24 August, pulled in by `revealAssetsOfKind`
    * — a function nothing called, deleted with the six other unread values. The budget shrank on
    * its own, which is what a budget that may only shrink is for.
    */
   it('reaches no panel of the tool table, except the list the status bar itself opens', () => {
     const { files } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
-      './panels/jobs/JobRow/JobRow.tsx',
-      './panels/jobs/JobRow/JobRowDetail.tsx',
-      './panels/jobs/Jobs.tsx',
+    expect(
+      [...files].filter(path => PANEL_TREES.some(tree => path.startsWith(tree))).sort(),
+    ).toEqual([
+      // The conversation of the assistant, on the first screen because its toast is — read for
+      // the first time on 2026-08-31, when the tree became the features'.
+      './features/assistant/components/Assistant/AssistantStatus.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversation.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationGauge.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationPicker.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationQuestion.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationStep.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationSuggestions.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationTurn.tsx',
+      './features/assistant/components/Assistant/Conversation/AssistantConversationWorking.tsx',
+      './features/assistant/components/Assistant/Conversation/Choice/AssistantConversationChoice.tsx',
+      './features/assistant/components/Assistant/Conversation/Choice/AssistantConversationChoiceForm.tsx',
+      './features/assistant/components/Assistant/Conversation/conversation.ts',
+      './features/assistant/components/Assistant/Conversation/conversationStyles.ts',
+      './features/assistant/components/Assistant/Toast/AssistantToast.tsx',
+      './features/assistant/components/Assistant/Toast/revealChat.ts',
+      // The five of the dictation, on the first screen because the composer's microphone is:
+      // invisible to this case while they sat under `./dictation/`, and read for the first time
+      // the day the tree became the features'.
+      './features/dictation/components/Dictation/DictationButton.tsx',
+      './features/dictation/components/Dictation/Status/DictationStatus.tsx',
+      './features/dictation/components/Dictation/Status/DictationStatusListening.tsx',
+      './features/dictation/components/Heard.tsx',
+      './features/dictation/components/LevelMeter.tsx',
+      './features/generation/components/JobRow/JobRow.tsx',
+      './features/generation/components/JobRow/JobRowDetail.tsx',
+      './features/generation/components/Jobs.tsx',
     ])
   })
 
+  // A file rather than a folder: the licences are one window, among the shell's own components.
   it('never reaches the licences window', () => {
-    const { files } = GRAPH
-
-    expect([...files].filter(path => path.startsWith('./licences/'))).toEqual([])
+    expect(deferredUnder('./features/shell/components/LicencesWindow')).toEqual([])
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `formatUnits` used to be the exception that let `./usage/format.ts` in: a job row prices a run
-  // in the units the window totals, and the status bar carries those rows. It lives in
+  // `formatUnits` used to be the exception that let the window's own `format.ts` in: a job row
+  // prices a run in the units the window totals, and the status bar carries those rows. It is in
   // `helpers/format.ts` now, which the opening chunk already reaches — hence the second assertion,
   // without which moving it back would read as a win while only shifting the weight.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual([])
+    expect(deferredUnder('./features/usage/')).toEqual([])
     expect(files).toContain('./helpers/format.ts')
     expect(packages).not.toContain('recharts')
   })

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { posterUrl, type AssetType } from '@shared/domain/asset'
-import type { LinkOption } from '@/design/LinkField/LinkField'
+import type { LinkOption } from '@/components/LinkField/LinkField'
 import { useProjectPictureAssets } from './useProjectPictureAssets'
 
 /**

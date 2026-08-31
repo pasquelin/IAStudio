@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { projectName, type Project, type RecentProject } from '@shared/domain/project'
-import type * as DocumentIo from '@/app/documentIo'
+import type * as DocumentIo from '@/features/shell/documentIo'
 import { installFakeBridge } from '@/services/fakeBridge'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { FileOutcome } from '@shared/domain/fileOp'
@@ -12,12 +12,12 @@ import { useSettings } from './settings'
 import { ASSISTANT_ROLE, type AiRoleId, type RoleProvider } from '@shared/domain/aiRole'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
-vi.mock('@/app/orphanTabs', () => ({ closeOrphanTabs }))
+vi.mock('@/features/shell/orphanTabs', () => ({ closeOrphanTabs }))
 
 // Only the question: `refreshDocuments` on the same module is what every case below leans on,
 // and a whole fake of it would leave `followProject` asserting nothing.
 const settleUnsavedWorkForProjectChange = vi.hoisted(() => vi.fn(async () => true))
-vi.mock('@/app/documentIo', async importOriginal => ({
+vi.mock('@/features/shell/documentIo', async importOriginal => ({
   ...(await importOriginal<typeof DocumentIo>()),
   settleUnsavedWorkForProjectChange,
 }))

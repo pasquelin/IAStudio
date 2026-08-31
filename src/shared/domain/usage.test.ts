@@ -22,7 +22,7 @@ describe('the day a usage point falls on', () => {
   })
 
   // The window pairs this with its own formatters, and that pair is held in
-  // `renderer/src/usage/format.test.ts` — this side only owes the rule.
+  // `renderer/src/features/usage/components/Usage/format.test.ts` — this side only owes the rule.
   it('leaves a stamp already cut to a day alone', () => {
     expect(dayOf('2026-08-13')).toBe('2026-08-13')
   })

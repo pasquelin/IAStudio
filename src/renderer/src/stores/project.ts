@@ -9,9 +9,9 @@ import {
   type Project,
 } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
-import { refreshDocuments, settleUnsavedWorkForProjectChange } from '@/app/documentIo'
+import { refreshDocuments, settleUnsavedWorkForProjectChange } from '@/features/shell/documentIo'
 import { readProjectScripts } from './code'
-import { closeOrphanTabs } from '@/app/orphanTabs'
+import { closeOrphanTabs } from '@/features/shell/orphanTabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures, reportFailure } from '@/services/diagnostics'
 import { useSettings } from './settings'

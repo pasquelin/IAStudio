@@ -1,0 +1,108 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ErrorBoundary } from './ErrorBoundary'
+import { Failure } from './Failure'
+
+function Boom(): never {
+  throw new Error('panel exploded')
+}
+
+// React reports every caught error on the console; the assertions below read that reporting,
+// and letting it through would bury the run in stack traces it is meant to be catching.
+beforeEach(() => {
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('ErrorBoundary', () => {
+  it('renders its children while nothing throws', () => {
+    render(
+      <ErrorBoundary>
+        <p>panel content</p>
+      </ErrorBoundary>,
+    )
+
+    expect(screen.getByText('panel content')).toBeInTheDocument()
+  })
+
+  it('shows the failure notice instead of letting the error reach the window', () => {
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
+  })
+
+  it('hands retry to the fallback, so a caller can offer its own way back', async () => {
+    let failing = true
+
+    function Flaky() {
+      if (failing) throw new Error('not yet')
+      return <p>recovered</p>
+    }
+
+    render(
+      <ErrorBoundary fallback={retry => <button onClick={retry}>start over</button>}>
+        <Flaky />
+      </ErrorBoundary>,
+    )
+
+    failing = false
+    await userEvent.click(screen.getByRole('button', { name: 'start over' }))
+
+    expect(screen.getByText('recovered')).toBeInTheDocument()
+  })
+
+  // The root of `main.tsx` shows this one. Asserted on the text, not the key: a missing
+  // translation would surface as `errors.windowCrashed` on top of whatever already broke.
+  it('names the window, not the panel, when the caller asks for that scope', () => {
+    render(
+      <ErrorBoundary fallback={retry => <Failure scope="window" onRetry={retry} />}>
+        <Boom />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.getByText('L’application a rencontré une erreur.')).toBeInTheDocument()
+  })
+
+  it('renders a given fallback instead of the notice, for a surface too small to explain', () => {
+    render(
+      <ErrorBoundary fallback={() => null}>
+        <Boom />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
+  })
+
+  // What it catches reaches the log through the root, never from here: `features/shell/rootErrors.test.tsx`
+  // mounts this very boundary and asserts the entry that crosses.
+  it('renders the children again after a retry, once they stop throwing', async () => {
+    // Outside the component on purpose: the boundary unmounts what threw, so state held
+    // inside it would not survive to answer differently on the second attempt.
+    let failing = true
+
+    function Flaky() {
+      if (failing) throw new Error('not yet')
+      return <p>recovered</p>
+    }
+
+    render(
+      <ErrorBoundary>
+        <Flaky />
+      </ErrorBoundary>,
+    )
+    expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
+
+    failing = false
+    await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
+
+    expect(screen.getByText('recovered')).toBeInTheDocument()
+  })
+})

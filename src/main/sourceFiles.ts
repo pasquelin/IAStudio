@@ -12,7 +12,7 @@
  * through `readFileSync` anchored on `import.meta.url`.
  */
 import { readdirSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** Long enough for five trees of sources, parsed one file at a time. */
@@ -82,3 +82,59 @@ export function exportedNames(code: string): Map<string, 'value' | 'type'> {
 
 const DECLARES =
   /(?:^|\n)export (?:async |declare |abstract )*(function\*?|const|let|var|class|type|interface|enum) (\w+)/g
+
+/**
+ * Where an import specifier lands under `src`, or `null` when nothing does — a package, a node
+ * builtin, or a spelling no file answers.
+ *
+ * `?worker` and `?raw` are Vite's, and the module they name is still a module. `.js` spelt for a
+ * `.ts` file resolves too: `moduleResolution: 'bundler'` accepts both and this repo writes both —
+ * a cycle spelt that way compiled, linted and BUILT while the ratchet said four.
+ *
+ * Shared rather than spelt per guard: four tables of aliases coexisted and none listed the same
+ * ones, so a sweep silently skipped whatever its own table had forgotten.
+ */
+export function resolveSpecifier(specifier: string, fromFile: string): string | null {
+  const bare = specifier.split('?')[0] ?? specifier
+  const alias = ALIASES.find(([prefix]) => bare.startsWith(prefix))
+  const target = alias
+    ? join(SOURCE_ROOT, alias[1], bare.slice(alias[0].length))
+    : bare.startsWith('.')
+      ? resolve(dirname(fromFile), bare)
+      : null
+  if (target === null) return null
+
+  const stem = target.replace(/\.[cm]?jsx?$/, '')
+  const spellings = [
+    target,
+    `${stem}.ts`,
+    `${stem}.tsx`,
+    join(stem, 'index.ts'),
+    join(stem, 'index.tsx'),
+  ]
+  return spellings.find(one => /\.tsx?$/.test(one) && isFile(one)) ?? null
+}
+
+/**
+ * Whether a specifier names a file of this repository at all, told apart from a package by its
+ * leading `.` or by an alias — `@testing-library/react` opens like an alias and is not one.
+ */
+export function isLocalSpecifier(specifier: string): boolean {
+  return specifier.startsWith('.') || ALIASES.some(([prefix]) => specifier.startsWith(prefix))
+}
+
+/** The aliases `tsconfig` and `electron.vite.config.ts` declare, as roots under `src/`. */
+const ALIASES: readonly [string, string][] = [
+  ['@/', 'renderer/src/'],
+  ['@shared/', 'shared/'],
+  ['@main/', 'main/'],
+  ['@game/', 'game/'],
+]
+
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile()
+  } catch {
+    return false
+  }
+}

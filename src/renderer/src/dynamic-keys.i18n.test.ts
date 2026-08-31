@@ -20,30 +20,33 @@ import {
   type LayerKind,
 } from '@/engines/canvas/canvasState'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
-import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
-import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
+import { LAYER_LOCKS } from '@/features/image/components/Layer/layerLocks'
+import {
+  LAYER_OPERATIONS,
+  type LayerOperation,
+} from '@/features/image/components/Layer/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
 import { INPUT_ORIGINS, type InputOrigin } from '@/generation/generationInputs'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
-import { NAVIGATION_HINT_GROUPS } from '@/spaces/three/SceneNavigationHint'
-import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
+import { NAVIGATION_HINT_GROUPS } from '@/features/scene/components/Scene/SceneNavigationHint'
+import { CHARACTER_KINDS } from '@/features/scene/components/RigSection'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
-import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
-import { DOCUMENT_NAME_REFUSALS } from '@/newDocument/documentName'
+import { TRACK_FLAGS } from '@/features/timeline/components/trackFlags'
+import { DOCUMENT_NAME_REFUSALS } from '@/features/document/documentName'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { FILE_KINDS } from '@shared/domain/folder'
-import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
+import { FILE_INFO_SECTIONS } from '@/features/document/components/FileInfoWindow/sections'
 import { CHOICE_SCOPES } from '@shared/domain/aiOverview'
 import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
 import { CLOUD_IDS } from '@shared/domain/aiCloud'
 import { doorLabelKey } from '@/helpers/assistantDoor'
-import { ASSISTANT_STARTERS, starterKey } from '@/assistant/starters'
-import { SOURCES } from '@/panels/assets/facets'
+import { ASSISTANT_STARTERS, starterKey } from '@/features/assistant/starters'
+import { SOURCES } from '@/features/assets/components/Asset/Browser/facets'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is

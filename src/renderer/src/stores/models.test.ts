@@ -6,7 +6,7 @@ import {
   DEFAULT_COLLECTION_STATE,
   setFacetValue,
 } from '@/helpers/collectionState'
-import { ORIGIN_FACET } from '@/panels/models/modelFilters'
+import { ORIGIN_FACET } from '@/features/models/modelFilters'
 import { useModels } from './models'
 
 beforeEach(() => {
