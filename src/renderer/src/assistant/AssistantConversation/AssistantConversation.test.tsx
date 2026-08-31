@@ -680,7 +680,7 @@ describe('while the assistant is working', () => {
     })
     render(<AssistantConversation />)
 
-    expect(screen.getByText(`${short(2116)} / ${short(8192)} jetons`)).toBeInTheDocument()
+    expect(screen.getByText(`${short(2116)} / ${short(8192)}`)).toBeInTheDocument()
   })
 
   /**
@@ -692,8 +692,8 @@ describe('while the assistant is working', () => {
     useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 0, door: null })
     render(<AssistantConversation />)
 
-    expect(screen.getByText(`${short(2116)} jetons lus`)).toBeInTheDocument()
-    expect(screen.queryByText(/fenêtre/i)).not.toBeInTheDocument()
+    expect(screen.getByText(short(2116))).toBeInTheDocument()
+    expect(screen.queryByText(/fenêtre|jeton/i)).not.toBeInTheDocument()
   })
 
   /**
@@ -710,7 +710,7 @@ describe('while the assistant is working', () => {
     render(<AssistantConversation />)
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-    expect(screen.getByText(`${short(2116)} jetons lus`)).toBeInTheDocument()
+    expect(screen.getByText(short(2116))).toBeInTheDocument()
   })
 
   /** 🛑 A declared fallback is not a window: no gauge is painted against a made-up denominator. */
@@ -725,7 +725,7 @@ describe('while the assistant is working', () => {
     render(<AssistantConversation />)
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-    expect(screen.queryByText(/jetons|caractères/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\d/)).not.toBeInTheDocument()
   })
 
   /**
@@ -742,7 +742,7 @@ describe('while the assistant is working', () => {
     })
     render(<AssistantConversation />)
 
-    expect(screen.getByText(`0 / ${short(100_000)} caractères`)).toBeInTheDocument()
+    expect(screen.getByText(`0 / ${short(100_000)}`)).toBeInTheDocument()
   })
 
   // Characters against characters: the door is bounded by a LENGTH, and tokens here would be an
@@ -756,7 +756,7 @@ describe('while the assistant is working', () => {
     })
     render(<AssistantConversation />)
 
-    expect(screen.getByText(`${short(7400)} / ${short(100_000)} caractères`)).toBeInTheDocument()
+    expect(screen.getByText(`${short(7400)} / ${short(100_000)}`)).toBeInTheDocument()
   })
 
   // 🛑 The one exception to "a plan is running, the field is shut": a question with nothing to
