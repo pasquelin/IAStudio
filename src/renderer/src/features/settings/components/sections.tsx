@@ -7,11 +7,11 @@ import {
   type SettingSectionEntry,
 } from '@shared/domain/settingsRegistry'
 import { AccountSettings } from './AccountSettings/AccountSettings'
-import { AiSettings } from './AiSettings/AiSettings'
+import { AiSettings } from './Ai/AiSettings'
 import { DictationSettings } from './DictationSettings'
-import { McpSettings } from './McpSettings/McpSettings'
-import { MemoryGraph } from './MemorySettings/MemoryGraph/MemoryGraph'
-import { MemorySettings } from './MemorySettings/MemorySettings'
+import { McpSettings } from './McpSettings'
+import { MemoryGraph } from './Memory/Graph/MemoryGraph'
+import { MemorySettings } from './Memory/MemorySettings'
 import { MediaSettings } from './MediaSettings'
 import { ShortcutsSettings } from './ShortcutsSettings/ShortcutsSettings'
 

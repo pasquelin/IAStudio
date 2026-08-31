@@ -6,9 +6,9 @@ import { cn } from '@/helpers/cn'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
-import { SettingLine } from './SettingLine'
+import { SettingLine } from './Setting/SettingLine'
 import { SETTING_COLUMN, SETTING_SELECT } from './settingStyles'
-import { SettingRestoreButton } from './SettingRestoreButton'
+import { SettingRestoreButton } from './Setting/SettingRestoreButton'
 
 /** No descriptor names it — its options are whatever is plugged in — but the path is a leaf. */
 const DEVICE: SettingPath = 'dictation.inputDeviceId'

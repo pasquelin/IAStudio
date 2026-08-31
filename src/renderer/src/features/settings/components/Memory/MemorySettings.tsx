@@ -14,9 +14,9 @@ import { cn } from '@/helpers/cn'
 import { useAssistantMemory } from '@/stores/assistantMemory'
 import { useProject } from '@/stores/project'
 import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
-import { MemoryRelations } from './MemoryRelations/MemoryRelations'
-import { MemoryRowActions } from './MemoryRowActions'
-import { MemoryRowDetail } from './MemoryRowDetail'
+import { MemoryRelations } from './Relations/MemoryRelations'
+import { MemoryRowActions } from './Row/MemoryRowActions'
+import { MemoryRowDetail } from './Row/MemoryRowDetail'
 import { MemoryUpkeep } from './MemoryUpkeep'
 
 /**

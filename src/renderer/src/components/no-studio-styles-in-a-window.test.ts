@@ -29,10 +29,10 @@ const FRAMES_A_WINDOW = /<WindowShell[\s>]/
 const FAMILIES: readonly string[] = [
   './features/document/',
   './features/manual/',
+  './features/settings/',
   './features/usage/',
   './journal/',
   './licences/',
-  './settings/',
 ]
 
 /**
@@ -42,7 +42,7 @@ const FAMILIES: readonly string[] = [
 const ALLOWED: readonly string[] = [
   './features/document/components/NewDocument/NewDocumentWindow.tsx',
   './features/document/components/NewDocument/NewDocumentTemplateTile.tsx',
-  './settings/AiSettings/AiCandidateRow.tsx',
+  './features/settings/components/Ai/AiCandidateRow.tsx',
 ]
 
 describe('a window that is not a dock', () => {

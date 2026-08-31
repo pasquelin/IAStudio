@@ -5,7 +5,7 @@ import { hitId, sectionsOf, type SearchHit } from '@shared/domain/settingsSearch
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { WINDOW_GROUP_LABEL } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
-import { SettingList } from '../SettingList'
+import { SettingList } from '../Setting/SettingList'
 import { SettingsWindowResultRow } from './SettingsWindowResultRow'
 
 /**

@@ -3,7 +3,7 @@ import type { SettingPath } from '@shared/domain/settingsPath'
 import { SETTING_REGISTRY } from '@shared/domain/settingsRegistry'
 import { WindowNavItem } from '@/components/WindowNav/WindowNavItem'
 import { useSettingsDraft } from '@/stores/settingsDraft'
-import { SettingStagedDot } from '../SettingStagedDot'
+import { SettingStagedDot } from '../Setting/SettingStagedDot'
 import type { SettingsSection } from '../sections'
 
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */

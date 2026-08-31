@@ -1,6 +1,6 @@
 import type { SettingDescriptor } from '@shared/domain/settingsRegistry'
-import { SettingRow } from './SettingRow/SettingRow'
-import { SETTING_COLUMN } from './settingStyles'
+import { SettingRow } from './Row/SettingRow'
+import { SETTING_COLUMN } from '../settingStyles'
 
 /**
  * A run of settings. Used both by a section showing what it owns and by the search showing

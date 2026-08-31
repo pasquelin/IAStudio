@@ -65,11 +65,11 @@ describe('the line of a list in an app window', () => {
 
     expect(wearing.sort()).toEqual([
       '../features/manual/components/ManualWindow/ManualWindowResults.tsx',
-      '../settings/AiSettings/AiChoiceRow.tsx',
-      '../settings/AiSettings/AiCloudModel.tsx',
-      '../settings/AiSettings/AiStudioModel.tsx',
-      '../settings/SettingLine.tsx',
-      '../settings/SettingsWindow/SettingsWindowResultRow.tsx',
+      '../features/settings/components/Ai/AiChoiceRow.tsx',
+      '../features/settings/components/Ai/AiCloudModel.tsx',
+      '../features/settings/components/Ai/AiStudioModel.tsx',
+      '../features/settings/components/Setting/SettingLine.tsx',
+      '../features/settings/components/SettingsWindow/SettingsWindowResultRow.tsx',
     ])
   })
 })

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useMcpState } from '@/hooks/useMcpState'
-import { SETTING_COLUMN } from '../settingStyles'
+import { SETTING_COLUMN } from './settingStyles'
 
 /** The one list skin these three runs share, so they cannot drift apart on the same screen. */
 const LIST = 'list-inside space-y-1'

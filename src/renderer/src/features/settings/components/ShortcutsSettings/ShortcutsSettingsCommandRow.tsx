@@ -8,8 +8,8 @@ import { useChordCapture } from '@/hooks/useChordCapture'
 import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { SettingLine } from '../SettingLine'
-import { SettingRestoreButton } from '../SettingRestoreButton'
+import { SettingLine } from '../Setting/SettingLine'
+import { SettingRestoreButton } from '../Setting/SettingRestoreButton'
 import { WINDOW_HELP } from '@/components/windowStyles'
 
 export function ShortcutsSettingsCommandRow({

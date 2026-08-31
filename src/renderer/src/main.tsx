@@ -34,7 +34,8 @@ await initI18n(language)
 
 /** Same reason as the licences below, for another window's folder: registry, sections, draft. */
 const SettingsWindow = lazy(async () => ({
-  default: (await import('@/settings/SettingsWindow/SettingsWindow')).SettingsWindow,
+  default: (await import('@/features/settings/components/SettingsWindow/SettingsWindow'))
+    .SettingsWindow,
 }))
 
 /**
