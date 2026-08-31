@@ -103,7 +103,7 @@
       },
       "projectCreate": {
         "title": "Create a project folder",
-        "description": "Makes a project and opens it, without raising the system dialogue a person would use. A NAME is enough — the studio puts it where this person keeps projects, named above. An absolute path goes where it says."
+        "description": "Makes a project and opens it, without raising the system dialogue a person would use. A NAME is enough — the studio puts it where this person keeps projects, named above. The folder field says which folder to make it in, when the sentence names one."
       },
       "fileOpen": {
         "title": "Open a file of the project",
@@ -1468,7 +1468,9 @@
       "memoryBody": "The detail",
       "memoryImportance": "Importance, from 1 to 5",
       "memoryFile": "Project file this is about",
-      "memoryTo": "Id of the memory pointed at"
+      "memoryTo": "Id of the memory pointed at",
+      "projectName": "Project name",
+      "projectParent": "Created in"
     },
     "listening": "The assistant is listening",
     "done": "The assistant has answered",
@@ -1520,12 +1522,13 @@
       "studio": "This changes the studio’s own state, and no ⌘Z comes back from it. It spends no creative units.",
       "yes": "Allow",
       "pickFolder": "Choose…",
-      "pickFolderHint": "Opens the system picker, and what the assistant runs is the folder chosen there",
+      "pickFolderHint": "Opens the system picker, and the action will use the folder chosen there",
       "yesHint": "Runs the action above, and commits what it commits",
       "no": "Don’t allow",
       "noHint": "Runs nothing, and the assistant takes it into account for what follows",
       "on": "Yes",
-      "off": "No"
+      "off": "No",
+      "pickUnset": "where you keep your projects"
     },
     "starters": {
       "projectOpen": "Open a recent project",

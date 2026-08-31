@@ -42,6 +42,28 @@ const PROJECT_FOLDER: ActionField = {
   picks: 'folder',
 }
 
+/**
+ * 🛑 Creating takes a NAME and a place to put it, where opening and renaming take one PATH. Told
+ * apart because the question offers to point at what a `picks` field holds: sharing one field,
+ * the folder a person pointed at REPLACED the name, and the studio then tried to make a project
+ * of a folder that already held some — which it refuses, rightly.
+ */
+const PROJECT_NAME: ActionField = {
+  key: 'name',
+  kind: 'text',
+  labelKey: 'assistant.fields.projectName',
+  required: true,
+}
+
+/** Where the new project goes. Absent, the studio uses where this person keeps them. */
+const PROJECT_PARENT: ActionField = {
+  key: 'folder',
+  kind: 'text',
+  labelKey: 'assistant.fields.projectParent',
+  required: false,
+  picks: 'folder',
+}
+
 export const FILE_ACTIONS: readonly AssistantAction[] = [
   action({
     /**
@@ -105,7 +127,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'studio',
     repeatable: true,
     reach: 'both',
-    fields: [PROJECT_FOLDER],
+    fields: [PROJECT_NAME, PROJECT_PARENT],
   }),
   action({
     /**

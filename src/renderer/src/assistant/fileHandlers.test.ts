@@ -251,7 +251,7 @@ describe('opening and making a project', () => {
     withProject()
     useProject.setState({ createAt })
 
-    expect(await runAction('project.create', { path: '/tmp/Neuf' })).toEqual({
+    expect(await runAction('project.create', { name: '/tmp/Neuf' })).toEqual({
       ok: true,
       data: created,
     })
@@ -274,7 +274,7 @@ describe('opening and making a project', () => {
       },
     }))
 
-    await runAction('project.create', { path: 'test3' })
+    await runAction('project.create', { name: 'test3' })
 
     expect(createAt).toHaveBeenCalledWith('/Users/someone/Mes Projets/test3')
   })
@@ -285,7 +285,7 @@ describe('opening and making a project', () => {
     withProject()
     useProject.setState({ createAt })
 
-    await runAction('project.create', { path: '/tmp/Ailleurs' })
+    await runAction('project.create', { name: '/tmp/Ailleurs' })
 
     expect(createAt).toHaveBeenCalledWith('/tmp/Ailleurs')
   })
@@ -301,7 +301,7 @@ describe('opening and making a project', () => {
     expect(await runAction('project.create', {})).toMatchObject({
       ok: false,
       refusal: 'badInput',
-      detail: expect.stringContaining('"path"'),
+      detail: expect.stringContaining('"name"'),
     })
   })
 
@@ -318,7 +318,7 @@ describe('opening and making a project', () => {
       },
     }))
 
-    expect(await runAction('project.create', { path: 'test3' })).toMatchObject({
+    expect(await runAction('project.create', { name: 'test3' })).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })
@@ -332,7 +332,7 @@ describe('opening and making a project', () => {
     withProject()
     useProject.setState({ createAt: vi.fn(async () => null) })
 
-    expect(await runAction('project.create', { path: '/tmp/Neuf' })).toMatchObject({
+    expect(await runAction('project.create', { name: '/tmp/Neuf' })).toMatchObject({
       ok: false,
       refusal: 'declined',
     })
@@ -352,7 +352,7 @@ describe('opening and making a project', () => {
       }),
     })
 
-    expect(await runAction('project.create', { path: '/tmp/Mes Projets' })).toMatchObject({
+    expect(await runAction('project.create', { name: '/tmp/Mes Projets' })).toMatchObject({
       ok: false,
       refusal: 'failed',
       detail: expect.stringContaining('NAME'),
@@ -368,7 +368,7 @@ describe('opening and making a project', () => {
       }),
     })
 
-    expect(await runAction('project.create', { path: '/tmp/Film/Plans' })).toMatchObject({
+    expect(await runAction('project.create', { name: '/tmp/Film/Plans' })).toMatchObject({
       ok: false,
       refusal: 'failed',
       detail: expect.stringContaining('inside a project'),

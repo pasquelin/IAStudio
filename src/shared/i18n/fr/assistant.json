@@ -103,7 +103,7 @@
       },
       "projectCreate": {
         "title": "Créer un dossier de projet",
-        "description": "Crée un projet et l’ouvre, sans lever le dialogue système qu’une personne utiliserait. Un NOM suffit — le studio le pose là où cette personne range ses projets, indiqué plus haut. Un chemin absolu va où il dit."
+        "description": "Crée un projet et l’ouvre, sans lever le dialogue système qu’une personne utiliserait. Un NOM suffit — le studio le pose là où cette personne range ses projets, indiqué plus haut. Le champ folder dit dans quel dossier le créer, quand la phrase en nomme un."
       },
       "fileOpen": {
         "title": "Ouvrir un fichier du projet",
@@ -1468,7 +1468,9 @@
       "memoryBody": "Le détail",
       "memoryImportance": "Importance, de 1 à 5",
       "memoryFile": "Fichier du projet que cela concerne",
-      "memoryTo": "Identifiant de la mémoire visée"
+      "memoryTo": "Identifiant de la mémoire visée",
+      "projectName": "Nom du projet",
+      "projectParent": "Créé dans"
     },
     "listening": "L’assistant vous écoute",
     "done": "L’assistant a répondu",
@@ -1520,12 +1522,13 @@
       "studio": "Cette action change l’état du studio, et aucun ⌘Z ne revient dessus. Elle ne coûte aucune unité créative.",
       "yes": "Autoriser",
       "pickFolder": "Choisir…",
-      "pickFolderHint": "Ouvre le sélecteur du système, et ce que l’assistant exécute est le dossier choisi là",
+      "pickFolderHint": "Ouvre le sélecteur du système, et l’action utilisera le dossier choisi là",
       "yesHint": "Lance l’action décrite au-dessus, et engage ce qu’elle engage",
       "no": "Refuser",
       "noHint": "N’exécute rien, et l’assistant en tient compte pour la suite",
       "on": "Oui",
-      "off": "Non"
+      "off": "Non",
+      "pickUnset": "là où vous rangez vos projets"
     },
     "starters": {
       "projectOpen": "Ouvre un projet récent",

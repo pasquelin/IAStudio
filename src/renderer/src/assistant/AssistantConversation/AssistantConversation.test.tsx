@@ -132,7 +132,7 @@ describe('the assistant conversation', () => {
     useAssistant.setState({
       asked: {
         id: 1,
-        request: { action: 'project.create', input: { path: 'Bateaux' }, commitment: 'studio' },
+        request: { action: 'project.create', input: { name: 'Bateaux' }, commitment: 'studio' },
         answer: vi.fn(),
       },
     })
@@ -164,10 +164,11 @@ describe('the assistant conversation', () => {
   })
 
   /**
-   * 🛑 A folder is a place only the PERSON knows: « Nouveau projet » is a name the model guessed,
-   * and the card was a yes-or-no on it. What leaves with the yes is what they pointed at.
+   * 🛑 A folder is a place only the PERSON knows, and it is where the project GOES — it never
+   * replaces its name. Sharing one field, what they pointed at overwrote « Nouveau projet », and
+   * the studio then tried to make a project of a folder that already held some.
    */
-  it('lets the person point at a folder, and sends that one', async () => {
+  it('lets the person point at where the project goes, and sends that one', async () => {
     const answered = vi.fn()
     installFakeBridge({ dialog: { pickPath: () => Promise.resolve('/Projets/Bateaux') } })
     useAssistant.setState({
@@ -175,7 +176,7 @@ describe('the assistant conversation', () => {
         id: 1,
         request: {
           action: 'project.create',
-          input: { path: 'Nouveau projet' },
+          input: { name: 'Nouveau projet' },
           commitment: 'studio',
         },
         answer: answered,
@@ -190,8 +191,27 @@ describe('the assistant conversation', () => {
 
     expect(answered).toHaveBeenCalledWith({
       granted: true,
-      input: { path: '/Projets/Bateaux' },
+      input: { name: 'Nouveau projet', folder: '/Projets/Bateaux' },
     })
+  })
+
+  /**
+   * 🛑 A `picks` field is shown even EMPTY: the model names no folder for « crée un projet jeu1 »,
+   * so the row that says where it lands — and the button that changes it — were both absent from
+   * the one card where the person could still say otherwise.
+   */
+  it('says where a project with no folder named will land, and offers to change it', () => {
+    useAssistant.setState({
+      asked: {
+        id: 1,
+        request: { action: 'project.create', input: { name: 'jeu1' }, commitment: 'studio' },
+        answer: vi.fn(),
+      },
+    })
+    render(<AssistantConversation />)
+
+    expect(screen.getByText(/là où vous rangez vos projets/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Choisir/ })).toBeInTheDocument()
   })
 
   /** Inventing a figure to fill the sentence would be worse than admitting there is none. */

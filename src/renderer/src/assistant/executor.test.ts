@@ -677,7 +677,7 @@ describe('asking across the wire', () => {
     const ask = vi.fn(saying(true))
     const stop = registerConfirmer(ask)
 
-    const outcome = await runConfirmedAction('project.create', { path: '/tmp/p' }, {})
+    const outcome = await runConfirmedAction('project.create', { name: 'p' }, {})
 
     expect(outcome).toMatchObject({ ok: false, refusal: 'needsConsent' })
     expect(refusalDetail(outcome)).toContain('the studio’s own state')
@@ -754,7 +754,7 @@ describe('asking across the wire', () => {
   it('hands back a token for every call of the lot that was missing one', async () => {
     const calls = [
       { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } },
-      { action: 'project.create', input: { path: '/tmp/p' } },
+      { action: 'project.create', input: { name: 'p' } },
     ]
 
     const first = await runConfirmedAction('studio.batch', { calls: JSON.stringify(calls) }, {})
@@ -777,7 +777,7 @@ describe('asking across the wire', () => {
    */
   it('leaves a token standing when the lot it answered for is refused', async () => {
     const one = { action: 'command.runStudioCommand', input: { command: 'canvas.cutout' } }
-    const two = { action: 'project.create', input: { path: '/tmp/p' } }
+    const two = { action: 'project.create', input: { name: 'p' } }
 
     const first = await runConfirmedAction('studio.batch', { calls: JSON.stringify([one]) }, {})
     const armedOne = { ...one, input: { ...one.input, consent: tokenOf(refusalDetail(first)) } }
@@ -819,7 +819,7 @@ describe('asking across the wire', () => {
    * the retry asks again for a yes already given. */
   it('spends a token only when its own call runs', async () => {
     const stops = { action: 'game.export', input: {} }
-    const engages = { action: 'project.create', input: { path: '/tmp/p' } }
+    const engages = { action: 'project.create', input: { name: 'p' } }
     const asked = await runConfirmedAction(
       'studio.batch',
       { calls: JSON.stringify([stops, engages]) },
