@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { WindowFailure } from '@/design/WindowFailure'
 import { checkAccountName, type AccountSummary } from '@shared/domain/account'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { cn } from '@/helpers/cn'
@@ -74,11 +75,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
             {t('accounts.cancel')}
           </button>
         </form>
-        {failure && (
-          <p role="alert" className="text-error mt-1 text-xs">
-            {t(FAILURE_KEYS[failure])}
-          </p>
-        )}
+        {failure && <WindowFailure className="mt-1">{t(FAILURE_KEYS[failure])}</WindowFailure>}
       </li>
     )
   }

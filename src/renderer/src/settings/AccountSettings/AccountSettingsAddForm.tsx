@@ -2,6 +2,7 @@ import { useId, useState, type SubmitEvent } from 'react'
 import { cn } from '@/helpers/cn'
 import { WINDOW_ACTION } from '@/design/windowStyles'
 import { useTranslation } from 'react-i18next'
+import { WindowFailure } from '@/design/WindowFailure'
 import { FormField } from '@/design/FormField'
 import { checkAccountName } from '@shared/domain/account'
 import { CLOUD_IDS, cloudAuth, isCloudProviderId, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
@@ -106,11 +107,7 @@ export function AccountSettingsAddForm() {
         </FormField>
       )}
 
-      {failure && (
-        <p role="alert" className="text-error text-xs">
-          {t(FAILURE_KEYS[failure])}
-        </p>
-      )}
+      {failure && <WindowFailure>{t(FAILURE_KEYS[failure])}</WindowFailure>}
 
       <button
         type="submit"

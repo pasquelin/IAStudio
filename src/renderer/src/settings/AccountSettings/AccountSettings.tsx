@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { WindowFailure } from '@/design/WindowFailure'
 import { failureMessageKey } from '@/services/failureMessage'
 import { providerOf } from '@shared/domain/account'
 import { accountsByProvider, useAccounts } from '@/stores/accounts'
@@ -60,9 +61,7 @@ export function AccountSettings() {
       )}
 
       {!auth.authenticated && accounts.some(account => providerOf(account) === SCENARIO_CLOUD) && (
-        <p role="alert" className="text-error text-xs">
-          {t(failureMessageKey(auth.reason))}
-        </p>
+        <WindowFailure>{t(failureMessageKey(auth.reason))}</WindowFailure>
       )}
 
       <AccountSettingsAddForm />

@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
+import { WindowNote } from '@/design/WindowNote'
 import { fileInfoPathOf } from '@shared/domain/fileInfo'
 import { nameOf } from '@shared/domain/folder'
 import { WindowShell } from '@/design/WindowShell'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useFileInfo } from '@/hooks/useFileInfo'
 import { fileInfoSectionsOf } from '../sections'
@@ -42,7 +42,7 @@ export function FileInfoWindow() {
           ),
         )
       ) : (
-        <p className={WINDOW_CAPTION}>{reading ? t('fileInfo.reading') : t('fileInfo.missing')}</p>
+        <WindowNote>{reading ? t('fileInfo.reading') : t('fileInfo.missing')}</WindowNote>
       )}
     </WindowShell>
   )

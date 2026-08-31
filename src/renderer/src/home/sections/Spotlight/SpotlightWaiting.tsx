@@ -1,5 +1,4 @@
-/** What a laid-down banner measures — held so its empty stand-in reserves the same room. */
-const BANNER_HEIGHT = 76
+import { Reserve } from '@/design/Reserve'
 
 /**
  * The band before it knows what it holds. Silent, and exactly the height of the banner that
@@ -8,10 +7,6 @@ const BANNER_HEIGHT = 76
  */
 export function SpotlightWaiting() {
   return (
-    <div
-      aria-hidden
-      className="bg-surface rounded-(--radius-sc-lg)"
-      style={{ height: BANNER_HEIGHT }}
-    />
+    <Reserve height="h-(--sc-spotlight-banner)" className="bg-surface rounded-(--radius-sc-lg)" />
   )
 }

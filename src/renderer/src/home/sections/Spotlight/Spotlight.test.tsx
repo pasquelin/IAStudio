@@ -54,10 +54,14 @@ describe('the spotlight while the studio is still opening', () => {
     expect(screen.queryByRole('article')).not.toBeInTheDocument()
   })
 
+  /**
+   * The GAUGE and not a number: the banner is prose under `--text-*`, so 76 pixels flat was right
+   * at font scale 1 and short by a third at 1.4 — the very jump this stand-in exists to prevent.
+   */
   it('holds the room the banner will take, so nothing shifts under the reader', () => {
     const { container } = render(<Spotlight />)
 
-    expect(container.firstElementChild).toHaveStyle({ height: '76px' })
+    expect(container.firstElementChild?.firstElementChild).toHaveClass('h-(--sc-spotlight-banner)')
   })
 
   it('speaks up as soon as the key has been tried', () => {
@@ -78,7 +82,7 @@ describe('the spotlight while the studio is still opening', () => {
     const { container } = render(<Spotlight />)
 
     expect(screen.queryByText('Tout est prêt')).not.toBeInTheDocument()
-    expect(container.firstElementChild).toHaveStyle({ height: '76px' })
+    expect(container.firstElementChild?.firstElementChild).toHaveClass('h-(--sc-spotlight-banner)')
   })
 
   /**

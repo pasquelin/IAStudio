@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { WindowNote } from '@/design/WindowNote'
 import type { ManualChapter } from '@shared/domain/manual'
 import { WINDOW_CAPTION, WINDOW_ROW_BUTTON } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
@@ -14,7 +15,7 @@ export function ManualWindowResults({
 }) {
   const { t } = useTranslation()
 
-  if (found.length === 0) return <p className={WINDOW_CAPTION}>{t('manual.noResult')}</p>
+  if (found.length === 0) return <WindowNote>{t('manual.noResult')}</WindowNote>
 
   return (
     <ul className="m-0 flex list-none flex-col p-0">

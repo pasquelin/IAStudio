@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
+import { WindowFailure } from '@/design/WindowFailure'
+import { WindowNote } from '@/design/WindowNote'
 import type { UsagePeriod, UsageReport } from '@shared/domain/usage'
-import { WINDOW_ACTION_SECONDARY, WINDOW_CAPTION } from '@/design/windowStyles'
-import { HINT_RIGHT } from '@/helpers/tooltip'
 import { UsageActivities } from '../UsageActivities/UsageActivities'
 import { UsageJournal } from '../UsageJournal'
 import { UsageModels } from '../UsageModels'
@@ -22,26 +22,20 @@ export function UsageWindowBody({ id, period, report, failure, onRetry }: UsageW
 
   if (failure) {
     return (
-      <div className="flex flex-col items-start gap-2">
-        <p className="text-xs">{t('usage.failure')}</p>
-        <button
-          type="button"
-          className={WINDOW_ACTION_SECONDARY}
-          {...HINT_RIGHT(t('usage.retryHint'))}
-          onClick={onRetry}
-        >
-          {t('usage.retry')}
-        </button>
-      </div>
+      <WindowFailure
+        action={{ label: t('usage.retry'), hint: t('usage.retryHint'), onClick: onRetry }}
+      >
+        {t('usage.failure')}
+      </WindowFailure>
     )
   }
 
-  if (!report) return <p className={WINDOW_CAPTION}>{t('usage.loading')}</p>
+  if (!report) return <WindowNote>{t('usage.loading')}</WindowNote>
 
   // Zeros across the board because nothing was spent, or because there is no key to ask? Only
   // this tells them apart, and a table of zeros reads as the first when it is the second.
   if (report.accounts.length === 0 && report.silent.length === 0) {
-    return <p className={WINDOW_CAPTION}>{t('usage.noAccount')}</p>
+    return <WindowNote>{t('usage.noAccount')}</WindowNote>
   }
 
   return (

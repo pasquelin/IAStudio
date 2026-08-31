@@ -1,6 +1,6 @@
 import { NEWS_PAGE_SIZE } from '@shared/domain/news'
+import { Reserve } from '@/design/Reserve'
 import { NEWS_ROW } from './newsStyles'
-import { cn } from '@/helpers/cn'
 
 /**
  * The band's height while it waits, drawn from the same rows it is about to hold.
@@ -11,11 +11,5 @@ import { cn } from '@/helpers/cn'
  * density, where the gauge is four pixels shorter.
  */
 export function NewsSkeleton() {
-  return (
-    <div aria-hidden className="flex flex-col">
-      {Array.from({ length: NEWS_PAGE_SIZE }, (_unused, rank) => (
-        <span key={rank} className={cn(NEWS_ROW, 'block')} />
-      ))}
-    </div>
-  )
+  return <Reserve height={NEWS_ROW} count={NEWS_PAGE_SIZE} />
 }

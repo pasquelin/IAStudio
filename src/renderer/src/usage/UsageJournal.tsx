@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { WindowFailure } from '@/design/WindowFailure'
+import { WindowNote } from '@/design/WindowNote'
 import type { UsagePeriod } from '@shared/domain/usage'
 import { WINDOW_ACTION_SECONDARY } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
@@ -8,7 +10,6 @@ import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'
 import { UsageTableRow } from './UsageTable/UsageTableRow'
 import { formatMoment, formatUnits } from '@/helpers/format'
 import { useUsageEvents } from '@/hooks/useUsageEvents'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
 
 /**
  * The raw billable log, event by event.
@@ -21,10 +22,10 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
   const locale = i18n.language
   const { page, loading, failure, more } = useUsageEvents(period)
 
-  if (failure) return <p className="text-xs">{t('usage.failure')}</p>
-  if (!page && loading) return <p className={WINDOW_CAPTION}>{t('usage.loading')}</p>
+  if (failure) return <WindowFailure>{t('usage.failure')}</WindowFailure>
+  if (!page && loading) return <WindowNote>{t('usage.loading')}</WindowNote>
   if (!page || page.events.length === 0) {
-    return <p className={WINDOW_CAPTION}>{t('usage.empty')}</p>
+    return <WindowNote>{t('usage.empty')}</WindowNote>
   }
 
   return (

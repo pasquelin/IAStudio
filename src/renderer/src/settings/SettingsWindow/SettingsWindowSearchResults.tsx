@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
+import { WindowNote } from '@/design/WindowNote'
 import { sectionEntry } from '@shared/domain/settingsRegistry'
 import { hitId, sectionsOf, type SearchHit } from '@shared/domain/settingsSearch'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
 import { cn } from '@/helpers/cn'
 import { SettingList } from '../SettingList'
 import { SettingsWindowResultRow } from './SettingsWindowResultRow'
@@ -24,7 +25,7 @@ export function SettingsWindowSearchResults({
   const { t } = useTranslation()
 
   if (found.length === 0) {
-    return <p className={WINDOW_CAPTION}>{t('settings.noResult')}</p>
+    return <WindowNote>{t('settings.noResult')}</WindowNote>
   }
 
   return (
