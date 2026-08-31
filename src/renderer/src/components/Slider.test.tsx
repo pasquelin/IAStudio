@@ -72,6 +72,34 @@ describe('Slider', () => {
     expect(onGestureEnd).toHaveBeenCalledTimes(1)
   })
 
+  /**
+   * Tab is not a step: it MOVES THE FOCUS on the keydown, so the keyup lands on the next control
+   * and never comes back here. A gesture opened on it stays open for the life of the document, and
+   * every later command folds into one undo entry.
+   */
+  it('opens no gesture on a key that only moves the focus', () => {
+    const { onGestureStart, onGestureEnd, slider } = renderSlider()
+
+    fireEvent.keyDown(slider, { key: 'Tab' })
+
+    expect(onGestureStart).not.toHaveBeenCalled()
+    expect(onGestureEnd).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A held arrow repeats, and `beginGesture` is not a counter: each repeat would rearm the merge
+   * target, so a two-second press became one undo entry per repeat instead of one for the run.
+   */
+  it('opens one gesture for a held arrow, not one per repeat', () => {
+    const { onGestureStart, slider } = renderSlider()
+
+    fireEvent.keyDown(slider, { key: 'ArrowRight' })
+    fireEvent.keyDown(slider, { key: 'ArrowRight', repeat: true })
+    fireEvent.keyDown(slider, { key: 'ArrowRight', repeat: true })
+
+    expect(onGestureStart).toHaveBeenCalledTimes(1)
+  })
+
   /** The arrows report the same way a drag does — the value moves, so the gesture is real. */
   it('reports a keyboard step as its own gesture', () => {
     const { onGestureStart, onGestureEnd, slider } = renderSlider()

@@ -18,6 +18,18 @@ export type SliderHandleProps = GestureProps & {
   className?: string
 }
 
+/** What a range input answers to by moving. Tab and Escape are not among them, deliberately. */
+const STEPPING_KEYS: ReadonlySet<string> = new Set([
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'PageUp',
+  'PageDown',
+  'Home',
+  'End',
+])
+
 /**
  * The `<input type="range">` of the studio, and the only one. What a PRESS opens belongs to the
  * track this sits on, never here: `RangeField` stacks two handles transparent to the pointer but
@@ -49,11 +61,18 @@ export function SliderHandle({
       max={max}
       step={step}
       onChange={event => onChange(Number(event.target.value))}
-      // 🛑 The KEY and never the focus. A gesture is keyed by document, and a drag leaves the
-      // handle focused: the blur landed on the next press elsewhere and closed the gesture that
-      // press had just opened, turning every frame of it into an undo entry of its own.
-      onKeyDown={() => onGestureStart?.()}
-      onKeyUp={() => onGestureEnd?.()}
+      // 🛑 The keys that MOVE the value, and only them. Never the focus: a drag leaves the handle
+      // focused, and the blur landed on the next press elsewhere, closing the gesture that press
+      // had just opened. Never Tab either — it moves the focus on the keydown, so its keyup lands
+      // on the next control and the gesture would stay open for the life of the document.
+      onKeyDown={event => {
+        // `repeat` skipped: `beginGesture` rearms the merge target, so a held arrow would cost
+        // one undo entry per repeat instead of one for the whole run.
+        if (STEPPING_KEYS.has(event.key) && !event.repeat) onGestureStart?.()
+      }}
+      onKeyUp={event => {
+        if (STEPPING_KEYS.has(event.key)) onGestureEnd?.()
+      }}
       className={cn(SLIDER_HANDLE, className)}
     />
   )

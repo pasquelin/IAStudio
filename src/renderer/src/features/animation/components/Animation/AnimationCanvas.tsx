@@ -596,6 +596,10 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
 
+    // The frame owed by the last pointermove, paid HERE: left pending, it lands after the press
+    // that follows and overwrites the head that press had just set.
+    if (grab.kind === 'scrub') scrubCoalesce.current.flush()
+
     if (grab.kind === 'block' || grab.kind === 'blockEdge' || grab.kind === 'shot') {
       useScenes.getState().endGesture(documentId)
       return

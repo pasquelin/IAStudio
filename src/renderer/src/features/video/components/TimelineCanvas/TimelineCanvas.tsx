@@ -78,6 +78,16 @@ export type TimelineCanvasProps = {
   history?: boolean
 }
 
+/**
+ * A montage with the head one can actually see. `clockHead ?? playhead` is what every surface of
+ * the strip draws, so it has to be what every gesture ACTS on — the split, the blade's own menu.
+ */
+function shownSequence(documentId: string, sequence: SequenceState): SequenceState {
+  const head = playbackHeadOf(usePlayback.getState(), documentId)
+
+  return head === undefined ? sequence : { ...sequence, playhead: head }
+}
+
 export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -205,7 +215,9 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   const run = useCallback(
     (command: CommandId): void => {
       const store = useSequences.getState()
-      const state = sequenceOf(store, documentId)
+      // The head as it is SEEN: while a transport runs the montage stops carrying it, and a cut
+      // reading the document's own would fall where the head stood before Play was pressed.
+      const state = shownSequence(documentId, sequenceOf(store, documentId))
       const current = latest.current.viewport
       const middle = size.current.width / 2
 
@@ -404,7 +416,8 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     event.preventDefault()
 
     const store = useSequences.getState()
-    const state = sequenceOf(store, documentId)
+    // The head as it is seen here too: the row below cuts at it, and says so.
+    const state = shownSequence(documentId, sequenceOf(store, documentId))
     const target = hitTest(state, viewport, pointAt(event))
     if (!target || !('clipId' in target)) return
 

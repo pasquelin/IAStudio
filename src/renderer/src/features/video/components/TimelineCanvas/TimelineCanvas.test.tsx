@@ -23,6 +23,7 @@ import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { exportSequence } from './sequenceExport'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { usePlayback } from '@/stores/playback'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
@@ -98,6 +99,7 @@ let menu = fakeMenu()
 describe('TimelineCanvas', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
+    usePlayback.setState({ running: {}, heads: {} })
     useAssets.setState({ items: [asset()] })
     useSelection.getState().selectFiles([])
     menu = fakeMenu()
@@ -265,6 +267,21 @@ describe('TimelineCanvas', () => {
     fireEvent.keyDown(paint(), { code: 'Delete' })
 
     expect(clipsOf()).toHaveLength(1)
+  })
+
+  /**
+   * While a transport runs, the head belongs to the CLOCK and the montage stops carrying it: a cut
+   * reading the document's own head would fall where the head stood before Play was pressed, and
+   * `clipUnderPlayhead` would even name the wrong clip.
+   */
+  it('cuts where the head is SEEN while the montage plays, not where the document left it', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clipFixture('clip-1', 0, 4_000_000)))
+    usePlayback.setState({ running: { 'doc-1': true }, heads: { 'doc-1': 2_000_000 } })
+    paint()
+
+    act(() => publishCommand('sequence.split'))
+
+    expect(clipsOf().map(held => held.start)).toEqual([0, 2_000_000])
   })
 
   it('splits a clip under the blade', () => {

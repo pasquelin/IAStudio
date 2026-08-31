@@ -82,6 +82,7 @@ import {
   guiPayload,
   guiRefusesToSave,
 } from './guiDocument'
+import { usePlayback } from '@/stores/playback'
 import { useMonitorPair } from '@/stores/monitorPair'
 import { useSkyboxViews } from '@/stores/skyboxViews'
 import { useMaterialViews } from '@/stores/materialViews'
@@ -1365,6 +1366,9 @@ function forgetDocument(documentId: string, gone?: DocumentDescriptor): void {
   // Of the same kind: a montage reopening with a clip monitor its predecessor had asked for is
   // not what the default says.
   useMonitorPair.getState().forgetMonitorPair(documentId)
+  // And the head a transport left behind: every surface reads `clockHead ?? sequence.playhead`,
+  // so one kept here would beat the head the FILE carries when the montage is opened again.
+  usePlayback.getState().clearHead(documentId)
   closePanel(documentId)
   useDocuments.getState().close(documentId)
 }
