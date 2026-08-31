@@ -6,7 +6,7 @@ import {
   MIN_FIELD_OF_VIEW,
   SKYBOX_VIEWS,
 } from '@shared/domain/skybox'
-import { SKYBOX_VIEW_LABELS } from '@/spaces/skyboxes/skyboxTools'
+import { SKYBOX_VIEW_LABELS } from '@/features/skybox/components/Skybox/skyboxTools'
 import { PropertySection } from '@/components/PropertySection'
 import { SelectField } from '@/components/SelectField'
 import { SliderField } from '@/components/SliderField'

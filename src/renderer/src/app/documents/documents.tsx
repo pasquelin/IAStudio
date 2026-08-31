@@ -27,7 +27,8 @@ const AudioDocument = lazy(async () => ({
   default: (await import('@/features/audio/components/AudioDocument')).AudioDocument,
 }))
 const SkyboxDocument = lazy(async () => ({
-  default: (await import('@/spaces/skyboxes/SkyboxDocument')).SkyboxDocument,
+  default: (await import('@/features/skybox/components/Skybox/Document/SkyboxDocument'))
+    .SkyboxDocument,
 }))
 const ScriptDocument = lazy(async () => ({
   default: (await import('@/features/code/components/ScriptDocument')).ScriptDocument,

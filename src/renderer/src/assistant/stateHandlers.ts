@@ -325,7 +325,8 @@ async function exportOf(
       )
     }
     case 'skybox': {
-      const { skyboxExportFiles } = await import('@/spaces/skyboxes/skyboxExportFiles')
+      const { skyboxExportFiles } =
+        await import('@/features/skybox/components/Skybox/Document/skyboxExportFiles')
       // The six faces alone: a panorama is a menu row, and this door takes no target — offering
       // one here would be a second place to keep the list of them in step.
       return skyboxExportFiles(document.id, {

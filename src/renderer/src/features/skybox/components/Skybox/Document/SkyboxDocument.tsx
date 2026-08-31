@@ -27,7 +27,7 @@ import { useMountedEngine } from '@/hooks/useMountedEngine'
 import { runDocumentExport } from '@/app/documentExport'
 import { useBindingOverrides } from '@/stores/bindings'
 import { skyboxExportFiles } from './skyboxExportFiles'
-import { SKYBOX_TOOLS, skyboxViewFrom } from './skyboxTools'
+import { SKYBOX_TOOLS, skyboxViewFrom } from '../skyboxTools'
 
 /**
  * A sky handed to an engine as six faces, from the row of the native menu that was picked.

@@ -28,7 +28,7 @@ import { useMountedEngine } from '@/hooks/useMountedEngine'
 import { runDocumentExport } from '@/app/documentExport'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
-import { environmentDressOf } from '@/spaces/skyboxes/environmentDress'
+import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 
 /**
  * A material handed to an engine, from the row of the native menu that was picked.

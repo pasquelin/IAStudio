@@ -209,7 +209,7 @@ describe('the opening chunk', () => {
       './spaces/three/SceneDocument.tsx',
       './spaces/video/SequenceDocument.tsx',
       './features/audio/components/AudioDocument.tsx',
-      './spaces/skyboxes/SkyboxDocument.tsx',
+      './features/skybox/components/Skybox/Document/SkyboxDocument.tsx',
       './spaces/materials/MaterialDocument/MaterialDocument.tsx',
     ]
 
