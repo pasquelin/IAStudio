@@ -43,7 +43,7 @@ import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
 import { CLOUD_IDS } from '@shared/domain/aiCloud'
 import { doorLabelKey } from '@/helpers/assistantDoor'
 import { ASSISTANT_STARTERS, starterKey } from '@/assistant/starters'
-import { SOURCES } from '@/panels/assets/facets'
+import { SOURCES } from '@/features/assets/components/Asset/Browser/facets'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is

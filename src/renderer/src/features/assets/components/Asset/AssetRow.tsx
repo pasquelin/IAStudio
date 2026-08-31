@@ -6,7 +6,7 @@ import { Row } from '@/components/Row'
 import { ROW_QUIET, ROW_WRAPPER } from '@/components/styles'
 import { Thumbnail } from '@/components/Thumbnail'
 import { cn } from '@/helpers/cn'
-import { LibraryAsset } from './LibraryAsset'
+import { LibraryAsset } from '../LibraryAsset'
 import { nameOfRow, type AssetRowModel, type RowHints } from './rows'
 
 export type AssetRowProps = {

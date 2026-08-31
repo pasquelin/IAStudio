@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { job } from '@/stores/job-fixtures'
 import { mergeFeed } from './feed'
-import type { AssetRowModel } from './rows'
+import type { AssetRowModel } from '../rows'
 
 function row(id: string, createdAt: string): AssetRowModel {
   const asset: CloudAsset = {

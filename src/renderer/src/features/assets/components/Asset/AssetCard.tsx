@@ -8,7 +8,7 @@ import { ProgressBar } from '@/components/ProgressBar'
 import { Spinner } from '@/components/Spinner'
 import { cloudTileFace } from '@/helpers/cloudTile'
 import { cn } from '@/helpers/cn'
-import { LibraryAsset } from './LibraryAsset'
+import { LibraryAsset } from '../LibraryAsset'
 import { nameOfRow, typeOfRow, type AssetRowModel, type RowHints } from './rows'
 
 /** The width a tile occupies. What the CDN is asked for follows, once density is applied. */

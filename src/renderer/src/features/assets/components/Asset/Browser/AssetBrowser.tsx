@@ -34,12 +34,12 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
-import { AssetCard } from './AssetCard'
-import { AssetDetails } from './AssetDetails'
-import { AssetRow } from './AssetRow'
+import { AssetCard } from '../AssetCard'
+import { AssetDetails } from '../AssetDetails'
+import { AssetRow } from '../AssetRow'
 import { OWN_SOURCE, PUBLISHED_SOURCE, SOURCE_FACET, TYPE_FACET } from './facets'
 import { mergeFeed, type FeedSource, type FeedSourceName } from './feed'
-import { markOf, mergeRows, runningRows, typeOfRow, type AssetRowModel } from './rows'
+import { markOf, mergeRows, runningRows, typeOfRow, type AssetRowModel } from '../rows'
 
 /** How much of a cloud listing one page asks for. The scroll asks for the next. */
 const LIBRARY_PAGE = 60

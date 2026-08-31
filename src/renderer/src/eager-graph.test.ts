@@ -263,7 +263,7 @@ describe('the opening chunk', () => {
    * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
    * node kinds in behind it.
    *
-   * `panels/assets/facets.ts` was the fourth until 24 August, pulled in by `revealAssetsOfKind`
+   * The assets' `facets.ts` was the fourth until 24 August, pulled in by `revealAssetsOfKind`
    * — a function nothing called, deleted with the six other unread values. The budget shrank on
    * its own, which is what a budget that may only shrink is for.
    */

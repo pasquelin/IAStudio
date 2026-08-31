@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { SectionFoldScope } from '@/components/SectionFoldScope'
 import { ROW_DETAIL } from '@/components/styles'
-import { AssetInspector } from './AssetInspector/AssetInspector'
-import { CloudAssetInspector } from './AssetInspector/CloudAssetInspector'
+import { AssetInspector } from './Inspector/AssetInspector'
+import { CloudAssetInspector } from '../CloudAssetInspector'
 import type { AssetRowModel } from './rows'
 
 /**

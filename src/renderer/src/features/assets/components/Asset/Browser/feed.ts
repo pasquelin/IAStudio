@@ -1,4 +1,4 @@
-import { stampOfIso, stampOfRow, type AssetRowModel } from './rows'
+import { stampOfIso, stampOfRow, type AssetRowModel } from '../rows'
 
 /**
  * The lists the panel shows as one. Named rather than left to free strings: `hungry` travels back

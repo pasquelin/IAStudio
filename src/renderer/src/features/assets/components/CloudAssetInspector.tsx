@@ -3,8 +3,8 @@ import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { PropertySection } from '@/components/PropertySection'
 import { PropertyRow } from '@/components/PropertyRow'
 import { defined } from '@shared/guards'
-import { AssetInspectorGeneration } from './AssetInspectorGeneration'
-import { AssetMeasureRows } from './AssetMeasureRows'
+import { AssetInspectorGeneration } from './Asset/Inspector/AssetInspectorGeneration'
+import { AssetMeasureRows } from './Asset/AssetMeasureRows'
 
 /**
  * One asset of a library nothing here holds yet. Everything `AssetInspector` has and this has not

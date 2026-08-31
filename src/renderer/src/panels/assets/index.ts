@@ -1,6 +1,6 @@
 import type { ToolDefinition } from '@/panels/definition'
-import { AssetBrowser } from './AssetBrowser'
-import { AssetBrowserActions } from './AssetBrowserActions'
+import { AssetBrowser } from '../../features/assets/components/Asset/Browser/AssetBrowser'
+import { AssetBrowserActions } from '../../features/assets/components/Asset/Browser/AssetBrowserActions'
 
 export const definition: ToolDefinition = {
   Content: AssetBrowser,

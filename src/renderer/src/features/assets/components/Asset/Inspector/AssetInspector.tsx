@@ -17,7 +17,7 @@ import { useBadgeLabels } from '@/hooks/useBadgeLabels'
 import { useJobs } from '@/stores/jobs'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { AssetInspectorGeneration } from './AssetInspectorGeneration'
-import { AssetMeasureRows } from './AssetMeasureRows'
+import { AssetMeasureRows } from '../AssetMeasureRows'
 
 /**
  * One asset, read out — and the prompt behind it, which is what makes the shelf navigable
