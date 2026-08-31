@@ -1,6 +1,7 @@
 import type { MaterialStyle } from '@shared/domain/style'
 import type { Asset } from '@shared/domain/asset'
 import { MANIFEST_VERSION, type Project } from '@shared/domain/project'
+import { pathParentOf } from '@shared/domain/fileName'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { noContext, type ContextState } from '@shared/domain/projectContext'
 import type { AccountSummary } from '@shared/domain/account'
@@ -66,8 +67,8 @@ export function createMemoryShell(assetOf: (assetId: string) => Asset | null): M
       // A project is a FOLDER, and its name is that folder's — renaming MOVES it.
       open: path => Promise.resolve(projectAt(path)),
       create: path => Promise.resolve(projectAt(path)),
-      rename: (path, name) =>
-        Promise.resolve(projectAt(`${path.slice(0, path.lastIndexOf('/'))}/${name}`)),
+      // The folder MOVES, as the real store does — see `main/project/store.ts`.
+      rename: (path, name) => Promise.resolve(projectAt(`${pathParentOf(path)}/${name}`)),
       revealFile: relative => {
         revealed.push(relative)
         return Promise.resolve()

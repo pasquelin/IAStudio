@@ -9,6 +9,7 @@ import { assetsById, useAssets } from './assets'
 import { useProject } from './project'
 import { selectedFilePaths, useSelection } from './selection'
 import { useSettings } from './settings'
+import { ASSISTANT_ROLE, type AiRoleId, type RoleProvider } from '@shared/domain/aiRole'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
 vi.mock('@/app/orphanTabs', () => ({ closeOrphanTabs }))
@@ -663,8 +664,49 @@ describe('giving a project a new name', () => {
     expect(rename).toHaveBeenCalledWith(SUMMER.path, 'Winter')
     // 🛑 The PATH moves with the name: an entry left where it was points at a folder that is no
     // longer there, and `projects.list` then answers a path nothing opens.
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storage: expect.objectContaining({ recentProjects: [{ ...SUMMER, path: RENAMED.path }] }),
+      }),
+    )
+  })
+
+  /** One role override, as `ai.projectRoles` shapes it — the value is not what this case is about. */
+  const ROLE_HELD: Partial<Record<AiRoleId, RoleProvider>> = {
+    [ASSISTANT_ROLE]: { kind: 'cloud', providerId: 'deepseek' },
+  }
+
+  /**
+   * 🛑 EVERYTHING keyed by folder moves with it, and the account link above all: orphaned at the
+   * old path, `planProjectAccount` answers `adopt` and the project silently comes back on whichever
+   * key is active — a destructive write nobody asked for.
+   */
+  it('moves every table keyed on the folder, not only the shelf', async () => {
+    installFakeBridge({ project: { rename: () => Promise.resolve(RENAMED) } })
+    const write = vi.fn(async () => {})
+    useSettings.setState(state => ({
+      write,
+      settings: {
+        ...state.settings,
+        storage: {
+          ...state.settings.storage,
+          recentProjects: [SUMMER],
+          lastProject: SUMMER.path,
+          projectAccounts: { [SUMMER.path]: 'account-1' },
+        },
+        ai: { ...state.settings.ai, projectRoles: { [SUMMER.path]: ROLE_HELD } },
+      },
+    }))
+
+    await useProject.getState().rename(SUMMER.path, 'Winter')
+
     expect(write).toHaveBeenCalledWith({
-      storage: { recentProjects: [{ ...SUMMER, path: RENAMED.path }] },
+      storage: {
+        recentProjects: [{ ...SUMMER, path: RENAMED.path }],
+        projectAccounts: { [RENAMED.path]: 'account-1' },
+        lastProject: RENAMED.path,
+      },
+      ai: { projectRoles: { [RENAMED.path]: ROLE_HELD } },
     })
   })
 

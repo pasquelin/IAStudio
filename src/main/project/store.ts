@@ -408,7 +408,7 @@ export function createProjectStore({
    * database that fails to open — corrupt, locked, on a full disk — would leave the studio
    * with no project at all while the interface still showed the previous one as open.
    */
-  const activate = async (opened: Project, announce = true): Promise<Project> => {
+  const activate = async (opened: Project): Promise<Project> => {
     const file = join(opened.path, CATALOG_FILE)
     await mkdir(dirname(file), { recursive: true })
 
@@ -446,11 +446,11 @@ export function createProjectStore({
     project = opened
     roleFolders = resolved
     /**
-     * 🛑 Silent for a RENAME, and the window is what pays otherwise: `onChange` means "another
-     * project is in front now", so it empties the scene clipboard, dismisses every toast and
-     * refetches three lists — to move a folder the person is still working in.
+     * 🛑 Fired for a RENAME too, and staying silent there cost more than it saved: `onChange` is
+     * the only thing that redirects the folder watch, follows the assistant's memory and settles
+     * the account link — all of which stayed on a folder that had just moved.
      */
-    if (announce) onChange(opened)
+    onChange(opened)
     onRoles(resolved)
     return opened
   }
@@ -559,9 +559,7 @@ export function createProjectStore({
 
       // 🛑 Reopened rather than patched: the catalogue is a thread holding a file INSIDE the folder
       // that just moved, and `activate` is the one place that closes one and opens the next.
-      if (project?.path === path) {
-        return moved === path ? holding(renamed) : await activate(renamed, false)
-      }
+      if (project?.path === path) return moved === path ? holding(renamed) : await activate(renamed)
 
       return renamed
     },

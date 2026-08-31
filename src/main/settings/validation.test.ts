@@ -26,6 +26,29 @@ function acceptable(descriptor: SettingDescriptor): SettingValue {
   }
 }
 
+/**
+ * 🛑 The shelf is written by the MAIN process without passing through this parser, so a field the
+ * schema demands and nothing writes any more empties the WHOLE file: `salvagePartialSettings` does
+ * one `safeParse` and answers `{}` on any failure. Measured 2026-08-31, with a green gate — theme,
+ * keys, shortcuts and shelf all back to their defaults on the launch after a project was opened.
+ */
+describe('a shelf entry crossing the boundary', () => {
+  const entry = { path: '/projects/jeu1', openedAt: '2026-08-31T10:00:00.000Z' }
+  const held = { storage: { recentProjects: [entry], projectsFolder: '/projects' } }
+
+  it('takes what this build writes, and keeps the rest of the file with it', () => {
+    expect(salvagePartialSettings(held)).toEqual(held)
+    expect(parsePartialSettings(held)).toEqual(held)
+  })
+
+  // A file written when the name still lived beside the path: the field is stripped, not refused.
+  it('reads an entry written when the name still lived beside the path', () => {
+    const older = { storage: { recentProjects: [{ ...entry, name: 'Vieux' }] } }
+
+    expect(salvagePartialSettings(older)).toEqual({ storage: { recentProjects: [entry] } })
+  })
+})
+
 describe('settings validation', () => {
   /*
    * The shape is enumerated by hand in `validation.ts`, and zod STRIPS what it does not declare

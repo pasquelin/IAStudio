@@ -22,14 +22,10 @@ export const PROJECT_MENU_ROWS = 3
 /**
  * What can be done to a recent project without opening it, as rows.
  *
- * Three, and **none of them touches the folder**: one shows it in the system's file manager, one
- * gives it a new name in its manifest, and one drops it from the shelf. Nothing is deleted and
- * nothing is moved — the studio does not erase or relocate a folder someone made, and the shelf is
- * a list of shortcuts. Reopening the project puts a forgotten row back, which is what makes the
- * last row safe to offer with no confirmation behind it.
- *
- * The rename leaves the folder alone for a harder reason than politeness: `recentProjects`,
- * `storage.lastProject` and every absolute path the catalogue holds are keyed on it.
+ * Three, and **none of them deletes anything**: one shows the folder in the system's file
+ * manager, one RENAMES it — a project is named by its folder — and one drops it from the shelf.
+ * Reopening the project puts a forgotten row back, which is what makes the last row safe to offer
+ * with no confirmation behind it.
  *
  * Rendered by two things — the right-click menu and the row's own button — because a right-click
  * is not a keyboard gesture: `contextmenu` from Shift+F10 targets the focused cell, not the div

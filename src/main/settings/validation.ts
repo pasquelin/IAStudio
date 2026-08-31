@@ -78,7 +78,11 @@ const generation = z.object({
 
 const recentProject = z.object({
   path: z.string().min(1),
-  name: z.string().min(1),
+  /**
+   * 🛑 No `name`, and required it emptied every setting: a project is named by its FOLDER, so
+   * nothing writes one any more — and this schema refusing the entry made `salvagePartialSettings`
+   * answer `{}` for the WHOLE file. Theme, keys, shortcuts and shelf, gone on the next write.
+   */
   openedAt: z.string().min(1),
   // Optional, and it has to stay so: a file written before 13 August carries no such field, and
   // requiring it would fail validation for every entry a user already had.

@@ -1402,13 +1402,13 @@ export type StudioBridge = {
      */
     revealFolder: (path: string) => Promise<boolean>
     /**
-     * Renames a PROJECT — the name in its manifest, never the folder on disk. Named by its own
-     * absolute path, so the home's shelf can rename one it has not opened.
+     * Renames a PROJECT: its FOLDER moves, and that is the whole of it — a project is named by
+     * its folder. Named by its own absolute path, so the home's shelf can rename one it has not
+     * opened, and it answers the project at its NEW path.
      *
-     * The folder is deliberately left alone: `recentProjects`, `storage.lastProject` and every
-     * absolute path the catalogue holds are keyed on it, and moving it would strand all three for
-     * a display name. The manifest already allows the two to differ, which is exactly why
-     * `RecentProject` stores the name instead of deriving it from the folder.
+     * 🛑 What is keyed on the folder moves with it, and the caller owns that half: the shelf,
+     * `storage.lastProject`, `storage.projectAccounts` and `ai.projectRoles`. The catalogue does
+     * not — its rows are relative, so it travels inside the folder.
      *
      * Answers the project as it now reads. Throws when the folder will not open — a project
      * renamed out from under the studio is the same failure `open` reports.

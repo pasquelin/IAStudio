@@ -782,6 +782,20 @@ describe('renaming a project', () => {
     await expect(store.catalog().search({})).resolves.toEqual([])
   })
 
+  /**
+   * 🛑 Announced, and staying silent cost more than it saved: `onChange` is the only thing that
+   * redirects the folder watch, follows the assistant's memory and re-keys the account link — all
+   * of which stayed on a folder that had just moved.
+   */
+  it('announces the folder it moved to, for everything keyed on the old one', async () => {
+    const made = await store.create(join(root, 'Before'))
+    vi.mocked(onChange).mockClear()
+
+    const renamed = await store.rename(made.path, 'After')
+
+    expect(onChange).toHaveBeenCalledWith(renamed)
+  })
+
   // The home's shelf lists projects that are not open, and renaming one must not open it.
   it('renames a project that is not open, without opening it', async () => {
     const other = await store.create(join(root, 'other'))

@@ -1,4 +1,5 @@
 import { codeIn } from '../guards'
+import { pathBaseNameOf } from './fileName'
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
 import { parentOf } from './folder'
@@ -88,8 +89,7 @@ export type Project = {
  * the same reason it is: the settings are replicated in every window, so the home reads the
  * list without a channel of its own.
  *
- * The name is stored rather than derived from the folder: a project renamed in its manifest
- * would otherwise be listed under the name of the folder it happens to sit in.
+ * The NAME is not here — it is read off the path by `projectName`, and a rename moves the folder.
  */
 export type RecentProject = {
   /**
@@ -177,8 +177,9 @@ export function projectPickerFolder(
  * points, and a name compared or drawn as it came would not match the same word typed here.
  */
 export function projectName(path: string): string {
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return path.slice(cut + 1).normalize('NFC')
+  // 🛑 The trailing separator goes FIRST: `/Projets/jeu1/` is a path a model writes and a picker
+  // returns, and read as it came the name is the empty string — an unnamed project everywhere.
+  return pathBaseNameOf(path.replace(/[/\\]+$/, '')).normalize('NFC')
 }
 
 /**
@@ -320,6 +321,28 @@ export function planProjectAccount(
   if (!held) return { kind: 'missing' }
 
   return held.active ? { kind: 'keep' } : { kind: 'restore', account: held }
+}
+
+/**
+ * A table keyed BY FOLDER, re-keyed onto the folder a project moved to.
+ *
+ * 🛑 Three of them exist — `storage.projectAccounts`, `ai.projectRoles`, and the layouts a window
+ * adopts — and a rename moves the key of all three since 2026-08-31. Left behind, the account link
+ * is orphaned and `planProjectAccount` answers `adopt`: the project silently comes back on
+ * whichever key is active, and the write that follows is destructive.
+ */
+export function movedProjectKey<T>(
+  held: Record<string, T>,
+  from: string,
+  to: string,
+): Record<string, T> {
+  const moving = held[from]
+  if (moving === undefined) return held
+
+  return {
+    ...Object.fromEntries(Object.entries(held).filter(([key]) => key !== from)),
+    [to]: moving,
+  }
 }
 
 /**

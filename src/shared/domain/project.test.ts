@@ -204,6 +204,21 @@ describe('what a project is called', () => {
   it('reads a decomposed name as the word it spells', () => {
     expect(projectName('/Projets/E\u0301te\u0301')).toBe('Été')
   })
+
+  /**
+   * 🛑 A path a model writes and a picker returns. Read as it came, the name is the empty string —
+   * an untitled project in the title bar, the breadcrumb, `projects.list` and the briefing.
+   */
+  it('reads a folder named with a trailing separator', () => {
+    expect(projectName('/Users/x/Projets/jeu1/')).toBe('jeu1')
+    expect(projectName('C:\\Projets\\jeu1\\')).toBe('jeu1')
+  })
+
+  // Nothing above a volume root is a folder, so there is no name to read — and none to invent.
+  it('answers nothing for a path that names no folder', () => {
+    expect(projectName('/')).toBe('')
+    expect(projectName('')).toBe('')
+  })
 })
 
 /**
