@@ -60,10 +60,6 @@ export function AssistantConversationGauge() {
   // Characters against a character bound, tokens against a token one — never the two mixed.
   const byLength = shown.unit === 'characters'
   const read = byLength ? promptChars : promptTokens
-  const counted = {
-    read: formatCompact(read, i18n.language),
-    window: formatCompact(shown.size, i18n.language),
-  }
 
   return (
     <span
@@ -71,7 +67,10 @@ export function AssistantConversationGauge() {
       {...HINT_TOP(byLength ? t('assistant.contextHintChars') : t('assistant.contextHint'))}
     >
       <span className="text-muted text-tiny truncate">
-        {byLength ? t('assistant.contextOfChars', counted) : t('assistant.contextOf', counted)}
+        {t('assistant.contextOf', {
+          read: formatCompact(read, i18n.language),
+          window: formatCompact(shown.size, i18n.language),
+        })}
       </span>
       <ProgressBar
         ratio={read / shown.size}
