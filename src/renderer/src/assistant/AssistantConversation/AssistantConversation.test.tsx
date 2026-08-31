@@ -12,7 +12,14 @@ import { useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { focusChat } from '../chatPanel'
 import { mountedDictationTarget } from '@/dictation/destination'
+import { formatCompact } from '@/helpers/format'
 import { AssistantConversation } from './AssistantConversation'
+
+/**
+ * Read through the formatter the gauge uses, so a locale change moves both at once. The spaces
+ * are flattened: `Intl` binds the unit with U+202F, which the DOM matcher normalises away.
+ */
+const short = (value: number): string => formatCompact(value, 'fr').replace(/\s/g, ' ')
 
 const say = vi.hoisted(() => vi.fn<(utterance: string) => Promise<void>>())
 const stop = vi.hoisted(() => vi.fn())
@@ -673,21 +680,20 @@ describe('while the assistant is working', () => {
     })
     render(<AssistantConversation />)
 
-    const grouped = (value: number): string =>
-      new Intl.NumberFormat('fr').format(value).replace(/\s/g, '\\s')
-    expect(screen.getByText(new RegExp(`${grouped(2116)}.*${grouped(8192)}`))).toBeInTheDocument()
+    expect(screen.getByText(`${short(2116)} / ${short(8192)} jetons`)).toBeInTheDocument()
   })
 
   /**
-   * 🛑 A door that names no window shows the count alone AND says the window is unknown: a ratio
-   * against a guess is the `2 067 / 4 096` once shown for DeepSeek, whose window is far wider.
+   * 🛑 A door that names no window shows the count ALONE. Naming the missing window on the line
+   * took more room than the figure it qualified and pushed Send onto a row of its own — what the
+   * door will not say is the tooltip's to say, which costs no width.
    */
-  it('says the window is unknown where the door named none', () => {
+  it('shows the count alone where the door named no window', () => {
     useAssistant.setState({ busy: false, promptTokens: 2116, windowTokens: 0, door: null })
     render(<AssistantConversation />)
 
-    expect(screen.getByText(/2\s?116 jetons lus/)).toBeInTheDocument()
-    expect(screen.getByText(/fenêtre inconnue/)).toBeInTheDocument()
+    expect(screen.getByText(`${short(2116)} jetons lus`)).toBeInTheDocument()
+    expect(screen.queryByText(/fenêtre/i)).not.toBeInTheDocument()
   })
 
   /**
@@ -704,11 +710,11 @@ describe('while the assistant is working', () => {
     render(<AssistantConversation />)
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-    expect(screen.getByText(/fenêtre inconnue/)).toBeInTheDocument()
+    expect(screen.getByText(`${short(2116)} jetons lus`)).toBeInTheDocument()
   })
 
   /** 🛑 A declared fallback is not a window: no gauge is painted against a made-up denominator. */
-  it('shows no ratio for a bound the door could not read', () => {
+  it('says nothing at all for a bound the door could not read', () => {
     useAssistant.setState({
       busy: false,
       promptTokens: 0,
@@ -719,7 +725,7 @@ describe('while the assistant is working', () => {
     render(<AssistantConversation />)
 
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-    expect(screen.getByText(/Fenêtre inconnue/)).toBeInTheDocument()
+    expect(screen.queryByText(/jetons|caractères/)).not.toBeInTheDocument()
   })
 
   /**
@@ -736,8 +742,7 @@ describe('while the assistant is working', () => {
     })
     render(<AssistantConversation />)
 
-    const grouped = new Intl.NumberFormat('fr').format(100_000).replace(/\s/g, '\\s')
-    expect(screen.getByText(new RegExp(`0.*${grouped} caractères`))).toBeInTheDocument()
+    expect(screen.getByText(`0 / ${short(100_000)} caractères`)).toBeInTheDocument()
   })
 
   // Characters against characters: the door is bounded by a LENGTH, and tokens here would be an
@@ -751,11 +756,7 @@ describe('while the assistant is working', () => {
     })
     render(<AssistantConversation />)
 
-    const grouped = (value: number): string =>
-      new Intl.NumberFormat('fr').format(value).replace(/\s/g, '\\s')
-    expect(
-      screen.getByText(new RegExp(`${grouped(7400)}.*${grouped(100_000)} caractères`)),
-    ).toBeInTheDocument()
+    expect(screen.getByText(`${short(7400)} / ${short(100_000)} caractères`)).toBeInTheDocument()
   })
 
   // 🛑 The one exception to "a plan is running, the field is shut": a question with nothing to

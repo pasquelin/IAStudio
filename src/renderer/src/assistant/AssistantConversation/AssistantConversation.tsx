@@ -509,7 +509,8 @@ export function AssistantConversation() {
 
             {/* Wrapping: the picker and the pair sit side by side wherever there is room and
                 stack where there is not — one line could only shrink, and the picker has a
-                floor. */}
+                floor. The GAUGE gives ground first: it is the one part that reads the same
+                narrower, and it kept pushing Send onto a row of its own. */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Down here from the header, beside the sentence it will read: the moment one wants
                 another brain is the middle of writing, not a trip to a preferences window. */}
@@ -520,7 +521,7 @@ export function AssistantConversation() {
               <AssistantConversationGauge />
 
               {/* Beside the button it shares a job with: this pair is "how the sentence gets in". */}
-              <span className="ml-auto flex items-center gap-2">
+              <span className="ml-auto flex shrink-0 items-center gap-2">
                 <DictationButton variant="header" tooltip={TIP_TOP} />
 
                 {/* Where Send was, and never beside it: the same corner the eye already goes to
