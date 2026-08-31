@@ -8,7 +8,7 @@ import {
   homeSectionOf,
   type HomeSectionId,
 } from '@shared/domain/home'
-import { queryHost } from '@/app/query-fixtures'
+import { queryHost } from '@/features/shell/components/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'

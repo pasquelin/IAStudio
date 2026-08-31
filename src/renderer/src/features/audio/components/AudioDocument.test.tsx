@@ -11,7 +11,7 @@ import {
   withChain,
   type TakeChain,
 } from '@/engines/audio/edits'
-import { exportOtio } from '@/app/otioExport'
+import { exportOtio } from '@/features/shell/components/otioExport'
 import { startAssetDrag } from '@/helpers/assetDrag'
 import { publishCommand } from '@/services/commandBus'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -49,7 +49,9 @@ vi.mock('@/services/bridge', async importOriginal => ({
   getBridge: () => ({ assets: { saveAudio } }),
 }))
 
-vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
+vi.mock('@/features/shell/components/otioExport', () => ({
+  exportOtio: vi.fn(() => Promise.resolve('Bande.otio')),
+}))
 
 const asset: Asset = {
   id: 'asset-1',

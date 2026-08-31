@@ -10,7 +10,7 @@ import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { SceneDocument } from './Scene/Document/SceneDocument'
 
-vi.mock('@/app/dockviewApi', () => ({ setDocumentTitle: vi.fn() }))
+vi.mock('@/features/shell/components/dockviewApi', () => ({ setDocumentTitle: vi.fn() }))
 
 // jsdom has no WebGL context: what this covers is the wiring between the keyboard and the store.
 vi.mock('@/engines/scene/SceneRenderer', () => ({

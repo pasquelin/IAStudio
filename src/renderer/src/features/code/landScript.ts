@@ -1,7 +1,7 @@
 import { orElse } from '@shared/promises'
 import { documentFolderOf } from '@shared/domain/document'
 import { getBridge } from '@/services/bridge'
-import { createScript } from '@/app/newDocument'
+import { createScript } from '@/features/shell/newDocument'
 import { scriptRefOf, useCode } from '@/stores/code'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
 

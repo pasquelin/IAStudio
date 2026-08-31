@@ -14,7 +14,7 @@ import { SliderField } from '@/components/SliderField'
 import { ToggleField } from '@/components/ToggleField'
 import type { GestureProps } from '@/components/styles'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { choicesOf } from '../../../../panels/inspector/unionChoices'
+import { choicesOf } from '../../../shell/components/unionChoices'
 
 export type EnvironmentRenderSectionProps = {
   world: SceneWorld

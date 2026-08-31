@@ -23,7 +23,7 @@ import { useProject } from '@/stores/project'
 import { Explorer } from './Explorer'
 
 const openDocument = vi.fn()
-vi.mock('@/app/dockviewApi', () => ({
+vi.mock('@/features/shell/components/dockviewApi', () => ({
   openDocument: (...args: unknown[]) => openDocument(...args),
 }))
 

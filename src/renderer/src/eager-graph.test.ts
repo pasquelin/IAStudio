@@ -95,7 +95,7 @@ async function walk(): Promise<Graph> {
   const packages = new Set<string>()
   const files = new Set<string>()
   const unresolved = new Set<string>()
-  const queue: string[] = ['./main.tsx']
+  const queue: string[] = ['./features/shell/components/main.tsx']
 
   while (queue.length > 0) {
     const key = queue.pop()
@@ -171,11 +171,11 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./app/toolComponents.ts')
+    expect(files).toContain('./features/shell/components/ToolWindow/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
-    expect(files).toContain('./app/Shell/Shell.tsx')
+    expect(files).toContain('./features/shell/components/Shell/Shell.tsx')
     expect(files).toContain('./features/home/components/HomeView/HomeView.tsx')
   })
 
@@ -287,7 +287,7 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * Deferred by `app/toolComponents.ts` on 9 August: every panel of the table, the home screen's
+   * Deferred by `features/shell/components/ToolWindow/toolComponents.ts` on 9 August: every panel of the table, the home screen's
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *

@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '@/panels/definition'
+import type { ToolDefinition } from '@/features/shell/definition'
 import { History } from '../../features/git/components/History/History'
 import { HistoryActions } from '../../features/git/components/History/HistoryActions'
 

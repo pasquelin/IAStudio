@@ -15,8 +15,8 @@ const saveDocument = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const saveDocumentAs = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const importOtioz = vi.hoisted(() => vi.fn())
 
-vi.mock('@/app/documentIo', () => ({ saveDocument, saveDocumentAs }))
-vi.mock('@/app/otioImport', () => ({ importOtioz }))
+vi.mock('@/features/shell/documentIo', () => ({ saveDocument, saveDocumentAs }))
+vi.mock('@/features/shell/otioImport', () => ({ importOtioz }))
 
 const createPicked = vi.fn()
 const openPicked = vi.fn()

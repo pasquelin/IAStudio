@@ -4,7 +4,12 @@ import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { posterUrl } from '@shared/domain/asset'
-import { exportCutAs, exportOtio, exportOtioz, exportStems } from '@/app/otioExport'
+import {
+  exportCutAs,
+  exportOtio,
+  exportOtioz,
+  exportStems,
+} from '@/features/shell/components/otioExport'
 import type { Command } from '@/engines/core/history'
 import {
   addClips,

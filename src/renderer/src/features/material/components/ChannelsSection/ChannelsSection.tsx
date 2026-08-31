@@ -11,7 +11,7 @@ import { placeMaterialChannel } from '@/features/material/components/placeChanne
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { ChannelsSectionRow } from './ChannelsSectionRow'
-import type { DerivationState } from '../../../../panels/inspector/ChannelsSection/derivation'
+import type { DerivationState } from '../../../shell/components/derivation'
 
 export type ChannelsSectionProps = { documentId: string }
 

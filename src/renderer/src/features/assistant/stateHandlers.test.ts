@@ -16,13 +16,13 @@ import { useProject } from '@/stores/project'
 import { runAction } from './executor'
 
 const openDocument = vi.hoisted(() => vi.fn())
-vi.mock('@/app/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
+vi.mock('@/features/shell/components/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
 
 const closeDocument = vi.hoisted(() => vi.fn(async () => true))
 const documentIsDirty = vi.hoisted(() => vi.fn(() => false))
 const saveDocument = vi.hoisted(() => vi.fn(async () => true))
 const dropDocument = vi.hoisted(() => vi.fn(async () => true))
-vi.mock('@/app/documentIo', () => ({
+vi.mock('@/features/shell/documentIo', () => ({
   closeDocument,
   documentIsDirty,
   saveDocument,

@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ToolDefinition } from '@/panels/definition'
+import type { ToolDefinition } from '@/features/shell/definition'
 import { EmptyState } from '@/components/EmptyState'
 import { NODE_KINDS, type PanelNodeType } from '@/engines/scene/nodeKinds'
 import { activeSceneId, useDocuments } from '@/stores/documents'

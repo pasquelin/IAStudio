@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { isMtlxDocument } from '@shared/domain/materialX'
 import { isWorn } from '@shared/domain/scene'
-import { materialFromPayload } from '@/app/materialDocument'
+import { materialFromPayload } from '@/features/shell/materialDocument'
 import { channelOfInput } from '@/engines/material/mtlxMaterial'
 import type { MaterialState } from '@/engines/material/materialState'
 import { createDocumentSource } from './documentSource'

@@ -47,7 +47,7 @@ import { setChannel } from '@/engines/material/commands'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
-import { withQueries } from '@/app/query-fixtures'
+import { withQueries } from '@/features/shell/components/query-fixtures'
 
 const { Content } = definition
 

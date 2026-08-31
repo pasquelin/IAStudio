@@ -1,5 +1,5 @@
 import { refFromString } from '@shared/domain/ref'
-import { openDocument } from '@/app/dockviewApi'
+import { openDocument } from '@/features/shell/components/dockviewApi'
 import { useCode } from '@/stores/code'
 import { documentAtPath, useDocuments } from '@/stores/documents'
 

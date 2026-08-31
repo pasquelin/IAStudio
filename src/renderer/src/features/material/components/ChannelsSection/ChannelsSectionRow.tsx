@@ -9,7 +9,7 @@ import { cn } from '@/helpers/cn'
 import type { EditPixels } from '@/helpers/openAsset'
 import { PictureField } from '../../../../panels/inspector/PictureField/PictureField'
 import { ChannelsSectionMenuRows } from './ChannelsSectionMenuRows'
-import type { ChannelDerivation } from '../../../../panels/inspector/ChannelsSection/derivation'
+import type { ChannelDerivation } from '../../../shell/components/derivation'
 
 export type ChannelsSectionRowProps = {
   channel: PbrChannel

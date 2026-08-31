@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '@/panels/definition'
+import type { ToolDefinition } from '@/features/shell/definition'
 import { AssetBrowser } from '../../features/assets/components/Asset/Browser/AssetBrowser'
 import { AssetBrowserActions } from '../../features/assets/components/Asset/Browser/AssetBrowserActions'
 

@@ -9,7 +9,7 @@ import { openAssetById } from '@/helpers/openAsset'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useDocumentOptions } from '@/hooks/useDocumentOptions'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
-import { choicesOf } from '../../../../../panels/inspector/unionChoices'
+import { choicesOf } from '../../../../shell/components/unionChoices'
 import { EnvironmentChoiceSky } from './EnvironmentChoiceSky'
 
 const SKIES: readonly AssetType[] = ['skybox']

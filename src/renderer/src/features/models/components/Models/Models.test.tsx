@@ -10,7 +10,7 @@ import {
   type ModelQuery,
   type ModelSummary,
 } from '@shared/domain/model'
-import { withQueries } from '@/app/query-fixtures'
+import { withQueries } from '@/features/shell/components/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'

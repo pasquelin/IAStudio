@@ -1,6 +1,6 @@
 import { refused } from '@shared/domain/assistant'
 import type { GameExportRequest } from '@shared/domain/gameExport'
-import { scenePayloadOf } from '@/app/sceneDocument'
+import { scenePayloadOf } from '@/features/shell/sceneDocument'
 
 import { getBridge } from '@/services/bridge'
 

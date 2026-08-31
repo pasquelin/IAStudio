@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '@/panels/definition'
+import type { ToolDefinition } from '@/features/shell/definition'
 import { Inspector } from './Inspector/Inspector'
 import { InspectorActions } from './InspectorActions'
 

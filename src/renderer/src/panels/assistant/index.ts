@@ -1,5 +1,5 @@
 import { AssistantConversation } from '@/features/assistant/components/Assistant/Conversation/AssistantConversation'
-import type { ToolDefinition } from '@/panels/definition'
+import type { ToolDefinition } from '@/features/shell/definition'
 import { AssistantActions } from '../../features/assistant/components/Assistant/AssistantActions'
 
 /**

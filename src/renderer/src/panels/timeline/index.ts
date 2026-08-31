@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '@/panels/definition'
+import type { ToolDefinition } from '@/features/shell/definition'
 import { TimelineActions } from '../../features/timeline/components/Timeline/TimelineActions'
 import { TimelinePanel } from '../../features/timeline/components/Timeline/TimelinePanel'
 

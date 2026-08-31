@@ -30,9 +30,11 @@ const FAMILIES: readonly string[] = [
   './features/document/',
   './features/manual/',
   './features/settings/',
+  // Two files rather than a folder: the journal and the licences are one window each, and they
+  // sit among the shell's own components, which are the docks this rule is measured against.
+  './features/shell/components/JournalWindow.tsx',
+  './features/shell/components/LicencesWindow.tsx',
   './features/usage/',
-  './journal/',
-  './licences/',
 ]
 
 /**

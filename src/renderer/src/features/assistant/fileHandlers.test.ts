@@ -14,7 +14,7 @@ import { runAction } from './executor'
 const refusedRename = (why: string): ProjectRenamed => ({ ok: false, why })
 
 const openDocument = vi.hoisted(() => vi.fn())
-vi.mock('@/app/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
+vi.mock('@/features/shell/components/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
 
 // The editor half of the gesture, held at its own tests: what `file.open` owes a caller is which
 // of the three destinations took the file, not what the destination then did with it.

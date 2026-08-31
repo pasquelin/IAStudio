@@ -108,20 +108,20 @@ const TEST_POOL = 'threads'
  * a stale entry costs only the second it wastes.
  */
 const DOM_BOUND = [
-  'src/renderer/src/app/documentIo.test.ts',
+  'src/renderer/src/features/shell/documentIo.test.ts',
   // The composer makes a canvas per layer to read its pixels back, and a spy has to have
   // something to stand in FOR.
   'src/renderer/src/features/image/psdDocument.test.ts',
   // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
   // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
-  'src/renderer/src/app/newDocument.test.ts',
+  'src/renderer/src/features/shell/newDocument.test.ts',
   // The same reason: a generated script asked for a tab of its own is named the same way.
   'src/renderer/src/stores/codeGeneration.test.ts',
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
-  'src/renderer/src/app/toolComponents.test.ts',
-  'src/renderer/src/app/unsavedGuard.test.ts',
+  'src/renderer/src/features/shell/components/ToolWindow/toolComponents.test.ts',
+  'src/renderer/src/features/shell/unsavedGuard.test.ts',
   'src/renderer/src/features/dictation/insertAtCaret.test.ts',
   'src/renderer/src/engines/audio/audioRender.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/components/windowStyles'
 import { useTranslation } from 'react-i18next'
 import type { LandingTarget } from '@shared/domain/landingTarget'
-import { Dialog } from '@/app/Dialog'
+import { Dialog } from '@/features/shell/components/Dialog'
 import { fieldHandle } from '@/components/scHandle'
 
 export type GeneratorLandingDialogProps = {

@@ -44,8 +44,8 @@ const showWorkspace = vi.hoisted(() => vi.fn())
 const createDocumentIn = vi.hoisted(() => vi.fn())
 const revealTool = vi.hoisted(() => vi.fn())
 
-vi.mock('@/app/dockviewApi', () => ({ showWorkspace }))
-vi.mock('@/app/newDocument', () => ({ createDocumentIn }))
+vi.mock('@/features/shell/components/dockviewApi', () => ({ showWorkspace }))
+vi.mock('@/features/shell/newDocument', () => ({ createDocumentIn }))
 vi.mock('@/helpers/revealPanel', () => ({ revealTool }))
 
 function onImageDocument(): void {

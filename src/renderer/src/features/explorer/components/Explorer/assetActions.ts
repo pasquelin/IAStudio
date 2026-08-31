@@ -1,5 +1,5 @@
 import { isPrivatePath } from '@shared/domain/folder'
-import { exportContactSheet } from '@/app/contactSheetExport'
+import { exportContactSheet } from '@/features/shell/contactSheetExport'
 import { assetsAt } from '@/helpers/assetAt'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from '@/stores/assets'

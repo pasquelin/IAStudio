@@ -1,6 +1,6 @@
 import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { hasChannel } from '@shared/domain/channelTexture'
-import { openDocument } from '@/app/dockviewApi'
+import { openDocument } from '@/features/shell/components/dockviewApi'
 import { readyForWriting } from '@/helpers/assetIntents'
 import { reportFailure } from '@/services/diagnostics'
 import { documentForAsset, useDocuments } from '@/stores/documents'

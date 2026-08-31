@@ -13,7 +13,7 @@ import { useCloud } from '@/stores/cloud'
 import { useJobs } from '@/stores/jobs'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { job } from '@/stores/job-fixtures'
-import { withQueries } from '@/app/query-fixtures'
+import { withQueries } from '@/features/shell/components/query-fixtures'
 import { AssetBrowser } from './AssetBrowser'
 
 /**

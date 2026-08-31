@@ -9,8 +9,13 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import type { FolderExportRequest } from '@shared/ipc'
-import { closeDocument, documentIsDirty, dropDocument, saveDocument } from '@/app/documentIo'
-import { openDocument } from '@/app/dockviewApi'
+import {
+  closeDocument,
+  documentIsDirty,
+  dropDocument,
+  saveDocument,
+} from '@/features/shell/documentIo'
+import { openDocument } from '@/features/shell/components/dockviewApi'
 import { layerById } from '@/engines/canvas/canvasState'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { designatedIn } from '@/engines/timeline/timelineState'
@@ -344,7 +349,7 @@ async function exportOf(
     }
     case 'sequence':
     case 'audio': {
-      const { otioExportFiles } = await import('@/app/otioExport')
+      const { otioExportFiles } = await import('@/features/shell/components/otioExport')
       return otioExportFiles(document.id)
     }
     // `null`, not a throw: a script is already a `.ts` of the project, so there is nothing to

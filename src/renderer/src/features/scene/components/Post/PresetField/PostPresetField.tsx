@@ -12,7 +12,7 @@ import { stackOfPreset } from '@/engines/scene/postCommands'
 import { newId } from '@/helpers/ids'
 import { HINT_LEFT, HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
 import { usePostPresets } from '@/stores/postPresets'
-import { choicesOf } from '../../../../../panels/inspector/unionChoices'
+import { choicesOf } from '../../../../shell/components/unionChoices'
 import { exportPostPreset, importPostPreset } from './postPresetIo'
 
 export type PostPresetFieldProps = {

@@ -85,7 +85,7 @@ function keysIn(
 ): { keys: { key: string; line: number }[]; filled: Interpolated[] } {
   // No `ScriptKind`: TypeScript reads it off the name, and forcing TSX on a `.ts` was worse than
   // useless — `const f = <T,>(x: T) => x` opens a tag, the parser drops into error recovery, and
-  // nothing after it is visited. Measured on this glob: 697 nodes of `app/documentIo.ts` seen
+  // nothing after it is visited. Measured on this glob: 697 nodes of `features/shell/documentIo.ts` seen
   // out of 1653.
   const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
   const keys: { key: string; line: number }[] = []

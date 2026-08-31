@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { skyboxFromPayload } from '@/app/skyboxDocument'
+import { skyboxFromPayload } from '@/features/shell/skyboxDocument'
 import { skySourceUri } from '@/engines/skybox/gltfSky'
 import type { SkyboxContent } from '@shared/domain/skybox'
 import { createDocumentSource } from './documentSource'

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { scenePayloadOf } from '@/app/sceneDocument'
+import { scenePayloadOf } from '@/features/shell/sceneDocument'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { loadSceneSource, montageSceneOf } from './sceneSources'

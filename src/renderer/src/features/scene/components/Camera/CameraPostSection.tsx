@@ -9,7 +9,7 @@ import type { CameraNode } from '@/engines/scene/sceneState'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
-import { choicesOf } from '../../../../panels/inspector/unionChoices'
+import { choicesOf } from '../../../shell/components/unionChoices'
 
 export type CameraPostSectionProps = {
   documentId: string

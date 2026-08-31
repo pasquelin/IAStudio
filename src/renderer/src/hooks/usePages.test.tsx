@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { withQueries } from '@/app/query-fixtures'
+import { withQueries } from '@/features/shell/components/query-fixtures'
 import { usePages, type Page } from './usePages'
 
 type Row = { id: string }

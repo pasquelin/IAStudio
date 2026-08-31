@@ -15,7 +15,7 @@ import { useAssets } from '@/stores/assets'
 import { useSceneViews } from '@/stores/sceneViews'
 import type { FieldKind, ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
-import { withQueries } from '@/app/query-fixtures'
+import { withQueries } from '@/features/shell/components/query-fixtures'
 import { RigSection } from './RigSection'
 
 const DOCUMENT = 'doc-1'
