@@ -186,7 +186,7 @@ const DOM_BOUND = [
   'src/renderer/src/spaces/image/imageTools.test.ts',
   'src/renderer/src/features/material/deriveChannel.test.ts',
   'src/renderer/src/spaces/three/sceneTools.test.ts',
-  'src/renderer/src/spaces/video/videoTools.test.ts',
+  'src/renderer/src/features/video/components/videoTools.test.ts',
   'src/renderer/src/stores/dictation.test.ts',
   'src/renderer/src/stores/documents.test.ts',
   'src/renderer/src/stores/layouts.test.ts',

@@ -26,7 +26,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
-import type { VideoToolId } from './videoTools'
+import type { VideoToolId } from '../videoTools'
 
 vi.mock('@/app/otioExport', () => ({ exportOtio: vi.fn(() => Promise.resolve('Bande.otio')) }))
 vi.mock('./sequenceExport', () => ({ exportSequence: vi.fn(() => Promise.resolve('Bande.mp4')) }))

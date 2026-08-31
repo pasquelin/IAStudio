@@ -56,7 +56,7 @@ import { playbackHeadOf, usePlayback } from '@/stores/playback'
 import { addSceneToSequence, selectClipIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { exportSequence } from './sequenceExport'
-import type { VideoToolId } from './videoTools'
+import type { VideoToolId } from '../videoTools'
 
 export type TimelineCanvasProps = {
   documentId: string

@@ -1,4 +1,4 @@
-import { TimelineCanvas } from '@/spaces/video/TimelineCanvas'
+import { TimelineCanvas } from '@/features/video/components/TimelineCanvas/TimelineCanvas'
 import { useVideoTool } from '@/stores/videoTool'
 import { TrackHeaders } from './Track/Headers/TrackHeaders'
 

@@ -226,7 +226,7 @@ describe('the opening chunk', () => {
     const editors = [
       './spaces/image/ImageDocument/ImageDocument.tsx',
       './spaces/three/SceneDocument.tsx',
-      './spaces/video/SequenceDocument.tsx',
+      './features/video/components/SequenceDocument.tsx',
       './features/audio/components/AudioDocument.tsx',
       './features/skybox/components/Skybox/Document/SkyboxDocument.tsx',
       './features/material/components/Material/MaterialDocument.tsx',

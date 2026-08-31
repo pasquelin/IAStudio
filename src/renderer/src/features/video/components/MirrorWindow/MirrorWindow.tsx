@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timelineState'
-import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
-import { montageSink } from './montageSink'
+import { mirrorMessageOf, openMirrorChannel } from '../mirrorChannel'
+import { montageSink } from '../montageSink'
 import { silentSound } from './silentSound'
 
 /**

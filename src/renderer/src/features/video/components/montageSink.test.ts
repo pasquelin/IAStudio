@@ -2,22 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { SceneStage, SceneStageOptions } from '@/engines/scene/sceneStage'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
+import { WINDOW_SOURCES } from '@/windowSources'
 import { montageSink } from './montageSink'
-
-/**
- * Every source of the renderer, as text — read through Vite rather than through `fs`, for the
- * reason `no-hardcoded-text.test.ts` gives: a test living here has no filesystem.
- */
-const SOURCES: Record<string, string> = import.meta.glob(
-  [
-    '../../**/*.ts',
-    '../../**/*.tsx',
-    '!../../**/*.test.ts',
-    '!../../**/*.test.tsx',
-    '!../../**/*-fixtures.ts',
-  ],
-  { query: '?raw', import: 'default', eager: true },
-)
 
 const MESH: Asset = {
   id: 'asset_3',
@@ -33,14 +19,21 @@ describe('the sink a montage reads the studio through', () => {
    * Three surfaces had each wired the same four stores themselves, so the `assetOf` fix below had
    * to be found three times over. Sorted rather than ordered: `import.meta.glob` promises no order
    * of its own, and a fourth site is what this counts.
+   *
+   * Read through `WINDOW_SOURCES` rather than a glob of its own: the pattern was `../../**`, which
+   * meant the whole renderer from `spaces/video/` and its own folder from here. The sweep followed
+   * the file and shrank to nothing, which is the trap `windowSources.ts` was extracted for.
    */
   it('is wired in exactly one place', () => {
-    const wiring = Object.entries(SOURCES)
+    const wiring = Object.entries(WINDOW_SOURCES)
       .filter(([, source]) => source.includes('createStudioSink('))
       .map(([path]) => path)
       .sort()
 
-    expect(wiring).toEqual(['../../engines/timeline/sinkPort.ts', './montageSink.ts'])
+    expect(wiring).toEqual([
+      './engines/timeline/sinkPort.ts',
+      './features/video/components/montageSink.ts',
+    ])
   })
 
   /**

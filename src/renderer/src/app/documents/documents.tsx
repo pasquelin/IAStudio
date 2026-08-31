@@ -21,7 +21,7 @@ const SceneDocument = lazy(async () => ({
   default: (await import('@/spaces/three/SceneDocument')).SceneDocument,
 }))
 const SequenceDocument = lazy(async () => ({
-  default: (await import('@/spaces/video/SequenceDocument')).SequenceDocument,
+  default: (await import('@/features/video/components/SequenceDocument')).SequenceDocument,
 }))
 const AudioDocument = lazy(async () => ({
   default: (await import('@/features/audio/components/AudioDocument')).AudioDocument,

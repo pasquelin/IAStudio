@@ -5,8 +5,8 @@ import { sequenceDuration, type SequenceState } from '@/engines/timeline/timelin
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { montageSink } from './montageSink'
-import { silentSound } from './silentSound'
+import { montageSink } from '../montageSink'
+import { silentSound } from '../MirrorWindow/silentSound'
 
 /**
  * How many decoders and pictures an export may hold. The same ceilings a monitor lives under —
