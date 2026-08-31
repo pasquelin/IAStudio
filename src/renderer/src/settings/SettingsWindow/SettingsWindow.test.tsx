@@ -6,6 +6,25 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingsWindow } from './SettingsWindow'
+import type * as NavigationEntry from './SettingsWindowNavigationEntry'
+
+/**
+ * How many root entries of the column the WINDOW asks to render again. An entry that re-renders
+ * on its own subscription is not counted: the wrapper stands above it, and what is measured here
+ * is the parent waking the column.
+ */
+const column = vi.hoisted(() => ({ renders: 0 }))
+
+vi.mock('./SettingsWindowNavigationEntry', async importOriginal => {
+  const actual = await importOriginal<typeof NavigationEntry>()
+  const Entry = actual.SettingsWindowNavigationEntry
+  return {
+    SettingsWindowNavigationEntry: (props: Parameters<typeof Entry>[0]) => {
+      column.renders += 1
+      return <Entry {...props} />
+    },
+  }
+})
 
 function navigation(): HTMLElement {
   return screen.getByRole('navigation', { name: 'Sections de réglages' })
@@ -241,6 +260,22 @@ describe('SettingsWindow', () => {
     expect(write).not.toHaveBeenCalled()
     // Back to what is stored, which is what "cancel" has to mean for the control too.
     expect(screen.getByLabelText(/Densité/)).toHaveValue('comfortable')
+  })
+
+  /**
+   * The window subscribed to the same boolean as its draft bar, so the first staged setting
+   * re-rendered the whole column the bar exists to keep out of it.
+   */
+  it('leaves the section column alone when the draft turns dirty', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Apparence' }))
+
+    column.renders = 0
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+
+    // Thirteen before the window stopped reading the same boolean as the bar.
+    expect(column.renders).toBe(0)
   })
 
   // A window that shows Apply and Cancel with nothing waiting reads as a form to submit.

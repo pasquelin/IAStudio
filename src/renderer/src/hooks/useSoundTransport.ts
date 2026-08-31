@@ -56,6 +56,12 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
       // that is gone, out of the store's default: a picture track, in the Audio workspace.
       if (!sequenceStore.hasState(store, documentId)) return
 
+      // While playing the clock owns the head, and publishes it alone: replacing the montage sixty
+      // times a second woke the strip, the monitor and the take editor for a number they read from
+      // the transport instead. Stopped, the head is the document's again.
+      const playback = usePlayback.getState()
+      if (playbackOf(playback, documentId)) return playback.setHead(documentId, playhead)
+
       store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
     },
     [documentId],
@@ -74,7 +80,13 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
       maxPictures: MAX_PICTURES,
       owner: documentId,
       onTime: setTime,
-      onPlayingChange: running => usePlayback.getState().setRunning(documentId, running),
+      onPlayingChange: running => {
+        const playback = usePlayback.getState()
+        playback.setRunning(documentId, running)
+        // Said to have stopped BEFORE the engine reports its last time, which then lands in the
+        // montage: the head belongs to the document again the moment nothing is turning it.
+        if (!running) playback.clearHead(documentId)
+      },
     })
 
     engine.current = created

@@ -433,6 +433,43 @@ describe('Collection', () => {
     expect(screen.getAllByRole('listitem').some(cell => cell.tabIndex === 0)).toBe(true)
   })
 
+  /**
+   * The tab stop is looked up by walking the items, and the virtualizer re-renders this whole
+   * component every time its window moves by a row — so a scroll paid that walk per row, over the
+   * catalogue rather than over what is mounted.
+   */
+  it('reads a bounded number of ids per render, whatever the catalogue holds', () => {
+    let reads = 0
+    const counted = Array.from({ length: 2000 }, (_, index) => ({
+      get id() {
+        reads += 1
+        return `row_${index}`
+      },
+      name: `Row ${index}`,
+    }))
+    // Nothing picked, which is the nominal state of two of the six panels: the walk read every
+    // id to answer that there is no anchor.
+    const props = { onSelect: vi.fn() }
+
+    const view = renderCollection(counted, { view: 'list' }, props)
+    reads = 0
+    // Ten renders, as a scroll of a few hundred pixels asks for.
+    for (let tick = 0; tick < 10; tick += 1) {
+      view.rerender(
+        <Collection
+          label="Rows"
+          items={counted}
+          state={{ ...DEFAULT_COLLECTION_STATE, view: 'list' }}
+          renderCard={item => <span>{item.name}</span>}
+          renderRow={item => <span>{item.name}</span>}
+          {...props}
+        />,
+      )
+    }
+
+    expect(reads).toBeLessThan(1_000)
+  })
+
   // The virtualizer only mounts a window: an anchor scrolled far out of it used to take the tab
   // stop with it, and the whole collection fell out of the tab order.
   it('keeps its tab stop when the anchor is nowhere near the mounted window', () => {

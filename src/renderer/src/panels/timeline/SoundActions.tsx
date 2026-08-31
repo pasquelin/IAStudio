@@ -1,5 +1,5 @@
 import { transports } from '@/engines/timeline/playback'
-import { playbackOf, usePlayback } from '@/stores/playback'
+import { playbackHeadOf, playbackOf, usePlayback } from '@/stores/playback'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { SequenceActions } from './SequenceActions'
 import { TimelineTransport } from './TimelineTransport'
@@ -19,6 +19,8 @@ export type SoundActionsProps = { documentId: string }
 export function SoundActions({ documentId }: SoundActionsProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const playing = usePlayback(state => playbackOf(state, documentId))
+  // The head the clock owns while it runs: the montage stops carrying it as soon as one plays.
+  const clockHead = usePlayback(state => playbackHeadOf(state, documentId))
 
   const rewind = (): void => {
     const store = useSequences.getState()
@@ -38,7 +40,7 @@ export function SoundActions({ documentId }: SoundActionsProps) {
       lead={
         <TimelineTransport
           playing={playing}
-          time={sequence.playhead}
+          time={clockHead ?? sequence.playhead}
           fps={sequence.settings.fps}
           onToggle={() => transports.toggle(documentId)}
           onRewind={rewind}

@@ -258,8 +258,11 @@ export class TimelineEngine {
     this.clock.stop()
     this.sound.stop()
     playbackToken.release(this.deps.owner)
-    this.deps.onTime?.(this.clock.now())
+    // Said to have stopped BEFORE the last time is reported: a host that leaves the head to the
+    // clock while it runs would drop that report, and the document would keep the head it had
+    // before playing — the next play, split or export would then act a whole take too early.
     this.deps.onPlayingChange?.(false)
+    this.deps.onTime?.(this.clock.now())
   }
 
   playing(): boolean {

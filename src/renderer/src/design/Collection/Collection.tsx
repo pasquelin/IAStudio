@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Fragment, useEffect, useRef, type DragEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { offerBlankDrop, type DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
@@ -244,11 +244,17 @@ export function Collection<T extends { id: string }>({
    * One tab stop for the whole collection, then the arrows — the roving pattern `Tree` uses.
    * A cell per tab makes a catalogue of five hundred models five hundred presses deep.
    */
-  const selected = new Set(selectedIds)
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds])
   // The anchor is a notion of selection, so a collection that only opens its rows has none and
   // enters at the first mounted cell instead.
   const anchor = onSelect ? selectedIds?.at(-1) : undefined
-  const anchored = items.findIndex(item => item.id === anchor)
+  // Held across renders: the virtualizer renders this component again every time its window moves
+  // by a row, and this walk covers the whole catalogue rather than the mounted part of it. With
+  // nothing picked it read every id to answer -1, which is the nominal state of two panels.
+  const anchored = useMemo(
+    () => (anchor === undefined ? -1 : items.findIndex(item => item.id === anchor)),
+    [items, anchor],
+  )
   const firstMounted = firstVisible * columns
   // The tab stop must be a cell that exists: the virtualizer only mounts a window, and an anchor
   // scrolled out of it would leave the whole collection out of the tab order.

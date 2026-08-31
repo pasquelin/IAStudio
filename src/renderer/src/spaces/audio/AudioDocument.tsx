@@ -11,6 +11,7 @@ import { useSplitPair } from '@/hooks/useSplitPair'
 import { audioHistoryOf, isAudioEditDirty, useAudioEdits } from '@/stores/audioEdits'
 import { useDocumentIsInFront } from '@/stores/documents'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
+import { playbackHeadOf, usePlayback } from '@/stores/playback'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { exportOtio, exportOtioz, exportStems } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
@@ -28,6 +29,10 @@ export type AudioDocumentProps = { documentId: string }
  */
 export function AudioDocument({ documentId }: AudioDocumentProps) {
   const sequence = useSequences(state => sequenceOf(state, documentId))
+  // The head belongs to the clock while it plays, and the montage no longer carries it — read
+  // back exactly as the picture pair reads it.
+  const clockHead = usePlayback(state => playbackHeadOf(state, documentId))
+  const program = clockHead === undefined ? sequence : { ...sequence, playhead: clockHead }
   const active = useDocumentIsInFront(documentId)
 
   // Both halves, as closing this document already asks of both: a take's file holds the chain of
@@ -134,7 +139,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
           over a pane with nothing under it would leave the rest of the column empty. */}
       <div className={takeShown ? 'flex min-h-0' : 'flex min-h-0 flex-1'} style={takeStyle}>
         <ProgramMonitor
-          sequence={sequence}
+          sequence={program}
           transport={transport}
           onSeek={seek}
           clipHalf={{ shown: takeShown, onToggle: toggleTake }}

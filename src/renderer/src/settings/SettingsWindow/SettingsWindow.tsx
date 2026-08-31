@@ -75,11 +75,22 @@ export function SettingsWindow() {
   useAppliedSettings()
 
   // Published so the main process can ask before closing on work nobody applied: closing a
-  // window is its decision, and it has no other way to know.
-  const pending = useSettingsDraft(isSettingsDraftDirty)
+  // window is its decision, and it has no other way to know. Subscribed rather than read in the
+  // render: the first staged setting woke the whole column the draft bar exists to spare.
   useEffect(() => {
-    void getBridge()?.settings.setPending(pending)
-  }, [pending])
+    let published: boolean | null = null
+    const publish = (dirty: boolean): void => {
+      const bridge = getBridge()
+      // Remembered only once it has actually been said: a window that staged its first change
+      // before the bridge answered would otherwise never tell, and close on the work in silence.
+      if (dirty === published || !bridge) return
+      published = dirty
+      void bridge.settings.setPending(dirty)
+    }
+
+    publish(isSettingsDraftDirty(useSettingsDraft.getState()))
+    return useSettingsDraft.subscribe(state => publish(isSettingsDraftDirty(state)))
+  }, [])
 
   // Searched over the translated title and description, so `t` has to be a dependency: the
   // same query finds different settings once the language changes.
