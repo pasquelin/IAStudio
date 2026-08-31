@@ -83,6 +83,8 @@ export type ActivityMessage =
   | 'projectAccountSwitched'
   | 'projectHoldsProjects'
   | 'projectLegacyAssetsFolder'
+  | 'projectNameTaken'
+  | 'projectNameUnsafe'
   | 'projectNested'
   | 'projectNotAProject'
   | 'projectNotCreated'
@@ -127,6 +129,8 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'projectAccountSwitched',
   'projectHoldsProjects',
   'projectLegacyAssetsFolder',
+  'projectNameTaken',
+  'projectNameUnsafe',
   'projectNested',
   'projectNotAProject',
   'projectNotCreated',

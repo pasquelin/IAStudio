@@ -8,6 +8,16 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * The code inside a rejection that crossed the IPC boundary, or nothing when none of them is.
+ *
+ * 🛑 Matched at the END, never compared whole: `ipcMain.handle` wraps what it rethrows — `Error
+ * invoking remote method 'project:create': Error: holds-projects` — so an equality test never
+ * fires and every failure reads as unexpected.
+ */
+export const codeIn = <T extends string>(message: string, codes: readonly T[]): T | null =>
+  codes.find(code => message === code || message.endsWith(`: ${code}`)) ?? null
+
+/**
  * What a rejection says, whatever was thrown. A thrown string is as ordinary as a thrown
  * `Error` — a worker that dies, a loader that gives up — and both sides of the boundary need
  * the same answer for the same throw.

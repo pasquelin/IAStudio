@@ -1,4 +1,5 @@
 import { orElse } from '@shared/promises'
+import { messageOf } from '@shared/guards'
 import { create } from 'zustand'
 import {
   projectPickerFolder,
@@ -20,6 +21,9 @@ import { forgetAssetRevisions } from './assetRevisions'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './sceneClipboard'
 import { useSelection } from './selection'
+
+/** What a rename answered: the project under its new name and folder, or why it did not happen. */
+export type ProjectRenamed = { ok: true; project: Project } | { ok: false; why: string | null }
 
 type ProjectState = {
   project: Project | null
@@ -84,7 +88,7 @@ type ProjectState = {
    * Answers whether it happened. The folder can have gone since the shelf last saw it, which is
    * why the manifest is written FIRST: the settings must not claim a name the disk refused.
    */
-  rename: (path: string, name: string) => Promise<boolean>
+  rename: (path: string, name: string) => Promise<ProjectRenamed>
 }
 
 /**
@@ -324,21 +328,23 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   rename: async (path, name) => {
     const bridge = getBridge()
-    if (!bridge) return false
+    if (!bridge) return { ok: false, why: null }
 
     let renamed: Project
     try {
       renamed = await bridge.project.rename(path, name)
-    } catch {
+    } catch (error) {
       // Already in the journal, put there by the handler: this answers the caller and stops. The
       // settings are deliberately left alone — a name the disk refused must not be listed.
-      return false
+      // 🛑 The REASON travels: a caller told only "no" said so to a model, which invented one.
+      return { ok: false, why: messageOf(error) }
     }
 
     // Only when it is the open one. The broadcast the handler sends reaches the OTHER windows;
     // this one is already past it, and waiting for a round trip would leave the title bar naming
     // the old name for a frame.
-    if (get().project?.path === path) set({ project: renamed })
+    const wasOpen = get().project?.path === path
+    if (wasOpen) set({ project: renamed })
 
     const { settings, write } = useSettings.getState()
     await write({
@@ -350,11 +356,15 @@ export const useProject = create<ProjectState>()((set, get) => ({
           settings.storage.recentProjects,
           path,
           renamed.manifest.name,
+          renamed.path,
         ),
+        // 🛑 The pointer the next launch reopens, and it names a FOLDER: left at the old one the
+        // studio starts on a path nothing answers, and forgets the project on the way.
+        ...(wasOpen && settings.storage.lastProject === path ? { lastProject: renamed.path } : {}),
       },
     })
 
-    return true
+    return { ok: true, project: renamed }
   },
 
   openPicked: async () => {

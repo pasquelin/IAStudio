@@ -4,9 +4,26 @@ import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Manifest, RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { useProject } from '@/stores/project'
+import { useProject, type ProjectRenamed } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Projects } from './Projects'
+
+/** What a rename answers back — the row's own path and name are what the cases assert on. */
+const RENAMED_OK: ProjectRenamed = {
+  ok: true,
+  project: {
+    path: '/tmp/Renamed',
+    manifest: {
+      version: 1,
+      name: 'Renamed',
+      createdAt: '2026-08-17T10:00:00.000Z',
+      updatedAt: '2026-08-17T10:00:00.000Z',
+    },
+  },
+}
+
+/** A refusal as the store shapes it — the reason is what the sentences below are read from. */
+const refusedRename = (why: string): ProjectRenamed => ({ ok: false, why })
 
 const SUMMER: RecentProject = {
   path: '/projects/summer',
@@ -239,7 +256,7 @@ describe('renaming from the panel', () => {
   })
 
   it('writes the new name on Enter, and gives the row back', async () => {
-    const rename = vi.fn(() => Promise.resolve(true))
+    const rename = vi.fn(() => Promise.resolve(RENAMED_OK))
     useProject.setState({ rename })
     renderPanel()
     await startFromMenu()
@@ -254,7 +271,7 @@ describe('renaming from the panel', () => {
   // Abandoning must cost nothing: `InlineRename` commits the ORIGINAL name on Escape, and a write
   // fired for it would stamp `updatedAt` and rewrite the settings for a gesture that said no.
   it('writes nothing when the edit is abandoned', async () => {
-    const rename = vi.fn(() => Promise.resolve(true))
+    const rename = vi.fn(() => Promise.resolve(RENAMED_OK))
     useProject.setState({ rename })
     renderPanel()
     await startFromMenu()
@@ -290,7 +307,7 @@ describe('renaming from the panel', () => {
   it('says so when the rename was refused', async () => {
     const report = vi.fn(() => Promise.resolve())
     installFakeBridge({ diagnostics: { report } })
-    useProject.setState({ rename: () => Promise.resolve(false) })
+    useProject.setState({ rename: () => Promise.resolve(refusedRename('taken')) })
     renderPanel()
     await startFromMenu()
 
