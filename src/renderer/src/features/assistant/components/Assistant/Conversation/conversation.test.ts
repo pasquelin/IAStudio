@@ -4,6 +4,7 @@ import {
   alreadySettled,
   assistantHistory,
   repeatedRelative,
+  RESULT_MAX,
   resultLine,
   repeatKeyOf,
   settledKeyOf,
@@ -289,7 +290,7 @@ describe('a call that sets a named state, sent twice in one turn', () => {
  * id that was never whole, measured 2026-08-31.
  */
 describe('an object answer too long to show whole', () => {
-  const LONG = 'x'.repeat(700)
+  const LONG = 'x'.repeat(RESULT_MAX + 100)
 
   it('keeps the members that fit whole and names the one it dropped', () => {
     const shown = resultLine({ id: 'abc-123', bulk: LONG, cues: ['fade-1'] })
@@ -305,12 +306,18 @@ describe('an object answer too long to show whole', () => {
    * the assistant could not name one object of the scene in front of it.
    */
   it('gives what fits of a list too long to show whole, and says how many', () => {
-    const nodes = Array.from({ length: 40 }, (_, at) => ({ id: `node-${at}`, name: `Cube ${at}` }))
+    // Counted off the ceiling at the ~40 characters an entry costs: a fixed 40 entries stopped
+    // overrunning it the day it was raised.
+    const many = Math.ceil(RESULT_MAX / 20)
+    const nodes = Array.from({ length: many }, (_, at) => ({
+      id: `node-${at}`,
+      name: `Cube ${at}`,
+    }))
 
     const shown = resultLine({ id: 'abc-123', nodes })
 
     expect(shown).toContain('"id":"node-0"')
-    expect(shown).toContain('of 40)')
+    expect(shown).toContain(`of ${many})`)
     // Never half an item: an id cut in two is an id every later call is refused on.
     expect(shown).not.toMatch(/"id":"node-\d+$/)
   })

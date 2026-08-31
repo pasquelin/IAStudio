@@ -1,5 +1,6 @@
 import type { ActionName } from '@shared/domain/assistant'
 import { composedContext } from '@shared/domain/projectContext'
+import { resultLine } from '@/features/assistant/components/Assistant/Conversation/conversation'
 import { useAssistant } from '@/stores/assistant'
 import { PROJECT } from './project'
 import type { Called, Run, Scenario } from './run'
@@ -58,8 +59,13 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
 }
 
 /**
- * What the studio answered, as the model was shown it: a refusal by name, or how much came back.
- * The COUNT and not the rows — "found 0" is the whole finding, and nine paths are three lines.
+ * What the studio answered: a refusal by name, or how much came back. The COUNT and not the rows
+ * — "found 0" is the whole finding, and nine paths are three lines.
+ *
+ * 🛑 Bounded by `resultLine` and by NOTHING ELSE — the product's own cut, so an oracle can never
+ * pass on what the model was not shown. Cut to 60 here instead, `answerOf` read the ellipsis:
+ * `{"ref":"script:Walk.ts","source":"export default defineSc…` against a scenario looking for
+ * `defineScript`, unwinnable by any model, measured 2026-08-31.
  */
 function answerShown(step: { refusal: string | null; detail?: string; data?: unknown }): string {
   if (step.refusal !== null) {
@@ -67,7 +73,7 @@ function answerShown(step: { refusal: string | null; detail?: string; data?: unk
   }
   if (Array.isArray(step.data)) return `found ${step.data.length}`
 
-  return step.data === undefined ? 'ok' : `ok ${shortly(step.data)}`
+  return step.data === undefined ? 'ok' : `ok ${resultLine(step.data)}`
 }
 
 /** What a value was, short enough to read in a failure list. */
