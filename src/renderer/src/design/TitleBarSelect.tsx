@@ -1,9 +1,8 @@
 import { mdiChevronDown } from '@mdi/js'
-import { useEffect, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
-import { useLatest } from '@/hooks/useLatest'
 import { Flyout } from './Flyout'
 import { TITLE_BAR_TRIGGER } from './styles'
 import { UiIcon } from './UiIcon'
@@ -53,14 +52,7 @@ export function TitleBarSelect({
   onOpen,
   width,
 }: TitleBarSelectProps) {
-  const flyout = useHoverFlyout(rowCount)
-  // Through a ref: read as a dependency, a caller's inline arrow would re-ask on every paint the
-  // menu survives — and on every paint its own answer causes.
-  const latestOpen = useLatest(onOpen)
-
-  useEffect(() => {
-    if (flyout.showing) latestOpen.current?.()
-  }, [flyout.showing, latestOpen])
+  const flyout = useHoverFlyout(rowCount, onOpen)
 
   return (
     <div {...flyout.wrapProps} className="contents">

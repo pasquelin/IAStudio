@@ -7,6 +7,7 @@ import { cn } from '@/helpers/cn'
 import { WindowShell } from '@/design/WindowShell'
 import { WindowNav } from '@/design/WindowNav/WindowNav'
 import { WindowSearch } from '@/design/WindowSearch'
+import { useConnections } from '@/hooks/useConnections'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
@@ -53,12 +54,7 @@ export function SettingsWindow() {
 
   // Connected here rather than from the account section: a subscription opened by a leaf is
   // torn down and rebuilt every time the user walks the section tree.
-  useEffect(() => {
-    const subscriptions = [connect(), connectAccounts(), connectAiModels(), connectMemory()]
-    return () => {
-      for (const subscription of subscriptions) void subscription.then(stop => stop())
-    }
-  }, [connect, connectAccounts, connectAiModels, connectMemory])
+  useConnections([connect, connectAccounts, connectAiModels, connectMemory])
 
   // Asked for while already open: the window moves instead of reloading, which would throw
   // away a half-typed key. The search is dropped with it — results shown over a section the

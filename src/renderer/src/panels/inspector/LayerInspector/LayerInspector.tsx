@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { resetTo } from '@/helpers/resetTo'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { NumberField } from '@/design/NumberField'
 import { PropertySection } from '@/design/PropertySection'
@@ -76,9 +77,9 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => edit.run(setLayerOpacity(layer.id, value))}
-          onReset={
-            layer.opacity === FULL ? undefined : () => edit.run(setLayerOpacity(layer.id, FULL))
-          }
+          onReset={resetTo(layer.opacity, FULL, value =>
+            edit.run(setLayerOpacity(layer.id, value)),
+          )}
           {...edit.gesture}
         />
         {/* Distinct from the one above: it fades the pixels and leaves the effects drawn around
@@ -91,11 +92,9 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           max={1}
           step={0.01}
           onChange={value => edit.run(setLayerFillOpacity(layer.id, value))}
-          onReset={
-            layer.fillOpacity === FULL
-              ? undefined
-              : () => edit.run(setLayerFillOpacity(layer.id, FULL))
-          }
+          onReset={resetTo(layer.fillOpacity, FULL, value =>
+            edit.run(setLayerFillOpacity(layer.id, value)),
+          )}
           {...edit.gesture}
         />
 
@@ -172,17 +171,14 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
                 }),
               )
             }
-            onReset={
-              layer.values[layer.adjustment] === NEUTRAL_ADJUSTMENTS[layer.adjustment]
-                ? undefined
-                : () =>
-                    edit.run(
-                      setLayerAdjustment(layer.id, {
-                        ...layer.values,
-                        [layer.adjustment]: NEUTRAL_ADJUSTMENTS[layer.adjustment],
-                      }),
-                    )
-            }
+            onReset={resetTo(
+              layer.values[layer.adjustment],
+              NEUTRAL_ADJUSTMENTS[layer.adjustment],
+              value =>
+                edit.run(
+                  setLayerAdjustment(layer.id, { ...layer.values, [layer.adjustment]: value }),
+                ),
+            )}
             {...edit.gesture}
           />
         </PropertySection>
@@ -212,11 +208,10 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={toDegrees(layer.transform.rotation)}
           step={1}
           onChange={value => move({ rotation: toRadians(value) })}
-          onReset={
-            layer.transform.rotation === IDENTITY.rotation
-              ? undefined
-              : () => move({ rotation: IDENTITY.rotation })
-          }
+          // The RAW angle, not the degrees the field shows: `onChange` converts, this does not.
+          onReset={resetTo(layer.transform.rotation, IDENTITY.rotation, rotation =>
+            move({ rotation }),
+          )}
           {...edit.gesture}
         />
         <NumberField
@@ -225,11 +220,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={layer.transform.scaleX}
           step={0.1}
           onChange={value => move({ scaleX: value })}
-          onReset={
-            layer.transform.scaleX === IDENTITY.scaleX
-              ? undefined
-              : () => move({ scaleX: IDENTITY.scaleX })
-          }
+          onReset={resetTo(layer.transform.scaleX, IDENTITY.scaleX, scaleX => move({ scaleX }))}
           {...edit.gesture}
         />
         <NumberField
@@ -238,11 +229,7 @@ export function LayerInspector({ documentId, layer }: LayerInspectorProps) {
           value={layer.transform.scaleY}
           step={0.1}
           onChange={value => move({ scaleY: value })}
-          onReset={
-            layer.transform.scaleY === IDENTITY.scaleY
-              ? undefined
-              : () => move({ scaleY: IDENTITY.scaleY })
-          }
+          onReset={resetTo(layer.transform.scaleY, IDENTITY.scaleY, scaleY => move({ scaleY }))}
           {...edit.gesture}
         />
         {isGroup(layer) && (

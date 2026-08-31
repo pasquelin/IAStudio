@@ -21,8 +21,9 @@ export function JournalWindow() {
     let gone = false
     const open: (() => void)[] = []
 
-    // In `await` rather than the `.then(stop => stop())` its neighbours copied: unmounted before
-    // a subscription lands, that one leaves it open for the session.
+    // One at a time, and NOT through `useConnections`, which opens its batch all at once: journal
+    // ids restart at 1 per project, so a window hearing the lines before the change would stack
+    // two projects' accounts into one list.
     const subscribe = async (): Promise<void> => {
       for (const connect of [connectProject, connectActivity]) {
         const stop = await connect()

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { resetTo } from '@/helpers/resetTo'
 import { ColorField } from '@/design/ColorField'
 import { NumberField } from '@/design/NumberField'
 import { SliderField } from '@/design/SliderField'
@@ -44,13 +45,8 @@ export function PropertyControl({
   // must be. One line here names every parameter of every primitive, light and lens.
   const scId = `${section}.${field.name}`
 
-  /**
-   * Live only where the field has moved off what its factory gives — and only where a factory
-   * could be found: a descriptor with none leaves the button drawn and inert rather than lying
-   * about a default nobody can name.
-   */
-  const onReset =
-    fallback === undefined || fallback === value ? undefined : () => onChange(fallback)
+  // A descriptor with no factory leaves the button inert rather than lying about a default.
+  const onReset = resetTo(value, fallback, onChange)
 
   if (typeof value === 'boolean') {
     return (

@@ -1,5 +1,6 @@
 import { mdiPlus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { resetTo } from '@/helpers/resetTo'
 import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { PropertyRow } from '@/design/PropertyRow'
 import { PropertySection } from '@/design/PropertySection'
@@ -36,11 +37,9 @@ export function PathSection({ path, onChange, gesture }: PathSectionProps) {
         max={MAX_TENSION}
         step={0.05}
         onChange={tension => onChange({ ...path, tension })}
-        onReset={
-          path.tension === DEFAULT_PATH.tension
-            ? undefined
-            : () => onChange({ ...path, tension: DEFAULT_PATH.tension })
-        }
+        onReset={resetTo(path.tension, DEFAULT_PATH.tension, tension =>
+          onChange({ ...path, tension }),
+        )}
         {...gesture}
       />
       <ToggleField

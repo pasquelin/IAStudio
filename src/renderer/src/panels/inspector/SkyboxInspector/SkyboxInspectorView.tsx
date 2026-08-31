@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { resetTo } from '@/helpers/resetTo'
 import {
   DEFAULT_FIELD_OF_VIEW,
   MAX_FIELD_OF_VIEW,
@@ -53,11 +54,9 @@ export function SkyboxInspectorView({ documentId }: SkyboxInspectorViewProps) {
           step={1}
           scId="view.fieldOfView"
           onChange={fieldOfView => set(documentId, { fieldOfView })}
-          onReset={
-            settings.fieldOfView === DEFAULT_FIELD_OF_VIEW
-              ? undefined
-              : () => set(documentId, { fieldOfView: DEFAULT_FIELD_OF_VIEW })
-          }
+          onReset={resetTo(settings.fieldOfView, DEFAULT_FIELD_OF_VIEW, fieldOfView =>
+            set(documentId, { fieldOfView }),
+          )}
         />
       </PropertySection>
 

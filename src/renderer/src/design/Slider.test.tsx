@@ -53,4 +53,34 @@ describe('Slider', () => {
     expect(onGestureStart).toHaveBeenCalledTimes(1)
     expect(onGestureEnd).toHaveBeenCalledTimes(1)
   })
+
+  /**
+   * A drag leaves the handle FOCUSED, and the blur lands later — on the next press somewhere else.
+   * A gesture is keyed by document, so that second end closed whatever gesture had just been
+   * opened, and every frame of the drag after it became an undo entry of its own.
+   */
+  it('ends the drag once, however long the handle keeps the focus', () => {
+    const { onGestureStart, onGestureEnd, slider } = renderSlider()
+
+    fireEvent.pointerDown(slider)
+    fireEvent.focus(slider)
+    fireEvent.change(slider, { target: { value: '6' } })
+    fireEvent.pointerUp(slider)
+    fireEvent.blur(slider)
+
+    expect(onGestureStart).toHaveBeenCalledTimes(1)
+    expect(onGestureEnd).toHaveBeenCalledTimes(1)
+  })
+
+  /** The arrows report the same way a drag does — the value moves, so the gesture is real. */
+  it('reports a keyboard step as its own gesture', () => {
+    const { onGestureStart, onGestureEnd, slider } = renderSlider()
+
+    fireEvent.keyDown(slider, { key: 'ArrowRight' })
+    fireEvent.change(slider, { target: { value: '6' } })
+    fireEvent.keyUp(slider, { key: 'ArrowRight' })
+
+    expect(onGestureStart).toHaveBeenCalledTimes(1)
+    expect(onGestureEnd).toHaveBeenCalledTimes(1)
+  })
 })

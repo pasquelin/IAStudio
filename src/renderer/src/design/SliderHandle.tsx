@@ -49,10 +49,11 @@ export function SliderHandle({
       max={max}
       step={step}
       onChange={event => onChange(Number(event.target.value))}
-      // Keyboard steps report the same way a drag does, and a focus that changes nothing costs an
-      // empty gesture, not an entry.
-      onFocus={() => onGestureStart?.()}
-      onBlur={() => onGestureEnd?.()}
+      // 🛑 The KEY and never the focus. A gesture is keyed by document, and a drag leaves the
+      // handle focused: the blur landed on the next press elsewhere and closed the gesture that
+      // press had just opened, turning every frame of it into an undo entry of its own.
+      onKeyDown={() => onGestureStart?.()}
+      onKeyUp={() => onGestureEnd?.()}
       className={cn(SLIDER_HANDLE, className)}
     />
   )

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { resetTo } from '@/helpers/resetTo'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { boundsOf } from '@shared/domain/settingsRegistry'
 import { SliderField } from '@/design/SliderField'
@@ -40,11 +41,11 @@ export function SceneSnapSurfaceMenu({ view, onViewport }: SceneSnapSurfaceMenuP
         max={OFFSET.max}
         step={0.01}
         onChange={snapSurfaceOffset => onViewport({ snapSurfaceOffset })}
-        onReset={
-          view.snapSurfaceOffset === DEFAULT_SETTINGS.three.snapSurfaceOffset
-            ? undefined
-            : () => onViewport({ snapSurfaceOffset: DEFAULT_SETTINGS.three.snapSurfaceOffset })
-        }
+        onReset={resetTo(
+          view.snapSurfaceOffset,
+          DEFAULT_SETTINGS.three.snapSurfaceOffset,
+          snapSurfaceOffset => onViewport({ snapSurfaceOffset }),
+        )}
       />
     </div>
   )

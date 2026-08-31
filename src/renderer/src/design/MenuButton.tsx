@@ -1,7 +1,6 @@
-import { useEffect, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
-import { useLatest } from '@/hooks/useLatest'
 import { Flyout } from './Flyout'
 import { ToolButton, type ToolButtonProps } from './ToolButton'
 
@@ -75,14 +74,7 @@ export function MenuButton({
   menu = true,
   ...button
 }: MenuButtonProps) {
-  const flyout = useHoverFlyout(rowCount)
-  // Read through a ref: a caller passing a fresh arrow would re-run the effect on every render the
-  // menu survives, and the one caller that has it reads the branches from git each time.
-  const shown = useLatest(onShow)
-
-  useEffect(() => {
-    if (flyout.showing) shown.current?.()
-  }, [flyout.showing, shown])
+  const flyout = useHoverFlyout(rowCount, onShow)
 
   return (
     <div {...flyout.wrapProps} className="contents">

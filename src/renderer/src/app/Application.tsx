@@ -4,6 +4,7 @@ import { connectRemoteActions } from '@/assistant/remoteActions'
 import { connectThoughtStream } from '@/assistant/thoughtStream'
 import { useAccountChange } from '@/hooks/useAccountChange'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
+import { useConnections } from '@/hooks/useConnections'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useDictationShortcut } from '@/hooks/useDictationShortcut'
@@ -51,25 +52,7 @@ export function Application() {
   const connectProjectContext = useProjectContext(state => state.connect)
   const connectTasks = useTasks(state => state.connect)
 
-  useEffect(() => {
-    const subscriptions = [
-      connectSettings(),
-      connectAccounts(),
-      connectAiModels(),
-      connectProject(),
-      connectFolderRoles(),
-      connectJobs(),
-      connectMedia(),
-      connectDictation(),
-      connectUpdates(),
-      connectActivity(),
-      connectAssets(),
-      connectProjectContext(),
-    ]
-    return () => {
-      for (const subscription of subscriptions) void subscription.then(stop => stop())
-    }
-  }, [
+  useConnections([
     connectSettings,
     connectAccounts,
     connectAiModels,

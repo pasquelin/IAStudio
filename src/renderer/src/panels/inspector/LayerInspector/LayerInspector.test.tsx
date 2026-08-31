@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   adjustmentLayer,
+  DEFAULT_CANVAS,
   DEFAULT_SHAPE_SIDES,
   groupLayer,
   pixelLayer,
@@ -34,6 +35,32 @@ describe('LayerInspector', () => {
     show()
 
     expect(screen.getAllByRole('option')).toHaveLength(16)
+  })
+
+  /**
+   * Six lines of this panel offer a reset, and none was covered: the button only lives once the
+   * value has moved, and what it undoes has to be one step of the history like any edit.
+   */
+  it('puts a layer back at full opacity, and undoes like any other edit', async () => {
+    const dimmed = { ...pixelLayer('layer-1', 'Background'), opacity: 0.4 }
+    installCanvas(DOCUMENT, { ...DEFAULT_CANVAS, layers: [dimmed] })
+    show(dimmed)
+    const reset = screen.getAllByRole('button', { name: /Revenir à la valeur/ })[0]
+
+    expect(reset).toBeEnabled()
+    await userEvent.click(reset!)
+
+    expect(first()?.opacity).toBe(1)
+
+    useCanvases.getState().undo(DOCUMENT)
+
+    expect(first()?.opacity).toBe(0.4)
+  })
+
+  it('leaves the reset of a layer at its default inert', () => {
+    show(pixelLayer('layer-1', 'Background'))
+
+    expect(screen.getAllByRole('button', { name: /Revenir à la valeur/ })[0]).toBeDisabled()
   })
 
   it('writes the chosen blend mode into the layer', async () => {
