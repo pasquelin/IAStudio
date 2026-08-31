@@ -58,6 +58,7 @@ import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import type { Size } from '@/engines/core/geometry'
 import { paintOn } from '@/engines/core/canvas2d'
+import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
 import { trackIdsOf, type AnimationRow } from '@/engines/scene/animationRows'
 import { clamp } from '@shared/numeric'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
@@ -156,6 +157,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const grabbed = useRef<Grab | null>(null)
+  const scrubCoalesce = useRef(createFrameCoalesce())
 
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const playhead = useScenePlayhead(documentId)
@@ -204,6 +206,12 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     latest.current = snapshot
     paint()
   })
+
+  // A gesture cut short by an unmount must not drop the head it ended on.
+  useEffect(() => {
+    const coalesce = scrubCoalesce.current
+    return () => coalesce.flush()
+  }, [])
 
   useRepaintOnResize(canvasRef, paint)
 
@@ -540,7 +548,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       current.timeline.duration,
     )
 
-    if (grab.kind === 'scrub') return seek(at)
+    // One head per frame: a pointermove is faster than a paint, and every subject row beside the
+    // band reads the head — the montage's own strip coalesces its scrub for the same reason.
+    if (grab.kind === 'scrub') return scrubCoalesce.current.schedule(at, seek)
 
     // Written straight through rather than previewed: the block IS the preview, and the whole run
     // collapses into one entry because a gesture was opened on the press.

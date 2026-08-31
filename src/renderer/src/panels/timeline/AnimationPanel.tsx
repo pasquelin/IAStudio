@@ -12,7 +12,6 @@ import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useScenePlayhead } from '@/stores/sceneViews'
 import { AnimationCanvas } from './AnimationCanvas'
 import { AnimationHeaders } from './AnimationHeaders/AnimationHeaders'
 
@@ -30,13 +29,10 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const { t } = useTranslation()
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  // The one field this panel reads, and not the whole view: `setPlayhead` and `setPreview` both
-  // replace that object, and the band would repaint for every frame of playback and every scrub.
-  const playhead = useScenePlayhead(documentId)
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
   const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
-  useHeadInsideBand(documentId, playhead, timeline.duration)
+  useHeadInsideBand(documentId, timeline.duration)
 
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector
   // would hand it a new snapshot every render and the subscription would never settle.

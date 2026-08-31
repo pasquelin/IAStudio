@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -54,6 +54,32 @@ describe('TrackHeaders', () => {
     headers()
 
     expect(screen.getByTestId('track-header-V1')).toHaveStyle({ height: '90px' })
+  })
+
+  /**
+   * A pointermove is faster than a frame, and each height clones the whole montage: the sixteen
+   * a frame can carry became sixteen copies of every track of the document.
+   */
+  it('writes one height per frame, not one per pixel', async () => {
+    installTracks([trackFixture('V1', 'video', [], { height: 90 })])
+    headers()
+
+    let writes = 0
+    const stop = useSequences.subscribe((state, previous) => {
+      const heightOf = (held: typeof state) =>
+        sequenceOf(held, 'doc-1').tracks.find(track => track.id === 'V1')?.height
+      if (heightOf(state) !== heightOf(previous)) writes += 1
+    })
+    const handle = screen.getAllByRole('separator')[0]!
+    fireEvent.pointerDown(handle, { pointerId: 1, clientY: 500 })
+    for (let move = 1; move <= 60; move += 1) {
+      fireEvent.pointerMove(handle, { pointerId: 1, clientY: 500 + move })
+    }
+
+    expect(writes).toBe(0)
+    // And the last one still lands: what a frame carries is the newest height, never none.
+    await waitFor(() => expect(trackOf('V1')?.height).toBe(150))
+    stop()
   })
 
   it('mutes a track from its own row', async () => {

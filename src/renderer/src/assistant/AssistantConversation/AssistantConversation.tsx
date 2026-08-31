@@ -15,7 +15,6 @@ import { GhostText } from '@/design/GhostText'
 import { QuietNote } from '@/design/QuietNote'
 import { fieldHandle } from '@/design/scHandle'
 import { PANEL_SCROLL } from '@/design/styles'
-import { Spinner } from '@/design/Spinner'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { completionFor, foldForSearch, matchesWords, searchWords } from '@shared/text'
@@ -40,6 +39,7 @@ import { AssistantConversationChoice } from './AssistantConversationChoice'
 import { AssistantConversationGauge } from './AssistantConversationGauge'
 import { AssistantConversationQuestion } from './AssistantConversationQuestion'
 import { AssistantConversationTurn } from './AssistantConversationTurn'
+import { AssistantConversationWorking } from './AssistantConversationWorking'
 import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
 
 /** Whether the caret sits past the last character, which is the only place a tail is painted. */
@@ -76,11 +76,9 @@ export function AssistantConversation() {
   const turns = useAssistant(state => state.turns)
   const busy = useAssistant(state => state.busy)
   const round = useAssistant(state => state.round)
-  const stopping = useAssistant(state => state.stopping)
-  const streamed = useAssistant(state => state.streamed)
-  const promptTokens = useAssistant(state => state.promptTokens)
-  const replyTokens = useAssistant(state => state.replyTokens)
   const stop = useAssistant(state => state.stop)
+  // Two writes per chain, not sixty a second — unlike the tail, which left with the working line.
+  const stopping = useAssistant(state => state.stopping)
   const asked = useAssistant(state => state.asked)
   const choosing = useAssistant(state => state.choosing)
   // 🛑 The exception to "a plan is running, the field is shut": ONE question with nothing to press
@@ -340,26 +338,7 @@ export function AssistantConversation() {
             <AssistantConversationTurn key={turn.id} turn={turn} />
           ))}
 
-          {/* IN the thread, last of it — where the answer itself will appear, and never down by
-              the field: what one watches while waiting is the place the words will land. */}
-          {busy && !asked && !choosing && (
-            <li className="text-muted text-mini m-0 flex flex-col gap-1.5">
-              <span className="flex items-center gap-1.5">
-                <Spinner label={t('assistant.thinking')} size={14} />
-                {stopping
-                  ? t('assistant.stopping')
-                  : round > 1
-                    ? t('assistant.workingRound', { round })
-                    : t('assistant.thinking')}
-                {promptTokens > 0 && (
-                  <span>{t('assistant.tokens', { prompt: promptTokens, reply: replyTokens })}</span>
-                )}
-              </span>
-              {/* The tail and not the head: what says a model is alive is the words arriving, and
-                  the top of a JSON object stops moving after the first line. */}
-              {streamed !== '' && <span className="line-clamp-3 break-all">{streamed}</span>}
-            </li>
-          )}
+          <AssistantConversationWorking />
         </ol>
       )}
 

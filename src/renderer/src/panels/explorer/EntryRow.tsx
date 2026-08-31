@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LoadableImage } from '@/design/LoadableImage'
 import { Row } from '@/design/Row'
@@ -46,10 +47,14 @@ export type EntryRowProps = {
  * A document written before that carries the uuid as its file name still, and shows its title
  * here: a name nobody chose is not one to read a folder by, and renaming it settles both.
  *
+ * Memoised: the panel arms its keyboard on focus and blur, which bubble, so one click from a row
+ * to the next re-renders it three times — and every prop here is a primitive but the rename, which
+ * one row at a time carries.
+ *
  * The glyph is the workspace's for a document and a plain sheet for everything else, read off
  * the same table the rail and the asset menu read.
  */
-export function EntryRow({
+export const EntryRow = memo(function EntryRow({
   name,
   extension,
   icon,
@@ -119,4 +124,4 @@ export function EntryRow({
       hint={hint}
     />
   )
-}
+})

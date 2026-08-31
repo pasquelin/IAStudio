@@ -11,7 +11,7 @@ import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { bonesOfNode, useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { sceneViewOf, useSceneFrameHead, useSceneViews } from '@/stores/sceneViews'
 import { TimelineTransport } from '../TimelineTransport'
 import { AnimationActionsKeyButton } from './AnimationActionsKeyButton'
 import { AnimationActionsSheetButton } from './AnimationActionsSheetButton'
@@ -37,12 +37,15 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
-  const view = useSceneViews(state => sceneViewOf(state, documentId))
+  // Two narrow reads and the head at the FRAME: `setPlayhead` replaces the whole view sixty times
+  // a second, and the timecode under it counts frames — 25 of them a second, not 60.
+  const picked = useSceneViews(state => sceneViewOf(state, documentId).pickedBone)
+  const playing = useSceneViews(state => sceneViewOf(state, documentId).playing)
+  const head = useSceneFrameHead(documentId, timeline.fps)
   const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
   const bones = useModelFiles(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
-  const picked = view.pickedBone
   const [chosen, setChosen] = useState('')
 
   // The pose mode decides when it has picked one: clicking a bone in the viewport is a clearer
@@ -66,12 +69,13 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
   return (
     <>
       <TimelineTransport
-        playing={view.playing}
-        time={view.playhead}
+        playing={playing}
+        time={head}
         fps={timeline.fps}
         onRewind={() => useSceneViews.getState().setPlayhead(documentId, 0)}
         onToggle={() => {
           const views = useSceneViews.getState()
+          const view = sceneViewOf(views, documentId)
           // Rewound first when the head is already at the end: pressing Play there would stop on
           // the very frame it started, which reads as a button that does nothing.
           if (!view.playing && view.playhead >= timeline.duration) {

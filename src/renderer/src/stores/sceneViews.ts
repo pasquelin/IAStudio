@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Us } from '@shared/domain/time'
+import { snapToFrame, type Us } from '@shared/domain/time'
 import {
   DEFAULT_PANE_VIEWS,
   type CameraPlacement,
@@ -361,6 +361,15 @@ export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
  */
 export function useScenePlayhead(documentId: string): Us {
   return useSceneViews(state => sceneViewOf(state, documentId).playhead)
+}
+
+/**
+ * The head SNAPPED, quantised in the selector as `LevelMeter` quantises its own reading: playback
+ * runs the head on the wall clock, and a surface that only ever shows frames must not wake
+ * between two of them.
+ */
+export function useSceneFrameHead(documentId: string, fps: number): Us {
+  return useSceneViews(state => snapToFrame(sceneViewOf(state, documentId).playhead, fps))
 }
 
 export function useScenePreview(documentId: string): WatchedPreview | null {

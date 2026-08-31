@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
@@ -346,13 +346,35 @@ describe('scrubbing and picking on the band', () => {
     expect(playhead()).toBe(3 * SECOND)
   })
 
-  it('keeps following the pointer while it is held down', () => {
+  // Awaited, and that IS the behaviour: the head follows the pointer one frame at a time, never
+  // once per pointermove — see the count below.
+  it('keeps following the pointer while it is held down', async () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={keyRows()} />)
 
     press(canvas(), 'pointerdown', 100, 4)
     press(canvas(), 'pointermove', 400, 4)
 
-    expect(playhead()).toBe(4 * SECOND)
+    await waitFor(() => expect(playhead()).toBe(4 * SECOND))
+  })
+
+  /**
+   * A pointermove is faster than a paint, and every subject row beside the band reads the head:
+   * a scrub wrote it up to sixteen times a frame, for one line the eye can follow.
+   */
+  it('writes one head per frame while the pointer is dragged, not one per move', async () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyRows()} />)
+    press(canvas(), 'pointerdown', 100, 4)
+
+    let writes = 0
+    const stop = useSceneViews.subscribe(() => {
+      writes += 1
+    })
+    for (let move = 1; move <= 60; move += 1) press(canvas(), 'pointermove', 100 + move * 5, 4)
+
+    expect(writes).toBe(0)
+    // And the last position still lands: what a frame carries is the newest head, never none.
+    await waitFor(() => expect(playhead()).toBe(4 * SECOND))
+    stop()
   })
 
   it('holds the head inside the band rather than running past its end', () => {

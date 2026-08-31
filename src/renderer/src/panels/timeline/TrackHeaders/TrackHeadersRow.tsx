@@ -1,9 +1,11 @@
 import { mdiDotsHorizontal } from '@mdi/js'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
+import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
 import { moveTrack } from '@/engines/timeline/commands'
 import {
   clampTrackHeight,
@@ -58,6 +60,13 @@ export function TrackHeadersRow({
 }: TrackHeadersRowProps) {
   const { t } = useTranslation()
   const menu = useContextMenu()
+  const heightCoalesce = useRef(createFrameCoalesce())
+
+  // A gesture cut short must not drop the height it ended on.
+  useEffect(() => {
+    const coalesce = heightCoalesce.current
+    return () => coalesce.flush()
+  }, [])
 
   // Renaming is an edit and goes through a command; the rest is state — see `writeTrack`.
   const write = (change: (current: Track) => Track): void =>
@@ -122,7 +131,13 @@ export function TrackHeadersRow({
       <ResizeHandle
         axis="vertical"
         size={track.height}
-        onSize={height => write(current => ({ ...current, height: clampTrackHeight(height) }))}
+        // One height per frame: a pointermove is faster than a paint, and each of them clones the
+        // whole montage — sixteen copies of every track for one frame of a drag.
+        onSize={height =>
+          heightCoalesce.current.schedule(height, next =>
+            write(current => ({ ...current, height: clampTrackHeight(next) })),
+          )
+        }
       />
 
       {menu.at && (

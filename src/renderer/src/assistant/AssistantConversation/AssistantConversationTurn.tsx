@@ -1,10 +1,20 @@
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AssistantTurn } from '../conversation'
 import { AssistantConversationStep } from './AssistantConversationStep'
 import { CONVERSATION_BUBBLE } from './conversationStyles'
 
-/** One exchange: what was asked, what came back, and what each action actually did. */
-export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
+/**
+ * One exchange: what was asked, what came back, and what each action actually did.
+ *
+ * Memoised because a stream writes once a FRAME and a keystroke once a character, neither of
+ * which touches a turn: a thread of forty was rebuilt forty times over for a word it never shows.
+ */
+export const AssistantConversationTurn = memo(function AssistantConversationTurn({
+  turn,
+}: {
+  turn: AssistantTurn
+}) {
   const { t } = useTranslation()
 
   return (
@@ -53,4 +63,4 @@ export function AssistantConversationTurn({ turn }: { turn: AssistantTurn }) {
       )}
     </li>
   )
-}
+})

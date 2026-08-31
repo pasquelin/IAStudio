@@ -9,10 +9,11 @@ import { keyNode, reorderCameraShots, unkeySubject } from '@/engines/scene/anima
 import { trackIdsOf, type SubjectRow } from '@/engines/scene/animationRows'
 import { shotsWithCameraMoved } from '@/engines/scene/cameraShots'
 import { newId } from '@/helpers/ids'
+import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
-import { useScenePlayhead } from '@/stores/sceneViews'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 import type { RowReorder } from '../TimelineRow/rowReorder'
 import { TrackFlagButton } from '../TrackFlagButton'
@@ -36,15 +37,15 @@ export function AnimationHeadersSubject({
   shown: readonly string[]
 }) {
   const { t } = useTranslation()
-  const playhead = useScenePlayhead(documentId)
   const fps = useScenes(state => sceneOf(state, documentId).animation.fps)
-
-  const at = snapToFrame(playhead, fps)
-  const standing = row.keys.includes(at)
+  // The ANSWER is subscribed to rather than the head: this row asks the clock one question, and
+  // there is one of these per subject — thirty of them woke sixty times a second to learn nothing.
+  const standing = useSceneViews(state =>
+    row.keys.includes(snapToFrame(sceneViewOf(state, documentId).playhead, fps)),
+  )
 
   const key = (): void => {
-    const store = useScenes.getState()
-    const state = sceneOf(store, documentId)
+    const { state, at } = sceneKeyingAt(documentId)
 
     // Pressed where a key already stands, it takes that key off: a pose one cannot undo is a
     // pose one is stuck with, and nothing else in the panel removes one.
@@ -52,7 +53,7 @@ export function AnimationHeadersSubject({
       ? unkeySubject(state, trackIdsOf(row), at)
       : keyNode(state, subjectOf(row.id), at, channelNames(t, row.name), () => `track_${newId()}`)
 
-    if (command) store.runCommand(documentId, command)
+    if (command) useScenes.getState().runCommand(documentId, command)
   }
 
   // The composition has no pose to key, only the channels its panel opened: the diamond stands

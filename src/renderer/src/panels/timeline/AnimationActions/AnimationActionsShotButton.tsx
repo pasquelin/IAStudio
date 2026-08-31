@@ -7,14 +7,13 @@ import { selectedNodes } from '@/engines/scene/sceneState'
 import { newId } from '@/helpers/ids'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useScenePlayhead } from '@/stores/sceneViews'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /** Puts the selected camera on air from the head onwards — the shot itself is `newShotAt`'s. */
 export function AnimationActionsShotButton({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
-  const playhead = useScenePlayhead(documentId)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
   const camera = anchor?.type === 'camera' ? anchor : null
@@ -32,6 +31,9 @@ export function AnimationActionsShotButton({ documentId }: { documentId: string 
 
         const store = useScenes.getState()
         const { animation } = sceneOf(store, documentId)
+        // Read at the click rather than subscribed to: this glyph draws nothing from the head,
+        // and subscribing repainted it on every frame of playback.
+        const { playhead } = sceneViewOf(useSceneViews.getState(), documentId)
         store.runCommand(
           documentId,
           addCameraShot(newShotAt(animation, camera.id, newId(), playhead)),

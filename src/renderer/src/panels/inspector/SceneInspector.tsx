@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useTranslation } from 'react-i18next'
 import {
   setGeometryOn,
@@ -11,7 +12,6 @@ import {
   setTextOn,
 } from '@/engines/scene/commands'
 import { ownedStackOf } from '@shared/domain/postProcessing'
-import { snapToFrame } from '@shared/domain/time'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
 import { lensToCommand } from '@/engines/scene/animationCommands'
@@ -21,7 +21,7 @@ import { newId } from '@/helpers/ids'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { SCENE_POST, type PostTargetRef } from '@/engines/scene/postCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
-import { sceneViewOf, useScenePlayhead, useSceneViews } from '@/stores/sceneViews'
+import { sceneViewChromeOf, useSceneFrameHead, useSceneViews } from '@/stores/sceneViews'
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -63,11 +63,14 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // snapshot on every call, and the render loop never settles.
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const animation = useScenes(state => sceneOf(state, documentId).animation)
-  const playhead = useScenePlayhead(documentId)
+  // Where a key would land, which is where the lens has to be READ: the head runs on the wall
+  // clock during playback, so reading it raw would show a value no key ever takes. Snapped in the
+  // SELECTOR, so the panel sleeps between two frames instead of waking sixty times a second.
+  const at = useSceneFrameHead(documentId, animation.fps)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const world = useScenes(state => sceneOf(state, documentId).world)
   const lockedAxes = useScenes(state => sceneOf(state, documentId).lockedAxes)
-  const view = useSceneViews(state => sceneViewOf(state, documentId))
+  const view = useSceneViews(useShallow(state => sceneViewChromeOf(state, documentId)))
   const selection = useMemo(() => selectedNodes(nodes, selectedIds), [nodes, selectedIds])
   const node = selection.at(-1) ?? null
 
@@ -92,10 +95,6 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
-  // Where a key would land, which is where the lens has to be READ: the head runs on the wall
-  // clock during playback and stops between two frames, so reading it raw would show a value the
-  // key written a frame earlier never takes.
-  const at = snapToFrame(playhead, animation.fps)
   // Derived from the node the component already holds, not a third subscription: a selector
   // would re-scan `nodes` on every emission of any drag to find a camera that is right here.
   const cameraStack = ownedStackOf(camera?.camera.post)
@@ -293,8 +292,10 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           </DescriptorSection>
           <CameraShotSection
             camera={camera}
-            shot={shotOfCameraAt(animation, camera.id, playhead)}
-            shotAtHead={() => newShotAt(animation, camera.id, newId(), playhead)}
+            shot={shotOfCameraAt(animation, camera.id, at)}
+            shotAtHead={() =>
+              newShotAt(animation, camera.id, newId(), sceneKeyingAt(documentId).at)
+            }
             nodes={nodes}
             run={command => edit.run(command)}
             gesture={edit.gesture}
