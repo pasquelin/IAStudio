@@ -5,7 +5,7 @@ import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/material'
 import { TRANSLATIONS } from '@shared/i18n'
 import { installMaterial } from '@/stores/material-fixtures'
 import { materialHistoryOf, materialOf, useMaterials } from '@/stores/materials'
-import { inSection } from '../inspector-fixtures'
+import { inSection } from '../../../../../panels/inspector/inspector-fixtures'
 import { MaterialInspector } from './MaterialInspector'
 
 const DOCUMENT = 'tex-1'

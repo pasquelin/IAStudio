@@ -361,7 +361,7 @@ async function channel(input: Record<string, unknown>): Promise<ActionOutcome> {
   // Loaded on the call rather than imported at the top: this table is evaluated by the first
   // screen, and `eager-graph.test.ts` holds that chunk to reaching no third module out of an
   // editor's folder.
-  const { placeMaterialChannel } = await import('@/spaces/materials/placeChannel')
+  const { placeMaterialChannel } = await import('@/features/material/components/placeChannel')
   return withAsset(assetId, asset =>
     placeMaterialChannel(open.documentId, asset, which)
       ? { ok: true }

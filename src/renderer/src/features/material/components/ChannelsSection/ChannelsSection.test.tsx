@@ -40,7 +40,7 @@ const channels = () => materialOf(useMaterials.getState(), 'doc-1').channels
 /** The section reaches it through an `import()`, and behind it sit three.js and a WebGL context. */
 const deriveMaterialChannel = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 
-vi.mock('@/spaces/materials/deriveChannel', () => ({ deriveMaterialChannel }))
+vi.mock('@/features/material/deriveChannel', () => ({ deriveMaterialChannel }))
 
 beforeEach(() => {
   installMaterial('doc-1')

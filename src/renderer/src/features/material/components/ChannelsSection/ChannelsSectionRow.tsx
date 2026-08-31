@@ -7,9 +7,9 @@ import { TileMark } from '@/components/TileMark'
 import type { ChannelMap, ChannelOrigin } from '@/engines/material/materialState'
 import { cn } from '@/helpers/cn'
 import type { EditPixels } from '@/helpers/openAsset'
-import { PictureField } from '../PictureField/PictureField'
+import { PictureField } from '../../../../panels/inspector/PictureField/PictureField'
 import { ChannelsSectionMenuRows } from './ChannelsSectionMenuRows'
-import type { ChannelDerivation } from './derivation'
+import type { ChannelDerivation } from '../../../../panels/inspector/ChannelsSection/derivation'
 
 export type ChannelsSectionRowProps = {
   channel: PbrChannel

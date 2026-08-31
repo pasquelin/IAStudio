@@ -7,11 +7,11 @@ import { setChannel } from '@/engines/material/commands'
 import { canDerive, sourceFor } from '@/engines/material/materialState'
 import { editPixelsOf, type EditPixels } from '@/helpers/openAsset'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
-import { placeMaterialChannel } from '@/spaces/materials/placeChannel'
+import { placeMaterialChannel } from '@/features/material/components/placeChannel'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { ChannelsSectionRow } from './ChannelsSectionRow'
-import type { DerivationState } from './derivation'
+import type { DerivationState } from '../../../../panels/inspector/ChannelsSection/derivation'
 
 export type ChannelsSectionProps = { documentId: string }
 
@@ -50,7 +50,7 @@ export const ChannelsSection = memo(function ChannelsSection({ documentId }: Cha
   const derive = async (channel: PbrChannel): Promise<void> => {
     setDeriving(channel)
     try {
-      const { deriveMaterialChannel } = await import('@/spaces/materials/deriveChannel')
+      const { deriveMaterialChannel } = await import('@/features/material/deriveChannel')
       await deriveMaterialChannel(documentId, channel)
     } finally {
       setDeriving(null)

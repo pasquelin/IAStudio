@@ -39,7 +39,7 @@ export function MaterialInspectorSeamReading({ documentId }: { documentId: strin
   const measure = async (): Promise<void> => {
     setMeasuring(true)
     try {
-      const { measureMaterialSeam } = await import('@/spaces/materials/measureSeam')
+      const { measureMaterialSeam } = await import('@/features/material/measureSeam')
       await measureMaterialSeam(documentId)
     } finally {
       setMeasuring(false)

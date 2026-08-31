@@ -2,7 +2,10 @@ import { mdiCogOutline, mdiImageFilterBlackWhite } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { MenuRow } from '@/components/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { DERIVE_LABELS, type ChannelDerivation } from './derivation'
+import {
+  DERIVE_LABELS,
+  type ChannelDerivation,
+} from '../../../../panels/inspector/ChannelsSection/derivation'
 
 export type ChannelsSectionMenuRowsProps = {
   derivation: ChannelDerivation | null

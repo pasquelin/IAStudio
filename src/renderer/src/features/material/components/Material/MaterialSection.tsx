@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { MaterialDescriptor } from '@shared/domain/scene'
 import type { GestureProps } from '@/components/styles'
 import { materialFields, withField } from '@/engines/scene/propertyFields'
-import { DescriptorSection } from './DescriptorSection'
-import { TextureSlotFields } from './TextureSlotFields'
+import { DescriptorSection } from '../../../../panels/inspector/DescriptorSection'
+import { TextureSlotFields } from '../../../../panels/inspector/TextureSlotFields'
 
 export type MaterialSectionProps = {
   material: MaterialDescriptor

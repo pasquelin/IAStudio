@@ -184,7 +184,7 @@ const DOM_BOUND = [
   'src/renderer/src/hooks/useShortcutLabel.test.ts',
   'src/renderer/src/i18n/index.test.ts',
   'src/renderer/src/spaces/image/imageTools.test.ts',
-  'src/renderer/src/spaces/materials/deriveChannel.test.ts',
+  'src/renderer/src/features/material/deriveChannel.test.ts',
   'src/renderer/src/spaces/three/sceneTools.test.ts',
   'src/renderer/src/spaces/video/videoTools.test.ts',
   'src/renderer/src/stores/dictation.test.ts',

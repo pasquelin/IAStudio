@@ -335,7 +335,7 @@ async function exportOf(
       })
     }
     case 'material': {
-      const { materialExportFiles } = await import('@/spaces/materials/materialExportFiles')
+      const { materialExportFiles } = await import('@/features/material/materialExportFiles')
       return materialExportFiles(
         document.id,
         oneOf(input, 'target', MATERIAL_EXPORT_TARGETS) ?? 'raw',

@@ -12,7 +12,7 @@ import {
   shapeFrom,
   materialTools,
   tilingFrom,
-} from '../materialTools'
+} from './materialTools'
 import { materialOf, useMaterials } from '@/stores/materials'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 

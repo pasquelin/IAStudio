@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ChannelsSectionMenuRows } from './ChannelsSectionMenuRows'
-import type { ChannelDerivation } from './derivation'
+import type { ChannelDerivation } from '../../../../panels/inspector/ChannelsSection/derivation'
 
 const READY: ChannelDerivation = { source: 'baseColor', state: 'ready', run: vi.fn() }
 

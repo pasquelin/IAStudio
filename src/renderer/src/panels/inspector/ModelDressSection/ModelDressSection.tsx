@@ -15,7 +15,7 @@ import { SelectField } from '@/components/SelectField'
 import { openAssetById } from '@/helpers/openAsset'
 import { getBridge } from '@/services/bridge'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
-import { openModelMaterial } from '@/spaces/materials/openModelMaterial'
+import { openModelMaterial } from '@/features/material/openModelMaterial'
 import { ModelDressSectionMaterials } from './ModelDressSectionMaterials'
 
 /** Derived, never restated: a third `kind` on the union has to answer here or it will not compile. */

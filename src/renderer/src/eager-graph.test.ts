@@ -210,7 +210,7 @@ describe('the opening chunk', () => {
       './spaces/video/SequenceDocument.tsx',
       './features/audio/components/AudioDocument.tsx',
       './features/skybox/components/Skybox/Document/SkyboxDocument.tsx',
-      './spaces/materials/MaterialDocument/MaterialDocument.tsx',
+      './features/material/components/Material/MaterialDocument.tsx',
     ]
 
     expect(editors.filter(editor => files.has(editor))).toEqual([])

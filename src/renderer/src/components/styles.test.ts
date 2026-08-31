@@ -521,8 +521,8 @@ describe('the shape of a row line', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      '../features/material/components/StylesSection/StylesSectionRow.tsx',
       '../features/project/components/Project/ProjectRow.tsx',
-      '../panels/inspector/StylesSection/StylesSectionRow.tsx',
       './Row.tsx',
       './Tree.tsx',
     ])
@@ -613,12 +613,12 @@ describe('what a line names', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      '../features/material/components/StylesSection/StylesSectionRow.tsx',
       // A fourth on 2026-08-24: the home's models band names its sources the same way, and had
       // spelled the five words out before this rule said so.
       '../home/sections/ModelInventory/ModelInventoryMeans.tsx',
       '../panels/history/DiffPane.tsx',
       '../panels/history/HistoryRow.tsx',
-      '../panels/inspector/StylesSection/StylesSectionRow.tsx',
     ])
   })
 })

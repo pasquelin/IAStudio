@@ -7,7 +7,7 @@ import { documentForAsset, useDocuments } from '@/stores/documents'
 import { useAssets } from '@/stores/assets'
 import { materialStore, useMaterials } from '@/stores/materials'
 import { useProject } from '@/stores/project'
-import { placeMaterialChannel } from './placeChannel'
+import { placeMaterialChannel } from './components/placeChannel'
 import type { UnpackPort } from '@/engines/material/derive/unpackPort'
 import { unpackMaterialChannels } from './unpackChannels'
 

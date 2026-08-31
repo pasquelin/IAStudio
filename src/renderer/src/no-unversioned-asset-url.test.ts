@@ -53,15 +53,15 @@ const ALLOWED = new Map<string, string>([
     'hole: measures the picture the browser cached, not the file — so the drift notice can lie',
   ],
   [
-    'spaces/materials/deriveChannel.ts | const picture = await derive({ channel, sourceUrl: assetUrl(source.assetId) })',
+    'features/material/deriveChannel.ts | const picture = await derive({ channel, sourceUrl: assetUrl(source.assetId) })',
     'hole: derives a channel from whatever the browser already holds',
   ],
   [
-    'spaces/materials/unpackChannels.ts | const picture = await unpack({ channel, sourceUrl: assetUrl(asset.id) })',
+    'features/material/unpackChannels.ts | const picture = await unpack({ channel, sourceUrl: assetUrl(asset.id) })',
     'hole: same, when a packed picture is split',
   ],
   [
-    'spaces/materials/measureSeam.ts | const ratio = await measure(assetUrl(source.assetId))',
+    'features/material/measureSeam.ts | const ratio = await measure(assetUrl(source.assetId))',
     'hole: same, when a tile is measured',
   ],
   [
@@ -81,7 +81,7 @@ const ALLOWED = new Map<string, string>([
     'hole: same, in the generator',
   ],
   [
-    'spaces/materials/MaterialDocument/MaterialDocument.tsx | const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))',
+    'features/material/components/Material/MaterialDocument.tsx | const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))',
     'hole: same, the flat channel shown when a row carries no poster',
   ],
 ])

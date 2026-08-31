@@ -14,7 +14,7 @@ import { ClipInspector } from '../ClipInspector'
 import { LayerInspector } from '../LayerInspector/LayerInspector'
 import { SceneInspector } from '../SceneInspector'
 import { SkyboxInspector } from '../../../features/skybox/components/Skybox/Inspector/SkyboxInspector'
-import { MaterialInspector } from '../MaterialInspector/MaterialInspector'
+import { MaterialInspector } from '../../../features/material/components/Material/Inspector/MaterialInspector'
 import { TrackInspector } from '../TrackInspector'
 import { InspectorEmpty } from './InspectorEmpty'
 

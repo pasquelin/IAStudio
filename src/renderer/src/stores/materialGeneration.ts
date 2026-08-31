@@ -2,7 +2,7 @@ import { isLocalPicture, PICTURES, type Asset } from '@shared/domain/asset'
 import { createGenerationLanding } from './generationLanding'
 
 async function placeChannel(documentId: string, asset: Asset): Promise<void> {
-  const { placeMaterialChannel } = await import('@/spaces/materials/placeChannel')
+  const { placeMaterialChannel } = await import('@/features/material/components/placeChannel')
   placeMaterialChannel(documentId, asset)
 }
 

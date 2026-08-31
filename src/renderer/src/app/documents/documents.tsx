@@ -37,7 +37,8 @@ const GuiDocument = lazy(async () => ({
   default: (await import('@/features/gui/components/Gui/Document/GuiDocument')).GuiDocument,
 }))
 const MaterialDocument = lazy(async () => ({
-  default: (await import('@/spaces/materials/MaterialDocument/MaterialDocument')).MaterialDocument,
+  default: (await import('@/features/material/components/Material/MaterialDocument'))
+    .MaterialDocument,
 }))
 /**
  * Every space is opened the same way: the tab checks its document still exists, then renders.

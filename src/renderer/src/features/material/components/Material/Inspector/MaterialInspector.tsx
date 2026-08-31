@@ -17,14 +17,14 @@ import {
   PREVIEW_SHAPES,
   TILING_PREVIEWS,
 } from '@/engines/material/materialState'
-import { SHAPE_LABELS } from '@/spaces/materials/materialTools'
+import { SHAPE_LABELS } from '@/features/material/components/Material/materialTools'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { DEFAULT_TEXTURE_MATERIAL, MATERIAL_BOUNDS } from '@shared/domain/material'
 import { materialOf, useMaterials } from '@/stores/materials'
-import { EnvironmentSection } from '../EnvironmentSection'
+import { EnvironmentSection } from '../../../../../panels/inspector/EnvironmentSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
-import { ChannelsSection } from '../ChannelsSection/ChannelsSection'
-import { StylesSection } from '../StylesSection/StylesSection'
+import { ChannelsSection } from '../../ChannelsSection/ChannelsSection'
+import { StylesSection } from '../../StylesSection/StylesSection'
 import { MaterialInspectorSeamReading } from './MaterialInspectorSeamReading'
 
 export type TextureInspectorProps = { documentId: string }
