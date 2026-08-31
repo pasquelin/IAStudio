@@ -4,6 +4,7 @@ import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import {
   BYTE_UNITS,
   formatBytes,
+  formatCompact,
   formatDecimal,
   formatMoment,
   formatMoney,
@@ -99,6 +100,20 @@ describe('writing a number', () => {
   it('drops the zeros a whole number does not need', () => {
     expect(formatDecimal(1, 'fr', { digits: 2 })).toBe('1')
     expect(formatDecimal(1.5, 'fr', { digits: 2 })).toBe('1,5')
+  })
+})
+
+describe('a count in three digits at most', () => {
+  /** What Alban asked for: the composer had `24 169`, and the width of it pushed Send onto a row. */
+  it('shortens a count to its two leading digits', () => {
+    expect(formatCompact(24_169, 'fr').replace(/\s/g, ' ')).toBe('24 k')
+    expect(formatCompact(1_234_567, 'en')).toBe('1.2M')
+  })
+
+  // Two significant digits would round 999 up to `1 k`, a number the studio never counted.
+  it('leaves a count under a thousand whole', () => {
+    expect(formatCompact(999, 'fr')).toBe('999')
+    expect(formatCompact(0, 'fr')).toBe('0')
   })
 })
 
