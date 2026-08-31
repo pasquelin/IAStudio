@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { activeCameraAt } from '@/engines/scene/cameraShots'
 import { selectedNodes } from '@/engines/scene/sceneState'
 import { previewRect, type PaneRect } from '@/engines/viewport/panes'

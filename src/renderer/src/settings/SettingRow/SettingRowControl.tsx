@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { SettingValue } from '@shared/domain/settingsPath'
-import { fieldHandle } from '@/design/scHandle'
+import { fieldHandle } from '@/components/scHandle'
 import {
   boundsOf,
   optionLabel,
@@ -9,8 +9,8 @@ import {
 } from '@shared/domain/settingsRegistry'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
-import { Slider } from '@/design/Slider'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { Slider } from '@/components/Slider'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 import { SETTING_SELECT } from '../settingStyles'
 import type { Labelled } from './controls'
 import { SettingRowColorControl } from './SettingRowColorControl'

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ActivityList } from '@/app/ActivityList/ActivityList'
-import { WindowShell } from '@/design/WindowShell'
+import { WindowShell } from '@/components/WindowShell'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useActivity } from '@/stores/activity'
 import { useProject } from '@/stores/project'

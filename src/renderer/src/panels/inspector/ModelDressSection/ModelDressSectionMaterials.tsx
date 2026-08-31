@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { QuietNote } from '@/design/QuietNote'
-import type { LinkOption } from '@/design/LinkField/LinkField'
+import { QuietNote } from '@/components/QuietNote'
+import type { LinkOption } from '@/components/LinkField/LinkField'
 import { withMaterialAt } from '@shared/domain/scene'
 import { useDocumentOptions } from '@/hooks/useDocumentOptions'
 import { ModelDressSectionRow } from './ModelDressSectionRow'

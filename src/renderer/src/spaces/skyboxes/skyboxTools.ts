@@ -7,7 +7,7 @@ import {
 } from '@mdi/js'
 import type { CommandId } from '@shared/domain/command'
 import { SKYBOX_VIEWS, type SkyboxView } from '@shared/domain/skybox'
-import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
+import type { ToolbarItem, ToolMode } from '@/components/Toolbar/tools'
 
 /** How the sky is laid flat, as a glyph. The button wears the one in use. */
 const VIEW_ICONS: Record<SkyboxView, string> = {

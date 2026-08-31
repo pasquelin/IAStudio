@@ -1,4 +1,4 @@
-import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { HOME_COMPONENTS } from '../homeRegistry'

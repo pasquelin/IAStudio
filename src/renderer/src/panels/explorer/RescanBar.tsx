@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ProgressRow } from '@/design/ProgressRow'
+import { ProgressRow } from '@/components/ProgressRow'
 import { getBridge } from '@/services/bridge'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useRescan } from '@/hooks/useRescan'

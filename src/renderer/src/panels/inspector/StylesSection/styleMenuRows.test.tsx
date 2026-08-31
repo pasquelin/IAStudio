@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { useTranslation } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { ContextMenu } from '@/design/ContextMenu'
-import { renderMenuRows } from '@/design/menuRows'
+import { ContextMenu } from '@/components/ContextMenu'
+import { renderMenuRows } from '@/components/menuRows'
 import { styleMenuRows } from './styleMenuRows'
 
 /** At the pointer, as the style row raises them. */

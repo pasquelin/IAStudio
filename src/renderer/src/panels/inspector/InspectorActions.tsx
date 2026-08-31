@@ -1,6 +1,6 @@
 import { mdiPaletteSwatchOutline, mdiUnfoldLessHorizontal, mdiUnfoldMoreHorizontal } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { activeMaterialId, useDocuments } from '@/stores/documents'
 import { anySectionOpen, useSectionFolds } from '@/stores/sectionFolds'

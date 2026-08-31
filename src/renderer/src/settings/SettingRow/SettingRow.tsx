@@ -4,7 +4,7 @@ import { descriptorAt, type SettingDescriptor } from '@shared/domain/settingsReg
 import { SettingLine } from '../SettingLine'
 import { SettingRestoreButton } from '../SettingRestoreButton'
 import { useSettingsDraft, useSettingValue } from '@/stores/settingsDraft'
-import { WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_HELP } from '@/components/windowStyles'
 import { SettingRowControl } from './SettingRowControl'
 
 /**

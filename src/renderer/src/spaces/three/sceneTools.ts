@@ -38,7 +38,7 @@ import {
   mdiVectorSquare,
   mdiVectorUnion,
 } from '@mdi/js'
-import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
+import type { ToolbarItem, ToolMode } from '@/components/Toolbar/tools'
 import { ADD_FAMILIES, labelKeyOf } from '@/engines/scene/nodeKinds'
 import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 

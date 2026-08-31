@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { GROUND_SIZE, type SceneWorld } from '@shared/domain/scene'
-import { ColorField } from '@/design/ColorField'
-import { NumberField } from '@/design/NumberField'
-import { PropertySection } from '@/design/PropertySection'
-import { SliderField } from '@/design/SliderField'
-import { ToggleField } from '@/design/ToggleField'
-import type { GestureProps } from '@/design/styles'
+import { ColorField } from '@/components/ColorField'
+import { NumberField } from '@/components/NumberField'
+import { PropertySection } from '@/components/PropertySection'
+import { SliderField } from '@/components/SliderField'
+import { ToggleField } from '@/components/ToggleField'
+import type { GestureProps } from '@/components/styles'
 
 export type EnvironmentGroundSectionProps = {
   world: SceneWorld

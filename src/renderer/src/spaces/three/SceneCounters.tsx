@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
-import { VIEWPORT_READOUT } from '@/design/styles'
+import { VIEWPORT_READOUT } from '@/components/styles'
 import { formatDecimal } from '@/helpers/format'
 import type { SceneStats } from '@/engines/scene/sceneStats'
 

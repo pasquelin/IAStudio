@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { rowSkin } from '@/design/styles'
+import { rowSkin } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { openScriptAt } from '@/helpers/openScript'
 import { useCode } from '@/stores/code'

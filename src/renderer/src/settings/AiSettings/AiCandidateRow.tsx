@@ -7,8 +7,8 @@ import {
   modelThumbnailUrl,
   type DownloadProgress,
 } from '@shared/domain/localModel'
-import { FIELD_THUMBNAIL } from '@/design/styles'
-import { Thumbnail } from '@/design/Thumbnail'
+import { FIELD_THUMBNAIL } from '@/components/styles'
+import { Thumbnail } from '@/components/Thumbnail'
 import { useBytes } from '@/hooks/useBytes'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { AiChoiceRow } from './AiChoiceRow'

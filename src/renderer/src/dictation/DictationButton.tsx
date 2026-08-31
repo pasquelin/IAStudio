@@ -1,6 +1,6 @@
 import { mdiMicrophone, mdiMicrophoneOff } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import { useDictationView } from '@/hooks/useDictationView'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'

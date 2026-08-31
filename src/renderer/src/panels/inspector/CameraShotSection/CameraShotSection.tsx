@@ -2,12 +2,12 @@ import { mdiVectorPolyline } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { POINT_TARGET, type CameraShot, type CameraTarget } from '@shared/domain/animation'
-import { PropertyRow } from '@/design/PropertyRow'
-import { PropertySection } from '@/design/PropertySection'
-import { SelectField } from '@/design/SelectField'
-import { ToolButton } from '@/design/ToolButton'
-import { VectorField } from '@/design/VectorField'
-import type { GestureProps } from '@/design/styles'
+import { PropertyRow } from '@/components/PropertyRow'
+import { PropertySection } from '@/components/PropertySection'
+import { SelectField } from '@/components/SelectField'
+import { ToolButton } from '@/components/ToolButton'
+import { VectorField } from '@/components/VectorField'
+import type { GestureProps } from '@/components/styles'
 import {
   bindRailToShot,
   editCameraShot,

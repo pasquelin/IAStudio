@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Settings } from '@shared/domain/settings'
-import { PropertySection } from '@/design/PropertySection'
-import { QuietNote } from '@/design/QuietNote'
-import { SelectField } from '@/design/SelectField'
+import { PropertySection } from '@/components/PropertySection'
+import { QuietNote } from '@/components/QuietNote'
+import { SelectField } from '@/components/SelectField'
 import {
   SHADOW_LEVELS,
   shadowLevelOf,

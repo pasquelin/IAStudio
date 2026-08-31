@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { CommandId } from '@shared/domain/command'
-import { ResizeHandle } from '@/design/ResizeHandle'
+import { ResizeHandle } from '@/components/ResizeHandle'
 import { canRedo, canUndo } from '@/engines/core/history'
 import type { Us } from '@/engines/timeline/timelineState'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'

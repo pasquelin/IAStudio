@@ -1,6 +1,6 @@
 import { mdiDragVertical } from '@mdi/js'
 import { use, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
-import { UiIcon } from '@/design/UiIcon'
+import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
 import { isGoneForGood } from '@/helpers/teardown'
 import { useLatest } from '@/hooks/useLatest'

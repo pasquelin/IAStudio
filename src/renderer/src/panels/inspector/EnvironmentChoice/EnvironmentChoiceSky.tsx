@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
+import { LinkField, type LinkOption } from '@/components/LinkField/LinkField'
 import { urlOfPicture } from '@/hooks/useProjectPictures'
 import { openDocumentById } from '@/helpers/openAsset'
 import { useSkySource } from '@/stores/skyboxSources'

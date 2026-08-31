@@ -2,8 +2,8 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
 import type { ModelRefusalWord } from '@/hooks/useModelReach'
-import { Thumbnail } from '@/design/Thumbnail'
-import { Row } from '@/design/Row'
+import { Thumbnail } from '@/components/Thumbnail'
+import { Row } from '@/components/Row'
 import { modelSubtitle } from './modelSubtitle'
 
 /** Memoized like the card: a scroll re-renders every mounted row on each frame. */

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/design/Button'
-import { QuietNote } from '@/design/QuietNote'
+import { Button } from '@/components/Button'
+import { QuietNote } from '@/components/QuietNote'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { enterWorkspace } from '../open'
 import { HINT_TOP } from '@/helpers/tooltip'

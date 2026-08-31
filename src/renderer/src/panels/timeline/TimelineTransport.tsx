@@ -1,9 +1,9 @@
 import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { Us } from '@shared/domain/time'
-import { Separator } from '@/design/Separator'
-import { Timecode } from '@/design/Timecode'
-import { ToolButton } from '@/design/ToolButton'
+import { Separator } from '@/components/Separator'
+import { Timecode } from '@/components/Timecode'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 
 export type TimelineTransportProps = {

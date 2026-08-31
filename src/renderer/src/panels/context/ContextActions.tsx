@@ -7,8 +7,8 @@ import {
   withCard,
   type ContextCard,
 } from '@shared/domain/projectContext'
-import { MenuButton } from '@/design/MenuButton'
-import { MenuRow } from '@/design/MenuRow'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuRow } from '@/components/MenuRow'
 import { newId } from '@/helpers/ids'
 import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useProjectContext } from '@/stores/projectContext'

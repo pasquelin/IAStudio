@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EnvironmentRef } from '@shared/domain/scene'
-import { PropertySection } from '@/design/PropertySection'
+import { PropertySection } from '@/components/PropertySection'
 import { EnvironmentChoice } from './EnvironmentChoice/EnvironmentChoice'
 
 export type EnvironmentSectionProps = {

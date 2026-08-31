@@ -4,7 +4,7 @@ import type { UsageReport } from '@shared/domain/usage'
 import { formatMoney, formatUnits } from '@/helpers/format'
 import { formatDay } from '../format'
 import { UsageOverviewFigure } from './UsageOverviewFigure'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 
 export function UsageOverview({ report }: { report: UsageReport }) {
   const { t, i18n } = useTranslation()

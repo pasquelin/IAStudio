@@ -1,5 +1,5 @@
 import { mdiPlaylistPlus, mdiRhombus, mdiVideoPlusOutline } from '@mdi/js'
-import type { ToolbarItem } from '@/design/Toolbar/tools'
+import type { ToolbarItem } from '@/components/Toolbar/tools'
 import { addCameraShot, keySubject, putOnAnimationSheet } from '@/engines/scene/animationCommands'
 import { newShotAt } from '@/engines/scene/cameraShots'
 import { selectedNodes, type SceneNode, type SceneState } from '@/engines/scene/sceneState'

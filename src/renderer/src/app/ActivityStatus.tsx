@@ -1,7 +1,7 @@
 import { mdiAlertCircleOutline, mdiHistory } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { StatusFlyout } from '@/design/StatusFlyout'
-import { UiIcon } from '@/design/UiIcon'
+import { StatusFlyout } from '@/components/StatusFlyout'
+import { UiIcon } from '@/components/UiIcon'
 import { failureCount, useActivity } from '@/stores/activity'
 import { ActivityList } from './ActivityList/ActivityList'
 

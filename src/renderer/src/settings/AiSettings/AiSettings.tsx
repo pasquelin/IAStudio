@@ -16,7 +16,7 @@ import {
   WINDOW_CAPTION,
   WINDOW_GROUP_LABEL,
   WINDOW_HELP,
-} from '@/design/windowStyles'
+} from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useBytes } from '@/hooks/useBytes'
 import { useModelFit } from '@/hooks/useModelFit'

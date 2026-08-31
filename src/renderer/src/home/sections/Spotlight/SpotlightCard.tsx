@@ -1,5 +1,5 @@
-import { Button } from '@/design/Button'
-import { UiIcon } from '@/design/UiIcon'
+import { Button } from '@/components/Button'
+import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 

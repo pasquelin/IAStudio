@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { WINDOW_ACTION } from '@/design/windowStyles'
+import { WINDOW_ACTION } from '@/components/windowStyles'
 import { useTranslation } from 'react-i18next'
 import type { ModelCandidate } from '@shared/domain/aiOverview'
 import type { DownloadProgress } from '@shared/domain/localModel'

@@ -37,7 +37,7 @@ import type { CommandId } from '@shared/domain/command'
 import type { SelectionShape } from '@/engines/canvas/canvasSelection'
 import { SHAPE_KINDS, type ShapeKind } from '@/engines/canvas/canvasState'
 import type { CanvasTool } from '@/engines/canvas/canvasTool'
-import type { ToolbarItem } from '@/design/Toolbar/tools'
+import type { ToolbarItem } from '@/components/Toolbar/tools'
 import type { AiEdit } from './aiActions'
 
 export type ImageTool = ToolbarItem & { tool: CanvasTool }

@@ -1,7 +1,7 @@
 import { mdiRhombus } from '@mdi/js'
 import { useMemo, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { putOnAnimationSheet } from '@/engines/scene/animationCommands'
 import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'

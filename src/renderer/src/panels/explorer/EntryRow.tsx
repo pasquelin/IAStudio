@@ -1,10 +1,10 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LoadableImage } from '@/design/LoadableImage'
-import { Row } from '@/design/Row'
-import { UiIcon } from '@/design/UiIcon'
+import { LoadableImage } from '@/components/LoadableImage'
+import { Row } from '@/components/Row'
+import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
-import { InlineRename } from '@/design/InlineRename'
+import { InlineRename } from '@/components/InlineRename'
 
 export type EntryRowProps = {
   /**

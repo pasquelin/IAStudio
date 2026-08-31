@@ -1,7 +1,7 @@
 import { mdiFilterVariant } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { MenuButton } from '@/design/MenuButton'
-import { MenuRow } from '@/design/MenuRow'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuRow } from '@/components/MenuRow'
 import { formatList } from '@/helpers/format'
 import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 

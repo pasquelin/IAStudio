@@ -1,7 +1,7 @@
 import { mdiRunFast } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { clipKeyOf, DEFAULT_CLIP, type ClipRef, type ClipSource } from '@shared/domain/scene'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { laneHolding } from '@/engines/scene/clipBlend'
 import { addModelClip, removeModelClip } from '@/engines/scene/commands'
 import { nodeById, type SceneState } from '@/engines/scene/sceneState'

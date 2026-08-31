@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ModelSummary } from '@shared/domain/model'
-import { Thumbnail } from '@/design/Thumbnail'
-import { Row } from '@/design/Row'
+import { Thumbnail } from '@/components/Thumbnail'
+import { Row } from '@/components/Row'
 
 /** The chosen model, kept in view: it is what the generator below will run. */
 export function ModelsSelected({

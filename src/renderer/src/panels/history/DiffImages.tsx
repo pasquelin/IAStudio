@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { QuietNote } from '@/design/QuietNote'
-import { PANEL_GROUP_LABEL } from '@/design/styles'
+import { QuietNote } from '@/components/QuietNote'
+import { PANEL_GROUP_LABEL } from '@/components/styles'
 import { useGitBlobUrl } from '@/hooks/useGitBlobUrl'
 
 export type DiffImagesProps = {

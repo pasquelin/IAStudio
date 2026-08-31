@@ -7,10 +7,10 @@ import {
   SKYBOX_VIEWS,
 } from '@shared/domain/skybox'
 import { SKYBOX_VIEW_LABELS } from '@/spaces/skyboxes/skyboxTools'
-import { PropertySection } from '@/design/PropertySection'
-import { SelectField } from '@/design/SelectField'
-import { SliderField } from '@/design/SliderField'
-import { ToggleField } from '@/design/ToggleField'
+import { PropertySection } from '@/components/PropertySection'
+import { SelectField } from '@/components/SelectField'
+import { SliderField } from '@/components/SliderField'
+import { ToggleField } from '@/components/ToggleField'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skyboxViews'
 

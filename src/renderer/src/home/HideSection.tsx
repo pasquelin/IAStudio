@@ -1,7 +1,7 @@
 import { mdiEyeOffOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { homeSectionOf, shownHomeSection, type HomeSectionId } from '@shared/domain/home'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
 

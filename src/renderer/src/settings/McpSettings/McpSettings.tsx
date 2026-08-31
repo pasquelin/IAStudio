@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useMcpState } from '@/hooks/useMcpState'
 import { SETTING_COLUMN } from '../settingStyles'

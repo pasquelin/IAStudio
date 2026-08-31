@@ -1,5 +1,5 @@
 import { mdiFileOutline } from '@mdi/js'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 
 /**
  * What a document tab says instead of a document — none open, one still loading, one whose

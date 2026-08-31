@@ -2,7 +2,7 @@ import { mdiTune } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { colourOf, packedColour } from '@shared/domain/color'
 import { cn } from '@/helpers/cn'
-import { CONTROL } from '@/design/styles'
+import { CONTROL } from '@/components/styles'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import type { CanvasTool } from '@/engines/canvas/canvasTool'
 import {
@@ -11,9 +11,9 @@ import {
   type BrushSetting,
   type BrushSettings,
 } from '@/engines/canvas/brush'
-import { MenuButton } from '@/design/MenuButton'
-import { fieldHandle } from '@/design/scHandle'
-import { SliderField } from '@/design/SliderField'
+import { MenuButton } from '@/components/MenuButton'
+import { fieldHandle } from '@/components/scHandle'
+import { SliderField } from '@/components/SliderField'
 
 /**
  * The three settings the flyout offers, as a table: a fourth is one row here rather than a

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GIT_CHANGE_BADGES, type GitCommitFile } from '@shared/domain/git'
-import { Row } from '@/design/Row'
-import { rowSkin, TONE_TEXT, type StatusTone } from '@/design/styles'
+import { Row } from '@/components/Row'
+import { rowSkin, TONE_TEXT, type StatusTone } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 
 /**

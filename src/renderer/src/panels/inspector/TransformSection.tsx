@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import type { DisplayUnit, Transform, Vector3 } from '@shared/domain/scene'
-import { PropertySection } from '@/design/PropertySection'
-import { TextField } from '@/design/TextField'
-import { VectorField } from '@/design/VectorField'
+import { PropertySection } from '@/components/PropertySection'
+import { TextField } from '@/components/TextField'
+import { VectorField } from '@/components/VectorField'
 import { batch, renameNode, setTransform, withAxisHeld } from '@/engines/scene/commands'
 import {
   axisIsLocked,

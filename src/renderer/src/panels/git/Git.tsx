@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { GIT_FAILURE_KEYS, remoteHost } from '@shared/domain/git'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { toolIcon } from '@/helpers/toolRegistry'
 import { useGitStatus } from '@/hooks/useGitStatus'
 import { NoProject } from '@/panels/shared/NoProject'

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { isRecord } from '@shared/guards'
-import type { GestureProps } from '@/design/styles'
+import type { GestureProps } from '@/components/styles'
 import { scriptProps } from '@/engines/code/scriptProps'
 import { useCode } from '@/stores/code'
 import { ComponentField } from './ComponentField'

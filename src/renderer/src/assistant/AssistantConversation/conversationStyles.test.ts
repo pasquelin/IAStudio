@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { spellsOut, WRITTEN_SOURCES } from '@/design/testHarness'
+import { spellsOut, WRITTEN_SOURCES } from '@/components/testHarness'
 import { CONVERSATION_CARD, CONVERSATION_FIELD_TYPE } from './conversationStyles'
 
 /** As `WRITTEN_SOURCES` keys it: the glob resolves against `design/testHarness.ts`. */

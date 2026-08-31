@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useMedia } from '@/stores/media'
 import { useSettings } from '@/stores/settings'
 import { cn } from '@/helpers/cn'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 
 /**
  * What no descriptor can express: whether a binary actually answers. The path itself is a

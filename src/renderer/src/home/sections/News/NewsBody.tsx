@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/design/Button'
-import { QuietNote } from '@/design/QuietNote'
+import { Button } from '@/components/Button'
+import { QuietNote } from '@/components/QuietNote'
 import type { NewsQuery } from '@/hooks/useNews'
 import { useSettings } from '@/stores/settings'
 import { NewsRow } from './NewsRow'

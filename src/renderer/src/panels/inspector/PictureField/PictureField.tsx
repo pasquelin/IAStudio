@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
 import { mountedAssetPicker } from '@/app/assetPicker'
-import { LinkField, type LinkFieldProps } from '@/design/LinkField/LinkField'
+import { LinkField, type LinkFieldProps } from '@/components/LinkField/LinkField'
 import { openAssetById } from '@/helpers/openAsset'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 

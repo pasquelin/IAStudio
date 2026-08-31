@@ -8,7 +8,7 @@ import {
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { Memory } from '@shared/domain/assistantMemory'
-import { WindowIconButton } from '@/design/WindowIconButton'
+import { WindowIconButton } from '@/components/WindowIconButton'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAssistantMemory } from '@/stores/assistantMemory'
 

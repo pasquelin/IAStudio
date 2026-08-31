@@ -1,4 +1,4 @@
-import { PANEL_SCROLL } from '@/design/styles'
+import { PANEL_SCROLL } from '@/components/styles'
 import { InspectorFace } from './InspectorFace'
 
 /**

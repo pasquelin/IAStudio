@@ -1,12 +1,12 @@
 import { memo } from 'react'
-import { Row } from '@/design/Row'
+import { Row } from '@/components/Row'
 import type { Command } from '@/engines/core/history'
 import { renameNode, setNodeVisible } from '@/engines/scene/commands'
 import { iconOf } from '@/engines/scene/nodeFactory'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { useScenes } from '@/stores/scenes'
-import { InlineRename } from '@/design/InlineRename'
-import { ROW_WRAPPER } from '@/design/styles'
+import { InlineRename } from '@/components/InlineRename'
+import { ROW_WRAPPER } from '@/components/styles'
 import { VisibilityToggle } from './VisibilityToggle'
 
 export type SceneNodeRowProps = {

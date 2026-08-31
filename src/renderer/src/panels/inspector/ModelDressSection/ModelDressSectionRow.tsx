@@ -1,10 +1,10 @@
 import { mdiAutoFix } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { isWorn } from '@shared/domain/scene'
-import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
+import { LinkField, type LinkOption } from '@/components/LinkField/LinkField'
 import { urlOfPicture } from '@/hooks/useProjectPictures'
 import { openDocumentById } from '@/helpers/openAsset'
-import { MenuRow } from '@/design/MenuRow'
+import { MenuRow } from '@/components/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useWornMaterial } from '@/stores/materialSources'
 

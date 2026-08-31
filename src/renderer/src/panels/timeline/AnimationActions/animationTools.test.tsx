@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Toolbar } from '@/design/Toolbar/Toolbar'
+import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { cameraNode } from '@/engines/scene/nodeFactory'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'

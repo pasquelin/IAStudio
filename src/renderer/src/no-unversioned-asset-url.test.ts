@@ -65,7 +65,7 @@ const ALLOWED = new Map<string, string>([
     'hole: same, when a tile is measured',
   ],
   [
-    'design/AssetDropField.tsx | <Thumbnail url={poster ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />',
+    'components/AssetDropField.tsx | <Thumbnail url={poster ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />',
     'hole: the fallback when a row carries no poster — a thumbnail, so it costs a stale tile',
   ],
   [

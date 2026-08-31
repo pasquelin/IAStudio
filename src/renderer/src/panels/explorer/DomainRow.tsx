@@ -1,8 +1,8 @@
 import { mdiFileOutline, mdiTextureBox } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { FileDomain } from '@shared/domain/fileRole'
-import { Row } from '@/design/Row'
-import { UiIcon } from '@/design/UiIcon'
+import { Row } from '@/components/Row'
+import { UiIcon } from '@/components/UiIcon'
 import { assetIcon } from '@/helpers/workspaces'
 
 /**

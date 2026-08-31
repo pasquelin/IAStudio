@@ -1,16 +1,16 @@
 import { mdiAlertCircleOutline } from '@mdi/js'
-import { WINDOW_ACTION_QUIET } from '@/design/windowStyles'
+import { WINDOW_ACTION_QUIET } from '@/components/windowStyles'
 import { useTranslation } from 'react-i18next'
 import { bindingOf, type BindingOverrides, type CommandDescriptor } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useChordCapture } from '@/hooks/useChordCapture'
-import { UiIcon } from '@/design/UiIcon'
+import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from '../SettingLine'
 import { SettingRestoreButton } from '../SettingRestoreButton'
-import { WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_HELP } from '@/components/windowStyles'
 
 export function ShortcutsSettingsCommandRow({
   descriptor,

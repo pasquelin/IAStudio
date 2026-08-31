@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { WindowFailure } from '@/design/WindowFailure'
-import { WindowNote } from '@/design/WindowNote'
+import { WindowFailure } from '@/components/WindowFailure'
+import { WindowNote } from '@/components/WindowNote'
 import type { UsagePeriod, UsageReport } from '@shared/domain/usage'
 import { UsageActivities } from '../UsageActivities/UsageActivities'
 import { UsageJournal } from '../UsageJournal'

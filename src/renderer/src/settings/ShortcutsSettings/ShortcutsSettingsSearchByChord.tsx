@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { WINDOW_ACTION_QUIET, WINDOW_ACTION_SECONDARY } from '@/design/windowStyles'
+import { WINDOW_ACTION_QUIET, WINDOW_ACTION_SECONDARY } from '@/components/windowStyles'
 import type { Signature } from '@shared/domain/shortcut'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useChordCapture } from '@/hooks/useChordCapture'

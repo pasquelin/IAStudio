@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SettingPath } from '@shared/domain/settingsPath'
-import { WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_HELP } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'

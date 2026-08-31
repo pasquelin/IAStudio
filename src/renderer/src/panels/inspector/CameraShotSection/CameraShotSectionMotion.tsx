@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { EASINGS, type CameraMotion } from '@shared/domain/animation'
-import { NumberField } from '@/design/NumberField'
-import { SelectField } from '@/design/SelectField'
-import type { GestureProps } from '@/design/styles'
+import { NumberField } from '@/components/NumberField'
+import { SelectField } from '@/components/SelectField'
+import type { GestureProps } from '@/components/styles'
 
 export type CameraShotSectionMotionProps = {
   motion: CameraMotion

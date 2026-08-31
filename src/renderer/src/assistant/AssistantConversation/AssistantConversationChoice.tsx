@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { answeredByComposer } from '@shared/domain/assistant'
-import { Button } from '@/design/Button'
+import { Button } from '@/components/Button'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
 import { AssistantConversationChoiceForm } from './AssistantConversationChoiceForm'

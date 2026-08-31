@@ -1,5 +1,5 @@
 import { mdiEye, mdiEyeOffOutline } from '@mdi/js'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 
 export type VisibilityToggleProps = {

@@ -1,6 +1,6 @@
 import type { ActivityEntry } from '@shared/domain/activity'
-import { UiIcon } from '@/design/UiIcon'
-import { TONE_TEXT } from '@/design/styles'
+import { UiIcon } from '@/components/UiIcon'
+import { TONE_TEXT } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { GLYPHS, TONES } from './activityLevels'
 import { ActivityListMessage } from './ActivityListMessage'

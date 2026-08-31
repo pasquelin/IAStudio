@@ -22,7 +22,7 @@ import {
   mdiVectorCircleVariant,
 } from '@mdi/js'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
-import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
+import type { ToolbarItem, ToolMode } from '@/components/Toolbar/tools'
 import {
   PREVIEW_SHAPES,
   TILING_PREVIEWS,

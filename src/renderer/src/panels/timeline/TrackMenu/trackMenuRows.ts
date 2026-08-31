@@ -1,6 +1,6 @@
 import { mdiArrowDown, mdiArrowUp, mdiDeleteOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
-import type { MenuRowSpec } from '@/design/menuRows'
+import type { MenuRowSpec } from '@/components/menuRows'
 import { moveTrack, removeTrack } from '@/engines/timeline/commands'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useSequences } from '@/stores/sequences'

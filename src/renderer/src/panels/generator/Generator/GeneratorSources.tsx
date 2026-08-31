@@ -1,10 +1,10 @@
 import { mdiClose } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { assetUrl } from '@shared/domain/asset'
-import { Row } from '@/design/Row'
-import { PANEL_GROUP_LABEL } from '@/design/styles'
-import { Thumbnail } from '@/design/Thumbnail'
-import { ToolButton } from '@/design/ToolButton'
+import { Row } from '@/components/Row'
+import { PANEL_GROUP_LABEL } from '@/components/styles'
+import { Thumbnail } from '@/components/Thumbnail'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import {
   isWithdrawable,

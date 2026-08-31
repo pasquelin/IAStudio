@@ -1,7 +1,7 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 

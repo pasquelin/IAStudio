@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { planStack, type PostEffect, type PostStack } from '@shared/domain/postProcessing'
-import { Tree } from '@/design/Tree'
+import { Tree } from '@/components/Tree'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { PostStackRow } from './PostStackRow'
 

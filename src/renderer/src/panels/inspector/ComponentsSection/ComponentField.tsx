@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import type { ActionField } from '@shared/domain/assistantAction'
 import type { JsonValue } from '@shared/domain/component'
-import { NumberField } from '@/design/NumberField'
-import { SelectField } from '@/design/SelectField'
-import { TextField } from '@/design/TextField'
-import { ToggleField } from '@/design/ToggleField'
-import type { GestureProps } from '@/design/styles'
+import { NumberField } from '@/components/NumberField'
+import { SelectField } from '@/components/SelectField'
+import { TextField } from '@/components/TextField'
+import { ToggleField } from '@/components/ToggleField'
+import type { GestureProps } from '@/components/styles'
 
 export type ComponentFieldProps = {
   /** What the row SHOWS. Handed over rather than read off a component: a script's settings live

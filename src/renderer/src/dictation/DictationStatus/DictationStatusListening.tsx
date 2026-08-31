@@ -1,6 +1,6 @@
 import { mdiMicrophone } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { UiIcon } from '@/design/UiIcon'
+import { UiIcon } from '@/components/UiIcon'
 import { useAssistant } from '@/stores/assistant'
 import { Heard } from '../Heard'
 import { LevelMeter } from '../LevelMeter'

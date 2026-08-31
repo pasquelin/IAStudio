@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { resetTo } from '@/helpers/resetTo'
 import { NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
-import { SliderField } from '@/design/SliderField'
+import { SliderField } from '@/components/SliderField'
 import { ADJUSTMENT_FIELDS } from '@/engines/skybox/adjustmentFields'
 
 export type SkyboxInspectorAdjustmentsProps = {

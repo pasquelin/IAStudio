@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { boundsOf } from '@shared/domain/settingsRegistry'
 import { FLY_SPEEDS } from '@shared/domain/snap'
-import { Separator } from '@/design/Separator'
-import { Slider } from '@/design/Slider'
-import { ValueGrid } from '@/design/ValueGrid/ValueGrid'
+import { Separator } from '@/components/Separator'
+import { Slider } from '@/components/Slider'
+import { ValueGrid } from '@/components/ValueGrid/ValueGrid'
 import { useSpeedReading } from '@/hooks/useSpeedReading'
 
 // Read once: the registry answers by walking every descriptor.

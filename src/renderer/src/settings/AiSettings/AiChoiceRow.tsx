@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { AiRoleId } from '@shared/domain/aiRole'
-import { fieldHandle } from '@/design/scHandle'
-import { WINDOW_CAPTION, WINDOW_HELP, WINDOW_ROW } from '@/design/windowStyles'
+import { fieldHandle } from '@/components/scHandle'
+import { WINDOW_CAPTION, WINDOW_HELP, WINDOW_ROW } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 
 export type AiChoiceRowProps = {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { COMPONENT_TYPES } from '@shared/domain/componentRegistry'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { loadCodeEditor, type CodeEditor } from '@/engines/code/CodeEditor'
 import { projectTypes } from '@/engines/code/projectTypes'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'

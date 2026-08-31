@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Memory } from '@shared/domain/assistantMemory'
 import { neighboursOf, type MemoryTie } from '@shared/domain/memoryGraph'
-import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { WINDOW_CAPTION, WINDOW_GROUP_LABEL } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { MemoryRelationsRow } from './MemoryRelationsRow'
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { fieldHandle } from '@/design/scHandle'
+import { fieldHandle } from '@/components/scHandle'
 import { useCommittedText } from '@/hooks/useCommittedText'
 import type { CommittedProps } from './controls'
 

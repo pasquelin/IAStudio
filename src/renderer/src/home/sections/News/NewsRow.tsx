@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { NewsItem } from '@shared/domain/news'
-import { ROW_INK, ROW_QUIET } from '@/design/styles'
+import { ROW_INK, ROW_QUIET } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { timeAgo } from '@/helpers/relativeTime'

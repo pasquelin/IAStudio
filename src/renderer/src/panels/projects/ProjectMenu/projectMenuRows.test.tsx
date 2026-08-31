@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FileOutcome } from '@shared/domain/fileOp'
-import { ContextMenu } from '@/design/ContextMenu'
+import { ContextMenu } from '@/components/ContextMenu'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useProject, type ProjectRenamed } from '@/stores/project'
 import { useTranslation } from 'react-i18next'
-import { renderMenuRows } from '@/design/menuRows'
+import { renderMenuRows } from '@/components/menuRows'
 import { projectMenuRows } from './projectMenuRows'
 
 /** What a rename answers back — the row's own path and name are what the cases assert on. */

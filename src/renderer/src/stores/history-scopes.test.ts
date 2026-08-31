@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandIn, scopeOfWorkspace } from '@shared/domain/command'
 import { workspaceForKind, type DocumentKind } from '@shared/domain/document'
-import { WRITTEN_SOURCES } from '@/design/testHarness'
+import { WRITTEN_SOURCES } from '@/components/testHarness'
 
 /**
  * The half of the `SCOPE_BY_WORKSPACE` trap that `shared/` cannot see.

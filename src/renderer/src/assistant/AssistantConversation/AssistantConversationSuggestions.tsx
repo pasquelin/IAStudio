@@ -1,4 +1,4 @@
-import { MENU_SURFACE, rowSkin } from '@/design/styles'
+import { MENU_SURFACE, rowSkin } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 

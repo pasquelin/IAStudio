@@ -5,8 +5,8 @@ import type { ModelSummary } from '@shared/domain/model'
 import type { ModelRefusalWord } from '@/hooks/useModelReach'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
-import { MediaTile } from '@/design/MediaTile'
-import { TILE_MARK } from '@/design/styles'
+import { MediaTile } from '@/components/MediaTile'
+import { TILE_MARK } from '@/components/styles'
 
 /**
  * The tile's corner label: a standing, or the reason the model cannot be picked. On the plate

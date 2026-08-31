@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/design/windowStyles'
+import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/components/windowStyles'
 import { useTranslation } from 'react-i18next'
 import type { LandingTarget } from '@shared/domain/landingTarget'
 import { Dialog } from '@/app/Dialog'
-import { fieldHandle } from '@/design/scHandle'
+import { fieldHandle } from '@/components/scHandle'
 
 export type GeneratorLandingDialogProps = {
   /** Answered with where the result goes, and whether that answer becomes the rule. */

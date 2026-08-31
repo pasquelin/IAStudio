@@ -1,5 +1,5 @@
 import { NEWS_PAGE_SIZE } from '@shared/domain/news'
-import { Reserve } from '@/design/Reserve'
+import { Reserve } from '@/components/Reserve'
 import { NEWS_ROW } from './newsStyles'
 
 /**

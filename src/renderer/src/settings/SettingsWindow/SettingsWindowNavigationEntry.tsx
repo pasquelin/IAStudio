@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { SettingPath } from '@shared/domain/settingsPath'
 import { SETTING_REGISTRY } from '@shared/domain/settingsRegistry'
-import { WindowNavItem } from '@/design/WindowNav/WindowNavItem'
+import { WindowNavItem } from '@/components/WindowNav/WindowNavItem'
 import { useSettingsDraft } from '@/stores/settingsDraft'
 import { SettingStagedDot } from '../SettingStagedDot'
 import type { SettingsSection } from '../sections'

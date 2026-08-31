@@ -4,7 +4,7 @@ import {
   WINDOW_ACTION_DANGER,
   WINDOW_ACTION_QUIET,
   WINDOW_HELP,
-} from '@/design/windowStyles'
+} from '@/components/windowStyles'
 import { SettingLine } from './SettingLine'
 
 /** What paints the button, where nothing is being confirmed — see `WINDOW_ACTION_QUIET`. */

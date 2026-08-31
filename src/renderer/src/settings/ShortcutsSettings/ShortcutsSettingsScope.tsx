@@ -6,7 +6,7 @@ import type {
   CommandScope,
 } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
-import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { WINDOW_GROUP_LABEL } from '@/components/windowStyles'
 import { ShortcutsSettingsCommandRow } from './ShortcutsSettingsCommandRow'
 
 export function ShortcutsSettingsScope({

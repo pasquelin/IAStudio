@@ -8,12 +8,12 @@ import {
   type PostEffectId,
   type PostStack,
 } from '@shared/domain/postProcessing'
-import { PropertyRow } from '@/design/PropertyRow'
-import { PropertySection } from '@/design/PropertySection'
-import { SelectField } from '@/design/SelectField'
-import { ToggleField } from '@/design/ToggleField'
-import { ToolButton } from '@/design/ToolButton'
-import { EmptyState } from '@/design/EmptyState'
+import { PropertyRow } from '@/components/PropertyRow'
+import { PropertySection } from '@/components/PropertySection'
+import { SelectField } from '@/components/SelectField'
+import { ToggleField } from '@/components/ToggleField'
+import { ToolButton } from '@/components/ToolButton'
+import { EmptyState } from '@/components/EmptyState'
 import { postEffectFields } from '@/engines/scene/propertyFields'
 import { postAt } from '@/engines/scene/animationEval'
 import {

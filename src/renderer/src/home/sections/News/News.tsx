@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ARTICLES_TOPIC, NEWS_TOPICS, OPENING_TOPIC, type NewsTopic } from '@shared/domain/news'
-import { Chip } from '@/design/Chip'
+import { Chip } from '@/components/Chip'
 import { useNews } from '@/hooks/useNews'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'

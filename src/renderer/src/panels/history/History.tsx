@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { toolIcon } from '@/helpers/toolRegistry'
 import { useGitHistory } from '@/hooks/useGitHistory'
 import { useGit } from '@/stores/git'

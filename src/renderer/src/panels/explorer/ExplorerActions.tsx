@@ -6,8 +6,8 @@ import {
   mdiShapeOutline,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
-import { UiIcon } from '@/design/UiIcon'
+import { ToolButton } from '@/components/ToolButton'
+import { UiIcon } from '@/components/UiIcon'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useExplorerView } from '@/stores/explorerView'
 import { useMedia } from '@/stores/media'

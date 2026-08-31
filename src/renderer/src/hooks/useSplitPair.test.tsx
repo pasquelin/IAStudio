@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ResizeHandle } from '@/design/ResizeHandle'
+import { ResizeHandle } from '@/components/ResizeHandle'
 import { useSplitPair } from './useSplitPair'
 
 let pairSize = 1000

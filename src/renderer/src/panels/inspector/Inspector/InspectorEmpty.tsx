@@ -1,6 +1,6 @@
 import { mdiTuneVariant } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 
 export function InspectorEmpty() {
   const { t } = useTranslation()

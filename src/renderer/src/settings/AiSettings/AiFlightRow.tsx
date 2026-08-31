@@ -1,5 +1,5 @@
-import { ProgressBar } from '@/design/ProgressBar'
-import { WINDOW_ACTION } from '@/design/windowStyles'
+import { ProgressBar } from '@/components/ProgressBar'
+import { WINDOW_ACTION } from '@/components/windowStyles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 
 export type AiFlightRowProps = {

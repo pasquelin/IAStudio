@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Memory } from '@shared/domain/assistantMemory'
 import { duplicatesIn, staleIn } from '@shared/domain/memoryUpkeep'
-import { WINDOW_GROUP_LABEL } from '@/design/windowStyles'
+import { WINDOW_GROUP_LABEL } from '@/components/windowStyles'
 import { SettingActionLine } from '../SettingActionLine'
 import { useAssistantMemory } from '@/stores/assistantMemory'
 

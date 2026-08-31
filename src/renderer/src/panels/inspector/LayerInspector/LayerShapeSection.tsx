@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { ColorField } from '@/design/ColorField'
-import { NumberField } from '@/design/NumberField'
-import { PropertySection } from '@/design/PropertySection'
-import { ToggleField } from '@/design/ToggleField'
+import { ColorField } from '@/components/ColorField'
+import { NumberField } from '@/components/NumberField'
+import { PropertySection } from '@/components/PropertySection'
+import { ToggleField } from '@/components/ToggleField'
 import { colourOf, packedColour } from '@shared/domain/color'
 import {
   DEFAULT_STROKE_WIDTH,

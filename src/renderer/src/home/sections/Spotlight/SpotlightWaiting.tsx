@@ -1,4 +1,4 @@
-import { Reserve } from '@/design/Reserve'
+import { Reserve } from '@/components/Reserve'
 
 /**
  * The band before it knows what it holds. Silent, and exactly the height of the banner that

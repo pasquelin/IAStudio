@@ -1,7 +1,7 @@
 import { DockviewReact, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
-import { AssetDropTarget } from '@/design/AssetDropTarget'
+import { AssetDropTarget } from '@/components/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'

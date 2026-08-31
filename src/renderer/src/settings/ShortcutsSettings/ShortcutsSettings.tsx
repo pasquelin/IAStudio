@@ -11,7 +11,7 @@ import {
 import type { Signature } from '@shared/domain/shortcut'
 import { useOverrides } from '@/hooks/useOverrides'
 import { resolveBindings } from '@/stores/bindings'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 import { ShortcutsSettingsScope } from './ShortcutsSettingsScope'
 import { ShortcutsSettingsSearchByChord } from './ShortcutsSettingsSearchByChord'
 

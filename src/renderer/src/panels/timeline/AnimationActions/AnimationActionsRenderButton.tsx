@@ -1,7 +1,7 @@
 import { mdiMovieOpenOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { activeCameraAt } from '@/engines/scene/cameraShots'
 import { firstCameraId } from '@/engines/scene/sceneState'
 import { TIP_BOTTOM } from '@/helpers/tooltip'

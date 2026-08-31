@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PropertySection } from '@/design/PropertySection'
-import type { GestureProps } from '@/design/styles'
+import { PropertySection } from '@/components/PropertySection'
+import type { GestureProps } from '@/components/styles'
 import type { FieldValue, PropertyField } from '@/engines/scene/propertyFields'
 import { PropertyControl } from './PropertyControl'
 

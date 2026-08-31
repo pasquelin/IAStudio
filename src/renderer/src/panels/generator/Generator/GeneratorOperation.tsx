@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { AiRoleId } from '@shared/domain/aiRole'
-import { SelectField } from '@/design/SelectField'
+import { SelectField } from '@/components/SelectField'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { roleLabel } from '@/helpers/roleLabel'
 import type { CapabilityChoice } from '@/generation/capabilityResolver'

@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { resetTo } from '@/helpers/resetTo'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { boundsOf } from '@shared/domain/settingsRegistry'
-import { SliderField } from '@/design/SliderField'
-import { ToggleField } from '@/design/ToggleField'
+import { SliderField } from '@/components/SliderField'
+import { ToggleField } from '@/components/ToggleField'
 
 // Read once: the registry answers by walking every descriptor.
 const OFFSET = boundsOf('three.snapSurfaceOffset')

@@ -1,7 +1,7 @@
 import { mdiTelevisionPlay } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import { EMPTY_SEQUENCE, type SequenceState } from '@/engines/timeline/timelineState'
 import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'

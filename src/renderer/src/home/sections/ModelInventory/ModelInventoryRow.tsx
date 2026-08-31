@@ -1,4 +1,4 @@
-import { rowSkin, ROW_INK, ROW_QUIET } from '@/design/styles'
+import { rowSkin, ROW_INK, ROW_QUIET } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { ModelInventoryGauge } from './ModelInventoryGauge'

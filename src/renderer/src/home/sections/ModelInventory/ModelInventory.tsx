@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { QuietNote } from '@/design/QuietNote'
+import { QuietNote } from '@/components/QuietNote'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { Section } from '../../Section'

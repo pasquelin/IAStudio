@@ -1,6 +1,6 @@
 import { mdiDeleteOutline, mdiRenameOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
-import type { MenuRowSpec } from '@/design/menuRows'
+import type { MenuRowSpec } from '@/components/menuRows'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useStyles } from '@/stores/styles'
 

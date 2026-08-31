@@ -1,7 +1,7 @@
 import { mdiDeleteOutline, mdiPlus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { clipLane, MAIN_LANE_ID, type ClipLane } from '@shared/domain/scene'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { lanesMinus, lanesMoved, lanesPlus } from '@/engines/scene/clipBlend'
 import { setModelLanes } from '@/engines/scene/commands'
 import type { LaneRow } from '@/engines/scene/animationRows'

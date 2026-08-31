@@ -1,5 +1,5 @@
-import { MediaTile } from '@/design/MediaTile'
-import { rowSkin } from '@/design/styles'
+import { MediaTile } from '@/components/MediaTile'
+import { rowSkin } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 

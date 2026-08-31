@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ProgressRow } from '@/design/ProgressRow'
-import { StatusFlyout } from '@/design/StatusFlyout'
-import { StatusProgressFace } from '@/design/StatusProgressFace'
+import { ProgressRow } from '@/components/ProgressRow'
+import { StatusFlyout } from '@/components/StatusFlyout'
+import { StatusProgressFace } from '@/components/StatusProgressFace'
 import { formatPercent } from '@/helpers/format'
 import { useTasks } from '@/stores/tasks'
 

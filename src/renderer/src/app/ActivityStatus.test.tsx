@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { STATUS_BUTTON } from '@/design/styles'
+import { STATUS_BUTTON } from '@/components/styles'
 import { useActivity } from '@/stores/activity'
 import { ActivityStatus } from './ActivityStatus'
 

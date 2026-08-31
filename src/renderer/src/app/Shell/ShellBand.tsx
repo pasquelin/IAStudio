@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { ResizeHandle } from '@/design/ResizeHandle'
+import { ResizeHandle } from '@/components/ResizeHandle'
 import { cn } from '@/helpers/cn'
 import { useTools } from '@/stores/tools'
 import { ShellEdge } from './ShellEdge'

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { WINDOW_ACTION, WINDOW_ACTION_SECONDARY } from '@/design/windowStyles'
+import { WINDOW_ACTION, WINDOW_ACTION_SECONDARY } from '@/components/windowStyles'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settingsDraft'
 

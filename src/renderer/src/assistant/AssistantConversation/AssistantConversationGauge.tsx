@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { AssistantWindow } from '@shared/domain/assistant'
-import { ProgressBar } from '@/design/ProgressBar'
+import { ProgressBar } from '@/components/ProgressBar'
 import { formatCompact } from '@/helpers/format'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAssistant } from '@/stores/assistant'

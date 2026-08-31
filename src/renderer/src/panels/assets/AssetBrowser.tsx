@@ -9,9 +9,9 @@ import {
   type AssetType,
 } from '@shared/domain/asset'
 import { typeOfWorkspace } from '@shared/domain/assetKind'
-import { Collection } from '@/design/Collection/Collection'
-import { CollectionBar } from '@/design/CollectionBar/CollectionBar'
-import { EmptyState } from '@/design/EmptyState'
+import { Collection } from '@/components/Collection/Collection'
+import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
+import { EmptyState } from '@/components/EmptyState'
 import { cloudPage } from '@/helpers/cloudPage'
 import { filterLocally, isFiltered, setFacetValue } from '@/helpers/collectionState'
 import { applySelection } from '@/helpers/selection'

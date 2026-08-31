@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 import { report } from '../usage-fixtures'
 import { UsageActivities } from './UsageActivities'
 

@@ -23,7 +23,7 @@ import {
 } from '@mdi/js'
 import { UI_ELEMENT_TYPES, type UiElementType } from '@shared/domain/ui'
 import { UI_RESOLUTION_IDS } from '@shared/domain/uiResolution'
-import type { ToolbarItem, ToolMode } from '@/design/Toolbar/tools'
+import type { ToolbarItem, ToolMode } from '@/components/Toolbar/tools'
 
 /**
  * What the interface editor's bar offers. Actions rather than modes: the one armed tool an

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/design/windowStyles'
+import { DIALOG_ACTION, DIALOG_ACTION_SECONDARY } from '@/components/windowStyles'
 import type { ModelSummary } from '@shared/domain/model'
 import { useAiModels } from '@/stores/aiModels'
 import { Dialog } from '@/app/Dialog'

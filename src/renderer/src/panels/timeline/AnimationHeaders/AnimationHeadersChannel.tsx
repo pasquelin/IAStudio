@@ -1,6 +1,6 @@
 import { mdiDeleteOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { removeAnimationTrack } from '@/engines/scene/animationCommands'
 import type { ChannelRow } from '@/engines/scene/animationRows'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'

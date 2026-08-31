@@ -1,6 +1,6 @@
 import { mdiCameraControl } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { setTransform } from '@/engines/scene/commands'
 import { transformFromPlacement } from '@/engines/scene/sceneView'
 import type { CameraNode } from '@/engines/scene/sceneState'

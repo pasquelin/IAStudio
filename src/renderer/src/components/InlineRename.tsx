@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { FIELD } from '@/design/styles'
+import { FIELD } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { isGoneForGood } from '@/helpers/teardown'

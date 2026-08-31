@@ -6,8 +6,8 @@ import {
   CONTEXT_TITLE_MAX,
   type ContextCard,
 } from '@shared/domain/projectContext'
-import { CHECKBOX, FIELD, FIELD_FILL, PANEL_HEAD } from '@/design/styles'
-import { ToolButton } from '@/design/ToolButton'
+import { CHECKBOX, FIELD, FIELD_FILL, PANEL_HEAD } from '@/components/styles'
+import { ToolButton } from '@/components/ToolButton'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { ContextPictures } from './ContextPictures'

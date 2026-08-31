@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { hasFailed, type IngestProgress } from '@shared/domain/media'
-import { ProgressRow } from '@/design/ProgressRow'
+import { ProgressRow } from '@/components/ProgressRow'
 import { useMedia } from '@/stores/media'
 
 export type ImportProgressRowProps = {

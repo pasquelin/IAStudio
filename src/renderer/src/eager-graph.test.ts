@@ -155,7 +155,7 @@ describe('the opening chunk', () => {
   it('never reaches the generation form, nor what validates it', () => {
     const { files } = GRAPH
 
-    expect(files).not.toContain('./design/DynamicForm/DynamicForm.tsx')
+    expect(files).not.toContain('./components/DynamicForm/DynamicForm.tsx')
     expect(files).not.toContain('./helpers/dynamicFormSchema.ts')
   })
 

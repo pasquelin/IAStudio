@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useTranslation } from 'react-i18next'
-import { ContextMenu } from '@/design/ContextMenu'
-import { renderMenuRows } from '@/design/menuRows'
+import { ContextMenu } from '@/components/ContextMenu'
+import { renderMenuRows } from '@/components/menuRows'
 import { trackMenuRows } from './trackMenuRows'
 
 /** At the pointer, as the header column raises them. */

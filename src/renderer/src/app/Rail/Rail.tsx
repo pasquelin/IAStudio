@@ -1,4 +1,4 @@
-import { Separator } from '@/design/Separator'
+import { Separator } from '@/components/Separator'
 import type { ToolZone } from '@shared/domain/tool'
 import { RailGroup } from './RailGroup'
 import { RailNewButton } from './RailNewButton'

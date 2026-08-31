@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WRITTEN_SOURCES } from '@/design/testHarness'
+import { WRITTEN_SOURCES } from '@/components/testHarness'
 
 /**
  * 🛑 A refusal that names nothing is one a caller cannot repair. Measured on the bench pass of

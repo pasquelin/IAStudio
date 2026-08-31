@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Toast } from '@/design/Toast/Toast'
-import { ToastStack } from '@/design/Toast/ToastStack'
+import { Toast } from '@/components/Toast/Toast'
+import { ToastStack } from '@/components/Toast/ToastStack'
 import { useActivity } from '@/stores/activity'
 import { ActivityListMessage } from './ActivityList/ActivityListMessage'
 import { GLYPHS, TONES } from './ActivityList/activityLevels'

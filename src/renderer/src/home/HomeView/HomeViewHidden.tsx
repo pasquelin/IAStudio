@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { hiddenHomeSections, homeSections, shownHomeSection } from '@shared/domain/home'
-import { INLINE_LINK } from '@/design/styles'
+import { INLINE_LINK } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { hasApi, useSettings } from '@/stores/settings'
 import { HINT_TOP } from '@/helpers/tooltip'

@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PICTURES } from '@shared/domain/asset'
-import { PropertySection } from '@/design/PropertySection'
+import { PropertySection } from '@/components/PropertySection'
 import { editPixelsOf } from '@/helpers/openAsset'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'

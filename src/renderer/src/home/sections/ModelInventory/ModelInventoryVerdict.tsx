@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { SettingsSectionId } from '@shared/domain/settings'
-import { ProgressBar } from '@/design/ProgressBar'
+import { ProgressBar } from '@/components/ProgressBar'
 import { ModelInventoryAdvice } from './ModelInventoryAdvice'
 import { servedTotalsOf } from './inventory'
 

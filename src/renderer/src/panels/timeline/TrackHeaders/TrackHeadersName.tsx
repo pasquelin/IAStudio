@@ -4,7 +4,7 @@ import { renameTrack } from '@/engines/timeline/commands'
 import type { Track } from '@/engines/timeline/timelineState'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
-import { InlineRename } from '@/design/InlineRename'
+import { InlineRename } from '@/components/InlineRename'
 import { useSequences } from '@/stores/sequences'
 
 export function TrackHeadersName({

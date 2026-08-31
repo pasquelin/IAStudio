@@ -7,11 +7,11 @@ import {
   type SkyboxEnvironment,
   type SunSettings,
 } from '@shared/domain/skybox'
-import { ColorField } from '@/design/ColorField'
-import { PropertyRow } from '@/design/PropertyRow'
-import { PropertySection } from '@/design/PropertySection'
-import { SliderField } from '@/design/SliderField'
-import { ToggleField } from '@/design/ToggleField'
+import { ColorField } from '@/components/ColorField'
+import { PropertyRow } from '@/components/PropertyRow'
+import { PropertySection } from '@/components/PropertySection'
+import { SliderField } from '@/components/SliderField'
+import { ToggleField } from '@/components/ToggleField'
 import { setAdjustment, setEnvironmentSetting, setSunSetting } from '@/engines/skybox/commands'
 import { resetTo } from '@/helpers/resetTo'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'

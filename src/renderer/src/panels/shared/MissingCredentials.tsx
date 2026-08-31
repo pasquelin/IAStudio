@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { useSettings } from '@/stores/settings'
 
 /**

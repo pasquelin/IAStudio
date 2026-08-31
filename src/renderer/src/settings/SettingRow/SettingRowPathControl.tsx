@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
-import { WINDOW_ACTION } from '@/design/windowStyles'
+import { WINDOW_ACTION } from '@/components/windowStyles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import type { CommittedProps } from './controls'

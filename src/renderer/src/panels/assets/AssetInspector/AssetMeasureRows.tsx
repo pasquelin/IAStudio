@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { PropertyRow } from '@/design/PropertyRow'
+import { PropertyRow } from '@/components/PropertyRow'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes, formatMoment } from '@/helpers/format'
 

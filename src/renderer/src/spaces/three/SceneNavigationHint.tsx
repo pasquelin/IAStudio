@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_MOTION, type MotionId } from '@shared/domain/shortcut'
-import { VIEWPORT_READOUT } from '@/design/styles'
+import { VIEWPORT_READOUT } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { useForgettableTimeout } from '@/hooks/useForgettableTimeout'

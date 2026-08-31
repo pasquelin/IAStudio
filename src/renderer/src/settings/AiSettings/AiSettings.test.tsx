@@ -4,7 +4,7 @@ import type { AiOverview, ModelCandidate, RoleRow } from '@shared/domain/aiOverv
 import { aiRoleId, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
 import type { ModelFamily } from '@shared/domain/model'
-import { FIELD_THUMBNAIL } from '@/design/styles'
+import { FIELD_THUMBNAIL } from '@/components/styles'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAiModels } from '@/stores/aiModels'
 import { AiSettings } from './AiSettings'

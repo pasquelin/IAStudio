@@ -1,7 +1,7 @@
 import { mdiFileOutline } from '@mdi/js'
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type * as RowModule from '@/design/Row'
+import type * as RowModule from '@/components/Row'
 import { EntryRow } from './EntryRow'
 
 /**
@@ -10,7 +10,7 @@ import { EntryRow } from './EntryRow'
  */
 const drawn = vi.hoisted(() => ({ rows: 0 }))
 
-vi.mock('@/design/Row', async importOriginal => {
+vi.mock('@/components/Row', async importOriginal => {
   const actual = await importOriginal<typeof RowModule>()
   return {
     ...actual,

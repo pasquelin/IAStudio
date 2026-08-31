@@ -8,7 +8,7 @@
  * `renderer/src/dynamic-keys.i18n.test.ts`. A value listed in neither ships its raw key on screen.
  */
 import type { TFunction } from 'i18next'
-import type { SelectOption } from '@/design/SelectField'
+import type { SelectOption } from '@/components/SelectField'
 
 export type Choices<T extends string> = {
   options: readonly SelectOption<T>[]

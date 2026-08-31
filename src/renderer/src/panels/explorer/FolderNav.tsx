@@ -1,6 +1,6 @@
 import { mdiArrowUp, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 
 export type FolderNavProps = {

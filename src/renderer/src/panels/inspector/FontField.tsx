@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { fontKey, type FontRef } from '@shared/domain/font'
-import { LinkField, type LinkOption } from '@/design/LinkField/LinkField'
+import { LinkField, type LinkOption } from '@/components/LinkField/LinkField'
 import { studioFonts } from '@/services/fonts'
 
 export type FontFieldProps = {

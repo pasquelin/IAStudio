@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { DisplayUnit } from '@shared/domain/scene'
-import { Separator } from '@/design/Separator'
-import { ValueGrid } from '@/design/ValueGrid/ValueGrid'
+import { Separator } from '@/components/Separator'
+import { ValueGrid } from '@/components/ValueGrid/ValueGrid'
 import { useSnapReading } from '@/hooks/useSnapReading'
 import type { SnapStepControl } from './sceneSnapControls'
 

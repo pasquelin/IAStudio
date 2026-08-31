@@ -1,5 +1,5 @@
 import type { SettingValue } from '@shared/domain/settingsPath'
-import { fieldHandle } from '@/design/scHandle'
+import { fieldHandle } from '@/components/scHandle'
 import { useToken } from '@/hooks/useToken'
 import type { Labelled } from './controls'
 

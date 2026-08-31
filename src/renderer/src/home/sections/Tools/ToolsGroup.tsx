@@ -1,5 +1,5 @@
-import { UiIcon } from '@/design/UiIcon'
-import { HOME_BLOCK, HOME_BLOCK_HEADING, rowSkin, TILE_QUIET } from '@/design/styles'
+import { UiIcon } from '@/components/UiIcon'
+import { HOME_BLOCK, HOME_BLOCK_HEADING, rowSkin, TILE_QUIET } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 
 export type Entry = {

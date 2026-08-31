@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { PlacedNode } from '@/engines/memory/memoryLayout'
-import { WINDOW_CAPTION } from '@/design/windowStyles'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 
 /**

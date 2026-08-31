@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { WindowNote } from '@/design/WindowNote'
+import { WindowNote } from '@/components/WindowNote'
 import type { UsageReport } from '@shared/domain/usage'
 import { UsageTable } from './UsageTable/UsageTable'
 import { UsageTableHeadCell } from './UsageTable/UsageTableHeadCell'

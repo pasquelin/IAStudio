@@ -1,9 +1,9 @@
 import { mdiPause, mdiPlay, mdiRunFast } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { bundledThumbnailUrl } from '@shared/domain/animationLibrary'
-import { Row } from '@/design/Row'
-import { Thumbnail } from '@/design/Thumbnail'
-import { ToolButton } from '@/design/ToolButton'
+import { Row } from '@/components/Row'
+import { Thumbnail } from '@/components/Thumbnail'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { ANIMATION_DRAG_TYPE, type DraggedAnimation } from './dragged'
 

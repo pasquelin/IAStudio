@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import type { TrackFlag } from './trackFlags'
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MaterialDescriptor } from '@shared/domain/scene'
-import type { GestureProps } from '@/design/styles'
+import type { GestureProps } from '@/components/styles'
 import { materialFields, withField } from '@/engines/scene/propertyFields'
 import { DescriptorSection } from './DescriptorSection'
 import { TextureSlotFields } from './TextureSlotFields'

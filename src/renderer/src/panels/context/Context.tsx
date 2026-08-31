@@ -7,8 +7,8 @@ import {
   withCard,
   withoutCard,
 } from '@shared/domain/projectContext'
-import { EmptyState } from '@/design/EmptyState'
-import { PANEL_SCROLL } from '@/design/styles'
+import { EmptyState } from '@/components/EmptyState'
+import { PANEL_SCROLL } from '@/components/styles'
 import { newId } from '@/helpers/ids'
 import { toolIcon } from '@/helpers/toolRegistry'
 import { NoProject } from '@/panels/shared/NoProject'

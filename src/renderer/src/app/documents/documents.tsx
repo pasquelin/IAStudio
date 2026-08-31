@@ -1,7 +1,7 @@
 import type { IDockviewPanelProps } from 'dockview-react'
 import type { DocumentKind } from '@shared/domain/document'
 import { lazy, type FC } from 'react'
-import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { DocumentsGuard } from './DocumentsGuard'
 
 export type DocumentPanelParams = { documentId: string }

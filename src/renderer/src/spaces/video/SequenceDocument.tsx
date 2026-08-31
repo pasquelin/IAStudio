@@ -1,8 +1,8 @@
 import { mdiVideoOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/design/EmptyState'
-import { ResizeHandle } from '@/design/ResizeHandle'
+import { EmptyState } from '@/components/EmptyState'
+import { ResizeHandle } from '@/components/ResizeHandle'
 import { programOwner, sourceOwner } from '@/engines/timeline/playback'
 import {
   EMPTY_SEQUENCE,

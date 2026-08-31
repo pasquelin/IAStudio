@@ -1,6 +1,6 @@
 import { mdiRestore } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { WindowIconButton } from '@/design/WindowIconButton'
+import { WindowIconButton } from '@/components/WindowIconButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 
 export type SettingRestoreButtonProps = {

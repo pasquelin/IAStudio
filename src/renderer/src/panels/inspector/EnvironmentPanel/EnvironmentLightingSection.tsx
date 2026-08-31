@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { ENV_INTENSITY, type SceneWorld } from '@shared/domain/scene'
-import { PropertySection } from '@/design/PropertySection'
-import { SliderField } from '@/design/SliderField'
-import type { GestureProps } from '@/design/styles'
+import { PropertySection } from '@/components/PropertySection'
+import { SliderField } from '@/components/SliderField'
+import type { GestureProps } from '@/components/styles'
 import { EnvironmentChoice } from '../EnvironmentChoice/EnvironmentChoice'
 
 export type EnvironmentLightingSectionProps = {

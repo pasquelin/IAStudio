@@ -1,8 +1,8 @@
 import { mdiDownloadOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ProgressBar } from '@/design/ProgressBar'
-import { UiIcon } from '@/design/UiIcon'
-import { STATUS_BUTTON } from '@/design/styles'
+import { ProgressBar } from '@/components/ProgressBar'
+import { UiIcon } from '@/components/UiIcon'
+import { STATUS_BUTTON } from '@/components/styles'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useUpdates } from '@/stores/updates'
 

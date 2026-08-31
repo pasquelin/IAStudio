@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FILE_DOMAINS, type FileDomain } from '@shared/domain/fileRole'
-import { PropertyRow } from '@/design/PropertyRow'
-import { SelectField } from '@/design/SelectField'
+import { PropertyRow } from '@/components/PropertyRow'
+import { SelectField } from '@/components/SelectField'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 

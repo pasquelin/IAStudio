@@ -1,7 +1,7 @@
 import { mdiProgressClock } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { useJobs } from '@/stores/jobs'
-import { EmptyState } from '@/design/EmptyState'
+import { EmptyState } from '@/components/EmptyState'
 import { JobRow } from './JobRow/JobRow'
 
 /**

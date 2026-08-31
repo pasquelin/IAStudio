@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
-import { WINDOW_CAPTION, WINDOW_HELP, WINDOW_ROW } from '@/design/windowStyles'
+import { WINDOW_CAPTION, WINDOW_HELP, WINDOW_ROW } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useAssistant } from '@/stores/assistant'
 import { useSettings } from '@/stores/settings'

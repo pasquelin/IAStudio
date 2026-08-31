@@ -9,9 +9,9 @@ import {
   mdiTune,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { MenuButton } from '@/design/MenuButton'
-import { MenuRow } from '@/design/MenuRow'
-import { ToolButton } from '@/design/ToolButton'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuRow } from '@/components/MenuRow'
+import { ToolButton } from '@/components/ToolButton'
 import {
   ADJUSTMENT_KINDS,
   adjustmentLayer,

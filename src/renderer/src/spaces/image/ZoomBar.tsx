@@ -1,6 +1,6 @@
 import { mdiFitToScreenOutline, mdiMagnifyMinusOutline, mdiMagnifyPlusOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { ToolButton } from '@/design/ToolButton'
+import { ToolButton } from '@/components/ToolButton'
 import { formatPercent } from '@/helpers/format'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { CANVAS_MAX_SCALE, CANVAS_MIN_SCALE } from '@/engines/canvas/viewport'

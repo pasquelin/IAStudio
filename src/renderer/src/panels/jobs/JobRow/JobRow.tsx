@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { ProgressRow } from '@/design/ProgressRow'
-import type { StatusTone } from '@/design/styles'
+import { ProgressRow } from '@/components/ProgressRow'
+import type { StatusTone } from '@/components/styles'
 import { useJobs } from '@/stores/jobs'
 import { JobRowDetail } from './JobRowDetail'
 

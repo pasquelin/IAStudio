@@ -15,7 +15,7 @@ import { WINDOW_SOURCES } from '../windowSources'
  * wears its own vocabulary wherever it is mounted. The journal is the witness — it renders
  * `ActivityList`, whose row imports the status tones, and that row belongs to the dock as much.
  */
-const IMPORTS_STUDIO_STYLES = /from '@\/design\/styles'/
+const IMPORTS_STUDIO_STYLES = /from '@\/components\/styles'/
 
 /** The families of window, read off the shell they frame themselves with rather than listed. */
 const FAMILIES = [
@@ -24,7 +24,7 @@ const FAMILIES = [
       .filter(([, code]) => /<WindowShell[\s>]/.test(code))
       .map(([path]) => `./${path.split('/')[1] ?? ''}/`),
   ),
-].filter(folder => folder !== './design/')
+].filter(folder => folder !== './components/')
 
 /**
  * Declared with the reason, which is the same one three times: `windowStyles.ts` publishes no
@@ -58,10 +58,10 @@ describe('a window that is not a dock', () => {
    * away, and a pattern reading both would go quiet while staying green.
    */
   it('tells the studio module from the window one, which is what makes it a rule', () => {
-    expect(IMPORTS_STUDIO_STYLES.test("import { rowSkin } from '@/design/styles'")).toBe(true)
-    expect(IMPORTS_STUDIO_STYLES.test("import { WINDOW_ROW } from '@/design/windowStyles'")).toBe(
-      false,
-    )
+    expect(IMPORTS_STUDIO_STYLES.test("import { rowSkin } from '@/components/styles'")).toBe(true)
+    expect(
+      IMPORTS_STUDIO_STYLES.test("import { WINDOW_ROW } from '@/components/windowStyles'"),
+    ).toBe(false)
   })
 
   /** The exceptions are the rule's own state: one that stopped being needed and stayed is a hole. */

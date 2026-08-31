@@ -75,11 +75,11 @@ function borrowsTheSweep(code: string): boolean {
   // and would have dropped out of the net exactly like the one this function was added for. The
   // review caught the two literal spellings before anyone wrote that guard.
   //
-  // `(design/)?` is the third spelling, and it cost a day: the five guards that SIT BESIDE
+  // `(components/)?` is the third spelling, and it cost a day: the five guards that SIT BESIDE
   // `testHarness.ts` write `'./testHarness'`, which the folder-qualified form does not match.
   // The line added for it on 2026-08-16 caught its five distant consumers and none of its
   // neighbours — a fix measured by a count that went up, which is exactly how a half-fix looks.
-  return /from '\.[./]*\/(sourceFiles|windowSources|(design\/)?testHarness)'|from '@main\/sourceFiles'|from '@\/(windowSources|design\/testHarness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
+  return /from '\.[./]*\/(sourceFiles|windowSources|(components\/)?testHarness)'|from '@main\/sourceFiles'|from '@\/(windowSources|components\/testHarness)'|from '\.[./]*\/scripts\/[\w-]+\.ts'/.test(
     code,
   )
 }

@@ -8,11 +8,11 @@ import {
   type SceneWorld,
 } from '@shared/domain/scene'
 import type { Settings } from '@shared/domain/settings'
-import { PropertySection } from '@/design/PropertySection'
-import { SelectField } from '@/design/SelectField'
-import { SliderField } from '@/design/SliderField'
-import { ToggleField } from '@/design/ToggleField'
-import type { GestureProps } from '@/design/styles'
+import { PropertySection } from '@/components/PropertySection'
+import { SelectField } from '@/components/SelectField'
+import { SliderField } from '@/components/SliderField'
+import { ToggleField } from '@/components/ToggleField'
+import type { GestureProps } from '@/components/styles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from '../unionChoices'
 

@@ -92,7 +92,7 @@ describe('the frame of an application window', () => {
 
   it('is declared in one file, and every window borrows it', () => {
     const owners = Object.entries(WINDOW_SOURCES)
-      .filter(([path]) => !path.endsWith('design/WindowShell.tsx'))
+      .filter(([path]) => !path.endsWith('components/WindowShell.tsx'))
       .filter(([, code]) => COLUMN.test(code) || PANE.test(code))
       .map(([path]) => path)
 

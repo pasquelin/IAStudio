@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { StatusFlyout } from '@/design/StatusFlyout'
-import { StatusProgressFace } from '@/design/StatusProgressFace'
+import { StatusFlyout } from '@/components/StatusFlyout'
+import { StatusProgressFace } from '@/components/StatusProgressFace'
 import { Jobs } from '@/panels/jobs/Jobs'
 import { useJobs } from '@/stores/jobs'
 

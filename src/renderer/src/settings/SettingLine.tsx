@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { WINDOW_ROW } from '@/design/windowStyles'
+import { WINDOW_ROW } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { SettingStagedDot } from './SettingStagedDot'
 

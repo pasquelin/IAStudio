@@ -7,7 +7,7 @@ import {
   mdiSineWave,
   mdiVolumeMedium,
 } from '@mdi/js'
-import type { ToolbarItem } from '@/design/Toolbar/tools'
+import type { ToolbarItem } from '@/components/Toolbar/tools'
 
 export type AudioToolId =
   'crop' | 'fadeIn' | 'fadeOut' | 'normalize' | 'trimSilence' | 'compare' | 'apply' | 'saveAs'

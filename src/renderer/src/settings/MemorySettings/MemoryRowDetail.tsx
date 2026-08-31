@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Memory, MemorySourceKind } from '@shared/domain/assistantMemory'
-import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/windowStyles'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/components/windowStyles'
 import { formatMoment } from '@/helpers/format'
 
 /**

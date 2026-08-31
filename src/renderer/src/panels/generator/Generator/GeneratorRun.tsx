@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
-import { ProgressRow } from '@/design/ProgressRow'
+import { ProgressRow } from '@/components/ProgressRow'
 import { failureKeyOf } from '@/services/failureMessage'
 import { useJobs } from '@/stores/jobs'
 

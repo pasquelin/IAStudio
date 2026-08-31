@@ -1,6 +1,6 @@
 import { mdiAlertCircleOutline, mdiAlertOutline, mdiCheckCircleOutline } from '@mdi/js'
 import type { ActivityLevel } from '@shared/domain/activity'
-import type { StatusTone } from '@/design/styles'
+import type { StatusTone } from '@/components/styles'
 
 export const GLYPHS: Record<ActivityLevel, string> = {
   info: mdiCheckCircleOutline,

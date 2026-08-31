@@ -24,7 +24,7 @@ describe('finding the tests no import graph reaches', () => {
   })
 
   it('holds the one the narrow reading missed', () => {
-    expect(GUARDED).toContain('src/renderer/src/design/styles.test.ts')
+    expect(GUARDED).toContain('src/renderer/src/components/styles.test.ts')
   })
 
   /**
@@ -98,9 +98,9 @@ describe('finding the tests no import graph reaches', () => {
    */
   it('sees the three ways the renderer sweep is borrowed', () => {
     expect(readsTheTree("import { WRITTEN_SOURCES } from './testHarness'")).toBe(true)
-    expect(readsTheTree("import { WRITTEN_SOURCES } from '../design/testHarness'")).toBe(true)
-    expect(readsTheTree("import { SUITE_SOURCES } from '@/design/testHarness'")).toBe(true)
-    expect(GUARDED).toContain('src/renderer/src/design/spacing.test.ts')
+    expect(readsTheTree("import { WRITTEN_SOURCES } from '../components/testHarness'")).toBe(true)
+    expect(readsTheTree("import { SUITE_SOURCES } from '@/components/testHarness'")).toBe(true)
+    expect(GUARDED).toContain('src/renderer/src/components/spacing.test.ts')
     expect(GUARDED).toContain('src/renderer/src/stores/job-fixtures.test.ts')
   })
 

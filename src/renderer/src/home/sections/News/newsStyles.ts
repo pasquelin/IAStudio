@@ -1,4 +1,4 @@
-import { rowSkin } from '@/design/styles'
+import { rowSkin } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 
 /**

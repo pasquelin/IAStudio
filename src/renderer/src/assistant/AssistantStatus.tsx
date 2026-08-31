@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Spinner } from '@/design/Spinner'
+import { Spinner } from '@/components/Spinner'
 import { useAssistant } from '@/stores/assistant'
 
 /**
