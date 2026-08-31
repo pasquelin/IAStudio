@@ -15,7 +15,9 @@ const landing = createGenerationLanding({
   // holds the opening chunk's reach into the editors, and nothing here runs before a generation
   // this workspace launched comes back.
   land: (documentId, asset) => {
-    void import('@/spaces/audio/loadTake').then(({ loadTake }) => loadTake(documentId, asset))
+    void import('@/features/audio/components/TakeEditor/loadTake').then(({ loadTake }) =>
+      loadTake(documentId, asset),
+    )
   },
 })
 

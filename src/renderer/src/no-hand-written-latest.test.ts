@@ -14,7 +14,7 @@ import { WINDOW_SOURCES } from './windowSources'
  */
 const COMPILER_REFUSES = new Set([
   './panels/timeline/AnimationCanvas.tsx',
-  './spaces/audio/ProgramMonitor.tsx',
+  './features/audio/components/ProgramMonitor.tsx',
 ])
 
 /** The hook itself, which is the four lines rather than a copy of them. */

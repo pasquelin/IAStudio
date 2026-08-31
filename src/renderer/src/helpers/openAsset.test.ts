@@ -350,7 +350,7 @@ describe('opening an asset', () => {
 
     // The tab is the asset's, so the second take reaches it the way a drop does. The head has
     // not moved, so it lands over the first block — what any drop at the head does.
-    const { loadTake } = await import('@/spaces/audio/loadTake')
+    const { loadTake } = await import('@/features/audio/components/TakeEditor/loadTake')
     loadTake(tab, asset({ id: 'asset-2' }))
 
     const edits = audioEditsOf(useAudioEdits.getState(), tab)

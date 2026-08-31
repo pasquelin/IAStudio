@@ -15,7 +15,7 @@ import { playbackHeadOf, usePlayback } from '@/stores/playback'
 import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { exportOtio, exportOtioz, exportStems } from '@/app/otioExport'
 import { ProgramMonitor } from './ProgramMonitor'
-import { TakeEditor } from './TakeEditor'
+import { TakeEditor } from './TakeEditor/TakeEditor'
 
 export type AudioDocumentProps = { documentId: string }
 
