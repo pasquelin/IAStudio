@@ -8,7 +8,7 @@ import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocumentIsInFront } from '@/stores/documents'
 import { guiOf, isGuiDirty, useGuis } from '@/stores/gui'
-import { GuiStage } from './GuiStage/GuiStage'
+import { GuiStage } from '../GuiStage'
 import {
   addUiElementOfType,
   duplicateSelectedUi,
@@ -16,8 +16,8 @@ import {
   lockSelectedUi,
   removeSelectedUi,
 } from './guiEdits'
-import { GUI_ADD_TOOL, GUI_RESOLUTION_TOOL, GUI_TOOLS, type GuiActionId } from './guiTools'
-import { fitGuiToPanel, guiToActualSize, setGuiResolution, zoomGuiIn, zoomGuiOut } from './guiView'
+import { GUI_ADD_TOOL, GUI_RESOLUTION_TOOL, GUI_TOOLS, type GuiActionId } from '../guiTools'
+import { fitGuiToPanel, guiToActualSize, setGuiResolution, zoomGuiIn, zoomGuiOut } from '../guiView'
 
 /**
  * What each button of the bar does. A `Record` over the closed list, so a tool added to

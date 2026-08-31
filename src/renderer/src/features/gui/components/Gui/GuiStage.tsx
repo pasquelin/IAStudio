@@ -13,7 +13,7 @@ import { pickFrom } from '@/helpers/selection'
 import { assetVersionOf } from '@/stores/assets'
 import { guiOf, selectInGui, useGuis } from '@/stores/gui'
 import { guiHostOf, guiViewportOf, useGuiViews } from '@/stores/guiViews'
-import { fitGuiToPanel } from '../guiView'
+import { fitGuiToPanel } from './guiView'
 import { GuiSelectionFrame } from './GuiSelectionFrame'
 
 /**

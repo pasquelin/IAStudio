@@ -33,7 +33,7 @@ const ScriptDocument = lazy(async () => ({
   default: (await import('@/features/code/components/ScriptDocument')).ScriptDocument,
 }))
 const GuiDocument = lazy(async () => ({
-  default: (await import('@/spaces/gui/GuiDocument')).GuiDocument,
+  default: (await import('@/features/gui/components/Gui/Document/GuiDocument')).GuiDocument,
 }))
 const MaterialDocument = lazy(async () => ({
   default: (await import('@/spaces/materials/MaterialDocument/MaterialDocument')).MaterialDocument,
