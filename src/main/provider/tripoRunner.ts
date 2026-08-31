@@ -1,27 +1,17 @@
+import { isAbsolute } from 'node:path'
 import type { AssetType } from '@shared/domain/asset'
-import type { JobTarget } from '@shared/domain/job'
+import { aiRoleId } from '@shared/domain/aiRole'
+import { contractOf } from '@shared/domain/aiCapability'
+import { uploadMimeTypeOf } from '@shared/domain/assetMime'
 import { CREDIT_UNIT } from '@shared/domain/credits'
+import { pathBaseNameOf } from '@shared/domain/fileName'
+import type { JobTarget } from '@shared/domain/job'
 import { PROMPT_FIELD_KEY } from '@shared/domain/localFields'
-import {
-  tripoEntryOf,
-  TRIPO_LANE_LIMITS,
-  type TripoEntry,
-  type TripoLane,
-} from '@shared/domain/tripo'
+import { tripoEntryOf, TRIPO_LANE_LIMITS, type TripoEntry } from '@shared/domain/tripo'
+import { extensionFromUrl } from '@main/assets/localBackend'
 import type { CollectableProduction } from '@main/assets/localCollector'
 import type { JobRunner, RemoteJob } from './jobManager'
 import { TripoError, type TripoApi, type TripoTask } from './tripoApi'
-
-/**
- * Generations run by Tripo, behind the shape the job manager already speaks.
- *
- * Three things separate it from the Scenario runner beside it. Their result URLs expire in five
- * minutes, so a finished task is downloaded on the very poll that saw it succeed and filed by
- * the LOCAL collector — there is no library to fetch it back from. Nothing of theirs cancels:
- * their reference publishes no such endpoint, so `cancel` refuses rather than let the studio
- * report a stopped generation that is still being billed. And the polls of one beat are asked in
- * ONE request, which is what their reference recommends over N.
- */
 
 export type TripoJobRunner = JobRunner & {
   /** What a finished task left on this disk, for the collector to file and then drop. */
@@ -38,7 +28,7 @@ export type TripoRunnerDeps = {
   readFile: (path: string) => Promise<Uint8Array>
   /** Writes the result where `destinationFor` said. */
   writeFile: (path: string, bytes: Uint8Array) => Promise<void>
-  /** Where a downloaded result lands, named after the task and the extension its URL announced. */
+  /** Where a downloaded result lands. The extension carries its dot, as `extname` writes it. */
   destinationFor: (taskId: string, extension: string) => Promise<string>
   /** How long the polls of one beat are gathered for before the grouped request goes out. */
   gather: (ms: number) => Promise<void>
@@ -52,43 +42,20 @@ const REMEMBERED = 64
 /** Wide enough to gather the polls of jobs that started together, short enough to go unnoticed. */
 const DEFAULT_GATHER_MS = 50
 
-/** The shelf a family lands on. Nothing of Tripo's produces anything else. */
-const SHELF: Record<string, AssetType> = { '3d': 'mesh', image: 'image' }
-
 /**
- * The extension a signed URL announces, without its dot.
- *
- * Read off the PATH and never off the whole string, which carries the signature: their URLs end
- * in `?X-Amz-…`, and the last dot of that files a mesh under `.com`.
+ * The shelf an entry's result lands on, read off what its EMPLOYMENT produces — never off its
+ * family, which would file a texture endpoint of the 3D family as a mesh.
  */
-export function extensionOfUrl(url: string, fallback: string): string {
-  const name = (url.split('?')[0] ?? url).split('/').pop() ?? ''
-  const dot = name.lastIndexOf('.')
-  const extension = dot > 0 ? name.slice(dot + 1) : ''
-
-  return /^[a-z0-9]{1,5}$/i.test(extension) ? extension.toLowerCase() : fallback
+function shelfOf(entry: TripoEntry): AssetType {
+  const output = contractOf(aiRoleId(entry.family, entry.capability))?.output
+  // `code` is the one medium that is not a shelf, and nothing of Tripo's writes a script.
+  return output === undefined || output === 'code' ? 'mesh' : output
 }
 
-/** The lane a target is counted in, or `null` for anything that is not Tripo's. */
-export function tripoLaneOf(targetId: string): TripoLane | null {
-  return tripoEntryOf(targetId)?.lane ?? null
-}
-
-/** How many of that lane may run at once, as Tripo publishes it. */
-export function tripoLaneLimit(lane: TripoLane): number {
-  return TRIPO_LANE_LIMITS[lane]
-}
-
-/** Whether a value is a path on this disk rather than a URL, a token or a task id. */
-const isPath = (value: string): boolean => value.startsWith('/') || /^[a-z]:[\\/]/i.test(value)
-
-const MIME: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  glb: 'model/gltf-binary',
-  gltf: 'model/gltf+json',
+/** The lane a target is counted in and its published ceiling, or `null` for another runtime. */
+export function tripoLaneOf(targetId: string): { name: string; limit: number } | null {
+  const lane = tripoEntryOf(targetId)?.lane
+  return lane === undefined ? null : { name: lane, limit: TRIPO_LANE_LIMITS[lane] }
 }
 
 export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
@@ -113,13 +80,12 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
   }
 
   const sendUp = async (path: string): Promise<string> => {
-    const extension = extensionOfUrl(path, 'png')
-    const bytes = await deps.readFile(path)
+    const name = pathBaseNameOf(path)
 
     return await held().upload(
-      path.split(/[\\/]/).pop() ?? `input.${extension}`,
-      bytes,
-      MIME[extension] ?? 'application/octet-stream',
+      name,
+      await deps.readFile(path),
+      uploadMimeTypeOf(name) ?? 'application/octet-stream',
     )
   }
 
@@ -140,18 +106,16 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
 
       // A picture or a mesh arrives as a PATH: `services.ts` routes a Tripo body through the
       // LOCAL resolver, so nothing of it was ever sent to an account of another cloud.
-      sent[field.key] = typeof value === 'string' && isPath(value) ? await sendUp(value) : value
+      sent[field.key] = typeof value === 'string' && isAbsolute(value) ? await sendUp(value) : value
     }
 
     return sent
   }
 
   /**
-   * The state of one task, asked together with every other poll of the same beat.
-   *
-   * Their reference recommends the grouped read over one request per task, and five generations
-   * being watched is five requests a beat otherwise — against a limiter nothing here can see,
-   * since their responses carry no rate headers (measured).
+   * One request per beat rather than one per task: their responses carry no rate header
+   * (measured), so five watched generations would spend five requests against a ceiling
+   * nothing here can read.
    */
   const stateOf = async (taskId: string): Promise<TripoTask | undefined> => {
     if (!batch) {
@@ -176,9 +140,11 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       return
     }
 
-    const shelf = SHELF[entry.family] ?? 'mesh'
-    const extension = extensionOfUrl(task.outputUrl, shelf === 'mesh' ? 'glb' : 'png')
-    const destination = await deps.destinationFor(task.taskId, extension)
+    const shelf = shelfOf(entry)
+    const destination = await deps.destinationFor(
+      task.taskId,
+      extensionFromUrl(task.outputUrl, shelf),
+    )
     await deps.writeFile(destination, await deps.download(task.outputUrl))
 
     // The prompt is empty after a relaunch, and that is the honest answer: the collector names
@@ -231,9 +197,8 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       return answerFor(task)
     },
 
-    // 🛑 Refused, and it is the whole of decision 7: their reference publishes no cancellation,
-    // so a job reported as stopped would go on running and go on being billed. The window greys
-    // the button and says why; anything reaching here is told the same thing.
+    // 🛑 Their reference publishes no cancellation: a job reported as stopped goes on being
+    // billed. The row is told by `Job.cancellable`; anything reaching here is told the same.
     cancel: taskId =>
       Promise.reject(new TripoError(0, 0, `Tripo does not stop a task it has started (${taskId})`)),
 

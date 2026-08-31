@@ -184,7 +184,7 @@
     "manageHint": "Ouvre les réglages pour ajouter, renommer ou retirer un compte",
     "credits": {
       "left": "Crédit restant : {{amount}}",
-      "unit": "{{amount}} crédits",
+      "unit": "{{units}} crédits",
       "unreadable": "Crédit restant illisible pour l’instant.",
       "unpublished": "Ce service ne publie pas le crédit restant."
     }

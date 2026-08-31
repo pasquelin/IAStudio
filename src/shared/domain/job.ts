@@ -39,6 +39,14 @@ export type Job = {
    */
   costUnit?: string
   /**
+   * Whether the service running it takes a cancellation at all. Absent means yes, which every
+   * job carried before a second cloud arrived.
+   *
+   * 🛑 A property of the SERVICE, decided where the runners live: read off the target by the
+   * window instead, a row would carry a rule of the main process and name a cloud to apply it.
+   */
+  cancellable?: boolean
+  /**
    * The id the runner issued. Ours (`id`) is minted before submit; a local runner files what it
    * produced under this one (`local_…`). Absent until submit has answered.
    */

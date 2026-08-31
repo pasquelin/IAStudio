@@ -137,12 +137,8 @@ export type RegistryOptions = {
   /** Whether a local model's weights are on this disk. Read per call: an install lands mid-panel. */
   isInstalled: (modelId: string) => boolean
   /**
-   * The models a cloud publishes as DATA rather than through a listing — its whole catalogue,
-   * already described, or nothing while no key is held for it.
-   *
-   * A second REMOTE catalogue and not a second local one: what it names runs on a cloud, and each
-   * entry carries its own `runsOn` so nothing here has to be told which cloud answered. Read per
-   * call, like the local manifests: a key added mid-panel fills the picker on the next search.
+   * A cloud's whole catalogue as DATA rather than through a listing, each entry carrying its own
+   * `runsOn` — so nothing here is told which cloud answered. Empty while no key is held.
    */
   publishedModels?: () => readonly ModelDescriptor[]
   /** Names the knobs of a local model's form. The main process holds the language as a service. */
@@ -493,7 +489,9 @@ export function createModelRegistry({
     const since = query.since ? cutoff(query.since, now()) : null
     const held = offlineSummaries(query.family).filter(summary => matches(summary, query, since))
     const seen = new Set(held.map(summary => summary.id))
-    const remotes = page.items.filter(item => !seen.has(item.id) && !isOffline(item.id))
+    // By the runtime each summary CARRIES, never by asking the catalogues: read as a lookup, the
+    // published one was rebuilt and re-translated once per item of the page.
+    const remotes = page.items.filter(item => !seen.has(item.id) && item.runsOn === SCENARIO_CLOUD)
     const limit = query.limit ?? DEFAULT_LIMIT
     return { items: [...held, ...remotes].slice(0, limit), cursor: page.cursor }
   }
@@ -560,20 +558,11 @@ export function createModelRegistry({
 
   const published = (): readonly ModelDescriptor[] => publishedModels?.() ?? []
 
-  /**
-   * Every model the studio can offer without walking a listing: this machine's, and the ones a
-   * cloud publishes as data. They ride on the FIRST page and are never paginated — a handful of
-   * entries held in memory, where a cursor would be machinery for a list that fills one screen.
-   */
+  /** Never paginated: a handful of entries in memory, where a cursor would be machinery. */
   const offlineSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] => [
     ...localSummaries(asFamily),
     ...published().filter(model => asFamily === undefined || model.family === asFamily),
   ]
-
-  /** Whether an id belongs to a model this registry answers for without asking the API. */
-  const isOffline = (modelId: string): boolean =>
-    localModels().some(model => model.id === modelId) ||
-    published().some(model => model.id === modelId)
 
   /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
   const described = async (modelId: string): Promise<ModelDescriptor> => {
@@ -694,9 +683,7 @@ export function createModelRegistry({
       // Nothing remote is walked for this machine alone, for another cloud's own models, nor for
       // a family no catalogue publishes: the pages could only be discarded, and each of them is a
       // round trip on a quota.
-      const elsewhere =
-        query.runsOn !== undefined &&
-        (query.runsOn === LOCAL_RUNTIME || query.runsOn !== SCENARIO_CLOUD)
+      const elsewhere = query.runsOn !== undefined && query.runsOn !== SCENARIO_CLOUD
       let cursor: Cursor | null =
         elsewhere || !servedByCatalogue(query.family)
           ? null
@@ -765,8 +752,8 @@ export function createModelRegistry({
 
     describe: async modelId =>
       describedAsCloudItself(modelId) ??
-      published().find(model => model.id === modelId) ??
       describedLocally(modelId) ??
+      published().find(model => model.id === modelId) ??
       (await described(modelId)),
 
     previews: async assetIds => {

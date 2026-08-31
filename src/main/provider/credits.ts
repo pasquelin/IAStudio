@@ -1,5 +1,6 @@
 import { SCENARIO_CLOUD, type CloudProviderId } from '@shared/domain/aiCloud'
-import { TRIPO_BASE_URL, TRIPO_CLOUD } from '@shared/domain/tripo'
+import { TRIPO_CLOUD } from '@shared/domain/tripo'
+import { createTripoApi } from './tripoApi'
 import {
   CREDIT_UNIT,
   type CreditBalance,
@@ -102,20 +103,6 @@ function openrouterKeyLimit(body: unknown): readonly Money[] | null {
   return dollars(openrouterData(body)?.['limit_remaining'])
 }
 
-/**
- * What Tripo has left, in CREDITS — their answer names no currency at all, and `frozen` is what
- * their running tasks are holding rather than anything left to spend.
- *
- * 🛑 NOT MEASURED against a spending account: read on a key with 5 000 credits and nothing
- * running, so whether `balance` already excludes `frozen` is unknown. Shown as it comes.
- */
-function tripoLeft(body: unknown): readonly Money[] | null {
-  const data = isRecord(body) && isRecord(body['data']) ? body['data'] : null
-  const amount = data ? figureOf(data['balance']) : null
-
-  return amount === null ? null : [{ amount, currency: CREDIT_UNIT }]
-}
-
 type BalanceRead = (get: CreditsFetch, key: string) => Promise<readonly Money[] | null>
 
 /**
@@ -127,8 +114,21 @@ const READ: Partial<Record<CloudProviderId, BalanceRead>> = {
   deepseek: async (get, key) =>
     deepseekLeft(await readJson(get, 'https://api.deepseek.com/user/balance', key)),
 
-  [TRIPO_CLOUD]: async (get, key) =>
-    tripoLeft(await readJson(get, `${TRIPO_BASE_URL}/account/balance`, key)),
+  /**
+   * In CREDITS: their answer names no currency. Through the runner's own client, so the envelope
+   * is checked in ONE place — a refusal carrying a `data.balance` would otherwise be drawn as a
+   * balance. 🛑 NOT MEASURED whether `balance` already excludes `frozen`.
+   */
+  [TRIPO_CLOUD]: async (get, key) => {
+    const { balance } = await createTripoApi({
+      key: () => key,
+      // The timeout this reader gives every call: a pending host would otherwise never fill the
+      // cache, and every opening of the menu would ask again.
+      fetch: (input, init) => get(input, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) }),
+    }).balance()
+
+    return [{ amount: balance, currency: CREDIT_UNIT }]
+  },
 
   // Both at once, and it takes both: `/credits` asks for a management key while `/key` answers an
   // inference one but quotes a figure only where the key was given a limit.

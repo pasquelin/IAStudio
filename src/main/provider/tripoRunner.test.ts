@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { TRIPO_CATALOGUE, tripoModelId, type TripoEntry } from '@shared/domain/tripo'
 import type { TripoApi, TripoTask } from './tripoApi'
-import {
-  createTripoRunner,
-  extensionOfUrl,
-  tripoLaneLimit,
-  tripoLaneOf,
-  type TripoRunnerDeps,
-} from './tripoRunner'
+import { createTripoRunner, tripoLaneOf, type TripoRunnerDeps } from './tripoRunner'
 
 const entryOn = (endpoint: string): TripoEntry => {
   const entry = TRIPO_CATALOGUE.find(one => one.endpoint === endpoint && one.model === 'tripo-v3.1')
@@ -42,7 +36,7 @@ function harness(tasks: readonly TripoTask[] = [], overrides: Partial<TripoRunne
       written.push({ path, bytes })
       return Promise.resolve()
     },
-    destinationFor: (taskId, extension) => Promise.resolve(`/tmp/${taskId}.${extension}`),
+    destinationFor: (taskId, extension) => Promise.resolve(`/tmp/${taskId}${extension}`),
     gather: () => Promise.resolve(),
     log: () => {},
     ...overrides,
@@ -231,23 +225,18 @@ describe('following a Tripo task', () => {
   })
 })
 
-describe('extensionOfUrl', () => {
-  /** Their URLs end in `?X-Amz-…`: the last dot of the whole string files a mesh under `.com`. */
-  it('reads the path and never the signature', () => {
-    expect(extensionOfUrl('https://cdn.tripo.com/x.glb?X-Amz-Date=2026', 'png')).toBe('glb')
-    expect(extensionOfUrl('https://cdn.tripo.com/x?X-Amz-Date=2026', 'png')).toBe('png')
-    expect(extensionOfUrl('https://cdn.tripo.com/a.very-long-suffix', 'glb')).toBe('glb')
-  })
-})
-
 describe('the lane a target is counted in', () => {
   it('reads the category off the catalogue, and its published ceiling', () => {
     const lowPoly = TRIPO_CATALOGUE.find(one => one.model === 'tripo-p1')
+    const picture = TRIPO_CATALOGUE.find(one => one.family === 'image')
 
-    expect(tripoLaneOf(TEXT_TARGET.id)).toBe('model-h')
+    expect(tripoLaneOf(TEXT_TARGET.id)).toEqual({ name: 'model-h', limit: 10 })
     // Their P series is counted apart from the H one, at half the ceiling.
-    expect(tripoLaneOf(tripoModelId(lowPoly ?? TEXT_TO_MODEL))).toBe('model-p')
-    expect(tripoLaneLimit('image')).toBe(1)
+    expect(tripoLaneOf(tripoModelId(lowPoly ?? TEXT_TO_MODEL))).toEqual({
+      name: 'model-p',
+      limit: 5,
+    })
+    expect(tripoLaneOf(tripoModelId(picture ?? TEXT_TO_MODEL))?.limit).toBe(1)
   })
 
   it('counts nothing of another runtime', () => {

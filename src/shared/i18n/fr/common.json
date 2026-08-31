@@ -29,7 +29,7 @@
       "cancelled": "Annulée"
     },
     "cancel": "Annuler la tâche",
-    "cancelRefused": "{{cloud}} n’arrête pas une génération commencée : elle ira jusqu’au bout et sera facturée."
+    "cancelRefused": "Ce service n’arrête pas une génération commencée : elle ira jusqu’au bout et sera facturée."
   },
   "tasks": {
     "running_one": "{{count, number}} tâche",

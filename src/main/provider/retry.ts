@@ -13,11 +13,8 @@ export type RetryOptions = {
   /** What a retry can fix here. Defaults to the Scenario SDK's own reading of a failure. */
   retryable?: (error: unknown) => boolean
   /**
-   * How long the SERVICE asked to be left alone for, in milliseconds — a `Retry-After` header.
-   * `null` where it said nothing, which is when the doubling below decides instead.
-   *
-   * Honoured rather than averaged with the backoff: a service that names a delay knows when its
-   * window reopens, and coming back earlier is a second refusal with certainty.
+   * A `Retry-After`, in milliseconds; `null` where the service said nothing. Honoured rather
+   * than averaged with the backoff — a service naming a delay knows when its window reopens.
    */
   delayFor?: (error: unknown) => number | null
 }
@@ -32,13 +29,7 @@ export const DEFAULT_BACKOFF_BASE_MS = 1000
  */
 const BACKOFF_CEILING_MS = 30_000
 
-/**
- * The longest a service may ask to be left alone for.
- *
- * A job holds its place in the concurrency bound while it waits, so an hour asked for by a
- * header would block the queue behind it for an hour. Past this the studio comes back early and
- * takes the refusal, which is the outcome that at least keeps the queue moving.
- */
+/** A job holds its concurrency slot while it waits: past this the studio comes back early. */
 const ASKED_CEILING_MS = 60_000
 
 /** How far a wait may be pulled either side of its nominal length. */

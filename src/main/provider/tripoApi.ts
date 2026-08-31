@@ -1,14 +1,13 @@
-import { isRecord } from '@shared/guards'
+import type { ApiFailure } from '@shared/domain/failure'
+import { isRecord, readOptionalNumber, readText } from '@shared/guards'
 import { TRIPO_BASE_URL } from '@shared/domain/tripo'
 
 /** Narrower than `fetch` on purpose: this is what a test has to answer. */
 export type TripoFetch = (input: string, init?: RequestInit) => Promise<Response>
 
 /**
- * What their v3 answers with, measured 2026-08-31 against the live service: a success carries
- * `{"code":0,"status":"success","data":{…}}`, a refusal `{"code":N,"status":"error","message":…,
- * "suggestion":…}` — and the request id travels in the `X-Request-ID` HEADER, not in the body,
- * whatever their reference says.
+ * Measured 2026-08-31 against the live service: a success carries `{"code":0,…,"data":{…}}`, a
+ * refusal `{"code":N,"status":"error","message":…}`.
  */
 export class TripoError extends Error {
   constructor(
@@ -31,12 +30,27 @@ const TRIPO_RATE_LIMITED = 1007
 const TRIPO_TOO_MANY_TASKS = 2000
 
 /**
- * What a retry can fix on their side.
+ * Their refusal, in the studio's OWN vocabulary — the same codes an SDK error reduces to.
  *
- * The two codes are NOT the same refusal and the studio answers both by waiting: 1007 is their
- * rate limiter, 2000 is a category already full — the ceiling `TRIPO_LANE_LIMITS` exists to stay
- * under, so one arriving means the studio's own count and theirs disagree. Everything else — a
- * bad key, a malformed id, a body they refuse — fails identically forever.
+ * 🛑 Without this the panel says « erreur inattendue » for a revoked key, where the Scenario
+ * half says « clé invalide »: `apiFailureOf` reads the SDK's classes and answers `unexpected`
+ * for everything another service words its own way.
+ */
+export function tripoFailureOf(error: unknown): ApiFailure | null {
+  if (!(error instanceof TripoError)) return null
+  if (error.httpStatus === 401 || error.code === 2) return 'invalid-credentials'
+  if (error.httpStatus === 403) return 'forbidden'
+  if (error.httpStatus === 404) return 'not-found'
+  if (error.httpStatus === 429) return 'rate-limited'
+  if (error.httpStatus >= 500) return 'server'
+
+  return 'unexpected'
+}
+
+/**
+ * What a retry can fix on their side. Their two waitable refusals are NOT the same thing: 1007
+ * is their rate limiter, 2000 a category already full — one arriving means the studio's own
+ * count and theirs disagree.
  */
 export function isRetryableTripo(error: unknown): boolean {
   if (!(error instanceof TripoError)) return false
@@ -82,20 +96,10 @@ export type TripoApiOptions = {
   baseUrl?: string
 }
 
-const numberIn = (record: Record<string, unknown>, key: string): number | undefined => {
-  const held = record[key]
-  return typeof held === 'number' && Number.isFinite(held) ? held : undefined
-}
+const textOf = (record: Record<string, unknown>, key: string): string | undefined =>
+  readText(record, key) ?? undefined
 
-const textIn = (record: Record<string, unknown>, key: string): string | undefined => {
-  const held = record[key]
-  return typeof held === 'string' && held.length > 0 ? held : undefined
-}
-
-/**
- * `Retry-After` in either shape the RFC allows — seconds, or a date. `null` for a header that
- * is neither, which is what keeps a malformed one from becoming a wait of `NaN`.
- */
+/** Seconds or a date, as the RFC allows. Nothing for a third shape, which would wait `NaN`. */
 export function retryAfterMsOf(header: string | null, now: number): number | undefined {
   if (!header) return undefined
 
@@ -106,40 +110,34 @@ export function retryAfterMsOf(header: string | null, now: number): number | und
   return Number.isFinite(at) ? Math.max(0, at - now) : undefined
 }
 
-/**
- * The result URL of a finished task, whichever of the two their output carries: a mesh answers
- * `model_url`, a picture `image_url` — and `rendered_image_url` is the preview of a MESH, never
- * its result, so it is read last and only when nothing else answered.
- */
+/** 🛑 `rendered_image_url` is a mesh's PREVIEW and never its result — read last, or not at all. */
 function outputUrlOf(output: unknown): string | undefined {
   if (!isRecord(output)) return undefined
 
   return (
-    textIn(output, 'model_url') ??
-    textIn(output, 'image_url') ??
-    textIn(output, 'pbr_model') ??
-    textIn(output, 'rendered_image_url')
+    textOf(output, 'model_url') ??
+    textOf(output, 'image_url') ??
+    textOf(output, 'pbr_model') ??
+    textOf(output, 'rendered_image_url')
   )
 }
 
 export function taskOf(payload: unknown): TripoTask | null {
   if (!isRecord(payload)) return null
-  const taskId = textIn(payload, 'task_id') ?? textIn(payload, 'id')
-  const status = textIn(payload, 'status')
+  const taskId = textOf(payload, 'task_id') ?? textOf(payload, 'id')
+  const status = textOf(payload, 'status')
   if (!taskId || !status) return null
+
+  const progress = readOptionalNumber(payload, 'progress')
+  const credits = readOptionalNumber(payload, 'credits_consumed')
+  const outputUrl = outputUrlOf(payload['output'])
 
   return {
     taskId,
     status,
-    ...(numberIn(payload, 'progress') === undefined
-      ? {}
-      : { progress: numberIn(payload, 'progress') }),
-    ...(numberIn(payload, 'credits_consumed') === undefined
-      ? {}
-      : { credits: numberIn(payload, 'credits_consumed') }),
-    ...(outputUrlOf(payload['output']) === undefined
-      ? {}
-      : { outputUrl: outputUrlOf(payload['output']) }),
+    ...(progress === undefined ? {} : { progress }),
+    ...(credits === undefined ? {} : { credits }),
+    ...(outputUrl === undefined ? {} : { outputUrl }),
   }
 }
 
@@ -156,13 +154,8 @@ export function createTripoApi({
   fetch: get = fetch,
   baseUrl = TRIPO_BASE_URL,
 }: TripoApiOptions): TripoApi {
-  /**
-   * Whether `POST /tasks/list` has been seen to work.
-   *
-   * 🛑 NOT MEASURED: their reference recommends the grouped read and the studio has never run it.
-   * Refused once, this drops to one request per task for the rest of the session rather than
-   * failing every poll on a shape nobody has verified.
-   */
+  // 🛑 NOT MEASURED: their reference recommends the grouped read and nothing here has run it.
+  // Refused once, this drops to one request per task for the session.
   let grouped = true
 
   const call = async (
@@ -185,13 +178,13 @@ export function createTripoApi({
       // A gateway answering HTML is the ordinary shape of an outage: the status below says it.
     }
 
-    const code = isRecord(body) ? numberIn(body, 'code') : undefined
+    const code = isRecord(body) ? readOptionalNumber(body, 'code') : undefined
     if (response.ok && code === 0) return isRecord(body) ? body['data'] : null
 
     throw new TripoError(
       code ?? 0,
       response.status,
-      (isRecord(body) ? textIn(body, 'message') : undefined) ??
+      (isRecord(body) ? textOf(body, 'message') : undefined) ??
         `${path} answered ${response.status}`,
       retryAfterMsOf(response.headers.get('retry-after'), Date.now()),
     )
@@ -212,7 +205,7 @@ export function createTripoApi({
   return {
     create: async (endpoint, body) => {
       const data = await postJson(endpoint, body)
-      const taskId = isRecord(data) ? (textIn(data, 'task_id') ?? textIn(data, 'id')) : undefined
+      const taskId = isRecord(data) ? (textOf(data, 'task_id') ?? textOf(data, 'id')) : undefined
       // Refused rather than answered with an empty id: a task that exists and cannot be followed
       // is a generation paid for and abandoned, which is the one outcome worth throwing over.
       if (!taskId) throw new TripoError(0, 200, 'a task was created without an id to follow it by')
@@ -239,7 +232,7 @@ export function createTripoApi({
       const form = new FormData()
       form.append('file', new Blob([bytes], { type: mimeType }), fileName)
       const data = await call('files', { method: 'POST', body: form })
-      const token = isRecord(data) ? textIn(data, 'file_token') : undefined
+      const token = isRecord(data) ? textOf(data, 'file_token') : undefined
       if (!token) throw new TripoError(0, 200, 'a file was accepted without a token')
 
       return token
@@ -249,7 +242,10 @@ export function createTripoApi({
       const data = await call('account/balance')
       if (!isRecord(data)) throw new TripoError(0, 200, 'the balance came back unreadable')
 
-      return { balance: numberIn(data, 'balance') ?? 0, frozen: numberIn(data, 'frozen') ?? 0 }
+      return {
+        balance: readOptionalNumber(data, 'balance') ?? 0,
+        frozen: readOptionalNumber(data, 'frozen') ?? 0,
+      }
     },
   }
 }

@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { Job } from '@shared/domain/job'
-import { TRIPO_CATALOGUE, tripoModelId } from '@shared/domain/tripo'
 import { job as jobOf } from '@/stores/job-fixtures'
 import { JobRow } from './JobRow'
 
@@ -42,27 +41,26 @@ describe('what a finished job says it cost', () => {
 })
 
 /**
- * Decision 7 of the Tripo plan: their service publishes no cancellation, so a button reporting a
- * running generation as stopped would have somebody believe they stopped a spend that continues.
+ * A service that publishes no cancellation: a button reporting a running generation as stopped
+ * would have somebody believe they stopped a spend that continues. The row is TOLD — it reads
+ * `job.cancellable`, and knows no cloud by name.
  */
-describe('a generation on a cloud that does not stop one', () => {
-  const target = TRIPO_CATALOGUE.map(tripoModelId)[0] ?? ''
-
+describe('a generation nothing can stop', () => {
   it('refuses through the button, and says why', () => {
-    render(<JobRow job={job({ targetId: target, status: 'running' })} />)
+    render(<JobRow job={job({ cancellable: false, status: 'running' })} />)
 
     expect(screen.getByRole('button')).toHaveAttribute('aria-disabled', 'true')
   })
 
   // Nothing has been spent while it waits in the studio's own queue: that one still stops here.
-  it('still cancels one that has not reached them yet', () => {
-    render(<JobRow job={job({ targetId: target, status: 'queued' })} />)
+  it('still cancels one that has not reached the service yet', () => {
+    render(<JobRow job={job({ cancellable: false, status: 'queued' })} />)
 
     expect(screen.getByRole('button')).not.toHaveAttribute('aria-disabled')
   })
 
-  it('leaves every other cloud alone', () => {
-    render(<JobRow job={job({ targetId: 'model_flux', status: 'running' })} />)
+  it('leaves a job that carries no such word alone', () => {
+    render(<JobRow job={job({ status: 'running' })} />)
 
     expect(screen.getByRole('button')).not.toHaveAttribute('aria-disabled')
   })

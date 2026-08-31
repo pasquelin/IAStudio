@@ -208,3 +208,19 @@ describe('a balance quoted in credits', () => {
     })
   })
 })
+
+/**
+ * 🛑 The envelope is checked in ONE place. Read a second way, a refusal that still carries a
+ * `data.balance` would be drawn as a balance by the title bar and refused by the runner.
+ */
+describe('a refusal wearing a balance', () => {
+  it('reads it as unreadable rather than as what the key has left', async () => {
+    const fetch = answers({
+      [TRIPO_BALANCE]: { code: 2, status: 'error', message: 'no', data: { balance: 5000 } },
+    })
+
+    expect(await reader([account('tri', 'tripo')], fetch).balances()).toEqual({
+      tri: { state: 'unreadable' },
+    })
+  })
+})

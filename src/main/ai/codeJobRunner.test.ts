@@ -118,7 +118,7 @@ describe('a script written by a chat cloud', () => {
 
     const submitted = await runner.submit({ id: ANTHROPIC }, { prompt: 'a spin' })
     await finished(runner, submitted.jobId)
-    runner.forget?.(submitted.jobId)
+    runner.forget?.(submitted.jobId, TARGET)
 
     const again = await runner.poll(submitted.jobId, TARGET)
     expect(again.status).toBe('success')

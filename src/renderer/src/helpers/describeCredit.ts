@@ -12,8 +12,7 @@ export type CreditReading = {
  * One amount, written the way its cloud quotes it.
  *
  * 🛑 `Intl.NumberFormat` throws `RangeError` on a currency it does not know, in the title bar's
- * own render — so a balance counted in CREDITS has to be told apart before it is formatted, and
- * the unit is named by the reader's own bundle rather than by a three-letter code.
+ * own render — so a balance counted in credits is told apart BEFORE it is formatted.
  */
 function amountOf(
   money: { amount: number; currency: string },
@@ -22,7 +21,7 @@ function amountOf(
 ): string {
   return money.currency === CREDIT_UNIT
     ? translate('accounts.credits.unit', {
-        amount: formatDecimal(money.amount, locale, { digits: 0 }),
+        units: formatDecimal(money.amount, locale, { digits: 0 }),
       })
     : formatMoney(money.amount, money.currency, locale)
 }

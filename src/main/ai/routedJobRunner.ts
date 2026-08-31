@@ -24,21 +24,32 @@ export type RoutedJobDeps = {
 }
 
 export function createRoutedJobRunner(deps: RoutedJobDeps): JobRunner {
-  // Rejected rather than thrown: `JobManager` awaits these, and a synchronous throw from a
-  // submission would escape the retry that is meant to word the failure.
-  const required = async (runner: JobRunner | null): Promise<JobRunner> => {
+  const required = (runner: JobRunner | null): JobRunner => {
     if (!runner) throw new Error('no account is held for a generation that needs one')
 
     return runner
   }
 
-  /** Which of the four owns a target, decided by the target alone. */
+  /**
+   * Which of the four owns a target, decided by the target alone. `async` so a missing account
+   * comes back as a rejection: `JobManager` awaits these, and a synchronous throw from a
+   * submission would escape the retry that is meant to word the failure.
+   */
   const routed = async (targetId: string): Promise<JobRunner> => {
     if (cloudOfModelId(targetId) !== null) return deps.code
-    if (isTripoModelId(targetId)) return await required(deps.tripo())
+    if (isTripoModelId(targetId)) return required(deps.tripo())
     if (deps.isLocalTarget(targetId)) return deps.local
 
-    return await required(deps.cloud())
+    return required(deps.cloud())
+  }
+
+  /** The same routing, for what a runner may answer without an account being held. */
+  const owner = (targetId: string): JobRunner | null => {
+    if (cloudOfModelId(targetId) !== null) return deps.code
+    if (isTripoModelId(targetId)) return deps.tripo()
+    if (deps.isLocalTarget(targetId)) return deps.local
+
+    return deps.cloud()
   }
 
   return {
@@ -49,5 +60,10 @@ export function createRoutedJobRunner(deps: RoutedJobDeps): JobRunner {
     cancel: async (jobId, target) => {
       await (await routed(target.id)).cancel(jobId, target)
     },
+
+    // 🛑 Passed on, and it was not: the manager calls `runner.forget?.(…)` on the ROUTED runner,
+    // so an absent method here swallowed every release — the Tripo runner kept one prompt per
+    // submission for the life of the process, and its own `forget` was dead code.
+    forget: (jobId, target) => owner(target.id)?.forget?.(jobId, target),
   }
 }

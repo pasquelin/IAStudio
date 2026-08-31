@@ -50,12 +50,11 @@ describe('the Tripo API', () => {
         ),
       )
 
-    const failure = await apiOn(get)
-      .create('generation/text-to-model', {})
-      .catch((error: unknown) => error)
-
-    expect(failure).toBeInstanceOf(TripoError)
-    expect(failure).toMatchObject({ code: 2000, httpStatus: 429, retryAfterMs: 3000 })
+    await expect(apiOn(get).create('generation/text-to-model', {})).rejects.toMatchObject({
+      code: 2000,
+      httpStatus: 429,
+      retryAfterMs: 3000,
+    })
   })
 
   // A 200 whose body says `code` is not zero is a refusal too — the envelope decides, not HTTP.

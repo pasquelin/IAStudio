@@ -87,6 +87,15 @@ export function readText(source: Record<string, unknown>, key: string): string |
   return typeof value === 'string' && value.trim() !== '' ? value : null
 }
 
+/** A number held as a number, or nothing — where `readNumber` answers a fallback. */
+export function readOptionalNumber(
+  source: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  const value = source[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
 /**
  * A number that cannot be negative — a length, an intensity, a point in time. Twelve call sites
  * across four engines wrote `Math.max(0, readNumber(…))` before this existed.

@@ -44,11 +44,8 @@ export type RemoteJob = {
 export type JobRunner = {
   submit: (target: JobTarget, body: Record<string, unknown>) => Promise<RemoteJob>
   /**
-   * The target rides along with the id, and a runner that needs neither may take one argument.
-   *
-   * What it buys is the ROUTING: a job picked up from a previous session reaches a runner that
-   * has never heard of its id, and a router keying on ids alone had to remember every id it ever
-   * minted — or send the poll of a resumed generation to the wrong cloud.
+   * The target rides along, and a runner needing neither may take one argument: a job picked up
+   * from a previous session reaches a runner that has never heard of its id.
    */
   poll: (jobId: string, target: JobTarget) => Promise<RemoteJob>
   cancel: (jobId: string, target: JobTarget) => Promise<void>
@@ -56,7 +53,7 @@ export type JobRunner = {
    * The manager has the outcome and will never poll this one again — whatever the runner kept to
    * answer with may go. Optional: a runner that keeps nothing has nothing to release.
    */
-  forget?: (jobId: string) => void
+  forget?: (jobId: string, target: JobTarget) => void
 }
 
 /**
@@ -134,12 +131,14 @@ export type JobManagerDeps = {
   /** Whether the target is a model this machine holds. Absent, every job uses `concurrency`. */
   isLocalTarget?: (targetId: string) => boolean
   /**
-   * The CATEGORY a target is counted in, beside the global bound, and how many of that category
-   * may run at once. `null` for a target counted only against `concurrency()`.
-   *
-   * Tripo is why: its ceilings are per category and one of them is ONE picture at a time, so two
-   * images launched together are a refusal every time — while its ten 3D slots sit idle. A single
-   * number for a whole cloud cannot say that, and discovering it by a 429 spends the request.
+   * Whether the service behind a target stops a task it has started. Absent, every one does —
+   * which is what the studio assumed before a cloud that does not.
+   */
+  cancellableTarget?: (targetId: string) => boolean
+  /**
+   * A per-category ceiling beside the global bound — `null` for a target counted only against
+   * `concurrency()`. One cloud allows ONE picture at a time while ten of its 3D slots sit idle,
+   * which a single number for a whole cloud cannot say.
    */
   lane?: (targetId: string) => { name: string; limit: number } | null
   maxRetries: () => number
@@ -164,11 +163,7 @@ export type JobManagerDeps = {
   sleep: (ms: number) => Promise<void>
   pollIntervalMs?: number
   backoffBaseMs?: number
-  /**
-   * What a retry can fix, for the clouds this manager runs against. Defaults to the Scenario
-   * SDK's own reading — which answers `false` for every refusal another service words its own
-   * way, so a second cloud's rate limit would fail a job that one wait would have saved.
-   */
+  /** What a retry can fix. Defaults to the Scenario SDK's reading, which is blind to the rest. */
   retryable?: (error: unknown) => boolean
   /** How long a service asked to be left alone for. See `RetryOptions.delayFor`. */
   retryDelayFor?: (error: unknown) => number | null
@@ -362,6 +357,7 @@ export function createJobManager({
   concurrency,
   localConcurrency,
   isLocalTarget,
+  cancellableTarget,
   lane,
   maxRetries,
   resolveAssetInputs,
@@ -529,7 +525,7 @@ export function createJobManager({
     // 🛑 HERE and not on the poll that answered: `follow` leaves without settling when the
     // project changed under it, and the resume that follows polls the SAME job again — a runner
     // that had let go of its answer would settle it succeeded with nothing.
-    if (entry.remoteId !== null) entry.account?.runner.forget?.(entry.remoteId)
+    if (entry.remoteId !== null) entry.account?.runner.forget?.(entry.remoteId, targetOf(entry))
     // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
     // agent and its sockets, and a finished job would keep a switched-away account's alive for
     // the rest of the session. `execute` holds its own reference, and `cancel` returns before
@@ -819,6 +815,7 @@ export function createJobManager({
       progress: 0,
       createdAt: now(),
       assetIds: [],
+      ...(cancellableTarget?.(target.id) === false ? { cancellable: false } : {}),
     }
 
     const active = accounts.active()

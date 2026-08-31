@@ -16,10 +16,7 @@ describe('describeCredit', () => {
     expect(reading).toEqual({ figure: '$12.50', sentenceKey: 'accounts.credits.left' })
   })
 
-  /**
-   * 🛑 `Intl.NumberFormat` throws `RangeError` on a currency it does not know, inside the title
-   * bar's own render — a balance counted in credits must never reach it as one.
-   */
+  // 🛑 `Intl.NumberFormat` throws `RangeError` on a currency it does not know, in a render.
   it('names the unit of a balance that is not money, without asking Intl for a currency', () => {
     const reading = describeCredit(
       { state: 'known', left: [{ amount: 5000, currency: CREDIT_UNIT }] },

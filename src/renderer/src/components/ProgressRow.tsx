@@ -16,11 +16,7 @@ export type ProgressRowProps = {
   tone?: StatusTone
   /**
    * Both or neither: a labelless button is unreachable, a labelled one that does nothing lies.
-   *
-   * `refusedBecause` is the third case, and it is not a fourth state of the same button: some
-   * services do not stop a task they have started, and a button that reported one as cancelled
-   * would have somebody believe they stopped a spend that is still running. The row keeps the
-   * button, says why in its tooltip, and does nothing when it is pressed.
+   * `refusedBecause` keeps the button and says why, rather than report a running spend as stopped.
    */
   cancel?: { label: string; onClick: () => void; refusedBecause?: string }
   /** Rendered under the row, for a failure worth a sentence. */
@@ -39,6 +35,8 @@ export function ProgressRow({
   cancel,
   detail,
 }: ProgressRowProps) {
+  const refused = cancel?.refusedBecause !== undefined
+
   return (
     <li className="flex flex-col gap-0.5 px-2 py-1 text-xs">
       <div className="flex items-center gap-2">
@@ -52,17 +50,16 @@ export function ProgressRow({
           <ToolButton
             icon={mdiCloseCircleOutline}
             label={cancel.label}
-            // The reason REPLACES the label in the tooltip: the name is already what the button
-            // answers to, and repeating it would leave the refusal unsaid.
+            // The reason REPLACES the label in the tooltip: repeating a name the button already
+            // answers to would leave the refusal unsaid.
             description={cancel.refusedBecause}
             tooltip={TIP_LEFT}
             variant="header"
-            // `aria-disabled` rather than `disabled`: a disabled button dispatches no pointer
-            // event in Chromium, so the tooltip carrying the reason would never be drawn — and
-            // the reason is the whole point of keeping the button on the row.
-            aria-disabled={cancel.refusedBecause === undefined ? undefined : true}
-            className={cancel.refusedBecause === undefined ? undefined : 'cursor-not-allowed'}
-            onClick={cancel.refusedBecause === undefined ? cancel.onClick : undefined}
+            // 🛑 `aria-disabled` and not `disabled`: a disabled button dispatches no pointer event
+            // in Chromium, so the tooltip carrying the reason would never be drawn.
+            aria-disabled={refused || undefined}
+            className={refused ? 'cursor-not-allowed' : undefined}
+            onClick={refused ? undefined : cancel.onClick}
           />
         )}
       </div>

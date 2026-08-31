@@ -137,3 +137,38 @@ describe('the routed job runner', () => {
     await expect(runner.submit({ id: 'model_flux' }, {})).rejects.toThrow(/no account/)
   })
 })
+
+/**
+ * 🛑 The manager releases a settled job through the ROUTED runner. Absent here, the optional
+ * call was swallowed: every runner's own `forget` was dead code, and the one that keeps a prompt
+ * per submission kept them for the life of the process.
+ */
+describe('releasing a settled job', () => {
+  it('reaches the runner that owns the target', () => {
+    const tripo = { ...tripoRunner(), forget: vi.fn() }
+    const runner = createRoutedJobRunner({
+      local: localRunner(),
+      code: codeRunner(),
+      tripo: () => tripo,
+      cloud: () => cloudRunner(),
+      isLocalTarget: () => false,
+    })
+
+    runner.forget?.('9a1c-5248', { id: anyTripoTarget })
+
+    expect(tripo.forget).toHaveBeenCalledWith('9a1c-5248', { id: anyTripoTarget })
+  })
+
+  // Nothing to release, and nothing to throw over: a job whose account went away is settled too.
+  it('says nothing when no account is held for the target any more', () => {
+    const runner = createRoutedJobRunner({
+      local: localRunner(),
+      code: codeRunner(),
+      tripo: () => null,
+      cloud: () => null,
+      isLocalTarget: () => false,
+    })
+
+    expect(() => runner.forget?.('9a1c-5248', { id: anyTripoTarget })).not.toThrow()
+  })
+})

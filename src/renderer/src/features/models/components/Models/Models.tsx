@@ -36,8 +36,6 @@ const PAGE_LIMIT = 24
  */
 const AUTOMATIC_PULLS = 6
 
-/** Never rebuilt: a fresh empty array per render would invalidate the memo that reads it. */
-
 export type ModelsProps = {
   /** The family whose catalogue is browsed. The settings screen it sits under names it. */
   family: ModelFamily

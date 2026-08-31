@@ -444,6 +444,19 @@ describe('job manager', () => {
     await settled()
   })
 
+  /**
+   * A service that does not stop what it started — the row draws what the manager decided, and
+   * names no cloud of its own.
+   */
+  it('marks a job the service will not stop as uncancellable, and every other one as nothing', () => {
+    const { manager } = harness({
+      cancellableTarget: targetId => targetId !== 'tripo:one',
+    })
+
+    expect(manager.submit({ id: 'tripo:one' }, 'One', {}).cancellable).toBe(false)
+    expect(manager.submit({ id: 'model_flux' }, 'Flux', {}).cancellable).toBeUndefined()
+  })
+
   it('never runs two jobs on this machine at once', async () => {
     let active = 0
     let peak = 0
@@ -573,7 +586,7 @@ describe('job manager', () => {
     manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
-    expect(forget).toHaveBeenCalledWith('job_remote')
+    expect(forget).toHaveBeenCalledWith('job_remote', { id: 'model_flux' })
   })
 
   /** The step aside settles nothing, so what the runner kept has to outlive it — see the resume. */

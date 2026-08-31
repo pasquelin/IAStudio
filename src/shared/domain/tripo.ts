@@ -1,5 +1,11 @@
 import type { FieldDescriptor, ModelFamily } from './model'
-import { ADVANCED_GROUP, PROMPT_FIELD_KEY, type LocalFieldTemplate } from './localFields'
+import {
+  ADVANCED_GROUP,
+  fieldKeysOf,
+  fieldsFrom,
+  PROMPT_FIELD_KEY,
+  type LocalFieldTemplate,
+} from './localFields'
 
 /**
  * The Tripo catalogue, as DATA — their API publishes no model listing, so the studio carries one.
@@ -52,16 +58,7 @@ export type TripoEntry = {
    * launched. The one figure a real submission will correct, and it is quoted as an estimate.
    */
   readonly credits: number
-  readonly fields: readonly TripoFieldTemplate[]
-}
-
-/**
- * One knob, before a language is chosen — `LocalFieldTemplate` with its closed lists named by
- * key too. A `FieldOption.label` is SCREEN TEXT, so a catalogue that filled it directly would be
- * writing French into `shared/`; `optionKeys` is the half that survives translation.
- */
-export type TripoFieldTemplate = Omit<LocalFieldTemplate, 'options'> & {
-  readonly optionKeys?: readonly { readonly value: string; readonly labelKey: string }[]
+  readonly fields: readonly LocalFieldTemplate[]
 }
 
 /** `tripo:<endpoint>:<model>` — what a job target carries, and what routes its poll. */
@@ -75,7 +72,7 @@ export function isTripoModelId(modelId: string): boolean {
   return modelId.startsWith(TRIPO_PREFIX)
 }
 
-const PROMPT: TripoFieldTemplate = {
+const PROMPT: LocalFieldTemplate = {
   key: PROMPT_FIELD_KEY,
   kind: 'longText',
   labelKey: 'localFields.prompt',
@@ -83,7 +80,7 @@ const PROMPT: TripoFieldTemplate = {
   promptSpark: true,
 }
 
-const NEGATIVE_PROMPT: TripoFieldTemplate = {
+const NEGATIVE_PROMPT: LocalFieldTemplate = {
   key: 'negative_prompt',
   kind: 'longText',
   labelKey: 'localFields.negativePrompt',
@@ -96,15 +93,15 @@ const NEGATIVE_PROMPT: TripoFieldTemplate = {
  * a model a previous run produced. Their v3 unified five v2 field names into this one, which
  * takes a `task_id`, a URL or a `file_token` indifferently.
  */
-function input(kind: 'image' | 'mesh' | 'raw', labelKey: string): TripoFieldTemplate {
+function input(kind: 'image' | 'mesh' | 'raw', labelKey: string): LocalFieldTemplate {
   return { key: 'input', kind, labelKey, required: true }
 }
 
-function seed(key: string, labelKey: string): TripoFieldTemplate {
+function seed(key: string, labelKey: string): LocalFieldTemplate {
   return { key, kind: 'seed', labelKey, required: false, group: ADVANCED_GROUP }
 }
 
-const TEXTURE: TripoFieldTemplate = {
+const TEXTURE: LocalFieldTemplate = {
   key: 'texture',
   kind: 'boolean',
   labelKey: 'tripoFields.texture',
@@ -115,7 +112,7 @@ const TEXTURE: TripoFieldTemplate = {
 }
 
 /** Documented as overriding `texture` to true, which is why its help says so rather than hiding it. */
-const PBR: TripoFieldTemplate = {
+const PBR: LocalFieldTemplate = {
   key: 'pbr',
   kind: 'boolean',
   labelKey: 'tripoFields.pbr',
@@ -125,7 +122,7 @@ const PBR: TripoFieldTemplate = {
   costImpact: true,
 }
 
-function quality(key: 'texture_quality' | 'geometry_quality'): TripoFieldTemplate {
+function quality(key: 'texture_quality' | 'geometry_quality'): LocalFieldTemplate {
   return {
     key,
     kind: 'choice',
@@ -141,7 +138,7 @@ function quality(key: 'texture_quality' | 'geometry_quality'): TripoFieldTemplat
   }
 }
 
-const FACE_LIMIT: TripoFieldTemplate = {
+const FACE_LIMIT: LocalFieldTemplate = {
   key: 'face_limit',
   kind: 'integer',
   labelKey: 'tripoFields.face_limit',
@@ -152,7 +149,7 @@ const FACE_LIMIT: TripoFieldTemplate = {
   group: ADVANCED_GROUP,
 }
 
-const QUAD: TripoFieldTemplate = {
+const QUAD: LocalFieldTemplate = {
   key: 'quad',
   kind: 'boolean',
   labelKey: 'tripoFields.quad',
@@ -163,7 +160,7 @@ const QUAD: TripoFieldTemplate = {
   costImpact: true,
 }
 
-const SMART_LOW_POLY: TripoFieldTemplate = {
+const SMART_LOW_POLY: LocalFieldTemplate = {
   key: 'smart_low_poly',
   kind: 'boolean',
   labelKey: 'tripoFields.smart_low_poly',
@@ -173,7 +170,7 @@ const SMART_LOW_POLY: TripoFieldTemplate = {
   costImpact: true,
 }
 
-const GENERATE_PARTS: TripoFieldTemplate = {
+const GENERATE_PARTS: LocalFieldTemplate = {
   key: 'generate_parts',
   kind: 'boolean',
   labelKey: 'tripoFields.generate_parts',
@@ -184,7 +181,7 @@ const GENERATE_PARTS: TripoFieldTemplate = {
   costImpact: true,
 }
 
-const AUTO_SIZE: TripoFieldTemplate = {
+const AUTO_SIZE: LocalFieldTemplate = {
   key: 'auto_size',
   kind: 'boolean',
   labelKey: 'tripoFields.auto_size',
@@ -193,7 +190,7 @@ const AUTO_SIZE: TripoFieldTemplate = {
   group: ADVANCED_GROUP,
 }
 
-const EXPORT_UV: TripoFieldTemplate = {
+const EXPORT_UV: LocalFieldTemplate = {
   key: 'export_uv',
   kind: 'boolean',
   labelKey: 'tripoFields.export_uv',
@@ -202,7 +199,7 @@ const EXPORT_UV: TripoFieldTemplate = {
   group: ADVANCED_GROUP,
 }
 
-const TEXTURE_ALIGNMENT: TripoFieldTemplate = {
+const TEXTURE_ALIGNMENT: LocalFieldTemplate = {
   key: 'texture_alignment',
   kind: 'choice',
   labelKey: 'tripoFields.texture_alignment',
@@ -215,7 +212,7 @@ const TEXTURE_ALIGNMENT: TripoFieldTemplate = {
   group: ADVANCED_GROUP,
 }
 
-const AUTOFIX: TripoFieldTemplate = {
+const AUTOFIX: LocalFieldTemplate = {
   key: 'enable_image_autofix',
   kind: 'boolean',
   labelKey: 'tripoFields.enable_image_autofix',
@@ -226,7 +223,7 @@ const AUTOFIX: TripoFieldTemplate = {
 }
 
 /** Every knob a mesh generation shares, in the order the form reads them. */
-const MESH_KNOBS: readonly TripoFieldTemplate[] = [
+const MESH_KNOBS: readonly LocalFieldTemplate[] = [
   TEXTURE,
   PBR,
   quality('texture_quality'),
@@ -517,31 +514,15 @@ export function tripoEntryOf(modelId: string): TripoEntry | null {
   return BY_ID.get(modelId) ?? null
 }
 
-/**
- * The form, in the reader's language. `translate` is handed in for the reason `localFieldsOf`
- * takes one: this runs in the main process, where the language is a service.
- */
+/** The form, in the reader's language — through the one mapping `localFields.ts` publishes. */
 export function tripoFieldsOf(
   entry: TripoEntry,
   translate: (key: string) => string,
 ): FieldDescriptor[] {
-  return entry.fields.map(({ labelKey, helpKey, optionKeys, ...field }) => ({
-    ...field,
-    label: translate(labelKey),
-    ...(helpKey ? { help: translate(helpKey) } : {}),
-    ...(optionKeys
-      ? { options: optionKeys.map(one => ({ value: one.value, label: translate(one.labelKey) })) }
-      : {}),
-  }))
+  return fieldsFrom(entry.fields, translate)
 }
 
 /** The keys a bundle has to name, read off the catalogue rather than off a copy of it. */
 export function tripoFieldKeys(): readonly string[] {
-  return TRIPO_CATALOGUE.flatMap(entry =>
-    entry.fields.flatMap(field => [
-      field.labelKey,
-      ...(field.helpKey ? [field.helpKey] : []),
-      ...(field.optionKeys ?? []).map(one => one.labelKey),
-    ]),
-  )
+  return fieldKeysOf(TRIPO_CATALOGUE.flatMap(entry => entry.fields))
 }

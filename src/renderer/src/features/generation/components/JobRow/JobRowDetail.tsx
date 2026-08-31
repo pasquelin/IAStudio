@@ -18,17 +18,13 @@ export function JobRowDetail({ job }: { job: Job }) {
 
   if (job.cost === undefined) return null
 
-  // Through `formatUnits` like every other figure in Compute Units: it groups the thousands
-  // AND keeps the decimals of a cheap call, which rounding would report as free.
-  //
-  // 🛑 The UNIT comes off the job, never from here: a Tripo credit is not a creative unit, and a
-  // row labelling one as the other would have two counters read as one.
+  // 🛑 The UNIT comes off the job: a credit is not a creative unit, and a row labelling one as
+  // the other would have two counters read as one.
+  const units = formatUnits(job.cost, i18n.language)
+
   return (
     <span className="text-muted text-tiny">
-      {t(job.costUnit === CREDIT_UNIT ? 'accounts.credits.unit' : 'units.creative', {
-        units: formatUnits(job.cost, i18n.language),
-        amount: formatUnits(job.cost, i18n.language),
-      })}
+      {t(job.costUnit === CREDIT_UNIT ? 'accounts.credits.unit' : 'units.creative', { units })}
     </span>
   )
 }

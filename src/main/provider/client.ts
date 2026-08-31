@@ -6,6 +6,7 @@ import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/accounts'
 import { log } from '@main/log'
 import type { WatchCredentials } from './credentialsWatch'
+import { tripoFailureOf } from './tripoApi'
 
 /** Thrown when a channel needing the API is reached without usable credentials. */
 export class NotAuthenticatedError extends Error {
@@ -35,6 +36,11 @@ function restrictedByPlan(body: unknown): boolean {
  * that produced it, so returning it would walk the API key across the IPC boundary.
  */
 export function apiFailureOf(error: unknown): ApiFailure {
+  // A second cloud words its refusals its own way, and the classes below know nothing of it —
+  // without this, a revoked Tripo key reaches the jobs panel as « erreur inattendue ».
+  const elsewhere = tripoFailureOf(error)
+  if (elsewhere) return elsewhere
+
   if (error instanceof NotAuthenticatedError) return 'missing'
   if (error instanceof APIConnectionError) return 'network'
 
