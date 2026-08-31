@@ -180,13 +180,13 @@ const CREATE_REFUSALS: Record<ProjectOpenFailure, string> = {
 }
 
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
-  // Bare on purpose: `path` is `required`, so `runAction` refuses a call without it — and names
+  // Bare on purpose: `name` is `required`, so `runAction` refuses a call without it — and names
   // the field — before this ever runs.
-  const asked = textOf(input, 'path')
+  const asked = textOf(input, 'name')
   if (asked === null)
     return refused(
       'badInput',
-      '"path" is wanted — a name for the new project, which the studio puts where it keeps them, or a whole absolute path',
+      '"name" is wanted — what to call the new project. "folder" says where to put it, and the studio uses where this person keeps projects when it is left out',
     )
 
   /**
@@ -195,13 +195,14 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
    * is the studio's to know, never the model's.
    */
   const { projectsFolder, recentProjects } = useSettings.getState().settings.storage
-  const path = projectPathFor(asked, projectPickerFolder(projectsFolder, recentProjects))
+  const within = textOf(input, 'folder') ?? projectPickerFolder(projectsFolder, recentProjects)
+  const path = projectPathFor(asked, within ?? undefined)
   // The first project of a machine: nothing has been created yet, so there is no folder to put a
   // name under. Answered rather than guessed — `~/Documents` is a place nobody asked for.
   if (path === undefined) {
     return refused(
       'badInput',
-      'no folder is known to put a project in yet, and none can be guessed. Give "path" a whole ' +
+      'no folder is known to put a project in yet, and none can be guessed. Give "folder" a whole ' +
         'absolute path this time.',
     )
   }
