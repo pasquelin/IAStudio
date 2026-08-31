@@ -30,7 +30,7 @@ const SkyboxDocument = lazy(async () => ({
   default: (await import('@/spaces/skyboxes/SkyboxDocument')).SkyboxDocument,
 }))
 const ScriptDocument = lazy(async () => ({
-  default: (await import('@/spaces/code/ScriptDocument')).ScriptDocument,
+  default: (await import('@/features/code/components/ScriptDocument')).ScriptDocument,
 }))
 const GuiDocument = lazy(async () => ({
   default: (await import('@/spaces/gui/GuiDocument')).GuiDocument,

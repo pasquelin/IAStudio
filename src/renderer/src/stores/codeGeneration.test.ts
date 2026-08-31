@@ -46,7 +46,7 @@ let stop = (): void => undefined
  * creation with it. Loaded once here so a case waits on the SEAM rather than on a bundler.
  */
 beforeAll(async () => {
-  await import('@/spaces/code/landScript')
+  await import('@/features/code/landScript')
 })
 
 beforeEach(() => {

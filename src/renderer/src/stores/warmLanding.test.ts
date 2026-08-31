@@ -4,7 +4,7 @@ import { claimScriptOnSubmit } from './codeGeneration'
 
 /** Evaluated only when the chunk is actually fetched, which is the whole of what is measured. */
 const fetched = vi.fn()
-vi.mock('@/spaces/code/landScript', () => {
+vi.mock('@/features/code/landScript', () => {
   fetched()
   return { landScript: () => Promise.resolve(true) }
 })

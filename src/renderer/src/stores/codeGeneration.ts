@@ -11,7 +11,7 @@ import { useJobs } from './jobs'
  * comes back.
  */
 async function putScript(documentId: string | null, source: string): Promise<void> {
-  const { landScript } = await import('@/spaces/code/landScript')
+  const { landScript } = await import('@/features/code/landScript')
   // AFTER the import, which is a round trip of its own: `landingInto` says why.
   if (await landScript(landingInto(documentId), source)) return
 
@@ -38,7 +38,7 @@ const claims = createLandingClaims('script')
  */
 async function warmLanding(): Promise<void> {
   try {
-    await import('@/spaces/code/landScript')
+    await import('@/features/code/landScript')
   } catch {
     // Said by `putScript`, which is where a person can act on it.
   }
