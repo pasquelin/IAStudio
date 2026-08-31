@@ -184,7 +184,7 @@ describe('the row skin and the state it publishes', () => {
    * can open from a line one only reads, and what says a row opens is its tooltip.
    */
   const MAY_FILL_UNDER_THE_POINTER = [
-    '../home/sections/Tools/ToolsGroup.tsx',
+    '../features/home/components/Tools/ToolsGroup.tsx',
     // Back to two on 2026-08-20: the tiles a new document picks its template from. A tile in the
     // same strict sense — a still and a name, and nothing else on it that looks like a control.
     // ONE file since 2026-08-28, not one per kind: the scene's eight and the interface's four
@@ -615,10 +615,10 @@ describe('what a line names', () => {
     expect(wearing.sort()).toEqual([
       '../features/git/components/Diff/DiffPane.tsx',
       '../features/git/components/History/HistoryRow.tsx',
-      '../features/material/components/StylesSection/StylesSectionRow.tsx',
       // A fourth on 2026-08-24: the home's models band names its sources the same way, and had
       // spelled the five words out before this rule said so.
-      '../home/sections/ModelInventory/ModelInventoryMeans.tsx',
+      '../features/home/components/ModelInventory/ModelInventoryMeans.tsx',
+      '../features/material/components/StylesSection/StylesSectionRow.tsx',
     ])
   })
 })

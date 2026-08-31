@@ -5,7 +5,7 @@ import { NEWS_PAGE_SIZE, type NewsItem, type NewsPage } from '@shared/domain/new
 import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useSettings } from '@/stores/settings'
-import { settleHome, settled } from '../../home-fixtures'
+import { settleHome, settled } from '../home-fixtures'
 import { News } from './News'
 
 const item = (over: Partial<NewsItem> = {}): NewsItem => ({

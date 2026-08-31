@@ -6,7 +6,7 @@ import { aiRoleId, ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useAiModels } from '@/stores/aiModels'
-import { settleHome } from '../../home-fixtures'
+import { settleHome } from '../home-fixtures'
 import { ModelInventory } from './ModelInventory'
 
 const candidate = (over: Partial<ModelCandidate> = {}): ModelCandidate => ({

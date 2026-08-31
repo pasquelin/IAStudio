@@ -126,17 +126,20 @@ async function walk(): Promise<Graph> {
  *
  * `./panels/` was the whole answer until the panels started moving under
  * `features/<f>/components/`: a fixed prefix then matches fewer of them at every lot, and the
- * case reads a shorter and shorter list while staying green. The shell is not a panel — its
- * components ARE the first screen, which is what the whole file is about.
+ * case reads a shorter and shorter list while staying green. The shell and the home are not
+ * panels — their components ARE the first screen, which is what the whole file is about.
  */
-const NOT_A_PANEL = './features/shell/components/'
+const NOT_A_PANEL: readonly string[] = [
+  './features/home/components/',
+  './features/shell/components/',
+]
 
 const PANEL_TREES: readonly string[] = [
   './panels/',
   ...new Set(
     Object.keys(SOURCES)
       .map(key => /^\.\/features\/[^/]+\/components\//.exec(key)?.[0])
-      .filter((tree): tree is string => tree !== undefined && tree !== NOT_A_PANEL),
+      .filter((tree): tree is string => tree !== undefined && !NOT_A_PANEL.includes(tree)),
   ),
 ]
 
@@ -167,7 +170,7 @@ describe('the opening chunk', () => {
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
     expect(files).toContain('./app/Shell/Shell.tsx')
-    expect(files).toContain('./home/HomeView/HomeView.tsx')
+    expect(files).toContain('./features/home/components/HomeView/HomeView.tsx')
   })
 
   // Deferred by `Generator.tsx` on 8 August: −219,38 kB, three quarters of it zod.

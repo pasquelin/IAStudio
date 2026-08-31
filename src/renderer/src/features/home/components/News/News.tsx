@@ -5,7 +5,7 @@ import { Chip } from '@/components/Chip'
 import { useNews } from '@/hooks/useNews'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
-import { Section } from '../../Section'
+import { Section } from '../Section'
 import { NewsBody } from './NewsBody'
 
 /**

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { settleHome } from '@/home/home-fixtures'
+import { settleHome } from '@/features/home/components/home-fixtures'
 import { useSettings } from '@/stores/settings'
 import { Tools } from './Tools'
 

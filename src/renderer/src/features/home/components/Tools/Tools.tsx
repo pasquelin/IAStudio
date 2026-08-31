@@ -4,8 +4,8 @@ import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
-import { enterWorkspace } from '../../open'
-import { Section } from '../../Section'
+import { enterWorkspace } from '../open'
+import { Section } from '../Section'
 import { ToolsGroup, type Entry } from './ToolsGroup'
 
 /**
