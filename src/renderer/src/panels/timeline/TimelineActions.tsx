@@ -1,5 +1,5 @@
 import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
-import { AnimationActions } from './AnimationActions/AnimationActions'
+import { AnimationActions } from '../../features/animation/components/Animation/Actions/AnimationActions'
 import { ProgramTransport } from './ProgramTransport'
 import { SequenceActions } from './SequenceActions'
 import { SoundActions } from './SoundActions'

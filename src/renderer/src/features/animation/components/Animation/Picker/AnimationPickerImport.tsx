@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { ANIMATION_EXTENSIONS } from '@shared/domain/animationLibrary'
 import { extensionOf } from '@shared/domain/fileName'
 import type { ClipSource } from '@shared/domain/scene'
-import { Button } from '../Button'
-import { QuietNote } from '../QuietNote'
+import { Button } from '../../../../../components/Button'
+import { QuietNote } from '../../../../../components/QuietNote'
 import { getBridge } from '@/services/bridge'
 
 export type AnimationPickerImportProps = {

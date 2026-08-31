@@ -5,7 +5,7 @@ import { Row } from '@/components/Row'
 import { Thumbnail } from '@/components/Thumbnail'
 import { ToolButton } from '@/components/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { ANIMATION_DRAG_TYPE, type DraggedAnimation } from './dragged'
+import { ANIMATION_DRAG_TYPE, type DraggedAnimation } from '../dragged'
 
 export type AnimationsPanelRowProps = {
   name: string

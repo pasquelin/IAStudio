@@ -23,7 +23,7 @@ import { draggedShot } from '@/engines/scene/cameraShots'
 import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
-import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/panels/animations/dragged'
+import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/features/animation/components/dragged'
 import { sceneNodeDrag } from '@/panels/scene/dragged'
 import { multi, removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import {

@@ -13,7 +13,7 @@ import {
   type ClipSource,
 } from '@shared/domain/scene'
 import { secondsToUs, usToSeconds } from '@shared/domain/time'
-import { AnimationPicker } from '@/components/AnimationPicker/AnimationPicker'
+import { AnimationPicker } from '@/features/animation/components/Animation/Picker/AnimationPicker'
 import { BODY_PARTS, WHOLE_BODY } from '@shared/domain/humanoid'
 import { PropertySection } from '@/components/PropertySection'
 import { QuietNote } from '@/components/QuietNote'

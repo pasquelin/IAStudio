@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Viewport } from '@/engines/timeline/timelineGeometry'
 import type { AnimationRow } from '@/engines/scene/animationRows'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
-import { TimelineHeaderColumn } from '../TimelineHeaderColumn'
+import { TimelineHeaderColumn } from '../../../../../panels/timeline/TimelineHeaderColumn'
 import { AnimationHeadersRow } from './AnimationHeadersRow'
 
 export type AnimationHeadersProps = {

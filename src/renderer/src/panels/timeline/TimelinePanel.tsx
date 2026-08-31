@@ -2,7 +2,7 @@ import { mdiVideoVintage } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
-import { AnimationPanel } from './AnimationPanel'
+import { AnimationPanel } from '../../features/animation/components/Animation/AnimationPanel'
 import { MontagePanel } from './MontagePanel'
 import { SoundPanel } from './SoundPanel'
 

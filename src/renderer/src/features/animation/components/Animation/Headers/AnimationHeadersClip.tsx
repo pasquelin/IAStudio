@@ -8,7 +8,7 @@ import type { LaneRow } from '@/engines/scene/animationRows'
 import { newId } from '@/helpers/ids'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { TimelineRow } from '../TimelineRow/TimelineRow'
+import { TimelineRow } from '../../../../../panels/timeline/TimelineRow/TimelineRow'
 
 /**
  * The lanes of a model as an edit must see them: what the sheet DRAWS, which for a model that has

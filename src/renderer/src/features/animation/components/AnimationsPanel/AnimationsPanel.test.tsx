@@ -15,7 +15,7 @@ import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { AnimationsPanel } from './AnimationsPanel'
-import { ANIMATION_DRAG_TYPE } from './dragged'
+import { ANIMATION_DRAG_TYPE } from '../dragged'
 
 const DOCUMENT = 'doc-1'
 

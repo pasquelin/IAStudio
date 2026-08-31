@@ -14,10 +14,10 @@ import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
-import { TimelineRow } from '../TimelineRow/TimelineRow'
-import type { RowReorder } from '../TimelineRow/rowReorder'
-import { TrackFlagButton } from '../TrackFlagButton'
-import { isFlagOnAll, TRACK_FLAGS } from '../trackFlags'
+import { TimelineRow } from '../../../../../panels/timeline/TimelineRow/TimelineRow'
+import type { RowReorder } from '../../../../../panels/timeline/TimelineRow/rowReorder'
+import { TrackFlagButton } from '../../../../../panels/timeline/TrackFlagButton'
+import { isFlagOnAll, TRACK_FLAGS } from '../../../../../panels/timeline/trackFlags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
 function subjectOf(rowId: string): { nodeId: string; bone?: string } {

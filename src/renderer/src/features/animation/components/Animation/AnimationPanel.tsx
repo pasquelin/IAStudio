@@ -13,7 +13,7 @@ import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationCanvas } from './AnimationCanvas'
-import { AnimationHeaders } from './AnimationHeaders/AnimationHeaders'
+import { AnimationHeaders } from './Headers/AnimationHeaders'
 
 export type AnimationPanelProps = { documentId: string }
 

@@ -12,7 +12,7 @@ import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/a
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
-import { ANIMATION_DRAG_TYPE } from '@/panels/animations/dragged'
+import { ANIMATION_DRAG_TYPE } from '@/features/animation/components/dragged'
 import { ASSET_DRAG_TYPE } from '@/helpers/assetDrag'
 import { useAssets } from '@/stores/assets'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'

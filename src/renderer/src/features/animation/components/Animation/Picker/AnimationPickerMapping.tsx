@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clipKeyOf, type ClipSource } from '@shared/domain/scene'
-import { QuietNote } from '../QuietNote'
-import { Row } from '../Row'
-import { INLINE_LINK } from '../styles'
+import { QuietNote } from '../../../../../components/QuietNote'
+import { Row } from '../../../../../components/Row'
+import { INLINE_LINK } from '../../../../../components/styles'
 import { bodyFitOf } from '@/engines/scene/retarget'
 import { clipFitOfNode, useModelFiles } from '@/stores/modelFiles'
 
