@@ -83,7 +83,7 @@ describe('opening a model asset', () => {
     useProject.setState({
       project: {
         path: '/projects/demo',
-        manifest: { version: 1, name: 'Demo', createdAt: '', updatedAt: '' },
+        manifest: { version: 1, createdAt: '', updatedAt: '' },
       },
       known: true,
     })

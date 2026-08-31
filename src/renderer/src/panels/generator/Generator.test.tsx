@@ -111,7 +111,7 @@ const OFFERED: ModelSummary = {
 
 const PROJECT = {
   path: '/projects/demo',
-  manifest: { version: 1, name: 'demo', createdAt: '', updatedAt: '' },
+  manifest: { version: 1, createdAt: '', updatedAt: '' },
 }
 
 describe('Generator', () => {
@@ -333,10 +333,9 @@ describe('Generator', () => {
     beforeEach(() => {
       useProject.setState({
         project: {
-          path: '/projects/summer',
+          path: '/projects/Summer',
           manifest: {
             version: 1,
-            name: 'Summer',
             createdAt: '2026-01-01T00:00:00Z',
             updatedAt: '2026-01-01T00:00:00Z',
           },

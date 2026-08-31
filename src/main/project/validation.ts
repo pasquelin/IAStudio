@@ -47,7 +47,6 @@ const manifest = z.object({
   // Capped, not merely floored, exactly as `documentEnvelope` below — and for a heavier reason.
   // A document flattened by a later save is one file; a project is the whole folder.
   version: z.number().int().min(1).max(MANIFEST_VERSION),
-  name: z.string().min(1),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 })
@@ -441,12 +440,9 @@ export function parseDocumentTitle(value: unknown): string {
 }
 
 /**
- * A project's DISPLAY name, on its way into a manifest — the only validator it has, at creation
- * as at rename. Deliberately NOT a path segment: no folder is ever made from this name. Creating
- * lays the project into the folder the user chose and takes that folder's name as a starting
- * point; renaming writes the manifest and leaves the folder alone. Forbidding a slash would
- * refuse `Été 2026 / v2` for a constraint that does not exist — the manifest lets the name and
- * the folder differ, which is why `RecentProject` stores the name instead of deriving it.
+ * A project's name on its way in, at creation as at rename — and a project is named by its
+ * FOLDER, so this name becomes a path segment. What it may not hold is `isSafeFileName`'s to
+ * refuse; this bounds it.
  *
  * Trimmed and non-empty: a nameless project is a row nobody can find, and it is also how the root
  * of a volume is turned away — its basename is the empty string. Capped like every other string

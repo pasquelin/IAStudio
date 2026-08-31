@@ -10,8 +10,7 @@ const DAY = 24 * 60 * 60 * 1000
 // Relative to now rather than a fixed stamp: `timeAgo` reads the clock, and fake timers would
 // take `userEvent` with them.
 const SUMMER: RecentProject = {
-  path: '/projects/summer',
-  name: 'Summer',
+  path: '/projects/Summer',
   openedAt: new Date(Date.now() - 3 * DAY).toISOString(),
 }
 
@@ -28,7 +27,7 @@ describe('one row of the projects shelf', () => {
     render(<ProjectRow project={SUMMER} />)
 
     expect(screen.getByText('Summer')).toBeInTheDocument()
-    expect(screen.getByText('/projects/summer')).toBeInTheDocument()
+    expect(screen.getByText('/projects/Summer')).toBeInTheDocument()
   })
 
   // The date has not gone, and the tooltip carries the whole path too: a narrow panel truncates
@@ -38,7 +37,7 @@ describe('one row of the projects shelf', () => {
 
     expect(screen.getByText('Summer')).toHaveAttribute(
       'data-tooltip-content',
-      '/projects/summer — ouvert il y a 3 jours',
+      '/projects/Summer — ouvert il y a 3 jours',
     )
   })
 
@@ -57,7 +56,7 @@ describe('one row of the projects shelf', () => {
   it('falls back to the path alone when the date cannot be read', () => {
     render(<ProjectRow project={{ ...SUMMER, openedAt: 'not-a-date' }} />)
 
-    expect(screen.getByText('Summer')).toHaveAttribute('data-tooltip-content', '/projects/summer')
+    expect(screen.getByText('Summer')).toHaveAttribute('data-tooltip-content', '/projects/Summer')
     expect(screen.queryByText(/^Ouvert/)).not.toBeInTheDocument()
   })
 
@@ -116,6 +115,6 @@ describe('what the row does with the rename props it is handed', () => {
 
     await userEvent.dblClick(screen.getByText('Summer'))
 
-    expect(onRenameStart).toHaveBeenCalledExactlyOnceWith('/projects/summer')
+    expect(onRenameStart).toHaveBeenCalledExactlyOnceWith('/projects/Summer')
   })
 })

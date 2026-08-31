@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import type { Project, RecentProject } from '@shared/domain/project'
+import { projectName, type Project, type RecentProject } from '@shared/domain/project'
 import type * as DocumentIo from '@/app/documentIo'
 import { installFakeBridge } from '@/services/fakeBridge'
 import type { ActivityEntry } from '@shared/domain/activity'
@@ -109,7 +109,7 @@ describe('settling the tabs of a project being followed', () => {
    * skipped or merely not finished — which is what this test did until it was checked by removing
    * the guard and watching it stay green.
    */
-  it('follows another project, and lets the same one merely change its name', async () => {
+  it('follows another project, and stays put when the same folder announces itself', async () => {
     const listeners: ((project: Project | null) => void)[] = []
     const announce = (project: Project): void => listeners.forEach(listener => listener(project))
     installFakeBridge({
@@ -123,15 +123,17 @@ describe('settling the tabs of a project being followed', () => {
     await useProject.getState().connect()
 
     useActivity.setState({ unread: [TOAST] })
-    announce({ path: '/projects/summer', manifest: MANIFEST })
+    announce({ path: '/projects/Summer', manifest: MANIFEST })
 
     expect(useActivity.getState().unread).toEqual([])
 
     useActivity.setState({ unread: [TOAST] })
-    announce({ path: '/projects/summer', manifest: { ...MANIFEST, name: 'Winter' } })
+    announce({ path: '/projects/Summer', manifest: MANIFEST })
 
+    // 🛑 The same folder again is a manifest that moved under it, never another project: following
+    // it would empty the scene clipboard and dismiss every toast to update nothing.
     expect(useActivity.getState().unread).toEqual([TOAST])
-    expect(useProject.getState().project?.manifest.name).toBe('Winter')
+    expect(useProject.getState().project?.path).toBe('/projects/Summer')
   })
 
   /**
@@ -169,7 +171,7 @@ describe('settling the tabs of a project being followed', () => {
     })
     expect(assetsById(useAssets.getState()).get('a')).toBeDefined()
 
-    listeners.forEach(listener => listener({ path: '/projects/winter', manifest: MANIFEST }))
+    listeners.forEach(listener => listener({ path: '/projects/Winter', manifest: MANIFEST }))
     // The index read while the new catalogue is still being fetched, which is what a panel
     // rendering in that window does — and what used to put the old rows back for good.
     assetsById(useAssets.getState())
@@ -195,7 +197,7 @@ describe('settling the tabs of a project being followed', () => {
     await useProject.getState().connect()
     useSelection.getState().selectFiles(['Repérages/ruelle.png'])
 
-    listeners.forEach(listener => listener({ path: '/projects/winter', manifest: MANIFEST }))
+    listeners.forEach(listener => listener({ path: '/projects/Winter', manifest: MANIFEST }))
 
     expect(selectedFilePaths(useSelection.getState())).toEqual([])
   })
@@ -204,26 +206,26 @@ describe('settling the tabs of a project being followed', () => {
 /** Switching to a project the shelf already holds — the menu's rows and the home's list. */
 describe('opening a folder the studio already knows', () => {
   beforeEach(() => {
-    useProject.setState({ project: { path: '/projects/summer', manifest: MANIFEST }, known: true })
+    useProject.setState({ project: { path: '/projects/Summer', manifest: MANIFEST }, known: true })
   })
 
   it('switches to it once the unsaved work has been answered for', async () => {
-    const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
+    const open = vi.fn(() => Promise.resolve({ path: '/projects/Winter', manifest: MANIFEST }))
     installFakeBridge({ project: { open } })
 
-    await expect(useProject.getState().open('/projects/winter')).resolves.toBe(true)
+    await expect(useProject.getState().open('/projects/Winter')).resolves.toBe(true)
 
-    expect(open).toHaveBeenCalledWith('/projects/winter')
+    expect(open).toHaveBeenCalledWith('/projects/Winter')
   })
 
   // Switching takes the generations out of the bar exactly as closing does, so it owes the same
   // question — and in the same order, before anything is asked about documents.
   it('asks about the generations first, and stays put on a no', async () => {
     const askLeave = vi.fn(() => Promise.resolve(false))
-    const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
+    const open = vi.fn(() => Promise.resolve({ path: '/projects/Winter', manifest: MANIFEST }))
     installFakeBridge({ project: { askLeave, open } })
 
-    await expect(useProject.getState().open('/projects/winter')).resolves.toBe(false)
+    await expect(useProject.getState().open('/projects/Winter')).resolves.toBe(false)
 
     expect(askLeave).toHaveBeenCalled()
     expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
@@ -231,19 +233,19 @@ describe('opening a folder the studio already knows', () => {
   })
 
   it('stays where it is when that question is cancelled', async () => {
-    const open = vi.fn(() => Promise.resolve({ path: '/projects/winter', manifest: MANIFEST }))
+    const open = vi.fn(() => Promise.resolve({ path: '/projects/Winter', manifest: MANIFEST }))
     installFakeBridge({ project: { open } })
     settleUnsavedWorkForProjectChange.mockResolvedValue(false)
 
-    await expect(useProject.getState().open('/projects/winter')).resolves.toBe(false)
+    await expect(useProject.getState().open('/projects/Winter')).resolves.toBe(false)
 
     expect(open).not.toHaveBeenCalled()
-    expect(useProject.getState().project?.path).toBe('/projects/summer')
+    expect(useProject.getState().project?.path).toBe('/projects/Summer')
   })
 
   // Choosing the row already ticked means "yes, still" — there is nothing to answer for.
   it('asks nothing at all for the project already in front', async () => {
-    await expect(useProject.getState().open('/projects/summer')).resolves.toBe(true)
+    await expect(useProject.getState().open('/projects/Summer')).resolves.toBe(true)
 
     expect(settleUnsavedWorkForProjectChange).not.toHaveBeenCalled()
   })
@@ -258,7 +260,7 @@ describe('making a project at a path', () => {
   const made = { path: '/projects/neuf', manifest: MANIFEST }
 
   beforeEach(() => {
-    useProject.setState({ project: { path: '/projects/summer', manifest: MANIFEST }, known: true })
+    useProject.setState({ project: { path: '/projects/Summer', manifest: MANIFEST }, known: true })
   })
 
   it('asks on the way out, then makes the folder into a project', async () => {
@@ -279,7 +281,7 @@ describe('making a project at a path', () => {
     await expect(useProject.getState().createAt('/projects/neuf')).resolves.toBeNull()
 
     expect(create).not.toHaveBeenCalled()
-    expect(useProject.getState().project?.path).toBe('/projects/summer')
+    expect(useProject.getState().project?.path).toBe('/projects/Summer')
   })
 
   // The main process asks about a folder that already holds files, and `null` is that no.
@@ -288,7 +290,7 @@ describe('making a project at a path', () => {
 
     await expect(useProject.getState().createAt('/projects/neuf')).resolves.toBeNull()
 
-    expect(useProject.getState().project?.path).toBe('/projects/summer')
+    expect(useProject.getState().project?.path).toBe('/projects/Summer')
   })
 })
 
@@ -430,8 +432,7 @@ describe('picking a folder in the dialog', () => {
  */
 describe('closing the open project', () => {
   const OPEN: RecentProject = {
-    path: '/projects/summer',
-    name: 'Summer',
+    path: '/projects/Summer',
     openedAt: '2026-08-10T09:00:00.000Z',
   }
 
@@ -531,13 +532,11 @@ describe('closing the open project', () => {
  */
 describe('dropping a project from the shelf', () => {
   const SUMMER: RecentProject = {
-    path: '/projects/summer',
-    name: 'Summer',
+    path: '/projects/Summer',
     openedAt: '2026-08-10T09:00:00.000Z',
   }
   const WINTER: RecentProject = {
-    path: '/projects/winter',
-    name: 'Winter',
+    path: '/projects/Winter',
     openedAt: '2026-08-09T09:00:00.000Z',
   }
 
@@ -636,8 +635,7 @@ describe('dropping a project from the shelf', () => {
  */
 describe('giving a project a new name', () => {
   const SUMMER: RecentProject = {
-    path: '/projects/summer',
-    name: 'Summer',
+    path: '/projects/Summer',
     openedAt: '2026-08-10T09:00:00.000Z',
     createdAt: '2026-05-01T09:00:00.000Z',
   }
@@ -653,7 +651,7 @@ describe('giving a project a new name', () => {
     }))
   })
 
-  it('writes the manifest, then the shelf entry that carries the name', async () => {
+  it('moves the folder, then the shelf entry that points at it', async () => {
     const rename = vi.fn(() => Promise.resolve(RENAMED))
     const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
     installFakeBridge({ project: { rename }, settings: { write } })
@@ -666,19 +664,19 @@ describe('giving a project a new name', () => {
     // 🛑 The PATH moves with the name: an entry left where it was points at a folder that is no
     // longer there, and `projects.list` then answers a path nothing opens.
     expect(write).toHaveBeenCalledWith({
-      storage: { recentProjects: [{ ...SUMMER, name: 'Winter', path: RENAMED.path }] },
+      storage: { recentProjects: [{ ...SUMMER, path: RENAMED.path }] },
     })
   })
 
-  // The title bar reads `project.manifest.name`. Waiting for the broadcast to come back would
-  // leave it naming the old name for a frame.
+  // The title bar reads the folder. Waiting for the broadcast to come back would leave it
+  // naming the old one for a frame.
   it('takes the new name straight away when the renamed project is the open one', async () => {
     installFakeBridge({ project: { rename: () => Promise.resolve(RENAMED) } })
     useProject.setState({ project: { path: SUMMER.path, manifest: MANIFEST }, known: true })
 
     await useProject.getState().rename(SUMMER.path, 'Winter')
 
-    expect(useProject.getState().project?.manifest.name).toBe('Winter')
+    expect(projectName(useProject.getState().project?.path ?? '')).toBe('Winter')
   })
 
   // The shelf lists projects that are not open, and renaming one must not put it in front.

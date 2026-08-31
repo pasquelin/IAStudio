@@ -18,7 +18,7 @@ const DOCUMENT: DocumentDescriptor = {
 }
 
 const PROJECT = {
-  path: '/projects/summer',
+  path: '/projects/Summer',
   manifest: {
     version: 1,
     name: 'Summer',

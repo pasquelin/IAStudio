@@ -133,10 +133,10 @@ export type FolderVerdict = 'project' | 'occupied' | 'blank'
 
 export type ProjectStore = {
   /**
-   * Installs a project INTO `path`, which becomes its root — no folder is made from the name.
+   * Installs a project INTO `path`, which becomes its root AND its name — see `projectName`.
    * Call `inspect` first: this writes a manifest over whatever is there.
    */
-  create: (path: string, name: string) => Promise<Project>
+  create: (path: string) => Promise<Project>
   /**
    * What creating a project at `path` would mean, so nothing is written over.
    *
@@ -408,7 +408,7 @@ export function createProjectStore({
    * database that fails to open — corrupt, locked, on a full disk — would leave the studio
    * with no project at all while the interface still showed the previous one as open.
    */
-  const activate = async (opened: Project): Promise<Project> => {
+  const activate = async (opened: Project, announce = true): Promise<Project> => {
     const file = join(opened.path, CATALOG_FILE)
     await mkdir(dirname(file), { recursive: true })
 
@@ -445,7 +445,12 @@ export function createProjectStore({
     catalog = opening
     project = opened
     roleFolders = resolved
-    onChange(opened)
+    /**
+     * 🛑 Silent for a RENAME, and the window is what pays otherwise: `onChange` means "another
+     * project is in front now", so it empties the scene clipboard, dismisses every toast and
+     * refetches three lists — to move a folder the person is still working in.
+     */
+    if (announce) onChange(opened)
     onRoles(resolved)
     return opened
   }
@@ -474,7 +479,7 @@ export function createProjectStore({
   }
 
   return {
-    create: async (path, name) => {
+    create: async path => {
       await ensureMachineFolders(path)
       // Laid down once, and never put back on a later open: a user who threw `Images/` away
       // meant to, and a folder that came back would be the old layout wearing a new name.
@@ -485,7 +490,6 @@ export function createProjectStore({
         path,
         manifest: {
           version: MANIFEST_VERSION,
-          name,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -547,7 +551,7 @@ export function createProjectStore({
 
       const folder = join(dirname(path), name)
       const moved = await movedFolder(path, folder)
-      const renamed: Project = { path: moved, manifest: { ...manifest, name, updatedAt: now() } }
+      const renamed: Project = { path: moved, manifest: { ...manifest, updatedAt: now() } }
 
       // Through the queue, and it is not optional: `touch` writes this same file on every document
       // saved, so a rename racing a save would lose whichever landed first.
@@ -555,7 +559,9 @@ export function createProjectStore({
 
       // 🛑 Reopened rather than patched: the catalogue is a thread holding a file INSIDE the folder
       // that just moved, and `activate` is the one place that closes one and opens the next.
-      if (project?.path === path) return moved === path ? holding(renamed) : await activate(renamed)
+      if (project?.path === path) {
+        return moved === path ? holding(renamed) : await activate(renamed, false)
+      }
 
       return renamed
     },

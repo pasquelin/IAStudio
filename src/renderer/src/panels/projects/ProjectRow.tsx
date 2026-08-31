@@ -1,7 +1,7 @@
 import { mdiDotsHorizontal, mdiFolderOutline } from '@mdi/js'
 import { memo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { RecentProject } from '@shared/domain/project'
+import { projectName, type RecentProject } from '@shared/domain/project'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuButton } from '@/design/MenuButton'
@@ -83,7 +83,7 @@ export const ProjectRow = memo(function ProjectRow({
         onDoubleClick={event => event.stopPropagation()}
       >
         <InlineRename
-          value={project.name}
+          value={projectName(project.path)}
           label={t('home.projects.rename')}
           onCommit={commitRename}
         />
@@ -104,7 +104,7 @@ export const ProjectRow = memo(function ProjectRow({
     >
       <Row
         icon={mdiFolderOutline}
-        title={project.name}
+        title={projectName(project.path)}
         subtitle={project.path}
         hint={when ? t('home.projects.rowHint', { path: project.path, when }) : project.path}
         actions={

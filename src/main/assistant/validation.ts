@@ -136,7 +136,6 @@ const SNAPSHOT = z.object({
       path: z.string(),
       manifest: z.object({
         version: z.number(),
-        name: z.string(),
         createdAt: z.string(),
         updatedAt: z.string(),
       }),

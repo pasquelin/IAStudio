@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
 import { skeletonProfilesOf, useSkeletonProfiles } from './skeletonProfiles'
 
-const SUMMER = '/projects/summer'
-const WINTER = '/projects/winter'
+const SUMMER = '/projects/Summer'
+const WINTER = '/projects/Winter'
 
 const profile = (roles: Record<string, 'Hips' | 'Spine'>, bones = Object.keys(roles)) => ({
   signature: skeletonSignatureOf(bones),

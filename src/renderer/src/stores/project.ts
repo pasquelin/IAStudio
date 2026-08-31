@@ -3,7 +3,7 @@ import { messageOf } from '@shared/guards'
 import { create } from 'zustand'
 import {
   projectPickerFolder,
-  renamedRecentProject,
+  movedRecentProject,
   withoutRecentProject,
   type Project,
 } from '@shared/domain/project'
@@ -349,15 +349,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const { settings, write } = useSettings.getState()
     await write({
       storage: {
-        // The name the MANIFEST took, not the one that was asked for: the main process trims it
-        // (`parseProjectTitle`), and the shelf storing what was typed would list a project under
-        // a name its own manifest does not carry.
-        recentProjects: renamedRecentProject(
-          settings.storage.recentProjects,
-          path,
-          renamed.manifest.name,
-          renamed.path,
-        ),
+        // The entry MOVES: the name is read off the path, so this is the whole of the rename as
+        // far as the shelf is concerned.
+        recentProjects: movedRecentProject(settings.storage.recentProjects, path, renamed.path),
         // 🛑 The pointer the next launch reopens, and it names a FOLDER: left at the old one the
         // studio starts on a path nothing answers, and forgets the project on the way.
         ...(wasOpen && settings.storage.lastProject === path ? { lastProject: renamed.path } : {}),

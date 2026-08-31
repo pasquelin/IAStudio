@@ -14,6 +14,7 @@ import { openDocument } from '@/app/dockviewApi'
 import { enterWorkspace } from '../../open'
 import { SpotlightCard, type Slide } from './SpotlightCard'
 import { SpotlightWaiting } from './SpotlightWaiting'
+import { projectName } from '@shared/domain/project'
 
 /** Two to a page, dividing the band: a fixed width left the second one sliced by the edge. */
 const PER_VIEW = 2
@@ -64,7 +65,10 @@ export function Spotlight() {
       id: 'resume',
       icon: mdiPlayOutline,
       title: t('home.spotlight.resume'),
-      body: t('home.spotlight.resumeBody', { project: project.manifest.name, name: last.title }),
+      body: t('home.spotlight.resumeBody', {
+        project: projectName(project.path),
+        name: last.title,
+      }),
       action: {
         label: t('home.spotlight.resumeAction'),
         hint: t('home.spotlightResumeHint'),
@@ -115,7 +119,7 @@ export function Spotlight() {
       // Two sentences rather than an empty hole: `readyBody` names the project, and filling that
       // hole with '' left "est ouvert et ne contient encore rien" standing without a subject.
       body: project
-        ? t('home.spotlight.readyBody', { project: project.manifest.name })
+        ? t('home.spotlight.readyBody', { project: projectName(project.path) })
         : t('home.spotlight.readyBodyNoProject'),
       action: {
         label: t('home.spotlight.readyAction'),

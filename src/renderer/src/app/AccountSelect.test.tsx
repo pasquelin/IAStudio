@@ -26,7 +26,7 @@ const withProject = (name: string): void =>
   useProject.setState({
     project: {
       path: `/projects/${name}`,
-      manifest: { version: 1, name, createdAt: '2026-08-21', updatedAt: '2026-08-21' },
+      manifest: { version: 1, createdAt: '2026-08-21', updatedAt: '2026-08-21' },
     },
   })
 

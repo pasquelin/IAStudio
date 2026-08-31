@@ -1,7 +1,6 @@
 import type { MaterialStyle } from '@shared/domain/style'
 import type { Asset } from '@shared/domain/asset'
 import { MANIFEST_VERSION, type Project } from '@shared/domain/project'
-import { pathBaseNameOf } from '@shared/domain/fileName'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { noContext, type ContextState } from '@shared/domain/projectContext'
 import type { AccountSummary } from '@shared/domain/account'
@@ -25,7 +24,7 @@ export type MemoryShell = {
   pulled: () => readonly string[]
   pushed: () => readonly string[]
   /** A project as its folder names it — one maker, so the manifest version is never restated. */
-  projectAt: (path: string, name: string) => Project
+  projectAt: (path: string) => Project
   /** Files handed to the window from outside — a drop, or `media.indexFileInPlace`. */
   adopted: () => readonly string[]
   adopt: (relative: string) => void
@@ -52,9 +51,9 @@ export function createMemoryShell(assetOf: (assetId: string) => Asset | null): M
   let updateInstalled = false
   let helpAt: string | null = null
 
-  const projectAt = (path: string, name: string): Project => ({
+  const projectAt = (path: string): Project => ({
     path,
-    manifest: { version: MANIFEST_VERSION, name, createdAt: WHEN, updatedAt: WHEN },
+    manifest: { version: MANIFEST_VERSION, createdAt: WHEN, updatedAt: WHEN },
   })
 
   const accounts: AccountSummary[] = [
@@ -64,10 +63,11 @@ export function createMemoryShell(assetOf: (assetId: string) => Asset | null): M
 
   const channels: BridgeOverrides = {
     project: {
-      // A project is a FOLDER, so its name is its folder's — until the manifest is rewritten.
-      open: path => Promise.resolve(projectAt(path, pathBaseNameOf(path))),
-      create: path => Promise.resolve(projectAt(path, pathBaseNameOf(path))),
-      rename: (path, name) => Promise.resolve(projectAt(path, name)),
+      // A project is a FOLDER, and its name is that folder's — renaming MOVES it.
+      open: path => Promise.resolve(projectAt(path)),
+      create: path => Promise.resolve(projectAt(path)),
+      rename: (path, name) =>
+        Promise.resolve(projectAt(`${path.slice(0, path.lastIndexOf('/'))}/${name}`)),
       revealFile: relative => {
         revealed.push(relative)
         return Promise.resolve()

@@ -12,10 +12,9 @@ import { ProjectSelect } from './ProjectSelect'
 vi.mock('@/helpers/revealPanel', () => ({ revealTool: vi.fn(() => true) }))
 
 const summer: Project = {
-  path: '/projects/summer',
+  path: '/projects/Summer',
   manifest: {
     version: 1,
-    name: 'Summer',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },
@@ -23,7 +22,7 @@ const summer: Project = {
 
 const recent = (...names: string[]): RecentProject[] =>
   names.map(name => ({
-    path: `/projects/${name.toLowerCase()}`,
+    path: `/projects/${name}`,
     name,
     openedAt: '2026-08-01T00:00:00Z',
   }))
@@ -89,7 +88,7 @@ describe('ProjectSelect', () => {
     await openMenu('Summer')
     await userEvent.click(screen.getByRole('menuitemradio', { name: 'Winter' }))
 
-    expect(open).toHaveBeenCalledWith('/projects/winter')
+    expect(open).toHaveBeenCalledWith('/projects/Winter')
   })
 
   // Reopening the open one drops every panel's state and reloads the catalogue to land on the

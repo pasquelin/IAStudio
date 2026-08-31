@@ -31,7 +31,7 @@ function withProject(overrides: BridgeOverrides = {}): void {
   useProject.setState({
     project: {
       path: '/tmp/Film',
-      manifest: { version: 1, name: 'Film', createdAt: WHEN, updatedAt: WHEN },
+      manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
     },
   })
 }
@@ -248,7 +248,7 @@ describe('opening and making a project', () => {
   it('opens what it just created', async () => {
     const created = {
       path: '/tmp/Neuf',
-      manifest: { version: 1, name: 'Neuf', createdAt: WHEN, updatedAt: WHEN },
+      manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
     }
     const createAt = vi.fn(async () => created)
     withProject()
@@ -382,7 +382,7 @@ describe('opening and making a project', () => {
   it('renames a project by its own path, through the store the shelf reads', async () => {
     const renamed = {
       path: '/tmp/Autre',
-      manifest: { version: 1, name: 'Autre', createdAt: WHEN, updatedAt: WHEN },
+      manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
     }
     const renamedOk: ProjectRenamed = { ok: true, project: renamed }
     const rename = vi.fn(async () => renamedOk)

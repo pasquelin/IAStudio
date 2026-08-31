@@ -26,6 +26,7 @@ import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { getBridge } from '@/services/bridge'
 import { openDocument } from './dockviewApi'
+import { projectName } from '@shared/domain/project'
 
 /**
  * The file first, then the tab: `relist` is what gives the document the id its path spells.
@@ -33,6 +34,12 @@ import { openDocument } from './dockviewApi'
  * Exported for the one other thing that makes a script — a generation, which brings its own
  * source where a person's gesture brings the starter.
  */
+/** The open project's name, or nothing where none is open — the folder IS the name. */
+const openProjectName = (): string => {
+  const open = useProject.getState().project
+  return open ? projectName(open.path) : ''
+}
+
 export async function createScript(
   of: NamedCreation | undefined,
   source: string = SCRIPT_STARTER,
@@ -139,7 +146,7 @@ async function named(
       kind,
       folder,
       suggested: untitledDocumentName(takenDocumentNames(state, folder), kind),
-      projectName: useProject.getState().project?.manifest.name ?? '',
+      projectName: openProjectName(),
       // The tabs, which the window cannot read: it lists the project FOLDER for itself, and a
       // document opened and never saved is in no folder to be found.
       open: Object.values(state.documents),

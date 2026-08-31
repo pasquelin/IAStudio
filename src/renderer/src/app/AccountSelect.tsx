@@ -12,6 +12,7 @@ import { useCredits } from '@/stores/credits'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { describeCredit } from '@/helpers/describeCredit'
+import { projectName } from '@shared/domain/project'
 
 /**
  * Switches which stored API key the studio calls with.
@@ -46,7 +47,7 @@ export function AccountSelect() {
       ? t('accounts.connectedClouds', { count: groups.length })
       : (activeAccount(accounts)?.name ?? t('accounts.notConnected'))
   const scope = project
-    ? t('accounts.scopeProject', { project: project.manifest.name })
+    ? t('accounts.scopeProject', { project: projectName(project.path) })
     : t('accounts.scopeApp')
 
   return (

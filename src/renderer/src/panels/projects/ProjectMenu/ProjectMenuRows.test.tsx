@@ -14,14 +14,13 @@ const RENAMED_OK: ProjectRenamed = {
     path: '/tmp/Renamed',
     manifest: {
       version: 1,
-      name: 'Renamed',
       createdAt: '2026-08-17T10:00:00.000Z',
       updatedAt: '2026-08-17T10:00:00.000Z',
     },
   },
 }
 
-const PATH = '/projects/summer'
+const PATH = '/projects/Summer'
 
 const report = vi.fn(() => Promise.resolve())
 

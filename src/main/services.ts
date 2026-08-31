@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
 import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism, totalmem } from 'node:os'
-import { basename, delimiter, dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import { activeProvidersOf, scenarioAccount, type AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
@@ -27,6 +27,7 @@ import {
   THUMBNAIL_SIZE,
   landedInDefaultFolder,
   planProjectAccount,
+  projectName,
   withRecentProject,
   type Project,
   type ProjectAccountPlan,
@@ -1954,10 +1955,8 @@ export function createServices(settings: SettingsStore): Services {
       },
     },
     projectPath: () => project.current()?.path ?? null,
-    // The shelf holds the manifest's name, which is what a rename rewrites — the folder keeps
-    // whatever it was made under. Falls back to the folder for a project the shelf has forgotten.
-    projectNameOf: path =>
-      settings.read().storage.recentProjects.find(one => one.path === path)?.name ?? basename(path),
+    // The folder IS the name — there is nowhere else to read it from, and nothing to fall back on.
+    projectNameOf: path => projectName(path),
     // Routed on WHERE the target runs: a local model needs its picture off the disk, and
     // uploading it to an account would be a transfer nobody asked for.
     resolveAssetInputs: (body, target) =>

@@ -15,7 +15,6 @@ const RENAMED_OK: ProjectRenamed = {
     path: '/tmp/Renamed',
     manifest: {
       version: 1,
-      name: 'Renamed',
       createdAt: '2026-08-17T10:00:00.000Z',
       updatedAt: '2026-08-17T10:00:00.000Z',
     },
@@ -26,15 +25,13 @@ const RENAMED_OK: ProjectRenamed = {
 const refusedRename = (why: string): ProjectRenamed => ({ ok: false, why })
 
 const SUMMER: RecentProject = {
-  path: '/projects/summer',
-  name: 'Summer',
+  path: '/projects/Summer',
   openedAt: '2026-08-10T09:00:00.000Z',
   createdAt: '2026-05-01T09:00:00.000Z',
 }
 
 const MANIFEST: Manifest = {
   version: 1,
-  name: 'Summer',
   createdAt: '2026-05-01T09:00:00.000Z',
   updatedAt: '2026-08-10T09:00:00.000Z',
 }
@@ -65,8 +62,8 @@ describe('the projects panel', () => {
    */
   it('lists the newest-made project first, whatever order the settings hold', () => {
     setRecent([
-      { ...SUMMER, path: '/projects/old', name: 'Old', createdAt: '2026-01-01T00:00:00.000Z' },
-      { ...SUMMER, path: '/projects/new', name: 'New', createdAt: '2026-08-13T00:00:00.000Z' },
+      { ...SUMMER, path: '/projects/Old', createdAt: '2026-01-01T00:00:00.000Z' },
+      { ...SUMMER, path: '/projects/New', createdAt: '2026-08-13T00:00:00.000Z' },
     ])
 
     render(<Projects />)
@@ -84,8 +81,8 @@ describe('the projects panel', () => {
     const open = vi.fn(() => Promise.resolve(true))
     useProject.setState({ open })
     setRecent([
-      { ...SUMMER, path: '/projects/old', name: 'Old', createdAt: '2026-01-01T00:00:00.000Z' },
-      { ...SUMMER, path: '/projects/new', name: 'New', createdAt: '2026-08-13T00:00:00.000Z' },
+      { ...SUMMER, path: '/projects/Old', createdAt: '2026-01-01T00:00:00.000Z' },
+      { ...SUMMER, path: '/projects/New', createdAt: '2026-08-13T00:00:00.000Z' },
     ])
     render(<Projects />)
 
@@ -93,8 +90,8 @@ describe('the projects panel', () => {
     // What the main process writes back on an opening: the stored order flips.
     setRecent(
       [
-        { ...SUMMER, path: '/projects/old', name: 'Old', createdAt: '2026-01-01T00:00:00.000Z' },
-        { ...SUMMER, path: '/projects/new', name: 'New', createdAt: '2026-08-13T00:00:00.000Z' },
+        { ...SUMMER, path: '/projects/Old', createdAt: '2026-01-01T00:00:00.000Z' },
+        { ...SUMMER, path: '/projects/New', createdAt: '2026-08-13T00:00:00.000Z' },
       ].reverse(),
     )
 
@@ -107,8 +104,8 @@ describe('the projects panel', () => {
    * only opens has no selected state to announce.
    */
   it('paints the open project, and only that one', () => {
-    setRecent([SUMMER, { ...SUMMER, path: '/projects/winter', name: 'Winter' }])
-    useProject.setState({ project: { path: '/projects/summer', manifest: MANIFEST } })
+    setRecent([SUMMER, { ...SUMMER, path: '/projects/Winter' }])
+    useProject.setState({ project: { path: '/projects/Summer', manifest: MANIFEST } })
 
     render(<Projects />)
 
@@ -132,7 +129,7 @@ describe('the projects panel', () => {
 
     await userEvent.click(screen.getByText('Summer'))
 
-    expect(open).toHaveBeenCalledWith('/projects/summer')
+    expect(open).toHaveBeenCalledWith('/projects/Summer')
   })
 
   /**
@@ -193,7 +190,7 @@ describe('the projects panel', () => {
     await userEvent.pointer({ target: screen.getByText('Summer'), keys: '[MouseRight]' })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Retirer de la liste' }))
 
-    expect(forget).toHaveBeenCalledWith('/projects/summer')
+    expect(forget).toHaveBeenCalledWith('/projects/Summer')
     expect(open).not.toHaveBeenCalled()
   })
 })
@@ -206,7 +203,7 @@ describe('the room a project row is given', () => {
    * would notice it going away.
    */
   it('asks for the stacked height, not the height of a one-line row', () => {
-    setRecent([SUMMER, { ...SUMMER, path: '/projects/winter', name: 'Winter' }])
+    setRecent([SUMMER, { ...SUMMER, path: '/projects/Winter' }])
 
     render(<Projects />)
 
@@ -264,7 +261,7 @@ describe('renaming from the panel', () => {
     await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Winter{Enter}')
 
-    expect(rename).toHaveBeenCalledExactlyOnceWith('/projects/summer', 'Winter')
+    expect(rename).toHaveBeenCalledExactlyOnceWith('/projects/Summer', 'Winter')
     expect(screen.getByText('Summer')).toBeInTheDocument()
   })
 

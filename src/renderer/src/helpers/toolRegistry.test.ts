@@ -58,7 +58,7 @@ const openProject = (): void => {
   useProject.setState({
     project: {
       path: '/projects/demo',
-      manifest: { version: 1, name: 'demo', createdAt: '', updatedAt: '' },
+      manifest: { version: 1, createdAt: '', updatedAt: '' },
     },
   })
 }

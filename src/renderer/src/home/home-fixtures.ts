@@ -7,10 +7,9 @@ import { useSettings } from '@/stores/settings'
 
 /** A project the studio has answered about, for the suites of every section. */
 export const HOME_PROJECT: Project = {
-  path: '/projects/summer',
+  path: '/projects/Summer',
   manifest: {
     version: 1,
-    name: 'Summer',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },

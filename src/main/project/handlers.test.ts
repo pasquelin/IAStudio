@@ -270,7 +270,6 @@ describe('project handlers', () => {
 
       expect(injected.project.create).toHaveBeenCalledWith(
         '/Users/someone/Mes Projets/Bande-annonce',
-        'Bande-annonce',
       )
     })
 

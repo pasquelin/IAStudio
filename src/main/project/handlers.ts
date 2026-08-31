@@ -154,7 +154,7 @@ export function registerProjectHandlers({
       // The one refusal that is the user's to give, so it is asked before anything is written.
       if (verdict === 'occupied' && !(await askUseOccupiedFolder(askUser, named))) return null
 
-      return await project.create(root, named)
+      return await project.create(root)
     } catch (error) {
       // Same silence as opening: `createPicked` watches nothing either, so a folder that could
       // not be written said nothing at all. The path is left out — the user picked it from a

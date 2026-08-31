@@ -21,7 +21,6 @@ const PROJECT: Project = {
   path: '/projects/demo',
   manifest: {
     version: 1,
-    name: 'Demo',
     createdAt: '2026-08-07T10:00:00.000Z',
     updatedAt: '2026-08-07T10:00:00.000Z',
   },

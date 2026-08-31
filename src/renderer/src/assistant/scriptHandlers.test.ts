@@ -12,7 +12,7 @@ describe('the scripts of a project, written from outside the window', () => {
     useProject.setState({
       project: {
         path: '/tmp/p',
-        manifest: { version: 1, name: 'P', createdAt: WHEN, updatedAt: WHEN },
+        manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
       },
     })
     useCode.setState({ files: {}, problems: [], goto: null })

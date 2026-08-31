@@ -109,7 +109,7 @@ describe('opening a workspace', () => {
     useProject.setState({
       project: {
         path: '/projects/one',
-        manifest: { version: 1, name: 'One', createdAt: stamp, updatedAt: stamp },
+        manifest: { version: 1, createdAt: stamp, updatedAt: stamp },
       },
     })
     createDocumentIn.mockResolvedValue(madeDocument)
@@ -1056,7 +1056,7 @@ describe('a handler that throws rather than refuses', () => {
     useProject.setState({
       project: {
         path: '/tmp/Film',
-        manifest: { version: 1, name: 'Film', createdAt: WHEN, updatedAt: WHEN },
+        manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
       },
     })
 
