@@ -5,6 +5,9 @@ import type { ChatRequest } from './localRuntimes'
 
 const MODEL = localModel({ id: 'local_one', loader: 'llamacpp', contextTokens: 4_096 })
 
+/** This runner reads the id it minted and never the target; one stands for every case. */
+const TARGET = { id: MODEL.id }
+
 /** A manifest that declares the code employments — what tells the runner which prompt to compose. */
 const CODER = localModel({
   id: 'local_coder',
@@ -49,7 +52,7 @@ describe('a script written on this machine', () => {
     expect(asked[0]?.messages[0]?.content).toContain('declare module')
     expect(asked[0]?.messages[1]?.content).toContain('export const x = 0')
     // The fence off, and on the JOB — there is no asset to read a script back off.
-    expect((await runner.poll(submitted.jobId)).text).toBe('export const x = 1')
+    expect((await runner.poll(submitted.jobId, TARGET)).text).toBe('export const x = 1')
   })
 
   /**
@@ -88,7 +91,7 @@ describe('a script written on this machine', () => {
     await settled()
 
     expect(asked[0]?.messages).toHaveLength(1)
-    expect((await runner.poll(submitted.jobId)).text).toBe('```\nsome prose\n```')
+    expect((await runner.poll(submitted.jobId, TARGET)).text).toBe('```\nsome prose\n```')
   })
 })
 
@@ -107,7 +110,7 @@ describe('the local job runner', () => {
     expect(submitted.status).toBe('in-progress')
 
     await settled()
-    expect((await runner.poll(submitted.jobId)).status).toBe('success')
+    expect((await runner.poll(submitted.jobId, TARGET)).status).toBe('success')
     expect(runner.outputOf(submitted.jobId)).toBe('a picture of a cat')
   })
 
@@ -130,10 +133,10 @@ describe('the local job runner', () => {
 
     const submitted = await runner.submit({ id: MODEL.id }, {})
     await settled()
-    await runner.cancel(submitted.jobId)
+    await runner.cancel(submitted.jobId, TARGET)
     await settled()
 
-    expect((await runner.poll(submitted.jobId)).status).toBe('failure')
+    expect((await runner.poll(submitted.jobId, TARGET)).status).toBe('failure')
   })
 
   // A target this runner does not own reaching it is a routing defect, and answering `failure`
@@ -142,7 +145,7 @@ describe('the local job runner', () => {
     const runner = runnerWith()
 
     expect((await runner.submit({ id: 'model_flux' }, {})).status).toBe('failure')
-    await expect(runner.poll('local_nobody')).rejects.toThrow(/this machine/)
+    await expect(runner.poll('local_nobody', TARGET)).rejects.toThrow(/this machine/)
   })
 
   // Which of the two runners owns a poll is read off the id, so it has to be readable as one.
@@ -210,7 +213,7 @@ describe('a model that produces something other than a sentence', () => {
     })
 
     const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
-    expect((await runner.poll(jobId)).progress).toBe(0.75)
+    expect((await runner.poll(jobId, TARGET)).progress).toBe(0.75)
   })
 
   it('fails readably when nothing here generates for that model', async () => {
@@ -221,8 +224,8 @@ describe('a model that produces something other than a sentence', () => {
     const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
     await settled()
 
-    expect((await runner.poll(jobId)).status).toBe('failure')
-    expect((await runner.poll(jobId)).error).toBe('rejected')
+    expect((await runner.poll(jobId, TARGET)).status).toBe('failure')
+    expect((await runner.poll(jobId, TARGET)).error).toBe('rejected')
     expect(runner.producedBy(jobId)).toBeNull()
   })
 
@@ -234,7 +237,7 @@ describe('a model that produces something other than a sentence', () => {
     const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
     await settled()
 
-    expect((await runner.poll(jobId)).error).toBe('incomplete-model')
+    expect((await runner.poll(jobId, TARGET)).error).toBe('incomplete-model')
   })
 
   it('leaves a conversation producing nothing to file', async () => {

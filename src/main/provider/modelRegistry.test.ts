@@ -6,6 +6,10 @@ import {
   PROVIDER_MAINTAINER,
   SKYBOX_TAG,
   SYSTEM_TAG_PREFIX,
+  type FieldDescriptor,
+  type ModelDescriptor,
+  type ModelFamily,
+  type ModelOrigin,
 } from '@shared/domain/model'
 import { ADVANCED_GROUP } from '@shared/domain/localFields'
 import { localModel } from '@shared/domain/localModel-fixtures'
@@ -26,7 +30,7 @@ import {
  */
 const registryOf = (
   options: Omit<RegistryOptions, 'watch' | 'localModels' | 'translate' | 'isInstalled'> &
-    Partial<Pick<RegistryOptions, 'localModels' | 'translate' | 'isInstalled'>>,
+    Partial<Pick<RegistryOptions, 'localModels' | 'translate' | 'isInstalled' | 'publishedModels'>>,
 ): ModelRegistry =>
   createModelRegistry({
     localModels: () => [],
@@ -1068,5 +1072,96 @@ describe('the pictures a screenful needs', () => {
     await registry.previews(['asset_bare'])
 
     expect(calls).toEqual([['asset_bare']])
+  })
+})
+
+/**
+ * A second cloud that publishes its catalogue as DATA — no listing to walk, no key to spend on
+ * one. Its entries ride beside the local manifests: on the first page, described from memory,
+ * and never paginated.
+ */
+describe('a cloud that publishes its models as data', () => {
+  const TRIPO_FAMILY: ModelFamily = '3d'
+  const TRIPO_ORIGIN: ModelOrigin = 'community'
+  const TRIPO_PROMPT: FieldDescriptor = {
+    key: 'prompt',
+    kind: 'longText',
+    label: 'Description',
+    required: true,
+  }
+
+  const TRIPO_MESH: ModelDescriptor = {
+    id: 'tripo:generation/text-to-model:tripo-v3.1',
+    name: 'Tripo v3.1',
+    family: TRIPO_FAMILY,
+    runsOn: 'tripo',
+    source: 'tripo',
+    origin: TRIPO_ORIGIN,
+    installed: false,
+    downloadable: false,
+    diskBytes: 0,
+    featured: false,
+    capabilities: ['txt23d'],
+    tags: [],
+    fields: [TRIPO_PROMPT],
+  }
+
+  const emptyCatalog = (): ModelCatalog => ({
+    list: () => Promise.resolve({ models: [], token: null }),
+    search: () => Promise.resolve({ models: [], token: null }),
+    retrieve: () => Promise.reject(new Error('nothing to retrieve')),
+    assetUrls: () => Promise.resolve([]),
+  })
+
+  it('offers its models beside the ones a listing answers', async () => {
+    const registry = registryOf({
+      catalog: emptyCatalog,
+      publishedModels: () => [TRIPO_MESH],
+    })
+
+    const page = await registry.search({ family: '3d' })
+
+    expect(page.items.map(item => item.id)).toEqual([TRIPO_MESH.id])
+    expect(page.items[0]?.runsOn).toBe('tripo')
+  })
+
+  it('keeps them out of a family they do not serve', async () => {
+    const registry = registryOf({ catalog: emptyCatalog, publishedModels: () => [TRIPO_MESH] })
+
+    expect((await registry.search({ family: 'video' })).items).toEqual([])
+  })
+
+  /** Its form is DATA: describing it must not reach the API, which has never heard of the id. */
+  it('describes one from memory, without a round trip', async () => {
+    const retrieve = vi.fn()
+    const registry = registryOf({
+      catalog: () => ({ ...emptyCatalog(), retrieve }),
+      publishedModels: () => [TRIPO_MESH],
+    })
+
+    expect((await registry.describe(TRIPO_MESH.id)).fields.map(field => field.key)).toEqual([
+      'prompt',
+    ])
+    expect(retrieve).not.toHaveBeenCalled()
+  })
+
+  // Each entry carries its own `runsOn`, so filtering by it answers without walking anything.
+  it('walks no listing when the facet asks for another runtime', async () => {
+    const list = vi.fn(() => Promise.resolve({ models: [], token: null }))
+    const registry = registryOf({
+      catalog: () => ({ ...emptyCatalog(), list }),
+      publishedModels: () => [TRIPO_MESH],
+    })
+
+    expect((await registry.search({ runsOn: 'tripo' })).items.map(one => one.id)).toEqual([
+      TRIPO_MESH.id,
+    ])
+    expect(list).not.toHaveBeenCalled()
+  })
+
+  it('answers nothing of theirs while no key is held for that cloud', async () => {
+    const registry = registryOf({ catalog: emptyCatalog, publishedModels: () => [] })
+
+    expect((await registry.search({ family: '3d' })).items).toEqual([])
   })
 })

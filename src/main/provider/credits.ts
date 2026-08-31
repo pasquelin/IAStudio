@@ -1,5 +1,11 @@
 import { SCENARIO_CLOUD, type CloudProviderId } from '@shared/domain/aiCloud'
-import type { CreditBalance, CreditBalances, Money } from '@shared/domain/credits'
+import { TRIPO_BASE_URL, TRIPO_CLOUD } from '@shared/domain/tripo'
+import {
+  CREDIT_UNIT,
+  type CreditBalance,
+  type CreditBalances,
+  type Money,
+} from '@shared/domain/credits'
 import { isRecord } from '@shared/guards'
 import { orElse } from '@shared/promises'
 import { log } from '@main/log'
@@ -96,6 +102,20 @@ function openrouterKeyLimit(body: unknown): readonly Money[] | null {
   return dollars(openrouterData(body)?.['limit_remaining'])
 }
 
+/**
+ * What Tripo has left, in CREDITS — their answer names no currency at all, and `frozen` is what
+ * their running tasks are holding rather than anything left to spend.
+ *
+ * 🛑 NOT MEASURED against a spending account: read on a key with 5 000 credits and nothing
+ * running, so whether `balance` already excludes `frozen` is unknown. Shown as it comes.
+ */
+function tripoLeft(body: unknown): readonly Money[] | null {
+  const data = isRecord(body) && isRecord(body['data']) ? body['data'] : null
+  const amount = data ? figureOf(data['balance']) : null
+
+  return amount === null ? null : [{ amount, currency: CREDIT_UNIT }]
+}
+
 type BalanceRead = (get: CreditsFetch, key: string) => Promise<readonly Money[] | null>
 
 /**
@@ -106,6 +126,9 @@ type BalanceRead = (get: CreditsFetch, key: string) => Promise<readonly Money[] 
 const READ: Partial<Record<CloudProviderId, BalanceRead>> = {
   deepseek: async (get, key) =>
     deepseekLeft(await readJson(get, 'https://api.deepseek.com/user/balance', key)),
+
+  [TRIPO_CLOUD]: async (get, key) =>
+    tripoLeft(await readJson(get, `${TRIPO_BASE_URL}/account/balance`, key)),
 
   // Both at once, and it takes both: `/credits` asks for a management key while `/key` answers an
   // inference one but quotes a figure only where the key was given a limit.

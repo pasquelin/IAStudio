@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOUD_IDS } from '@shared/domain/aiCloud'
+import { CLOUD_IDS, cloudsServing } from '@shared/domain/aiCloud'
 import type { MemorySnapshot } from '@shared/domain/aiMemory'
 import {
   aiRoleId,
@@ -212,6 +212,8 @@ describe('aiOverviewOf', () => {
     )
 
     expect(rowOf(overview, ASSISTANT_ROLE)?.provider).toBeNull()
-    expect(rowOf(overview, ASSISTANT_ROLE)?.clouds).toEqual(CLOUD_IDS)
+    // Every cloud that DECLARES serving the role, which is not every cloud on file: one of them
+    // only generates, and offering it here would open on an account that answers no conversation.
+    expect(rowOf(overview, ASSISTANT_ROLE)?.clouds).toEqual(cloudsServing(ASSISTANT_ROLE))
   })
 })

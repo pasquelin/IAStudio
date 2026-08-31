@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { primaryRoleOf, providerOfModel } from '@shared/domain/aiRole'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
-import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { failureKeyOf } from '@/services/failureMessage'
 import { Collection } from '@/components/Collection/Collection'
 import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
@@ -18,11 +17,12 @@ import { useModelReach } from '@/hooks/useModelReach'
 import { ModelDownloadDialog } from '../ModelDownloadDialog'
 import { getBridge } from '@/services/bridge'
 import { modelCollectionOf, useModels } from '@/stores/models'
+import { useAccounts } from '@/stores/accounts'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/components/EmptyState'
 import { MissingCredentials } from '@/features/shell/components/MissingCredentials'
-import { facetsFor, queryFrom, sortOptions } from '../../modelFilters'
+import { cloudsHeldFor, facetsFor, queryFrom, sortOptions } from '../../modelFilters'
 import { ModelsCard } from './ModelsCard'
 import { ModelsRow } from './Row/ModelsRow'
 import { ModelsSelected } from './ModelsSelected'
@@ -37,7 +37,6 @@ const PAGE_LIMIT = 24
 const AUTOMATIC_PULLS = 6
 
 /** Never rebuilt: a fresh empty array per render would invalidate the memo that reads it. */
-const NO_CLOUDS: readonly string[] = []
 
 export type ModelsProps = {
   /** The family whose catalogue is browsed. The settings screen it sits under names it. */
@@ -69,6 +68,7 @@ export function Models({ family }: ModelsProps) {
   // window, which never connects the project store — so the scope read `app` with a project open.
   const projectPath = useAiModels(state => state.overview?.projectPath ?? null)
   const authenticated = useSettings(state => state.auth.authenticated)
+  const accounts = useAccounts(state => state.accounts)
   const plan = usePlanAccess()
 
   const reachOf = useModelReach(plan)
@@ -83,16 +83,13 @@ export function Models({ family }: ModelsProps) {
   const search = settled.family === family ? settled.search : ''
   // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
   // costs nothing, and `queryFrom` translates nothing.
-  // A cloud is offered only where a key is held. The listing itself stays on this machine
-  // until the person ticks Scenario — an account is not a reason to show billed models.
+  // A cloud is offered only where a key is held — see `cloudsHeldFor`. The listing itself stays
+  // on this machine until the person ticks one: an account is not a reason to show billed models.
   // Memoised BECAUSE the facets below depend on it: a fresh array per render defeated their memo
   // for anyone holding a key, which is the case that matters.
   const clouds = useMemo(
-    () =>
-      authenticated
-        ? CLOUD_PROVIDERS.filter(one => one.families.includes(family)).map(one => one.id)
-        : NO_CLOUDS,
-    [authenticated, family],
+    () => cloudsHeldFor(family, authenticated, accounts),
+    [accounts, authenticated, family],
   )
   const query = queryFrom(collection, family, search, clouds)
 

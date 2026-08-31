@@ -14,8 +14,15 @@ export type ProgressRowProps = {
   /** Short status text, at the right of the bar. */
   status: string
   tone?: StatusTone
-  /** Both or neither: a labelless button is unreachable, a labelled one that does nothing lies. */
-  cancel?: { label: string; onClick: () => void }
+  /**
+   * Both or neither: a labelless button is unreachable, a labelled one that does nothing lies.
+   *
+   * `refusedBecause` is the third case, and it is not a fourth state of the same button: some
+   * services do not stop a task they have started, and a button that reported one as cancelled
+   * would have somebody believe they stopped a spend that is still running. The row keeps the
+   * button, says why in its tooltip, and does nothing when it is pressed.
+   */
+  cancel?: { label: string; onClick: () => void; refusedBecause?: string }
   /** Rendered under the row, for a failure worth a sentence. */
   detail?: ReactNode
 }
@@ -45,9 +52,17 @@ export function ProgressRow({
           <ToolButton
             icon={mdiCloseCircleOutline}
             label={cancel.label}
+            // The reason REPLACES the label in the tooltip: the name is already what the button
+            // answers to, and repeating it would leave the refusal unsaid.
+            description={cancel.refusedBecause}
             tooltip={TIP_LEFT}
             variant="header"
-            onClick={cancel.onClick}
+            // `aria-disabled` rather than `disabled`: a disabled button dispatches no pointer
+            // event in Chromium, so the tooltip carrying the reason would never be drawn — and
+            // the reason is the whole point of keeping the button on the row.
+            aria-disabled={cancel.refusedBecause === undefined ? undefined : true}
+            className={cancel.refusedBecause === undefined ? undefined : 'cursor-not-allowed'}
+            onClick={cancel.refusedBecause === undefined ? cancel.onClick : undefined}
           />
         )}
       </div>

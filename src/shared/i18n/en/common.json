@@ -28,7 +28,8 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
-    "cancel": "Cancel job"
+    "cancel": "Cancel job",
+    "cancelRefused": "{{cloud}} does not stop a generation once started: it runs to its end and is billed."
   },
   "tasks": {
     "running_one": "{{count, number}} task",

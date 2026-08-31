@@ -184,6 +184,7 @@
     "manageHint": "Opens the settings to add, rename or remove an account",
     "credits": {
       "left": "Credit left: {{amount}}",
+      "unit": "{{amount}} credits",
       "unreadable": "Credit left cannot be read right now.",
       "unpublished": "This service does not publish remaining credit."
     }

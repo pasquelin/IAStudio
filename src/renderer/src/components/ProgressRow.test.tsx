@@ -37,6 +37,26 @@ describe('ProgressRow', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  /**
+   * Some services do not stop a task they have started. The button stays on the row and says
+   * why — `aria-disabled` and not `disabled`, because a disabled button dispatches no pointer
+   * event in Chromium and the tooltip carrying the reason would never be drawn.
+   */
+  it('keeps the button and refuses through it, rather than reporting a spend as stopped', async () => {
+    const onClick = vi.fn()
+    row({
+      ratio: 0.5,
+      cancel: { label: 'Interrompre', onClick, refusedBecause: 'Tripo ne stoppe rien' },
+    })
+
+    const button = screen.getByRole('button', { name: /Interrompre/ })
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAttribute('data-tooltip-content', 'Tripo ne stoppe rien')
+
+    await userEvent.click(button)
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
   it('shows the detail a failure is worth', () => {
     row({ status: 'Échec', detail: <span role="alert">Fichier illisible</span> })
     expect(screen.getByRole('alert')).toHaveTextContent('Fichier illisible')

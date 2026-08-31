@@ -20,6 +20,7 @@ const answers = (bodies: Record<string, unknown>): CreditsFetch =>
 const DEEPSEEK = 'https://api.deepseek.com/user/balance'
 const OPENROUTER_CREDITS = 'https://openrouter.ai/api/v1/credits'
 const OPENROUTER_KEY = 'https://openrouter.ai/api/v1/key'
+const TRIPO_BALANCE = 'https://openapi.tripo3d.ai/v3/account/balance'
 
 const TTL = 1_000
 
@@ -179,5 +180,31 @@ describe('what each stored key has left', () => {
   it('names only clouds the registry holds', () => {
     expect(BALANCE_CLOUDS.length).toBeGreaterThan(0)
     expect(BALANCE_CLOUDS.filter(id => !CLOUD_IDS.includes(id))).toEqual([])
+  })
+})
+
+/**
+ * The one cloud quoting a balance in something that is not money. `Intl.NumberFormat` throws on a
+ * currency it does not know, so the unit travels named rather than as a three-letter code.
+ */
+describe('a balance quoted in credits', () => {
+  it('reads what the key has left out of their envelope', async () => {
+    const fetch = answers({
+      [TRIPO_BALANCE]: { code: 0, status: 'success', data: { balance: 5000, frozen: 20 } },
+    })
+
+    const balances = await reader([account('tri', 'tripo')], fetch).balances()
+
+    expect(balances).toEqual({
+      tri: { state: 'known', left: [{ amount: 5000, currency: 'credits' }] },
+    })
+  })
+
+  it('says it could not read one rather than drawing a zero', async () => {
+    const fetch = answers({ [TRIPO_BALANCE]: { code: 2, status: 'error', message: 'no' } })
+
+    expect(await reader([account('tri', 'tripo')], fetch).balances()).toEqual({
+      tri: { state: 'unreadable' },
+    })
   })
 })

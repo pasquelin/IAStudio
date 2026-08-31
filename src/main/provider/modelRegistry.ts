@@ -136,6 +136,15 @@ export type RegistryOptions = {
   localModels: () => readonly LocalModel[]
   /** Whether a local model's weights are on this disk. Read per call: an install lands mid-panel. */
   isInstalled: (modelId: string) => boolean
+  /**
+   * The models a cloud publishes as DATA rather than through a listing — its whole catalogue,
+   * already described, or nothing while no key is held for it.
+   *
+   * A second REMOTE catalogue and not a second local one: what it names runs on a cloud, and each
+   * entry carries its own `runsOn` so nothing here has to be told which cloud answered. Read per
+   * call, like the local manifests: a key added mid-panel fills the picker on the next search.
+   */
+  publishedModels?: () => readonly ModelDescriptor[]
   /** Names the knobs of a local model's form. The main process holds the language as a service. */
   translate: (key: string) => string
   ttlMs?: number
@@ -425,6 +434,7 @@ export function createModelRegistry({
   watch,
   localModels,
   isInstalled,
+  publishedModels,
   translate,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
@@ -481,11 +491,11 @@ export function createModelRegistry({
     if (query.cursor !== undefined) return page
 
     const since = query.since ? cutoff(query.since, now()) : null
-    const locals = localSummaries(query.family).filter(summary => matches(summary, query, since))
-    const seen = new Set(locals.map(summary => summary.id))
-    const remotes = page.items.filter(item => item.runsOn !== LOCAL_RUNTIME && !seen.has(item.id))
+    const held = offlineSummaries(query.family).filter(summary => matches(summary, query, since))
+    const seen = new Set(held.map(summary => summary.id))
+    const remotes = page.items.filter(item => !seen.has(item.id) && !isOffline(item.id))
     const limit = query.limit ?? DEFAULT_LIMIT
-    return { items: [...locals, ...remotes].slice(0, limit), cursor: page.cursor }
+    return { items: [...held, ...remotes].slice(0, limit), cursor: page.cursor }
   }
 
   // The form a model on this machine offers, derived from its MODALITY — see `localFields.ts`.
@@ -547,6 +557,23 @@ export function createModelRegistry({
 
   const localSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] =>
     localModels().flatMap(model => localSummaryOf(model, isInstalled(model.id), asFamily) ?? [])
+
+  const published = (): readonly ModelDescriptor[] => publishedModels?.() ?? []
+
+  /**
+   * Every model the studio can offer without walking a listing: this machine's, and the ones a
+   * cloud publishes as data. They ride on the FIRST page and are never paginated — a handful of
+   * entries held in memory, where a cursor would be machinery for a list that fills one screen.
+   */
+  const offlineSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] => [
+    ...localSummaries(asFamily),
+    ...published().filter(model => asFamily === undefined || model.family === asFamily),
+  ]
+
+  /** Whether an id belongs to a model this registry answers for without asking the API. */
+  const isOffline = (modelId: string): boolean =>
+    localModels().some(model => model.id === modelId) ||
+    published().some(model => model.id === modelId)
 
   /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
   const described = async (modelId: string): Promise<ModelDescriptor> => {
@@ -656,7 +683,7 @@ export function createModelRegistry({
       // manifests held in memory, so a cursor into it would be machinery for a list that cannot
       // fill one screen. It comes first because it is the side that costs nothing to run.
       if (query.cursor === undefined) {
-        for (const summary of localSummaries(query.family)) {
+        for (const summary of offlineSummaries(query.family)) {
           if (!matches(summary, query, since)) continue
 
           seen.add(summary.id)
@@ -664,10 +691,14 @@ export function createModelRegistry({
         }
       }
 
-      // Nothing remote is walked for this machine alone, nor for a family no catalogue publishes:
-      // the pages could only be discarded, and each of them is a round trip on a quota.
+      // Nothing remote is walked for this machine alone, for another cloud's own models, nor for
+      // a family no catalogue publishes: the pages could only be discarded, and each of them is a
+      // round trip on a quota.
+      const elsewhere =
+        query.runsOn !== undefined &&
+        (query.runsOn === LOCAL_RUNTIME || query.runsOn !== SCENARIO_CLOUD)
       let cursor: Cursor | null =
-        query.runsOn === LOCAL_RUNTIME || !servedByCatalogue(query.family)
+        elsewhere || !servedByCatalogue(query.family)
           ? null
           : (deserialize(query.cursor) ?? startOf(query))
       let walked = 0
@@ -733,7 +764,10 @@ export function createModelRegistry({
     },
 
     describe: async modelId =>
-      describedAsCloudItself(modelId) ?? describedLocally(modelId) ?? (await described(modelId)),
+      describedAsCloudItself(modelId) ??
+      published().find(model => model.id === modelId) ??
+      describedLocally(modelId) ??
+      (await described(modelId)),
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]

@@ -4,7 +4,17 @@
  * is ABSENT from a reading rather than carrying a zero.
  */
 
-/** An amount in the currency its cloud quoted. Never converted: the studio holds no rate. */
+/**
+ * The unit a cloud counts in when it does not count in MONEY — Tripo sells credits, and quotes
+ * a balance in them with no currency anywhere in the answer.
+ *
+ * Named rather than left as a three-letter code: `Intl.NumberFormat` throws `RangeError` on a
+ * currency it does not know, in the title bar's own render, so a screen has to tell the two
+ * apart before it formats either.
+ */
+export const CREDIT_UNIT = 'credits'
+
+/** An amount in the currency its cloud quoted, or in `CREDIT_UNIT`. Never converted. */
 export type Money = {
   readonly amount: number
   readonly currency: string

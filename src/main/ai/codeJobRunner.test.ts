@@ -25,6 +25,9 @@ function runnerWith(post: CodeJobDeps['post'], deps: Partial<CodeJobDeps> = {}) 
 
 const ANTHROPIC = cloudModelId('anthropic')
 
+/** This runner reads the id it minted and never the target; one stands for every case. */
+const TARGET = { id: ANTHROPIC }
+
 /**
  * Polls until the round trip the submission started has settled.
  *
@@ -33,7 +36,7 @@ const ANTHROPIC = cloudModelId('anthropic')
  */
 async function finished(runner: ReturnType<typeof runnerWith>, jobId: string) {
   for (let at = 0; at < 50; at += 1) {
-    const job = await runner.poll(jobId)
+    const job = await runner.poll(jobId, TARGET)
     if (job.status !== 'in-progress') return job
   }
 
@@ -107,7 +110,7 @@ describe('a script written by a chat cloud', () => {
     const submitted = await runner.submit({ id: ANTHROPIC }, { prompt: 'a spin' })
     expect((await finished(runner, submitted.jobId)).text).toBe('export const x = 1')
 
-    expect((await runner.poll(submitted.jobId)).text).toBe('export const x = 1')
+    expect((await runner.poll(submitted.jobId, TARGET)).text).toBe('export const x = 1')
   })
 
   it('lets go of the script once the manager has it, and still owns the job', async () => {
@@ -117,7 +120,7 @@ describe('a script written by a chat cloud', () => {
     await finished(runner, submitted.jobId)
     runner.forget?.(submitted.jobId)
 
-    const again = await runner.poll(submitted.jobId)
+    const again = await runner.poll(submitted.jobId, TARGET)
     expect(again.status).toBe('success')
     expect(again.text).toBeUndefined()
     // The identity is what routes a poll and a collection; the script is what weighed.

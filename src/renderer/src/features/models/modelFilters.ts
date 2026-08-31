@@ -13,6 +13,8 @@ import {
   type ModelQuery,
   type ModelSort,
 } from '@shared/domain/model'
+import { CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { providerOf, type AccountSummary } from '@shared/domain/account'
 import {
   selectedValues,
   type CollectionState,
@@ -141,6 +143,28 @@ function chosen<T extends string>(
 ): T | undefined {
   const [value] = selectedValues(state, facet)
   return allowed.find(candidate => candidate === value)
+}
+
+/**
+ * The clouds this family may be listed from — those a key is actually held for.
+ *
+ * 🛑 Per CLOUD, and the Scenario probe alone cannot say it: `authenticated` reads that one key,
+ * so a studio holding only a second cloud's key was offered nothing at all, and the models of
+ * the service the person is paying for could not be reached from the panel. Scenario keeps the
+ * probe — a stored key it refuses lists nothing — and every other cloud answers on its account.
+ */
+export function cloudsHeldFor(
+  family: ModelFamily,
+  authenticated: boolean,
+  accounts: readonly AccountSummary[],
+): string[] {
+  return CLOUD_PROVIDERS.filter(
+    cloud =>
+      cloud.families.includes(family) &&
+      (cloud.id === SCENARIO_CLOUD
+        ? authenticated
+        : accounts.some(account => account.active && providerOf(account) === cloud.id)),
+  ).map(cloud => cloud.id)
 }
 
 /**

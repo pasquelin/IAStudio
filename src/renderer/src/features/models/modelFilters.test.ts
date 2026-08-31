@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import type { AccountSummary } from '@shared/domain/account'
 import { LOCAL_RUNTIME } from '@shared/domain/model'
+import { TRIPO_CLOUD } from '@shared/domain/tripo'
 import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collectionState'
 import {
   CAPABILITY_FACET,
+  cloudsHeldFor,
   facetsFor,
   ORIGIN_FACET,
   PERIOD_FACET,
@@ -292,5 +295,42 @@ describe('model filters', () => {
         sort: 'recent',
       })
     })
+  })
+})
+
+/**
+ * 🛑 A studio may hold a key for a second cloud and none for Scenario. Read off the Scenario
+ * probe alone, the runtime facet then offered nothing at all — and the models of the service the
+ * person is actually paying for could not be reached from the panel.
+ */
+describe('the clouds a family may be listed from', () => {
+  const active = (providerId: string): AccountSummary => ({
+    id: `a-${providerId}`,
+    name: 'Key',
+    providerId,
+    active: true,
+  })
+
+  it('offers a cloud on its own active key, with no Scenario account held', () => {
+    expect(cloudsHeldFor('3d', false, [active(TRIPO_CLOUD)])).toEqual([TRIPO_CLOUD])
+  })
+
+  it('offers none of a cloud nobody holds a key for', () => {
+    expect(cloudsHeldFor('3d', false, [])).toEqual([])
+  })
+
+  /** A stored key the probe refuses lists nothing: Scenario keeps answering on the probe. */
+  it('holds Scenario to its own probe rather than to an account on file', () => {
+    expect(cloudsHeldFor('image', false, [active(SCENARIO_CLOUD)])).not.toContain(SCENARIO_CLOUD)
+    expect(cloudsHeldFor('image', true, [])).toContain(SCENARIO_CLOUD)
+  })
+
+  it('offers no cloud for a family it does not serve', () => {
+    expect(cloudsHeldFor('skybox', true, [active(TRIPO_CLOUD)])).toEqual([SCENARIO_CLOUD])
+  })
+
+  // A key on file that is not the active one of its cloud is not the key calls go out on.
+  it('takes no cloud from an idle key', () => {
+    expect(cloudsHeldFor('3d', false, [{ ...active(TRIPO_CLOUD), active: false }])).toEqual([])
   })
 })

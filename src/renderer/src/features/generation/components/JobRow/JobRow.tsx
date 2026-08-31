@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
+import { isTripoModelId } from '@shared/domain/tripo'
 import { ProgressRow } from '@/components/ProgressRow'
 import type { StatusTone } from '@/components/styles'
 import { useJobs } from '@/stores/jobs'
@@ -26,6 +27,13 @@ export const JobRow = memo(function JobRow({ job }: { job: Job }) {
   const { t } = useTranslation()
   const cancel = useJobs(state => state.cancel)
   const finished = isFinished(job.status)
+  // 🛑 Only once it has REACHED them: a Tripo job still waiting its turn in the studio's own
+  // queue has cost nothing and stops here. Their service publishes no cancellation, so a
+  // running one goes on being billed whatever this button did.
+  const refusedBecause =
+    isTripoModelId(job.targetId) && job.status !== 'queued'
+      ? t('jobs.cancelRefused', { cloud: t('aiClouds.tripo') })
+      : undefined
 
   return (
     <ProgressRow
@@ -36,7 +44,13 @@ export const JobRow = memo(function JobRow({ job }: { job: Job }) {
       status={t(`jobs.status.${job.status}`)}
       tone={STATUS_TONE[job.status]}
       cancel={
-        finished ? undefined : { label: t('jobs.cancel'), onClick: () => void cancel(job.id) }
+        finished
+          ? undefined
+          : {
+              label: t('jobs.cancel'),
+              onClick: () => void cancel(job.id),
+              ...(refusedBecause === undefined ? {} : { refusedBecause }),
+            }
       }
       detail={<JobRowDetail job={job} />}
     />

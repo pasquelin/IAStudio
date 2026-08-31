@@ -6,7 +6,7 @@ import {
   type AccountsResult,
   type AccountSummary,
 } from '@shared/domain/account'
-import { ASSET_CLOUDS } from '@shared/domain/aiCloud'
+import { LIBRARY_CLOUDS } from '@shared/domain/aiCloud'
 import type { StudioBridge } from '@shared/ipc'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
 import { useSettings } from './settings'
@@ -41,7 +41,7 @@ export function activeAccount(accounts: readonly AccountSummary[]): AccountSumma
 }
 
 /**
- * Whether a key opening onto a remote LIBRARY is held — which cloud that is, `ASSET_CLOUDS` says.
+ * Whether a key opening onto a remote LIBRARY is held — which cloud that is, `LIBRARY_CLOUDS` says.
  *
  * A list not read yet counts as held: the ordinary case is someone who has a key, and their rail
  * must not lose an icon and get it back a moment later.
@@ -49,7 +49,7 @@ export function activeAccount(accounts: readonly AccountSummary[]): AccountSumma
 export function accountsHoldLibrary({ accounts, accountsLoaded }: AccountsHeld): boolean {
   return (
     !accountsLoaded ||
-    accounts.some(account => account.active && ASSET_CLOUDS.includes(providerOf(account)))
+    accounts.some(account => account.active && LIBRARY_CLOUDS.includes(providerOf(account)))
   )
 }
 

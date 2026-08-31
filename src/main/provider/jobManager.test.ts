@@ -407,6 +407,43 @@ describe('job manager', () => {
     await settled()
   })
 
+  /**
+   * A cloud whose ceilings are per CATEGORY — Tripo counts one picture at a time against ten
+   * meshes. A single number for the whole cloud would refuse the mesh or take a certain 429 on
+   * the second picture.
+   */
+  it('holds a category at its own ceiling while another category runs freely', async () => {
+    const started: string[] = []
+    const release: Record<string, () => void> = {}
+
+    const { manager } = harness({
+      concurrency: () => 5,
+      lane: id => (id.startsWith('tripo:') ? { name: id.split(':')[1] ?? '', limit: 1 } : null),
+      runner: {
+        submit: target =>
+          new Promise(resolve => {
+            started.push(target.id)
+            release[target.id] = () => resolve(remote('success'))
+          }),
+      },
+    })
+
+    manager.submit({ id: 'tripo:image:one' }, 'One', {})
+    manager.submit({ id: 'tripo:image:two' }, 'Two', {})
+    manager.submit({ id: 'tripo:mesh:three' }, 'Three', {})
+    await settled()
+
+    expect(started).toEqual(['tripo:image:one', 'tripo:mesh:three'])
+
+    release['tripo:image:one']?.()
+    await settled()
+    expect(started).toContain('tripo:image:two')
+
+    release['tripo:image:two']?.()
+    release['tripo:mesh:three']?.()
+    await settled()
+  })
+
   it('never runs two jobs on this machine at once', async () => {
     let active = 0
     let peak = 0
@@ -611,7 +648,7 @@ describe('job manager', () => {
     await settled()
     await manager.cancel(job.id)
 
-    expect(cancel).toHaveBeenCalledWith('job_remote')
+    expect(cancel).toHaveBeenCalledWith('job_remote', { id: 'model_flux' })
   })
 
   it('succeeds only once the assets are indexed', async () => {
@@ -827,7 +864,7 @@ describe('the account a job runs on', () => {
     switchAccount()
     await manager.cancel(job.id)
 
-    expect(studio.runner.cancel).toHaveBeenCalledWith('job_remote')
+    expect(studio.runner.cancel).toHaveBeenCalledWith('job_remote', { id: 'model_veo' })
     expect(other.runner.cancel).not.toHaveBeenCalled()
   })
 
@@ -1316,7 +1353,7 @@ describe('a job that outlives the session', () => {
 
     await manager.cancel(RUNNING.id)
 
-    expect(cancel).toHaveBeenCalledWith('job_remote')
+    expect(cancel).toHaveBeenCalledWith('job_remote', { id: 'model_veo' })
     expect(manager.list()[0]?.status).toBe('cancelled')
     // Taken by the API, so nothing is owed and the note goes with it.
     expect(remembered()).toEqual([])
