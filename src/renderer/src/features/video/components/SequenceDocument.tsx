@@ -15,11 +15,12 @@ import {
 import { clamp } from '@shared/numeric'
 import { useDocumentIsInFront } from '@/stores/documents'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
+import { reportMontageHead } from '@/helpers/reportMontageHead'
 import { playbackHeadOf, playbackOf, usePlayback } from '@/stores/playback'
 import { mirrorMessageOf, openMirrorChannel } from './mirrorChannel'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useLatest } from '@/hooks/useLatest'
-import { isSequenceDirty, sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
+import { isSequenceDirty, sequenceOf, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useSplitPair } from '@/hooks/useSplitPair'
@@ -219,23 +220,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   )
 
   const setProgramTime = useCallback(
-    (playhead: Us) => {
-      const store = useSequences.getState()
-      // Closing a tab drops the document BEFORE React unmounts this tab, and `dispose` pauses —
-      // which reports one last time. Writing then would build the montage back out of the store's
-      // default, and `replace` is the one write the store's own guard cannot catch: it is how a
-      // document ARRIVES. The sound workspace carries the same line, for the same reason.
-      if (!sequenceStore.hasState(store, documentId)) return
-
-      const playback = usePlayback.getState()
-      playback.setHead(documentId, playhead)
-      // While playing the clock already owns the head: replacing the sequence sixty times a
-      // second woke the strip, the inspector and both monitors for a number they can read here.
-      if (playbackOf(playback, programOwner(documentId))) return
-
-      // Playback is not an edit: the playhead goes through `replace`, which skips the history.
-      store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
-    },
+    (playhead: Us) => reportMontageHead(documentId, programOwner(documentId), playhead),
     [documentId],
   )
 

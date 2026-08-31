@@ -807,17 +807,22 @@ describe('the column a property line begins on', () => {
   })
 
   /**
-   * The rule that used to be read out of the FIELDS' own source: every property line reserved its
-   * end column, and nine files each had to remember. One file writes the shell now, so the sweep
-   * asks the only question left — that nothing goes around it.
-   *
-   * The two mentions in prose are not writes: the comparison is on the code, comments stripped.
+   * Nine files each had to remember the end column, and eight spelt the label column out. The
+   * rule making a truncated name readable was fixed on ONE of them — `ToggleField`, seen cut
+   * mid-word — and the others went on truncating. Two files write these now, and the sweep asks
+   * the only question left: that nothing goes around them. Comments stripped, since both names
+   * appear in prose right here.
    */
-  it('is written by the shell alone, so no line can end where it pleases', () => {
-    const wearing = WRITTEN_SOURCES.filter(([, source]) => stripped(source).includes('FIELD_ROW'))
+  const writersOf = (token: string): (string | undefined)[] =>
+    WRITTEN_SOURCES.filter(([, source]) => stripped(source).includes(token))
       .map(([path]) => path.split('/').pop())
       .sort()
 
-    expect(wearing).toEqual(['PropertyLine.tsx', 'styles.ts'])
+  it('is written by the shell alone, so no line can end where it pleases', () => {
+    expect(writersOf('FIELD_ROW')).toEqual(['PropertyLine.tsx', 'styles.ts'])
+  })
+
+  it('is drawn by one component alone, so no field can spell the column out again', () => {
+    expect(writersOf('FIELD_LABEL')).toEqual(['PropertyLabel.tsx', 'styles.ts'])
   })
 })

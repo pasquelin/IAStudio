@@ -58,7 +58,13 @@ import { runTask } from '@/stores/tasks'
 import { peaksOf, usePeaks } from '@/stores/peaks'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { playbackHeadOf, usePlayback } from '@/stores/playback'
-import { addSceneToSequence, selectClipIn, sequenceOf, useSequences } from '@/stores/sequences'
+import {
+  addSceneToSequence,
+  selectClipIn,
+  sequenceOf,
+  sequenceStore,
+  useSequences,
+} from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { exportSequence } from './sequenceExport'
 import type { VideoToolId } from '../videoTools'
@@ -298,7 +304,11 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   }
 
   const writePlayhead = (base: SequenceState, playhead: Us): void => {
-    useSequences.getState().replace(documentId, { ...base, playhead })
+    const store = useSequences.getState()
+    // A frame still owed when the tab closes is flushed on unmount, and `replace` is how a
+    // document ARRIVES: unguarded, it built this montage back for an id already handed back.
+    if (!sequenceStore.hasState(store, documentId)) return
+    store.replace(documentId, { ...base, playhead })
   }
 
   const scrubTo = (base: SequenceState, point: Point, immediate = false): void => {
@@ -388,6 +398,11 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     if (!current) return
 
     event.currentTarget.releasePointerCapture(event.pointerId)
+
+    // The frame owed by the last pointermove, paid HERE: left pending, it lands after the press
+    // that follows and rewrites the montage from the state THIS gesture started on. A scrub is no
+    // command either, so it ends on this line rather than on a hit test whose answer is dropped.
+    if (current.gesture.kind === 'scrub') return scrubCoalesce.current.flush()
 
     const command = commandForGesture(
       current.gesture,

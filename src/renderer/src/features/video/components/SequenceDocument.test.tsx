@@ -17,6 +17,10 @@ const pause = vi.fn()
 // Shared across instances, unlike the per-engine mocks: what the engine is handed is what will be
 // painted and heard, and both monitors hand it over here.
 const applied = vi.fn<(state: SequenceState) => void>()
+type EngineDeps = { owner: string; onTime?: (time: number) => void }
+
+/** What each monitor taught its engine, so a case can report a time the way the clock does. */
+const built = vi.hoisted<EngineDeps[]>(() => [])
 
 // jsdom has neither WebGL nor WebCodecs: the engine is exercised by hand, not here. What this
 // covers is that the tab shows two monitors and wires their transport.
@@ -32,7 +36,9 @@ vi.mock('@/engines/timeline/TimelineEngine', () => ({
     // and pausing reports the time one last time (`TimelineEngine.pause`).
     dispose = vi.fn(() => this.deps.onTime?.(0))
 
-    constructor(private deps: { onTime?: (time: number) => void }) {}
+    constructor(private deps: EngineDeps) {
+      built.push(deps)
+    }
   },
 }))
 
@@ -62,6 +68,8 @@ const seekMontage = (playhead: number): void => {
 describe('SequenceDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    built.length = 0
+    usePlayback.setState({ running: {}, heads: {} })
     useDocuments.setState({ activeId: 'doc-1' })
     // Almost everything below is about the PAIR, which a tab now opens with one half of: the
     // decor asks for the source monitor, and the one suite about the default closes it again.
@@ -269,6 +277,25 @@ describe('SequenceDocument', () => {
 
     seekMontage(2_600_000)
     expect(sourcePlayhead()).toBe(600_000)
+  })
+
+  /** Published while stopped, it survived the run that wrote it: the strip then stopped
+   * following a scrub, and `sequence.split` cut where Play had been pressed. */
+  it('hands the head back to the montage the moment the programme stops', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+    const clock = built.find(deps => deps.owner === programOwner('doc-1'))
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', later)))
+
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), true))
+    act(() => clock?.onTime?.(2_800_000))
+    expect(usePlayback.getState().heads['doc-1']).toBe(2_800_000)
+
+    // As `TimelineEngine.pause` has it: said to have stopped, THEN one last time reported.
+    act(() => usePlayback.getState().setRunning(programOwner('doc-1'), false))
+    act(() => clock?.onTime?.(3_000_000))
+
+    expect(usePlayback.getState().heads['doc-1']).toBeUndefined()
+    expect(sequenceStore.stateOf(useSequences.getState(), 'doc-1').playhead).toBe(3_000_000)
   })
 
   it('catches up with the head as soon as playback stops', () => {

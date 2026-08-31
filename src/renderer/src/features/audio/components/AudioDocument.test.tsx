@@ -38,7 +38,7 @@ const decodeAsset = vi.hoisted(() =>
 
 vi.mock('@/helpers/audioDecode', () => ({ decodeAsset }))
 
-vi.mock('./useWaveSurfer', () => ({
+vi.mock('@/hooks/useWaveSurfer', () => ({
   useWaveSurfer: () => ({ playing: false, currentTime: 0, toggle: vi.fn(), seek: vi.fn() }),
 }))
 

@@ -15,7 +15,7 @@ describe('ProgramTransport', () => {
   let unregister = (): void => undefined
 
   beforeEach(() => {
-    usePlayback.setState({ running: {} })
+    usePlayback.setState({ running: {}, heads: {} })
     installSequence('doc-1')
     play.mockReset()
     pause.mockReset()
@@ -40,15 +40,18 @@ describe('ProgramTransport', () => {
     expect(screen.getByRole('button', { name: /^Pause/ })).toBeInTheDocument()
   })
 
+  /** The head is HANDED BACK rather than published: one left here beat the montage's own. */
   it('stops the player and puts the head back at the start', async () => {
     const store = useSequences.getState()
     store.replace('doc-1', { ...sequenceOf(store, 'doc-1'), playhead: 2_000_000 })
+    usePlayback.getState().setHead('doc-1', 2_000_000)
     render(<ProgramTransport documentId="doc-1" />)
 
     await userEvent.click(screen.getByRole('button', { name: /Retour au début/ }))
 
     expect(pause).toHaveBeenCalledTimes(1)
     expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(0)
+    expect(usePlayback.getState().heads['doc-1']).toBeUndefined()
   })
 
   it('does not rebuild a document that has already been dropped', async () => {

@@ -30,7 +30,8 @@ export function ProgramTransport({ documentId }: ProgramTransportProps) {
         // moving the playhead is not an edit.
         const store = useSequences.getState()
         if (!sequenceStore.hasState(store, documentId)) return
-        usePlayback.getState().setHead(documentId, 0)
+        // Handed back, not published: the montage below carries the zero this writes.
+        usePlayback.getState().clearHead(documentId)
         store.replace(documentId, { ...sequenceOf(store, documentId), playhead: 0 })
       }}
     />

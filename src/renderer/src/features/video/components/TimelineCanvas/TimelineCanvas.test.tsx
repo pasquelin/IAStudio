@@ -18,11 +18,12 @@ import { fakeMenu } from '@/helpers/menu-fixtures'
 import { exportOtio } from '@/features/shell/components/otioExport'
 import { publishCommand } from '@/services/commandBus'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { installSequence } from '@/stores/sequence-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { exportSequence } from './sequenceExport'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { usePlayback } from '@/stores/playback'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
@@ -100,6 +101,8 @@ describe('TimelineCanvas', () => {
   beforeEach(() => {
     useTimelineView.setState({ viewports: {} })
     usePlayback.setState({ running: {}, heads: {} })
+    // Reinstalled rather than assumed: one case below drops the document on purpose.
+    installSequence('doc-1')
     useAssets.setState({ items: [asset()] })
     useSelection.getState().selectFiles([])
     menu = fakeMenu()
@@ -315,6 +318,32 @@ describe('TimelineCanvas', () => {
 
   it('moves the playhead when the ruler is pressed', () => {
     fireEvent.pointerDown(paint(), { clientX: 300, clientY: 4 })
+    expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(3_000_000)
+  })
+
+  /** The frame owed when the tab closes is flushed on unmount, and `replace` is how a document
+   * ARRIVES: unguarded it built this montage back for an id the project had handed back. */
+  it('builds no montage back for a document dropped mid-scrub', () => {
+    const view = render(<TimelineCanvas documentId="doc-1" tool="select" />)
+    const canvas = view.container.querySelector('canvas')
+    if (!canvas) throw new Error('the timeline renders no canvas')
+
+    fireEvent.pointerDown(canvas, { clientX: 100, clientY: 4 })
+    fireEvent.pointerMove(canvas, { clientX: 300, clientY: 4 })
+    act(() => useSequences.getState().drop('doc-1'))
+    view.unmount()
+
+    expect(sequenceStore.hasState(useSequences.getState(), 'doc-1')).toBe(false)
+  })
+
+  /** Left pending, the frame landed after the press that followed and rewrote the montage. */
+  it('pays the frame its last move owed on the release', () => {
+    const canvas = paint()
+
+    fireEvent.pointerDown(canvas, { clientX: 100, clientY: 4 })
+    fireEvent.pointerMove(canvas, { clientX: 300, clientY: 4 })
+    fireEvent.pointerUp(canvas, { clientX: 300, clientY: 4 })
+
     expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(3_000_000)
   })
 

@@ -157,6 +157,17 @@ const FEATURE_MODULE = /^\.\/features\/[^/]+\/[^/]+\.tsx?$/
  */
 const GRAPH = await walk()
 
+/**
+ * What the chunk holds under a prefix — the prefix checked to still NAME something, since one that
+ * names nothing filters nothing and reads exactly as green. `./settings/`, `./licences/` and
+ * `./usage/` all went silent that way the day the tree became the features'.
+ */
+function deferredUnder(prefix: string): string[] {
+  expect(Object.keys(SOURCES).some(key => key.startsWith(prefix))).toBe(true)
+
+  return [...GRAPH.files].filter(path => path.startsWith(prefix))
+}
+
 describe('the opening chunk', () => {
   /**
    * The assertion that makes the others mean something. Twice now a resolution failed in silence
@@ -208,7 +219,7 @@ describe('the opening chunk', () => {
 
     // The whole folder, not a sample of it: naming files lets a sibling — `AccountSettings`
     // reused by an onboarding, say — walk back in with the guard still green.
-    expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
+    expect(deferredUnder('./features/settings/')).toEqual([])
     expect(files).not.toContain('./stores/settingsDraft.ts')
     expect(files).not.toContain('../../shared/domain/settingsRegistry.ts')
     expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
@@ -259,8 +270,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     const neighbours = [...files].filter(
-      path =>
-        path.startsWith('./spaces/') || (FEATURE_MODULE.test(path) && !drawsTheFirstScreen(path)),
+      path => FEATURE_MODULE.test(path) && !drawsTheFirstScreen(path),
     )
 
     expect(neighbours.sort()).toEqual([
@@ -337,21 +347,20 @@ describe('the opening chunk', () => {
     ])
   })
 
+  // A file rather than a folder: the licences are one window, among the shell's own components.
   it('never reaches the licences window', () => {
-    const { files } = GRAPH
-
-    expect([...files].filter(path => path.startsWith('./licences/'))).toEqual([])
+    expect(deferredUnder('./features/shell/components/LicencesWindow')).toEqual([])
   })
 
   // The chart library is the reason this one is deferred, more than the window's own weight.
-  // `formatUnits` used to be the exception that let `./features/usage/components/Usage/format.ts` in: a job row prices a run
-  // in the units the window totals, and the status bar carries those rows. It lives in
+  // `formatUnits` used to be the exception that let the window's own `format.ts` in: a job row
+  // prices a run in the units the window totals, and the status bar carries those rows. It is in
   // `helpers/format.ts` now, which the opening chunk already reaches — hence the second assertion,
   // without which moving it back would read as a win while only shifting the weight.
   it('never reaches the usage window, nor what draws its charts', () => {
     const { files, packages } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./usage/'))).toEqual([])
+    expect(deferredUnder('./features/usage/')).toEqual([])
     expect(files).toContain('./helpers/format.ts')
     expect(packages).not.toContain('recharts')
   })
