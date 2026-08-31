@@ -73,11 +73,11 @@ const ALLOWED = new Map<string, string>([
     'hole: same, in the context strip',
   ],
   [
-    'panels/generator/Generator/GeneratorSources.tsx | <Thumbnail url={assetUrl(input.assetId)} />',
+    'features/generation/components/Generator/GeneratorSources.tsx | <Thumbnail url={assetUrl(input.assetId)} />',
     'hole: same, in the generator',
   ],
   [
-    'panels/generator/Generator/GeneratorContext.tsx | <Thumbnail key={id} url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
+    'features/generation/components/Generator/GeneratorContext.tsx | <Thumbnail key={id} url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
     'hole: same, in the generator',
   ],
   [

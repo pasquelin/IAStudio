@@ -575,7 +575,7 @@ describe('the word that names a group in a panel', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
-      '../panels/generator/Generator/GeneratorSources.tsx',
+      '../features/generation/components/Generator/GeneratorSources.tsx',
       '../panels/git/GitFileGroup.tsx',
       '../panels/history/CommitFiles.tsx',
       '../panels/history/DiffImages.tsx',

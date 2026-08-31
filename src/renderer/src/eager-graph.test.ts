@@ -122,6 +122,25 @@ async function walk(): Promise<Graph> {
 }
 
 /**
+ * Where the panels live, DERIVED so the case below cannot go quiet over an empty prefix.
+ *
+ * `./panels/` was the whole answer until the panels started moving under
+ * `features/<f>/components/`: a fixed prefix then matches fewer of them at every lot, and the
+ * case reads a shorter and shorter list while staying green. The shell is not a panel — its
+ * components ARE the first screen, which is what the whole file is about.
+ */
+const NOT_A_PANEL = './features/shell/components/'
+
+const PANEL_TREES: readonly string[] = [
+  './panels/',
+  ...new Set(
+    Object.keys(SOURCES)
+      .map(key => /^\.\/features\/[^/]+\/components\//.exec(key)?.[0])
+      .filter((tree): tree is string => tree !== undefined && tree !== NOT_A_PANEL),
+  ),
+]
+
+/**
  * Walked here rather than inside a case: the nine below ask the same question of the same tree,
  * and the first of them carried the whole reading on its own clock — 543 ms at best, 3 890 ms
  * on a machine at load 44, against a budget it cannot see. Module load is not timed, so a walk
@@ -238,7 +257,7 @@ describe('the opening chunk', () => {
    * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *
-   * The three left are reached for something other than a zone: `panels/jobs/Jobs.tsx` and its row
+   * The three left are reached for something other than a zone: the jobs list and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
    * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
    * way. That is why `Jobs.tsx` may not read `helpers/toolRegistry`: it would drag the scene's
@@ -251,10 +270,20 @@ describe('the opening chunk', () => {
   it('reaches no panel of the tool table, except the list the status bar itself opens', () => {
     const { files } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([
-      './panels/jobs/JobRow/JobRow.tsx',
-      './panels/jobs/JobRow/JobRowDetail.tsx',
-      './panels/jobs/Jobs.tsx',
+    expect(
+      [...files].filter(path => PANEL_TREES.some(tree => path.startsWith(tree))).sort(),
+    ).toEqual([
+      // The five of the dictation, on the first screen because the composer's microphone is:
+      // invisible to this case while they sat under `./dictation/`, and read for the first time
+      // the day the tree became the features'.
+      './features/dictation/components/Dictation/DictationButton.tsx',
+      './features/dictation/components/Dictation/Status/DictationStatus.tsx',
+      './features/dictation/components/Dictation/Status/DictationStatusListening.tsx',
+      './features/dictation/components/Heard.tsx',
+      './features/dictation/components/LevelMeter.tsx',
+      './features/generation/components/JobRow/JobRow.tsx',
+      './features/generation/components/JobRow/JobRowDetail.tsx',
+      './features/generation/components/Jobs.tsx',
     ])
   })
 

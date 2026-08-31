@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { isFinished, type Job } from '@shared/domain/job'
 import { StatusFlyout } from '@/components/StatusFlyout'
 import { StatusProgressFace } from '@/components/StatusProgressFace'
-import { Jobs } from '@/panels/jobs/Jobs'
+import { Jobs } from '@/features/generation/components/Jobs'
 import { useJobs } from '@/stores/jobs'
 
 type Summary = { count: number; ratio: number; failed: number }
