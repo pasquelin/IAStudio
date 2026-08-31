@@ -8,7 +8,7 @@ import { Tree, type TreeNode } from '@/components/Tree'
 import { UiIcon } from '@/components/UiIcon'
 import { canHoldUi, reparentUiElements, setUiFlag } from '@/engines/gui/guiCommands'
 import { uiTypeIcon } from '@/features/gui/components/Gui/guiTools'
-import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
+import { VisibilityToggle } from '@/features/scene/components/VisibilityToggle'
 import { guiOf, selectInGui, useGuis } from '@/stores/gui'
 
 type GuiItem = TreeNode & { element: UiElement }

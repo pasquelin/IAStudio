@@ -17,7 +17,7 @@ import { guiOf, useGuis } from '@/stores/gui'
  * What the studio does to an interface, whichever surface asked — the toolbar, the outliner, and
  * from the MCP lot on, the assistant.
  *
- * Apart from the space's dispatch for the reason `spaces/three/sceneCommands.ts` gives: written
+ * Apart from the space's dispatch for the reason `features/scene/components/sceneCommands.ts` gives: written
  * twice, a duplicate that stopped offsetting its copies would be fixed on one door and left
  * broken on the other. The policies live here rather than in a `.tsx` no other door can reach.
  */

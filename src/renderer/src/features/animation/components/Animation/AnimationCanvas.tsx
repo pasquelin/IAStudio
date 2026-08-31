@@ -18,13 +18,13 @@ import {
   takeOffAnimationSheet,
   unkeySubject,
 } from '@/engines/scene/animationCommands'
-import { removePickedShot } from '@/spaces/three/sceneCommands'
+import { removePickedShot } from '@/features/scene/components/sceneCommands'
 import { draggedShot } from '@/engines/scene/cameraShots'
 import { assetClip, bundledClip, clipKeyOf, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
 import { newId } from '@/helpers/ids'
 import { ANIMATION_DRAG_TYPE, draggedAnimationOf } from '@/features/animation/components/dragged'
-import { sceneNodeDrag } from '@/panels/scene/dragged'
+import { sceneNodeDrag } from '@/features/scene/components/dragged'
 import { multi, removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import {
   clipsDuplicated,

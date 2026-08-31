@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DisplayUnit } from '@shared/domain/scene'
-import { SNAP_READING_KEYS, type SnapReading } from '@/spaces/three/SceneSnapBar/sceneSnapControls'
-import { snapFigure } from '@/spaces/three/SceneSnapBar/snapFigure'
+import { SNAP_READING_KEYS, type SnapReading } from '@/features/scene/components/sceneSnapControls'
+import { snapFigure } from '@/features/scene/snapFigure'
 
 /** How a snap step reads: its figure in the display unit, wearing the symbol its kind takes. */
 export type SnapReader = (reads: SnapReading, step: number) => string

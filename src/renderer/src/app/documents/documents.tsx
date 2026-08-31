@@ -18,7 +18,7 @@ const ImageDocument = lazy(async () => ({
   default: (await import('@/features/image/components/ImageDocument/ImageDocument')).ImageDocument,
 }))
 const SceneDocument = lazy(async () => ({
-  default: (await import('@/spaces/three/SceneDocument')).SceneDocument,
+  default: (await import('@/features/scene/components/Scene/Document/SceneDocument')).SceneDocument,
 }))
 const SequenceDocument = lazy(async () => ({
   default: (await import('@/features/video/components/SequenceDocument')).SequenceDocument,

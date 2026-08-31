@@ -317,7 +317,8 @@ async function exportOf(
     case 'gui':
       return null
     case 'scene': {
-      const { sceneExportFiles } = await import('@/spaces/three/sceneExportFiles')
+      const { sceneExportFiles } =
+        await import('@/features/scene/components/Scene/Document/sceneExportFiles')
       return sceneExportFiles(
         document.id,
         oneOf(input, 'format', EXPORT_FORMATS) ?? 'glb',

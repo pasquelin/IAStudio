@@ -4,7 +4,7 @@ import type { MaterialDescriptor } from '@shared/domain/scene'
 import type { GestureProps } from '@/components/styles'
 import { materialFields, withField } from '@/engines/scene/propertyFields'
 import { DescriptorSection } from '../../../../panels/inspector/DescriptorSection'
-import { TextureSlotFields } from '../../../../panels/inspector/TextureSlotFields'
+import { TextureSlotFields } from '../../../scene/components/TextureSlotFields'
 
 export type MaterialSectionProps = {
   material: MaterialDescriptor

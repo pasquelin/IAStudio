@@ -10,7 +10,7 @@ import { useSceneViews } from '@/stores/sceneViews'
 import { useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
-import { sceneNodeDrag } from '@/panels/scene/dragged'
+import { sceneNodeDrag } from '@/features/scene/components/dragged'
 import { AnimationPanel } from './AnimationPanel'
 
 const DOCUMENT = 'doc-1'

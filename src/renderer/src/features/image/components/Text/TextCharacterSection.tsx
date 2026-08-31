@@ -5,7 +5,7 @@ import { PropertySection } from '@/components/PropertySection'
 import { setLayerText } from '@/engines/canvas/commands'
 import { colourOf, packedColour } from '@shared/domain/color'
 import type { TextLayer } from '@/engines/canvas/canvasState'
-import { FontField } from '@/panels/inspector/FontField'
+import { FontField } from '@/features/scene/components/FontField'
 import { useCanvases } from '@/stores/canvases'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 

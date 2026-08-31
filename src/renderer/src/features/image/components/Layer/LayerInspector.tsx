@@ -29,7 +29,7 @@ import {
 } from '@/engines/canvas/commands'
 import { LAYER_LOCKS } from '@/features/image/components/Layer/layerLocks'
 import { useCanvases } from '@/stores/canvases'
-import { FontField } from '../../../../panels/inspector/FontField'
+import { FontField } from '../../../scene/components/FontField'
 import { LayerShapeSection } from './LayerShapeSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 

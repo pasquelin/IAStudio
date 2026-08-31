@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { IMAGE_TOOLS, TOOL_COMMANDS } from '@/features/image/imageTools'
-import { SCENE_TOOLS } from '@/spaces/three/sceneTools'
+import { SCENE_TOOLS } from '@/features/scene/components/Scene/sceneTools'
 
 /** Widened, not cast: the bundle's inferred type carries no index signature. */
 const read = (bundle: unknown, key: string): unknown =>

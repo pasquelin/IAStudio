@@ -21,7 +21,7 @@ import { SHAPE_LABELS } from '@/features/material/components/Material/materialTo
 import { toDegrees, toRadians } from '@shared/domain/angles'
 import { DEFAULT_TEXTURE_MATERIAL, MATERIAL_BOUNDS } from '@shared/domain/material'
 import { materialOf, useMaterials } from '@/stores/materials'
-import { EnvironmentSection } from '../../../../../panels/inspector/EnvironmentSection'
+import { EnvironmentSection } from '../../../../scene/components/Environment/EnvironmentSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { ChannelsSection } from '../../ChannelsSection/ChannelsSection'
 import { StylesSection } from '../../StylesSection/StylesSection'
