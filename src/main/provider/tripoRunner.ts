@@ -4,6 +4,7 @@ import { aiRoleId } from '@shared/domain/aiRole'
 import { contractOf } from '@shared/domain/aiCapability'
 import { uploadMimeTypeOf } from '@shared/domain/assetMime'
 import { CREDIT_UNIT } from '@shared/domain/credits'
+import { extensionFromSignature } from '@shared/domain/domainFromSignature'
 import { pathBaseNameOf } from '@shared/domain/fileName'
 import type { JobTarget } from '@shared/domain/job'
 import type { FieldKind } from '@shared/domain/model'
@@ -43,8 +44,37 @@ const REMEMBERED = 64
 /** Wide enough to gather the polls of jobs that started together, short enough to go unnoticed. */
 const DEFAULT_GATHER_MS = 50
 
+/**
+ * Which of their output URLs an employment actually produced, in the order it is looked for.
+ *
+ * 🛑 MEASURED 2026-08-31: a text-to-model answers all three of `model_url`,
+ * `rendered_image_url` and `generated_image_url` — the last two are the picture it drew on the
+ * way — while a text-to-image answers `generated_image_url` ALONE. Reading one list for both
+ * filed a picture as a mesh, or a mesh's preview as its result.
+ */
+const RESULT_URLS: Record<string, readonly string[]> = {
+  mesh: ['model_url', 'pbr_model'],
+  image: ['generated_image_url', 'image_url', 'rendered_image_url'],
+}
+
 /** The field kinds that carry a file rather than a value — what the form fills with a path. */
 const FILE_KINDS: readonly FieldKind[] = ['image', 'mesh', 'raw']
+
+/**
+ * How a file reference travels, which is NOT the same on every endpoint.
+ *
+ * 🛑 MEASURED 2026-08-31: `file` wants an OBJECT — a bare string answers « Cannot construct
+ * instance of FileParam … from String value » — while `input` and the `*_task_id` fields want the
+ * string itself. Keyed by the field name, which is the only thing that tells them apart.
+ */
+const WRAPPED_FIELDS: readonly string[] = ['file', 'files']
+
+function wrapped(key: string, held: string): unknown {
+  if (!WRAPPED_FIELDS.includes(key)) return held
+
+  const one = held.startsWith('http') ? { url: held } : { file_token: held }
+  return key === 'files' ? [one] : one
+}
 
 /**
  * The shelf an entry's result lands on, read off what its EMPLOYMENT produces — never off its
@@ -113,7 +143,8 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       // the job on an ENOENT nobody could read. A file arrives as a PATH because `services.ts`
       // routes a Tripo body through the LOCAL resolver.
       const isFile = FILE_KINDS.includes(field.kind) && typeof value === 'string'
-      sent[field.key] = isFile && isAbsolute(value) ? await sendUp(value) : value
+      const held = isFile && isAbsolute(value) ? await sendUp(value) : value
+      sent[field.key] = isFile && typeof held === 'string' ? wrapped(field.key, held) : held
     }
 
     return sent
@@ -142,17 +173,24 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
 
   /** Brings the result down while its URL is still signed, and keeps where it landed. */
   const bringDown = async (entry: TripoEntry, task: TripoTask): Promise<void> => {
-    if (!task.outputUrl) {
-      deps.log('warn', `Tripo task ${task.taskId} succeeded with nothing to download`)
+    const shelf = shelfOf(entry)
+    const url = (RESULT_URLS[shelf] ?? []).map(name => task.outputUrls[name]).find(Boolean)
+    if (!url) {
+      deps.log(
+        'warn',
+        `Tripo task ${task.taskId} succeeded with no ${shelf} among ${Object.keys(task.outputUrls).join(', ') || 'nothing'}`,
+      )
       return
     }
 
-    const shelf = shelfOf(entry)
+    // 🛑 The BYTES name the file, and the URL only when they say nothing: measured, they answer
+    // a picture at `…/generated_image.png` whose content is a JPEG.
+    const bytes = await deps.download(url)
     const destination = await deps.destinationFor(
       task.taskId,
-      extensionFromUrl(task.outputUrl, shelf),
+      extensionFromSignature(bytes) ?? extensionFromUrl(url, shelf),
     )
-    await deps.writeFile(destination, await deps.download(task.outputUrl))
+    await deps.writeFile(destination, bytes)
 
     // The prompt is empty after a relaunch, and that is the honest answer: the collector names
     // the asset after `authored` when the note carried one, and after the job's label otherwise.

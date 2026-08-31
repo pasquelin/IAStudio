@@ -88,7 +88,8 @@ describe('submitting to Tripo', () => {
     await runner.submit(IMAGE_TARGET, { file: '/projects/kingdom/assets/hat.png' })
 
     expect(api.upload).toHaveBeenCalledWith('hat.png', expect.anything(), 'image/png')
-    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: 'file-token-1' })
+    // 🛑 An OBJECT, measured: a bare string answers « Cannot construct instance of FileParam ».
+    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: { file_token: 'file-token-1' } })
   })
 
   it('passes a value that is already theirs — a task id, a URL — as it stands', async () => {
@@ -97,7 +98,7 @@ describe('submitting to Tripo', () => {
     await runner.submit(IMAGE_TARGET, { file: 'https://theirs/hat.png' })
 
     expect(api.upload).not.toHaveBeenCalled()
-    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: 'https://theirs/hat.png' })
+    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: { url: 'https://theirs/hat.png' } })
   })
 
   /**
@@ -129,7 +130,7 @@ describe('submitting to Tripo', () => {
 describe('following a Tripo task', () => {
   it('reads its progress and what it has cost, in credits', async () => {
     const { runner } = harness([
-      { taskId: '9a1c-5248', status: 'running', progress: 40, credits: 20 },
+      { taskId: '9a1c-5248', status: 'running', progress: 40, credits: 20, outputUrls: {} },
     ])
 
     await runner.submit(TEXT_TARGET, { prompt: 'a hat' })
@@ -147,7 +148,11 @@ describe('following a Tripo task', () => {
   /** Their result URLs are signed for five minutes: the poll that sees the success downloads it. */
   it('brings the result down on the poll that saw it succeed', async () => {
     const { runner, written } = harness([
-      { taskId: '9a1c-5248', status: 'success', outputUrl: 'https://cdn/x.glb?X-Amz-Signature=ab' },
+      {
+        taskId: '9a1c-5248',
+        status: 'success',
+        outputUrls: { model_url: 'https://cdn/x.glb?X-Amz-Signature=ab' },
+      },
     ])
 
     await runner.submit(TEXT_TARGET, { prompt: 'a hat' })
@@ -165,7 +170,12 @@ describe('following a Tripo task', () => {
     const image = TRIPO_CATALOGUE.find(one => one.endpoint === 'generation/text-to-image')
     const target = { id: tripoModelId(image ?? TEXT_TO_MODEL) }
     const { runner } = harness([
-      { taskId: '9a1c-5248', status: 'success', outputUrl: 'https://cdn/x.png' },
+      {
+        taskId: '9a1c-5248',
+        status: 'success',
+        // Measured: a picture task answers this name ALONE, where a mesh answers three.
+        outputUrls: { generated_image_url: 'https://cdn/x.png' },
+      },
     ])
 
     await runner.submit(target, { prompt: 'a hat' })
@@ -176,7 +186,7 @@ describe('following a Tripo task', () => {
 
   it('downloads once, however many times the outcome is polled', async () => {
     const { runner, written } = harness([
-      { taskId: '9a1c-5248', status: 'success', outputUrl: 'https://cdn/x.glb' },
+      { taskId: '9a1c-5248', status: 'success', outputUrls: { model_url: 'https://cdn/x.glb' } },
     ])
 
     await runner.submit(TEXT_TARGET, { prompt: 'a hat' })
@@ -192,7 +202,7 @@ describe('following a Tripo task', () => {
    */
   it('collects a task picked up from a previous session', async () => {
     const { runner } = harness([
-      { taskId: 'left-running', status: 'success', outputUrl: 'https://cdn/x.glb' },
+      { taskId: 'left-running', status: 'success', outputUrls: { model_url: 'https://cdn/x.glb' } },
     ])
 
     await runner.poll('left-running', TEXT_TARGET)
@@ -217,8 +227,8 @@ describe('following a Tripo task', () => {
   /** One request for every generation being watched — what their reference recommends over N. */
   it('asks about every task of one beat in a single request', async () => {
     const { runner, api } = harness([
-      { taskId: 'a', status: 'running' },
-      { taskId: 'b', status: 'running' },
+      { taskId: 'a', status: 'running', outputUrls: {} },
+      { taskId: 'b', status: 'running', outputUrls: {} },
     ])
 
     await Promise.all([runner.poll('a', TEXT_TARGET), runner.poll('b', TEXT_TARGET)])
@@ -238,7 +248,7 @@ describe('following a Tripo task', () => {
   })
 
   it('answers for the tasks it submitted and the ones it filed', async () => {
-    const { runner } = harness([{ taskId: '9a1c-5248', status: 'running' }])
+    const { runner } = harness([{ taskId: '9a1c-5248', status: 'running', outputUrls: {} }])
 
     expect(runner.owns('9a1c-5248')).toBe(false)
     await runner.submit(TEXT_TARGET, { prompt: 'a hat' })

@@ -82,8 +82,8 @@ describe('the Tripo API', () => {
     expect(get.mock.calls[0]?.[0]).toBe('https://tripo.test/v3/tasks/list')
     // A FRACTION: theirs is a percentage, and the manager only reads the larger scale above 2.
     expect(tasks).toEqual([
-      { taskId: 'a', status: 'running', progress: 0.4 },
-      { taskId: 'b', status: 'success', outputUrl: 'https://x/b.glb' },
+      { taskId: 'a', status: 'running', progress: 0.4, outputUrls: {} },
+      { taskId: 'b', status: 'success', outputUrls: { model_url: 'https://x/b.glb' } },
     ])
   })
 
@@ -100,8 +100,8 @@ describe('the Tripo API', () => {
       .mockImplementation(() => Promise.resolve(ok({ task_id: 'a', status: 'queued' })))
 
     const api = apiOn(get)
-    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued' }])
-    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued' }])
+    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued', outputUrls: {} }])
+    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued', outputUrls: {} }])
 
     expect(get.mock.calls.map(call => call[0])).toEqual([
       'https://tripo.test/v3/tasks/list',
@@ -132,13 +132,19 @@ describe('the Tripo API', () => {
 })
 
 describe('taskOf', () => {
-  it('takes the result of a mesh, of a picture, and the preview only as a last resort', () => {
-    const url = (output: Record<string, string>) =>
-      taskOf({ task_id: 'a', status: 'success', output })?.outputUrl
+  /**
+   * 🛑 Handed over WHOLE: measured, a text-to-model answers `model_url`, `rendered_image_url` AND
+   * `generated_image_url` — the last two being the picture it drew on the way. Reducing to one
+   * here would file a mesh's intermediate picture as the mesh.
+   */
+  it('carries every URL the output names, and nothing that is not one', () => {
+    const task = taskOf({
+      task_id: 'a',
+      status: 'success',
+      output: { model_url: 'https://m', rendered_image_url: 'https://r', part_names: ['a'] },
+    })
 
-    expect(url({ model_url: 'm', rendered_image_url: 'r' })).toBe('m')
-    expect(url({ image_url: 'i' })).toBe('i')
-    expect(url({ rendered_image_url: 'r' })).toBe('r')
+    expect(task?.outputUrls).toEqual({ model_url: 'https://m', rendered_image_url: 'https://r' })
   })
 
   it('drops a payload naming neither a task nor a state', () => {
@@ -208,7 +214,7 @@ describe('what demotes the grouped read', () => {
 
     const api = apiOn(get)
     await expect(api.status(['a'])).rejects.toMatchObject({ code: 1007 })
-    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued' }])
+    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued', outputUrls: {} }])
 
     expect(get.mock.calls.map(call => call[0])).toEqual([
       'https://tripo.test/v3/tasks/list',
@@ -243,8 +249,8 @@ describe('the shape their grouped read actually answers', () => {
     )
 
     expect(await apiOn(get).status(['uuid-a', 'uuid-b'])).toEqual([
-      { taskId: 'uuid-a', status: 'success', progress: 1, credits: 10 },
-      { taskId: 'uuid-b', status: 'running', progress: 0.4 },
+      { taskId: 'uuid-a', status: 'success', progress: 1, credits: 10, outputUrls: {} },
+      { taskId: 'uuid-b', status: 'running', progress: 0.4, outputUrls: {} },
     ])
   })
 
@@ -254,7 +260,9 @@ describe('the shape their grouped read actually answers', () => {
       .fn<TripoFetch>()
       .mockResolvedValue(ok({ tasks: [{ task_id: 'uuid-a', status: 'queued' }] }))
 
-    expect(await apiOn(get).status(['uuid-a'])).toEqual([{ taskId: 'uuid-a', status: 'queued' }])
+    expect(await apiOn(get).status(['uuid-a'])).toEqual([
+      { taskId: 'uuid-a', status: 'queued', outputUrls: {} },
+    ])
     expect(get).toHaveBeenCalledTimes(1)
   })
 })

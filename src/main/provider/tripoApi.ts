@@ -78,8 +78,14 @@ export type TripoTask = {
   progress?: number
   /** What it has actually cost, once it has. */
   credits?: number
-  /** Where the result sits. Signed, and expiring in five minutes — hence the eager download. */
-  outputUrl?: string
+  /**
+   * Every URL their output carries, by name. Signed, and short-lived — hence the eager download.
+   *
+   * 🛑 Handed over WHOLE rather than reduced to one: measured, a text-to-model answers
+   * `model_url`, `rendered_image_url` AND `generated_image_url` — the last two being the picture
+   * it drew on the way. Picking here would file a mesh's intermediate picture as the mesh.
+   */
+  outputUrls: Readonly<Record<string, string>>
 }
 
 export type TripoApi = {
@@ -113,15 +119,14 @@ export function retryAfterMsOf(header: string | null, now: number): number | und
   return Number.isFinite(at) ? Math.max(0, at - now) : undefined
 }
 
-/** 🛑 `rendered_image_url` is a mesh's PREVIEW and never its result — read last, or not at all. */
-function outputUrlOf(output: unknown): string | undefined {
-  if (!isRecord(output)) return undefined
+/** Every URL their output names, the caller choosing which one its employment produces. */
+function urlsIn(output: unknown): Record<string, string> {
+  if (!isRecord(output)) return {}
 
-  return (
-    textOf(output, 'model_url') ??
-    textOf(output, 'image_url') ??
-    textOf(output, 'pbr_model') ??
-    textOf(output, 'rendered_image_url')
+  return Object.fromEntries(
+    Object.entries(output).flatMap(([name, value]) =>
+      typeof value === 'string' && value.startsWith('http') ? [[name, value]] : [],
+    ),
   )
 }
 
@@ -134,14 +139,12 @@ export function taskOf(payload: unknown): TripoTask | null {
   const percent = readOptionalNumber(payload, 'progress')
   const progress = percent === undefined ? undefined : percent / 100
   const credits = readOptionalNumber(payload, 'credits_consumed')
-  const outputUrl = outputUrlOf(payload['output'])
-
   return {
     taskId,
     status,
+    outputUrls: urlsIn(payload['output']),
     ...(progress === undefined ? {} : { progress }),
     ...(credits === undefined ? {} : { credits }),
-    ...(outputUrl === undefined ? {} : { outputUrl }),
   }
 }
 
