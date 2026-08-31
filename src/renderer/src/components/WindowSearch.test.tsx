@@ -47,7 +47,7 @@ describe('WindowSearch', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
-      '../manual/ManualWindow/ManualWindow.tsx',
+      '../features/manual/components/ManualWindow/ManualWindow.tsx',
       '../settings/MemorySettings/MemorySettings.tsx',
       '../settings/SettingsWindow/SettingsWindow.tsx',
     ])

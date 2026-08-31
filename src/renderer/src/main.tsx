@@ -65,7 +65,7 @@ const UsageWindow = lazy(async () => ({
  * and the markdown renderer comes with it. None of it belongs in the chunk the splash waits for.
  */
 const ManualWindow = lazy(async () => ({
-  default: (await import('@/manual/ManualWindow/ManualWindow')).ManualWindow,
+  default: (await import('@/features/manual/components/ManualWindow/ManualWindow')).ManualWindow,
 }))
 
 /** Split like its neighbours, though it is the smallest of them: it opens on a right-click. */

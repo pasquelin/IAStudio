@@ -64,7 +64,7 @@ describe('the line of a list in an app window', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
-      '../manual/ManualWindow/ManualWindowResults.tsx',
+      '../features/manual/components/ManualWindow/ManualWindowResults.tsx',
       '../settings/AiSettings/AiChoiceRow.tsx',
       '../settings/AiSettings/AiCloudModel.tsx',
       '../settings/AiSettings/AiStudioModel.tsx',
