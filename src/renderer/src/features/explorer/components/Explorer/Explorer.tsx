@@ -58,14 +58,14 @@ import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/panels/shared/NoProject'
 import { runAssetAction } from './assetActions'
-import { ImportProgress } from './ImportProgress'
+import { ImportProgress } from '../ImportProgress/ImportProgress'
 import { openEntryMenu, openRootMenu } from './entryMenu'
-import { DomainRow } from './DomainRow'
-import { EntryCard, type EntryKind } from './EntryCard'
-import { EntryRow } from './EntryRow'
+import { DomainRow } from '../DomainRow'
+import { EntryCard, type EntryKind } from '../Entry/EntryCard'
+import { EntryRow } from '../Entry/EntryRow'
 import { FolderCrumbs } from '@/components/FolderCrumbs'
 import { HINT_TOP } from '@/helpers/tooltip'
-import { FolderNav } from './FolderNav'
+import { FolderNav } from '../FolderNav'
 import {
   canWalkBy,
   FOLDER_WALK_START,
@@ -74,7 +74,7 @@ import {
   walkInto,
   type FolderWalk,
 } from './folderWalk'
-import { RescanBar } from './RescanBar'
+import { RescanBar } from '../RescanBar'
 
 /** Nothing held, nothing to take back — the state the panel starts in and falls back to. */
 const NO_HISTORY: FileHistory = { undo: false, redo: false }

@@ -24,7 +24,7 @@ import { showContextMenu, type ContextMenuRow } from '@/helpers/contextMenu'
 import type { FolderNode } from '@/hooks/useFolderTree'
 import { getBridge } from '@/services/bridge'
 import { actionablePaths, type AssetAction } from './assetActions'
-import { assetMenuGroups } from './assetMenu'
+import { assetMenuGroups } from '../../assetMenu'
 
 export type EntryMenuProps = {
   node: FolderNode

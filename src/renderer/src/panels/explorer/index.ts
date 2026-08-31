@@ -1,5 +1,5 @@
 import type { ToolDefinition } from '@/panels/definition'
-import { Explorer } from './Explorer'
-import { ExplorerActions } from './ExplorerActions'
+import { Explorer } from '../../features/explorer/components/Explorer/Explorer'
+import { ExplorerActions } from '../../features/explorer/components/Explorer/ExplorerActions'
 
 export const definition: ToolDefinition = { Content: Explorer, Actions: ExplorerActions }

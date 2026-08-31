@@ -15,7 +15,7 @@ import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
-import type { AssetAction } from './assetActions'
+import type { AssetAction } from './components/Explorer/assetActions'
 
 export type AssetMenuProps = {
   /** The asset the clicked row is, or nothing when the catalogue holds none at its path. */

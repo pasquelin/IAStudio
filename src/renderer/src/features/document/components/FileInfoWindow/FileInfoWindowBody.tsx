@@ -8,7 +8,7 @@ import { PropertyRow } from '@/components/PropertyRow'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes, formatMoment } from '@/helpers/format'
 import { itemOfPath } from '@/helpers/projectItem'
-import { RoleField } from '@/panels/shared/RoleField'
+import { RoleField } from '@/features/explorer/components/RoleField'
 import type { FileInfoSectionId } from './sections'
 
 export type FileInfoWindowBodyProps = {
