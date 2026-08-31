@@ -957,8 +957,9 @@ export type LogEntry = {
  * for some of its rows, and the bundle guard would ask for a sentence no surface displays.
  */
 export type TraceScope =
-  // A promise nobody awaited, rejected. This is the renderer's own silence: the calls that cross
-  // to the main process throw their answer away, so a full disk on a rename reaches no `catch`.
+  // The renderer's own SILENCE, whether or not anything awaited: the calls that cross to the main
+  // process throw their answer away, so a full disk on a rename reaches no `catch` — and a caught
+  // rejection that ends in a state rather than a sentence says nothing either.
   'shell.dropped'
 
 /**

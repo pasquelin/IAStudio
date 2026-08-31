@@ -16,7 +16,8 @@ import { invoke, openWindow, resetHandlers } from '@main/ipc/testHarness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
-import { ProjectOpenError, type FolderVerdict, type ProjectOpenFailure } from './store'
+import { ProjectOpenError, type FolderVerdict } from './store'
+import type { ProjectOpenFailure } from '@shared/domain/project'
 import type { AsyncCatalog } from './catalogClient'
 
 vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())

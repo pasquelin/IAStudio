@@ -613,7 +613,11 @@ async function ranAll(
       })
       patch(set, id, { steps: [...steps] })
     }
-  } catch {
+  } catch (error) {
+    // 🛑 Reachable only when the module itself will not load: `runAction` turns what a HANDLER
+    // throws into a refusal, so a studio that said why no longer reaches this. Said out loud all
+    // the same — a turn marked lost without a line is the defect that hid the sentence above.
+    traceFailure('shell.dropped', 'assistant action lot', error)
     patch(set, id, { lost: true })
     return false
   }

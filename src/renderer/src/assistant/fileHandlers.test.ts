@@ -339,6 +339,43 @@ describe('opening and making a project', () => {
   })
 
   /**
+   * 🛑 A folder OF projects is not a project, and the studio names the new one inside it. Thrown
+   * rather than answered, the verdict reached the turn as "the assistant could not answer that
+   * one" — over a studio that had written the reason in its journal, and with nothing for the
+   * model to repair from.
+   */
+  it('says what a folder already holding projects wants instead', async () => {
+    withProject()
+    useProject.setState({
+      createAt: vi.fn(async () => {
+        throw new Error("Error invoking remote method 'project:create': Error: holds-projects")
+      }),
+    })
+
+    expect(await runAction('project.create', { path: '/tmp/Mes Projets' })).toMatchObject({
+      ok: false,
+      refusal: 'failed',
+      detail: expect.stringContaining('NAME'),
+    })
+  })
+
+  /** A project inside a project gives the catalogue two owners for the same files. */
+  it('says a folder under a project is not one to create in', async () => {
+    withProject()
+    useProject.setState({
+      createAt: vi.fn(async () => {
+        throw new Error('nested')
+      }),
+    })
+
+    expect(await runAction('project.create', { path: '/tmp/Film/Plans' })).toMatchObject({
+      ok: false,
+      refusal: 'failed',
+      detail: expect.stringContaining('inside a project'),
+    })
+  })
+
+  /**
    * The manifest name, never the folder: `recentProjects`, `storage.lastProject` and every
    * absolute path the catalogue holds are keyed on the folder.
    */
