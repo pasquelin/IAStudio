@@ -125,7 +125,10 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.projectCreate.title',
     descriptionKey: 'assistant.actions.projectCreate.description',
     commitment: 'studio',
-    repeatable: true,
+    // 🛑 A project of that NAME is a named state: creating it twice in one turn brings nothing the
+    // first did not, and the second raised the confirmation card a second time over a project the
+    // person had just approved. Two DIFFERENT names still pass — the key holds the input.
+    repeatable: false,
     reach: 'both',
     fields: [PROJECT_NAME, PROJECT_PARENT],
   }),
@@ -283,7 +286,8 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.projectRename.title',
     descriptionKey: 'assistant.actions.projectRename.description',
     commitment: 'files',
-    repeatable: true,
+    // The name a project carries is a named state too, and the same input asks for what stands.
+    repeatable: false,
     reach: 'mcp',
     fields: [
       PROJECT_FOLDER,
