@@ -187,6 +187,33 @@ export function isAbsolutePath(path: string): boolean {
 }
 
 /**
+ * Why a folder will not serve as a project. Each case asks the person for a different thing: pick
+ * another folder, repair this one, update the studio, or — for a folder inside a project already,
+ * or one holding projects — name one that is neither.
+ */
+export type ProjectOpenFailure =
+  'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
+
+export const PROJECT_OPEN_FAILURES: readonly ProjectOpenFailure[] = [
+  'not-a-project',
+  'unreadable',
+  'too-new',
+  'nested',
+  'holds-projects',
+]
+
+/**
+ * The reason inside a rejection that crossed the boundary, or nothing for a failure that is not
+ * about the folder.
+ *
+ * 🛑 Matched at the END, never compared whole: `ipcMain.handle` wraps what it rethrows — `Error
+ * invoking remote method 'project:create': Error: holds-projects` — so an equality test never
+ * fires and every refusal reads as unexpected.
+ */
+export const projectFailureIn = (message: string): ProjectOpenFailure | null =>
+  PROJECT_OPEN_FAILURES.find(one => message === one || message.endsWith(`: ${one}`)) ?? null
+
+/**
  * Where a project called `name` goes when the model named no place: under the folder this person
  * keeps projects in. Nothing where none is known yet, which is the first project of a machine.
  */

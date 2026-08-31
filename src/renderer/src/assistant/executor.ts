@@ -10,10 +10,11 @@ import {
   type ActionOutcome,
 } from '@shared/domain/assistant'
 import { delegated } from '@shared/domain/delegation'
+import { messageOf } from '@shared/guards'
 import { englishText, fillHoles } from '@shared/i18n'
 import { getBridge } from '@/services/bridge'
 import { useSettings } from '@/stores/settings'
-import type { ActionHandlers } from './actionHandler'
+import type { ActionHandler, ActionHandlers } from './actionHandler'
 import { mountedConfirmer } from './confirm'
 import { confirmSentence, type Translate } from './confirmSentence'
 import {
@@ -161,12 +162,32 @@ export async function runAction(
   const read = readOrRefusal(name, input)
   if ('refusal' in read) return read.refusal
 
-  const outcome = await handler(read.listed, wire)
+  const outcome = await ranSafely(handler, read.listed, wire)
   // Not awaited, and the input READ rather than the one sent: what a memory anchors on must be
   // what the action actually acted on. A memory that will not persist must not turn a call that
   // changed the studio into a refusal.
   void rememberOutcome(name, read.listed, outcome)
   return outcome
+}
+
+/**
+ * 🛑 What a handler THROWS is a refusal like any other. Left to climb, it reached the bare catch
+ * of `ranAll`, which marked the whole turn LOST: the person read "the assistant could not answer
+ * that one" over a studio that had just written why in its journal, and the model — which repairs
+ * from refusals — was handed nothing at all.
+ */
+async function ranSafely(
+  handler: ActionHandler,
+  listed: Record<string, unknown>,
+  wire: WireCall | undefined,
+): Promise<ActionOutcome> {
+  try {
+    return await handler(listed, wire)
+  } catch (error) {
+    // `failed` and not `badInput`: the input was checked at the door, so what threw is the studio
+    // — a client told its input was wrong would retry a call that was never the problem.
+    return refused('failed', messageOf(error))
+  }
 }
 
 /**

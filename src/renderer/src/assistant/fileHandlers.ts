@@ -1,7 +1,15 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { documentExtensionOf, isDocumentExtension } from '@shared/domain/document'
 import { FOLDER_ROOT } from '@shared/domain/folder'
-import { projectPathFor, projectPickerFolder, projectsByCreation } from '@shared/domain/project'
+import {
+  projectFailureIn,
+  projectPathFor,
+  projectPickerFolder,
+  projectsByCreation,
+  type Project,
+  type ProjectOpenFailure,
+} from '@shared/domain/project'
+import { messageOf } from '@shared/guards'
 import type { StudioBridge } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { openProjectFile, type FileOpening } from '@/helpers/openProjectFile'
@@ -153,6 +161,24 @@ async function closeProject(): Promise<ActionOutcome> {
       )
 }
 
+/**
+ * What each verdict asks for, in the words a model repairs from. `holds-projects` is the one a
+ * person meets: a folder OF projects is not itself a project, and the studio names the new one
+ * inside it — the model only has to say the name.
+ */
+const CREATE_REFUSALS: Record<ProjectOpenFailure, string> = {
+  'holds-projects':
+    'that folder already holds projects, so it is a folder OF projects rather than one itself — call this again with just the NAME of the new project, and the studio puts it inside where it keeps them',
+  nested:
+    'that folder sits inside a project, and a project inside a project gives the catalogue two owners for the same files — name one that is not under a project',
+  'not-a-project':
+    'that folder could not be read as a place for a project — name another one, or give just the NAME of the new project and let the studio place it',
+  unreadable:
+    "that folder holds a project whose manifest cannot be read — it is not a place to create in, and repairing it is the person's to do",
+  'too-new':
+    'that folder holds a project written by a newer studio than this one, which cannot create over it — name another folder',
+}
+
 async function createProject(input: Record<string, unknown>): Promise<ActionOutcome> {
   // Bare on purpose: `path` is `required`, so `runAction` refuses a call without it — and names
   // the field — before this ever runs.
@@ -183,7 +209,18 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
   // Through the store, which is what makes this the FOURTH way out of a project rather than the
   // one that slipped past its questions: it left the open project without asking about the
   // generations running in it, nor about any document holding unsaved work.
-  const created = await useProject.getState().createAt(path)
+  let created: Project | null
+  try {
+    created = await useProject.getState().createAt(path)
+  } catch (error) {
+    /**
+     * 🛑 The folder's own refusal, said in a sentence the model can repair from. Left to throw it
+     * reached the turn as "the assistant could not answer that one", over a studio that had
+     * written the reason in its journal — and « crée un projet jeu1 » ended there.
+     */
+    const why = projectFailureIn(messageOf(error))
+    return refused('failed', why === null ? messageOf(error) : CREATE_REFUSALS[why])
+  }
   // `declined` rather than `badInput`, and it covers both nos: the question on the way out, and
   // the main process asking about a folder that already holds files. A client told its input was
   // wrong would retry a path that was never the problem.

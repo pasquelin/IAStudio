@@ -10,6 +10,7 @@ import {
   MACHINE_FOLDERS,
   type Manifest,
   type Project,
+  type ProjectOpenFailure,
 } from '@shared/domain/project'
 import type { ActivityMessageKey } from '@shared/domain/activity'
 import { isHiddenEntry } from '@shared/domain/folder'
@@ -58,14 +59,6 @@ export async function orWhenGone<T>(read: () => Promise<T>, gone: T): Promise<T>
     throw error
   }
 }
-
-/**
- * Why a folder would not serve as a project. Each case asks the user for a different thing: pick
- * another folder, repair this one, update the studio, or — for a folder sitting inside a project
- * already — pick one that is not there.
- */
-export type ProjectOpenFailure =
-  'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
 
 /**
  * One error carrying a reason rather than three classes: what every caller does with it is

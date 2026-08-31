@@ -23,6 +23,8 @@ import {
   runConfirmedAction,
 } from './executor'
 
+const WHEN = '2026-08-17T10:00:00.000Z'
+
 /** A person at the screen: the yes or the no, and the input handed back as it came. */
 const saying =
   (granted: boolean) =>
@@ -1036,5 +1038,32 @@ describe('what a call engages', () => {
   it('asks before an amend rewrites the version already recorded', () => {
     expect(commitmentOfCall('git.commit', { message: 'Un lot' })).toBe('none')
     expect(commitmentOfCall('git.commit', { message: 'Un lot', amend: true })).toBe('files')
+  })
+})
+
+describe('a handler that throws rather than refuses', () => {
+  /**
+   * 🛑 The one silence a model cannot repair from. Left to climb, the rejection reached the bare
+   * catch of the turn and marked it LOST: « L'assistant n'a pas su répondre à cette demande »,
+   * over a studio that had just written the reason in its journal.
+   */
+  it('answers with the reason instead of losing the whole turn', async () => {
+    installFakeBridge({
+      project: {
+        listFolder: vi.fn(() => Promise.reject(new Error('EACCES: permission denied'))),
+      },
+    })
+    useProject.setState({
+      project: {
+        path: '/tmp/Film',
+        manifest: { version: 1, name: 'Film', createdAt: WHEN, updatedAt: WHEN },
+      },
+    })
+
+    expect(await runAction('files.list', { folder: 'Plans' })).toEqual({
+      ok: false,
+      refusal: 'failed',
+      detail: 'EACCES: permission denied',
+    })
   })
 })
