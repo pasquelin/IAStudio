@@ -6,7 +6,7 @@ import { contextPictures, promptKeyOf, type ContextUse } from '@shared/domain/pr
 import { Button } from '@/components/Button'
 import { CHECKBOX, FIELD_THUMBNAIL } from '@/components/styles'
 import { Thumbnail } from '@/components/Thumbnail'
-import { fillSourceFields } from '@/spaces/image/aiFields'
+import { fillSourceFields } from '@/features/image/components/aiFields'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useModels } from '@/stores/models'

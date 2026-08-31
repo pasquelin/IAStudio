@@ -13,7 +13,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { lendPictureMeasure } from '@/spaces/image/pictureSize'
+import { lendPictureMeasure } from '@/features/image/pictureSize'
 import { editPixelsOf, openAsset } from './openAsset'
 
 /** Written out rather than taken from the home's fixture, which pulls in a DOM this never uses. */

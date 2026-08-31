@@ -27,9 +27,9 @@ import {
   setLayerText,
   setLayerTransform,
 } from '@/engines/canvas/commands'
-import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
+import { LAYER_LOCKS } from '@/features/image/components/Layer/layerLocks'
 import { useCanvases } from '@/stores/canvases'
-import { FontField } from '../FontField'
+import { FontField } from '../../../../panels/inspector/FontField'
 import { LayerShapeSection } from './LayerShapeSection'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 

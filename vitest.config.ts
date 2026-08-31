@@ -111,7 +111,7 @@ const DOM_BOUND = [
   'src/renderer/src/app/documentIo.test.ts',
   // The composer makes a canvas per layer to read its pixels back, and a spy has to have
   // something to stand in FOR.
-  'src/renderer/src/spaces/image/psdDocument.test.ts',
+  'src/renderer/src/features/image/psdDocument.test.ts',
   // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
   // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
   'src/renderer/src/app/newDocument.test.ts',
@@ -162,7 +162,7 @@ const DOM_BOUND = [
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
   // initialised by the renderer setup — `initI18n` reads `localStorage`, which node has not.
   'src/renderer/src/features/explorer/assetMenu.test.ts',
-  'src/renderer/src/panels/layers/layerMenu.test.ts',
+  'src/renderer/src/features/image/components/Layer/List/layerMenu.test.ts',
   'src/renderer/src/spaces/three/sceneAddMenu.test.ts',
   'src/renderer/src/spaces/three/sceneNodeMenu.test.ts',
   'src/renderer/src/helpers/modelForCapability.test.ts',
@@ -183,7 +183,7 @@ const DOM_BOUND = [
   'src/renderer/src/hooks/useReloadKey.test.ts',
   'src/renderer/src/hooks/useShortcutLabel.test.ts',
   'src/renderer/src/i18n/index.test.ts',
-  'src/renderer/src/spaces/image/imageTools.test.ts',
+  'src/renderer/src/features/image/imageTools.test.ts',
   'src/renderer/src/features/material/deriveChannel.test.ts',
   'src/renderer/src/spaces/three/sceneTools.test.ts',
   'src/renderer/src/features/video/components/videoTools.test.ts',

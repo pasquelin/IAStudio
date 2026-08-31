@@ -310,7 +310,7 @@ async function exportOf(
 ): Promise<FolderExportRequest | null> {
   switch (document.kind) {
     case 'image': {
-      const { imageExportFiles } = await import('@/spaces/image/imageExportFiles')
+      const { imageExportFiles } = await import('@/features/image/imageExportFiles')
       return imageExportFiles(document.id)
     }
     // Nothing goes out yet: what an interface would export is the game that shows it.

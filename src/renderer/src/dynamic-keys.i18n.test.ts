@@ -20,8 +20,11 @@ import {
   type LayerKind,
 } from '@/engines/canvas/canvasState'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
-import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
-import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
+import { LAYER_LOCKS } from '@/features/image/components/Layer/layerLocks'
+import {
+  LAYER_OPERATIONS,
+  type LayerOperation,
+} from '@/features/image/components/Layer/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'

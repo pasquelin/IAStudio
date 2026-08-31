@@ -49,7 +49,7 @@ const ALLOWED = new Map<string, string>([
     'hole: the export path reads the original the same way',
   ],
   [
-    'spaces/image/pictureSize.ts | const size = await measure(assetUrl(assetId))',
+    'features/image/pictureSize.ts | const size = await measure(assetUrl(assetId))',
     'hole: measures the picture the browser cached, not the file — so the drift notice can lie',
   ],
   [

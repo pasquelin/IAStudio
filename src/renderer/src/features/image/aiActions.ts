@@ -7,7 +7,7 @@ import { reportNotice } from '@/services/diagnostics'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
-import { fillEditFields } from './aiFields'
+import { fillEditFields } from './components/aiFields'
 import { offerModelsOfFamily } from '@/helpers/offerModel'
 import { revealTool } from '@/helpers/revealPanel'
 

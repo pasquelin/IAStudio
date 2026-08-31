@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { canvasHost } from '@/spaces/image/canvasHosts'
+import { canvasHost } from '@/features/image/canvasHosts'
 import { useCanvases } from '@/stores/canvases'
 import { useLivePreviews } from '@/stores/livePreviews'
 

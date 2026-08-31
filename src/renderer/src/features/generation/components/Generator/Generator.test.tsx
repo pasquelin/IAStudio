@@ -31,7 +31,7 @@ import { useSettings } from '@/stores/settings'
 import { chooseModels } from '@/stores/models-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
-import { prepareEdit } from '@/spaces/image/aiActions'
+import { prepareEdit } from '@/features/image/aiActions'
 import panelSource from './Generator.tsx?raw'
 import { Generator } from './Generator'
 

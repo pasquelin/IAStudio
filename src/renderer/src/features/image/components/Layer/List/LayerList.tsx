@@ -5,7 +5,7 @@ import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvasState
 import { moveLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
-import { LayerRow } from './LayerRow'
+import { LayerRow } from '../LayerRow'
 import { openLayerMenu } from './layerMenu'
 import { layerNodes, levelIndexOf, stackIndex } from './layerNodes'
 

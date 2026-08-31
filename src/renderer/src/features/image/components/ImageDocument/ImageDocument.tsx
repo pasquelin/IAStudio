@@ -47,8 +47,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf, cropFrameOf } from '@/stores/canvasViews'
 import { useDocumentIsInFront } from '@/stores/documents'
-import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../canvasView'
-import { guidePort } from '../guidePort'
+import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../../canvasView'
+import { guidePort } from '../../guidePort'
 import {
   AI_EDIT_TOOL,
   AI_EDIT_TOOL_ID,
@@ -64,18 +64,18 @@ import {
   IMAGE_TOOLS,
   selectionShapeFor,
   shapeKindFor,
-} from '../imageTools'
-import { layerPort } from '../layerPort'
-import { prepareEdit } from '../aiActions'
-import { exportLayeredPicture, exportPicture } from '../exportPicture'
-import { maskFromSelection } from '../maskActions'
-import { placeAsset } from '../placeAsset'
+} from '../../imageTools'
+import { layerPort } from '../../layerPort'
+import { prepareEdit } from '../../aiActions'
+import { exportLayeredPicture, exportPicture } from '../../exportPicture'
+import { maskFromSelection } from '../../maskActions'
+import { placeAsset } from '../../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
 import { useLivePreview } from '@/hooks/useLivePreview'
 import { useDocuments } from '@/stores/documents'
-import { holdCanvas } from '../canvasHosts'
-import { pixelPort } from '../pixelPort'
-import { turnPort } from '../turnPort'
+import { holdCanvas } from '../../canvasHosts'
+import { pixelPort } from '../../pixelPort'
+import { turnPort } from '../../turnPort'
 import { ZoomBar } from '../ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }

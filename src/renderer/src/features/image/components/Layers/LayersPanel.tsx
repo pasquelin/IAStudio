@@ -2,7 +2,7 @@ import { mdiLayersOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { activeImageId, useDocuments } from '@/stores/documents'
-import { LayerList } from './LayerList'
+import { LayerList } from '../Layer/List/LayerList'
 
 /**
  * The layer stack of whatever image is in front. A tool window has no props — it sits on the

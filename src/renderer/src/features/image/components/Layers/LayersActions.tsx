@@ -1,5 +1,5 @@
 import { activeImageId, useDocuments } from '@/stores/documents'
-import { LayerStackActions } from './LayerStackActions'
+import { LayerStackActions } from '../Layer/LayerStackActions'
 
 /**
  * Add and delete, rendered by `ToolWindow` on the panel's own title bar. Like the panel itself,

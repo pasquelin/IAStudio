@@ -129,19 +129,25 @@ async function walk(): Promise<Graph> {
  * case reads a shorter and shorter list while staying green. The shell and the home are not
  * panels — their components ARE the first screen, which is what the whole file is about.
  */
-const NOT_A_PANEL: readonly string[] = [
-  './features/home/components/',
-  './features/shell/components/',
-]
+const FIRST_SCREEN: readonly string[] = ['./features/home/', './features/shell/']
+
+const drawsTheFirstScreen = (path: string): boolean =>
+  FIRST_SCREEN.some(feature => path.startsWith(feature))
 
 const PANEL_TREES: readonly string[] = [
   './panels/',
   ...new Set(
     Object.keys(SOURCES)
       .map(key => /^\.\/features\/[^/]+\/components\//.exec(key)?.[0])
-      .filter((tree): tree is string => tree !== undefined && !NOT_A_PANEL.includes(tree)),
+      .filter((tree): tree is string => tree !== undefined && !drawsTheFirstScreen(tree)),
   ),
 ]
+
+/**
+ * A module at the ROOT of a feature: the helper an editor keeps beside its components, which is
+ * exactly what the neighbours case below counts. `./spaces/` said this until the editors moved.
+ */
+const FEATURE_MODULE = /^\.\/features\/[^/]+\/[^/]+\.tsx?$/
 
 /**
  * Walked here rather than inside a case: the nine below ask the same question of the same tree,
@@ -227,7 +233,7 @@ describe('the opening chunk', () => {
     const { files } = GRAPH
 
     const editors = [
-      './spaces/image/ImageDocument/ImageDocument.tsx',
+      './features/image/components/ImageDocument/ImageDocument.tsx',
       './spaces/three/SceneDocument.tsx',
       './features/video/components/SequenceDocument.tsx',
       './features/audio/components/AudioDocument.tsx',
@@ -243,15 +249,27 @@ describe('the opening chunk', () => {
    * screen does reach for a helper that happens to live next to one. Four of the six left when
    * the panels went lazy — they came in through a panel, not through the shell.
    *
-   * A budget rather than a ban — the list is allowed to shrink, never to grow, and a third entry
+   * A budget rather than a ban — the list is allowed to shrink, never to grow, and one entry more
    * means something on the first screen reached further than it needed.
+   *
+   * The dictation's three arrived on 2026-08-31 without the first screen changing: the case read
+   * `./spaces/` alone, and they sat under `./dictation/`. Widening the reading is what put them
+   * in; they are the microphone of the composer, which is on the first screen.
    */
-  it('pulls only these two neighbours out of the editors folders', () => {
+  it('pulls only these five neighbours out of the features', () => {
     const { files } = GRAPH
 
-    expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/image/canvasHosts.ts',
-      './spaces/image/placeAsset.ts',
+    const neighbours = [...files].filter(
+      path =>
+        path.startsWith('./spaces/') || (FEATURE_MODULE.test(path) && !drawsTheFirstScreen(path)),
+    )
+
+    expect(neighbours.sort()).toEqual([
+      './features/dictation/capture.ts',
+      './features/dictation/destination.ts',
+      './features/dictation/insertAtCaret.ts',
+      './features/image/canvasHosts.ts',
+      './features/image/placeAsset.ts',
     ])
   })
 

@@ -66,7 +66,7 @@ import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/documentStore'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
-import { canvasHost } from '@/spaces/image/canvasHosts'
+import { canvasHost } from '@/features/image/canvasHosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newMaterial } from '@/engines/material/materialState'
 import {
@@ -532,7 +532,7 @@ const IMAGE_IO: DocumentIo = {
     // Through `import()` for the reason `placeAsset` gives: this file is in the opening chunk.
     const replaced = target.replaces
     if (replaced) {
-      void import('@/spaces/image/assetFidelity')
+      void import('@/features/image/assetFidelity')
         .then(({ reportAssetDrift }) => reportAssetDrift(documentId, replaced, target.name))
         // Nothing is rethrown into a save: a notice that cannot be given has nowhere to go, and
         // an unhandled rejection here would be the only trace of it.
