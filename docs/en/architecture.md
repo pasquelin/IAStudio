@@ -463,22 +463,13 @@ src/renderer/src/
 │   ├── DocumentArea.tsx Dockview, documents only
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
-├── design/       the in-house design system — see below
+├── components/   the visual shapes MORE THAN ONE feature shares — see below
+├── features/     one domain per folder, its components under `components/`, its dock tools under `tools/`
+│   ├── shell/      the rails, the zones, the document area — and `main.tsx`, the entry
+│   ├── image/ scene/ video/ audio/ code/ material/ skybox/ gui/   one editor per document kind
+│   ├── explorer/ assets/ models/ git/ inspector/ timeline/ animation/ …   the dockable tools
+│   └── home/ settings/ usage/ manual/ document/ dictation/ assistant/ …   the surfaces outside a dock
 ├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, and `core/` — what every engine shares
-├── spaces/       one editor per document kind — SEVEN, as many as there are workspaces
-│   ├── image/      Pixi-backed canvas and its tools
-│   ├── three/      the three.js viewport and its tools
-│   ├── video/      the timeline canvas, the monitor, its tools
-│   ├── audio/      the waveform, its tools, the decoder
-│   ├── code/       Monaco, mounted on a script of the project
-│   ├── materials/  a material's channels, and their tiled preview
-│   └── skyboxes/   the immersive sky and its three flat projections
-├── panels/       the twenty-seven dockable tools
-├── home/         the home screen and its three bands — a page, not a layout
-├── settings/     the settings window, loaded on demand
-├── usage/        the consumption window, likewise
-├── licences/     the licences window, likewise
-├── dictation/    what the renderer sees of dictation: button, preview, level
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
 ├── helpers/      pure functions, all unit-tested
@@ -557,7 +548,7 @@ Their callbacks are kept stable for that memo to bite.
 `sequence.mirror` opens a second window mirroring the Program monitor, for a second screen. **The
 IPC bridge carries one thing only: opening that window** (`main/window/mirror.ts`). Everything else
 — the edit, the playhead, playback — travels over a `BroadcastChannel`
-(`spaces/video/mirrorChannel.ts`).
+(`features/video/components/mirrorChannel.ts`).
 
 **This is no way around invariant 2**, which guards the boundary between PROCESSES. Both windows
 load the same renderer bundle: they already share `SequenceState` as a type, and routing it through
@@ -988,12 +979,12 @@ hashes, remote URLs (`main/git/validation.ts`).
 ## The design system
 
 **If a component lives in a dock, it is in-house.** Toolbars, inspectors, timelines, outliners,
-the asset browser, the title bar, tabs — all of it in `src/renderer/src/design/`.
+the asset browser, the title bar, tabs — all of it in `src/renderer/src/components/`.
 
 DaisyUI is reserved for the surfaces where the application becomes an application again:
 preferences, dialogs, API key management, onboarding.
 
-Key primitives, all in `design/`:
+Key primitives, all in `components/`:
 
 | | |
 |---|---|
@@ -1005,7 +996,6 @@ Key primitives, all in `design/`:
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
 | `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `PictureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
-| `FormHeader` | the line naming what the form is for — the model, in Generate |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 
@@ -1397,12 +1387,12 @@ and the panels through Testing Library.
 
 | You want to add | Where to start |
 |---|---|
-| A tool panel | an entry in `TOOL_PLACEMENTS`, then `panels/<name>/` with an `index.ts` exporting `definition: { Content, Actions }` |
+| A tool panel | an entry in `TOOL_PLACEMENTS`, then `features/<feature>/tools/<name>.ts` exporting `definition: { Content, Actions }`, its components under `features/<feature>/components/` |
 | A workspace | `WORKSPACE_IDS`, then its icon and family in `helpers/workspaces.ts` — the compiler asks for both |
 | An IPC channel | `shared/ipc.ts` first, then the handler; the signature is derived, so start from the contract |
 | A mesh or light kind | `meshPrimitives.ts` / `lightTypes.ts` — the toolbar, the panels and the native menu all read those tables |
-| An image tool | `spaces/image/imageTools.ts`, in the right group |
-| A shared visual shape | `design/`, one component per file, plus its test |
+| An image tool | `features/image/components/imageTools.ts`, in the right group |
+| A shared visual shape | `components/`, one component per file, plus its test — and its name carries the prefix of its folders |
 
 Two rules that save the most time: check that a helper does not already exist before writing one,
 and read the neighbourhood before touching it. The registries mean most additions are one entry

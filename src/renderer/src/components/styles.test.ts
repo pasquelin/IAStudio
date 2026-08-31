@@ -679,7 +679,7 @@ describe('the line a pane draws above what it shows', () => {
   })
 
   // Named rather than counted. **Blind**: raw text, as above.
-  it('is worn by the five it was extracted from', () => {
+  it('is worn by the four it was extracted from', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && /\bPANEL_BAR\b/.test(source),
     ).map(([path]) => path)
@@ -689,7 +689,6 @@ describe('the line a pane draws above what it shows', () => {
       '../features/git/components/Git/GitReady.tsx',
       '../features/git/components/Remote/RemoteSetup.tsx',
       './CollectionBar/CollectionBar.tsx',
-      './FormHeader.tsx',
     ])
   })
 })
