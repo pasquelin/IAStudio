@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ACTION_REGISTRY, needsConfirmation, type ActionName } from './assistant'
 import { delegated, type Delegation } from './delegation'
 import { DEFAULT_SETTINGS } from './settings'
 
@@ -46,5 +47,29 @@ describe('what may run without the question on screen', () => {
   // Not reached — `needsConfirmation` is false for it — and answered rather than left to a default.
   it('lets an action that engages nothing through whatever is armed', () => {
     expect(delegated(DEFAULT_SETTINGS.mcp, 'none', null, 0)).toBe(true)
+  })
+})
+
+/**
+ * 🛑 A project may not be binned without somebody reading the card first. `files` would NOT have
+ * held it: anyone who armed `delegateFiles` to move rushes about would have had a whole project
+ * folder go unasked. Guarded as a PAIR — the cheap mistake is to publish one at the other's level.
+ */
+describe('what a project gesture may never run unasked', () => {
+  const everythingArmed: Delegation = armed({
+    delegateFiles: true,
+    delegateAsset: true,
+    delegateRemote: true,
+    delegateBudget: Number.MAX_SAFE_INTEGER,
+  })
+
+  const PAIR: readonly ActionName[] = ['project.forget', 'project.trash']
+
+  it.each(PAIR)('always asks before %s', name => {
+    const action = ACTION_REGISTRY.find(entry => entry.name === name)
+
+    expect(action?.commitment).toBe('studio')
+    expect(needsConfirmation(action?.commitment ?? 'none')).toBe(true)
+    expect(delegated(everythingArmed, action?.commitment ?? 'none', null, 0)).toBe(false)
   })
 })

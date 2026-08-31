@@ -105,6 +105,14 @@
         "title": "Créer un dossier de projet",
         "description": "Crée un projet et l’ouvre, sans lever le dialogue système qu’une personne utiliserait. Un NOM suffit — le studio le pose là où cette personne range ses projets, indiqué plus haut. Le champ folder dit dans quel dossier le créer, quand la phrase en nomme un."
       },
+      "projectForget": {
+        "title": "Retirer un projet des projets récents",
+        "description": "Retire un projet de la liste des projets récents, qui n’est qu’une liste de raccourcis. LE DOSSIER N’EST PAS TOUCHÉ et rien n’est effacé : rouvrir le projet remet la ligne. Pour mettre le dossier à la corbeille, c’est project.trash. Nommé par le chemin absolu que projects.list rend."
+      },
+      "projectTrash": {
+        "title": "Mettre un projet à la corbeille",
+        "description": "Met à la corbeille du système le DOSSIER du projet et tout ce qu’il contient — documents, assets, catalogue. Rien dans le studio ne revient dessus : seule la corbeille du système peut le rendre. Le projet est refermé s’il était ouvert, et sa ligne quitte les projets récents. Pour seulement retirer la ligne sans toucher au dossier, c’est project.forget. Nommé par le chemin absolu que projects.list rend."
+      },
       "fileOpen": {
         "title": "Ouvrir un fichier du projet",
         "description": "Ouvre n’importe quel fichier du dossier du projet — une image, un modèle 3D, une matière, un document — dans l’espace qui l’édite, comme un double-clic dans l’Explorateur. Un fichier qu’aucun éditeur d’ici ne prend est confié au programme auquel il appartient."
@@ -163,7 +171,7 @@
       },
       "projectRename": {
         "title": "Renommer un projet",
-        "description": "Change le nom qu’un projet porte dans son manifeste, sans jamais toucher au dossier qui le contient — le catalogue et les projets récents sont indexés dessus. Nommé par son chemin absolu, donc même fermé."
+        "description": "Renomme un projet, ce qui DÉPLACE son dossier : un projet est nommé par son dossier et par rien d’autre. Le contenu suit, rien n’est effacé. Nommé par le chemin absolu que projects.list rend, donc même fermé — et le chemin répondu est le NOUVEAU."
       },
       "modelsReadGenerationModelFields": {
         "title": "Lire les entrées d’un modèle",
@@ -339,7 +347,7 @@
       },
       "clipFade": {
         "title": "Régler un fondu de bloc",
-        "description": "Donne au fondu d’entrée ou de sortie d’un bloc la longueur demandée. Deux rampes plus longues que le bloc lui-même sont ramenées à ce qu’il peut porter."
+        "description": "Donne au fondu d’entrée ou de sortie d’un BLOC DE MONTAGE la longueur demandée — il faut donc un montage vidéo ou audio ouvert devant. Deux rampes plus longues que le bloc lui-même sont ramenées à ce qu’il peut porter. Pour un fondu dans la cinématique d’une scène 3D, c’est timeline.addSceneCue."
       },
       "clipGain": {
         "title": "Régler le niveau d’un bloc",
@@ -1087,11 +1095,11 @@
       },
       "timelineAddSceneCue": {
         "title": "Poser un repère sur la timeline",
-        "description": "Ajoute un événement, un son, une vidéo ou une transition à la timeline de la scène. Ce que le troisième champ désigne dépend de la liste — un nom d’événement, un identifiant d’asset, ou un genre de transition."
+        "description": "Ajoute un événement, un son, une vidéo ou une transition à la timeline de la SCÈNE 3D. Un événement est un NOM diffusé sur le bus au moment dit, qu’un script entend par onMessage — c’est ainsi qu’on fait arriver quelque chose à un instant de cinématique, plutôt qu’en posant des clés d’animation. Un fondu de cinématique se pose ici, avec list=transitions et what=fade. Ce que le troisième champ désigne dépend de la liste — un nom d’événement, un identifiant d’asset, ou un genre de transition. Pour un fondu sur un bloc de montage, c’est clip.fade."
       },
       "timelineRemoveSceneCue": {
         "title": "Retirer un repère de la timeline",
-        "description": "Enlève le repère de cette liste qui porte cet identifiant."
+        "description": "Retire un repère de la timeline de la SCÈNE 3D — un événement, un son, une vidéo ou une transition, dont un fondu de cinématique. L’identifiant se lit dans le membre cues que scene.state rend, jamais ailleurs. Pour retirer un fondu d’un bloc de montage, c’est clip.fade avec une longueur nulle."
       },
       "timelineSetPanelRows": {
         "title": "Choisir ce que la timeline offre",

@@ -267,20 +267,20 @@
       "help": "Ouvre un point d’entrée sur cette machine seule, par lequel un client comme Claude Code peut lancer les mêmes actions que l’assistant. Tout ce qui coûte ou téléverse demande votre accord à l’écran, exactement comme ici. Désactivé, rien n’écoute."
     },
     "mcpDelegateFiles": {
-      "title": "Laisser toucher aux fichiers sans demander",
-      "help": "Déplacer, renommer, mettre à la corbeille, revenir en arrière sur un fichier suivi par git. L’Explorateur reprend une partie de ces gestes, jamais tous. Sans ce réglage, chacun vous est demandé."
+      "title": "Déplacer et supprimer mes fichiers sans me demander",
+      "help": "Un client extérieur peut déplacer, renommer ou mettre à la corbeille un fichier de votre projet, et revenir en arrière sur un fichier suivi par git, sans rien afficher. L’Explorateur reprend une partie de ces gestes, jamais tous. Décoché, chaque geste vous est présenté avant."
     },
     "mcpDelegateAsset": {
-      "title": "Laisser téléverser sans demander",
-      "help": "Envoyer une image vers votre bibliothèque, où elle restera. Cela ne coûte aucune unité créative. Sans ce réglage, chaque téléversement vous est demandé."
+      "title": "Téléverser dans ma bibliothèque sans me demander",
+      "help": "Un client extérieur peut envoyer une image vers votre bibliothèque, où elle restera. Cela ne coûte aucune unité créative. Décoché, chaque téléversement vous est présenté avant."
     },
     "mcpDelegateRemote": {
-      "title": "Laisser publier vers un serveur sans demander",
-      "help": "Envoyer une branche vers un dépôt git distant. C’est le seul geste qui sorte de cette machine, et rien ici ne le rattrape. À n’armer qu’en connaissance de cause."
+      "title": "Publier vers un serveur distant sans me demander",
+      "help": "Un client extérieur peut envoyer une branche vers un dépôt git distant. C’est le seul geste qui sorte de cette machine, et rien ici ne le rattrape. À n’armer qu’en connaissance de cause."
     },
     "mcpDelegateBudget": {
-      "title": "Unités créatives dépensables sans demander",
-      "help": "Ce qu’un client peut dépenser dans cette fenêtre avant que le studio se remette à demander. À zéro, chaque dépense vous est demandée. Une génération que l’API refuse de chiffrer n’est jamais lancée sans vous, quel que soit ce montant."
+      "title": "Dépenser des unités créatives sans me demander",
+      "help": "Ce qu’un client extérieur peut dépenser dans cette fenêtre avant que le studio se remette à demander. À zéro, chaque dépense vous est présentée avant. Une génération que l’API refuse de chiffrer n’est jamais lancée sans vous, quel que soit ce montant."
     },
     "copyMcpCommand": {
       "title": "Commande de connexion",

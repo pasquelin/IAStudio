@@ -8,11 +8,14 @@ import {
   withoutRecentProject,
   type Project,
 } from '@shared/domain/project'
+import type { Settings } from '@shared/domain/settings'
+import type { ProjectBinned } from '@shared/ipc'
 import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments, settleUnsavedWorkForProjectChange } from '@/features/shell/documentIo'
 import { readProjectScripts } from './code'
 import { closeOrphanTabs } from '@/features/shell/orphanTabs'
 import { getBridge } from '@/services/bridge'
+import { withoutKey } from '@/helpers/objects'
 import { forgetReportedFailures, reportFailure } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
@@ -23,8 +26,19 @@ import { useLayouts } from './layouts'
 import { useSceneClipboard } from './sceneClipboard'
 import { useSelection } from './selection'
 
+/** How leaving a project ended. `nothing` is a window that had none open — a second one asking. */
+export type ProjectLeft = 'left' | 'kept' | 'failed' | 'nothing'
+
 /** What a rename answered: the project under its new name and folder, or why it did not happen. */
 export type ProjectRenamed = { ok: true; project: Project } | { ok: false; why: string | null }
+
+/**
+ * What a trashing answered. `trashed: false` is a folder the disk had already lost — the row still
+ * goes, and a caller told otherwise reports a bin that never happened. `declined` is the person
+ * keeping their project, which is a no rather than a failure.
+ */
+export type ProjectTrashed =
+  { ok: true; trashed: boolean } | { ok: false; declined: boolean; why: string | null }
 
 type ProjectState = {
   project: Project | null
@@ -64,10 +78,11 @@ type ProjectState = {
    * Leaves the open project with none in its place — the row stays on the shelf, unlike
    * forgetting one. `lastProject` goes with it, or the next launch reopens what was just closed.
    *
-   * `false` when one of the two questions on the way out was answered no — the generations still
-   * running, then the documents holding unsaved work, in that order.
+   * 🛑 WHICH ending, not a boolean: `kept` is a no to one of the two questions on the way out, and
+   * `failed` is the settling giving out. Read as one, a caller told the person had chosen to keep
+   * their project over a catalogue that had in fact crashed.
    */
-  close: () => Promise<boolean>
+  close: () => Promise<ProjectLeft>
   /**
    * Drops a folder from the shelf of recent projects. The folder itself is untouched: this is a
    * list of shortcuts, and forgetting one is not a gesture on someone's disk.
@@ -76,6 +91,12 @@ type ProjectState = {
    * a confirmation.
    */
   forget: (path: string) => Promise<void>
+  /**
+   * 🛑 BINS the folder, where `forget` above only drops a shortcut. The open project is LEFT
+   * first, through `close` and its two questions — a no there keeps the folder. Everything keyed
+   * on the path goes with it, as a rename moves it.
+   */
+  trash: (path: string) => Promise<ProjectTrashed>
   /**
    * Gives a project a new name, which MOVES its folder — a project is named by its folder.
    *
@@ -187,6 +208,20 @@ async function pickedProject(
 }
 
 /**
+ * The shelf without one folder, and the startup pointer with it when it named that one.
+ *
+ * 🛑 Shared by `forget` and `trash`: `startup: 'lastProject'` is the default, so a removal that
+ * left the pointer behind was undone by the next launch — the project reopened, `withRecentProject`
+ * put the row back at the top, and nothing anywhere said why.
+ */
+function shelfWithout(storage: Settings['storage'], path: string): Partial<Settings['storage']> {
+  return {
+    recentProjects: withoutRecentProject(storage.recentProjects, path),
+    ...(storage.lastProject === path ? { lastProject: undefined } : {}),
+  }
+}
+
+/**
  * The open project is owned by the main process; this is the renderer's replica, refreshed by
  * broadcast so every window agrees on which project is open.
  */
@@ -269,9 +304,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const leaving = get().project
     // Nothing to leave, and the settings below would then clear a `lastProject` this window has
     // no business clearing — a second window closing the same project reaches here too.
-    if (!bridge || !leaving) return false
+    if (!bridge || !leaving) return 'nothing'
 
-    if (!(await settleLeaving(bridge))) return false
+    if (!(await settleLeaving(bridge))) return 'kept'
 
     try {
       await bridge.project.close()
@@ -280,7 +315,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // caller does `void close()`. Left to travel it was an unhandled rejection, after the user
       // had already been asked about their unsaved work.
       reportFailure('project.close', leaving.path, error)
-      return false
+      return 'failed'
     }
 
     // The broadcast has in fact already emptied every panel — the main process fires `onChange`
@@ -296,7 +331,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       reportFailure('project.close', leaving.path, error)
     }
 
-    return true
+    return 'left'
   },
 
   createAt: async path => {
@@ -316,15 +351,61 @@ export const useProject = create<ProjectState>()((set, get) => ({
   forget: async path => {
     const { settings, write } = useSettings.getState()
 
+    await write({ storage: shelfWithout(settings.storage, path) })
+  },
+
+  trash: async path => {
+    const bridge = getBridge()
+    if (!bridge) return { ok: false, declined: false, why: null }
+
+    // Left through the same door every other exit takes, so the questions about running
+    // generations and unsaved work are asked BEFORE the folder goes.
+    const wasOpen = get().project?.path === path
+    if (wasOpen) {
+      const left = await get().close()
+      // The ENDING travels, never a sentence: the caller writes the words, as it does for a bin
+      // the disk refused — see `trashProject`.
+      if (left !== 'left') return { ok: false, declined: left === 'kept', why: left }
+    }
+
+    /**
+     * 🛑 Put BACK when nothing was binned. The project has to be closed before the folder can go —
+     * its catalogue holds a file inside it — so a refusal reached a person whose project had been
+     * shut for a gesture that never happened, with `lastProject` cleared and nothing to reopen it.
+     */
+    const kept = async (why: string): Promise<ProjectTrashed> => {
+      if (wasOpen) await get().open(path)
+      return { ok: false, declined: false, why }
+    }
+
+    let binned: ProjectBinned
+    try {
+      binned = await bridge.project.trash(path)
+    } catch (error) {
+      // The folder still stands, so nothing keyed on it may be dropped: a shelf that forgot a
+      // project the disk still holds is a project nobody can find again.
+      return await kept(messageOf(error))
+    }
+
+    if (binned === 'not-a-project') return await kept('not-a-project')
+
+    /**
+     * 🛑 The account link and the roles go ONLY on a real bin. `missing` is a folder the disk does
+     * not hold right now — an unplugged drive as much as a deletion — and pruning on that is the
+     * silent adoption `storage.projectAccounts` was split out to prevent. The shelf ROW still
+     * goes: it is a shortcut, and a failed opening already drops it.
+     */
+    const { settings, write } = useSettings.getState()
+    const trashed = binned === 'trashed'
     await write({
       storage: {
-        recentProjects: withoutRecentProject(settings.storage.recentProjects, path),
-        // Cleared with it when it named this folder: `startup: 'lastProject'` is the default, so
-        // the next launch would reopen the project, record it through `withRecentProject`, and
-        // put the row the user just removed back at the top without a word.
-        ...(settings.storage.lastProject === path ? { lastProject: undefined } : {}),
+        ...shelfWithout(settings.storage, path),
+        ...(trashed ? { projectAccounts: withoutKey(settings.storage.projectAccounts, path) } : {}),
       },
+      ...(trashed ? { ai: { projectRoles: withoutKey(settings.ai.projectRoles, path) } } : {}),
     })
+
+    return { ok: true, trashed }
   },
 
   rename: async (path, name) => {

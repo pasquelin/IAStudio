@@ -17,6 +17,8 @@ export type MemoryShell = {
   channels: BridgeOverrides
   /** What the machine was asked to do, in the order it was asked. */
   revealed: () => readonly string[]
+  /** The project folders sent to the system's trash, in the order they went. */
+  trashedProjects: () => readonly string[]
   described: () => readonly string[]
   styles: () => readonly MaterialStyle[]
   favorites: () => readonly FavoriteRecipe[]
@@ -38,6 +40,7 @@ export type MemoryShell = {
 
 export function createMemoryShell(assetOf: (assetId: string) => Asset | null): MemoryShell {
   const revealed: string[] = []
+  const trashedProjects: string[] = []
   const described: string[] = []
   const pulled: string[] = []
   const pushed: string[] = []
@@ -69,6 +72,12 @@ export function createMemoryShell(assetOf: (assetId: string) => Asset | null): M
       create: path => Promise.resolve(projectAt(path)),
       // The folder MOVES, as the real store does — see `main/project/store.ts`.
       rename: (path, name) => Promise.resolve(projectAt(`${pathParentOf(path)}/${name}`)),
+      // The disk is a port here, so what is scored is that the folder was sent to the trash —
+      // never that a folder disappeared, which no bench can watch happen.
+      trash: path => {
+        trashedProjects.push(path)
+        return Promise.resolve('trashed')
+      },
       revealFile: relative => {
         revealed.push(relative)
         return Promise.resolve()
@@ -198,6 +207,7 @@ export function createMemoryShell(assetOf: (assetId: string) => Asset | null): M
     pulled: () => pulled,
     pushed: () => pushed,
     projectAt,
+    trashedProjects: () => trashedProjects,
     adopted: () => adopted,
     adopt: relative => {
       adopted.push(relative)

@@ -154,14 +154,14 @@ async function closeProject(): Promise<ActionOutcome> {
   if (!project)
     return refused('noProject', 'no project is open — projects.list answers what there is to open')
 
-  // Same shape as `document.close`, and for the same reason: the store raises the only question
-  // that knows whether any work is at stake, so this action commits `none` and answers its no.
-  return (await close())
-    ? { ok: true }
-    : refused(
-        'declined',
-        'the person at the screen kept the project open — a generation may be running, or a document may hold unsaved work',
-      )
+  // 🛑 WHICH ending, never the truthiness: the store raises the only question that knows whether
+  // any work is at stake, and a settling that gave out is not a person saying no.
+  const left = await close()
+  if (left === 'left') return { ok: true }
+
+  return left === 'kept'
+    ? refused('declined', `the person at the screen kept the project open — ${WORK_AT_STAKE}`)
+    : refused('failed', 'the project could not be left — the journal holds why')
 }
 
 /**
@@ -237,6 +237,68 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
   return { ok: true, data: created }
 }
 
+/** Why leaving a project is asked about at all — the clause both refusals below borrow. */
+const WORK_AT_STAKE = 'a generation may be running, or a document may hold unsaved work'
+
+/**
+ * 🛑 The path both gestures below take, refused unless the SHELF holds it — a model that builds
+ * one from a NAME is the measured case, and the gesture that DESTROYS must not take an invented
+ * path on trust. A field left out is told so, never sent to read a list it did not ask for.
+ */
+function shelvedPath(input: Record<string, unknown>): { path: string } | ActionOutcome {
+  const path = textOf(input, 'path')
+  if (path === null) return refused('badInput', WANTS_PATH)
+
+  return useSettings.getState().settings.storage.recentProjects.some(one => one.path === path)
+    ? { path }
+    : refused('notFound', `no recent project has that path. ${FROM_THE_LIST}`)
+}
+
+const WANTS_PATH =
+  '"path" is wanted — the whole path of a project folder, as projects.list answers it'
+
+/**
+ * 🛑 The pair a model must not mix up: this one drops a ROW, `trashProject` bins a FOLDER. Told
+ * « retire jeu2 » with only the five other project actions to reach for, the model announced the
+ * project was not on the shelf — it was, on screen.
+ */
+async function forgetProject(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const shelved = shelvedPath(input)
+  if (!('path' in shelved)) return shelved
+
+  await useProject.getState().forget(shelved.path)
+  return { ok: true }
+}
+
+/**
+ * 🛑 The one gesture of this file nothing in the studio takes back. `trashed: false` says the disk
+ * had already lost the folder and only the row went.
+ */
+async function trashProject(input: Record<string, unknown>): Promise<ActionOutcome> {
+  const shelved = shelvedPath(input)
+  if (!('path' in shelved)) return shelved
+
+  const { path } = shelved
+  const outcome = await useProject.getState().trash(path)
+  if (outcome.ok) return { ok: true, data: { path, trashed: outcome.trashed } }
+  if (outcome.declined)
+    return refused(
+      'declined',
+      `the person at the screen kept the project — ${WORK_AT_STAKE} — and nothing was binned`,
+    )
+
+  // 🛑 The REASON travels, as a refused rename's does: told only that it failed, the model made
+  // one up and announced it to the person. `not-a-project` has a sentence already — the one
+  // `project.create` answers a folder that will not serve.
+  if (outcome.why === 'not-a-project')
+    return refused('notFound', `${CREATE_REFUSALS['not-a-project']} ${FROM_THE_LIST}`)
+
+  return refused(
+    'failed',
+    `"${path}" could not go to the trash${outcome.why === null ? '' : `: ${outcome.why}`}. ${FROM_THE_LIST}`,
+  )
+}
+
 /**
  * 🛑 Why it did not happen, in words a model repairs from. Told only that it failed, the model
  * announced to the person that no rename was needed — and the path it had built was one it made
@@ -280,6 +342,8 @@ export const FILE_HANDLERS: ActionHandlers = {
   'project.open': openProject,
   'project.close': closeProject,
   'project.create': createProject,
+  'project.forget': forgetProject,
+  'project.trash': trashProject,
   'file.facts': facts,
   'file.open': openFile,
 

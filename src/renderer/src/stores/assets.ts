@@ -286,7 +286,7 @@ export const useAssets = create<AssetsState>()(
                 hasMore: page.length === LOCAL_PAGE,
               }))
             } catch {
-              // No project open — the catalogue throws, and there is nothing more to read.
+              // The catalogue failed — see `refresh` below, which answers the same way.
               set({ hasMore: false })
             }
           })().finally(() => {
@@ -336,7 +336,8 @@ export const useAssets = create<AssetsState>()(
               pagesRead = Math.max(1, Math.ceil(found.length / LOCAL_PAGE))
               set({ items: found, hasMore: more })
             } catch {
-              // No project open: the catalogue throws, and an empty list is the honest answer.
+              // The catalogue failed. No project open answers an empty page instead, so what
+              // lands here is a database that stopped reading.
               pagesRead = 1
               set({ items: [], hasMore: false })
             }

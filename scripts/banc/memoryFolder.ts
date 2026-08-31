@@ -5,6 +5,7 @@ import {
   isUnder,
   nameOf,
   parentOf,
+  FOLDER_ROOT,
   type FileKind,
   type FolderEntry,
 } from '@shared/domain/folder'
@@ -66,10 +67,15 @@ export function createMemoryFolder(
   }
 
   const folder: MemoryFolder = {
+    /**
+     * 🛑 `?? FOLDER_ROOT`, and it is the whole of the port: `parentOf` answers `null` for a
+     * top-level entry, never `''`, so listing the project ROOT matched nothing and every scenario
+     * that started by looking at the project was handed an empty one — measured 2026-08-31.
+     */
     list: (relative, hidden = false) =>
       Promise.resolve(
         shown(
-          entries().filter(one => parentOf(one.path) === relative),
+          entries().filter(one => (parentOf(one.path) ?? FOLDER_ROOT) === relative),
           hidden,
         ),
       ),

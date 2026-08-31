@@ -62,6 +62,29 @@ export async function orWhenGone<T>(read: () => Promise<T>, gone: T): Promise<T>
   }
 }
 
+/** The three verdicts that mean no project sits at that path — the other two mean one does. */
+const NO_PROJECT_THERE: readonly ProjectOpenFailure[] = [
+  'not-a-project',
+  'nested',
+  'holds-projects',
+]
+
+/**
+ * Whether a folder really holds a project — asked by the one gesture that destroys one.
+ *
+ * 🛑 `unreadable` and `too-new` answer TRUE: a project IS there and this build cannot read it, and
+ * binning a corrupt project is exactly what a person asks for. Read as "no project", a manifest
+ * that failed to load for a second — a network share, a permission — told the person their folder
+ * was not a project, after their project had already been closed for the gesture.
+ */
+export async function holdsAProject(store: ProjectStore, path: string): Promise<boolean> {
+  try {
+    return (await store.inspect(path)) === 'project'
+  } catch (error) {
+    return error instanceof ProjectOpenError && !NO_PROJECT_THERE.includes(error.reason)
+  }
+}
+
 /**
  * One error carrying a reason rather than three classes: what every caller does with it is
  * choose a sentence, and a union keeps that choice exhaustive. `cause` holds what actually
@@ -147,8 +170,8 @@ export type ProjectStore = {
   inspect: (path: string) => Promise<FolderVerdict>
   open: (path: string) => Promise<Project>
   /**
-   * Writes a new name into a project's manifest — the FOLDER is never touched, see the channel's
-   * own doc for why. Works on a project that is not open, which the home's shelf needs.
+   * Renames a project, which MOVES its folder: a project is named by its folder and by nothing
+   * else. Works on a project that is not open, which the home's shelf needs.
    *
    * When the renamed one IS open, its in-memory copy is replaced too. `onChange` is deliberately
    * NOT fired: it means "another project is in front now", and it resumes remembered jobs and

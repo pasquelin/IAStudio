@@ -92,6 +92,8 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'project.open': null,
   'project.close': null,
   'project.create': null,
+  'project.forget': null,
+  'project.trash': null,
   'file.open': null,
   'files.list': null,
   'files.search': null,

@@ -33,7 +33,7 @@ import {
 import type { DocumentFiles } from './documents'
 import { askLeaveWithJobs, askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
 import type { ProjectContextStore } from './context'
-import { openFailureKey, type ProjectStore } from './store'
+import { holdsAProject, openFailureKey, orWhenGone, type ProjectStore } from './store'
 import {
   parseAssetQuery,
   parseContextCards,
@@ -108,6 +108,11 @@ export type ProjectHandlerDeps = {
   /** `dialog.showMessageBox`, injected for the same reason — see `documentDialogs`. */
   askUser: AskUser
   /**
+   * `shell.trashItem` on an ABSOLUTE path, which is what tells it apart from the one the folder
+   * writer takes: this bins a project folder from the outside, never a file within one.
+   */
+  trashFolder: (path: string) => Promise<void>
+  /**
    * How many generations are still running. Counted here rather than sent by the window: the
    * manager holds them, and a replica a beat behind would put a number in a dialog nobody could
    * check.
@@ -132,6 +137,7 @@ export function registerProjectHandlers({
   scripts,
   openInSystem,
   askUser,
+  trashFolder,
   runningJobCount,
 }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, async (_event, path) => {
@@ -259,6 +265,36 @@ export function registerProjectHandlers({
   })
 
   /**
+   * 🛑 `inspect` is not politeness, it is the last gate: `parseProjectPath` refuses a relative path
+   * and NOTHING else, so a path a model built from a name would otherwise bin `~/Documents` behind
+   * a card reading "put a project in the trash". The settings keyed on it are the caller's half.
+   */
+  handle(CHANNELS.projectTrash, async (_event, path) => {
+    const folderPath = parseProjectPath(path)
+    // 🛑 Told apart from the refusal below, and the caller acts on the difference: a folder that is
+    // merely not there may be a drive left unplugged, so nothing keyed on it may be dropped.
+    if (!exists(folderPath)) return 'missing'
+    if (!(await holdsAProject(project, folderPath))) {
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotTrashed' })
+      return 'not-a-project'
+    }
+
+    // Closed first: the catalogue is a thread holding a file INSIDE the folder, and a project
+    // cannot be binned from under an open database.
+    if (project.current()?.path === folderPath) await project.close()
+
+    try {
+      await trashFolder(folderPath)
+    } catch (error) {
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotTrashed' })
+      throw error
+    }
+
+    record({ level: 'info', topic: 'project', messageKey: 'activity.projectTrashed' })
+    return 'trashed'
+  })
+
+  /**
    * The seven gestures that write to the project folder, and the one that reads their history.
    *
    * All of them go through `files`, and none of them decides anything: what may be written is
@@ -365,10 +401,17 @@ export function registerProjectHandlers({
     return failure === ''
   })
 
-  handle(CHANNELS.assetsSearch, async (_event, query) => {
-    const found = await project.catalog().search(parseAssetQuery(query))
-    return found.map(withoutSourcePath)
-  })
+  /**
+   * 🛑 Empty rather than `no-project`: the window searches its assets and lists its documents on
+   * the way IN, so every launch wrote two errors over a studio doing nothing wrong. `orWhenGone`
+   * rather than a check of its own — it also catches the catalogue closing mid-read.
+   */
+  handle(CHANNELS.assetsSearch, (_event, query) =>
+    orWhenGone(async () => {
+      const found = await project.catalog().search(parseAssetQuery(query))
+      return found.map(withoutSourcePath)
+    }, []),
+  )
 
   handle(CHANNELS.assetsCounts, () => project.catalog().countByType())
 
@@ -603,7 +646,8 @@ export function registerProjectHandlers({
     scripts.write(parseFolderPath(path), String(source)),
   )
 
-  handle(CHANNELS.documentList, () => documents.list())
+  // The second of the two — see `assetsSearch` above for why these answer empty.
+  handle(CHANNELS.documentList, () => orWhenGone(() => documents.list(), []))
 
   handle(CHANNELS.documentRead, (_event, id, kind) =>
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),

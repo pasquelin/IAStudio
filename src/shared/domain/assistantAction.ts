@@ -47,6 +47,8 @@ export type ActionName =
   | 'project.open'
   | 'project.close'
   | 'project.create'
+  | 'project.forget'
+  | 'project.trash'
   | 'file.open'
   | 'files.list'
   | 'files.search'
@@ -745,9 +747,16 @@ export function inputProblem(
 /** `<the id>`, `$ASSET_ID`, `{{path}}` — a shape a caller writes when it has no value to write. */
 const PLACEHOLDER = /^(<.*>|\$[A-Z_]+|\{\{.*\}\}|TODO|xxx+)$/i
 
+/**
+ * 🛑 It says LOOK FIRST, because the measured case is a model that had already been answered:
+ * `projects.list` returned the one project, and the next call still wrote `<CHEMIN_PROJET>`. Told
+ * only to run the call that answers it, the model re-ran the listing or gave up and announced the
+ * gesture as done — measured on 41.8, 2026-08-31.
+ */
 const WROTE_PLACEHOLDER = (key: string, value: string): string =>
-  `"${key}" reads ${value}, which is a placeholder and not a value. Nothing here fills one in: ` +
-  `run the call that answers it, then send this one again with what came back.`
+  `"${key}" reads ${value}, which is a placeholder and not a value. Nothing here fills one in. ` +
+  `Read the answer of a call you have ALREADY made this turn and copy the value from it; only if ` +
+  `no answer holds it, run the call that answers it and send this one again.`
 
 const isEmpty = (value: unknown): boolean =>
   value === null || value === '' || (Array.isArray(value) && value.length === 0)

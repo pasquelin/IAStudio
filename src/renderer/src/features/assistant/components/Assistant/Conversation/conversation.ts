@@ -6,6 +6,7 @@ import {
   type ActionRefusal,
   refusalKey,
 } from '@shared/domain/assistant'
+import { isRecord } from '@shared/guards'
 import { stableKey } from '@shared/hash'
 import { englishText } from '@shared/i18n'
 
@@ -43,9 +44,76 @@ export function resultLine(data: unknown): string {
   if (Array.isArray(data)) return listWithin(data)
 
   const written = JSON.stringify(data) ?? ''
-  // A lone value is cut by characters and SAID to be cut: it has no items to drop by, and a
+  if (written.length <= RESULT_MAX) return written
+  if (isRecord(data)) return recordWithin(data)
+
+  // A lone value is cut by characters and SAID to be cut: it has no members to drop by, and a
   // model told nothing would read the tail it never got as the whole answer.
-  return written.length <= RESULT_MAX ? written : `${written.slice(0, RESULT_MAX)}… (cut short)`
+  return `${written.slice(0, RESULT_MAX)}… (cut short)`
+}
+
+/**
+ * 🛑 Whole MEMBERS, never characters: `scene.state` runs past the ceiling, so the tail was cut
+ * mid-value and the model copied `8edfaabe-0ebd…` as a row id — three calls refused on an id that
+ * was never whole, measured 2026-08-31.
+ *
+ * `continue`, not `break` as `listWithin` does: a small member must survive a big one before it,
+ * or one long list takes every id after it down. What was dropped is NAMED, since a model told
+ * only that something was cut cannot know whether what it needs is behind the ellipsis.
+ */
+function recordWithin(data: Record<string, unknown>): string {
+  const kept: string[] = []
+  const dropped: string[] = []
+  let left = RESULT_MAX
+
+  for (const [key, value] of Object.entries(data)) {
+    // `undefined` is a member that is NOT THERE: `JSON.stringify` omits it, and writing `null`
+    // instead tells the model a value was answered where none was.
+    if (value === undefined) continue
+
+    const written = `${JSON.stringify(key)}:${JSON.stringify(value) ?? 'null'}`
+    if (written.length + 1 <= left) {
+      left -= written.length + 1
+      kept.push(written)
+      continue
+    }
+
+    /**
+     * 🛑 A LIST too long gives what fits rather than nothing: `scene.state` answers `nodes`, the
+     * only place a node id is ever published, and dropping it whole left the assistant unable to
+     * name a single object of the scene it was looking at.
+     */
+    const items: readonly unknown[] = Array.isArray(value) ? value : []
+    const trimmed = items.length === 0 ? null : someOf(items, left - key.length - 4)
+    if (trimmed === null) {
+      dropped.push(key)
+      continue
+    }
+    left -= trimmed.written.length + key.length + 4
+    kept.push(`${JSON.stringify(key)}:${trimmed.written}`)
+    dropped.push(`${key} (first ${trimmed.count} of ${items.length})`)
+  }
+
+  const more = dropped.length === 0 ? '' : ` (cut short: ${dropped.join(', ')})`
+  return `{${kept.join(',')}}${more}`
+}
+
+/** As many WHOLE items of a list as `room` takes, or nothing when not even one does. */
+function someOf(
+  items: readonly unknown[],
+  room: number,
+): { written: string; count: number } | null {
+  const kept: string[] = []
+  let left = room
+
+  for (const item of items) {
+    const written = JSON.stringify(item) ?? 'null'
+    if (written.length + 1 > left) break
+    left -= written.length + 1
+    kept.push(written)
+  }
+
+  return kept.length === 0 ? null : { written: `[${kept.join(',')}]`, count: kept.length }
 }
 
 /**

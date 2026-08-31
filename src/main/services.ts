@@ -376,6 +376,8 @@ export type Services = {
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
   askUser: AskUser
+  /** Sends a whole project folder to the system's trash, named by its own absolute path. */
+  trashFolder: (path: string) => Promise<void>
   /** How many generations have not settled — what closing the project asks about. */
   runningJobCount: () => number
   pickMedia: () => Promise<string[]>
@@ -2251,6 +2253,7 @@ export function createServices(settings: SettingsStore): Services {
     promptContext,
     openInSystem: file => shell.openPath(file),
     askUser,
+    trashFolder: path => shell.trashItem(path),
     // Nothing to leave means nothing to ask about: `pickedProject` reaches the question on a
     // studio that has never opened a project, where a job of a project closed earlier would
     // otherwise be counted.

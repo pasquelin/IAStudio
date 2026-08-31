@@ -4,6 +4,7 @@ import {
   alreadySettled,
   assistantHistory,
   repeatedRelative,
+  resultLine,
   repeatKeyOf,
   settledKeyOf,
   type AssistantStep,
@@ -279,5 +280,47 @@ describe('a call that sets a named state, sent twice in one turn', () => {
 
     expect(alreadySettled(steps, 'layer.select', first)).toBe(false)
     expect(alreadySettled(steps, 'layer.select', between)).toBe(true)
+  })
+})
+
+/**
+ * 🛑 An answer past the ceiling is cut by whole MEMBERS, never mid-value: `scene.state` runs long,
+ * and the character cut handed the model `8edfaabe-0ebd…` as a row id — three calls refused on an
+ * id that was never whole, measured 2026-08-31.
+ */
+describe('an object answer too long to show whole', () => {
+  const LONG = 'x'.repeat(700)
+
+  it('keeps the members that fit whole and names the one it dropped', () => {
+    const shown = resultLine({ id: 'abc-123', bulk: LONG, cues: ['fade-1'] })
+
+    expect(shown).toContain('"id":"abc-123"')
+    expect(shown).toContain('cut short: bulk')
+    // The point of the whole thing: no value is handed over half written.
+    expect(shown).not.toContain('xxx…')
+  })
+
+  /**
+   * 🛑 `scene.state` publishes `nodes`, the only place a node id is ever answered. Dropped whole,
+   * the assistant could not name one object of the scene in front of it.
+   */
+  it('gives what fits of a list too long to show whole, and says how many', () => {
+    const nodes = Array.from({ length: 40 }, (_, at) => ({ id: `node-${at}`, name: `Cube ${at}` }))
+
+    const shown = resultLine({ id: 'abc-123', nodes })
+
+    expect(shown).toContain('"id":"node-0"')
+    expect(shown).toContain('of 40)')
+    // Never half an item: an id cut in two is an id every later call is refused on.
+    expect(shown).not.toMatch(/"id":"node-\d+$/)
+  })
+
+  // A member that is not there is not a member answered `null`.
+  it('leaves an absent member out rather than writing it null', () => {
+    expect(resultLine({ id: 'abc-123', missing: undefined, bulk: LONG })).not.toContain('null')
+  })
+
+  it('leaves an answer that fits exactly as it is', () => {
+    expect(resultLine({ id: 'abc-123' })).toBe('{"id":"abc-123"}')
   })
 })

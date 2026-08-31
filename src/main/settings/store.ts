@@ -129,7 +129,9 @@ function movedKey(before: AccountBook, after: AccountBook): boolean {
   return from?.key !== to?.key || from?.secret !== to?.secret
 }
 
-function merge(base: Settings, partial: PartialSettings): Settings {
+/** One write folded onto what stands, branch by branch. Exported for the bench's settings port,
+ * which must merge exactly as this does. */
+export function mergedSettings(base: Settings, partial: PartialSettings): Settings {
   return {
     general: { ...base.general, ...partial.general },
     ai: { ...base.ai, ...partial.ai },
@@ -189,7 +191,7 @@ export function createSettingsStore(
   }
 
   const read = (): Settings => {
-    cached ??= frozen(merge(defaults, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
+    cached ??= frozen(mergedSettings(defaults, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
     return cached
   }
 
@@ -305,7 +307,7 @@ export function createSettingsStore(
     read,
 
     write: partial => {
-      const merged = merge(read(), partial)
+      const merged = mergedSettings(read(), partial)
       adapter.write(SETTINGS_KEY, merged)
       forgetSettings()
       announce(merged)

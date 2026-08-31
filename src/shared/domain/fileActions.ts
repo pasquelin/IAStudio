@@ -134,6 +134,36 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
+     * 🛑 This one drops a ROW, the next one bins a FOLDER — the confusion that costs work nobody
+     * gets back, so both descriptions say which. `studio` because the shelf is a preference, the
+     * level `settings.write` already carries.
+     */
+    name: 'project.forget',
+    titleKey: 'assistant.actions.projectForget.title',
+    descriptionKey: 'assistant.actions.projectForget.description',
+    commitment: 'studio',
+    // A row already off the shelf cannot come off it twice, and the second call raised the card
+    // again over a project the person had just let go.
+    repeatable: false,
+    reach: 'both',
+    fields: [PROJECT_FOLDER],
+  }),
+  action({
+    /**
+     * 🛑 `studio` is the ONE level no delegation switch waives — `files` would have run unasked
+     * for anyone who armed `delegateFiles` to move rushes about. No native dialog behind it: a
+     * call from the wire would stand on one for good, the measure `document.deleteFromDisk` holds.
+     */
+    name: 'project.trash',
+    titleKey: 'assistant.actions.projectTrash.title',
+    descriptionKey: 'assistant.actions.projectTrash.description',
+    commitment: 'studio',
+    repeatable: false,
+    reach: 'both',
+    fields: [PROJECT_FOLDER],
+  }),
+  action({
+    /**
      * `both`, alone in this family: "open the green sailboat" is what a person SAYS, and a small
      * model shown only the short share could not answer it. `document.open` stayed `mcp` because
      * it needs a listing first; this one needs a name and a search.

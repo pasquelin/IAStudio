@@ -6,7 +6,13 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { FOLDER_ROOT, type FolderEntry } from '@shared/domain/folder'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
-import { useProject, type ProjectRenamed } from '@/stores/project'
+import type { ActionName } from '@shared/domain/assistant'
+import {
+  useProject,
+  type ProjectLeft,
+  type ProjectRenamed,
+  type ProjectTrashed,
+} from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { runAction } from './executor'
 
@@ -218,7 +224,7 @@ describe('opening and making a project', () => {
   })
 
   it('closes the open project through the store the title bar closes it with', async () => {
-    const close = vi.fn(async () => true)
+    const close = vi.fn(async (): Promise<ProjectLeft> => 'left')
     useProject.setState({ close })
 
     expect(await runAction('project.close', {})).toEqual({ ok: true })
@@ -228,7 +234,7 @@ describe('opening and making a project', () => {
   // Answered rather than done in silence: « ferme le projet » with none open is a person who
   // believes one is, and `ok` would leave them believing it.
   it('refuses to close when no project is open', async () => {
-    const close = vi.fn(async () => true)
+    const close = vi.fn(async (): Promise<ProjectLeft> => 'left')
     useProject.setState({ project: null, close })
 
     expect(await runAction('project.close', {})).toMatchObject({ ok: false, refusal: 'noProject' })
@@ -238,7 +244,7 @@ describe('opening and making a project', () => {
   // The store asked about a document holding unsaved work and was told no. `badInput` would send
   // a client back to check parameters it got right.
   it('reports a cancelled question as a refusal by a person', async () => {
-    useProject.setState({ close: vi.fn(async () => false) })
+    useProject.setState({ close: async () => 'kept' })
 
     expect(await runAction('project.close', {})).toMatchObject({ ok: false, refusal: 'declined' })
   })
@@ -607,5 +613,94 @@ describe('opening a file of the project', () => {
       ok: false,
       refusal: 'noProject',
     })
+  })
+})
+
+/**
+ * 🛑 The pair a model must not mix up. `project.forget` drops a ROW off the shelf; `project.trash`
+ * bins the FOLDER. Told « retire jeu2 » with neither of them published, the model answered that
+ * the project was not among the recent ones — it was, on screen — measured 2026-08-31.
+ */
+describe('telling forgetting a project from binning one', () => {
+  const SHELVED = [
+    { path: '/projets/Voilier', openedAt: '2026-08-30T10:00:00.000Z' },
+    { path: '/projets/Chantier', openedAt: '2026-08-29T10:00:00.000Z' },
+  ]
+
+  const binned = (trashed: boolean): ProjectTrashed => ({ ok: true, trashed })
+
+  beforeEach(() => {
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, recentProjects: SHELVED },
+      },
+    }))
+  })
+
+  it('drops the row through the store both shelves read', async () => {
+    const forget = vi.fn(async () => {})
+    useProject.setState({ forget })
+
+    expect(await runAction('project.forget', { path: '/projets/Voilier' })).toEqual({ ok: true })
+    expect(forget).toHaveBeenCalledWith('/projets/Voilier')
+  })
+
+  const PAIR: readonly ActionName[] = ['project.forget', 'project.trash']
+
+  it.each(PAIR)(
+    'refuses %s on a path no shelf holds, and says where a path comes from',
+    async name => {
+      const forget = vi.fn(async () => {})
+      const trash = vi.fn(async () => binned(true))
+      useProject.setState({ forget, trash })
+
+      expect(await runAction(name, { path: '/projets/Inconnu' })).toMatchObject({
+        ok: false,
+        refusal: 'notFound',
+        detail: expect.stringContaining('projects.list'),
+      })
+      expect(forget).not.toHaveBeenCalled()
+      expect(trash).not.toHaveBeenCalled()
+    },
+  )
+
+  /**
+   * 🛑 `trashed: false` is the disk having already lost the folder, and it must not read like the
+   * binning above it: a model told `ok` alone reports a folder in the trash where there is none.
+   */
+  it.each([true, false])('bins the folder and says whether it went (%s)', async went => {
+    const trash = vi.fn(async () => binned(went))
+    useProject.setState({ trash })
+
+    expect(await runAction('project.trash', { path: '/projets/Voilier' })).toEqual({
+      ok: true,
+      data: { path: '/projets/Voilier', trashed: went },
+    })
+    expect(trash).toHaveBeenCalledWith('/projets/Voilier')
+  })
+
+  // The person kept their project, which is not a failure — a model told "could not" tries again.
+  it('answers declined when the person kept the project', async () => {
+    useProject.setState({ trash: async () => ({ ok: false, declined: true, why: null }) })
+
+    expect(await runAction('project.trash', { path: '/projets/Voilier' })).toMatchObject({
+      ok: false,
+      refusal: 'declined',
+      detail: expect.stringContaining('kept the project'),
+    })
+  })
+
+  // 🛑 The REASON travels, as a refused rename's does: told only that it failed, the model made
+  // one up and announced it to the person.
+  it('carries why the folder would not go, and where a path comes from', async () => {
+    useProject.setState({ trash: async () => ({ ok: false, declined: false, why: 'EPERM' }) })
+
+    const outcome = await runAction('project.trash', { path: '/projets/Voilier' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'failed' })
+    const detail = outcome.ok ? '' : (outcome.detail ?? '')
+    expect(detail).toContain('EPERM')
+    expect(detail).toContain('projects.list')
   })
 })

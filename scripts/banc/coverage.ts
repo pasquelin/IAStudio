@@ -61,6 +61,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'project.open': ['41.7', '41.11'],
   'project.create': ['41.6', '41.10'],
   'project.close': ['41.9'],
+  'project.forget': ['41.12'],
+  'project.trash': ['41.13'],
 
   'file.open': ['2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '22.3', '66.2'],
   'files.list': ['1.2'],
