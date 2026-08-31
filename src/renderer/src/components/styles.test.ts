@@ -521,8 +521,8 @@ describe('the shape of a row line', () => {
     ).map(([path]) => path)
 
     expect(wearing.sort()).toEqual([
+      '../features/project/components/Project/ProjectRow.tsx',
       '../panels/inspector/StylesSection/StylesSectionRow.tsx',
-      '../panels/projects/ProjectRow.tsx',
       './Row.tsx',
       './Tree.tsx',
     ])

@@ -11,7 +11,7 @@ import { timeAgo } from '@/helpers/relativeTime'
 import { InlineRename } from '@/components/InlineRename'
 import { ROW_LINE } from '@/components/styles'
 import { renderMenuRows } from '@/components/menuRows'
-import { projectMenuRows } from './ProjectMenu/projectMenuRows'
+import { projectMenuRows } from './projectMenuRows'
 
 export type ProjectRowProps = {
   project: RecentProject
