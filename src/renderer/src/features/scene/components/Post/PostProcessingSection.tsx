@@ -39,7 +39,7 @@ import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { choicesOf } from '../../../shell/components/unionChoices'
-import { DescriptorSection } from '../../../../panels/inspector/DescriptorSection'
+import { DescriptorSection } from '../../../../components/DescriptorSection'
 import { PostPresetField } from './PresetField/PostPresetField'
 import { PostStackList } from './Stack/PostStackList'
 

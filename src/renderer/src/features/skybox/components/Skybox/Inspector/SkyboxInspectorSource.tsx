@@ -5,7 +5,7 @@ import { PropertySection } from '@/components/PropertySection'
 import { editPixelsOf } from '@/helpers/openAsset'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { PictureField } from '../../../../../panels/inspector/PictureField/PictureField'
+import { PictureField } from '../../../../../components/PictureField'
 
 export type SkyboxInspectorSourceProps = { documentId: string }
 

@@ -4,7 +4,7 @@ import type { TextDescriptor } from '@shared/domain/scene'
 import { TextField } from '@/components/TextField'
 import type { GestureProps } from '@/components/styles'
 import { textFields, withField } from '@/engines/scene/propertyFields'
-import { DescriptorSection } from '../../../panels/inspector/DescriptorSection'
+import { DescriptorSection } from '../../../components/DescriptorSection'
 import { FontField } from './FontField'
 
 export type TextSectionProps = {

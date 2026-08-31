@@ -25,7 +25,7 @@ import { sceneViewChromeOf, useSceneFrameHead, useSceneViews } from '@/stores/sc
 import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { DescriptorSection } from '../../../../panels/inspector/DescriptorSection'
+import { DescriptorSection } from '../../../../components/DescriptorSection'
 import { AnimationSection } from '../../../animation/components/Animation/AnimationSection'
 import { CameraAlignButton } from '../Camera/CameraAlignButton'
 import { CameraShotSection } from '../Camera/ShotSection/CameraShotSection'

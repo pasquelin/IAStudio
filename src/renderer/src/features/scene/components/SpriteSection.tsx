@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { SpriteDescriptor } from '@shared/domain/scene'
 import type { GestureProps } from '@/components/styles'
 import { spriteFields, withField } from '@/engines/scene/propertyFields'
-import { PictureField } from '../../../panels/inspector/PictureField/PictureField'
-import { DescriptorSection } from '../../../panels/inspector/DescriptorSection'
+import { PictureField } from '../../../components/PictureField'
+import { DescriptorSection } from '../../../components/DescriptorSection'
 
 export type SpriteSectionProps = {
   sprite: SpriteDescriptor

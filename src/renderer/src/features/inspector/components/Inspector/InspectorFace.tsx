@@ -10,12 +10,12 @@ import {
   useDocuments,
 } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { ClipInspector } from '../../../features/timeline/components/ClipInspector'
-import { LayerInspector } from '../../../features/image/components/Layer/LayerInspector'
-import { SceneInspector } from '../../../features/scene/components/Scene/SceneInspector'
-import { SkyboxInspector } from '../../../features/skybox/components/Skybox/Inspector/SkyboxInspector'
-import { MaterialInspector } from '../../../features/material/components/Material/Inspector/MaterialInspector'
-import { TrackInspector } from '../../../features/timeline/components/Track/TrackInspector'
+import { ClipInspector } from '../../../timeline/components/ClipInspector'
+import { LayerInspector } from '../../../image/components/Layer/LayerInspector'
+import { SceneInspector } from '../../../scene/components/Scene/SceneInspector'
+import { SkyboxInspector } from '../../../skybox/components/Skybox/Inspector/SkyboxInspector'
+import { MaterialInspector } from '../../../material/components/Material/Inspector/MaterialInspector'
+import { TrackInspector } from '../../../timeline/components/Track/TrackInspector'
 import { InspectorEmpty } from './InspectorEmpty'
 
 /**
