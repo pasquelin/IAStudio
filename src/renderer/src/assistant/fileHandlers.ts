@@ -3,11 +3,13 @@ import { documentExtensionOf, isDocumentExtension } from '@shared/domain/documen
 import { FOLDER_ROOT } from '@shared/domain/folder'
 import {
   projectFailureIn,
+  projectRenameFailureIn,
   projectPathFor,
   projectPickerFolder,
   projectsByCreation,
   type Project,
   type ProjectOpenFailure,
+  type ProjectRenameFailure,
 } from '@shared/domain/project'
 import { messageOf } from '@shared/guards'
 import type { StudioBridge } from '@shared/ipc'
@@ -234,6 +236,33 @@ async function createProject(input: Record<string, unknown>): Promise<ActionOutc
   return { ok: true, data: created }
 }
 
+/**
+ * 🛑 Why it did not happen, in words a model repairs from. Told only that it failed, the model
+ * announced to the person that no rename was needed — and the path it had built was one it made
+ * up from a NAME, over a `projects.list` that had just answered the real one.
+ */
+function renameProblem(path: string, why: string | null): string {
+  const named = why === null ? null : projectRenameFailureIn(why)
+  if (named !== null) return RENAME_REFUSALS[named]
+
+  const folder = why === null ? null : projectFailureIn(why)
+
+  return folder === null
+    ? `"${path}" could not be renamed. ${FROM_THE_LIST}`
+    : `${CREATE_REFUSALS[folder]} ${FROM_THE_LIST}`
+}
+
+const FROM_THE_LIST =
+  'A project path comes from projects.list and nowhere else — never build one from its name, ' +
+  'which is not what its folder is called until the rename goes through.'
+
+const RENAME_REFUSALS: Record<ProjectRenameFailure, string> = {
+  'unsafe-name':
+    'that name cannot be a folder name, and the folder takes the name — drop the separators and the control characters rather than having the studio choose for the person',
+  taken:
+    'a folder beside it already carries that name, and the folder takes the name — pick another, or rename the one already there first',
+}
+
 export const FILE_HANDLERS: ActionHandlers = {
   // 🛑 `projectsByCreation`, the order the two shelves the person LOOKS at are drawn in — the
   // stored order reshuffles on every opening, and « the first one » must mean one row.
@@ -300,15 +329,11 @@ export const FILE_HANDLERS: ActionHandlers = {
    * so the one that served this call would have kept the old name for good.
    */
   'project.rename': async input => {
-    const renamed = await useProject
-      .getState()
-      .rename(textOf(input, 'path') ?? '', textOf(input, 'name') ?? '')
+    const path = textOf(input, 'path') ?? ''
+    const renamed = await useProject.getState().rename(path, textOf(input, 'name') ?? '')
 
-    return renamed
-      ? { ok: true }
-      : refused(
-          'failed',
-          '"path" must name a project folder this machine knows and "name" must be free — projects.list answers the ones it knows',
-        )
+    return renamed.ok
+      ? { ok: true, data: renamed.project }
+      : refused('failed', renameProblem(path, renamed.why))
   },
 }

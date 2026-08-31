@@ -42,19 +42,20 @@ export function Projects() {
    */
   const startRename = useCallback((path: string) => setRenaming(path), [])
 
+  /**
+   * A REFUSAL, not a rejection: the store answers WHY rather than throwing, so what is reported
+   * here is the reason it gave — a rename that did nothing used to pass in silence.
+   */
+  const renameProject = async (project: RecentProject, name: string): Promise<void> => {
+    const renamed = await useProject.getState().rename(project.path, name)
+    if (renamed.ok) return
+
+    reportFailure('project.rename', project.path, new Error(renamed.why ?? 'rename refused'))
+  }
+
   const commitRename = useCallback((project: RecentProject, name: string): void => {
     setRenaming(null)
-    if (name === project.name) return
-
-    void useProject
-      .getState()
-      .rename(project.path, name)
-      // A REFUSAL, not a rejection: the store swallows the bridge error and answers `false`, so a
-      // `.catch` here could only ever have caught a settings write going wrong — and the rename
-      // that did nothing would have passed in silence.
-      .then(done => {
-        if (!done) reportFailure('project.rename', project.path, new Error('rename refused'))
-      })
+    if (name !== project.name) void renameProject(project, name)
   }, [])
 
   return (

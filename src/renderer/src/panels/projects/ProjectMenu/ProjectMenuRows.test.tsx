@@ -4,8 +4,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { ContextMenu } from '@/design/ContextMenu'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
-import { useProject } from '@/stores/project'
+import { useProject, type ProjectRenamed } from '@/stores/project'
 import { ProjectMenuRows } from './ProjectMenuRows'
+
+/** What a rename answers back — the row's own path and name are what the cases assert on. */
+const RENAMED_OK: ProjectRenamed = {
+  ok: true,
+  project: {
+    path: '/tmp/Renamed',
+    manifest: {
+      version: 1,
+      name: 'Renamed',
+      createdAt: '2026-08-17T10:00:00.000Z',
+      updatedAt: '2026-08-17T10:00:00.000Z',
+    },
+  },
+}
 
 const PATH = '/projects/summer'
 
@@ -166,7 +180,7 @@ describe('the menu of a recent project', () => {
   // What the row promises in words, held in code: the studio does not erase a folder someone made.
   it('offers nothing that reaches the folder itself', async () => {
     const trashFiles = vi.fn(nothingMoved)
-    const rename = vi.fn(() => Promise.resolve(true))
+    const rename = vi.fn(() => Promise.resolve(RENAMED_OK))
     useProject.setState({ forget: () => Promise.resolve(), rename })
     install({ project: { trashFiles } })
     // Every row enabled, so the sweep below actually presses all three rather than bouncing off

@@ -6,9 +6,12 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { FOLDER_ROOT, type FolderEntry } from '@shared/domain/folder'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
-import { useProject } from '@/stores/project'
+import { useProject, type ProjectRenamed } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { runAction } from './executor'
+
+/** A refusal as the store shapes it — the reason is what the sentences below are read from. */
+const refusedRename = (why: string): ProjectRenamed => ({ ok: false, why })
 
 const openDocument = vi.hoisted(() => vi.fn())
 vi.mock('@/app/dockviewApi', () => ({ openDocument, showWorkspace: vi.fn() }))
@@ -375,26 +378,52 @@ describe('opening and making a project', () => {
     })
   })
 
-  /**
-   * The manifest name, never the folder: `recentProjects`, `storage.lastProject` and every
-   * absolute path the catalogue holds are keyed on the folder.
-   */
+  /** The manifest name AND the folder, which move together — see `stores/project.ts`. */
   it('renames a project by its own path, through the store the shelf reads', async () => {
-    const rename = vi.fn(async () => true)
+    const renamed = {
+      path: '/tmp/Autre',
+      manifest: { version: 1, name: 'Autre', createdAt: WHEN, updatedAt: WHEN },
+    }
+    const renamedOk: ProjectRenamed = { ok: true, project: renamed }
+    const rename = vi.fn(async () => renamedOk)
     withProject()
     useProject.setState({ rename })
 
-    expect(await runAction('project.rename', { path: '/tmp/Autre', name: 'Autre' })).toEqual({
+    expect(await runAction('project.rename', { path: '/tmp/Vieux', name: 'Autre' })).toEqual({
       ok: true,
+      data: renamed,
     })
     // The store, never the channel: it is what puts the new name on the open project and in the
     // recent list — the broadcast behind the channel reaches OTHER windows only.
-    expect(rename).toHaveBeenCalledWith('/tmp/Autre', 'Autre')
+    expect(rename).toHaveBeenCalledWith('/tmp/Vieux', 'Autre')
+  })
 
-    useProject.setState({ rename: vi.fn(async () => false) })
+  /**
+   * 🛑 Told only that it failed, the model announced to the person that no rename was needed —
+   * over a path it had built from a NAME, which is not what the folder is called.
+   */
+  it('says which of the two the name broke, and where a path comes from', async () => {
+    withProject()
+
+    useProject.setState({ rename: vi.fn(async () => refusedRename('taken')) })
     expect(await runAction('project.rename', { path: '/tmp/X', name: 'X' })).toMatchObject({
       ok: false,
       refusal: 'failed',
+      detail: expect.stringContaining('already carries that name'),
+    })
+
+    useProject.setState({
+      rename: vi.fn(async () => refusedRename('unsafe-name')),
+    })
+    expect(await runAction('project.rename', { path: '/tmp/X', name: 'a/b' })).toMatchObject({
+      detail: expect.stringContaining('cannot be a folder name'),
+    })
+
+    useProject.setState({
+      rename: vi.fn(async () => refusedRename('not-a-project')),
+    })
+    expect(await runAction('project.rename', { path: '/tmp/X', name: 'X' })).toMatchObject({
+      detail: expect.stringContaining('projects.list'),
     })
   })
 })

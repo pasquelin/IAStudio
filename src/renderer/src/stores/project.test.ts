@@ -642,7 +642,7 @@ describe('giving a project a new name', () => {
     createdAt: '2026-05-01T09:00:00.000Z',
   }
 
-  const RENAMED = { path: SUMMER.path, manifest: { ...MANIFEST, name: 'Winter' } }
+  const RENAMED = { path: '/projects/Winter', manifest: { ...MANIFEST, name: 'Winter' } }
 
   beforeEach(() => {
     useSettings.setState(state => ({
@@ -658,11 +658,15 @@ describe('giving a project a new name', () => {
     const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
     installFakeBridge({ project: { rename }, settings: { write } })
 
-    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toBe(true)
+    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toMatchObject({
+      ok: true,
+    })
 
     expect(rename).toHaveBeenCalledWith(SUMMER.path, 'Winter')
+    // 🛑 The PATH moves with the name: an entry left where it was points at a folder that is no
+    // longer there, and `projects.list` then answers a path nothing opens.
     expect(write).toHaveBeenCalledWith({
-      storage: { recentProjects: [{ ...SUMMER, name: 'Winter' }] },
+      storage: { recentProjects: [{ ...SUMMER, name: 'Winter', path: RENAMED.path }] },
     })
   })
 
@@ -699,13 +703,17 @@ describe('giving a project a new name', () => {
       settings: { write },
     })
 
-    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toBe(false)
+    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toMatchObject({
+      ok: false,
+      why: expect.stringContaining('not a project'),
+    })
 
     expect(write).not.toHaveBeenCalled()
   })
 
-  // The row says the folder is left where it is. Nothing here may reach it.
-  it('touches nothing on the disk', async () => {
+  // The FOLDER moves in the main process, which owns it. No file gesture of this store's may
+  // reach the disk on the way — a rename is not a file operation the undo stack should hold.
+  it('moves nothing through the file channels', async () => {
     const renameFile = vi.fn(nothingMoved)
     const trashFiles = vi.fn(nothingMoved)
     installFakeBridge({
@@ -721,6 +729,9 @@ describe('giving a project a new name', () => {
   it('says nothing and does nothing with no bridge to write through', async () => {
     vi.unstubAllGlobals()
 
-    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toBe(false)
+    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toEqual({
+      ok: false,
+      why: null,
+    })
   })
 })

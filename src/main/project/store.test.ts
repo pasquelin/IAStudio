@@ -16,6 +16,7 @@ import {
   NoProjectError,
   orWhenGone,
   ProjectOpenError,
+  ProjectRenameError,
   type ProjectStore,
 } from './store'
 import { CATALOGUE_CLOSED } from './catalogClient'
@@ -705,8 +706,8 @@ describe('project store', () => {
 })
 
 /**
- * Renaming a project — the manifest's `name`, never the folder. The folder is what
- * `recentProjects`, `storage.lastProject` and every absolute path in the catalogue are keyed on.
+ * Renaming a project: the manifest's `name` AND its folder, since 2026-08-31. Two names for one
+ * thing is what made `projects.list` answer `{name: "Jeu2", path: ".../jeu1"}`.
  */
 describe('renaming a project', () => {
   let root: string
@@ -735,15 +736,15 @@ describe('renaming a project', () => {
   const manifestAt = async (path: string): Promise<unknown> =>
     JSON.parse(await readFile(join(path, MANIFEST_FILE), 'utf8'))
 
-  it('writes the new name into the manifest and leaves the folder where it is', async () => {
-    const made = await store.create(root, 'Before')
+  it('moves the folder to the new name, and writes it into the manifest', async () => {
+    const made = await store.create(join(root, 'Before'), 'Before')
 
     const renamed = await store.rename(made.path, 'After')
 
-    expect(renamed.path).toBe(made.path)
+    expect(renamed.path).toBe(join(root, 'After'))
     expect(renamed.manifest.name).toBe('After')
-    expect(await exists(made.path)).toBe(true)
-    expect(await manifestAt(made.path)).toMatchObject({ name: 'After' })
+    expect(await exists(made.path)).toBe(false)
+    expect(await manifestAt(renamed.path)).toMatchObject({ name: 'After' })
   })
 
   /**
@@ -752,7 +753,7 @@ describe('renaming a project', () => {
    * to prevent, arriving through the one gesture that reads as harmless.
    */
   it('never touches the date the project was made', async () => {
-    const made = await store.create(root, 'Before')
+    const made = await store.create(join(root, 'Before'), 'Before')
     clock = '2026-12-25T00:00:00.000Z'
 
     const renamed = await store.rename(made.path, 'After')
@@ -762,24 +763,24 @@ describe('renaming a project', () => {
   })
 
   it('replaces the open project in memory, so the studio reads the new name at once', async () => {
-    const made = await store.create(root, 'Before')
+    const made = await store.create(join(root, 'Before'), 'Before')
 
-    await store.rename(made.path, 'After')
+    const renamed = await store.rename(made.path, 'After')
 
     expect(store.current()?.manifest.name).toBe('After')
+    expect(store.current()?.path).toBe(renamed.path)
   })
 
   /**
-   * `onChange` means "another project is in front now": it resumes remembered jobs and re-arms the
-   * folder watch. Firing it for a rename would double-track running jobs to update a word.
+   * 🛑 The catalogue is a thread holding a file INSIDE the folder that just moved. Reopened rather
+   * than left pointing at the old path — and Windows would not have let the folder move at all.
    */
-  it('does not announce a project change', async () => {
-    const made = await store.create(root, 'Before')
-    vi.mocked(onChange).mockClear()
+  it('answers from the catalogue of the folder it moved to', async () => {
+    const made = await store.create(join(root, 'Before'), 'Before')
 
     await store.rename(made.path, 'After')
 
-    expect(onChange).not.toHaveBeenCalled()
+    await expect(store.catalog().search({})).resolves.toEqual([])
   })
 
   // The home's shelf lists projects that are not open, and renaming one must not open it.
@@ -790,10 +791,41 @@ describe('renaming a project', () => {
     const renamed = await store.rename(other.path, 'Renamed')
 
     expect(renamed.manifest.name).toBe('Renamed')
-    expect(await manifestAt(other.path)).toMatchObject({ name: 'Renamed' })
+    expect(await manifestAt(renamed.path)).toMatchObject({ name: 'Renamed' })
     // Still the one that was open, and its manifest untouched.
     expect(store.current()?.path).toBe(open.path)
     expect(await manifestAt(open.path)).toMatchObject({ name: 'Open' })
+  })
+
+  /**
+   * 🛑 Measured by inode, never deduced: APFS and NTFS fold case where ext4 does not, so `jeu1` →
+   * `Jeu1` is a plain rename on this Mac and « that name is taken » on a Linux runner — and
+   * `process.platform` answers for neither, since the volume is what decides.
+   */
+  it('takes a name that differs only in case', async () => {
+    const made = await store.create(join(root, 'jeu1'), 'jeu1')
+
+    const renamed = await store.rename(made.path, 'Jeu1')
+
+    expect(renamed.manifest.name).toBe('Jeu1')
+    expect(await manifestAt(renamed.path)).toMatchObject({ name: 'Jeu1' })
+  })
+
+  it('refuses a name a folder beside it already carries', async () => {
+    await store.create(join(root, 'Taken'), 'Taken')
+    const made = await store.create(join(root, 'Before'), 'Before')
+
+    await expect(store.rename(made.path, 'Taken')).rejects.toThrow(ProjectRenameError)
+    expect(await manifestAt(made.path)).toMatchObject({ name: 'Before' })
+  })
+
+  // Refused rather than transformed: a studio that quietly renamed « Brique 1/2 » to « Brique 1 2 »
+  // would list a project under a name nobody typed.
+  it('refuses a name the disk cannot carry', async () => {
+    const made = await store.create(join(root, 'Before'), 'Before')
+
+    await expect(store.rename(made.path, 'Brique 1/2')).rejects.toThrow(ProjectRenameError)
+    expect(await manifestAt(made.path)).toMatchObject({ name: 'Before' })
   })
 
   // A folder gone since the shelf last saw it is the ordinary case there, and it must not be

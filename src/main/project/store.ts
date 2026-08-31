@@ -1,6 +1,6 @@
 import { orElse } from '@shared/promises'
 import type { Dir } from 'node:fs'
-import { mkdir, opendir, readFile } from 'node:fs/promises'
+import { mkdir, opendir, readFile, rename as renameFolder, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import {
   CATALOG_FILE,
@@ -11,9 +11,11 @@ import {
   type Manifest,
   type Project,
   type ProjectOpenFailure,
+  type ProjectRenameFailure,
 } from '@shared/domain/project'
 import type { ActivityMessageKey } from '@shared/domain/activity'
 import { isHiddenEntry } from '@shared/domain/folder'
+import { isSafeFileName } from '@shared/domain/fileName'
 import type { FolderRole, RoleFolders } from '@shared/domain/folderRole'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
@@ -75,6 +77,22 @@ export class ProjectOpenError extends Error {
   }
 }
 
+/**
+ * Thrown when a project cannot take a name. Apart from `ProjectOpenError`, which answers about a
+ * FOLDER: these two are about the name asked for, and the folder is fine.
+ */
+export class ProjectRenameError extends Error {
+  constructor(readonly reason: ProjectRenameFailure) {
+    super(reason)
+    this.name = 'ProjectRenameError'
+  }
+}
+
+const RENAME_FAILURE_KEYS: Record<ProjectRenameFailure, ActivityMessageKey> = {
+  'unsafe-name': 'activity.projectNameUnsafe',
+  taken: 'activity.projectNameTaken',
+}
+
 const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
   'not-a-project': 'activity.projectNotAProject',
   unreadable: 'activity.projectUnreadable',
@@ -91,6 +109,8 @@ const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
  * reopening at startup, and only one of them goes through a channel.
  */
 export function openFailureKey(error: unknown): ActivityMessageKey | null {
+  if (error instanceof ProjectRenameError) return RENAME_FAILURE_KEYS[error.reason]
+
   return error instanceof ProjectOpenError ? OPEN_FAILURE_KEYS[error.reason] : null
 }
 
@@ -249,6 +269,17 @@ async function surveyFolder(folder: string): Promise<FolderSurvey> {
 /** A manifest body, and whether it came from the name projects carried before the rename. */
 type ManifestSource = { body: string; legacy: boolean }
 
+/** Whether two paths name the one folder — what a case-folding volume answers `true` to. */
+async function sameFolder(one: string, other: string): Promise<boolean> {
+  try {
+    const [first, second] = await Promise.all([stat(one), stat(other)])
+    return first.ino === second.ino && first.dev === second.dev
+  } catch {
+    // Either is gone between the check and here: not the same folder, and the rename below says so.
+    return false
+  }
+}
+
 /**
  * The manifest, under whichever name the folder carries it. The dotted file wins when both are
  * there: a project opened once since the rename keeps the old one beside it, and the stale copy
@@ -347,6 +378,29 @@ export function createProjectStore({
     })
     catalog = null
     project = null
+  }
+
+  /** The renamed project kept in memory, for a rename that moved nothing on disk. */
+  const holding = (renamed: Project): Project => {
+    project = renamed
+    return renamed
+  }
+
+  /**
+   * The folder under its new name, or where it already was when the two are the SAME folder.
+   *
+   * 🛑 Measured by inode, never deduced from the platform: APFS and NTFS fold case, ext4 does
+   * not, so `jeu1` → `Jeu1` is a plain rename on one volume and "that name is taken" on another
+   * — and `process.platform` answers for neither, since the volume is what decides.
+   */
+  const movedFolder = async (path: string, folder: string): Promise<string> => {
+    if (folder === path) return path
+    if ((await exists(folder)) && !(await sameFolder(path, folder))) {
+      throw new ProjectRenameError('taken')
+    }
+
+    await renameFolder(path, folder)
+    return folder
   }
 
   /**
@@ -489,13 +543,19 @@ export function createProjectStore({
       // Read from disk rather than from the open project, even when they are the same folder: this
       // is the only way one path serves both cases, and the manifest on disk is the truth anyway.
       const manifest = await loadManifest(path)
-      const renamed: Project = { path, manifest: { ...manifest, name, updatedAt: now() } }
+      if (!isSafeFileName(name)) throw new ProjectRenameError('unsafe-name')
+
+      const folder = join(dirname(path), name)
+      const moved = await movedFolder(path, folder)
+      const renamed: Project = { path: moved, manifest: { ...manifest, name, updatedAt: now() } }
 
       // Through the queue, and it is not optional: `touch` writes this same file on every document
       // saved, so a rename racing a save would lose whichever landed first.
       await writes.next(() => writeManifest(renamed))
 
-      if (project?.path === path) project = renamed
+      // 🛑 Reopened rather than patched: the catalogue is a thread holding a file INSIDE the folder
+      // that just moved, and `activate` is the one place that closes one and opens the next.
+      if (project?.path === path) return moved === path ? holding(renamed) : await activate(renamed)
 
       return renamed
     },

@@ -1,3 +1,4 @@
+import { codeIn } from '../guards'
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
 import { parentOf } from './folder'
@@ -194,6 +195,11 @@ export function isAbsolutePath(path: string): boolean {
 export type ProjectOpenFailure =
   'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
 
+/** Why a project cannot take a NAME. About the name asked for, never about the folder. */
+export type ProjectRenameFailure = 'unsafe-name' | 'taken'
+
+export const PROJECT_RENAME_FAILURES: readonly ProjectRenameFailure[] = ['unsafe-name', 'taken']
+
 export const PROJECT_OPEN_FAILURES: readonly ProjectOpenFailure[] = [
   'not-a-project',
   'unreadable',
@@ -211,7 +217,10 @@ export const PROJECT_OPEN_FAILURES: readonly ProjectOpenFailure[] = [
  * fires and every refusal reads as unexpected.
  */
 export const projectFailureIn = (message: string): ProjectOpenFailure | null =>
-  PROJECT_OPEN_FAILURES.find(one => message === one || message.endsWith(`: ${one}`)) ?? null
+  codeIn(message, PROJECT_OPEN_FAILURES)
+
+export const projectRenameFailureIn = (message: string): ProjectRenameFailure | null =>
+  codeIn(message, PROJECT_RENAME_FAILURES)
 
 /**
  * Where a project called `name` goes when the model named no place: under the folder this person
@@ -292,13 +301,12 @@ export function planProjectAccount(
 }
 
 /**
- * The list with one entry wearing a new name, and nothing else touched — not its dates, and above
- * all not its ORDER: a rename is not an opening.
+ * The list with one entry wearing a new name AND its new folder, nothing else touched — not its
+ * dates, and above all not its ORDER: a rename is not an opening.
  *
- * The name is stored rather than derived from the folder, so renaming a project in its manifest and
- * leaving this list alone would go on listing it under the old one until it was next opened. The
- * two writes therefore belong together, which is why this sits beside the manifest's own constants
- * rather than inside whichever surface offered the rename.
+ * 🛑 The folder moves with the name since 2026-08-31, so an entry left at the old path points at
+ * a folder that is no longer there: `projects.list` answered `{name: "Jeu2", path: ".../jeu1"}`,
+ * and a model that rebuilt a path from the name got ENOENT. Both halves, or neither.
  *
  * A path the list does not hold is not an error: the open project need not be a remembered one.
  */
@@ -306,8 +314,9 @@ export function renamedRecentProject(
   recent: readonly RecentProject[],
   path: string,
   name: string,
+  folder: string = path,
 ): RecentProject[] {
-  return recent.map(entry => (entry.path === path ? { ...entry, name } : entry))
+  return recent.map(entry => (entry.path === path ? { ...entry, name, path: folder } : entry))
 }
 
 /**
