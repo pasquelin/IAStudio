@@ -1,3 +1,6 @@
+import type { ToolButtonProps } from '../ToolButton'
+import type { TooltipFactory } from '@/helpers/tooltip'
+
 /**
  * What a toolbar is handed: one entry per button, and the modes a button may offer.
  *
@@ -24,6 +27,11 @@ export type ToolbarItem = {
   id: string
   /** i18n key of the label — never the displayed text. */
   labelKey: string
+  /**
+   * What fills the LABEL's `{{…}}` holes — a switch named after the row it acts on. Read through a
+   * variable, which `known-keys`' check on filled holes cannot see: a hole left open draws itself.
+   */
+  labelValues?: Record<string, string>
   /** i18n key of the one-line tooltip. Absent tips the label, which is better than nothing. */
   descriptionKey?: string
   /** What fills its `{{…}}` holes — for a tooltip that has to name what the click will act ON. */
@@ -31,6 +39,13 @@ export type ToolbarItem = {
   icon: string
   shortcut?: string
   disabled?: boolean
+  /** The host's gauge, when it is not the bar's: a panel's title bar draws a 14px glyph, not 16. */
+  variant?: ToolButtonProps['variant']
+  /**
+   * Overrides the placement the bar computed. `tipFor` knows the orientation and never where the
+   * bar SITS: hung on a panel's title, a horizontal bar has to tip downwards or cover its neighbour.
+   */
+  tip?: TooltipFactory
   /** A toggle that is on. Distinct from `activeTool`, the one armed tool, and drawn alike. */
   pressed?: boolean
   /**

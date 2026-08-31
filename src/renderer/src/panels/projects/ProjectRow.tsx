@@ -10,7 +10,8 @@ import { TIP_LEFT } from '@/helpers/tooltip'
 import { timeAgo } from '@/helpers/relativeTime'
 import { InlineRename } from '@/design/InlineRename'
 import { ROW_LINE } from '@/design/styles'
-import { ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu/ProjectMenuRows'
+import { renderMenuRows } from '@/design/menuRows'
+import { projectMenuRows } from './ProjectMenu/projectMenuRows'
 
 export type ProjectRowProps = {
   project: RecentProject
@@ -65,6 +66,7 @@ export const ProjectRow = memo(function ProjectRow({
     (name: string) => onRenameCommit?.(project, name),
     [onRenameCommit, project],
   )
+  const rows = projectMenuRows(t, project.path, onRenameStart && startRename)
 
   // A hand-edited settings file reaches here: the path alone is what an unreadable date leaves.
   const when = timeAgo(project.openedAt, i18n.language)
@@ -121,15 +123,9 @@ export const ProjectRow = memo(function ProjectRow({
               description={t('home.projects.actionsHint')}
               tooltip={TIP_LEFT}
               variant="header"
-              rowCount={PROJECT_MENU_ROWS}
+              rowCount={rows.length}
               opensOnClick
-              rows={close => (
-                <ProjectMenuRows
-                  path={project.path}
-                  onClose={close}
-                  onRename={onRenameStart && startRename}
-                />
-              )}
+              rows={close => renderMenuRows(rows, close)}
             />
           </span>
         }
@@ -139,11 +135,7 @@ export const ProjectRow = memo(function ProjectRow({
       {when && <span className="sr-only">{t('home.projects.openedAt', { when })}</span>}
       {menu.at && (
         <ContextMenu at={menu.at} onClose={menu.close}>
-          <ProjectMenuRows
-            path={project.path}
-            onClose={menu.close}
-            onRename={onRenameStart && startRename}
-          />
+          {renderMenuRows(rows, menu.close)}
         </ContextMenu>
       )}
     </div>

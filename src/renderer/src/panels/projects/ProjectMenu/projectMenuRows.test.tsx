@@ -5,7 +5,9 @@ import type { FileOutcome } from '@shared/domain/fileOp'
 import { ContextMenu } from '@/design/ContextMenu'
 import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useProject, type ProjectRenamed } from '@/stores/project'
-import { ProjectMenuRows } from './ProjectMenuRows'
+import { useTranslation } from 'react-i18next'
+import { renderMenuRows } from '@/design/menuRows'
+import { projectMenuRows } from './projectMenuRows'
 
 /** What a rename answers back — the row's own path and name are what the cases assert on. */
 const RENAMED_OK: ProjectRenamed = {
@@ -34,11 +36,16 @@ const install = (overrides: BridgeOverrides = {}): void => {
 
 /** At the pointer, as the shelf's row raises them. */
 const open = (onClose = vi.fn(), onRename?: () => void): void => {
-  render(
-    <ContextMenu at={{ x: 10, y: 10 }} onClose={onClose}>
-      <ProjectMenuRows path={PATH} onClose={onClose} onRename={onRename} />
-    </ContextMenu>,
-  )
+  function Menu() {
+    const { t } = useTranslation()
+    return (
+      <ContextMenu at={{ x: 10, y: 10 }} onClose={onClose}>
+        {renderMenuRows(projectMenuRows(t, PATH, onRename), onClose)}
+      </ContextMenu>
+    )
+  }
+
+  render(<Menu />)
 }
 
 beforeEach(() => {

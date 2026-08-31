@@ -33,13 +33,15 @@ export function ToolbarTool({ tool, active, tip, onTool, onMode }: ToolbarToolPr
   return (
     <MenuButton
       icon={armed?.icon ?? tool.icon}
-      label={t(armed?.labelKey ?? tool.labelKey)}
+      label={t(armed?.labelKey ?? tool.labelKey, tool.labelValues)}
       description={description ? t(description, tool.descriptionValues) : undefined}
       // No `??` onto the tool's own: a group's shortcut belongs to its first mode, and
       // showing it on another one contradicts the menu row right below.
       shortcut={tool.modes ? armed?.shortcut : tool.shortcut}
-      tooltip={tip}
+      // The bar's placement unless the item overrides it: only the item knows where its bar sits.
+      tooltip={tool.tip ?? tip}
       active={active}
+      variant={tool.variant}
       // An armed tool is something one ACTIONS, which `CLAUDE.md` gives the full accent — and
       // `active` alone paints it `elevated`, the very colour the hover uses. The bar then said
       // the same thing about the tool under the pointer and the tool in the hand.

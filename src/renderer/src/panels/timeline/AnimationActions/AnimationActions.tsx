@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
 import { SelectField } from '@/design/SelectField'
+import { Toolbar } from '@/design/Toolbar/Toolbar'
 import { ToolButton } from '@/design/ToolButton'
 import { setTimelineSettings } from '@/engines/scene/animationCommands'
 import { selectedNodes } from '@/engines/scene/sceneState'
@@ -13,10 +14,8 @@ import { bonesOfNode, useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneFrameHead, useSceneViews } from '@/stores/sceneViews'
 import { TimelineTransport } from '../TimelineTransport'
-import { AnimationActionsKeyButton } from './AnimationActionsKeyButton'
-import { AnimationActionsSheetButton } from './AnimationActionsSheetButton'
 import { AnimationActionsRenderButton } from './AnimationActionsRenderButton'
-import { AnimationActionsShotButton } from './AnimationActionsShotButton'
+import { animationTools, runAnimationTool } from './animationTools'
 
 export type AnimationActionsProps = { documentId: string }
 
@@ -93,9 +92,15 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         active={autoKey}
         onClick={() => useAnimationViews.getState().setAutoKey(documentId, !autoKey)}
       />
-      <AnimationActionsSheetButton documentId={documentId} />
-      <AnimationActionsKeyButton documentId={documentId} />
-      <AnimationActionsShotButton documentId={documentId} />
+      {/* Bare, as the montage's own bar is: `PanelHeader` lays these actions out already, and a
+          second furniture surface inside it draws a bar on the title row. */}
+      <Toolbar
+        orientation="horizontal"
+        label={t('animation.tools')}
+        className="border-none bg-transparent p-0 shadow-none"
+        tools={animationTools({ nodes, selectedIds, animation: timeline })}
+        onTool={id => runAnimationTool(documentId, id)}
+      />
 
       <div className="flex-1" />
 

@@ -16,7 +16,7 @@ const ROLE: Record<MenuTick, 'menuitemradio' | 'menuitemcheckbox'> = {
   'on-off': 'menuitemcheckbox',
 }
 
-type MenuRowBase = {
+export type MenuRowBase = {
   /** Already translated: the row draws what it is handed and looks nothing up. */
   label: string
   /**

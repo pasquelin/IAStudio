@@ -20,7 +20,8 @@ import { selectTrackIn, sequenceOf, useSequences, writeTrack } from '@/stores/se
 import { TimelineRow } from '../TimelineRow/TimelineRow'
 import { TrackFlagButton } from '../TrackFlagButton'
 import { TRACK_FLAGS } from '../trackFlags'
-import { TrackMenuRows, TRACK_MENU_ROWS } from '../TrackMenu/TrackMenuRows'
+import { renderMenuRows } from '@/design/menuRows'
+import { trackMenuRows } from '../TrackMenu/trackMenuRows'
 import { TrackHeadersName } from './TrackHeadersName'
 
 /**
@@ -74,7 +75,7 @@ export function TrackHeadersRow({
 
   const selected = sequence.selectedTrackId === track.id
   const audible = playsThrough(sequence, track)
-  const rows = { documentId, trackId: track.id, canRise, canFall }
+  const rows = trackMenuRows(t, { documentId, trackId: track.id, canRise, canFall })
 
   return (
     <TimelineRow
@@ -122,9 +123,9 @@ export function TrackHeadersRow({
           description={t('timeline.trackActionsHint')}
           tooltip={TIP_RIGHT}
           variant="header"
-          rowCount={TRACK_MENU_ROWS}
+          rowCount={rows.length}
           opensOnClick
-          rows={close => <TrackMenuRows {...rows} onClose={close} />}
+          rows={close => renderMenuRows(rows, close)}
         />
       </div>
 
@@ -142,7 +143,7 @@ export function TrackHeadersRow({
 
       {menu.at && (
         <ContextMenu at={menu.at} onClose={menu.close}>
-          <TrackMenuRows {...rows} onClose={menu.close} />
+          {renderMenuRows(rows, menu.close)}
         </ContextMenu>
       )}
     </TimelineRow>

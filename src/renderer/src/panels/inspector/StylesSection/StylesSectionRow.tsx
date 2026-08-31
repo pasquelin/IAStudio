@@ -11,7 +11,8 @@ import { cn } from '@/helpers/cn'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { useStyles } from '@/stores/styles'
-import { StylesSectionMenuRows, STYLE_MENU_ROWS } from './StylesSectionMenuRows'
+import { renderMenuRows } from '@/design/menuRows'
+import { styleMenuRows } from './styleMenuRows'
 
 export type StylesSectionRowProps = {
   style: MaterialStyle
@@ -38,6 +39,7 @@ export const StylesSectionRow = memo(function StylesSectionRow({
   const [renaming, setRenaming] = useState(false)
 
   const startRename = useCallback(() => setRenaming(true), [])
+  const rows = styleMenuRows(t, style.id, startRename)
 
   return (
     <li
@@ -82,11 +84,9 @@ export const StylesSectionRow = memo(function StylesSectionRow({
               description={t('styles.actionsHint')}
               tooltip={TIP_LEFT}
               variant="header"
-              rowCount={STYLE_MENU_ROWS}
+              rowCount={rows.length}
               opensOnClick
-              rows={close => (
-                <StylesSectionMenuRows id={style.id} onRename={startRename} onClose={close} />
-              )}
+              rows={close => renderMenuRows(rows, close)}
             />
           </FieldActions>
         </>
@@ -94,7 +94,7 @@ export const StylesSectionRow = memo(function StylesSectionRow({
 
       {menu.at && (
         <ContextMenu at={menu.at} onClose={menu.close}>
-          <StylesSectionMenuRows id={style.id} onRename={startRename} onClose={menu.close} />
+          {renderMenuRows(rows, menu.close)}
         </ContextMenu>
       )}
     </li>
