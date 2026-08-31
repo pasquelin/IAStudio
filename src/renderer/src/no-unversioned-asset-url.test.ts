@@ -69,7 +69,7 @@ const ALLOWED = new Map<string, string>([
     'hole: the fallback when a row carries no poster — a thumbnail, so it costs a stale tile',
   ],
   [
-    'panels/context/ContextPictures.tsx | <Thumbnail url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
+    'features/context/components/Context/ContextPictures.tsx | <Thumbnail url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
     'hole: same, in the context strip',
   ],
   [

@@ -652,7 +652,7 @@ describe('the box a panel puts above what it acts on', () => {
       // Not a panel HEAD, and it wears this anyway: a context card is a block ruled off by the
       // same trait, with the same room, and a fourth spelling of those five words is what the
       // rule above exists to prevent.
-      '../panels/context/ContextCardRow.tsx',
+      '../features/context/components/Context/ContextCardRow.tsx',
       '../panels/git/CommitBox.tsx',
       './CollectionBar/CollectionBar.tsx',
     ])
