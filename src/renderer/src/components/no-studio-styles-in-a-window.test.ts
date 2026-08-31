@@ -31,8 +31,8 @@ const FAMILIES = [
  * equivalent. It carries captions, rows and actions — no field role, no suffix, no gauge at all.
  */
 const ALLOWED: readonly string[] = [
-  './newDocument/NewDocumentWindow/NewDocumentWindow.tsx',
-  './newDocument/NewDocumentWindow/NewDocumentTemplateTile.tsx',
+  './features/document/components/NewDocument/NewDocumentWindow.tsx',
+  './features/document/components/NewDocument/NewDocumentTemplateTile.tsx',
   './settings/AiSettings/AiCandidateRow.tsx',
 ]
 

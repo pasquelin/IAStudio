@@ -5,7 +5,7 @@ import { nameOf } from '@shared/domain/folder'
 import { WindowShell } from '@/components/WindowShell'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useFileInfo } from '@/hooks/useFileInfo'
-import { fileInfoSectionsOf } from '../sections'
+import { fileInfoSectionsOf } from './sections'
 import { FileInfoWindowBody } from './FileInfoWindowBody'
 
 /**

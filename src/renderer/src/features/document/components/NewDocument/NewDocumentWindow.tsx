@@ -19,7 +19,7 @@ import { isComposing } from '@/helpers/composition'
 import { getBridge } from '@/services/bridge'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { takenDocumentNames, useDocuments } from '@/stores/documents'
-import { DOCUMENT_NAME_REFUSALS } from '../documentName'
+import { DOCUMENT_NAME_REFUSALS } from '../../documentName'
 import { NewDocumentTemplates } from './NewDocumentTemplates'
 import { NewDocumentUiTemplates } from './NewDocumentUiTemplates'
 

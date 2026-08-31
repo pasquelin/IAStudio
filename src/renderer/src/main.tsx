@@ -70,12 +70,14 @@ const ManualWindow = lazy(async () => ({
 
 /** Split like its neighbours, though it is the smallest of them: it opens on a right-click. */
 const FileInfoWindow = lazy(async () => ({
-  default: (await import('@/fileInfo/FileInfoWindow/FileInfoWindow')).FileInfoWindow,
+  default: (await import('@/features/document/components/FileInfoWindow/FileInfoWindow'))
+    .FileInfoWindow,
 }))
 
 /** Split like its neighbours: it opens on the plus button, and nowhere near the first frame. */
 const NewDocumentWindow = lazy(async () => ({
-  default: (await import('@/newDocument/NewDocumentWindow/NewDocumentWindow')).NewDocumentWindow,
+  default: (await import('@/features/document/components/NewDocument/NewDocumentWindow'))
+    .NewDocumentWindow,
 }))
 
 /**

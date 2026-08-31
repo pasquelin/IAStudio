@@ -9,7 +9,7 @@ import { formatDuration } from '@/engines/timeline/timecode'
 import { formatBytes, formatMoment } from '@/helpers/format'
 import { itemOfPath } from '@/helpers/projectItem'
 import { RoleField } from '@/panels/shared/RoleField'
-import type { FileInfoSectionId } from '../sections'
+import type { FileInfoSectionId } from './sections'
 
 export type FileInfoWindowBodyProps = {
   id: FileInfoSectionId

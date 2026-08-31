@@ -189,7 +189,7 @@ describe('the row skin and the state it publishes', () => {
     // same strict sense — a still and a name, and nothing else on it that looks like a control.
     // ONE file since 2026-08-28, not one per kind: the scene's eight and the interface's four
     // are drawn by the same tile, so the fill is asked for at a single site.
-    '../newDocument/NewDocumentWindow/NewDocumentTemplateTile.tsx',
+    '../features/document/components/NewDocument/NewDocumentTemplateTile.tsx',
   ]
 
   /**
