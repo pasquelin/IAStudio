@@ -24,7 +24,7 @@ describe('finding the tests no import graph reaches', () => {
   })
 
   it('holds the one the narrow reading missed', () => {
-    expect(GUARDED).toContain('src/renderer/src/design/property-line.test.ts')
+    expect(GUARDED).toContain('src/renderer/src/design/styles.test.ts')
   })
 
   /**

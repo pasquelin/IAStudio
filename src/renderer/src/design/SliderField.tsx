@@ -1,26 +1,24 @@
+import type { FieldHandle, FieldReset } from './styles'
 import type { ReactNode } from 'react'
 import { bound } from '@shared/numeric'
-import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
 import { ResetButton } from './ResetButton'
 import { Slider } from './Slider'
-import { FIELD_ROW, type GestureProps } from './styles'
+import type { GestureProps } from './styles'
 
-export type SliderFieldProps = GestureProps & {
-  label: string
-  value: number
-  min: number
-  max: number
-  step: number
-  onChange: (value: number) => void
-  /** The handle the MCP steers this field by. Never a translated word. */
-  scId?: string
-  /** Puts the value back where it started. Absent while it already stands there. */
-  onReset?: () => void
-  /** One more button for the row’s end column, drawn before the reset — a padlock, say. */
-  action?: ReactNode
-}
+export type SliderFieldProps = GestureProps &
+  FieldHandle &
+  FieldReset & {
+    label: string
+    value: number
+    min: number
+    max: number
+    step: number
+    onChange: (value: number) => void
+    /** Buttons for the row's end column, drawn before the reset — a padlock, say. */
+    actions?: ReactNode
+  }
 
 /**
  * A bounded value — roughness, metalness, the penumbra of a spot. The number stays beside the
@@ -35,14 +33,21 @@ export function SliderField({
   onChange,
   scId,
   onReset,
-  action,
+  actions,
   onGestureStart,
   onGestureEnd,
 }: SliderFieldProps) {
   return (
-    <label className={FIELD_ROW}>
-      <PropertyLabel label={label} />
-
+    <PropertyLine
+      label={label}
+      root="label"
+      actions={
+        <>
+          {actions}
+          <ResetButton onReset={onReset} />
+        </>
+      }
+    >
       <Slider
         value={value}
         min={min}
@@ -56,11 +61,6 @@ export function SliderField({
       />
 
       <Readout values={[value]} />
-
-      <FieldActions>
-        {action}
-        <ResetButton onReset={onReset} />
-      </FieldActions>
-    </label>
+    </PropertyLine>
   )
 }

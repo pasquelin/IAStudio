@@ -5,6 +5,8 @@ import {
   CONTROL,
   FIELD,
   FIELD_FILL,
+  FIELD_LABEL,
+  FIELD_ROW,
   NATIVE_SELECT,
   OVERLAY_BUTTON,
   PANEL_BAR,
@@ -761,5 +763,62 @@ describe('the header glyph', () => {
 
     expect(gauge).toBeDefined()
     expect(host).toBe(gauge)
+  })
+})
+
+/** Comments stripped: four rules of the guard this replaced were matching their own prose. */
+const stripped = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+/**
+ * The two families of property line — `PropertyRow` for a value to read, the fields for a control
+ * to change it — start at the same place, and both go through `PropertyLine` to do so.
+ *
+ * They used to declare their label column twice: `w-20` on one side, `w-16` on the other, with
+ * eight pixels of inset on one and none on the other. Three things diverged where one list is seen.
+ */
+describe('the column a property line begins on', () => {
+  /**
+   * Capped and NOT floored, which is not an oversight: a floor cannot shrink, and a side zone
+   * dragged to its 140px minimum then overflowed by 21px — the control collapsing to nothing while
+   * the buttons sat outside the panel.
+   */
+  it('takes a share of the row that a narrow panel can still shrink', () => {
+    expect(FIELD_LABEL).toContain('w-(--sc-label-share)')
+    expect(FIELD_LABEL).toContain('max-w-(--sc-label-max)')
+    expect(FIELD_LABEL).not.toContain('min-w-(--sc-label')
+  })
+
+  /** The lookbehind keeps `min-w-0` out of it: a minimum of zero is not a column width. */
+  it('is never a hardcoded width', () => {
+    expect(FIELD_LABEL).not.toMatch(/(?<![\w-])w-\d/)
+  })
+
+  /**
+   * The inset belongs to whatever HOLDS the row, which is what makes the two families line up: a
+   * row carrying its own started where no field could follow it.
+   */
+  it('leaves the horizontal inset to whatever holds the row', () => {
+    expect(FIELD_ROW).not.toMatch(/\bpx-\d/)
+  })
+
+  /** Same height too, or two lines of the same list are not the same height. */
+  it('stands the height of a control', () => {
+    expect(FIELD_ROW).toContain('min-h-(--sc-control)')
+  })
+
+  /**
+   * The rule that used to be read out of the FIELDS' own source: every property line reserved its
+   * end column, and nine files each had to remember. One file writes the shell now, so the sweep
+   * asks the only question left — that nothing goes around it.
+   *
+   * The two mentions in prose are not writes: the comparison is on the code, comments stripped.
+   */
+  it('is written by the shell alone, so no line can end where it pleases', () => {
+    const wearing = WRITTEN_SOURCES.filter(([, source]) => stripped(source).includes('FIELD_ROW'))
+      .map(([path]) => path.split('/').pop())
+      .sort()
+
+    expect(wearing).toEqual(['PropertyLine.tsx', 'styles.ts'])
   })
 })

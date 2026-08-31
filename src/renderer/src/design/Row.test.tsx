@@ -87,6 +87,17 @@ describe('Row', () => {
     expect(title.className).not.toContain('line-through')
   })
 
+  /**
+   * The second line truncates too — « Occlusion ambian… » — and hovering is the only way to read
+   * the rest. The NATIVE attribute here, where the name above raises the studio one: a row raising
+   * both would answer two different things depending on which half the pointer was over.
+   */
+  it('keeps its second line readable when the row is too narrow for it', () => {
+    render(<Row icon={mdiCube} title="Trajectoire" subtitle="Occlusion ambiante" />)
+
+    expect(screen.getByTitle('Occlusion ambiante')).toBeInTheDocument()
+  })
+
   it('renders what is handed to leading and to actions', () => {
     render(<Row icon={mdiCube} title="Cube" leading={<i>eye</i>} actions={<i>more</i>} />)
 

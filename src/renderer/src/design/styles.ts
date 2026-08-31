@@ -462,6 +462,22 @@ export type GestureProps = {
 }
 
 /**
+ * The name a script drives a control by — never a translated word, and never a DOM id. A composed
+ * one extends its parent's: `${scId}.min`, `${scId}.x`. `pilotable.test.ts` holds the rule.
+ */
+export type FieldHandle = {
+  scId?: string
+}
+
+/**
+ * Puts a property back where it started. Absent means it already stands there — the button is
+ * still drawn, and inert: drawn only when it acts, it narrowed the field under the pointer.
+ */
+export type FieldReset = {
+  onReset?: () => void
+}
+
+/**
  * A value the user types into: the generation form's fields and the inspector's. Its own shape
  * — bordered, tighter corners — because a field is something to fill in, not a bar control.
  */

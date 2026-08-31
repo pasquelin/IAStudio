@@ -54,7 +54,14 @@ export function PropertyControl({
 
   if (typeof value === 'boolean') {
     return (
-      <ToggleField label={label} value={value} onChange={onChange} scId={scId} action={action} />
+      <ToggleField
+        label={label}
+        value={value}
+        onChange={onChange}
+        scId={scId}
+        actions={action}
+        onReset={onReset}
+      />
     )
   }
 
@@ -70,7 +77,7 @@ export function PropertyControl({
           onChange={onChange}
           scId={scId}
           onReset={onReset}
-          action={action}
+          actions={action}
           {...gesture}
         />
       )
@@ -87,7 +94,7 @@ export function PropertyControl({
         onChange={onChange}
         scId={scId}
         onReset={onReset}
-        action={action}
+        actions={action}
         {...gesture}
       />
     )
@@ -145,7 +152,7 @@ export function PropertyControl({
         onChange={onChange}
         scId={scId}
         onReset={onReset}
-        action={action}
+        actions={action}
         {...gesture}
       />
     )
@@ -158,6 +165,7 @@ export function PropertyControl({
       onChange={onChange}
       scId={scId}
       onReset={onReset}
+      actions={action}
       {...gesture}
     />
   )

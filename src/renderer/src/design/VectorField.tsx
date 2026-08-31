@@ -11,10 +11,9 @@ import { useTranslation } from 'react-i18next'
 import type { NumericBounds } from '@shared/numeric'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { NumberField } from './NumberField'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
 import { ResetButton } from './ResetButton'
-import { FieldActions } from './FieldActions'
-import { FIELD_ROW, type GestureProps } from './styles'
+import type { GestureProps } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
 
@@ -145,7 +144,7 @@ export function VectorField<V extends AxisValue>({
       onChange={next => move(axis, next)}
       // Only where an axis has a line of its own to end; folded, the three share the row's.
       onReset={layout === 'row' ? resetOf(axis) : undefined}
-      action={
+      actions={
         layout === 'row' &&
         onHoldAxis && (
           <ToolButton
@@ -169,22 +168,43 @@ export function VectorField<V extends AxisValue>({
 
   return (
     <>
-      <div className={FIELD_ROW} {...hint}>
-        {/* The name and the fold are one target: a chevron of its own would be a second control
-            for a row whose whole left column already says what it is. */}
-        <PropertyLabel
-          as="button"
-          label={label}
-          leading={<UiIcon path={stacked ? mdiChevronDown : mdiChevronRight} size={12} />}
-          gesture={{
+      {/* The name and the fold are one target: a chevron of its own would be a second control
+          for a row whose whole left column already says what it is. */}
+      <PropertyLine
+        label={label}
+        root="div"
+        hint={hint}
+        nameProps={{
+          as: 'button',
+          leading: <UiIcon path={stacked ? mdiChevronDown : mdiChevronRight} size={12} />,
+          gesture: {
             type: 'button',
             'aria-expanded': stacked,
             onClick: () => setStacked(current => !current),
             ...HINT_LEFT(t(stacked ? 'inspector.stackFoldHint' : 'inspector.stackUnfoldHint')),
-          }}
-          className="cursor-pointer border-y-0 border-l-0 bg-transparent p-0 text-left"
-        />
+          },
+          className: 'cursor-pointer border-y-0 border-l-0 bg-transparent p-0 text-left',
+        }}
+        actions={
+          <>
+            {lockable && (
+              <ToolButton
+                icon={locked ? mdiLink : mdiLinkOff}
+                label={t(locked ? 'inspector.unlinkAxes' : 'inspector.linkAxes')}
+                description={t('inspector.linkAxesHint')}
+                // `TIP_*` and not `HINT_*`: the padlock draws no word of its own, so this is
+                // where its accessible name comes from.
+                tooltip={TIP_LEFT}
+                variant="header"
+                active={locked}
+                onClick={lock}
+              />
+            )}
 
+            <ResetButton onReset={resetAll} />
+          </>
+        }
+      >
         {!stacked && (
           <div
             className="grid min-w-0 flex-1 gap-2"
@@ -195,26 +215,7 @@ export function VectorField<V extends AxisValue>({
         )}
 
         {stacked && <div className="min-w-0 flex-1" />}
-
-        <FieldActions>
-          {lockable && (
-            <ToolButton
-              icon={locked ? mdiLink : mdiLinkOff}
-              label={t(locked ? 'inspector.unlinkAxes' : 'inspector.linkAxes')}
-              description={t('inspector.linkAxesHint')}
-              // `TIP_*` and not `HINT_*`: the padlock draws no word of its own, so this is where
-              // its accessible name comes from.
-              tooltip={TIP_LEFT}
-              variant="header"
-              active={locked}
-              onClick={lock}
-            />
-          )}
-
-          <ResetButton onReset={resetAll} />
-        </FieldActions>
-      </div>
-
+      </PropertyLine>
       {/* One line per axis, each in the shared label column — the same shape as every other
           property line, which is what makes a stacked vector readable beside them. */}
       {stacked && shown.map(axis => axisField(axis, 'row'))}

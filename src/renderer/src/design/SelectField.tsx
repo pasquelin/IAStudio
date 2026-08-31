@@ -1,11 +1,10 @@
 import { mdiChevronDown } from '@mdi/js'
 import { useId, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FieldActions } from './FieldActions'
 import { FormField } from './FormField'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
 import { fieldHandle } from './scHandle'
-import { CONTROL, FIELD, FIELD_ROW, NATIVE_SELECT } from './styles'
+import { CONTROL, FIELD, NATIVE_SELECT } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type SelectOption<V extends string> = {
@@ -180,29 +179,54 @@ export function SelectField<V extends string>({
     )
   }
 
-  return (
-    <div
-      className={cn(layout === 'bar' ? 'relative flex min-w-0 items-center' : FIELD_ROW, className)}
-    >
-      {layout === 'row' && <PropertyLabel as="label" htmlFor={id} label={label} />}
+  if (layout === 'row') {
+    return (
+      // Bound by `htmlFor` rather than by wrapping, so a thumbnail can stand between the name and
+      // the control without pressing the picture opening the list beside it.
+      <PropertyLine
+        label={label}
+        root="div"
+        htmlFor={id}
+        nameProps={{ as: 'label' }}
+        actions={actions}
+        className={className}
+      >
+        {leading}
+        {control}
+      </PropertyLine>
+    )
+  }
 
+  if (layout === 'inline') {
+    return (
+      // A line with no name column and no end room: not a property line, but the same height.
+      <PropertyLine label={label} root="div" name="none" actions={false} className={className}>
+        {leading}
+        {control}
+        {actions}
+      </PropertyLine>
+    )
+  }
+
+  return (
+    <div className={cn('relative flex min-w-0 items-center', className)}>
       {leading}
 
       {control}
 
       {/* Only the closed control is restyled; the open list stays the platform's, which is the
           whole reason a `<select>` is used inside a panel too narrow for a menu of its own. */}
-      {layout === 'bar' && (
+      {
         <UiIcon
           path={mdiChevronDown}
           size={12}
           className="text-muted pointer-events-none absolute right-2"
         />
-      )}
+      }
 
       {/* A property line keeps its end room whether or not it acts; a bar or an inline select is
           not one, and would only be given a gap nothing ever fills. */}
-      {layout === 'row' ? <FieldActions>{actions}</FieldActions> : actions}
+      {actions}
     </div>
   )
 }

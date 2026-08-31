@@ -3,7 +3,7 @@ import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ComponentType } from '@shared/domain/component'
 import { COMPONENT_TYPES, descriptorOf } from '@shared/domain/componentRegistry'
-import { FieldActions } from '@/design/FieldActions'
+import { PropertyLine } from '@/design/PropertyLine'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { PropertySection } from '@/design/PropertySection'
@@ -11,8 +11,7 @@ import { QuietNote } from '@/design/QuietNote'
 import { ToolButton } from '@/design/ToolButton'
 import { attachComponent, detachComponent, setComponentField } from '@/engines/scene/commands'
 import type { SceneNode } from '@/engines/scene/sceneState'
-import { cn } from '@/helpers/cn'
-import { FIELD_ROW, PANEL_GROUP_LABEL_WIDE } from '@/design/styles'
+import { PANEL_GROUP_LABEL_WIDE } from '@/design/styles'
 import { HINT_RIGHT, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { ComponentField } from './ComponentField'
@@ -77,13 +76,14 @@ export function ComponentsSection({ node, edit }: ComponentsSectionProps) {
 
       {held.map(component => (
         <Fragment key={component.type}>
-          <div className={cn(FIELD_ROW, 'mt-1')}>
-            <span className={PANEL_GROUP_LABEL_WIDE}>
-              {t(descriptorOf(component.type).titleKey)}
-            </span>
-            {/* The end column every other line of the panel keeps, so the detach button stands
-                where a reset stands rather than wherever the name happens to end. */}
-            <FieldActions>
+          {/* The end column every other line of the panel keeps, so the detach button stands
+              where a reset stands rather than wherever the name happens to end. */}
+          <PropertyLine
+            label={t(descriptorOf(component.type).titleKey)}
+            root="div"
+            name="none"
+            className="mt-1"
+            actions={
               <ToolButton
                 icon={mdiTrashCanOutline}
                 label={t('game.section.remove')}
@@ -92,8 +92,12 @@ export function ComponentsSection({ node, edit }: ComponentsSectionProps) {
                 variant="row"
                 onClick={() => edit.run(detachComponent(node.id, component.type))}
               />
-            </FieldActions>
-          </div>
+            }
+          >
+            <span className={PANEL_GROUP_LABEL_WIDE}>
+              {t(descriptorOf(component.type).titleKey)}
+            </span>
+          </PropertyLine>
 
           {descriptorOf(component.type).fields.map(field => (
             <ComponentField

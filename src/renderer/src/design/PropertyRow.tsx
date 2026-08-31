@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FieldActions } from './FieldActions'
-import { PropertyLabel } from './PropertyLabel'
-import { FIELD_ROW } from './styles'
+import { PropertyLine } from './PropertyLine'
 
 /**
  * How a value that does not fit its column is given room.
@@ -42,30 +40,33 @@ export type PropertyRowProps = {
  * in the same box.
  */
 export function PropertyRow({ label, children, shape = 'inline', actions }: PropertyRowProps) {
-  return (
-    <div
-      className={cn(
-        shape === 'stacked' ? 'text-tiny flex min-w-0 flex-col gap-2' : FIELD_ROW,
-        // The label rides the FIRST line of a value that takes two, as it would in any
-        // information panel; centred, it floated beside the middle of a wrapped path.
-        shape === 'wrap' && 'items-start',
-      )}
-    >
-      {/* Stacked, the value sits UNDER the name rather than beside it — so there is no column,
-          and therefore no rule and no fixed gauge to hold it to. */}
-      {shape === 'stacked' ? (
+  // Stacked, the value sits UNDER the name rather than beside it — so there is no column, no
+  // rule, no fixed gauge, and no end column to hold either.
+  if (shape === 'stacked') {
+    return (
+      <div className="text-tiny flex min-w-0 flex-col gap-2">
         <span title={label} className="text-muted shrink-0">
           {label}
         </span>
-      ) : (
-        <PropertyLabel label={label} />
-      )}
+        <div className="text-text min-w-0">{children}</div>
+      </div>
+    )
+  }
+
+  return (
+    <PropertyLine
+      label={label}
+      root="div"
+      // The label rides the FIRST line of a value that takes two, as it would in any information
+      // panel; centred, it floated beside the middle of a wrapped path.
+      className={cn(shape === 'wrap' && 'items-start')}
+      actions={actions}
+    >
       <div
         className={cn(
-          'text-text min-w-0',
           // Left like a field's own control, so a value read and a value edited share one column:
           // « Rôle » used to begin where « Taille » ended.
-          shape !== 'stacked' && 'flex-1',
+          'text-text min-w-0 flex-1',
           shape === 'inline' && 'truncate',
           shape === 'path' && 'truncate-start',
           // `break-all`: a path and a hash hold no space to break at, so a wrap with nothing to
@@ -75,9 +76,6 @@ export function PropertyRow({ label, children, shape = 'inline', actions }: Prop
       >
         {children}
       </div>
-
-      {/* Not when stacked: there is no column there, so no end column to hold either. */}
-      {shape !== 'stacked' && <FieldActions>{actions}</FieldActions>}
-    </div>
+    </PropertyLine>
   )
 }

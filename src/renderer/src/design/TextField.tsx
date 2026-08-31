@@ -1,24 +1,24 @@
-import { FieldActions } from './FieldActions'
-import { PropertyLabel } from './PropertyLabel'
+import type { ReactNode } from 'react'
+import { PropertyLine } from './PropertyLine'
 import { ResetButton } from './ResetButton'
 import { fieldHandle } from './scHandle'
-import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
+import { FIELD_FILL, type GestureProps, type FieldHandle, type FieldReset } from './styles'
 
-export type TextFieldProps = GestureProps & {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  /**
-   * Tooltip attributes from the host's own factory, already resolved — `HINT_LEFT` in the
-   * inspector. For a field whose label says WHAT it is and whose contents need saying HOW: a CEL
-   * expression naming its wires is the case that asked for it.
-   */
-  hint?: Record<string, string>
-  /** The handle the MCP steers this field by. Never a translated word. */
-  scId?: string
-  /** Puts the value back where it started. Absent while it already stands there. */
-  onReset?: () => void
-}
+export type TextFieldProps = GestureProps &
+  FieldHandle &
+  FieldReset & {
+    label: string
+    value: string
+    onChange: (value: string) => void
+    /**
+     * Tooltip attributes from the host's own factory, already resolved — `HINT_LEFT` in the
+     * inspector. For a field whose label says WHAT it is and whose contents need saying HOW: a CEL
+     * expression naming its wires is the case that asked for it.
+     */
+    hint?: Record<string, string>
+    /** Buttons for the row's end column, drawn before the reset — a padlock, say. */
+    actions?: ReactNode
+  }
 
 /**
  * A line of text in a property row — a node's name, or any descriptor value no table describes.
@@ -31,13 +31,21 @@ export function TextField({
   hint,
   scId,
   onReset,
+  actions,
   onGestureStart,
   onGestureEnd,
 }: TextFieldProps) {
   return (
-    <label className={FIELD_ROW}>
-      <PropertyLabel label={label} />
-
+    <PropertyLine
+      label={label}
+      root="label"
+      actions={
+        <>
+          {actions}
+          <ResetButton onReset={onReset} />
+        </>
+      }
+    >
       <input
         type="text"
         data-sc={scId && fieldHandle(scId)}
@@ -49,10 +57,6 @@ export function TextField({
         className={FIELD_FILL}
         {...hint}
       />
-
-      <FieldActions>
-        <ResetButton onReset={onReset} />
-      </FieldActions>
-    </label>
+    </PropertyLine>
   )
 }

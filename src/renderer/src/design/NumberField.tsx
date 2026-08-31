@@ -9,14 +9,15 @@ import { cn } from '@/helpers/cn'
 import { formatDecimal, parseDecimal } from '@/helpers/format'
 import { usePointerDrag } from '@/hooks/usePointerDrag'
 import { bound, type NumericBounds } from '@shared/numeric'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
 import { ResetButton } from './ResetButton'
-import { FieldActions } from './FieldActions'
 import { fieldHandle } from './scHandle'
-import { FIELD_FILL, FIELD_ROW, type GestureProps } from './styles'
+import { FIELD_FILL, type GestureProps, type FieldHandle, type FieldReset } from './styles'
 
 export type NumberFieldProps = NumericBounds &
-  GestureProps & {
+  GestureProps &
+  FieldHandle &
+  FieldReset & {
     label: string
     value: number
     onChange: (value: number) => void
@@ -35,12 +36,8 @@ export type NumberFieldProps = NumericBounds &
     disabled?: boolean
     /** Tooltip attributes already resolved, which is where a disabled row says WHY it is one. */
     hint?: Record<string, string>
-    /** The handle the MCP steers this field by. Never a translated word. */
-    scId?: string
-    /** Puts the value back where it started. Absent while it already stands there. */
-    onReset?: () => void
     /** One more button for the row's end column, drawn before the reset — a padlock, say. */
-    action?: ReactNode
+    actions?: ReactNode
   }
 
 /** Units per pixel dragged, for a field that declares no step of its own. */
@@ -91,7 +88,7 @@ export function NumberField({
   hint,
   scId,
   onReset,
-  action,
+  actions,
 }: NumberFieldProps) {
   const drag = usePointerDrag<Drag>()
   /**
@@ -215,12 +212,28 @@ export function NumberField({
   )
 
   return (
-    <div className={FIELD_ROW} {...hint}>
-      {/* Deliberately not a `<label>` bound to the field: a bound label focuses what it names,
-          so every drag would leave the field in edit mode. The input carries the name. */}
-      {layout === 'row' ? (
-        <PropertyLabel label={label} hidden gesture={scrub} className={scrubSkin} />
-      ) : (
+    // Deliberately not a `<label>` bound to the field: a bound label focuses what it names, so
+    // every drag would leave the field in edit mode. The input carries the name.
+    <PropertyLine
+      label={label}
+      root="div"
+      hint={hint}
+      name={layout === 'row' ? 'column' : 'none'}
+      nameProps={{ hidden: true, gesture: scrub, className: scrubSkin }}
+      actions={
+        // Never inside a vector's grid: the three axes share one reset, drawn by `VectorField` at
+        // the end of their line, or a Position row would end with three identical buttons.
+        layout === 'row' ? (
+          <>
+            {actions}
+            <ResetButton onReset={onReset} />
+          </>
+        ) : (
+          false
+        )
+      }
+    >
+      {layout !== 'row' && (
         <span aria-hidden title={label} {...scrub} className={cn('text-muted shrink-0', scrubSkin)}>
           {label}
         </span>
@@ -288,15 +301,6 @@ export function NumberField({
           axis === 'z' && 'border-l-axis-z',
         )}
       />
-
-      {/* Never inside a vector's grid: the three axes share one reset, drawn by `VectorField` at
-          the end of their line, or a Position row would end with three identical buttons. */}
-      {layout === 'row' && (
-        <FieldActions>
-          {action}
-          <ResetButton onReset={onReset} />
-        </FieldActions>
-      )}
-    </div>
+    </PropertyLine>
   )
 }

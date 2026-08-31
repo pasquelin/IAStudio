@@ -182,7 +182,7 @@ export function PostProcessingSection({
           scId="postfx.enabled"
           value={stack.enabled}
           onChange={enabled => run(setPostEnabled(target, enabled))}
-          action={
+          actions={
             <ToolButton
               icon={mdiCompare}
               label={t('postfx.bypass')}

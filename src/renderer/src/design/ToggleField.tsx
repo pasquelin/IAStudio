@@ -1,29 +1,35 @@
 import type { ReactNode } from 'react'
-import { FieldActions } from './FieldActions'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
+import { ResetButton } from './ResetButton'
 import { fieldHandle } from './scHandle'
-import { CHECKBOX, FIELD_ROW } from './styles'
+import { CHECKBOX, type FieldHandle, type FieldReset } from './styles'
 import { cn } from '@/helpers/cn'
 
-export type ToggleFieldProps = {
-  label: string
-  value: boolean
-  onChange: (value: boolean) => void
-  /** The handle the MCP steers this field by. Never a translated word. */
-  scId?: string
-  /** One more button for the row’s end column, drawn before the reset — a padlock, say. */
-  action?: ReactNode
-}
+export type ToggleFieldProps = FieldHandle &
+  FieldReset & {
+    label: string
+    value: boolean
+    onChange: (value: boolean) => void
+    /** Buttons for the row's end column, drawn before the reset — a padlock, say. */
+    actions?: ReactNode
+  }
 
 /**
  * A property that is on or off. It carries no gesture props: a checkbox changes once per
  * click, so there is no drag to coalesce into a single history entry.
  */
-export function ToggleField({ label, value, onChange, scId, action }: ToggleFieldProps) {
+export function ToggleField({ label, value, onChange, scId, actions, onReset }: ToggleFieldProps) {
   return (
-    <label className={FIELD_ROW}>
-      <PropertyLabel label={label} />
-
+    <PropertyLine
+      label={label}
+      root="label"
+      actions={
+        <>
+          {actions}
+          <ResetButton onReset={onReset} />
+        </>
+      }
+    >
       {/* At the START of the control column like every other field, since 2026-08-19: pinned to
           the far end it was the one line of the panel that began nowhere the others did, and it
           held its name to a gauge that read « Projette une … ». */}
@@ -35,8 +41,6 @@ export function ToggleField({ label, value, onChange, scId, action }: ToggleFiel
         // `mr-auto` rather than a filler element: the box keeps its size and takes the column.
         className={cn(CHECKBOX, 'mr-auto size-4 shrink-0')}
       />
-
-      <FieldActions>{action}</FieldActions>
-    </label>
+    </PropertyLine>
   )
 }

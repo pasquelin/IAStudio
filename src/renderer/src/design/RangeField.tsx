@@ -1,11 +1,10 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@shared/numeric'
-import { FieldActions } from './FieldActions'
 import { Readout } from './Readout'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
 import { SliderHandle } from './SliderHandle'
 import { SliderRail } from './SliderRail'
-import { FIELD_ROW, SLIDER_TRACK, type GestureProps } from './styles'
+import { SLIDER_TRACK, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -71,9 +70,8 @@ export function RangeField({
   }
 
   return (
-    <div className={FIELD_ROW}>
-      <PropertyLabel label={label} />
-
+    // `div`, never a wrapping label: it could bind only the first of the two handles.
+    <PropertyLine label={label} root="div">
       <div
         className={cn(SLIDER_TRACK, 'flex-1')}
         onPointerDown={() => onGestureStart?.()}
@@ -108,8 +106,6 @@ export function RangeField({
       </div>
 
       <Readout values={[value.min, value.max]} />
-
-      <FieldActions />
-    </div>
+    </PropertyLine>
   )
 }

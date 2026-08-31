@@ -1,23 +1,20 @@
 import { cn } from '@/helpers/cn'
 import { fieldHandle } from './scHandle'
 import type { ReactNode } from 'react'
-import { FieldActions } from './FieldActions'
-import { PropertyLabel } from './PropertyLabel'
+import { PropertyLine } from './PropertyLine'
 import { ResetButton } from './ResetButton'
-import { COLOR_READOUT, FIELD_ROW, type GestureProps } from './styles'
+import { COLOR_READOUT, type GestureProps, type FieldHandle, type FieldReset } from './styles'
 
-export type ColorFieldProps = GestureProps & {
-  label: string
-  /** Hexadecimal, `#rrggbb` — what the OS picker speaks and what a descriptor stores. */
-  value: string
-  onChange: (value: string) => void
-  /** The handle the MCP steers this field by. Never a translated word. */
-  scId?: string
-  /** Puts the colour back where it started. Absent while it already stands there. */
-  onReset?: () => void
-  /** One more button for the row’s end column, drawn before the reset — a padlock, say. */
-  action?: ReactNode
-}
+export type ColorFieldProps = GestureProps &
+  FieldHandle &
+  FieldReset & {
+    label: string
+    /** Hexadecimal, `#rrggbb` — what the OS picker speaks and what a descriptor stores. */
+    value: string
+    onChange: (value: string) => void
+    /** Buttons for the row's end column, drawn before the reset — a padlock, say. */
+    actions?: ReactNode
+  }
 
 /** A colour swatch that opens the OS picker — the input itself, which already draws its value. */
 export function ColorField({
@@ -26,14 +23,21 @@ export function ColorField({
   onChange,
   scId,
   onReset,
-  action,
+  actions,
   onGestureStart,
   onGestureEnd,
 }: ColorFieldProps) {
   return (
-    <label className={FIELD_ROW}>
-      <PropertyLabel label={label} />
-
+    <PropertyLine
+      label={label}
+      root="label"
+      actions={
+        <>
+          {actions}
+          <ResetButton onReset={onReset} />
+        </>
+      }
+    >
       <input
         type="color"
         data-sc={scId && fieldHandle(scId)}
@@ -57,11 +61,6 @@ export function ColorField({
       <span aria-hidden className={COLOR_READOUT}>
         {value}
       </span>
-
-      <FieldActions>
-        {action}
-        <ResetButton onReset={onReset} />
-      </FieldActions>
-    </label>
+    </PropertyLine>
   )
 }
