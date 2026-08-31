@@ -3,8 +3,8 @@ import { NumberField } from '@/components/NumberField'
 import { PropertySection } from '@/components/PropertySection'
 import { PropertyRow } from '@/components/PropertyRow'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { TrackFlagButton } from '@/panels/timeline/TrackFlagButton'
-import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
+import { TrackFlagButton } from '@/features/timeline/components/Track/TrackFlagButton'
+import { TRACK_FLAGS } from '@/features/timeline/components/trackFlags'
 import {
   clampTrackHeight,
   MAX_TRACK_HEIGHT,

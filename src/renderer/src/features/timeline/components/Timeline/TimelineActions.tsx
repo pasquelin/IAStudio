@@ -1,8 +1,8 @@
 import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
-import { AnimationActions } from '../../features/animation/components/Animation/Actions/AnimationActions'
-import { ProgramTransport } from './ProgramTransport'
-import { SequenceActions } from './SequenceActions'
-import { SoundActions } from './SoundActions'
+import { AnimationActions } from '../../../animation/components/Animation/Actions/AnimationActions'
+import { ProgramTransport } from '../ProgramTransport'
+import { SequenceActions } from '../SequenceActions'
+import { SoundActions } from '../Sound/SoundActions'
 
 /**
  * What the timeline panel puts on its own title bar — the montage tools for a sequence, the

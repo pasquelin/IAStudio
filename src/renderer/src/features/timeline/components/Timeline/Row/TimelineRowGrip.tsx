@@ -5,7 +5,7 @@ import { cn } from '@/helpers/cn'
 import { isGoneForGood } from '@/helpers/teardown'
 import { useLatest } from '@/hooks/useLatest'
 import { BandScrollContext } from '../bandScroll'
-import type { RowReorder } from './rowReorder'
+import type { RowReorder } from '../../rowReorder'
 
 /**
  * How many places a row has travelled, dragged by this much over rows of this height.

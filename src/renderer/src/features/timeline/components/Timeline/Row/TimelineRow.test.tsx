@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { TimelineRow } from './TimelineRow'
-import type { RowReorder } from './rowReorder'
+import type { RowReorder } from '../../rowReorder'
 
 const ROW_HEIGHT = 40
 const GRIP = /Move the row/

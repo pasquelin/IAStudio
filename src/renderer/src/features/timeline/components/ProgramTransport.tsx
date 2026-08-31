@@ -1,7 +1,7 @@
 import { programOwner, transports } from '@/engines/timeline/playback'
 import { playbackHeadOf, playbackOf, usePlayback } from '@/stores/playback'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { TimelineTransport } from './TimelineTransport'
+import { TimelineTransport } from './Timeline/TimelineTransport'
 
 export type ProgramTransportProps = { documentId: string }
 

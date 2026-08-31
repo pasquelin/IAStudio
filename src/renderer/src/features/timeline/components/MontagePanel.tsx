@@ -1,6 +1,6 @@
 import { TimelineCanvas } from '@/spaces/video/TimelineCanvas'
 import { useVideoTool } from '@/stores/videoTool'
-import { TrackHeaders } from './TrackHeaders/TrackHeaders'
+import { TrackHeaders } from './Track/Headers/TrackHeaders'
 
 export type MontagePanelProps = {
   documentId: string

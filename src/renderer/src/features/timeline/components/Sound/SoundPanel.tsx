@@ -1,5 +1,5 @@
 import { sequenceStore, useSequences } from '@/stores/sequences'
-import { MontagePanel } from './MontagePanel'
+import { MontagePanel } from '../MontagePanel'
 
 export type SoundPanelProps = { documentId: string }
 

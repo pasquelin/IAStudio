@@ -7,7 +7,7 @@ import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView } from '@/stores/timelineView'
-import { TimelinePanel } from './TimelinePanel'
+import { TimelinePanel } from '../Timeline/TimelinePanel'
 
 const DOCUMENT = 'take-1'
 

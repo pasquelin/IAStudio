@@ -5,7 +5,7 @@ import { removeAnimationTrack } from '@/engines/scene/animationCommands'
 import type { ChannelRow } from '@/engines/scene/animationRows'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { useScenes } from '@/stores/scenes'
-import { TimelineRow } from '../../../../../panels/timeline/TimelineRow/TimelineRow'
+import { TimelineRow } from '../../../../timeline/components/Timeline/Row/TimelineRow'
 
 export function AnimationHeadersChannel({
   documentId,

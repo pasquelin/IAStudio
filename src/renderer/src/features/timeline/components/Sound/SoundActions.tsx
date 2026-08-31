@@ -1,8 +1,8 @@
 import { transports } from '@/engines/timeline/playback'
 import { playbackHeadOf, playbackOf, usePlayback } from '@/stores/playback'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
-import { SequenceActions } from './SequenceActions'
-import { TimelineTransport } from './TimelineTransport'
+import { SequenceActions } from '../SequenceActions'
+import { TimelineTransport } from '../Timeline/TimelineTransport'
 
 export type SoundActionsProps = { documentId: string }
 

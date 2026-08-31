@@ -5,7 +5,7 @@ import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures
 import { DEFAULT_TRACK_HEIGHT } from '@/engines/timeline/timelineState'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
-import { TrackHeaders } from './TrackHeaders/TrackHeaders'
+import { TrackHeaders } from '../Track/Headers/TrackHeaders'
 
 /** Six rows in a column three high: the last three cannot be reached without the band moving. */
 const ROWS = 6

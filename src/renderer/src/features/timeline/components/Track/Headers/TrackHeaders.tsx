@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Viewport } from '@/engines/timeline/timelineGeometry'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
-import { TimelineHeaderColumn } from '../TimelineHeaderColumn'
+import { TimelineHeaderColumn } from '../../Timeline/TimelineHeaderColumn'
 import { TrackHeadersRow } from './TrackHeadersRow'
 
 export type TrackHeadersProps = { documentId: string }

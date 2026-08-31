@@ -7,7 +7,7 @@ import { EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timelineState'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
-import { TimelineActions } from './TimelineActions'
+import { TimelineActions } from '../Timeline/TimelineActions'
 
 const DOCUMENT = 'take-1'
 

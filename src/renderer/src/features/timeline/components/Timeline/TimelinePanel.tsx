@@ -2,9 +2,9 @@ import { mdiVideoVintage } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { activeAudioId, activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
-import { AnimationPanel } from '../../features/animation/components/Animation/AnimationPanel'
-import { MontagePanel } from './MontagePanel'
-import { SoundPanel } from './SoundPanel'
+import { AnimationPanel } from '../../../animation/components/Animation/AnimationPanel'
+import { MontagePanel } from '../MontagePanel'
+import { SoundPanel } from '../Sound/SoundPanel'
 
 /**
  * The montage of whatever sequence is in front. A tool window has no props — it sits on the

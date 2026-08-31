@@ -1,7 +1,7 @@
 import { useState, type HTMLAttributes, type ReactNode } from 'react'
 import { ROW_PADDING } from '@/engines/timeline/timelineGeometry'
 import { cn } from '@/helpers/cn'
-import type { RowReorder } from './rowReorder'
+import type { RowReorder } from '../../rowReorder'
 import { TimelineRowGrip } from './TimelineRowGrip'
 
 export type TimelineRowProps = Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'children'> & {

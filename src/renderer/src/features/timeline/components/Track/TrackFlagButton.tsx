@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/components/ToolButton'
 import type { TooltipFactory } from '@/helpers/tooltip'
-import type { TrackFlag } from './trackFlags'
+import type { TrackFlag } from '../trackFlags'
 
 export type TrackFlagButtonProps = {
   flag: TrackFlag

@@ -13,7 +13,7 @@ import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { bonesOfNode, useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneFrameHead, useSceneViews } from '@/stores/sceneViews'
-import { TimelineTransport } from '../../../../../panels/timeline/TimelineTransport'
+import { TimelineTransport } from '../../../../timeline/components/Timeline/TimelineTransport'
 import { AnimationActionsRenderButton } from './AnimationActionsRenderButton'
 import { animationTools, runAnimationTool } from './animationTools'
 
