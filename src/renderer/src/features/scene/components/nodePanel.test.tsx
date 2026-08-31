@@ -7,8 +7,8 @@ import { installScene } from '@/stores/scene-fixtures'
 import { nodesOfType, EMPTY_SCENE, type SceneNodeType } from '@/engines/scene/sceneState'
 import { useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { definition as lights } from '@/panels/lights/index'
-import { definition as meshes } from '@/panels/meshes/index'
+import { definition as lights } from '@/features/scene/tools/lights'
+import { definition as meshes } from '@/features/scene/tools/meshes'
 
 function nodes(type: SceneNodeType) {
   return nodesOfType(sceneOf(useScenes.getState(), 'doc-1').nodes, type)

@@ -124,9 +124,9 @@ async function walk(): Promise<Graph> {
 /**
  * Where the panels live, DERIVED so the case below cannot go quiet over an empty prefix.
  *
- * `./panels/` was the whole answer until the panels started moving under
- * `features/<f>/components/`: a fixed prefix then matches fewer of them at every lot, and the
- * case reads a shorter and shorter list while staying green. The shell and the home are not
+ * `./panels/` was the whole answer until the panels moved under `features/<f>/components/`: a
+ * fixed prefix then matched fewer of them at every lot, and the case read a shorter and shorter
+ * list while staying green. `./panels/` no longer exists at all. The shell and the home are not
  * panels — their components ARE the first screen, which is what the whole file is about.
  */
 const FIRST_SCREEN: readonly string[] = ['./features/home/', './features/shell/']
@@ -135,7 +135,6 @@ const drawsTheFirstScreen = (path: string): boolean =>
   FIRST_SCREEN.some(feature => path.startsWith(feature))
 
 const PANEL_TREES: readonly string[] = [
-  './panels/',
   ...new Set(
     Object.keys(SOURCES)
       .map(key => /^\.\/features\/[^/]+\/components\//.exec(key)?.[0])

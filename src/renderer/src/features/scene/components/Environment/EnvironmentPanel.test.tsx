@@ -10,7 +10,7 @@ import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { useSettings } from '@/stores/settings'
-import { definition } from '../../../../panels/inspector/index'
+import { definition } from '../../../shell/tools/inspector'
 
 const { Content } = definition
 
