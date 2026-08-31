@@ -129,7 +129,9 @@ const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   studio:
     'Refuses with a consent token first, and no setting ever waives that: it changes the ' +
     'settings, the account that answers, or the project that is open.',
-  credits: 'Refuses with a consent token first, with an estimate: it spends creative units.',
+  // Not « creative units »: what a run costs is the unit of whichever cloud serves it, and one
+  // of them sells credits. The estimate carries no unit either — some services publish none.
+  credits: 'Refuses with a consent token first, with an estimate where there is one: it spends.',
 }
 
 // The three ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`

@@ -266,11 +266,20 @@ const STATUS: Record<string, JobStatus> = {
   'warming-up': 'running',
   'in-progress': 'running',
   finalizing: 'running',
+  running: 'running',
   success: 'succeeded',
   succeeded: 'succeeded',
   failure: 'failed',
   failed: 'failed',
   canceled: 'cancelled',
+  /**
+   * 🛑 The three a second cloud spells and Scenario does not — plus its own spelling of
+   * cancelled, with two `l`s. Unmapped, each is read as RUNNING and polls for ever while holding
+   * its slot: one banned picture would block a lane whose ceiling is one for the whole session.
+   */
+  cancelled: 'cancelled',
+  banned: 'failed',
+  expired: 'failed',
 }
 
 export function jobStatusOf(remoteStatus: string): JobStatus {
@@ -927,6 +936,10 @@ export function createJobManager({
           progress: 0,
           createdAt: remembered.createdAt,
           assetIds: [],
+          // 🛑 Read again rather than remembered: the note carries no such word, and a resumed
+          // job that came back cancellable would report a running spend as stopped — which is
+          // the one thing this flag exists to prevent.
+          ...(cancellableTarget?.(remembered.targetId) === false ? { cancellable: false } : {}),
         }
 
         const entry: Entry = {

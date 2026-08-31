@@ -71,7 +71,10 @@ export function tripoRetryAfterMs(error: unknown): number | null {
 export type TripoTask = {
   taskId: string
   status: string
-  /** 0 to 100 on their side. Handed on as it comes: `jobProgressOf` reads both scales. */
+  /**
+   * A fraction of 1, DIVIDED here: theirs is a percentage, and the manager only reads the larger
+   * scale above 2 — so 1 % and 2 % would have arrived as a finished bar.
+   */
   progress?: number
   /** What it has actually cost, once it has. */
   credits?: number
@@ -128,7 +131,8 @@ export function taskOf(payload: unknown): TripoTask | null {
   const status = textOf(payload, 'status')
   if (!taskId || !status) return null
 
-  const progress = readOptionalNumber(payload, 'progress')
+  const percent = readOptionalNumber(payload, 'progress')
+  const progress = percent === undefined ? undefined : percent / 100
   const credits = readOptionalNumber(payload, 'credits_consumed')
   const outputUrl = outputUrlOf(payload['output'])
 
@@ -219,9 +223,12 @@ export function createTripoApi({
 
       try {
         const tasks = tasksIn(await postJson('tasks/list', { task_ids: [...taskIds] }))
+        // 🛑 Demoted on a SHAPE nobody serves, never on a refusal: read as "not served", one
+        // rate limit would have spent a request per task for the session — against the very
+        // limiter the grouped read exists to stay under.
         if (tasks) return tasks
-      } catch {
-        // Nothing to say twice: the fall back below is the answer, and it is taken for good.
+      } catch (error) {
+        if (!(error instanceof TripoError) || error.httpStatus !== 404) throw error
       }
 
       grouped = false
@@ -240,12 +247,12 @@ export function createTripoApi({
 
     balance: async () => {
       const data = await call('account/balance')
-      if (!isRecord(data)) throw new TripoError(0, 200, 'the balance came back unreadable')
+      const balance = isRecord(data) ? readOptionalNumber(data, 'balance') : undefined
+      // 🛑 Refused rather than defaulted: a zero drawn beside a key holding hundreds is the one
+      // outcome this must not produce, and the screen can say it could not read instead.
+      if (balance === undefined) throw new TripoError(0, 200, 'the balance came back unreadable')
 
-      return {
-        balance: readOptionalNumber(data, 'balance') ?? 0,
-        frozen: readOptionalNumber(data, 'frozen') ?? 0,
-      }
+      return { balance, frozen: (isRecord(data) && readOptionalNumber(data, 'frozen')) || 0 }
     },
   }
 }

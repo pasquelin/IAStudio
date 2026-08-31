@@ -696,12 +696,11 @@ export function createServices(settings: SettingsStore): Services {
    * per language: 54 entries and 274 knobs make a fresh build 429 bundle lookups, and the
    * registry asks on every search.
    */
-  let describedTripo: { language: Language; models: ModelDescriptor[] } | null = null
+  let tripoCatalogue: { language: Language; models: ModelDescriptor[] } | null = null
 
-  const tripoModels = (): readonly ModelDescriptor[] => {
-    if (!holdsTripo()) return []
+  const describedTripo = (): readonly ModelDescriptor[] => {
     const spoken = language()
-    if (describedTripo?.language === spoken) return describedTripo.models
+    if (tripoCatalogue?.language === spoken) return tripoCatalogue.models
 
     const said = (key: string): string => textAt(TRANSLATIONS[spoken], key)
     const models = TRIPO_CATALOGUE.map(entry => ({
@@ -722,14 +721,20 @@ export function createServices(settings: SettingsStore): Services {
       fields: tripoFieldsOf(entry, said),
     }))
 
-    describedTripo = { language: spoken, models }
+    tripoCatalogue = { language: spoken, models }
     return models
   }
+
+  /** What the picker is OFFERED, which is nothing while no key answers for it. */
+  const tripoModels = (): readonly ModelDescriptor[] => (holdsTripo() ? describedTripo() : [])
 
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
     publishedModels: tripoModels,
+    // Whether or not a key is held: a stored id must be answered from here rather than asked of
+    // a catalogue that has never heard of it.
+    publishedModelOf: modelId => describedTripo().find(model => model.id === modelId) ?? null,
     // The two catalogues merge in `catalogue.ts` and nowhere else: one panel, one set of filters,
     // and a model that says where it runs — ADR-21 as amended.
     localModels: mergedCatalogue,

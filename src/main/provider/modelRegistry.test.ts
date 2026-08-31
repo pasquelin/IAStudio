@@ -1137,6 +1137,7 @@ describe('a cloud that publishes its models as data', () => {
     const registry = registryOf({
       catalog: () => ({ ...emptyCatalog(), retrieve }),
       publishedModels: () => [TRIPO_MESH],
+      publishedModelOf: id => (id === TRIPO_MESH.id ? TRIPO_MESH : null),
     })
 
     expect((await registry.describe(TRIPO_MESH.id)).fields.map(field => field.key)).toEqual([
@@ -1159,9 +1160,75 @@ describe('a cloud that publishes its models as data', () => {
     expect(list).not.toHaveBeenCalled()
   })
 
+  /**
+   * 🛑 MEASURED before the filter: a search for « flux » in the Image space answered 32 entries,
+   * all of them this cloud's, and the model actually looked for never appeared. A catalogue hit
+   * is NOT narrowed the same way — the endpoint answers by likeness, and the letters typed would
+   * throw away most of what it found.
+   */
+  it('keeps its own models out of a search their name does not answer', async () => {
+    const registry = registryOf({
+      catalog: () => ({
+        ...emptyCatalog(),
+        search: () =>
+          Promise.resolve({
+            models: [{ id: 'model_flux', name: 'Flux', capabilities: ['txt23d'] }],
+            token: null,
+          }),
+      }),
+      publishedModels: () => [TRIPO_MESH],
+    })
+
+    const page = await registry.search({ search: 'flux', family: '3d' })
+
+    expect(page.items.map(item => item.id)).toEqual(['model_flux'])
+  })
+
+  /**
+   * The narrowing reaches the LOCAL manifests too, and that is intended: a machine holding a
+   * dozen models would otherwise answer them all to every word typed.
+   */
+  it('narrows this machine by the typed words as well', async () => {
+    const registry = registryOf({
+      catalog: emptyCatalog,
+      localModels: () => [localModel({ id: 'qwen-image', name: 'Qwen Image', family: 'image' })],
+      isInstalled: () => true,
+    })
+
+    expect((await registry.search({ search: 'qwen' })).items.map(one => one.id)).toEqual([
+      'qwen-image',
+    ])
+    expect((await registry.search({ search: 'flux' })).items).toEqual([])
+  })
+
+  it('answers its own where the typed words do name one', async () => {
+    const registry = registryOf({ catalog: emptyCatalog, publishedModels: () => [TRIPO_MESH] })
+
+    expect((await registry.search({ search: 'tripo' })).items.map(one => one.id)).toEqual([
+      TRIPO_MESH.id,
+    ])
+  })
+
   it('answers nothing of theirs while no key is held for that cloud', async () => {
     const registry = registryOf({ catalog: emptyCatalog, publishedModels: () => [] })
 
     expect((await registry.search({ family: '3d' })).items).toEqual([])
+  })
+
+  /**
+   * 🛑 A model id is STORED — a preference, a panel that was open. Read through the offered list,
+   * an id whose key has since been removed fell through to the API: the same
+   * `404 Model … not found` the local branch exists to prevent.
+   */
+  it('still describes one of theirs after its key is taken away', async () => {
+    const retrieve = vi.fn()
+    const registry = registryOf({
+      catalog: () => ({ ...emptyCatalog(), retrieve }),
+      publishedModels: () => [],
+      publishedModelOf: id => (id === TRIPO_MESH.id ? TRIPO_MESH : null),
+    })
+
+    expect((await registry.describe(TRIPO_MESH.id)).id).toBe(TRIPO_MESH.id)
+    expect(retrieve).not.toHaveBeenCalled()
   })
 })

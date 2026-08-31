@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { TRIPO_CATALOGUE, tripoModelId, type TripoEntry } from '@shared/domain/tripo'
-import type { TripoApi, TripoTask } from './tripoApi'
+import { isRetryableTripo, type TripoApi, type TripoTask } from './tripoApi'
 import { createTripoRunner, tripoLaneOf, type TripoRunnerDeps } from './tripoRunner'
 
 const entryOn = (endpoint: string): TripoEntry => {
@@ -98,6 +98,19 @@ describe('submitting to Tripo', () => {
     expect(api.create.mock.calls[0]?.[1]).toMatchObject({ input: 'https://theirs/hat.png' })
   })
 
+  /**
+   * 🛑 The FIELD says what is a file. Read off the string's shape, a prompt opening on a slash
+   * was handed to `readFile` and failed the job on an ENOENT nobody could read.
+   */
+  it('takes a prompt that looks like a path for the words it is', async () => {
+    const { runner, api } = harness()
+
+    await runner.submit(TEXT_TARGET, { prompt: '/robot on a plinth' })
+
+    expect(api.upload).not.toHaveBeenCalled()
+    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ prompt: '/robot on a plinth' })
+  })
+
   it('refuses a target no entry of this build names', async () => {
     const { runner } = harness()
 
@@ -187,10 +200,16 @@ describe('following a Tripo task', () => {
     expect(runner.producedBy('left-running')?.prompt).toBe('')
   })
 
-  it('says nothing succeeded when their listing left the task out', async () => {
+  /**
+   * A retention window, a partial answer. Thrown as one of THEIRS so the backoff decides: a bare
+   * `Error` reads as `unexpected` and settles the job on the first attempt.
+   */
+  it('leaves a task their listing left out to the backoff, rather than dropping it', async () => {
     const { runner } = harness([])
 
-    await expect(runner.poll('9a1c-5248', TEXT_TARGET)).rejects.toThrow(/said nothing/)
+    const failure = await runner.poll('9a1c-5248', TEXT_TARGET).catch((error: unknown) => error)
+
+    expect(isRetryableTripo(failure)).toBe(true)
   })
 
   /** One request for every generation being watched — what their reference recommends over N. */

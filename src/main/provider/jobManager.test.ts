@@ -140,6 +140,17 @@ describe('status mapping', () => {
     expect(jobStatusOf('failed')).toBe('failed')
   })
 
+  /**
+   * 🛑 A second cloud spells three outcomes Scenario never does. Unmapped, each folds onto
+   * `running` and polls for ever holding its slot — and one lane's ceiling is ONE, so a single
+   * banned picture would block every picture of the session.
+   */
+  it('folds the outcomes a second cloud spells its own way', () => {
+    expect(jobStatusOf('cancelled')).toBe('cancelled')
+    expect(jobStatusOf('banned')).toBe('failed')
+    expect(jobStatusOf('expired')).toBe('failed')
+  })
+
   // Declaring an outcome nobody understood is worse than polling one cycle too many.
   it('keeps polling on a status it has never seen', () => {
     expect(jobStatusOf('reticulating-splines')).toBe('running')
@@ -455,6 +466,22 @@ describe('job manager', () => {
 
     expect(manager.submit({ id: 'tripo:one' }, 'One', {}).cancellable).toBe(false)
     expect(manager.submit({ id: 'model_flux' }, 'Flux', {}).cancellable).toBeUndefined()
+  })
+
+  /**
+   * 🛑 A resumed job carries no such word in its note. Left unread, a generation of a service
+   * that does not stop one came back cancellable after a relaunch — and reporting it stopped is
+   * exactly what the flag prevents.
+   */
+  it('reads again, on a resumed job, whether its service stops what it started', () => {
+    const { manager } = harness({
+      cancellableTarget: targetId => targetId !== 'model_veo',
+      runner: { poll: () => new Promise<RemoteJob>(() => {}) },
+    })
+
+    manager.resume([RUNNING])
+
+    expect(manager.list()[0]?.cancellable).toBe(false)
   })
 
   it('never runs two jobs on this machine at once', async () => {

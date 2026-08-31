@@ -80,8 +80,9 @@ describe('the Tripo API', () => {
 
     expect(get).toHaveBeenCalledTimes(1)
     expect(get.mock.calls[0]?.[0]).toBe('https://tripo.test/v3/tasks/list')
+    // A FRACTION: theirs is a percentage, and the manager only reads the larger scale above 2.
     expect(tasks).toEqual([
-      { taskId: 'a', status: 'running', progress: 40 },
+      { taskId: 'a', status: 'running', progress: 0.4 },
       { taskId: 'b', status: 'success', outputUrl: 'https://x/b.glb' },
     ])
   })
@@ -90,7 +91,7 @@ describe('the Tripo API', () => {
    * The grouped read is the ONE thing here nobody has measured. Refused, the studio drops to one
    * request per task rather than failing every poll on a shape that was only ever documented.
    */
-  it('falls back to one request per task when the grouped read is refused, and stays there', async () => {
+  it('falls back to one request per task when the grouped read is not served, and stays there', async () => {
     const get = vi
       .fn<TripoFetch>()
       .mockImplementationOnce(() =>
@@ -184,5 +185,43 @@ describe('what a retry can fix on their side', () => {
     expect(tripoRetryAfterMs(failing(2000, 429, 3000))).toBe(3000)
     expect(tripoRetryAfterMs(failing(2000))).toBeNull()
     expect(tripoRetryAfterMs(new Error('elsewhere'))).toBeNull()
+  })
+})
+
+/**
+ * 🛑 The grouped read is demoted on a shape nobody serves, NEVER on a refusal: read as "not
+ * served", one rate limit would spend a request per task for the rest of the session — against
+ * the very limiter it exists to stay under.
+ */
+describe('what demotes the grouped read', () => {
+  it('keeps asking together after a refusal that says nothing about the endpoint', async () => {
+    const get = vi
+      .fn<TripoFetch>()
+      .mockImplementationOnce(() =>
+        Promise.resolve(
+          answer({ code: 1007, status: 'error', message: 'slow down' }, { status: 429 }),
+        ),
+      )
+      .mockImplementation(() =>
+        Promise.resolve(ok({ tasks: [{ task_id: 'a', status: 'queued' }] })),
+      )
+
+    const api = apiOn(get)
+    await expect(api.status(['a'])).rejects.toMatchObject({ code: 1007 })
+    expect(await api.status(['a'])).toEqual([{ taskId: 'a', status: 'queued' }])
+
+    expect(get.mock.calls.map(call => call[0])).toEqual([
+      'https://tripo.test/v3/tasks/list',
+      'https://tripo.test/v3/tasks/list',
+    ])
+  })
+})
+
+describe('a balance that came back without one', () => {
+  // 🛑 A zero drawn beside a key holding hundreds is the one outcome this must not produce.
+  it('refuses rather than answer nothing left', async () => {
+    const get = vi.fn<TripoFetch>().mockResolvedValue(ok({ frozen: 20 }))
+
+    await expect(apiOn(get).balance()).rejects.toThrow(/unreadable/)
   })
 })

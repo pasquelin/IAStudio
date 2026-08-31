@@ -138,9 +138,18 @@ export type RegistryOptions = {
   isInstalled: (modelId: string) => boolean
   /**
    * A cloud's whole catalogue as DATA rather than through a listing, each entry carrying its own
-   * `runsOn` — so nothing here is told which cloud answered. Empty while no key is held.
+   * `runsOn` — so nothing here is told which cloud answered. Empty while no key is held: a
+   * picker offering models an account cannot run ends in a refusal nobody can read.
    */
   publishedModels?: () => readonly ModelDescriptor[]
+  /**
+   * The same catalogue whether or not a key is held, for `describe` alone.
+   *
+   * 🛑 A model id is STORED — a preference, a panel that was open. Read through the list above,
+   * an id whose key has since been removed fell through to the API, which has never heard of it:
+   * the same `404 Model … not found` the local branch below exists to prevent.
+   */
+  publishedModelOf?: (modelId: string) => ModelDescriptor | null
   /** Names the knobs of a local model's form. The main process holds the language as a service. */
   translate: (key: string) => string
   ttlMs?: number
@@ -396,6 +405,21 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
 }
 
 /**
+ * Whether a model the studio holds ITSELF answers a typed search.
+ *
+ * 🛑 Never applied to a catalogue hit: the endpoint answers by semantic likeness, so narrowing
+ * its results by the letters typed would throw away most of what it found. The models held here
+ * have no such index — unfiltered, one cloud's fifty-four entries filled the whole page and the
+ * model actually searched for never appeared.
+ */
+function named(summary: ModelSummary, search: string | undefined): boolean {
+  const wanted = search?.trim().toLocaleLowerCase()
+  if (!wanted) return true
+
+  return `${summary.name} ${summary.id}`.toLocaleLowerCase().includes(wanted)
+}
+
+/**
  * The one tag the listing is narrowed by server-side, ahead of `matches`.
  *
  * A chosen tag comes first — it is what the user asked for. Failing that, the three families
@@ -431,6 +455,7 @@ export function createModelRegistry({
   localModels,
   isInstalled,
   publishedModels,
+  publishedModelOf,
   translate,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
@@ -487,7 +512,7 @@ export function createModelRegistry({
     if (query.cursor !== undefined) return page
 
     const since = query.since ? cutoff(query.since, now()) : null
-    const held = offlineSummaries(query.family).filter(summary => matches(summary, query, since))
+    const held = offlineSummaries(query).filter(summary => matches(summary, query, since))
     const seen = new Set(held.map(summary => summary.id))
     // By the runtime each summary CARRIES, never by asking the catalogues: read as a lookup, the
     // published one was rebuilt and re-translated once per item of the page.
@@ -559,10 +584,11 @@ export function createModelRegistry({
   const published = (): readonly ModelDescriptor[] => publishedModels?.() ?? []
 
   /** Never paginated: a handful of entries in memory, where a cursor would be machinery. */
-  const offlineSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] => [
-    ...localSummaries(asFamily),
-    ...published().filter(model => asFamily === undefined || model.family === asFamily),
-  ]
+  const offlineSummaries = (query: ModelQuery): readonly ModelSummary[] =>
+    [
+      ...localSummaries(query.family),
+      ...published().filter(model => query.family === undefined || model.family === query.family),
+    ].filter(summary => named(summary, query.search))
 
   /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
   const described = async (modelId: string): Promise<ModelDescriptor> => {
@@ -672,7 +698,7 @@ export function createModelRegistry({
       // manifests held in memory, so a cursor into it would be machinery for a list that cannot
       // fill one screen. It comes first because it is the side that costs nothing to run.
       if (query.cursor === undefined) {
-        for (const summary of offlineSummaries(query.family)) {
+        for (const summary of offlineSummaries(query)) {
           if (!matches(summary, query, since)) continue
 
           seen.add(summary.id)
@@ -753,7 +779,7 @@ export function createModelRegistry({
     describe: async modelId =>
       describedAsCloudItself(modelId) ??
       describedLocally(modelId) ??
-      published().find(model => model.id === modelId) ??
+      publishedModelOf?.(modelId) ??
       (await described(modelId)),
 
     previews: async assetIds => {

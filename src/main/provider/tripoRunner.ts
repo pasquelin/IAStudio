@@ -6,6 +6,7 @@ import { uploadMimeTypeOf } from '@shared/domain/assetMime'
 import { CREDIT_UNIT } from '@shared/domain/credits'
 import { pathBaseNameOf } from '@shared/domain/fileName'
 import type { JobTarget } from '@shared/domain/job'
+import type { FieldKind } from '@shared/domain/model'
 import { PROMPT_FIELD_KEY } from '@shared/domain/localFields'
 import { tripoEntryOf, TRIPO_LANE_LIMITS, type TripoEntry } from '@shared/domain/tripo'
 import { extensionFromUrl } from '@main/assets/localBackend'
@@ -41,6 +42,9 @@ const REMEMBERED = 64
 
 /** Wide enough to gather the polls of jobs that started together, short enough to go unnoticed. */
 const DEFAULT_GATHER_MS = 50
+
+/** The field kinds that carry a file rather than a value — what the form fills with a path. */
+const FILE_KINDS: readonly FieldKind[] = ['image', 'mesh', 'raw']
 
 /**
  * The shelf an entry's result lands on, read off what its EMPLOYMENT produces — never off its
@@ -104,9 +108,12 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       const value = body[field.key]
       if (value === undefined || value === null || value === '') continue
 
-      // A picture or a mesh arrives as a PATH: `services.ts` routes a Tripo body through the
-      // LOCAL resolver, so nothing of it was ever sent to an account of another cloud.
-      sent[field.key] = typeof value === 'string' && isAbsolute(value) ? await sendUp(value) : value
+      // 🛑 The FIELD says what is a file, never the shape of the value: read off the string, a
+      // prompt opening on a slash — « /robot on a plinth » — was handed to `readFile` and failed
+      // the job on an ENOENT nobody could read. A file arrives as a PATH because `services.ts`
+      // routes a Tripo body through the LOCAL resolver.
+      const isFile = FILE_KINDS.includes(field.kind) && typeof value === 'string'
+      sent[field.key] = isFile && isAbsolute(value) ? await sendUp(value) : value
     }
 
     return sent
@@ -186,9 +193,10 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
 
     poll: async (taskId, target) => {
       const task = await stateOf(taskId)
-      // Rejected rather than reported failed: a task their listing left out is one this poll
-      // knows nothing about, and calling it failed would drop a generation that is still running.
-      if (!task) throw new Error(`Tripo said nothing about ${taskId}`)
+      // Their listing left it out — a retention window, a partial answer. Thrown as one of
+      // THEIRS so the backoff can decide: a bare `Error` reads as `unexpected` and settles the
+      // job on the first attempt, dropping a generation that may still be running.
+      if (!task) throw new TripoError(0, 503, `Tripo said nothing about ${taskId}`)
 
       if (task.status === 'success' && !produced.has(taskId)) {
         await bringDown(entryFor(target), task)

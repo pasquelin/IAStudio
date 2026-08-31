@@ -141,6 +141,31 @@ describe('cancelling and counting', () => {
     })
   })
 
+  /**
+   * 🛑 A caller told « done » about a generation that runs to its end and is billed is the exact
+   * outcome the greyed button prevents at the screen. The same answer is owed here.
+   */
+  it('refuses to report a spend as stopped where the service does not stop one', async () => {
+    const cancel = vi.fn(async () => {})
+    useJobs.setState({ jobs: [{ ...running('job-1'), cancellable: false }], cancel })
+
+    expect(await runAction('job.cancelCloudGeneration', { jobId: 'job-1' })).toMatchObject({
+      ok: false,
+      refusal: 'declined',
+    })
+    expect(cancel).not.toHaveBeenCalled()
+  })
+
+  // Nothing has reached the service while it waits in the studio's own queue.
+  it('still cancels one of theirs that has not left the queue', async () => {
+    const cancel = vi.fn(async () => {})
+    const queued = jobOf({ id: 'job-1', status: 'queued', progress: 0 })
+    useJobs.setState({ jobs: [{ ...queued, cancellable: false }], cancel })
+
+    expect(await runAction('job.cancelCloudGeneration', { jobId: 'job-1' })).toEqual({ ok: true })
+    expect(cancel).toHaveBeenCalledWith('job-1')
+  })
+
   it('reads the usage over the window asked for, and the default otherwise', async () => {
     const usageReport = vi.fn(async () => report())
     installFakeBridge({ provider: { usageReport } })
