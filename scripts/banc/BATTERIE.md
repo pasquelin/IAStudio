@@ -225,6 +225,19 @@ réécrit.
 - **`activity.read`, `assets.captionImages` et les canaux `provider.*` ne sont pas modélisés** : les
   scénarios qui les exercent mesurent un port vide.
 
+## Ce que le banc ne mesure pas — le second cloud, 2026-08-31
+
+**Aucun scénario n'atteint Tripo, et c'est un trou déclaré plutôt qu'une couverture.** Ses modèles
+ne viennent pas du port API que le décor fake : ils viennent d'un catalogue en DONNÉES
+(`shared/domain/tripo.ts`), publié au registre seulement si un compte Tripo est actif. Le décor
+n'en tient aucun, donc `models.search` n'en rend aucun et aucune phrase ne peut nommer un
+identifiant `tripo:`.
+
+Ce que la porte tient quand même : les 251 actions sont inchangées — la génération passe par
+`models.search`, `generator.prepare` et `generator.submit`, qui existaient déjà — et le chemin
+complet est couvert par des tests unitaires, du catalogue jusqu'au routeur. Ce qu'aucune mesure ne
+dit : qu'un vrai modèle, mis devant cette application, choisisse Tripo quand on le lui demande.
+
 ## Quatre unités que le banc a d'abord lues de travers
 
 Elles sont écrites ici parce qu'aucune ne se devine et que chacune a rendu une section entière
