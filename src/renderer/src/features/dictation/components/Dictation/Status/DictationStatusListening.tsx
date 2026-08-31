@@ -2,8 +2,8 @@ import { mdiMicrophone } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/components/UiIcon'
 import { useAssistant } from '@/stores/assistant'
-import { Heard } from '../Heard'
-import { LevelMeter } from '../LevelMeter'
+import { Heard } from '../../Heard'
+import { LevelMeter } from '../../LevelMeter'
 
 /**
  * A live microphone, and WHERE the words are going.

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SttEvent, SttState } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { MicrophoneRefused, NoInputDevice } from '@/dictation/capture'
-import { registerDictationTarget } from '@/dictation/destination'
+import { MicrophoneRefused, NoInputDevice } from '@/features/dictation/capture'
+import { registerDictationTarget } from '@/features/dictation/destination'
 import { useDictation } from './dictation'
 import { useSettings } from './settings'
 
@@ -12,7 +12,7 @@ const startCapture = vi.fn((_options: unknown) => Promise.resolve({ stop }))
 
 // jsdom has no `getUserMedia` and no audio graph: what is under test is what the store does
 // with a capture, not the capture itself.
-vi.mock('@/dictation/capture', async importActual => {
+vi.mock('@/features/dictation/capture', async importActual => {
   // The real module is kept for the two error classes: the store tells them apart, so a
   // stand-in would be testing the stand-in.
   const actual = await importActual<Record<string, unknown>>()

@@ -11,7 +11,7 @@ import { useDictation } from '@/stores/dictation'
 import { useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { focusChat } from '../chatPanel'
-import { mountedDictationTarget } from '@/dictation/destination'
+import { mountedDictationTarget } from '@/features/dictation/destination'
 import { formatCompact } from '@/helpers/format'
 import { AssistantConversation } from './AssistantConversation'
 

@@ -17,14 +17,23 @@ import { WINDOW_SOURCES } from '../windowSources'
  */
 const IMPORTS_STUDIO_STYLES = /from '@\/components\/styles'/
 
-/** The families of window, read off the shell they frame themselves with rather than listed. */
-const FAMILIES = [
-  ...new Set(
-    Object.entries(WINDOW_SOURCES)
-      .filter(([, code]) => /<WindowShell[\s>]/.test(code))
-      .map(([path]) => `./${path.split('/')[1] ?? ''}/`),
-  ),
-].filter(folder => folder !== './components/')
+const FRAMES_A_WINDOW = /<WindowShell[\s>]/
+
+/**
+ * The folders a window owns, declared rather than read off the first path segment.
+ *
+ * That segment was the family until the features moved under `features/<name>/components/`: it
+ * then reads `./features/` for every one of them, and swallows every dock in the studio. The
+ * case below is what keeps the list honest — a `<WindowShell>` outside it goes red.
+ */
+const FAMILIES: readonly string[] = [
+  './features/document/',
+  './features/manual/',
+  './features/usage/',
+  './journal/',
+  './licences/',
+  './settings/',
+]
 
 /**
  * Declared with the reason, which is the same one three times: `windowStyles.ts` publishes no
@@ -41,6 +50,16 @@ describe('a window that is not a dock', () => {
   it('finds the windows and their sources at all', () => {
     expect(FAMILIES.length).toBeGreaterThan(3)
     expect(Object.keys(WINDOW_SOURCES).length).toBeGreaterThan(400)
+  })
+
+  /** A window framed outside the list is a window this rule never reads. */
+  it('names every folder a window frames itself in', () => {
+    const outside = Object.entries(WINDOW_SOURCES)
+      .filter(([, code]) => FRAMES_A_WINDOW.test(code))
+      .map(([path]) => path)
+      .filter(path => !FAMILIES.some(folder => path.startsWith(folder)))
+
+    expect(outside.sort()).toEqual([])
   })
 
   it('never reaches for the class strings of the docks', () => {

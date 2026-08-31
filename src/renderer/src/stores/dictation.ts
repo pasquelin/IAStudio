@@ -8,9 +8,9 @@ import {
   NoInputDevice,
   startCapture,
   type Capture,
-} from '@/dictation/capture'
-import { mountedDictationTarget } from '@/dictation/destination'
-import { insertAtCaret } from '@/dictation/insertAtCaret'
+} from '@/features/dictation/capture'
+import { mountedDictationTarget } from '@/features/dictation/destination'
+import { insertAtCaret } from '@/features/dictation/insertAtCaret'
 import { useSettings } from './settings'
 
 type DictationState = {

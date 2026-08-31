@@ -5,7 +5,7 @@ import type { TooltipFactory } from '@/helpers/tooltip'
 import { useDictationView } from '@/hooks/useDictationView'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBinding } from '@/stores/bindings'
-import { LevelMeter } from './LevelMeter'
+import { LevelMeter } from '../LevelMeter'
 
 export type DictationButtonProps = {
   /** `header` for a bar of panel actions, `row` for the foot of a field — see `ToolButton`. */

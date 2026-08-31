@@ -3,7 +3,7 @@ import type { FieldDescriptor } from '@shared/domain/model'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useDictationView } from '@/hooks/useDictationView'
 import { DictationButton } from './DictationButton'
-import { Heard } from './Heard'
+import { Heard } from '../Heard'
 
 /**
  * The microphone of one field, and the words as they are still being weighed.

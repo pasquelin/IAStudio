@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { insertAtCaret } from '@/dictation/insertAtCaret'
+import { insertAtCaret } from '@/features/dictation/insertAtCaret'
 import { field } from '@/helpers/dynamic-form-fixtures'
 import { DynamicForm } from './DynamicForm'
 
