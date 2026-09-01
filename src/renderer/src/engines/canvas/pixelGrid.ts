@@ -13,6 +13,11 @@ export function cellsSpanning(size: number, cell: number): number {
   return Math.max(1, Math.ceil(size / cell))
 }
 
+/** The other way round: the cell a side has to be cut by to hold `wanted` of them. */
+export function cellFor(size: number, wanted: number): number {
+  return sided(size / wanted)
+}
+
 /** The square a dab stamps. Two points inside one cell give the same rectangle — that is the mode. */
 export function stampRect(at: Point, cell: number, brushSize: number): Rect {
   const across = sided(brushSize / cell)

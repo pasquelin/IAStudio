@@ -1,6 +1,6 @@
 import { designatedIn } from '@/engines/timeline/timelineState'
 import { layerById } from '@/engines/canvas/canvasState'
-import { canvasOf, useCanvases } from '@/stores/canvases'
+import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import {
   activeImageId,
   activeSceneId,
@@ -11,6 +11,7 @@ import {
 } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { ClipInspector } from '../../../timeline/components/ClipInspector'
+import { CanvasInspector } from '../../../image/components/Canvas/CanvasInspector'
 import { LayerInspector } from '../../../image/components/Layer/LayerInspector'
 import { SceneInspector } from '../../../scene/components/Scene/SceneInspector'
 import { SkyboxInspector } from '../../../skybox/components/Skybox/Inspector/SkyboxInspector'
@@ -35,13 +36,22 @@ export function InspectorFace() {
   const textureId = useDocuments(activeMaterialId)
   const skyboxId = useDocuments(activeSkyboxId)
   const imageId = useDocuments(activeImageId)
-  const canvas = useCanvases(state => (imageId ? canvasOf(state, imageId) : null))
+  // `hasState` first: `canvasOf` falls back to the default canvas, and a document still being
+  // read would offer its fields to edit — an entry ⌘Z would then swap the loaded file for.
+  const canvas = useCanvases(state =>
+    imageId && canvasStore.hasState(state, imageId) ? canvasOf(state, imageId) : null,
+  )
 
   // `activeLayerId`, which is where a layer's own document holds it: one born on the canvas arms
   // it without any pointer being involved.
-  if (imageId) {
-    const layer = canvas ? layerById(canvas, canvas.activeLayerId) : null
-    return layer ? <LayerInspector documentId={imageId} layer={layer} /> : <InspectorEmpty />
+  if (imageId && canvas) {
+    const layer = layerById(canvas, canvas.activeLayerId)
+    return (
+      <>
+        <CanvasInspector key={imageId} documentId={imageId} canvas={canvas} />
+        {layer && <LayerInspector documentId={imageId} layer={layer} />}
+      </>
+    )
   }
 
   // Read off the montage, so no owner has to be compared: a clip designated in one tab cannot

@@ -338,6 +338,20 @@
     "modelDressOpenMaterialHint": "Opens it in the Materials space — the model follows whatever is edited there",
     "modelDressMissingMaterial": "Material not found",
     "modelDressClearMaterial": "Remove the material",
-    "modelDressClearMaterialHint": "This slot goes back to the file’s own material — the document stays in the project"
+    "modelDressClearMaterialHint": "This slot goes back to the file’s own material — the document stays in the project",
+    "document": "Document",
+    "resample": "Resample",
+    "dpi": "Density (dpi)",
+    "colorMode": "Colour mode",
+    "colorMode_rgb": "RGB",
+    "colorMode_grayscale": "Greyscale",
+    "bitDepth": "Bit depth",
+    "bitDepthBits": "{{count, number}}-bit",
+    "pixelArt": "Pixel art",
+    "pixelArtMode": "Pixel art mode",
+    "artResolution": "Resolution (cells)",
+    "artColumns": "Columns",
+    "artRows": "Rows",
+    "pixelSize": "Pixel size"
   }
 }

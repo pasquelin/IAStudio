@@ -137,6 +137,20 @@ describe('a gesture held over a document', () => {
     expect(valueOf(store)).toBe('c')
   })
 
+  // The first values a field emits can all be refused — a column count that lands on the cell
+  // the document already has — while an entry of the same id sits just before the gesture.
+  it('does not merge into an entry pushed before it once a refused command opened it', () => {
+    const store = storeOf()
+    const { beginGesture, runCommand } = store.use.getState()
+
+    runCommand('doc', set('slider', 'a'))
+    beginGesture('doc')
+    runCommand('doc', { ...set('slider', 'a'), refuses: () => true })
+    runCommand('doc', set('slider', 'b'))
+
+    expect(entries(store)).toBe(2)
+  })
+
   it('keeps two gestures of the same field apart', () => {
     const store = storeOf()
     const { beginGesture, endGesture, runCommand } = store.use.getState()

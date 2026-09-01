@@ -15,6 +15,7 @@ import { UI_TEMPLATE_IDS } from '@shared/domain/uiTemplates'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
+  COLOR_MODES,
   LAYER_KINDS,
   SHAPE_KINDS,
   type LayerKind,
@@ -104,6 +105,8 @@ const COMPOSED_KEYS: readonly string[] = [
   // no sentence would put a raw key over the viewport at the very moment the mode opens.
   ...NAVIGATION_HINT_GROUPS.map(group => `sceneNavigation.${group.key}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // Composed by the inspector's document face from the canvas's closed list.
+  ...COLOR_MODES.map(mode => `inspector.colorMode_${mode}`),
   // One row per element type in the bar's flyout, and the same word again as the outliner's
   // fallback title for an element its author has not named — the commonest state of a new one.
   ...UI_ELEMENT_TYPES.map(type => `guiTools.types.${type}`),

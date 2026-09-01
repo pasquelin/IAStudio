@@ -361,6 +361,13 @@ describe('resizeCanvas against resizeImage', () => {
     expect(layerById(after, 'a')?.transform.x).toBe(10)
   })
 
+  // A size field commits on every blur, and a scrub that came back is one of those.
+  it('refuses the size the document already has, unless the frame moves', () => {
+    expect(resizeCanvas(1024, 1024, { x: 0, y: 0 }).refuses?.(DEFAULT_CANVAS)).toBe(true)
+    expect(resizeCanvas(1024, 1024, { x: 4, y: 0 }).refuses?.(DEFAULT_CANVAS)).toBe(false)
+    expect(resizeImage(1024, 1024).refuses?.(DEFAULT_CANVAS)).toBe(true)
+  })
+
   it('scales the layers with the frame', () => {
     const [after] = roundTrip({ ...stack('a'), width: 100, height: 100 }, resizeImage(200, 50))
 

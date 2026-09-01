@@ -1,7 +1,7 @@
 import type { AdjustmentStack } from '@shared/domain/adjustments'
 import type { BlendMode } from '@shared/domain/canvasBlend'
 import { clamp } from '@shared/numeric'
-import type { Command } from '../core/history'
+import { replaceField, type Command } from '../core/history'
 import type { Point, Size } from '../core/geometry'
 import { anchoredAt, applyTo, layerMatrix } from './layerSpace'
 import {
@@ -20,7 +20,9 @@ import {
   sided,
   updateSiblings,
   wholeBox,
+  type BitDepth,
   type CanvasState,
+  type ColorMode,
   type Guide,
   type Layer,
   type LayerLocks,
@@ -450,16 +452,7 @@ export function removeGuide(id: string): Command<CanvasState> {
 }
 
 export function clearGuides(): Command<CanvasState> {
-  let previous: readonly Guide[] = []
-
-  return {
-    id: 'guide:clear',
-    apply: state => {
-      previous = state.guides
-      return { ...state, guides: [] }
-    },
-    revert: state => ({ ...state, guides: [...previous] }),
-  }
+  return replaceField('guide:clear', 'guides', () => [])
 }
 
 /**
@@ -673,34 +666,50 @@ export function resizeCanvas(
   height: number,
   offset: { x: number; y: number },
 ): Command<CanvasState> {
-  return restructure('canvas:resize', state => ({
-    ...state,
-    width: sided(width),
-    height: sided(height),
-    layers: moveLayers(state, transform => ({
-      ...transform,
-      x: transform.x + offset.x,
-      y: transform.y + offset.y,
-    })),
-  }))
+  return restructure(
+    'canvas:resize',
+    state => ({
+      ...state,
+      width: sided(width),
+      height: sided(height),
+      layers: moveLayers(state, transform => ({
+        ...transform,
+        x: transform.x + offset.x,
+        y: transform.y + offset.y,
+      })),
+    }),
+    state => sameSize(state, width, height) && offset.x === 0 && offset.y === 0,
+  )
+}
+
+function sameSize(state: CanvasState, width: number, height: number): boolean {
+  return state.width === sided(width) && state.height === sided(height)
+}
+
+/** A scalar of the document, and a same value refused: a field writes on every blur. */
+function documentField<K extends keyof CanvasState>(
+  commandId: string,
+  name: K,
+  value: CanvasState[K],
+): Command<CanvasState> {
+  return { ...replaceField(commandId, name, () => value), refuses: state => state[name] === value }
 }
 
 /** Puts the document on a pixel grid, or takes it off one — see `CanvasState.pixelCell`. */
 export function setPixelCell(cell: number | null): Command<CanvasState> {
-  const wanted = pixelCellOf(cell)
-  let previous: number | null = null
+  return documentField('canvas:pixelCell', 'pixelCell', pixelCellOf(cell))
+}
 
-  return {
-    id: 'canvas:pixelCell',
-    apply: state => {
-      previous = state.pixelCell
-      return { ...state, pixelCell: wanted }
-    },
-    // The field alone, never a snapshot of the state: arming a layer and folding a group both
-    // write outside the history, and a snapshot would take those back too.
-    revert: state => ({ ...state, pixelCell: previous }),
-    refuses: state => state.pixelCell === wanted,
-  }
+export function setCanvasDpi(dpi: number): Command<CanvasState> {
+  return documentField('canvas:dpi', 'dpi', sided(dpi))
+}
+
+export function setCanvasColorMode(mode: ColorMode): Command<CanvasState> {
+  return documentField('canvas:colorMode', 'colorMode', mode)
+}
+
+export function setCanvasBitDepth(depth: BitDepth): Command<CanvasState> {
+  return documentField('canvas:bitDepth', 'bitDepth', depth)
 }
 
 /**
@@ -715,21 +724,25 @@ export function setPixelCell(cell: number | null): Command<CanvasState> {
  * layer, where the true map is not a scale at all but a shear the transform cannot hold.
  */
 export function resizeImage(width: number, height: number): Command<CanvasState> {
-  return restructure('canvas:resample', state => {
-    const scaleX = sided(width) / state.width
-    const scaleY = sided(height) / state.height
+  return restructure(
+    'canvas:resample',
+    state => {
+      const scaleX = sided(width) / state.width
+      const scaleY = sided(height) / state.height
 
-    return remapped(
-      state,
-      { width: sided(width), height: sided(height) },
-      point => ({ x: point.x * scaleX, y: point.y * scaleY }),
-      transform => ({
-        ...transform,
-        scaleX: transform.scaleX * scaleX,
-        scaleY: transform.scaleY * scaleY,
-      }),
-    )
-  })
+      return remapped(
+        state,
+        { width: sided(width), height: sided(height) },
+        point => ({ x: point.x * scaleX, y: point.y * scaleY }),
+        transform => ({
+          ...transform,
+          scaleX: transform.scaleX * scaleX,
+          scaleY: transform.scaleY * scaleY,
+        }),
+      )
+    },
+    state => sameSize(state, width, height),
+  )
 }
 
 export type FlipAxis = 'horizontal' | 'vertical'

@@ -271,6 +271,9 @@ describe('the translation bundles', () => {
       'materialExportTargets.unreal',
       // A console, and consoles keep their name. `preset_psx` reads as one word to `wordsOf`.
       'postfx.preset_gameBoy',
+      // The name of a genre, and it is the same two words in French. Translating it would
+      // invent a term nobody who draws sprites uses.
+      'inspector.pixelArt',
     ])
 
     const copied = [...BUNDLES.fr]

@@ -156,9 +156,12 @@ const NOT_PUBLISHED: readonly string[] = [
   // one entry keeps the last apply. An action names the transform whole and goes through
   // `setLayerTransform` — a second door onto the same edit is an edit published twice.
   'translateLayer',
-  // Nothing calls it yet: the inspector's document face is what will write the grid, and
-  // `canvas.setPixelArt` the door a client comes through. The rule below drops this line then.
+  // The inspector's document face is their one door: `canvas.resize` is what a call asks for,
+  // and it names neither a grid, a density nor a depth. `canvas.setPixelArt` drops the first.
   'setPixelCell',
+  'setCanvasDpi',
+  'setCanvasColorMode',
+  'setCanvasBitDepth',
   // The grip's half of the pair `layer.editTextLayer` and `layer.transform` already publish: it writes a
   // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
   // A call names them one after the other and pays two undos, which no hand can do.

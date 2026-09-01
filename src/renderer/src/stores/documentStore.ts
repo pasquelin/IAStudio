@@ -209,10 +209,15 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
       runCommand: (documentId, command) => {
         // `undefined` outside a gesture, `null` before its first command: neither is an id.
         const merging = gestures.get(documentId) === command.id
+        const before = historyOf(get(), documentId)
         step(documentId, (state, history) =>
           merging ? runCoalescing(state, history, command) : run(state, history, command),
         )
-        if (gestures.has(documentId)) gestures.set(documentId, command.id)
+        // A refused command pushed nothing, so it is not the gesture's either: recorded, it
+        // would let the next one merge into an entry pushed BEFORE the gesture under the same id.
+        if (gestures.has(documentId) && historyOf(get(), documentId) !== before) {
+          gestures.set(documentId, command.id)
+        }
       },
 
       runOutsideGesture: (documentId, command) =>

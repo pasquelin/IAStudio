@@ -338,6 +338,20 @@
     "modelDressOpenMaterialHint": "L’ouvre dans l’espace Matières — le modèle suit ce qui y sera édité",
     "modelDressMissingMaterial": "Matière introuvable",
     "modelDressClearMaterial": "Retirer la matière",
-    "modelDressClearMaterialHint": "Cet emplacement reprend la matière du fichier — le document reste dans le projet"
+    "modelDressClearMaterialHint": "Cet emplacement reprend la matière du fichier — le document reste dans le projet",
+    "document": "Document",
+    "resample": "Rééchantillonner",
+    "dpi": "Densité (ppp)",
+    "colorMode": "Mode colorimétrique",
+    "colorMode_rgb": "RVB",
+    "colorMode_grayscale": "Niveaux de gris",
+    "bitDepth": "Profondeur de bits",
+    "bitDepthBits": "{{count, number}} bits",
+    "pixelArt": "Pixel art",
+    "pixelArtMode": "Mode pixel art",
+    "artResolution": "Résolution (cellules)",
+    "artColumns": "Colonnes",
+    "artRows": "Lignes",
+    "pixelSize": "Taille du pixel"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellsOfLine, cellsSpanning, gridIsLegible, stampRect } from './pixelGrid'
+import { cellFor, cellsOfLine, cellsSpanning, gridIsLegible, stampRect } from './pixelGrid'
 
 describe('stampRect', () => {
   it('gives one rectangle for every point inside the same cell', () => {
@@ -61,6 +61,18 @@ describe('cellsSpanning', () => {
   it('counts a partial last column in, since it is still a cell one can paint', () => {
     expect(cellsSpanning(1024, 16)).toBe(64)
     expect(cellsSpanning(1000, 16)).toBe(63)
+  })
+})
+
+describe('cellFor', () => {
+  it('is the inverse of cellsSpanning, whatever the document measures', () => {
+    expect(cellFor(1024, 64)).toBe(16)
+    expect(cellFor(64, 64)).toBe(1)
+    expect(cellsSpanning(1024, cellFor(1024, 64))).toBe(64)
+  })
+
+  it('never asks for a cell of nothing, however many are wanted', () => {
+    expect(cellFor(64, 4096)).toBe(1)
   })
 })
 

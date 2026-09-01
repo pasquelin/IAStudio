@@ -312,8 +312,10 @@ export const WHITE = 0xffffff
 
 export type ColorMode = 'rgb' | 'grayscale'
 
-const COLOR_MODES: readonly ColorMode[] = ['rgb', 'grayscale']
+export const COLOR_MODES: readonly ColorMode[] = ['rgb', 'grayscale']
 export type BitDepth = 8 | 16 | 32
+
+export const BIT_DEPTHS: readonly BitDepth[] = [8, 16, 32]
 
 export type CanvasState = {
   width: number
@@ -733,7 +735,7 @@ export function deserializeCanvas(raw: string): CanvasState {
       height: typeof source.height === 'number' ? source.height : DEFAULT_CANVAS.height,
       dpi: typeof source.dpi === 'number' ? source.dpi : DEFAULT_CANVAS.dpi,
       colorMode: oneOf(COLOR_MODES, source.colorMode, 'rgb'),
-      bitDepth: source.bitDepth === 16 || source.bitDepth === 32 ? source.bitDepth : 8,
+      bitDepth: oneOf(BIT_DEPTHS, source.bitDepth, 8),
       pixelCell: pixelCellOf(source.pixelCell),
       layers,
       // An id naming no layer would leave the document unpaintable, with no way back.
