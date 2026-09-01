@@ -138,26 +138,36 @@ function readState(): ActionOutcome {
       selectedId: open.state.selectedId,
       selectedTrackId: open.state.selectedTrackId,
       duration: sequenceDuration(open.state),
+      /**
+       * 🛑 A value AT ITS DEFAULT is left out, and absent reads as that default — a row is not
+       * muted, a clip runs at speed 1 with no fade and no gain. `resultLine` cuts by whole
+       * members, and `tracks` is the only one carrying a clip id, a start or a duration: a
+       * montage of two clips ran to 981 characters and came back `(cut short: tracks)`, so the
+       * model could not see one clip of the edit it was working on — measured 2026-09-01.
+       */
       tracks: open.state.tracks.map(track => ({
         id: track.id,
         kind: track.kind,
-        name: track.name,
+        // The name only where it says something the id does not — a row is called `V1` by both.
+        ...(track.name === track.id ? {} : { name: track.name }),
         index: track.index,
-        muted: track.muted,
-        solo: track.solo,
-        locked: track.locked,
+        ...(track.muted ? { muted: true } : {}),
+        ...(track.solo ? { solo: true } : {}),
+        ...(track.locked ? { locked: true } : {}),
         clips: track.clips.map(clip => ({
           id: clip.id,
           assetId: clip.assetId,
           ...(clip.sceneId === undefined ? {} : { sceneId: clip.sceneId }),
           start: clip.start,
           duration: clip.duration,
+          // Kept though it is start + duration: « juste après le premier » is answered from it,
+          // and a model that has to add two microsecond counts gets it wrong.
           end: clipEnd(clip),
-          inPoint: clip.inPoint,
-          speed: clip.speed,
-          fadeIn: clip.fadeIn,
-          fadeOut: clip.fadeOut,
-          gain: clip.gain,
+          ...(clip.inPoint === 0 ? {} : { inPoint: clip.inPoint }),
+          ...(clip.speed === 1 ? {} : { speed: clip.speed }),
+          ...(clip.fadeIn === 0 ? {} : { fadeIn: clip.fadeIn }),
+          ...(clip.fadeOut === 0 ? {} : { fadeOut: clip.fadeOut }),
+          ...(clip.gain === 0 ? {} : { gain: clip.gain }),
           ...(clip.linkId === undefined ? {} : { linkId: clip.linkId }),
         })),
       })),
