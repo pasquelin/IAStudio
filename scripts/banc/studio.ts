@@ -51,7 +51,7 @@ import {
 import { holdCanvas } from '@/features/image/canvasHosts'
 import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
 import { runAudioCommand } from '@/features/audio/components/audioCommands'
-import { runGuiCommand } from '@/features/gui/components/Gui/Document/guiCommands'
+import { runGuiDocumentCommand } from '@/features/gui/components/Gui/Document/guiDocumentCommands'
 import { runMaterialCommand } from '@/features/material/components/Material/materialCommands'
 import { runSkyboxCommand } from '@/features/skybox/components/Skybox/Document/skyboxCommands'
 import { lendSkyboxExportPort } from '@/features/skybox/components/Skybox/Document/skyboxExportFiles'
@@ -82,7 +82,7 @@ type ScopeRunner = (documentId: string, command: CommandId) => boolean
 /** The scopes a headless run can answer, each by the function its own tab calls. */
 const SCOPE_RUNNERS = new Map<CommandScope, ScopeRunner>([
   ['scene', runSceneCommand],
-  ['gui', runGuiCommand],
+  ['gui', runGuiDocumentCommand],
   ['skybox', runSkyboxCommand],
   ['material', runMaterialCommand],
   ['audio', runAudioCommand],
