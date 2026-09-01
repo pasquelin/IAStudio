@@ -595,7 +595,7 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no field named parent is no parent, no transform is standing at the origin unturned and unscaled, no colour is the studio’s own."
+        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",

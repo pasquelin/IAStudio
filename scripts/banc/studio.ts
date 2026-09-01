@@ -51,7 +51,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/features/scene/components/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
 import { createBenchMemory } from './memoryStore'
-import { createMemoryCatalog } from './memoryCatalog'
+import { createMemoryCatalog, type MemoryCatalog } from './memoryCatalog'
 import { DOCUMENT_SOURCES, WHEN } from './project'
 import { createMemoryCloud } from './memoryCloud'
 import { createMemoryFiles } from './memoryFiles'
@@ -155,6 +155,21 @@ function freePath(disk: MemoryFolder, into: string, stem: string, extension: str
  * died in `generator.submit` on « reading 'normalize' », measured 2026-09-01.
  */
 const speakFrench = (): Promise<void> => initI18n(DEFAULT_LANGUAGE)
+
+/**
+ * The pictures an extraction stands in for: what the project holds under Materials.
+ *
+ * 🛑 ALL of them, and the base-colour ones are not told apart — `memoryCatalog` files no `map`,
+ * so nothing here says which channel a picture is. A decor that needs that distinction has to
+ * give the catalogue the field first.
+ */
+const texturesOfTheProject = (catalog: MemoryCatalog): readonly Asset[] =>
+  catalog
+    .rows()
+    .filter(
+      one =>
+        one.type === 'image' && (one.path ?? '').startsWith(`${DEFAULT_ROLE_PATHS.materials}/`),
+    )
 
 export async function createStudio(
   seed: readonly { path: string; kind: FileKind }[],
@@ -292,24 +307,25 @@ export async function createStudio(
         const held = await catalog.find(assetId)
         if (!held || held.type !== 'mesh') throw new Error(`asset ${assetId} is not a mesh`)
 
-        const taken = catalog
-          .rows()
-          .filter(
-            one =>
-              one.type === 'image' &&
-              (one.path ?? '').startsWith(`${DEFAULT_ROLE_PATHS.materials}/`) &&
-              (one.map === undefined || one.map === 'baseColor'),
-          )
+        // 🛑 Idempotent, as `textureExtraction.ts` is: it short-circuits on what it already filed,
+        // « without that, the two paths would double », and a model may repeat this call.
+        const already = catalog.rows().filter(one => one.derivedFrom === assetId)
+        if (already.length > 0) return already
 
         const filed: Asset[] = []
-        for (const one of taken) {
-          const path = freePath(folder, DEFAULT_ROLE_PATHS.image, nameOf(one.path ?? ''), '')
+        for (const one of texturesOfTheProject(catalog)) {
+          const path = freePath(
+            folder,
+            DEFAULT_ROLE_PATHS.image,
+            stemOf(nameOf(one.path ?? '')),
+            '.png',
+          )
           await folder.write(path)
           filed.push(
             await catalog.add({
               ...one,
               id: `texture-${path}`,
-              name: nameOf(path),
+              name: stemOf(nameOf(path)),
               path,
               derivedFrom: assetId,
             }),

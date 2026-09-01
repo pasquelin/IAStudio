@@ -75,8 +75,8 @@ describe('reading the scene in front', () => {
     // The part that MOVED and it alone: an unturned rotation and an unscaled scale stay out.
     expect(node?.transform).toEqual({ position: { x: 2, y: 0, z: 0 } })
     // A colour and seven map slots, all `null` on a fresh mesh — 145 characters of "no texture".
-    expect(node?.material).not.toHaveProperty('color')
-    expect(node?.material).toMatchObject({ kind: 'standard' })
+    // Nothing left to say, so the member goes too: `material: {}` says only what absence says.
+    expect(node).not.toHaveProperty('material')
   })
 
   it('answers the flat list of nodes, with what each one carries', async () => {
