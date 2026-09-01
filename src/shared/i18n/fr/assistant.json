@@ -939,7 +939,7 @@
       },
       "nodeMarkAsCuttingTool": {
         "title": "Marquer des objets comme outils",
-        "description": "Marque des objets de la scène devant, ou retire la marque : un objet marqué est CREUSÉ dans les autres au pli suivant, quel que soit le pli demandé et quel que soit l’ordre des identifiants. Sans marque, la plus grosse forme est la matière."
+        "description": "Marque des objets de la scène devant, ou la retire avec « negative » à FAUX : un objet marqué est CREUSÉ dans les autres au pli suivant, quel que soit le pli demandé et quel que soit l’ordre des identifiants. Sans marque, la plus grosse forme est la matière."
       },
       "nodeCombineIntoSolid": {
         "title": "Percer, fusionner ou croiser des objets",
@@ -1303,7 +1303,7 @@
       "nodeId": "Identifiant de l’objet",
       "nodeIds": "Identifiants des objets",
       "matterId": "Identifiant de la forme à creuser",
-      "negative": "Marquer, ou retirer la marque",
+      "negative": "Vrai marque l’objet comme outil de découpe, faux retire la marque",
       "nodeKind": "Ce qu’il faut ajouter",
       "relative": "À vrai, les valeurs sont des ÉCARTS et non des valeurs finales : position et rotation s’AJOUTENT à ce qui est là, échelle et intensité le MULTIPLIENT. Un mètre plus haut s’écrit positionY 1 avec relative vrai ; de moitié s’écrit scaleX 0,5 avec relative vrai",
       "positionX": "Position en largeur",
@@ -1441,7 +1441,7 @@
       "postValue": "Valeur numérique du paramètre",
       "postText": "Valeur textuelle du paramètre — un mot d’une liste, une couleur, un identifiant d’asset",
       "postOn": "Valeur d’un paramètre qui est un interrupteur",
-      "postEnabled": "Actif ou non",
+      "postEnabled": "Vrai allume toute la composition, faux l’éteint",
       "postPreset": "Préréglage à appliquer",
       "postMode": "Ce que la caméra fait de la composition de la scène",
       "postPresetName": "Nom à donner au préréglage",

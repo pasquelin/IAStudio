@@ -939,7 +939,7 @@
       },
       "nodeMarkAsCuttingTool": {
         "title": "Mark objects as tools",
-        "description": "Marks objects of the scene in front, or takes the mark off: a marked object is CUT OUT of the others at the next fold, whichever fold is asked for and whatever the order of the ids. With no mark, the biggest shape is the matter."
+        "description": "Marks objects of the scene in front, or takes the mark off with “negative” FALSE: a marked object is CUT OUT of the others at the next fold, whichever fold is asked for and whatever the order of the ids. With no mark, the biggest shape is the matter."
       },
       "nodeCombineIntoSolid": {
         "title": "Carve, join or intersect objects",
@@ -1303,7 +1303,7 @@
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
       "matterId": "Identifier of the shape to be carved",
-      "negative": "Mark, or take the mark off",
+      "negative": "True marks it as a cutting tool, false takes the mark off",
       "nodeKind": "What to add",
       "relative": "Set true to give CHANGES rather than final values: position and rotation are ADDED to what stands, scale and intensity MULTIPLY it. One metre up is positionY 1 with relative true; half is scaleX 0.5 with relative true",
       "positionX": "Position in width",
@@ -1441,7 +1441,7 @@
       "postValue": "Numeric value of the parameter",
       "postText": "Textual value of the parameter — a word from a list, a colour, an asset id",
       "postOn": "Value of a parameter that is a switch",
-      "postEnabled": "On or off",
+      "postEnabled": "True switches the whole composition on, false off",
       "postPreset": "Preset to apply",
       "postMode": "What the camera does with the scene’s composition",
       "postPresetName": "Name to give the preset",
