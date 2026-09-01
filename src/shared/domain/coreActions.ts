@@ -43,7 +43,13 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.commandRunStudioCommand.title',
     descriptionKey: 'assistant.actions.commandRunStudioCommand.description',
     commitment: 'none',
-    repeatable: true,
+    /**
+     * 🛑 A command answers `ok` and NOTHING of what it did, so a model with no way to confirm sends
+     * it again: « duplique-le » ran `scene.duplicate` three times and left four cubes where two
+     * were asked for. `alreadySettled` refuses the second identical one of a turn, and says the
+     * first has already happened — a command meant twice is two turns, or two different ids.
+     */
+    repeatable: false,
     raises: input =>
       typeof input.command === 'string' ? commitmentOfCommand(input.command) : 'none',
     reach: 'both',

@@ -179,6 +179,9 @@ describe('what a second identical call can bring', () => {
       'channel.setMuteSoloLock',
       'chat.close',
       'clip.select',
+      // 🛑 A command answers `ok` and nothing of what it did: « duplique-le » ran
+      // `scene.duplicate` three times and left four cubes where two were asked for.
+      'command.runStudioCommand',
       'dictation.start',
       'dictation.stop',
       'document.activate',
