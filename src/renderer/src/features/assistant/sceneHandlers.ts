@@ -377,8 +377,9 @@ function readState(): ActionOutcome {
     ok: true,
     data: {
       /**
-       * 🛑 The ID-BEARING members first: `resultLine` gives each over-long list what room is
-       * left when it reaches it, so a member early in this object is one a busy scene still gets.
+       * 🛑 The ID-BEARING members first, and `tracks` ahead of `nodes`: a list that holds nothing
+       * is left out entirely, so a scene with no animation gives `nodes` the whole budget, while
+       * an animated one spends it on the bands — where `target.nodeId` names the object anyway.
        * Raising the ceiling instead moved the bench score by nothing at all, twice — the figures
        * are in `conversation.ts`. What made a scene readable was making the ANSWER smaller.
        */
@@ -399,32 +400,22 @@ function readState(): ActionOutcome {
       ...cuesLaid(open.state.animation),
       // The whole world and not its environment alone: the fog, the backdrop, the ground and the
       // grading are document values, and a client that can write them has to be able to read them.
-      world: apartFrom(open.state.world, DEFAULT_WORLD),
-      // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
-      // writes, and a ten-second take at every frame is a megabyte of it across the boundary.
       ...someOrNone(
         'tracks',
         open.state.animation.tracks.map(track => ({
           id: track.id,
           name: track.name,
           index: track.index,
-          muted: track.muted,
-          solo: track.solo,
-          locked: track.locked,
+          // At their default, left out like everything else here: a band is heard, alone with the
+          // others, and unlocked. Three of them cost 47 characters a track, and a two-track scene
+          // answered ONE — « supprime uniquement l'animation de rotation » never saw the other.
+          ...(track.muted ? { muted: true } : {}),
+          ...(track.solo ? { solo: true } : {}),
+          ...(track.locked ? { locked: true } : {}),
           target: track.target,
           keys: track.keys.map(key => key.time),
         })),
       ),
-      /**
-       * The flat list the state itself holds — the tree is derived from `parentId`, and handing
-       * one over would be a second shape of the same thing for a client to walk.
-       *
-       * 🛑 A value AT ITS DEFAULT is left out, and absent reads as that default: no parent, drawn,
-       * standing at the origin unturned and unscaled. `resultLine` cuts by whole members and this
-       * is the last one, so a scene of three objects came back `(cut short: nodes)` — the model
-       * could not name ONE object of the scene it was editing, measured 2026-09-01. An identity
-       * transform alone cost 118 characters a node.
-       */
       nodes: mostWanted(open.state.nodes, open.state.selectedIds).map(node => ({
         id: node.id,
         name: node.name,
@@ -455,6 +446,19 @@ function readState(): ActionOutcome {
             }
           : {}),
       })),
+      world: apartFrom(open.state.world, DEFAULT_WORLD),
+      // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
+      // writes, and a ten-second take at every frame is a megabyte of it across the boundary.
+      /**
+       * The flat list the state itself holds — the tree is derived from `parentId`, and handing
+       * one over would be a second shape of the same thing for a client to walk.
+       *
+       * 🛑 A value AT ITS DEFAULT is left out, and absent reads as that default: no parent, drawn,
+       * standing at the origin unturned and unscaled. `resultLine` cuts by whole members and this
+       * is the last one, so a scene of three objects came back `(cut short: nodes)` — the model
+       * could not name ONE object of the scene it was editing, measured 2026-09-01. An identity
+       * transform alone cost 118 characters a node.
+       */
     },
   }
 }
