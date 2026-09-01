@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '@/helpers/cn'
 import { withoutTip, type TooltipFactory } from '@/helpers/tooltip'
-import { BUTTON_BASE } from './styles'
+import { BUTTON_BASE, TONE_TEXT, type StatusTone } from './styles'
 import { UiIcon } from './UiIcon'
 
 /**
@@ -56,6 +56,11 @@ export type ToolButtonProps = Omit<
   told?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
+  /**
+   * What pressing this button MEANS, in the ink `StatusTone` publishes. 🛑 Dropped while the
+   * button is inert: a disabled control still wearing its colour reads as available.
+   */
+  tone?: StatusTone
   /** Which host the button sits on — see `HOSTS` for what each one costs. */
   variant?: keyof typeof HOSTS
   iconSize?: number
@@ -80,7 +85,9 @@ export function ToolButton({
   acts,
   told,
   accented,
+  tone,
   variant = 'bar',
+  disabled,
   className,
   iconSize,
   children,
@@ -95,6 +102,7 @@ export function ToolButton({
       type="button"
       ref={ref}
       aria-pressed={acts ? undefined : (told ?? active)}
+      disabled={disabled}
       className={cn(
         BUTTON_BASE,
         // A glyph beside words needs the space a square button never did: the journal's filters
@@ -102,7 +110,10 @@ export function ToolButton({
         icon !== undefined && children !== undefined && 'gap-1.5',
         'text-muted shrink-0 bg-transparent',
         HOSTS[variant].box,
-        'hover:bg-elevated hover:text-text',
+        'hover:bg-elevated',
+        // The tone survives the pointer: a Play that stops being green under the hand is a
+        // button whose colour answered the pointer instead of the state.
+        tone && !disabled ? TONE_TEXT[tone] : 'hover:text-text',
         active && 'bg-elevated text-text',
         accented && 'bg-accent hover:bg-accent text-accent-content',
         className,

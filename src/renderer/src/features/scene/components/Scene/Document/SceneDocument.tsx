@@ -59,7 +59,6 @@ import { nextDisplayMode } from '@/engines/scene/sceneView'
 import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneStats'
 import { CameraPreview } from '../../Camera/CameraPreview'
-import { PlayBar } from '../../PlayBar'
 import { SceneCounters } from '../SceneCounters'
 import { SceneNavigationHint } from '../SceneNavigationHint'
 import { openSceneAddMenu } from './sceneAddMenu'
@@ -675,13 +674,13 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       <div ref={host} tabIndex={-1} className="absolute inset-0 outline-none" />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
-      {/* The host div, not the canvas: the renderer makes its own canvas inside it, and a game
-          started before the first frame would read its keys off an element that is not there. */}
-      <PlayBar documentId={documentId} viewport={() => host.current} />
       <SceneSnapBar
         documentId={documentId}
         speed={flySpeed}
         onSpeed={speed => engine.current?.setFlySpeed(speed)}
+        // The host div, not the canvas: the renderer makes its own canvas inside it, and a game
+        // started before the first frame would read its keys off an element that is not there.
+        viewport={() => host.current}
       />
       {armed && <SceneNavigationHint speed={flySpeed} />}
       <CameraPreview documentId={documentId} />

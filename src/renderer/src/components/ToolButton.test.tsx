@@ -19,6 +19,20 @@ describe('ToolButton', () => {
     expect(screen.getByRole('button', { name: 'Brush' })).toHaveAttribute('data-tooltip-id')
   })
 
+  /**
+   * 🛑 The tone goes with the button being pressable. A disabled control still wearing its
+   * colour reads as available — and the scene transport's whole reading is « the coloured one
+   * is the one to press », Stop staying inert until there is a game to end.
+   */
+  it('paints the tone it is given, and drops it while inert', () => {
+    const { unmount } = render(<ToolButton label="Play" tone="success" tooltip={TIP_TOP} />)
+    expect(screen.getByRole('button', { name: 'Play' })).toHaveClass('text-success')
+    unmount()
+
+    render(<ToolButton label="Stop" tone="danger" disabled tooltip={TIP_TOP} />)
+    expect(screen.getByRole('button', { name: 'Stop' })).not.toHaveClass('text-danger')
+  })
+
   it('exposes its active state to assistive technologies', () => {
     render(<ToolButton label="Select" active tooltip={TIP_TOP} />)
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('aria-pressed', 'true')
