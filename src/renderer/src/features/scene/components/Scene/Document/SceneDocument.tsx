@@ -678,9 +678,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         documentId={documentId}
         speed={flySpeed}
         onSpeed={speed => engine.current?.setFlySpeed(speed)}
-        // The host div, not the canvas: the renderer makes its own canvas inside it, and a game
-        // started before the first frame would read its keys off an element that is not there.
-        viewport={() => host.current}
       />
       {armed && <SceneNavigationHint speed={flySpeed} />}
       <CameraPreview documentId={documentId} />

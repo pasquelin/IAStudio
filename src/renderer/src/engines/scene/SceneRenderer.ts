@@ -228,6 +228,12 @@ export type SceneRendererOptions = {
   onSelect: (ids: readonly string[], mode: SelectionMode) => void
   onTransform: (moves: readonly NodeMove[]) => void
   /**
+   * The editor's own furniture — trihedron, camera bodies and frustums, light helpers, rails.
+   * `false` draws none of it: a window that PLAYS a scene shows the game, and the tools it was
+   * built with are the studio talking over it.
+   */
+  chrome?: boolean
+  /**
    * What clips a model brought, once its file has landed. React cannot ask the cache: the names
    * live in the file, not in the document, and a panel offering a choice has to know them.
    */
@@ -1006,6 +1012,9 @@ export class SceneRenderer {
    */
   private showAidsForSelection(): void {
     const selected = new Set(this.selectedIds)
+    // A window that plays the scene shows none of them, whatever the settings say — the same cut
+    // `hideWorkshop` makes for a render, held for the life of the engine rather than one draw.
+    const chrome = this.options.chrome !== false
     // An aid stands BESIDE its node rather than under it, so it inherits nothing: a lamp the
     // document hides, or one an isolation excludes, would go on drawing its line across the
     // scene without this. `selected` stays the default and the paragraph above says why.
@@ -1017,16 +1026,24 @@ export class SceneRenderer {
       const camera = this.objects.get(id)
       if (node?.type !== 'camera' || !(camera instanceof PerspectiveCamera)) continue
       applyCamera(camera, node.camera, FRUSTUM_REACH)
-      frustum.visible = shows(this.view.cameraHelpers, id)
+      frustum.visible = chrome && shows(this.view.cameraHelpers, id)
     }
 
-    for (const [id, helper] of this.helpers) helper.visible = shows(this.view.lightHelpers, id)
+    for (const [id, helper] of this.helpers) {
+      helper.visible = chrome && shows(this.view.lightHelpers, id)
+    }
+
+    // The body of a camera and the bulb of a lamp stand where the thing they draw stands, so a
+    // game would be played looking at the marker somebody put there to find the light by.
+    if (!chrome) for (const marker of this.markers.values()) marker.visible = false
 
     const rails = this.workedRailIds()
     for (const [id, node] of this.applied) {
       if (node.type !== 'path') continue
       const rail = this.objects.get(id)
-      if (rail) showPathKnobs(rail, rails.has(id))
+      if (!rail) continue
+      if (!chrome) rail.visible = false
+      showPathKnobs(rail, chrome && rails.has(id))
     }
   }
 
@@ -1656,7 +1673,7 @@ export class SceneRenderer {
    * the camera it holds is not part of its published surface. */
   private buildViewHelper(): void {
     const canvas = this.viewport.canvas
-    if (!canvas) return
+    if (!canvas || this.options.chrome === false) return
 
     this.viewHelper?.dispose()
     const helper = new ViewHelper(this.viewport.camera, canvas)

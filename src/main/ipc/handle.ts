@@ -229,6 +229,8 @@ type ChannelMethod = {
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
 
   [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
+  [CHANNELS.gameWindowOpen]: StudioBridge['gameWindow']['open']
+  [CHANNELS.gameWindowClose]: StudioBridge['gameWindow']['close']
 
   [CHANNELS.helpOpen]: StudioBridge['help']['open']
 

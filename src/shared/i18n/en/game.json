@@ -52,6 +52,22 @@
       "speed": "Speed",
       "stepHeight": "Step"
     },
+    "play": {
+      "faults_many": "{{count, number}} errors",
+      "faults_one": "{{count, number}} error",
+      "faults_other": "{{count, number}} errors",
+      "objects_many": "{{count, number}} objects",
+      "objects_one": "{{count, number}} object",
+      "objects_other": "{{count, number}} objects",
+      "pause": "Pause",
+      "pauseHint": "Freezes the game where it stands",
+      "readout": "{{fps}} fps · step {{tick}}",
+      "start": "Run",
+      "startHint": "Plays the scene as a game, without touching the document",
+      "stop": "Stop",
+      "stopHint": "Throws the game away and puts the scene back as it was",
+      "openFault": "Opens the script at the line of the fault"
+    },
     "section": {
       "title": "Components",
       "add": "Add a component",
@@ -78,21 +94,12 @@
       "y": "Y",
       "z": "Z"
     },
-    "play": {
-      "faults_many": "{{count, number}} errors",
-      "faults_one": "{{count, number}} error",
-      "faults_other": "{{count, number}} errors",
-      "objects_many": "{{count, number}} objects",
-      "objects_one": "{{count, number}} object",
-      "objects_other": "{{count, number}} objects",
-      "pause": "Pause",
-      "pauseHint": "Freezes the game where it stands",
-      "readout": "{{fps}} fps · step {{tick}}",
-      "start": "Run",
-      "startHint": "Plays the scene as a game, without touching the document",
-      "stop": "Stop",
-      "stopHint": "Throws the game away and puts the scene back as it was",
-      "openFault": "Opens the script at the line of the fault"
+    "window": {
+      "debug": "Debug",
+      "debugHint": "What the game says about itself: objects, frames per second, steps, faults",
+      "noFaults": "No faults",
+      "title": "Play mode",
+      "waiting": "Waiting for the studio…"
     }
   }
 }

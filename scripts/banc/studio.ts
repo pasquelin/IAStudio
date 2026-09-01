@@ -24,6 +24,7 @@ import { standInForWorkers } from './codeWorker'
 import { drawing } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
+import { createGameStage } from '@/game/gameStage'
 import { lendPictureMeasure } from '@/features/image/pictureSize'
 import {
   forgetDocumentHistoriesForTests,
@@ -439,7 +440,19 @@ export async function createStudio(
     }
   }
 
+  /**
+   * 🛑 The second SURFACE a headless run has not got: a game runs in a WINDOW of its own, and
+   * there is none to open here. What stands in is the very stage that window mounts, on the same
+   * channel and against the same stub renderer — so the protocol a Play speaks is measured, not
+   * replaced. A `fake*` studio is what this dodges: nothing of `play.ts` is re-implemented.
+   */
+  const followTheGameWindow = (): (() => void) => {
+    const stage = createGameStage({ renderer: drawing(), input: new EventTarget() })
+    return () => stage.close()
+  }
+
   const leaveTheDock = followTheDock()
+  const leaveTheGameWindow = followTheGameWindow()
   const leaveTheCommandBus = followTheCommandBus()
   const leaveTheViewport = followTheViewport()
   const leaveTheWorkers = standInForWorkers()
@@ -531,6 +544,7 @@ export async function createStudio(
       leaveTheDock()
       leaveTheCommandBus()
       leaveTheViewport()
+      leaveTheGameWindow()
       leaveTheWorkers()
       // The database and the temporary file of this run's memory, which nothing else closes.
       memory.close()

@@ -332,6 +332,11 @@ export type Channels = {
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 
+  /** Opens the game window, or reveals the one already open. See `GAME_ROUTE`. */
+  gameWindowOpen: 'game:open-window'
+  /** Closes it. What a Stop pressed in the studio does — the window is the main process's. */
+  gameWindowClose: 'game:close-window'
+
   /** Opens one of the three windows the Help menu offers, or reveals the one already open. */
   helpOpen: 'help:open'
 
@@ -574,6 +579,8 @@ export const CHANNELS: Channels = {
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
+  gameWindowOpen: 'game:open-window',
+  gameWindowClose: 'game:close-window',
   helpOpen: 'help:open',
 
   menuPopup: 'menu:popup',
@@ -1010,6 +1017,7 @@ export const EVENTS = {
   taskProgress: 'evt:task-progress',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
+  gameWindowClosed: 'evt:game-window-closed',
   activity: 'evt:activity',
 }
 
@@ -2162,6 +2170,20 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * The game window. Same line as `mirror`: what it PLAYS it reads for itself off a channel both
+   * windows share, and the only things this side owns are opening the window and closing it.
+   */
+  gameWindow: {
+    open: () => Promise<void>
+    close: () => Promise<void>
+    /**
+     * The window went away — closed by its own traffic lights, or by anything else the studio did
+     * not ask for. 🛑 The only way the studio learns it: a renderer that is being torn down has no
+     * turn left in which to say so, so the fact belongs to the main process.
+     */
+    onClosed: (callback: () => void) => Unsubscribe
   }
   /**
    * The three windows of the Help menu. Same line as `mirror` above: what each one SHOWS it reads
