@@ -17,24 +17,31 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
   const asked: { action: ActionName; input: Record<string, unknown> }[] = []
   let rounds = 0
 
-  const studio = await createStudio(PROJECT, async request => {
-    rounds += 1
-    const answer = await ask({
-      ...request,
-      state: await studio.state(),
-      context: composedContext(studio.shell.context().cards),
-      /**
-       * 🛑 The COUNT, which is the whole of what a briefing says about the memory — and the bench
-       * never sent it, so `MEMORY_CALL` was printed on no run at all. Told nothing, the model
-       * searched the FILES for what it had learned: « qu'est-ce que tu sais des caméras ? »
-       * answered `files.search query=camera → found 0`, measured 2026-09-01.
-       */
-      memories: studio.memories().filter(one => MEMORY_ANSWERING_STATES.includes(one.state)).length,
-    })
+  const studio = await createStudio(
+    PROJECT,
+    async request => {
+      rounds += 1
+      const answer = await ask({
+        ...request,
+        state: await studio.state(),
+        context: composedContext(studio.shell.context().cards),
+        /**
+         * 🛑 The COUNT, which is the whole of what a briefing says about the memory — and the bench
+         * never sent it, so `MEMORY_CALL` was printed on no run at all. Told nothing, the model
+         * searched the FILES for what it had learned: « qu'est-ce que tu sais des caméras ? »
+         * answered `files.search query=camera → found 0`, measured 2026-09-01.
+         */
+        memories: studio.memories().filter(one => MEMORY_ANSWERING_STATES.includes(one.state))
+          .length,
+      })
 
-    asked.push(...answer.calls.map(one => ({ action: one.action as ActionName, input: one.input })))
-    return answer
-  }, scenario.answers)
+      asked.push(
+        ...answer.calls.map(one => ({ action: one.action as ActionName, input: one.input })),
+      )
+      return answer
+    },
+    scenario.answers,
+  )
 
   await scenario.setup?.(studio)
   // What the decor changed is not what the model changed — see `settle`.
