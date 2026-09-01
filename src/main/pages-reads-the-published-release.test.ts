@@ -45,7 +45,7 @@ describe('the site naming the release that was just published', () => {
    * `/releases/latest`, with no mention of the event.
    */
   it('names the two sources in the same step, not in two workflows', () => {
-    const step = WORKFLOW.slice(WORKFLOW.indexOf('Write the release manifest'))
+    const step = WORKFLOW.slice(WORKFLOW.indexOf('Écrire le manifeste de version'))
     expect(step.slice(0, step.indexOf('- uses:'))).toContain('releases/tags/')
   })
 })
