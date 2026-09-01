@@ -200,7 +200,8 @@ import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import type { CharacterExtras } from '@shared/domain/character'
-import { characterExtrasIn, rigFromObject } from './rigRead'
+import { characterOf } from './rigRead'
+import type { Bounds } from './rigFit'
 import type { GlbSkinAttributes } from './glbSkin'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
@@ -264,7 +265,13 @@ export type SceneRendererOptions = {
    * The skeleton this model's FILE carries, as a document holds one, with what the studio wrote
    * beside it. For the window that edits a character: only the engine ever decodes the file.
    */
-  onCharacter?: (nodeId: string, rig: Rig | null, extras: CharacterExtras | null) => void
+  onCharacter?: (
+    nodeId: string,
+    rig: Rig | null,
+    extras: CharacterExtras | null,
+    /** What the mesh measures, which is what a fit proportions itself off. */
+    bounds: Bounds | null,
+  ) => void
   /**
    * The weights this side just worked out, for whoever writes the file back. Only the engine
    * ever holds both a mesh and a rig, and asking for them again at ⌘S would pay for a million
@@ -3522,9 +3529,8 @@ export class SceneRenderer {
       this.options.onRig?.(node.id, rig)
       // Read off the very object that just landed: the skeleton window edits the FILE, and
       // decoding it a second time to read its bones would pay for a million triangles twice.
-      const carried = rigFromObject(holder)
-      const extras = characterExtrasIn(holder)
-      this.options.onCharacter?.(node.id, carried, extras)
+      const { rig: carried, extras } = characterOf(holder)
+      this.options.onCharacter?.(node.id, carried, extras, rig.bounds)
       // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
       // and a motion laid on a skeleton nobody has read plays on the wrong joints.
       if (carried) this.learnRig(carried, extras?.roles)
@@ -4622,7 +4628,7 @@ function helperVisibilityMoved(held: ViewportOptions, next: ViewportOptions): bo
  * Whether a model has to be built again rather than patched.
  *
  * A FILE that changed is not read here: it is not an edit of a document and cannot be seen in a
- * comparison of two states. `reloadAsset` is the door for that, and it is impérative on purpose.
+ * comparison of two states. `reloadAsset` is the door for that, and it is imperative on purpose.
  */
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
   if (node.type !== 'model') return true

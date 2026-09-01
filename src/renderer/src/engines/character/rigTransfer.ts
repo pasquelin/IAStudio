@@ -1,6 +1,7 @@
 import type { Bounds } from '../scene/rigFit'
 import { rigFaultOf, type Rig, type RigBone } from '@shared/domain/rig'
 import type { Vector3 } from '@shared/domain/transform'
+import { ORIGIN, worldPlaces } from './rigWorld'
 
 /** Why a skeleton cannot be taken from one body to another, or nothing. */
 export type RigTransferFault = 'empty' | 'no-height'
@@ -66,34 +67,6 @@ function localOf(placed: ReadonlyMap<string, Vector3>, bone: RigBone): Vector3 {
 
   return { x: here.x - above.x, y: here.y - above.y, z: here.z - above.z }
 }
-
-/** The same walk `skinWeights.wireOf` does, and for the same reason. */
-function worldPlaces(bones: readonly RigBone[]): Map<string, Vector3> {
-  const byName = new Map(bones.map(bone => [bone.name, bone]))
-  const world = new Map<string, Vector3>()
-
-  const place = (bone: RigBone): Vector3 => {
-    const known = world.get(bone.name)
-    if (known) return known
-
-    const parent = bone.parent === null ? null : byName.get(bone.parent)
-    const above = parent ? place(parent) : ORIGIN
-    const here = {
-      x: above.x + bone.rest.position.x,
-      y: above.y + bone.rest.position.y,
-      z: above.z + bone.rest.position.z,
-    }
-    world.set(bone.name, here)
-
-    return here
-  }
-
-  for (const bone of bones) place(bone)
-
-  return world
-}
-
-const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
 
 const heightOf = (bounds: Bounds): number => bounds.max.y - bounds.min.y
 const centreX = (bounds: Bounds): number => (bounds.min.x + bounds.max.x) / 2

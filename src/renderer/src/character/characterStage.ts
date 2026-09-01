@@ -1,11 +1,12 @@
 import type { CharacterExtras } from '@shared/domain/character'
+import type { Bounds } from '@/engines/scene/rigFit'
 import type { Rig } from '@shared/domain/rig'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { modelNode } from '@/engines/scene/nodeFactory'
-import { seedCharacter } from '@/stores/character'
+import { characterStore, seedCharacter } from '@/stores/character'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { characterMessageOf, openCharacterChannel } from './characterChannel'
+import { openCharacterChannel, type CharacterMessage } from './characterChannel'
 
 /** What a stage needs of an engine: a workshop scene laid over it, and what the file turned out to be. */
 export type CharacterDraw = {
@@ -16,15 +17,11 @@ export type CharacterDraw = {
 export type CharacterStageDeps = {
   renderer: CharacterDraw
   assetId: string
-  /** Told what the catalogue calls this character, once the studio has answered. */
-  onName?: (name: string) => void
-  /** Told the studio went away, which leaves this window with a file and nobody to ask. */
-  onGone?: () => void
 }
 
 export type CharacterStage = {
   /** Called by the engine when a model's file has landed — see `SceneRendererOptions.onCharacter`. */
-  read: (rig: Rig | null, extras: CharacterExtras | null) => void
+  read: (rig: Rig | null, extras: CharacterExtras | null, bounds: Bounds | null) => void
   close: () => void
 }
 
@@ -39,22 +36,16 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
   const channel = openCharacterChannel()
   let framed = false
 
-  channel.onmessage = event => {
-    const message = characterMessageOf(event.data)
-    if (!message) return
-    if (message.kind === 'gone') {
-      deps.onGone?.()
-      return
-    }
-    // Every message names its character, and a window turned towards another one drops it: the
-    // channel is shared, and a studio may answer for a subject this window no longer holds.
-    if (!('assetId' in message) || message.assetId !== deps.assetId) return
-    if (message.kind === 'subject') deps.onName?.(message.name)
+  // 🛑 Published rather than asked for: every assistant action runs in the STUDIO window, whose
+  // own character store is empty — without this the ten skeleton actions reach nothing at all.
+  const publish = (rig: Rig | null, bounds: Bounds | null): void => {
+    channel.postMessage({
+      kind: 'holds',
+      assetId: deps.assetId,
+      rig,
+      bounds,
+    } satisfies CharacterMessage)
   }
-
-  // Asked rather than waited for: a channel replays nothing, and this window opens well after
-  // the studio pressed the button that made it.
-  channel.postMessage({ kind: 'ask', assetId: deps.assetId })
 
   // 🛑 A real scene document, in this window's own store: the motion picker, the preview and the
   // blocks it lays are the studio's own surfaces, and they all speak that language. A state kept
@@ -62,16 +53,31 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
   const documentId = workshopIdOf(deps.assetId)
   useScenes.getState().replace(documentId, workshopScene(deps.assetId))
   deps.renderer.apply(sceneOf(useScenes.getState(), documentId))
-  const watching = useScenes.subscribe(state => deps.renderer.apply(sceneOf(state, documentId)))
+  // Compared before applying: the store writes a fresh object for every command, every mark and
+  // every document — and `apply` sweeps the whole scene each time it is called.
+  let last = sceneOf(useScenes.getState(), documentId)
+  const watching = useScenes.subscribe(state => {
+    const next = sceneOf(state, documentId)
+    if (next === last) return
+
+    last = next
+    deps.renderer.apply(next)
+  })
 
   return {
-    read: (rig, extras) => {
+    read: (rig, extras, bounds) => {
       seedCharacter(deps.assetId, rig, extras ?? {})
+      publish(rig, bounds)
       // Aimed ONCE: re-aiming per landing makes the view breathe as a pose changes the bounds.
       if (!framed) framed = deps.renderer.frameContents()
     },
     close: () => {
       watching()
+      // Let go on both sides: the store would otherwise keep every character this window has
+      // shown, and an action looking for « the open one » would find the first, for ever.
+      channel.postMessage({ kind: 'dropped', assetId: deps.assetId } satisfies CharacterMessage)
+      characterStore.use.getState().drop(deps.assetId)
+      useScenes.getState().drop(documentId)
       channel.close()
     },
   }

@@ -65,7 +65,12 @@ export function CharacterMotionPickerPreview({
     const next = lanesWith(lanes, lane.id, clips =>
       clips.map(clip => (clip.id === clipId ? { ...clip, speed, loop } : clip)),
     )
-    if (next) useScenes.getState().runCommand(documentId, setModelLanes(nodeId, next))
+    // `replace` and not a command: the workshop scene is a SCRATCH, and an undo entry laid on it
+    // is one no key of this window can ever reach — see the `character` command scope.
+    if (next) {
+      const scenes = useScenes.getState()
+      scenes.replace(documentId, setModelLanes(nodeId, next).apply(sceneOf(scenes, documentId)))
+    }
   }
 
   const watch = (at: number, playing: boolean): void =>

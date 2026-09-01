@@ -201,10 +201,26 @@ export function sceneHoldsMore(document: unknown): string[] {
   )
   held.push(...unknownComponents(document))
   held.push(...unknownTimelineRows(document))
+  held.push(...skeletonsLeftBehind(document))
   held.push(...gltfForeignAsset(document))
   held.push(...gltfForeignExtensions(document, KHR_LIGHTS_PUNCTUAL))
 
   return held
+}
+
+/**
+ * The skeletons a scene written before they moved still carries.
+ *
+ * 🛑 A rig belongs to the model's own file now, and this reader drops the one a node holds. Named
+ * here so the save REFUSES rather than writing the loss out — the rule the five other kinds live
+ * under, and one a guard on root keys alone cannot see: `rig` sits inside a composed member.
+ */
+function skeletonsLeftBehind(document: Record<string, unknown>): string[] {
+  const held3d = gltfStudioMetadata(document)[GLTF_SCENE_STATE]
+  const nodes = isRecord(held3d) && Array.isArray(held3d.nodes) ? held3d.nodes : []
+  const rigged = nodes.filter(node => isRecord(node) && isRecord(node.model) && 'rig' in node.model)
+
+  return rigged.length > 0 ? ['nodes.model.rig'] : []
 }
 
 /** The timeline rows this build would drop, named `animation.<list>` — see `timelineRowsLost`. */

@@ -102,12 +102,6 @@ describe('editing a character', () => {
     expect(unlinkCharacterMotion('m1').apply(linked).motions).toEqual([])
   })
 
-  it('closes the band on a motion it no longer knows', () => {
-    const open = { ...RIGGED, motions: [{ id: 'm1', name: 'x', assetId: 'a' }], editing: 'm1' }
-
-    expect(unlinkCharacterMotion('m1').apply(open).editing).toBeNull()
-  })
-
   it('puts a skeleton on a character that had none, and takes it back off', () => {
     const command = setCharacterRig(RIG)
     const after = command.apply({ ...EMPTY_CHARACTER, assetId: 'asset-1' })

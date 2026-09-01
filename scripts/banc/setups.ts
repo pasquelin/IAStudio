@@ -1,5 +1,6 @@
 import type { RecentProject } from '@shared/domain/project'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { workshopIdOf } from '@/character/characterStage'
 import { seedCharacter, useCharacters } from '@/stores/character'
 import { useJobs } from '@/stores/jobs'
 import { useSettings } from '@/stores/settings'
@@ -89,8 +90,11 @@ export const modelScene = async (studio: Studio): Promise<void> => {
   })
   measured(studio, named(studio, 'Knight'))
   // 🛑 The skeleton window, opened on the same file: `rig.*` acts on a CHARACTER now, and with
-  // none open the whole of section 50 would be scored on a refusal.
-  seedCharacter(assetOf(studio, 'knight in plate armour, character.glb'), null, {})
+  // none open the whole of section 50 would be scored on a refusal. Its workshop scene is
+  // measured too — a fit proportions itself off a height, and reads it from that scene alone.
+  const character = assetOf(studio, 'knight in plate armour, character.glb')
+  seedCharacter(character, null, {})
+  measured(studio, 'workshop', workshopIdOf(character))
 }
 
 /**
@@ -113,8 +117,8 @@ export const bonesOf = (studio: Studio): readonly string[] => {
  * 🛑 What the ENGINE measures of a model, which a headless run has none of: without it `rig.fit`
  * refuses `notFound` and the whole of section 50 is scored on a model nobody could have rigged.
  */
-const measured = (studio: Studio, nodeId: string): void => {
-  useModelFiles.getState().reportRig(frontId(studio), nodeId, {
+const measured = (studio: Studio, nodeId: string, documentId = frontId(studio)): void => {
+  useModelFiles.getState().reportRig(documentId, nodeId, {
     status: 'staticMesh',
     bones: [],
     boneNames: [],

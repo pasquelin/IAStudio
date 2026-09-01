@@ -1,7 +1,8 @@
 import type { CharacterExtras } from '@shared/domain/character'
 import type { GlbSkinPatch } from '@/engines/scene/glbSkin'
 import type { CharacterState } from '@/engines/character/characterState'
-import { createGlbWriter } from '@/engines/scene/glbWriter'
+import { createGlbWriter, type GlbWriter } from '@/engines/scene/glbWriter'
+import type { StudioBridge } from '@shared/ipc'
 import { fetchAsset } from '@/helpers/assetFetch'
 import { getBridge } from '@/services/bridge'
 import { characterOf, characterStore } from '@/stores/character'
@@ -21,21 +22,43 @@ export async function saveCharacter(assetId: string, skins: CharacterSkinning): 
   const state = characterOf(characterStore.use.getState(), assetId)
   if (!bridge || !state.rig) return false
 
-  const file = new Uint8Array(await (await fetchAsset(assetId)).arrayBuffer())
-  const writer = createGlbWriter(() => new GlbWriteWorker())
+  // One save at a time: a second ⌘S while one is in flight would hold a second copy of a file of
+  // tens of megabytes, and race the first to the same path.
+  const running = writing.get(assetId)
+  if (running) return running
+
+  const done = write(bridge, assetId, state, skins)
+  writing.set(assetId, done)
 
   try {
-    const written = await writer.write(file, {
-      bones: state.rig.bones,
-      skins,
-      extras: extrasOf(state),
-    })
-    if (!written) return false
-
-    await bridge.assets.saveMesh({ replaces: assetId, glb: written })
+    return await done
   } finally {
-    writer.dispose()
+    writing.delete(assetId)
   }
+}
+
+const writing = new Map<string, Promise<boolean>>()
+
+/** The port, kept: its worker drags all of three.js, and a ⌘S paid for that parse every time. */
+let writer: GlbWriter | null = null
+
+async function write(
+  bridge: StudioBridge,
+  assetId: string,
+  state: CharacterState,
+  skins: CharacterSkinning,
+): Promise<boolean> {
+  const file = new Uint8Array(await (await fetchAsset(assetId)).arrayBuffer())
+  writer ??= createGlbWriter(() => new GlbWriteWorker())
+
+  const written = await writer.write(file, {
+    bones: state.rig?.bones ?? [],
+    skins,
+    extras: extrasOf(state),
+  })
+  if (!written) return false
+
+  await bridge.assets.saveMesh({ replaces: assetId, glb: written })
 
   const saved = characterStore.use.getState()
   saved.markSaved(assetId, characterStore.markOf(saved, assetId))

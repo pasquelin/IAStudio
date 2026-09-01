@@ -8,7 +8,7 @@ import type { Bounds } from '@/engines/scene/rigFit'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
 import { createCharacterStage, workshopIdOf } from '@/character/characterStage'
-import { assetVersionOf } from '@/stores/assets'
+import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { characterOf, isCharacterDirty, useCharacters } from '@/stores/character'
@@ -28,8 +28,9 @@ export type CharacterWindowProps = { assetId: string }
 export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
-  const [name, setName] = useState(assetId)
+  const engineRef = useRef<SceneRenderer | null>(null)
   const character = useCharacters(state => characterOf(state, assetId))
+  const name = useAssets(state => assetsById(state).get(assetId)?.name ?? assetId)
   const dirty = useCharacters(state => isCharacterDirty(state, assetId))
   // Empty while the file carries its own skin, which is every character rigged elsewhere. What
   // fills it is fitting a skeleton HERE — the weights are the engine's, and it alone has them.
@@ -52,6 +53,15 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     },
   })
 
+  // 🛑 The skeleton the store holds, put ON the model. Without this a fitted rig lives in a
+  // state nobody draws, no weights are ever worked out, and ⌘S writes bones bound to nothing.
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine || !nodeId || !character.rig) return
+
+    void engine.skinModel(nodeId, character.rig)
+  }, [character.rig, nodeId])
+
   useEffect(() => {
     const element = hostRef.current
     if (!element) return
@@ -69,10 +79,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
       assetVersion: assetVersionOf,
       wornDress: wornModelDress,
       environmentDress: environmentDressOf,
-      onCharacter: (_nodeId, rig, extras) => stage.read(rig, extras),
-      // What the mesh MEASURES, which is what a fit proportions itself off — and the only thing
-      // that says whether one can be laid at all.
-      onRig: (_nodeId, state) => setBounds(state.bounds),
+      onCharacter: (_nodeId, rig, extras, measured) => {
+        setBounds(measured)
+        stage.read(rig, extras, measured)
+      },
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig.
       onSkinning: (_nodeId, weighed) => setSkins(weighed),
       // A bone is not a node: it has no id in any document, and it is picked apart from anything
@@ -80,6 +90,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
       onSelectBone: bone => useCharacterView.getState().pickBone(bone?.bone ?? null),
     })
     renderer.mount(element)
+    engineRef.current = renderer
     renderer.configure({
       ...DEFAULT_SETTINGS.three,
       showGrid: true,
@@ -93,9 +104,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     renderer.setSkeletons(true)
     renderer.setPoseMode(true)
 
-    const stage = createCharacterStage({ renderer, assetId, onName: setName })
+    const stage = createCharacterStage({ renderer, assetId })
 
     return () => {
+      engineRef.current = null
       stage.close()
       renderer.dispose()
       void leaveProject(leaving)

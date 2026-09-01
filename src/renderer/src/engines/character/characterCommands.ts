@@ -27,8 +27,7 @@ import type { CharacterState } from './characterState'
  * same value is one that lies.
  */
 
-/** The suffix an IK handle's name carries, so nothing else is mistaken for one. */
-export /**
+/**
  * One whole-state edit, undone by putting back what it replaced.
  *
  * The state is small and flat — one character — so keeping the previous one costs nothing where
@@ -169,11 +168,7 @@ export function linkCharacterMotion(motion: MotionRef): Command<CharacterState> 
 export function unlinkCharacterMotion(id: string): Command<CharacterState> {
   return edit('motion.unlink', state =>
     state.motions.some(one => one.id === id)
-      ? {
-          ...state,
-          motions: state.motions.filter(one => one.id !== id),
-          editing: state.editing === id ? null : state.editing,
-        }
+      ? { ...state, motions: state.motions.filter(one => one.id !== id) }
       : null,
   )
 }

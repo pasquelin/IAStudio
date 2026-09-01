@@ -69,47 +69,6 @@ export function createRetarget(spawn: () => Worker): Retarget {
   )
   const profiles = new Map<string, SkeletonProfile>()
 
-  const send = (request: RetargetRequest, watch: Watch): Promise<readonly WireClip[] | null> =>
-    new Promise((resolve, reject) => {
-      const running = port.running()
-
-      // Posted before it is recorded, so a payload the structured clone cannot carry throws with
-      // no slot left behind — `bvhInflight` says why this order is safe.
-      running.postMessage(request, clipBuffers(request.clips))
-
-      // Dropped whichever way the request ends, a worker dying included.
-      const stop = new AbortController()
-      const give = (clips: readonly WireClip[] | null): void => {
-        stop.abort()
-        resolve(clips)
-      }
-      const fail = (error: Error): void => {
-        stop.abort()
-        reject(error)
-      }
-      port.record(request.id, { resolve: give, reject: fail, onProgress: watch?.onProgress })
-
-      // `{ signal }` rather than a bare listener: a caller keeping ONE controller for its whole
-      // life would otherwise leave one listener per request behind it, each holding a `resolve`.
-      watch?.signal?.addEventListener(
-        'abort',
-        () => {
-          if (!port.forget(request.id)) return
-          running.postMessage({ id: request.id, cancel: true })
-          give(null)
-        },
-        { signal: stop.signal },
-      )
-
-      // An `abort` already fired has already been delivered, so the listener above would never
-      // run: without this the worker does the whole job and answers clips for a dead caller.
-      if (watch?.signal?.aborted) {
-        port.forget(request.id)
-        running.postMessage({ id: request.id, cancel: true })
-        give(null)
-      }
-    })
-
   return {
     adapt: async (target, source, clips, watch) => {
       if (port.isGone()) return null
@@ -119,11 +78,17 @@ export function createRetarget(spawn: () => Worker): Retarget {
       // Nothing to replay: the clips already speak this skeleton's language, exactly.
       if (sameSkeleton(targetBones, sourceBones)) return [...clips]
 
-      const request: RetargetRequest = {
-        id: port.claim(),
-        ...retargetPlanOf(targetBones, sourceBones, clips.map(wireClipOf), undefined, profiles),
-      }
-      const adapted = await send(request, watch)
+      const plan = retargetPlanOf(
+        targetBones,
+        sourceBones,
+        clips.map(wireClipOf),
+        undefined,
+        profiles,
+      )
+      const adapted = await port.send(id => {
+        const request: RetargetRequest = { id, ...plan }
+        return { message: request, transfer: clipBuffers(request.clips) }
+      }, watch)
 
       return adapted && adapted.map(clipFromWire)
     },
@@ -136,8 +101,6 @@ export function createRetarget(spawn: () => Worker): Retarget {
     },
   }
 }
-
-type Watch = { onProgress?: (progress: number) => void; signal?: AbortSignal } | undefined
 
 /**
  * What to ask the worker for: which target bone reads which source bone, and where the hips are.

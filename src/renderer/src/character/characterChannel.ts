@@ -1,5 +1,7 @@
 import { isRecord } from '@shared/guards'
-import type { MotionRef } from '@shared/domain/character'
+import { isVector3 } from '@shared/domain/scene'
+import { isRig, type Rig } from '@shared/domain/rig'
+import type { Bounds } from '@/engines/scene/rigFit'
 
 /**
  * What the studio and the skeleton window say to each other.
@@ -10,16 +12,16 @@ import type { MotionRef } from '@shared/domain/character'
  */
 export type CharacterMessage =
   /**
-   * The window asking who it is editing, which it must: a channel replays nothing, and the
-   * window opens after the studio asked for it.
+   * What the window is editing, published on every change.
+   *
+   * 🛑 The studio needs it: every assistant action runs in the studio window, whose own
+   * character store is empty — an action naming a character could reach none without this.
    */
-  | { kind: 'ask'; assetId: string }
-  /** The studio answering: what the catalogue calls it, and what plays beside it. */
-  | { kind: 'subject'; assetId: string; name: string; motions: readonly MotionRef[] }
+  | { kind: 'holds'; assetId: string; rig: Rig | null; bounds: Bounds | null }
+  /** The window closed the character, or turned towards another one. */
+  | { kind: 'dropped'; assetId: string }
   /** The file was written back. Every scene holding this model rereads it — at ⌘S, never before. */
   | { kind: 'saved'; assetId: string }
-  /** The studio is going away: nothing left to answer this window. */
-  | { kind: 'gone' }
 
 const CHANNEL = 'ia-studio.character'
 
@@ -36,21 +38,14 @@ export function characterMessageOf(data: unknown): CharacterMessage | null {
   if (!isRecord(data)) return null
 
   switch (data.kind) {
-    case 'ask':
-      return named(data) ? { kind: 'ask', assetId: data.assetId } : null
-    case 'subject':
-      return named(data) && typeof data.name === 'string' && Array.isArray(data.motions)
-        ? {
-            kind: 'subject',
-            assetId: data.assetId,
-            name: data.name,
-            motions: motionsOf(data.motions),
-          }
+    case 'holds':
+      return named(data) && (data.rig === null || isRig(data.rig))
+        ? { kind: 'holds', assetId: data.assetId, rig: data.rig, bounds: boundsOf(data.bounds) }
         : null
+    case 'dropped':
+      return named(data) ? { kind: 'dropped', assetId: data.assetId } : null
     case 'saved':
       return named(data) ? { kind: 'saved', assetId: data.assetId } : null
-    case 'gone':
-      return { kind: 'gone' }
     default:
       return null
   }
@@ -62,13 +57,9 @@ function named(
   return typeof data.assetId === 'string' && data.assetId !== ''
 }
 
-function motionsOf(values: readonly unknown[]): MotionRef[] {
-  return values.flatMap(value =>
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.name === 'string' &&
-    typeof value.assetId === 'string'
-      ? [{ id: value.id, name: value.name, assetId: value.assetId }]
-      : [],
-  )
+/** What the window measured of the mesh, which is what a fit proportions itself off. */
+function boundsOf(value: unknown): Bounds | null {
+  if (!isRecord(value) || !isVector3(value.min) || !isVector3(value.max)) return null
+
+  return { min: value.min, max: value.max }
 }

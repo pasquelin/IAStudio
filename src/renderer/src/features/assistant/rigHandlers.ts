@@ -44,6 +44,7 @@ import {
   setCharacterBoneRole,
   setCharacterRig,
 } from '@/engines/character/characterCommands'
+import { workshopIdOf } from '@/character/characterStage'
 import { useCharacters } from '@/stores/character'
 import { nodeById, type ModelNode, type SceneState } from '@/engines/scene/sceneState'
 import { newId } from '@/helpers/ids'
@@ -171,15 +172,17 @@ function fitRig(): ActionOutcome {
   return { ok: true }
 }
 
-/** What the engine measured of the open character, whichever scene happens to show it. */
+/**
+ * What the engine measured of the open character.
+ *
+ * 🛑 Its OWN workshop scene, never « the first model of any document »: a fit proportions itself
+ * off a height, and one read from another mesh would lay a skeleton of the wrong size.
+ */
 function boundsOfCharacter(assetId: string): Bounds | null {
   const files = useModelFiles.getState()
-  for (const byNode of Object.values(files.rigs)) {
-    for (const rig of Object.values(byNode)) if (rig.bounds) return rig.bounds
-  }
-  void assetId
+  const measured = files.rigs[workshopIdOf(assetId)] ?? {}
 
-  return null
+  return Object.values(measured).find(rig => rig.bounds)?.bounds ?? null
 }
 
 /** What the panels read off a character: its bones, their roles, its handles, what it can play. */

@@ -1,4 +1,4 @@
-import { Matrix4 } from 'three'
+import { Euler, Matrix4, Quaternion } from 'three'
 import { glbChunksOf, glbFrom } from '@shared/domain/glbContainer'
 import { isRecord } from '@shared/guards'
 import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
@@ -174,9 +174,11 @@ function placement(bone: RigBone): Record<string, number[]> {
 }
 
 function quaternionOf(bone: RigBone): number[] {
-  const { bones } = bonesOfRig({ bones: [{ ...bone, parent: null }], origin: 'local' })
-  const quaternion = bones[0]?.quaternion
-  return quaternion ? [quaternion.x, quaternion.y, quaternion.z, quaternion.w] : [0, 0, 0, 1]
+  const turn = new Quaternion().setFromEuler(
+    new Euler(bone.rest.rotation.x, bone.rest.rotation.y, bone.rest.rotation.z),
+  )
+
+  return [turn.x, turn.y, turn.z, turn.w]
 }
 
 function childrenOf(
@@ -261,7 +263,7 @@ function accessorFor(
   type = 'MAT4',
 ): number {
   accessors.push({
-    bufferView: push(new Uint8Array(values.buffer.slice(0)), 4),
+    bufferView: push(bytesOf(values), 4),
     componentType: 5126,
     count: values.length / (type === 'MAT4' ? 16 : 4),
     type,
@@ -276,13 +278,18 @@ function unsignedAccessor(
   values: Uint16Array,
 ): number {
   accessors.push({
-    bufferView: push(new Uint8Array(values.buffer.slice(0)), 2),
+    bufferView: push(bytesOf(values), 2),
     componentType: 5123,
     count: values.length / 4,
     type: 'VEC4',
   })
 
   return accessors.length - 1
+}
+
+/** A view, never a copy: these buffers were transferred into this worker and are only read. */
+function bytesOf(values: Float32Array | Uint16Array): Uint8Array {
+  return new Uint8Array(values.buffer, values.byteOffset, values.byteLength)
 }
 
 function joined(head: Uint8Array, tail: readonly Uint8Array[], length: number): Uint8Array {

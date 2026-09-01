@@ -1,9 +1,9 @@
-import { Euler, Matrix4, Quaternion, Vector3, type Object3D, type SkinnedMesh } from 'three'
+import { Matrix4, type Object3D, type SkinnedMesh } from 'three'
 import type { Rig, RigBone, RigFault, RigOrigin } from '@shared/domain/rig'
 import { rigFaultOf } from '@shared/domain/rig'
 import { characterExtrasOf, type CharacterExtras } from '@shared/domain/character'
-import type { Transform } from '@shared/domain/transform'
-import { skeletonBonesOf } from './rigState'
+import { transformOfMatrix } from '../csg/csgMatrix'
+import { isBoneObject, skeletonBonesOf } from './rigState'
 
 /**
  * A skeleton a `.glb` already carries, read back as the document spells one.
@@ -30,16 +30,21 @@ export function rigReadFaultOf(root: Object3D): RigReadFault | null {
  * The order is the FILE's, parents before children — not the one a fitter laid its bones in.
  */
 export function rigBonesOf(root: Object3D): RigBone[] {
+  // Asked FIRST: a model with no bone is most of a scene, and it would otherwise pay a full walk
+  // and a `Matrix4` per named object to be handed an empty list.
+  const bones = skeletonBonesOf(root)
+  if (bones.length === 0) return []
+
   const places = bindPlacesOf(root)
   const held = new Matrix4()
 
-  return skeletonBonesOf(root).flatMap(bone => {
+  return bones.flatMap(bone => {
     const place = places.get(bone.name)
     const above = bone.parent === null ? root.matrixWorld : places.get(bone.parent)
     if (!place || !above) return []
 
     held.copy(above).invert().multiply(place)
-    return [{ ...bone, rest: transformOf(held) }]
+    return [{ ...bone, rest: transformOfMatrix(held) }]
   })
 }
 
@@ -50,13 +55,28 @@ export function rigBonesOf(root: Object3D): RigBone[] {
  * hip » is what makes a foreign skeleton animatable, and glTF has nowhere else to keep it.
  */
 export function rigFromObject(root: Object3D, origin: RigOrigin = 'imported'): Rig | null {
-  const corrected = characterExtrasIn(root)?.roles ?? {}
+  return characterOf(root, origin).rig
+}
+
+/**
+ * The skeleton a `.glb` carries AND what the studio wrote beside it, in one read.
+ *
+ * Together because the roles of the second correct the first, and because walking the file twice
+ * for two answers is what the engine pays per model, in every scene.
+ */
+export function characterOf(
+  root: Object3D,
+  origin: RigOrigin = 'imported',
+): { rig: Rig | null; extras: CharacterExtras | null } {
+  const extras = characterExtrasIn(root)
+  const corrected = extras?.roles ?? {}
   const bones = rigBonesOf(root).map(bone => {
     const role = corrected[bone.name]
     return role ? { ...bone, role } : bone
   })
 
-  return bones.length > 0 && rigFaultOf(bones) === null ? { bones, origin } : null
+  const held = bones.length > 0 && rigFaultOf(bones) === null ? { bones, origin } : null
+  return { rig: held, extras }
 }
 
 /**
@@ -66,12 +86,19 @@ export function rigFromObject(root: Object3D, origin: RigOrigin = 'imported'): R
  * makes, and an engine holding that scene inside a placement of its own would find nothing there.
  */
 export function characterExtrasIn(root: Object3D): CharacterExtras | null {
-  let found: CharacterExtras | null = null
-  root.traverse(object => {
-    found ??= characterExtrasOf(object.userData)
-  })
+  // A walk that STOPS, where `traverse` cannot: what the loader writes sits two or three levels
+  // down, and the rest of a character is thousands of objects with nothing to say.
+  const pending: Object3D[] = [root]
+  while (pending.length > 0) {
+    const object = pending.pop()
+    if (!object) break
 
-  return found
+    const found = characterExtrasOf(object.userData)
+    if (found) return found
+    pending.push(...object.children)
+  }
+
+  return null
 }
 
 /**
@@ -103,34 +130,17 @@ function bindPlacesOf(root: Object3D): Map<string, Matrix4> {
   return places
 }
 
+/** The flag rather than `instanceof`, which would miss one from another three instance. */
 function skinnedIn(root: Object3D): SkinnedMesh[] {
-  const found: SkinnedMesh[] = []
-  root.traverse(object => {
-    if (Reflect.get(object, 'isSkinnedMesh') === true) found.push(object as SkinnedMesh)
-  })
-
-  return found
-}
-
-/** Euler XYZ, which is the order `bonesOfRig` reads a rest back in. */
-function transformOf(matrix: Matrix4): Transform {
-  const position = new Vector3()
-  const quaternion = new Quaternion()
-  const scale = new Vector3()
-  matrix.decompose(position, quaternion, scale)
-  const rotation = new Euler().setFromQuaternion(quaternion)
-
-  return {
-    position: { x: position.x, y: position.y, z: position.z },
-    rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
-    scale: { x: scale.x, y: scale.y, z: scale.z },
-  }
+  return root
+    .getObjectsByProperty('isSkinnedMesh', true)
+    .filter((object): object is SkinnedMesh => Reflect.get(object, 'isSkinnedMesh') === true)
 }
 
 function hasBone(root: Object3D): boolean {
   let found = false
   root.traverse(object => {
-    if (Reflect.get(object, 'isBone') === true) found = true
+    if (isBoneObject(object)) found = true
   })
 
   return found

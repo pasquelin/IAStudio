@@ -4,12 +4,12 @@
  * `workerPort` holds the worker and the register; what is here is the wire — a request that
  * answers many times, and a caller that can take one back, neither of which `bvhBuilder` carries.
  */
-import { isIkHandle, type Rig, type RigBone } from '@shared/domain/rig'
+import { isIkHandle, type Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
-import type { Vector3 } from '@shared/domain/transform'
 import { SKIN_REGIONS, type SkinRegion, type SkinRequest, type SkinResponse } from './skinMessage'
 import type { SkinBinding } from './skinVertices'
 import { createWorkerPort } from '../core/workerPort'
+import { ORIGIN, worldPlaces } from './rigWorld'
 
 export type SkinWeights = {
   /**
@@ -32,52 +32,10 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
 
   return {
     bind: (positions, rig, watch) =>
-      new Promise<SkinBinding | null>((resolve, reject) => {
-        if (port.isGone()) {
-          resolve(null)
-          return
-        }
-
-        const id = port.claim()
-        const running = port.running()
+      port.send(id => {
         const request: SkinRequest = { id, ...wireOf(positions, rig) }
-
-        // Posted before it is recorded, so a payload the structured clone cannot carry throws
-        // with no slot left behind — `bvhInflight` says why this order is safe.
-        running.postMessage(request, [request.position.buffer, request.segments.buffer])
-
-        const give = (): void => {
-          if (!port.forget(id)) return
-          watch?.signal?.removeEventListener('abort', give)
-          running.postMessage({ id, cancel: true })
-          resolve(null)
-        }
-
-        // Wrapped rather than dropped at each exit: a request leaves the register by four paths,
-        // and one that forgot its listener would leak with nothing to say so.
-        const settled =
-          <T>(hand: (value: T) => void) =>
-          (value: T): void => {
-            watch?.signal?.removeEventListener('abort', give)
-            hand(value)
-          }
-
-        port.record(id, {
-          resolve: settled(resolve),
-          reject: settled(reject),
-          onProgress: watch?.onProgress,
-        })
-
-        // Abandoned before it was even asked: an `abort` already delivered never calls the
-        // listener below, which would outlive the request on a signal one caller keeps for a
-        // whole model. A port contract — `scene-models.test.ts` measures why nothing reaches it.
-        if (watch?.signal?.aborted) {
-          give()
-          return
-        }
-
-        watch?.signal?.addEventListener('abort', give)
-      }),
+        return { message: request, transfer: [request.position.buffer, request.segments.buffer] }
+      }, watch),
 
     dispose: port.dispose,
   }
@@ -99,32 +57,6 @@ export function wireOf(positions: Float32Array, rig: Rig): Omit<SkinRequest, 'id
   })
 
   return { position: positions, segments, regions }
-}
-
-const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
-
-/** Rest poses are written in a parent's space; the distances are measured in the mesh's. */
-function worldPlaces(bones: readonly RigBone[]): Map<string, Vector3> {
-  const byName = new Map(bones.map(bone => [bone.name, bone]))
-  const world = new Map<string, Vector3>()
-
-  const place = (bone: RigBone): Vector3 => {
-    const known = world.get(bone.name)
-    if (known) return known
-
-    const parent = bone.parent === null ? null : byName.get(bone.parent)
-    const above = parent ? place(parent) : ORIGIN
-    const here = {
-      x: above.x + bone.rest.position.x,
-      y: above.y + bone.rest.position.y,
-      z: above.z + bone.rest.position.z,
-    }
-    world.set(bone.name, here)
-    return here
-  }
-
-  for (const bone of bones) place(bone)
-  return world
 }
 
 /**
