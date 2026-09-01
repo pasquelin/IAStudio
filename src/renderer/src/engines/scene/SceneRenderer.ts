@@ -203,7 +203,8 @@ import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
-import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
+import type { InstancedGroups } from './grouping'
+import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
@@ -1638,13 +1639,10 @@ export class SceneRenderer {
    */
   exportTo(format: ExportFormat, scope: 'scene' | 'selection'): Promise<Uint8Array> {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
+    const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
     // In DOCUMENT order, not in the order the objects were built: a node rebuilt after an undo
     // is the newest object of the map, and a file that listed it last diffed on every undo.
     const rank = new Map(this.documentOrder.map((node, at) => [node.id, at]))
-    const rankOf = (id: string): number | undefined => rank.get(id)
-    const roots = [...wanted]
-      .filter(id => !this.hasExportedAncestor(id, wanted))
-      .sort((one, other) => (rankOf(one) ?? Infinity) - (rankOf(other) ?? Infinity))
 
     // The copies are taken synchronously inside `exportObjects`, so putting the document's own
     // visibility back for the length of this call is enough — an isolation running while somebody
@@ -1658,7 +1656,7 @@ export class SceneRenderer {
           // the names the document gave them.
           nameOf: id => this.applied.get(id)?.name,
           clipsFor: copies => this.bakedClips(copies),
-          rankOf,
+          rankOf: id => rank.get(id),
         },
       ),
     )
@@ -4448,16 +4446,17 @@ export class SceneRenderer {
     // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
     // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
     // clicks over empty space and selecting a lamp nobody could see.
-    // The lots too: a body a lot draws is met there, through the tree built for it, and named
-    // by its slot — its source is still met as well, on the layer instancing keeps it on.
+    // And what draws the grouped bodies, where that names a hit by its slot: the lots. Their
+    // sources are met as well, on the layer instancing keeps them on, and answer the same.
     const targets = [
       ...this.objects.values(),
       ...[...this.helpers.values()].filter(helper => helper.visible),
-      ...this.instances.drawn(),
+      ...this.instances.pickable(),
     ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    if (!hit) return null
-    return this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name))
+    return hit
+      ? (this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name)))
+      : null
   }
 
   /**

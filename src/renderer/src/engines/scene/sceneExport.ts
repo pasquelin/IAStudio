@@ -92,7 +92,7 @@ export type ExportOptions = {
   /**
    * Where a node stands in the DOCUMENT, read by the id its object carries. A node rebuilt after
    * an undo hangs last under its parent, so without this a file lists it out of order — a noisy
-   * diff for whoever versions their scenes. What it does not rank keeps its place.
+   * diff for whoever versions their scenes. What it does not rank comes after, in its own order.
    */
   rankOf?: (id: string) => number | undefined
 }
@@ -120,7 +120,10 @@ export async function exportObjects(
 
   try {
     const roots = objects.map(object => placedCopy(object))
-    if (rankOf) for (const root of roots) root.traverse(child => orderChildren(child, rankOf))
+    if (rankOf) {
+      roots.sort(byRank(rankOf))
+      for (const root of roots) root.traverse(child => child.children.sort(byRank(rankOf)))
+    }
     // BEFORE the rename, which is what lets a caller find a node by the id it still wears. The
     // baked clips name their objects by uuid, so renaming afterwards cannot unbind them.
     const animations = [...clipsIn(roots), ...(clipsFor?.(roots) ?? [])]
@@ -226,22 +229,11 @@ function aimAtTarget(object: Object3D, copy: Object3D): void {
   copy.add(copy.target)
 }
 
-/** The ranked children back in document order, in the slots they held; the rest stay put. */
-function orderChildren(parent: Object3D, rankOf: (id: string) => number | undefined): void {
-  const slots: number[] = []
-  const ranked: { child: Object3D; rank: number }[] = []
-  for (const [at, child] of parent.children.entries()) {
-    const rank = rankOf(child.name)
-    if (rank === undefined) continue
-    slots.push(at)
-    ranked.push({ child, rank })
-  }
-  ranked.sort((one, other) => one.rank - other.rank)
-  for (const [at, slot] of slots.entries()) {
-    const entry = ranked[at]
-    if (entry) parent.children[slot] = entry.child
-  }
-}
+/** Document order for what is ranked; what is not keeps its own order, after. Stable. */
+const byRank =
+  (rankOf: (id: string) => number | undefined) =>
+  (one: Object3D, other: Object3D): number =>
+    (rankOf(one.name) ?? Infinity) - (rankOf(other.name) ?? Infinity)
 
 /**
  * The name the document gave a node, in place of the id its object wears. That id is the picking

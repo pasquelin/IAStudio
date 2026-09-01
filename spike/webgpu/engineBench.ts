@@ -1,10 +1,11 @@
-import { BatchedMesh, DataTexture, Group, PerspectiveCamera, RGBAFormat, RepeatWrapping, Vector3, type Texture } from 'three'
+import { BatchedMesh, Group, PerspectiveCamera, Vector3, type Texture } from 'three'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { SceneRenderer, type GroupingStrategy } from '@/engines/scene/SceneRenderer'
 import type { CameraPlacement } from '@/engines/scene/sceneView'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { createGlTimer, type GlTimer } from './glTimer.js'
-import { centresOf, sceneS1, sceneVaried, withNothingMoved, withOneAdded, withOneMoved, withoutMaps } from './engineScenes'
+import { centresOf, sceneS1, sceneVaried, withBodyMoved, withNothingMoved, withOneAdded, withOneMoved, withoutMaps } from './engineScenes'
+import { checker } from './floorScenes.js'
 
 /**
  * Le banc du chantier C : le VRAI `SceneRenderer`, monté sur une fenêtre, mesuré des deux côtés
@@ -23,8 +24,11 @@ const FPS_FRAMES = 120
 const EDITS = 100
 const APPLY_PASSES = 12
 
-type Placement = CameraPlacement
+type Point = { x: number; y: number; z: number }
 type Numbers = Record<string, number | string | null>
+
+/** Ce que l'URL de la page demande : scènes, ordre, chemins, et les interrupteurs de ventilation. */
+const QUERY = new URLSearchParams(location.search)
 
 const nextFrame = (): Promise<number> => new Promise(resolve => requestAnimationFrame(resolve))
 const pause = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
@@ -37,22 +41,6 @@ const heapMb = (): number | null => {
   // `memory` n'est pas standard : Chromium seul le publie.
   const memory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
   return memory ? round(memory.usedJSHeapSize / 1e6) : null
-}
-
-function checker(size = 128): Texture {
-  const data = new Uint8Array(size * size * 4)
-  for (let at = 0; at < size * size; at++) {
-    const on = (((at % size) >> 4) + ((at / size) | 0) >> 4) % 2 === 0
-    data[at * 4] = on ? 210 : 60
-    data[at * 4 + 1] = on ? 200 : 70
-    data[at * 4 + 2] = on ? 190 : 90
-    data[at * 4 + 3] = 255
-  }
-  const texture = new DataTexture(data, size, size, RGBAFormat)
-  texture.wrapS = RepeatWrapping
-  texture.wrapT = RepeatWrapping
-  texture.needsUpdate = true
-  return texture
 }
 
 /**
@@ -149,9 +137,8 @@ const resetCount = (): void => {
  * dire où part le temps d'un lot sans toucher au code de production.
  */
 {
-  const query = new URLSearchParams(location.search)
-  const sort = query.get('sort') !== 'off'
-  const cull = query.get('cull') !== 'off'
+  const sort = QUERY.get('sort') !== 'off'
+  const cull = QUERY.get('cull') !== 'off'
   if (!sort || !cull) {
     const onBeforeRender = BatchedMesh.prototype.onBeforeRender
     BatchedMesh.prototype.onBeforeRender = function patched(this: BatchedMesh, ...args) {
@@ -174,7 +161,7 @@ function hostOf(): HTMLDivElement {
 }
 
 /** La part des centres qu'une caméra tient dans son champ, en NDC. */
-function shareInView(placement: Placement, centres: { x: number; y: number; z: number }[], fov: number): number {
+function shareInView(placement: CameraPlacement, centres: Point[], fov: number): number {
   const camera = new PerspectiveCamera(fov, WIDTH / HEIGHT, 0.1, 5000)
   camera.position.set(placement.position.x, placement.position.y, placement.position.z)
   camera.lookAt(placement.target.x, placement.target.y, placement.target.z)
@@ -193,9 +180,9 @@ function shareInView(placement: Placement, centres: { x: number; y: number; z: n
  * La même position, la visée tournée autour de l'axe vertical jusqu'à ce que 30 % des corps
  * restent dans le champ — par bissection sur l'angle, la part décroissant avec lui.
  */
-function turnedAway(full: Placement, centres: { x: number; y: number; z: number }[], fov: number, want = 0.3): { placement: Placement; share: number } {
+function turnedAway(full: CameraPlacement, centres: Point[], fov: number, want = 0.3): { placement: CameraPlacement; share: number } {
   const forward = new Vector3(full.target.x - full.position.x, full.target.y - full.position.y, full.target.z - full.position.z)
-  const at = (angle: number): Placement => {
+  const at = (angle: number): CameraPlacement => {
     const turned = forward.clone().applyAxisAngle(new Vector3(0, 1, 0), angle)
     return { position: full.position, target: { x: full.position.x + turned.x, y: full.position.y + turned.y, z: full.position.z + turned.z } }
   }
@@ -277,7 +264,7 @@ async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, v
   }
   timer?.dispose()
 
-  const prefix = view === 'full' ? 'full' : 'turned'
+  const prefix = view
   return {
     [`${prefix}FrameCpuMs`]: round(median(cpu)),
     [`${prefix}ScenePassCpuMs`]: round(median(scenePass)),
@@ -318,7 +305,7 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
   const progress = (phase: string): void => onProgress?.({ scene, grouping, phase })
   progress('construction')
   const host = hostOf()
-  const texture = checker()
+  const texture: Texture = checker()
   const heapBefore = heapMb()
 
   const renderer = new SceneRenderer({
@@ -330,13 +317,12 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
   })
   renderer.prepareOffscreen({ alpha: false, pixelRatio: 1 })
   renderer.mount(host)
-  const query = new URLSearchParams(location.search)
-  renderer.configure({ ...DEFAULT_SETTINGS.three, showGrid: false, shadows: query.get('shadows') !== 'off' })
+  renderer.configure({ ...DEFAULT_SETTINGS.three, showGrid: false, shadows: QUERY.get('shadows') !== 'off' })
   const canvas = host.querySelector('canvas')
   if (!canvas) throw new Error('the engine mounted no canvas')
 
   const built = SCENES[scene]()
-  const state = query.get('maps') === 'off' ? withoutMaps(built) : built
+  const state = QUERY.get('maps') === 'off' ? withoutMaps(built) : built
   const opened = performance.now()
   renderer.apply(state)
   const firstApplyMs = round(performance.now() - opened)
@@ -366,8 +352,9 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
   renderer.placeView(full)
 
   progress('100 éditions')
+  // Cent corps différents, à dessein : c'est une session d'édition, pas la colonne « 1 bougé ».
   for (let at = 0; at < EDITS; at++) {
-    renderer.apply(withOneMoved(state, at))
+    renderer.apply(withBodyMoved(state, at))
     if (at % 10 === 0) await nextFrame()
   }
   await nextFrame()
@@ -396,10 +383,10 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
 }
 
 export async function runEngine(onProgress?: (step: Step) => void): Promise<{ results: unknown[]; failures: unknown[] }> {
-  const query = new URLSearchParams(location.search)
-  const scenes = (query.get('scenes')?.split(',') ?? ['S1', 'S2', 'S3']).filter((name): name is SceneName => name in SCENES)
-  const both: GroupingStrategy[] = query.get('order') === 'reversed' ? ['batched', 'instanced'] : ['instanced', 'batched']
-  const groupings = both.filter(grouping => (query.get('groupings') ?? both.join(',')).split(',').includes(grouping))
+  const scenes = (QUERY.get('scenes')?.split(',') ?? ['S1', 'S2', 'S3']).filter((name): name is SceneName => name in SCENES)
+  const both: GroupingStrategy[] = QUERY.get('order') === 'reversed' ? ['batched', 'instanced'] : ['instanced', 'batched']
+  const asked = QUERY.get('groupings')?.split(',')
+  const groupings = asked ? both.filter(grouping => asked.includes(grouping)) : both
   const results: unknown[] = []
   const failures: unknown[] = []
 
@@ -408,9 +395,11 @@ export async function runEngine(onProgress?: (step: Step) => void): Promise<{ re
       try {
         results.push(await measureOne(scene, grouping, onProgress))
       } catch (error) {
-        failures.push({ scene, grouping, error: String((error as Error)?.stack ?? error) })
+        // `as` : ce qu'un `throw` porte n'est typé par personne ; on lit `stack` s'il existe.
+        failures.push({ scene, grouping, error: String((error as { stack?: string }).stack ?? error) })
       }
-      ;(globalThis as unknown as { __partial: unknown }).__partial = { results, failures }
+      // `as` : `__partial` est le canal que `run.mjs` sonde ; rien ne le déclare côté page.
+      ;(globalThis as { __partial?: unknown }).__partial = { results, failures }
     }
   }
   return { results, failures }

@@ -25,6 +25,7 @@ const OTHER_SENSES: Record<string, string> = {
   gltfDocument: 'a layer of software — the file layer, and what MaterialX had one down',
   instancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
   batching: 'three.js `Layers`: the same one, once a lot draws the mesh',
+  grouping: 'three.js `Layers`: the constant itself, which both strategies share',
   SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
 }
 

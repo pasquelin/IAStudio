@@ -8,6 +8,10 @@
  * Trois cas, même image à l'écran : sans source · sources à `matrixAutoUpdate` vrai (ce que le
  * moteur fait) · sources à `matrixAutoUpdate` faux. La différence entre le premier et le second
  * est le plancher qu'aucun regroupement ne peut rendre.
+ *
+ * Banc AUTONOME, en JavaScript, sans le moteur : il refait le placement de S2 et S3
+ * (`engineScenes.sceneVaried`) en termes three.js et porte ses propres `median`/`seeded`, comme
+ * les autres bancs `.js` de ce dossier. Rien ne le lie à la scène du moteur — c'est assumé.
  */
 import {
   AmbientLight,

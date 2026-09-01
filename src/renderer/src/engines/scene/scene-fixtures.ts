@@ -209,3 +209,15 @@ export function scriptedTextureCache() {
     },
   }
 }
+
+/** A `.gltf` node as a file lists it — the two fields an export test reads. */
+export type GltfNode = { name?: string; children?: number[] }
+
+/** The nodes of the scene a renderer exports, in the order the file lists them. */
+export async function gltfNodesOf(renderer: {
+  exportTo: (format: 'gltf', scope: 'scene') => Promise<Uint8Array>
+}): Promise<GltfNode[]> {
+  const file = new TextDecoder().decode(await renderer.exportTo('gltf', 'scene'))
+  // `as`: a `.gltf` file holds glTF, and `nodes` is the field this reads.
+  return (JSON.parse(file) as { nodes?: GltfNode[] }).nodes ?? []
+}

@@ -1,7 +1,7 @@
 import { Group } from 'three'
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer } from './SceneRenderer'
-import { directionalLight, meshNode } from './scene-fixtures'
+import { directionalLight, gltfNodesOf, meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
 
 /**
@@ -24,19 +24,12 @@ const sceneOf = (nodes: SceneNode[]): SceneState => ({
   nodes: [directionalLight('sun'), ...nodes],
 })
 
-const namesOf = async (renderer: SceneRenderer): Promise<string[]> => {
-  const file = new TextDecoder().decode(await renderer.exportTo('gltf', 'scene'))
-  // `as`: a `.gltf` file holds glTF, and `nodes` is the field this reads.
-  const parsed = JSON.parse(file) as { nodes?: { name?: string; children?: number[] }[] }
-  return (parsed.nodes ?? []).flatMap(node => node.name ?? [])
-}
+const namesOf = async (renderer: SceneRenderer): Promise<string[]> =>
+  (await gltfNodesOf(renderer)).flatMap(node => node.name ?? [])
 
 /** The children of the named node, by name, in the order the file lists them. */
 const childrenOf = async (renderer: SceneRenderer, name: string): Promise<string[]> => {
-  const file = new TextDecoder().decode(await renderer.exportTo('gltf', 'scene'))
-  // `as`: same field, one level down.
-  const parsed = JSON.parse(file) as { nodes?: { name?: string; children?: number[] }[] }
-  const nodes = parsed.nodes ?? []
+  const nodes = await gltfNodesOf(renderer)
   const parent = nodes.find(node => node.name === name)
   return (parent?.children ?? []).flatMap(index => nodes[index]?.name ?? [])
 }

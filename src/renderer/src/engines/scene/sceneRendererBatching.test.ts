@@ -2,7 +2,7 @@ import { Group } from 'three'
 import { byCodeUnit } from '@shared/text'
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer, type GroupingStrategy } from './SceneRenderer'
-import { directionalLight, meshNode } from './scene-fixtures'
+import { directionalLight, gltfNodesOf, meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './sceneState'
 
 /**
@@ -54,11 +54,8 @@ const rendererOf = (grouping: GroupingStrategy = 'batched'): SceneRenderer =>
 const fileOf = async (renderer: SceneRenderer): Promise<string> =>
   new TextDecoder().decode(await renderer.exportTo('gltf', 'scene'))
 
-const namesOf = (file: string): string[] => {
-  // `as`: a `.gltf` file holds glTF, and `nodes` is the field this reads.
-  const parsed = JSON.parse(file) as { nodes?: { name?: string }[] }
-  return (parsed.nodes ?? []).flatMap(node => node.name ?? [])
-}
+const namesOf = async (renderer: SceneRenderer): Promise<string[]> =>
+  (await gltfNodesOf(renderer)).flatMap(node => node.name ?? [])
 
 describe('editing a body a lot draws', () => {
   it('exports the scene with every body, whatever draws it', async () => {
@@ -66,7 +63,7 @@ describe('editing a body a lot draws', () => {
     const renderer = rendererOf()
     renderer.apply(sceneOf(nodes))
 
-    const names = namesOf(await fileOf(renderer))
+    const names = await namesOf(renderer)
     for (const node of nodes) expect(names).toContain(node.id)
   })
 
@@ -115,8 +112,8 @@ describe('editing a body a lot draws', () => {
     const straight = rendererOf()
     straight.apply(settled)
 
-    expect(namesOf(await fileOf(edited)).sort(byCodeUnit)).toEqual(
-      namesOf(await fileOf(straight)).sort(byCodeUnit),
+    expect((await namesOf(edited)).sort(byCodeUnit)).toEqual(
+      (await namesOf(straight)).sort(byCodeUnit),
     )
   })
 })

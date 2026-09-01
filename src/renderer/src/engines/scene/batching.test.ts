@@ -15,44 +15,44 @@ import {
 import { describe, expect, it } from 'vitest'
 import { meshNode } from './scene-fixtures'
 import { createBatchedGroups } from './batching'
-import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './instancing'
+import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
 import type { MeshNode, SceneNode } from './sceneState'
 
 type Built = { nodes: SceneNode[]; objects: Map<string, Mesh> }
 
-const BOX = new BoxGeometry(1, 1, 1)
-const SPHERE = new SphereGeometry(0.5, 8, 6)
-const RED = new MeshStandardMaterial({ color: '#ff0000' })
-const BLUE = new MeshStandardMaterial({ color: '#0000ff' })
+/** A shape as the engine sees it: the object drawn, and the descriptor the node is keyed by. */
+type Shape = { geometry: BufferGeometry; descriptor: MeshNode['geometry'] }
+type Paint = { material: Material; color: string }
 
-/**
- * N nodes in a row along x, each wearing the shape and paint its index picks. The DESCRIPTOR
- * decides the key, as it does in the engine — the objects only carry what is drawn.
- */
+const BOX: Shape = { geometry: new BoxGeometry(1, 1, 1), descriptor: meshNode('x').geometry }
+const SPHERE: Shape = {
+  geometry: new SphereGeometry(0.5, 8, 6),
+  descriptor: { kind: 'sphere', radius: 0.5, widthSegments: 8, heightSegments: 6 },
+}
+const RED: Paint = { material: new MeshStandardMaterial({ color: '#ff0000' }), color: '#ff0000' }
+const BLUE: Paint = { material: new MeshStandardMaterial({ color: '#0000ff' }), color: '#0000ff' }
+
+/** N nodes in a row along x, each wearing the shape and paint its index picks. */
 function laidOut(
   count: number,
-  shapeOf: (at: number) => BufferGeometry = () => BOX,
-  paintOf: (at: number) => Material = () => RED,
+  shapeOf: (at: number) => Shape = () => BOX,
+  paintOf: (at: number) => Paint = () => RED,
 ): Built {
   const nodes: SceneNode[] = []
   const objects = new Map<string, Mesh>()
   for (let at = 0; at < count; at += 1) {
-    const geometry = shapeOf(at)
-    const material = paintOf(at)
+    const shape = shapeOf(at)
+    const paint = paintOf(at)
     const base = meshNode(`n${at}`)
-    const node: MeshNode = {
+    nodes.push({
       ...base,
-      geometry:
-        geometry === BOX
-          ? base.geometry
-          : { kind: 'sphere', radius: 0.5, widthSegments: 8, heightSegments: 6 },
-      material: { ...base.material, color: material === RED ? '#ff0000' : '#0000ff' },
-    }
-    const mesh = new Mesh(geometry, material)
+      geometry: shape.descriptor,
+      material: { ...base.material, color: paint.color },
+    })
+    const mesh = new Mesh(shape.geometry, paint.material)
     mesh.position.set(at * 3, 0, 0)
     mesh.updateMatrixWorld(true)
-    nodes.push(node)
-    objects.set(node.id, mesh)
+    objects.set(base.id, mesh)
   }
   return { nodes, objects }
 }
@@ -170,7 +170,7 @@ describe('createBatchedGroups', () => {
   it('keeps a shape without an index out of a lot that has one, rather than throwing', () => {
     const scene = host()
     // A polyhedron is NOT indexed where a box is: three refuses to mix them in one geometry.
-    const knot = new IcosahedronGeometry(0.5, 1)
+    const knot: Shape = { geometry: new IcosahedronGeometry(0.5, 1), descriptor: SPHERE.descriptor }
     const { nodes, objects } = laidOut(WORTH_INSTANCING * 2, at => (at % 2 === 0 ? BOX : knot))
 
     expect(createBatchedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(
@@ -183,7 +183,7 @@ describe('createBatchedGroups', () => {
     const scene = host()
     const { nodes, objects } = laidOut(WORTH_INSTANCING + 1)
     const first = objects.get('n0')
-    if (first) first.material = [RED, BLUE]
+    if (first) first.material = [RED.material, BLUE.material]
 
     expect(createBatchedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(WORTH_INSTANCING)
     expect(first?.layers.isEnabled(0)).toBe(true)
@@ -266,12 +266,13 @@ describe('a node dragged while its lot draws it', () => {
 })
 
 describe('picking a body through the lot that draws it', () => {
-  const built = (count: number, shapeOf?: (at: number) => BufferGeometry) => {
+  const built = (count: number, shapeOf?: (at: number) => Shape) => {
     const scene = host()
     const groups = createBatchedGroups(scene)
     const { nodes, objects } = laidOut(count, shapeOf)
+    // Through `pickable`, which is what builds the trees the accelerated raycast walks.
     const pick = (at: number): string | null => {
-      const hit = rayOnto(at).intersectObjects(batchesIn(scene), false)[0]
+      const hit = rayOnto(at).intersectObjects([...groups.pickable()], false)[0]
       return hit ? groups.nodeIdOf(hit) : null
     }
     return { groups, nodes, objects, pick }
@@ -291,7 +292,7 @@ describe('picking a body through the lot that draws it', () => {
     const { groups, nodes, objects } = built(WORTH_INSTANCING)
     groups.rebuild(nodes, id => objects.get(id))
 
-    const stranger = new Mesh(BOX, RED)
+    const stranger = new Mesh(BOX.geometry, RED.material)
     expect(groups.nodeIdOf({ object: stranger, distance: 1, point: new Vector3() })).toBeNull()
   })
 

@@ -33,7 +33,7 @@ const HEIGHT = 900
 export const GROUPS = [4, 8, 12, 20, 30, 45, 60, 8, 16, 24, 40, 55, 12, 36, 50, 60, 20, 44]
 export const MOVING_SHARE = 6
 
-function checker(size = 128) {
+export function checker(size = 128) {
   const data = new Uint8Array(size * size * 4)
   for (let at = 0; at < size * size; at++) {
     const on = (((at % size) >> 4) + ((at / size) | 0) >> 4) % 2 === 0
@@ -57,7 +57,7 @@ const shapes = () => [
   new TorusKnotGeometry(0.45, 0.15, 48, 10),
 ]
 
-const place = (index, total) => {
+export const place = (index, total) => {
   const side = Math.ceil(Math.cbrt(total))
   const half = (side - 1) / 2
   return new Vector3(

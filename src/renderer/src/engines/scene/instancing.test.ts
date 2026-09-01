@@ -9,12 +9,8 @@ import {
 import { describe, expect, it } from 'vitest'
 import { EDGE_LAYER } from './sceneView'
 import { meshNode } from './scene-fixtures'
-import {
-  DRAWN_BY_INSTANCE,
-  WORTH_INSTANCING,
-  createInstancedGroups,
-  keepsItsGroup,
-} from './instancing'
+import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
+import { createInstancedGroups, keepsItsGroup } from './instancing'
 import type { SceneNode } from './sceneState'
 
 /** One shape, N nodes of it — a decor someone copied and pasted, which is the case that costs. */

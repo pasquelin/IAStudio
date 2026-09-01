@@ -56,7 +56,7 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
   it('picks through the lots, and names a hit by its slot before its source', () => {
     // A lot names the body a ray met by `batchId`; its source, kept where the camera never looks, is met
     // too and names itself. Left out of the targets, the tree built for the lot serves nobody.
-    expect(body('nodeAt')).toContain('this.instances.drawn()')
+    expect(body('nodeAt')).toContain('this.instances.pickable()')
     expect(body('nodeAt')).toContain('this.instances.nodeIdOf(hit) ??')
   })
 
