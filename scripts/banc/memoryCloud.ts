@@ -117,16 +117,14 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
   let runs = 0
 
   /**
-   * 🛑 The store is where a cancellation LANDS: `useJobs.cancel` tells the provider and waits for
-   * the studio to be told back, which on a real account arrives as progress. Nothing wrote
-   * `cancelled` here, so « annule la génération en cours » could not be won by any model.
+   * 🛑 Through the studio's OWN `apply`, as a real account's progress push arrives: `useJobs.cancel`
+   * tells the provider and writes nothing itself, so nothing here wrote `cancelled` and « annule
+   * la génération en cours » could not be won by any model. Written straight into the store
+   * instead, the port would answer the oracle by itself and measure nothing of the studio.
    */
   const cancelJob = (jobId: string): Promise<void> => {
-    useJobs.setState(state => ({
-      jobs: state.jobs.map(one =>
-        one.id === jobId ? { ...one, status: 'cancelled', finishedAt: WHEN } : one,
-      ),
-    }))
+    const held = useJobs.getState().jobs.find(one => one.id === jobId)
+    if (held) useJobs.getState().apply({ id: jobId, status: 'cancelled', progress: held.progress })
     return Promise.resolve()
   }
 

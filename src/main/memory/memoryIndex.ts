@@ -9,6 +9,7 @@ import {
   type MemoryRef,
   type MemoryRefKind,
   type MemoryType,
+  MEMORY_ANSWERING_STATES,
 } from '@shared/domain/assistantMemory'
 import { oneOf } from '@shared/guards'
 import { askExpression, matchExpression } from '@main/project/ftsMatch'
@@ -240,7 +241,7 @@ const IDS_PER_QUERY = 500
  * Without this a memory the person had set aside came back in the briefing beside its replacement.
  */
 const ANSWERING = {
-  states: ['live', 'pinned'],
+  states: MEMORY_ANSWERING_STATES,
   limit: RECALL_CANDIDATES,
 } satisfies MemoryQuery
 

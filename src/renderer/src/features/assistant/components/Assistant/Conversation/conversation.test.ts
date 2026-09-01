@@ -306,7 +306,7 @@ describe('an object answer too long to show whole', () => {
    * the assistant could not name one object of the scene in front of it.
    */
   it('gives what fits of a list too long to show whole, and says how many', () => {
-    // Counted off the ceiling at the ~40 characters an entry costs: a fixed 40 entries stopped
+    // Counted off the ceiling at the ~20 characters an entry costs: a fixed 40 entries stopped
     // overrunning it the day it was raised.
     const many = Math.ceil(RESULT_MAX / 20)
     const nodes = Array.from({ length: many }, (_, at) => ({

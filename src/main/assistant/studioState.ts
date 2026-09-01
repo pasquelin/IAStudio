@@ -175,14 +175,14 @@ export function describeStudio(data: unknown): string {
     ...selectionLine(state.selection),
     ...armedLine(state),
     ...projectLine(state),
-    // 🛑 BEHIND the armed model and the project: `linesWithin` breaks on the first line that does
-    // not fit, so a line placed ahead of those two takes them down on a saturated briefing — and
-    // a generation run without the armed id is what `armedLine` exists to prevent.
-    ...playLine(state.play),
-    ...taskLines(state.tasks),
     ...(state.authKnown && !state.authenticated
       ? ['  Not signed in: nothing can be generated.']
       : []),
+    // 🛑 LAST, behind the armed model, the project and the sign-in: `linesWithin` breaks on the
+    // first line that does not fit, so a line placed ahead of those takes them down on a
+    // saturated briefing. What STOPS an action outranks what merely tells of one under way.
+    ...playLine(state.play),
+    ...taskLines(state.tasks),
   ]
 
   return linesWithin(lines.join('\n'), STATE_MAX)

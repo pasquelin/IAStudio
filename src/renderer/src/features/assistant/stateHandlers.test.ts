@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { DocumentNameFailure } from '@shared/domain/documentName'
+import { SNAPSHOT_TASKS_MAX, type StudioSnapshot } from '@shared/domain/studioSnapshot'
+import { TARGET_NAME_MAX } from '@shared/domain/target'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -117,6 +119,34 @@ describe('reading what the studio is', () => {
     expect(await runAction('studio.state', {})).toMatchObject({
       data: { tasks: [{ id: 'task-7', label: 'Indexing', ratio: 0.4 }] },
     })
+  })
+
+  /**
+   * 🛑 The label is a document TITLE, unbounded, and the only field of the snapshot that could
+   * fail `parseSnapshot` — which answers null, and takes the WHOLE studio block out of every
+   * briefing. Cut and scrubbed here, as `narrowTargets` does for a target's name.
+   */
+  it('cuts, scrubs and clamps what a task publishes', async () => {
+    useTasks.getState().begin({ id: 'task-7', label: `x"${'y'.repeat(60)}`, ratio: 1.4 })
+
+    const outcome = await runAction('studio.state', {})
+    const [task] = outcome.ok ? ((outcome.data as StudioSnapshot).tasks ?? []) : []
+
+    expect(task?.label).toHaveLength(TARGET_NAME_MAX)
+    expect(task?.label).not.toContain('"')
+    expect(task?.ratio).toBe(1)
+  })
+
+  // Newest first: what a person has just started is what they ask about.
+  it('publishes the newest tasks when more run than it names', async () => {
+    for (let at = 0; at < SNAPSHOT_TASKS_MAX + 2; at += 1)
+      useTasks.getState().begin({ id: `task-${at}`, label: `T${at}`, ratio: 0 })
+
+    const outcome = await runAction('studio.state', {})
+    const tasks = outcome.ok ? ((outcome.data as StudioSnapshot).tasks ?? []) : []
+
+    expect(tasks).toHaveLength(SNAPSHOT_TASKS_MAX)
+    expect(tasks[0]?.id).toBe(`task-${SNAPSHOT_TASKS_MAX + 1}`)
   })
 
   /**

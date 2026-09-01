@@ -63,6 +63,16 @@ export const TARGET_ID_MAX = 40
 const FORGERY = /["\p{Cc}]/gu
 
 /**
+ * A name on its way into the briefing: scrubbed of what forges a line, then cut to the bound.
+ *
+ * 🛑 Shared with the snapshot's tasks, whose label is a document TITLE — unbounded, and the one
+ * field of `StudioSnapshot` that could fail `parseSnapshot`. A failed parse answers `null` and
+ * `describeStudio` then writes nothing at all: the whole studio block leaves every briefing.
+ */
+export const briefingName = (name: string): string =>
+  name.replace(FORGERY, ' ').slice(0, TARGET_NAME_MAX)
+
+/**
  * The share of the document worth telling the model about, most likely first, each cut to what
  * the budget allows.
  *
@@ -97,6 +107,6 @@ export function narrowTargets(
     .slice(0, max)
     .map(target => ({
       ...target,
-      name: target.name.replace(FORGERY, ' ').slice(0, TARGET_NAME_MAX),
+      name: briefingName(target.name),
     }))
 }

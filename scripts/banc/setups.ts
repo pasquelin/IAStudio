@@ -247,12 +247,14 @@ export const madeChest = generated('3d', 'model-3d', 'a wooden chest')
  */
 export const generating = async (studio: Studio): Promise<void> => {
   await madeCar(studio)
+  // The NEWEST alone — the store keeps it first — and with nothing filed: a job still running
+  // has produced no asset, and no end to be dated by.
   useJobs.setState(state => ({
-    jobs: state.jobs.map(({ finishedAt: _done, ...one }) => ({
-      ...one,
-      status: 'running',
-      progress: 0.4,
-    })),
+    jobs: state.jobs.map((job, at) =>
+      at > 0
+        ? job
+        : { ...job, status: 'running', progress: 0.4, assetIds: [], finishedAt: undefined },
+    ),
   }))
 }
 

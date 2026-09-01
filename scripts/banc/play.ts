@@ -1,4 +1,5 @@
 import type { ActionName } from '@shared/domain/assistant'
+import { MEMORY_ANSWERING_STATES } from '@shared/domain/assistantMemory'
 import { composedContext } from '@shared/domain/projectContext'
 import { resultLine } from '@/features/assistant/components/Assistant/Conversation/conversation'
 import { useAssistant } from '@/stores/assistant'
@@ -9,7 +10,8 @@ import { createStudio, type Think } from './studio'
 /**
  * 🛑 `useAssistant.say()` chains the rounds — the window's own loop, so the ceiling, the history
  * window and the stop conditions are the ones the product ships. The bench stands in for the
- * DOOR the main process holds, filling state and context as `createRoutedBrain` does.
+ * DOOR the main process holds, filling state, context and the memory count as `createRoutedBrain`
+ * does — `folders` alone stays out, no scenario naming a folder of this machine.
  */
 export async function play(scenario: Scenario, ask: Think): Promise<Run & { rounds: number }> {
   const asked: { action: ActionName; input: Record<string, unknown> }[] = []
@@ -21,6 +23,13 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
       ...request,
       state: await studio.state(),
       context: composedContext(studio.shell.context().cards),
+      /**
+       * 🛑 The COUNT, which is the whole of what a briefing says about the memory — and the bench
+       * never sent it, so `MEMORY_CALL` was printed on no run at all. Told nothing, the model
+       * searched the FILES for what it had learned: « qu'est-ce que tu sais des caméras ? »
+       * answered `files.search query=camera → found 0`, measured 2026-09-01.
+       */
+      memories: studio.memories().filter(one => MEMORY_ANSWERING_STATES.includes(one.state)).length,
     })
 
     asked.push(...answer.calls.map(one => ({ action: one.action as ActionName, input: one.input })))

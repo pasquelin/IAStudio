@@ -7,7 +7,8 @@ import type {
 import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { PlayState } from '@shared/domain/gameRuntime'
-import { SNAPSHOT_TASKS_MAX } from '@shared/domain/studioSnapshot'
+import { SNAPSHOT_TASKS_MAX, type SnapshotTask } from '@shared/domain/studioSnapshot'
+import { briefingName, TARGET_ID_MAX } from '@shared/domain/target'
 import { EXPORT_FORMATS } from '@shared/domain/scene'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import type { FolderExportRequest } from '@shared/ipc'
@@ -34,7 +35,7 @@ import {
 } from '@/stores/documents'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { playReportOf, usePlay } from '@/stores/play'
-import { useTasks } from '@/stores/tasks'
+import { useTasks, type TaskRow } from '@/stores/tasks'
 import { useSettings } from '@/stores/settings'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
@@ -116,6 +117,24 @@ function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
 const frontKind = (documents: DocumentsSlice): DocumentKind | null =>
   (documents.activeId ? documents.documents[documents.activeId] : undefined)?.kind ?? null
 
+/**
+ * The running tasks a briefing may name, newest first — what a person just started is what they
+ * ask about. Cut and scrubbed like a target: `TaskRow.label` is a document title, unbounded, and
+ * an over-long one fails `parseSnapshot` and takes the WHOLE studio block out of the briefing.
+ */
+function publishedTasks(running: Readonly<Record<string, TaskRow>>): SnapshotTask[] {
+  return Object.values(running)
+    .filter(one => one.id.length <= TARGET_ID_MAX)
+    .reverse()
+    .slice(0, SNAPSHOT_TASKS_MAX)
+    .map(one => ({
+      id: one.id,
+      label: briefingName(one.label),
+      // `taskRatio` divides what is done by an ESTIMATED total, so it overshoots.
+      ratio: Math.min(1, Math.max(0, one.ratio)),
+    }))
+}
+
 /** The state of the game on the scene in front, or `edit` when none is in front at all. */
 function playAhead(documents: DocumentsSlice): PlayState {
   const sceneId = activeSceneId(documents)
@@ -158,7 +177,7 @@ function studioState(): ActionOutcome {
     // Off the scene IN FRONT: a game runs per document, and another tab's would aim
     // « reprends la partie » at a scene the person is not looking at.
     play: playAhead(documents),
-    tasks: Object.values(useTasks.getState().running).slice(0, SNAPSHOT_TASKS_MAX),
+    tasks: publishedTasks(useTasks.getState().running),
     authenticated: auth.auth.authenticated,
     // Same reason as `projectKnown`, and the store keeps the flag for it.
     authKnown: auth.authKnown,

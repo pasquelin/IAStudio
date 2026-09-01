@@ -281,12 +281,11 @@ function readState(): ActionOutcome {
     ok: true,
     data: {
       /**
-       * 🛑 The small FIXED members first and `nodes` last, because it is the one that fills what
-       * is left: `resultLine` hands an over-long list all the remaining room, so every member
-       * behind it is dropped whole. Reordering does not fix the cut — `world` and `nodes` do not
-       * both fit under `RESULT_MAX`, whichever goes first — it only chooses which one is lost.
-       * Measured 2026-08-31: raising the ceiling instead moved the bench score by nothing at all,
-       * so `nodes` stays cut on a busy scene, and `conversation.ts` carries the figure.
+       * 🛑 The order below buys nothing and is kept as it was: `resultLine` hands the FIRST
+       * over-long list all the room left, so `tracks` and `nodes` cannot both survive whichever
+       * goes first — reordering only chooses which one is lost. A three-object scene answers
+       * `(cut short: nodes)` today. Raising the ceiling instead moved the bench score by nothing
+       * at all on 2026-08-31, and `conversation.ts` carries that figure.
        */
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,

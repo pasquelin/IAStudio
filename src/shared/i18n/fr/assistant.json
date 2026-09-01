@@ -923,15 +923,15 @@
       },
       "contextReadProjectCards": {
         "title": "Lire le contexte du projet",
-        "description": "Rend les fiches de contexte du projet ouvert, avec leur titre, leur texte et si elles s’appliquent."
+        "description": "Répond les fiches de contexte — ce que la PERSONNE a dit de ce projet — avec leur titre, leur texte et si elles s’appliquent."
       },
       "contextWriteProjectCard": {
         "title": "Écrire une fiche de contexte",
-        "description": "Ajoute une fiche au contexte du projet, ou remplace le titre, le texte ou l’état de celle qu’un identifiant nomme."
+        "description": "Écrit ce que la PERSONNE dit que le projet EST ou VISE, dans son ensemble, en fiche durable relue à chaque tour. Une règle de travail sur la façon dont une chose se fait ici — comment les caméras bougent, comment les fichiers se nomment — est un souvenir : memory.write."
       },
       "contextDeleteProjectCard": {
         "title": "Supprimer une fiche de contexte",
-        "description": "Retire du contexte du projet la fiche qu’un identifiant nomme. Son texte est perdu."
+        "description": "Retire du contexte du projet la fiche que désigne un identifiant — ce que la personne a dit, dédit. Son texte est perdu."
       },
       "targetSelect": {
         "title": "Désigner une cible",
@@ -1123,19 +1123,19 @@
       },
       "memoryRecall": {
         "title": "Retrouver ce qui a été appris",
-        "description": "Cherche dans ce que l’assistant a appris du projet et rend les résumés trouvés avec leur identifiant."
+        "description": "Cherche ce que l’assistant a CONSTATÉ en travaillant et répond les résumés trouvés, avec leurs identifiants. Ce que la personne dit du projet vit dans les fiches de contexte."
       },
       "memoryRead": {
         "title": "Lire une mémoire en entier",
-        "description": "Rend le détail d’une mémoire, ce qu’elle référence et d’où elle vient, à partir de son identifiant."
+        "description": "Répond le détail d’un souvenir, ce à quoi il se rapporte et d’où il vient, à partir de son identifiant."
       },
       "memoryWrite": {
         "title": "Retenir quelque chose du projet",
-        "description": "Écrit une mémoire dans le projet ouvert. Elle remplace celle qui se tient déjà sur la même référence."
+        "description": "Note une règle de travail de ce projet, ou ce que l’assistant a constaté en agissant — comment une chose se fait ici, à quoi sert un fichier ou un objet. Ce que la personne dit que le projet EST ou VISE est une fiche de contexte. Remplace celui qui portait déjà la même référence."
       },
       "memoryForget": {
         "title": "Oublier une mémoire",
-        "description": "Marque une mémoire comme oubliée. Rien n’est effacé du fichier : ce qui a été appris reste traçable."
+        "description": "Marque comme oublié ce que l’assistant avait constaté. Rien n’est effacé du fichier : ce qui a été appris reste traçable."
       },
       "memoryLink": {
         "title": "Relier deux mémoires",
