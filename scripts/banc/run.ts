@@ -35,6 +35,12 @@ export type Scenario = {
    */
   setup?: (studio: Studio) => Promise<void>
   /**
+   * 🛑 What the person answers the confirmation card — `yes` unless a scenario says otherwise.
+   * Held at `yes` for every scenario before 2026-09-01, the « the person said no » path of the
+   * executor was played by NOTHING: 285 actions, and a refusal reached none of them.
+   */
+  answers?: 'yes' | 'no'
+  /**
    * Whether the request was carried out — read off what the studio HOLDS, never off the words
    * the model wrote. Every failure this bench exists for was announced as a success.
    */

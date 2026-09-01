@@ -499,7 +499,7 @@
       },
       "styleSave": {
         "title": "Enregistrer la matière comme style",
-        "description": "Met de côté la matière du document devant sous le nom donné. Le nom sert de base, le studio le rendant unique s’il est déjà pris."
+        "description": "Enregistre la matière du document devant sous le nom donné. Le nom sert de base, le studio le rendant unique s’il est déjà pris."
       },
       "styleRename": {
         "title": "Renommer un style de matière",
@@ -543,11 +543,11 @@
       },
       "favoritesListPinnedRecipes": {
         "title": "Lister les recettes épinglées",
-        "description": "Rend les recettes mises de côté, avec le modèle qui les a produites et l’espace qui sait les refaire. Une recette garde de quoi relancer une génération."
+        "description": "Rend les recettes épinglées au projet, avec le modèle qui les a produites et l’espace qui sait les refaire. Une recette garde de quoi relancer une génération."
       },
       "favoritePinAssetRecipe": {
         "title": "Épingler la recette d’un asset",
-        "description": "Met de côté ce qui a produit un asset du projet ouvert, pour pouvoir le refaire. Un asset que personne n’a généré n’a pas de recette à garder."
+        "description": "Épingle ce qui a produit un asset du projet ouvert, pour pouvoir le refaire. Un asset que personne n’a généré n’a pas de recette à garder."
       },
       "favoriteUnpinAssetRecipe": {
         "title": "Retirer une recette épinglée",
@@ -855,7 +855,7 @@
       },
       "gitStashes": {
         "title": "Lister les remises",
-        "description": "Rend ce qui a été mis de côté, de la plus récente à la plus ancienne, pour qu’un client puisse en reprendre une par sa place dans la liste."
+        "description": "Rend ce qui a été remisé, de la plus récente à la plus ancienne, pour qu’un client puisse en reprendre une par sa place dans la liste."
       },
       "gitInit": {
         "title": "Commencer à enregistrer les versions",
@@ -887,7 +887,7 @@
       },
       "gitStash": {
         "title": "Remiser les modifications en cours",
-        "description": "Met de côté les modifications de la copie de travail et la ramène à la dernière version enregistrée. Les modifications quittent alors le disque."
+        "description": "Remise les modifications de la copie de travail et la ramène à la dernière version enregistrée. Les modifications quittent alors le disque."
       },
       "gitStashPop": {
         "title": "Reprendre une remise",

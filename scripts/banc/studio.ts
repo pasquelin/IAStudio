@@ -174,6 +174,7 @@ const texturesOfTheProject = (catalog: MemoryCatalog): readonly Asset[] =>
 export async function createStudio(
   seed: readonly { path: string; kind: FileKind }[],
   think?: Think,
+  answers: 'yes' | 'no' = 'yes',
 ): Promise<Studio> {
   await speakFrench()
   const folder = createMemoryFolder(seed)
@@ -488,7 +489,7 @@ export async function createStudio(
   // The input goes back as it came: a headless run points at no folder, so what gets scored is
   // the model's own values.
   const closeConfirmer = registerConfirmer(request =>
-    Promise.resolve({ granted: true, input: request.input }),
+    Promise.resolve({ granted: answers === 'yes', input: request.input }),
   )
   /**
    * 🛑 Not optional: the chain WAITS on an `ask`, so a headless run with nobody to answer hangs on

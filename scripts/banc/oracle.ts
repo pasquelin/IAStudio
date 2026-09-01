@@ -455,6 +455,14 @@ export const searched = (run: Run, word: string): boolean =>
       ),
   )
 
+/**
+ * The call the person said NO to — `answerShown` writes « refused declined », the name the
+ * executor gives that one path. Both halves matter: a scenario reading only what the studio
+ * still HOLDS passes on a model that never called, which is what the decor already held.
+ */
+export const declined = (run: Run, name: ActionName): boolean =>
+  run.called.some(one => one.action === name && one.answer?.startsWith('refused declined') === true)
+
 /** Whether an action ran at all, refused or not — what an undo scenario has to see happen. */
 export const tried = (run: Run, name: ActionName): boolean =>
   run.called.some(one => one.action === name)

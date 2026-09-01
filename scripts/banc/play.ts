@@ -34,7 +34,7 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
 
     asked.push(...answer.calls.map(one => ({ action: one.action as ActionName, input: one.input })))
     return answer
-  })
+  }, scenario.answers)
 
   await scenario.setup?.(studio)
   // What the decor changed is not what the model changed — see `settle`.

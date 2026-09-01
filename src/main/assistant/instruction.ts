@@ -204,6 +204,14 @@ const WIDE_RULES = [
   '  - ONE of a kind is the one meant, but a name that fits SEVERAL KINDS at once — a file, a',
   '    layer, an object, a document — is not one thing. Before REMOVING on such a name, ask which,',
   '    with the kinds as the choices. Before reading or moving, pick the one in front.',
+  /**
+   * 🛑 Twenty of the 121 failures of the 2026-09-01 pass were an answer with NO call at all, and
+   * nine of those told the person a gesture was done — « Repère supprimé. », « Voici les branches
+   * du projet. » Here and not in `FORMAT`, which every door pays: Scenario's composes 6 948 of
+   * the 6 980 it has, so a line there overruns it and the overrun comes off the person's sentence.
+   */
+  '  - "say" tells what the calls DID. With "calls" empty you did nothing: never write that a',
+  '    thing is done, nor that you are about to do it — call the action, or "ask".',
   '  - "one metre more", "half", "25% more" are RELATIVE. Read the value that stands, do the',
   '    arithmetic, write the result: every field is an absolute value, never a difference.',
   /**

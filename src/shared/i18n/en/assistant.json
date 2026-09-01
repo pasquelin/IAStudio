@@ -499,7 +499,7 @@
       },
       "styleSave": {
         "title": "Save the material as a style",
-        "description": "Puts the material of the document in front aside under the given name. The name is a base, the studio making it unique when it is already taken."
+        "description": "Records the material of the document in front under the given name. The name is a base, the studio making it unique when it is already taken."
       },
       "styleRename": {
         "title": "Rename a material style",
@@ -543,11 +543,11 @@
       },
       "favoritesListPinnedRecipes": {
         "title": "List the pinned recipes",
-        "description": "Answers the recipes put aside, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
+        "description": "Answers the recipes pinned to the project, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
       },
       "favoritePinAssetRecipe": {
         "title": "Pin what produced an asset",
-        "description": "Puts aside what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
+        "description": "Pins what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
       },
       "favoriteUnpinAssetRecipe": {
         "title": "Remove a pinned recipe",
@@ -855,7 +855,7 @@
       },
       "gitStashes": {
         "title": "List the shelved changes",
-        "description": "Returns what has been set aside, newest first, so a client can put one back by its place in the list."
+        "description": "Returns what has been shelved, newest first, so a client can put one back by its place in the list."
       },
       "gitInit": {
         "title": "Start recording versions",
@@ -887,7 +887,7 @@
       },
       "gitStash": {
         "title": "Shelve the current changes",
-        "description": "Sets the working tree’s changes aside and returns it to the last recorded version. It takes the changes off the disk."
+        "description": "Shelves the working tree’s changes and returns it to the last recorded version. It takes the changes off the disk."
       },
       "gitStashPop": {
         "title": "Bring shelved changes back",
