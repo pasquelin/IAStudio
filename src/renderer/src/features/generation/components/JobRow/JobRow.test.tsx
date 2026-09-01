@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { Job } from '@shared/domain/job'
+import type { Job, JobNote } from '@shared/domain/job'
 import { job as jobOf } from '@/stores/job-fixtures'
 import { JobRow } from './JobRow'
 
@@ -85,19 +85,26 @@ describe('the unit a cost is quoted in', () => {
 })
 
 /**
- * 🛑 `animations/rig-check` is free, so its cost says nothing, and it writes no file, so the
- * shelf says nothing either. The verdict is the whole point of the run — read off `job.text`,
- * where the runner leaves a result that is not a file.
+ * 🛑 A free check quotes its cost at zero, and writes no file: without the sentence a runner
+ * asked for, its row said nothing at all. Read off `job.note` — a KEY, and holes that are keys
+ * too, so nothing in this component knows a cloud.
  */
-describe('what a free rig check answered', () => {
-  it('names the topology a rig should then be asked for', () => {
-    render(<JobRow job={job({ facts: '{"riggable": true, "rig_type": "biped"}', cost: 0 })} />)
+describe('what a runner asked to be said on the row', () => {
+  it('fills the holes of the sentence with words, not with keys', () => {
+    const note = {
+      labelKey: 'tripoRigCheck.riggableAs',
+      params: { topology: 'tripoFields.rig_type_biped' },
+    }
+
+    render(<JobRow job={job({ note, cost: 0 })} />)
 
     expect(screen.getByText('Squelettable · Bipède')).toBeDefined()
   })
 
-  it('says a mesh cannot be rigged, rather than a cost of zero', () => {
-    render(<JobRow job={job({ facts: '{"riggable": false}', cost: 0 })} />)
+  it('says it before the cost, which a free run quotes at zero', () => {
+    const note: JobNote = { labelKey: 'tripoRigCheck.notRiggable', tone: 'warning' }
+
+    render(<JobRow job={job({ note, cost: 0 })} />)
 
     expect(screen.getByText('Pas de squelette possible')).toBeDefined()
   })

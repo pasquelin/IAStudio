@@ -1,4 +1,5 @@
 import { isRecord } from '../guards'
+import type { JobNote } from './job'
 import type { FieldDescriptor, ModelDescriptor, ModelFamily } from './model'
 import {
   ADVANCED_GROUP,
@@ -706,33 +707,19 @@ export function tripoFieldKeys(): readonly string[] {
 }
 
 /**
- * What `animations/rig-check` answers — the one Tripo result that is not a file, and what says
- * whether the 25 credits a rig costs are worth spending.
+ * What `animations/rig-check` answers — the one Tripo result that is not a file, said as the row
+ * will say it. A topology no bundle has a word for drops the short sentence rather than showing
+ * a raw key, which is this repo's costliest defect.
  */
-export type TripoRigCheck = {
-  readonly riggable: boolean
-  /** Absent when they name a topology no bundle has a word for: the sentence then drops it. */
-  readonly rigType?: string
-}
+export function tripoRigCheckNote(output: unknown): JobNote | null {
+  if (!isRecord(output) || typeof output['riggable'] !== 'boolean') return null
+  if (!output['riggable']) return { labelKey: 'tripoRigCheck.notRiggable', tone: 'warning' }
 
-export function tripoRigCheckOf(text: string | undefined): TripoRigCheck | null {
-  // A row reads this on every render, and every other runtime writes a SCRIPT here: a thrown
-  // parse per frame is the cost of not looking first.
-  if (!text?.startsWith('{')) return null
-
-  let answered: unknown
-  try {
-    answered = JSON.parse(text)
-  } catch {
-    // Every other runtime writes a script here, which is not JSON — not a failure, just not ours.
-    return null
-  }
-
-  if (!isRecord(answered) || typeof answered['riggable'] !== 'boolean') return null
-  const rigType = answered['rig_type']
-
-  return {
-    riggable: answered['riggable'],
-    ...(typeof rigType === 'string' && TRIPO_RIG_TYPES.includes(rigType) ? { rigType } : {}),
-  }
+  const rigType = output['rig_type']
+  return typeof rigType === 'string' && TRIPO_RIG_TYPES.includes(rigType)
+    ? {
+        labelKey: 'tripoRigCheck.riggableAs',
+        params: { topology: `tripoFields.rig_type_${rigType}` },
+      }
+    : { labelKey: 'tripoRigCheck.riggable' }
 }

@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { CREDIT_UNIT } from '@shared/domain/credits'
 import type { Job } from '@shared/domain/job'
-import { tripoRigCheckOf } from '@shared/domain/tripo'
 import { failureMessageKey } from '@/services/failureMessage'
+import { cn } from '@/helpers/cn'
 import { formatUnits } from '@/helpers/format'
 
 /** What the row says under its bar: why it failed, what it answered, or what it cost. One of them. */
@@ -17,19 +17,20 @@ export function JobRowDetail({ job }: { job: Job }) {
     )
   }
 
-  // 🛑 Before the cost, which a free check quotes at zero: the verdict is the whole point of the
-  // run, and it is what says whether the 25 credits a rig costs are worth spending.
-  const check = tripoRigCheckOf(job.facts)
-  if (check) {
+  // 🛑 Before the cost, which a free check quotes at zero: what a runner asked to be said is
+  // the whole point of that run. A KEY, and its holes are keys too — nothing here knows a cloud.
+  if (job.note) {
+    const { labelKey, params, tone } = job.note
+    // The holes are keys too, so each is said before it fills one. The tuple is annotated
+    // because `Object.fromEntries` widens to `any` otherwise, and i18next then widens its own
+    // return past what a node can hold.
+    const holes = Object.fromEntries(
+      Object.entries(params ?? {}).map(([hole, key]): [string, string] => [hole, t(key)]),
+    )
+
     return (
-      <span className={check.riggable ? 'text-muted text-tiny' : 'text-warning text-tiny'}>
-        {!check.riggable
-          ? t('tripoRigCheck.notRiggable')
-          : check.rigType
-            ? t('tripoRigCheck.riggableAs', {
-                topology: t(`tripoFields.rig_type_${check.rigType}`),
-              })
-            : t('tripoRigCheck.riggable')}
+      <span className={cn('text-tiny', tone === 'warning' ? 'text-warning' : 'text-muted')}>
+        {t(labelKey, holes)}
       </span>
     )
   }

@@ -83,7 +83,12 @@ describe('the Tripo API', () => {
     // A FRACTION: theirs is a percentage, and the manager only reads the larger scale above 2.
     expect(tasks).toEqual([
       { taskId: 'a', status: 'running', progress: 0.4, outputUrls: {} },
-      { taskId: 'b', status: 'success', outputUrls: { model_url: 'https://x/b.glb' } },
+      {
+        taskId: 'b',
+        status: 'success',
+        outputUrls: { model_url: 'https://x/b.glb' },
+        output: { model_url: 'https://x/b.glb' },
+      },
     ])
   })
 
@@ -148,24 +153,18 @@ describe('taskOf', () => {
   })
 
   /**
-   * 🛑 `animations/rig-check` is free and answers three facts and no URL. Kept out, the task
-   * succeeded, produced nothing, and the person learnt nothing of what it was run for.
+   * 🛑 `animations/rig-check` is free and answers three facts and no URL. Read for its URLs
+   * alone, the task succeeded, produced nothing, and said nothing of what it was run for.
    */
-  it('keeps what the output says beside its files', () => {
+  it('keeps their answer as it came, beside the URLs it reads out of it', () => {
     const task = taskOf({
       task_id: 'a',
       status: 'success',
       output: { riggable: true, rig_type: 'biped', topology: 'biped' },
     })
 
-    expect(task?.outputFacts).toEqual({ riggable: true, rig_type: 'biped', topology: 'biped' })
+    expect(task?.output).toEqual({ riggable: true, rig_type: 'biped', topology: 'biped' })
     expect(task?.outputUrls).toEqual({})
-  })
-
-  it('leaves the facts out of a task whose output is files alone', () => {
-    const task = taskOf({ task_id: 'a', status: 'success', output: { model_url: 'https://m' } })
-
-    expect(task?.outputFacts).toBeUndefined()
   })
 
   it('drops a payload naming neither a task nor a state', () => {
