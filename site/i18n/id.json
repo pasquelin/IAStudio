@@ -26,7 +26,8 @@
     "docs": "Dokumen",
     "build": "Versi pengembangan",
     "download": "Unduh",
-    "languageLabel": "Bahasa"
+    "languageLabel": "Bahasa",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "Aplikasi desktop · proyek mandiri",

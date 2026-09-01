@@ -26,7 +26,8 @@
     "docs": "दस्तावेज़",
     "build": "विकास संस्करण",
     "download": "डाउनलोड",
-    "languageLabel": "भाषा"
+    "languageLabel": "भाषा",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "डेस्कटॉप अनुप्रयोग · स्वतंत्र परियोजना",

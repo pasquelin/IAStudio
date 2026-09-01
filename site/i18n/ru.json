@@ -26,7 +26,8 @@
     "docs": "Документация",
     "build": "Версия для разработки",
     "download": "Скачать",
-    "languageLabel": "Язык"
+    "languageLabel": "Язык",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "Настольное приложение · независимый проект",

@@ -26,7 +26,8 @@
     "docs": "Belgeler",
     "build": "Geliştirme sürümü",
     "download": "İndir",
-    "languageLabel": "Dil"
+    "languageLabel": "Dil",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "Masaüstü uygulaması · bağımsız proje",

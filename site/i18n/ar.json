@@ -27,7 +27,8 @@
     "docs": "التوثيق",
     "build": "نسخة تطوير",
     "download": "تنزيل",
-    "languageLabel": "اللغة"
+    "languageLabel": "اللغة",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "تطبيق سطح مكتب · مشروع مستقل",
