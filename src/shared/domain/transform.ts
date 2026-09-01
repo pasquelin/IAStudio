@@ -23,6 +23,26 @@ export const IDENTITY_TRANSFORM: Transform = {
   scale: { x: 1, y: 1, z: 1 },
 }
 
+/** The three parts of a transform, for a walk that must not forget one. */
+const PARTS: readonly (keyof Transform)[] = ['position', 'rotation', 'scale']
+
+/**
+ * The parts of a transform that have MOVED, the ones still at rest left out.
+ *
+ * 🛑 For what crosses to a model, where every character is one the rest of the answer does not
+ * get: a node merely moved carried its unturned rotation and its unscaled scale for 78 characters,
+ * in the one member of `scene.state` that was being dropped whole for want of room.
+ */
+export function movedParts(transform: Transform): Partial<Transform> {
+  const moved: Partial<Transform> = {}
+  for (const part of PARTS) {
+    const rest = IDENTITY_TRANSFORM[part]
+    const value = transform[part]
+    if (value.x !== rest.x || value.y !== rest.y || value.z !== rest.z) moved[part] = value
+  }
+  return moved
+}
+
 /** A transform nothing else holds a reference into — what a runtime copies out of a document. */
 export function copyTransform(transform: Transform): Transform {
   return {

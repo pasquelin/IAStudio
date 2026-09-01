@@ -319,7 +319,7 @@
       },
       "sequenceState": {
         "title": "Lire le montage en cours d’édition",
-        "description": "Rend le montage devant — ses réglages, sa durée, la tête de lecture et ce qui est sélectionné — puis chaque piste avec ses blocs, leurs bornes, leur entrée dans la source, leur vitesse, leurs fondus et leur niveau."
+        "description": "Répond le montage en avant — ses réglages, sa durée, la tête de lecture et ce qui est sélectionné — puis chaque piste avec ses clips, leurs bornes, leur entrée dans la source, leur vitesse, leurs fondus et leur niveau. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : une piste s’entend et n’est pas verrouillée, un clip va à la vitesse 1 depuis son début, sans fondu et au niveau enregistré."
       },
       "sequenceSeek": {
         "title": "Placer la tête de lecture",
@@ -595,7 +595,7 @@
       },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
-        "description": "Rend tous les objets du document 3D devant — identifiant, nom, type, parent, visibilité et transformation, avec la géométrie, la matière ou la lumière qu’ils portent — plus ce qui est sélectionné, les plans de caméra, et le décor entier de la scène."
+        "description": "Répond chaque objet du document 3D en avant — son identifiant, son nom, son type, son parent, sa visibilité et sa transformation, avec la géométrie, la matière ou la lumière qu’il porte — plus ce qui est sélectionné, les plans de caméra et le réglage de la scène. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : pas de champ parent veut dire aucun parent, pas de transformation veut dire à l’origine, sans rotation ni échelle, pas de couleur veut dire celle du studio."
       },
       "nodeAdd": {
         "title": "Ajouter un objet à la scène",
