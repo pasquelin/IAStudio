@@ -31,7 +31,12 @@ function playing(): string | ActionOutcome {
  * guard opened all eight handlers before this existed.
  */
 const onPlaying =
-  (run: (documentId: string, input: Record<string, unknown>) => ActionOutcome): ActionHandler =>
+  (
+    run: (
+      documentId: string,
+      input: Record<string, unknown>,
+    ) => ActionOutcome | Promise<ActionOutcome>,
+  ): ActionHandler =>
   input => {
     const held = playing()
     return typeof held === 'string' ? run(held, input) : held
@@ -53,20 +58,24 @@ export const PLAY_HANDLERS: ActionHandlers = {
     return { ok: true }
   }),
 
-  'play.pause': onPlaying(documentId => {
-    // 🛑 A start answers before its engines land, so there is a window where no session exists.
+  // 🛑 Awaited, unlike its neighbours: the game runs in the game WINDOW, so what answers here is
+  // that window and not this one. A start still answers at once — it has nothing to wait for.
+  'play.pause': onPlaying(async documentId => {
+    // 🛑 A start answers before its window opens, so there is a spell where no session exists.
     // Said rather than swallowed: a model told « paused » would step a world still running.
-    if (!usePlay.getState().pause(documentId)) return refused('badInput', 'no game is running yet')
+    if (!(await usePlay.getState().pause(documentId)))
+      return refused('badInput', 'no game is running yet')
     return { ok: true, data: { state: playReportOf(usePlay.getState(), documentId).state } }
   }),
 
-  'play.resume': onPlaying(documentId => {
-    if (!usePlay.getState().resume(documentId)) return refused('badInput', 'no game is running')
+  'play.resume': onPlaying(async documentId => {
+    if (!(await usePlay.getState().resume(documentId)))
+      return refused('badInput', 'no game is running')
     return { ok: true, data: { state: playReportOf(usePlay.getState(), documentId).state } }
   }),
 
-  'play.step': onPlaying((documentId, input) => {
-    const ran = usePlay.getState().step(documentId, numberOf(input, 'steps') ?? 1)
+  'play.step': onPlaying(async (documentId, input) => {
+    const ran = await usePlay.getState().step(documentId, numberOf(input, 'steps') ?? 1)
     // Nothing ran is not nothing happened: only a PAUSED game steps, and a game whose engines
     // are still landing is not one at all. Both are said, because they are repaired differently.
     if (ran === 0) {
@@ -76,13 +85,13 @@ export const PLAY_HANDLERS: ActionHandlers = {
     return { ok: true, data: { steps: ran, ...readingOf(documentId) } }
   }),
 
-  'play.loadScene': onPlaying((documentId, input) => {
+  'play.loadScene': onPlaying(async (documentId, input) => {
     // Refused rather than asked for: an empty name takes the frame's one request slot, and would
     // swallow the one a script made on the same step.
     const scene = textOf(input, 'scene') ?? ''
     if (scene.length === 0) return refused('badInput', 'no scene named')
 
-    if (!usePlay.getState().loadScene(documentId, scene, numberOf(input, 'fade') ?? 0)) {
+    if (!(await usePlay.getState().loadScene(documentId, scene, numberOf(input, 'fade') ?? 0))) {
       return refused('badInput', 'no game is running')
     }
     // 🛑 Asked for, never done here: the swap happens between two steps, and a scene the project

@@ -1,15 +1,18 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LogEntry, RuntimeError } from '@shared/domain/gameRuntime'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { documentFolderOf } from '@shared/domain/document'
 import { createInertPhysics } from '@game/host/inertPhysics'
+import { createInertScripts } from '@game/host/inertScripts'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { drawing } from '@/game/game-fixtures'
+import { createGameStage, type GameStage } from '@/game/gameStage'
+import { installFakeBridge } from '@/services/fakeBridge'
 import { useCode } from '@/stores/code'
 import { installDocument } from '@/stores/document-fixtures'
 import { usePlay } from '@/stores/play'
@@ -22,6 +25,11 @@ vi.mock('@game/host/rapierPhysics', () => ({
   loadRapierPhysics: () => Promise.resolve(createInertPhysics()),
 }))
 
+/** And the sandbox with it: a suite that measures a transport must not wait on a JIT. */
+vi.mock('@game/host/quickjsScripts', () => ({
+  loadQuickjsScripts: () => Promise.resolve(createInertScripts()),
+}))
+
 const DOCUMENT = 'doc-scene'
 
 function show() {
@@ -31,15 +39,24 @@ function show() {
     selectedIds: [],
   })
   registerSceneEngine(DOCUMENT, drawing())
-  const host = document.createElement('div')
-  render(<SceneSnapPlay documentId={DOCUMENT} viewport={() => host} />)
+  render(<SceneSnapPlay documentId={DOCUMENT} />)
 }
+
+/** The stage the game window mounts, since a suite opens none — see `play.test.ts`. */
+let stage: GameStage | null = null
 
 const play = () => screen.getByRole('button', { name: 'Jouer' })
 const stop = () => screen.getByRole('button', { name: 'Arrêter' })
 
+beforeEach(() => {
+  installFakeBridge()
+  stage = createGameStage({ renderer: drawing(), input: new EventTarget() })
+})
+
 afterEach(() => {
   usePlay.getState().stop(DOCUMENT)
+  stage?.close()
+  stage = null
   forgetSceneEngine(DOCUMENT)
 })
 
@@ -64,11 +81,14 @@ describe('the transport of a scene played as a game', () => {
 
     await userEvent.click(play())
 
-    // Waited on the STATE, not on the button: both are drawn from the first render, so a
-    // `findByRole` answers instantly with the transport as it was before the engine landed.
-    await waitFor(() => expect(play()).toBeDisabled())
-    expect(stop()).toHaveClass('text-danger')
-    expect(play()).not.toHaveClass('text-success')
+    // Both in ONE wait, and on the STATE rather than on the buttons: they are drawn from the
+    // first render, so a `findByRole` answers instantly with the transport as it was before the
+    // game started — and asserting them one after the other splits a single report in two.
+    await waitFor(() => {
+      expect(play()).toBeDisabled()
+      expect(stop()).toHaveClass('text-danger')
+      expect(play()).not.toHaveClass('text-success')
+    })
   })
 
   it('grays Play out while the game runs, and takes the game back to edit on stop', async () => {
@@ -116,7 +136,7 @@ describe('a game whose systems are failing', () => {
         { level: 'error', message: 'system script threw: broken', at: 1 },
       ],
     )
-    render(<SceneSnapPlay documentId={DOCUMENT} viewport={() => null} />)
+    render(<SceneSnapPlay documentId={DOCUMENT} />)
 
     expect(screen.getByRole('button', { name: '1 erreur' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '1 erreur' })).toHaveAttribute(
@@ -131,7 +151,7 @@ describe('a game whose systems are failing', () => {
       [{ script: WALK, entity: null, message: 'cannot import node:fs', line: 3, column: 0, at: 1 }],
       [{ level: 'error', message: 'system script threw: broken', at: 2 }],
     )
-    render(<SceneSnapPlay documentId={DOCUMENT} viewport={() => null} />)
+    render(<SceneSnapPlay documentId={DOCUMENT} />)
 
     expect(screen.getByRole('button', { name: '2 erreurs' })).toBeInTheDocument()
   })
@@ -142,7 +162,7 @@ describe('a game whose systems are failing', () => {
     // The script has to BE a document of the project: a fault naming one the project does not
     // hold opens nothing at all, which `openScript.test.ts` states from the other side.
     installDocument('Walk', 'code')
-    render(<SceneSnapPlay documentId={DOCUMENT} viewport={() => null} />)
+    render(<SceneSnapPlay documentId={DOCUMENT} />)
 
     await userEvent.click(screen.getByRole('button', { name: '1 erreur' }))
 

@@ -3,6 +3,7 @@ import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isJournalRoute } from '@shared/domain/activity'
 import { isFileInfoRoute } from '@shared/domain/fileInfo'
+import { isGameWindowRoute } from '@shared/domain/gameWindow'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
 import { isMirrorRoute } from '@shared/domain/mirror'
@@ -54,6 +55,11 @@ const JournalWindow = lazy(async () => ({
 /** Split like its neighbours: the return is opened on purpose, and rarely. */
 const MirrorWindow = lazy(async () => ({
   default: (await import('@/features/video/components/MirrorWindow/MirrorWindow')).MirrorWindow,
+}))
+
+/** Lazy for a harder reason than size: it drags a `SceneRenderer`, and with it all of three.js. */
+const GameWindow = lazy(async () => ({
+  default: (await import('@/features/game/components/GameWindow/GameWindow')).GameWindow,
 }))
 
 /** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
@@ -113,6 +119,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <UsageWindow />
+      </Suspense>
+    )
+  }
+  if (isGameWindowRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <GameWindow />
       </Suspense>
     )
   }

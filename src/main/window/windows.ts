@@ -6,6 +6,7 @@ import { JOURNAL_ROUTE } from '@shared/domain/activity'
 import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
+import { GAME_WINDOW_ROUTE } from '@shared/domain/gameWindow'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { NEW_DOCUMENT_ROUTE } from '@shared/domain/newDocument'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
@@ -406,4 +407,50 @@ export function openMirrorWindow(): BrowserWindow {
   load(window, { hash: MIRROR_ROUTE })
   mirrorWindow = window
   return window
+}
+
+/** The one game window, held apart from the auxiliary ones — see `openGameWindow`. */
+let gameWindow: BrowserWindow | null = null
+
+/**
+ * A scene played as a game, in a window of its own. NOT an auxiliary one, for the reason
+ * `openMirrorWindow` gives: those refuse full screen, which is wrong for something one plays.
+ * 🛑 Its closing is TOLD to the studio — a window torn down has no turn left in which to publish.
+ */
+export function openGameWindow(): BrowserWindow {
+  if (gameWindow && !gameWindow.isDestroyed()) {
+    revealWindow(gameWindow)
+    return gameWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    minWidth: 480,
+    minHeight: 320,
+    show: false,
+    backgroundColor: MIRROR_BACKGROUND,
+    title: TRANSLATIONS[windowLanguage()].game.window.title,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => {
+    // Identity-checked, as every other slot here is: an older window closing must not clear one
+    // a newer game now holds, nor tell the studio that the game it just started is over.
+    if (gameWindow !== window) return
+    gameWindow = null
+    studioWindow()?.webContents.send(EVENTS.gameWindowClosed)
+  })
+
+  load(window, { hash: GAME_WINDOW_ROUTE })
+  gameWindow = window
+  return window
+}
+
+/** What a Stop pressed in the studio does. Silent when there is no game window to close. */
+export function closeGameWindow(): void {
+  if (gameWindow && !gameWindow.isDestroyed()) gameWindow.close()
 }

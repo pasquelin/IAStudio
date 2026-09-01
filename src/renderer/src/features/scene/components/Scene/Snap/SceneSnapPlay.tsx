@@ -5,20 +5,13 @@ import { tipFor } from '@/helpers/tooltip'
 import { openScriptAt } from '@/helpers/openScript'
 import { playReportOf, usePlay } from '@/stores/play'
 
-export type SceneSnapPlayProps = {
-  documentId: string
-  /**
-   * What the keyboard and the pointer are read off while the game runs. A GETTER, called when the
-   * button is pressed: the host is a ref, and a ref read during a render is a stale value.
-   */
-  viewport: () => HTMLElement | null
-}
+export type SceneSnapPlayProps = { documentId: string }
 
 /**
  * The transport that starts a game, on the viewport's own bar rather than in a box of its own —
  * 🛑 that box sat at the toolbars' own coordinates, covered whole, and no click reached Play.
  */
-export function SceneSnapPlay({ documentId, viewport }: SceneSnapPlayProps) {
+export function SceneSnapPlay({ documentId }: SceneSnapPlayProps) {
   const { t } = useTranslation()
   const report = usePlay(state => playReportOf(state, documentId))
   // Both, never one OR the other: a game that has a script fault and an engine error has two
@@ -31,14 +24,10 @@ export function SceneSnapPlay({ documentId, viewport }: SceneSnapPlayProps) {
   const addressable = report.errors.findLast(one => one.line > 0) ?? null
 
   const play = (): void => {
-    if (report.state === 'paused') {
-      usePlay.getState().resume(documentId)
-      return
-    }
-
-    const host = viewport()
-    // No viewport, no game: the runtime draws through the engine that viewport owns.
-    if (host) usePlay.getState().start(documentId, host)
+    // The game runs in a window of its own, which reads its own keyboard: nothing of this
+    // viewport is handed over, and a resumed game is not a started one.
+    if (report.state === 'paused') void usePlay.getState().resume(documentId)
+    else usePlay.getState().start(documentId)
   }
 
   return (

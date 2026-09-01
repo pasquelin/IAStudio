@@ -1,9 +1,6 @@
 import { create } from 'zustand'
 import { NOT_PLAYING, type RuntimeReport } from '@shared/domain/gameRuntime'
-import type { DomInputTarget } from '@game/host/domInput'
 import { orElse } from '@shared/promises'
-import { loadRapierPhysics } from '@game/host/rapierPhysics'
-import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import {
   createScriptCompiler,
@@ -11,8 +8,9 @@ import {
   type ScriptTrouble,
 } from '@/engines/code/scriptCompiler'
 import { withoutKey } from '@/helpers/objects'
-import { animationFrames } from '@/game/frameDriver'
-import { startPlay, type PlaySession, type SceneLookup } from '@/game/playSession'
+import { gameMessageOf, openGameChannel, type GameCommand } from '@/game/gameChannel'
+import type { SceneLookup } from '@/game/playSession'
+import { getBridge } from '@/services/bridge'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { codeFilesOf, useCode } from './code'
 import { documentById, sceneDocumentNamed, useDocuments } from './documents'
@@ -20,137 +18,230 @@ import { sceneEngineOf } from './sceneEngines'
 import { loadSceneSource, montageSceneOf } from './sceneSources'
 import { sceneOf, useScenes } from './scenes'
 
+/** How long a command may wait on the game window. A `step` runs up to 120 fixed steps there. */
+const COMMAND_MS = 2_000
+
 export type PlayStoreState = {
   /** What each document's game says about itself. A document that is not playing has none. */
   reports: Record<string, RuntimeReport>
   /**
-   * `input` is what the keyboard and pointer are read off. Optional, and its absence is not a
-   * degraded mode but a DIFFERENT caller: a model driving the game from outside the window has
-   * no element to hand over, and a game nobody presses a key in still runs.
+   * Opens the game window on that scene, or turns the open one towards it. 🛑 Answers AT ONCE:
+   * the window, the WebAssembly and the first frame are all behind it.
    */
-  start: (documentId: string, input?: DomInputTarget) => void
-  /** Whether there WAS a game to pause: one whose engines are still landing has no session. */
-  pause: (documentId: string) => boolean
-  resume: (documentId: string) => boolean
+  start: (documentId: string) => void
+  /** Whether there WAS a game to pause — the game window's own answer, not a guess. */
+  pause: (documentId: string) => Promise<boolean>
+  resume: (documentId: string) => Promise<boolean>
   /** Runs that many fixed steps on a PAUSED game and answers how many ran. */
-  step: (documentId: string, steps: number) => number
+  step: (documentId: string, steps: number) => Promise<number>
   /** Sends a running game to another scene. Whether there WAS one to send. */
-  loadScene: (documentId: string, scene: string, fade: number) => boolean
+  loadScene: (documentId: string, scene: string, fade: number) => Promise<boolean>
   stop: (documentId: string) => void
 }
 
-/** Ran on the session when there is one, and says whether there WAS one. */
-const held = (session: PlaySession | undefined, run: (one: PlaySession) => void): boolean => {
-  if (!session) return false
-  run(session)
-  return true
+/**
+ * The game runs in the window `openGameWindow` opens, which owns the only engine that may draw
+ * it. What lives here is the studio half: what plays, what it reports, what is asked of it.
+ */
+let channel: BroadcastChannel | null = null
+/** Which document the game window is playing, as far as this window asked. */
+let playing: string | null = null
+/** What was last published, so a window that opens late can be answered when it asks. */
+let published: PublishedGame | null = null
+/** Commands sent and not yet answered, by the id their answer quotes. */
+const waiting = new Map<number, (answer: CommandAnswer) => void>()
+let lastCommand = 0
+/** Given back when the game stops: the studio publishes every edit made under a running game. */
+let stopWatchingScene: (() => void) | null = null
+
+type CommandAnswer = { ok: boolean; ran: number }
+
+type PublishedGame = {
+  documentId: string
+  modules: readonly ScriptModule[]
+  troubles: readonly ScriptTrouble[]
 }
 
-/**
- * A running game per document.
- *
- * The sessions are held OUTSIDE the store, like the engines they draw through: a session holds a
- * world and a frame loop, and putting one into zustand would re-render every subscriber each time
- * a document started playing. What the screen reads is the report, which is plain data.
- */
-const sessions = new Map<string, PlaySession>()
-
-/**
- * 🛑 Documents whose engine is still loading, by GENERATION rather than by name. A stop followed
- * by a play, both while the WebAssembly is in flight, left the FIRST call installing the session
- * — bound to a viewport element the remount had already detached, so nothing answered a key.
- */
-const starting = new Map<string, number>()
-let generation = 0
-
-export const usePlay = create<PlayStoreState>()(set => ({
+export const usePlay = create<PlayStoreState>()(() => ({
   reports: {},
 
-  start: (documentId, input) => {
-    // No viewport, no game: the runtime draws through the engine that viewport owns.
-    if (sessions.has(documentId) || starting.has(documentId) || !sceneEngineOf(documentId)) return
+  start: documentId => {
+    // The runtime draws a scene the studio is showing: with no viewport there is nothing to play.
+    if (playing === documentId || !sceneEngineOf(documentId)) return
 
-    generation += 1
-    starting.set(documentId, generation)
-    // A target of its own when none was handed over: `createDomInput` attaches listeners, and
-    // one that nothing dispatches to is a game where no key is ever down.
-    void begin(documentId, generation, input ?? new EventTarget(), report =>
-      set(state => ({ reports: { ...state.reports, [documentId]: report } })),
-    )
+    // 🛑 One window, one game: a Play on another scene REPLACES the one running, so the transport
+    // of the scene it replaced has to stop saying it is playing.
+    if (playing) forget(playing)
+    playing = documentId
+    void begin(documentId)
   },
 
-  // 🛑 Answered rather than swallowed: a game whose engines are still landing has no session,
-  // and a caller told « paused » that was not is one that steps a world running under it.
-  pause: documentId => held(sessions.get(documentId), one => one.pause()),
-  resume: documentId => held(sessions.get(documentId), one => one.resume()),
-  step: (documentId, steps) => sessions.get(documentId)?.step(steps) ?? 0,
-  loadScene: (documentId, scene, fade) =>
-    held(sessions.get(documentId), one => one.loadScene(scene, fade)),
+  pause: async documentId => (await command(documentId, { name: 'pause' })).ok,
+  resume: async documentId => (await command(documentId, { name: 'resume' })).ok,
+  step: async (documentId, steps) => (await command(documentId, { name: 'step', steps })).ran,
+  loadScene: async (documentId, scene, fade) =>
+    (await command(documentId, { name: 'loadScene', scene, fade })).ok,
 
   stop: documentId => {
-    // Dropped from the waiting list too: a stop while the engine loads must not be overtaken by
-    // the session it was cancelling.
-    starting.delete(documentId)
-    sessions.get(documentId)?.stop()
-    sessions.delete(documentId)
-    // Guarded: every viewport teardown calls this, playing or not, and an unconditional write
-    // would re-render every subscriber for a document that was never played.
-    set(state =>
-      documentId in state.reports ? { reports: withoutKey(state.reports, documentId) } : state,
-    )
+    // 🛑 The command first, and the window after: a stage running WITHOUT a window — the bench —
+    // has a session to end that closing nothing would leave running.
+    if (playing === documentId) {
+      channel?.postMessage({ kind: 'command', id: ++lastCommand, command: { name: 'stop' } })
+      void closeGame()
+    }
+    forget(documentId)
   },
 }))
 
-/**
- * The engines first, the world second — the WebAssembly weighs 2,7 Mo and lands in 27 ms, which is
- * a frame nobody sees but not a wait a Play button may take synchronously.
- */
-async function begin(
-  documentId: string,
-  token: number,
-  input: DomInputTarget,
-  onReport: (report: RuntimeReport) => void,
-): Promise<void> {
-  // All three together, and each failing on its own: the machines are independent, and reading
-  // the project's scripts off the disk fits entirely under the time a WebAssembly takes to land.
-  const [physics, script, compiled] = await Promise.all([
-    orElse(loadRapierPhysics(), undefined),
-    orElse(loadQuickjsScripts(), undefined),
-    // 🛑 Guarded like the other two: a rejection here left `starting` holding the document, and
-    // the Play button then did NOTHING until its viewport unmounted.
-    orElse(compiledScripts(), NO_SCRIPTS),
-  ])
-
-  // 🛑 The scenes this one goes TO, read while the engines are still landing: a fade that has to
-  // wait for a file is a fade that stalls on black, and the timeline names them in advance.
-  for (const scene of scenesAhead(sceneOf(useScenes.getState(), documentId))) sceneNamed(scene)
-
-  const renderer = sceneEngineOf(documentId)
-  // Stopped, overtaken by a later Play, or its viewport closed while the engines were loading.
-  if (starting.get(documentId) !== token || !renderer) {
-    physics?.dispose()
-    script?.dispose()
-    return
+/** Shared by a Stop and by the window going away on its own — see `watchTheGameWindow`. */
+function forget(documentId: string): void {
+  if (playing === documentId) {
+    playing = null
+    published = null
+    stopWatchingScene?.()
+    stopWatchingScene = null
   }
-  starting.delete(documentId)
-
-  sessions.set(
-    documentId,
-    startPlay({
-      documentId,
-      renderer,
-      editState: () => sceneOf(useScenes.getState(), documentId),
-      input,
-      frames: animationFrames(),
-      physics,
-      script,
-      modules: compiled.modules,
-      troubles: compiled.troubles,
-      sceneNamed,
-      onReport,
-    }),
+  // Guarded: every viewport teardown calls this, playing or not, and an unconditional write would
+  // re-render every subscriber for a document that was never played.
+  usePlay.setState(state =>
+    documentId in state.reports ? { reports: withoutKey(state.reports, documentId) } : state,
   )
 }
+
+async function closeGame(): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+  // Swallowed with a reason: closing a window that has already gone is not a failure to report.
+  try {
+    await bridge.gameWindow.close()
+  } catch {
+    /* the window was already gone */
+  }
+}
+
+/**
+ * 🛑 Compiles HERE and never in the game window: what a Play runs has to be the text on screen,
+ * and the unsaved source of an open script lives in this window's store alone.
+ */
+async function begin(documentId: string): Promise<void> {
+  const compiled = await orElse(compiledScripts(), NO_SCRIPTS)
+  // Stopped, or overtaken by a Play on another document, while the scripts were compiling.
+  if (playing !== documentId) return
+
+  // 🛑 The scenes this one goes TO, read while the window is opening: a fade that has to wait for
+  // a file is a fade that stalls on black, and the timeline names them in advance.
+  for (const scene of scenesAhead(sceneOf(useScenes.getState(), documentId))) sceneNamed(scene)
+
+  published = { documentId, modules: compiled.modules, troubles: compiled.troubles }
+  publishGame()
+  watchTheScene(documentId)
+
+  const bridge = getBridge()
+  if (!bridge) return
+  // Swallowed with a reason: a window the main process refused to open leaves the transport where
+  // it was, and the refusal is already in the journal.
+  try {
+    await bridge.gameWindow.open()
+  } catch {
+    /* the journal has the reason */
+  }
+}
+
+function publishGame(): void {
+  if (!published) return
+  wire().postMessage({
+    kind: 'play',
+    documentId: published.documentId,
+    scene: sceneOf(useScenes.getState(), published.documentId),
+    modules: published.modules,
+    troubles: published.troubles,
+  })
+}
+
+/** Every edit under a running game: `createStudioRender` reads the edit state on every frame. */
+function watchTheScene(documentId: string): void {
+  stopWatchingScene?.()
+  let shown: SceneState | null = null
+  stopWatchingScene = useScenes.subscribe(state => {
+    const scene = sceneOf(state, documentId)
+    if (scene === shown) return
+    shown = scene
+    wire().postMessage({ kind: 'edit', documentId, scene })
+  })
+}
+
+/** The channel, opened on the first game and kept: the window may ask for the game at any time. */
+function wire(): BroadcastChannel {
+  if (channel) return channel
+
+  const opened = openGameChannel()
+  opened.onmessage = event => {
+    const message = gameMessageOf(event.data)
+    if (!message) return
+
+    if (message.kind === 'ask') {
+      publishGame()
+      return
+    }
+    if (message.kind === 'report') {
+      // 🛑 Only for the game this window ASKED for: a session ending publishes one last report,
+      // which lands after the stop that caused it and would put a forgotten document back on the
+      // transport — reading `edit` where there is nothing at all.
+      if (message.documentId !== playing) return
+      usePlay.setState(state => ({
+        reports: { ...state.reports, [message.documentId]: message.report },
+      }))
+      return
+    }
+    if (message.kind === 'want') {
+      opened.postMessage({ kind: 'scene', scene: message.scene, found: sceneNamed(message.scene) })
+      return
+    }
+    if (message.kind === 'done') {
+      waiting.get(message.id)?.({ ok: message.ok, ran: message.ran })
+      waiting.delete(message.id)
+    }
+  }
+
+  channel = opened
+  watchTheGameWindow()
+  return opened
+}
+
+/**
+ * 🛑 The MAIN process's fact, never a message from its renderer: a window being torn down has no
+ * turn left in which to publish, and the transport must go back to Play at once.
+ */
+function watchTheGameWindow(): void {
+  getBridge()?.gameWindow.onClosed(() => {
+    const held = playing
+    if (held) forget(held)
+  })
+}
+
+/**
+ * Asks the game window to do something. 🛑 Bounded rather than open: a window that went away
+ * answers nothing, and an MCP client hung on `play.pause` is what this family exists to avoid.
+ */
+function command(documentId: string, asked: GameCommand): Promise<CommandAnswer> {
+  if (playing !== documentId || !channel) return Promise.resolve(NOT_ANSWERED)
+
+  const id = ++lastCommand
+  return new Promise<CommandAnswer>(resolve => {
+    const timer = setTimeout(() => {
+      waiting.delete(id)
+      resolve(NOT_ANSWERED)
+    }, COMMAND_MS)
+
+    waiting.set(id, answer => {
+      clearTimeout(timer)
+      resolve(answer)
+    })
+    channel?.postMessage({ kind: 'command', id, command: asked })
+  })
+}
+
+const NOT_ANSWERED: CommandAnswer = { ok: false, ran: 0 }
 
 /**
  * 🛑 The COMPILER is kept for the window, not the modules: a Play must not parse nine megabytes of

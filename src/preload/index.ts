@@ -328,6 +328,11 @@ const bridge: StudioBridge = {
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
   },
+  gameWindow: {
+    open: () => ipcRenderer.invoke(CHANNELS.gameWindowOpen),
+    close: () => ipcRenderer.invoke(CHANNELS.gameWindowClose),
+    onClosed: callback => subscribe<void>(EVENTS.gameWindowClosed, callback),
+  },
   help: {
     open: page => ipcRenderer.invoke(CHANNELS.helpOpen, page),
   },
