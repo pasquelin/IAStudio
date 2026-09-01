@@ -95,7 +95,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'asset.get': ['43.1'],
   'asset.update': ['20.2'],
   'asset.reveal': ['43.5'],
-  'asset.extractTextures': ['3.4'],
+  'asset.extractTextures': ['2.5', '3.4'],
   'assets.removeFromLibrary': ['43.2'],
 
   'canvas.state': ['39.1'],

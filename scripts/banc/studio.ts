@@ -281,6 +281,49 @@ export async function createStudio(
     assets: {
       search: query => catalog.search(query),
       /**
+       * 🛑 The stub REJECTED, so « ouvre la texture utilisée par mon modèle » had no answer at
+       * all. Reading pictures out of a `.glb` is what a backend does and this disk holds names,
+       * so what stands in FILES the project's own base-colour material pictures as fresh rows —
+       * copies keeping their id would have any later gesture land on the original.
+       */
+      extractTextures: async assetId => {
+        // The refusal the real channel gives: `handlers.ts` finds the asset and throws for a row
+        // that is not a mesh, so a hallucinated id answered `ok` with the whole shelf.
+        const held = await catalog.find(assetId)
+        if (!held || held.type !== 'mesh') throw new Error(`asset ${assetId} is not a mesh`)
+
+        const taken = catalog
+          .rows()
+          .filter(
+            one =>
+              one.type === 'image' &&
+              (one.path ?? '').startsWith(`${DEFAULT_ROLE_PATHS.materials}/`) &&
+              (one.map === undefined || one.map === 'baseColor'),
+          )
+
+        const filed: Asset[] = []
+        for (const one of taken) {
+          const path = freePath(folder, DEFAULT_ROLE_PATHS.image, nameOf(one.path ?? ''), '')
+          await folder.write(path)
+          filed.push(
+            await catalog.add({
+              ...one,
+              id: `texture-${path}`,
+              name: nameOf(path),
+              path,
+              derivedFrom: assetId,
+            }),
+          )
+        }
+        return filed
+      },
+      /**
+       * 🛑 The stub REJECTED, so « ouvre la texture utilisée par mon modèle » had no answer at
+       * all. Reading the pictures out of a `.glb` is what a backend does and this disk holds
+       * names, so what stands in is the project's OWN material pictures — the ones an extraction
+       * would have filed there, minus the maps that are not the base colour.
+       */
+      /**
        * 🛑 The stub REJECTED, so every still the bench ever took answered « the scene viewport
        * gave back no still » — a refusal that named the viewport for a port that had simply said
        * no. The picture lands on the disk and in the catalogue, as an indexing pass files one.
