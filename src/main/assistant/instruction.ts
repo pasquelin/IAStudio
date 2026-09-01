@@ -212,6 +212,13 @@ const WIDE_RULES = [
    */
   '  - "say" tells what the calls DID. With "calls" empty you did nothing: never write that a',
   '    thing is done, nor that you are about to do it — call the action, or "ask".',
+  /**
+   * 🛑 The other half, and it fails the same way with no call at all: « il n'y a pas de fusion en
+   * cours » on a decor holding one, three runs out of three, `git.status` never called. What the
+   * studio holds is READ, never recalled — the state block is a summary and answers nothing.
+   */
+  '  - What the studio HOLDS is read, never recalled. "there is no merge under way", "the scene',
+  '    already has one", "nothing was generated" are readings: call the read, answer from it.',
   '  - "one metre more", "half", "25% more" are RELATIVE. Read the value that stands, do the',
   '    arithmetic, write the result: every field is an absolute value, never a difference.',
   /**
