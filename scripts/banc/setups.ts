@@ -1,6 +1,8 @@
 import type { RecentProject } from '@shared/domain/project'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { useJobs } from '@/stores/jobs'
 import { useSettings } from '@/stores/settings'
+import { useTasks } from '@/stores/tasks'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -238,6 +240,29 @@ export const generated =
 export const madeCar = generated('image', 'model-image', 'a red sports car')
 export const madeBoat = generated('image', 'model-image', 'the boat at night')
 export const madeChest = generated('3d', 'model-3d', 'a wooden chest')
+
+/**
+ * 🛑 A generation still RUNNING, which the cloud port cannot make: it answers a finished job, so
+ * « annule la génération en cours » had nothing under way to cancel and no model could win it.
+ */
+export const generating = async (studio: Studio): Promise<void> => {
+  await madeCar(studio)
+  // The NEWEST alone — the store keeps it first — and with nothing filed: a job still running
+  // has produced no asset, and no end to be dated by.
+  useJobs.setState(state => ({
+    jobs: state.jobs.map((job, at) =>
+      at > 0
+        ? job
+        : { ...job, status: 'running', progress: 0.4, assetIds: [], finishedAt: undefined },
+    ),
+  }))
+}
+
+/** A long task of THIS window under way — what `task.cancelLocalTask` stops, by the id it mints. */
+export const indexing = (studio: Studio): Promise<void> => {
+  useTasks.getState().begin({ id: 'task-index', label: 'Indexation du projet', ratio: 0.4 })
+  return Promise.resolve(void studio)
+}
 
 /** That montage carrying BOTH of the project's sounds, one after the other on the sound row. */
 export const twoBeds = async (studio: Studio): Promise<void> => {

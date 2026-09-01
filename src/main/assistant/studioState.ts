@@ -1,9 +1,11 @@
 import { primaryRoleOf } from '@shared/domain/aiRole'
 import type {
   SnapshotDocument,
+  SnapshotTask,
   SnapshotSelection,
   StudioSnapshot,
 } from '@shared/domain/studioSnapshot'
+import type { PlayState } from '@shared/domain/gameRuntime'
 import { FAMILY_BY_WORKSPACE, isWorkspaceId } from '@shared/domain/workspace'
 import { parseSnapshot } from './validation'
 import { projectName } from '@shared/domain/project'
@@ -21,6 +23,9 @@ const OTHERS_NAMED = 3
 
 /** How many selected things are named, for the same reason. */
 const SELECTED_NAMED = 4
+
+/** How many running tasks are named, for the same reason. */
+const TASKS_NAMED = 2
 
 /**
  * 🛑 What the whole block may cost the briefing. Its twin `context` is capped where it is composed
@@ -112,6 +117,40 @@ function armedLine(state: StudioSnapshot): string[] {
 }
 
 /**
+ * 🛑 The id and not the count: `task.cancelLocalTask` takes one, and nothing else in a briefing
+ * publishes it — « arrête la tâche d'indexation qui tourne » read `jobs.list`, which holds cloud
+ * generations alone, and answered that nothing was running.
+ */
+function taskLines(tasks: readonly SnapshotTask[]): string[] {
+  if (tasks.length === 0) return []
+
+  const named = tasks
+    .slice(0, TASKS_NAMED)
+    .map(one => `${quoted(one.label)} (${one.id}, ${Math.round(one.ratio * 100)}%)`)
+  const rest = tasks.length - named.length
+
+  return [
+    `  Running here: ${named.join(', ')}${rest > 0 ? `, and ${rest} more` : ''}.`,
+    '  task.cancelLocalTask stops one by its id.',
+  ]
+}
+
+/**
+ * 🛑 Said only while a game is UNDER WAY, and it names the calls: nothing else in the briefing
+ * announces one, so « où en est la partie ? » was answered off the document block and « reprends
+ * la partie » without a single call. The tick stays out — `runtime.report` answers it, and a
+ * number here would be read instead of called.
+ */
+function playLine(play: PlayState): string[] {
+  if (play === 'playing')
+    return ['  A game is RUNNING on the scene in front. runtime.report says where it is.']
+
+  return play === 'paused'
+    ? ['  A game is PAUSED on the scene in front. play.step advances it, play.resume carries on.']
+    : []
+}
+
+/**
  * 🛑 Said only once the window KNOWS. `project` starts `null` meaning "not asked yet", and a turn
  * fired before the answer landed would tell the model there is no project over an open one.
  */
@@ -139,6 +178,11 @@ export function describeStudio(data: unknown): string {
     ...(state.authKnown && !state.authenticated
       ? ['  Not signed in: nothing can be generated.']
       : []),
+    // 🛑 LAST, behind the armed model, the project and the sign-in: `linesWithin` breaks on the
+    // first line that does not fit, so a line placed ahead of those takes them down on a
+    // saturated briefing. What STOPS an action outranks what merely tells of one under way.
+    ...playLine(state.play),
+    ...taskLines(state.tasks),
   ]
 
   return linesWithin(lines.join('\n'), STATE_MAX)

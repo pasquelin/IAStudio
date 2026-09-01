@@ -47,6 +47,16 @@ export type MemoryState = 'live' | 'pinned' | 'archived' | 'dropped'
 
 export const MEMORY_STATES: readonly MemoryState[] = ['live', 'pinned', 'archived', 'dropped']
 
+/**
+ * The states a recall may answer with, and what the briefing's memory signal counts.
+ *
+ * 🛑 In `shared/` because three readers need the SAME predicate: the index that answers, the one
+ * that counts, and the bench that stands in for the door. Written a second time in `scripts/banc`
+ * it drifted at once — `live` alone there, `live` and `pinned` here, so a decor pinning a memory
+ * scored a scenario unwinnable that the shipped studio answers.
+ */
+export const MEMORY_ANSWERING_STATES: readonly MemoryState[] = ['live', 'pinned']
+
 /** Who put it there. `action` names an action of the registry in `ref`; the others name nothing. */
 export type MemorySourceKind = 'action' | 'person' | 'assistant' | 'import'
 

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { DocumentNameFailure } from '@shared/domain/documentName'
+import { SNAPSHOT_TASKS_MAX, type StudioSnapshot } from '@shared/domain/studioSnapshot'
+import { TARGET_NAME_MAX } from '@shared/domain/target'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -12,6 +14,9 @@ import { installSequence } from '@/stores/sequence-fixtures'
 import { selectTrackIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { NOT_PLAYING } from '@shared/domain/gameRuntime'
+import { usePlay } from '@/stores/play'
+import { useTasks } from '@/stores/tasks'
 import { useProject } from '@/stores/project'
 import { runAction } from './executor'
 
@@ -41,6 +46,9 @@ const stored = (id: string, path: string): DocumentDescriptor => ({
 
 beforeEach(() => {
   installFakeBridge()
+  // Left set, a paused game of one case is the state every case after it reads.
+  usePlay.setState({ reports: {} })
+  useTasks.setState({ running: {} })
   openDocument.mockClear()
   closeDocument.mockClear()
   closeDocument.mockResolvedValue(true)
@@ -103,6 +111,58 @@ describe('reading what the studio is', () => {
       ok: true,
       data: { selection: { kind: 'node', items: [{ id: node?.id, name: node?.name }] } },
     })
+  })
+
+  it('names the long tasks this window is running', async () => {
+    useTasks.getState().begin({ id: 'task-7', label: 'Indexing', ratio: 0.4 })
+
+    expect(await runAction('studio.state', {})).toMatchObject({
+      data: { tasks: [{ id: 'task-7', label: 'Indexing', ratio: 0.4 }] },
+    })
+  })
+
+  /**
+   * 🛑 The label is a document TITLE, unbounded, and the only field of the snapshot that could
+   * fail `parseSnapshot` — which answers null, and takes the WHOLE studio block out of every
+   * briefing. Cut and scrubbed here, as `narrowTargets` does for a target's name.
+   */
+  it('cuts, scrubs and clamps what a task publishes', async () => {
+    useTasks.getState().begin({ id: 'task-7', label: `x"${'y'.repeat(60)}`, ratio: 1.4 })
+
+    const outcome = await runAction('studio.state', {})
+    const [task] = outcome.ok ? ((outcome.data as StudioSnapshot).tasks ?? []) : []
+
+    expect(task?.label).toHaveLength(TARGET_NAME_MAX)
+    expect(task?.label).not.toContain('"')
+    expect(task?.ratio).toBe(1)
+  })
+
+  // Newest first: what a person has just started is what they ask about.
+  it('publishes the newest tasks when more run than it names', async () => {
+    for (let at = 0; at < SNAPSHOT_TASKS_MAX + 2; at += 1)
+      useTasks.getState().begin({ id: `task-${at}`, label: `T${at}`, ratio: 0 })
+
+    const outcome = await runAction('studio.state', {})
+    const tasks = outcome.ok ? ((outcome.data as StudioSnapshot).tasks ?? []) : []
+
+    expect(tasks).toHaveLength(SNAPSHOT_TASKS_MAX)
+    expect(tasks[0]?.id).toBe(`task-${SNAPSHOT_TASKS_MAX + 1}`)
+  })
+
+  /**
+   * 🛑 Off the scene IN FRONT: a game runs per document, and another tab's would aim « reprends
+   * la partie » at a scene the person is not looking at.
+   */
+  it('says a game is under way on the scene in front', async () => {
+    installScene('doc-scene', createDefaultScene())
+    installDocuments({ 'doc-scene': '3d', 'doc-other': '3d' }, 'doc-scene')
+    usePlay.setState({ reports: { 'doc-other': { ...NOT_PLAYING, state: 'playing' } } })
+
+    expect(await runAction('studio.state', {})).toMatchObject({ data: { play: 'edit' } })
+
+    usePlay.setState({ reports: { 'doc-scene': { ...NOT_PLAYING, state: 'paused' } } })
+
+    expect(await runAction('studio.state', {})).toMatchObject({ data: { play: 'paused' } })
   })
 
   // Which TRACK is designated, not the clip that was designated before it: a briefing that read

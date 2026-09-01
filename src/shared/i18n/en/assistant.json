@@ -923,15 +923,15 @@
       },
       "contextReadProjectCards": {
         "title": "Read the project’s context",
-        "description": "Answers the open project’s context cards, with their title, their text and whether they apply."
+        "description": "Answers the context cards — what the PERSON has said this project is — with their title, their text and whether they apply."
       },
       "contextWriteProjectCard": {
         "title": "Write a context card",
-        "description": "Adds a card to the project’s context, or replaces the title, the text or the state of the one an id names."
+        "description": "Writes what the PERSON says the project IS or AIMS AT, as a whole, as a standing card read back every turn. A working rule about how a thing is done here — how cameras move, how files are named — is a memory instead (memory.write)."
       },
       "contextDeleteProjectCard": {
         "title": "Delete a context card",
-        "description": "Takes the card an id names out of the project’s context. Its text is lost."
+        "description": "Takes the card an id names out of the project’s context — what the person said, unsaid. Its text is lost."
       },
       "targetSelect": {
         "title": "Aim at a target",
@@ -1123,7 +1123,7 @@
       },
       "memoryRecall": {
         "title": "Recall what was learned",
-        "description": "Searches what the assistant learned about the project and answers the summaries it found, with their ids."
+        "description": "Searches what the assistant NOTICED while working and answers the summaries it found, with their ids. What the person said the project is lives in the context cards."
       },
       "memoryRead": {
         "title": "Read one memory whole",
@@ -1131,11 +1131,11 @@
       },
       "memoryWrite": {
         "title": "Remember something about the project",
-        "description": "Writes a memory into the open project. It replaces the one already standing on the same reference."
+        "description": "Writes down a working rule of this project, or something the assistant noticed while acting — how a thing is done here, what a file or an object is for. What the person says the project IS or AIMS AT is a context card instead. Replaces the one already standing on the same reference."
       },
       "memoryForget": {
         "title": "Forget a memory",
-        "description": "Marks a memory as forgotten. Nothing is erased from the file: what was learned stays traceable."
+        "description": "Marks something the assistant noticed as forgotten. Nothing is erased from the file: what was learned stays traceable."
       },
       "memoryLink": {
         "title": "Link two memories",

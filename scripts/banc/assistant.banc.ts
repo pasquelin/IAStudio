@@ -113,7 +113,7 @@ function transcriptOf(played: Run): string {
 
   const steps = played.called.map((one, at) => {
     const said = inputShown(one.input)
-    return `      ${at + 1}. ${one.action}${said ? ` ${said}` : ''} → ${one.answer ?? 'never ran'}`
+    return `      ${at + 1}. ${one.action}${said ? ` ${said}` : ''} → ${one.answer === undefined ? 'never ran' : shortly(one.answer)}`
   })
 
   return [`${played.called.length} calls`, ...steps, `      said: ${shortly(played.said)}`].join(

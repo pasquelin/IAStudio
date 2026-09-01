@@ -28,6 +28,9 @@ import { lendPictureMeasure } from '@/features/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
 import { useAssistant } from '@/stores/assistant'
 import { useJobs } from '@/stores/jobs'
+import { noContext } from '@shared/domain/projectContext'
+import { useProjectContext } from '@/stores/projectContext'
+import { useTasks } from '@/stores/tasks'
 import { unsavedDocumentIds } from '@/features/shell/documentIo'
 import type { PlayState } from '@shared/domain/gameRuntime'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
@@ -284,6 +287,7 @@ export async function createStudio(
       searchModels: query => cloud.searchModels(query),
       describeModel: modelId => cloud.describeModel(modelId),
       generate: (modelId, body) => cloud.generate(modelId, body),
+      cancelJob: jobId => cloud.cancelJob(jobId),
     },
   })
 
@@ -295,6 +299,15 @@ export async function createStudio(
   resetDocumentStoresForTests()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
   useJobs.setState({ jobs: [], bodies: {} })
+  // 🛑 And the tasks: a decor that starts one starts it BY HAND, so nothing ends it — `runTask`'s
+  // own `finally` never runs — and every scenario after it read a task of somebody else's decor.
+  useTasks.setState({ running: {} })
+  /**
+   * 🛑 And the project's context cards, for the same reason and with a worse bite: a card written
+   * by one scenario stood for every one after it, so « retiens que… » scored against a project
+   * that already held four, and « oublie… » was asked to clear what no decor had laid.
+   */
+  useProjectContext.setState({ context: noContext(), loaded: true })
   // 🛑 Settings too, and `shelved` is why: a scenario that sows the recent projects would leave
   // them for every section after it, where an empty shelf is what makes `project.create` refuse.
   // It matters more since the port below MERGES a write rather than answering the defaults.

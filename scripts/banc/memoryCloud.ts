@@ -14,6 +14,7 @@ import {
   type ModelQuery,
   type ModelSummary,
 } from '@shared/domain/model'
+import { useJobs } from '@/stores/jobs'
 import type { MemoryCatalog } from './memoryCatalog'
 import { WHEN } from './project'
 import type { MemoryFolder } from './memoryFolder'
@@ -27,6 +28,8 @@ export type MemoryCloud = {
   searchModels: (query?: ModelQuery) => Promise<ModelPage>
   describeModel: (modelId: string) => Promise<ModelDescriptor>
   generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+  /** Marks one cancelled in the store, which is where a real account's progress lands it. */
+  cancelJob: (jobId: string) => Promise<void>
   /** What family a job ran, which `Job` does not carry — an oracle asks it by `targetId`. */
   familyOf: (modelId: string) => ModelFamily | null
   /** The schema, read the way a mounted panel already holds it rather than fetched again. */
@@ -113,6 +116,18 @@ const nameOfRun = (label: string, body: Record<string, unknown>): string =>
 export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog): MemoryCloud {
   let runs = 0
 
+  /**
+   * 🛑 Through the studio's OWN `apply`, as a real account's progress push arrives: `useJobs.cancel`
+   * tells the provider and writes nothing itself, so nothing here wrote `cancelled` and « annule
+   * la génération en cours » could not be won by any model. Written straight into the store
+   * instead, the port would answer the oracle by itself and measure nothing of the studio.
+   */
+  const cancelJob = (jobId: string): Promise<void> => {
+    const held = useJobs.getState().jobs.find(one => one.id === jobId)
+    if (held) useJobs.getState().apply({ id: jobId, status: 'cancelled', progress: held.progress })
+    return Promise.resolve()
+  }
+
   return {
     searchModels: (query = {}) =>
       Promise.resolve({
@@ -128,6 +143,8 @@ export function createMemoryCloud(folder: MemoryFolder, catalog: MemoryCatalog):
       const model = found(modelId)
       return model ? Promise.resolve(model) : Promise.reject(new Error(`no model ${modelId}`))
     },
+
+    cancelJob,
 
     familyOf: modelId => found(modelId)?.family ?? null,
 

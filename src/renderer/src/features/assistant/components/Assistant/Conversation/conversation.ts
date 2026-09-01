@@ -33,11 +33,17 @@ export type AssistantStep = {
  * 🛑 What one result may spend of the model's window, in characters.
  *
  * A listing of a full project is thousands of entries; handed back whole it would push the
- * briefing out of every door — Scenario's leaves 8 000 characters for ALL of it. Cut to a size,
- * and what was cut is SAID: a model reading a silently truncated list plans against a project
- * half of which it cannot see.
+ * briefing out of every door. Cut to a size, and what was cut is SAID: a model reading a silently
+ * truncated list plans against a project half of which it cannot see.
+ *
+ * 🛑 `[M]` Raised to 3 000 and put back: `scene.state` runs 1 740 to 3 006 characters on the bench
+ * decors, so it looked like the cut that blinded a model. Measured 2026-08-31 over 120 runs of
+ * sections 6, 7, 22 and 61 — 79 passed at 600, 79 at 3 000. It buys 10.7% fewer tokens sent and
+ * costs turns of history nothing measured, so it is not a trade to make blind. Reordering
+ * `scene.state` does not fix it either, and `sceneHandlers.ts` says why: no order makes `world`
+ * and `nodes` both fit, so it only chooses which of them is lost.
  */
-const RESULT_MAX = 600
+export const RESULT_MAX = 600
 
 /** The first entries of a list, or a value, as the model reads it — never a broken JSON tail. */
 export function resultLine(data: unknown): string {

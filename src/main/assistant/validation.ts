@@ -9,8 +9,9 @@ import {
   type AssistantThought,
 } from '@shared/domain/assistant'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
+import { PLAY_STATES } from '@shared/domain/gameRuntime'
 import { TARGET_ID_MAX, TARGET_KINDS, TARGET_NAME_MAX, TARGETS_MAX } from '@shared/domain/target'
-import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
+import { SNAPSHOT_TASKS_MAX, type StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import type { AssistantActionResult } from '@shared/ipc'
 import { NOTE_TEXT_MAX, type WindowNote } from '@shared/domain/assistantNote'
@@ -163,6 +164,16 @@ const SNAPSHOT = z.object({
     })
     .nullable(),
   armedModels: z.record(z.string(), z.string()),
+  play: z.enum(PLAY_STATES),
+  tasks: z
+    .array(
+      z.object({
+        id: z.string().max(TARGET_ID_MAX),
+        label: z.string().max(TARGET_NAME_MAX),
+        ratio: z.number().min(0).max(1),
+      }),
+    )
+    .max(SNAPSHOT_TASKS_MAX),
   authenticated: z.boolean(),
   authKnown: z.boolean(),
 }) satisfies z.ZodType<StudioSnapshot>

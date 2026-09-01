@@ -281,9 +281,11 @@ function readState(): ActionOutcome {
     ok: true,
     data: {
       /**
-       * 🛑 The ID-BEARING members first, and the two big projections last: `resultLine` drops whole
-       * members once past its ceiling, so a busy scene spent the budget on `world` and `tracks` and
-       * cut the very lists a client needs an id from — which is what `cues` was added to fix.
+       * 🛑 The order below buys nothing and is kept as it was: `resultLine` hands the FIRST
+       * over-long list all the room left, so `tracks` and `nodes` cannot both survive whichever
+       * goes first — reordering only chooses which one is lost. A three-object scene answers
+       * `(cut short: nodes)` today. Raising the ceiling instead moved the bench score by nothing
+       * at all on 2026-08-31, and `conversation.ts` carries that figure.
        */
       documentId: open.documentId,
       selectedIds: open.state.selectedIds,
