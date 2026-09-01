@@ -57,6 +57,18 @@ export function crisp(value: number): number {
   return Math.round(value) + 0.5
 }
 
+/**
+ * The origin on whole DEVICE pixels: at ×8 a fractional one makes nearest-sampled blocks of 7 and
+ * 9. For what is shown, never what is stored — a pan would accumulate its roundings.
+ */
+export function onDevicePixels(viewport: Viewport, ratio: number): Viewport {
+  return {
+    ...viewport,
+    x: Math.round(viewport.x * ratio) / ratio,
+    y: Math.round(viewport.y * ratio) / ratio,
+  }
+}
+
 export function toScreen(viewport: Viewport, point: Point): Point {
   return { x: point.x * viewport.scale + viewport.x, y: point.y * viewport.scale + viewport.y }
 }

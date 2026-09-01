@@ -45,6 +45,7 @@ import {
   type TextLayer,
   type Transform,
   WHITE,
+  onPixelGrid,
 } from './canvasState'
 import {
   dragSelection,
@@ -107,6 +108,7 @@ import {
   containIn,
   DEFAULT_VIEW,
   fitTo,
+  onDevicePixels,
   sameViewport,
   toDocument,
   zoomCanvasAt,
@@ -789,7 +791,17 @@ export class CanvasEngine {
 
     // Dragging a guide rewrites the state sixty times a second and touches no pixel: walking the
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
-    if (previous && previous.layers === state.layers && !resized) return
+    // Grid on or off only: a change of cell size touches no surface.
+    const regridded = previous !== null && onPixelGrid(previous) !== onPixelGrid(state)
+    if (previous && previous.layers === state.layers && !resized) {
+      if (!regridded) return
+      // The one change that reaches the GPU without a layer moving: the sampling, and the
+      // origin — see `shownViewport`. Walking the stack for a checkbox would be the full pass.
+      this.applyFiltering()
+      this.placeWorld()
+      this.render()
+      return
+    }
 
     // A frame is placed against a document that no longer exists: a quarter turn or a resample
     // under it would leave ⏎ cropping to a rectangle outside the picture, which recuts every
@@ -961,6 +973,19 @@ export class CanvasEngine {
     // Last, and outside the guard: `attach` is where a proxy is born, and a base that moved
     // without restacking still has to drag its stencil along.
     this.refreshClips()
+    this.applyFiltering()
+  }
+
+  // Walked rather than tracked: the grid flips under surfaces that exist, and a departed one
+  // comes back with the mode it left with. Nearest for minification too, as Aseprite does.
+  // `update()` is what reaches the GPU: Pixi 8.19 writes the filters and emits nothing.
+  private applyFiltering(): void {
+    const scaleMode = onPixelGrid(this.state) ? 'nearest' : 'linear'
+    for (const { texture } of this.surfaces.values()) {
+      if (texture.source.scaleMode === scaleMode) continue
+      texture.source.scaleMode = scaleMode
+      texture.source.style.update()
+    }
   }
 
   /** Frees what the stack no longer holds. A layer that left took its pixels with it. */
@@ -1318,21 +1343,26 @@ export class CanvasEngine {
   }
 
   private applyViewport(): void {
-    const { x, y, scale } = this.view.viewport
+    if (this.placeWorld()) this.render()
+  }
+
+  /** Moves the world to the shown viewport, and says whether it moved at all. */
+  private placeWorld(): boolean {
+    const shown = this.shownViewport()
     // Nothing moved since it was last APPLIED, so nothing is redrawn: every frame of a pan comes
     // through here twice — the pointer, then the store's echo — and the second composited the
     // whole document again over identical numbers. Against what was APPLIED and not against the
     // node, whose default a mount already matches.
-    if (this.applied && sameViewport(this.applied, this.view.viewport)) return
-    this.applied = { x, y, scale }
+    if (this.applied && sameViewport(this.applied, shown)) return false
+    this.applied = shown
 
-    this.world.position.set(x, y)
-    this.world.scale.set(scale)
+    this.world.position.set(shown.x, shown.y)
+    this.world.scale.set(shown.scale)
     // A zoom slides the grips out from under a still hand. Not while a gesture is open: that one
     // owns the cursor — a pan holds `grabbing` across every frame it moves the view by.
     if (this.gesture.kind === 'none') this.forgetHover()
     this.overlay.invalidate()
-    this.render()
+    return true
   }
 
   /**
@@ -1985,11 +2015,21 @@ export class CanvasEngine {
     this.render()
   }
 
+  // Where the world is placed, and where a pointer is read: on the resolution Pixi rasterises
+  // at, fixed at mount. The overlay reads the SAME viewport, or its lines drift off the blocks.
+  private shownViewport(): Viewport {
+    if (!onPixelGrid(this.state)) return this.view.viewport
+    return onDevicePixels(
+      this.view.viewport,
+      this.app?.renderer.resolution ?? window.devicePixelRatio,
+    )
+  }
+
   private scene(): OverlayScene | null {
     if (!this.state) return null
 
     return {
-      viewport: this.view.viewport,
+      viewport: this.shownViewport(),
       host: this.hostSize,
       document: { width: this.state.width, height: this.state.height },
       showRulers: this.view.rulers,
@@ -2371,7 +2411,7 @@ export class CanvasEngine {
     if (this.tool !== 'move') return
 
     this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
-    const point = toDocument(this.view.viewport, this.toHost(event))
+    const point = toDocument(this.shownViewport(), this.toHost(event))
     // The ARMED caption only: this tool moves what is armed and nothing here can arm a layer, so
     // opening another would leave the type panel on a third. A padlocked POSITION still edits.
     const caption = this.captionAt(point)
@@ -2385,7 +2425,7 @@ export class CanvasEngine {
     // gesture is the one moment where a stale rectangle would be felt as an offset stroke.
     this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
     const host = this.toHost(event)
-    const point = toDocument(this.view.viewport, host)
+    const point = toDocument(this.shownViewport(), host)
     this.pointer = host
 
     // Held from here to `endGesture`, so a drag that leaves the panel keeps being followed.
@@ -2784,7 +2824,7 @@ export class CanvasEngine {
 
     // Every remaining gesture works in document space; the pan is the only one that does not,
     // and an idle hover — the common case — must not pay for the conversion at all.
-    const point = toDocument(this.view.viewport, host)
+    const point = toDocument(this.shownViewport(), host)
 
     switch (gesture.kind) {
       case 'guide': {
@@ -2950,7 +2990,7 @@ export class CanvasEngine {
    */
   private hovering(host: Point): void {
     const box = this.spacing ? null : this.hoverBox()
-    const next = box && this.chromeAt(box, toDocument(this.view.viewport, host))
+    const next = box && this.chromeAt(box, toDocument(this.shownViewport(), host))
     // Weighed alongside the grip, never behind it: a refusing tool holds no chrome, so both
     // hits compare equal on every move and a test on the grip alone would return before the
     // refusal was ever read.

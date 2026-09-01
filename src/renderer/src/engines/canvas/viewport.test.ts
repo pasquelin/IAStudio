@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_SCALE as TIMELINE_MAX_SCALE } from '@/engines/timeline/viewport'
 import {
+  onDevicePixels,
   centerOn,
   clampCanvasScale,
   containIn,
@@ -24,6 +25,12 @@ describe('viewport', () => {
 
     expect(screen).toEqual({ x: 60, y: 30 })
     expect(toDocument(VIEWPORT, screen)).toEqual({ x: 10, y: 5 })
+  })
+
+  // A CSS pixel is not the unit that matters: at a ratio of 2, half a CSS pixel is whole.
+  it('snaps the origin to whole device pixels and leaves the zoom alone', () => {
+    expect(onDevicePixels({ x: 10.4, y: 3.5, scale: 8 }, 1)).toEqual({ x: 10, y: 4, scale: 8 })
+    expect(onDevicePixels({ x: 10.4, y: 3.5, scale: 8 }, 2)).toEqual({ x: 10.5, y: 3.5, scale: 8 })
   })
 
   it('clamps a scale to what the renderer can show', () => {

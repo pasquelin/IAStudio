@@ -98,6 +98,8 @@ const gpu: {
   pixels: number[]
   /** Every time the drawing buffer was asked to take its host's box — see `followHostSize`. */
   resizes: number
+  /** Every texture built, with the sampling the engine wrote on it and whether it pushed it. */
+  textures: { source: { scaleMode: string; style: { updates: number } } }[]
 } = {
   renders: 0,
   masked: 0,
@@ -116,6 +118,7 @@ const gpu: {
   sampled: [],
   pixels: [0, 0, 0, 0],
   resizes: 0,
+  textures: [],
 }
 
 vi.mock('pixi.js/unsafe-eval', () => ({}))
@@ -353,16 +356,27 @@ vi.mock('pixi.js', () => {
       create: (options: { width: number; height: number }) => {
         const id = gpu.texturesCreated
         gpu.texturesCreated += 1
-        return {
+        const texture = {
           id,
           width: options.width,
           height: options.height,
-          // The patch store lifts sub-frames off it; what matters is that it is a stable object.
-          source: {},
+          // A stable object, which the patch store lifts sub-frames off. Its style counts its
+          // updates: in Pixi 8.19 a sampling written without one never reaches the GPU.
+          source: {
+            scaleMode: 'linear',
+            style: {
+              updates: 0,
+              update(): void {
+                this.updates += 1
+              },
+            },
+          },
           destroy: () => {
             gpu.texturesDestroyed += 1
           },
         }
+        gpu.textures.push(texture)
+        return texture
       },
     },
   }
@@ -627,6 +641,7 @@ beforeEach(() => {
   gpu.sampled = []
   gpu.pixels = [0, 0, 0, 0]
   gpu.resizes = 0
+  gpu.textures = []
 })
 
 describe('the blend table', () => {
@@ -786,6 +801,20 @@ describe('mounting', () => {
 
     expect(gpu.texturesCreated).toBe(1)
     expect(gpu.renders).toBe(renders)
+  })
+
+  // Putting the document on a grid changes no layer, and the guard above would have skipped the
+  // pass that switches every surface to nearest sampling: green, and inert.
+  it('switches every surface to nearest sampling on a pixel grid, and back off it', async () => {
+    const { engine } = await mounted()
+    const sampling = (): string[] => gpu.textures.map(texture => texture.source.scaleMode)
+
+    engine.apply({ ...DEFAULT_CANVAS, pixelCell: 1 })
+    expect(sampling()).toEqual(['nearest'])
+
+    engine.apply(DEFAULT_CANVAS)
+    expect(sampling()).toEqual(['linear'])
+    expect(gpu.textures[0]?.source.style.updates).toBe(2)
   })
 })
 

@@ -216,6 +216,11 @@ export function pixelCellOf(raw: unknown): number | null {
   return Math.min(Math.floor(raw), MAX_PIXEL_CELL)
 }
 
+/** Whether the picture is drawn on a grid at all — the question every renderer asks first. */
+export function onPixelGrid(state: CanvasState | null): boolean {
+  return state !== null && state.pixelCell !== null
+}
+
 /**
  * A text box as a layer stores one. The engine reads drags in floats, so one taken at 74% zoom
  * comes back as 471.5789473684211 — and the panel's fields keep every digit they are handed.
