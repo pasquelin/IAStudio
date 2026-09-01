@@ -49,7 +49,8 @@
     "llms:check": "node scripts/make-llms.mjs --check",
     "licences:check": "node scripts/check-licences.mjs",
     "build:site": "node site/build.mjs _site",
-    "preview:site": "node scripts/serve.mjs _site --base=/IAStudio/"
+    "preview:site": "node scripts/serve.mjs _site --base=/IAStudio/",
+    "spike:apply": "tsc --noEmit -p spike/webgpu/tsconfig.json && vitest run --config spike/webgpu/vitest.spike.config.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",

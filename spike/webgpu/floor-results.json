@@ -1,0 +1,64 @@
+{
+  "at": "2026-09-01T20:36:00.993Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "floor": 64,
+      "bodies": 544,
+      "moving": 91,
+      "movingShare": 16.728,
+      "instancedGroups": 0,
+      "instancedBodies": 0,
+      "cpuRenderMs": 0.993,
+      "uploadMs": 0,
+      "frameMs": 7.933,
+      "fps": 126.05,
+      "gpuMs": 0.643,
+      "drawCalls": 1088,
+      "triangles": 368104,
+      "heapBefore": 5.256,
+      "heapLoaded": 10.228,
+      "heapEdited": 10.576
+    },
+    {
+      "floor": 16,
+      "bodies": 544,
+      "moving": 91,
+      "movingShare": 16.728,
+      "instancedGroups": 13,
+      "instancedBodies": 500,
+      "cpuRenderMs": 0.187,
+      "uploadMs": 0.007,
+      "frameMs": 8.327,
+      "fps": 120.096,
+      "gpuMs": 0.876,
+      "drawCalls": 114,
+      "triangles": 368104,
+      "heapBefore": 11.8,
+      "heapLoaded": 16.554,
+      "heapEdited": 15.047
+    }
+  ],
+  "failures": [],
+  "movingShare": 16.667,
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "plancher 64 — édition",
+      "workingSetKb": 142880
+    },
+    {
+      "at": 4006,
+      "phase": "plancher 16 — édition",
+      "workingSetKb": 160144
+    },
+    {
+      "at": 6008,
+      "phase": "fin",
+      "workingSetKb": 160080
+    }
+  ]
+}

@@ -98,6 +98,10 @@ describe('the dead-code detector still looking at the tree', () => {
    * public site, which knip does not parse. The scripts are entry points because they hold code;
    * the CSS is ignored outright, having no graph to enter.
    *
+   * `spike/**` is ignored for the reason the stylesheet is: a bench is run by hand and imported
+   * by nothing the product ships, so knip reports every one of its files as dead. What that costs
+   * is stated rather than hidden — dead code inside the bench is no longer detected by anything.
+   *
    * They are here because a detector that always reports the same false positives is a detector
    * whose red gets read as normal. The three entry points for `src/main`, `src/preload` and the
    * renderer are NOT here: knip finds them itself and reports each as redundant, which is what
@@ -109,7 +113,7 @@ describe('the dead-code detector still looking at the tree', () => {
       $schema: 'https://unpkg.com/knip@6/schema.json',
       ignoreBinaries: ['sips', 'iconutil', 'uv'],
       entry: ['scripts/before-pack.mjs', 'site/assets/js/*.js'],
-      ignore: ['site/assets/css/**'],
+      ignore: ['site/assets/css/**', 'spike/**'],
     })
   })
 

@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Chantier B — le plancher d'instanciation</title>
+<style>
+  body { background: #0d0f14; color: #cfd6e4; font: 13px ui-monospace, monospace; margin: 0; padding: 12px; }
+  #stage canvas { display: block; border: 1px solid #2a3040; }
+  #log { margin-top: 8px; }
+</style>
+<body>
+  <div id="stage"></div>
+  <div id="log">démarrage…</div>
+  <script type="module">
+    import { runGroups } from './groupBench.js'
+    const log = document.querySelector('#log')
+    window.__done = false
+    runGroups(step => {
+      log.textContent = `${step.done}/${step.total} — groupes de ${step.groupSize} · ${step.mode}`
+    })
+      .then(report => {
+        window.__report = report
+        window.__done = true
+        log.textContent = `terminé : ${report.results.length} mesures, ${report.failures.length} échecs`
+      })
+      .catch(error => {
+        window.__report = { results: [], failures: [{ fatal: String(error?.stack ?? error) }] }
+        window.__done = true
+        log.textContent = `échec : ${error}`
+      })
+  </script>
+</body>

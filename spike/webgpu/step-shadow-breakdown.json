@@ -1,0 +1,370 @@
+{
+  "at": "2026-09-01T19:26:45.920Z",
+  "rounds": 10,
+  "report": [
+    {
+      "shape": "plate",
+      "count": 10000,
+      "bareMs": 1.642,
+      "instrumentedMs": 3.678,
+      "residualMs": 1.593,
+      "parts": [
+        {
+          "name": "syncNode",
+          "ms": 0.634,
+          "calls": 10000
+        },
+        {
+          "name": "hangFromParent",
+          "ms": 0.63,
+          "calls": 10000
+        },
+        {
+          "name": "tuneShadowsIfMoved",
+          "ms": 0.281,
+          "calls": 1
+        },
+        {
+          "name": "tuneShadows",
+          "ms": 0.28,
+          "calls": 1
+        },
+        {
+          "name": "poseMarkers",
+          "ms": 0.094,
+          "calls": 1
+        },
+        {
+          "name": "showAidsForSelection",
+          "ms": 0.089,
+          "calls": 1
+        },
+        {
+          "name": "sweepCompositions",
+          "ms": 0.072,
+          "calls": 1
+        },
+        {
+          "name": "regroupInstances",
+          "ms": 0.003,
+          "calls": 1
+        },
+        {
+          "name": "refreshAids",
+          "ms": 0.002,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "shape": "plate",
+      "count": 50000,
+      "bareMs": 11.442,
+      "instrumentedMs": 22.578,
+      "residualMs": 5.129,
+      "parts": [
+        {
+          "name": "hangFromParent",
+          "ms": 8.2,
+          "calls": 50000
+        },
+        {
+          "name": "syncNode",
+          "ms": 3.582,
+          "calls": 50000
+        },
+        {
+          "name": "tuneShadowsIfMoved",
+          "ms": 2.173,
+          "calls": 1
+        },
+        {
+          "name": "tuneShadows",
+          "ms": 2.171,
+          "calls": 1
+        },
+        {
+          "name": "showAidsForSelection",
+          "ms": 0.6,
+          "calls": 1
+        },
+        {
+          "name": "poseMarkers",
+          "ms": 0.505,
+          "calls": 1
+        },
+        {
+          "name": "sweepCompositions",
+          "ms": 0.196,
+          "calls": 1
+        },
+        {
+          "name": "regroupInstances",
+          "ms": 0.012,
+          "calls": 1
+        },
+        {
+          "name": "applyPoses",
+          "ms": 0.004,
+          "calls": 1
+        },
+        {
+          "name": "applyCameraShots",
+          "ms": 0.002,
+          "calls": 1
+        },
+        {
+          "name": "refreshAids",
+          "ms": 0.002,
+          "calls": 1
+        },
+        {
+          "name": "applyWorld",
+          "ms": 0.002,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "shape": "arbre",
+      "count": 10000,
+      "bareMs": 1.735,
+      "instrumentedMs": 3.48,
+      "residualMs": 1.07,
+      "parts": [
+        {
+          "name": "hangFromParent",
+          "ms": 0.896,
+          "calls": 10000
+        },
+        {
+          "name": "syncNode",
+          "ms": 0.601,
+          "calls": 10000
+        },
+        {
+          "name": "tuneShadowsIfMoved",
+          "ms": 0.287,
+          "calls": 1
+        },
+        {
+          "name": "tuneShadows",
+          "ms": 0.287,
+          "calls": 1
+        },
+        {
+          "name": "showAidsForSelection",
+          "ms": 0.253,
+          "calls": 1
+        },
+        {
+          "name": "poseMarkers",
+          "ms": 0.052,
+          "calls": 1
+        },
+        {
+          "name": "sweepCompositions",
+          "ms": 0.03,
+          "calls": 1
+        },
+        {
+          "name": "regroupInstances",
+          "ms": 0.004,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "shape": "arbre",
+      "count": 50000,
+      "bareMs": 13.317,
+      "instrumentedMs": 23.147,
+      "residualMs": 5.359,
+      "parts": [
+        {
+          "name": "hangFromParent",
+          "ms": 9.029,
+          "calls": 50000
+        },
+        {
+          "name": "syncNode",
+          "ms": 3.345,
+          "calls": 50000
+        },
+        {
+          "name": "tuneShadowsIfMoved",
+          "ms": 2.03,
+          "calls": 1
+        },
+        {
+          "name": "tuneShadows",
+          "ms": 2.029,
+          "calls": 1
+        },
+        {
+          "name": "showAidsForSelection",
+          "ms": 0.618,
+          "calls": 1
+        },
+        {
+          "name": "poseMarkers",
+          "ms": 0.544,
+          "calls": 1
+        },
+        {
+          "name": "sweepCompositions",
+          "ms": 0.172,
+          "calls": 1
+        },
+        {
+          "name": "regroupInstances",
+          "ms": 0.012,
+          "calls": 1
+        },
+        {
+          "name": "applyPoses",
+          "ms": 0.003,
+          "calls": 1
+        },
+        {
+          "name": "applyCameraShots",
+          "ms": 0.002,
+          "calls": 1
+        },
+        {
+          "name": "refreshAids",
+          "ms": 0.002,
+          "calls": 1
+        },
+        {
+          "name": "applyWorld",
+          "ms": 0.002,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "shape": "ombres",
+      "count": 10000,
+      "bareMs": 1.936,
+      "instrumentedMs": 3.355,
+      "residualMs": 1.011,
+      "parts": [
+        {
+          "name": "hangFromParent",
+          "ms": 0.63,
+          "calls": 10000
+        },
+        {
+          "name": "syncNode",
+          "ms": 0.58,
+          "calls": 10000
+        },
+        {
+          "name": "tuneShadowsIfMoved",
+          "ms": 0.444,
+          "calls": 1
+        },
+        {
+          "name": "tuneShadows",
+          "ms": 0.443,
+          "calls": 1
+        },
+        {
+          "name": "poseMarkers",
+          "ms": 0.125,
+          "calls": 1
+        },
+        {
+          "name": "showAidsForSelection",
+          "ms": 0.088,
+          "calls": 1
+        },
+        {
+          "name": "sweepCompositions",
+          "ms": 0.028,
+          "calls": 1
+        },
+        {
+          "name": "measureShadowReach",
+          "ms": 0.003,
+          "calls": 1
+        },
+        {
+          "name": "regroupInstances",
+          "ms": 0.003,
+          "calls": 1
+        }
+      ]
+    },
+    {
+      "shape": "ombres",
+      "count": 50000,
+      "bareMs": 12.324,
+      "instrumentedMs": 22.255,
+      "residualMs": 5.2,
+      "parts": [
+        {
+          "name": "hangFromParent",
+          "ms": 7.829,
+          "calls": 50000
+        },
+        {
+          "name": "syncNode",
+          "ms": 3.486,
+          "calls": 50000
+        },
+        {
+          "name": "tuneShadowsIfMoved",
+          "ms": 2.128,
+          "calls": 1
+        },
+        {
+          "name": "tuneShadows",
+          "ms": 2.127,
+          "calls": 1
+        },
+        {
+          "name": "poseMarkers",
+          "ms": 0.726,
+          "calls": 1
+        },
+        {
+          "name": "showAidsForSelection",
+          "ms": 0.508,
+          "calls": 1
+        },
+        {
+          "name": "sweepCompositions",
+          "ms": 0.224,
+          "calls": 1
+        },
+        {
+          "name": "regroupInstances",
+          "ms": 0.011,
+          "calls": 1
+        },
+        {
+          "name": "measureShadowReach",
+          "ms": 0.01,
+          "calls": 1
+        },
+        {
+          "name": "applyCameraShots",
+          "ms": 0.002,
+          "calls": 1
+        },
+        {
+          "name": "refreshAids",
+          "ms": 0.002,
+          "calls": 1
+        },
+        {
+          "name": "applyWorld",
+          "ms": 0.002,
+          "calls": 1
+        }
+      ]
+    }
+  ]
+}

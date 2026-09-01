@@ -1,0 +1,101 @@
+{
+  "at": "2026-09-01T19:54:59.879Z",
+  "report": [
+    {
+      "shape": "plate",
+      "count": 1000,
+      "grouped": 1000,
+      "instances": 1,
+      "drawCallsBefore": 1000,
+      "drawCallsAfter": 1
+    },
+    {
+      "shape": "plate",
+      "count": 10000,
+      "grouped": 10000,
+      "instances": 1,
+      "drawCallsBefore": 10000,
+      "drawCallsAfter": 1
+    },
+    {
+      "shape": "plate",
+      "count": 50000,
+      "grouped": 50000,
+      "instances": 1,
+      "drawCallsBefore": 50000,
+      "drawCallsAfter": 1
+    },
+    {
+      "shape": "arbre",
+      "count": 1000,
+      "grouped": 1000,
+      "instances": 1,
+      "drawCallsBefore": 1000,
+      "drawCallsAfter": 1
+    },
+    {
+      "shape": "arbre",
+      "count": 10000,
+      "grouped": 10000,
+      "instances": 1,
+      "drawCallsBefore": 10000,
+      "drawCallsAfter": 1
+    },
+    {
+      "shape": "arbre",
+      "count": 50000,
+      "grouped": 50000,
+      "instances": 1,
+      "drawCallsBefore": 50000,
+      "drawCallsAfter": 1
+    },
+    {
+      "shape": "ombres",
+      "count": 1000,
+      "grouped": 997,
+      "instances": 1,
+      "drawCallsBefore": 1000,
+      "drawCallsAfter": 4
+    },
+    {
+      "shape": "ombres",
+      "count": 10000,
+      "grouped": 9997,
+      "instances": 1,
+      "drawCallsBefore": 10000,
+      "drawCallsAfter": 4
+    },
+    {
+      "shape": "ombres",
+      "count": 50000,
+      "grouped": 49997,
+      "instances": 1,
+      "drawCallsBefore": 50000,
+      "drawCallsAfter": 4
+    },
+    {
+      "shape": "variee",
+      "count": 1000,
+      "grouped": 0,
+      "instances": 0,
+      "drawCallsBefore": 1000,
+      "drawCallsAfter": 1000
+    },
+    {
+      "shape": "variee",
+      "count": 10000,
+      "grouped": 10000,
+      "instances": 24,
+      "drawCallsBefore": 10000,
+      "drawCallsAfter": 24
+    },
+    {
+      "shape": "variee",
+      "count": 50000,
+      "grouped": 50000,
+      "instances": 24,
+      "drawCallsBefore": 50000,
+      "drawCallsAfter": 24
+    }
+  ]
+}

@@ -1,6 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreBinaries": ["sips", "iconutil", "uv"],
-  "entry": ["scripts/before-pack.mjs", "site/assets/js/*.js"],
-  "ignore": ["site/assets/css/**"]
+  "ignoreBinaries": [
+    "sips",
+    "iconutil",
+    "uv"
+  ],
+  "entry": [
+    "scripts/before-pack.mjs",
+    "site/assets/js/*.js"
+  ],
+  "ignore": [
+    "site/assets/css/**",
+    "spike/**"
+  ]
 }
