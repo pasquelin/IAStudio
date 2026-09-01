@@ -58,6 +58,14 @@ export type Job = {
    * editor rather than on the shelf, and the window is what puts it there.
    */
   text?: string
+  /**
+   * What a service ANSWERED where a file was expected — Tripo's free rig check, and nothing else
+   * today. Shown on the job's own row and nowhere else.
+   *
+   * 🛑 Never `text`: that one is a DOCUMENT, and the Code space lands it in an editor for any
+   * claimed job — a verdict written there would overwrite the script open in the tab.
+   */
+  facts?: string
 }
 
 /** The runner's own id (`local_…`). Collecting under ours files nothing and still succeeds. */

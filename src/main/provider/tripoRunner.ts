@@ -211,7 +211,7 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
     forgetOldest()
   }
 
-  const answerFor = (task: TripoTask): RemoteJob => ({
+  const answerFor = (entry: TripoEntry, task: TripoTask): RemoteJob => ({
     jobId: task.taskId,
     status: task.status,
     assetIds: [],
@@ -219,6 +219,11 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
     // In CREDITS, and said so: a Tripo credit is not a creative unit, and the row that draws
     // the figure must not label it with the other cloud's word.
     ...(task.credits === undefined ? {} : { cost: task.credits, costUnit: CREDIT_UNIT }),
+    // Gated on the ENTRY, not on an empty URL list: a mesh task answers `part_names` beside its
+    // files, and those are not something a row says.
+    ...(entry.answersFacts && task.outputFacts !== undefined
+      ? { facts: JSON.stringify(task.outputFacts) }
+      : {}),
   })
 
   const entryFor = (target: JobTarget): TripoEntry => {
@@ -239,17 +244,20 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
     },
 
     poll: async (taskId, target) => {
+      const entry = entryFor(target)
       const task = await stateOf(taskId)
       // Their listing left it out — a retention window, a partial answer. Thrown as one of
       // THEIRS so the backoff can decide: a bare `Error` reads as `unexpected` and settles the
       // job on the first attempt, dropping a generation that may still be running.
       if (!task) throw new TripoError(0, 503, `Tripo said nothing about ${taskId}`)
 
-      if (task.status === 'success' && !produced.has(taskId)) {
-        await bringDown(entryFor(target), task)
+      // An endpoint that answers rather than produces has nothing to bring down, and warning
+      // that it wrote no mesh would teach a reader to skip the line that flags a lost one.
+      if (task.status === 'success' && !entry.answersFacts && !produced.has(taskId)) {
+        await bringDown(entry, task)
       }
 
-      return answerFor(task)
+      return answerFor(entry, task)
     },
 
     // 🛑 Their reference publishes no cancellation: a job reported as stopped goes on being

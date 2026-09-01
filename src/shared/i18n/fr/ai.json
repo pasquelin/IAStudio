@@ -24,6 +24,11 @@
     "tripo": "Tripo",
     "tripoHint": "Génération 3D et images. Une clé API. Sert les espaces 3D et Image."
   },
+  "tripoRigCheck": {
+    "riggable": "Squelettable",
+    "riggableAs": "Squelettable · {{topology}}",
+    "notRiggable": "Pas de squelette possible"
+  },
   "tripoFields": {
     "texture": "Image",
     "textureHelp": "Décochée, la maille revient nue — et coûte 10 crédits de moins.",

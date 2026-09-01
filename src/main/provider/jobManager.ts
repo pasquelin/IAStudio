@@ -39,6 +39,8 @@ export type RemoteJob = {
    * here rather than fetched after: there is no asset to read it back off.
    */
   text?: string
+  /** What was answered where a file was expected — see `Job.facts`, which it is copied onto. */
+  facts?: string
 }
 
 export type JobRunner = {
@@ -641,6 +643,7 @@ export function createJobManager({
 
     // Before the collection, since there is nothing to collect: the window reads it off the job.
     if (remote.text !== undefined) entry.job.text = remote.text
+    if (remote.facts !== undefined) entry.job.facts = remote.facts
 
     /**
      * Nothing is brought down for a discreet job, and the ids kept are the API's own.

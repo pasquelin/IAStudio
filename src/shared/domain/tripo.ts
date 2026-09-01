@@ -1,3 +1,4 @@
+import { isRecord } from '../guards'
 import type { FieldDescriptor, ModelDescriptor, ModelFamily } from './model'
 import {
   ADVANCED_GROUP,
@@ -63,6 +64,8 @@ export type TripoEntry = {
    * still their documentation's.
    */
   readonly credits: number
+  /** Answers facts instead of a file — nothing is brought down, and the row reads the answer. */
+  readonly answersFacts?: true
   readonly fields: readonly LocalFieldTemplate[]
 }
 
@@ -335,6 +338,17 @@ function meshEntries(line: TripoLine): TripoEntry[] {
   ]
 }
 
+/** The topologies rigging fits a skeleton to, and the only ones `animations/rig-check` names. */
+export const TRIPO_RIG_TYPES: readonly string[] = [
+  'biped',
+  'quadruped',
+  'avian',
+  'aquatic',
+  'serpentine',
+  'hexapod',
+  'octopod',
+]
+
 /**
  * Their whole animation catalogue, measured 2026-08-31 by a body the service refused, which
  * enumerates it. The `preset:` prefix stays out of the key — `:` is what i18next splits a ns on.
@@ -502,15 +516,10 @@ const PROCESSING: readonly TripoEntry[] = [
         helpKey: 'tripoFields.rig_typeHelp',
         required: false,
         default: 'biped',
-        optionKeys: [
-          'biped',
-          'quadruped',
-          'avian',
-          'aquatic',
-          'serpentine',
-          'hexapod',
-          'octopod',
-        ].map(value => ({ value, labelKey: `tripoFields.rig_type_${value}` })),
+        optionKeys: TRIPO_RIG_TYPES.map(value => ({
+          value,
+          labelKey: `tripoFields.rig_type_${value}`,
+        })),
       },
       {
         key: 'out_format',
@@ -533,6 +542,7 @@ const PROCESSING: readonly TripoEntry[] = [
     capability: 'rig',
     lane: 'animation',
     credits: 0,
+    answersFacts: true,
     fields: [input('mesh', 'tripoFields.sourceModel')],
   },
   {
@@ -693,4 +703,36 @@ export function tripoDescriptorOf(
 /** The keys a bundle has to name, read off the catalogue rather than off a copy of it. */
 export function tripoFieldKeys(): readonly string[] {
   return fieldKeysOf(TRIPO_CATALOGUE.flatMap(entry => entry.fields))
+}
+
+/**
+ * What `animations/rig-check` answers — the one Tripo result that is not a file, and what says
+ * whether the 25 credits a rig costs are worth spending.
+ */
+export type TripoRigCheck = {
+  readonly riggable: boolean
+  /** Absent when they name a topology no bundle has a word for: the sentence then drops it. */
+  readonly rigType?: string
+}
+
+export function tripoRigCheckOf(text: string | undefined): TripoRigCheck | null {
+  // A row reads this on every render, and every other runtime writes a SCRIPT here: a thrown
+  // parse per frame is the cost of not looking first.
+  if (!text?.startsWith('{')) return null
+
+  let answered: unknown
+  try {
+    answered = JSON.parse(text)
+  } catch {
+    // Every other runtime writes a script here, which is not JSON — not a failure, just not ours.
+    return null
+  }
+
+  if (!isRecord(answered) || typeof answered['riggable'] !== 'boolean') return null
+  const rigType = answered['rig_type']
+
+  return {
+    riggable: answered['riggable'],
+    ...(typeof rigType === 'string' && TRIPO_RIG_TYPES.includes(rigType) ? { rigType } : {}),
+  }
 }

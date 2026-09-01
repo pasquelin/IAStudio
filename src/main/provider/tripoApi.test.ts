@@ -147,6 +147,27 @@ describe('taskOf', () => {
     expect(task?.outputUrls).toEqual({ model_url: 'https://m', rendered_image_url: 'https://r' })
   })
 
+  /**
+   * 🛑 `animations/rig-check` is free and answers three facts and no URL. Kept out, the task
+   * succeeded, produced nothing, and the person learnt nothing of what it was run for.
+   */
+  it('keeps what the output says beside its files', () => {
+    const task = taskOf({
+      task_id: 'a',
+      status: 'success',
+      output: { riggable: true, rig_type: 'biped', topology: 'biped' },
+    })
+
+    expect(task?.outputFacts).toEqual({ riggable: true, rig_type: 'biped', topology: 'biped' })
+    expect(task?.outputUrls).toEqual({})
+  })
+
+  it('leaves the facts out of a task whose output is files alone', () => {
+    const task = taskOf({ task_id: 'a', status: 'success', output: { model_url: 'https://m' } })
+
+    expect(task?.outputFacts).toBeUndefined()
+  })
+
   it('drops a payload naming neither a task nor a state', () => {
     expect(taskOf({ status: 'success' })).toBeNull()
     expect(taskOf('running')).toBeNull()
