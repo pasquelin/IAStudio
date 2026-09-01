@@ -14,6 +14,11 @@ const entryOn = (endpoint: string): TripoEntry => {
 const TEXT_TO_MODEL = entryOn('generation/text-to-model')
 const IMAGE_TO_MODEL = entryOn('generation/image-to-model')
 
+// Not `entryOn`: the free check takes no model of its own, so it is found by endpoint alone.
+const RIG_CHECK = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig-check')
+if (!RIG_CHECK) throw new Error('no animations/rig-check in the catalogue')
+
+const RIG_CHECK_TARGET = { id: tripoModelId(RIG_CHECK) }
 const TEXT_TARGET = { id: tripoModelId(TEXT_TO_MODEL) }
 const IMAGE_TARGET = { id: tripoModelId(IMAGE_TO_MODEL) }
 
@@ -185,28 +190,26 @@ describe('following a Tripo task', () => {
   })
 
   /**
-   * The free rig check writes no file, so `bringDown` has nothing to bring: the answer travels
-   * on the job itself, where the row that draws it can read it.
+   * The free rig check writes no file, so `bringDown` has nothing to bring: the sentence travels
+   * on the job itself, where the row that draws it reads it.
    */
   it('carries a result that is not a file on the job rather than dropping it', async () => {
-    // Not `entryOn`: the check takes no model of its own, so it is found by endpoint alone.
-    const check = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig-check')
-    if (!check) throw new Error('no animations/rig-check in the catalogue')
-    const target = { id: tripoModelId(check) }
     const { runner } = harness([
       {
         taskId: '9a1c-5248',
         status: 'success',
         outputUrls: {},
-        outputFacts: { riggable: true, rig_type: 'biped' },
+        output: { riggable: true, rig_type: 'biped' },
       },
     ])
 
-    await runner.submit(target, { input: 'asset-1' })
+    await runner.submit(RIG_CHECK_TARGET, { input: 'asset-1' })
+    const answered = await runner.poll('9a1c-5248', RIG_CHECK_TARGET)
 
-    const answered = await runner.poll('9a1c-5248', target)
-
-    expect(answered.facts).toBe('{"riggable":true,"rig_type":"biped"}')
+    expect(answered.note).toEqual({
+      labelKey: 'tripoRigCheck.riggableAs',
+      params: { topology: 'tripoFields.rig_type_biped' },
+    })
     // 🛑 Never `text`: the Code space lands that one in an editor for ANY claimed job, so a
     // verdict written there overwrites the script open in the tab.
     expect(answered.text).toBeUndefined()
@@ -214,17 +217,14 @@ describe('following a Tripo task', () => {
 
   // It brings nothing down, so the warning that flags a genuinely lost mesh URL stays rare.
   it('says nothing in the journal about a file it was never going to write', async () => {
-    const check = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig-check')
-    if (!check) throw new Error('no animations/rig-check in the catalogue')
-    const target = { id: tripoModelId(check) }
     const log = vi.fn()
     const { runner } = harness(
-      [{ taskId: '9a1c-5248', status: 'success', outputUrls: {}, outputFacts: { riggable: true } }],
+      [{ taskId: '9a1c-5248', status: 'success', outputUrls: {}, output: { riggable: true } }],
       { log },
     )
 
-    await runner.submit(target, { input: 'asset-1' })
-    await runner.poll('9a1c-5248', target)
+    await runner.submit(RIG_CHECK_TARGET, { input: 'asset-1' })
+    await runner.poll('9a1c-5248', RIG_CHECK_TARGET)
 
     expect(log).not.toHaveBeenCalled()
   })
@@ -236,13 +236,13 @@ describe('following a Tripo task', () => {
         taskId: '9a1c-5248',
         status: 'success',
         outputUrls: { model_url: 'https://cdn/x.glb' },
-        outputFacts: { part_names: ['a'] },
+        output: { model_url: 'https://cdn/x.glb', part_names: ['a'] },
       },
     ])
 
     await runner.submit(TEXT_TARGET, { prompt: 'a hat' })
 
-    expect((await runner.poll('9a1c-5248', TEXT_TARGET)).facts).toBeUndefined()
+    expect((await runner.poll('9a1c-5248', TEXT_TARGET)).note).toBeUndefined()
   })
 
   it('downloads once, however many times the outcome is polled', async () => {

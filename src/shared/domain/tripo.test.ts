@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CAPABILITIES_BY_FAMILY } from './model'
 import {
   isTripoModelId,
-  tripoRigCheckOf,
+  tripoRigCheckNote,
   tripoDescriptorOf,
   tripoEntryOf,
   tripoFieldKeys,
@@ -115,21 +115,20 @@ describe('the Tripo catalogue', () => {
 
     expect(animation?.kind).toBe('choice')
     expect(animation?.default).toBe('preset:walk')
-    expect(animation?.optionKeys?.map(one => one.value)).toEqual([
-      'preset:walk',
-      'preset:run',
-      'preset:idle',
-      'preset:jump',
-      'preset:climb',
-      'preset:dive',
-      'preset:fall',
-      'preset:hurt',
-      'preset:shoot',
-      'preset:slash',
-      'preset:turn',
-    ])
-    expect(animation?.optionKeys?.map(one => one.labelKey)).not.toContain(
-      'tripoFields.animation_preset:walk',
+    expect(animation?.optionKeys).toEqual(
+      [
+        'walk',
+        'run',
+        'idle',
+        'jump',
+        'climb',
+        'dive',
+        'fall',
+        'hurt',
+        'shoot',
+        'slash',
+        'turn',
+      ].map(preset => ({ value: `preset:${preset}`, labelKey: `tripoFields.animation_${preset}` })),
     )
   })
 
@@ -236,21 +235,30 @@ describe('tripoFieldsOf', () => {
  * `{"riggable": true, "rig_type": "biped", "topology": "biped"}` — the one Tripo result that
  * carries no URL, and what says whether the 25 credits a rig costs are worth spending.
  */
-describe('tripoRigCheckOf', () => {
-  it('reads the verdict and the topology a rig should then be asked for', () => {
-    const answered = '{"riggable": true, "rig_type": "biped", "topology": "biped"}'
-
-    expect(tripoRigCheckOf(answered)).toEqual({ riggable: true, rigType: 'biped' })
+describe('tripoRigCheckNote', () => {
+  it('names the topology a rig should then be asked for, as a key the row translates', () => {
+    expect(tripoRigCheckNote({ riggable: true, rig_type: 'biped', topology: 'biped' })).toEqual({
+      labelKey: 'tripoRigCheck.riggableAs',
+      params: { topology: 'tripoFields.rig_type_biped' },
+    })
   })
 
   it('drops a topology no bundle has a word for, rather than showing a raw key', () => {
-    expect(tripoRigCheckOf('{"riggable": true, "rig_type": "chimera"}')).toEqual({ riggable: true })
+    expect(tripoRigCheckNote({ riggable: true, rig_type: 'chimera' })).toEqual({
+      labelKey: 'tripoRigCheck.riggable',
+    })
   })
 
-  // Every other runtime writes a script on `job.text`, and a script is not this.
-  it('answers nothing for text that is not a verdict', () => {
-    expect(tripoRigCheckOf('export function main() {}')).toBeNull()
-    expect(tripoRigCheckOf('{"model_url": "https://cdn/x.glb"}')).toBeNull()
-    expect(tripoRigCheckOf(undefined)).toBeNull()
+  // The one answer that should stop a spend: a rig costs 25 credits and this one is free.
+  it('asks for a warning when the mesh cannot be rigged at all', () => {
+    expect(tripoRigCheckNote({ riggable: false })).toEqual({
+      labelKey: 'tripoRigCheck.notRiggable',
+      tone: 'warning',
+    })
+  })
+
+  it('says nothing about an output that is not a verdict', () => {
+    expect(tripoRigCheckNote({ model_url: 'https://cdn/x.glb' })).toBeNull()
+    expect(tripoRigCheckNote(undefined)).toBeNull()
   })
 })

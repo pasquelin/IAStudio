@@ -1254,6 +1254,11 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * amount of typechecking sees it: the key exists only once the template has run.
  */
 const DYNAMIC_KEYS: readonly string[] = [
+  // The three sentences `tripoRigCheckNote` composes for a job's row. Nothing reads them as a
+  // literal any more — the runner names one, and the window translates whatever it is handed.
+  'tripoRigCheck.riggable',
+  'tripoRigCheck.riggableAs',
+  'tripoRigCheck.notRiggable',
   // `FILE_DOMAINS` and not `ASSET_TYPES`: the same six, plus the one a file has when the studio
   // has no domain to file it under — an explorer shows those too, and « other » is an answer
   // rather than a failure to classify.

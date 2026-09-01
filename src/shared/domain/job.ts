@@ -59,13 +59,21 @@ export type Job = {
    */
   text?: string
   /**
-   * What a service ANSWERED where a file was expected — Tripo's free rig check, and nothing else
-   * today. Shown on the job's own row and nowhere else.
+   * A sentence a runner wants said on the job's own row — a free rig check's verdict, today.
    *
    * 🛑 Never `text`: that one is a DOCUMENT, and the Code space lands it in an editor for any
    * claimed job — a verdict written there would overwrite the script open in the tab.
    */
-  facts?: string
+  note?: JobNote
+}
+
+/** What a runner says on a row, as `JobFailure` does: a KEY, never a message. */
+export type JobNote = {
+  readonly labelKey: string
+  /** The holes of the sentence, and their values are KEYS too — the row translates each. */
+  readonly params?: Readonly<Record<string, string>>
+  /** Absent reads as a plain fact; `warning` is what should stop a spend. */
+  readonly tone?: 'warning'
 }
 
 /** The runner's own id (`local_…`). Collecting under ours files nothing and still succeeds. */

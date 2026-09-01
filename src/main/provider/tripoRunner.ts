@@ -9,7 +9,12 @@ import { pathBaseNameOf } from '@shared/domain/fileName'
 import type { JobTarget } from '@shared/domain/job'
 import type { FieldKind } from '@shared/domain/model'
 import { PROMPT_FIELD_KEY } from '@shared/domain/localFields'
-import { tripoEntryOf, TRIPO_LANE_LIMITS, type TripoEntry } from '@shared/domain/tripo'
+import {
+  tripoEntryOf,
+  tripoRigCheckNote,
+  TRIPO_LANE_LIMITS,
+  type TripoEntry,
+} from '@shared/domain/tripo'
 import { extensionFromUrl } from '@main/assets/localBackend'
 import type { CollectableProduction } from '@main/assets/localCollector'
 import type { JobRunner, RemoteJob } from './jobManager'
@@ -211,20 +216,22 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
     forgetOldest()
   }
 
-  const answerFor = (entry: TripoEntry, task: TripoTask): RemoteJob => ({
-    jobId: task.taskId,
-    status: task.status,
-    assetIds: [],
-    ...(task.progress === undefined ? {} : { progress: task.progress }),
-    // In CREDITS, and said so: a Tripo credit is not a creative unit, and the row that draws
-    // the figure must not label it with the other cloud's word.
-    ...(task.credits === undefined ? {} : { cost: task.credits, costUnit: CREDIT_UNIT }),
+  const answerFor = (entry: TripoEntry, task: TripoTask): RemoteJob => {
     // Gated on the ENTRY, not on an empty URL list: a mesh task answers `part_names` beside its
     // files, and those are not something a row says.
-    ...(entry.answersFacts && task.outputFacts !== undefined
-      ? { facts: JSON.stringify(task.outputFacts) }
-      : {}),
-  })
+    const note = entry.answersFacts ? tripoRigCheckNote(task.output) : null
+
+    return {
+      jobId: task.taskId,
+      status: task.status,
+      assetIds: [],
+      ...(task.progress === undefined ? {} : { progress: task.progress }),
+      // In CREDITS, and said so: a Tripo credit is not a creative unit, and the row that draws
+      // the figure must not label it with the other cloud's word.
+      ...(task.credits === undefined ? {} : { cost: task.credits, costUnit: CREDIT_UNIT }),
+      ...(note === null ? {} : { note }),
+    }
+  }
 
   const entryFor = (target: JobTarget): TripoEntry => {
     const entry = tripoEntryOf(target.id)
