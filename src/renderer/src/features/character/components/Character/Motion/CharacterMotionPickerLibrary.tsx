@@ -1,16 +1,16 @@
 import { mdiFileOutline, mdiPackageVariantClosed } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { ClipSource } from '@shared/domain/scene'
-import { QuietNote } from '../../../../../components/QuietNote'
-import { Row } from '../../../../../components/Row'
-import { rowSkin } from '../../../../../components/styles'
+import { QuietNote } from '@/components/QuietNote'
+import { Row } from '@/components/Row'
+import { rowSkin } from '@/components/styles'
 import { clipLabel } from '@/helpers/clipLabel'
 import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { useProjectAnimations } from '@/hooks/useProjectAnimations'
 import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { assetIcon } from '@/helpers/workspaces'
 
-export type AnimationPickerLibraryProps = {
+export type CharacterMotionPickerLibraryProps = {
   documentId: string
   nodeId: string
   onChoose: (source: ClipSource, label: string) => void
@@ -23,11 +23,11 @@ export type AnimationPickerLibraryProps = {
  * One list rather than three, because from where someone stands all three answer the same
  * question — and only the choice decides what a block ends up reading.
  */
-export function AnimationPickerLibrary({
+export function CharacterMotionPickerLibrary({
   documentId,
   nodeId,
   onChoose,
-}: AnimationPickerLibraryProps) {
+}: CharacterMotionPickerLibraryProps) {
   const { t } = useTranslation()
   const bundled = useBundledAnimations()
   const own = useModelFiles(state => clipsOfNode(state, documentId, nodeId))

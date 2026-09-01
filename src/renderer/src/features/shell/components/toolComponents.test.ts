@@ -6,7 +6,6 @@ import { definition as assistant } from '@/features/assistant/tools/assistant'
 import { definition as explorer } from '@/features/explorer/tools/explorer'
 import { definition as git } from '@/features/git/tools/git'
 import { definition as history } from '@/features/git/tools/history'
-import { definition as animations } from '@/features/animation/tools/animations'
 import { definition as context } from '@/features/context/tools/context'
 import { definition as generator } from '@/features/generation/tools/generator'
 import { definition as inspector } from '@/features/shell/tools/inspector'
@@ -44,7 +43,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   inspector,
   assets,
   projects,
-  animations,
   text,
   context,
   problems,

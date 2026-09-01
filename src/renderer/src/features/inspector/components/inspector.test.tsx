@@ -999,14 +999,9 @@ describe('the inspector on an imported model', () => {
     useSelection.getState().selectFiles([])
   })
 
-  it('offers no clip picker while the file has reported none', () => {
-    install(modelNodeFixture('model-1'))
-    render(withQueries(<Content />))
-
-    expect(screen.queryByLabelText('Clip')).not.toBeInTheDocument()
-  })
-
-  it('offers the clips the file brought', () => {
+  // 🛑 The inspector no longer picks a clip at all. WHICH block plays is set on the band, where
+  // the block one is talking about is visible; the skeleton and the motions are the window's.
+  it('says what a model is, and offers no skeleton form of its own', () => {
     install(modelNodeFixture('model-1'))
     useModelFiles.setState({
       clips: { 'doc-1': { 'model-1': ['walk'] } },
@@ -1014,7 +1009,8 @@ describe('the inspector on an imported model', () => {
     })
     render(withQueries(<Content />))
 
-    expect(screen.getByLabelText('Clip')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Clip')).not.toBeInTheDocument()
+    expect(screen.getByText(/pas encore animable/)).toBeInTheDocument()
   })
 
   /**

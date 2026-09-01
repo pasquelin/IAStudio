@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import type { ClipSource } from '@shared/domain/scene'
 import { useModelFiles } from '@/stores/modelFiles'
-import { AnimationPickerMapping } from './AnimationPickerMapping'
+import { CharacterMotionPickerMapping } from './CharacterMotionPickerMapping'
 
 const DOCUMENT = 'doc-1'
 const SOURCE: ClipSource = { kind: 'bundled', name: 'Capoeira' }
@@ -15,7 +15,7 @@ function show(missingInTarget: HumanoidRole[] = [], missingInSource: HumanoidRol
       [DOCUMENT]: { a: { 'bundled:Capoeira': { matched: [], missingInSource, missingInTarget } } },
     },
   })
-  render(<AnimationPickerMapping documentId={DOCUMENT} nodeId="a" source={SOURCE} />)
+  render(<CharacterMotionPickerMapping documentId={DOCUMENT} nodeId="a" source={SOURCE} />)
 }
 
 describe('what the preview says about the fit', () => {

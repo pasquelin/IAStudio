@@ -6,14 +6,14 @@ import { setModelLanes } from '@/engines/scene/commands'
 import { nodeById } from '@/engines/scene/sceneState'
 import { clipSpanOf, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { clipLengthOf, useModelFiles } from '@/stores/modelFiles'
-import { SliderField } from '../../../../../components/SliderField'
-import { ToggleField } from '../../../../../components/ToggleField'
-import { ToolButton } from '../../../../../components/ToolButton'
+import { SliderField } from '@/components/SliderField'
+import { ToggleField } from '@/components/ToggleField'
+import { ToolButton } from '@/components/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useScenePreview, useSceneViews } from '@/stores/sceneViews'
 
-export type AnimationPickerPreviewProps = {
+export type CharacterMotionPickerPreviewProps = {
   documentId: string
   nodeId: string
   clipId: string
@@ -31,11 +31,11 @@ const SCRUB_STEP = 0.05
  * It plays the REAL block through the real retargeting, on the real character: what the issue
  * asks in as many words. There is nothing to rehearse and nothing that could differ.
  */
-export function AnimationPickerPreview({
+export function CharacterMotionPickerPreview({
   documentId,
   nodeId,
   clipId,
-}: AnimationPickerPreviewProps) {
+}: CharacterMotionPickerPreviewProps) {
   const { t } = useTranslation()
   const preview = useScenePreview(documentId)
   const lanes = useScenes(state => {

@@ -1,21 +1,21 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ClipSource } from '@shared/domain/scene'
-import { Button } from '../../../../../components/Button'
-import { Flyout } from '../../../../../components/Flyout'
-import { chipSkin } from '../../../../../components/styles'
-import { AnimationPickerAi } from './AnimationPickerAi'
-import { AnimationPickerImport } from './AnimationPickerImport'
-import { AnimationPickerLibrary } from './AnimationPickerLibrary'
-import { AnimationPickerMapping } from './AnimationPickerMapping'
-import { AnimationPickerPreview } from './AnimationPickerPreview'
+import { Button } from '@/components/Button'
+import { Flyout } from '@/components/Flyout'
+import { chipSkin } from '@/components/styles'
+import { CharacterMotionPickerAi } from './CharacterMotionPickerAi'
+import { CharacterMotionPickerImport } from './CharacterMotionPickerImport'
+import { CharacterMotionPickerLibrary } from './CharacterMotionPickerLibrary'
+import { CharacterMotionPickerMapping } from './CharacterMotionPickerMapping'
+import { CharacterMotionPickerPreview } from './CharacterMotionPickerPreview'
 
 /** The three places a motion can come from. Their order is the one the issue lists them in. */
-export type AnimationPickerSource = 'library' | 'import' | 'ai'
+export type CharacterMotionPickerSource = 'library' | 'import' | 'ai'
 
-const SOURCES: readonly AnimationPickerSource[] = ['library', 'import', 'ai']
+const SOURCES: readonly CharacterMotionPickerSource[] = ['library', 'import', 'ai']
 
-export type AnimationPickerProps = {
+export type CharacterMotionPickerProps = {
   documentId: string
   nodeId: string
   /** What it hangs off — the « add an animation » button of the inspector. */
@@ -35,7 +35,7 @@ export type AnimationPickerProps = {
  * A flyout rather than a window, and choosing lays the REAL block: a separate window has no
  * viewport, so it could only ever show a rehearsal.
  */
-export function AnimationPicker({
+export function CharacterMotionPicker({
   documentId,
   nodeId,
   anchor,
@@ -43,15 +43,17 @@ export function AnimationPicker({
   onChoose,
   onKeep,
   onCancel,
-}: AnimationPickerProps) {
+}: CharacterMotionPickerProps) {
   const { t } = useTranslation()
-  const [source, setSource] = useState<AnimationPickerSource>('library')
+  const [source, setSource] = useState<CharacterMotionPickerSource>('library')
 
   const pane = (): ReactNode => {
-    if (source === 'import') return <AnimationPickerImport onChoose={onChoose} />
-    if (source === 'ai') return <AnimationPickerAi />
+    if (source === 'import') return <CharacterMotionPickerImport onChoose={onChoose} />
+    if (source === 'ai') return <CharacterMotionPickerAi />
 
-    return <AnimationPickerLibrary documentId={documentId} nodeId={nodeId} onChoose={onChoose} />
+    return (
+      <CharacterMotionPickerLibrary documentId={documentId} nodeId={nodeId} onChoose={onChoose} />
+    )
   }
 
   return (
@@ -76,8 +78,16 @@ export function AnimationPicker({
 
         {laid && (
           <>
-            <AnimationPickerPreview documentId={documentId} nodeId={nodeId} clipId={laid.clipId} />
-            <AnimationPickerMapping documentId={documentId} nodeId={nodeId} source={laid.source} />
+            <CharacterMotionPickerPreview
+              documentId={documentId}
+              nodeId={nodeId}
+              clipId={laid.clipId}
+            />
+            <CharacterMotionPickerMapping
+              documentId={documentId}
+              nodeId={nodeId}
+              source={laid.source}
+            />
             <div className="flex justify-end gap-2">
               <Button onClick={onCancel}>{t('inspector.animationCancel')}</Button>
               <Button variant="primary" onClick={onKeep}>

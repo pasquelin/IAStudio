@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clipKeyOf, type ClipSource } from '@shared/domain/scene'
-import { QuietNote } from '../../../../../components/QuietNote'
-import { Row } from '../../../../../components/Row'
-import { INLINE_LINK } from '../../../../../components/styles'
+import { QuietNote } from '@/components/QuietNote'
+import { Row } from '@/components/Row'
+import { INLINE_LINK } from '@/components/styles'
 import { bodyFitOf } from '@/engines/scene/retarget'
 import { clipFitOfNode, useModelFiles } from '@/stores/modelFiles'
 
-export type AnimationPickerMappingProps = {
+export type CharacterMotionPickerMappingProps = {
   documentId: string
   nodeId: string
   source: ClipSource
@@ -19,11 +19,11 @@ export type AnimationPickerMappingProps = {
  * ROLES rather than bone names, because that is the only vocabulary two skeletons share:
  * `mixamorigLeftHand` and `L_Hand` are the same joint and no string says so.
  */
-export function AnimationPickerMapping({
+export function CharacterMotionPickerMapping({
   documentId,
   nodeId,
   source,
-}: AnimationPickerMappingProps) {
+}: CharacterMotionPickerMappingProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const fit = useModelFiles(state => clipFitOfNode(state, documentId, nodeId, clipKeyOf(source)))

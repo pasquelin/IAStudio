@@ -40,7 +40,6 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   inspector: { load: () => import('@/features/shell/tools/inspector'), role: 'actions' },
   assets: { load: () => import('@/features/assets/tools/assets'), role: 'actions' },
   projects: { load: () => import('@/features/project/tools/projects'), role: null },
-  animations: { load: () => import('@/features/animation/tools/animations'), role: null },
   text: { load: () => import('@/features/image/tools/text'), role: null },
   context: { load: () => import('@/features/context/tools/context'), role: 'actions' },
   problems: { load: () => import('@/features/code/tools/problems'), role: null },

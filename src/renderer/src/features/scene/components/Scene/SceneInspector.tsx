@@ -26,7 +26,6 @@ import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from '../../../../components/DescriptorSection'
-import { AnimationSection } from '../../../animation/components/Animation/AnimationSection'
 import { CameraAlignButton } from '../Camera/CameraAlignButton'
 import { CameraShotSection } from '../Camera/ShotSection/CameraShotSection'
 import { ComponentsSection } from '../ComponentsSection'
@@ -231,7 +230,6 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       {model && (
         <>
           <RigSection documentId={documentId} node={model} />
-          <AnimationSection documentId={documentId} node={model} edit={edit} />
           {/* On the anchor alone, unlike a material: how many slots a model has depends on what
               its own file carries, so spreading a dress over a selection would name slots meshes
               beside it never had. */}

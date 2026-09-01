@@ -4,6 +4,7 @@ import type { SceneState } from '@/engines/scene/sceneState'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { modelNode } from '@/engines/scene/nodeFactory'
 import { seedCharacter } from '@/stores/character'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { characterMessageOf, openCharacterChannel } from './characterChannel'
 
 /** What a stage needs of an engine: a workshop scene laid over it, and what the file turned out to be. */
@@ -54,7 +55,14 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
   // Asked rather than waited for: a channel replays nothing, and this window opens well after
   // the studio pressed the button that made it.
   channel.postMessage({ kind: 'ask', assetId: deps.assetId })
-  deps.renderer.apply(workshopScene(deps.assetId))
+
+  // 🛑 A real scene document, in this window's own store: the motion picker, the preview and the
+  // blocks it lays are the studio's own surfaces, and they all speak that language. A state kept
+  // beside the store would have meant a second copy of every one of them.
+  const documentId = workshopIdOf(deps.assetId)
+  useScenes.getState().replace(documentId, workshopScene(deps.assetId))
+  deps.renderer.apply(sceneOf(useScenes.getState(), documentId))
+  const watching = useScenes.subscribe(state => deps.renderer.apply(sceneOf(state, documentId)))
 
   return {
     read: (rig, extras) => {
@@ -63,6 +71,7 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
       if (!framed) framed = deps.renderer.frameContents()
     },
     close: () => {
+      watching()
       channel.close()
     },
   }
@@ -76,4 +85,9 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
  */
 export function workshopScene(assetId: string): SceneState {
   return { ...EMPTY_SCENE, nodes: [modelNode(assetId, assetId)] }
+}
+
+/** The document this window's workshop scene lives under — one per character, in its own store. */
+export function workshopIdOf(assetId: string): string {
+  return `character:${assetId}`
 }

@@ -10,6 +10,7 @@ import { type ClipBlock } from '@/engines/timeline/bandRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { clipRefLabel } from '@/helpers/clipLabel'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
+import { TimelineClipSettings } from '../../../timeline/components/Timeline/TimelineClipSettings'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -135,6 +136,11 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           <div className="min-w-0 flex-1">
             <AnimationCanvas documentId={documentId} rows={rows} />
           </div>
+          {/* Beside the block one is looking at: how a move plays used to be set in the inspector,
+              which could not see WHICH block and so described the first one it found. */}
+          <aside className="border-edge w-56 shrink-0 overflow-y-auto border-l px-2 py-1">
+            <TimelineClipSettings documentId={documentId} />
+          </aside>
         </div>
       )}
     </div>

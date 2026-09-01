@@ -7,13 +7,14 @@ import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { Bounds } from '@/engines/scene/rigFit'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
-import { createCharacterStage } from '@/character/characterStage'
+import { createCharacterStage, workshopIdOf } from '@/character/characterStage'
 import { assetVersionOf } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { characterOf, isCharacterDirty, useCharacters } from '@/stores/character'
 import { useCharacterView } from '@/stores/characterView'
 import { useProject } from '@/stores/project'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
 
 export type CharacterWindowProps = { assetId: string }
@@ -34,6 +35,8 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   // fills it is fitting a skeleton HERE — the weights are the engine's, and it alone has them.
   const [skins, setSkins] = useState<CharacterSkinning>([])
   const [bounds, setBounds] = useState<Bounds | null>(null)
+  // The node of the workshop scene, which is what the surfaces of the studio address a model by.
+  const nodeId = useScenes(state => sceneOf(state, workshopIdOf(assetId)).nodes[0]?.id)
 
   // The window's own keys. Its OWN scope and not the scene's: ⌘Z here must not reach the scene a
   // studio window is showing beside it.
@@ -114,6 +117,8 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
           assetId={assetId}
           name={dirty ? `${name} •` : name}
           bounds={bounds}
+          documentId={workshopIdOf(assetId)}
+          nodeId={nodeId ?? ''}
         />
       </div>
     </div>

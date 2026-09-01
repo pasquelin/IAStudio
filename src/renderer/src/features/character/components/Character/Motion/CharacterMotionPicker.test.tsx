@@ -10,7 +10,7 @@ import { useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import { AnimationPicker } from './AnimationPicker'
+import { CharacterMotionPicker } from './CharacterMotionPicker'
 
 const DOCUMENT = 'doc-1'
 
@@ -31,7 +31,7 @@ function show(laid: { clipId: string; source: ClipSource } | null = null) {
   const onCancel = vi.fn()
 
   render(
-    <AnimationPicker
+    <CharacterMotionPicker
       documentId={DOCUMENT}
       nodeId="a"
       anchor={document.body}

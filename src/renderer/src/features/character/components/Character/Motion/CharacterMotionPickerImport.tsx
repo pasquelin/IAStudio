@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { ANIMATION_EXTENSIONS } from '@shared/domain/animationLibrary'
 import { extensionOf } from '@shared/domain/fileName'
 import type { ClipSource } from '@shared/domain/scene'
-import { Button } from '../../../../../components/Button'
-import { QuietNote } from '../../../../../components/QuietNote'
+import { Button } from '@/components/Button'
+import { QuietNote } from '@/components/QuietNote'
 import { getBridge } from '@/services/bridge'
 
-export type AnimationPickerImportProps = {
+export type CharacterMotionPickerImportProps = {
   onChoose: (source: ClipSource, label: string) => void
 }
 
@@ -16,7 +16,7 @@ export type AnimationPickerImportProps = {
  * the accepted set is wider than the studio's own. LINKED rather than copied, as every import is,
  * so what is chosen downstream is an ordinary asset.
  */
-export function AnimationPickerImport({ onChoose }: AnimationPickerImportProps) {
+export function CharacterMotionPickerImport({ onChoose }: CharacterMotionPickerImportProps) {
   const { t } = useTranslation()
   const [refused, setRefused] = useState(false)
 

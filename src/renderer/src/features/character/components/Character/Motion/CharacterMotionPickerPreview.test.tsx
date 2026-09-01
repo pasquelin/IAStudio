@@ -7,7 +7,7 @@ import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelFiles } from '@/stores/modelFiles'
 import { installScene } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
-import { AnimationPickerPreview } from './AnimationPickerPreview'
+import { CharacterMotionPickerPreview } from './CharacterMotionPickerPreview'
 
 const DOCUMENT = 'doc-1'
 const CLIP = 'block-1'
@@ -34,7 +34,7 @@ function show(length: number | null = LENGTH, clip: Partial<ClipRef> = {}): void
   useModelFiles.setState({
     lengths: length === null ? {} : { [DOCUMENT]: { a: { 'bundled:Capoeira': length } } },
   })
-  render(<AnimationPickerPreview documentId={DOCUMENT} nodeId="a" clipId={CLIP} />)
+  render(<CharacterMotionPickerPreview documentId={DOCUMENT} nodeId="a" clipId={CLIP} />)
 }
 
 describe('watching the block that was laid', () => {

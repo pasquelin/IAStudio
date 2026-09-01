@@ -18,6 +18,7 @@ import {
   setCharacterBoneRole,
 } from '@/engines/character/characterCommands'
 import { rigHandBones, type Bounds } from '@/engines/scene/rigFit'
+import { CharacterMotionList } from '../Character/Motion/CharacterMotionList'
 import { CharacterWindowFit } from './CharacterWindowFit'
 import { characterOf, useCharacters } from '@/stores/character'
 import { useCharacterView } from '@/stores/characterView'
@@ -25,6 +26,9 @@ import { useCharacterView } from '@/stores/characterView'
 export type CharacterWindowInspectorProps = {
   assetId: string
   name: string
+  /** The workshop scene this window drives, which is where a motion is tried out. */
+  documentId: string
+  nodeId: string
   /** What the engine measured of the mesh, for the rigger that proportions itself off it. */
   bounds: Bounds | null
 }
@@ -35,7 +39,13 @@ export type CharacterWindowInspectorProps = {
  * Nothing of a scene: no transform, no shadow, no environment. That separation is the whole
  * reason this window exists.
  */
-export function CharacterWindowInspector({ assetId, name, bounds }: CharacterWindowInspectorProps) {
+export function CharacterWindowInspector({
+  assetId,
+  name,
+  bounds,
+  documentId,
+  nodeId,
+}: CharacterWindowInspectorProps) {
   const { t } = useTranslation()
   const character = useCharacters(state => characterOf(state, assetId))
   const picked = useCharacterView(state => state.pickedBone)
@@ -109,6 +119,10 @@ export function CharacterWindowInspector({ assetId, name, bounds }: CharacterWin
               {t('inspector.addHands')}
             </Button>
           )}
+        </PropertySection>
+
+        <PropertySection title={t('character.motions')} scId="character.motions">
+          <CharacterMotionList assetId={assetId} documentId={documentId} nodeId={nodeId} />
         </PropertySection>
       </div>
     </Panel>
