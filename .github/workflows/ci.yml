@@ -32,7 +32,7 @@ jobs:
 
       # Not a link of the gate: `pnpm validate` runs `engine:check` itself. This only puts the
       # tool that link shells out to on PATH — the engine is Python, and uv drives it.
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
 
       - run: pnpm install --frozen-lockfile
 
