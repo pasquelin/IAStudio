@@ -1,5 +1,5 @@
 import type { Point } from '../core/geometry'
-import type { Rect } from './canvasState'
+import { sided, type Rect } from './canvasState'
 
 // A CELL is one square of the artwork; `cell` is how many document pixels wide it is, and it
 // always comes from `pixelCellOf` — nothing here guards a division by it.
@@ -15,7 +15,7 @@ export function cellsSpanning(size: number, cell: number): number {
 
 /** The square a dab stamps. Two points inside one cell give the same rectangle — that is the mode. */
 export function stampRect(at: Point, cell: number, brushSize: number): Rect {
-  const across = Math.max(1, Math.round(brushSize / cell))
+  const across = sided(brushSize / cell)
   const back = Math.floor((across - 1) / 2)
   const column = cellOf(at.x, cell) - back
   const row = cellOf(at.y, cell) - back
