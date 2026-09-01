@@ -1,25 +1,19 @@
 import type { OpenByZone } from '@pasquelin/panels'
 import { familyOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
 import { declarePanelsOf } from '@/features/shell/panelSpecs'
+import { LAYOUT_KEY } from '@/features/shell/layoutStorage'
 import { panelsStore } from './panels'
 
 /**
  * A chassis holding nothing — `panelsStore` is a module singleton, so a test inherits the last.
- *
- * 🛑 Written rather than `reset()`: that one SETTLES the view in front against the registry it
- * finds, and a registry emptied first settles it EMPTY — a view that then has an entry, so
- * nothing re-opens it and every panel stays shut.
+ * 🛑 Not `reset()`: that one SETTLES the view in front against the registry it finds, and a
+ * registry emptied first settles it EMPTY, which nothing re-opens.
  */
 export function resetChassis(): void {
-  panelsStore.setState({
-    registry: [],
-    views: {},
-    lengths: { sizes: {}, splits: {} },
-    focusedZone: null,
-    stashed: {},
-    defaults: undefined,
-    available: { width: 0, height: 0 },
-  })
+  // A `<Shell>` mounted after another one wrote its arrangement would restore it instead of
+  // settling, and the two tests would describe the same window.
+  globalThis.localStorage?.removeItem(LAYOUT_KEY)
+  panelsStore.setState(panelsStore.getInitialState())
 }
 
 /**

@@ -34,8 +34,6 @@ export const HOME_SURFACE = 'home'
  */
 export type SurfaceFamily = 'workspaces' | 'home'
 
-export const SURFACE_FAMILIES: readonly SurfaceFamily[] = ['workspaces', 'home']
-
 export function familyOf(surface: ToolSurface): SurfaceFamily {
   return surface === HOME_SURFACE ? 'home' : 'workspaces'
 }
@@ -133,8 +131,6 @@ export type ToolPlacement = {
    */
   opens?: number
 }
-
-export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
 
 /**
  * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
@@ -394,11 +390,6 @@ export function placementIn(id: unknown, surface: ToolSurface): ToolPlacement | 
 export function serves(placement: ToolPlacement, surface: ToolSurface): boolean {
   return placement.surfaces.includes(surface)
 }
-
-export const TOOL_ZONES: readonly ToolZone[] = ['left', 'right', 'top', 'bottomLeft', 'bottomRight']
-
-/** The band's two halves, in the order they are drawn. */
-export const BOTTOM_ZONES: readonly ToolZone[] = ['bottomLeft', 'bottomRight']
 
 /** Whether the zone is one of the band's halves, which share a height and a resize handle. */
 export function isBottom(zone: ToolZone): boolean {

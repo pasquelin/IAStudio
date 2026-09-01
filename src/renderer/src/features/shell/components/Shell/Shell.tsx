@@ -31,6 +31,7 @@ import { UiIcon } from '@/components/UiIcon'
 import { fillsActions, hasActions } from '../toolComponents'
 import { toolIcon, toolTitleKey } from '@/helpers/toolRegistry'
 import { panelSpecsOf } from '../../panelSpecs'
+import { LAYOUT_KEY, layoutStorage } from '../../layoutStorage'
 import { useToolState } from '@/hooks/useToolState'
 import { familyOf } from '@shared/domain/tool'
 import { panelsStore } from '@/stores/panels'
@@ -88,6 +89,16 @@ export function Shell() {
     () => panelSpecsOf(surface, state, id => t(toolTitleKey(id))),
     [surface, state, t],
   )
+  // Written inline, a new object every render invalidated every zone's memoisation.
+  const labels = useMemo(
+    () => ({
+      closePanel: t('actions.removeTool'),
+      resizeZone: t('actions.resizeZone'),
+      resizeSplit: t('actions.resizeSplit'),
+      resizeBand: t('actions.resizeBand'),
+    }),
+    [t],
+  )
 
   return (
     <Panels
@@ -97,17 +108,11 @@ export function Shell() {
       // the projects where a space holds generation.
       view={familyOf(surface)}
       components={COMPONENTS}
-      // 🛑 NOTHING persists the arrangement in this batch, deliberately: the studio's own key
-      // carries twenty migrations the chassis' file knows nothing about, and reading it is the
-      // next batch's whole subject. Left to the library, the first launch would overwrite it.
-      storage={null}
+      // The studio's own key, read through the twenty versions `zustand/persist` wrote under it.
+      storage={layoutStorage}
+      storageKey={LAYOUT_KEY}
       railHeader={<RailNewButton />}
-      labels={{
-        closePanel: t('actions.removeTool'),
-        resizeZone: t('actions.resizeZone'),
-        resizeSplit: t('actions.resizeSplit'),
-        resizeBand: t('actions.resizeBand'),
-      }}
+      labels={labels}
       className="min-h-0 flex-1"
       header={
         <TitleBar
