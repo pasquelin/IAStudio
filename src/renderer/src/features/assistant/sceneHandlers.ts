@@ -159,7 +159,7 @@ function editNode(
   // 🛑 Told apart: a node that is not there and an edit with nothing to do read the same as
   // `badInput`, and a client re-sent a `node.remove` whose node it had just removed — 33 refusals
   // on the bench pass of 2026-08-26, none of them saying the object was already gone.
-  if (!node) return refused('notFound', `no node "${named}" in the scene in front, by id or name`)
+  if (!node) return refused('notFound', noSuchNode(named, open.state.nodes))
 
   const command = build(node, open.documentId)
   if (!command) return refused('badInput', `"${node.name}" has nothing to change here`)
@@ -362,6 +362,29 @@ function cuesLaid(animation: SceneAnimation): Record<string, unknown> {
   }
   return Object.keys(cues).length === 0 ? {} : { cues }
 }
+
+/**
+ * The refusal for a node nobody holds, naming the ones the scene DOES — bounded, so a busy scene
+ * does not spend a turn on a list.
+ *
+ * 🛑 Told only that its word matched nothing, a model invented another: « château », « chevalier »
+ * and « caméra » were each aimed at twice over on the pass of 2026-09-01, on a scene holding
+ * « Cube Test ». What it needs to correct itself is the names, and it has them in one line.
+ */
+export function noSuchNode(named: string, nodes: readonly SceneNode[]): string {
+  const held = nodes
+    .slice(0, NAMES_IN_A_REFUSAL)
+    .map(one => `"${one.name}"`)
+    .join(', ')
+  const rest = nodes.length - Math.min(nodes.length, NAMES_IN_A_REFUSAL)
+
+  return nodes.length === 0
+    ? `no node "${named}": the scene in front holds none`
+    : `no node "${named}" in the scene in front, by id or name — it holds ${held}${rest > 0 ? `, and ${rest} more` : ''}`
+}
+
+/** How many names a refusal spells. Past this a busy scene spends the turn on a list. */
+const NAMES_IN_A_REFUSAL = 8
 
 /** A node's `transform`, or nothing at all when it has not left where a fresh one stands. */
 function moved(transform: Transform): { transform: Partial<Transform> } | null {

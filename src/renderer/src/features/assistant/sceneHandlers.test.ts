@@ -55,6 +55,28 @@ beforeEach(() => {
   })
 })
 
+describe('a node nobody holds', () => {
+  /**
+   * 🛑 Told only that its word matched nothing, a model invents another: « château », « chevalier »
+   * and « caméra » were each aimed at twice on the bench pass of 2026-09-01, on a scene holding
+   * « Cube Test ». The names it needs to correct itself fit in the refusal.
+   */
+  it('names what the scene does hold', async () => {
+    await runAction('node.add', { kind: 'box', name: 'Caisse' })
+
+    const outcome = await runAction('node.rename', { nodeId: 'château', name: 'x' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
+    expect(outcome.ok ? '' : (outcome.detail ?? '')).toContain('"Caisse"')
+  })
+
+  it('says the scene holds none rather than naming an empty list', async () => {
+    const outcome = await runAction('node.rename', { nodeId: 'château', name: 'x' })
+
+    expect(outcome.ok ? '' : (outcome.detail ?? '')).toContain('holds none')
+  })
+})
+
 describe('reading the scene in front', () => {
   /**
    * 🛑 What a node STANDS AT is left out, and absent reads as that default — the rule the action's
