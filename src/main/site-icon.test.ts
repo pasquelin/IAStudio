@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /**
- * GitHub Pages serves nothing above `docs/`, so the site's favicon is a COPY of the application
- * icon rather than a link to it, and nothing else compares the two.
+ * GitHub Pages serves only what the build hands it, so the site's favicon is a COPY of the
+ * application icon rather than a link to it, and nothing else compares the two.
  *
  * **Two blind spots, in the open, and the second is the costly one.** `apple-touch-icon.png` beside
  * it is a flattened RENDER no test reopens — a stale one shows on an iOS home screen alone. But
@@ -15,7 +15,7 @@ const fileAt = (path: string): string =>
 
 describe('the site icon', () => {
   it('is the application icon itself', () => {
-    expect(fileAt('docs/assets/images/icon.svg')).toBe(fileAt('build/icon.svg'))
+    expect(fileAt('site/assets/images/icon.svg')).toBe(fileAt('build/icon.svg'))
   })
 
   // Two empty files are equal too: the case above passes on a pair of them.
@@ -24,6 +24,6 @@ describe('the site icon', () => {
   })
 
   it('is what the page links to', () => {
-    expect(fileAt('docs/index.html')).toContain('href="assets/images/icon.svg"')
+    expect(fileAt('site/template.html')).toContain('href="{{root}}assets/images/icon.svg"')
   })
 })

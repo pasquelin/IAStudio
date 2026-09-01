@@ -94,7 +94,7 @@ describe('the dead-code detector still looking at the tree', () => {
    * configuration. Deleting it on knip's word would stop ffmpeg being fetched at packaging time,
    * and the build would ship without an encoder rather than fail.
    *
-   * `docs/assets/js/*.js` and the stylesheet beside them are loaded by `docs/index.html` — the
+   * `site/assets/js/*.js` and the stylesheet beside them are loaded by `site/template.html` — the
    * public site, which knip does not parse. The scripts are entry points because they hold code;
    * the CSS is ignored outright, having no graph to enter.
    *
@@ -108,8 +108,8 @@ describe('the dead-code detector still looking at the tree', () => {
     expect(config).toEqual({
       $schema: 'https://unpkg.com/knip@6/schema.json',
       ignoreBinaries: ['sips', 'iconutil', 'uv'],
-      entry: ['scripts/before-pack.mjs', 'docs/assets/js/*.js'],
-      ignore: ['docs/assets/css/**'],
+      entry: ['scripts/before-pack.mjs', 'site/assets/js/*.js'],
+      ignore: ['site/assets/css/**'],
     })
   })
 
