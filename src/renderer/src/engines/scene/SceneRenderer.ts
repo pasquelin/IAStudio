@@ -1531,16 +1531,13 @@ export class SceneRenderer {
    * exactly what that helper sets aside.
    */
   private regroupInstances(): void {
-    if (!this.groupingStale && this.movedNodes.size === 0) return
-
-    // The world matrices are what a group COPIES, and nothing before here refreshes them: the
-    // one pass that did is `tuneShadows`, which only runs when a light casts. Without this a
-    // body of a fresh group was drawn at the origin, and a typed placement lagged one apply.
-    this.viewport.scene.updateMatrixWorld()
-
     if (this.groupingStale) {
       this.groupingStale = false
       this.movedNodes.clear()
+      // The world matrices are what a group COPIES, and nothing before here refreshes them: the
+      // one pass that did is `tuneShadows`, which only runs when a light casts. Without this a
+      // body of a fresh group was drawn at the origin.
+      this.viewport.scene.updateMatrixWorld()
       const instanced = this.instances.rebuild([...this.applied.values()], id =>
         this.objects.get(id),
       )
@@ -1550,6 +1547,11 @@ export class SceneRenderer {
       if (instanced > 0) forgetDress(this.paneMemory)
       return
     }
+    if (this.movedNodes.size === 0) return
+
+    // The moved nodes alone, never the whole scene: refreshing all of it costs the traversal of
+    // every source — 15 ms against 3 on 50 000 nodes, per typed placement, measured 02/09.
+    for (const id of this.movedNodes) this.objects.get(id)?.updateWorldMatrix(true, false)
 
     // Only the slots that moved. Their region's bounds are widened rather than recut, so the
     // culling stays conservative until the next real change of content puts them back exact.

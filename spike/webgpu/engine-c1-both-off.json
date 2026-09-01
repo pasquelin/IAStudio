@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-01T22:44:06.274Z",
+  "at": "2026-09-01T23:44:30.923Z",
   "platform": "darwin",
   "electron": "43.4.0",
   "chrome": "150.0.7871.224",
@@ -9,15 +9,15 @@
       "scene": "S1",
       "grouping": "batched",
       "bodies": 544,
-      "firstApplyMs": 16.7,
+      "firstApplyMs": 17.4,
       "applyStillMs": 0.1,
-      "applyOneMovedMs": 0.2,
-      "applyOneAddedMs": 2.2,
-      "fullFrameCpuMs": 1.1,
-      "fullScenePassCpuMs": 0.327,
+      "applyOneMovedMs": 0.1,
+      "applyOneAddedMs": 2.3,
+      "fullFrameCpuMs": 1.2,
+      "fullScenePassCpuMs": 0.313,
       "fullFrameMs": 8.3,
       "fullFps": 120.482,
-      "fullGpuMs": 1.086,
+      "fullGpuMs": 1.716,
       "fullDrawCalls": 122,
       "fullMultiDrawCalls": 26,
       "fullInstancedCalls": 0,
@@ -26,11 +26,11 @@
       "fullBodiesByInstance": 0,
       "fullTriangles": 394024,
       "turnedShareInView": 30.147,
-      "turnedFrameCpuMs": 0.9,
-      "turnedScenePassCpuMs": 0.247,
-      "turnedFrameMs": 8.2,
-      "turnedFps": 121.951,
-      "turnedGpuMs": 0.743,
+      "turnedFrameCpuMs": 0.7,
+      "turnedScenePassCpuMs": 0.24,
+      "turnedFrameMs": 8.3,
+      "turnedFps": 120.482,
+      "turnedGpuMs": 1.334,
       "turnedDrawCalls": 90,
       "turnedMultiDrawCalls": 26,
       "turnedInstancedCalls": 0,
@@ -38,23 +38,23 @@
       "turnedBodiesByLot": 1000,
       "turnedBodiesByInstance": 0,
       "turnedTriangles": 388256,
-      "heapBefore": 13.089,
-      "heapLoaded": 19.625,
-      "heapEdited": 28.148
+      "heapBefore": 13.115,
+      "heapLoaded": 19.854,
+      "heapEdited": 28.354
     },
     {
       "scene": "S2",
       "grouping": "batched",
       "bodies": 10000,
-      "firstApplyMs": 102.2,
-      "applyStillMs": 0.5,
+      "firstApplyMs": 101.8,
+      "applyStillMs": 0.6,
       "applyOneMovedMs": 0.8,
-      "applyOneAddedMs": 14.9,
-      "fullFrameCpuMs": 6.4,
-      "fullScenePassCpuMs": 1.467,
-      "fullFrameMs": 12.9,
-      "fullFps": 77.519,
-      "fullGpuMs": 2.707,
+      "applyOneAddedMs": 17.5,
+      "fullFrameCpuMs": 7.2,
+      "fullScenePassCpuMs": 1.427,
+      "fullFrameMs": 13.5,
+      "fullFps": 74.074,
+      "fullGpuMs": 3.053,
       "fullDrawCalls": 25,
       "fullMultiDrawCalls": 16,
       "fullInstancedCalls": 0,
@@ -63,11 +63,11 @@
       "fullBodiesByInstance": 0,
       "fullTriangles": 2853144,
       "turnedShareInView": 30,
-      "turnedFrameCpuMs": 6.3,
-      "turnedScenePassCpuMs": 1.347,
-      "turnedFrameMs": 12.7,
-      "turnedFps": 78.74,
-      "turnedGpuMs": 2.46,
+      "turnedFrameCpuMs": 7.5,
+      "turnedScenePassCpuMs": 1.593,
+      "turnedFrameMs": 12.6,
+      "turnedFps": 79.365,
+      "turnedGpuMs": 2.139,
       "turnedDrawCalls": 25,
       "turnedMultiDrawCalls": 16,
       "turnedInstancedCalls": 0,
@@ -75,9 +75,9 @@
       "turnedBodiesByLot": 20000,
       "turnedBodiesByInstance": 0,
       "turnedTriangles": 2853144,
-      "heapBefore": 29.127,
-      "heapLoaded": 75.204,
-      "heapEdited": 90.364
+      "heapBefore": 29.325,
+      "heapLoaded": 84.765,
+      "heapEdited": 90.78
     }
   ],
   "failures": [],
@@ -85,32 +85,32 @@
     {
       "at": 2002,
       "phase": "S1 batched — 70 % hors champ",
-      "workingSetKb": 174864
+      "workingSetKb": 174320
     },
     {
       "at": 4005,
       "phase": "S2 batched — plein champ",
-      "workingSetKb": 255168
+      "workingSetKb": 277792
     },
     {
-      "at": 6006,
+      "at": 6009,
       "phase": "S2 batched — plein champ",
-      "workingSetKb": 272608
+      "workingSetKb": 281072
     },
     {
-      "at": 8009,
+      "at": 8013,
       "phase": "S2 batched — 70 % hors champ",
-      "workingSetKb": 284800
+      "workingSetKb": 290160
     },
     {
-      "at": 10012,
+      "at": 10024,
       "phase": "S2 batched — 100 éditions",
-      "workingSetKb": 281584
+      "workingSetKb": 286800
     },
     {
-      "at": 12014,
+      "at": 12030,
       "phase": "fin",
-      "workingSetKb": 281536
+      "workingSetKb": 286752
     }
   ]
 }

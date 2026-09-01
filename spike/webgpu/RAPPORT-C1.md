@@ -47,19 +47,19 @@ et l'inverse) ; les deux valeurs sont écrites quand elles diffèrent.
 
 | scène | chemin | frame | passe | GPU | FPS | appels | corps dessinés | triangles |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| S1 · 544 | instanced | **0,5 · 1,0** | 0,21 · 0,24 | 1,71 · 1,71 | 120 | 122 | 1 000 | 394 024 |
-| S1 · 544 | batched | **1,1 · 1,3** | 0,45 · 0,43 | 3,24 · 5,19 | 120 | 122 | 988 | 388 764 |
-| S2 · 10 000 | instanced | **1,6 · 3,8** | 1,19 · 1,69 | 2,22 · 4,17 | 120 | 57 | 20 000 | 2 853 144 |
-| S2 · 10 000 | batched | **10,1 · 12,3** | 3,97 · 4,75 | 4,03 · 5,39 | 70 · 64 | **25** | 19 734 | 2 816 212 |
-| S3 · 50 000 | instanced | **22,2 · 26,9** | 12,0 · 16,4 | 5,81 · 6,83 | 55,9 · 44,1 | 169 | 100 000 | 14 266 896 |
-| S3 · 50 000 | batched | **50,0 · 51,0** | 28,9 · 29,5 | 7,53 · 7,41 | 19,0 · 18,7 | **25** | 98 330 | 14 034 092 |
+| S1 · 544 | instanced | **0,8 · 1,1** | 0,22 · 0,25 | 1,72 · 1,21 | 120 | 122 | 1 000 | 394 024 |
+| S1 · 544 | batched | **1,4 · 1,5** | 0,45 · 0,47 | 5,20 · 4,78 | 120 | 122 | 988 | 388 764 |
+| S2 · 10 000 | instanced | **3,4 · 3,3** | 1,69 · 1,65 | 2,97 · 2,08 | 120 | 57 | 20 000 | 2 853 144 |
+| S2 · 10 000 | batched | **10,7 · 11,3** | 3,97 · 4,06 | 3,27 · 3,07 | 74 · 70 | **25** | 19 734 | 2 816 212 |
+| S3 · 50 000 | instanced | **26,2 · 30,0** | 16,2 · 18,1 | 6,64 · 12,8 | 45,5 · 39,7 | 169 | 100 000 | 14 266 896 |
+| S3 · 50 000 | batched | **48,0 · 51,7** | 27,7 · 29,6 | 7,58 · 6,11 | 19,0 · 19,1 | **25** | 98 330 | 14 034 092 |
 
 Temps en ms, deux valeurs = les deux ordres. « Corps dessinés » compte les deux passes.
 
 **Le lot divise les appels par 2,3 sur S2 et par 6,8 sur S3, et coûte plus de CPU partout :**
-1,3 à 2,2× la frame sur S1, 3,2 à 6,3× sur S2, 1,9 à 2,3× sur S3 selon l'ordre de mesure. La
-passe de scène, moins bruitée, dit la même chose : ×1,8 à 2,1 sur S1, ×2,8 à 3,3 sur S2, ×1,8 à
-2,4 sur S3. Le GPU monte aussi — les matrices d'un lot se
+1,4 à 1,8× la frame sur S1, 3,1 à 3,4× sur S2, 1,7 à 1,8× sur S3 selon l'ordre de mesure. La
+passe de scène, moins bruitée, dit la même chose : ×1,9 à 2,0 sur S1, ×2,4 sur S2, ×1,6 à 1,7
+sur S3. Le GPU monte aussi — les matrices d'un lot se
 lisent dans une texture, quatre texels par sommet, là qu'un `InstancedMesh` les reçoit en
 attribut.
 
@@ -70,25 +70,27 @@ three ne les lise (`sort=off`, `cull=off`) :
 
 | variante | frame | passe | FPS |
 |---|---:|---:|---:|
-| tri + culling (livré) | 10,1 | 3,97 | 70 |
-| sans tri | 8,1 | 2,43 | 65 |
-| sans culling | 11,1 | 4,24 | 68 |
-| sans tri ni culling | **6,4** | **1,47** | 78 |
-| *instanced, pour comparer* | *1,6* | *1,19* | *120* |
+| tri + culling (livré) | 10,7 | 3,97 | 74 |
+| sans tri | 7,7 | 2,16 | 70 |
+| sans culling | 10,5 | 4,38 | 68 |
+| sans tri ni culling | **7,2** | **1,43** | 74 |
+| *instanced, pour comparer* | *3,4* | *1,69* | *120* |
 
 Et sans ombre, les deux chemins : instanced 1,8 de frame et 1,35 de passe pour 33 appels ;
-batched 4,3 et 3,88 pour 17 appels.
+batched 4,3 et 3,88 pour 17 appels — mesuré avant le correctif des matrices, qui ne touche pas
+au dessin.
 
 Trois lectures :
 
 1. **`onBeforeRender` d'un `BatchedMesh` parcourt chaque instance à chaque passe** — lecture de
-   la matrice dans la texture, sphère, frustum, puis tri. Sur S2 c'est 2,5 ms par passe — un
-   quart de microseconde par instance — et il y a deux passes : la carte d'ombre du soleil, puis
-   la couleur. Sans ombre l'écart entre les deux chemins passe de 8,5 à 2,5 ms de frame. **Une
-   seconde lampe qui projette ajouterait une passe de plus.**
-2. Les deux drapeaux rabattus, la passe de scène du lot rejoint celle de l'instance (1,47 contre
-   1,19). **La frame, elle, reste à 6,4 contre 1,6** : le résidu est dans la passe d'ombre des
-   lots, que ce banc ne ventile pas plus finement.
+   la matrice dans la texture, sphère, frustum, puis tri. Sur S2 le tri seul vaut 3,0 ms de
+   frame et le culling 0,7 — et il y a deux passes : la carte d'ombre du soleil, puis la couleur.
+   Sans ombre l'écart entre les deux chemins tombe de 7,3 à 2,5 ms de frame. **Une seconde lampe
+   qui projette ajouterait une passe de plus.**
+2. Les deux drapeaux rabattus, la passe de scène du lot passe SOUS celle de l'instance (1,43
+   contre 1,69) : le multi-draw fait bien son travail une fois qu'on ne lui demande plus de
+   parcourir ses instances. **La frame, elle, reste à 7,2 contre 3,4** — le résidu est dans la
+   passe d'ombre des lots, que ce banc ne ventile pas plus finement.
 3. Le culling par instance FAIT son travail : en vue tournée, le lot dessine 676 corps sur S1 et
    65 302 sur S3 là où l'instance en dessine 1 000 et 97 906. Ce qu'il économise sur le GPU
    (1,55 contre 0,87 sur S1, tout de même au-dessus) ne rattrape pas ce qu'il coûte sur le CPU.
@@ -105,7 +107,7 @@ le picking, le gizmo et l'export. three les traverse quand même — `updateMatr
 | 10 000 | 0,08 ms | **1,18 ms** | 1,07 ms |
 | 50 000 | 0,09 ms | **11,17 ms** | 10,90 ms |
 
-**Onze millisecondes de la passe de 12 à 16 sur S3 sont la traversée des sources cachées**, et figer
+**Onze millisecondes de la passe de 16 à 18 sur S3 sont la traversée des sources cachées**, et figer
 leurs matrices n'en rend que 0,3 : c'est le parcours qui coûte, pas la composition. Aucun
 regroupement ne touche à ce chiffre. C'est la vraie cible d'une phase à venir — sortir les
 sources du graphe rendu, en gardant un conteneur détaché pour le picking et le gizmo — et elle
@@ -115,13 +117,13 @@ n'a pas été engagée ici : hors périmètre de la phase 1.
 
 | critère | verdict | mesure |
 |---|---|---|
-| S1 : CPU render ≤ avant | 🛑 **non atteint** | frame 1,1 · 1,3 contre 0,5 · 1,0 ms, passe 0,45 contre 0,21 · 0,24 |
+| S1 : CPU render ≤ avant | 🛑 **non atteint** | frame 1,4 · 1,5 contre 0,8 · 1,1 ms, passe 0,45 · 0,47 contre 0,22 · 0,25 |
 | S1 : aucun recul fonctionnel | ✅ | § 6 |
 | S1 : FPS sans régression mesurable | ✅ | 120 des deux côtés, au vsync |
-| S2 plein champ ≥ 60 FPS | ✅ | 70 · 64 — mais l'instance y est à 120 |
+| S2 plein champ ≥ 60 FPS | ✅ | 74 · 70 — mais l'instance y est à 120 |
 | S2 plein champ : appels ≤ 30 | ✅ | 25 |
 | tas JS ≤ 1,5× avant | ⚠️ **non concluant** | § 5 |
-| apply pas pire qu'après A | ✅ | § 5 — « 1 ajouté » a rejoint l'instance depuis que les arbres de picking se bâtissent au premier clic |
+| apply pas pire qu'après A | ✅ sur la colonne du chantier A ; 🛑 sur « 1 ajouté » | § 5 |
 
 **Le critère qui commande est le premier, et il n'est pas atteint.** Les appels de dessin
 n'étaient plus le goulot après le chantier B — 57 appels dessinent S2 à 120 FPS — et le lot
@@ -134,31 +136,36 @@ et par passe que l'`InstancedMesh` ne paie jamais.
 
 | scène | chemin | 1er apply | rien ne change | 1 bougé | 1 ajouté |
 |---|---|---:|---:|---:|---:|
-| S1 | instanced | 14,3 · 9,6 | 0,1 | 0,1 | 1,5 · 1,3 |
-| S1 | batched | 14,6 · 14,7 | 0,0 · 0,1 | 0,1 | 1,5 · 2,5 |
-| S2 | instanced | 102,7 · 96,6 | 0,5 · 0,6 | 0,6 | 14,8 · 14,6 |
-| S2 | batched | 81,2 · 113,9 | 0,4 · 0,5 | 0,6 · 0,7 | 15,8 · 19,6 |
-| S3 | instanced | 456,8 · 471,6 | 2,0 · 2,1 | 3,2 · 4,2 | 72,2 · 79,5 |
-| S3 | batched | 408,6 · 422,1 | 2,1 · 2,3 | 3,2 · 3,4 | 83,4 · 74,4 |
+| S1 | instanced | 14,9 · 10,1 | 0,1 | 0,2 · 0,1 | 1,7 · 1,2 |
+| S1 | batched | 10,9 · 17,4 | 0,1 | 0,1 | 2,4 · 2,8 |
+| S2 | instanced | 121 · 96,6 | 0,5 · 0,4 | 0,7 · 0,6 | 20,9 · 16,8 |
+| S2 | batched | 94,1 · 98,8 | 0,5 · 0,4 | 0,6 | 18,9 · 21,4 |
+| S3 | instanced | 481 · 500 | 2,2 · 2,1 | **4,1 · 3,3** | 104 · 96 |
+| S3 | batched | 434 · 452 | 2,2 · 2,1 | **3,2 · 3,4** | 106 · 113 |
 
-« Rien » et « 1 bougé » sont identiques — ces passes ne regroupent pas. « 1 bougé » déplace
-TOUJOURS le dernier corps, comme `benchSupport` l'exige : un index qui tourne change deux
-identités par passe. « 1 ajouté » refait le regroupement ; une première passe y comptait +40 à
-+90 % pour le lot, qui bâtissait l'arbre de picking de chaque géométrie à chaque regroupement.
-Bâti au premier clic, l'écart est dans le bruit.
+« Rien » et « 1 bougé » ne regroupent pas et se ressemblent des deux côtés ; « 1 bougé » déplace
+TOUJOURS le dernier corps, comme `benchSupport` l'exige — un index qui tourne change deux
+identités par passe. Sur la colonne que le chantier A visait, `1 nœud bougé` à 50 000 sur une
+forme éclairée, A rendait 3,77 ms : on est à 3,2 à 4,1, donc au même niveau.
+
+🛑 **« 1 ajouté » a monté de 20 à 30 %, et c'est le prix du correctif des matrices** — sur S3, 96
+à 113 ms contre 72 à 89 avant lui. Un changement de CONTENU rafraîchit désormais les matrices de
+la scène entière avant de regrouper, ce qui est la seule façon qu'une copie neuve se dessine où
+son noeud est. Un noeud qui ne fait que BOUGER n'y passe pas : ses matrices seules sont
+rafraîchies, et c'est ce qui a ramené la colonne de 15 ms à 3,2 — première écriture mesurée puis
+corrigée. Le coût restant est payé sur un geste, jamais par frame.
 
 Tas JS en Mo, `avant → chargé → après 100 éditions`, ordre normal puis inversé :
 
 | scène | instanced | batched |
 |---|---|---|
-| S1 | 13,1 → 25,6 → 23,9 · 24,4 → 21,4 → 26,2 | 25,0 → 39,8 → 34,6 · 13,1 → 19,8 → 23,4 |
-| S2 | 35,4 → 72,5 → 87,5 · 89,3 → 131,6 → 131,2 | 97,3 → 127,8 → 139,1 · 27,2 → 91,2 → 79,4 |
-| S3 | 148 → 283 → 265 · 299 → 261 → 295 | 260 → 256 → 285 · 140 → 264 → 305 |
+| S1 | 13,1 → 25,9 → 25,5 · 26,8 → 21,6 → 28,5 | 26,6 → 21,8 → 31,5 · 13,1 → 20,8 → 25,8 |
+| S2 | 32,5 → 75,2 → 95,0 · 75,7 → 119,7 → 138,5 | 71,5 → 133,3 → 140,9 · 29,5 → 68,1 → 99,3 |
+| S3 | 123 → 283 → 274 · 280 → 271 → 296 | 272 → 258 → 303 · 148 → 255 → 280 |
 
 **La scène mesurée en second hérite du tas de la première, non ramassé** — sur S3 le « chargé »
-du second va de −38 à +135 Mo selon l'ordre, pour la même scène. Sur S2, le lot charge +31 · +64
-Mo contre +37 · +42 pour l'instance : la plage du lot recouvre celle de l'instance, rien ne
-sépare les deux. **Aucun rapport 1,5× ne peut être affirmé ni infirmé par ce banc.** La double
+du second va de −14 à +160 Mo selon l'ordre, pour la même scène. Sur S2, le lot charge +62 · +39
+Mo contre +43 · +44 pour l'instance : les deux plages se recouvrent, rien ne les sépare. **Aucun rapport 1,5× ne peut être affirmé ni infirmé par ce banc.** La double
 représentation — sources en plus des lots — est bien mesurée sur le vrai moteur, comme demandé,
 mais ce que le tas dit est dominé par le ramasse-miettes.
 
@@ -234,8 +241,8 @@ leur garde ; quatre écrites plutôt que corrigées.
    `TRIANGLES_PER_REGION`, donc il tient dans UNE région, dont la sphère englobe tout le niveau.
    Le culling par instance de three ne s'active jamais sur ce chemin. C'est exactement ce que la
    phase 2 doit mesurer d'abord — et c'est mesuré : 70 % hors champ ne change pas la passe
-   (12,0 → 11,7 et 16,4 → 16,1 ms sur S3, selon l'ordre).
-2. **Onze millisecondes sur douze à seize à S3 sont les sources cachées**, pas le dessin. Tant qu'elles
+   (16,2 → 16,4 et 18,1 → 15,7 ms sur S3, selon l'ordre).
+2. **Onze millisecondes sur seize à dix-huit à S3 sont les sources cachées**, pas le dessin. Tant qu'elles
    sont dans le graphe, aucun culling ne descend sous ce plancher.
 3. **L'ordre des enfants d'un noeud rebâti est faux dans le GRAPHE, pas seulement à l'export.**
    `syncNode` et `hangFromParent` ajoutent en fin de liste ; l'export le rattrape par un tri, ce
