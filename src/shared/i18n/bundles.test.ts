@@ -832,6 +832,14 @@ describe('the translation bundles', () => {
       reads: ['show all', 'fit to view'],
       separates: 'lifting a filter, and fitting the view',
     },
+    marche: {
+      reads: ['walk', 'step'],
+      separates: 'a movement Tripo retargets, and the step height a game character climbs',
+    },
+    blessure: {
+      reads: ['hurt', 'damage'],
+      separates: 'a movement Tripo retargets, and the post effect laid over the picture',
+    },
   }
 
   type Split = Record<string, { reads: readonly string[]; separates: string }>
@@ -963,6 +971,10 @@ describe('the translation bundles', () => {
     pause: {
       reads: ['mettre en pause', 'pause'],
       separates: "the inspector's action, and the transport button, which has room for a word",
+    },
+    run: {
+      reads: ['course', 'jouer'],
+      separates: 'a movement Tripo retargets, and starting the game',
     },
     scale: {
       reads: ['redimensionner', 'échelle'],
