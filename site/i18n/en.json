@@ -1,0 +1,378 @@
+{
+  "meta": {
+    "lang": "en",
+    "name": "English",
+    "short": "EN",
+    "flag": "🇺🇸",
+    "docs": "en",
+    "ogLocale": "en_US"
+  },
+  "head": {
+    "title": "IA Studio — six generation workshops, one window",
+    "description": "Multimodal desktop application: image, video, 3D, audio, textures and skyboxes in a dockable panel interface. Offline dictation and control through an MCP server.",
+    "ogTitle": "IA Studio — six generation workshops, one window",
+    "ogDescription": "Six generation workshops in a single window. Electron, React 19, TypeScript. macOS, Windows, Linux."
+  },
+  "nav": {
+    "skip": "Skip to content",
+    "home": "Home",
+    "video": "Video",
+    "threeD": "3D",
+    "image": "Image",
+    "audio": "Audio",
+    "textures": "Materials",
+    "skyboxes": "Skyboxes",
+    "architecture": "Architecture",
+    "docs": "Docs",
+    "build": "Development build",
+    "download": "Download",
+    "languageLabel": "Language"
+  },
+  "hero": {
+    "eyebrow": "Desktop application · independent project",
+    "lede": "Six generation workshops in a single window. Dockable panels, a timecoded timeline, an inspector, a library on disk: the tools of production software, applied to generative models.",
+    "browse": "Browse the workshops",
+    "source": "View the source code",
+    "meta": {
+      "stack": "Electron · React 19 · TypeScript",
+      "platforms": "macOS, Windows, Linux",
+      "languages": "French and English"
+    }
+  },
+  "home": {
+    "eyebrow": "Home · the starting point",
+    "title": "A project is a folder. Nothing more.",
+    "lede": "Open a folder and it becomes a project: documents, imported assets, generations. Everything stays on disk, in formats other software already reads — OpenRaster, OpenTimelineIO, glTF, MaterialX — browsed from the application and versioned by git without leaving the window.",
+    "alt": "Home screen: a banner to resume the last project, a list of recently opened projects, shortcuts to the six workshops, a feed of creations published by everyone, and the account library panel.",
+    "specs": {
+      "0": {
+        "term": "Workshops",
+        "title": "Six spaces, one window",
+        "text": "Image, Video, 3D, Audio, Materials and Skyboxes. Each has its own tools and opens in a tab, beside the others."
+      },
+      "1": {
+        "term": "Panels",
+        "title": "Dockable and detachable",
+        "text": "Models, Explorer, Assets, Inspector, Timeline. Arrange the window as you like; the layout is remembered per workshop."
+      },
+      "2": {
+        "term": "Library",
+        "title": "Disk first",
+        "text": "Generations land in the project folder. The remote account library plugs in afterwards, with an API key."
+      }
+    }
+  },
+  "video": {
+    "eyebrow": "Workshop · .mp4 output",
+    "lede": "Two monitors, a multitrack timeline, and models that produce the shots.",
+    "list": {
+      "0": {
+        "term": "Monitors",
+        "text": "Source and Program, as on an editing station: the chosen clip on one side, the edit as it will be exported on the other."
+      },
+      "1": {
+        "term": "Timeline",
+        "text": "Video and audio tracks, selection, blade and hand tools, timecoded playback."
+      },
+      "2": {
+        "term": "Models",
+        "text": "Sequence-to-Video, Video Cut, Video Concat, Video Studio."
+      }
+    },
+    "alt": "Video workshop: Source and Program monitors side by side, Assets panel, clip inspector, four-track timeline V1, A1, V2 and A2.",
+    "chips": {
+      "0": "Source 00:00:00:00",
+      "1": "V1 · A1 · V2 · A2",
+      "2": "25 fps",
+      "3": "Project assets"
+    }
+  },
+  "threeD": {
+    "eyebrow": "Workshop · .glb output",
+    "lede": "A generated mesh, placed in a scene you light, animate and export.",
+    "list": {
+      "0": {
+        "term": "Viewport",
+        "text": "Grid, orientation gizmo and an overlaid counter: triangles, vertices, draw calls, texture memory."
+      },
+      "1": {
+        "term": "Lighting",
+        "text": "Five sources — ambient, directional, hemispheric, point, spot — exposed as tracks, with keyframes on the timeline."
+      },
+      "2": {
+        "term": "Export",
+        "text": "The mesh leaves as .glb wherever you drop it, ready for an engine."
+      }
+    },
+    "alt": "3D workshop: a generated car placed in a mountain setting, move gizmo and triangle counter overlaid, scene tree and inspector on the right, light timeline at the bottom.",
+    "chips": {
+      "0": "Triangles · Vertices · Calls",
+      "1": "Length 5 s",
+      "2": "25 fps",
+      "3": "Studio environment"
+    }
+  },
+  "image": {
+    "eyebrow": "Workshop · .png output",
+    "lede": "A layered canvas, where generation is one tool among the others.",
+    "list": {
+      "0": {
+        "term": "Layers",
+        "text": "Stacking, visibility, locking. Every generation arrives as a layer, above what is already there."
+      },
+      "1": {
+        "term": "Tools",
+        "text": "Move, hand, scale, frame, selection, shapes, brush, pencil, eraser, text, layer fill, eyedropper."
+      },
+      "2": {
+        "term": "Provenance",
+        "text": "The inspector keeps the model that produced the layer, its weight and its creation date."
+      }
+    },
+    "alt": "Image workshop: a transparent canvas with a cut-out skeleton, model catalogue on the left, Layers and Inspector panels on the right, asset strip at the bottom.",
+    "chips": {
+      "0": "Layers",
+      "1": "Zoom 84.6%",
+      "2": "Model kept",
+      "3": "Asset strip"
+    }
+  },
+  "audio": {
+    "eyebrow": "Workshop · .wav output",
+    "lede": "Compose and edit sound across several tracks, in the same window as the rest.",
+    "list": {
+      "0": {
+        "term": "Tracks",
+        "text": "Multitrack editing, the same tools as the video timeline, playback locked to the same timecode."
+      },
+      "1": {
+        "term": "Waveforms",
+        "text": "Computed in a separate process: an hour of sound does not freeze the interface while it is analysed."
+      },
+      "2": {
+        "term": "Models",
+        "text": "Music, ambiences and effects, generated by the API then dropped straight onto a track."
+      }
+    },
+    "alt": "Audio workshop: Program monitor showing the waveform of the edit, Source monitor below, catalogue of sound generation models, four-track audio timeline.",
+    "chips": {
+      "0": "Program 00:00:00:00",
+      "1": "A1 · A2 · A3 · A4",
+      "2": "Waveforms",
+      "3": "Project assets"
+    }
+  },
+  "textures": {
+    "eyebrow": "Workshop · .png ×4 output",
+    "lede": "A material, not an image: each channel is produced then checked separately.",
+    "list": {
+      "0": {
+        "term": "Channels",
+        "text": "Eight: Base colour, Normal, Roughness, Metal, Occlusion, Height, Emission, Cavity. Seven come out of a generation, Emission is set right here; all export file by file."
+      },
+      "1": {
+        "term": "Preview",
+        "text": "The material is applied to a test volume — sphere, cube, cylinder, plane, knot — and lit in real time, before export."
+      },
+      "2": {
+        "term": "Tiling",
+        "text": "Channels tileable at 4096 × 4096, usable as they are in an engine."
+      }
+    },
+    "alt": "Materials workshop: preview cube carrying the material, inspector open on the channels — base colour and normal — then on the material settings, strip of generated images.",
+    "chips": {
+      "0": "4096 × 4096",
+      "1": "4 channels",
+      "2": "Preview on a volume",
+      "3": "Separate export"
+    }
+  },
+  "skyboxes": {
+    "eyebrow": "Workshop · .hdr output",
+    "lede": "A sky that serves as a backdrop and, at the same time, as a light source.",
+    "list": {
+      "0": {
+        "term": "Projections",
+        "text": "360°, equirectangular, cross, six faces. Switch from one view to another without re-exporting."
+      },
+      "1": {
+        "term": "Control",
+        "text": "Adjustable field of view and test objects, to judge the light on a matte sphere and a glossy one."
+      },
+      "2": {
+        "term": "Use",
+        "text": "The sky produced here lights the 3D workshop scene directly."
+      }
+    },
+    "alt": "Skyboxes workshop: a snowy mountain sky in 360-degree projection, two test spheres on the ground — one matte, one mirror — and sun settings on the right.",
+    "chips": {
+      "0": "360°",
+      "1": "Equirect",
+      "2": "Cross",
+      "3": "6 faces",
+      "4": "Test objects"
+    }
+  },
+  "ticker": {
+    "0": "Text → Image",
+    "1": "Image → Image",
+    "2": "Cut-out",
+    "3": "Reframe",
+    "4": "Trim",
+    "5": "Text → Video",
+    "6": "Sequence → Video",
+    "7": "Editing",
+    "8": "Concatenation",
+    "9": "Image → 3D",
+    "10": "Voxel",
+    "11": "Text → Audio",
+    "12": "PBR material",
+    "13": "Colour · Normal · Roughness · Metal",
+    "14": "360° skybox",
+    "15": "Equirectangular"
+  },
+  "architecture": {
+    "eyebrow": "Under the hood",
+    "title": "No generation form is written by hand.",
+    "lede": "A model's parameters are its own and change without warning. They are therefore read at runtime and turned into fields: a new model shows up with its settings, without one more line of code.",
+    "racks": {
+      "0": "Interface",
+      "1": "The bridge to the API",
+      "2": "On your machine"
+    },
+    "cells": {
+      "0": {
+        "tag": "Workshops",
+        "title": "Six modes, one layout",
+        "text": "Dockable and detachable panels, tabs, a layout remembered per workshop between sessions."
+      },
+      "1": {
+        "tag": "Engines",
+        "title": "Rebuilt from their state",
+        "text": "Detaching a panel destroys its graphics context. The engine rebuilds itself identically — which gives undo and saving at the same time."
+      },
+      "2": {
+        "tag": "Library",
+        "title": "Project folder",
+        "text": "A project is a folder readable without the application, browsed by a real file explorer and tracked by git from the studio — branches, versions, conflicts. Import, export and catalogue share one index, which finds its files again even when they are moved outside the application."
+      },
+      "3": {
+        "tag": "ModelRegistry",
+        "title": "The fields come from the model",
+        "text": "The schema the model declares becomes a list of fields, rendered as such. An unknown type falls back to raw input rather than making the form disappear."
+      },
+      "4": {
+        "tag": "JobManager",
+        "title": "One place asks",
+        "text": "Every generation is asynchronous. A single component follows progress, caps the number of concurrent tasks and backs off when the service refuses."
+      },
+      "5": {
+        "tag": "Secrets",
+        "title": "The interface never sees the key",
+        "text": "Key and secret are encrypted by the system store. The window asks “am I signed in?”, never “what is my key?”."
+      },
+      "6": {
+        "tag": "Dictation",
+        "title": "Offline, entirely",
+        "text": "A speech recognition engine runs in a separate process, on your computer. Once the model is fetched, nothing that is said leaves for the network."
+      },
+      "7": {
+        "tag": "MCP server",
+        "title": "The studio is driven from outside",
+        "text": "233 actions across 16 families, from documents to assets, from the scene to the edit, from the file to the git repository: an agent does what the interface does, by the same paths."
+      },
+      "8": {
+        "tag": "Load",
+        "title": "The display thread stays free",
+        "text": "Thumbnails, waveforms, heavy meshes and video encoding go to the graphics processor, into worker threads or into a separate process."
+      }
+    }
+  },
+  "docs": {
+    "eyebrow": "Documentation &amp; demonstration",
+    "title": "Everything is written next to the code.",
+    "videoLabel": "IA Studio demonstration: a tour of the six workshops, from a 3D generation through to the edit.",
+    "links": {
+      "0": {
+        "text": "The manual, twenty chapters — also readable inside the application",
+        "label": "Manual"
+      },
+      "1": {
+        "text": "The invariants, the engines and what crosses the boundary",
+        "label": "Architecture"
+      },
+      "2": {
+        "text": "Driving the studio from an agent, through the MCP server",
+        "label": "MCP server"
+      },
+      "3": {
+        "text": "Seventeen decisions, with what was ruled out and why",
+        "label": "Decisions"
+      },
+      "4": {
+        "text": "Publishing a release: signing, artefacts, rolling back",
+        "label": "Releasing"
+      },
+      "5": {
+        "text": "Source code licence — PolyForm Noncommercial 1.0.0",
+        "label": "Licence"
+      }
+    },
+    "manualFile": "user-guide.md"
+  },
+  "download": {
+    "eyebrow": "Installation",
+    "title": "Three platforms, one repository.",
+    "lede": "Five installers, produced by the same integration pipeline at every release. Until the first public release, the repository clones and runs in three commands.",
+    "items": {
+      "0": {
+        "os": "macOS",
+        "kind": "Apple Silicon · .dmg",
+        "state": "Release to come"
+      },
+      "1": {
+        "os": "macOS",
+        "kind": "Intel · .dmg",
+        "state": "Release to come"
+      },
+      "2": {
+        "os": "Windows",
+        "kind": "x64 · .exe",
+        "state": "Release to come"
+      },
+      "3": {
+        "os": "Linux",
+        "kind": "x86_64 · .AppImage",
+        "state": "Release to come"
+      },
+      "4": {
+        "os": "Debian, Ubuntu",
+        "kind": "x86_64 · .deb",
+        "state": "Release to come"
+      }
+    },
+    "note": "The installer is governed by the <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">terms of use</a>; the source code, by the <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial&nbsp;1.0.0</a> licence. The application gives access to no generation service: it uses the API key you provide, under your account and at your expense."
+  },
+  "foot": {
+    "groups": {
+      "0": "IA Studio",
+      "1": "Workshops",
+      "2": "Resources",
+      "3": "Contact"
+    },
+    "about": "Multimodal desktop application, built solo. Electron, React, TypeScript.",
+    "resources": {
+      "0": "Download",
+      "1": "Repository",
+      "2": "Licence"
+    },
+    "legal": "Source code under the <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> licence · application distributed under its <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">terms of use</a> · third-party components listed in the <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">notices</a>. © 2026 Alban Pasquelin.",
+    "docsLink": "Documentation",
+    "changelog": "Changelog"
+  },
+  "status": {
+    "project": "project",
+    "workshop": "workshop",
+    "position": "position"
+  }
+}

@@ -1,0 +1,378 @@
+{
+  "meta": {
+    "lang": "tr",
+    "name": "Türkçe",
+    "short": "TR",
+    "flag": "🇹🇷",
+    "docs": "en",
+    "ogLocale": "tr_TR"
+  },
+  "head": {
+    "title": "IA Studio — altı üretim atölyesi, tek bir pencere",
+    "description": "Çok kipli masaüstü uygulaması: görüntü, video, 3B, ses, dokular ve gökkutuları, yerleştirilebilir panellerden oluşan bir arayüzde. Çevrimdışı dikte ve MCP sunucusu üzerinden yönetim.",
+    "ogTitle": "IA Studio — altı üretim atölyesi, tek bir pencere",
+    "ogDescription": "Altı üretim atölyesi tek bir pencerede. Electron, React 19, TypeScript. macOS, Windows, Linux."
+  },
+  "nav": {
+    "skip": "İçeriğe geç",
+    "home": "Ana sayfa",
+    "video": "Video",
+    "threeD": "3B",
+    "image": "Görüntü",
+    "audio": "Ses",
+    "textures": "Malzemeler",
+    "skyboxes": "Gökkutuları",
+    "architecture": "Mimari",
+    "docs": "Belgeler",
+    "build": "Geliştirme sürümü",
+    "download": "İndir",
+    "languageLabel": "Dil"
+  },
+  "hero": {
+    "eyebrow": "Masaüstü uygulaması · bağımsız proje",
+    "lede": "Altı üretim atölyesi tek bir pencerede. Yerleştirilebilir paneller, zaman koduyla çalışan bir zaman çizelgesi, denetçi, diskteki kitaplık: bir prodüksiyon yazılımının araçları, üretken modellere uygulanmış hâliyle.",
+    "browse": "Atölyeleri gez",
+    "source": "Kaynak kodu gör",
+    "meta": {
+      "stack": "Electron · React 19 · TypeScript",
+      "platforms": "macOS, Windows, Linux",
+      "languages": "Fransızca ve İngilizce"
+    }
+  },
+  "home": {
+    "eyebrow": "Ana sayfa · başlangıç noktası",
+    "title": "Proje bir klasördür. Fazlası değil.",
+    "lede": "Bir klasör açın, proje olsun: belgeler, içe aktarılan varlıklar, üretimler. Her şey diskte kalır, başka yazılımların çoktan okuduğu biçimlerde — OpenRaster, OpenTimelineIO, glTF, MaterialX —, uygulamadan gezilir ve pencereden çıkmadan git ile sürümlenir.",
+    "alt": "Ana ekran: son projeye dönme şeridi, yakınlarda açılan projelerin listesi, altı atölyeye kısayollar, herkesin yayımladığı işlerin akışı ve hesabın kitaplık paneli.",
+    "specs": {
+      "0": {
+        "term": "Atölyeler",
+        "title": "Altı alan, tek pencere",
+        "text": "Görüntü, Video, 3B, Ses, Malzemeler ve Gökkutuları. Her birinin kendi araçları var ve ötekilerin yanında bir sekmede açılır."
+      },
+      "1": {
+        "term": "Paneller",
+        "title": "Yerleştirilebilir ve ayrılabilir",
+        "text": "Modeller, Gezgin, Varlıklar, Denetçi, Zaman çizelgesi. Pencere dilediğiniz gibi düzenlenir, yerleşim her atölye için ayrı hatırlanır."
+      },
+      "2": {
+        "term": "Kitaplık",
+        "title": "Önce disk",
+        "text": "Üretimler projenin klasörüne düşer. Uzak hesabın kitaplığı sonradan, bir API anahtarıyla bağlanır."
+      }
+    }
+  },
+  "video": {
+    "eyebrow": "Atölye · çıktı .mp4",
+    "lede": "İki monitör, çok izli bir zaman çizelgesi ve planları üreten modeller.",
+    "list": {
+      "0": {
+        "term": "Monitörler",
+        "text": "Kaynak ve Program, bir kurgu masasındaki gibi: bir yanda seçilen klip, öbür yanda dışa aktarılacağı hâliyle kurgu."
+      },
+      "1": {
+        "term": "Zaman çizelgesi",
+        "text": "Video ve ses izleri, seçim, bıçak ve el araçları, zaman koduyla oynatma."
+      },
+      "2": {
+        "term": "Modeller",
+        "text": "Sequence-to-Video, Video Cut, Video Concat, Video Studio."
+      }
+    },
+    "alt": "Video atölyesi: Kaynak ve Program monitörleri yan yana, Varlıklar paneli, klip denetçisi, V1, A1, V2 ve A2 olmak üzere dört izli zaman çizelgesi.",
+    "chips": {
+      "0": "Kaynak 00:00:00:00",
+      "1": "V1 · A1 · V2 · A2",
+      "2": "25 kare/sn",
+      "3": "Proje varlıkları"
+    }
+  },
+  "threeD": {
+    "eyebrow": "Atölye · çıktı .glb",
+    "lede": "Üretilmiş bir örgü, ışıklandırdığınız, canlandırdığınız ve dışa aktardığınız bir sahneye konmuş hâliyle.",
+    "list": {
+      "0": {
+        "term": "Görüntü alanı",
+        "text": "Izgara, yön küresi ve üste binen sayaç: üçgenler, köşeler, çizim çağrıları, doku belleği."
+      },
+      "1": {
+        "term": "Işıklandırma",
+        "text": "Beş kaynak — ortam, yönlü, yarımküre, nokta, spot — iz olarak açılır, zaman çizelgesinde anahtar kareleriyle."
+      },
+      "2": {
+        "term": "Dışa aktarma",
+        "text": "Örgü, bıraktığınız yere .glb olarak çıkar; bir motora hazırdır."
+      }
+    },
+    "alt": "3B atölyesi: dağ manzarasına konmuş üretilmiş otomobil, üste binen taşıma küresi ve üçgen sayacı, sağda sahne ağacı ve denetçi, altta ışıkların zaman çizelgesi.",
+    "chips": {
+      "0": "Üçgen · Köşe · Çağrı",
+      "1": "Süre 5 sn",
+      "2": "25 kare/sn",
+      "3": "Stüdyo ortamı"
+    }
+  },
+  "image": {
+    "eyebrow": "Atölye · çıktı .png",
+    "lede": "Katmanlı bir tuval; üretim, buradaki araçlardan yalnızca biri.",
+    "list": {
+      "0": {
+        "term": "Katmanlar",
+        "text": "Üst üste yığma, görünürlük, kilitleme. Her üretim, hâlihazırda olanın üstüne bir katman olarak gelir."
+      },
+      "1": {
+        "term": "Araçlar",
+        "text": "Taşıma, el, ölçekleme, çerçeve, seçim, şekiller, fırça, kalem, silgi, metin, katman doldurma, damlalık."
+      },
+      "2": {
+        "term": "İzlenebilirlik",
+        "text": "Denetçi, katmanı üreten modeli, ağırlığını ve oluşturulma tarihini saklar."
+      }
+    },
+    "alt": "Görüntü atölyesi: saydam zeminli tuvalde kesilip çıkarılmış bir iskelet, solda model kataloğu, sağda Katmanlar ve Denetçi panelleri, altta varlık şeridi.",
+    "chips": {
+      "0": "Katmanlar",
+      "1": "Yakınlaştırma %84,6",
+      "2": "Model saklandı",
+      "3": "Varlık şeridi"
+    }
+  },
+  "audio": {
+    "eyebrow": "Atölye · çıktı .wav",
+    "lede": "Birkaç iz üzerinde ses bestelemek ve kurgulamak — geri kalanla aynı pencerede.",
+    "list": {
+      "0": {
+        "term": "İzler",
+        "text": "Çok izli kurgu, video zaman çizelgesiyle aynı araçlar, aynı zaman koduna oturtulmuş oynatma."
+      },
+      "1": {
+        "term": "Dalga biçimleri",
+        "text": "Ayrı bir süreçte hesaplanır: bir saatlik ses, çözümlenirken arayüzü dondurmaz."
+      },
+      "2": {
+        "term": "Modeller",
+        "text": "Müzik, ortam sesleri ve efektler API ile üretilir, sonra doğrudan bir ize bırakılır."
+      }
+    },
+    "alt": "Ses atölyesi: kurgunun dalga biçimini gösteren Program monitörü, altında Kaynak monitörü, ses üretim modelleri kataloğu, dört ses izli zaman çizelgesi.",
+    "chips": {
+      "0": "Program 00:00:00:00",
+      "1": "A1 · A2 · A3 · A4",
+      "2": "Dalga biçimleri",
+      "3": "Proje varlıkları"
+    }
+  },
+  "textures": {
+    "eyebrow": "Atölye · çıktı .png ×4",
+    "lede": "Bir görüntü değil, bir malzeme: her kanal ayrı üretilir, sonra ayrı denetlenir.",
+    "list": {
+      "0": {
+        "term": "Kanallar",
+        "text": "Sekiz tane: Taban rengi, Normal, Pürüzlülük, Metal, Örtüşme, Yükseklik, Işıma, Oyuk. Yedisi üretimden çıkar, Işıma burada ayarlanır; hepsi dosya dosya dışa aktarılır."
+      },
+      "1": {
+        "term": "Önizleme",
+        "text": "Malzeme bir deneme hacmine — küre, küp, silindir, düzlem, düğüm — uygulanır ve dışa aktarmadan önce gerçek zamanlı ışıklandırılır."
+      },
+      "2": {
+        "term": "Ekler",
+        "text": "4096 × 4096 döşenebilir kanallar; bir motorda olduğu gibi kullanılabilir."
+      }
+    },
+    "alt": "Malzemeler atölyesi: malzemeyi taşıyan önizleme küpü, önce kanallara — taban rengi ve normal — sonra malzeme ayarlarına açılmış denetçi, üretilen görüntülerin şeridi.",
+    "chips": {
+      "0": "4096 × 4096",
+      "1": "4 kanal",
+      "2": "Hacim üzerinde önizleme",
+      "3": "Ayrı dışa aktarma"
+    }
+  },
+  "skyboxes": {
+    "eyebrow": "Atölye · çıktı .hdr",
+    "lede": "Hem dekor hem de ışık kaynağı olan bir gökyüzü.",
+    "list": {
+      "0": {
+        "term": "İzdüşümler",
+        "text": "360°, eşdikdörtgen, haç, altı yüz. Yeniden dışa aktarmadan görünüm değiştirilir."
+      },
+      "1": {
+        "term": "Denetim",
+        "text": "Ayarlanabilir görüş açısı ve deneme nesneleri; ışığı mat bir küre ile parlak bir küre üzerinde tartmak için."
+      },
+      "2": {
+        "term": "Kullanım",
+        "text": "Burada üretilen gökyüzü, doğrudan 3B atölyesinin sahnesini aydınlatır."
+      }
+    },
+    "alt": "Gökkutuları atölyesi: karlı dağların gökyüzü 360 derece izdüşümde, yerde iki deneme küresi — biri mat, öbürü ayna — ve sağda güneş ayarları.",
+    "chips": {
+      "0": "360°",
+      "1": "Eşdikdörtgen",
+      "2": "Haç",
+      "3": "6 yüz",
+      "4": "Deneme nesneleri"
+    }
+  },
+  "ticker": {
+    "0": "Metin → Görüntü",
+    "1": "Görüntü → Görüntü",
+    "2": "Arka plan ayırma",
+    "3": "Yeniden çerçeveleme",
+    "4": "Kırpma",
+    "5": "Metin → Video",
+    "6": "Dizi → Video",
+    "7": "Kurgu",
+    "8": "Birleştirme",
+    "9": "Görüntü → 3B",
+    "10": "Voksel",
+    "11": "Metin → Ses",
+    "12": "PBR malzeme",
+    "13": "Renk · Normal · Pürüzlülük · Metal",
+    "14": "360° gökkutusu",
+    "15": "Eşdikdörtgen"
+  },
+  "architecture": {
+    "eyebrow": "Kaputun altında",
+    "title": "Hiçbir üretim formu elle yazılmadı.",
+    "lede": "Bir modelin parametreleri kendine özgüdür ve haber vermeden değişir. Bu yüzden çalışma anında okunur ve alanlara dönüştürülür: yeni bir model, ayarlarıyla birlikte belirir; tek satır fazladan kod olmadan.",
+    "racks": {
+      "0": "Arayüz",
+      "1": "API'ye giden köprü",
+      "2": "Sizin makinenizde"
+    },
+    "cells": {
+      "0": {
+        "tag": "Atölyeler",
+        "title": "Altı kip, tek yerleşim",
+        "text": "Yerleştirilebilir ve ayrılabilir paneller, sekmeler, iki oturum arasında her atölye için hatırlanan yerleşim."
+      },
+      "1": {
+        "tag": "Motorlar",
+        "title": "Durumlarından yeniden kurulurlar",
+        "text": "Bir paneli ayırmak, onun grafik bağlamını yok eder. Motor kendini birebir yeniden kurar — geri alma ile kaydetme de bu sayede ortaya çıkar."
+      },
+      "2": {
+        "tag": "Kitaplık",
+        "title": "Proje klasörü",
+        "text": "Proje, uygulama olmadan da okunabilen bir klasördür; gerçek bir dosya yöneticisiyle gezilir ve stüdyodan git ile izlenir — dallar, sürümler, çakışmalar. İçe aktarma, dışa aktarma ve katalog aynı dizini paylaşır; bu dizin, uygulamanın dışına taşınmış dosyaları bile yeniden bulur."
+      },
+      "3": {
+        "tag": "ModelRegistry",
+        "title": "Alanlar modelden gelir",
+        "text": "Modelin bildirdiği şema, olduğu gibi işlenen bir alan listesine dönüşür. Bilinmeyen bir tür, formu yok etmek yerine ham girişe düşer."
+      },
+      "4": {
+        "tag": "JobManager",
+        "title": "Yalnızca tek bir yer sorar",
+        "text": "Her üretim eşzamansızdır. Tek bir bileşen ilerlemeyi izler, eşzamanlı iş sayısını sınırlar ve hizmet reddettiğinde bekler."
+      },
+      "5": {
+        "tag": "Sırlar",
+        "title": "Arayüz anahtarı asla görmez",
+        "text": "Anahtar ve sır, sistemin kasası tarafından şifrelenir. Pencere “oturum açtım mı?” diye sorar, asla “anahtarım nedir?” diye değil."
+      },
+      "6": {
+        "tag": "Dikte",
+        "title": "Tümüyle çevrimdışı",
+        "text": "Bir konuşma tanıma motoru, sizin bilgisayarınızda ayrı bir süreçte çalışır. Model bir kez indirildikten sonra, söylenenlerin hiçbiri ağa çıkmaz."
+      },
+      "7": {
+        "tag": "MCP sunucusu",
+        "title": "Stüdyo dışarıdan yönetilir",
+        "text": "16 ailede 233 eylem: belgelerden varlıklara, sahneden kurguya, dosyadan git deposuna. Bir etmen, arayüzün yaptığını, aynı yollardan yapar."
+      },
+      "8": {
+        "tag": "Yük",
+        "title": "Görüntü iş parçacığı boş kalır",
+        "text": "Küçük resimler, dalga biçimleri, ağır örgüler ve video kodlaması grafik işlemcisine, hesap iş parçacıklarına ya da ayrı bir sürece gider."
+      }
+    }
+  },
+  "docs": {
+    "eyebrow": "Belgeler &amp; gösterim",
+    "title": "Her şey kodun yanına yazılmıştır.",
+    "videoLabel": "IA Studio gösterimi: altı atölyenin gezisi, bir 3B üretiminden kurguya kadar.",
+    "links": {
+      "0": {
+        "text": "Yirmi bölümlük el kitabı — uygulamanın içinde de okunur",
+        "label": "El kitabı"
+      },
+      "1": {
+        "text": "Değişmezler, motorlar ve sınırı geçen her şey",
+        "label": "Mimari"
+      },
+      "2": {
+        "text": "Stüdyoyu bir etmenden, MCP sunucusu üzerinden yönetmek",
+        "label": "MCP sunucusu"
+      },
+      "3": {
+        "text": "On yedi karar; elenenler ve nedenleriyle birlikte",
+        "label": "Kararlar"
+      },
+      "4": {
+        "text": "Bir sürüm yayımlamak: imza, çıktılar, geri dönüş",
+        "label": "Yayımlama"
+      },
+      "5": {
+        "text": "Kaynak kodun lisansı — PolyForm Noncommercial 1.0.0",
+        "label": "Lisans"
+      }
+    },
+    "manualFile": "user-guide.md"
+  },
+  "download": {
+    "eyebrow": "Kurulum",
+    "title": "Üç platform, tek bir depo.",
+    "lede": "Beş kurulum dosyası, her sürümde aynı bütünleştirme zinciriyle üretilir. İlk genel sürüm çıkana dek, depo klonlanır ve üç komutla çalışır.",
+    "items": {
+      "0": {
+        "os": "macOS",
+        "kind": "Apple Silicon · .dmg",
+        "state": "Sürüm yolda"
+      },
+      "1": {
+        "os": "macOS",
+        "kind": "Intel · .dmg",
+        "state": "Sürüm yolda"
+      },
+      "2": {
+        "os": "Windows",
+        "kind": "x64 · .exe",
+        "state": "Sürüm yolda"
+      },
+      "3": {
+        "os": "Linux",
+        "kind": "x86_64 · .AppImage",
+        "state": "Sürüm yolda"
+      },
+      "4": {
+        "os": "Debian, Ubuntu",
+        "kind": "x86_64 · .deb",
+        "state": "Sürüm yolda"
+      }
+    },
+    "note": "Kurulum dosyası <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">kullanım koşullarına</a> tabidir; kaynak kod ise <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial&nbsp;1.0.0</a> lisansına. Uygulama hiçbir üretim hizmetine erişim vermez: sizin sağladığınız API anahtarını, sizin hesabınız altında ve sizin masrafınızla kullanır."
+  },
+  "foot": {
+    "groups": {
+      "0": "IA Studio",
+      "1": "Atölyeler",
+      "2": "Kaynaklar",
+      "3": "İletişim"
+    },
+    "about": "Çok kipli masaüstü uygulaması, tek başına geliştirildi. Electron, React, TypeScript.",
+    "resources": {
+      "0": "İndirme",
+      "1": "Depo",
+      "2": "Lisans"
+    },
+    "legal": "Kaynak kod <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> lisansı altında · uygulama kendi <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">kullanım koşullarıyla</a> dağıtılır · üçüncü taraf bileşenler <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">bildirimlerde</a> listelenmiştir. © 2026 Alban Pasquelin.",
+    "docsLink": "Belgeler",
+    "changelog": "Değişiklikler"
+  },
+  "status": {
+    "project": "proje",
+    "workshop": "atölye",
+    "position": "konum"
+  }
+}

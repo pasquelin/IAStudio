@@ -30,7 +30,7 @@
     "format:check": "prettier --check --cache \"{src,scripts}/**/*.{ts,tsx,css,mjs}\"",
     "check": "node scripts/check.mjs",
     "engine:check": "node scripts/engine-check.mjs",
-    "validate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm unused:main && pnpm engine:check",
+    "validate": "pnpm llms:check && pnpm licences:check && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm unused:main && pnpm engine:check",
     "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs",
     "stt:fetch": "node scripts/fetch-stt.mjs",
     "engine:fetch": "node scripts/fetch-engine.mjs",
@@ -43,7 +43,12 @@
     "decoders:copy": "node scripts/copy-decoders.mjs",
     "postinstall": "node scripts/dev-app-identity.mjs && node scripts/copy-decoders.mjs",
     "models:pin": "node scripts/pin-models.mjs",
-    "models:thumbnails": "node scripts/make-model-thumbnails.mjs"
+    "models:thumbnails": "node scripts/make-model-thumbnails.mjs",
+    "llms": "node scripts/make-llms.mjs",
+    "llms:check": "node scripts/make-llms.mjs --check",
+    "licences:check": "node scripts/check-licences.mjs",
+    "build:site": "node site/build.mjs _site",
+    "preview:site": "node scripts/serve.mjs _site --base=/IAStudio/"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",

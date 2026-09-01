@@ -1,0 +1,12 @@
+# Socle partagé — les quatre fichiers ci-dessous sont IDENTIQUES octet pour octet dans
+# map3D, panels et IA Studio, et une correction faite dans l'un se recopie telle quelle
+# dans les deux autres. Les trois dépôts n'ont pas la même configuration Prettier
+# (printWidth 120 ici, 100 ailleurs ; arrowParens divergent) : les laisser au formateur
+# local les ferait diverger au premier `pnpm format`, et la recopie deviendrait un diff.
+#
+# Ils sont donc tenus à la main, dans un style commun. Pour les remettre sous formateur,
+# il faudrait d'abord aligner les trois `.prettierrc`.
+site/build.mjs
+scripts/make-llms.mjs
+scripts/check-licences.mjs
+scripts/serve.mjs

@@ -95,7 +95,6 @@
   /* ------------------------------------------------------------ héros */
 
   var heroWrap = document.querySelector('.hero .wrap');
-  var heroCue = document.querySelector('.scroll-cue');
   var veil = document.getElementById('veil');
 
   /* Le champ de particules lit cette valeur pour s'écarter du contenu :
@@ -110,7 +109,6 @@
   var stagePin = stage && stage.querySelector('.stage__pin');
   var stageFrame = stage && stage.querySelector('.stage__frame');
   var stageImg = stageFrame && stageFrame.querySelector('img');
-  var stageHint = stage && stage.querySelector('.stage__hint');
   var wide = window.matchMedia('(min-width: 861px)');
 
   /* --------------------------------------------- onglets & barre de statut */
@@ -267,7 +265,6 @@
       var hp = clamp(scrollY / vh, 0, 1);
       heroWrap.style.transform = 'translate3d(0,' + (hp * 90).toFixed(1) + 'px,0)';
       heroWrap.style.opacity = clamp(1 - hp * 1.35, 0, 1).toFixed(3);
-      if (heroCue) heroCue.style.opacity = clamp(1 - hp * 4, 0, 1).toFixed(3);
       /* le voile se referme derrière le héros : les particules passent
          de premier plan à texture de fond, sans gêner la lecture */
       if (veil) veil.style.opacity = smooth(hp).toFixed(3);
@@ -293,7 +290,6 @@
       stageFrame.style.transform = 'scale(' + scale.toFixed(4) + ')';
       stageFrame.style.borderRadius = (30 - 17 * eq).toFixed(1) + 'px';
       if (stageImg) stageImg.style.transform = 'scale(' + (1.10 - 0.10 * eq).toFixed(4) + ')';
-      if (stageHint) stageHint.style.opacity = clamp(1 - q * 3.2, 0, 1).toFixed(3);
       holeStage = eq * Math.min(
         clamp((vh - stageRect.top) / (vh * 0.5), 0, 1),
         clamp(stageRect.bottom / (vh * 0.8), 0, 1)
@@ -325,7 +321,12 @@
      à rééditer à la main. Le fichier ABSENT est le cas normal tant qu'aucune version
      n'est sortie — les cartes gardent alors ce que le HTML porte. */
 
-  fetch('assets/release.json', { cache: 'no-cache' })
+  /* Relatif à la RACINE du site, pas à la page : `/IAStudio/fr/` aurait demandé
+     `/IAStudio/fr/assets/release.json`, qui n'existe pas. Le gabarit pose la racine
+     sur <html>, parce que lui seul sait à quelle profondeur la page est rendue. */
+  var root = document.documentElement.dataset.root || '';
+
+  fetch(root + 'assets/release.json', { cache: 'no-cache' })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (release) {
       if (!release || !release.tag) return;

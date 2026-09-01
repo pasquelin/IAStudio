@@ -49,3 +49,6 @@ secret/
 # porte le chemin ABSOLU de cette machine vers l'exécutable — vraie ici, fausse partout ailleurs.
 .mcp.json
 resources/gameRuntime/
+
+# Vitrine bâtie (site/build.mjs) — jamais versionnée, rebâtie à chaque publication.
+_site/

@@ -1,0 +1,378 @@
+{
+  "meta": {
+    "lang": "de",
+    "name": "Deutsch",
+    "short": "DE",
+    "flag": "🇩🇪",
+    "docs": "en",
+    "ogLocale": "de_DE"
+  },
+  "head": {
+    "title": "IA Studio — sechs Generierungswerkstätten, ein einziges Fenster",
+    "description": "Multimodale Desktop-Anwendung: Bild, Video, 3D, Audio, Texturen und Skyboxen in einer Oberfläche mit andockbaren Panels. Diktat offline und Steuerung über einen MCP-Server.",
+    "ogTitle": "IA Studio — sechs Generierungswerkstätten, ein einziges Fenster",
+    "ogDescription": "Sechs Generierungswerkstätten in einem einzigen Fenster. Electron, React 19, TypeScript. macOS, Windows, Linux."
+  },
+  "nav": {
+    "skip": "Zum Inhalt springen",
+    "home": "Start",
+    "video": "Video",
+    "threeD": "3D",
+    "image": "Bild",
+    "audio": "Audio",
+    "textures": "Materialien",
+    "skyboxes": "Skyboxen",
+    "architecture": "Architektur",
+    "docs": "Doku",
+    "build": "Entwicklungsversion",
+    "download": "Herunterladen",
+    "languageLabel": "Sprache"
+  },
+  "hero": {
+    "eyebrow": "Desktop-Anwendung · unabhängiges Projekt",
+    "lede": "Sechs Generierungswerkstätten in einem einzigen Fenster. Andockbare Panels, Timeline mit Timecode, Inspektor, Bibliothek auf der Festplatte: die Werkzeuge einer Produktionssoftware, angewandt auf generative Modelle.",
+    "browse": "Werkstätten durchgehen",
+    "source": "Quellcode ansehen",
+    "meta": {
+      "stack": "Electron · React 19 · TypeScript",
+      "platforms": "macOS, Windows, Linux",
+      "languages": "Französisch und Englisch"
+    }
+  },
+  "home": {
+    "eyebrow": "Start · der Ausgangspunkt",
+    "title": "Ein Projekt ist ein Ordner. Mehr nicht.",
+    "lede": "Öffnen Sie einen Ordner, und er wird zum Projekt: Dokumente, importierte Assets, Generierungen. Alles bleibt auf der Festplatte, in Formaten, die andere Programme längst lesen — OpenRaster, OpenTimelineIO, glTF, MaterialX —, aus der Anwendung heraus durchsucht und per git versioniert, ohne das Fenster zu verlassen.",
+    "alt": "Startbildschirm: Leiste zum Fortsetzen des letzten Projekts, Liste zuletzt geöffneter Projekte, Verknüpfungen zu den sechs Werkstätten, Strom der von allen veröffentlichten Werke und Bibliotheks-Panel des Kontos.",
+    "specs": {
+      "0": {
+        "term": "Werkstätten",
+        "title": "Sechs Räume, ein Fenster",
+        "text": "Bild, Video, 3D, Audio, Materialien und Skyboxen. Jede hat eigene Werkzeuge und öffnet sich als Reiter, neben den anderen."
+      },
+      "1": {
+        "term": "Panels",
+        "title": "Andockbar und ablösbar",
+        "text": "Modelle, Explorer, Assets, Inspektor, Timeline. Das Fenster wird geordnet, wie man will; die Anordnung wird je Werkstatt gemerkt."
+      },
+      "2": {
+        "term": "Bibliothek",
+        "title": "Zuerst die Festplatte",
+        "text": "Generierungen landen im Projektordner. Die Bibliothek des entfernten Kontos kommt danach dazu, mit einem API-Schlüssel."
+      }
+    }
+  },
+  "video": {
+    "eyebrow": "Werkstatt · Ausgabe .mp4",
+    "lede": "Zwei Monitore, eine mehrspurige Timeline und Modelle, die die Einstellungen liefern.",
+    "list": {
+      "0": {
+        "term": "Monitore",
+        "text": "Quelle und Programm, wie an einem Schnittplatz: der gewählte Clip auf der einen Seite, der Schnitt so, wie er exportiert wird, auf der anderen."
+      },
+      "1": {
+        "term": "Timeline",
+        "text": "Video- und Audiospuren, Werkzeuge Auswahl, Klinge und Hand, Wiedergabe im Timecode."
+      },
+      "2": {
+        "term": "Modelle",
+        "text": "Sequence-to-Video, Video Cut, Video Concat, Video Studio."
+      }
+    },
+    "alt": "Werkstatt Video: Monitore Quelle und Programm nebeneinander, Assets-Panel, Clip-Inspektor, Timeline mit vier Spuren V1, A1, V2 und A2.",
+    "chips": {
+      "0": "Quelle 00:00:00:00",
+      "1": "V1 · A1 · V2 · A2",
+      "2": "25 B/s",
+      "3": "Projekt-Assets"
+    }
+  },
+  "threeD": {
+    "eyebrow": "Werkstatt · Ausgabe .glb",
+    "lede": "Ein generiertes Mesh, gesetzt in eine Szene, die man beleuchtet, animiert und exportiert.",
+    "list": {
+      "0": {
+        "term": "Viewport",
+        "text": "Raster, Orientierungs-Gizmo und eingeblendeter Zähler: Dreiecke, Eckpunkte, Draw Calls, Texturspeicher."
+      },
+      "1": {
+        "term": "Beleuchtung",
+        "text": "Fünf Quellen — ambient, gerichtet, hemisphärisch, punktförmig, Spot — als Spuren offengelegt, mit Keyframes auf der Timeline."
+      },
+      "2": {
+        "term": "Export",
+        "text": "Das Mesh geht als .glb dorthin, wo Sie es ablegen, bereit für eine Engine."
+      }
+    },
+    "alt": "Werkstatt 3D: generiertes Auto in einer Bergkulisse, Verschiebe-Gizmo und Dreieckszähler eingeblendet, Szenenbaum und Inspektor rechts, Licht-Timeline unten.",
+    "chips": {
+      "0": "Dreiecke · Eckpunkte · Calls",
+      "1": "Dauer 5 s",
+      "2": "25 B/s",
+      "3": "Umgebung Studio"
+    }
+  },
+  "image": {
+    "eyebrow": "Werkstatt · Ausgabe .png",
+    "lede": "Eine Leinwand mit Ebenen, auf der die Generierung ein Werkzeug unter anderen ist.",
+    "list": {
+      "0": {
+        "term": "Ebenen",
+        "text": "Stapelung, Sichtbarkeit, Sperren. Jede Generierung kommt als Ebene an, über dem, was schon da ist."
+      },
+      "1": {
+        "term": "Werkzeuge",
+        "text": "Verschieben, Hand, Skalieren, Rahmen, Auswahl, Formen, Pinsel, Stift, Radierer, Text, Ebenenfüllung, Pipette."
+      },
+      "2": {
+        "term": "Nachvollziehbarkeit",
+        "text": "Der Inspektor behält das Modell, das die Ebene erzeugt hat, ihr Gewicht und ihr Erstellungsdatum."
+      }
+    },
+    "alt": "Werkstatt Bild: Leinwand mit transparentem Hintergrund und freigestelltem Skelett, Modellkatalog links, Panels Ebenen und Inspektor rechts, Asset-Leiste unten.",
+    "chips": {
+      "0": "Ebenen",
+      "1": "Zoom 84,6 %",
+      "2": "Modell erhalten",
+      "3": "Asset-Leiste"
+    }
+  },
+  "audio": {
+    "eyebrow": "Werkstatt · Ausgabe .wav",
+    "lede": "Ton auf mehreren Spuren komponieren und schneiden, im selben Fenster wie alles andere.",
+    "list": {
+      "0": {
+        "term": "Spuren",
+        "text": "Mehrspuriger Schnitt, dieselben Werkzeuge wie die Video-Timeline, Wiedergabe auf denselben Timecode gelegt."
+      },
+      "1": {
+        "term": "Wellenformen",
+        "text": "In einem eigenen Prozess berechnet: eine Stunde Ton lässt die Oberfläche während der Analyse nicht einfrieren."
+      },
+      "2": {
+        "term": "Modelle",
+        "text": "Musik, Atmosphären und Effekte, von der API erzeugt und direkt auf einer Spur abgelegt."
+      }
+    },
+    "alt": "Werkstatt Audio: Monitor Programm mit der Wellenform des Schnitts, Monitor Quelle darunter, Katalog der Klanggenerierungsmodelle, Timeline mit vier Audiospuren.",
+    "chips": {
+      "0": "Programm 00:00:00:00",
+      "1": "A1 · A2 · A3 · A4",
+      "2": "Wellenformen",
+      "3": "Projekt-Assets"
+    }
+  },
+  "textures": {
+    "eyebrow": "Werkstatt · Ausgabe .png ×4",
+    "lede": "Ein Material, kein Bild: jeder Kanal wird einzeln erzeugt und dann geprüft.",
+    "list": {
+      "0": {
+        "term": "Kanäle",
+        "text": "Acht: Grundfarbe, Normale, Rauheit, Metall, Okklusion, Höhe, Emission, Kavität. Sieben stammen aus einer Generierung, die Emission wird hier eingestellt; alle werden Datei für Datei exportiert."
+      },
+      "1": {
+        "term": "Vorschau",
+        "text": "Das Material wird auf einen Testkörper gelegt — Kugel, Würfel, Zylinder, Ebene, Knoten — und in Echtzeit beleuchtet, vor dem Export."
+      },
+      "2": {
+        "term": "Übergänge",
+        "text": "Kachelbare Kanäle in 4096 × 4096, unverändert in einer Engine verwendbar."
+      }
+    },
+    "alt": "Werkstatt Materialien: Vorschauwürfel mit dem Material, Inspektor geöffnet auf den Kanälen — Grundfarbe und Normale — und dann auf den Materialeinstellungen, Leiste generierter Bilder.",
+    "chips": {
+      "0": "4096 × 4096",
+      "1": "4 Kanäle",
+      "2": "Vorschau am Körper",
+      "3": "Getrennter Export"
+    }
+  },
+  "skyboxes": {
+    "eyebrow": "Werkstatt · Ausgabe .hdr",
+    "lede": "Ein Himmel, der zugleich Kulisse und Lichtquelle ist.",
+    "list": {
+      "0": {
+        "term": "Projektionen",
+        "text": "360°, äquirektangulär, Kreuz, sechs Flächen. Man wechselt die Ansicht, ohne neu zu exportieren."
+      },
+      "1": {
+        "term": "Steuerung",
+        "text": "Einstellbarer Blickwinkel und Testobjekte, um das Licht auf einer matten und einer glänzenden Kugel zu beurteilen."
+      },
+      "2": {
+        "term": "Verwendung",
+        "text": "Der hier erzeugte Himmel beleuchtet direkt die Szene der 3D-Werkstatt."
+      }
+    },
+    "alt": "Werkstatt Skyboxen: verschneiter Berghimmel in 360-Grad-Projektion, zwei Testkugeln am Boden — eine matt, eine spiegelnd — und Sonneneinstellungen rechts.",
+    "chips": {
+      "0": "360°",
+      "1": "Äquirekt",
+      "2": "Kreuz",
+      "3": "6 Flächen",
+      "4": "Testobjekte"
+    }
+  },
+  "ticker": {
+    "0": "Text → Bild",
+    "1": "Bild → Bild",
+    "2": "Freistellen",
+    "3": "Reframe",
+    "4": "Zuschnitt",
+    "5": "Text → Video",
+    "6": "Sequenz → Video",
+    "7": "Schnitt",
+    "8": "Verkettung",
+    "9": "Bild → 3D",
+    "10": "Voxel",
+    "11": "Text → Audio",
+    "12": "PBR-Material",
+    "13": "Farbe · Normale · Rauheit · Metall",
+    "14": "Skybox 360°",
+    "15": "Äquirektangulär"
+  },
+  "architecture": {
+    "eyebrow": "Unter der Haube",
+    "title": "Kein Generierungsformular wird von Hand geschrieben.",
+    "lede": "Die Parameter eines Modells gehören ihm allein und ändern sich ohne Vorwarnung. Sie werden deshalb zur Laufzeit gelesen und in Felder verwandelt: ein neues Modell erscheint mit seinen Einstellungen, ohne eine weitere Zeile Code.",
+    "racks": {
+      "0": "Oberfläche",
+      "1": "Die Brücke zur API",
+      "2": "Auf Ihrem Rechner"
+    },
+    "cells": {
+      "0": {
+        "tag": "Werkstätten",
+        "title": "Sechs Modi, eine Anordnung",
+        "text": "Andockbare und ablösbare Panels, Reiter, je Werkstatt zwischen zwei Sitzungen gemerkte Anordnung."
+      },
+      "1": {
+        "tag": "Engines",
+        "title": "Aus ihrem Zustand neu erzeugt",
+        "text": "Ein Panel abzulösen zerstört seinen Grafikkontext. Die Engine baut sich identisch wieder auf — was zugleich das Rückgängigmachen und das Speichern ergibt."
+      },
+      "2": {
+        "tag": "Bibliothek",
+        "title": "Projektordner",
+        "text": "Ein Projekt ist ein Ordner, der ohne die Anwendung lesbar ist, von einem echten Dateimanager durchsucht und aus dem Studio heraus per git verfolgt wird — Branches, Versionen, Konflikte. Import, Export und Katalog teilen sich denselben Index, der seine Dateien auch dann wiederfindet, wenn sie außerhalb der Anwendung verschoben wurden."
+      },
+      "3": {
+        "tag": "ModelRegistry",
+        "title": "Die Felder kommen vom Modell",
+        "text": "Das vom Modell deklarierte Schema wird zu einer Feldliste, so wiedergegeben, wie sie ist. Ein unbekannter Typ fällt auf Roheingabe zurück, statt das Formular verschwinden zu lassen."
+      },
+      "4": {
+        "tag": "JobManager",
+        "title": "Nur eine Stelle fragt",
+        "text": "Jede Generierung ist asynchron. Eine einzige Komponente verfolgt den Fortschritt, begrenzt die Zahl gleichzeitiger Aufgaben und wartet ab, wenn der Dienst ablehnt."
+      },
+      "5": {
+        "tag": "Geheimnisse",
+        "title": "Die Oberfläche sieht den Schlüssel nie",
+        "text": "Schlüssel und Geheimnis werden vom Speicher des Systems verschlüsselt. Das Fenster fragt „bin ich angemeldet?“, nie „wie lautet mein Schlüssel?“."
+      },
+      "6": {
+        "tag": "Diktat",
+        "title": "Offline, vollständig",
+        "text": "Eine Spracherkennung läuft in einem eigenen Prozess, auf Ihrem Rechner. Ist das Modell einmal geholt, verlässt nichts von dem Gesagten den Rechner."
+      },
+      "7": {
+        "tag": "MCP-Server",
+        "title": "Das Studio wird von außen gesteuert",
+        "text": "233 Aktionen in 16 Familien, von den Dokumenten zu den Assets, von der Szene zum Schnitt, von der Datei zum git-Repository: ein Agent tut, was die Oberfläche tut, auf denselben Wegen."
+      },
+      "8": {
+        "tag": "Last",
+        "title": "Der Anzeige-Thread bleibt frei",
+        "text": "Miniaturen, Wellenformen, schwere Meshes und Videokodierung gehen auf den Grafikprozessor, in Worker-Threads oder in einen eigenen Prozess."
+      }
+    }
+  },
+  "docs": {
+    "eyebrow": "Dokumentation &amp; Vorführung",
+    "title": "Alles steht neben dem Code geschrieben.",
+    "videoLabel": "Vorführung von IA Studio: ein Gang durch die sechs Werkstätten, von einer 3D-Generierung bis zum Schnitt.",
+    "links": {
+      "0": {
+        "text": "Das Handbuch, zwanzig Kapitel — auch in der Anwendung lesbar",
+        "label": "Handbuch"
+      },
+      "1": {
+        "text": "Die Invarianten, die Engines und was die Grenze überschreitet",
+        "label": "Architektur"
+      },
+      "2": {
+        "text": "Das Studio aus einem Agenten steuern, über den MCP-Server",
+        "label": "MCP-Server"
+      },
+      "3": {
+        "text": "Siebzehn Entscheidungen, mit dem Verworfenen und dem Warum",
+        "label": "Entscheidungen"
+      },
+      "4": {
+        "text": "Eine Version veröffentlichen: Signatur, Artefakte, Rückweg",
+        "label": "Veröffentlichung"
+      },
+      "5": {
+        "text": "Lizenz des Quellcodes — PolyForm Noncommercial 1.0.0",
+        "label": "Lizenz"
+      }
+    },
+    "manualFile": "user-guide.md"
+  },
+  "download": {
+    "eyebrow": "Installation",
+    "title": "Drei Plattformen, ein einziges Repository.",
+    "lede": "Fünf Installationsprogramme, bei jeder Version von derselben Integrationskette erzeugt. Bis zur ersten öffentlichen Version klont und startet man das Repository in drei Befehlen.",
+    "items": {
+      "0": {
+        "os": "macOS",
+        "kind": "Apple Silicon · .dmg",
+        "state": "Version folgt"
+      },
+      "1": {
+        "os": "macOS",
+        "kind": "Intel · .dmg",
+        "state": "Version folgt"
+      },
+      "2": {
+        "os": "Windows",
+        "kind": "x64 · .exe",
+        "state": "Version folgt"
+      },
+      "3": {
+        "os": "Linux",
+        "kind": "x86_64 · .AppImage",
+        "state": "Version folgt"
+      },
+      "4": {
+        "os": "Debian, Ubuntu",
+        "kind": "x86_64 · .deb",
+        "state": "Version folgt"
+      }
+    },
+    "note": "Das Installationsprogramm unterliegt den <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">Nutzungsbedingungen</a>; der Quellcode der Lizenz <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial&nbsp;1.0.0</a>. Die Anwendung gibt keinen Zugang zu irgendeinem Generierungsdienst: sie nutzt den API-Schlüssel, den Sie bereitstellen, unter Ihrem Konto und auf Ihre Kosten."
+  },
+  "foot": {
+    "groups": {
+      "0": "IA Studio",
+      "1": "Werkstätten",
+      "2": "Ressourcen",
+      "3": "Kontakt"
+    },
+    "about": "Multimodale Desktop-Anwendung, allein entwickelt. Electron, React, TypeScript.",
+    "resources": {
+      "0": "Download",
+      "1": "Repository",
+      "2": "Lizenz"
+    },
+    "legal": "Quellcode unter der Lizenz <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · Anwendung vertrieben unter ihren <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">Nutzungsbedingungen</a> · Komponenten Dritter aufgeführt in den <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">Hinweisen</a>. © 2026 Alban Pasquelin.",
+    "docsLink": "Dokumentation",
+    "changelog": "Änderungen"
+  },
+  "status": {
+    "project": "Projekt",
+    "workshop": "Werkstatt",
+    "position": "Position"
+  }
+}

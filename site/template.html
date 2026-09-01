@@ -1,0 +1,612 @@
+<!doctype html>
+<!--
+  Ce fichier est un GABARIT : `site/build.mjs` le rend une fois par dictionnaire de
+  `site/i18n/`, et n'écrit jamais dedans. Les {{clés}} viennent de ces dictionnaires ;
+  ce qui n'est pas traduit — le nom du produit, les commandes, les identifiants — est
+  écrit ici en clair.
+-->
+<html lang="{{lang}}" dir="{{dir}}" data-root="{{root}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{head.title}}</title>
+<meta name="description" content="{{head.description}}">
+<meta name="theme-color" content="#0C0D0F">
+{{alternates}}
+
+<!-- Le SVG est l'icône de l'application elle-même ; le PNG aplati sert iOS, qui masque les coins
+     lui-même et peint le sien derrière une image transparente. -->
+<link rel="icon" href="{{root}}assets/images/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{root}}assets/images/apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pasquelin.github.io/IAStudio/">
+<meta property="og:locale" content="{{ogLocale}}">
+{{localeAlternates}}
+<meta property="og:title" content="{{head.ogTitle}}">
+<meta property="og:description" content="{{head.ogDescription}}">
+<!-- Absolue, et non relative : les robots d'aperçu ne résolvent pas les chemins relatifs. -->
+<meta property="og:image" content="https://pasquelin.github.io/IAStudio/assets/images/accueil.webp">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Chargée sans bloquer la première peinture : une feuille de style tierce retarde
+     l'affichage du temps d'un aller-retour réseau. `media="print"` la sort du chemin
+     critique, le `onload` la rend à tout le monde. Le <noscript> couvre le cas sans JS. -->
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap">
+<noscript>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap">
+</noscript>
+<link rel="stylesheet" href="{{root}}assets/css/style.css">
+
+<script type="application/ld+json">
+{{jsonld}}
+</script>
+<script>
+  /* on masque avant la première peinture, mais on redonne la main
+     si le moteur ne démarre pas : le contenu ne doit jamais rester caché. */
+  document.documentElement.className += ' js';
+  setTimeout(function () {
+    var r = document.documentElement;
+    if (!r.classList.contains('fx-ready')) r.classList.remove('js');
+  }, 2500);
+</script>
+</head>
+
+<body>
+<a class="skip" href="#accueil">{{nav.skip}}</a>
+
+<!-- ===================================================================
+     Jeu d'icônes — reprend la barre de modes de l'application.
+     =================================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="m15.5 11 6-3.2v8.4l-6-3.2z"/></symbol>
+  <symbol id="i-3d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8 21 8v8l-9 5.2L3 16V8z"/><path d="M3 8l9 5.2L21 8"/><path d="M12 13.2v8"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 4.8-4.4 4 3.4 3.2-2.6L20 17"/></symbol>
+  <symbol id="i-audio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.6 9.4a4 4 0 0 1 0 5.2"/><path d="M18.4 6.9a7.6 7.6 0 0 1 0 10.2"/></symbol>
+  <symbol id="i-tex" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 14 14 3.5M9 20.5 20.5 9"/></symbol>
+  <symbol id="i-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8" cy="10" r="1.7"/><path d="M2.5 16.5 8.5 12l4.5 3.4L17 12.6l4.5 3.4"/></symbol>
+</svg>
+
+<!-- ===================================================================
+     BARRE DE TITRE — c'est le menu. Chaque onglet vise une section.
+     =================================================================== -->
+<header class="app-bar">
+  <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <nav class="tabs" aria-label="Ateliers">
+    <a class="tab" href="#accueil"   data-tab="{{nav.home}}"  aria-current="true"><svg><use href="#i-home"/></svg>{{nav.home}}</a>
+    <a class="tab" href="#video"     data-tab="{{nav.video}}"><svg><use href="#i-video"/></svg>{{nav.video}}</a>
+    <a class="tab" href="#trois-d"   data-tab="{{nav.threeD}}"><svg><use href="#i-3d"/></svg>{{nav.threeD}}</a>
+    <a class="tab" href="#image"     data-tab="{{nav.image}}"><svg><use href="#i-image"/></svg>{{nav.image}}</a>
+    <a class="tab" href="#audio"     data-tab="{{nav.audio}}"><svg><use href="#i-audio"/></svg>{{nav.audio}}</a>
+    <a class="tab" href="#textures" data-tab="{{nav.textures}}"><svg><use href="#i-tex"/></svg>{{nav.textures}}</a>
+    <a class="tab" href="#skyboxes"  data-tab="{{nav.skyboxes}}"><svg><use href="#i-sky"/></svg>{{nav.skyboxes}}</a>
+  </nav>
+
+  <div class="bar-right">
+    <a class="chip chip--nav" href="#architecture">{{nav.architecture}}</a>
+    <a class="chip chip--nav" href="#docs">{{nav.docs}}</a>
+    <!-- Le texte est réécrit par main.js depuis assets/release.json, que la CI produit au tag.
+         Ce qui est écrit ici est le repli quand aucune version n'a encore été publiée. -->
+    <span class="chip chip--build" data-release-tag><span class="dot"></span>{{nav.build}}</span>
+    {{langSwitch}}
+    <a class="chip chip--cta" href="#telecharger">{{nav.download}}</a>
+  </div>
+</header>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div id="veil" aria-hidden="true"></div>
+
+<main id="contenu">
+
+  <!-- ================================================================
+       HÉROS — le décor est le viewport 3D de l'application.
+       ================================================================ -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow" data-fx data-rise="16" data-delay="60">{{hero.eyebrow}}</p>
+      <h1>
+        <span class="l1" data-fx data-split data-delay="140">IA</span>
+        <span class="l2" data-fx data-split data-delay="240">Studio</span>
+      </h1>
+      <p class="lede" data-fx data-rise="22" data-delay="520">{{hero.lede}}</p>
+      <div class="hero-actions" data-fx data-rise="20" data-delay="620">
+        <a class="btn btn--fill" href="#video">{{hero.browse}}</a>
+        <a class="btn" href="https://github.com/pasquelin/IAStudio" target="_blank" rel="noopener">{{hero.source}}</a>
+      </div>
+      <p class="hero-meta" data-fx data-rise="16" data-delay="720">
+        <span>{{hero.meta.stack}}</span>
+        <span>{{hero.meta.platforms}}</span>
+        <span>{{hero.meta.languages}}</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ACCUEIL — la capture s'ouvre en plein cadre pendant le scroll.
+       Le bloc .stage est épinglé : sa hauteur (210vh) détermine la
+       durée de l'ouverture.
+       ================================================================ -->
+  <section class="panel" id="accueil">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">{{home.eyebrow}}</p>
+        <h2 data-fx data-split data-delay="80">{{home.title}}</h2>
+        <p class="lede" data-fx data-rise="22" data-delay="320">{{home.lede}}</p>
+      </div>
+    </div>
+
+    <div class="stage" data-stage>
+      <div class="stage__pin">
+        <div class="stage__frame frame frame--glow">
+          <img src="{{root}}assets/images/accueil.webp" width="1800" height="1129"
+               alt="{{home.alt}}" loading="eager">
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <!-- AXE : vertical -->
+      <dl class="specs" data-fx data-rise="32" data-speed="-0.018">
+        <div class="spec">
+          <dt>{{home.specs.0.term}}</dt>
+          <dd><b>{{home.specs.0.title}}</b>{{home.specs.0.text}}</dd>
+        </div>
+        <div class="spec">
+          <dt>{{home.specs.1.term}}</dt>
+          <dd><b>{{home.specs.1.title}}</b>{{home.specs.1.text}}</dd>
+        </div>
+        <div class="spec">
+          <dt>{{home.specs.2.term}}</dt>
+          <dd><b>{{home.specs.2.title}}</b>{{home.specs.2.text}}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — VIDÉO
+       AXE : vertical. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="video">
+    <div class="wrap mode">
+      <div class="mode__text" data-fx data-still data-speed="-0.035">
+        <p class="eyebrow" data-fx data-rise="16">{{video.eyebrow}}</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">{{nav.video}}</h2>
+        <p class="lede" data-fx data-rise="20" data-delay="220">{{video.lede}}</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="20">
+          <li><b>{{video.list.0.term}}</b>{{video.list.0.text}}</li>
+          <li><b>{{video.list.1.term}}</b>{{video.list.1.text}}</li>
+          <li><b>{{video.list.2.term}}</b>{{video.list.2.text}}</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.07">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="{{root}}assets/images/video.webp" width="1800" height="1129" data-depth
+               alt="{{video.alt}}" loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="14">
+          <span>{{video.chips.0}}</span><span>{{video.chips.1}}</span><span>{{video.chips.2}}</span><span>{{video.chips.3}}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — 3D
+       AXE : horizontal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="trois-d">
+    <div class="wrap mode mode--flip">
+      <div class="mode__text" data-fx data-still data-speedx="0.026">
+        <p class="eyebrow" data-fx data-rise="0" data-shift="-20">{{threeD.eyebrow}}</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">{{nav.threeD}}</h2>
+        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">{{threeD.lede}}</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
+          <li><b>{{threeD.list.0.term}}</b>{{threeD.list.0.text}}</li>
+          <li><b>{{threeD.list.1.term}}</b>{{threeD.list.1.text}}</li>
+          <li><b>{{threeD.list.2.term}}</b>{{threeD.list.2.text}}</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speedx="-0.036">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="{{root}}assets/images/3d.webp" width="1800" height="1129" data-depth
+               alt="{{threeD.alt}}" loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
+          <span>{{threeD.chips.0}}</span><span>{{threeD.chips.1}}</span><span>{{threeD.chips.2}}</span><span>{{threeD.chips.3}}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — IMAGE
+       AXE : diagonal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="image">
+    <div class="wrap mode">
+      <div class="mode__text" data-fx data-still data-speed="-0.024" data-speedx="-0.016">
+        <p class="eyebrow" data-fx data-rise="12" data-shift="-12">{{image.eyebrow}}</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">{{nav.image}}</h2>
+        <p class="lede" data-fx data-rise="14" data-shift="-14" data-delay="220">{{image.lede}}</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="14" data-stagger-shift="-14">
+          <li><b>{{image.list.0.term}}</b>{{image.list.0.text}}</li>
+          <li><b>{{image.list.1.term}}</b>{{image.list.1.text}}</li>
+          <li><b>{{image.list.2.term}}</b>{{image.list.2.text}}</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.05" data-speedx="0.024">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="{{root}}assets/images/image.webp" width="1800" height="1129" data-depth
+               alt="{{image.alt}}" loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="10" data-stagger-shift="-10">
+          <span>{{image.chips.0}}</span><span>{{image.chips.1}}</span><span>{{image.chips.2}}</span><span>{{image.chips.3}}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — AUDIO
+       AXE : vertical. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="audio">
+    <div class="wrap mode mode--flip">
+      <div class="mode__text" data-fx data-still data-speed="-0.035">
+        <p class="eyebrow" data-fx data-rise="16">{{audio.eyebrow}}</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">{{nav.audio}}</h2>
+        <p class="lede" data-fx data-rise="20" data-delay="220">{{audio.lede}}</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="20">
+          <li><b>{{audio.list.0.term}}</b>{{audio.list.0.text}}</li>
+          <li><b>{{audio.list.1.term}}</b>{{audio.list.1.text}}</li>
+          <li><b>{{audio.list.2.term}}</b>{{audio.list.2.text}}</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.07">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="{{root}}assets/images/audio.webp" width="1800" height="1129" data-depth
+               alt="{{audio.alt}}" loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="14">
+          <span>{{audio.chips.0}}</span><span>{{audio.chips.1}}</span><span>{{audio.chips.2}}</span><span>{{audio.chips.3}}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — TEXTURES
+       AXE : horizontal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="textures">
+    <div class="wrap mode">
+      <div class="mode__text" data-fx data-still data-speedx="-0.026">
+        <p class="eyebrow" data-fx data-rise="0" data-shift="-20">{{textures.eyebrow}}</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">{{nav.textures}}</h2>
+        <p class="lede" data-fx data-rise="0" data-shift="-24" data-delay="220">{{textures.lede}}</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="0" data-stagger-shift="-26">
+          <li><b>{{textures.list.0.term}}</b>{{textures.list.0.text}}</li>
+          <li><b>{{textures.list.1.term}}</b>{{textures.list.1.text}}</li>
+          <li><b>{{textures.list.2.term}}</b>{{textures.list.2.text}}</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speedx="0.036">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="{{root}}assets/images/textures.webp" width="1800" height="1129" data-depth
+               alt="{{textures.alt}}" loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="0" data-stagger-shift="-18">
+          <span>{{textures.chips.0}}</span><span>{{textures.chips.1}}</span><span>{{textures.chips.2}}</span><span>{{textures.chips.3}}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       ATELIER — SKYBOXES
+       AXE : diagonal. Un seul axe par section — ne pas cumuler data-speed
+       et data-speedx ici, c'est l'alternance entre sections qui donne
+       le rythme.
+       ================================================================ -->
+  <section class="panel" id="skyboxes">
+    <div class="wrap mode mode--flip">
+      <div class="mode__text" data-fx data-still data-speed="-0.024" data-speedx="0.016">
+        <p class="eyebrow" data-fx data-rise="12" data-shift="-12">{{skyboxes.eyebrow}}</p>
+        <h2 class="mode__title" data-fx data-split data-delay="60">{{nav.skyboxes}}</h2>
+        <p class="lede" data-fx data-rise="14" data-shift="-14" data-delay="220">{{skyboxes.lede}}</p>
+        <ul class="mode__list" data-stagger="60" data-stagger-rise="14" data-stagger-shift="-14">
+          <li><b>{{skyboxes.list.0.term}}</b>{{skyboxes.list.0.text}}</li>
+          <li><b>{{skyboxes.list.1.term}}</b>{{skyboxes.list.1.text}}</li>
+          <li><b>{{skyboxes.list.2.term}}</b>{{skyboxes.list.2.text}}</li>
+        </ul>
+      </div>
+      <figure class="mode__shot" data-fx data-still data-speed="0.05" data-speedx="-0.024">
+        <div class="frame" data-fx data-rise="0" data-zoom="0.05">
+          <img src="{{root}}assets/images/skyboxes.webp" width="1800" height="1129" data-depth
+               alt="{{skyboxes.alt}}" loading="lazy">
+        </div>
+        <figcaption class="chipset" data-stagger="50" data-stagger-rise="10" data-stagger-shift="-10">
+          <span>{{skyboxes.chips.0}}</span><span>{{skyboxes.chips.1}}</span><span>{{skyboxes.chips.2}}</span><span>{{skyboxes.chips.3}}</span><span>{{skyboxes.chips.4}}</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       BANDEAU — ce que les ateliers savent produire. Le contenu est
+       dupliqué à l'identique : c'est ce qui rend la boucle invisible.
+       Pour modifier la liste, éditer les DEUX blocs .ticker__set.
+       ================================================================ -->
+  <div class="ticker" aria-hidden="true" data-ticker>
+    <div class="ticker__row">
+      <div class="ticker__set"><span>{{ticker.0}}</span><span>{{ticker.1}}</span><span>{{ticker.2}}</span><span>{{ticker.3}}</span><span>{{ticker.4}}</span><span>{{ticker.5}}</span><span>{{ticker.6}}</span><span>{{ticker.7}}</span><span>{{ticker.8}}</span><span>{{ticker.9}}</span><span>{{ticker.10}}</span><span>{{ticker.11}}</span><span>{{ticker.12}}</span><span>{{ticker.13}}</span><span>{{ticker.14}}</span><span>{{ticker.15}}</span></div>
+      <div class="ticker__set"><span>{{ticker.0}}</span><span>{{ticker.1}}</span><span>{{ticker.2}}</span><span>{{ticker.3}}</span><span>{{ticker.4}}</span><span>{{ticker.5}}</span><span>{{ticker.6}}</span><span>{{ticker.7}}</span><span>{{ticker.8}}</span><span>{{ticker.9}}</span><span>{{ticker.10}}</span><span>{{ticker.11}}</span><span>{{ticker.12}}</span><span>{{ticker.13}}</span><span>{{ticker.14}}</span><span>{{ticker.15}}</span></div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       ARCHITECTURE
+       ================================================================ -->
+  <section class="panel" id="architecture">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">{{architecture.eyebrow}}</p>
+        <h2 data-fx data-split data-delay="80">{{architecture.title}}</h2>
+        <p class="lede" data-fx data-rise="22" data-delay="360">{{architecture.lede}}</p>
+      </div>
+
+      <!-- AXE : horizontal -->
+      <div class="rack" data-fx data-rise="0" data-shift="-28" data-speedx="0.018">
+        <div class="rack__row">
+          <div class="rack__label">{{architecture.racks.0}}</div>
+          <div class="rack__cells">
+            <div class="cell">
+              <span class="tag">{{architecture.cells.0.tag}}</span>
+              <h3>{{architecture.cells.0.title}}</h3>
+              <p>{{architecture.cells.0.text}}</p>
+            </div>
+            <div class="cell">
+              <span class="tag">{{architecture.cells.1.tag}}</span>
+              <h3>{{architecture.cells.1.title}}</h3>
+              <p>{{architecture.cells.1.text}}</p>
+            </div>
+            <div class="cell">
+              <span class="tag">{{architecture.cells.2.tag}}</span>
+              <h3>{{architecture.cells.2.title}}</h3>
+              <p>{{architecture.cells.2.text}}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rack__row">
+          <div class="rack__label">{{architecture.racks.1}}</div>
+          <div class="rack__cells">
+            <div class="cell">
+              <span class="tag">{{architecture.cells.3.tag}}</span>
+              <h3>{{architecture.cells.3.title}}</h3>
+              <p>{{architecture.cells.3.text}}</p>
+            </div>
+            <div class="cell">
+              <span class="tag">{{architecture.cells.4.tag}}</span>
+              <h3>{{architecture.cells.4.title}}</h3>
+              <p>{{architecture.cells.4.text}}</p>
+            </div>
+            <div class="cell">
+              <span class="tag">{{architecture.cells.5.tag}}</span>
+              <h3>{{architecture.cells.5.title}}</h3>
+              <p>{{architecture.cells.5.text}}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rack__row">
+          <div class="rack__label">{{architecture.racks.2}}</div>
+          <div class="rack__cells">
+            <div class="cell">
+              <span class="tag">{{architecture.cells.6.tag}}</span>
+              <h3>{{architecture.cells.6.title}}</h3>
+              <p>{{architecture.cells.6.text}}</p>
+            </div>
+            <div class="cell">
+              <span class="tag">{{architecture.cells.7.tag}}</span>
+              <h3>{{architecture.cells.7.title}}</h3>
+              <p>{{architecture.cells.7.text}}</p>
+            </div>
+            <div class="cell">
+              <span class="tag">{{architecture.cells.8.tag}}</span>
+              <h3>{{architecture.cells.8.title}}</h3>
+              <p>{{architecture.cells.8.text}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       DOCUMENTATION + DÉMO
+
+       `preload="none"` : sans lui, le navigateur télécharge les 12 Mo de
+       la démo avant même qu'on ait défilé jusqu'ici. Le poster — une
+       image tirée de la vidéo elle-même, donc au même 16/9 que `.player`
+       — suffit à montrer de quoi il s'agit.
+       ================================================================ -->
+  <section class="panel" id="docs">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">{{docs.eyebrow}}</p>
+        <h2 data-fx data-split data-delay="80">{{docs.title}}</h2>
+      </div>
+
+      <div class="split">
+        <div class="player" data-fx data-rise="0" data-zoom="0.04" data-speedx="0.026">
+          <video src="{{root}}assets/video/demo.mp4" poster="assets/images/demo-poster.webp"
+                 controls playsinline preload="none"
+                 aria-label="{{docs.videoLabel}}"></video>
+        </div>
+
+        <!-- `blob/HEAD` suit la branche par défaut du dépôt : un renommage de branche
+             ne transforme pas ces six liens en 404. -->
+        <ul class="doclist" data-stagger="70" data-stagger-rise="0" data-stagger-shift="-30">
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/{{docs}}/{{docs.manualFile}}" target="_blank" rel="noopener"><span>{{docs.links.0.text}}</span><em>{{docs.links.0.label}}</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/{{docs}}/architecture.md" target="_blank" rel="noopener"><span>{{docs.links.1.text}}</span><em>{{docs.links.1.label}}</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/{{docs}}/manuel/20-piloter-de-l-exterieur.md" target="_blank" rel="noopener"><span>{{docs.links.2.text}}</span><em>{{docs.links.2.label}}</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/tree/HEAD/docs/ci/adr" target="_blank" rel="noopener"><span>{{docs.links.3.text}}</span><em>{{docs.links.3.label}}</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/docs/ci/RELEASE.md" target="_blank" rel="noopener"><span>{{docs.links.4.text}}</span><em>{{docs.links.4.label}}</em></a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE" target="_blank" rel="noopener"><span>{{docs.links.5.text}}</span><em>{{docs.links.5.label}}</em></a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       TÉLÉCHARGEMENT
+       ================================================================ -->
+  <section class="panel" id="telecharger">
+    <div class="wrap">
+      <div class="panel__head">
+        <p class="eyebrow" data-fx data-rise="16">{{download.eyebrow}}</p>
+        <h2 data-fx data-split data-delay="80">{{download.title}}</h2>
+        <p class="lede" data-fx data-rise="22" data-delay="300">{{download.lede}}</p>
+      </div>
+
+      <!-- AXE : vertical
+           Les liens et les états sont remplis par main.js depuis assets/release.json,
+           que la chaîne de publication écrit au moment du tag. Ce qui est écrit ici
+           est l'état affiché tant qu'aucune version n'a été publiée. -->
+      <div class="dl" data-fx data-rise="28">
+        <a class="dl__item" data-dl="darwin-arm64" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
+          <h3>{{download.items.0.os}}</h3>
+          <p>{{download.items.0.kind}}</p>
+          <span class="state">{{download.items.0.state}}</span>
+        </a>
+        <a class="dl__item" data-dl="darwin-x64" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
+          <h3>{{download.items.1.os}}</h3>
+          <p>{{download.items.1.kind}}</p>
+          <span class="state">{{download.items.1.state}}</span>
+        </a>
+        <a class="dl__item" data-dl="win32-x64" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
+          <h3>{{download.items.2.os}}</h3>
+          <p>{{download.items.2.kind}}</p>
+          <span class="state">{{download.items.2.state}}</span>
+        </a>
+        <a class="dl__item" data-dl="linux-AppImage" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
+          <h3>{{download.items.3.os}}</h3>
+          <p>{{download.items.3.kind}}</p>
+          <span class="state">{{download.items.3.state}}</span>
+        </a>
+        <a class="dl__item" data-dl="linux-deb" href="https://github.com/pasquelin/IAStudio/releases" target="_blank" rel="noopener">
+          <h3>{{download.items.4.os}}</h3>
+          <p>{{download.items.4.kind}}</p>
+          <span class="state">{{download.items.4.state}}</span>
+        </a>
+      </div>
+
+      <p class="dl-note" data-fx data-rise="18" data-delay="120">{{download.note}}</p>
+
+      <pre class="term" data-fx data-rise="22" data-delay="140"><code><b>git</b> clone https://github.com/pasquelin/IAStudio.git
+<b>pnpm</b> install
+<b>pnpm</b> start</code></pre>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================================================================
+     PIED DE PAGE — la mention d'indépendance reste visible.
+     =================================================================== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__grid" data-fx data-rise="22">
+      <div>
+        <h4>{{foot.groups.0}}</h4>
+        <p style="margin:0;max-width:34ch">{{foot.about}}</p>
+      </div>
+      <div>
+        <h4>{{foot.groups.1}}</h4>
+        <ul>
+          <li><a href="#image">{{nav.image}}</a></li>
+          <li><a href="#video">{{nav.video}}</a></li>
+          <li><a href="#trois-d">{{nav.threeD}}</a></li>
+          <li><a href="#audio">{{nav.audio}}</a></li>
+          <li><a href="#textures">{{nav.textures}}</a></li>
+          <li><a href="#skyboxes">{{nav.skyboxes}}</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>{{foot.groups.2}}</h4>
+        <ul>
+          <li><a href="#docs">{{foot.docsLink}}</a></li>
+          <li><a href="#architecture">{{nav.architecture}}</a></li>
+          <li><a href="#telecharger">{{foot.resources.0}}</a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio" target="_blank" rel="noopener">{{foot.resources.1}}</a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE" target="_blank" rel="noopener">{{foot.resources.2}}</a></li>
+          <li><a href="https://github.com/pasquelin/IAStudio/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener">{{foot.changelog}}</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>{{foot.groups.3}}</h4>
+        <ul>
+          <li><a href="https://www.linkedin.com/in/alban-pasquelin/" target="_blank" rel="noopener">LinkedIn</a></li>
+          <li><a href="mailto:alban.pasquelin@gmail.com">alban.pasquelin@gmail.com</a></li>
+          <li><a href="https://github.com/pasquelin" target="_blank" rel="noopener">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="legal" data-fx data-rise="18" data-delay="240">{{foot.legal}}</p>
+  </div>
+</footer>
+
+<!-- ===================================================================
+     BARRE DE STATUT — position de lecture, comme dans l'application.
+     =================================================================== -->
+<div class="status-bar" role="status" aria-live="off">
+  <span class="hide-s"><b>{{status.project}}</b> ia-studio</span>
+  <span class="hide-s"><b>{{status.workshop}}</b> <span class="cur" data-current>{{nav.home}}</span></span>
+  <span class="sp"></span>
+  <span><b>{{status.position}}</b> <span class="tc" data-timecode>00:00:00:00</span></span>
+</div>
+<div class="progress" aria-hidden="true"></div>
+
+<!-- three 0.185.1, la version que l'application embarque. Depuis 0.16x la bibliothèque ne
+     publie plus de build global : seul le module existe, d'où la carte d'import. Le module
+     tire `./three.core.min.js` en relatif, résolu contre cette même URL.
+
+     Les deux empreintes sont celles publiées par cdnjs. Un fichier altéré chez l'hébergeur
+     ne s'exécute pas : le navigateur refuse le module. Le `<script integrity>` habituel ne
+     s'applique pas ici — un module chargé par carte d'import passe par CE champ, qui prend
+     l'URL pour clé, y compris celle que le module résout tout seul. Les navigateurs qui ne
+     connaissent pas encore ce champ l'ignorent sans erreur et chargent le module sans
+     vérification : l'unique garantie de bout en bout serait d'héberger le fichier ici. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.module.min.js"
+  },
+  "integrity": {
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.module.min.js": "sha512-I68i240tOgV4+XEaWOhSb6g0DSYHBZvh5xV/OD4r8gMQLzMlCiGLKJMv2cLv/NSSclI/1OOqBQbcCa2GtLKToQ==",
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.185.1/three.core.min.js": "sha512-WzP39n+gKzHN+GRInj+FL4+JPbBPkGQiJf8oCBXqaqlqc57jW+sPYFn48ds+slQBe18f4Mctw5c+RAEVrhCO3g=="
+  }
+}
+</script>
+<script type="module" src="{{root}}assets/js/scene.js"></script>
+<script src="{{root}}assets/js/main.js" defer></script>
+</body>
+</html>

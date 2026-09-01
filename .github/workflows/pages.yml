@@ -1,35 +1,52 @@
+# Vitrine GitHub Pages. Squelette commun aux trois dépôts (map3D, panels, IA Studio) :
+# mêmes déclencheurs, mêmes versions d'actions, même artefact `_site`. Ce qui diffère ici
+# tient à la seule particularité réelle de ce dépôt — le manifeste de version.
+#
+# Ce que ce workflow ajoute et que la page ne peut pas savoir toute seule : quelle version
+# est sortie, et où vivent ses cinq installeurs. Il écrit `site/assets/release.json`, que
+# `main.js` lit pour remplir la pastille de version et les cartes de téléchargement.
+#
+# Rien n'est réécrit dans le dépôt : le fichier est produit dans l'artefact déployé, donc
+# aucun tag ne crée de commit, et `site/` reste libre d'un fichier généré qui entrerait en
+# conflit à chaque fusion.
+#
+# Le déclencheur est la PUBLICATION d'une release, pas le tag : `release.yml` bâtit les trois
+# plateformes et laisse un BROUILLON, délibérément (ADR-06). Déployer sur le tag annoncerait
+# des installeurs que personne n'a encore relus.
 name: Pages
 
-# The presentation site, served from `docs/` — a static page with no build step. What this
-# workflow adds is the ONE thing the page cannot know on its own: which version is out, and
-# where its five installers live. It writes `docs/assets/release.json`, which `main.js` reads
-# to fill the version chip and the download cards.
-#
-# Nothing is committed back to the repository: the file is generated into the artefact that
-# gets deployed, so no tag ever produces a commit, and `docs/` stays free of a generated file
-# that would conflict on every merge.
-#
-# It runs on a published release rather than on the tag: `release.yml` builds the three
-# platforms and leaves a DRAFT, deliberately (ADR-06). Deploying on the tag would advertise
-# installers that nobody has looked at yet.
 on:
   push:
     branches: [main]
-    paths: ['docs/**', '.github/workflows/pages.yml']
+    paths:
+      - 'site/**'
+      - 'scripts/**'
+      - 'repo.config.json'
+      - 'package.json'
+      - '.github/workflows/pages.yml'
+  # Les mêmes chemins en pull request : on bâtit sans déployer, pour qu'une vitrine
+  # cassée se voie avant la fusion et non après.
+  pull_request:
+    paths:
+      - 'site/**'
+      - 'scripts/**'
+      - 'repo.config.json'
+      - 'package.json'
+      - '.github/workflows/pages.yml'
   release:
     types: [published]
   workflow_dispatch:
-
-# One deployment at a time, and the newest wins — but never cancelled mid-upload, which
-# would leave the site half-published.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+# Un seul déploiement à la fois, sans annuler celui en cours : une publication à moitié
+# écrite est pire qu'une publication en retard.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -39,16 +56,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The release that FIRED this run, when one did: `/releases/latest` is a separate resource
-      # and it is eventually consistent — read ten seconds after v1.0.0 went public, on 20/08, it
-      # still answered v0.2.0, and the site advertised the previous version with the previous
-      # download links, from a green run. The event payload carries the release itself, so there
-      # is nothing to ask. `/releases/latest` stays the source for a dispatch or a push, and it
-      # answers 404 before the first release — the normal case, where the page keeps its wording.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # Pas de `pnpm install`, et c'est voulu : `site/build.mjs` est du Node pur sans une
+      # seule dépendance — comme dans les deux autres dépôts. Ici cela évite d'installer
+      # Electron pour rendre quinze pages HTML. Le garde-fou du code est joué par `ci.yml`
+      # sur chaque push et chaque pull request ; le rejouer ici ne trouverait rien de plus.
+
+      # La release qui a DÉCLENCHÉ ce run, s'il y en a une : `/releases/latest` est une
+      # ressource à part, et sa cohérence est différée — lue dix secondes après la sortie
+      # publique de v1.0.0, le 20/08, elle répondait encore v0.2.0, et le site annonçait la
+      # version précédente avec les liens précédents, depuis un run vert. La charge utile de
+      # l'événement porte la release elle-même : il n'y a donc rien à demander.
+      # `/releases/latest` reste la source pour un dispatch ou un push, et répond 404 avant
+      # la première release — le cas normal, où la page garde sa formulation d'origine.
       #
-      # Drafts and pre-releases: `/releases/latest` filters both, the payload does not, so the
-      # two flags are read here or a published pre-release would land on the site.
-      - name: Write the release manifest
+      # Brouillons et préversions : `/releases/latest` filtre les deux, la charge utile non,
+      # d'où la lecture des deux drapeaux — sans quoi une préversion publiée arriverait sur
+      # le site.
+      - name: Écrire le manifeste de version
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -65,14 +95,14 @@ jobs:
           fi
 
           if ! gh api "$source" > release.json 2>/dev/null; then
-            echo "No published release yet — the page keeps its built-in wording." \
+            echo "Aucune version publiée — la page garde sa formulation d'origine." \
               >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          # Each card is matched on the artefact name that electron-builder produces,
-          # `${name}-${version}-${platform}-${arch}.${ext}` — see electron-builder.yml.
-          # A platform missing from the release is left to say so rather than 404.
+          # Chaque carte est appariée sur le nom d'artefact que produit electron-builder,
+          # `${name}-${version}-${platform}-${arch}.${ext}` — cf. electron-builder.yml.
+          # Une plateforme absente de la release garde son libellé plutôt que d'offrir un 404.
           jq '{
             tag: .tag_name,
             published: .published_at,
@@ -94,20 +124,28 @@ jobs:
                 })
               | from_entries
             )
-          }' release.json > docs/assets/release.json
+          }' release.json > site/assets/release.json
 
           rm release.json
-          echo "Published version: $(jq -r .tag docs/assets/release.json)" >> "$GITHUB_STEP_SUMMARY"
-          jq -r '.assets | keys[] | "- " + .' docs/assets/release.json >> "$GITHUB_STEP_SUMMARY"
+          echo "Version publiée : $(jq -r .tag site/assets/release.json)" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.assets | keys[] | "- " + .' site/assets/release.json >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/configure-pages@v5
+      # Une seule commande bâtit tout le site : les quinze langues, les assets, le sitemap
+      # et robots.txt. Le rendu échoue si un dictionnaire est désaccordé — c'est le garde-fou
+      # qui compte ici, et il est dans le moteur, pas dans ce fichier.
+      - run: pnpm build:site
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/configure-pages@v6
+        if: github.ref == 'refs/heads/main'
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.ref == 'refs/heads/main'
         with:
-          path: docs
+          path: _site
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -117,4 +155,4 @@ jobs:
 
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

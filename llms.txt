@@ -1,0 +1,46 @@
+# IA Studio
+
+> **Multimodal desktop creation studio** for generative models (Electron 43 + React 19 +
+> TypeScript). Six workshops — Image, Video, 3D, Audio, Materials, Skyboxes — in one window
+> with dockable panels, a timecoded timeline, an inspector and a project library on disk.
+> Offline dictation, and **233 MCP actions across 16 families** so an agent drives the studio
+> through the same paths the interface uses.
+
+## Mental model (read this first)
+
+- **A project is a folder.** Documents, imported assets and generations stay on disk, in
+  formats other software already reads — OpenRaster, OpenTimelineIO, glTF, MaterialX. The
+  application browses it and git versions it, without leaving the window.
+- **No generation form is written by hand.** A model's parameters are its own and change
+  without warning, so `ModelRegistry` reads the schema at runtime and turns it into fields.
+  An unknown type falls back to raw input rather than making the form disappear.
+- **Engines are rebuilt from their state.** Detaching a panel destroys its graphics context;
+  the engine reconstructs itself identically — which is also where undo and saving come from.
+- **The interface never sees the API key.** Key and secret are encrypted by the system store.
+  The window asks "am I signed in?", never "what is my key?".
+- **The application gives access to no generation service.** It uses the API key you provide,
+  under your own account and at your expense.
+
+## Where things are
+
+- `src/main/` — Electron main process: windows, secrets, filesystem, git, MCP server.
+- `src/renderer/` — React 19 interface: the six workshops, panels, inspector, timeline.
+- `src/shared/` — what crosses the boundary: constants, contracts, types.
+- `engine/` — the Python side, driven by uv (speech recognition and local tooling).
+- `docs/en/`, `docs/fr/` — the manual and the architecture, in both languages.
+- `docs/ci/adr/` — seventeen decisions, each with what was ruled out and why.
+- `site/` — the presentation site: one template, fifteen dictionaries, a shared build.
+
+## Running it
+
+```
+pnpm install
+pnpm start          # electron-vite in watch mode
+pnpm validate       # the gate: llms, licences, typecheck, lint, format, tests
+pnpm build:site     # the presentation site, fifteen languages, into _site/
+```
+
+## Licence
+
+Source code under **PolyForm Noncommercial 1.0.0**; the installer is governed by `EULA.md`.
+Non-commercial use only.
