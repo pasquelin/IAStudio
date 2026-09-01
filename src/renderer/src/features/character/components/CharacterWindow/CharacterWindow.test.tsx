@@ -31,7 +31,10 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
 }))
 
 const ASSET = 'asset-hero'
-const BOUNDS = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
+const SAMPLE = {
+  bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
+  points: new Float32Array(),
+}
 
 beforeEach(() => {
   built.length = 0
@@ -45,12 +48,14 @@ afterEach(() => {
 
 // Asked for at the first sight of the window: a joint could be moved and never turned, and the
 // only way to say which was to edit the source.
-it('offers the four ways of acting on a joint, and opens on placing one', async () => {
+it('offers the ways of acting on a joint, opens on placing one, and offers no scale', async () => {
   render(<CharacterWindow assetId={ASSET} />)
 
   const bar = screen.getByRole('toolbar')
 
-  expect(within(bar).getAllByRole('button')).toHaveLength(4)
+  expect(within(bar).getAllByRole('button')).toHaveLength(3)
+  // A joint is a point and a length: there is nothing about one to enlarge.
+  expect(within(bar).queryByRole('button', { name: /échelle/i })).toBeNull()
   expect(within(bar).getByRole('button', { pressed: true })).toHaveAccessibleName(/Déplacer/)
 
   await userEvent.click(within(bar).getByRole('button', { name: /Pivoter/ }))
@@ -66,7 +71,7 @@ it('drops the waiting note as soon as the engine has measured the mesh', async (
   expect(screen.getByText('En attente du personnage…')).toBeInTheDocument()
 
   await act(async () => {
-    built[0]?.onCharacter?.('node-1', null, {}, BOUNDS)
+    built[0]?.onCharacter?.('node-1', null, {}, SAMPLE)
   })
 
   expect(screen.queryByText('En attente du personnage…')).not.toBeInTheDocument()

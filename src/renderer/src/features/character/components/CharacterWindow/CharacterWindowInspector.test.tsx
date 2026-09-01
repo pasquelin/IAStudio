@@ -11,7 +11,10 @@ import { useCharacterView } from '@/stores/characterView'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
 
 const ASSET = 'asset-hero'
-const BOUNDS = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
+const SAMPLE = {
+  bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
+  points: new Float32Array(),
+}
 
 const RIG: Rig = {
   origin: 'imported',
@@ -26,7 +29,7 @@ const show = (): void => {
     withQueries(
       <CharacterWindowInspector
         assetId={ASSET}
-        bounds={BOUNDS}
+        sample={SAMPLE}
         documentId="character:asset-hero"
         nodeId="node-1"
       />,

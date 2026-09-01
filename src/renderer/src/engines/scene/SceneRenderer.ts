@@ -201,7 +201,7 @@ import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import type { CharacterExtras } from '@shared/domain/character'
 import { characterOf } from './rigRead'
-import type { Bounds } from './rigFit'
+import { meshSampleOf, type MeshSample } from './rigSnap'
 import type { GlbSkinAttributes } from './glbSkin'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
@@ -269,8 +269,11 @@ export type SceneRendererOptions = {
     nodeId: string,
     rig: Rig | null,
     extras: CharacterExtras | null,
-    /** What the mesh measures, which is what a fit proportions itself off. */
-    bounds: Bounds | null,
+    /**
+     * What the mesh measures AND what it is made of — the envelope a fit proportions itself off,
+     * and the points that pull each joint inside the body rather than onto that envelope.
+     */
+    sample: MeshSample | null,
   ) => void
   /**
    * The weights this side just worked out, for whoever writes the file back. Only the engine
@@ -3533,7 +3536,7 @@ export class SceneRenderer {
       // Read off the very object that just landed: the skeleton window edits the FILE, and
       // decoding it a second time to read its bones would pay for a million triangles twice.
       const { rig: carried, extras } = characterOf(holder)
-      this.options.onCharacter?.(node.id, carried, extras, rig.bounds)
+      this.options.onCharacter?.(node.id, carried, extras, meshSampleOf(rig))
       // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
       // and a motion laid on a skeleton nobody has read plays on the wrong joints.
       if (carried) this.learnRig(carried, extras?.roles)

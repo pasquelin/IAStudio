@@ -164,6 +164,9 @@ export function rigStateFixture(names: readonly string[]): RigState {
     boneCount: names.length,
     // Nothing once there are bones, which is what the engine answers.
     bounds: rigged ? null : STANDING_BOUNDS,
+    // Empty rather than absent for a bare mesh: a fit with no point to read leaves the joints
+    // where the proportions put them, which is what a suite not testing the shape wants.
+    points: rigged ? null : new Float32Array(),
   }
 }
 

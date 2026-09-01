@@ -8,7 +8,7 @@ import { PANE_TOOLBAR } from '@/components/styles'
 import { TooltipHost } from '@/components/TooltipHost'
 import { WindowTitleBar } from '@/components/WindowTitleBar'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
-import type { Bounds } from '@/engines/scene/rigFit'
+import type { MeshSample } from '@/engines/scene/rigSnap'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
@@ -56,7 +56,9 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   // Empty while the file carries its own skin, which is every character rigged elsewhere. What
   // fills it is fitting a skeleton HERE — the weights are the engine's, and it alone has them.
   const [skins, setSkins] = useState<CharacterSkinning>([])
-  const [bounds, setBounds] = useState<Bounds | null>(null)
+  // What the mesh measures AND what it is made of: a fit reads the first for proportions and
+  // the second to pull each joint inside the body.
+  const [sample, setSample] = useState<MeshSample | null>(null)
   // The node of the workshop scene, which is what the surfaces of the studio address a model by.
   const nodeId = useScenes(state => sceneOf(state, workshopIdOf(assetId)).nodes[0]?.id)
   const picked = useCharacterView(state => state.pickedBone)
@@ -121,8 +123,8 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
       wornDress: wornModelDress,
       environmentDress: environmentDressOf,
       onCharacter: (_nodeId, rig, extras, measured) => {
-        setBounds(measured)
-        stage.read(rig, extras, measured)
+        setSample(measured)
+        stage.read(rig, extras, measured?.bounds ?? null)
       },
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig.
       onSkinning: (_nodeId, weighed) => setSkins(weighed),
@@ -194,7 +196,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             {/* While the FILE is still landing, never while it merely carries no skeleton: a
                 bare mesh is on screen and animatable from the panel beside it, and the sentence
                 sat over a character plainly there. `bounds` is what the engine measured. */}
-            {!bounds && (
+            {!sample && (
               <div className="pointer-events-none absolute inset-0">
                 <EmptyState icon={mdiSkull} message={t('character.window.waiting')} />
               </div>
@@ -202,7 +204,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
           </div>
           <CharacterWindowInspector
             assetId={assetId}
-            bounds={bounds}
+            sample={sample}
             documentId={workshopIdOf(assetId)}
             nodeId={nodeId ?? ''}
           />

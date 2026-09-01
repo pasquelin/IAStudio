@@ -125,6 +125,9 @@ const measured = (studio: Studio, nodeId: string, documentId = frontId(studio)):
     boneCount: 0,
     // A character of about 1.8 m, standing — `rigFitFaultOf` refuses anything flat or lying.
     bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
+    // No vertex to read, so the fit keeps the joints its proportions placed — which is exactly
+    // what a run with no viewport can be scored on.
+    points: new Float32Array(),
   })
 }
 

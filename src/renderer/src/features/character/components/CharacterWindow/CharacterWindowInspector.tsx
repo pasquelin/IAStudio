@@ -16,7 +16,8 @@ import {
   renameCharacterBone,
   setCharacterBoneRole,
 } from '@/engines/character/characterCommands'
-import { rigHandBones, type Bounds } from '@/engines/scene/rigFit'
+import { rigHandBones } from '@/engines/scene/rigFit'
+import type { MeshSample } from '@/engines/scene/rigSnap'
 import { CharacterMotionList } from '../Character/Motion/CharacterMotionList'
 import { CharacterWindowFit } from './CharacterWindowFit'
 import { characterOf, useCharacters } from '@/stores/character'
@@ -27,8 +28,8 @@ export type CharacterWindowInspectorProps = {
   /** The workshop scene this window drives, which is where a motion is tried out. */
   documentId: string
   nodeId: string
-  /** What the engine measured of the mesh, for the rigger that proportions itself off it. */
-  bounds: Bounds | null
+  /** What the engine measured of the mesh, for the rigger that fits itself to it. */
+  sample: MeshSample | null
 }
 
 /**
@@ -39,7 +40,7 @@ export type CharacterWindowInspectorProps = {
  */
 export function CharacterWindowInspector({
   assetId,
-  bounds,
+  sample,
   documentId,
   nodeId,
 }: CharacterWindowInspectorProps) {
@@ -58,7 +59,7 @@ export function CharacterWindowInspector({
           {!rig && (
             <>
               <QuietNote>{t('inspector.rigStatus_staticMesh')}</QuietNote>
-              <CharacterWindowFit assetId={assetId} bounds={bounds} />
+              <CharacterWindowFit assetId={assetId} sample={sample} />
             </>
           )}
           {rig && <QuietNote>{t('inspector.rigReady')}</QuietNote>}
