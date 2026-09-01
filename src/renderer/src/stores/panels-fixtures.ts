@@ -1,6 +1,7 @@
 import type { OpenByZone } from '@pasquelin/panels'
 import { familyOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
-import { declarePanelsOf } from '@/features/shell/panelSpecs'
+import type { ToolState } from '@/helpers/toolRegistry'
+import { declarePanelsOf, panelSpecsOf } from '@/features/shell/panelSpecs'
 import { LAYOUT_KEY } from '@/features/shell/layoutStorage'
 import { panelsStore } from './panels'
 
@@ -26,4 +27,22 @@ export function chassisFor(surface: ToolSurface, open?: OpenByZone<ToolId>): voi
   resetChassis()
   if (open !== undefined) panelsStore.setState({ views: { [familyOf(surface)]: open } })
   declarePanelsOf(surface)
+}
+
+/**
+ * The same chassis, told what the studio holds rather than reading it — the panels a surface
+ * offers are the answers to a `ToolState`, and a test that names it says which case it is about.
+ */
+export function chassisOffering(
+  surface: ToolSurface,
+  state: ToolState,
+  open?: OpenByZone<ToolId>,
+): void {
+  resetChassis()
+  if (open !== undefined) panelsStore.setState({ views: { [familyOf(surface)]: open } })
+
+  const chassis = panelsStore.getState()
+  chassis.declare(panelSpecsOf(surface, state, id => id))
+  chassis.setView(familyOf(surface))
+  chassis.settle()
 }

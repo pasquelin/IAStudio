@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { isHorizontal } from '@pasquelin/panels'
 import {
   SCENARIO_TOOLS,
-  isHorizontal,
   placementIn,
   placementOf,
   placementsOf,

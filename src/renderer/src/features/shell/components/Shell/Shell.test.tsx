@@ -79,11 +79,8 @@ describe('the default layout', () => {
   })
 })
 
-/**
- * A panel a surface cannot offer is a panel NOT DECLARED, and that is the whole of what
- * `shownTools` used to resolve. The half it would have taken falls back to what this surface
- * does declare — and gives it back the day the panel returns.
- */
+// A panel a surface cannot offer is a panel NOT DECLARED. The half it would have taken falls
+// back to what this surface does declare — and gives it back the day the panel returns.
 describe('a panel the surface cannot offer', () => {
   it('is absent from the frame and from the rail, with no project open', () => {
     renderShell()

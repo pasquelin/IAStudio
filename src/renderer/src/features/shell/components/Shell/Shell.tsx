@@ -54,9 +54,8 @@ const dropFocus = (): void => panelsStore.getState().focus(null)
  * The centre takes ONLY documents: an open file and its toolbar. Tool windows live on the edges
  * and never enter it.
  *
- * A panel the surface cannot offer is a panel NOT DECLARED, which is the whole of what used to
- * be `shownTools` and `openEverywhereItSits`: the half it held falls back to what this surface
- * does declare, and takes it back when the panel returns.
+ * A panel the surface cannot offer is a panel NOT DECLARED: the half it held falls back to what
+ * this surface does declare, and takes it back when the panel returns.
  */
 export function Shell() {
   const { t } = useTranslation()

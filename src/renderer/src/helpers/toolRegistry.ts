@@ -25,7 +25,6 @@ import {
   type ToolSlot,
   type ToolSurface,
   type ToolZone,
-  type ZoneSlots,
 } from '@shared/domain/tool'
 import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
@@ -88,24 +87,6 @@ export const TOOLS: readonly Tool[] = TOOL_PLACEMENTS.map(placement => ({
   ...placement,
   icon: ICONS[placement.id],
 }))
-
-/** Indexed once: `TOOLS` never changes, so filtering it on every render is pure waste. */
-const BY_ZONE = TOOLS.reduce<Record<ToolZone, Tool[]>>(
-  (index, tool) => {
-    index[tool.zone].push(tool)
-    return index
-  },
-  { left: [], right: [], top: [], bottomLeft: [], bottomRight: [] },
-)
-
-/**
- * The tools of a zone that the surface actually has. A layer stack means nothing in the audio
- * space: its icon has no business sitting in that rail, and its panel none being restored there
- * by a layout arranged elsewhere.
- */
-export function toolsInZone(zone: ToolZone, surface: ToolSurface): Tool[] {
-  return BY_ZONE[zone].filter(tool => serves(tool, surface))
-}
 
 /** i18n key of a tool's title — never the displayed text. */
 export function toolTitleKey(id: ToolId): string {
@@ -170,78 +151,6 @@ function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   return true
 }
 
-/**
- * One half, resolved: `undefined` is closed, `null` is open on no panel in particular, an id is
- * one the user chose. 🛑 Private — it cannot see the other half, so it does not know a `solo`
- * panel is silencing this one. Every reader goes through `shownTools`.
- */
-function shownTool(
-  tool: ToolId | null | undefined,
-  zone: ToolZone,
-  slot: ToolSlot,
-  surface: ToolSurface,
-  state: ToolState,
-): ToolId | null {
-  if (tool === undefined) return null
-  if (tool === null) return firstToolIn(zone, slot, surface, state)
-
-  // Zone AND half: a stored id that names neither is not this half's business, whether it
-  // belongs to the other column, the other half, or to a band no placement ever cuts.
-  const placement = placementIn(tool, surface)
-  if (placement?.zone === zone && placement.slot === slot) {
-    // The half falls back to what the section does put there rather than to the Models panel,
-    // which the home does not have at all — it stood empty on a home with no project open.
-    return canOffer(tool, surface, state) ? tool : firstToolIn(zone, slot, surface, state)
-  }
-
-  return firstToolIn(zone, slot, surface, state)
-}
-
-/** What a zone's halves hold, once resolved. `null` where the half draws nothing at all. */
-export type ShownTools = { primary: ToolId | null; secondary: ToolId | null }
-
-/**
- * Both halves at once, because one can silence the other: a `solo` panel takes the zone WHOLE.
- * Resolved here rather than in each of the three readers, two of which would contradict it.
- */
-export function shownTools(
-  slots: ZoneSlots | undefined,
-  zone: ToolZone,
-  surface: ToolSurface,
-  state: ToolState,
-): ShownTools {
-  const primary = shownTool(slots?.primary, zone, 'primary', surface, state)
-  if (primary !== null && isSolo(primary, surface)) return { primary, secondary: null }
-
-  return { primary, secondary: shownTool(slots?.secondary, zone, 'secondary', surface, state) }
-}
-
-/** Whether this panel takes its zone whole where it stands. */
-export function isSolo(id: ToolId, surface: ToolSurface): boolean {
-  return placementIn(id, surface)?.solo === true
-}
-
-/**
- * The panel a section puts first in a half — what an unchosen half shows, and the fallback.
- * `sharing` skips the one taking the zone whole, which a half falling back beside it would
- * otherwise answer with again, swallowing the gesture just made.
- */
-export function firstToolIn(
-  zone: ToolZone,
-  slot: ToolSlot,
-  surface: ToolSurface,
-  state: ToolState,
-  sharing = false,
-): ToolId | null {
-  const first = toolsInZone(zone, surface).find(
-    candidate =>
-      candidate.slot === slot &&
-      !(sharing && candidate.solo) &&
-      canOffer(candidate.id, surface, state),
-  )
-  return first ? first.id : null
-}
-
 /** Where the panel sits on this surface, or `null` where it is not on offer right now. */
 export function offeredPlacement(
   id: ToolId,
@@ -253,36 +162,17 @@ export function offeredPlacement(
 }
 
 /**
- * Every panel this section can currently open, across all zones. What the native menu is told,
- * since it lives in the main process and cannot ask a store.
+ * The same answer as ids, read off the stores: what the native menu is told, since it lives in
+ * the main process and cannot subscribe.
  */
 export function availableToolIds(surface: ToolSurface): ToolId[] {
-  const state = toolStateOf()
-  return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state)).map(
-    tool => tool.id,
-  )
+  return toolsOffered(surface, toolStateOf()).map(tool => tool.id)
 }
 
 /**
- * Every panel this surface can offer right now, across all zones, in declaration order — which
- * is the order the rail stacks them in and the order a half falls back through.
- *
- * The whole registry rather than one zone's: the chassis is DECLARED, so the shell hands it the
- * panels it has and the library places them. `availableToolIds` answers the same question for
- * the native menu, which lives in the main process and reads the state rather than subscribing.
+ * Every panel this surface can offer right now, in declaration order — the order the rail stacks
+ * them in and the order a half falls back through. The chassis is DECLARED this list and places it.
  */
 export function toolsOffered(surface: ToolSurface, state: ToolState): Tool[] {
   return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state))
-}
-
-/**
- * The tools of a zone this section can actually offer. Generating without a model is impossible,
- * so the generator is not merely disabled there — it is absent, and the rail shows what the
- * section can do rather than what it cannot.
- *
- * The state is passed in rather than read: `useAvailableTools` subscribes to it, and `canOffer`
- * stays module-private, which is what it was before the hook moved out.
- */
-export function toolsAvailableIn(zone: ToolZone, surface: ToolSurface, state: ToolState): Tool[] {
-  return toolsInZone(zone, surface).filter(tool => canOffer(tool.id, surface, state))
 }

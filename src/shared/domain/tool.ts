@@ -4,6 +4,7 @@
  * enriches it with icons and components. Duplicating it in the main process would degrade
  * `ToolId` to `string` and force a cast back on the other side.
  */
+import type { Slot, Zone, ZoneSlots as ChassisZoneSlots } from '@pasquelin/panels'
 import {
   GENERATIVE_WORKSPACE_IDS,
   LIBRARY_WORKSPACE_IDS,
@@ -39,10 +40,10 @@ export function familyOf(surface: ToolSurface): SurfaceFamily {
 }
 
 /**
- * Where a tool hangs. The bottom band is TWO zones sharing one height: whichever of them is alone
- * runs under the opposite column, and together they split the width between them.
+ * Where a tool hangs — the chassis' own zone, under the studio's name. Types only: `shared/`
+ * holds no runtime dependency, and a type import is erased.
  */
-export type ToolZone = 'left' | 'right' | 'top' | 'bottomLeft' | 'bottomRight'
+export type ToolZone = Zone
 
 export type ToolId =
   | 'assistant'
@@ -79,14 +80,8 @@ export type ToolId =
  */
 export const SCENARIO_TOOLS: readonly ToolId[] = ['generator', 'assets']
 
-/**
- * A zone is cut in two, and each half shows one tool at a time. The rail draws the same cut as
- * a separator: icons above it open in the first half, icons below in the second.
- *
- * `primary` is the half nearest the window edge the zone hangs from — the top of a side column,
- * the left of the bottom strip.
- */
-export type ToolSlot = 'primary' | 'secondary'
+/** A zone is cut in two, and each half shows one tool at a time — the chassis' own slot. */
+export type ToolSlot = Slot
 
 /**
  * Where a tool sits. A tool may declare **more than one**, for disjoint sets of surfaces: the
@@ -140,7 +135,7 @@ export type ToolPlacement = {
  * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
  * the sky in Skyboxes. An id there would impose one section's answer on the other five.
  */
-export type ZoneSlots = Partial<Record<ToolSlot, ToolId | null>>
+export type ZoneSlots = ChassisZoneSlots<ToolId>
 
 /**
  * Tools sharing a zone AND a slot take turns; tools in different slots of the same zone show
@@ -389,14 +384,4 @@ export function placementIn(id: unknown, surface: ToolSurface): ToolPlacement | 
 
 export function serves(placement: ToolPlacement, surface: ToolSurface): boolean {
   return placement.surfaces.includes(surface)
-}
-
-/** Whether the zone is one of the band's halves, which share a height and a resize handle. */
-export function isBottom(zone: ToolZone): boolean {
-  return zone === 'bottomLeft' || zone === 'bottomRight'
-}
-
-/** Horizontal zones: their size is set as a height, not a width. */
-export function isHorizontal(zone: ToolZone): boolean {
-  return zone === 'top' || isBottom(zone)
 }
