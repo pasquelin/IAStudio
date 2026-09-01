@@ -170,7 +170,10 @@ export function describeStudio(data: unknown): string {
 
   const lines = [
     'Studio now:',
-    `  Space: ${state.workspace}${state.surface === state.workspace ? '' : `, showing ${state.surface}`}.`,
+    // 🛑 The command SCOPE beside the space, because the rule of `command.runStudioCommand` sends
+    // a model here for it: an image document is kind `image` and scope `canvas`, so a model
+    // reading the kind composed `image.undo`, which no command answers to.
+    `  Space: ${state.workspace}${state.surface === state.workspace ? '' : `, showing ${state.surface}`}${state.commandScope === null ? '' : `. Commands here are ${state.commandScope}.<verb>`}.`,
     ...documentLines(state.documents),
     ...selectionLine(state.selection),
     ...armedLine(state),

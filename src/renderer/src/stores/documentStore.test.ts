@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createDocumentStore, resetDocumentStoresForTests } from './documentStore'
+import {
+  createDocumentStore,
+  forgetDocumentHistoriesForTests,
+  resetDocumentStoresForTests,
+} from './documentStore'
 import type { Command } from '@/engines/core/history'
 
 /**
@@ -236,5 +240,22 @@ describe('a gesture held over a document', () => {
     runCommand('doc', set('slider', 'b'))
 
     expect(entries(store)).toBe(2)
+  })
+})
+
+/**
+ * 🛑 What a bench decor needs and `resetForTests` cannot give: the documents stay as the decor
+ * left them, and nothing it did is undoable. Asked to take one change back, a model sent
+ * `scene.undo` twice and the second removed the cube the decor had put there.
+ */
+describe('forgetting what the documents can undo', () => {
+  it('empties the history and keeps what the documents hold', () => {
+    const store = storeOf()
+    store.use.getState().runCommand('doc', set('value', 'written'))
+
+    forgetDocumentHistoriesForTests()
+
+    expect(entries(store)).toBe(0)
+    expect(valueOf(store)).toBe('written')
   })
 })

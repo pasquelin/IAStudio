@@ -85,6 +85,8 @@ export type DocumentStore<S> = {
    * with, so in production it would reopen every closed document at once.
    */
   resetForTests: () => void
+  /** Empties every history, keeping what the documents hold — see the free function above. */
+  forgetHistoriesForTests: () => void
 }
 
 /**
@@ -98,11 +100,22 @@ export type DocumentStore<S> = {
  * for the length of its module, and the hook walks the lot each time. Thirty entries at the
  * worst site today; a suite that built thousands would feel it.
  */
-const BUILT: { resetForTests: () => void }[] = []
+const BUILT: { resetForTests: () => void; forgetHistoriesForTests: () => void }[] = []
 
 /** Puts every document store a suite has loaded back as it was built — see `resetForTests`. */
 export function resetDocumentStoresForTests(): void {
   for (const store of BUILT) store.resetForTests()
+}
+
+/**
+ * Empties the undo history of every open document, keeping what they HOLD.
+ *
+ * 🛑 For a bench decor, which lays a scene out through the studio's own actions and must not
+ * leave them undoable: asked to take one change back, a model sent `scene.undo` twice and the
+ * second removed the cube the decor had put there — measured 2026-09-01 on 29.2.
+ */
+export function forgetDocumentHistoriesForTests(): void {
+  for (const store of BUILT) store.forgetHistoriesForTests()
 }
 
 /**
@@ -276,6 +289,17 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
     use.setState({ states: {}, histories: {}, saved: {} })
   }
 
+  const forgetHistoriesForTests = (): void => {
+    gestures.clear()
+    // 🛑 The save marks follow: `isDirty` compares `saved` to the history's mark, so a document
+    // written before this — a decor may save one — would read `Command !== null` for ever after,
+    // and `changed()` would answer true whatever the model did.
+    use.setState(state => ({
+      histories: {},
+      saved: Object.fromEntries(Object.keys(state.saved).map(id => [id, null])),
+    }))
+  }
+
   const store = {
     use,
     stateOf,
@@ -285,6 +309,7 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
     isDirty,
     hasUnsavedWork,
     resetForTests,
+    forgetHistoriesForTests,
   }
   BUILT.push(store)
   return store

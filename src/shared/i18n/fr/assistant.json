@@ -3,7 +3,7 @@
     "actions": {
       "commandRunStudioCommand": {
         "title": "Lancer une commande",
-        "description": "Déclenche une commande du studio par son identifiant, comme le ferait un raccourci clavier ou une entrée de menu. Le document concerné doit être au premier plan."
+        "description": "Déclenche une commande du studio par son identifiant, exactement comme un raccourci clavier ou une entrée de menu. Le document visé doit être devant. Un identifiant s’écrit <portée>.<verbe>, et studio.state répond la portée de ce qui est devant : reprendre une modification d’un document, c’est <portée>.undo — scene.undo, canvas.undo, sequence.undo — et la remettre <portée>.redo. UN appel reprend UN geste, donc un second reprend celui d’avant : relire le document plutôt que de l’envoyer deux fois. Aucune autre action n’annule une modification, files.undoFileOperation ne couvrant que les fichiers du projet."
       },
       "workspaceOpen": {
         "title": "Ouvrir un espace",
@@ -827,7 +827,7 @@
       },
       "worldSetGroundPlane": {
         "title": "Régler le sol de la scène",
-        "description": "Montre ou cache le sol que la scène possède, et règle sa couleur, son côté, son opacité et le fait qu’il reçoive les ombres. Ce sol appartient au document, à la différence de la grille, qui est un réglage de l’application."
+        "description": "Montre ou masque le sol que la scène possède, et règle sa couleur, son côté, son opacité et si les ombres s’y posent. C’est ainsi qu’un sol s’AJOUTE à une scène : une surface ajoutée comme objet reste un objet parmi les autres, pas le sol. Ce sol appartient au document, contrairement à la grille, qui est un réglage de l’application."
       },
       "worldSetToneMapping": {
         "title": "Régler le rendu de la scène",
@@ -899,11 +899,11 @@
       },
       "settingsRead": {
         "title": "Lire les réglages",
-        "description": "Rend tous les réglages que porte le studio, section par section, exactement tels que la fenêtre des réglages les montre."
+        "description": "Répond tous les réglages du studio, section par section, tels que la fenêtre des réglages les montre. Ce que la vue DESSINE vit ici — la grille, les ombres, les repères — comme les unités, le thème et la langue. Aucune action de scène ne les active."
       },
       "settingsWrite": {
         "title": "Changer les réglages",
-        "description": "Écrit un ou plusieurs réglages, section par section. Ce qui n’est pas nommé reste tel quel, et un changement qui ne nomme rien que le studio connaisse est refusé plutôt qu’écrit sans être lu."
+        "description": "Écrit un ou plusieurs réglages, section par section. C’est ainsi que la grille et les ombres s’activent ou se règlent — les lire d’abord, un changement qui ne nomme rien de connu étant refusé plutôt qu’écrit à l’aveugle. Ce qui n’est pas nommé est laissé tel quel."
       },
       "accountsList": {
         "title": "Lister les comptes",
@@ -1027,7 +1027,7 @@
       },
       "componentAttach": {
         "title": "Attacher un composant",
-        "description": "Donne à un objet de la scène quelque chose à FAIRE pendant la partie — sa santé, son mouvement. Refusé si l’objet en porte déjà un du même type."
+        "description": "Donne à un objet de la scène quelque chose à FAIRE pendant la partie — sa santé, son mouvement. C’est ainsi qu’un objet se met à bouger tout seul : node.transform le pose une fois quelque part et il y reste. Refusé si l’objet en porte déjà un de ce type."
       },
       "componentDetach": {
         "title": "Détacher un composant",

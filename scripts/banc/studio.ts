@@ -25,7 +25,10 @@ import { drawing } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { lendPictureMeasure } from '@/features/image/pictureSize'
-import { resetDocumentStoresForTests } from '@/stores/documentStore'
+import {
+  forgetDocumentHistoriesForTests,
+  resetDocumentStoresForTests,
+} from '@/stores/documentStore'
 import { useAssistant } from '@/stores/assistant'
 import { useJobs } from '@/stores/jobs'
 import { noContext } from '@shared/domain/projectContext'
@@ -495,9 +498,15 @@ export async function createStudio(
     },
     wasAt: nodeId => poses.get(nodeId) ?? null,
     settle: () => {
-      // A snapshot, like the poses below — never a write into the studio's own save marks.
-      settled = new Set(unsavedDocumentIds())
       ops.forget()
+      // 🛑 And the documents' own histories, for the reason `ops.forget` empties the file stack:
+      // a decor lays its scene out through the studio's actions, so a second `scene.undo` took
+      // back what the DECOR had put there — 29.2 read a cube that no longer existed.
+      forgetDocumentHistoriesForTests()
+      // 🛑 AFTER the clear, never before: taken first, the set held every document the decor had
+      // laid out — all of them clean a line later — and `changed()` then masked the very ones a
+      // scenario edits. A snapshot all the same, never a write into the studio's own save marks.
+      settled = new Set(unsavedDocumentIds())
       refusals.length = 0
       poses.clear()
       for (const document of Object.values(useDocuments.getState().documents)) {
