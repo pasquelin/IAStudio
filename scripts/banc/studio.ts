@@ -11,6 +11,7 @@ import {
 } from '@shared/domain/document'
 import { documentFileName } from '@shared/domain/documentName'
 import { extensionOf, stemOf } from '@shared/domain/fileName'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
 import type { ModelFamily } from '@shared/domain/model'
@@ -135,6 +136,17 @@ const TYPED_ANSWER = 'Banc'
 /** The brain the window asks, which the MAIN process holds — the door, never the loop. */
 export type Think = StudioBridge['assistant']['think']
 
+/** The folders the real export channel refuses by name — see `folderInsideProject`. */
+const RESERVED_FOLDERS: readonly string[] = ['.git', '.index']
+
+/** The first name nothing holds, `Vue`, then `Vue 2` — what `freeAssetName` answers on a disk. */
+function freePath(disk: MemoryFolder, into: string, stem: string, extension: string): string {
+  for (let at = 1; ; at += 1) {
+    const path = pathIn(into, at === 1 ? `${stem}${extension}` : `${stem} ${at}${extension}`)
+    if (disk.kindOf(path) === null) return path
+  }
+}
+
 export async function createStudio(
   seed: readonly { path: string; kind: FileKind }[],
   think?: Think,
@@ -229,6 +241,24 @@ export async function createStudio(
       undoFile: ops.undo,
       redoFile: ops.redo,
       fileHistory: () => Promise.resolve(ops.can()),
+      /**
+       * 🛑 The stub answered `null` and wrote NOTHING: « exporte la scène dans mon dossier
+       * documents » came back `ok null` over an empty folder, and no oracle could tell the export
+       * from a refusal. The files land on the same disk as everything else, under the folder the
+       * request names — which is what `exportInto` does on a real machine.
+       */
+      exportInto: async request => {
+        // 🛑 The refusal the real channel gives, and the one `stateHandlers.ts` tells apart: the
+        // destination is NAMED, held inside the project, and `.git` and `.index` are not it.
+        if (RESERVED_FOLDERS.includes(request.folder) || request.folder.includes('..')) return null
+
+        await folder.createFolder(request.folder)
+        // `${name}${extension}` with no dot between them, as `main/export/folder.ts` writes it:
+        // an `ExportedFile` carries its extension with the dot, so a second one names `x..glb`.
+        for (const file of request.files)
+          await folder.write(pathIn(request.folder, `${file.name}${file.extension}`))
+        return request.folder
+      },
       fileFacts: relative => {
         const kind = folder.kindOf(relative)
         return Promise.resolve(
@@ -240,6 +270,28 @@ export async function createStudio(
     },
     assets: {
       search: query => catalog.search(query),
+      /**
+       * 🛑 The stub REJECTED, so every still the bench ever took answered « the scene viewport
+       * gave back no still » — a refusal that named the viewport for a port that had simply said
+       * no. The picture lands on the disk and in the catalogue, as an indexing pass files one.
+       */
+      savePicture: async request => {
+        // 🛑 A FREE name, as `freeAssetPath` gives one: two captures of the same view are two
+        // pictures in the studio, and a fixed path filed one row over another — the very lie
+        // `batterie.test.ts` guards under « une copie s'appelle "… 2" ».
+        const path = freePath(folder, DEFAULT_ROLE_PATHS.image, request.name, '.png')
+        await folder.write(path)
+        return await catalog.add({
+          id: `capture-${path}`,
+          // The name WITHOUT the extension, as `localBackend.ts` files one: it lands in the path.
+          name: nameOf(path).replace(/\.png$/, ''),
+          type: 'image',
+          location: 'local',
+          path,
+          tags: [],
+          createdAt: WHEN,
+        })
+      },
       counts: () => catalog.countByType(),
       // Left to the stub until the bench pass of 2026-08-25: tagging an asset was answered by a
       // channel that kept nothing, so « range-la avec des mots-clés » could not be measured.
