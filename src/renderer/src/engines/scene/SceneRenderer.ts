@@ -755,6 +755,16 @@ export class SceneRenderer {
   private groupingStale = true
   /** Nodes that only MOVED since the last grouping — their slots are still theirs. */
   private readonly movedNodes = new Set<string>()
+  /**
+   * The box the shadow frusta are cut from, held across passes. A move only ever GROWS it; it is
+   * dropped when the content changes, which is the one thing that can make it shrink.
+   */
+  private shadowBounds: Box3 | null = null
+  /**
+   * Whether the parent pass has anything to walk. Only content can change where a node hangs —
+   * `keepsItsGroup` reads `parentId`, so a node that merely MOVED kept the parent it had.
+   */
+  private hangAll = true
   /** What the model costs, held between the passes that cannot have changed it. */
   private modelStats: SceneStats = EMPTY_STATS
   private mode: TransformMode = 'select'
@@ -955,21 +965,32 @@ export class SceneRenderer {
     this.animations.setTimeline(state.animation)
     this.sweepCompositions(state)
 
-    // A Set rather than a `some` per object: `apply` runs on every state change, selection
-    // included, and the quadratic form costs milliseconds well before a scene gets large.
-    const alive = new Set<string>()
+    // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
+    // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
     for (const node of state.nodes) {
-      alive.add(node.id)
-      this.syncNode(node)
+      if (this.applied.get(node.id) !== node) this.syncNode(node)
     }
 
-    let stale: string[] | null = null
-    for (const id of this.objects.keys()) if (!alive.has(id)) (stale ??= []).push(id)
-    if (stale) for (const id of stale) this.release(id)
+    // The set of live ids is built only when one can be missing. `applied` holds every node the
+    // last pass knew, so it outgrows the state exactly when a node left it — and building that
+    // set of 50 000 strings on every pass was most of what `apply` spent outside its sub-passes.
+    if (this.applied.size !== state.nodes.length) {
+      const alive = new Set<string>()
+      for (const node of state.nodes) alive.add(node.id)
+      let stale: string[] | null = null
+      for (const id of this.objects.keys()) if (!alive.has(id)) (stale ??= []).push(id)
+      if (stale) for (const id of stale) this.release(id)
+    }
 
     // A second pass, because the first cannot know the order: a child may be synced before the
     // parent it hangs from exists as an object. By here every one of them does.
-    for (const node of state.nodes) this.hangFromParent(node)
+    //
+    // Walked only when the content moved: a pass where nothing but transforms changed cannot
+    // have moved a node under another parent, and walking all of them cost 9,7 ms on 50 000.
+    if (this.hangAll) {
+      for (const node of state.nodes) this.hangFromParent(node)
+      this.hangAll = false
+    }
     this.poseMarkers(state.nodes)
 
     this.selectedIds = state.selectedIds
@@ -1488,6 +1509,10 @@ export class SceneRenderer {
   private markContentChanged(): void {
     this.contentChanged = true
     this.groupingStale = true
+    this.hangAll = true
+    // Only a node leaving or being rebuilt can make the scene SMALLER, so that is the one event
+    // the held box cannot survive.
+    this.shadowBounds = null
   }
 
   /**
@@ -3652,13 +3677,36 @@ export class SceneRenderer {
    * casts something.
    */
   private measureShadowReach(): number {
-    const bounds = boundsOf(this.framedObjects())
+    const bounds = this.heldShadowBounds()
     if (bounds.isEmpty()) return this.view.gridSize
 
     const size = bounds.getSize(new ThreeVector3())
     // The diagonal, not the width: a sun comes in at an angle, and a frustum cut to the exact
     // width of the set clips the shadow its far corner throws across it.
     return Math.max(Math.max(size.x, size.z) * Math.SQRT2, this.view.gridSize)
+  }
+
+  /**
+   * 🛑 Walked in FULL only when the content changed. Reading the box off every object on every
+   * pass was 23.8 ms of the 38.7 one `apply` cost on 50 000 lit nodes — a whole frame budget
+   * spent re-measuring a set that had moved by one node.
+   *
+   * A move grows the box and never shrinks it: a frustum too WIDE loses a little shadow
+   * resolution, one too NARROW clips the shadow off. Bringing an object back from far away
+   * therefore keeps the wider frustum until the next content change.
+   */
+  private heldShadowBounds(): Box3 {
+    if (!this.shadowBounds) {
+      this.shadowBounds = boundsOf(this.framedObjects())
+      return this.shadowBounds
+    }
+    for (const id of this.movedNodes) {
+      const object = this.objects.get(id)
+      if (object && isFramed(this.applied.get(id)?.type ?? 'group')) {
+        this.shadowBounds.expandByObject(object)
+      }
+    }
+    return this.shadowBounds
   }
 
   private buildMesh(node: SceneNode & { type: 'mesh' }): Mesh {
