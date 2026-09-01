@@ -339,7 +339,7 @@
       },
       "clipTrim": {
         "title": "Trim one edge of a clip",
-        "description": "Pulls a clip’s in or out point to the given instant, never past the source behind it. A still has no source to run past and stretches freely."
+        "description": "Pulls a clip’s in or out point to the given instant, never past the source behind it. A still has no source to run past and stretches freely. “at” is an instant on the TIMELINE and never a length: to make a clip two seconds longer, read its “end” and send that plus 2000000."
       },
       "clipSplit": {
         "title": "Cut a clip in two",
@@ -375,7 +375,7 @@
       },
       "trackReorderTracks": {
         "title": "Reorder the tracks",
-        "description": "Raises or lowers a track by the given number of rows, which changes what covers what. A negative number lowers it, a positive one raises it."
+        "description": "Moves a track by the given number of rows, which changes what covers what. The rows are counted from the TOP, so a negative number moves it up and a positive one down — sequence.state answers them in that order, the first being the topmost."
       },
       "trackRename": {
         "title": "Rename a track",

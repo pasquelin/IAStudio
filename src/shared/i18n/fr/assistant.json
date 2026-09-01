@@ -339,7 +339,7 @@
       },
       "clipTrim": {
         "title": "Rogner un bord de bloc",
-        "description": "Tire l’entrée ou la sortie d’un bloc jusqu’à l’instant donné, sans jamais dépasser la source qui est derrière. Une image fixe n’a pas de source à dépasser et s’étire librement."
+        "description": "Tire le point d’entrée ou de sortie d’un clip jusqu’à l’instant donné, jamais au-delà de la source derrière lui. Une image fixe n’a pas de source à dépasser et s’étire librement. « at » est un instant sur la TIMELINE, jamais une durée : pour rallonger un clip de deux secondes, lire son « end » et envoyer cette valeur plus 2000000."
       },
       "clipSplit": {
         "title": "Couper un bloc en deux",
@@ -375,7 +375,7 @@
       },
       "trackReorderTracks": {
         "title": "Changer l’ordre des pistes",
-        "description": "Monte ou descend une piste du nombre de rangs donné, ce qui change ce qui recouvre quoi. Un rang négatif descend, un rang positif monte."
+        "description": "Déplace une piste du nombre de rangs donné, ce qui change ce qui recouvre quoi. Les rangs se comptent depuis le HAUT, donc un nombre négatif la monte et un positif la descend — sequence.state les répond dans cet ordre, la première étant la plus haute."
       },
       "trackRename": {
         "title": "Renommer une piste",
