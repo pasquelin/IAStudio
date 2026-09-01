@@ -8,10 +8,11 @@
 import { app, BrowserWindow } from 'electron'
 import { createServer } from 'vite'
 import { writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+const ROOT = resolve(HERE, '../..')
 const PATIENCE_MS = 30 * 60 * 1000
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -22,8 +23,18 @@ async function main() {
     configFile: false,
     // Port LIBRE, jamais fixe : une fenetre du banc restee ouverte tenait le port, et le
     // lancement suivant mourait au demarrage en laissant croire a un plantage du banc.
-    server: { port: 0, strictPort: false },
+    server: { port: 0, strictPort: false, fs: { allow: [ROOT] } },
     logLevel: 'warn',
+    // Le banc du chantier C importe le VRAI moteur : les alias du dépôt, et ses deux constantes.
+    resolve: {
+      alias: {
+        '@shared': resolve(ROOT, 'src/shared'),
+        '@main': resolve(ROOT, 'src/main'),
+        '@game': resolve(ROOT, 'src/game'),
+        '@': resolve(ROOT, 'src/renderer/src'),
+      },
+    },
+    define: { __DEV__: 'true', __COMMIT_HASH__: JSON.stringify('spike') },
   })
   await server.listen()
   const port = server.httpServer.address().port

@@ -152,6 +152,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/scene-renderer-export.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
+  'src/renderer/src/engines/scene/sceneRendererBatching.test.ts',
   'src/renderer/src/engines/scene/sceneRendererExportOrder.test.ts',
   'src/renderer/src/engines/scene/threeFactory.test.ts',
   'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',

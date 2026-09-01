@@ -326,9 +326,10 @@ export type SceneRendererOptions = {
    */
   onPane?: (pane: number) => void
   /**
-   * How repeated shapes are drawn in fewer calls. `batched` — the default — opens one
-   * `BatchedMesh` per material; `instanced` keeps one `InstancedMesh` per shape and material,
-   * the path measured before the lots, kept so the two can be weighed on the same build.
+   * How repeated shapes are drawn in fewer calls. `instanced` — the default — opens one
+   * `InstancedMesh` per shape and material, split into regions; `batched` opens one `BatchedMesh`
+   * per material. Measured on this Mac, 2026-09-02, the lot costs MORE CPU on every scene: its
+   * per-instance cull and sort run once per pass, 10.4 ms against 3.1 a frame on 10 000 bodies.
    */
   grouping?: GroupingStrategy
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
@@ -868,9 +869,7 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
-    this.instances = (
-      options.grouping === 'instanced' ? createInstancedGroups : createBatchedGroups
-    )(
+    this.instances = (options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups)(
       this.viewport.scene,
       mesh =>
         // What the document dresses it in, never what a view left on it: an instance born during

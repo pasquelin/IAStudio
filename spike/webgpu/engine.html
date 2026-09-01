@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Chantier C — le vrai moteur, instancié contre lots</title>
+<style>
+  body { background: #0d0f14; color: #cfd6e4; font: 13px ui-monospace, monospace; margin: 0; padding: 12px; }
+  #stage > div { transform: scale(0.5); transform-origin: top left; border: 1px solid #2a3040; }
+  #stage { height: 460px; }
+  #log { margin-top: 8px; }
+</style>
+<body>
+  <div id="stage"></div>
+  <div id="log">démarrage…</div>
+  <script type="module">
+    import { runEngine } from './engineBench.ts'
+    const log = document.querySelector('#log')
+    window.__done = false
+    runEngine(step => { log.textContent = `${step.scene} ${step.grouping} — ${step.phase}` })
+      .then(report => { window.__report = report; window.__done = true; log.textContent = 'terminé' })
+      .catch(error => {
+        window.__report = { results: [], failures: [{ fatal: String(error?.stack ?? error) }] }
+        window.__done = true
+        log.textContent = `échec : ${error}`
+      })
+  </script>
+</body>

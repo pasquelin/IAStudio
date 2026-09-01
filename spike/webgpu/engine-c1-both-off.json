@@ -1,0 +1,116 @@
+{
+  "at": "2026-09-01T22:20:08.501Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "scene": "S1",
+      "grouping": "batched",
+      "bodies": 544,
+      "firstApplyMs": 20.9,
+      "applyStillMs": 0.1,
+      "applyOneMovedMs": 0.1,
+      "applyOneAddedMs": 3.5,
+      "fullFrameCpuMs": 1.2,
+      "fullScenePassCpuMs": 0.333,
+      "fullFrameMs": 8.3,
+      "fullFps": 120.482,
+      "fullGpuMs": 1.417,
+      "fullDrawCalls": 122,
+      "fullMultiDrawCalls": 26,
+      "fullInstancedCalls": 0,
+      "fullPlainCalls": 96,
+      "fullBodiesByLot": 1000,
+      "fullBodiesByInstance": 0,
+      "fullTriangles": 394024,
+      "turnedShareInView": 30.147,
+      "turnedFrameCpuMs": 1,
+      "turnedScenePassCpuMs": 0.247,
+      "turnedFrameMs": 8.3,
+      "turnedFps": 120.482,
+      "turnedGpuMs": 0.739,
+      "turnedDrawCalls": 90,
+      "turnedMultiDrawCalls": 26,
+      "turnedInstancedCalls": 0,
+      "turnedPlainCalls": 64,
+      "turnedBodiesByLot": 1000,
+      "turnedBodiesByInstance": 0,
+      "turnedTriangles": 388256,
+      "heapBefore": 13.025,
+      "heapLoaded": 22.832,
+      "heapEdited": 26.835
+    },
+    {
+      "scene": "S2",
+      "grouping": "batched",
+      "bodies": 10000,
+      "firstApplyMs": 103,
+      "applyStillMs": 0.5,
+      "applyOneMovedMs": 0.7,
+      "applyOneAddedMs": 19.2,
+      "fullFrameCpuMs": 7.1,
+      "fullScenePassCpuMs": 1.513,
+      "fullFrameMs": 13.8,
+      "fullFps": 72.464,
+      "fullGpuMs": 3.428,
+      "fullDrawCalls": 25,
+      "fullMultiDrawCalls": 16,
+      "fullInstancedCalls": 0,
+      "fullPlainCalls": 9,
+      "fullBodiesByLot": 20000,
+      "fullBodiesByInstance": 0,
+      "fullTriangles": 2853144,
+      "turnedShareInView": 30,
+      "turnedFrameCpuMs": 7.1,
+      "turnedScenePassCpuMs": 1.487,
+      "turnedFrameMs": 12.8,
+      "turnedFps": 78.125,
+      "turnedGpuMs": 2.466,
+      "turnedDrawCalls": 25,
+      "turnedMultiDrawCalls": 16,
+      "turnedInstancedCalls": 0,
+      "turnedPlainCalls": 9,
+      "turnedBodiesByLot": 20000,
+      "turnedBodiesByInstance": 0,
+      "turnedTriangles": 2853144,
+      "heapBefore": 27.809,
+      "heapLoaded": 70.335,
+      "heapEdited": 86.296
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2002,
+      "phase": "S1 batched — 70 % hors champ",
+      "workingSetKb": 171776
+    },
+    {
+      "at": 4008,
+      "phase": "S2 batched — plein champ",
+      "workingSetKb": 272688
+    },
+    {
+      "at": 6010,
+      "phase": "S2 batched — plein champ",
+      "workingSetKb": 278224
+    },
+    {
+      "at": 8012,
+      "phase": "S2 batched — 70 % hors champ",
+      "workingSetKb": 288464
+    },
+    {
+      "at": 10013,
+      "phase": "S2 batched — 100 éditions",
+      "workingSetKb": 288656
+    },
+    {
+      "at": 12017,
+      "phase": "fin",
+      "workingSetKb": 284272
+    }
+  ]
+}
