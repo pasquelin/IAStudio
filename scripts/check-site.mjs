@@ -88,6 +88,18 @@ for (const [quoi, motif] of [
   if (!liens.some((l) => motif.test(l.href))) griefs.push(`aucun lien vers ${quoi}.`)
 }
 
+/* ------------------------------------------------------------ le contact */
+/* Une adresse écrite en clair sur une page publique est moissonnée par les robots dans
+   la journée. Le contact passe par LinkedIn, sur les trois vitrines : joignable, et sans
+   rien laisser d'automatiquement exploitable. */
+const enClair = [...page.matchAll(/mailto:[^"'\s>]+|[\w.%+-]+@[\w.-]+\.[a-z]{2,}/gi)].map((m) => m[0])
+if (enClair.length > 0) {
+  griefs.push(`adresse en clair sur la page : ${[...new Set(enClair)].join(', ')}.`)
+}
+if (!liens.some((l) => /linkedin\.com/i.test(l.href))) {
+  griefs.push(`aucun lien de contact vers LinkedIn.`)
+}
+
 /* ------------------------------------------------------- les ancres internes */
 /* Une ancre qui ne vise aucune section est un lien mort que rien ne signale : le
    navigateur ne bouge pas, et personne ne sait pourquoi. */
