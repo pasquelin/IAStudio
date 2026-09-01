@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_ACCOUNT_NAME, ENVIRONMENT_ACCOUNT_ID } from '@shared/domain/account'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DEFAULT_ACCOUNT_NAME } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
-import type { StoredAccount } from './accounts'
 import { memoryAdapter, type MemoryAdapter } from './memoryAdapter'
 import { createSettingsStore, type SettingsStore } from './store'
 
@@ -31,6 +30,35 @@ describe('settings store', () => {
   it('falls back to the defaults when the stored settings are unusable', () => {
     adapter.raw.set('settings', { appearance: { theme: 'purple' } })
     expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
+  })
+
+  /**
+   * A read cost a zod pass over the whole file and a rebuild of fifteen sections, and the main
+   * process asks from many hot paths — `services.ts` alone eighteen times.
+   */
+  it('reads the stored settings once, and again after a write', () => {
+    const store = createSettingsStore(adapter)
+    const reads = vi.spyOn(adapter, 'read')
+
+    store.read()
+    store.read()
+    expect(reads.mock.calls.filter(([key]) => key === 'settings')).toHaveLength(1)
+
+    store.write({ appearance: { density: 'compact' } })
+    expect(store.read().appearance.density).toBe('compact')
+    expect(reads.mock.calls.filter(([key]) => key === 'settings').length).toBeGreaterThan(1)
+  })
+
+  /**
+   * Held between reads means SHARED between callers: one of them writing into a section would
+   * change what every other reads, while the file behind it still said the old thing.
+   */
+  it('hands back settings nobody can write into', () => {
+    const settings = createSettingsStore(adapter).read()
+
+    expect(() => {
+      settings.appearance.density = 'compact'
+    }).toThrow()
   })
 
   it('merges a partial write section by section', () => {
@@ -117,7 +145,7 @@ describe('settings store', () => {
   it('stores the whole book encrypted, never in clear', () => {
     storeWithAccount()
     expect(String(adapter.raw.get('accounts'))).toBe(
-      'enc:{"accounts":[{"id":"id-1","name":"Studio","credentials":{"key":"api_k","secret":"s3cr3t"}}],"activeId":"id-1"}',
+      'enc:{"accounts":[{"id":"id-1","name":"Studio","credentials":{"key":"api_k","secret":"s3cr3t"}}],"activeByProvider":{"scenario":"id-1"}}',
     )
   })
 
@@ -249,102 +277,6 @@ describe('settings store', () => {
   })
 })
 
-describe('the development account in the store', () => {
-  const ENVIRONMENT: StoredAccount = {
-    id: ENVIRONMENT_ACCOUNT_ID,
-    name: 'Development',
-    credentials: { key: 'env_key', secret: 'env_secret' },
-    origin: 'environment',
-  }
-
-  let adapter: MemoryAdapter
-
-  beforeEach(() => {
-    adapter = memoryAdapter()
-  })
-
-  const storeWithEnvironment = (): SettingsStore =>
-    createSettingsStore(adapter, {
-      newAccountId: countingIds(),
-      environmentAccount: () => ENVIRONMENT,
-    })
-
-  it('answers with it on a machine that has stored nothing', () => {
-    const store = storeWithEnvironment()
-
-    expect(store.accounts()).toEqual([
-      { id: ENVIRONMENT_ACCOUNT_ID, name: 'Development', active: true, readOnly: true },
-    ])
-    expect(store.readCredentials()).toEqual({ key: 'env_key', secret: 'env_secret' })
-    expect(store.hasCredentials()).toBe(true)
-  })
-
-  /**
-   * The keychain holds what the user typed and nothing else. Persisting a copy of the file
-   * would outlive the file: delete `secrets/.env` and the studio would go on spending the key
-   * it had squirrelled away, with a row nothing on screen could explain.
-   */
-  it('never writes it to the keychain', () => {
-    const store = storeWithEnvironment()
-    store.addAccount('Studio', { key: 'api_k', secret: 's3cr3t' })
-
-    const written: unknown = JSON.parse(adapter.decrypt(adapter.read<string>('accounts') ?? ''))
-
-    expect(written).toEqual({
-      accounts: [{ id: 'id-1', name: 'Studio', credentials: { key: 'api_k', secret: 's3cr3t' } }],
-      activeId: ENVIRONMENT_ACCOUNT_ID,
-    })
-  })
-
-  // The file is gone, and the choice it left behind cannot be honoured: the studio falls
-  // through to the key the user typed rather than to nothing at all.
-  it('hands over to a stored account once the file is gone', () => {
-    storeWithEnvironment().addAccount('Studio', { key: 'api_k', secret: 's3cr3t' })
-    const store = createSettingsStore(adapter, { environmentAccount: () => null })
-
-    expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
-  })
-
-  // The rule every account follows: adding a key is configuring, not switching.
-  it('stays in use when a first key is stored beside it', () => {
-    const store = storeWithEnvironment()
-    const change = store.addAccount('Studio', { key: 'api_k', secret: 's3cr3t' })
-
-    expect(change.credentialsChanged).toBe(false)
-    expect(store.readCredentials()).toEqual({ key: 'env_key', secret: 'env_secret' })
-  })
-
-  it('hands over once the stored account is switched to', () => {
-    const store = storeWithEnvironment()
-    store.addAccount('Studio', { key: 'api_k', secret: 's3cr3t' })
-
-    expect(store.activateAccount('id-1').credentialsChanged).toBe(true)
-    expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
-  })
-
-  it('refuses to rename or remove it', () => {
-    const store = storeWithEnvironment()
-
-    expect(() => store.renameAccount(ENVIRONMENT_ACCOUNT_ID, 'Mine')).toThrow('read-only-account')
-    expect(() => store.removeAccount(ENVIRONMENT_ACCOUNT_ID)).toThrow('read-only-account')
-  })
-
-  // Locked keychain in development: the file is still readable, and the studio still runs.
-  it('still answers when the stored book cannot be read', () => {
-    adapter.raw.set('accounts', 'not encrypted by us')
-    const store = storeWithEnvironment()
-
-    expect(store.readCredentials()).toEqual({ key: 'env_key', secret: 'env_secret' })
-  })
-
-  it('leaves the account list empty once the file is gone', () => {
-    const store = createSettingsStore(adapter, { environmentAccount: () => null })
-
-    expect(store.accounts()).toEqual([])
-    expect(store.readCredentials()).toBeNull()
-  })
-})
-
 describe('carrying a single-credential install over', () => {
   let adapter: MemoryAdapter
 
@@ -377,7 +309,7 @@ describe('carrying a single-credential install over', () => {
     store.settleAccounts()
 
     expect(adapter.raw.has('credentials')).toBe(false)
-    expect(String(adapter.raw.get('accounts'))).toContain('"name":"Scenario"')
+    expect(String(adapter.raw.get('accounts'))).toContain(`"name":"${DEFAULT_ACCOUNT_NAME}"`)
     expect(store.readCredentials()).toEqual({ key: 'api_k', secret: 's3cr3t' })
   })
 

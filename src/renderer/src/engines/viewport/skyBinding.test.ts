@@ -1,14 +1,24 @@
 import { SRGBColorSpace, Texture, type ColorSpace } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import type { EnvironmentRef } from '@shared/domain/scene'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
+import type { EnvironmentDress } from '@shared/domain/skybox'
 import { createTextureCache } from '../scene/textureCache'
 import { createSkyBinding } from './skyBinding'
 import { fakeEnvironment, fakeTextureSource } from './viewport-fixtures'
 
-const SKY: EnvironmentRef = { kind: 'skybox', assetId: 'sky-1' }
-const OTHER: EnvironmentRef = { kind: 'skybox', assetId: 'sky-2' }
-const THIRD: EnvironmentRef = { kind: 'skybox', assetId: 'sky-3' }
-const STUDIO: EnvironmentRef = { kind: 'studio' }
+/** A picture hung on its own — what `environmentDressOf` answers for a `skybox` reference. */
+const hung = (assetId: string): EnvironmentDress => ({
+  assetId,
+  adjustments: NEUTRAL_ADJUSTMENTS,
+  sun: null,
+  intensity: 1,
+})
+
+const SKY = hung('sky-1')
+const OTHER = hung('sky-2')
+const THIRD = hung('sky-3')
+/** The procedural studio: a scene naming no sky, and one whose sky has not landed yet. */
+const STUDIO = null
 
 describe('createSkyBinding', () => {
   let source: ReturnType<typeof fakeTextureSource>
@@ -28,9 +38,34 @@ describe('createSkyBinding', () => {
     const environment = fakeEnvironment()
     await binding().apply(environment, SKY)
 
-    expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+    expect(source.load).toHaveBeenCalledWith('ia-studio://asset/sky-1', 'flipY')
     expect(environment.setTexture).toHaveBeenCalled()
     expect(environment.refresh).toHaveBeenCalled()
+  })
+
+  /**
+   * The grading of a sky moves while its picture does not — an exposure turned in the sky's own
+   * tab. Pushed after the « already shown » shortcut, the scene would keep the raw picture until
+   * the sky was swapped for another.
+   */
+  it('pushes the grading even when the picture has not moved', async () => {
+    const sky = binding()
+    const environment = fakeEnvironment()
+    const graded = { ...SKY, adjustments: { ...NEUTRAL_ADJUSTMENTS, exposure: 1.5 } }
+
+    await sky.apply(environment, SKY)
+    await sky.apply(environment, graded)
+
+    expect(environment.setAdjustments).toHaveBeenLastCalledWith(graded.adjustments)
+    expect(source.load).toHaveBeenCalledTimes(1)
+  })
+
+  it('grades nothing for a scene lit by the procedural studio', async () => {
+    const environment = fakeEnvironment()
+
+    await binding().apply(environment, STUDIO)
+
+    expect(environment.setAdjustments).toHaveBeenCalledWith(NEUTRAL_ADJUSTMENTS)
   })
 
   it('reads the file once, however many times the same choice comes back', async () => {
@@ -63,7 +98,7 @@ describe('createSkyBinding', () => {
     await sky.refresh()
 
     expect(source.load).toHaveBeenCalledTimes(2)
-    expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
+    expect(source.load).toHaveBeenLastCalledWith('ia-studio://asset/sky-1?v=after', 'flipY')
   })
 
   it('refreshes nothing before a sky has been asked for', async () => {
@@ -92,8 +127,8 @@ describe('createSkyBinding', () => {
     const second = sky.apply(environment, SKY)
 
     const newer = new Texture()
-    settle.get('scenario://asset/sky-1?v=v2')?.(newer)
-    settle.get('scenario://asset/sky-1?v=v1')?.(new Texture())
+    settle.get('ia-studio://asset/sky-1?v=v2')?.(newer)
+    settle.get('ia-studio://asset/sky-1?v=v1')?.(new Texture())
     await Promise.all([first, second])
 
     expect(environment.setTexture).toHaveBeenLastCalledWith(newer)

@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterEach, beforeAll } from 'vitest'
+import { afterEach, beforeAll, vi } from 'vitest'
+
+vi.mock('three/addons/libs/meshopt_decoder.module.js', () => ({
+  MeshoptDecoder: { supported: true, ready: Promise.resolve() },
+}))
 import {
   handleRequest,
   type AudioWorkerRequest,
@@ -8,8 +12,10 @@ import {
 } from '@/engines/audio/audioRender'
 import { initI18n } from '@/i18n'
 import { forgetRememberedAssets, useAssets } from '@/stores/assets'
-// The rule that needs no browser, shared with the `renderer-node` project — it says why there.
-// Its `beforeEach` registers on import, so it runs before the hooks written below.
+import { forgetAssetRevisions } from '@/stores/assetRevisions'
+// The rules that need no browser, shared with the `renderer-node` project — it says why there.
+// Imports are hoisted, so the user agent it pins is in place before anything below reads it, and
+// its `beforeEach` registers before the hooks written here.
 import './testSetupStores'
 
 /**
@@ -315,3 +321,6 @@ afterEach(() => useAssets.getState().cancelInvalidate())
  * case puts in the catalogue would answer a lookup in the next.
  */
 afterEach(forgetRememberedAssets)
+
+/** And the stamps beside them: `assetVersionOf` reads the registry FIRST — see `assetRevisions`. */
+afterEach(forgetAssetRevisions)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { domainFromSignature, SIGNATURE_BYTES } from './domainFromSignature'
+import { domainFromSignature, extensionFromSignature, SIGNATURE_BYTES } from './domainFromSignature'
 
 const header = (...parts: (string | number)[]): Uint8Array => {
   const bytes = new Uint8Array(SIGNATURE_BYTES)
@@ -46,5 +46,34 @@ describe('domainFromSignature', () => {
   it('answers nothing for bytes it does not know', () => {
     expect(domainFromSignature(header('hello, this is prose'))).toBeNull()
     expect(domainFromSignature(new Uint8Array(0))).toBeNull()
+  })
+})
+
+/**
+ * 🛑 MEASURED 2026-08-31 against a live service: it answered a picture at
+ * `…/generated_image.png` whose bytes are a JPEG. A name a SERVICE invented cannot be trusted;
+ * one the person wrote still wins, which is why `domainFromSignature` is asked only without one.
+ */
+describe('extensionFromSignature', () => {
+  const withMagic = (magic: readonly number[], at = 0): Uint8Array => {
+    const bytes = new Uint8Array(SIGNATURE_BYTES)
+    magic.forEach((byte, index) => (bytes[at + index] = byte))
+    return bytes
+  }
+
+  it('names a file by what its first bytes are', () => {
+    expect(extensionFromSignature(withMagic([0x89, 0x50, 0x4e, 0x47]))).toBe('.png')
+    expect(extensionFromSignature(withMagic([0xff, 0xd8, 0xff]))).toBe('.jpg')
+    expect(extensionFromSignature(withMagic([0x67, 0x6c, 0x54, 0x46]))).toBe('.glb')
+  })
+
+  // The one the measurement is about: a JPEG served under a `.png` URL.
+  it('contradicts a suffix a service invented', () => {
+    expect(extensionFromSignature(withMagic([0xff, 0xd8, 0xff]))).not.toBe('.png')
+  })
+
+  it('answers nothing for bytes the table names no suffix for', () => {
+    expect(extensionFromSignature(withMagic([0x1a, 0x45, 0xdf, 0xa3]))).toBeNull()
+    expect(extensionFromSignature(withMagic([0x00, 0x01, 0x02]))).toBeNull()
   })
 })

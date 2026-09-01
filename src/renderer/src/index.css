@@ -58,6 +58,27 @@
    * Restated darker in the light theme, where a lighter blue would be the wrong direction.
    */
   --color-accent-ink: #6193f3;
+
+  /*
+   * One hue per section, worn by GLYPHS alone — never by a word, which WCAG 1.4.3 would hold to
+   * 4.5 and which would turn a folder listing into seven colours shouting at once.
+   *
+   * 🛑 Redundant by design: the icons already differ in SHAPE, so the colour reinforces and never
+   * carries alone (WCAG 1.4.1). And every hue sits at least 57° from the accent's 222°, because a
+   * blue glyph beside an unselected row would say « chosen » — the one thing accent means here.
+   *
+   * MEASURED on the three grounds an icon lands on AND on each of them under a CHOSEN row, which
+   * fills `bg-accent-soft` and is the tightest of the six: 3.08 to 3.53:1 there against 5.60 to
+   * 7.12 on a bare ground, where 1.4.11 asks 3. It is the selected row the first measurement
+   * missed — the seven read 2.45 to 2.48 on it, and the guard looked only at the bare grounds.
+   */
+  --color-domain-image: #de8cbb;
+  --color-domain-video: #de928a;
+  --color-domain-3d: #ca9f47;
+  --color-domain-code: #88b334;
+  --color-domain-audio: #37be37;
+  --color-domain-skyboxes: #36b998;
+  --color-domain-materials: #cb8fde;
   /*
    * What is written ON that fill, declared HERE and not only in the daisyUI blocks: three dock
    * components read `text-accent-content`, and leaving the name to daisyUI's variable map would
@@ -303,6 +324,21 @@
   initial-value: 18px;
 }
 
+/* Registered for the same reason, and it is what lets the one below be DERIVED at all:
+   `useGauge` reads it back, and an unregistered `calc()` reads as its own text. */
+@property --sc-spotlight-card {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 168px;
+}
+
+/* Its stand-in, registered for the same reason and derived for the same one. */
+@property --sc-spotlight-banner {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 76px;
+}
+
 /*
  * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
  * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
@@ -313,7 +349,7 @@
  * `default` is what paints the window before the renderer has published the attribute.
  */
 @plugin 'daisyui/theme' {
-  name: 'scenario-dark';
+  name: 'iastudio-dark';
   default: true;
   prefersdark: true;
   color-scheme: dark;
@@ -368,7 +404,7 @@
  * them would leave the panels white and the viewport dark.
  */
 @plugin 'daisyui/theme' {
-  name: 'scenario-light';
+  name: 'iastudio-light';
   color-scheme: light;
 
   --color-base-100: #f5f6f8;
@@ -408,6 +444,15 @@
   --border: 1px;
   --depth: 0;
   --noise: 0;
+
+  /* The same seven hues, darkened. Tightest is a chosen row at 3.08, against 3.95 bare. */
+  --color-domain-image: #c42381;
+  --color-domain-video: #c83124;
+  --color-domain-3d: #896419;
+  --color-domain-code: #557414;
+  --color-domain-audio: #167b16;
+  --color-domain-skyboxes: #157860;
+  --color-domain-materials: #a925d5;
 
   --color-chassis: #dcdde1;
   --color-panel: #ffffff;
@@ -505,6 +550,38 @@
      drawn behind as a div, so a single pair of values answers every slider of the studio. */
   --sc-slider-rail: 4px;
   --sc-slider-thumb: 14px;
+  /* Every menu of figures the studio offers — snap steps, turn divisions, fly speeds. The COUNT
+     lives here beside the track because both are what make four menus read as one family: a width
+     alone still let a short list lay itself out three across.
+     In `ch` and not pixels, for the reason `--sc-tooltip` gives below: the cells wear
+     `--text-tiny`, which follows `appearance.fontScale` up to 1.4, and a fixed track would wrap
+     `10000 mm` onto a second line inside a box whose height cannot grow. Out of the density block
+     with it — what sets this width is the text, and density does not move the text.
+     Eleven, measured 2026-08-25: the two longest readings any menu prints, `×0,015625` and
+     `10000 mm`, both draw 56px against the 68px a cell leaves inside its padding. */
+  --sc-value-grid: repeat(4, 11ch);
+  /* How wide the home's column is allowed to grow. Not a density gauge — it does not change with
+     one — but a gauge all the same, so no component writes the number. On a 2 000px display an
+     unbounded column put a row's label at one edge and its value at the other; the rails narrow
+     the centre for a workspace, and the home has none of them open on most of its width. */
+  --sc-home-width: 1100px;
+  /* How wide the conversation is allowed to grow where its host is a whole window — the empty
+     centre. Derived, like the card above: the thread is prose under `--text-*`, so a fixed cap
+     would widen the measure in characters at every step of the scale. 520px at scale 1 is about
+     86 characters of `--text-xs`, measured against 760px giving 126 of it. The right column caps
+     itself by being a column, so nothing reads this there. */
+  --sc-chat-width: calc(520px * var(--sc-font-scale));
+  /* How tall a card of the home's top band stands. A gauge because the rail is handed a NUMBER,
+     and derived because the card is prose under `--text-*`: at scale 1.4 its four clamped lines
+     no longer fit a 168px box, and `overflow` cuts the fourth through the middle — for exactly
+     the readers who enlarged the text. Registered above, or `useGauge` reads the calc as text. */
+  --sc-spotlight-card: calc(168px * var(--sc-font-scale));
+  /* The same band LAID DOWN — one card taking the width. Its stand-in reserved 76px flat, right
+     at scale 1 and short by a third at 1.4: the jump the stand-in exists to prevent. */
+  --sc-spotlight-banner: calc(76px * var(--sc-font-scale));
+  /* The coverage bar of the home's models band. Bounded, and short on purpose: a bar running the
+     width of the page reads as a download in progress rather than as a proportion. */
+  --sc-verdict-bar: 320px;
   /* The glyph a `ToolButton` draws on a header. RECOPIED from `HOSTS.header.glyph`, which takes a
      number and not a gauge — `design/styles.test.ts` holds the two together, since moving one
      alone would shift the lean below by half its change and nothing would say so. */
@@ -516,6 +593,10 @@
   /* The room every property line keeps at its end, drawn into or not — two controls, the most any
      line asks for: padlock and reset on Scale, browse and clear on a link. */
   --sc-row-actions: calc(var(--sc-control) * 2);
+  /* Where a surface laid BESIDE the pane's tool column starts. Derived, so a density that moves
+     the control moves it too: `left-2` under the column (8px), its border and `p-1` on both
+     sides (10px), and 8px of air between the two. */
+  --sc-pane-aside: calc(var(--sc-control) + 26px);
   /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
      `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
@@ -542,6 +623,14 @@
      also loosened the documents panel, which stacks the same two steps. Flat, for the reason
      above. */
   --sc-row-filled: 44px;
+  /* A list row whose PICTURE is what one reads — the asset shelf. Two steps of text fit in 36;
+     a thumbnail one can recognise does not, and 28px of picture showed a colour, not a subject. */
+  --sc-row-media: 48px;
+  /* The room a row keeps around the picture it carries — ONE number, so every thumbnail of the
+     studio is inset the same however tall its line is. Same at both densities: the padding is
+     what stays constant, the picture is what shrinks. What a picture then measures is derived
+     from it in `ROW_MEDIA_*`, which is where the three shapes are written. */
+  --sc-row-pad: 4px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
   --sc-rail-button: 36px;
@@ -603,6 +692,7 @@
   --sc-slider-thumb: 12px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
+  --sc-row-media: 42px;
   --sc-rail: 42px;
   --sc-rail-button: 32px;
   --sc-gutter: 4px;
@@ -736,25 +826,6 @@ body,
 :fullscreen,
 :fullscreen::backdrop {
   background: var(--color-monitor);
-}
-
-/*
- * A surface that scrolls without saying so.
- *
- * For the conversation, and it is the one place it belongs: a thread reads as a page of words, and
- * a bar down its side turns it back into a scrolling box. Everywhere else in the studio the bar is
- * information — a panel of layers, a list of assets, an inspector all use it to say how much more
- * there is.
- *
- * A utility rather than a class written in the component, so the two spellings it takes — the
- * WebKit pseudo-element and the standard property — stay together. They are one rule.
- */
-@utility scrollbar-none {
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 /*

@@ -1,4 +1,4 @@
-# Scenario Studio — architecture
+# IA Studio — architecture
 
 How the studio is built, and why it is built that way. Written for someone picking the codebase
 up. Looking for how to *use* it? See [user-guide.md](user-guide.md).
@@ -36,7 +36,7 @@ Electron, three targets, one repository.
         │  main process         Node, full privilege  │
         │                                             │
         │  · API credentials, encrypted by the OS     │
-        │  · Scenario SDK client                      │
+        │  · provider SDK client                      │
         │  · JobManager — the only thing that polls   │
         │  · ModelRegistry — schemas → descriptors    │
         │  · SQLite catalogue, project folders        │
@@ -128,7 +128,7 @@ mesh in a burst, and bounding that burst to a single thread keeps the rest of th
 responsive. All three are wiring only: the catalogue, the dispatch, the audio arithmetic and the
 BVH build are tested on their own, without a worker in sight.
 
-**What waits for an answer is a module, not a private map.** `bvh-inflight.ts` holds the requests
+**What waits for an answer is a module, not a private map.** `bvhInflight.ts` holds the requests
 sent to the worker and the promises waiting on them, and it reports how many are out. The reason
 is not elegance: while that map lived inside the builder's closure, the line sweeping it after a
 refused send was an assurance no test could reach — emptied, the gate stayed green. **A register
@@ -155,7 +155,7 @@ sides import it; neither can drift.
 renderer                    preload                  main
 ────────                    ───────                  ────
 getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
-  .scenario                 exposeInMainWorld       handlers derived from the channel
+  .provider                 exposeInMainWorld       handlers derived from the channel
   .searchModels(q)          contextBridge           returns typed data
 ```
 
@@ -166,7 +166,7 @@ Twenty-one prefixes, the busiest being:
 
 | Family | Count | What it carries |
 |---|---|---|
-| `scenario:*` | 13 | model search, model description, generation, job control |
+| `provider:*` | 13 | model search, model description, generation, job control |
 | `assets:*` / `cloud:*` | 9 + 6 | project catalogue, ingestion, and the account's library |
 | `dictation:*` | 8 | microphone permissions, model, recognition session |
 | `settings:*` / `accounts:*` | 6 + 5 | read, write, credentials, authentication state |
@@ -174,7 +174,7 @@ Twenty-one prefixes, the busiest being:
 | `styles:*` | 4 | material settings, saved and replayed |
 | `favorites:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 each | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 each | — |
+| `activity:*`, `diagnostics:*`, `scene:*`, `material:*`, `skybox:*` | 1 each | — |
 
 **`EVENTS` is the other direction** — main pushing to the renderer, eighteen entries: job and
 media progress, log lines, project and settings changes, window state, dictation previews, and the
@@ -184,7 +184,7 @@ the scene.
 The split is not cosmetic: **every `on…` on the bridge subscribes to exactly one entry of
 `EVENTS`**, and every call method maps to exactly one of `CHANNELS`.
 
-Local files are served to the renderer over a custom `scenario://` protocol. The URL is derived
+Local files are served to the renderer over a custom `ia-studio://` protocol. The URL is derived
 from the asset identifier, so a grid of thumbnails costs no IPC at all — and the renderer still
 never handles a file path.
 
@@ -194,9 +194,9 @@ never handles a file path.
 
 ```
 src/main/
-├── scenario/
+├── provider/
 │   ├── client.ts            the @scenario-labs/sdk client, built from stored credentials
-│   ├── credentials.ts       reading, validating, and reporting auth state
+│   ├── credentialsWatch.ts  when the active key changes, what must be reread
 │   ├── modelRegistry.ts     GET /models/{id} → FieldDescriptor[]
 │   ├── modelCatalog.ts      paginated model listing, cached
 │   ├── jobManager.ts        the queue, the concurrency, the polling
@@ -213,7 +213,7 @@ src/main/
 │   ├── uploader.ts          sending a file up to the library
 │   ├── cost.ts              what a generation would cost, without running it
 │   ├── usage.ts             the units spent, and the price list
-│   └── handlers.ts          the scenario:* channels
+│   └── handlers.ts          the provider:* channels
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
 │   ├── catalog.ts           the SQLite asset index
@@ -229,13 +229,13 @@ src/main/
 │   ├── syncPlan.ts          what two sides would have to do about each other
 │   ├── collector.ts         what a generation drops into the project
 │   ├── autoCaption.ts       naming a picture from what the API sees in it
-│   └── protocol.ts          the scenario:// protocol
+│   └── protocol.ts          the ia-studio:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── assistant/               the assistant's thinking, behind a port, and how its reply is read
 ├── mcp/                     the same catalogue of actions, offered to a client outside
 ├── settings/                the encrypted store, its adapter, its handlers
 ├── favorites/               the pinned recipes, kept outside every project
-├── styles/                  the material settings replayed from one texture to the next
+├── styles/                  the material settings replayed from one material to the next
 ├── scene/                   exporting a scene, and validating it
 ├── export/                  writing several files into a folder: a material, six sky faces
 ├── diagnostics/             the channel the renderer reports a failure through
@@ -331,18 +331,42 @@ load.
 
 `ACTION_REGISTRY` (`shared/domain/assistant.ts`) declares what the studio can be asked to do —
 one family per `*Actions.ts` module, their fields, **what each one commits** (`none`, `files`,
-`asset`, `remote`, `credits`) and **which door offers it** (`reach`). **The count is not written
+`asset`, `remote`, `studio`, `credits`) and **which door offers it** (`reach`). **The count is not written
 here**: it rises with every batch, and `exhaustive.test.ts` holds it to the `ActionName` union. It
 has two readers, and **neither of them decides**:
 
-- **the assistant**, inside the window, which lists the `both` share to its model — eleven actions;
-- **`main/mcp/tools.ts`**, which republishes **all** of it as MCP tools for a client outside.
+- **the assistant**, inside the window, whose briefing carries **every NAME** and nothing else;
+- **`main/mcp/tools.ts`**, which republishes **all** of it, fields included, as MCP tools for a
+  client outside.
 
-**The asymmetry is forced, not tasteful.** The assistant's catalogue goes out in a prompt capped by
-`INSTRUCTION_MAX` at ten thousand characters, of which four thousand are left for the person's own
-sentence — `brain.test.ts` holds that floor. Publishing the families a program drives (files, layers,
-scene, git) there would eat that margin, and the sentence is what the truncation would take off.
-`tools/list` has no cap.
+**The briefing carries the names, never the manuals.** The 283 actions grouped by family cost
+4 225 characters, where their descriptions and their fields cost 90 994 — which only the widest
+door could hold, on every single turn. What an action IS and what it takes is composed only for
+those a chain has opened (`loaded`).
+
+**Naming an action without its manual no longer costs the answer: it opens it.** The model writes
+its call, `answeredTurn` (`brainTurn.ts`) sees the fields are missing, adds them to the briefing
+and asks again inside the same turn — the budget is `TURN_ATTEMPTS`. `actions.find` is the same
+move by a WORD rather than a name. **What is opened stays open until the request ends**: the window
+hands `AssistantThought.loaded` from one round to the next and starts empty when the chain
+finishes — the main process keeps nothing between two turns.
+
+**What the room decides is no longer the catalogue but the RULES.** Each brain declares the room it
+holds — Scenario ten thousand characters, the `instruction` field of its generation endpoint
+(`brainProvider.ts`) · a chat cloud its own (`brainHttp.ts`) · a local model whatever its window
+leaves (`roomFor`, `promptWindow.ts`). Below the floor the wide rules ask for, `studioBriefing`
+gives only their core and keeps its state, its context and its manuals.
+
+**`studio` was born of that widening**: the assistant's model is now shown actions that change the
+settings, the account that answers, or the project that is open — none of them undoable by ⌘Z, and
+the account decides whose library and whose invoice the next generation lands on. It is the only
+level with no delegation switch, and that is the point.
+
+**What a model may name is the whole registry**, and `parseReply` holds to it: a name the registry
+does not declare is refused, a name it does declare but the briefing has not described is not.
+`reach` therefore decides nothing about the briefing any more; only `actionsReaching('mcp')` still
+reads it. A shared ceiling did the opposite — `INSTRUCTION_MAX` lived in `shared/` and applied to
+the seven HTTP clouds, which accept dozens of times more.
 
 **`validatesInput` (`assistantAction.ts`) is the whole of the input validation**, derived from the
 fields and sitting on `runConfirmedAction`. Nothing upstream does it: the IPC boundary checks the
@@ -351,7 +375,7 @@ untouched — its `additionalProperties: false` is a promise to the client, not 
 refuses **before** the confirmation question, or a bad input would have the person asked to approve
 a spend that was never going to happen.
 
-The name changes dialect on the way — `command.run` becomes `command_run`, because the tool-name
+The name changes dialect on the way — `command.runStudioCommand` becomes `command_runStudioCommand`, because the tool-name
 grammar takes no dot — and `actionOfTool` walks it back. **One substitution, never a second column
 in the registry**: that column would drift from the first.
 
@@ -363,7 +387,7 @@ back, a `callId` sews the halves together, and **every way of failing answers**,
 other end there is a client that would otherwise sit there.
 
 **The declared level is only a floor.** `raises` lifts it from the call's own input —
-`commitmentOfCommand` for `command.run`, an `amend` for `git.commit` — and `asksItself` marks the
+`commitmentOfCommand` for `command.runStudioCommand`, an `amend` for `git.commit` — and `asksItself` marks the
 action whose handler raises its OWN question, which is why its level stays at the floor.
 `commitmentOfCommand` is the one guarded command by command: five canvas commands flatten and
 upload the picture, which creates a permanent asset. A miss there would go through with nothing
@@ -390,6 +414,42 @@ start** — a file left by a crash names a port the next process will inherit.
 some two hundred modules, and this setting is off by default. A static import would put them on the
 launch of every studio that never opens that door.
 
+### A client is given a command, never an address
+
+What the preferences put on the clipboard — and what `.mcp.json` carries — is **the application
+itself, launched with `--mcp-stdio=<path to mcp.json>`** (`mcpLaunch`, `endpoint.ts`). That process
+opens no window and no services, does not take the single-instance lock — a client connecting while
+the studio is up would otherwise be the second instance and quit — and relays stdio ↔ loopback
+(`stdio.ts`).
+
+**It re-reads the address at EVERY message, never once.** That is the whole mechanism: the four
+locks do not move, and a client's configuration stops going stale when the studio restarts. Without
+it the way in was unusable under `electron-vite --watch`, which restarts the main process several
+times an hour — and cost whoever installed the app one paste per launch.
+
+**The path to `mcp.json` travels IN the command** rather than being worked out on the other side: a
+studio started with `--user-data-dir` resolves a different profile, and the process that writes the
+address would never be the one that reads it. And in development there is **one address file per
+CHECKOUT** (`mcp-<digest>.json`), not per profile: two development studios share a `userData`, so
+the second to start took the first's file over — its clients then drove the wrong studio, and its
+quit removed the file from under a studio still listening.
+
+**`.mcp.json` is MERGED, never overwritten** (`mcpConfigWith`): at the root of a repository that
+file is the PROJECT's client configuration and not ours — other servers live in it, and a launch
+that rewrote it deleted them without a word. A malformed one is left exactly as it is.
+
+🛑 **That process silences the log before anything else** (`setLogVerbosity('silent')`): `log.info`
+prints to STDOUT, which here is the client's JSON-RPC stream. One line of ours on it and the client
+can read nothing further; what goes wrong leaves on stderr.
+
+**In development the setting is on by DEFAULT** (`defaultSettings`, `shared/domain/settings.ts`,
+injected into the store) — which only reaches a profile that never wrote its settings: an existing
+`settings.json` carries `false`, and `merge` lets the stored value win. On a profile already served,
+the box has to be ticked once and the launch leaves a `.mcp.json` at the root of the checkout, which
+Claude Code reads on its own. **`main/mcp/production-unchanged.test.ts` holds the difference**:
+outside development the default is off, the port stays the operating system's, the token stays
+minted, and the four delegation lines stay at zero on both sides.
+
 ---
 
 ## The renderer
@@ -403,21 +463,13 @@ src/renderer/src/
 │   ├── DocumentArea.tsx Dockview, documents only
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
-├── design/       the in-house design system — see below
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, gpu, and `core/` — what every engine shares
-├── spaces/       one editor per document kind — SIX, as many as there are workspaces
-│   ├── image/      Pixi-backed canvas and its tools
-│   ├── three/      the three.js viewport and its tools
-│   ├── video/      the timeline canvas, the monitor, its tools
-│   ├── audio/      the waveform, its tools, the decoder
-│   ├── textures/   a material's channels, and their tiled preview
-│   └── skyboxes/   the immersive sky and its three flat projections
-├── panels/       the twenty-seven dockable tools
-├── home/         the home screen and its three bands — a page, not a layout
-├── settings/     the settings window, loaded on demand
-├── usage/        the consumption window, likewise
-├── licences/     the licences window, likewise
-├── dictation/    what the renderer sees of dictation: button, preview, level
+├── components/   the visual shapes MORE THAN ONE feature shares — see below
+├── features/     one domain per folder, its components under `components/`, its dock tools under `tools/`
+│   ├── shell/      the rails, the zones, the document area — and `main.tsx`, the entry
+│   ├── image/ scene/ video/ audio/ code/ material/ skybox/ gui/   one editor per document kind
+│   ├── explorer/ assets/ models/ git/ inspector/ timeline/ animation/ …   the dockable tools
+│   └── home/ settings/ usage/ manual/ document/ dictation/ assistant/ …   the surfaces outside a dock
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, material, gpu, and `core/` — what every engine shares
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
 ├── helpers/      pure functions, all unit-tested
@@ -496,7 +548,7 @@ Their callbacks are kept stable for that memo to bite.
 `sequence.mirror` opens a second window mirroring the Program monitor, for a second screen. **The
 IPC bridge carries one thing only: opening that window** (`main/window/mirror.ts`). Everything else
 — the edit, the playhead, playback — travels over a `BroadcastChannel`
-(`spaces/video/mirrorChannel.ts`).
+(`features/video/components/mirrorChannel.ts`).
 
 **This is no way around invariant 2**, which guards the boundary between PROCESSES. Both windows
 load the same renderer bundle: they already share `SequenceState` as a type, and routing it through
@@ -535,7 +587,7 @@ it would degrade `ToolId` to `string`.
 
 A tool may declare **more than one placement**, for disjoint sets of workspaces — the Explorer
 holds the same half in every workspace and on the home, but only the home's asks for an open
-project. **No tool declares two workspace halves since 17 August**, the shelf having given up its
+project. **No tool declares two workspace halves since 17 August**, the Explorer having given up its
 second one when it moved into the left column.
 `tool.test.ts` locks the two invariants that keep this legible: the workspaces of two
 placements never overlap, and the placements of one tool share a slot — a tool that changed half as
@@ -551,7 +603,7 @@ where `shared/` holds no runtime dependency. Hence a layer above it, in
 - the generator is offered only where a model is chosen or preferred;
 - a half nobody has chosen for shows the **first panel the workspace declares there**. It holds
   `null` in the store — an absent key means the half is closed, an id means the user chose. The
-  layout is remembered once for all six workspaces while that first panel differs in each:
+  layout is remembered once for all seven workspaces while that first panel differs in each:
   writing an id there would impose one workspace's answer on the other five. `shownTool` tells the
   three cases apart, and migrating to version 8 puts every earlier layout back to its default,
   half by half.
@@ -569,25 +621,36 @@ Six of them, no React inside any one.
 | `TimelineEngine` | mediabunny + Canvas + Web Audio | the sequence: clips, playback of picture AND sound, waveforms, filmstrips |
 | `engines/audio` | plain sample arrays | the sound edit: crop, fades, gain, normalise, trim silence |
 | `SkyboxRenderer` | `ViewportEngine` | the sky from the inside: sun, grading, probes |
-| `TextureRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
+| `MaterialRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
 
 The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resizing, on-demand
 loop, image-based lighting. Each writing its own was three chances to disagree about a resize
 or a disposal.
 
-**Six engines, nine folders under `engines/`: the other three are not engines.** `core/` carries
-the shared history, `viewport/` the base of the three 3D views, and `gpu/` the shader passes and
-the frame counter.
+**Six engines, twelve folders under `engines/`: the other six are not engines.** `core/` carries
+the shared history, `viewport/` the base of the three 3D views, `gpu/` the shader passes and
+the frame counter, `postfx/` the post-processing chains and their LUTs, `code/` script
+compilation off the UI thread, and `csg/` boolean carving.
 
-The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
+**`csg/` is a layer, not an engine, and that is deliberate**: it holds no scene, knows neither
+document nor selection, and that is what will make it reusable outside the studio — to run a game,
+where carving happens at EDIT time and never at runtime. The graph (brushes, operations,
+placements) is the document; the evaluated mesh is a reference-counted cache, freed the moment no
+node points at it, and rebuilt on demand. Nothing is evaluated during a gesture: it all goes on
+release, into a worker that receives the GRAPH and hands back transferable buffers. What the cut
+has not finished shows as raw brushes — the solid wall, without its window — never a missing
+object. [ADR-25](../ci/adr/ADR-25-le-graphe-booleen-fait-foi.md) carries the decisions, including
+the ones that prepare collisions without shipping them.
+
+The audio one is a pair of modules rather than a class — `audioData.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
 three: the edit is the state, never the buffer currently in memory.
 
-**That is sound EDITING. PLAYBACK is a second pair, elsewhere** — `sound-schedule.ts` and
-`sound-port.ts`, under `engines/timeline/`, because it reads a sequence of clips rather than one
+**That is sound EDITING. PLAYBACK is a second pair, elsewhere** — `soundSchedule.ts` and
+`soundPort.ts`, under `engines/timeline/`, because it reads a sequence of clips rather than one
 file. The split is the same: the arithmetic on one side, what only a browser can do on the other.
 
-Each pairs with a plain state module (`canvas-state.ts`, `scene-state.ts`, `timeline-state.ts`)
+Each pairs with a plain state module (`canvasState.ts`, `sceneState.ts`, `timelineState.ts`)
 and a command module. Commands are the only way state changes, which is what makes undo a
 generic mechanism in `engines/core/history.ts` rather than three bespoke ones.
 
@@ -601,15 +664,15 @@ moves the race window instead of closing it — a field opens its gesture **on f
 command at all. One caller is concerned today, `setSkyboxSource`, which serves all three ways a
 picture enters a sky.
 
-`node-factory.ts`, `mesh-primitives.ts`, `light-types.ts` and `three-factory.ts` keep the
+`nodeFactory.ts`, `meshPrimitives.ts`, `lightTypes.ts` and `threeFactory.ts` keep the
 *description* of a node separate from its three.js instantiation — so a scene serialises without
 dragging the renderer along, and rebuilds from that serialisation alone.
 
 And once the three object exists, **it is mutated, never replaced**: `.set` rather than a `new`.
 Those writes arrive on every frame of an inspector drag, and the cost is not theoretical —
 replacing a material risks recompiling its shader program, replacing a colour throws away the
-instance three is holding. Ten colour writes follow the rule, and `three-sync.ts`,
-`TextureRenderer.ts` and `SkyboxRenderer.ts` each carry it as a comment, next to what it guards.
+instance three is holding. Ten colour writes follow the rule, and `threeSync.ts`,
+`MaterialRenderer.ts` and `SkyboxRenderer.ts` each carry it as a comment, next to what it guards.
 
 **One exception, and it is deliberate**: `ViewportEngine` does replace the scene background object,
 because that field accepts `null` — a `.set` could not clear it, and the background is only
@@ -622,11 +685,11 @@ scrubbing starts stuttering for no visible reason. The timeline and the Audio wo
 both take it from the same place.
 
 **What a monitor makes you HEAR goes through a second port, and its arithmetic is pure.**
-`engines/timeline/sound-schedule.ts` knows nothing but numbers: where a slice lands on the output
+`engines/timeline/soundSchedule.ts` knows nothing but numbers: where a slice lands on the output
 clock, what a load that arrived late must skip rather than play late, how much source a sped-up
 clip spends, and **where the fade envelope goes** — the `ClipFade` an `AudioChunk` carries gives
 the CLIP's edges as instants rather than lengths, because a slice may begin INSIDE a fade, and
-`cueFor` turns them into the corners of `SoundCue.ramps`. `sound-port.ts` holds what only a browser
+`cueFor` turns them into the corners of `SoundCue.ramps`. `soundPort.ts` holds what only a browser
 can do — one `AudioContext` per window, opened on the first sound and never closed, the browser's
 own decoder, one `AudioBufferSourceNode` per clip, and the envelope laid on its `GainNode`:
 `setValueAtTime` at the cue instant **before** any ramp, without which a ramp would start from the
@@ -634,7 +697,7 @@ instant the graph was built.
 
 A clip is planned **whole** as it enters the one-second horizon, never window by window: a source
 restarted at every joint is heard as a click. The samples themselves are shared per asset and
-reference counted (`engines/core/ref-cache.ts`) — `decodeAudioData` decodes the **file**, not the
+reference counted (`engines/core/refCache.ts`) — `decodeAudioData` decodes the **file**, not the
 share of it one clip takes.
 
 **The output clock is the master whenever it runs.** `TimelineEngine.play` wakes the sound
@@ -644,7 +707,7 @@ the sound in under a minute. The port answers `null` while the output is not run
 output freezes its time, and hanging onto it would stop the sequence rather than play it.
 
 **What a monitor shows comes from a sink, and the engine picks which one.**
-`engines/timeline/sink-port.ts` opens a mediabunny `VideoSampleSink` where the asset carries a
+`engines/timeline/sinkPort.ts` opens a mediabunny `VideoSampleSink` where the asset carries a
 video track, and a still-picture sink everywhere else — that one answers the same frame at every
 position, a picture having no time of its own. `TimelineEngine.seek` never sees the difference: it
 asks for a frame and gets one.
@@ -667,17 +730,18 @@ a logo laid over it.
 
 ```
 1. user picks a model            Models panel → stores/models
-2. renderer asks for its schema  scenario:describe-model
+2. renderer asks for its schema  provider:describe-model
 3. main fetches it               GET /models/{id}
 4. ModelRegistry translates      JSON schema → FieldDescriptor[]
 5. DynamicForm renders it        react-hook-form + a zod schema built from the descriptors
-5b. the price shows up           scenario:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
-6. user submits                  scenario:generate
+5b. the price shows up           provider:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
+5c. the project's context joins  promptContext — on THOSE TWO channels, nowhere else
+6. user submits                  provider:generate
 7. JobManager queues it          bounded concurrency
 8. it polls                      jobs.retrieve — 2 s is the FLOOR, not the rate
 9. progress flows back           evt:job-progress → status line
 10. success                      metadata.assetIds → downloaded into the project
-11. the catalogue records it     SQLite → the asset appears in the shelf
+11. the catalogue records it     SQLite → the asset appears in the Explorer
 ```
 
 Steps 3 and 4 are the reason invariant 5 exists. A model's inputs are its own; a form written by
@@ -685,6 +749,20 @@ hand is right for exactly one model on exactly one day.
 
 An unknown field kind renders as raw input rather than failing the descriptor — a generation
 form that silently loses a field is worse than an ugly one.
+
+**Step 5c sits in the handler and not in the `JobManager`, and the queue is why**: a job waits
+minutes before it runs, and a context edited in between would be added to a body somebody has
+already read on screen. It is also the one point the estimate and the generation share: what is
+priced is what is sent. The prompt field is found through `promptSpark` and never by name — a
+context landing in a negative prompt would ask for the opposite of itself. A model that declares
+none is left alone, silently.
+
+**The WRITTEN prompt travels beside it** (`AuthoredPrompt`), from the handler to the collector: the
+API echoes back what it was sent, and `generatedAssetName` cuts an asset's name from the first sixty
+characters of its prompt — a project with a context would have named all of its assets the same.
+`AssetGeneration` gains no field: `withAuthoredPrompt` puts the written one back into `params`, so a
+« regenerate » reopens on what was typed rather than stacking the context at every replay.
+[ADR-24](../ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md).
 
 **Step 8 slows down as the load rises, and that is what makes it safe.** The interval is
 `max(floor, ceil(running × 60,000 ÷ POLL_REQUESTS_PER_MINUTE))`: two seconds is what one or two
@@ -697,7 +775,7 @@ than written out, precisely so it cannot go quietly false the day one of them is
 **Step 5b reads a price out of two shapes of answer, because the reference and the server do not
 agree.** A `?dryRun=true` creates no job and spends nothing. The reference documents a **402**
 carrying `estimatedCost`; the server, observed on both endpoints, answers **200** with
-`creativeUnitsCost` beside an empty `job`. `main/scenario/cost.ts` reads both, the 200 first and
+`creativeUnitsCost` beside an empty `job`. `main/provider/cost.ts` reads both, the 200 first and
 the 402 as a fallback — a 500 or a dead network is thrown on, so it reaches the log like every
 other failure.
 
@@ -729,14 +807,40 @@ It is one case of the [first screen](#the-first-screen) rule.
 A project is a folder. `project.json` is its manifest (version, name, timestamps); the rest is
 structure the studio creates on open — see the [manual](manual/04-projects.md) for the tree.
 
+**`.project-context.json` is the project's second file to carry human writing**: the cards saying
+what the project is about, added to every generation and to the assistant's briefing. It lives in
+the FOLDER rather than in the settings, unlike `settings.ai.projectRoles` — the criterion is in
+[ADR-24](../ci/adr/ADR-24-ce-qui-voyage-avec-le-projet.md). It refuses to be overwritten when it is
+unreadable or from a newer build, the opposite of `jobStore.ts`: what it holds is somebody's text.
+
+A **folder's role** is told by a marker it carries, `.ia-studio-role`, and not by its name: ten
+roles (`shared/domain/folderRole.ts`), one per place the studio files something. `DEFAULT_ROLE_PATHS`
+says where each one STARTS — `Images/`, `Modelling/Scenes/`, `Scripts/`… — and nothing more: the
+folder is ordinary from the first second, and a rename made in the Finder costs it nothing, the
+marker travelling with it. A table of paths kept elsewhere would be wrong from that rename on.
+
+Resolution is in two steps (`main/project/folderRoles.ts`). `.index/folder-roles.json` remembers
+each role's last path, and opening VERIFIES it against the marker — ten reads. Only a role that no
+longer answers sends out a walk, which reuses `FolderReader.walk` with hidden entries shown: a
+marker IS one. A role whose folder is gone is absent from the map rather than pointed at its
+default — absent says “nowhere yet” where a default would say “here”, and what is here gets
+written into; the folder comes back at the first write that needs it (`ProjectStore.folderFor`),
+never on an open. Two folders claiming one role are settled by depth then by code unit, never by a
+collator.
+
+The names are ENGLISH and fixed: a folder following the language would be renamed at every change,
+and every catalogue row under it would point beside the file. What translates is the ROLE — ten
+`folderRoles.*` keys — which the explorer says with a section icon and a tooltip, the name shown
+always staying the one on disk.
+
 The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, name, type,
-location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf
+location, tags, timestamps, and the path when the asset is local. It exists so the Explorer
 can search thousands of items without touching the filesystem, and so a project remains portable.
 
 **It does not rebuild.** Nothing guesses again what a file IS: the catalogue fills up as you
 generate and import. Deleting it loses the names, the tags, the dimensions, the generation recipe,
 `derivedFrom`, the `sourcePath` of linked media and the activity journal — the files remain, and
-nothing says what they are any more. `.scenario/items.json` is what is left to read that day: a
+nothing says what they are any more. `.ia-studio/items.json` is what is left to read that day: a
 backup keyed by content fingerprint, written after every reconciliation pass that changed
 something, which the studio never reads of its own accord.
 
@@ -749,10 +853,10 @@ rewriting the path of a row nobody asked to move is the one failure a reconcilia
 have. `search` and `countByType` hide what is dated, so the trash — which dates rather than
 deletes — gives a whole row back if the file comes out of it.
 
-Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
-image is served to the renderer as `scenario://<id>`.
+Assets are either `local` (a file in the project) or `cloud` (still only on the provider). A local
+image is served to the renderer as `ia-studio://<id>`.
 
-**Documents** are files filed wherever the user wants them — `documents/` is only where a
+**Documents** are files filed wherever the user wants them — their section's folder is only where a
 first save lands, and `documents.list()` walks the whole project to find them. One per document,
 **named after the document** —
 `Niveau.gltf`, `Bande annonce.otio`. Its id lives in the envelope (format version 3) rather than
@@ -794,7 +898,7 @@ body that is not a montage.
 For the **image** the file is an OpenRaster container — a ZIP, no longer a folder. The main
 process packs and unpacks it: `mimetype` first and stored, `stack.xml`, the `mergedimage.png` the
 specification requires, one PNG per surface under `data/`, and the studio's own state under
-`scenario/`. The window produces the stack (a document's `content` IS that stack, as JSON) and
+`provider/`. The window produces the stack (a document's `content` IS that stack, as JSON) and
 the surfaces beside it, as bytes; the main process writes the syntax. **A listing reads only the
 first kilobytes of a container** — the studio envelope is written second and uncompressed, or
 listing a project would open a hundred megabytes per document.
@@ -812,7 +916,7 @@ leaves the file as it is. The same refusal covers a sky holding a whole scene an
 holding more than one (`incomplete` in `IO_BY_KIND`).
 
 Either way a space that learns to save needs no channel of its own. **All six kinds can write
-themselves today** — image, scene, sequence, audio, skybox and texture, declared in one place,
+themselves today** — image, scene, sequence, audio, skybox and material, declared in one place,
 `IO_BY_KIND` in `app/documentIo.ts`. A kind absent from that table has a Save that does nothing,
 rather than one that writes an empty body.
 
@@ -875,12 +979,12 @@ hashes, remote URLs (`main/git/validation.ts`).
 ## The design system
 
 **If a component lives in a dock, it is in-house.** Toolbars, inspectors, timelines, outliners,
-the asset browser, the title bar, tabs — all of it in `src/renderer/src/design/`.
+the asset browser, the title bar, tabs — all of it in `src/renderer/src/components/`.
 
 DaisyUI is reserved for the surfaces where the application becomes an application again:
 preferences, dialogs, API key management, onboarding.
 
-Key primitives, all in `design/`:
+Key primitives, all in `components/`:
 
 | | |
 |---|---|
@@ -890,9 +994,8 @@ Key primitives, all in `design/`:
 | `MediaTile`, `Thumbnail` | the captioned square tile, and the same picture at a fixed size |
 | `Toolbar`, `ToolButton`, `Button`, `UiIcon` | the shared bar, its icon buttons, its labelled ones, the only door icons come through |
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
-| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
+| `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `PictureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
-| `FormHeader` | the line naming what the form is for — the model, in Generate |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 
@@ -914,7 +1017,7 @@ Three consequences for the caller, none of them optional:
   `aria-setsize` come from the real index: without them a 2000-model catalogue says "1 of 35",
   and the number changes as you scroll.
 - **`aria-multiselectable` is declared, never inferred.** `pickFrom` offers shift and ⌘ to every
-  caller, but most keep a single selection — only two pass `multiple`, the asset shelf and the
+  caller, but most keep a single selection — only two pass `multiple`, the Explorer and the
   node list. Inferring it would promise a range the others do not build.
 
 `aria-selected` is only ever set on an `option`, and **a list that merely opens is not one**:
@@ -1053,7 +1156,7 @@ Seven things go through the bundles without looking like it, and each answers an
   narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.
   The count of keys carrying it climbs with every batch; `bundles.test.ts` is what holds, not a
   figure written here. **The exception is a factor, not a count**:
-  `texture.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
+  `material.tilingPreviewTimes` writes "4×", and grouping a repetition would be wrong exactly where
   the grouping would show — `bundles.test.ts` holds the rule **and its exception**. A **creative
   unit** does not go through `{{units, number}}` either but through `formatUnits`, which does more
   than group: it keeps two decimals under ten units, because a cheap call rounded to zero would
@@ -1082,7 +1185,7 @@ into a tooltip.
 
 ### The one dictionary indexed on text, and why
 
-**The Scenario API has no notion of language** — no `Accept-Language`, no locale parameter on
+**The generation API has no notion of language** — no `Accept-Language`, no locale parameter on
 `models.retrieve`, nothing in the SDK. The text a model publishes for its own inputs ("Target
 size", "Max splat points", and the explanatory sentences under them) is therefore translated here
 or nowhere.
@@ -1094,7 +1197,7 @@ points" and leave its description in English right underneath.
 
 Three consequences, one of them to be accepted:
 
-- **a label changed on Scenario's side falls back to English** rather than failing.
+- **a label changed on the provider's side falls back to English** rather than failing.
   `normalizeModelText` absorbs what costs nothing to absorb — case, whitespace, typographic
   apostrophes and dashes, trailing punctuation — and the fallback is **the English sentence
   itself, never a key**. The worst case is the screen as it was, not a broken one;
@@ -1117,7 +1220,7 @@ together is a trap. `USAGE_ACTIONS` is what gets **billed**; `USAGE_EVENT_ACTION
 `assistant-message`). The two overlap by three quarters, hence **a single label table both read
 from** — so **one bundle key per
 value**, held by `bundles.test.ts` the way the PBR channels and the journal's scopes already are.
-An action Scenario adds without its line turns the guard red.
+An action the provider adds without its line turns the guard red.
 
 The rule that tells them apart:
 
@@ -1228,20 +1331,11 @@ trusted.
 
 ### What a developer sets
 
-`secrets/.env`, read **at runtime** by the main process, **in development only**
-(`app.isPackaged === false`). It is never handed to the bundler: injecting a secret at build time
-would carve it into `out/`, and an `.asar` opens in a text editor.
-
-| Variable | Used by |
-|---|---|
-| `SCENARIO_API_KEY`, `SCENARIO_API_SECRET` | the API client, as a fallback |
-| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | packaging only — never at runtime |
-
-Credentials saved in the settings **win** over the ones in `.env`. The file is a convenience for
-development, not a second source of truth.
-
 `ELECTRON_RENDERER_URL` is set by electron-vite in watch mode and is what makes the window load
 from the dev server rather than from disk.
+
+API keys are entered in Settings and encrypted by the keychain. Packaging reads `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` from the environment if they are set.
 
 ### What the environment provides without being configured
 
@@ -1257,7 +1351,7 @@ read rather than demanded.
 
 ### What the build needs
 
-`scripts/dist.sh` loads `secrets/.env` and calls electron-builder. Left empty, the three Apple
+`scripts/dist.sh` calls electron-builder. Absent from the environment, the three Apple
 variables make it skip signing and notarisation — it logs that it did, and `pnpm dist` still
 produces an application. It is simply unsigned, and Gatekeeper will say so on first open.
 Filling them in enables the full chain with no code change.
@@ -1272,8 +1366,8 @@ opaquely.
 ## Testing
 
 **Over 9,000 tests across nearly 700 files**, run by Vitest — the exact figure moves with every
-merge, and `pnpm test` states it (9,315 across 686 on 2026-08-17). Unit tests are colocated (`*.test.ts` next to the code) and
-written in the same movement as the code, never after.
+merge, and `pnpm test` states it (9,315 across 686 on 2026-08-17). Unit tests are colocated
+(`*.test.ts` next to the code) and written in the same movement as the code, never after.
 
 `pnpm validate` must be green before any commit. It chains the links `package.json` declares, and
 that is where they are read: spelling them out here would make a second list, and a second list
@@ -1293,12 +1387,12 @@ and the panels through Testing Library.
 
 | You want to add | Where to start |
 |---|---|
-| A tool panel | an entry in `TOOL_PLACEMENTS`, then `panels/<name>/` with an `index.ts` exporting `definition: { Content, Actions }` |
+| A tool panel | an entry in `TOOL_PLACEMENTS`, then `features/<feature>/tools/<name>.ts` exporting `definition: { Content, Actions }`, its components under `features/<feature>/components/` |
 | A workspace | `WORKSPACE_IDS`, then its icon and family in `helpers/workspaces.ts` — the compiler asks for both |
 | An IPC channel | `shared/ipc.ts` first, then the handler; the signature is derived, so start from the contract |
-| A mesh or light kind | `mesh-primitives.ts` / `light-types.ts` — the toolbar, the panels and the native menu all read those tables |
-| An image tool | `spaces/image/imageTools.ts`, in the right group |
-| A shared visual shape | `design/`, one component per file, plus its test |
+| A mesh or light kind | `meshPrimitives.ts` / `lightTypes.ts` — the toolbar, the panels and the native menu all read those tables |
+| An image tool | `features/image/components/imageTools.ts`, in the right group |
+| A shared visual shape | `components/`, one component per file, plus its test — and its name carries the prefix of its folders |
 
 Two rules that save the most time: check that a helper does not already exist before writing one,
 and read the neighbourhood before touching it. The registries mean most additions are one entry

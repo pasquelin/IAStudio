@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CLIP_DB, FLOOR_DB } from '@/engines/audio/level'
 import { createSoundPort, playFrom, type SoundOutput } from './soundPort'
+
+vi.mock('../audio/decodePort', () => ({
+  decodeBytesOffThread: vi.fn(async () => {
+    throw new Error('no worker in this suite')
+  }),
+}))
 import type { SoundCue } from './soundSchedule'
 
 const fetchAsset = vi.hoisted(() => vi.fn(async () => new Response(new ArrayBuffer(8))))
@@ -41,6 +47,7 @@ const outputWith = () => {
     sampleRate: 48_000,
     resume: vi.fn(async () => {}),
     decodeAudioData: vi.fn(async () => decoded),
+    createBuffer: vi.fn(),
     createAnalyser: vi.fn(() => analyser),
     createBufferSource: vi.fn(() => source),
     createGain: vi.fn(() => {

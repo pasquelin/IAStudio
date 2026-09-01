@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SUITE_SOURCES, WRITTEN_SOURCES } from '@/design/testHarness'
+import { SUITE_SOURCES, WRITTEN_SOURCES } from '@/components/testHarness'
 
 const SCENE = [...WRITTEN_SOURCES, ...SUITE_SOURCES].filter(
   ([path]) => path.startsWith('../engines/scene/') && !path.endsWith('no-layer-for-a-line.test.ts'),
@@ -23,6 +23,8 @@ const OTHER_SENSES: Record<string, string> = {
   paneDress: "a camera's own layer mask, read per pass",
   sceneDocument: 'the shot field that no longer exists, sorted once on read',
   gltfDocument: 'a layer of software — the file layer, and what MaterialX had one down',
+  instancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
+  SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
 }
 
 const stemOf = (path: string): string => (path.split('/').pop() ?? '').split('.')[0] ?? ''

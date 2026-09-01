@@ -26,6 +26,7 @@ type Harness = {
   catalog: AsyncCatalog
   trashed: string[]
   assetsChanged: ReturnType<typeof vi.fn>
+  pathsChanged: ReturnType<typeof vi.fn>
 }
 
 /**
@@ -40,6 +41,7 @@ async function harness(): Promise<Harness> {
   const { root, catalog } = await withTempProject()
   const trashed: string[] = []
   const assetsChanged = vi.fn()
+  const pathsChanged = vi.fn()
 
   const folder = {
     ...createFolderReader(() => root, inFrench),
@@ -58,9 +60,10 @@ async function harness(): Promise<Harness> {
     catalog: () => catalog,
     newBatchId: () => 'batch-1',
     assetsChanged,
+    pathsChanged,
   })
 
-  return { files, root, catalog, trashed, assetsChanged }
+  return { files, root, catalog, trashed, assetsChanged, pathsChanged }
 }
 
 const namesIn = async (root: string, folder = ''): Promise<string[]> =>
@@ -154,6 +157,15 @@ describe('trashing', () => {
 
     expect(assetsChanged).not.toHaveBeenCalled()
   })
+
+  /** 🛑 What ACTUALLY moved, not what was asked: a refused move must not be followed anywhere. */
+  it('tells what references a file by path what really happened', async () => {
+    const { files, pathsChanged } = harnessed
+
+    await files.move(['brief.pdf'], 'Rushes')
+
+    expect(pathsChanged).toHaveBeenCalledWith([{ from: 'brief.pdf', to: 'Rushes/brief.pdf' }])
+  })
 })
 
 describe('taking a batch back', () => {
@@ -242,6 +254,7 @@ describe('taking a batch back', () => {
       catalog: () => catalog,
       newBatchId: () => 'batch-1',
       assetsChanged: vi.fn(),
+      pathsChanged: vi.fn(),
     })
 
     await files.move(['brief.pdf'], 'Rushes')
@@ -284,6 +297,7 @@ describe('with no project open', () => {
       catalog: () => harnessed.catalog,
       newBatchId: () => 'batch-1',
       assetsChanged: vi.fn(),
+      pathsChanged: vi.fn(),
     })
 
     expect(await files.move(['a.png'], 'refs')).toEqual({

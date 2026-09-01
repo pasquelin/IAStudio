@@ -14,6 +14,30 @@ describe('jobs store', () => {
     vi.unstubAllGlobals()
   })
 
+  /**
+   * 🛑 Settling emits a progress event and NEVER the whole job — the list is announced only when
+   * it gains or loses an entry. What is not copied here reaches no row: the unit was sent and
+   * dropped from the day a second cloud existed, and a free check's verdict said nothing at all.
+   */
+  it('keeps everything a settled job gained, not only its status', () => {
+    useJobs.getState().apply({
+      id: 'job_1',
+      status: 'succeeded',
+      progress: 1,
+      costUnit: 'credits',
+      note: { labelKey: 'tripoRigCheck.riggable' },
+      finishedAt: '2026-08-31T09:00:00.000Z',
+      remoteId: '9a1c-5248',
+    })
+
+    expect(useJobs.getState().jobs[0]).toMatchObject({
+      costUnit: 'credits',
+      note: { labelKey: 'tripoRigCheck.riggable' },
+      finishedAt: '2026-08-31T09:00:00.000Z',
+      remoteId: '9a1c-5248',
+    })
+  })
+
   it('updates a job in place without touching the others', () => {
     const before = useJobs.getState().jobs[1]
     useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.6 })
@@ -69,7 +93,7 @@ describe('jobs store', () => {
     const stopProgress = vi.fn()
     const stopChanges = vi.fn()
     installFakeBridge({
-      scenario: {
+      provider: {
         onProgress: () => stopProgress,
         onJobsChanged: callback => {
           listeners.push(callback)
@@ -89,9 +113,42 @@ describe('jobs store', () => {
     expect(stopChanges).toHaveBeenCalledOnce()
   })
 
+  /**
+   * 🛑 `generationOf` finds a body through an ASSET's `jobId`, so a job that finished with
+   * nothing on the shelf holds one nobody can ever reach again. Measured on the Code space, whose
+   * bodies carry `studio.d.ts`: 20 generations retained 254 527 B until the reload.
+   */
+  it('drops the body of a job that settled with nothing on the shelf', async () => {
+    installFakeBridge({
+      provider: {
+        generate: () => Promise.resolve(job({ id: 'job_code', status: 'queued', progress: 0 })),
+      },
+    })
+
+    await useJobs.getState().submit({ id: 'cloud:anthropic' }, { prompt: 'a spin', api: 'x' })
+    expect(useJobs.getState().bodies['job_code']).toBeDefined()
+
+    useJobs.getState().apply({ id: 'job_code', status: 'succeeded', progress: 1 })
+    expect(useJobs.getState().bodies['job_code']).toBeUndefined()
+  })
+
+  /** The inspector reads it back to show what an asset was made from — and to run it again. */
+  it('keeps the body of a job that produced something', async () => {
+    installFakeBridge({
+      provider: {
+        generate: () => Promise.resolve(job({ id: 'job_img', status: 'queued', progress: 0 })),
+      },
+    })
+
+    await useJobs.getState().submit({ id: 'model_flux' }, { prompt: 'a rock' })
+    useJobs.getState().apply({ id: 'job_img', status: 'succeeded', progress: 1, assetIds: ['a_1'] })
+
+    expect(useJobs.getState().bodies['job_img']).toEqual({ prompt: 'a rock' })
+  })
+
   it('puts a freshly submitted job at the top of the list', async () => {
     installFakeBridge({
-      scenario: {
+      provider: {
         generate: () => Promise.resolve(job({ id: 'job_new', status: 'queued', progress: 0 })),
       },
     })

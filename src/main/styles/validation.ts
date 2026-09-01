@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { readMaterial } from '@shared/domain/texture'
+import { readMaterial } from '@shared/domain/material'
 import type { MaterialStyle } from '@shared/domain/style'
 import { pathSegment } from '@main/validation'
 

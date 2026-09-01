@@ -10,6 +10,8 @@
  * promising a whole round trip through another editor would be a lie this type has to prevent.
  */
 
+import { STUDIO_METADATA_KEY } from './studioMetadata'
+
 /** The mimetype the spec demands as the container's first, uncompressed entry. */
 export const ORA_MIMETYPE = 'image/openraster'
 
@@ -17,7 +19,7 @@ export const ORA_MIMETYPE = 'image/openraster'
 export const ORA_VERSION = '0.0.3'
 
 /** Where the studio's own state rides inside the container. */
-export const ORA_STUDIO_PATH = 'scenario/document.json'
+export const ORA_STUDIO_PATH = `${STUDIO_METADATA_KEY}/document.json`
 
 /**
  * The document's envelope — who it is, and which asset it edits — inside the container.
@@ -30,7 +32,7 @@ export const ORA_STUDIO_PATH = 'scenario/document.json'
  * A container from another application has none, and that is not a failure: it has no identity
  * of ours to carry, so it is known by its file name exactly as a pre-version-3 document is.
  */
-export const ORA_ENVELOPE_PATH = 'scenario/envelope.json'
+export const ORA_ENVELOPE_PATH = `${STUDIO_METADATA_KEY}/envelope.json`
 
 /** How much of a container is read to find that envelope. */
 export const ORA_HEAD_LIMIT = 64 * 1024

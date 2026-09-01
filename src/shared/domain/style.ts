@@ -1,4 +1,4 @@
-import type { MaterialSettings } from './texture'
+import type { MaterialSettings } from './material'
 
 /**
  * A way of reading a material, kept OUTSIDE any project — the same reasoning as

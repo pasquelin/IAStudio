@@ -1,6 +1,11 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import {
+  action,
+  ENVIRONMENT_FIELDS,
+  type ActionField,
+  type AssistantAction,
+} from './assistantAction'
 import { MAX_FIELD_OF_VIEW, MIN_FIELD_OF_VIEW, SKYBOX_VIEWS } from './skybox'
-import { PBR_CHANNELS, PREVIEW_SHAPES } from './texture'
+import { PBR_CHANNELS, PREVIEW_SHAPES } from './material'
 
 /**
  * The sky and the material, driven by value.
@@ -29,6 +34,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxState.title',
     descriptionKey: 'assistant.actions.skyboxState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -38,10 +44,11 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
      * in it. Session state, exactly as `view.display` is in the 3D space: none of it is saved with
      * the document and ⌘Z never touches it.
      */
-    name: 'skybox.view',
-    titleKey: 'assistant.actions.skyboxView.title',
-    descriptionKey: 'assistant.actions.skyboxView.description',
+    name: 'skybox.setViewOptions',
+    titleKey: 'assistant.actions.skyboxSetViewOptions.title',
+    descriptionKey: 'assistant.actions.skyboxSetViewOptions.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -57,13 +64,14 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * Every dial optional, like `layer.style`: a client changing the exposure alone must not have
+     * Every dial optional, like `layer.setOpacityBlendAndVisibility`: a client changing the exposure alone must not have
      * to restate a temperature it never read.
      */
-    name: 'skybox.adjust',
-    titleKey: 'assistant.actions.skyboxAdjust.title',
-    descriptionKey: 'assistant.actions.skyboxAdjust.description',
+    name: 'skybox.adjustImage',
+    titleKey: 'assistant.actions.skyboxAdjustImage.title',
+    descriptionKey: 'assistant.actions.skyboxAdjustImage.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NUMBER('exposure', 'assistant.fields.exposure'),
@@ -80,14 +88,16 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.skyboxResetAdjustments.title',
     descriptionKey: 'assistant.actions.skyboxResetAdjustments.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'skybox.sun',
-    titleKey: 'assistant.actions.skyboxSun.title',
-    descriptionKey: 'assistant.actions.skyboxSun.description',
+    name: 'skybox.setSun',
+    titleKey: 'assistant.actions.skyboxSetSun.title',
+    descriptionKey: 'assistant.actions.skyboxSetSun.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NUMBER('elevation', 'assistant.fields.elevation'),
@@ -97,10 +107,11 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'skybox.environment',
-    titleKey: 'assistant.actions.skyboxEnvironment.title',
-    descriptionKey: 'assistant.actions.skyboxEnvironment.description',
+    name: 'skybox.setPreviewLighting',
+    titleKey: 'assistant.actions.skyboxSetPreviewLighting.title',
+    descriptionKey: 'assistant.actions.skyboxSetPreviewLighting.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NUMBER('intensity', 'assistant.fields.intensity', 0),
@@ -113,28 +124,31 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'skybox.source',
-    titleKey: 'assistant.actions.skyboxSource.title',
-    descriptionKey: 'assistant.actions.skyboxSource.description',
+    name: 'skybox.setSourceImage',
+    titleKey: 'assistant.actions.skyboxSetSourceImage.title',
+    descriptionKey: 'assistant.actions.skyboxSetSourceImage.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
     ],
   }),
   action({
-    name: 'texture.state',
-    titleKey: 'assistant.actions.textureState.title',
-    descriptionKey: 'assistant.actions.textureState.description',
+    name: 'material.state',
+    titleKey: 'assistant.actions.materialState.title',
+    descriptionKey: 'assistant.actions.materialState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'texture.material',
-    titleKey: 'assistant.actions.textureMaterial.title',
-    descriptionKey: 'assistant.actions.textureMaterial.description',
+    name: 'material.setSurfaceSettings',
+    titleKey: 'assistant.actions.materialSetSurfaceSettings.title',
+    descriptionKey: 'assistant.actions.materialSetSurfaceSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
@@ -166,10 +180,11 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'texture.preview',
-    titleKey: 'assistant.actions.texturePreview.title',
-    descriptionKey: 'assistant.actions.texturePreview.description',
+    name: 'material.setPreviewDisplay',
+    titleKey: 'assistant.actions.materialSetPreviewDisplay.title',
+    descriptionKey: 'assistant.actions.materialSetPreviewDisplay.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       NUMBER('envIntensity', 'assistant.fields.intensity', 0),
@@ -206,13 +221,28 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
+     * The sibling of `world.setSceneLighting`, and it names its sources the same way: a PICTURE by asset
+     * id, a sky DOCUMENT by title. A preview judged under a different world than the scene it is
+     * headed for is a preview that decided nothing.
+     */
+    name: 'material.setPreviewEnvironment',
+    titleKey: 'assistant.actions.materialSetPreviewEnvironment.title',
+    descriptionKey: 'assistant.actions.materialSetPreviewEnvironment.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: ENVIRONMENT_FIELDS,
+  }),
+  action({
+    /**
      * No `assetId` means EMPTY the channel, which is the one thing an optional field can say here
      * that a required one cannot — clearing a map is a real gesture of the panel.
      */
-    name: 'texture.channel',
-    titleKey: 'assistant.actions.textureChannel.title',
-    descriptionKey: 'assistant.actions.textureChannel.description',
+    name: 'material.setChannelImage',
+    titleKey: 'assistant.actions.materialSetChannelImage.title',
+    descriptionKey: 'assistant.actions.materialSetChannelImage.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -230,6 +260,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.stylesList.title',
     descriptionKey: 'assistant.actions.stylesList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -242,6 +273,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.styleSave.title',
     descriptionKey: 'assistant.actions.styleSave.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true }],
   }),
@@ -250,6 +282,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.styleRename.title',
     descriptionKey: 'assistant.actions.styleRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'styleId', kind: 'text', labelKey: 'assistant.fields.styleId', required: true },
@@ -265,6 +298,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.styleRemove.title',
     descriptionKey: 'assistant.actions.styleRemove.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'styleId', kind: 'text', labelKey: 'assistant.fields.styleId', required: true },

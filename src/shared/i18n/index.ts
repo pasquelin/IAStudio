@@ -25,12 +25,17 @@ export type { Translations } from './fr'
  * a sentence written for a model, where a raw key reads as an instruction it cannot follow.
  */
 export function englishText(key: string): string {
+  return textAt(TRANSLATIONS.en, key)
+}
+
+/**
+ * The same lookup in whichever language a caller holds — for text that DOES land on a screen and
+ * is keyed at runtime: the form of a local model names its knobs by key, not by sentence.
+ */
+export function textAt(bundle: typeof fr, key: string): string {
   const text = key
     .split('.')
-    .reduce<unknown>(
-      (current, part) => (isRecord(current) ? current[part] : undefined),
-      TRANSLATIONS.en,
-    )
+    .reduce<unknown>((current, part) => (isRecord(current) ? current[part] : undefined), bundle)
   return typeof text === 'string' ? text : ''
 }
 

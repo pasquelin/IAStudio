@@ -53,9 +53,32 @@ tronque.
 **Retirer ne demande pas confirmation** : rien n’est perdu, et rouvrir le projet remet sa ligne.
 C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 
+**Retirer un projet de la liste ne le ferme pas.** Les deux gestes sont distincts : retirer efface
+une ligne d’une liste de raccourcis, fermer rend le studio à l’accueil. Retirer la ligne du projet
+ouvert laisse donc l’Explorateur, la timeline et les onglets exactement où ils étaient — c’est
+**Fermer le projet**, dans le menu du projet de la barre de titre, qui les vide.
+
+**Une génération en cours n’est pas perdue par la fermeture.** Elle continue là où elle tourne, et
+son résultat est rangé dans ce projet-ci — jamais dans un autre, même si vous en ouvrez un autre
+entre-temps. Elle reste visible dans la barre des générations tant qu’elle tourne, mais **son
+résultat n’arrivera pas dans le projet que vous ouvrez à la place** : c’est en rouvrant le sien
+que vous le retrouverez. **Le studio vous le demande** avant de vous laisser quitter le projet —
+fermeture comme bascule vers un autre — en disant combien tournent encore.
+
+Et quand l’une d’elles se termine alors que son projet n’est pas ouvert, **le studio l’écrit dans
+son journal** — panneau Activité — en nommant la génération et le projet où son résultat vous
+attend. Sans cette ligne, la génération quitterait la barre sans rien montrer, ce qui ressemble à
+du travail perdu : il ne l’est pas, mais il faut rouvrir son projet **dans les sept jours** pour
+le récupérer.
+
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un
 > document quand vous faites `⌘S`, la disposition des panneaux quand vous la changez.
+
+**Quitter un projet vous demande d’abord ce qu’il faut faire du travail non enregistré**, document
+par document — enregistrer, abandonner, ou renoncer à partir. C’est vrai des trois façons de le
+quitter : le fermer, en ouvrir un autre depuis la liste, en choisir un dans le sélecteur. Renoncer
+laisse tout exactement où c’était.
 
 ---
 
@@ -64,18 +87,26 @@ C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 ```
 Mon projet/
 │
-├── Images/               SEPT DOSSIERS POUR COMMENCER
+├── Images/               UN DOSSIER PAR SECTION DU STUDIO
 ├── Video/                  posés à la création, et ordinaires : renommez-les,
-├── Audio/                  videz-les, jetez-les, rangez-les autrement
-├── 3D/
-├── Textures/
-├── Sky/
-├── Animations/
+├── Audio/                  déplacez-les, videz-les, rangez-les autrement
+├── Materials/            vos matières, et les images qui les servent
+├── Skyboxes/
+├── Scripts/
+├── Modelling/            la section Modélisation range trois choses
+│   ├── Scenes/             vos scènes
+│   ├── Models/             vos maillages
+│   └── Animations/         vos mouvements
 │                           …et tout ce que vous créez à côté
+│
+│   Chacun porte un .ia-studio-role — CACHÉ — qui dit à quelle section il sert
 │
 ├── .project.json         la carte d'identité — CACHÉ
 │
-├── .scenario/            UNE SAUVEGARDE DU CATALOGUE — CACHÉ
+├── .project-context.json  CE QUE LE PROJET RACONTE — CACHÉ
+│                        l'univers, le style, les interdits — voir plus bas
+│
+├── .ia-studio/            UNE SAUVEGARDE DU CATALOGUE — CACHÉ
 │   └── items.json          ce qu'un fichier ne peut pas dire de lui-même
 │
 └── .index/               LE CATALOGUE ET SES CACHES — À GARDER, CACHÉ
@@ -91,12 +122,42 @@ règle. Vos fichiers restent visibles et vous les rangez comme vous l’entendez
 les regarder, les copier, les réparer. La carte d’identité, l’index et la sauvegarde, non : ce sont
 les outils du studio, pas votre travail.
 
-> **Les sept dossiers de départ ne sont qu’un point de départ.** Ils sont posés à la création et
-> jamais remis : si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a
-> besoin d’un endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
+> **Ces dossiers ne sont qu’un point de départ.** Ils sont posés à la création et jamais remis :
+> si vous supprimez `Images/`, il ne revient pas — sauf le jour où une génération a besoin d’un
+> endroit où atterrir, et le studio le recrée plutôt que de refuser de travailler.
+
+> **Renommez-les, déplacez-les : ils continuent de servir leur section.** Ce qui lie un dossier à
+> une section n’est pas son nom mais un petit fichier caché qu’il porte, `.ia-studio-role`. Il
+> voyage avec le dossier — un renommage dans le Finder ou l’Explorateur de Windows, un
+> déplacement, une copie, un zip. Renommez `Modelling/` en « Mes modèles » et le prochain maillage
+> y atterrit quand même.
+>
+> Dans l’explorateur du studio, un dossier qui sert une section porte l’icône de cette section, et
+> **son nom reste celui du disque** — ce que vous lisez dans le studio est ce que vous lisez dans
+> le Finder. C’est l’icône et l’infobulle qui disent la section, dans votre langue ; le dossier,
+> lui, ne change jamais de nom parce que vous changez de langue.
+>
+> Un dossier neuf portant le nom d’origine — vous avez renommé `Images/`, puis créé un `Images/` à
+> la main — est un dossier ordinaire : c’est le marqueur qui décide, pas le mot.
+
+> **Les noms sur le disque sont en anglais, et c’est délibéré.** Un dossier qui suivrait la langue
+> de l’interface serait renommé à chaque changement de langue, et tout ce que le catalogue sait de
+> ce qu’il contient pointerait à côté. Le studio traduit ce que le dossier SERT, jamais son nom.
+
+> **`Materials/` est le seul qui ne corresponde pas à un type de fichier.** Il tient vos
+> **matières** — les documents `.mtlx` — et les **images qui en servent une** : une couleur de
+> base, un relief, une rugosité y atterrissent, quand une photo va dans `Images/`. Ce qui les
+> sépare n'est pas leur nature, les deux sont des images, mais **le canal** que la seconde porte.
+
+> **Un projet créé avant cette arborescence garde la sienne, à l’identique.** `3D/`, `Sky/`,
+> `documents/`, `scripts/`, `Textures/` : rien n’est déplacé, rien n’est renommé, et tout ce qui
+> s’y trouve reste lisible et modifiable. Chaque fichier porte son propre chemin, et rien ne lit
+> son rôle dans le nom du dossier qui le tient. Seuls les fichiers CRÉÉS à partir de maintenant
+> atterrissent dans la nouvelle arborescence, qui apparaît à côté de l’ancienne. Vous pouvez tout
+> ranger à la main, à votre rythme, ou ne rien ranger du tout.
 
 > **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
-> Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.scenario/` ne le reçoit
+> Le studio le pose lui-même sur `.project.json` et sur `.index/`. **`.ia-studio/` ne le reçoit
 > pas** : le jour où il apparaît — il n’est écrit qu’après une passe qui a trouvé quelque chose —
 > vous le verrez dans l’Explorateur de Windows, à côté de vos dossiers. Il n’y a rien à en faire :
 > c’est la sauvegarde décrite plus bas. Si la pose échoue, **le projet s’ouvre quand
@@ -122,15 +183,15 @@ est créé d’avance et reste vide — rien ne l’écrit encore.
 
 **`posters/` n’en est pas un.** C’est l’image que porte la vignette, et **deux types y ont droit** :
 la vidéo et le modèle 3D — les deux qu’aucune vignette ne saurait distinguer autrement, une
-étagère de rushes étant une étagère de rectangles gris.
+liste de rushes étant une liste de rectangles gris.
 
 Pour une vidéo importée, l’image est saisie **au dixième de la durée**, et non au début : une
-prise commence assez souvent sur du noir pour qu’une étagère de premières images soit une étagère
+prise commence assez souvent sur du noir pour qu’une liste de premières images soit une liste
 de tuiles noires. Pour un modèle, c’est l’aperçu descendu avec lui.
 
 **Elle n’est écrite qu’une fois** — à l’import ou au rapatriement — et rien ne la refabrique après
 coup. Jetez ce dossier, et vos vignettes retombent sur l’icône générique de leur type. Rien n’est
-perdu de votre travail ; c’est l’étagère qui devient illisible d’un coup d’œil.
+perdu de votre travail ; c’est l’Explorateur qui devient illisible d’un coup d’œil.
 
 **`catalog.db` n’en est pas un.** C’est lui qui garde le nom de chaque asset, ses tags, ses
 dimensions, le modèle et le prompt qui l’ont produit, ce dont il dérive — et, pour un média
@@ -142,7 +203,7 @@ générations et des imports ; la passe qui relit le dossier à l’ouverture RE
 ont bougé, elle ne redevine pas ce qu’ils sont. Supprimer `.index/` rend donc un projet dont les
 fichiers sont tous là et dont plus rien ne dit ce qu’ils sont.
 
-> **C’est à cela que sert `.scenario/items.json`.** Le studio y recopie, après chaque passe qui a
+> **C’est à cela que sert `.ia-studio/items.json`.** Le studio y recopie, après chaque passe qui a
 > changé quelque chose, ce qu’un fichier ne peut pas dire de lui-même : son nom, ses tags, le
 > modèle et le prompt qui l’ont produit — rangés par empreinte du contenu, de sorte qu’un fichier
 > retrouvé se reconnaisse. Ce n’est pas une source : le studio ne la lit jamais de lui-même. C’est
@@ -171,7 +232,7 @@ que vous désignez et cherche ce fichier dedans.
 - **`updatedAt` bouge à chaque document enregistré.** C’est la dernière fois que ce projet a
   travaillé, pas la dernière fois qu’il a été ouvert.
 - **Désigner un dossier qui n’en contient pas** vous vaut « Ce dossier n’est pas un projet
-  Scenario », dans le journal et dans une bulle en bas à droite — pas un message système.
+  IA Studio », dans le journal et dans une bulle en bas à droite — pas un message système.
 - **Un fichier tronqué ou modifié à la main** est signalé comme illisible, et le studio ne l’ouvre
   pas plutôt que d’en deviner le contenu.
 - **Un projet créé par une version PLUS RÉCENTE du studio est refusé.** Il n’est pas ouvert « du
@@ -185,6 +246,113 @@ que vous désignez et cherche ce fichier dedans.
 > dossier vous appartient, vous le synchronisez peut-être, et une version antérieure du studio sait
 > encore le lire. Renommer le dossier pour lui retirer son extension est à vous de le faire, si
 > vous y tenez ; le studio n’y touche pas.
+
+---
+
+## Le contexte du projet
+
+Vous travaillez sur un film médiéval. Vous demandez « une maison » et vous obtenez un pavillon de
+banlieue. Vous récrivez « une chaumière médiévale à colombages, dans une forêt brumeuse, peinture à
+l'huile » — et vous le récrivez à chaque génération, toute la journée.
+
+**Le contexte du projet est l'endroit où l'on écrit cela une fois.** Il vit dans le panneau
+**Contexte**, moitié basse de la colonne de gauche, à côté de l'Explorateur et de Git : les trois
+parlent du projet ouvert — son arbre, son histoire, et ce qu'il raconte.
+
+Le menu du projet, dans la barre de titre, y mène aussi : **Contexte du projet**, entre la liste
+des projets et les deux façons d'en ouvrir un autre. C'est l'une des deux lignes qui agissent sur
+le projet ouvert au lieu d'en changer — l'autre est **Fermer le projet**.
+
+### Des fiches, et rien d'imposé
+
+Un contexte est une liste de **fiches**. Chacune porte un titre que vous choisissez, un texte que
+vous écrivez, et un interrupteur.
+
+```
+CONTEXTE DU PROJET                    [+]
+──────────────────────────────────────────
+☑ Univers
+  Moyen Âge, XIIIᵉ siècle. Forêt profonde,
+  royaume en déclin.
+
+☑ Direction artistique
+  Peinture à l'huile, clair-obscur, ocres
+  et verts sourds.
+
+☐ Personnage : Aldric
+  Chevalier balafré, armure ternie.
+
+☑ Interdits
+  Béton, néon, vêtement moderne.
+──────────────────────────────────────────
+             412 / 600 caractères envoyés
+```
+
+**Aucune rubrique n'est imposée**, et c'est délibéré : un romancier, un architecte et un studio de
+jeu décrivent un monde avec des mots entièrement différents. Le bouton `+` propose trois façons de
+commencer — Univers, Direction artistique, Interdits — mais ce ne sont que des points de départ :
+renommez, réécrivez, supprimez.
+
+**Une fiche éteinte garde son texte et n'ajoute rien.** C'est ainsi qu'on met un personnage de côté
+le temps d'une série d'images sans le perdre.
+
+### Ce qui part, et le compteur
+
+Le texte des fiches allumées est ajouté **sous** votre prompt, jamais devant :
+
+```
+une maison en ruine
+
+Project context —
+Univers: Moyen Âge, XIIIᵉ siècle. Forêt profonde, royaume en déclin.
+Direction artistique: Peinture à l'huile, clair-obscur, ocres et verts sourds.
+Interdits: Béton, néon, vêtement moderne.
+```
+
+Le compteur en bas du panneau dit ce qui est réellement envoyé. **La limite est de six cents
+caractères, et elle vient des modèles, pas du studio** : beaucoup d'encodeurs de texte ne lisent que
+soixante-dix-sept jetons — environ trois cents caractères — et laissent tomber le reste sans un mot.
+Au-delà de la limite, **les dernières fiches ne partent pas** ; elles sont écartées entières, jamais
+coupées au milieu d'une phrase.
+
+### Des images de référence
+
+Une fiche peut porter jusqu'à **quatre images** : déposez-les dessus depuis la bibliothèque.
+
+Elles ne partent pas toutes seules. Le panneau de génération les montre avec un bouton **Utiliser
+ces références**, et rien ne bouge sans ce clic — une image de référence change l'opération que le
+modèle exécute et ce qu'elle coûte, ce n'est pas quelque chose qui doit arriver par surprise. Le
+bouton n'apparaît pas pour un modèle qui ne prend aucune image.
+
+### Le fichier, et ce qui se passe s'il casse
+
+Le contexte est écrit dans `.project-context.json`, **à la racine de votre dossier de projet**. Il
+suit donc le projet : copié sur un disque, envoyé à quelqu'un, versionné dans Git — il est là.
+C'est du JSON lisible et vous pouvez l'éditer à la main.
+
+Si le studio ne parvient pas à le lire, **il n'y touche pas** et le panneau dit laquelle des deux
+choses est arrivée :
+
+| Ce que dit le panneau | Ce qu'il faut faire |
+|---|---|
+| Le fichier est illisible | Le réparer, ou le supprimer pour repartir de zéro. Rien n'a été écrasé |
+| Écrit par une version plus récente | Mettre le studio à jour |
+
+Un projet qui n'a pas de fichier n'a pas de contexte, et c'est le cas ordinaire : rien n'est créé
+tant que vous n'avez pas écrit une première fiche.
+
+### Ce que le contexte touche, et ce qu'il ne touche pas
+
+**Il s'applique à toutes les générations** — images, vidéos, modèles 3D, sons, ciels — dès
+que le modèle a un champ de description. Un agrandissement, une conversion, un maillage fait à
+partir d'une image n'en ont pas : le contexte ne fait alors rien, silencieusement.
+
+**L'assistant le reçoit aussi.** Il sait dans quel projet il travaille sans que vous le lui disiez.
+
+**Le nom de vos fichiers ne change pas.** Un asset généré est nommé d'après le début de son prompt ;
+c'est **ce que vous avez écrit** qui le nomme, jamais la version allongée par le contexte. De même,
+« Régénérer » rouvre le formulaire sur votre prompt, pas sur le prompt allongé — sans quoi le
+contexte s'ajouterait à lui-même à chaque reprise.
 
 ---
 
@@ -207,9 +375,10 @@ suivante. **Le dernier dossier choisi est celui où le document ira** — il n�
 suivre. Le chemin complet est écrit au-dessus des colonnes. On ne sort jamais du projet : rien
 d’autre n’est proposé.
 
-Les colonnes s’ouvrent sur le dossier que l’Explorateur montre, ou sur `documents/` si rien n’y
-est sélectionné. En dessous, **Nouveau dossier** en crée un dans le dossier choisi, sans quitter
-la fenêtre.
+Les colonnes s’ouvrent sur le dossier que l’Explorateur montre, ou, si rien n’y est sélectionné,
+sur le dossier de la section — `Modelling/Scenes/` pour une scène, `Images/` pour une image,
+`Materials/` pour une matière. En dessous, **Nouveau dossier** en crée un dans le dossier choisi,
+sans quitter la fenêtre.
 
 Il est enregistré avec `⌘S` / `Ctrl+S` — dans le dossier que vous avez choisi en le créant, et
 ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il est :
@@ -221,7 +390,7 @@ ensuite là où vous l’avez rangé — sous une extension qui dit ce qu’il e
 | séquence vidéo | `.otio` | Vidéo |
 | son en cours d’édition | `.otio` | Audio |
 | ciel | `.gltf` | Skyboxes |
-| matière | `.mtlx` | Textures |
+| matière | `.mtlx` | Matières |
 
 Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.gltf` à côté de
 `b204.mtlx` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.
@@ -253,8 +422,8 @@ l’un des deux est toujours allumé :
 | **Par dossier** | le projet tel qu’il est rangé sur le disque, en arborescence |
 | **Par domaine** | tous les fichiers du projet groupés par ce qu’ils **sont**, où qu’ils soient rangés |
 
-**Par domaine** ignore les dossiers. Il pose huit en-têtes au plus — les sept types du studio, plus
-**Autre** pour ce qui n’en relève d’aucun — chacun suivi du nombre de fichiers qu’il compte. **Un
+**Par domaine** ignore les dossiers. Il pose huit en-têtes au plus — les six types du studio,
+**Matière** pour un document `.mtlx`, et **Autre** pour ce qui n’en relève d’aucun — chacun suivi du nombre de fichiers qu’il compte. **Un
 domaine que rien ne remplit n’apparaît pas** : huit en-têtes vides sur un projet neuf ne diraient
 rien.
 
@@ -361,7 +530,7 @@ document ouvert : annuler dans le canevas ne doit pas atteindre votre disque.
 > « Cette action est irréversible », et c’est exact.
 
 **Un refus, et il est grisé plutôt que caché.** Ce que le studio garde pour lui — tout ce qui
-commence par un point : `.index/`, `.scenario/`, `.project.json` — ne se renomme ni ne se jette, et
+commence par un point : `.index/`, `.ia-studio/`, `.project.json` — ne se renomme ni ne se jette, et
 ne reçoit rien non plus. Ce sont ses outils ; renommer l’un d’eux casserait le projet pour un nom
 que personne ne lit. **Le même refus vaut des deux côtés du glisser** : vous voyez avant de lâcher.
 
@@ -377,7 +546,7 @@ c’est ce que la passe de réconciliation fait à l’ouverture et au retour da
 **Le renommage, lui, passe par le geste de la chose.** Un asset et un document ont chacun le leur, et
 l’Explorateur y mène : le nom change, et le fichier suit dans le même mouvement. Un document
 renommé ici garde son onglet ouvert, qui prend le nouveau nom. Un asset renommé ici change de nom
-partout à la fois — l’Explorateur, l’étagère, l’Inspecteur, l’onglet qui l’édite — parce qu’il
+partout à la fois — l’Explorateur, l’Inspecteur, l’onglet qui l’édite — parce qu’il
 n’y a **qu’un seul nom** : celui de sa ligne d’index EST celui de son fichier.
 
 > **Une image que vous avez déposée vous-même se renomme aussi**, même si le studio n’en a
@@ -420,7 +589,7 @@ dossier de projet ; ni l’un ni l’autre moment ne suffit seul.
 
 **Elle reconnaît un fichier à son contenu, pas à son chemin.** Déplacez une image d’un dossier à
 l’autre, renommez-la, faites les deux : la fiche la retrouve et la suit. Les identifiants ne
-changent pas, donc **une scène 3D continue de pointer sur sa texture** après que vous l’avez
+changent pas, donc **une scène 3D continue de pointer sur son image** après que vous l’avez
 rangée ailleurs.
 
 **Elle n’efface jamais une fiche.** Un fichier introuvable est **daté comme absent**, et sa fiche
@@ -803,7 +972,7 @@ Le studio fonctionne, mais plusieurs choses sont indisponibles, et le disent :
 | Ce que vous voyez | Pourquoi |
 |---|---|
 | « Ouvrez un projet pour générer. » | une image fabriquée doit atterrir quelque part |
-| « Ouvrez un projet pour voir ses assets. » | l’étagère montre le contenu d’un projet |
+| « Ouvrez un projet pour voir ses assets. » | l’Explorateur montre le contenu d’un projet |
 | Le bouton **+** du rail est grisé | un document est un fichier dans un dossier de projet |
 
 ---

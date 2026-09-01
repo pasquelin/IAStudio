@@ -1,4 +1,12 @@
-import { Box3, Mesh, Vector3, type Material, type Object3D, type Texture } from 'three'
+import {
+  Box3,
+  InstancedMesh,
+  Mesh,
+  Vector3,
+  type Material,
+  type Object3D,
+  type Texture,
+} from 'three'
 import { MARKER_NAME } from './markerPaint'
 
 /**
@@ -28,6 +36,10 @@ const BYTES_PER_TEXEL = 4
  * Geometries and textures are counted per distinct object, not per mesh: ten cubes sharing one
  * box carry one box's triangles on the GPU, and a count that added them ten times would send
  * someone optimising a model that is already fine.
+ *
+ * The studio's own primitives share a shape since `geometryCache`, so this reading now covers
+ * them too: five hundred identical cubes report one cube's triangles and five hundred draws.
+ * Before, only a model's clones were shared and the two halves of the overlay disagreed.
  */
 export function statsOf(
   objects: Iterable<Object3D>,
@@ -36,11 +48,15 @@ export function statsOf(
   const geometries = seen.geometries ?? new Set<unknown>()
   const textures = seen.textures ?? new Set<unknown>()
   const stats = { ...EMPTY_STATS }
+  // A caller hands the object of every node AND each of those holds its children, so a node
+  // hanging from another arrived twice: `draws` counted it twice, the deduped three did not.
+  const met = new Set<Object3D>()
 
   const count = (child: Object3D): void => {
     // Walked by hand rather than by `traverse`: a marker is a whole subtree to step over, and
     // `traverse` offers no way to stop at one. Visibility still gates the MESH alone, as before.
-    if (child.name === MARKER_NAME) return
+    if (child.name === MARKER_NAME || met.has(child)) return
+    met.add(child)
 
     if (child instanceof Mesh && child.visible) {
       const geometry = child.geometry
@@ -122,12 +138,17 @@ function textureBytes(texture: Texture): number {
  */
 export function densityOf(object: Object3D): number {
   const stats = statsOf([object])
-  if (stats.triangles === 0) return 0
+  // An instance holds ONE geometry and draws it `count` times, while its box spans every copy:
+  // counted once against that box, a thousand cubes read as empty space and the density view
+  // painted the most crowded thing on screen at the coolest step of its ramp.
+  const triangles =
+    object instanceof InstancedMesh ? stats.triangles * object.count : stats.triangles
+  if (triangles === 0) return 0
 
   const size = new Box3().setFromObject(object).getSize(new Vector3())
   const area = 2 * (size.x * size.y + size.y * size.z + size.z * size.x)
   // A flat plane and a point both enclose nothing; their triangles are all the answer there is.
-  return area === 0 ? stats.triangles : stats.triangles / area
+  return area === 0 ? triangles : triangles / area
 }
 
 /** Adds up what several counts hold, for a scene read object by object. */
@@ -140,5 +161,18 @@ export function totalStats(parts: readonly SceneStats[]): SceneStats {
       textureBytes: total.textureBytes + part.textureBytes,
     }),
     { ...EMPTY_STATS },
+  )
+}
+
+/**
+ * Whether two readings say the same thing. Read by the viewport, which is handed one on every
+ * `apply` — and a running game applies sixty times a second.
+ */
+export function sameStats(one: SceneStats, other: SceneStats): boolean {
+  return (
+    one.triangles === other.triangles &&
+    one.vertices === other.vertices &&
+    one.draws === other.draws &&
+    one.textureBytes === other.textureBytes
   )
 }

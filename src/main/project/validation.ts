@@ -18,24 +18,35 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import { isPrivatePath } from '@shared/domain/folder'
+import { isFolderRole, type FolderRole } from '@shared/domain/folderRole'
+import { GAME_VERSION, type GameManifest } from '@shared/domain/game'
 import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
-import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
+import {
+  CONTEXT_BODY_MAX,
+  CONTEXT_CARDS_MAX,
+  CONTEXT_PICTURES_MAX,
+  CONTEXT_TITLE_MAX,
+  CONTEXT_VERSION,
+  type ContextCard,
+  type ProjectContext,
+} from '@shared/domain/projectContext'
+import { isPbrChannel, type PbrChannel } from '@shared/domain/material'
 import type {
   SaveAudioRequest,
   SaveLayeredRequest,
   SavePictureRequest,
   SaveTextureRequest,
 } from '@shared/ipc'
+import { assetId } from '@main/assets/validation'
 import { isPngBytes } from '@main/media/png'
 import { pathSegment, withinCodePoints } from '@main/validation'
-import { base64Payload } from '@main/scenario/validation'
+import { base64Payload } from '@main/provider/validation'
 
 const manifest = z.object({
   // Capped, not merely floored, exactly as `documentEnvelope` below — and for a heavier reason.
   // A document flattened by a later save is one file; a project is the whole folder.
   version: z.number().int().min(1).max(MANIFEST_VERSION),
-  name: z.string().min(1),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 })
@@ -43,6 +54,59 @@ const manifest = z.object({
 /** A project folder is user territory: its manifest can be edited, truncated or replaced. */
 export function parseManifest(value: unknown): Manifest {
   return manifest.parse(value)
+}
+
+// Bounds in CODE POINTS, never in UTF-16 units: a card written in emoji or in Japanese is as long
+// as it looks, which is the lesson `checkAssetName` already carries.
+const contextCard = z.object({
+  id: z.string().trim().min(1).refine(withinCodePoints(80)),
+  // May be empty: a card with no title travels as its body alone.
+  title: z.string().trim().refine(withinCodePoints(CONTEXT_TITLE_MAX)),
+  body: z.string().refine(withinCodePoints(CONTEXT_BODY_MAX)),
+  active: z.boolean(),
+  pictures: z.array(assetId).max(CONTEXT_PICTURES_MAX),
+})
+
+const projectContext = z.object({
+  version: z.number().int().min(1).max(CONTEXT_VERSION),
+  cards: z.array(contextCard).max(CONTEXT_CARDS_MAX),
+})
+
+/** The file, which like the manifest is user territory — hand-edited, truncated, or older. */
+export function parseProjectContext(value: unknown): ProjectContext {
+  return projectContext.parse(value)
+}
+
+/** What a window, or a program driving the studio, asks to store. */
+export function parseContextCards(value: unknown): ContextCard[] {
+  return z.array(contextCard).max(CONTEXT_CARDS_MAX).parse(value)
+}
+
+const gameScript = z.object({ id: z.string().min(1), path: z.string().min(1) })
+
+const gamePrefab = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  document: z.string().min(1),
+})
+
+/**
+ * Every member but the version has a default, and that is a decision: `game.json` is written by
+ * hand and merged by git, so a manifest naming only its scenes must open rather than read as
+ * broken. The version alone is required — it is what tells a file from a later build apart.
+ */
+const game = z.object({
+  version: z.number().int().min(1).max(GAME_VERSION),
+  scenes: z.array(z.string().min(1)).default([]),
+  entryScene: z.string().min(1).nullable().default(null),
+  scripts: z.array(gameScript).default([]),
+  prefabs: z.array(gamePrefab).default([]),
+  settings: z.object({ title: z.string().default('') }).default({ title: '' }),
+})
+
+/** The author's file: hand-edited, versioned by git, and merged by a tool that knows no schema. */
+export function parseGame(value: unknown): GameManifest {
+  return game.parse(value)
 }
 
 // Absolute paths only, and enforced rather than merely intended: a relative one would resolve
@@ -58,6 +122,12 @@ export function parseProjectName(value: unknown): string {
   return pathSegment.parse(value)
 }
 
+/** A role a window may ask the folder of — refused rather than trusted, it crosses the frontier. */
+export function parseFolderRole(value: unknown): FolderRole {
+  if (!isFolderRole(value)) throw new Error('invalid-folder-role')
+  return value
+}
+
 // In code points, and generous rather than exact: `mkdirSync` takes an absolute path of 1 023
 // BYTES on APFS and refuses at 1 024 — swept a byte at a time, with segments under `NAME_MAX` —
 // so nothing a relative path this long names is a folder the disk would hold.
@@ -68,20 +138,27 @@ const withinPathBound = withinCodePoints(1024)
  * by `/`. Bounded, never absolute, never climbing, and never through a backslash — Windows takes
  * that as a separator, so `..\..` would walk out through a check that only looked at `/`.
  *
+ * 🛑 The drive letter is spelt OUT rather than left to `isAbsolute`, which answers for the system
+ * it RUNS on: `C:/Users/x` reads as relative on macOS and on the Linux runner alike.
+ *
  * A control character is deliberately NOT refused, unlike `pathSegment`: that one names what gets
  * CREATED, this one names what already exists. APFS holds such a name and `folder.list` hands it
  * straight back, so refusing here would lose a folder the disk really has.
  */
-const folderPath = z.string().refine(
-  // One `refine`, and short-circuited, because zod runs every check after a failed one: a bound
-  // of its own would still let a 5 MB string be split, two thousand at a time via `folderPaths`.
-  value =>
+export function isProjectRelativeFolder(value: string): boolean {
+  return (
     withinPathBound(value) &&
     !isAbsolute(value) &&
+    !/^[A-Za-z]:/.test(value) &&
     !value.startsWith('/') &&
     !value.includes('\\') &&
-    value.split('/').every(segment => segment !== '.' && segment !== '..'),
-)
+    value.split('/').every(segment => segment !== '.' && segment !== '..')
+  )
+}
+
+// One `refine`, and short-circuited, because zod runs every check after a failed one: a bound of
+// its own would still let a 5 MB string be split, two thousand at a time via `folderPaths`.
+const folderPath = z.string().refine(isProjectRelativeFolder)
 
 export function parseFolderPath(value: unknown): string {
   return folderPath.parse(value)
@@ -134,12 +211,15 @@ const assetQuery = z.object({
   paths: z.array(folderPath).max(ASSET_PATHS_MAX).optional(),
   // Absent here, `z.object` STRIPS it and the query reaching SQL is unfiltered: reading back a
   // generation's output answered with the first rows of the whole catalogue.
-  ids: z.array(z.string().trim().min(1)).max(ASSET_PATHS_MAX).optional(),
+  ids: z.array(assetId).max(ASSET_PATHS_MAX).optional(),
+  // Which of a page of library assets this project already holds. Held to the same bound and
+  // stripped for the same reason as `ids` just above — the ids are the API's, not this side's,
+  // so they go through the plain string rule rather than through `assetId`.
+  remoteAssetIds: z.array(z.string().trim().min(1).max(200)).max(ASSET_PATHS_MAX).optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),
-  // Spelled out rather than reusing the `assetId` schema, which is declared further down.
-  derivedFrom: z.string().trim().min(1).optional(),
+  derivedFrom: assetId.optional(),
   generated: z.literal(true).optional(),
   // Bounded here rather than in SQL: the renderer chooses the page size, and an unbounded
   // one would pull an entire well-stocked project across the IPC boundary in one message.
@@ -149,12 +229,6 @@ const assetQuery = z.object({
 
 export function parseAssetQuery(value: unknown): AssetQuery {
   return assetQuery.parse(value)
-}
-
-const assetId = z.string().trim().min(1)
-
-export function parseAssetId(value: unknown): string {
-  return assetId.parse(value)
 }
 
 // An edited take crosses the boundary as bytes. Bounded rather than trusted: the renderer is
@@ -222,8 +296,8 @@ const MAX_STUDIO_STATE = 64 * 1024 * 1024
 
 const oraBase = {
   name: z.string().max(200),
-  x: z.number().finite(),
-  y: z.number().finite(),
+  x: z.number(),
+  y: z.number(),
   opacity: z.number().min(0).max(1),
   visible: z.boolean(),
   composite: z.string().max(64),
@@ -366,12 +440,9 @@ export function parseDocumentTitle(value: unknown): string {
 }
 
 /**
- * A project's DISPLAY name, on its way into a manifest — the only validator it has, at creation
- * as at rename. Deliberately NOT a path segment: no folder is ever made from this name. Creating
- * lays the project into the folder the user chose and takes that folder's name as a starting
- * point; renaming writes the manifest and leaves the folder alone. Forbidding a slash would
- * refuse `Été 2026 / v2` for a constraint that does not exist — the manifest lets the name and
- * the folder differ, which is why `RecentProject` stores the name instead of deriving it.
+ * A project's name on its way in, at creation as at rename — and a project is named by its
+ * FOLDER, so this name becomes a path segment. What it may not hold is `isSafeFileName`'s to
+ * refuse; this bounds it.
  *
  * Trimmed and non-empty: a nameless project is a row nobody can find, and it is also how the root
  * of a volume is turned away — its basename is the empty string. Capped like every other string
@@ -399,7 +470,8 @@ const documentEnvelope = z.object({
   title,
   updatedAt: z.string().min(1),
   // Absent on every document written before assets could be opened, and on every document that
-  // edits none — so an absent field means "not linked" rather than a file to migrate.
+  // edits none — so an absent field means "not linked" rather than a file to migrate. Unbounded
+  // where the draft above bounds it: this reads a file that EXISTS, and a bound would refuse it.
   sourceAssetId: z.string().min(1).optional(),
   // Absent before version 3, where the file name was the id. Declared here or zod STRIPS it and
   // the field is written by the main process and never seen again — the very defect the comment

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
 /**
- * How long the typing must stop before the word travels. One value for the two panels that search
- * the API as one types: they wait the same, and two constants would drift into two behaviours.
+ * How long the typing must stop before the word travels. One value for every panel that searches
+ * as one types: they wait the same, and two constants would drift into two behaviours.
  */
 export const SEARCH_DELAY_MS = 250
 

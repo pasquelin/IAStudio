@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import type { AsyncCatalog } from '@main/project/catalogClient'
-import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
+import type { RemoteAssetCatalog } from '@main/provider/assetCatalog'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import { createCloudBackend, type CloudBackendDeps } from './cloudBackend'
 import type { ImportRequest, LocalBackend } from './localBackend'
@@ -43,6 +43,7 @@ function harness(overrides: Partial<CloudBackendDeps> = {}): Harness {
   const smalls: { name: string; base64: string }[] = []
 
   const local: LocalBackend = {
+    importFromFile: () => Promise.reject(new Error('a twin is downloaded, never moved')),
     importFromUrl: async request => {
       imported.push(request)
       const asset: Asset = {
@@ -132,6 +133,26 @@ describe('bringing an asset down', () => {
       remoteUpdatedAt: '2026-08-06T10:00:00.000Z',
       generation,
     })
+  })
+
+  /**
+   * The channel is what files a picture with the materials rather than with the photographs, and
+   * the provenance is the only thing that carries it. Dropped here, a channel pulled from the
+   * Library lands beside the photographs while its twin generated in the app lands with the
+   * materials — one picture, two folders, on the door it came through alone.
+   */
+  it('carries the channel a pulled picture serves, read off its provenance', async () => {
+    const { backend, imported } = harness()
+    await backend.pull(cloudAsset({ remoteType: 'texture-smoothness' }))
+
+    expect(imported[0]).toMatchObject({ map: 'roughness', mapInverted: true })
+  })
+
+  it('claims no channel for a picture no material asked for', async () => {
+    const { backend, imported } = harness()
+    await backend.pull(cloudAsset({ remoteType: 'txt2img' }))
+
+    expect(imported[0]?.map).toBeUndefined()
   })
 
   /**

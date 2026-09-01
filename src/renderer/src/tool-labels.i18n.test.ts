@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '@shared/guards'
-import { TRANSLATIONS } from '@shared/i18n'
-import { IMAGE_TOOLS, TOOL_COMMANDS } from '@/spaces/image/imageTools'
-import { SCENE_TOOLS } from '@/spaces/three/sceneTools'
+import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
+import { IMAGE_TOOLS, TOOL_COMMANDS } from '@/features/image/imageTools'
+import { SCENE_TOOLS } from '@/features/scene/components/Scene/sceneTools'
 
 /** Widened, not cast: the bundle's inferred type carries no index signature. */
 const read = (bundle: unknown, key: string): unknown =>
@@ -13,13 +13,16 @@ const read = (bundle: unknown, key: string): unknown =>
 const titleKeyOf = (command: string): string =>
   `commands.${command.replace(/\.(\w)/, (_, letter: string) => letter.toUpperCase())}.title`
 
+/** The button a row of the image table arms — the mode inside it when the row names one. */
+const armedButton = ({ tool, mode }: { tool: string; mode?: string }) => {
+  const button = IMAGE_TOOLS.find(candidate => candidate.id === tool)
+  return mode === undefined ? button : button?.modes?.find(candidate => candidate.id === mode)
+}
+
 /** Both bars, as pairs of the two keys that name one tool. */
 function pairs(): { command: string; labelKey: string }[] {
-  const fromImage = TOOL_COMMANDS.flatMap(({ command, tool, mode }) => {
-    const entry = IMAGE_TOOLS.find(candidate => candidate.id === tool)
-    const labelKey = mode
-      ? entry?.modes?.find(candidate => candidate.id === mode)?.labelKey
-      : entry?.labelKey
+  const fromImage = TOOL_COMMANDS.flatMap(({ command, ...arms }) => {
+    const labelKey = armedButton(arms)?.labelKey
     return labelKey === undefined ? [] : [{ command, labelKey }]
   })
 
@@ -51,6 +54,34 @@ describe('the two names a tool wears', () => {
         read(TRANSLATIONS.fr, titleKey),
       )
     }
+  })
+
+  /**
+   * What the rule above cannot see: a pair the two languages BOTH split, each its own way. The
+   * palette shipped `Remplir le calque` against `Outil Pot de peinture`, and `Trait` against
+   * `Forme Ligne` — the prefix may dress the bare name, never replace it.
+   */
+  it('carries the bare name inside the prefixed one, in every language', () => {
+    const drift = LANGUAGES.flatMap(({ code }) =>
+      pairs().flatMap(({ command, labelKey }) => {
+        const label = read(TRANSLATIONS[code], labelKey)
+        const title = read(TRANSLATIONS[code], titleKeyOf(command))
+        if (typeof label !== 'string' || typeof title !== 'string')
+          return [`${code} ${command}: ${labelKey} or its command title reads nothing`]
+        return title.toLocaleLowerCase(code).includes(label.toLocaleLowerCase(code))
+          ? []
+          : [`${code} ${command}: "${title}" drops "${label}"`]
+      }),
+    )
+
+    expect(drift).toEqual([])
+  })
+
+  /** `TOOL_COMMANDS` is written by hand, and a row that arms nothing leaves `pairs` in silence. */
+  it('arms a button for every row of the image table', () => {
+    const orphans = TOOL_COMMANDS.filter(entry => armedButton(entry) === undefined)
+
+    expect(orphans.map(entry => entry.command)).toEqual([])
   })
 
   /**

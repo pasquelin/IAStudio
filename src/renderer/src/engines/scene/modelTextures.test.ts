@@ -1,4 +1,11 @@
-import { Mesh, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture } from 'three'
+import {
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  RepeatWrapping,
+  SRGBColorSpace,
+  Texture,
+} from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createModelTextures } from './modelTextures'
 import { scriptedTextureCache } from './scene-fixtures'
@@ -28,6 +35,27 @@ function materialOf(root: Object3D): MeshStandardMaterial {
   return found
 }
 
+/** Two meshes, two materials — a car body and its glass, which is the ordinary glTF file. */
+function twoMaterialModel(): Object3D {
+  const source = new Object3D()
+  for (let made = 0; made < 2; made += 1) {
+    const geometry = geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 })
+    source.add(new Mesh(geometry, new MeshStandardMaterial()))
+  }
+  return source
+}
+
+/** Every standard material of an instance, in the order a traversal meets them. */
+function materialsOf(root: Object3D): MeshStandardMaterial[] {
+  const found: MeshStandardMaterial[] = []
+  root.traverse(object => {
+    if (object instanceof Mesh && object.material instanceof MeshStandardMaterial) {
+      found.push(object.material)
+    }
+  })
+  return found
+}
+
 let onChange: () => void
 
 beforeEach(() => {
@@ -41,10 +69,12 @@ describe('createModelTextures', () => {
     const instance = instanceOf(source)
     const textures = createModelTextures(scripted.cache, instance, onChange)
 
-    textures.apply({ map: { assetId: 'tex-1' } })
+    textures.apply(0, { map: { assetId: 'tex-1' } })
     const loaded = await scripted.settle('tex-1')
 
-    expect(materialOf(instance).map).toBe(loaded)
+    // The SOURCE, not the instance: an override wears the sampler of the map it replaces, so
+    // what lands on the material is a clone sharing the picture — see `sampledLike`.
+    expect(materialOf(instance).map?.source).toBe(loaded?.source)
     expect(scripted.spaces.get('tex-1')).toBe(SRGBColorSpace)
     expect(onChange).toHaveBeenCalled()
   })
@@ -58,10 +88,10 @@ describe('createModelTextures', () => {
     const untouched = instanceOf(source)
     const textures = createModelTextures(scripted.cache, dressed, onChange)
 
-    textures.apply({ map: { assetId: 'tex-1' } })
+    textures.apply(0, { map: { assetId: 'tex-1' } })
     const loaded = await scripted.settle('tex-1')
 
-    expect(materialOf(dressed).map).toBe(loaded)
+    expect(materialOf(dressed).map?.source).toBe(loaded?.source)
     expect(materialOf(untouched).map).toBe(fileMap)
     expect(materialOf(source).map).toBe(fileMap)
   })
@@ -72,9 +102,9 @@ describe('createModelTextures', () => {
     const instance = instanceOf(source)
     const textures = createModelTextures(scripted.cache, instance, onChange)
 
-    textures.apply({ map: { assetId: 'tex-1' } })
+    textures.apply(0, { map: { assetId: 'tex-1' } })
     await scripted.settle('tex-1')
-    textures.apply({})
+    textures.apply(0, {})
 
     expect(scripted.released).toEqual(['tex-1'])
     expect(materialOf(instance).map).toBe(fileMap)
@@ -86,12 +116,28 @@ describe('createModelTextures', () => {
     const instance = instanceOf(source)
     const textures = createModelTextures(scripted.cache, instance, onChange)
 
-    textures.apply({ map: { assetId: 'a' }, normalMap: { assetId: 'b' } })
+    textures.apply(0, { map: { assetId: 'a' }, normalMap: { assetId: 'b' } })
     await scripted.settle('a')
     textures.dispose()
 
     expect(scripted.released.sort()).toEqual(['a', 'b'])
     expect(materialOf(instance).map).toBe(fileMap)
+  })
+
+  it('disposes the cloned materials, not the ones the file still holds', () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+    const clone = materialOf(instance)
+    const file = materialOf(source)
+    const disposeClone = vi.spyOn(clone, 'dispose')
+    const disposeFile = vi.spyOn(file, 'dispose')
+
+    textures.dispose()
+
+    expect(disposeClone).toHaveBeenCalledOnce()
+    expect(disposeFile).not.toHaveBeenCalled()
   })
 
   /**
@@ -119,10 +165,225 @@ describe('createModelTextures', () => {
     unlit.add(new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 })))
     const undressable = vi.fn()
 
-    createModelTextures(scripted.cache, unlit, onChange, undressable).apply({
+    createModelTextures(scripted.cache, unlit, onChange, undressable).apply(0, {
       map: { assetId: 'tex-1' },
     })
 
     expect(undressable).toHaveBeenCalled()
+  })
+
+  /**
+   * glTF stores its UVs for an unflipped picture, and `GLTFLoader` configures no orientation —
+   * asked the studio's own way up, an override lands upside down over the map it replaces.
+   */
+  it('asks for its pictures the way up the model file stores them', async () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).apply(0, {
+      map: { assetId: 'tex-base' },
+    })
+    await scripted.settle('tex-base')
+
+    expect(scripted.orientations.get('tex-base')).toBe('from-image')
+  })
+
+  /**
+   * A `.glb` whose map tiles says so on the SAMPLER, not in the picture. Posted bare, an override
+   * reverted every model to ClampToEdge at 1×1 — a slot at a time it was rare, the button that
+   * fills five at once makes it a single click.
+   */
+  it('dresses the override with the sampler of the map it replaces', async () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    fileMap.wrapS = RepeatWrapping
+    fileMap.wrapT = RepeatWrapping
+    fileMap.repeat.set(4, 2)
+    fileMap.offset.set(0.25, 0.5)
+    fileMap.channel = 1
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).apply(0, {
+      map: { assetId: 'tex-base' },
+    })
+    await scripted.settle('tex-base')
+
+    const worn = materialOf(instance).map
+    expect(worn?.repeat.toArray()).toEqual([4, 2])
+    expect(worn?.offset.toArray()).toEqual([0.25, 0.5])
+    expect(worn?.wrapS).toBe(RepeatWrapping)
+    expect(worn?.channel).toBe(1)
+  })
+
+  /**
+   * The clone carries its own wrapping, and `getTextureCacheKey` reads it — so three allocates a
+   * SECOND GPU texture for it, one the cache never hears about. Left alone, every ⌘S on the
+   * picture and every reopening of the scene grew `info.memory.textures` for the session.
+   */
+  it('frees the clone it wore when the model goes away', async () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    fileMap.repeat.set(2, 2)
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.apply(0, { map: { assetId: 'tex-base' } })
+    await scripted.settle('tex-base')
+    const worn = materialOf(instance).map
+    const freed = vi.spyOn(worn as Texture, 'dispose')
+
+    textures.dispose()
+
+    expect(freed).toHaveBeenCalled()
+  })
+
+  /**
+   * The finish a material of the Materials space is worth to a model. Absent fields leave what the
+   * glTF put there — a model dressed by half a finish keeps the other half of its file.
+   */
+  it('wears the finish over the one its file carries', () => {
+    const scripted = scriptedTextureCache()
+    const { source } = loadedModel()
+    const instance = instanceOf(source)
+    materialOf(instance).roughness = 0.9
+
+    createModelTextures(scripted.cache, instance, onChange).dress(0, { metalness: 0.5 })
+
+    expect(materialOf(instance).metalness).toBe(0.5)
+    expect(materialOf(instance).roughness).toBe(0.9)
+  })
+
+  // The repeat rides on the TEXTURES, not on the material: one tiling turns every map at once.
+  it('tiles the maps rather than the material', () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    const instance = instanceOf(source)
+
+    createModelTextures(scripted.cache, instance, onChange).dress(0, { tiling: { x: 4, y: 2 } })
+
+    expect(fileMap.repeat.toArray()).toEqual([4, 2])
+  })
+})
+
+/**
+ * A model carries one material per primitive of its mesh — Blender's slots, Unreal's elements —
+ * and the studio dressed ALL of them with whatever the node named. A car was then a body, a glass
+ * and a set of tyres painted the same.
+ */
+describe('a model of several materials', () => {
+  it('counts the materials its file carries', () => {
+    const instance = instanceOf(twoMaterialModel())
+    const textures = createModelTextures(scriptedTextureCache().cache, instance, onChange)
+
+    expect(textures.count()).toBe(2)
+  })
+
+  it('dresses one slot without touching the others', async () => {
+    const scripted = scriptedTextureCache()
+    const instance = instanceOf(twoMaterialModel())
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.apply(1, { map: { assetId: 'tex-1' } })
+    const loaded = await scripted.settle('tex-1')
+
+    const [first, second] = materialsOf(instance)
+    expect(second?.map?.source).toBe(loaded?.source)
+    expect(first?.map).toBeNull()
+  })
+
+  it('gives each slot the finish of its own material', () => {
+    const instance = instanceOf(twoMaterialModel())
+    const textures = createModelTextures(scriptedTextureCache().cache, instance, onChange)
+
+    textures.dress(0, { roughness: 0.2 })
+    textures.dress(1, { roughness: 0.9 })
+
+    expect(materialsOf(instance).map(one => one.roughness)).toEqual([0.2, 0.9])
+  })
+
+  // A slot the file does not have is a row the user added ahead of its model: it does nothing,
+  // and it must not write into the last material that does exist.
+  it('writes nothing for a slot the file does not carry', async () => {
+    const scripted = scriptedTextureCache()
+    const instance = instanceOf(twoMaterialModel())
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.apply(5, { map: { assetId: 'tex-1' } })
+    await Promise.resolve()
+
+    expect(materialsOf(instance).every(one => one.map === null)).toBe(true)
+  })
+})
+
+/**
+ * A glTF material is routinely worn by SEVERAL primitives. A slot per *(mesh, material)* pair made
+ * a file of one material report five, so dressing « slot 0 » left four meshes on their own maps —
+ * and every scene saved before the two modes existed reopened under-dressed, in silence.
+ */
+describe('a material several meshes share', () => {
+  function sharedMaterialModel(): Object3D {
+    const material = new MeshStandardMaterial()
+    const source = new Object3D()
+    for (let made = 0; made < 3; made += 1) {
+      const geometry = geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 })
+      source.add(new Mesh(geometry, material))
+    }
+    return source
+  }
+
+  it('counts one slot, not one per mesh', () => {
+    const instance = instanceOf(sharedMaterialModel())
+    const textures = createModelTextures(scriptedTextureCache().cache, instance, onChange)
+
+    expect(textures.count()).toBe(1)
+  })
+
+  it('dresses every mesh wearing it from that one slot', async () => {
+    const scripted = scriptedTextureCache()
+    const instance = instanceOf(sharedMaterialModel())
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.apply(0, { map: { assetId: 'tex-1' } })
+    const loaded = await scripted.settle('tex-1')
+
+    const worn = materialsOf(instance)
+    expect(worn).toHaveLength(3)
+    expect(worn.every(one => one.map?.source === loaded?.source)).toBe(true)
+  })
+})
+
+/**
+ * Covering a model with a picture names no finish at all, and the clone still carried whatever the
+ * material before it wrote: a model that wore a red material kept the red multiplying its new base
+ * colour until the engine was rebuilt.
+ */
+describe('a finish a dress no longer names', () => {
+  it('puts back the one the file gave the material', () => {
+    const { source } = loadedModel()
+    materialOf(source).color.set('#204080')
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scriptedTextureCache().cache, instance, onChange)
+
+    textures.dress(0, { color: '#ff0000' })
+    textures.dress(0, undefined)
+
+    expect(`#${materialOf(instance).color.getHexString()}`).toBe('#204080')
+  })
+
+  // `needsUpdate` makes three.js re-derive the program's key, and this runs per slot of every
+  // model on each catalogue refresh — a model wearing what it already wears must not pay for it.
+  it('leaves the program alone when nothing moved', () => {
+    const instance = instanceOf(loadedModel().source)
+    const textures = createModelTextures(scriptedTextureCache().cache, instance, onChange)
+
+    textures.dress(0, { roughness: 0.4 })
+    // `needsUpdate` has no getter in three.js — `version` is what it bumps, and what a renderer
+    // compares to decide whether the program has to be derived again.
+    const material = materialOf(instance)
+    const before = material.version
+    textures.dress(0, { roughness: 0.4 })
+
+    expect(material.version).toBe(before)
   })
 })

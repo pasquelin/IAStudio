@@ -6,7 +6,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'"
     />
-    <title>Scenario Studio</title>
+    <title>IA Studio</title>
     <style>
       * {
         margin: 0;
@@ -16,44 +16,56 @@
       body {
         width: 100vw;
         height: 100vh;
-        padding: 26px 28px;
+        padding: 34px 40px 30px;
         overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        /* Same stops as build/icon.svg: the splash and the Dock icon must read as one object. */
-        background: linear-gradient(158deg, #3b4256 0%, #22242a 55%, #191a1c 100%);
+        display: grid;
+        grid-template-rows: 1fr auto;
+        justify-items: center;
+        /* The tile colour of build/icon.svg, lit from where the mark sits: the splash and the Dock
+           icon must read as one object. */
+        background: radial-gradient(ellipse at 50% 42%, #202124 0%, #161921 58%, #191a1c 100%);
         color: #dfe1e5;
         font: 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         user-select: none;
         cursor: default;
         -webkit-app-region: drag;
       }
-      .top {
+      .stage {
+        align-self: center;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
       }
       .mark {
-        width: 54px;
-        height: 54px;
+        width: 96px;
+        height: 96px;
         flex: none;
       }
       .name {
-        font-size: 19px;
+        font-size: 15px;
         font-weight: 600;
-        letter-spacing: 0.2px;
+        letter-spacing: 0.34em;
+        /* Uppercased by the sheet, never in the markup: `appName.test.ts` reads the name as data. */
+        text-transform: uppercase;
+        /* The tracking is applied to the right of each letter, the last one included. */
+        text-indent: 0.34em;
+      }
+      .name b {
+        font-weight: 600;
+        color: #6193f3;
       }
       .version {
         font-size: 11px;
         color: #91959b;
-        margin-top: 3px;
+        letter-spacing: 0.04em;
         font-variant-numeric: tabular-nums;
       }
       .track {
-        height: 2px;
+        width: 70%;
+        height: 3px;
         background: #34363a;
-        border-radius: 2px;
+        border-radius: 3px;
         overflow: hidden;
       }
       /* Indeterminate: startup is one synchronous block, so any percentage would be invented. */
@@ -61,7 +73,9 @@
         height: 100%;
         width: 40%;
         background: #346ef2;
-        border-radius: 2px;
+        border-radius: 3px;
+        /* The glow is the mark's own blue, one step lighter — the maquette's lit bar. */
+        box-shadow: 0 0 10px 1px #6193f3;
         animation: sweep 1.25s ease-in-out infinite;
       }
       @keyframes sweep {
@@ -82,33 +96,31 @@
     </style>
   </head>
   <body>
-    <div class="top">
-      <svg class="mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <div class="stage">
+      <!--
+        The icon's monogram, without its tile: this surface already paints the tile colour. COPIED
+        rather than imported — a separate Vite entry under `default-src 'none'` reaches no file.
+        `splash.test.ts` pins every SHAPE below to `build/icon.svg`; the viewBox that frames them
+        is pinned by no one, so a mark that moves inside the 1024 grid crops here, silently.
+      -->
+      <svg class="mark" viewBox="247 229 566 566" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="327" cy="351" r="53" fill="#346ef2" />
+        <rect x="276" y="431" width="102" height="295" rx="44" fill="#346ef2" />
         <path
-          fill="#fff"
-          opacity="1"
-          d="M 256.211609 219.877777 L 503.321014 365.44278 L 256.211609 511.007751 L 9.102222 365.44278 Z"
+          d="M 414.0 726.0 Q 391.0 726.0 391.0 703.0 L 391.0 635.0 Q 391.0 621.0 397.3 608.5
+             L 504.0 395.0 Q 566.0 271.0 628.0 395.0 L 783.2 705.4 Q 793.5 726.0 770.5 726.0
+             L 714.5 726.0 Q 691.5 726.0 681.2 705.4 L 592.8 528.7 Q 566.0 475.0 539.2 528.7
+             L 450.8 705.4 Q 440.5 726.0 417.5 726.0 Z"
+          fill="#ffffff"
         />
         <path
-          fill="#fff"
-          opacity="0.78"
-          d="M 256.211609 147.059967 L 503.321014 292.624969 L 256.211609 438.189972 L 9.102222 292.624969 Z"
-        />
-        <path
-          fill="#fff"
-          opacity="0.6"
-          d="M 256.211609 74.312775 L 503.321014 219.877777 L 256.211609 365.44278 L 9.102222 219.877777 Z"
-        />
-        <path
-          fill="#fff"
-          opacity="0.42"
-          d="M 256.211609 1.494995 L 503.321014 147.059967 L 256.211609 292.624969 L 9.102222 147.059967 Z"
+          d="M 508.0 726.0 Q 488.0 726.0 496.9 708.1 L 541.4 619.2 Q 566.0 570.0 590.6 619.2
+             L 635.1 708.1 Q 644.0 726.0 624.0 726.0 Z"
+          fill="#346ef2"
         />
       </svg>
-      <div>
-        <div class="name">Scenario Studio</div>
-        <div class="version" id="version"></div>
-      </div>
+      <div class="name"><b>IA</b> Studio</div>
+      <div class="version" id="version"></div>
     </div>
     <div class="track"><div class="fill"></div></div>
     <script type="module" src="/src/splash.ts"></script>

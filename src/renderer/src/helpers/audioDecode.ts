@@ -1,25 +1,31 @@
 import type { AudioData } from '@/engines/audio/audioData'
+import { decodeBytesOffThread } from '@/engines/audio/decodePort'
 import { fetchAsset } from '@/helpers/assetFetch'
 
 /**
  * Brings an asset's sound into memory, as plain arrays.
  *
- * `decodeAudioData` is the browser's own decoder — no ffmpeg, no wasm, nothing shipped for it.
- *
- * The context is closed straight away: only the samples are kept, and an `AudioContext` left
- * open holds an output device for as long as the tab lives.
+ * Decoded in a worker: `decodeAudioData` on this thread froze the window for the length of the
+ * take. The context is closed straight away when we fall back here — an `AudioContext` left open
+ * holds an output device for as long as the tab lives.
  */
 export async function decodeAsset(assetId: string): Promise<AudioData> {
-  const response = await fetchAsset(assetId)
+  try {
+    return await decodeBytesOffThread(await (await fetchAsset(assetId)).arrayBuffer())
+  } catch {
+    // Read again rather than kept: the port TRANSFERS the buffer, so holding a copy for this
+    // path taxed every successful decode with the whole encoded file — 115 MB for ten minutes
+    // of stereo WAV — to serve a fallback that runs when the worker itself failed.
+    return decodeHere(await (await fetchAsset(assetId)).arrayBuffer())
+  }
+}
 
+async function decodeHere(bytes: ArrayBuffer): Promise<AudioData> {
   const context = new AudioContext()
   try {
-    const buffer = await context.decodeAudioData(await response.arrayBuffer())
+    const buffer = await context.decodeAudioData(bytes)
     return {
       sampleRate: buffer.sampleRate,
-      // Copied out of the `AudioBuffer` rather than viewed into it: these arrays are handed to
-      // the render worker, which takes ownership of their buffers, and detaching storage the
-      // decoder still holds is not something to find out about at runtime.
       channels: Array.from({ length: buffer.numberOfChannels }, (_unused, channel) =>
         buffer.getChannelData(channel).slice(),
       ),

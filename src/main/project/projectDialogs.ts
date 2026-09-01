@@ -23,6 +23,28 @@ export async function askUseOccupiedFolder(ask: AskUser, folder: string): Promis
 }
 
 /**
+ * Whether the project may be left while generations are still running — closed, or swapped for
+ * another, which does the same thing to them.
+ *
+ * They are not at risk: the manager refuses to file them anywhere but in their own project, and
+ * picks them up when it is opened again. What is at risk is the person's understanding — they
+ * leave the bar on the way out, and nothing else in the studio would say where they went.
+ */
+export async function askLeaveWithJobs(ask: AskUser, count: number): Promise<boolean> {
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].project
+
+  return await askConfirm(ask, {
+    message: t.leaveRunningTitle,
+    // The count rides in the DETAIL, and the title carries none: this file has no plural forms,
+    // and « 1 générations » is what a title built from a number would have read on a lone job.
+    detail: fillHoles(t.leaveRunningBody, { count }, language),
+    confirm: t.leaveRunningConfirm,
+    cancel: t.leaveRunningCancel,
+  })
+}
+
+/**
  * Whether a BATCH really goes to the trash. Asked from two files up, never from a window.
  *
  * Asked at all because this is the one gesture the explorer offers that `⌘Z` cannot take back:

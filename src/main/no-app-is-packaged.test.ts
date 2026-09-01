@@ -42,11 +42,11 @@ function packagedReadsIn(path: string, source: string): string[] {
  * the flag reporting a packaged app in the middle of a dev run. `isDevelopment`
  * (`main/environment.ts`) reads `__DEV__`, injected by `define`, so it says what the build IS.
  *
- * Eight behaviours had already switched to their production side this way and were moved off the
+ * Seven behaviours had already switched to their production side this way and were moved off the
  * flag — the window's entry point, DevTools, the log mirror, the Dock icon, the developer menu,
- * the reload guard, the `secrets/.env` fallback and the single-instance lock. The updater was the
- * ninth and was missed, because it fails quietly: `checkForUpdates` ran during development and
- * only ever reached a log line. Nothing stopped a tenth, so this does.
+ * the reload guard and the single-instance lock. The updater was the
+ * eighth and was missed, because it fails quietly: `checkForUpdates` ran during development and
+ * only ever reached a log line. Nothing stopped a ninth, so this does.
  *
  * TWO blind spots, written down rather than left to be discovered:
  *

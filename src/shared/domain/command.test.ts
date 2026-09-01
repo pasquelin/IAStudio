@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '../guards'
-import { isSignature } from './shortcut'
+import { isSignature, reservedByPlatform } from './shortcut'
 import { LANGUAGES, TRANSLATIONS } from '../i18n'
 import {
   bindingOf,
@@ -11,8 +11,10 @@ import {
   commandIn,
   commandsIn,
   conflicts,
+  platformDefaults,
   scopeOfWorkspace,
 } from './command'
+import { HOME_SURFACE } from './tool'
 import { WORKSPACE_IDS } from './workspace'
 
 function resolve(bundle: unknown, key: string): unknown {
@@ -190,5 +192,90 @@ describe('the keys the registry binds', () => {
   it('would refuse a letter written in place of a code', () => {
     expect(isSignature('KeyP')).toBe(true)
     expect(isSignature('P')).toBe(false)
+  })
+
+  /**
+   * ⌘Q, ⌘W, ⌘M: the desktop answers these before any window does, on all three systems. A
+   * command holding one is unreachable AND takes a gesture nothing else can make — which is
+   * exactly what ⌘Q did on a French keyboard, where the window read it as the canvas's ⌘A.
+   */
+  it('leaves the chords the desktop answers to the desktop', () => {
+    for (const isMac of [true, false]) {
+      const taken = COMMAND_REGISTRY.filter(descriptor =>
+        reservedByPlatform(bindingOf(descriptor.id, platformDefaults(isMac))),
+      )
+
+      expect(taken.map(descriptor => descriptor.id)).toEqual([])
+    }
+  })
+})
+
+describe('what a system other than macOS ships', () => {
+  it('gives full screen the key its desktops actually use', () => {
+    expect(bindingOf('window.fullScreen', platformDefaults(false))).toBe('F11')
+    expect(bindingOf('window.fullScreen', platformDefaults(true))).toBe('Ctrl+Meta+KeyF')
+  })
+
+  it('lets a remap win over what the system ships', () => {
+    const remapped = { ...platformDefaults(false), 'window.fullScreen': 'Meta+KeyJ' }
+
+    expect(bindingOf('window.fullScreen', remapped)).toBe('Meta+KeyJ')
+  })
+
+  it('spells every one of them as a signature the studio can produce', () => {
+    const written = Object.values(platformDefaults(false))
+
+    expect(written.filter(signature => !isSignature(signature))).toEqual([])
+    expect(written.length).toBeGreaterThan(0)
+  })
+
+  /** Two commands of one scope sharing a key is a clash wherever it happens. */
+  it('clashes with nothing it ships alongside', () => {
+    expect(conflicts(platformDefaults(false))).toEqual([])
+  })
+})
+
+/**
+ * One space now opens two kinds, so ⌘Z has to follow the DOCUMENT. What the native menu offers
+ * is built from this answer alone, in the main process, from a surface and a kind.
+ */
+describe('the scope a document edits through', () => {
+  it('answers the kind before the space, where the two disagree', () => {
+    expect(scopeOfWorkspace('3d', 'scene')).toBe('scene')
+    expect(scopeOfWorkspace('3d', 'gui')).toBe('gui')
+  })
+
+  it('answers the space where the kind names no scope of its own', () => {
+    expect(scopeOfWorkspace('image', 'image')).toBe('canvas')
+    expect(scopeOfWorkspace('3d', null)).toBe('scene')
+  })
+
+  /**
+   * 🛑 The home edits nothing, and `activeId` is NOT cleared on the way there — so the last
+   * interface opened would otherwise arm ⌘Z over a screen holding no editor at all, and the
+   * Edit menu would show an enabled Undo doing nothing.
+   */
+  it('answers nothing over the home, whatever tab was left active behind it', () => {
+    expect(scopeOfWorkspace(HOME_SURFACE, 'gui')).toBeNull()
+    expect(scopeOfWorkspace(null, 'gui')).toBeNull()
+  })
+})
+
+describe('the commands that raise a system dialogue', () => {
+  /**
+   * 🛑 A LIST, and it is an opt-in flag on 131 entries: written out so a sixth dialogue shows up
+   * here as a name rather than as a count nobody can act on. **Blind spot**: nothing detects a
+   * command that starts raising one later — this list is held by reading, not by the machine.
+   */
+  it('names the five, so a sixth is a change somebody has to make on purpose', () => {
+    const raising = COMMAND_REGISTRY.filter(one => one.raisesDialog).map(one => one.id)
+
+    expect([...raising].sort()).toEqual([
+      'canvas.export',
+      'canvas.exportLayered',
+      'montage.import',
+      'project.new',
+      'project.open',
+    ])
   })
 })

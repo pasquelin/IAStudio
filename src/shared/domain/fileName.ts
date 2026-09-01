@@ -71,7 +71,7 @@ function withinBytes(points: readonly string[]): string {
  * title cannot be a file name ask `isSafeFileName` first — the fallback is for the paths where
  * there is nobody to ask.
  */
-export function safeFileName(name: string, fallback = 'texture'): string {
+export function safeFileName(name: string, fallback: string): string {
   // NFC first, and this is one of the two places the studio settles that question — the other is
   // the folder reader, where the disk speaks. `Été` typed here and `Été` pasted from elsewhere
   // are the same six characters on screen and two different strings underneath; left as they
@@ -169,6 +169,23 @@ export function stemOf(fileName: string): string {
 export function extensionOf(fileName: string): string {
   const cut = fileName.lastIndexOf('.')
   return cut <= 0 ? '' : fileName.slice(cut)
+}
+
+/**
+ * The last segment of a path the OS wrote, whichever separator it used.
+ *
+ * `pathBaseNameOf` and not `baseNameOf`: `folder.ts` already exports a `parentOf` for the
+ * `/`-joined ids the explorer walks, and two functions of one word in two domains is how an
+ * auto-import lands on the wrong one.
+ */
+export function pathBaseNameOf(path: string): string {
+  return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
+}
+
+/** The folder a path names, or the path itself when it names no folder. */
+export function pathParentOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut > 0 ? path.slice(0, cut) : path
 }
 
 /**

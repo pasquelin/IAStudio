@@ -15,8 +15,10 @@ import {
 } from '@/engines/timeline/timelineState'
 import {
   addAssetToSequence,
+  selectTrackIn,
   sequenceHistoryOf,
   sequenceOf,
+  sequenceStore,
   useSequences,
   writeTakeClip,
 } from './sequences'
@@ -34,6 +36,21 @@ const asset: Asset = {
 
 const clipsOf = (documentId: string): Clip[] =>
   sequenceOf(useSequences.getState(), documentId).tracks[0]?.clips ?? []
+
+describe('what a montage designates', () => {
+  /**
+   * The window between a tab appearing and its file being read: `stateOf` answers with the
+   * SEQUENCE default there, and a pick written into it builds a montage the file then argues
+   * with — the guard every other writer of this store carries.
+   */
+  it('writes nothing into a document whose file is still on its way', () => {
+    sequenceStore.resetForTests()
+
+    selectTrackIn('doc-1', 'V1')
+
+    expect(useSequences.getState().states['doc-1']).toBeUndefined()
+  })
+})
 
 describe('sequences store', () => {
   it('gives an empty sequence for a document never opened', () => {

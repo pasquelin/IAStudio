@@ -21,7 +21,7 @@ export type FavoritesStore = {
   /** Answers the whole list, as the account channels do: one write, one truth back. */
   pin: (draft: FavoriteDraft) => Promise<FavoriteRecipe[]>
   unpin: (id: string) => Promise<FavoriteRecipe[]>
-  /** The file behind `scenario://favorite/<id>`, or null for an id that is not one of ours. */
+  /** The file behind `ia-studio://favorite/<id>`, or null for an id that is not one of ours. */
   thumbnailPath: (id: string) => string | null
 }
 
@@ -127,7 +127,12 @@ export function createFavorites(folder: string): FavoritesStore {
         } catch (error) {
           // The index is what `unpin` reads to know which stills to remove, so a picture whose
           // line never landed is one nothing can ever collect.
-          await rm(fileOf(draft.id), { force: true }).catch(() => {})
+          try {
+            await rm(fileOf(draft.id), { force: true })
+          } catch {
+            // The write that failed is what the caller has to hear about, not this tidy-up.
+          }
+
           throw error
         }
       }),
@@ -141,7 +146,12 @@ export function createFavorites(folder: string): FavoritesStore {
         // pointing at a file that is gone is a broken tile for good — the shelf reads
         // `hasThumbnail` and never checks again.
         const written = await write(kept)
-        await rm(fileOf(id), { force: true }).catch(() => {})
+        try {
+          await rm(fileOf(id), { force: true })
+        } catch {
+          // An orphaned picture is invisible, per the note above; the line is already gone.
+        }
+
         return written
       }),
 
@@ -150,7 +160,7 @@ export function createFavorites(folder: string): FavoritesStore {
      * `hasThumbnail` it already holds, and a file that is not there is a 404 either way.
      *
      * Contained all the same, exactly as `assetFilePath` contains a catalogue path. The id here
-     * comes off a URL and `new URL` does not decode `%2F`, so `scenario://favorite/..%2F..%2Fx`
+     * comes off a URL and `new URL` does not decode `%2F`, so `ia-studio://favorite/..%2F..%2Fx`
      * reaches this as a real `../../x` — and the scheme is one the CSP lets the window fetch.
      */
     thumbnailPath: id => {

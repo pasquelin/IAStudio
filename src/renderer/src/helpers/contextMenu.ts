@@ -94,12 +94,13 @@ export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<
   // it cannot draw, and a menu that never appears leaves no half-open surface behind to hint at
   // it — an unhandled rejection would be the only trace, and it is not one anybody reads.
   const first = rows.find(row => !isRule(row))
-  const chosen = await getBridge()
-    ?.menu.popup(items)
-    .catch(error => {
-      reportFailure('shell.menu', first && !isRule(first) ? first.label : '', error)
-      return null
-    })
+  let chosen
+  try {
+    chosen = await getBridge()?.menu.popup(items)
+  } catch (error) {
+    reportFailure('shell.menu', first && !isRule(first) ? first.label : '', error)
+    return
+  }
 
   // Spelt out rather than `!chosen`: the first row's id is `'0'`, which reads as falsy to anyone
   // skimming even though the string is not.

@@ -1,3 +1,6 @@
+import { extensionOf } from './fileName'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from './folderRole'
+import { SCRIPT_EXTENSION } from './game'
 import type { OraSurface } from './openRaster'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
@@ -5,7 +8,8 @@ import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
  * Document registry, shared by both processes: the native menu will need it for
  * "File ▸ New", and duplicating the type would degrade `DocumentKind` to `string`.
  */
-export type DocumentKind = 'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'texture'
+export type DocumentKind =
+  'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'material' | 'script' | 'gui'
 
 /** The values beside the type: a file read back off disk has to be checked against them. */
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
@@ -14,7 +18,9 @@ export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   'sequence',
   'audio',
   'skybox',
-  'texture',
+  'material',
+  'script',
+  'gui',
 ]
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
@@ -55,18 +61,26 @@ export type DocumentDescriptor = {
   sourceAssetId?: string
 }
 
-const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
-  image: 'image',
-  '3d': 'scene',
-  video: 'sequence',
-  audio: 'audio',
-  textures: 'texture',
-  skyboxes: 'skybox',
+/**
+ * What each space opens, FIRST one first.
+ *
+ * A list rather than one kind, since the 3D space holds two: a scene and the interfaces a game
+ * shows over it. The head of the list is what its New button makes — a second table saying which
+ * would be free to disagree with this one.
+ */
+const KINDS_BY_WORKSPACE: Record<WorkspaceId, readonly DocumentKind[]> = {
+  image: ['image'],
+  '3d': ['scene', 'gui'],
+  video: ['sequence'],
+  audio: ['audio'],
+  materials: ['material'],
+  skyboxes: ['skybox'],
+  code: ['script'],
 }
 
 /** `null` for a workspace whose editor does not exist yet — the new-document button disables. */
 export function kindForWorkspace(workspace: WorkspaceId): DocumentKind | null {
-  return KIND_BY_WORKSPACE[workspace]
+  return KINDS_BY_WORKSPACE[workspace][0] ?? null
 }
 
 /**
@@ -78,7 +92,7 @@ export function kindForWorkspace(workspace: WorkspaceId): DocumentKind | null {
  * describes, read the other way round.
  */
 export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
-  return WORKSPACE_IDS.find(workspace => KIND_BY_WORKSPACE[workspace] === kind) ?? null
+  return WORKSPACE_IDS.find(workspace => KINDS_BY_WORKSPACE[workspace].includes(kind)) ?? null
 }
 
 /**
@@ -89,19 +103,48 @@ export function workspaceForKind(kind: DocumentKind): WorkspaceId | null {
  */
 export const DOCUMENT_VERSION = 3
 
-export const DOCUMENTS_FOLDER = 'documents'
+/**
+ * The one folder every document used to be filed under, whatever it was.
+ *
+ * Nothing writes into it any more and nothing is migrated out of it: a project made before the
+ * roles keeps its files exactly where they are, and the next save lands beside its own kind. Read
+ * for two things only — the path a pre-version-3 file still sits at, and the staging sweep, which
+ * has to look where a stopped save may have left a copy.
+ */
+export const LEGACY_DOCUMENTS_FOLDER = 'documents'
 
 /**
- * What a document of the studio carries inside a file it does not own the shape of.
+ * The role a document of this kind is filed under when its author names no folder.
  *
- * Every open format the studio writes has somewhere for data a reader may ignore — `metadata` in
- * OpenTimelineIO, `extras` in glTF — and the studio's own goes under one domain key, holding
- * which document the file IS and which kind, where a name shared by two editors cannot say.
+ * A `Record` rather than a chain of tests: an eighth kind does not compile until it has answered
+ * where it lands, where a fallback would file it under one shelf without a word.
  *
- * Here rather than in each format: they were spelt twice, and two spellings of an invariant are
- * free to drift the day one is edited — which is the very argument each of them carried.
+ * Read by the STORE and not by the naming window alone: a caller that supplies a title opens no
+ * window at all — the assistant and the MCP wire both do — and a second answer written there
+ * would file the same gesture in two folders.
  */
-export const STUDIO_METADATA_KEY = 'scenario'
+const ROLE_BY_KIND: Record<DocumentKind, FolderRole> = {
+  image: 'image',
+  scene: 'scenes',
+  sequence: 'video',
+  audio: 'audio',
+  skybox: 'skyboxes',
+  material: 'materials',
+  script: 'code',
+  gui: 'gui',
+}
+
+export function roleForKind(kind: DocumentKind): FolderRole {
+  return ROLE_BY_KIND[kind]
+}
+
+/** Where a document of this kind STARTS. Where it lands is `ProjectStore.folderFor`, which reads
+ * the markers and lays the folder down. */
+export function documentFolderOf(kind: DocumentKind): string {
+  return DEFAULT_ROLE_PATHS[roleForKind(kind)]
+}
+
+export { STUDIO_METADATA_KEY } from './studioMetadata'
 
 export const DOCUMENT_ID_KEY = 'documentId'
 
@@ -129,8 +172,44 @@ export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
   // Held in the same container as the scene, for the same reason: a sky is an environment, and
   // glTF is what carries one. The file says which of the two it is.
   skybox: '.gltf',
-  texture: '.mtlx',
+  material: '.mtlx',
+  // The one kind whose file the studio does not spell: a script IS its text, so the envelope has
+  // no line to sit on. `PLAIN_TEXT` in `documentBody.ts` is the format, and the file NAME is the
+  // id — a renamed script is therefore a different document, which is the price of that.
+  script: SCRIPT_EXTENSION,
+  // A COMPOUND suffix, and the only one: `extensionOf` answers `.json` for it, so anything
+  // telling a document by its extension reads `documentExtensionOf` instead.
+  gui: '.ui.json',
 }
+
+/**
+ * The longest document extension this name ends with — `.ui.json` before `.json`.
+ *
+ * 🛑 `extensionOf` cuts at the LAST dot, so it answers `.json` for `hud.ui.json`: a compound
+ * suffix is invisible to it, and every `.json` of the project would read as a document. What
+ * tells a document apart therefore asks this, and only this.
+ */
+export function documentExtensionOf(fileName: string): string {
+  const found = COMPOUND_EXTENSIONS.find(extension => fileName.endsWith(extension))
+  return found ?? extensionOf(fileName)
+}
+
+/**
+ * The name without the extension `documentExtensionOf` reads — `hud` for `hud.ui.json`.
+ *
+ * 🛑 The pair of the above, and it has to be: `stemOf` cuts at the last dot, so it answers
+ * `hud.ui`. Paired with the compound extension, a copy came out `hud.ui 2.ui.json`, and a
+ * second `hud.ui 2.ui 2.ui.json`.
+ */
+export function documentStemOf(fileName: string): string {
+  const extension = documentExtensionOf(fileName)
+  return extension ? fileName.slice(0, -extension.length) : fileName
+}
+
+/** Longest first, so `.ui.json` is tried before a plain `.json` ever could be. */
+const COMPOUND_EXTENSIONS: readonly string[] = Object.values(EXTENSIONS_BY_KIND)
+  .filter(extension => extension.slice(1).includes('.'))
+  .sort((one, other) => other.length - one.length)
 
 /**
  * Where a document of this id WOULD live had it never been named — which is where one written
@@ -142,7 +221,7 @@ export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
  * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
-  return `${DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
+  return `${LEGACY_DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
 }
 
 /**

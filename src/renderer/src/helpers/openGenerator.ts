@@ -1,5 +1,7 @@
-import type { ModelFamily } from '@shared/domain/model'
+import { aiRoleId, primaryRoleOf } from '@shared/domain/aiRole'
+import { CAPABILITIES_BY_FAMILY, type ModelFamily } from '@shared/domain/model'
 import { revealTool } from '@/helpers/revealPanel'
+import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
 
 /**
@@ -20,8 +22,22 @@ export function openGeneratorOn(
   family: ModelFamily,
   modelId: string,
   params: Record<string, unknown>,
+  capability?: string,
 ): void {
-  useModels.getState().prepare(family, modelId, params)
+  // 🛑 Either spelling: `generator.readArmedGeneration` reports the ROLE (`code/code2code`), and a client
+  // feeding that back got the family's first employment instead — silently, and the wrong one.
+  const named = capability?.slice(capability.indexOf('/') + 1)
+  const role =
+    named !== undefined && CAPABILITIES_BY_FAMILY[family].includes(named)
+      ? aiRoleId(family, named)
+      : primaryRoleOf(family)
+  if (!role) return
+
+  useModels.getState().prepare(role, modelId, params)
+  // 🛑 Both halves, as `prepareEdit` does: the panel reads the model and the values of the
+  // operation it settled on, so arming one without forcing the other hands them to whichever
+  // operation the current selection happens to point at — silently, with default values.
+  useGeneration.getState().forceCapability(role)
   // The generator may well be closed — it is a tool window like any other.
   revealTool('generator')
 }

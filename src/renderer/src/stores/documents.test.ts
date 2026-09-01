@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DocumentDescriptor, DocumentWrite } from '@shared/domain/document'
+import {
+  documentFolderOf,
+  type DocumentDescriptor,
+  type DocumentWrite,
+} from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fakeBridge'
 import {
   documentForAsset,
@@ -36,7 +40,7 @@ describe('documents store', () => {
   it('keeps nothing in local storage, the project folder being what says a document exists', async () => {
     await useDocuments.getState().create('3d')
 
-    expect(localStorage.getItem('scenario-studio:documents')).toBeNull()
+    expect(localStorage.getItem('ia-studio:documents')).toBeNull()
   })
 
   // A file per tab opened and never typed in would litter the project with empty documents
@@ -68,7 +72,7 @@ describe('documents store', () => {
               kind: 'scene',
               title: 'Scène 1',
               workspace: '3d',
-              path: 'documents/Scène 1.gltf',
+              path: `${documentFolderOf('scene')}/Scène 1.gltf`,
             },
           ]),
       },
@@ -169,9 +173,9 @@ describe('documents store', () => {
     expect(created?.workspace).toBe('3d')
   })
 
-  it('creates a texture document in the textures workspace', async () => {
-    const created = await useDocuments.getState().create('textures')
-    expect(created?.kind).toBe('texture')
+  it('creates a material document in the materials workspace', async () => {
+    const created = await useDocuments.getState().create('materials')
+    expect(created?.kind).toBe('material')
   })
 
   /**

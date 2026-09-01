@@ -1,0 +1,61 @@
+import { useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { ModelSummary } from '@shared/domain/model'
+import type { PlanAccess } from '@shared/domain/plan'
+import { usePlanRefusal } from './usePlanRefusal'
+
+/** The word a tile shows for a refusal, and the sentence its tooltip explains it with. */
+export type ModelRefusalWord = { word: string; hint: string }
+
+/**
+ * Why a model cannot be picked right now, or `undefined` when it can.
+ *
+ * Two reasons, and they are not the same gesture: a plan that does not reach it is a purchase,
+ * where weights that are not on the disk are a download the studio can start itself.
+ */
+export type ModelReach = {
+  /**
+   * The two words the tile shows, and the sentence its tooltip explains them with.
+   *
+   * The word is carried rather than spelled by the tile: a local model depends on no
+   * subscription, and a badge fixed on "beyond your plan" said exactly that about eight models
+   * whose only problem was not being downloaded yet.
+   */
+  refusal: ModelRefusalWord | undefined
+  /** Whether the studio can fix it by fetching the weights, rather than the person by buying. */
+  fetchable: boolean
+}
+
+const WITHIN: ModelReach = { refusal: undefined, fetchable: false }
+
+export function useModelReach(plan: PlanAccess | null): (model: ModelSummary) => ModelReach {
+  const { t } = useTranslation()
+  const refusalFor = usePlanRefusal(plan)
+  // Held rather than rebuilt: the catalogue memoises its tiles on this word and asks it again for
+  // every one of them, so a fresh object per model woke the whole grid on every frame of a scroll.
+  const locked = useRef<ModelRefusalWord | null>(null)
+
+  return useMemo(() => {
+    const absent = { word: t('models.notInstalled'), hint: t('models.notInstalledHint') }
+    const unwired = { word: t('models.engineMissing'), hint: t('models.engineMissingHint') }
+
+    return model => {
+      // 🛑 Before the plan, and never after: a model of THIS machine answers to no subscription,
+      // and asking first said "beyond your plan" about weights that were only missing.
+      // `installed` is absent for a cloud model, where there is nothing to fetch.
+      if (model.installed === false) {
+        return model.downloadable === false
+          ? { refusal: unwired, fetchable: false }
+          : { refusal: absent, fetchable: true }
+      }
+
+      const beyond = refusalFor(model.requiredPlanLevel)
+      if (beyond === undefined) return WITHIN
+
+      if (locked.current?.hint !== beyond) {
+        locked.current = { word: t('models.planLocked'), hint: beyond }
+      }
+      return { refusal: locked.current, fetchable: false }
+    }
+  }, [refusalFor, t])
+}

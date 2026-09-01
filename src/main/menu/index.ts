@@ -1,7 +1,13 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
-import type { BindingOverrides, MenuAbility, MenuCheck } from '@shared/domain/command'
+import {
+  platformDefaults,
+  type BindingOverrides,
+  type MenuAbility,
+  type MenuCheck,
+} from '@shared/domain/command'
+import { sameOrder } from '@shared/collections'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { frontWindow, sendToFront } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
@@ -14,6 +20,7 @@ import {
   openSettingsWindow,
   openUsageWindow,
 } from '@main/window/windows'
+import { isDocumentKind, type DocumentKind } from '@shared/domain/document'
 import { menuTemplate } from './template'
 
 /** Everything one window reported about itself, which is everything the menu draws from it. */
@@ -22,6 +29,7 @@ type WindowMenu = {
   tools: readonly ToolId[]
   checked: readonly MenuCheck[]
   abilities: readonly MenuAbility[]
+  kind: DocumentKind | null
 }
 
 /**
@@ -58,15 +66,19 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
   overrides = remapped
   shown = focusedMenu()
 
+  const isMac = process.platform === 'darwin'
   const template = menuTemplate({
     language: windowLanguage(),
     workspace: shown?.surface ?? null,
+    kind: shown?.kind ?? null,
     tools: shown?.tools ?? [],
     checked: shown?.checked ?? [],
     abilities: shown?.abilities ?? [],
-    isMac: process.platform === 'darwin',
+    isMac,
     isDevelopment,
-    overrides,
+    // What this system ships under what the user remapped, exactly as the window reads them:
+    // the menu would otherwise advertise ⌃⌘F on a machine whose full-screen key is F11.
+    overrides: { ...platformDefaults(isMac), ...overrides },
     actions: {
       openSettings: () => void openSettingsWindow(),
       openLicences: () => void openLicencesWindow(),
@@ -80,17 +92,12 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
       setDisplay: request => sendToFront(EVENTS.sceneDisplay, request),
       exportScene: command => sendToFront(EVENTS.sceneExport, command),
       captureScene: command => sendToFront(EVENTS.sceneCapture, command),
-      exportTexture: command => sendToFront(EVENTS.textureExport, command),
+      exportMaterial: command => sendToFront(EVENTS.materialExport, command),
       exportSkybox: command => sendToFront(EVENTS.skyboxExport, command),
     },
   })
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
-}
-
-/** Generic, so a call cannot quietly compare the tools of one window to the ticks of another. */
-function sameList<T extends string>(next: readonly T[], shownList: readonly T[]): boolean {
-  return next.length === shownList.length && next.every((id, index) => id === shownList[index])
 }
 
 /**
@@ -109,9 +116,9 @@ function sameMenu(next: WindowMenu | null, drawn: WindowMenu | null): boolean {
 
   return (
     next.surface === drawn.surface &&
-    sameList(next.tools, drawn.tools) &&
-    sameList(next.checked, drawn.checked) &&
-    sameList(next.abilities, drawn.abilities)
+    sameOrder(next.tools, drawn.tools) &&
+    sameOrder(next.checked, drawn.checked) &&
+    sameOrder(next.abilities, drawn.abilities)
   )
 }
 
@@ -127,7 +134,7 @@ function rebuildInNewLanguage(): void {
 export function registerMenuHandlers(): void {
   followWindowLanguage(rebuildInNewLanguage)
 
-  handle(CHANNELS.windowWorkspace, (event, next, tools, checked, abilities) => {
+  handle(CHANNELS.windowWorkspace, (event, next, tools, checked, abilities, kind) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a surface this one has dropped.
     if (next !== HOME_SURFACE && !WORKSPACE_IDS.includes(next)) return
@@ -139,6 +146,8 @@ export function registerMenuHandlers(): void {
       tools: (tools ?? []).filter(id => placementOf(id) !== null),
       checked: checked ?? [],
       abilities: abilities ?? [],
+      // Same defaulting, same reason: an older preload sends nothing here.
+      kind: kind && isDocumentKind(kind) ? kind : null,
     })
     rebuildIfStale()
   })

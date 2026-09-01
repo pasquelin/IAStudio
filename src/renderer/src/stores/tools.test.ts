@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { shownTools, type ToolState } from '@/helpers/toolRegistry'
 import { arrangedFor } from './tool-fixtures'
 import {
   familyOf,
@@ -15,6 +16,7 @@ import {
   DEFAULT_LENGTHS,
   DEFAULT_OPEN,
   DEFAULT_SIZES,
+  defaultSizeOf,
   migrateTools,
   fitZoneSize,
   fitSplit,
@@ -101,32 +103,39 @@ describe('tools store', () => {
     expect((sizes.left ?? 0) + (sizes.right ?? 0)).toBeLessThanOrEqual(1000 - MIN_CENTER)
   })
 
-  /** The home keeps a right column of its own, and one width serves both: it counts here. */
+  /**
+   * A zone open anywhere takes its width off the others, whichever family holds it open — and at
+   * the width that family DRAWS it: the home is left on its default here, where the right column
+   * is open on the assistant's 460. What is left of 800 is under the floor, so the drag stops at
+   * `MIN_SIZE`.
+   */
   it('re-clamps every zone when the window shrinks', () => {
     useTools.setState({
-      arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
+      arrangements: arrangedFor('image', {
+        open: { left: { primary: 'assets' }, right: { primary: 'inspector' } },
+      }),
       lengths: { sizes: { left: 600 }, splits: {} },
     })
     useTools.getState().fit(800, 600)
-    expect(useTools.getState().lengths.sizes.left).toBe(800 - DEFAULT_SIZES.right - MIN_CENTER)
+    expect(useTools.getState().lengths.sizes.left).toBe(MIN_SIZE)
   })
 
   /**
    * A length is clamped against the TIGHTEST of the two families now that one serves both: a
-   * width the home could afford — its right column being the only one open there — would
-   * overflow a space that keeps the opposite column open.
+   * width the home could afford — its left column being the only one it opens — would overflow
+   * a space that keeps the opposite column open.
    */
   it('clamps a width against a column the other family keeps open', () => {
     useTools.setState({
       arrangements: {
-        workspaces: { open: { left: { primary: 'models' } } },
-        home: { open: { right: { primary: 'library' } } },
+        workspaces: { open: { right: { primary: 'inspector' } } },
+        home: { open: { left: { primary: 'projects' } } },
       },
-      lengths: { sizes: { left: 400 }, splits: {} },
+      lengths: { sizes: { right: 400 }, splits: {} },
     })
-    useTools.getState().resize('right', 900, 1000)
+    useTools.getState().resize('left', 900, 1000)
 
-    expect(useTools.getState().lengths.sizes.right).toBe(1000 - 400 - MIN_CENTER)
+    expect(useTools.getState().lengths.sizes.left).toBe(1000 - 400 - MIN_CENTER)
   })
 
   it('opens a tool in the half its placement declares', () => {
@@ -148,9 +157,9 @@ describe('tools store', () => {
   it('swaps within a half rather than stacking, when two tools share it', () => {
     const { show } = useTools.getState()
     show('image', 'left', 'generator')
-    show('image', 'left', 'models')
+    show('image', 'left', 'assets')
 
-    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'models' })
+    expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({ primary: 'assets' })
   })
 
   it('empties the half it is asked to close', () => {
@@ -177,6 +186,121 @@ describe('tools store', () => {
     expect(useTools.getState().focusedZone).toBeNull()
   })
 
+  /**
+   * The right column belongs to the assistant while it is up, and gives itself back after.
+   *
+   * A conversation read in half a column is a conversation nobody holds, so the panel declares
+   * `solo` and the store puts the column away rather than sharing it — then restores exactly what
+   * it put away, since anything else would be the studio's default, not the reader's.
+   */
+  describe('a panel that takes its zone whole', () => {
+    it('puts the other half away, and gives it back on closing', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', {
+          open: { right: { primary: 'layers', secondary: 'inspector' } },
+        }),
+      })
+      const { show, close } = useTools.getState()
+
+      show('image', 'right', 'assistant')
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'assistant',
+      })
+
+      close('image', 'right', 'primary')
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'layers',
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * Asking for another panel is a CHOICE, and restoring over it would undo the very gesture
+     * that was just made. The column comes back, and what was asked for stands in it.
+     */
+    it('gives the column back around the panel asked for, rather than over it', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', {
+          open: { right: { primary: 'layers', secondary: 'inspector' } },
+        }),
+      })
+      const { show } = useTools.getState()
+
+      show('image', 'right', 'assistant')
+      show('image', 'right', 'text')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'text',
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * The column nobody arranged: the assistant is what an untouched right half draws, so there
+     * is nothing stashed to give back. The half falls to the first panel that SHARES the zone —
+     * without it, an unnamed half would answer with the assistant again and swallow the gesture.
+     */
+    it('falls to the panel behind it where nothing was ever put away', () => {
+      useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+
+      useTools.getState().show('image', 'right', 'inspector')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'layers',
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * 🛑 The half the solo panel SILENCES is not a half it closed: rebuilding the column from the
+     * shared panel alone shut the inspector every time a rail icon of the upper half was clicked.
+     */
+    it('keeps the silenced half when the reader asks for another panel beside it', () => {
+      useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+
+      useTools.getState().show('image', 'right', 'layers')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        primary: 'layers',
+        secondary: null,
+      })
+    })
+
+    /**
+     * 🛑 It closes THAT HALF, never the column: the half beside it may hold a panel the reader
+     * chose while the assistant was withheld, and closing the assistant took it down with it.
+     */
+    it('closes only the half it was asked to, where nothing was put away', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', { open: { right: { secondary: 'inspector' } } }),
+      })
+
+      useTools.getState().close('image', 'right', 'primary')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({
+        secondary: 'inspector',
+      })
+    })
+
+    /**
+     * 🛑 A reset that left the stash behind gave the column back on the next close — undoing,
+     * silently, the very reset that had just cleared it.
+     */
+    it('forgets what it put away when the layout is reset', () => {
+      useTools.setState({
+        arrangements: arrangedFor('image', {
+          open: { right: { primary: 'layers', secondary: 'inspector' } },
+        }),
+      })
+      useTools.getState().show('image', 'right', 'assistant')
+
+      useTools.getState().reset()
+      useTools.getState().close('image', 'right', 'primary')
+
+      expect(arrangementOf(useTools.getState(), 'image').open.right).toEqual({ secondary: null })
+    })
+  })
+
   it('clamps the divider between the two halves', () => {
     useTools.setState({
       arrangements: arrangedFor('image', {
@@ -185,6 +309,48 @@ describe('tools store', () => {
     })
     useTools.getState().resplit('right', 900, 400)
     expect(useTools.getState().lengths.splits.right).toBe(400 - MIN_SPLIT)
+  })
+})
+
+/**
+ * A conversation at 260 wraps every sentence onto three lines, and the layer stack at 460 is
+ * mostly gutter — so the width belongs to the TOOL, until somebody drags one.
+ */
+describe('a tool that opens its zone wider than the zone would', () => {
+  it('opens at its own width, where its neighbours keep the zone width', () => {
+    expect(defaultSizeOf('right', 'assistant')).toBe(460)
+    expect(defaultSizeOf('right', 'layers')).toBe(DEFAULT_SIZES.right)
+    expect(defaultSizeOf('right', null)).toBe(DEFAULT_SIZES.right)
+  })
+
+  /**
+   * 🛑 The clamp reads the same number, or the opposite column may be dragged over room this one
+   * is already drawing in — and the centre goes under its floor with nothing on screen saying so.
+   */
+  it('is the room the opposite column is bounded against', () => {
+    useTools.setState({
+      arrangements: arrangedFor('home', {
+        open: { left: { primary: 'projects' }, right: { primary: 'assistant' } },
+      }),
+      lengths: { sizes: {}, splits: {} },
+    })
+
+    useTools.getState().resize('left', 900, 1400)
+
+    expect(useTools.getState().lengths.sizes.left).toBe(1400 - 460 - MIN_CENTER)
+  })
+
+  /**
+   * 🛑 The case above names the tool; NO stored layout does. `DEFAULT_OPEN` holds `null` — "the
+   * panel this surface declares first" — and the shell resolves it before drawing, so a clamp
+   * reading the stored half sees no tool and bounds against the zone's own width instead.
+   */
+  it('is that room on a layout nobody has touched, where no half names a tool', () => {
+    useTools.getState().reset()
+
+    useTools.getState().resize('left', 900, 1400)
+
+    expect(useTools.getState().lengths.sizes.left).toBe(1400 - 460 - MIN_CENTER)
   })
 })
 
@@ -276,7 +442,10 @@ describe('the home and the workspaces arrange their zones apart', () => {
   it('bounds each column against the other', () => {
     useTools.getState().resize('left', 700, 1000)
 
-    expect(useTools.getState().lengths.sizes.left).toBe(1000 - DEFAULT_SIZES.right - MIN_CENTER)
+    // 460, not the zone's own width: the home's right column is open on the assistant, and this
+    // read `DEFAULT_SIZES.right` for as long as the clamp looked at the stored half rather than
+    // the drawn one.
+    expect(useTools.getState().lengths.sizes.left).toBe(1000 - 460 - MIN_CENTER)
   })
 
   it('re-clamps the studio when the window shrinks', () => {
@@ -287,6 +456,15 @@ describe('the home and the workspaces arrange their zones apart', () => {
     expect(useTools.getState().lengths.sizes.left).toBe(MIN_SIZE)
   })
 })
+
+/** The home with a project open: the assistant asks for a centre holding anything but the thread,
+ * and the home page IS that. */
+const IN_HOME: ToolState = {
+  hasProject: true,
+  hasGit: true,
+  hasCloud: true,
+  centreTaken: true,
+}
 
 describe('migrating to the split arrangement', () => {
   // Everything version 8 stored was the workspaces': one arrangement, flat at the root, since the
@@ -323,6 +501,31 @@ describe('migrating to the split arrangement', () => {
     expect(migrated?.lengths.sizes).toEqual({ left: 400 })
     // The home is the one this bump changes: it starts on both halves of both columns.
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
+  })
+
+  /**
+   * 🛑 A `ToolId` ARRIVING costs a bump exactly as one leaving does, and this is the case that
+   * proves it: version 19 knew no right column on the home, so an arrangement written by it names
+   * the halves it had and no others. Left unmigrated, the zone reads as one nobody opened — the
+   * assistant would be reachable from the home by ⌘K alone, for ever, on every installed profile.
+   */
+  it('opens the home on the assistant, which a version 19 arrangement cannot name', () => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
+          workspaces: { open: { right: { primary: 'layers' } } },
+          home: {
+            open: { left: { primary: null, secondary: null }, bottomRight: { primary: null } },
+          },
+        },
+      },
+      19,
+    )
+
+    expect(migrated?.arrangements.home.open.right).toEqual({ primary: null })
+    expect(
+      shownTools(migrated?.arrangements.home.open.right, 'right', HOME_SURFACE, IN_HOME),
+    ).toMatchObject({ primary: 'assistant' })
   })
 
   /**
@@ -469,7 +672,7 @@ describe('openFrom', () => {
   it('rebuilds a whole version 6 layout, losing no panel', () => {
     const open = openFrom({
       left: { primary: 'assets', secondary: 'explorer' },
-      right: { primary: 'models', secondary: 'inspector' },
+      right: { primary: 'assets', secondary: 'inspector' },
       bottom: { primary: 'assets' },
     })
 
@@ -503,11 +706,11 @@ describe('openFrom', () => {
    */
   it('drops a panel no version knows any more, and keeps the rest', () => {
     const open = openFrom({
-      left: { primary: 'models' },
+      left: { primary: 'assets' },
       right: { primary: 'documents', secondary: 'inspector' },
     })
 
-    expect(open.left).toEqual({ primary: 'models' })
+    expect(open.left).toEqual({ primary: 'assets' })
     // The half is emptied rather than dropped: it keeps its size and its handle.
     expect(open.right).toEqual({ secondary: 'inspector' })
   })

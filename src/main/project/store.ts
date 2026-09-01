@@ -1,7 +1,6 @@
-import { execFile as execFileCallback } from 'node:child_process'
+import { orElse } from '@shared/promises'
 import type { Dir } from 'node:fs'
-import { mkdir, opendir, readFile } from 'node:fs/promises'
-import { promisify } from 'node:util'
+import { mkdir, opendir, readFile, rename as renameFolder, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import {
   CATALOG_FILE,
@@ -9,17 +8,22 @@ import {
   MANIFEST_VERSION,
   LEGACY_MANIFEST_FILE,
   MACHINE_FOLDERS,
-  STARTER_FOLDERS,
   type Manifest,
   type Project,
+  type ProjectOpenFailure,
+  type ProjectRenameFailure,
 } from '@shared/domain/project'
 import type { ActivityMessageKey } from '@shared/domain/activity'
 import { isHiddenEntry } from '@shared/domain/folder'
+import { isSafeFileName } from '@shared/domain/fileName'
+import type { FolderRole, RoleFolders } from '@shared/domain/folderRole'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { exists, isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import { CATALOGUE_CLOSED, type AsyncCatalog } from './catalogClient'
 import { applyJournal } from './fileJournal'
+import { ensureRoleFolder, layRoleFolders, resolveRoleFolders, writeRoleCache } from './folderRoles'
+import { hideFromExplorer } from './hideFromExplorer'
 import { parseManifest } from './validation'
 
 /** Thrown when a channel needing a project is reached before one is open. */
@@ -58,13 +62,28 @@ export async function orWhenGone<T>(read: () => Promise<T>, gone: T): Promise<T>
   }
 }
 
+/** The three verdicts that mean no project sits at that path — the other two mean one does. */
+const NO_PROJECT_THERE: readonly ProjectOpenFailure[] = [
+  'not-a-project',
+  'nested',
+  'holds-projects',
+]
+
 /**
- * Why a folder would not serve as a project. Each case asks the user for a different thing: pick
- * another folder, repair this one, update the studio, or — for a folder sitting inside a project
- * already — pick one that is not there.
+ * Whether a folder really holds a project — asked by the one gesture that destroys one.
+ *
+ * 🛑 `unreadable` and `too-new` answer TRUE: a project IS there and this build cannot read it, and
+ * binning a corrupt project is exactly what a person asks for. Read as "no project", a manifest
+ * that failed to load for a second — a network share, a permission — told the person their folder
+ * was not a project, after their project had already been closed for the gesture.
  */
-export type ProjectOpenFailure =
-  'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
+export async function holdsAProject(store: ProjectStore, path: string): Promise<boolean> {
+  try {
+    return (await store.inspect(path)) === 'project'
+  } catch (error) {
+    return error instanceof ProjectOpenError && !NO_PROJECT_THERE.includes(error.reason)
+  }
+}
 
 /**
  * One error carrying a reason rather than three classes: what every caller does with it is
@@ -79,6 +98,22 @@ export class ProjectOpenError extends Error {
     super(reason, { cause })
     this.name = 'ProjectOpenError'
   }
+}
+
+/**
+ * Thrown when a project cannot take a name. Apart from `ProjectOpenError`, which answers about a
+ * FOLDER: these two are about the name asked for, and the folder is fine.
+ */
+export class ProjectRenameError extends Error {
+  constructor(readonly reason: ProjectRenameFailure) {
+    super(reason)
+    this.name = 'ProjectRenameError'
+  }
+}
+
+const RENAME_FAILURE_KEYS: Record<ProjectRenameFailure, ActivityMessageKey> = {
+  'unsafe-name': 'activity.projectNameUnsafe',
+  taken: 'activity.projectNameTaken',
 }
 
 const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
@@ -97,6 +132,8 @@ const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
  * reopening at startup, and only one of them goes through a channel.
  */
 export function openFailureKey(error: unknown): ActivityMessageKey | null {
+  if (error instanceof ProjectRenameError) return RENAME_FAILURE_KEYS[error.reason]
+
   return error instanceof ProjectOpenError ? OPEN_FAILURE_KEYS[error.reason] : null
 }
 
@@ -105,6 +142,11 @@ export type ProjectStoreDeps = {
   openCatalog: (file: string) => Promise<AsyncCatalog>
   now: () => string
   onChange: (project: Project | null) => void
+  /**
+   * Where the roles sit, whenever that changes. Apart from `onChange`, which resumes jobs and
+   * re-arms the folder watch: a folder appearing must not cost that.
+   */
+  onRoles: (roles: RoleFolders) => void
   /** Writes out whatever still belongs to the project being closed, before its catalogue goes. */
   settle?: () => Promise<void>
 }
@@ -114,10 +156,10 @@ export type FolderVerdict = 'project' | 'occupied' | 'blank'
 
 export type ProjectStore = {
   /**
-   * Installs a project INTO `path`, which becomes its root — no folder is made from the name.
+   * Installs a project INTO `path`, which becomes its root AND its name — see `projectName`.
    * Call `inspect` first: this writes a manifest over whatever is there.
    */
-  create: (path: string, name: string) => Promise<Project>
+  create: (path: string) => Promise<Project>
   /**
    * What creating a project at `path` would mean, so nothing is written over.
    *
@@ -128,8 +170,8 @@ export type ProjectStore = {
   inspect: (path: string) => Promise<FolderVerdict>
   open: (path: string) => Promise<Project>
   /**
-   * Writes a new name into a project's manifest — the FOLDER is never touched, see the channel's
-   * own doc for why. Works on a project that is not open, which the home's shelf needs.
+   * Renames a project, which MOVES its folder: a project is named by its folder and by nothing
+   * else. Works on a project that is not open, which the home's shelf needs.
    *
    * When the renamed one IS open, its in-memory copy is replaced too. `onChange` is deliberately
    * NOT fired: it means "another project is in front now", and it resumes remembered jobs and
@@ -141,6 +183,10 @@ export type ProjectStore = {
   path: () => string
   /** The open project's catalogue. Throws rather than answering an empty one. */
   catalog: () => AsyncCatalog
+  /** Where each role's folder sits — for DRAWING. A write asks `folderFor`, which lays it down. */
+  roles: () => RoleFolders
+  /** The folder a role names, laid down with its marker if the project has none. */
+  folderFor: (role: FolderRole) => Promise<string>
   /**
    * Stamps the manifest with the moment the project last did some work. Called on every document
    * saved, so it never throws and never makes a caller wait: what it says is nice to have, and a
@@ -152,10 +198,12 @@ export type ProjectStore = {
    * quit right after a save does not leave the write it started behind.
    */
   settled: () => Promise<void>
-  close: () => void
+  /**
+   * Leaves no project open. Settles first, as `activate` does before a swap: what is still
+   * queued belongs to the project being left, and its catalogue is about to stop answering.
+   */
+  close: () => Promise<void>
 }
-
-const execFile = promisify(execFileCallback)
 
 /**
  * Indented, because a project folder is meant to be opened by hand — and atomic, because this
@@ -174,18 +222,6 @@ async function writeManifest({ path, manifest }: Project): Promise<void> {
 async function ensureMachineFolders(root: string): Promise<void> {
   await Promise.all(MACHINE_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
   await hideFromExplorer(join(root, '.index'))
-}
-
-/**
- * The folders a project STARTS with — laid down once, at creation, and never put back.
- *
- * That is the whole of what makes them ordinary: a user who threw `Images/` away meant to, and a
- * folder that came back at the next open would be the old layout wearing a new name. An import
- * with nowhere else to go recreates the one it needs (`freeAssetPath`), which is a different
- * thing — it happens because something is being written, not because a project was opened.
- */
-async function createStarterFolders(root: string): Promise<void> {
-  await Promise.all(STARTER_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
 }
 
 /**
@@ -247,32 +283,25 @@ async function surveyFolder(folder: string): Promise<FolderSurvey> {
   } finally {
     // Closed by the iterator when it runs out, and NOT when it is left early: a throw partway
     // would leak the handle, which on Windows also keeps the folder locked.
-    await dir.close().catch(() => undefined)
+    await orElse(dir.close(), undefined)
   }
 
   return survey
 }
 
-/**
- * A leading dot hides on macOS and Linux and means nothing on Windows, which reads the
- * FILE_ATTRIBUTE_HIDDEN bit that Node does not expose. `attrib` is the only way to set it
- * without a native module, and it costs one short process per project rather than per file.
- *
- * Failures are swallowed on purpose: a manifest the Explorer happens to show is a cosmetic
- * problem, and refusing to open the project over it would be a real one.
- */
-async function hideFromExplorer(path: string): Promise<void> {
-  if (process.platform !== 'win32') return
-
-  try {
-    await execFile('attrib', ['+h', path])
-  } catch {
-    return
-  }
-}
-
 /** A manifest body, and whether it came from the name projects carried before the rename. */
 type ManifestSource = { body: string; legacy: boolean }
+
+/** Whether two paths name the one folder — what a case-folding volume answers `true` to. */
+async function sameFolder(one: string, other: string): Promise<boolean> {
+  try {
+    const [first, second] = await Promise.all([stat(one), stat(other)])
+    return first.ino === second.ino && first.dev === second.dev
+  } catch {
+    // Either is gone between the check and here: not the same folder, and the rename below says so.
+    return false
+  }
+}
 
 /**
  * The manifest, under whichever name the folder carries it. The dotted file wins when both are
@@ -302,7 +331,7 @@ async function readManifest(path: string): Promise<ManifestSource> {
  * not ours to tidy, and an older build of the studio still reads it.
  */
 async function promoteManifest(path: string, body: string): Promise<void> {
-  await writeAtomic(join(path, MANIFEST_FILE), body).catch(() => undefined)
+  await orElse(writeAtomic(join(path, MANIFEST_FILE), body), undefined)
   await hideFromExplorer(join(path, MANIFEST_FILE))
 }
 
@@ -354,10 +383,13 @@ export function createProjectStore({
   openCatalog,
   now,
   onChange,
+  onRoles,
   settle,
 }: ProjectStoreDeps): ProjectStore {
   let project: Project | null = null
   let catalog: AsyncCatalog | null = null
+  /** Where each role's folder was last found. Empty between projects, partial when one is gone. */
+  let roleFolders: RoleFolders = {}
   /** Two stamps a millisecond apart must not have the older one land last. */
   const writes = writeQueue()
 
@@ -371,6 +403,29 @@ export function createProjectStore({
     project = null
   }
 
+  /** The renamed project kept in memory, for a rename that moved nothing on disk. */
+  const holding = (renamed: Project): Project => {
+    project = renamed
+    return renamed
+  }
+
+  /**
+   * The folder under its new name, or where it already was when the two are the SAME folder.
+   *
+   * 🛑 Measured by inode, never deduced from the platform: APFS and NTFS fold case, ext4 does
+   * not, so `jeu1` → `Jeu1` is a plain rename on one volume and "that name is taken" on another
+   * — and `process.platform` answers for neither, since the volume is what decides.
+   */
+  const movedFolder = async (path: string, folder: string): Promise<string> => {
+    if (folder === path) return path
+    if ((await exists(folder)) && !(await sameFolder(path, folder))) {
+      throw new ProjectRenameError('taken')
+    }
+
+    await renameFolder(path, folder)
+    return folder
+  }
+
   /**
    * The new catalogue is opened before the current one is dropped. The other way round, a
    * database that fails to open — corrupt, locked, on a full disk — would leave the studio
@@ -379,6 +434,11 @@ export function createProjectStore({
   const activate = async (opened: Project): Promise<Project> => {
     const file = join(opened.path, CATALOG_FILE)
     await mkdir(dirname(file), { recursive: true })
+
+    // Started here and awaited below: it depends on the folder alone, so it runs under the
+    // catalogue opening and the journal replay rather than after them — and the four lines that
+    // publish the project must stay free of any `await`, see below.
+    const resolving = readRoles(opened.path)
 
     const opening = await openCatalog(file)
 
@@ -401,26 +461,58 @@ export function createProjectStore({
     // Whatever is still queued belongs to the project that is closing, and its catalogue is
     // about to stop answering. The stamp goes with it: it is being written into the folder the
     // studio is about to leave.
+    const resolved = await resolving
     await Promise.all([settle?.(), writes.settled()])
 
     close()
     catalog = opening
     project = opened
+    roleFolders = resolved
+    /**
+     * 🛑 Fired for a RENAME too, and staying silent there cost more than it saved: `onChange` is
+     * the only thing that redirects the folder watch, follows the assistant's memory and settles
+     * the account link — all of which stayed on a folder that had just moved.
+     */
     onChange(opened)
+    onRoles(resolved)
     return opened
   }
 
+  /** Whether the map points a role at a folder the disk no longer holds — a rename, a deletion. */
+  const roleFolderMissing = async (
+    root: string,
+    held: RoleFolders,
+    role: FolderRole,
+  ): Promise<boolean> => {
+    const folder = held[role]
+    return folder !== undefined && !(await exists(join(root, folder)))
+  }
+
+  /** Never fatal: a project whose roles cannot be read opens with none, and the first write lays
+   * the folder it needs back down. Losing a role costs a folder, never a project. */
+  const readRoles = async (root: string): Promise<RoleFolders> => {
+    try {
+      const { roles, walked } = await resolveRoleFolders(root)
+      if (walked) await writeRoleCache(root, roles)
+      return roles
+    } catch (error) {
+      log.warn('project', `reading the folder roles failed: ${String(error)}`)
+      return {}
+    }
+  }
+
   return {
-    create: async (path, name) => {
+    create: async path => {
       await ensureMachineFolders(path)
-      await createStarterFolders(path)
+      // Laid down once, and never put back on a later open: a user who threw `Images/` away
+      // meant to, and a folder that came back would be the old layout wearing a new name.
+      await layRoleFolders(path)
 
       const timestamp = now()
       const made: Project = {
         path,
         manifest: {
           version: MANIFEST_VERSION,
-          name,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
@@ -478,13 +570,19 @@ export function createProjectStore({
       // Read from disk rather than from the open project, even when they are the same folder: this
       // is the only way one path serves both cases, and the manifest on disk is the truth anyway.
       const manifest = await loadManifest(path)
-      const renamed: Project = { path, manifest: { ...manifest, name, updatedAt: now() } }
+      if (!isSafeFileName(name)) throw new ProjectRenameError('unsafe-name')
+
+      const folder = join(dirname(path), name)
+      const moved = await movedFolder(path, folder)
+      const renamed: Project = { path: moved, manifest: { ...manifest, updatedAt: now() } }
 
       // Through the queue, and it is not optional: `touch` writes this same file on every document
       // saved, so a rename racing a save would lose whichever landed first.
       await writes.next(() => writeManifest(renamed))
 
-      if (project?.path === path) project = renamed
+      // 🛑 Reopened rather than patched: the catalogue is a thread holding a file INSIDE the folder
+      // that just moved, and `activate` is the one place that closes one and opens the next.
+      if (project?.path === path) return moved === path ? holding(renamed) : await activate(renamed)
 
       return renamed
     },
@@ -499,6 +597,33 @@ export function createProjectStore({
     catalog: () => {
       if (!catalog) throw new NoProjectError()
       return catalog
+    },
+
+    roles: () => roleFolders,
+
+    folderFor: async role => {
+      if (!project) throw new NoProjectError()
+
+      // Captured BEFORE the awaits: `close()` nulls `project`, and an opening that landed during
+      // one of them would otherwise write this project's roles into the next one's cache.
+      const root = project.path
+
+      // A folder renamed while the project is OPEN leaves the map naming where it used to be —
+      // and laying the default back down would orphan the folder the user just renamed, marker
+      // and all. Re-resolved instead: the marker travelled with it, so the walk finds it.
+      const held = (await roleFolderMissing(root, roleFolders, role))
+        ? await readRoles(root)
+        : roleFolders
+
+      const folder = await ensureRoleFolder(root, held, role)
+      const settled = { ...held, [role]: folder }
+      if (roleFolders[role] !== folder || held !== roleFolders) {
+        roleFolders = settled
+        await writeRoleCache(root, settled)
+        onRoles(settled)
+      }
+
+      return folder
     },
 
     touch: () => {
@@ -519,9 +644,27 @@ export function createProjectStore({
 
     settled: writes.settled,
 
-    close: () => {
+    close: async () => {
+      // The PATH, not the object: `touch` replaces the project with a new one carrying a fresh
+      // stamp on every document saved, and an autosave landing during the settling below would
+      // make an identity check read as "another project opened" on the very same folder.
+      const leaving = project?.path
+      // Nothing open: a second window asking, or a direct call on the channel. Announcing a
+      // change nobody made re-arms the folder watch and republishes the machine for nothing.
+      if (leaving === undefined) return
+
+      await Promise.all([settle?.(), writes.settled()])
+      // `projectOpen` is an independent handler, so a project opened while this awaited would
+      // otherwise be the one torn down here.
+      if (project?.path !== leaving) return
+
       close()
+      // Emptied with the project, as the field's own line promises: `bundledTextures` and the
+      // legacy-layout note both read this, and the paths of a folder nobody has open answer for
+      // a project that is no longer there.
+      roleFolders = {}
       onChange(null)
+      onRoles(roleFolders)
     },
   }
 }

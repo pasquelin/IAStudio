@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
@@ -7,7 +8,8 @@ import {
   type CheckerTextureId,
   type InstalledCheckerTexture,
 } from '@shared/domain/checkerTexture'
-import { DEFAULT_ASSET_FOLDERS, withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { withoutSourcePath, type Asset } from '@shared/domain/asset'
+import { folderForRole, type RoleFolders } from '@shared/domain/folderRole'
 import { pathIn } from '@shared/domain/folder'
 import { CHANNELS } from '@shared/ipc'
 import { ownFileOf } from './protocol'
@@ -24,13 +26,35 @@ type BundledTextureDeps = {
   folder: () => string
   /** The open project's folder, which is what a stored path is relative to. */
   projectPath: () => string
+  /**
+   * Where each role's folder sits — `ProjectStore.roles`. A LOOKUP rather than a landing: the row
+   * the catalogue holds names the folder the write chose, and this has to ask the same question.
+   */
+  roles: () => RoleFolders
   /** Whether a file is still there. Injected, exactly as `assets:absent` takes it. */
   exists: (file: string) => boolean
 }
 
 /** Where one lands in the project, and where it is looked for before being copied again. */
-function pathOf(id: CheckerTextureId): string {
-  return pathIn(DEFAULT_ASSET_FOLDERS.texture, checkerTextureFile(id))
+function pathOf(id: CheckerTextureId, roles: RoleFolders): string {
+  return pathIn(folderForRole('materials', roles), checkerTextureFile(id))
+}
+
+/**
+ * Where a project filed one before the folder settled — searched too, since this folder is a
+ * catalogue LOOKUP here and not merely where a new file lands.
+ *
+ * Miss one and the first 3D open of such a project installs a second set of four under fresh
+ * ids, while its meshes go on wearing the first.
+ *
+ * 🛑 LITERALS on purpose, where the line above reads a constant: these name where a file WAS, and
+ * a past cannot be spelled by a value the studio still reserves the right to change. `Images` is
+ * here for that reason and not because it is today's picture folder.
+ */
+const FORMER_FOLDERS: readonly string[] = ['Images', 'Textures']
+
+function formerPathsOf(id: CheckerTextureId): readonly string[] {
+  return FORMER_FOLDERS.map(folder => pathIn(folder, checkerTextureFile(id)))
 }
 
 /**
@@ -56,10 +80,14 @@ export function registerBundledTextureHandlers({
   newAssetId,
   folder,
   projectPath,
+  roles,
   exists,
 }: BundledTextureDeps): void {
   const install = async (id: CheckerTextureId): Promise<Asset> => {
-    const held = (await catalog().search({ path: pathOf(id) }))[0]
+    let held = (await catalog().search({ path: pathOf(id, roles()) }))[0]
+    for (const former of formerPathsOf(id)) {
+      held ??= (await catalog().search({ path: former }))[0]
+    }
     // The row alone is not enough: a texture deleted in the Finder leaves it behind, and every
     // primitive of that project would then be born wearing a map that resolves to no file.
     const file = held ? ownFileOf(projectPath(), held) : null
@@ -71,10 +99,10 @@ export function registerBundledTextureHandlers({
     // already point at, and a fresh one would leave every one of them resolving to nothing.
     //
     // Falling back to a fresh import rather than letting it throw: `replaceBytes` writes to the
-    // path the row carries and makes no folder, so a `Textures/` sent to the trash whole would
+    // path the row carries and makes no folder, so a `Materials/` sent to the trash whole would
     // fail on the first of the four and cost the project all of them.
     if (held) {
-      const rewritten = await assets.replaceBytes(held.id, bytes, '.png').catch(() => null)
+      const rewritten = await orElse(assets.replaceBytes(held.id, bytes, '.png'), null)
       if (rewritten) return withoutSourcePath(rewritten)
     }
 
@@ -83,9 +111,7 @@ export function registerBundledTextureHandlers({
         {
           id: newAssetId(),
           name: CHECKER_TEXTURE_NAMES[id],
-          // A working texture is a texture in the catalogue: it lands under the shelf's own
-          // facet, and a mesh reads it through the same door as any other map.
-          type: 'texture',
+          type: 'image',
           extension: '.png',
           map: 'baseColor',
         },

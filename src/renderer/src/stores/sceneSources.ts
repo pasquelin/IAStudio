@@ -1,20 +1,9 @@
-import { create } from 'zustand'
-import { sceneFromPayload } from '@/engines/scene/sceneDocument'
+import { sceneFromGltf } from '@/engines/scene/gltfDocument'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { CameraPlacement } from '@/engines/scene/sceneView'
-import { getBridge } from '@/services/bridge'
-import { reportFailure } from '@/services/diagnostics'
+import { createDocumentSource } from './documentSource'
 import { sceneOf, sceneStore, useScenes } from './scenes'
 import { sceneViewOf, useSceneViews } from './sceneViews'
-
-type SceneSourcesState = {
-  /** Keyed by document id, and holding only scenes NO tab has open — see `montageSceneOf`. */
-  scenes: Record<string, SceneState>
-  /** Which reads are in flight, so a montage asking sixty times a second reads the file once. */
-  reading: Set<string>
-  install: (sceneId: string, scene: SceneState) => void
-  begin: (sceneId: string) => boolean
-}
 
 /**
  * The scenes a montage draws whose document is not open in a tab.
@@ -23,21 +12,15 @@ type SceneSourcesState = {
  * is one: that is what makes an edit show up in the montage at once. This holds the other case —
  * a sequence that names a scene nobody has opened — read off disk once and kept.
  *
- * It is deliberately NOT written back to: nothing here edits a scene. Opening that document in
- * its own tab takes over, since `montageSceneOf` prefers the tab.
+ * It is deliberately NOT written back to: nothing here edits a scene.
  */
-const useSceneSources = create<SceneSourcesState>()((set, get) => ({
-  scenes: {},
-  reading: new Set(),
-
-  install: (sceneId, scene) => set(state => ({ scenes: { ...state.scenes, [sceneId]: scene } })),
-
-  begin: sceneId => {
-    if (get().reading.has(sceneId)) return false
-    get().reading.add(sceneId)
-    return true
-  },
-}))
+const scenes = createDocumentSource({
+  kind: 'scene',
+  // The very door an open tab comes through, and the studio's own state rides in `extras`. Read
+  // any other way, a clip naming a scene nobody had opened drew an EMPTY one — the glTF's `nodes`
+  // parse, and none of them is ours.
+  parse: payload => sceneFromGltf(payload),
+})
 
 /**
  * The scene a montage should draw for a document id: the open tab's if there is one, the copy
@@ -52,7 +35,7 @@ export function montageSceneOf(sceneId: string): SceneState | null {
   // disk copy instead is exactly the staleness a live clip exists to avoid.
   if (sceneStore.hasState(documents, sceneId)) return sceneOf(documents, sceneId)
 
-  return useSceneSources.getState().scenes[sceneId] ?? null
+  return scenes.copyOf(sceneId)
 }
 
 /**
@@ -66,18 +49,5 @@ export function montageViewOf(sceneId: string): CameraPlacement | null {
   return sceneViewOf(useSceneViews.getState(), sceneId).camera
 }
 
-/**
- * Reads a scene a montage names but no tab holds. Once per document: the sink calls this when
- * the source opens, and a failure leaves the clip drawing nothing rather than retrying forever.
- */
-export function loadSceneSource(sceneId: string): void {
-  const bridge = getBridge()
-  if (!bridge || !useSceneSources.getState().begin(sceneId)) return
-
-  void bridge.documents
-    .read(sceneId, 'scene')
-    .then(file => {
-      if (file) useSceneSources.getState().install(sceneId, sceneFromPayload(file.content))
-    })
-    .catch(error => reportFailure('document.load', sceneId, error))
-}
+/** Reads a scene a montage names but no tab holds. Once per document — see `createDocumentSource`. */
+export const loadSceneSource = scenes.load

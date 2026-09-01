@@ -33,7 +33,7 @@ describe('isolation', () => {
     const held = isolate(
       NOTHING_ISOLATED,
       ['model'],
-      (id: string) => (id === 'model' ? ['mesh'] : []),
+      () => ['mesh'],
       (id: string) => (id === 'model' ? ['group'] : []),
     )
 

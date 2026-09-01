@@ -140,7 +140,7 @@ export function animationViewOf(
  * The picked keys as a set, for the paint and the hit test to ask in one step.
  *
  * NOT a zustand selector, and it must not become one: a fresh Set per call is a new snapshot on
- * every render, and the subscription then never settles — the trap `modelClips` carries a note
+ * every render, and the subscription then never settles — the trap `modelFiles` carries a note
  * about. Callers wrap it in a `useMemo` keyed on the array, whose identity IS stable.
  */
 export function keySetOf(keys: readonly string[]): ReadonlySet<string> {

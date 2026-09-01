@@ -1,4 +1,4 @@
-import { open, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import {
   DOCUMENT_ID_KEY,
   DOCUMENT_KIND_KEY,
@@ -21,6 +21,7 @@ import { isMtlxDocument, MTLX_HEAD_LIMIT } from '@shared/domain/materialX'
 import { isOtioTimeline, otioStudioMetadata } from '@shared/domain/otio'
 import { ORA_HEAD_LIMIT, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { isRecord, readString } from '@shared/guards'
+import { firstBytes } from '@main/persistence'
 import { mtlxHeadIn, readMaterialX, writeMaterialX } from '@main/assets/materialXFile'
 import {
   oraHeadIn,
@@ -29,6 +30,7 @@ import {
   type OraHead,
 } from '@main/assets/openRasterFile'
 import { parseDocumentEnvelope, parseOraStack } from './validation'
+import { isUiFile } from './uiValidation'
 
 /**
  * How a document's bytes are spelt. A kind of the studio's own is an envelope on its first line
@@ -69,20 +71,6 @@ const ENVELOPE_MARK = '"kind":"'
  * head — and a glTF exported into the project as a mesh carries nothing of the sort.
  */
 const STUDIO_MARK = `"${STUDIO_METADATA_KEY}"`
-
-/** The head of a file and no more of it — what keeps a listing from reading a project whole. */
-async function firstBytes(file: string, limit: number): Promise<Buffer> {
-  const handle = await open(file, 'r')
-  try {
-    // `allocUnsafe`: every byte handed back is one `read` wrote, and zeroing the rest per document
-    // is work a listing pays for nothing.
-    const buffer = Buffer.allocUnsafe(limit)
-    const { bytesRead } = await handle.read(buffer, 0, limit, 0)
-    return buffer.subarray(0, bytesRead)
-  } finally {
-    await handle.close()
-  }
-}
 
 /** The one every kind the studio invented is written in, and the one a listing reads short. */
 export const ENVELOPED: DocumentBodyFormat = {
@@ -330,7 +318,7 @@ function mtlxEnvelope(envelope: string): DocumentEnvelope {
   const { id, kind } = mtlxStamp(envelope)
   return {
     version: DOCUMENT_VERSION,
-    kind: isDocumentKind(kind) ? kind : 'texture',
+    kind: isDocumentKind(kind) ? kind : 'material',
     title: '',
     updatedAt: '',
     ...(id ? { id } : {}),
@@ -382,12 +370,92 @@ const OPEN_MATERIALX: DocumentBodyFormat = {
   },
 }
 
+/**
+ * An interface IS its JSON — one object, opening on the studio's own key so a listing reads a
+ * bounded head whatever the tree weighs. The shape MaterialX has, and better than glTF's, whose
+ * mark can fall past the read behind a long list of root nodes.
+ */
+const OPEN_UI: DocumentBodyFormat = {
+  read: body => uiDocument(body.toString('utf8')),
+  write: document => {
+    const parsed = jsonOrNull(document.content)
+    // 🛑 Refused, never wrapped in the envelope — the way a montage that is not one is. The two
+    // formats that DO fall back have a legacy enveloped form on people's disks; this one has
+    // none, so the fallback could only ever turn a valid `.ui.json` into something no other
+    // tool parses. A rename reaches this writer without passing the window's own refusal.
+    if (!isRecord(parsed) || !isUiFile(parsed)) {
+      throw new Error('Refusing to write an interface that is not one')
+    }
+
+    // The stamp FIRST, and the document after it: written last it would sit behind the tree,
+    // outside the bounded head, and the file would drop out of every listing. The `$schema` is
+    // the WINDOW's — `uiPayload` puts it there — so it travels in `rest` like any other member.
+    const { [STUDIO_METADATA_KEY]: held, ...rest } = parsed
+    return `${JSON.stringify(
+      { [STUDIO_METADATA_KEY]: studioStamp(isRecord(held) ? held : {}, document), ...rest },
+      null,
+      2,
+    )}\n`
+  },
+  readHead: async file => {
+    const head = (await firstBytes(file, ENVELOPE_LIMIT)).toString('utf8')
+    const cut = head.indexOf('\n')
+    // A first line that PARSES as an envelope is a document written before this format; an
+    // indented interface has one too — it reads `{` — so the parse is what tells them apart.
+    const first = cut === -1 ? null : jsonOrNull(head.slice(0, cut))
+    if (isRecord(first) && !(STUDIO_METADATA_KEY in first)) return parseDocumentEnvelope(first)
+
+    // A `.ui.json` somebody else wrote carries nothing of ours: turned away rather than listed,
+    // which is the rule every open format here follows.
+    if (!head.includes(STUDIO_MARK)) throw new Error('Nothing of the studio where this file begins')
+    return shortHeadIn(head, 'gui') ?? uiDocument(await readFile(file, 'utf8'))
+  },
+}
+
+function uiDocument(body: string): DocumentFile {
+  const parsed = jsonOrNull(body)
+  if (!isRecord(parsed) || !(STUDIO_METADATA_KEY in parsed)) return envelopedDocument(body)
+
+  return openDocument(
+    body,
+    parsed,
+    value => (isRecord(value) ? studioMetadataOf(value) : {}),
+    'gui',
+  )
+}
+
+/** The studio's own block of a `.ui.json`, which is a member of the object rather than an extra. */
+const studioMetadataOf = (value: Record<string, unknown>): Record<string, unknown> => {
+  const held = value[STUDIO_METADATA_KEY]
+  return isRecord(held) ? held : {}
+}
+
+/** The one kind with NOTHING of the studio in its file, so the envelope is composed rather than
+ * read: the file NAME is the id — a renamed script is a different document — and `readHead`
+ * touches no disk, so listing a hundred scripts opens none of them. */
+const PLAIN_TEXT: DocumentBodyFormat = {
+  read: body => ({ ...plainEnvelope(), content: body.toString('utf8') }),
+  write: document => document.content,
+  readHead: () => Promise.resolve(plainEnvelope()),
+}
+
+const plainEnvelope = (): DocumentEnvelope => ({
+  version: DOCUMENT_VERSION,
+  kind: 'script',
+  // Both left to the file: the stem is the title AND the id, and a value invented here would be
+  // one the folder disagrees with at the next rename.
+  title: '',
+  updatedAt: '',
+})
+
 // `.gltf` twice over — the scene and the sky wear the same extension, so one entry serves both.
 const FORMAT_BY_EXTENSION: Record<string, DocumentBodyFormat> = {
   [EXTENSIONS_BY_KIND.sequence]: OPEN_TIMELINE,
   [EXTENSIONS_BY_KIND.image]: OPEN_RASTER,
   [EXTENSIONS_BY_KIND.scene]: OPEN_SCENE,
-  [EXTENSIONS_BY_KIND.texture]: OPEN_MATERIALX,
+  [EXTENSIONS_BY_KIND.material]: OPEN_MATERIALX,
+  [EXTENSIONS_BY_KIND.script]: PLAIN_TEXT,
+  [EXTENSIONS_BY_KIND.gui]: OPEN_UI,
 }
 
 /** How a file of this extension is spelt — the studio's own envelope for anything unlisted. */

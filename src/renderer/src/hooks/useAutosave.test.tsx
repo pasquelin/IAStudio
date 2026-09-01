@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettings } from '@/stores/settings'
-import * as documentIo from '@/app/documentIo'
+import * as documentIo from '@/features/shell/documentIo'
 import { AUTOSAVE_INTERVAL_MS, useAutosave } from './useAutosave'
 
 /**

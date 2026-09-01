@@ -43,17 +43,22 @@ The colours say a role: grey for what is walked on, dark grey for walls and what
 
 ## Moving through the scene
 
-Two navigation modes, which coexist.
+Three ways to move, which coexist.
 
 ### Orbiting the scene — the mouse alone
 
 | Gesture | Effect |
 |---|---|
 | **Left-click + drag** in empty space | turns the view around the point being looked at |
-| **Wheel** | moves forward and back |
+| **Wheel** | moves forward and back, **towards whatever the pointer aims at** |
 | **Right-click + drag** *(see below)* | flies |
 
 This is the default mode. You turn **around** the scene, as if walking round it.
+
+> **The wheel travels towards what you aim at, and stops at nothing.** The point the view turns
+> around moves onto whatever the pointer names, and the camera **crosses** it if you keep going —
+> there is no invisible wall to slow down against and never reach. The step follows the distance
+> of what you aim at: wide far off, fine up close.
 
 ### Flying through the scene — a button held
 
@@ -78,7 +83,22 @@ gesture would move both the object and the point of view.
 > **The keys are read at their physical position.** WASD on a QWERTY keyboard and ZQSD on an AZERTY
 > one are **the same four keys**. There is nothing to reconfigure.
 
-Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
+### Navigating continuously — the mode, holding nothing
+
+The **Navigate** button in the toolbar, or the <kbd>`</kbd> key (the one under Escape), arms a
+mode where there is **nothing left to hold**:
+
+- the **mouse becomes the view** — it disappears, and the view follows it;
+- the **same keys** as above move the camera;
+- the **wheel sets the speed** instead of moving the camera, for the length of the session;
+- <kbd>Esc</kbd> gives the mouse back and leaves the mode.
+
+The keys are recalled for a few seconds at the bottom of the viewport each time the mode is armed.
+
+> **While the mode is armed, the letters belong to the camera.** <kbd>S</kbd> backs away and does
+> not call the Scale tool; the tools take their keys back the moment you leave.
+
+Three settings govern flying: **Settings ▸ Workspaces ▸ Modelling**
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -96,10 +116,11 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
 | **Move** | `G` | drags the object along the coloured arrows |
 | **Rotate** | `R` | turns the object with the coloured circles |
 | **Scale** | `S` | grows or shrinks it with the handles |
-| **Snap** | `M` | moves the handles **in steps** instead of leaving them free |
+| **All snaps** | `M` | turns all four snaps on or off at once; a second press gives back the ones that were on |
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
 | **Display mode** | `Z` | cycles the nine ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |
+| **Navigate** | `` ` `` | arms continuous flight: the mouse holds the view, the keys travel |
 
 The bar carries only what the hand asks for **without letting go of the mouse**. The rest is in
 the native menu:
@@ -113,8 +134,54 @@ the native menu:
 | Copy, cut, paste | **the keys alone** — see below |
 
 **Snapping is for lining things up.** Without it an object lands 1.0374 m from the previous one;
-with it, at a round 1 m. How fine the steps are — one for moving, one for rotating, one for
-scaling — is set in **Settings ▸ Workspaces ▸ 3D**.
+with it, at a round 1 m.
+
+### The bar at the top — what you set while manipulating
+
+A second bar floats **at the top of the viewport**, horizontal. It carries no tools but
+**behaviours**: what you change *while* manipulating, without letting go of the mouse.
+
+Each entry is a group of **two zones**. The icon, on the left, **turns that one snap** on or off
+and nothing else. The value, on the right, **opens a menu** on hover, as the tool bar's own menus
+do — a click on it puts the menu away. Choosing a step **arms that snap along with it**: reaching
+for a step is asking for the snap, and leaving it off cost a second click on every first use.
+
+The steps are laid out **in columns**, not as a list: a value is found by eye, and a column of
+nine steps covered the very scene it was about to change. The step in force is **painted where it
+stands** — not marked by a tick at the other end of a list.
+
+| Entry | What the icon toggles | What the menu sets |
+|---|---|---|
+| **Camera speed** | *(nothing: it has no toggle)* | rungs from 0.5 to 20 m/s, and a free run between them |
+| **Surface snap** | lays what you drag on the first surface below it | whether it follows the slope, and how far above it floats |
+| **Grid snap** | advances a move in even steps | the step, from 1 cm to 10 m |
+| **Angle snap** | turns in even steps | the angle, as an increment or as a division of a full turn |
+| **Scale snap** | changes the scale in even steps | the ratio |
+
+The bar sits at the **top right** of the viewport; the tool column already owns the left.
+
+**The four are independent.** Laying a prop on a table while its angle stays free is the gesture
+the single toggle could not spell. The **All snaps** button of the vertical bar, and the `M` key,
+turn every one of them off at once — and a second press gives back exactly the ones that were on.
+
+**The speed on the bar is the speed of flight.** It is the same value the wheel sets while the
+Navigate mode is armed: the two cannot contradict each other.
+
+The steps themselves are **settings**, shared by every document; the four switches belong to the
+document in hand. The same steps are in **Settings ▸ Workspaces ▸ Modelling** and in the
+**Environment** panel.
+
+**The surface snap is the one that counts in no steps**: it casts a ray downwards from what you
+are dragging and lays it on whatever it meets. It only acts during a **move** — not during a
+rotation or a resize.
+
+**The handles never grow past the object they hold.** On a small part they follow its size and
+shrink with it as you pull back; beyond that they keep one size on screen rather than growing
+without end — or they would be impossible to grab from afar. The ceiling is set in
+**Settings ▸ Workspaces ▸ Modelling ▸ Handle size**.
+
+A light and a camera have no volume to measure: their handles keep the size of the setting, or
+there would be nothing left to grab.
 
 **The local frame shows on a turned object.** With world handles, the red arrow always points
 east. With local handles it points to the **object's** right: which is what you want to drive a
@@ -144,18 +211,18 @@ Three paths lead to the same place:
 
 - the **Add** menu, which files the three families — mesh, light, object;
 - the **+** buttons of the **Meshes** and **Lights** panels;
-- dragging and dropping, for a model coming off the shelf.
+- dragging and dropping, for a model coming off the Explorer.
 
 The object lands at the **scene origin** — the centre of the world, where the axes cross.
 
 ### Bringing in an existing model
 
 The shapes below are the ones the studio can **build**. A model from elsewhere — generated by a
-*text to 3D* model, or imported from a `.glb` — comes in through the shelf:
+*text to 3D* model, or imported from a `.glb` — comes in through the Explorer:
 
 | Gesture | Result |
 |---|---|
-| **Double-click** a mesh in the shelf | a **scene of its own** opens, with the mesh inside |
+| **Double-click** a mesh in the Explorer | a **scene of its own** opens, with the mesh inside |
 | **Drag and drop** onto the 3D view | it enters the scene **in front of you** — anywhere on the view, toolbar included |
 | **Right-click ▸ Add to the scene** | the same, without aiming at the view — a scene open anywhere is enough |
 
@@ -201,7 +268,7 @@ the letters their shape — the **size**, the **depth** (set it to zero for flat
 **curve segments**, which decide how finely the curves are cut.
 
 A text is lit like a mesh and wears the same **material**: colour, roughness, metalness, and the
-five textures. It casts and receives shadows.
+five images. It casts and receives shadows.
 
 #### The fonts on offer
 
@@ -225,13 +292,13 @@ does. It is what you use for a spark, a glow, a marker, a label above an object 
 has to stay readable from wherever you look.
 
 **Add ▸ Object ▸ Sprite** puts one at the origin. It arrives with no picture: choose one in the Inspector,
-under **Sprite**, from the project's own images — the same ones a material takes as a texture.
+under **Sprite**, from the project's own images — the same ones a material takes into a channel.
 
 | Setting | What it does |
 |---|---|
 | **Colour** | tints the picture. On a sprite with none, it is the colour of the quad itself |
 | **Opacity** | from transparent to opaque |
-| **Texture** | the picture shown, taken from the project's assets |
+| **Image** | the picture shown, taken from the project's assets |
 
 Four things to know:
 
@@ -421,6 +488,57 @@ filed would vanish from the screen, and you would think it lost.
 
 ---
 
+## Carve, join, intersect
+
+**Edit ▸ Carve**, or the toolbar buttons, after the grouping one.
+
+Set a cube inside a wall, select both — **in whichever order you like** — then **Carve**: the wall
+gains a window. That is the whole principle. **The biggest shape is the material**, the others are
+the tools that carve it, and the order of the clicks changes nothing.
+
+One way to mark, three to combine, and two to go back:
+
+| Button | What it does |
+|---|---|
+| **Negate** | marks the chosen shapes as **tools** — they turn red and translucent |
+| **Carve** | cuts the smaller shapes out of the biggest one — the cube opens the window |
+| **Join** | merges the shapes into a single solid |
+| **Keep overlap** | keeps only the part where the shapes overlap |
+| **Separate** | gives the original shapes back, each where it stood |
+| **Flip the fold** | `I` — folds the same shapes the other way round, with no undo |
+
+**If the fold runs backwards, do not look for the reason: press `I`.** Flip the fold runs the same
+fold the other way round — what was carved becomes the matter — in one click and with no undo. It
+is a row of the right-click menu on the solid too.
+
+**To say in advance which shape will be carved**, mark the tool: select it, press `N`, and it shows
+translucent red. A marked shape is **always** cut out of the others, whichever button follows
+— so **Join** with a negative in the selection pierces rather than merges. Press `N` again to take the mark off.
+
+> **The mark shows; the order of the clicks did not.** That is the whole reason for the button:
+> before it, nothing on screen said which object was about to be carved, and since adding a shape
+> selects it, the natural gesture nearly always ran the wrong way round.
+
+**Nothing is lost.** The solid remembers the shapes it was made of: **Separate** hands them back
+where they stood, and `⌘Z` undoes the cut like any other action. So you can try things freely.
+
+> **What was carved comes back marked.** A shape that served as a tool is handed back translucent
+> red, so folding the same selection again gives the same solid. Press `N` to take the mark
+> off and make it an ordinary shape again.
+
+The resulting solid behaves like an ordinary object: it carries a name, moves, turns, wears a
+material, and the window follows the wall when you move it.
+
+> **The calculation does not run while you drag the cube**, but when you click the button — and it
+> runs beside the window, without freezing the screen. On a very detailed shape the solid may
+> therefore show up **whole for a moment** before the hole appears: that is not an error, it is the
+> calculation not having answered yet.
+
+> **A lone shape cannot be carved.** It takes at least two, and the buttons do nothing until then.
+> **Separate** applies to one solid at a time.
+
+---
+
 ## Duplicate, copy, paste
 
 The four shortcuts you already know. **Duplicate** has its row in **Edit**; the *Cut*, *Copy* and
@@ -483,7 +601,7 @@ its radius, a torus shows its tube, a spot shows its angle.
 | **Identity** | the name, editable |
 | **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z). A childless sprite selected on its own has no Rotation row: it would show nowhere |
 | **Geometry** | what defines the shape: radius, width, segments… |
-| **Material** | Colour, Roughness, Metalness, Tiles per metre, and five texture slots |
+| **Material** | Colour, Roughness, Metalness, Tiles per metre, and five image slots |
 
 #### Every geometry field
 
@@ -518,15 +636,15 @@ result you cannot predict without trying.
 | **Roughness** | perfect mirror | fully matte |
 | **Metalness** | plastic, wood, stone | metal |
 
-The five texture slots — **Texture**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
-occlusion** — take images from the project. The **Choose a texture** button opens the list;
-**Remove the texture** empties it.
+The five image slots — **Image**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
+occlusion** — take images from the project. The **Choose an image** button opens the list;
+**Remove the image** empties it.
 
 **Every new shape arrives already dressed** in a working chequer. It is there for three things:
-judging a scale, seeing a texture stretch, and telling one face from another. Replace it whenever
+judging a scale, seeing an image stretch, and telling one face from another. Replace it whenever
 you like — it is a starting point, not a decoration.
 
-Four chequers are copied into the project's **Textures** folder the first time a scene asks for
+Four chequers are copied into the project's **Images** folder the first time a scene asks for
 one: `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. They are project images like any
 other.
 
@@ -598,7 +716,7 @@ without anyone noticing.
 > shows nothing.
 
 What a shadow looks like — crisp or softened edge, how fine the computation — is set once for the
-whole scene in **Settings ▸ Workspaces ▸ 3D**.
+whole scene in **Settings ▸ Workspaces ▸ Modelling**.
 
 ### Environment — the sky that lights
 
@@ -627,7 +745,7 @@ not there: it would be chosen, and nothing would show.
 The chequering is **not** an object in the scene: it is a reference, to know where things are and
 at what height. It appears in no render.
 
-**Settings ▸ Workspaces ▸ 3D**:
+**Settings ▸ Workspaces ▸ Modelling**:
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -686,7 +804,7 @@ light markers are not part of the scene: they are display aids. The file holds o
 **A sprite does not come out either**, and without warning: neither format has an object that
 always turns to face the camera. In glTF the file keeps its name and its place, but nothing is
 drawn there; in USDZ nothing of it remains at all. A flat image that has to survive the export is
-made with a plane and a texture.
+made with a plane and an image.
 
 **A nested selection keeps its place.** Exporting an object filed inside a group writes it where it
 stands in the scene, not where it stands inside its group.
@@ -695,14 +813,14 @@ stands in the scene, not where it stands inside its group.
 
 ## Saving
 
-`⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
+`⌘S` / `Ctrl+S` writes the scene into the project, under `Modelling/Scenes/`.
 
 **3D scenes can save**, as do the six other document kinds.
 
 **The file written is a `.gltf`, and it is a real glTF**: another application opens it and finds
 the scene tree, the name and place of every object, the cameras, and the directional, point and
 spot lights. What the standard does not carry — the shape of the primitives, the materials, the
-rails, the camera shots, the animation — travels inside the same file but **is read by Scenario
+rails, the camera shots, the animation — travels inside the same file but **is read by IA Studio
 alone**. Nothing is lost from one save to the next; what opens elsewhere is poorer than what you
 see here.
 
@@ -724,7 +842,7 @@ width of the screen.
 
 ### What a model already brings
 
-A character generated by Scenario — by a *text to motion* model, or captured from a video — arrives
+A character generated remotely — by a *text to motion* model, or captured from a video — arrives
 with its **animation clips** inside the file. Select it, and the Inspector offers the **Animation**
 section:
 
@@ -824,13 +942,13 @@ The button opens a small panel beside it, with two settings.
 | Setting | What it offers |
 |---|---|
 | **Character type** | **Automatic**, **Human**, **Animal**, **Other** |
-| **Service** | **Automatic — the studio**, then the Scenario services that can do it |
+| **Service** | **Automatic — the studio**, then the remote services that can do it |
 
 **The studio only lays a HUMANOID skeleton** — hips, spine, two arms, two legs. Choosing **Animal**
 or **Other** shows the reason and **greys out Create the skeleton**: better said than laying hips
 on a horse and letting you find out.
 
-> **The Scenario services are listed, and none can be chosen today.** Each carries the reason that
+> **The remote services are listed, and none can be chosen today.** Each carries the reason that
 > stops it — the missing subscription, the size of the model, or that it is **not wired up yet**.
 > The studio does it **itself and for free**, with no size limit: that is what "Automatic — the
 > studio" means, and what **Create the skeleton** runs.
@@ -849,7 +967,7 @@ underneath it, with three tabs.
 |---|---|
 | **Library** | everything already at hand, in a single list: the clips the character's own file brought, the ones shipped with the studio, and the animations filed in the project |
 | **Import** | a file taken from disk — `.glb`, `.gltf`, `.fbx` |
-| **AI** | the Scenario models that **make** a motion |
+| **AI** | the remote models that **make** a motion |
 
 **The Library tab is not the *Animations* panel** described further down, and the two lists are not
 the same: the tab counts one source more — the animations filed in the project — and it **lays**

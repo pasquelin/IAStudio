@@ -161,14 +161,14 @@ describe('writing an OpenRaster container', () => {
       packOpenRaster(document({ stack: stack({ studio: '{"guides":[1]}' }) })),
     )
 
-    expect(entries['scenario/document.json']).toBe('{"guides":[1]}')
+    expect(entries['iastudio/document.json']).toBe('{"guides":[1]}')
   })
 
   /** A file written elsewhere has nothing of ours in it, and must still be a valid container. */
   it('writes no studio entry when there is no studio state', () => {
     expect(
       entriesOf(packOpenRaster(document({ stack: stack({ studio: '' }) }))),
-    ).not.toHaveProperty('scenario/document.json')
+    ).not.toHaveProperty('iastudio/document.json')
   })
 
   /**
@@ -488,7 +488,7 @@ describe('containerPictureOf', () => {
   }
 
   /**
-   * The asset scheme routes every `scenario://asset/…` through this, so a layer sourced from a
+   * The asset scheme routes every `ia-studio://asset/…` through this, so a layer sourced from a
    * container reads it too: answered the thumbnail, a 4K picture arrived 256 px wide and was
    * stretched over the whole document.
    */

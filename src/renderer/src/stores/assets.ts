@@ -1,4 +1,7 @@
 import { create } from 'zustand'
+import { sameOrder } from '@shared/collections'
+import { assetRevisionOf, rememberAssetRevisions } from './assetRevisions'
+import { livePreviewVersionOf } from './livePreviews'
 import { persist } from 'zustand/middleware'
 import {
   ASSET_SEARCH_LIMIT_MAX,
@@ -69,7 +72,7 @@ type AssetsState = {
    */
   connect: () => Promise<() => void>
   /**
-   * Says the catalogue changed and lets this store decide when to read it. `assets.search` is
+   * Says the catalogue changed and lets this store decide when to read it. `assets.searchProjectCatalogue` is
    * a synchronous SQLite query in the main process: forty rushes finishing their ingest would
    * otherwise freeze every window forty times over.
    */
@@ -138,7 +141,7 @@ function sameScope(
   next: readonly AssetType[] | null,
 ): boolean {
   if (current === null || next === null) return current === next
-  return current.length === next.length && current.every((type, index) => type === next[index])
+  return sameOrder(current, next)
 }
 
 /**
@@ -190,7 +193,14 @@ export function forgetRememberedAssets(): void {
  * ⌘S rewrites a picture — see `versionedUrl`.
  */
 export function assetVersionOf(assetId: string): string | undefined {
-  return assetsById(useAssets.getState()).get(assetId)?.localChangedAt
+  // The registry FIRST: it is fed by the event that says a file was written, where the shelf is
+  // one page of the newest rows — see `assetRevisions`.
+  const written =
+    assetRevisionOf(assetId) ?? assetsById(useAssets.getState()).get(assetId)?.localChangedAt
+  const shown = livePreviewVersionOf(assetId)
+  // The preview's count rides ON the file's stamp rather than replacing it: revoking one has to
+  // leave a version the slot has not seen, or the file would come back under a key already held.
+  return shown === 0 ? written : `${written ?? ''}+${shown}`
 }
 
 /** The shape the store persisted before it held a whole `CollectionState`. */
@@ -276,7 +286,7 @@ export const useAssets = create<AssetsState>()(
                 hasMore: page.length === LOCAL_PAGE,
               }))
             } catch {
-              // No project open — the catalogue throws, and there is nothing more to read.
+              // The catalogue failed — see `refresh` below, which answers the same way.
               set({ hasMore: false })
             }
           })().finally(() => {
@@ -287,7 +297,7 @@ export const useAssets = create<AssetsState>()(
         },
 
         // Callers that need the rows NOW share the read already in flight rather than opening a
-        // second one: `assets.search` is a synchronous SQLite query in the main process, and
+        // second one: `assets.searchProjectCatalogue` is a synchronous SQLite query in the main process, and
         // three generations finishing together asked for the same answer three times over.
         refresh: async () => {
           // Shared only when it answers the same question. A read in flight for the previous
@@ -326,7 +336,8 @@ export const useAssets = create<AssetsState>()(
               pagesRead = Math.max(1, Math.ceil(found.length / LOCAL_PAGE))
               set({ items: found, hasMore: more })
             } catch {
-              // No project open: the catalogue throws, and an empty list is the honest answer.
+              // The catalogue failed. No project open answers an empty page instead, so what
+              // lands here is a database that stopped reading.
               pagesRead = 1
               set({ items: [], hasMore: false })
             }
@@ -340,7 +351,12 @@ export const useAssets = create<AssetsState>()(
         // Through `invalidate` like every other site that says the catalogue moved, so the
         // coalescing holds: an extraction writing six pictures is one read, not six.
         connect: connectThroughBridge(async bridge =>
-          bridge.assets.onChanged(() => get().invalidate()),
+          bridge.assets.onChanged(changed => {
+            // Before the invalidation: the shelf reads a page in a third of a second, and a
+            // texture slot may ask for its version on the very next frame.
+            rememberAssetRevisions(changed)
+            get().invalidate()
+          }),
         ),
 
         invalidate: () => {
@@ -355,22 +371,20 @@ export const useAssets = create<AssetsState>()(
           const refused = checkAssetName(name)
           if (refused) return refused
 
-          let refusal: AssetNameFailure | null = null
-          const written = await getBridge()
-            ?.assets.update(assetId, { name: name.trim() })
-            .catch((error: unknown) => {
-              // Read off the message, as a document's refusal is: the name reached the file, so
-              // the folder can now refuse what no field could see — a name it already holds.
-              // Answering `too-long` for all of them, which is what this did while length was
-              // the only thing that could be wrong, would tell the user to shorten a name whose
-              // only fault is that it is taken.
-              //
-              // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`), and
-              // no longer here as well: the sole caller wrote a second line for the same failure.
-              refusal = nameFailureOf(error, ASSET_NAME_FAILURES, 'invalid')
-              return null
-            })
-          if (!written) return refusal ?? 'invalid'
+          const bridge = getBridge()
+          if (!bridge) return 'invalid'
+
+          let written
+          try {
+            written = await bridge.assets.update(assetId, { name: name.trim() })
+          } catch (error) {
+            // Read off the message, as a document's refusal is: the name reached the file, so
+            // the folder can now refuse what no field could see — a name it already holds.
+            // Journalled by the CALLER, on the code this hands back (`helpers/rename.ts`).
+            return nameFailureOf(error, ASSET_NAME_FAILURES, 'invalid')
+          }
+
+          if (!written) return 'invalid'
 
           // Written into the shelf rather than waited for: `assets:update` broadcasts nothing —
           // it is answered where it was ordered, which is the doctrine every other write follows.
@@ -383,12 +397,17 @@ export const useAssets = create<AssetsState>()(
         },
 
         retype: async (assetId, type) => {
-          const written = await getBridge()
-            ?.assets.update(assetId, { type })
-            .catch((error: unknown) => {
-              reportFailure('assets.retype', assetId, error)
-              return null
-            })
+          const bridge = getBridge()
+          if (!bridge) return
+
+          let written
+          try {
+            written = await bridge.assets.update(assetId, { type })
+          } catch (error) {
+            reportFailure('assets.retype', assetId, error)
+            return
+          }
+
           if (!written) return
 
           // Into the shelf on the spot, as a rename is — `assets:update` broadcasts nothing, so
@@ -411,7 +430,7 @@ export const useAssets = create<AssetsState>()(
       }
     },
     {
-      name: 'scenario-studio:assets',
+      name: 'ia-studio:assets',
       version: COLLECTION_PERSIST_VERSION,
       /**
        * The store used to persist a bare `view`, before the state became a whole

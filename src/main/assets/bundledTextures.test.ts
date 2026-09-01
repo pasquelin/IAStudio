@@ -22,7 +22,7 @@ function shippedFolder(): string {
   return folder
 }
 
-const PROJECT = '/projects/One.scenario'
+const PROJECT = '/projects/One'
 
 let catalog: AsyncCatalog
 let written: Asset[]
@@ -33,9 +33,9 @@ function backend(): LocalBackend {
     const asset: Asset = {
       id: request.id,
       name: request.name,
-      type: 'texture',
+      type: 'image',
       location: 'local',
-      path: `Textures/${request.name}.png`,
+      path: `Images/${request.name}.png`,
       tags: [],
       createdAt: '2026-08-20T10:00:00.000Z',
     }
@@ -68,6 +68,7 @@ function install(folder: string, ids = 0): Promise<InstalledCheckerTexture[]> {
     assets: backend(),
     newAssetId: () => `asset_${(minted += 1)}`,
     folder: () => folder,
+    roles: () => ({}),
     projectPath: () => PROJECT,
     exists: file => onDisk.has(file),
   })
@@ -96,10 +97,10 @@ describe('the working textures shipped with the app', () => {
       'checkerSmall',
     ])
     expect(written.map(asset => asset.path)).toEqual([
-      'Textures/GridLarge.png',
-      'Textures/GridSmall.png',
-      'Textures/CheckerLarge.png',
-      'Textures/CheckerSmall.png',
+      'Images/GridLarge.png',
+      'Images/GridSmall.png',
+      'Images/CheckerLarge.png',
+      'Images/CheckerSmall.png',
     ])
   })
 
@@ -121,7 +122,7 @@ describe('the working textures shipped with the app', () => {
   it('writes again the one whose file has gone, keeping the id its scenes point at', async () => {
     const folder = shippedFolder()
     const first = await install(folder)
-    onDisk.delete(`${PROJECT}/Textures/CheckerLarge.png`)
+    onDisk.delete(`${PROJECT}/Images/CheckerLarge.png`)
     written = []
 
     const second = await install(folder, 100)
@@ -129,4 +130,35 @@ describe('the working textures shipped with the app', () => {
     expect(written.map(asset => asset.name)).toEqual(['CheckerLarge'])
     expect(second).toEqual(first)
   })
+
+  /**
+   * This folder is a catalogue LOOKUP, not merely where a new file lands: a project that filed
+   * its four under `Textures/` would otherwise take four more under `Images/`, and its meshes
+   * would go on wearing the first four.
+   */
+  it.each(['Textures', 'Materials'])(
+    'keeps the four a project filed under %s, before the folder settled',
+    async folder => {
+      const former: Asset = {
+        id: 'asset_filed_before',
+        name: 'GridLarge',
+        type: 'image',
+        location: 'local',
+        path: `${folder}/GridLarge.png`,
+        tags: [],
+        createdAt: '2026-08-20T10:00:00.000Z',
+      }
+      catalog.add(former)
+      onDisk.add(`${PROJECT}/${former.path}`)
+
+      const installed = await install(shippedFolder())
+
+      expect(installed[0]).toEqual({ id: 'gridLarge', assetId: former.id })
+      expect(written.map(asset => asset.path)).toEqual([
+        'Images/GridSmall.png',
+        'Images/CheckerLarge.png',
+        'Images/CheckerSmall.png',
+      ])
+    },
+  )
 })

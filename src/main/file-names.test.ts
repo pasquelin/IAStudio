@@ -84,21 +84,28 @@ function isFileOf(path: string, name: string): boolean {
 }
 
 /**
- * A store is exempt, and it is the only thing that is.
+ * A store is exempt from PLACEMENT, and it is the only thing that is.
  *
  * `useProject` is not a hook, it is the store itself — `create()` hands back something a component
  * subscribes to, and forty of them would have to move into `hooks/` under names nobody looks for
  * them by. The selectors written beside one are exempt for the same reason: `useHomeVisible` is
  * `homeIsVisible` subscribed, and the two halves of one answer belong in one file.
  *
- * The angle blind here, in clear: a real hook written under `stores/` is not reported. Decided
- * 2026-08-17 — it is the price of not splitting every store from its own selectors.
+ * The angle blind here, in clear: a real hook written under `stores/` is not reported as
+ * MISPLACED. Decided 2026-08-17 — it is the price of not splitting every store from its own
+ * selectors. Its NAME is held all the same, by the guard below, which exempts nothing.
  */
 const isStore = (path: string): boolean => path.includes(`${sep}stores${sep}`)
 
 const projectSources = PROJECT_TREES.flatMap(tree => sourceFiles(tree)).filter(
   path => !isDeclaration(path),
 )
+
+/** Read once: both guards below ask the same question of the same 1 300 files. */
+const hooksByFile: [string, Set<string>][] = projectSources.map(path => [
+  path,
+  hooksIn(readFileSync(path, 'utf8')),
+])
 
 /**
  * The benchmarks, which `sourceFiles` drops along with the suites — and which nothing else was
@@ -156,15 +163,36 @@ describe(`file names — ${RULE}`, () => {
   it(
     'gives every hook a file of its own name under hooks',
     () => {
-      const misplaced = projectSources
-        .filter(path => !isStore(path))
-        .flatMap(path =>
-          [...hooksIn(readFileSync(path, 'utf8'))]
+      const misplaced = hooksByFile
+        .filter(([path]) => !isStore(path))
+        .flatMap(([path, names]) =>
+          [...names]
             .filter(name => !isFileOf(path, name))
             .map(name => `${reported(path)} declares ${name}`),
         )
 
       expect(misplaced.sort()).toEqual([])
+    },
+    WHOLE_PROJECT,
+  )
+
+  /**
+   * One `use…` name, one declaration — stores INCLUDED, and that is what the guard above cannot
+   * say: it exempts `stores/` before it compares, so a store and a hook both answered to
+   * `useDictation`. An auto-import picks whichever it finds first, and the two are not one shape.
+   */
+  it(
+    'lets one name answer for one hook',
+    () => {
+      const byName = new Map<string, string[]>()
+      for (const [path, names] of hooksByFile)
+        for (const name of names) byName.set(name, [...(byName.get(name) ?? []), reported(path)])
+
+      const shared = [...byName]
+        .filter(([, paths]) => paths.length > 1)
+        .map(([name, paths]) => `${name}: ${paths.sort().join(', ')}`)
+
+      expect(shared.sort()).toEqual([])
     },
     WHOLE_PROJECT,
   )

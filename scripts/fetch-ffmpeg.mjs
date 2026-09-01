@@ -261,7 +261,7 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
 
   rmSync(destination, { recursive: true, force: true })
   mkdirSync(destination, { recursive: true })
-  const work = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-'))
+  const work = mkdtempSync(join(tmpdir(), 'ia-studio-ffmpeg-'))
 
   try {
     for (const archive of target.archives) {
@@ -303,11 +303,11 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
         `Licence: ${target.licence}`,
         `Build: ${target.source}`,
         '',
-        'FFmpeg is a separate program, spawned by Scenario Studio. It is not linked into it.',
+        'FFmpeg is a separate program, spawned by IA Studio. It is not linked into it.',
         '',
         'Corresponding sources, as the licence requires:',
         `  ${sources.url}`,
-        `  also attached to every release of Scenario Studio as ${sources.file}`,
+        `  also attached to every release of IA Studio as ${sources.file}`,
         '',
         'The build configuration of this very binary is printed by:',
         `  ${platform === 'win32' ? 'ffmpeg.exe' : './ffmpeg'} -buildconf`,
@@ -335,7 +335,7 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
 
 /** Fetches every target into a scratch folder and prints what to paste back into `TARGETS`. */
 async function printDigests() {
-  const scratch = mkdtempSync(join(tmpdir(), 'scenario-ffmpeg-digests-'))
+  const scratch = mkdtempSync(join(tmpdir(), 'ia-studio-ffmpeg-digests-'))
   try {
     for (const key of Object.keys(TARGETS)) {
       const [platform, arch] = key.split('-')

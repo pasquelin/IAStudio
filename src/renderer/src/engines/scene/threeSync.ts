@@ -47,6 +47,57 @@ export function applyMaterial(
   material.metalness = descriptor.metalness
 }
 
+/** Enough for the tool's own silhouette to read while the matter behind it still shows. */
+const NEGATIVE_OPACITY = 0.45
+
+/**
+ * A shape MARKED as a tool, and the look Roblox gives one: translucent red, so what is about to
+ * be taken away shows through what it will be taken out of.
+ *
+ * It REPLACES the descriptor's colour rather than tinting it, and owns `transparent`, `opacity`
+ * and `depthWrite` on the material — a `MaterialDescriptor` that ever gains an opacity has to
+ * settle with this. A texture still multiplies through: that slot belongs to the texture holder.
+ */
+export function applyNegative(
+  material: MeshStandardMaterial,
+  colour: string,
+  negative: boolean,
+): void {
+  material.transparent = negative
+  material.opacity = negative ? NEGATIVE_OPACITY : 1
+  // Off, or a tool standing in front of the matter would hide it rather than show through it.
+  material.depthWrite = !negative
+  // The paint it wore, kept where the EXPORT can find it: `placedCopy` shares materials by
+  // reference, so without this a marked cube shipped red at 45 % into every `.glb` written.
+  if (negative) material.userData[NEGATIVE_PAINT] = material.color.getHex()
+  else delete material.userData[NEGATIVE_PAINT]
+  if (negative && colour) material.color.set(colour)
+}
+
+/** Where `applyNegative` leaves the paint a marked material had — read by `unmarkTools`. */
+export const NEGATIVE_PAINT = 'negativePaint'
+
+/**
+ * The tool mark taken off a COPY, paint and all. A mark is an editing role, not a finish: Roblox
+ * writes a negated part out as an ordinary one, and this studio's exports have to as well.
+ */
+export function unmarkTools(root: Object3D): void {
+  root.traverse(child => {
+    if (!(child instanceof Mesh)) return
+    const material = standardMaterialOf(child)
+    const paint: unknown = material?.userData[NEGATIVE_PAINT]
+    if (!material || typeof paint !== 'number') return
+
+    const own = material.clone()
+    own.color.setHex(paint)
+    own.transparent = false
+    own.opacity = 1
+    own.depthWrite = true
+    delete own.userData[NEGATIVE_PAINT]
+    child.material = own
+  })
+}
+
 /** The second UV set an occlusion map needs. Absent from every primitive the studio builds. */
 export function giveSecondUvSet(geometry: BufferGeometry): void {
   const uv = geometry.attributes.uv
@@ -54,22 +105,18 @@ export function giveSecondUvSet(geometry: BufferGeometry): void {
 }
 
 /**
- * A geometry cannot be mutated into another shape, so this one swaps it — and disposes the one
- * it replaces. Left behind, every character typed in a radius field leaks a buffer on the GPU.
+ * Puts a mesh on another shape and hands back the one it was wearing, `null` when it already
+ * wore it — for the caller to give back, since only it knows which cache lent it.
  */
-export function applyGeometry(
-  mesh: Mesh,
-  descriptor: GeometryDescriptor,
-  tilesPerMetre: number,
-): void {
+export function wearGeometry(mesh: Mesh, next: BufferGeometry): BufferGeometry | null {
   const previous = mesh.geometry
-  const next = tiledGeometry(descriptor, tilesPerMetre)
+  if (previous === next) return null
+
   // The new shape inherits the second UV set, or an occlusion map already in place would stop
   // doing anything the moment a radius is nudged.
   if (previous.attributes.uv1) giveSecondUvSet(next)
-
   mesh.geometry = next
-  previous.dispose()
+  return previous
 }
 
 /** The shape, with its maps repeated at the material's density — see `uvTiling` for how. */

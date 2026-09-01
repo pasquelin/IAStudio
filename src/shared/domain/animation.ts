@@ -1,3 +1,4 @@
+import type { JsonValue } from './component'
 import type { Transform, Vector3 } from './scene'
 import { SECOND, type Us } from './time'
 
@@ -5,16 +6,40 @@ import { SECOND, type Us } from './time'
  * What a track drives. Three for a node, and the same three for one bone of a rig — a bone is
  * addressed by name because it lives inside the file, never in the document (see `ModelRef`).
  */
-export type TrackProperty = 'position' | 'rotation' | 'scale' | 'fov'
+export type TrackProperty = 'position' | 'rotation' | 'scale' | 'fov' | 'post'
 
-export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale', 'fov']
+/** Every property a track may drive. What a reader validates a stored target against. */
+export const TRACK_PROPERTIES: readonly TrackProperty[] = [
+  'position',
+  'rotation',
+  'scale',
+  'fov',
+  'post',
+]
+
+/**
+ * The properties a hand keys directly on a subject of the sheet — the pose, and the lens.
+ *
+ * `post` is deliberately out: a composition parameter is keyed from the composition panel,
+ * against an effect INSTANCE and a parameter name, neither of which a subject row can name.
+ */
+export const DIRECT_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale', 'fov']
+
+/**
+ * The subject a scene's own composition is keyed under.
+ *
+ * A reserved id rather than a nullable field: every node id is a `crypto.randomUUID()`, so no
+ * node can ever answer to this, and the whole of the track machinery — filtering, rows, solo,
+ * keys — keeps working on a plain string. `animation.test.ts` holds it to that shape.
+ */
+export const SCENE_SUBJECT_ID = '@scene'
 
 /**
  * The three a pose is made of — what every node can be keyed on, and what `contributionAt`
  * composes. `fov` is deliberately out: it drives a lens rather than a transform, and it is read
- * by `fovAt` alone.
+ * by `fovAt` alone. `post` likewise, read by `postAt`.
  */
-export type PoseProperty = Exclude<TrackProperty, 'fov'>
+export type PoseProperty = Exclude<TrackProperty, 'fov' | 'post'>
 
 export const POSE_PROPERTIES: readonly PoseProperty[] = ['position', 'rotation', 'scale']
 
@@ -30,11 +55,19 @@ export type Keyframe = { time: Us; value: Vector3 }
 
 /** Which object a track writes on, and which of its three values. */
 export type TrackTarget = {
+  /** A node of the scene, or `SCENE_SUBJECT_ID` for the scene's own composition. */
   nodeId: string
   /** A bone of that node's model, or the node itself when absent. */
   bone?: string
   property: TrackProperty
+  /**
+   * Present on a `post` track and on no other: which effect INSTANCE of the stack, and which of
+   * its parameters. The instance rather than the effect kind, so two blooms are two channels.
+   */
+  post?: PostTarget
 }
+
+export type PostTarget = { effectId: string; param: string }
 
 export type AnimationTrack = {
   id: string
@@ -108,6 +141,72 @@ export type CameraShot = {
 }
 
 /**
+ * What a timeline DOES at an instant, beyond moving something.
+ *
+ * 🛑 A call into the game, never a behaviour of its own: the row says WHEN, and what happens is
+ * a script's or the bus's. A timeline that could act would be a second runtime.
+ */
+export type TimelineEvent = {
+  id: string
+  at: Us
+  /** The event's own name, put on the bus — what a script hears through `onMessage`. */
+  name: string
+  /** Which entity it happened to, or nothing when it happened to the scene. */
+  entity?: string
+  payload?: Readonly<Record<string, JsonValue>>
+}
+
+/**
+ * A sound or a picture on air from `start`, by the reference the catalogue answers.
+ *
+ * One list per medium rather than one with a `kind`: what a row OFFERS differs — a sound fades,
+ * a video does not loop under a dialogue — and a union would have every reader test the kind.
+ */
+export type TimelineMedia = {
+  id: string
+  assetId: string
+  start: Us
+  duration: Us
+  /** Linear, in `[0, 1]`. Absent is full. */
+  gain?: number
+  fadeIn?: Us
+  fadeOut?: Us
+  loop?: boolean
+}
+
+/** What a transition DOES between two moments. `cut` is instant; the others take their time. */
+export type TransitionKind = 'fade' | 'cut' | 'dissolve'
+
+export const TRANSITION_KINDS: readonly TransitionKind[] = ['fade', 'cut', 'dissolve']
+
+export type TimelineTransition = {
+  id: string
+  at: Us
+  kind: TransitionKind
+  duration: Us
+  /** Which scene it goes TO, for a transition that changes one. Absent stays here. */
+  scene?: string
+}
+
+/**
+ * 🛑 A FILTER OF VIEW, never a capability.
+ *
+ * It decides which rows the panel OFFERS and nothing else — the engine plays every row of a
+ * timeline whatever this says, and `timelineTemplate.test.ts` holds that in both directions. The
+ * precedent is `sheet`, taken for a measured reason: a panel that offers everything is a panel
+ * nobody can read.
+ */
+export type TimelineTemplate = 'cinematic' | 'dialogue' | 'intro' | 'gameplay' | 'custom'
+
+export const TIMELINE_TEMPLATES: readonly TimelineTemplate[] = [
+  'cinematic',
+  'dialogue',
+  'intro',
+  'gameplay',
+  'custom',
+]
+
+/**
  * What a document holds of its animation. The playhead is NOT here: where the head stands is
  * how a scene is being looked at, like the projection and the display mode — and a head written
  * into the document would put one undo entry per frame of playback.
@@ -128,6 +227,16 @@ export type AnimationTimeline = {
    * 99,2 % of the window's DOM, measured 20/08.
    */
   sheet: readonly string[]
+  /**
+   * What the timeline does BESIDES moving something. All optional, and absent on every document
+   * written before games: a scene that carries none plays exactly as it did.
+   */
+  events?: readonly TimelineEvent[]
+  audio?: readonly TimelineMedia[]
+  video?: readonly TimelineMedia[]
+  transitions?: readonly TimelineTransition[]
+  /** Which rows the panel offers. Never what the engine can do — see `TimelineTemplate`. */
+  template?: TimelineTemplate
 }
 
 /**
@@ -182,4 +291,9 @@ export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({
  */
 export function neutralOf(property: TrackProperty): Vector3 {
   return property === 'scale' ? ONE : ZERO
+}
+
+/** Whether this target drives a composition parameter, narrowed so `post` can be read off it. */
+export function drivesPost(target: TrackTarget): target is TrackTarget & { post: PostTarget } {
+  return target.property === 'post' && target.post !== undefined
 }

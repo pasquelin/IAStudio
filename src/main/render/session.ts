@@ -6,7 +6,7 @@ import { FRAME_PATTERN, frameName, sequenceArgs } from '../media/ffmpeg'
 /** What a render needs of the outside world, so a test can hand it anything but a real encoder. */
 export type RenderDeps = {
   /** Runs ffmpeg with those arguments. Resolves on success, rejects with what it said otherwise. */
-  encode: (args: readonly string[]) => Promise<void>
+  encode: (args: readonly string[], signal?: AbortSignal) => Promise<void>
   /** Where the frames are staged. A temp folder by default; a test hands a known one. */
   scratch?: () => Promise<string>
 }
@@ -35,6 +35,7 @@ export async function startRender(deps: RenderDeps): Promise<RenderSession> {
   await mkdir(folder, { recursive: true })
 
   let done = false
+  let encoding: AbortController | null = null
   const clear = async (): Promise<void> => {
     if (done) return
     done = true
@@ -45,15 +46,23 @@ export async function startRender(deps: RenderDeps): Promise<RenderSession> {
   return {
     frame: (index, png) => writeFile(join(folder, frameName(index)), png),
     finish: async (destination, fps) => {
+      encoding = new AbortController()
       try {
-        await deps.encode(sequenceArgs(join(folder, FRAME_PATTERN), destination, fps))
+        await deps.encode(
+          sequenceArgs(join(folder, FRAME_PATTERN), destination, fps),
+          encoding.signal,
+        )
       } finally {
+        encoding = null
         // Even when the encode refuses: the frames of a failed render are megabytes nobody will
         // ever look at, and leaving them behind is how a temp folder becomes a disk full.
         await clear()
       }
     },
-    cancel: clear,
+    cancel: async () => {
+      encoding?.abort()
+      await clear()
+    },
   }
 }
 

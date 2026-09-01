@@ -34,17 +34,20 @@ function afterParameters(source: string, from: number): number {
 }
 
 /**
- * Every command a module publishes — an exported function whose RETURN type is a `Command`.
+ * Every command a module publishes — an exported function whose RETURN type is a `Command`, or an
+ * alias one of the four modules declares for one. READ rather than listed, and read ACROSS the
+ * four: an alias is exported, so the module that names it in a signature need not be the one that
+ * declared it — and a name the regex misses drops a whole family of commands out of this guard.
  *
  * The return type and not the name: `copiesOf` and `keyableProperties` are read by commands and
  * are not ones, while `mergeDown` is one and says nothing of the sort in its name.
  */
-function commandsOf(source: string): string[] {
+function commandsOf(source: string, types: readonly string[]): string[] {
+  const returns = new RegExp(`^: (${types.join('|')})\\b`)
+
   return [...source.matchAll(/export function (\w+)\(/g)]
     .filter(match =>
-      source
-        .slice(afterParameters(source, match.index + match[0].length - 1))
-        .startsWith(': Command<'),
+      returns.test(source.slice(afterParameters(source, match.index + match[0].length - 1))),
     )
     .map(match => match[1] ?? '')
 }
@@ -59,10 +62,21 @@ const HANDLERS = Object.entries(WINDOW_SOURCES)
   .join('\n')
 
 /** Read once, like `HANDLERS`: both rules below walk the same four modules. */
-const COMMANDS: readonly (readonly [string, readonly string[]])[] = COMMAND_MODULES.map(module => [
+const SOURCES: readonly (readonly [string, string])[] = COMMAND_MODULES.map(module => [
   module,
-  commandsOf(Object.entries(WINDOW_SOURCES).find(([path]) => path.endsWith(module))?.[1] ?? ''),
+  Object.entries(WINDOW_SOURCES).find(([path]) => path.endsWith(module))?.[1] ?? '',
 ])
+
+const COMMAND_TYPES: readonly string[] = [
+  'Command',
+  ...SOURCES.flatMap(([, source]) =>
+    [...source.matchAll(/type (\w+) = Command</g)].map(match => match[1] ?? ''),
+  ),
+]
+
+const COMMANDS: readonly (readonly [string, readonly string[]])[] = SOURCES.map(
+  ([module, source]) => [module, commandsOf(source, COMMAND_TYPES)],
+)
 
 /**
  * A command a combinator builds FROM, rather than a gesture of its own. Publishing one would be
@@ -73,9 +87,11 @@ const COMBINATORS: readonly string[] = [
   'editClip',
   'railOnNewShot',
   // The single-node writer its spreading twin builds from. `setMaterialOn` is what decides
-  // whether a mesh or a text is being painted, and `movesToCommand` whether a move becomes a key
-  // — an action naming the half underneath would be a second law about what that edit means.
+  // whether a mesh, a text or a solid is being painted, and `movesToCommand` whether a move
+  // becomes a key — an action naming the half underneath would be a second law about what that
+  // edit means.
   'setMeshMaterial',
+  'setNodeMaterial',
   'setTextMaterial',
   'setSprite',
   'setText',
@@ -102,7 +118,7 @@ const COMBINATORS: readonly string[] = [
 const SPREAD_OVER_A_SELECTION: readonly string[] = ['setGeometryOn', 'setLightOn', 'setCameraOn']
 
 /**
- * Reached through `command.run` rather than by an action of its own — the OTHER door, which this
+ * Reached through `command.runStudioCommand` rather than by an action of its own — the OTHER door, which this
  * rule cannot see: a client fires the registry command beside each one and the surface in front
  * builds the edit. Listed so they do not read as gestures nothing can reach.
  */
@@ -118,6 +134,9 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
   // The same bargain for who is ON the animation band: the selection, then the command beside it.
   putOnAnimationSheet: 'scene.addToSheet',
   takeOffAnimationSheet: 'scene.removeFromSheet',
+  // The toggle half of the tool mark: `node.markAsCuttingTool` publishes `setNodesNegative`, which SAYS
+  // which of the two it means, where a button has to read what is already marked.
+  negateNodes: 'scene.negate',
 }
 
 /**
@@ -137,7 +156,7 @@ const NOT_PUBLISHED: readonly string[] = [
   // one entry keeps the last apply. An action names the transform whole and goes through
   // `setLayerTransform` — a second door onto the same edit is an edit published twice.
   'translateLayer',
-  // The grip's half of the pair `layer.text` and `layer.transform` already publish: it writes a
+  // The grip's half of the pair `layer.editTextLayer` and `layer.transform` already publish: it writes a
   // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
   // A call names them one after the other and pays two undos, which no hand can do.
   'resizeCaption',

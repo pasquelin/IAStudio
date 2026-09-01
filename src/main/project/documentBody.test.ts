@@ -24,6 +24,7 @@ const PNG = Uint8Array.from(
 
 const scene = bodyFormatOf('.gltf')
 const otio = bodyFormatOf('.otio')
+const script = bodyFormatOf('.ts')
 
 /** What `readFile` hands a format: a format reads bytes, whatever the shape of what it wrote. */
 const onDisk = (body: string | Uint8Array): Buffer => Buffer.from(body)
@@ -53,7 +54,7 @@ const timeline = (studio: Record<string, unknown> = {}): string =>
   JSON.stringify({
     OTIO_SCHEMA: 'Timeline.1',
     name: 'Bande',
-    metadata: { scenario: studio },
+    metadata: { iastudio: studio },
     global_start_time: null,
     tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
   })
@@ -76,6 +77,31 @@ describe('a document of the studio’s own spelling', () => {
   // kind that does not exist yet reading the same way.
   it('is what an unlisted extension is spelt in', () => {
     expect(bodyFormatOf('.whatever')).toBe(ENVELOPED)
+  })
+})
+
+describe('a script held as plain TypeScript', () => {
+  const SOURCE = "import { defineScript } from '@studio'\nexport default defineScript({})\n"
+
+  /** 🛑 The bytes and nothing else: an envelope written here would be code that does not compile. */
+  it('writes the text alone, with nothing of the studio around it', () => {
+    expect(asText(script.write({ ...ENVELOPE, kind: 'script', content: SOURCE }))).toBe(SOURCE)
+  })
+
+  it('reads a file no studio ever wrote, as the script it is', () => {
+    expect(script.read(onDisk(SOURCE))).toMatchObject({ kind: 'script', content: SOURCE })
+  })
+
+  /**
+   * The head is COMPOSED, never read: `foundAt` falls back on the file name for a document whose
+   * envelope carries no id, which is what names a script. Listing a project of a hundred scripts
+   * therefore opens none of them.
+   */
+  it('answers a head without going near the disk', async () => {
+    expect(await script.readHead('/nowhere/at/all/Walk.ts')).toMatchObject({
+      kind: 'script',
+      title: '',
+    })
   })
 })
 
@@ -475,7 +501,7 @@ describe('a sky held as glTF', () => {
     updatedAt: '2026-08-18T10:00:00.000Z',
     id: 'doc-sky',
     content: JSON.stringify({
-      asset: { version: '2.0', generator: 'Scenario Studio' },
+      asset: { version: '2.0', generator: 'IA Studio' },
       scene: 0,
       scenes: [{ name: 'Crépuscule', nodes: [0] }],
       nodes: [{ name: 'Sun' }],
@@ -514,7 +540,7 @@ describe('a sky held as glTF', () => {
 
     expect(line.startsWith('{"asset":')).toBe(true)
     expect(JSON.parse(`${line.replace(/,$/, '')}}`)).toMatchObject({
-      asset: { extras: { scenario: { documentKind: 'skybox' } } },
+      asset: { extras: { iastudio: { documentKind: 'skybox' } } },
     })
   })
 
@@ -550,7 +576,7 @@ describe('a material held as MaterialX', () => {
 
   const materialDocument = (over: Partial<DocumentFile> = {}): DocumentFile => ({
     version: DOCUMENT_VERSION,
-    kind: 'texture',
+    kind: 'material',
     title: 'Laiton',
     updatedAt: '2026-08-18T10:00:00.000Z',
     id: 'doc-mat',
@@ -575,8 +601,8 @@ describe('a material held as MaterialX', () => {
     const written = asText(material.write(materialDocument()))
 
     expect(written.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
-    expect(written).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
-    expect(written).toContain('<surfacematerial name="scenario_material" type="material">')
+    expect(written).toContain('<standard_surface name="SR_iastudio" type="surfaceshader">')
+    expect(written).toContain('<surfacematerial name="iastudio_material" type="material">')
   })
 
   /**
@@ -586,7 +612,7 @@ describe('a material held as MaterialX', () => {
   it('reads back the kind and the id it wrote', () => {
     const read = material.read(onDisk(asText(material.write(materialDocument()))))
 
-    expect(read).toMatchObject({ kind: 'texture', id: 'doc-mat', title: '', updatedAt: '' })
+    expect(read).toMatchObject({ kind: 'material', id: 'doc-mat', title: '', updatedAt: '' })
   })
 
   /** The content is the composed structure and never the file's own text, as a picture's is. */
@@ -608,7 +634,7 @@ describe('a material held as MaterialX', () => {
     const enveloped = ENVELOPED.write(materialDocument({ content: '{"channels":{}}' }))
 
     expect(material.read(onDisk(asText(enveloped)))).toMatchObject({
-      kind: 'texture',
+      kind: 'material',
       id: 'doc-mat',
       title: 'Laiton',
     })
@@ -620,7 +646,7 @@ describe('a material held as MaterialX', () => {
       onDisk('<?xml version="1.0"?>\n<materialx version="1.39">\n</materialx>\n'),
     )
 
-    expect(read).toMatchObject({ kind: 'texture', title: '' })
+    expect(read).toMatchObject({ kind: 'material', title: '' })
     expect(read.id).toBeUndefined()
   })
 })
@@ -635,7 +661,7 @@ describe('what a listing pays per document', () => {
   let root = ''
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-heads-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-heads-'))
   })
 
   const laid = async (name: string, body: string): Promise<string> => {
@@ -782,3 +808,124 @@ describe('what a listing pays per document', () => {
     expect(await otio.readHead(file)).toMatchObject({ kind: 'sequence', id: 'doc-4' })
   })
 })
+
+describe('an interface held as plain JSON', () => {
+  const ui = bodyFormatOf('.ui.json')
+
+  const uiBody = (over: Record<string, unknown> = {}): string =>
+    JSON.stringify({
+      version: 1,
+      mode: 'screen',
+      design: { width: 1920, height: 1080 },
+      root: { type: 'screen', id: 'root', children: [] },
+      bindings: [],
+      ...over,
+    })
+
+  const written = (over: Record<string, unknown> = {}, id = 'doc_1'): string =>
+    asText(ui.write({ ...ENVELOPE, kind: 'gui', id, content: uiBody(over) }))
+
+  /** The whole reason the format is not the studio's envelope: the file has to BE json. */
+  it('writes one JSON object, which anything can parse', () => {
+    const parsed: unknown = JSON.parse(written())
+
+    expect(parsed).toMatchObject({ version: 1, mode: 'screen' })
+  })
+
+  /**
+   * 🛑 The stamp opens the file. Written behind the tree it would fall outside the bounded head,
+   * and the document would drop out of every listing — measured on glTF, whose mark once sat
+   * behind a long list of root nodes.
+   */
+  it('opens on the studio stamp, whatever the tree weighs', () => {
+    expect(written().startsWith(`{\n  "${STUDIO_METADATA_KEY}": {`)).toBe(true)
+  })
+
+  it('reads back the identity it wrote', () => {
+    const read = ui.read(onDisk(written()))
+
+    expect(read).toMatchObject({ kind: 'gui', id: 'doc_1' })
+    expect(JSON.parse(read.content)).toMatchObject({ mode: 'screen' })
+  })
+
+  /** Title and clock are the FILE's, never the body's: written here they would go stale. */
+  it('carries neither the title nor the clock into the file', () => {
+    const parsed: unknown = JSON.parse(written())
+    const held = isRecordOf(parsed) ? parsed[STUDIO_METADATA_KEY] : null
+
+    expect(held).toEqual({ documentId: 'doc_1', [DOCUMENT_KIND_KEY]: 'gui' })
+  })
+
+  it('survives a round trip through the disk, twice over', () => {
+    const once = written({ mode: 'world' })
+    const again = asText(ui.write({ ...ui.read(onDisk(once)), title: 'Autre' }))
+
+    expect(JSON.parse(again)).toEqual(JSON.parse(once))
+  })
+
+  /**
+   * 🛑 Refused, never wrapped — and a RENAME is what makes this matter: it reaches this writer
+   * from the main process without passing the window's own refusal, so an enveloped fallback
+   * would turn a damaged interface into two lines no other tool parses, on a gesture nobody
+   * thinks of as writing.
+   */
+  it('refuses a body that is not an interface rather than enveloping it', () => {
+    const notOne: DocumentFile = {
+      ...ENVELOPE,
+      kind: 'gui',
+      content: '{"OTIO_SCHEMA":"Timeline.1"}',
+    }
+
+    expect(() => ui.write(notOne)).toThrow()
+  })
+
+  it('refuses a body written by a later build rather than rewriting it', () => {
+    const tooNew: DocumentFile = { ...ENVELOPE, kind: 'gui', content: uiBody({ version: 99 }) }
+
+    expect(() => ui.write(tooNew)).toThrow()
+  })
+
+  it('refuses a body whose root is not a screen', () => {
+    const broken: DocumentFile = {
+      ...ENVELOPE,
+      kind: 'gui',
+      content: uiBody({ root: { type: 'panel' } }),
+    }
+
+    expect(() => ui.write(broken)).toThrow()
+  })
+
+  describe('listing one', () => {
+    let folder = ''
+
+    beforeEach(async () => {
+      folder = await mkdtemp(join(tmpdir(), 'ui-head-'))
+    })
+
+    it('reads the head without opening the tree', async () => {
+      const file = join(folder, 'hud.ui.json')
+      const huge = Array.from({ length: 400 }, (_, index) => ({
+        type: 'panel',
+        id: `p${index}`,
+        children: [],
+      }))
+      const body = written({ root: { type: 'screen', id: 'root', children: huge } })
+      await writeFile(file, body)
+
+      // Bigger than the bounded read, so answering at all proves the head was enough.
+      expect(Buffer.byteLength(body)).toBeGreaterThan(ENVELOPE_LIMIT)
+      await expect(ui.readHead(file)).resolves.toMatchObject({ kind: 'gui', id: 'doc_1' })
+    })
+
+    /** A `.ui.json` somebody else wrote is not ours, and a listing says so rather than opening it. */
+    it('turns away a file with nothing of the studio in it', async () => {
+      const file = join(folder, 'other.ui.json')
+      await writeFile(file, uiBody())
+
+      await expect(ui.readHead(file)).rejects.toThrow()
+    })
+  })
+})
+
+const isRecordOf = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null

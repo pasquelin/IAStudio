@@ -3,7 +3,7 @@
  * the components so the panels that own this state — and drive a server query from it — can
  * be tested without rendering a virtualized grid.
  */
-import { foldForSearch } from '@shared/text'
+import { matchesWords, searchWords } from '@shared/text'
 import { clamp } from '@shared/numeric'
 import { THUMBNAIL_SIZE } from '@shared/domain/project'
 
@@ -41,8 +41,13 @@ export const THUMBNAIL_STEP = 24
 /**
  * Bumped whenever `CollectionState` changes shape, and shared by every store that persists
  * one: a restored state missing a field it now needs lays out a grid of zero-wide columns.
+ *
+ * 3 for a facet VALUE that stopped existing, which is the same failure read from the other end:
+ * `texture` was an asset kind until 2026-08-26, the Materials shelf posed it by default, and a
+ * restored `type: ['texture']` narrows to nothing — with no option left in the select to see it
+ * by, and none to clear it with. Dropping the blob costs a filter nobody typed twice.
  */
-export const COLLECTION_PERSIST_VERSION = 2
+export const COLLECTION_PERSIST_VERSION = 3
 
 export const DEFAULT_COLLECTION_STATE: CollectionState = {
   search: '',
@@ -54,15 +59,6 @@ export const DEFAULT_COLLECTION_STATE: CollectionState = {
 
 /** For panels with no grid and no filters: a fixed state, never persisted. */
 export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: 'list' }
-
-/**
- * Its twin the other way round: pictures in a narrow column, with neither search nor facets.
- *
- * A module constant rather than an object built in the panel, for the reason every fixed state
- * here is one — nothing may hand out a shared mutable, and a preset belongs beside the defaults
- * it is a variation of.
- */
-export const TILES_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, thumbnailSize: 96 }
 
 /**
  * The state as it goes to storage. `search` is the one field no store persists: reopening the
@@ -136,7 +132,9 @@ export function filterLocally<T>(
   state: CollectionState,
   filter: LocalFilter<T>,
 ): T[] {
-  const needle = foldForSearch(state.search.trim())
+  // The same words the project search matches by, and for the same reason: a picture is named
+  // after the prompt that made it, so `green sailboat` sits three commas apart in its name.
+  const words = searchWords(state.search)
 
   // Resolved once for the list rather than per item: the shelf that calls this holds a thousand
   // rows now that it pages, and re-entering the facets per row allocated two objects each.
@@ -146,8 +144,8 @@ export function filterLocally<T>(
   })
 
   return items.filter(item => {
-    const against = needle ? filter.text(item) : null
-    if (against !== null && !foldForSearch(against).includes(needle)) return false
+    const against = words.length > 0 ? filter.text(item) : null
+    if (against !== null && !matchesWords(against, words)) return false
 
     for (const { read, wanted } of narrowing) {
       const held = read(item)

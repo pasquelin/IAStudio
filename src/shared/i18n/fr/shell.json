@@ -1,14 +1,15 @@
 {
   "app": {
-    "name": "Scenario Studio"
+    "name": "IA Studio"
   },
   "workspaces": {
     "navigation": "Espaces de travail",
     "image": "Image",
     "video": "Vidéo",
     "3d": "Modélisation",
+    "code": "Code",
     "audio": "Audio",
-    "textures": "Textures",
+    "materials": "Matières",
     "skyboxes": "Skyboxes",
     "moveLeft": "Déplacer à gauche",
     "moveRight": "Déplacer à droite",
@@ -16,7 +17,15 @@
     "moveLeftHint": "Place cet espace avant son voisin de gauche dans la barre",
     "moveRightHint": "Place cet espace après son voisin de droite dans la barre"
   },
+  "folderRoles": {
+    "section": "Dossier de la section {{label}}",
+    "scenes": "Scènes de la section {{label}}",
+    "models": "Modèles de la section {{label}}",
+    "animations": "Animations de la section {{label}}",
+    "gui": "Interfaces du jeu"
+  },
   "panels": {
+    "assistant": "Assistant",
     "layers": "Calques",
     "meshes": "Mailles",
     "lights": "Lumières",
@@ -27,12 +36,14 @@
     "models": "Modèles",
     "generator": "Génération",
     "inspector": "Inspecteur",
-    "assets": "Assets",
+    "assets": "Bibliothèque",
     "scene": "Scène",
     "projects": "Vos projets",
-    "library": "Votre bibliothèque",
     "animations": "Animations",
-    "text": "Texte"
+    "text": "Texte",
+    "context": "Contexte",
+    "problems": "Problèmes",
+    "guiTree": "Interface"
   },
   "view": {
     "projection": "Projection",
@@ -157,7 +168,7 @@
     "exportLayers": "Image à calques (PSD)…",
     "exportScene": "Scène",
     "exportSelection": "Sélection",
-    "exportTexture": "Matière",
+    "exportMaterial": "Matière",
     "exportSkybox": "Ciel",
     "resetLayout": "Réinitialiser la disposition",
     "fullScreen": "Plein écran",
@@ -170,7 +181,7 @@
     "clearGuides": "Effacer les repères",
     "snap": "Magnétisme",
     "help": "Aide",
-    "about": "À propos de {{name}}",
+    "about": "À propos d’{{name}}",
     "licences": "Licences",
     "manual": "Manuel utilisateur",
     "imageTools": "Outils",
@@ -186,7 +197,8 @@
     "sections": {
       "spotlight": "Où vous en étiez",
       "tools": "Outils",
-      "explore": "Explorer"
+      "models": "Vos modèles",
+      "news": "Ce qui bouge"
     },
     "title": "Accueil",
     "tools": {
@@ -195,8 +207,9 @@
       "image": "Générer et retoucher des images sur un canevas à calques.",
       "video": "Monter, enchaîner et exporter des images animées.",
       "3d": "Construire une scène, l’éclairer, exporter le modèle.",
+      "code": "Écrire le comportement d’un jeu, script par script.",
       "audio": "Composer et monter du son sur plusieurs pistes.",
-      "textures": "Produire les canaux d’une matière sans raccord.",
+      "materials": "Produire les canaux d’une matière sans raccord.",
       "skyboxes": "Générer des ciels et éclairer une scène avec.",
       "newProject": "Nouveau projet",
       "newProjectHelp": "Un dossier qui réunit vos documents et tout ce que vous y importez.",
@@ -218,10 +231,6 @@
       "rename": "Renommer",
       "renameHint": "Changer le nom du projet, sans toucher à son dossier sur le disque"
     },
-    "library": {
-      "fetch": "Récupérer « {{name}} » dans le projet",
-      "none": "La bibliothèque de votre compte Scenario est vide, ou aucune clé API n’est renseignée."
-    },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",
       "resumeBody": "{{name}}, dans {{project}}.",
@@ -231,7 +240,7 @@
       "running_other": "{{count, number}} générations en cours",
       "runningBody": "Elles continuent pendant que vous travaillez, et atterrissent dans le document qui les a demandées.",
       "connect": "Connecter une clé API",
-      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret Scenario. Collez-les dans Réglages ▸ Compte — ils sont chiffrés par le trousseau du système et ne quittent jamais cette machine. Tout ce qui est sur votre disque fonctionne sans.",
+      "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret d’API, mais tout ce qui est sur votre disque fonctionne sans. Collez-les dans Réglages ▸ Modèles d’IA ▸ Clés API.",
       "connectAction": "Saisir la clé API",
       "ready": "Tout est prêt",
       "readyBody": "{{project}} est ouvert et ne contient encore rien. Choisissez un espace et créez-y la première pièce.",
@@ -250,16 +259,75 @@
     "retry": "Réessayer",
     "refused": "Ce panneau n’a pas obtenu de réponse.",
     "open": "Ouvrir « {{name}} »",
-    "explore": {
-      "loading": "Chargement du fil…",
-      "none": "Rien de publié dans cette catégorie pour le moment."
-    },
     "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
-    "exploreTabHint": "Ne montre que cette catégorie dans la bande",
     "closingActionHint": "Ouvre l’espace de création, celui où l’on génère",
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
-    "spotlightConnectHint": "Ouvre les réglages, à la section du compte",
+    "spotlightConnectHint": "Ouvre les réglages, à la section des clés API",
     "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère",
-    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit"
+    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit",
+    "models": {
+      "means": "Ce dont vous disposez",
+      "machine": "Machine",
+      "manage": "Gérer",
+      "choose": "Choisir",
+      "installOllama": "Installer",
+      "addKey": "Ajouter une clé",
+      "manageKeys": "Gérer les clés",
+      "localNone": "Aucun modèle installé",
+      "localCount_one": "{{count, number}} modèle installé",
+      "localCount_many": "{{count, number}} modèles installés",
+      "localCount_other": "{{count, number}} modèles installés",
+      "localLoaded_one": "{{count, number}} chargé en mémoire",
+      "localLoaded_many": "{{count, number}} chargés en mémoire",
+      "localLoaded_other": "{{count, number}} chargés en mémoire",
+      "localHint": "Ouvre les réglages, là où l’on installe, charge et retire un modèle",
+      "ollamaMissing": "Pas sur cet ordinateur",
+      "ollamaIdle": "Installé, mais fermé",
+      "ollamaEmpty": "Aucun modèle",
+      "ollamaCount_one": "{{count, number}} modèle prêt",
+      "ollamaCount_many": "{{count, number}} modèles prêts",
+      "ollamaCount_other": "{{count, number}} modèles prêts",
+      "ollamaHint": "Ouvre les réglages, à la section IA, où Ollama s’installe et se choisit",
+      "cloudNone": "Aucune clé API",
+      "cloudHint": "Ouvre les réglages, à la section des clés API",
+      "employments": "Vos espaces",
+      "employmentHint": "Ouvre les réglages, là où se choisit ce qui sert {{name}}",
+      "nothing": "Aucun modèle sur cette machine et aucune clé API : rien ne peut encore être généré.",
+      "coverage": "Ce qu’un seul téléchargement couvre",
+      "held": "Installé",
+      "beyond": "Hors de portée",
+      "advice_choose_one": "{{names}} a son modèle installé : il reste à le choisir.",
+      "advice_choose_many": "{{names}}{{rest}} ont leur modèle installé : il reste à les choisir.",
+      "advice_choose_other": "{{names}}{{rest}} ont leur modèle installé : il reste à les choisir.",
+      "advice_choose_action": "Choisir",
+      "advice_install_one": "{{name}} couvre {{count, number}} opération ({{families}}) pour {{size}}.",
+      "advice_install_many": "{{name}} couvre {{count, number}} opérations ({{families}}) pour {{size}}.",
+      "advice_install_other": "{{name}} couvre {{count, number}} opérations ({{families}}) pour {{size}}.",
+      "advice_install_action": "Installer",
+      "advice_key": "Aucune clé API : les modèles en ligne ne demandent aucun téléchargement.",
+      "advice_key_action": "Ajouter une clé",
+      "adviceHint": "Ouvre les réglages, là où ce conseil se met en œuvre",
+      "served": "{{count, number}} / {{total, number}}",
+      "verdict_one": "{{count, number}} opération sur {{total, number}} a un modèle",
+      "verdict_many": "{{count, number}} opérations sur {{total, number}} ont un modèle",
+      "verdict_other": "{{count, number}} opérations sur {{total, number}} ont un modèle",
+      "verdictBar": "Part de vos opérations qui ont un modèle",
+      "andOthers_one": " et {{count, number}} autre",
+      "andOthers_many": " et {{count, number}} autres",
+      "andOthers_other": " et {{count, number}} autres"
+    },
+    "news": {
+      "articles": "Articles",
+      "topicHint": "Ne montre que cette catégorie dans la bande",
+      "reading": "Lecture en cours…",
+      "refused": "La source n’a pas répondu.",
+      "none": "Rien à signaler dans cette catégorie.",
+      "off": "Les actualités sont coupées : le studio ne contacte personne.",
+      "turnOn": "Les activer",
+      "openHint": "Ouvre la page dans votre navigateur",
+      "downloads_one": "{{value}} téléchargement",
+      "downloads_many": "{{value}} téléchargements",
+      "downloads_other": "{{value}} téléchargements"
+    }
   }
 }

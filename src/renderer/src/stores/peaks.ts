@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
-import { peaksFromSamples } from '@/engines/audio/audioData'
+import { peaksFromBytesOffThread } from '@/engines/audio/decodePort'
 import type { Clip } from '@/engines/timeline/timelineState'
-import { decodeAsset } from '@/helpers/audioDecode'
+import { fetchAsset } from '@/helpers/assetFetch'
 import { getBridge } from '@/services/bridge'
 
 type ByAsset = Record<string, Float32Array | null>
@@ -59,7 +59,8 @@ function withinBudget(byAsset: ByAsset): ByAsset {
  */
 async function derivePeaks(assetId: string): Promise<Float32Array | null> {
   try {
-    return peaksFromSamples(await decodeAsset(assetId), PEAKS_PER_SECOND)
+    const bytes = await (await fetchAsset(assetId)).arrayBuffer()
+    return await peaksFromBytesOffThread(bytes, PEAKS_PER_SECOND)
   } catch {
     // An asset that is not sound at all reaches here too — every clip asks, and a picture has no
     // waveform to fail at deriving.

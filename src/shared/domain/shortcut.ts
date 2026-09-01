@@ -2,9 +2,15 @@
  * Keyboard registry, shared by both processes: the settings window will edit these bindings,
  * and the native menu displays some of them.
  *
- * Everything is keyed on `event.code` — the physical key position. `KeyW KeyA KeyS KeyD` are
- * the same four keys on QWERTY (WASD) and AZERTY (ZQSD), so one table serves both. `event.key`
- * would scatter them.
+ * A binding is spelled with a `KeyboardEvent.code` — `KeyA`, `Semicolon` — but that spelling is
+ * a NAME, not a position: a keypress is signed by the character PRINTED on the key, resolved
+ * back to the code that character occupies on a US keyboard. Every platform and every editor
+ * names chords that way, and a French keyboard needs it: ⌘ and the key marked Q must reach the
+ * platform's Quit, where reading the position gave `Meta+KeyA` and selected the whole canvas.
+ *
+ * Position survives where the character cannot serve: flying (`DEFAULT_MOTION`, where `KeyW KeyA
+ * KeyS KeyD` IS the shape under the hand, and reads ZQSD on AZERTY), and any key printing a
+ * character this file does not know — a dead key, `!`, `ù` — which `codeOf` names by position.
  */
 /** Held keys, read every frame while flying — not fired once like a command. */
 export type MotionId = 'forward' | 'back' | 'left' | 'right' | 'up' | 'down' | 'boost'
@@ -27,6 +33,8 @@ export type Signature = string
  */
 export type KeyChord = {
   code: string
+  /** The character the key produces, as `KeyboardEvent.key` spells it. `''` where none is known. */
+  key: string
   ctrlKey: boolean
   altKey: boolean
   shiftKey: boolean
@@ -41,24 +49,105 @@ export type KeyChord = {
  * chord would have to agree in all three — a remap would write one of them and the other would
  * go on answering the old key. Here the second spelling never exists.
  *
- * `NumpadEnter` is a distinct position, and the table stays keyed on positions: nothing is
- * renamed, one code is read as another. Only keys whose meaning does not depend on Num Lock
- * belong here — `Numpad1` is `End` with the lock off, so folding it onto `Digit1` would fire a
- * command on a key the user pressed to move the caret.
+ * `NumpadEnter` is a distinct position, and reading it as `Enter` is what makes the keypad's
+ * return key answer the two commands bound to that name. The keypad's DIGITS need no entry: with
+ * the lock on they print their digit and `codeOf` names them by it, and with the lock off they
+ * print `End` or `PageUp`, which no character names — so they stay on their own position, and a
+ * keypress meant to move the caret fires nothing.
  */
 const CODE_ALIASES: Record<string, string> = {
   NumpadEnter: 'Enter',
 }
 
+/**
+ * Where each character sits on a US keyboard. Built once: this is read on every keystroke that
+ * is not typed into a field.
+ */
+const US_CODE_BY_CHARACTER: Record<string, string> = {
+  ...Object.fromEntries([...'abcdefghijklmnopqrstuvwxyz'].map(c => [c, `Key${c.toUpperCase()}`])),
+  ...Object.fromEntries([...'0123456789'].map(d => [d, `Digit${d}`])),
+  ' ': 'Space',
+  '-': 'Minus',
+  '=': 'Equal',
+  '[': 'BracketLeft',
+  ']': 'BracketRight',
+  '\\': 'Backslash',
+  ';': 'Semicolon',
+  "'": 'Quote',
+  ',': 'Comma',
+  '.': 'Period',
+  '/': 'Slash',
+  '`': 'Backquote',
+}
+
+/**
+ * Which physical key plays the part ⌘ plays on macOS. Ctrl everywhere else, which is what
+ * `CmdOrCtrl` already tells the native menu — the window used to disagree, and every ⌘ command
+ * of every space was out of reach by keyboard on Windows and Linux.
+ */
+function commandHeld(event: KeyChord, isMac: boolean): boolean {
+  return isMac ? event.metaKey : event.ctrlKey
+}
+
+/**
+ * Whether Shift is what TYPED the key rather than part of the chord. AZERTY and QWERTZ put the
+ * digits under Shift, so ⌘⇧1 is the user's ⌘1.
+ *
+ * Digits alone, and only on the digit's own key: a letter under Shift is still that letter,
+ * which is what makes ⇧B a chord and not a stray B.
+ */
+function shiftTypesTheKey(event: KeyChord): boolean {
+  return event.shiftKey && event.code === `Digit${event.key}`
+}
+
 /** Fixed modifier order, so one combination always produces one signature. */
-export function signatureOf(event: KeyChord): Signature {
+function chordOf(event: KeyChord, isMac: boolean, code: string): Signature {
   const parts: string[] = []
-  if (event.ctrlKey) parts.push('Ctrl')
+  // The Windows/Super key names no chord of this studio, and `SIGNATURE_SHAPE` refuses this
+  // spelling: it matches nothing, rather than reading as the same chord pressed without it.
+  if (!isMac && event.metaKey) parts.push('Super')
+  if (isMac && event.ctrlKey) parts.push('Ctrl')
   if (event.altKey) parts.push('Alt')
-  if (event.shiftKey) parts.push('Shift')
-  if (event.metaKey) parts.push('Meta')
-  parts.push(CODE_ALIASES[event.code] ?? event.code)
+  if (event.shiftKey && !shiftTypesTheKey(event)) parts.push('Shift')
+  if (commandHeld(event, isMac)) parts.push('Meta')
+  parts.push(code)
   return parts.join('+')
+}
+
+/** The code a keypress is named by: the character it prints, or the position where none is. */
+function codeOf(event: KeyChord): string {
+  const printed = event.key.length === 1 ? US_CODE_BY_CHARACTER[event.key.toLowerCase()] : undefined
+  return printed ?? CODE_ALIASES[event.code] ?? event.code
+}
+
+/** What a keypress is called: what a recorder writes down, and what a tooltip displays. */
+export function signatureOf(event: KeyChord, isMac: boolean): Signature {
+  return chordOf(event, isMac, codeOf(event))
+}
+
+/**
+ * Chords the desktop answers before any window does: quitting, closing, hiding, minimising, the
+ * screenshot keys. A command bound to one is unreachable AND takes a gesture the user has no
+ * other way to make — `Meta` reads as ⌘ on macOS and Ctrl elsewhere, which is where these sit
+ * on all three systems.
+ *
+ * ⌘, is absent on purpose: the platform reserves it FOR the settings, which is what it opens.
+ */
+const PLATFORM_CHORDS: ReadonlySet<Signature> = new Set([
+  'Meta+KeyQ',
+  'Meta+KeyW',
+  'Meta+KeyM',
+  'Meta+KeyH',
+  'Meta+Space',
+  'Meta+Tab',
+  'Shift+Meta+Digit3',
+  'Shift+Meta+Digit4',
+  'Shift+Meta+Digit5',
+  'Alt+F4',
+])
+
+export function reservedByPlatform(signature: Signature | null): boolean {
+  return signature !== null && PLATFORM_CHORDS.has(signature)
 }
 
 /**
@@ -117,6 +206,24 @@ export function copiesText(signature: Signature): boolean {
   return TEXT_CHORDS.has(signature)
 }
 
+/**
+ * Whether the caret would have a use for the key: writing it, erasing with it, or moving through
+ * the words. That is anything a bare key carries, and anything Shift or Alt do — both produce a
+ * character on a Mac.
+ *
+ * Blind spot: `Ctrl` reads as safe, and on macOS it is not — `⌃A`, `⌃E`, `⌃K` and `⌃D` are the
+ * caret set every AppKit field implements. No binding carries a bare `Ctrl` today, and answering
+ * differently per platform would take a signature the platform is passed to.
+ *
+ * Asked by the native menu, which must not reserve such a key with the system: see `keyOf` in
+ * `main/menu/template.ts`.
+ */
+export function typesText(signature: Signature | null): boolean {
+  if (!signature) return false
+  const modifiers = signature.split('+').slice(0, -1)
+  return !modifiers.includes('Ctrl') && !modifiers.includes('Meta')
+}
+
 const MODIFIER_GLYPHS: Record<string, string> = {
   Ctrl: '⌃',
   Alt: '⌥',
@@ -125,9 +232,21 @@ const MODIFIER_GLYPHS: Record<string, string> = {
 }
 
 /**
+ * How the other two desktops write the same chord: words joined by `+`, and `Meta` reading as
+ * the Ctrl it IS there. Drawing ⌘ on Windows named a key that keyboard does not have.
+ */
+const MODIFIER_WORDS: Record<string, string> = {
+  Alt: 'Alt',
+  Shift: 'Shift',
+  Meta: 'Ctrl',
+}
+
+/** Those desktops put the command key first: `Ctrl+Shift+Z`, never `Shift+Ctrl+Z`. */
+const WORD_ORDER = ['Meta', 'Ctrl', 'Alt', 'Shift']
+
+/**
  * Turns a signature into what a tooltip shows — the display counterpart of `signatureOf`.
- * `KeyG` is a position, not a letter, but the letter is what is printed on the key in front of
- * the user, so that is what is displayed.
+ * `KeyG` is the NAME of a key, and what the user is looking for is the letter printed on it.
  *
  * `keyName` names the keys that are words rather than glyphs. It is asked for rather than
  * looked up here because `shared/` has no runtime dependency and so cannot translate: `Space`
@@ -136,6 +255,7 @@ const MODIFIER_GLYPHS: Record<string, string> = {
 export function shortcutLabel(
   signature: Signature | null,
   keyName: (code: NamedKey) => string,
+  isMac: boolean,
 ): string {
   // A command may be bound to nothing: listed and searchable, waiting for a key. Its tooltip
   // simply shows no shortcut rather than an empty pair of brackets.
@@ -143,8 +263,11 @@ export function shortcutLabel(
 
   const parts = signature.split('+')
   const code = parts.at(-1) ?? ''
-  const modifiers = parts.slice(0, -1).map(part => MODIFIER_GLYPHS[part] ?? part)
-  return [...modifiers, keyGlyph(code, keyName)].join('')
+  const spelling = isMac ? MODIFIER_GLYPHS : MODIFIER_WORDS
+  const held = parts.slice(0, -1)
+  if (!isMac) held.sort((a, b) => WORD_ORDER.indexOf(a) - WORD_ORDER.indexOf(b))
+  const modifiers = held.map(part => spelling[part] ?? part)
+  return [...modifiers, keyGlyph(code, keyName)].join(isMac ? '' : '+')
 }
 
 /**
@@ -161,6 +284,13 @@ const KEY_GLYPHS: Record<string, string> = {
   Comma: ',',
   Period: '.',
   Slash: '/',
+  // The key under Escape. Its legend differs by layout — `²` on a French one — and the code is
+  // what the binding matches on either way.
+  Backquote: '`',
+  // Held as a bare code by `DEFAULT_MOTION`, never as the `Shift` segment of a signature, so the
+  // modifier glyphs never see it — without this the flight hint reads `ShiftLeft`.
+  ShiftLeft: '⇧',
+  ShiftRight: '⇧',
   BracketLeft: '[',
   BracketRight: ']',
   ArrowUp: '↑',

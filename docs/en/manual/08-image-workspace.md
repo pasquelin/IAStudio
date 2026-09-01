@@ -20,16 +20,16 @@ would be nowhere to write the document.
 ### Bringing an existing picture in
 
 **An image document is not condemned to start from white.** Three gestures lay a picture from
-your shelf onto it, and all three do the same thing: **one more layer**, on top of the stack,
+your assets onto it, and all three do the same thing: **one more layer**, on top of the stack,
 named after the asset and **already active**: it is the one the next stroke will land on.
 
 | Gesture | What it needs |
 |---|---|
 | **Drag and drop** the picture onto the canvas | the image tab open in front of you |
 | **Right-click ▸ Place as a layer** | an image tab open, in front or not |
-| The **Image…** tool, Shapes group | nothing: it opens the shelf, you pick there |
+| The **Image…** tool, Shapes group | nothing: it opens the Explorer, you pick there |
 
-> Only **pictures of the project** come in — the ones showing in the shelf, generated or
+> Only **pictures of the project** come in — the ones showing in the Explorer, generated or
 > imported. A picture not yet downloaded into the project cannot be dropped.
 
 **Double-click is not in that table, and that is the chapter's distinction**: it goes into no open
@@ -37,7 +37,7 @@ document. It opens the picture in a tab **of its own**: it is not one more layer
 document IS the picture — and reopening the same picture comes back to that tab rather than opening
 a second. It is the studio-wide rule, described in [Assets](07-assets.md).
 
-There is **no "Open" menu**: you open with a double-click, on the picture in the shelf or on the
+There is **no "Open" menu**: you open with a double-click, on the picture in the Explorer or on the
 document in the Explorer. The `+` on the left rail starts from white instead — and that document
 has no asset behind it. The distinction matters when you close the tab — see the end of this
 chapter.
@@ -112,15 +112,15 @@ In other words: an armed tool never needs the menu to be taken up again.
 |---|---|---|
 | **Move** | `V` | drags the active layer's content |
 | **Hand** | `H` | pans the view |
-| **Scale** | `K` | shows eight grips and a rotation handle around the armed layer |
 
 > **This is the group armed on opening.** A document opens on **Move**, never on the brush: the
 > first click on a picture you have just opened must not be able to leave a mark on it. The
-> brush is one key away — `P`.
+> brush is one key away — `B`.
 
 ### The **Image** menu
 
-Six entries. The last four act on the **whole document**, layers included — not on the active layer:
+**Twelve entries.** The first six work the document itself, and the last four of those act on the
+**whole document**, layers included — not on the active layer:
 
 | Entry | What it does |
 |---|---|
@@ -131,8 +131,8 @@ Six entries. The last four act on the **whole document**, layers included — no
 | **Rotate clockwise** | a quarter turn to the right; **the frame turns with it** — a portrait becomes a landscape |
 | **Rotate counter-clockwise** | a quarter turn to the left, same thing |
 
-None ships with a shortcut: the menu is their only way in. You can give them one in
-[settings](14-settings.md), as with any other command.
+**Only Merge down ships with a shortcut** — `⌘E`. For the other five the menu is the only way in;
+you can give them one in [settings](14-settings.md), as with any other command.
 
 > **A mirror followed by the same mirror gives back exactly the picture you started from.** That is
 > not a given: the studio turns the layer rather than rewriting its pixels, which is what keeps a
@@ -145,11 +145,20 @@ None ships with a shortcut: the menu is their only way in. You can give them one
 receives the picture composed from what disappears. `⌘Z` gives the stack back — and the picture with
 it, as long as the document has not changed size in between.
 
+**The seventh entry sits alone in its block**: **Make a mask of the selection**, which hides the
+active layer outside the drawn area. It is greyed until there is both an area and an active layer.
+The layers panel carries the same action.
+
+**The last five ask the model**: **Regenerate the region**, **Extend**, **Cut out**, **Upscale**,
+**Vectorise**. None of them leaves on its own — each fills in the Generation panel's form and shows
+it to you. **The menu is not their only door**: the toolbar carries them too, in its Model edits
+group, described below. [All the shortcuts](15-shortcuts.md) says what each one sends.
+
 ### Frame group
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Crop** | `F` | drag a frame over the picture, adjust it, then `⏎` to trim |
+| **Crop** | `C` | drag a frame over the picture, adjust it, then `⏎` to trim |
 | **Slice** | — | *not available yet* |
 | **Cut** | — | *not available yet* |
 
@@ -194,20 +203,20 @@ The frame never leaves the picture — a crop trims, it does not grow.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Rectangle** | `R` | Shift for a square |
-| **Line** | `⇧R` | Shift constrains it to 45° |
+| **Rectangle** | `U` | Shift for a square |
+| **Line** | `⇧U` | Shift constrains it to 45° |
 | **Arrow** | `A` | Shift constrains it to 45° |
 | **Ellipse** | `O` | Shift for a circle |
 | **Polygon** | — | drawn from its centre |
 | **Star** | — | drawn from its centre |
-| **Image…** | — | opens the shelf, to lay a picture down as a layer |
+| **Image…** | — | opens the Explorer, to lay a picture down as a layer |
 
 ### Drawing group
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Brush** | `P` | paints, soft edge |
-| **Pencil** | `⇧P` | paints, hard edge |
+| **Brush** | `B` | paints, soft edge |
+| **Pencil** | `⇧B` | paints, hard edge |
 | **Pen** | — | *not available yet* |
 
 ### Text group
@@ -224,24 +233,20 @@ sets its **content**, its **size** and its **font**.
 machine's. What [the Modelling workspace](09-modelling-workspace.md#the-fonts-on-offer) says about missing fonts
 holds word for word here.
 
-### Eraser group
-
-| Tool | Shortcut | What it does |
-|---|---|---|
-| **Point eraser** | `E` | erases as the pointer passes |
-| **Selective eraser** | — | erases the inside of the selection in one gesture |
-
-The eraser erases **to transparency**; it does not paint white.
-
 ### Standalone tools
+
+These have no group: the button arms the tool, there is no menu to open.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
 | **Comment** | — | *not available yet* |
-| **Fill layer** | `G` | fills the active layer — or the **selected area**, if there is one |
+| **Eraser** | `E` | erases as the pointer passes |
+| **Paint bucket** | `G` | fills the active layer — or the **selected area**, if there is one |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
 | **Colour** | — | the colour of the brush, the pencil, the shapes and the fill |
 | **Brush settings** | `[` and `]` | the size, the hardness and the opacity |
+
+The eraser erases **to transparency**; it does not paint white.
 
 > **These two follow the armed tool, and leave when it does not read them.** The eyedropper, the
 > pointer, the crop frame and the caption tool paint no pixel: the bar then shows neither colour
@@ -250,10 +255,33 @@ The eraser erases **to transparency**; it does not paint white.
 > **not greyed, it is gone**: the rule the inspector already applies to a sprite, which gets no
 > shadow section rather than a dead one.
 
-> **Fill is not a paint bucket.** It does not hunt for the patch of colour under the pointer: it
-> fills **the whole layer**, edge to edge — or, **if an area is selected, that area alone**. That
-> is what gives a plain background in one gesture, and a region its flat colour; it is not the
-> colour-proximity fill you may know from elsewhere.
+> **This bucket does not stop at outlines.** It does not hunt for the patch of colour under the
+> pointer: it fills **the whole layer**, edge to edge — or, **if an area is selected, that area
+> alone**. That is what gives a plain background in one gesture, and a region its flat colour; it
+> is not the colour-proximity fill you may know from elsewhere.
+
+### Model edits group
+
+After the tools, separated from them by a rule, a group that is not one: **its rows do not arm,
+they act.** Clicking the button opens the list rather than taking an armed tool back up. After it
+come the two crop buttons, greyed until a frame is drawn, then the colour and the brush settings.
+
+| Row | What it sends |
+|---|---|
+| **Regenerate the region** | the masked region of the active layer, to be repainted |
+| **Extend** | the flattened image, to be carried beyond its edges |
+| **Cut out** | the flattened image, to have its background removed |
+| **Upscale** | the flattened image, to be redefined more finely |
+| **Vectorise** | the flattened image, to be turned into paths |
+
+These are the five entries at the bottom of the **Image** menu: two doors, one action. The group is
+greyed while an edit is being prepared — flattening then uploading takes what the network takes, and
+a button that says nothing meanwhile makes you think the click was missed.
+
+**None of them leaves on its own**: each fills in the Generation panel's form and shows it to you.
+Cut out, Upscale and Vectorise also want a model set in **Settings ▸ AI models**; without one, the
+edit opens the screen where you choose it rather than leaving. [The models](05-models.md) says which
+family each one expects.
 
 ### The brush settings
 
@@ -348,7 +376,7 @@ on the way out; rulers, guides and marching ants are not in it.
 > same. That is not what `⇧⌘E` does: the export flattens and leaves the studio, while saving keeps
 > the stack intact so you can carry on.
 >
-> **And if that document was opened from an asset, `⌘S` rewrites that asset TOO** — so the shelf's
+> **And if that document was opened from an asset, `⌘S` rewrites that asset TOO** — so the Explorer's
 > thumbnail follows what you are editing, instead of showing the original generation. The two
 > writes happen in that order, and the order matters: the document carries the layers and the
 > history, the asset a flat picture. If the second one fails, your work is already on disk and it
@@ -361,7 +389,7 @@ on the way out; rulers, guides and marching ants are not in it.
 > the edit enters the project, and your file stays where it is.
 >
 > **The studio says so when it finds the document no longer measures its asset**, at two moments
-> that are not equal. Reopening the asset from the shelf while its tab is already there is a
+> that are not equal. Reopening the asset from the Explorer while its tab is already there is a
 > warning: nothing has been written yet, and you can still choose. On save it is a statement —
 > **nothing is refused and the write happens**. And it stays quiet when it cannot measure: an
 > asset that will not decode, or a tab that has not finished opening. To keep the original intact,
@@ -371,7 +399,7 @@ on the way out; rulers, guides and marching ants are not in it.
 > for a name: the copy is called *"(the name) copy"*, and the asset you had open stays as your
 > last `⌘S` left it.
 >
-> An image is written as a **folder**, `documents/<id>.ora/`: one `document.json` for the stack,
+> An image is written as a **folder**, `Images/<name>.ora`: one `document.json` for the stack,
 > and one `.png` per layer — plus a second for its mask, where there is one. That is deliberately
 > inspectable: you can open the folder and look at the layers one by one.
 >

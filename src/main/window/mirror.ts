@@ -10,7 +10,7 @@ import { openMirrorWindow } from './windows'
  * process is read at load time, before anything can report on it.
  *
  * What the return SHOWS never passes through here. Both windows run the same renderer bundle and
- * publish to each other directly — see `spaces/video/mirrorChannel`.
+ * publish to each other directly — see `features/video/components/mirrorChannel`.
  */
 export function registerMirrorWindow(): void {
   handle(CHANNELS.mirrorOpen, () => {

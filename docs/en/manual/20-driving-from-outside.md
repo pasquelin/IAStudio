@@ -17,13 +17,15 @@ It has two doors, and **they open onto the same room**:
 Both read **the same catalogue**, and **nothing that commits anything goes out without your seeing
 it on screen** — wherever the request came from.
 
-They do not see the same share of it, and that is deliberate. **The assistant knows eleven**, the
-ones a spoken sentence needs: open a workspace, find a model, prepare a generation. **The way in
-offers them all**, everything a program drives deliberately — the file tree, the layer stack, the
-edit, the sky, the material, the 3D scene, a character's skeleton, the git repository, the remote
-library, the studio's panels. The reason is a plain one: the model that reads your sentences is
-given the whole catalogue before each of them, and the whole catalogue would leave no room left
-for the sentence.
+**The way in offers them all** — everything a program drives deliberately: the file tree, the
+layer stack, the edit, the sky, the material, the 3D scene, a character's skeleton, the git
+repository, the remote library, the studio's panels.
+
+**The assistant gets as many of them as the model answering you can hold.** The whole catalogue
+where there is room — a chat cloud, a local model with a wide window — and only the actions a
+spoken sentence needs where there is not: open a workspace, find a model, prepare a generation. In
+that case it is left with a way to **ask for the rest** mid-course, which costs it one round trip.
+There is nothing for you to set: it follows the model picked in the assistant's window.
 
 ---
 
@@ -35,7 +37,7 @@ and that is all.
 You write what you want to do, in an ordinary sentence:
 
 > *Open a new 3D file*
-> *Search for a texture model for stone*
+> *Search for a material model for stone*
 > *Prepare an image generation at 1024 by 1024*
 
 The assistant reads the sentence, picks one or more actions from the catalogue, and runs them.
@@ -43,21 +45,35 @@ Each step shows in the thread, with what it returned.
 
 ### What the assistant can read
 
-**Nothing you have not written.** It receives your sentence and **the last ten exchanges** of the
-conversation under way, rendered as text. It sees neither your images, nor your projects, nor the
-contents of your documents — it knows the *catalogue* of actions and their parameters, not what
-they are about to apply to.
+**Your sentence, the last ten exchanges, and the state of the studio.** It knows which workspace
+is open, which document is in front and whether it holds unsaved changes, which model is armed for
+that workspace, what is selected in it, and what the project's own notes say
+([chapter 4](04-projects.md#the-projects-context)). That is what lets it read "make me a bicycle"
+as a generation in the workspace you are in, rather than as a document to create.
+
+**It still does not see your documents**: neither your images nor their contents — it knows the
+*catalogue* of actions and their parameters, and the state of the window, not what your files
+hold.
 
 One exception, and it is explicit: **Describe the style of the references** reads the reference
 images already sitting on the Generator's form. It is the only place the assistant looks at an
 image, and you have to have asked for it.
 
-### Choosing the model that reads you
+### Choosing who answers you
 
 The picker is **in the assistant's own window**, not in the settings — the moment one wants a
-steadier model is the middle of a sentence that was not understood.
+steadier model is the middle of a sentence that was not understood. It lists everything that can
+answer, grouped by where it runs:
 
-| Model | What it is worth |
+- **On this machine** — the models installed here, Ollama included. Nothing leaves the computer.
+- **Your keys** — the services you hold a key for in *Settings ▸ API keys*. The exact model name is
+  set beside the service, in *Settings ▸ AI models*.
+- **The studio** — the remote catalogue, on one of the four models below.
+
+It is the same choice as *Settings ▸ AI models ▸ Assistant*: changing it here changes it there, and
+it applies to the open project once that project is what settled it.
+
+| Studio model | What it is worth |
 |---|---|
 | **Haiku 4.5** *(start)* | the fastest and the cheapest |
 | **Sonnet 4.6** | the balance |
@@ -67,9 +83,10 @@ steadier model is the middle of a sentence that was not understood.
 The cheapest is enough to open a workspace or search for a model. The others hold up better on a
 request that chains three or four actions.
 
-> **There is no second account and no second key to enter.** The assistant thinks on a model of
-> the Scenario catalogue, over the connection you already have. That is also why **thinking is
-> paid for** — see just below.
+> **Under *The studio*, there is no second account and no second key to enter.** The assistant
+> thinks on a model of the remote catalogue, over the connection you already have. That is also
+> why **thinking is paid for** — see just below. A service of your own, or a model on this
+> machine, spends no creative units at all.
 
 ### What it costs
 
@@ -118,7 +135,8 @@ Four things, and a request needs all four to get through:
 
 ### Opening it
 
-**Settings ▸ Advanced ▸ Drive the studio from outside.** Tick the box; the way in starts at once.
+**Settings ▸ Way in (MCP) ▸ Drive the studio from outside.** Tick the box; the way in starts at
+once.
 Untick it, it stops and **nothing is listening any more**.
 
 ---
@@ -127,39 +145,69 @@ Untick it, it stops and **nothing is listening any more**.
 
 This is the common case, and it takes three gestures.
 
-### 1. Open the door
+### 1. Copy the connection line
 
-**Settings ▸ Advanced**, tick **Drive the studio from outside**.
-
-### 2. Copy the connection line
-
-Just below, **Connection command ▸ Copy**. The studio puts a line of this shape on your clipboard:
+**Settings ▸ Way in (MCP) ▸ Connection command ▸ Copy.** The studio puts a line of this shape on
+your clipboard:
 
 ```
-claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <name> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-The number after `127.0.0.1:` and the token after `Bearer` **are yours, and this launch's**. They
-are not in this manual because they cannot be: they change.
+**No port, no token, no address.** What you paste names **the studio as a program to start**, not
+a place to reach. That is what makes this line true for every launch — see below.
 
-### 3. Paste it in a terminal
+### 2. Paste it in a terminal
 
 Open a terminal **in the project folder where you work with Claude Code**, and paste the line.
-That is all: Claude Code now knows the studio, and sees its tools.
+Claude Code now knows the studio.
 
-To check, ask it for its MCP servers — the studio should be there, connected.
+### 3. Open the door
 
-### What to redo at every launch
+Back in the same section, tick **Drive the studio from outside**. It then says which port the
+studio is listening on, what a client can do, and what guards the door.
 
-**The port and the token change every time the studio starts.** Yesterday's line is worth nothing
-today: the client addresses a port where nothing is listening any more, or presents a stale token.
+**That order is not a requirement** — it is the one on screen, and it only makes sense now that
+what you copy holds no address: the box can be ticked before, after, or already be ticked.
 
-**So the gesture is to be redone after each launch**: copy the command again, and paste it again. A
-client already registered under the same name is replaced; there is nothing to remove first.
+**Ticking is what makes the tools appear**: with the door shut your client finds the studio and
+is told it is not answering. To check, ask it for its MCP servers — the studio should be there,
+connected.
 
-> **That is the price of the two middle locks**, and it is deliberate. A fixed port and a permanent
-> token would hold on their own from one session to the next — and would hold just as well for any
-> program that had read that file once.
+### A client configured by a file
+
+Not all of them are driven from a terminal. For those, **Configuration block ▸ Copy the JSON**
+puts the same connection on the clipboard, in the shape a configuration file expects:
+
+```json
+{
+  "mcpServers": {
+    "ia-studio": {
+      "command": "/Applications/IA Studio.app/Contents/MacOS/IA Studio",
+      "args": ["--mcp-stdio=…"]
+    }
+  }
+}
+```
+
+Paste it into your client's MCP configuration file. Like the command, it holds no port and no
+token.
+
+### There is nothing to redo
+
+**The port and the token do change every time the studio starts**: the two middle locks are intact,
+and deliberately so — a fixed port and a permanent token would hold from one session to the next,
+and would hold just as well for any program that had read them once.
+
+**But your client does not know them.** It starts the studio, and it is that program which reads
+the current launch's address — at every message it carries, never once and for all.
+
+**A line pasted once therefore holds for every launch after it**, including the ones where the port
+and the token are new, which is all of them. A client already registered under the same name is
+replaced; there is nothing to remove first.
+
+> **Studio closed, or box unticked**: your client is told the studio is not answering, rather than
+> left waiting. Open it again and it picks up — with nothing to paste again.
 
 ### What you can ask it for
 
@@ -171,7 +219,7 @@ from your code project:
 > *List the generations under way*
 > *Prepare an image generation with this prompt, but do not send it*
 > *Sort this week's rushes into a folder per day*
-> *Generate a stone texture, wait for it, and place it in the scene*
+> *Generate a stone material, wait for it, and place it in the scene*
 > *Add a text layer saying “Credits” at the bottom of the image, at 64 points*
 > *Put a sphere two metres to the right of the cube and light it warm*
 > *Record a version with a message describing what we have just done*
@@ -184,7 +232,7 @@ the prepared generation** has had your yes on screen, nothing has gone out.
 
 ## The catalogue
 
-**Fourteen families.** The table below says what each family covers and what it **commits** — that
+**Fifteen families.** The table below says what each family covers and what it **commits** — that
 last column is what decides whether the studio will ask you anything. Neither the count nor the
 exact list is copied out here: they move, and **your client reads them at the source** when you ask
 it for its tools, with every parameter of every action.
@@ -195,13 +243,14 @@ it for its tools, with every parameter of every action.
 | **Files** | open a project, rename it, list, search, move, copy, rename, bin, show in the system file manager, undo and redo the last batch | **files**, for whatever moves or destroys |
 | **Documents** | open, bring to the front, rename, close, export into the project | **files**, for closing, renaming and exporting |
 | **Generating** | read a model's inputs, price them, prepare, start, wait, cancel | **creative units** for starting, and for starting alone |
-| **The library** | search, read, tag, caption and remove assets, find the ones whose file has gone, pull a model's textures out | **files** for removing, **a server** for removing from the remote library too |
+| **The library** | search, read, tag, caption and remove assets, find the ones whose file has gone, pull a model's images out | **files** for removing, **a server** for removing from the remote library too |
 | **The remote library** | browse your own and the public feed, find likenesses, plan, fetch, send | **an asset**, for sending |
 | **The image** | the layer stack: add, style, place, group, merge, crop, set a mask, lay and move the guides | nothing |
 | **The edit** | Video and Audio: lay a clip, move it, trim it, cut it, set fades, level and speed, keep the tracks. Exporting the document writes the **cut** as OpenTimelineIO, never a film — the frame-by-frame render needs a session nothing outside can hold | nothing, except the export |
 | **Sky and material** | adjust a sky's image, place its sun, choose the projection to look at it under, fill a material's channels, remap them, choose the shape to judge it on, and render it | nothing |
 | **3D** | the scene: place an object, turn it, cut it to size, light it, paint it, dress it in maps, set a text, draw a rail, reparent it, and look at it — from one side, in one of the ways of drawing, and take a still of it. The setting too: what lights the scene, what hangs behind it, its haze, its ground, its rendering, and the ready-made worlds | nothing |
 | **Characters** | make a model animatable, add or remove a bone, tie it to a joint of the standard, put a handle on it, list what it can play, lay an animation block and set it, lay and take back keys, keep the channels, set length and rate | nothing |
+| **The project's context** | read the cards that say what the project is about, add one, rewrite one, turn it on or off, delete it | **files**, for rewriting a card's text and for deleting one — adding and turning off destroy nothing |
 | **Versions** | read the repository and its history, stage, record, branch, shelve, settle a conflict, fetch, publish | **files**, for whatever rewrites the working tree; **a server**, for publishing |
 | **Settings** | read and change the settings, press the buttons of the window, list the accounts, switch to one, rename one | **files**, for the two buttons nothing takes back |
 | **Around the documents** | the window, the account, updates, fonts, pinned recipes, material styles, the studio's panels, dictation, and the three windows of the Help menu | **files**, for deleting a style and for installing an update |
@@ -340,13 +389,14 @@ program outside**. The assistant is in the window: there is always someone there
 
 - **It never returns an API key or a secret.** It can say which accounts exist, which one is
   active, and rename the label of one — never what they hold, and it can neither add one nor
-  delete one. What goes to Scenario goes as usual, with your credentials, from your machine.
+  delete one. What goes to the provider goes as usual, with your credentials, from your machine.
 - **It arms nothing for itself.** The four lines that let a commitment through without a question
   are written in the settings window and nowhere else: a client asking to change them is told no.
 - **It never spends on its own.** One action spends — starting the prepared generation — and it
   asks, with its estimate.
 - **It does not outlive the studio.** With the studio closed the way in no longer exists, and the
-  launch's token with it.
+  launch's token with it. What your client keeps is not an address but a way to start the studio:
+  nothing it holds opens anything while the studio is not running with the box ticked.
 
 > **It does read and change your project folder**, which the first versions of this way in did not.
 > That is what lets a coding assistant work with you rather than beside you — and it is why

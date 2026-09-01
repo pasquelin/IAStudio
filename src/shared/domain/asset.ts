@@ -1,7 +1,8 @@
 import { FILE_NAME_MAX_LENGTH } from './fileName'
-import type { PbrChannel } from './texture'
+import type { FolderRole } from './folderRole'
+import type { PbrChannel } from './material'
 
-export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'texture' | 'skybox' | 'animation'
+export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'skybox' | 'animation'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
 export const ASSET_TYPES: readonly AssetType[] = [
@@ -9,7 +10,6 @@ export const ASSET_TYPES: readonly AssetType[] = [
   'video',
   'audio',
   'mesh',
-  'texture',
   'skybox',
   'animation',
 ]
@@ -34,28 +34,47 @@ export function isAssetType(value: unknown): value is AssetType {
 }
 
 /**
- * Where each kind lands when nothing says otherwise — a DEFAULT, no longer a law.
+ * The role each kind is filed under when nothing says otherwise.
  *
- * It used to be both: the folder a file sat in is what said what the file was, so leaving one
- * meant ceasing to be a picture. Nothing reads a role off a folder any more (`natureOf` reads
- * the extension, the catalogue overrules it), so these are ordinary folders the user may rename,
- * fill with something else, or throw away — and the writer recreates the one it needs rather
- * than failing, which is the whole difference between a default and a law.
+ * A ROLE rather than a folder name: where the role sits is the user's business — renamed, moved,
+ * nested — and only the marker inside the folder says which one it is. `DEFAULT_ROLE_PATHS` holds
+ * the names a fresh project starts with.
  *
- * The names are English and fixed, never translated: a folder whose name followed the interface
- * language would be renamed on disk at every language change, and every catalogue row under it
- * would point beside the file.
+ * `Record<AssetType, FolderRole>` still makes a new kind a compile error rather than a surprise.
  *
- * `Record<AssetType, string>` still makes a new kind a compile error rather than a surprise.
+ * A DEFAULT and nothing more, which is what made dropping `Textures` safe: a project that filed
+ * pictures there keeps them — every row carries its own path — and only what it takes in from now
+ * on lands with the rest.
  */
-export const DEFAULT_ASSET_FOLDERS: Record<AssetType, string> = {
-  image: 'Images',
-  video: 'Video',
-  audio: 'Audio',
-  mesh: '3D',
-  texture: 'Textures',
-  skybox: 'Sky',
-  animation: 'Animations',
+const ROLE_BY_ASSET_TYPE: Record<AssetType, FolderRole> = {
+  image: 'image',
+  video: 'video',
+  audio: 'audio',
+  mesh: 'models',
+  skybox: 'skyboxes',
+  animation: 'animations',
+}
+
+/**
+ * The role an asset of this shape is filed under.
+ *
+ * A picture that serves a MATERIAL is filed with the materials rather than with the pictures. It
+ * is still a picture — the kind says so, and every shelf that draws one draws this — but what a
+ * person looks for it under is what it serves, and seven channels of one surface loose among the
+ * photographs is a folder nobody can read.
+ *
+ * `packedSlot` answers beside `map` and must: a `metallicRoughnessTexture` packs two channels
+ * into one image and claims neither, and it is the very picture the unpack gesture starts from —
+ * leaving it behind files a model's maps over two folders.
+ */
+export function roleForAsset(asset: {
+  type: AssetType
+  map?: PbrChannel
+  packedSlot?: string
+}): FolderRole {
+  const servesAMaterial = asset.map !== undefined || asset.packedSlot !== undefined
+
+  return servesAMaterial ? 'materials' : ROLE_BY_ASSET_TYPE[asset.type]
 }
 
 /**
@@ -204,7 +223,7 @@ export type Asset = {
   /**
    * What ties the outputs of one generation together — the seven channels of a PBR pack above
    * all. The API has no notion of a group: it answers with siblings that share a `parentId`, a
-   * `parentJobId` and nothing else, and dropping a whole material onto the texture space means
+   * `parentJobId` and nothing else, and dropping a whole material onto the materials space means
    * being able to name the set.
    */
   groupId?: string
@@ -220,6 +239,13 @@ export type Asset = {
   map?: PbrChannel
   /** Set when the pixels read the other way round — a smoothness map stored as roughness. */
   mapInverted?: boolean
+  /**
+   * The glTF slot an extracted picture came out of, when `map` cannot name it — a
+   * `metallicRoughnessTexture` packs two channels into one image, a `clearcoatTexture` names one
+   * the studio has no channel for. Without it the two are indistinguishable, and offering to
+   * unpack either would write a roughness out of a coat.
+   */
+  packedSlot?: string
   /**
    * Absolute path of a linked external media. A twenty-minute 4K rush is twenty gigabytes: it
    * is linked, never copied into the project, which is why `hash` exists to relink it.
@@ -246,7 +272,7 @@ export type Asset = {
 }
 
 /** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
-export const PICTURES: readonly AssetType[] = ['image', 'texture', 'skybox']
+export const PICTURES: readonly AssetType[] = ['image', 'skybox']
 
 /**
  * Whether this asset is a picture the studio can serve from disk. One answer to the question,
@@ -376,9 +402,8 @@ export function assetBadgeOf(asset: Asset, activeOwnerId: string | null): AssetB
     case 'error':
       return 'error'
     default:
-      // A twin with nothing said about it is one the catalogue recorded before it tracked
-      // sync — an asset collected from a generation. Both sides hold it, and neither has moved.
-      return 'synced'
+      // Provenance, not a twin: a generation lands a file so a resume does not download twice.
+      return 'local-only'
   }
 }
 
@@ -497,6 +522,17 @@ export type AssetQuery = {
    * answers in. Empty means nothing, as it does for `paths`.
    */
   ids?: readonly string[]
+  /**
+   * Which of THESE library assets this project already holds — the question the remote browser
+   * asks of every page it draws.
+   *
+   * Asked of the catalogue rather than answered from the rows a window happens to be holding:
+   * that store pages the catalogue two hundred at a time, so a project with more than that would
+   * have offered a download of a file already on the disk. Bounded by `ASSET_PATHS_MAX` and
+   * empty means nothing, both exactly as `paths` above — one placeholder each in a statement the
+   * main process builds.
+   */
+  remoteAssetIds?: readonly string[]
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus
@@ -527,11 +563,11 @@ export type AssetQuery = {
 export type AssetCounts = Record<AssetType, number>
 
 /**
- * A fresh tally at zero. A literal rather than built from `ASSET_TYPES`, so a seventh kind is a
+ * A fresh tally at zero. A literal rather than built from `ASSET_TYPES`, so a kind added is a
  * compile error here instead of a counter silently missing from five hand-written copies.
  */
 export function emptyAssetCounts(): AssetCounts {
-  return { image: 0, video: 0, audio: 0, mesh: 0, texture: 0, skybox: 0, animation: 0 }
+  return { image: 0, video: 0, audio: 0, mesh: 0, skybox: 0, animation: 0 }
 }
 
 /**
@@ -552,8 +588,14 @@ export type AssetChanges = {
   type?: AssetType
 }
 
-export const ASSET_SCHEME = 'scenario'
+export const ASSET_SCHEME = 'ia-studio'
 export const ASSET_HOST = 'asset'
+
+/**
+ * The original bytes, for an export that must not downsample a 4K H.264 take the monitor
+ * plays through its proxy. Same scheme, different host, so the resolver cannot guess.
+ */
+export const MASTER_HOST = 'master'
 
 /**
  * The host that serves an asset's still rather than the asset itself. A host of its own, and not
@@ -570,7 +612,7 @@ export const POSTER_HOST = 'poster'
 export const THUMB_HOST = 'thumb'
 
 /**
- * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
+ * `ia-studio://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
  * keep their stills outside any project, so they answer on a host of their own.
  */
 export function hostedUrl(host: string, id: string): string {
@@ -606,6 +648,10 @@ export function hostedIdFromUrl(url: string, host: string): string | null {
  */
 export function assetUrl(assetId: string): string {
   return hostedUrl(ASSET_HOST, assetId)
+}
+
+export function assetMasterUrl(assetId: string): string {
+  return hostedUrl(MASTER_HOST, assetId)
 }
 
 /**
@@ -660,7 +706,7 @@ export function versionedUrl(url: string, version: string | undefined): string {
   return version ? `${url}?v=${encodeURIComponent(version)}` : url
 }
 
-/** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
+/** `ia-studio://asset/<id>` → `<id>`. Anything else is not ours to serve. */
 export function assetIdFromUrl(url: string): string | null {
   return hostedIdFromUrl(url, ASSET_HOST)
 }

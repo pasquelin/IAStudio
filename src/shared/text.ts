@@ -19,6 +19,51 @@ export function foldForSearch(text: string): string {
 }
 
 /**
+ * The words a search is made of — folded, then matched against every name by `matchesWords`.
+ *
+ * Punctuation is not part of a word: a dictated `le voilier.` ends in a full stop, and a search
+ * that kept it attached answered nothing for a file plainly there. Letters and NUMBERS by their
+ * Unicode class, never `[a-z0-9]`: « génération » shattered into `g`, `n` and `ration`, and the
+ * one-letter tokens scored against dozens of actions in `findActions`.
+ */
+export function searchWords(term: string): readonly string[] {
+  return foldForSearch(term).match(/[\p{Letter}\p{Number}]+/gu) ?? []
+}
+
+/**
+ * Whether a name answers those words: EVERY one of them is in it, in any order.
+ *
+ * A substring was what this used to be, and it failed the search a person actually types —
+ * `green sailboat` finds nothing in `a beautiful sailing ship, sailboat, on the open sea, green`.
+ * The words are PREPARED by the caller: a walk crosses a hundred thousand entries, and folding
+ * one term per entry is that work done a hundred thousand times.
+ */
+export function matchesWords(name: string, words: readonly string[]): boolean {
+  if (words.length === 0) return false
+
+  const folded = foldForSearch(name)
+  return words.every(word => folded.includes(word))
+}
+
+/**
+ * What is left of `sentence` once `typed` has been written, or nothing when the sentence does not
+ * begin that way — the grey tail an inline completion paints ahead of the caret.
+ *
+ * The cut is SEARCHED for rather than taken at `typed.length`: folding drops characters, so a
+ * decomposed `é` typed as two makes the two lengths disagree, and the tail came out a letter short.
+ */
+export function completionFor(sentence: string, typed: string): string | undefined {
+  if (typed.trim() === '') return undefined
+
+  const written = foldForSearch(typed)
+  for (let cut = 0; cut < sentence.length; cut++) {
+    if (foldForSearch(sentence.slice(0, cut)) === written) return sentence.slice(cut)
+  }
+
+  return undefined
+}
+
+/**
  * The order of two strings nothing DISPLAYS in that order — an ISO stamp, a schema key, an id.
  *
  * `localeCompare` is the wrong tool twice over here. It answers in the locale the OS happens to
@@ -34,3 +79,13 @@ export function foldForSearch(text: string): string {
 export function byCodeUnit(one: string, other: string): number {
   return one < other ? -1 : one > other ? 1 : 0
 }
+
+/**
+ * A text cut to a length, with an ellipsis saying it was cut — never a silent truncation.
+ *
+ * Here rather than beside its callers: four other places hand-roll it — a contact sheet caption,
+ * a memory summary, an action's result, a history block — and each RESERVES the ellipsis inside
+ * its bound, which this does not. They are worth folding in the day that difference is settled.
+ */
+export const clipped = (text: string, max: number): string =>
+  text.length <= max ? text : `${text.slice(0, max)}…`

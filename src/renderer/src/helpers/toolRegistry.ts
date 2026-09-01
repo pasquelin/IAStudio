@@ -1,8 +1,9 @@
 import {
-  mdiCloudOutline,
+  mdiAlertCircleOutline,
+  mdiChatOutline,
   mdiRunFast,
+  mdiBookOpenPageVariantOutline,
   mdiCreationOutline,
-  mdiCubeScan,
   mdiFileTreeOutline,
   mdiFolderMultipleOutline,
   mdiFolderOutline,
@@ -13,22 +14,26 @@ import {
   mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
+  mdiViewDashboardOutline,
 } from '@mdi/js'
 import {
   placementIn,
   serves,
   TOOL_PLACEMENTS,
   type ToolId,
+  type ToolPlacement,
   type ToolSlot,
   type ToolSurface,
   type ToolZone,
+  type ZoneSlots,
 } from '@shared/domain/tool'
 import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
+import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
+import { useDocuments } from '@/stores/documents'
 import { useGit } from '@/stores/git'
+import { homeIsVisible } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { modelForFamily } from './modelForFamily'
-import { familyOfSurface } from './workspaces'
 
 export type Tool = {
   id: ToolId
@@ -36,9 +41,12 @@ export type Tool = {
   zone: ToolZone
   slot: ToolSlot
   surfaces: readonly ToolSurface[]
+  solo?: true
 }
 
 const ICONS: Record<ToolId, string> = {
+  // The same glyph the title bar wore until the assistant became a panel of its own.
+  assistant: mdiChatOutline,
   layers: mdiLayersOutline,
   // From the scene registry: the rail icon and the panel's own empty state must not drift.
   meshes: NODE_KINDS.mesh.icon,
@@ -51,16 +59,20 @@ const ICONS: Record<ToolId, string> = {
   // neither the fork above it nor the film reel the montage wears.
   history: mdiHistory,
   scene: mdiFileTreeOutline,
-  models: mdiCubeScan,
+  guiTree: mdiViewDashboardOutline,
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
   assets: mdiImageMultipleOutline,
   // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
-  library: mdiCloudOutline,
   animations: mdiRunFast,
   text: mdiFormatText,
+  // An open book: what the project SAYS about itself, beside the folder that holds it and
+  // the fork that tracks it. Neither of those two, and neither the sparkle of a generation.
+  context: mdiBookOpenPageVariantOutline,
+  // What the compiler had to say, and the rail already spends its braces on the Code space.
+  problems: mdiAlertCircleOutline,
 }
 
 /**
@@ -109,23 +121,32 @@ export function toolIcon(id: ToolId): string {
 }
 
 /** The answers the shared registry cannot give: they depend on state, which `shared/` cannot read. */
-export function toolStateOf(surface: ToolSurface): ToolState {
-  const family = familyOfSurface(surface)
+export function toolStateOf(): ToolState {
   return {
-    hasModel: Boolean(family && modelForFamily(family)),
     hasProject: useProject.getState().project !== null,
     hasGit: gitHoldsFolder(useGit.getState().repository),
+    hasCloud: accountsHoldLibrary(useAccounts.getState()),
+    centreTaken: homeIsVisible() || Object.keys(useDocuments.getState().documents).length > 0,
   }
 }
 
 /** What a surface can offer beyond what the registry declares, each rule answered from a store. */
 export type ToolState = {
-  /** A model to generate with: one chosen in the Models panel, or one preferred in the settings. */
-  hasModel: boolean
   /** A project folder open, which is what the Explorer reads. */
   hasProject: boolean
+  /**
+   * The centre holding anything but the conversation — a document, or the home page, which has
+   * no Dockview at all. False means the empty centre is staging the thread itself.
+   */
+  centreTaken: boolean
   /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
   hasGit: boolean
+  /**
+   * A key opening onto a remote library — see `accountsHoldLibrary`. Read off the account LIST
+   * and never off `auth.authenticated`, which is the answer to a network round trip: an icon
+   * keyed on that one would be absent for the first second of every launch.
+   */
+  hasCloud: boolean
 }
 
 /**
@@ -138,21 +159,21 @@ export type ToolState = {
 function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
   const requires = placementIn(id, surface)?.requires
 
-  if (requires === 'model') return state.hasModel
   if (requires === 'project') return state.hasProject
   // `git` implies `project`, and the conjunction is not redundant: the repository is corrected
   // asynchronously, so a project just closed still reads `ready` until the next status lands.
   if (requires === 'git') return state.hasProject && state.hasGit
+  if (requires === 'cloud') return state.hasCloud
+  if (requires === 'centreTaken') return state.centreTaken
   return true
 }
 
 /**
- * `undefined` for a closed half, `null` for one open on no panel in particular, an id for one the
- * user chose. Three substitutions — an unchosen half falls to the section's first panel, a half
- * holding a tool the section puts elsewhere shows what it does put there, a generator with no
- * model gives way to Models — and none of them touches the persisted state.
+ * One half, resolved: `undefined` is closed, `null` is open on no panel in particular, an id is
+ * one the user chose. 🛑 Private — it cannot see the other half, so it does not know a `solo`
+ * panel is silencing this one. Every reader goes through `shownTools`.
  */
-export function shownTool(
+function shownTool(
   tool: ToolId | null | undefined,
   zone: ToolZone,
   slot: ToolSlot,
@@ -174,17 +195,59 @@ export function shownTool(
   return firstToolIn(zone, slot, surface, state)
 }
 
-/** The panel a section puts first in a half — what an unchosen half shows, and the fallback. */
-function firstToolIn(
+/** What a zone's halves hold, once resolved. `null` where the half draws nothing at all. */
+export type ShownTools = { primary: ToolId | null; secondary: ToolId | null }
+
+/**
+ * Both halves at once, because one can silence the other: a `solo` panel takes the zone WHOLE.
+ * Resolved here rather than in each of the three readers, two of which would contradict it.
+ */
+export function shownTools(
+  slots: ZoneSlots | undefined,
+  zone: ToolZone,
+  surface: ToolSurface,
+  state: ToolState,
+): ShownTools {
+  const primary = shownTool(slots?.primary, zone, 'primary', surface, state)
+  if (primary !== null && isSolo(primary, surface)) return { primary, secondary: null }
+
+  return { primary, secondary: shownTool(slots?.secondary, zone, 'secondary', surface, state) }
+}
+
+/** Whether this panel takes its zone whole where it stands. */
+export function isSolo(id: ToolId, surface: ToolSurface): boolean {
+  return placementIn(id, surface)?.solo === true
+}
+
+/**
+ * The panel a section puts first in a half — what an unchosen half shows, and the fallback.
+ * `sharing` skips the one taking the zone whole, which a half falling back beside it would
+ * otherwise answer with again, swallowing the gesture just made.
+ */
+export function firstToolIn(
   zone: ToolZone,
   slot: ToolSlot,
   surface: ToolSurface,
   state: ToolState,
+  sharing = false,
 ): ToolId | null {
   const first = toolsInZone(zone, surface).find(
-    candidate => candidate.slot === slot && canOffer(candidate.id, surface, state),
+    candidate =>
+      candidate.slot === slot &&
+      !(sharing && candidate.solo) &&
+      canOffer(candidate.id, surface, state),
   )
   return first ? first.id : null
+}
+
+/** Where the panel sits on this surface, or `null` where it is not on offer right now. */
+export function offeredPlacement(
+  id: ToolId,
+  surface: ToolSurface,
+  state: ToolState,
+): ToolPlacement | null {
+  const placement = placementIn(id, surface)
+  return placement && canOffer(id, surface, state) ? placement : null
 }
 
 /**
@@ -192,7 +255,7 @@ function firstToolIn(
  * since it lives in the main process and cannot ask a store.
  */
 export function availableToolIds(surface: ToolSurface): ToolId[] {
-  const state = toolStateOf(surface)
+  const state = toolStateOf()
   return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state)).map(
     tool => tool.id,
   )

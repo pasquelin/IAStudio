@@ -1,15 +1,16 @@
-import { rm, writeFile } from 'node:fs/promises'
+import { copyFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
-  DEFAULT_ASSET_FOLDERS,
+  roleForAsset,
   wantsPoster,
   type Asset,
   type AssetGeneration,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import type { FolderRole } from '@shared/domain/folderRole'
 import { POSTERS_FOLDER } from '@shared/domain/project'
-import type { PbrChannel } from '@shared/domain/texture'
+import type { PbrChannel } from '@shared/domain/material'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import { log } from '@main/log'
 import { freeAssetPath } from './assetFile'
@@ -19,7 +20,6 @@ const FALLBACK_EXTENSION: Record<AssetType, string> = {
   video: '.mp4',
   audio: '.mp3',
   mesh: '.glb',
-  texture: '.png',
   skybox: '.png',
   animation: '.glb',
 }
@@ -29,6 +29,11 @@ export type Download = (url: string) => Promise<Uint8Array>
 export type LocalBackendDeps = {
   download: Download
   projectPath: () => string
+  /**
+   * Where an asset of this role lands — `ProjectStore.folderFor`. Asked rather than composed: a
+   * project whose `Modelling/Models` was renamed in the Finder goes on filing meshes there.
+   */
+  folderFor: (role: FolderRole) => Promise<string>
   catalog: () => AsyncCatalog
   now: () => string
   /**
@@ -72,6 +77,11 @@ export type ImportRequest = {
   /** The project the twin belongs to — an API key opens onto one, and keys can be swapped. */
   remoteOwnerId?: string
   remoteUpdatedAt?: string
+  /**
+   * False for a generation: the remote id is provenance so a resume does not download twice.
+   * A pull from the library leaves this unset, which is a twin and counts as synced.
+   */
+  sync?: false
   derivedFrom?: string
   /** What ties the outputs of one generation together — the seven channels of a PBR pack. */
   groupId?: string
@@ -97,6 +107,13 @@ export type WriteRequest = Omit<ImportRequest, 'url'> & {
 export type LocalBackend = {
   importFromUrl: (request: ImportRequest) => Promise<Asset>
   importFromBytes: (request: WriteRequest, bytes: Uint8Array) => Promise<Asset>
+  /**
+   * The same import, for bytes that are ALREADY a file on this machine — what a local generation
+   * leaves behind. Moved rather than read and written back: a video or a panorama would otherwise
+   * cross the main process's heap whole, twice. The source is gone on success; a move across
+   * volumes falls back to a copy, and then it is the caller's to discard.
+   */
+  importFromFile: (request: WriteRequest, sourcePath: string) => Promise<Asset>
   /**
    * Overwrites an asset's file, keeping its id, its name and its place in the catalogue. What
    * "apply" means in the audio editor: the same asset, edited. The extension follows the bytes,
@@ -146,25 +163,19 @@ export function extensionFromUrl(url: string, type: AssetType): string {
   }
 }
 
-/**
- * What an asset that came down from the library records about its twin.
- *
- * It is `synced` the moment it lands, and that is not an assumption: the bytes on disk were
- * just downloaded from the very asset being pointed at, so the two sides cannot differ yet.
- * `remoteSyncedAt` is the baseline both later stamps are measured against.
- */
+/** A library pull is a twin (`synced`). A generation (`sync: false`) keeps the remote id and stamp. */
 export function twinOf(
-  request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt'>,
+  request: Pick<ImportRequest, 'remoteAssetId' | 'remoteOwnerId' | 'remoteUpdatedAt' | 'sync'>,
   at: string,
 ): Partial<Asset> {
   if (!request.remoteAssetId) return {}
 
   return {
     remoteAssetId: request.remoteAssetId,
-    syncStatus: 'synced',
     remoteSyncedAt: at,
     ...(request.remoteOwnerId ? { remoteOwnerId: request.remoteOwnerId } : {}),
     ...(request.remoteUpdatedAt ? { remoteUpdatedAt: request.remoteUpdatedAt } : {}),
+    ...(request.sync === false ? {} : { syncStatus: 'synced' }),
   }
 }
 
@@ -175,6 +186,7 @@ export function twinOf(
 export function createLocalBackend({
   download,
   projectPath,
+  folderFor,
   catalog,
   now,
   hash,
@@ -225,7 +237,26 @@ export function createLocalBackend({
     }
   }
 
-  const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
+  /** Bytes in hand, or a file already on this machine. */
+  type WriteSource = { bytes: Uint8Array } | { from: string }
+
+  /** `rename` first: a copy of a panorama is megabytes of I/O the same volume never needs. */
+  const place = async (source: WriteSource, absolute: string): Promise<void> => {
+    if ('bytes' in source) return await writeFile(absolute, source.bytes)
+
+    try {
+      await rename(source.from, absolute)
+    } catch {
+      // Across volumes `rename` refuses (EXDEV), and the studio's temporary folder and the
+      // project can sit on different ones. The source is left for its owner to discard.
+      await copyFile(source.from, absolute)
+    }
+  }
+
+  const lengthOf = async (source: WriteSource, absolute: string): Promise<number> =>
+    'bytes' in source ? source.bytes.byteLength : (await stat(absolute)).size
+
+  const write = async (request: WriteRequest, source: WriteSource): Promise<Asset> => {
     // Read BEFORE the write, where it used to run beside it: the file is named after the row
     // now, so where the bytes go depends on what this id already has. Pulling a twin a second
     // time must land on the file it landed on the first — not beside it, under a suffixed name.
@@ -251,16 +282,17 @@ export function createLocalBackend({
 
     const relativePath = existing?.path
       ? withExtension(existing.path, extension)
-      : await freeAssetPath(projectPath(), DEFAULT_ASSET_FOLDERS[request.type], name, extension)
+      : await freeAssetPath(projectPath(), await folderFor(roleForAsset(request)), name, extension)
 
     // The probe spawns ffprobe, so it runs beside the still rather than after it.
     const absolute = join(projectPath(), relativePath)
-    const written = writeFile(absolute, bytes)
-    const [posterPath, probe, fingerprint] = await Promise.all([
+    const written = place(source, absolute)
+    const [posterPath, probe, fingerprint, byteLength] = await Promise.all([
       poster,
-      // After the write, and only after it: these two read the file that was just laid down.
+      // After the write, and only after it: these three read the file that was just laid down.
       written.then(() => probeWritten(request, relativePath)),
       written.then(() => hash(absolute)),
+      written.then(() => lengthOf(source, absolute)),
     ])
 
     const at = now()
@@ -279,7 +311,7 @@ export function createLocalBackend({
       type: request.type,
       location: 'local',
       path: relativePath,
-      bytes: bytes.byteLength,
+      bytes: byteLength,
       tags: existing?.tags ?? [],
       createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
@@ -287,8 +319,7 @@ export function createLocalBackend({
       // the fingerprint an earlier write recorded, which still describes the same bytes.
       ...(fingerprint ? { hash: fingerprint } : {}),
       ...(probe ? { probe } : {}),
-      // Absent rather than cleared: a still that failed to come down this time leaves the one
-      // an earlier pull already put on disk, which is still a true picture of the same asset.
+      // Absent rather than cleared, for the reason the fingerprint above carries.
       ...(posterPath ? { posterPath } : {}),
       ...(request.jobId ? { jobId: request.jobId } : {}),
       ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
@@ -328,10 +359,14 @@ export function createLocalBackend({
     importFromUrl: async request =>
       write(
         { ...request, extension: extensionFromUrl(request.url, request.type) },
-        await download(request.url),
+        {
+          bytes: await download(request.url),
+        },
       ),
 
-    importFromBytes: (request, bytes) => write(request, bytes),
+    importFromBytes: (request, bytes) => write(request, { bytes }),
+
+    importFromFile: (request, sourcePath) => write(request, { from: sourcePath }),
 
     replaceBytes: async (assetId, bytes, extension, probe) => {
       const existing = await catalog().find(assetId)
@@ -353,7 +388,7 @@ export function createLocalBackend({
         ? withExtension(existing.path, safeExtension(extension, existing.type))
         : await freeAssetPath(
             projectPath(),
-            DEFAULT_ASSET_FOLDERS[existing.type],
+            await folderFor(roleForAsset(existing)),
             existing.name,
             safeExtension(extension, existing.type),
           )

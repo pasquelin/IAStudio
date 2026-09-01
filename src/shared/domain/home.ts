@@ -16,36 +16,22 @@ import { reconcileOrder } from './order'
  * `tools` came back from that list on 12 August, and it is the one that did: a list of ten things
  * the studio can start is read ACROSS, in a grid, and a 320-pixel column turned it into a ladder
  * nobody scans. The three left are the three that earn the width — what the studio puts forward,
- * what it can start, and the feed that pages as it is scrolled. Everything else reads better in
- * a column.
+ * what it can start, and what it can run with.
  */
-export type HomeSectionId = 'spotlight' | 'tools' | 'explore'
+export type HomeSectionId = 'spotlight' | 'tools' | 'models' | 'news'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
   /**
-   * Whether the band needs an API key to draw anything at all.
-   *
-   * A flag and not a list of requirements. It WAS a list, and its second value — a project had to
-   * be open — went with the four bands that listed what a folder held, which are panels now: a
-   * closed folder is an empty state there, not a reason to disappear. What the list then became
-   * was a loop asking one question several times, where a second value added later would have
-   * compiled, passed every test, and silently meant "api".
-   */
-  requiresApi?: boolean
-  /**
    * Sections the user may not hide. Together they are what keeps the screen from ever being
-   * empty — which is why `home.test.ts` demands that no pinned section need a key.
+   * empty.
    */
   pinned?: boolean
   /**
-   * Held at the foot of the page, and not movable.
-   *
-   * For a band that never ends: the feed pages as it is scrolled, so anything below it can only
-   * be reached by outrunning the fetches. Ordering is a preference; burying a section is not one
-   * the menu should be able to express.
+   * Sections a machine with no cloud account cannot fill. They are left out entirely rather than
+   * drawn over an apology — see `visibleHomeSections`.
    */
-  anchored?: boolean
+  requiresApi?: boolean
 }
 
 /**
@@ -57,7 +43,14 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   // Pinned for the same promise the spotlight carries, and it is the stronger half of it: this
   // is the one band that says something on a machine with no key, no project and no history.
   { id: 'tools', pinned: true },
-  { id: 'explore', requiresApi: true, anchored: true },
+  // What this studio can actually run, and with what. It replaced the feed of everything
+  // published on Scenario, which required a key to draw a single tile and answered a question
+  // nobody opens the studio with — see `home/sections/ModelInventory`.
+  { id: 'models' },
+  // What is moving outside it. Last because it is about somebody else's work: the bands above
+  // are about this machine, and a reader scrolls past them to reach it deliberately — and off a
+  // machine with no cloud account, not at all.
+  { id: 'news', requiresApi: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
@@ -78,15 +71,6 @@ function settingOf(entry: HomeSectionEntry): HomeSectionSetting {
 
 export const DEFAULT_HOME_SECTIONS: readonly HomeSectionSetting[] = HOME_SECTIONS.map(settingOf)
 
-/** What the studio can currently draw from. The answer comes from a store, never from here. */
-export type HomeContext = {
-  authenticated: boolean
-}
-
-function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
-  return entry.requiresApi !== true || context.authenticated
-}
-
 /**
  * The stored order, cleaned of ids this version no longer knows and completed by the ones it
  * has added since. Every read and every write starts here: a user reordering a home whose
@@ -97,48 +81,52 @@ function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
  */
 export function homeSections(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
   const kept = stored.filter(setting => homeSectionOf(setting.id) !== null)
+
   // Built here rather than reusing `DEFAULT_HOME_SECTIONS`: what the registry contributes ends up
   // in the caller's array, and a module constant handed out by reference is a shared mutable.
-  const settings = reconcileOrder(kept, HOME_SECTIONS.map(settingOf), setting => setting.id)
-
-  // Anchored bands are put back at the foot whatever the stored order says. Settings written by
-  // an earlier version — or by hand — would otherwise place one mid-page, where its endless
-  // scroll makes everything under it unreachable.
-  return [...settings.filter(setting => !anchored(setting)), ...settings.filter(anchored)]
+  return reconcileOrder(kept, HOME_SECTIONS.map(settingOf), setting => setting.id)
 }
 
-function anchored(setting: HomeSectionSetting): boolean {
-  return homeSectionOf(setting.id)?.anchored === true
+/** Whether this studio can fill the band at all — the condition both readings below share. */
+function drawable(entry: HomeSectionEntry | null, hasApi: boolean): boolean {
+  return hasApi || entry?.requiresApi !== true
 }
 
 /**
- * The sections to draw, in order. This is the whole of the "never an empty home" promise, and
- * the reason it is a pure function rather than a condition inside a component.
+ * The sections to draw, in order — the whole of the "never an empty home" promise, and the reason
+ * it is a pure function rather than a condition inside a component. It settles what the SETTINGS
+ * and the account allow; a band may still take itself off the page over what it has READ, which
+ * no pure function of these two arguments can know. `News` is the one that does.
  *
- * Two rules produce it: a section whose requirements are unmet is dropped rather than drawn
- * empty, and a pinned section is drawn whatever the user hid. Since every pinned section
- * requires nothing, the result can never be empty — a test holds both halves of that sentence.
+ * Two rules produce it: a pinned section is drawn whatever the user hid, and a section that needs
+ * the cloud is left out of a studio that has no account for it.
+ *
+ * `hasApi` is passed rather than read, and is not optional: the caller is the only one that knows
+ * whether the key has been TRIED yet, and a default would have this answer "no account" during
+ * the second the window takes to find out.
+ *
+ * 🛑 The flag went away with the explore feed and came back with the news band. The models band
+ * does NOT carry it: it is at its most useful on a machine with no key, since saying so is half
+ * of what it is for.
  */
 export function visibleHomeSections(
   stored: readonly HomeSectionSetting[],
-  context: HomeContext,
+  hasApi: boolean,
 ): readonly HomeSectionId[] {
   return homeSections(stored)
     .filter(setting => {
       const entry = homeSectionOf(setting.id)
-      if (!entry) return false
-      return (entry.pinned === true || setting.visible) && satisfies(entry, context)
+      return drawable(entry, hasApi) && (entry?.pinned === true || setting.visible)
     })
     .map(setting => setting.id)
 }
 
 // The stored order is still reconciled and still read — the registry's own order decides what the
 // centre stacks — but nothing moves a band any more, and that is a consequence rather than a
-// decision: every band is either pinned or anchored, so none of them has anywhere to go.
-// `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with the six
-// bands that left on 11 August, and `tools` coming back on the 12th did not bring them with it —
-// it arrived pinned. The day a MOVABLE band lands, rewriting them from the history is cheaper
-// than having carried rules no case can reach.
+// decision: the menu that moved them went with the six bands that left on 11 August, and neither
+// `tools` coming back on the 12th nor the models band replacing the feed brought it with them.
+// The day a MOVABLE band lands, rewriting `movedHomeSection` from the history is cheaper than
+// having carried rules no case can reach.
 
 /** One field of one section, rewritten. Both writes the menu offers are shaped like this. */
 function patchedHomeSection(
@@ -159,9 +147,20 @@ export function shownHomeSection(
   return patchedHomeSection(stored, id, { visible })
 }
 
-/** Sections the user hid, so the home can offer them back without a trip to the preferences. */
-export function hiddenHomeSections(stored: readonly HomeSectionSetting[]): HomeSectionId[] {
+/**
+ * Sections the user hid, so the home can offer them back without a trip to the preferences.
+ *
+ * `hasApi` for the same reason `visibleHomeSections` takes it: offering back a band this studio
+ * cannot draw is a line that does nothing when clicked.
+ */
+export function hiddenHomeSections(
+  stored: readonly HomeSectionSetting[],
+  hasApi: boolean,
+): HomeSectionId[] {
   return homeSections(stored)
-    .filter(setting => !setting.visible && homeSectionOf(setting.id)?.pinned !== true)
+    .filter(setting => {
+      const entry = homeSectionOf(setting.id)
+      return drawable(entry, hasApi) && !setting.visible && entry?.pinned !== true
+    })
     .map(setting => setting.id)
 }

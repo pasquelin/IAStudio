@@ -1,6 +1,6 @@
-# Scenario Studio — le manuel
+# IA Studio — le manuel
 
-Bienvenue. Ce manuel explique **tout** ce que fait Scenario Studio, du premier lancement au
+Bienvenue. Ce manuel explique **tout** ce que fait IA Studio, du premier lancement au
 travail de tous les jours.
 
 Il est écrit pour être lu par quelqu’un qui n’a jamais ouvert de logiciel de création, sans
@@ -15,9 +15,9 @@ nécessaire, il est expliqué à l’endroit où il apparaît, puis rappelé dan
 
 ## En trois phrases
 
-Scenario Studio est un logiciel qui s’installe sur votre ordinateur. Il sait **fabriquer** des
+IA Studio est un logiciel qui s’installe sur votre ordinateur. Il sait **fabriquer** des
 images, des vidéos, des sons, des objets en 3D, des matières et des ciels — en demandant à des
-modèles d’intelligence artificielle, en ligne, chez [Scenario](https://www.scenario.com). Et il
+modèles d’intelligence artificielle, en ligne, chez un fournisseur de génération. Et il
 sait ensuite **les assembler, les régler et les ranger**, chez vous, sans les renvoyer nulle
 part.
 
@@ -40,7 +40,7 @@ part.
 | 4 | [Les projets](manuel/04-projets.md) | Ce qu’est un projet, ce qu’il y a dedans, comment le sauvegarder et le déplacer |
 | 5 | [Trouver un modèle](manuel/05-modeles.md) | Le catalogue, la recherche, les filtres, et comment choisir |
 | 6 | [Générer](manuel/06-generer.md) | Le formulaire, le prompt, la file de tâches, les erreurs et les reprises |
-| 7 | [Les assets](manuel/07-assets.md) | L’étagère du projet, la recherche, l’import de vos propres fichiers |
+| 7 | [Les assets et la Bibliothèque](manuel/07-assets.md) | La bibliothèque distante, télécharger, l’import de vos propres fichiers |
 
 ### Les espaces de travail
 
@@ -50,7 +50,7 @@ part.
 | 9 | [Espace Modélisation](manuel/09-espace-modelisation.md) | Voler dans une scène, poser des objets et des lumières, les régler |
 | 10 | [Espace Vidéo](manuel/10-espace-video.md) | Monter une séquence, couper, régler des pistes |
 | 11 | [Espace Audio](manuel/11-espace-audio.md) | Rogner un son, faire des fondus, normaliser |
-| 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
+| 12 | [Espace Matières](manuel/12-espace-matieres.md) | Juger une matière sur un objet éclairé |
 | 13 | [Espace Skyboxes](manuel/13-espace-skyboxes.md) | Fabriquer un ciel à 360° et le régler |
 
 ### Les annexes
@@ -75,7 +75,7 @@ première image dans votre projet.
 **1. Branchez votre compte.**
 Ouvrez les réglages avec `⌘,` (macOS) ou `Ctrl+,` (Windows, Linux). Allez dans **Compte**.
 Donnez un **nom** au compte, puis collez votre **clé API** et votre **secret API**, pris sur
-[app.scenario.com](https://app.scenario.com). Cliquez **Ajouter un compte** : le studio vérifie
+chez votre fournisseur. Cliquez **Ajouter un compte** : le studio vérifie
 tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 
 **2. Créez un projet.**
@@ -83,7 +83,7 @@ tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 tout ce que vous fabriquerez atterrira dedans.
 
 **3. Choisissez un espace.**
-En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Matières**,
 **Skyboxes**. Cliquez **Image**.
 
 **4. Choisissez un modèle.**
@@ -102,7 +102,8 @@ barre qui avance. Un clic dessus ouvre le détail.
 Vous pouvez continuer à travailler pendant ce temps.
 
 **7. Récupérez le résultat.**
-Quand la tâche passe à « Terminée », l’image arrive dans le panneau **Assets** — l’étagère du
+Quand la tâche passe à « Terminée », l’image arrive dans la **Bibliothèque** de votre compte — et
+dans le dossier du
 projet — et sur votre disque, dans le dossier `Images/`. Cliquez dessus : l’**Inspecteur**,
 à droite, montre son modèle, son prompt et sa graine, et sait ouvrir le dossier qui la contient.
 
@@ -138,17 +139,17 @@ Les symboles du clavier, une fois pour toutes :
 
 **Vos identifiants ne quittent jamais votre machine.** Ils sont chiffrés par le trousseau de
 votre système d’exploitation — le même coffre-fort que celui qui garde vos mots de passe — et
-seule la partie du logiciel qui parle à Scenario y a accès. L’écran que vous regardez, lui, ne
+seule la partie du logiciel qui parle au fournisseur y a accès. L’écran que vous regardez, lui, ne
 sait jamais quelle est votre clé : il sait seulement s’il est connecté ou non.
 
 **Vos fichiers non plus.** Vos projets sont des dossiers ordinaires sur votre disque. Ce qui part
-vers Scenario, c’est ce que vous demandez de générer : le texte de votre prompt et, le cas échéant,
+vers le fournisseur, c’est ce que vous demandez de générer : le texte de votre prompt et, le cas échéant,
 l’image que vous fournissez en entrée.
 
 **Une exception, et elle est cochée par défaut** — mais elle ne touche pas vos fichiers. Le
 réglage **Nommer les assets rapatriés**, dans **Réglages ▸ Génération**, demande à l’API de nommer
 une image qui arrive sans nom utile. **Aucun octet ne quitte votre disque** : cette image-là est
-déjà chez Scenario, puisqu’elle en vient, et le studio n’envoie que son identifiant. Ce qui se
+déjà chez le fournisseur, puisqu’elle en vient, et le studio n’envoie que son identifiant. Ce qui se
 dépense, en revanche, ce sont des **unités créatives**, sans clic de votre part — c’est le seul
 endroit où le studio dépense de lui-même. Décochez-le et cela s’arrête ; le
 [chapitre 14](manuel/14-reglages.md) le détaille.

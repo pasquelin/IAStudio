@@ -8,6 +8,7 @@
  * A document naming a system face is only faithful on a machine that has it. That hole is not
  * papered over: a family nothing answers to comes back as nothing, and the renderer says so.
  */
+import { orElse } from '@shared/promises'
 import {
   assembleFont,
   collectionOffsets,
@@ -142,7 +143,11 @@ async function liftFace(disk: FontDisk, face: SystemFace): Promise<Uint8Array | 
 
     return assembleFont(new DataView(header.buffer, header.byteOffset).getUint32(0), tables)
   } finally {
-    await file.close().catch(() => {})
+    try {
+      await file.close()
+    } catch {
+      // A descriptor that will not close must not replace what the read was about to answer.
+    }
   }
 }
 
@@ -153,7 +158,7 @@ async function buildIndex(
   const found = new Map<string, SystemFace>()
 
   for (const folder of folders) {
-    const paths = await disk.list(folder).catch(() => [])
+    const paths = await orElse(disk.list(folder), [])
 
     for (const path of paths) {
       if (!isFontFile(path)) continue
@@ -172,7 +177,7 @@ async function buildIndex(
 
 /** Every face a file offers under the one subfamily the studio lists, named. */
 async function facesOf(disk: FontDisk, path: string): Promise<SystemFace[]> {
-  const file = await disk.open(path).catch(() => null)
+  const file = await orElse(disk.open(path), null)
   if (!file) return []
 
   try {
@@ -192,7 +197,11 @@ async function facesOf(disk: FontDisk, path: string): Promise<SystemFace[]> {
     // one bad file in a folder of four hundred must not empty the picker.
     return []
   } finally {
-    await file.close().catch(() => {})
+    try {
+      await file.close()
+    } catch {
+      // Same as above: one bad file must not empty the picker, and neither must its handle.
+    }
   }
 }
 

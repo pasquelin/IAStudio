@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
 import type { AuthState } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { activeAccount, useAccounts } from './accounts'
+import { accountsByProvider, activeAccount, useAccounts } from './accounts'
 import { useSettings } from './settings'
 
 const studio: AccountSummary = { id: 'a', name: 'Studio', active: true }
@@ -10,6 +10,33 @@ const client: AccountSummary = { id: 'b', name: 'Client X', active: false }
 
 const result = (accounts: AccountSummary[]): Promise<AccountsResult> =>
   Promise.resolve({ accounts })
+
+/**
+ * The switch groups by cloud, one active key per group. A summary with no `providerId` is a key
+ * stored before clouds became a list, and it reads as Scenario — the same default the main
+ * process gives its own absence.
+ */
+describe('accountsByProvider', () => {
+  const google: AccountSummary = { id: 'g', name: 'Perso', providerId: 'google', active: true }
+
+  it('keeps one group while one cloud is held', () => {
+    expect(accountsByProvider([studio, client])).toEqual([
+      { providerId: 'scenario', accounts: [studio, client] },
+    ])
+  })
+
+  it('splits the keys by the cloud each one opens', () => {
+    const groups = accountsByProvider([studio, google, client])
+
+    expect(groups.map(group => group.providerId)).toEqual(['scenario', 'google'])
+    expect(groups[0]?.accounts).toEqual([studio, client])
+    expect(groups[1]?.accounts).toEqual([google])
+  })
+
+  it('answers nothing for a book that holds nothing', () => {
+    expect(accountsByProvider([])).toEqual([])
+  })
+})
 
 describe('useAccounts', () => {
   beforeEach(() => {
@@ -24,6 +51,24 @@ describe('useAccounts', () => {
 
       await useAccounts.getState().connect()
       expect(useAccounts.getState().accounts).toEqual([studio])
+    })
+
+    /**
+     * 🛑 The flag has to travel WITH the list, never a beat later. A watcher woken by the accounts
+     * alone reads a baseline that is not yet marked known, calls the first list a switch, and
+     * throws the whole query cache away at every launch.
+     */
+    it('marks the list read in the same breath as it publishes it', async () => {
+      installFakeBridge({ accounts: { list: () => Promise.resolve([studio]) } })
+      const seen: boolean[] = []
+      const stop = useAccounts.subscribe(state => {
+        if (state.accounts.length > 0) seen.push(state.accountsLoaded)
+      })
+
+      await useAccounts.getState().connect()
+      stop()
+
+      expect(seen).not.toContain(false)
     })
 
     // A switch landing while the read is in flight is newer than what the read answers.
@@ -169,5 +214,11 @@ describe('activeAccount', () => {
 
   it('answers null when none is', () => {
     expect(activeAccount([{ ...studio, active: false }])).toBeNull()
+  })
+
+  it('prefers the Scenario key when another cloud is also in use', () => {
+    expect(
+      activeAccount([{ id: 'o', name: 'GPT', providerId: 'openai', active: true }, studio]),
+    ).toEqual(studio)
   })
 })

@@ -104,7 +104,7 @@ describe('the favourites folder', () => {
 
   /**
    * The id reaches this off a URL, and `new URL` does not decode `%2F`: a crafted
-   * `scenario://favorite/..%2F..%2Fsecret` arrives here as a real `../../secret`. The scheme is
+   * `ia-studio://favorite/..%2F..%2Fsecret` arrives here as a real `../../secret`. The scheme is
    * one the window is allowed to fetch, so an unchecked join would hand it any file on disk.
    */
   it('refuses a still whose id would climb out of the folder', () => {
@@ -164,5 +164,22 @@ describe('the favourites folder', () => {
     await writeFile(join(folder, 'favorites.json'), 'not json at all', 'utf8')
 
     await expect(favorites.list()).resolves.toEqual([])
+  })
+
+  /**
+   * `texture` was an asset kind until 2026-08-26, and this file carries no version to migrate on.
+   * Without the rename the enum drops the whole recipe — then the next `pin` writes the shortened
+   * list back, and the entry is gone from the FILE, its thumbnail orphaned, with nothing said.
+   */
+  it('keeps a recipe pinned under the kind that has since been folded into pictures', async () => {
+    await favorites.pin(draft())
+    const stored: unknown[] = JSON.parse(await readFile(join(folder, 'favorites.json'), 'utf8'))
+    const legacy = { ...(stored[0] as object), id: 'favorite_legacy', type: 'texture' }
+    await writeFile(join(folder, 'favorites.json'), JSON.stringify([legacy, ...stored]), 'utf8')
+
+    const read = await createFavorites(folder).list()
+
+    expect(read.map(recipe => recipe.id)).toContain('favorite_legacy')
+    expect(read.find(recipe => recipe.id === 'favorite_legacy')?.type).toBe('image')
   })
 })

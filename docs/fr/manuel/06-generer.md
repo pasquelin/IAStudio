@@ -13,7 +13,7 @@ C’est le cœur du studio : vous décrivez, il fabrique.
 **2. La demande part.** Elle ne revient pas tout de suite. Elle devient une **tâche**, visible
 dans le panneau du même nom, avec une barre de progression.
 
-**3. Le résultat arrive** dans le panneau Assets et sur votre disque.
+**3. Le résultat arrive** dans la **Bibliothèque** de votre compte, puis sur votre disque.
 
 Entre les deux, vous pouvez continuer à travailler, changer d’espace, ouvrir un autre document.
 Rien ne bloque.
@@ -46,10 +46,11 @@ publié demain aura, lui aussi, le sien — sans mise à jour du studio.
 | Un **carré de couleur** | une couleur | un clic ouvre le sélecteur du système |
 | Un **nombre avec un dé** 🎲 | la *graine* — voir plus bas | un nombre, ou un clic sur le dé |
 
-> **Une image posée sur un formulaire part chez Scenario au moment de générer.** Le modèle
-> tourne sur les serveurs de Scenario : il ne peut lire que ce que la bibliothèque du compte
+> **Une image posée sur un formulaire part chez le fournisseur au moment de générer.** Le modèle
+> tourne sur les serveurs du fournisseur : il ne peut lire que ce que la bibliothèque du compte
 > contient. Le studio envoie donc l’asset du projet, garde le lien entre les deux, et n’envoie
-> rien la fois suivante. Vous la retrouvez dans **Votre bibliothèque**, sur l’accueil.
+> rien la fois suivante. Vous la retrouvez dans le panneau **Bibliothèque**, parmi ce que la
+> bibliothèque du compte détient.
 >
 > Une image modifiée depuis son envoi repart : sans quoi la génération tournerait sur une
 > version que vous ne voyez plus.
@@ -235,6 +236,32 @@ Ni l’un ni l’autre n’est une panne, et rien n’est dépensé.
 
 ---
 
+## Le contexte du projet, dans le formulaire
+
+Si le projet ouvert porte un contexte, le panneau le montre au-dessus du formulaire, tel qu'il
+partira, avec une case cochée :
+
+```
+☑ Appliquer le contexte du projet
+┌────────────────────────────────────────┐
+│ Project context —                      │
+│ Univers: Moyen Âge, XIIIᵉ siècle…      │
+│ Direction artistique: peinture à…      │
+└────────────────────────────────────────┘
+```
+
+**Décocher la case laisse le contexte de côté pour ce tir-là**, sans aller éteindre une fiche dans
+le panneau Contexte. La case reste comme vous l'avez laissée tant que le panneau est ouvert.
+
+Le prix affiché sous le bouton **Générer** tient compte du contexte : ce qui est chiffré est ce qui
+sera envoyé.
+
+Le bloc n'apparaît pas quand il n'y aurait rien à dire — aucune fiche allumée, ou un modèle sans
+champ de description. Ce que le contexte contient, comment il s'écrit et où il est rangé sont au
+chapitre [Projets](04-projets.md#le-contexte-du-projet).
+
+---
+
 ## Les réglages qu’on retrouve souvent
 
 Ils ne sont pas les mêmes partout, mais ces noms reviennent :
@@ -362,7 +389,7 @@ le reste en file.
 Ce nombre se règle : **Réglages ▸ Génération ▸ Générations simultanées**, de 1 à 16.
 
 > **Augmenter ce nombre n’accélère pas le service.** Cela rend seulement plus probable que
-> Scenario refuse vos demandes en trop. La file existe justement pour étaler une rafale plutôt
+> le fournisseur refuse vos demandes en trop. La file existe justement pour étaler une rafale plutôt
 > que de la faire rejeter. Trois est un bon équilibre.
 
 ### Les reprises automatiques
@@ -378,7 +405,7 @@ Quatre par défaut.
 
 ### Fermer le studio n’annule pas une génération
 
-**Une génération lancée continue chez Scenario, que le studio soit ouvert ou non.** Ce qui manquait
+**Une génération lancée continue chez le fournisseur, que le studio soit ouvert ou non.** Ce qui manquait
 jusqu’ici, c’est qu’il sache la retrouver au retour : c’est fait. En quittant, il note les
 demandes encore en cours ; au lancement suivant, il les reprend là où elles en sont et leur
 résultat rejoint vos assets comme si de rien n’était.
@@ -394,7 +421,7 @@ Trois précisions qui décident de ce que vous verrez :
   d’un modèle, qui dure des heures, et assez court pour qu’un projet abandonné en pleine
   génération ne traîne pas ses notes indéfiniment.
 
-**Une annulation, elle, arrête vraiment la demande** — chez Scenario, pas seulement dans
+**Une annulation, elle, arrête vraiment la demande** — chez le fournisseur, pas seulement dans
 l’affichage.
 
 ### Changer de compte n’interrompt pas une génération en cours
@@ -415,9 +442,9 @@ un modèle, et la première continue tranquillement.
 
 La ligne passe à **Terminée**, et l’asset apparaît :
 
-- dans le panneau **Assets** — l’étagère du projet ;
-- sur votre disque, dans `Images/`, `Video/`, `Audio/`… selon son type, tant que vous ne l’avez pas
-  rangé ailleurs.
+- dans la **Bibliothèque** de votre compte, d’où vous pouvez le télécharger ;
+- sur votre disque, dans `Images/`, `Video/`, `Modelling/Models/`… selon son type — ou dans `Materials/`
+  quand c’est une image qui sert une matière — tant que vous ne l’avez pas rangé ailleurs.
 
 **Ce que vous pouvez en faire ensuite dépend de son type**, et c’est là que le studio surprend le
 plus souvent :
@@ -445,7 +472,7 @@ ou le glisser-déposer. Voir [Les assets](07-assets.md).
 
 ## Régénérer avec les mêmes réglages
 
-Sélectionnez un asset dans l’étagère, et regardez l’**Inspecteur**, à droite. S’il connaît la
+Sélectionnez un asset dans l’Explorateur, et regardez l’**Inspecteur**, à droite. S’il connaît la
 génération qui l’a produit, il affiche son modèle, son prompt et sa graine — et propose
 **Régénérer**.
 
@@ -461,12 +488,12 @@ de relancer, ce qui est la façon la plus rapide d’explorer une piste.
 
 | Message | Cause | Quoi faire |
 |---|---|---|
-| **Aucun identifiant enregistré.** | aucune clé API | **Réglages ▸ Compte** |
+| **Aucun identifiant enregistré.** | aucune clé API | **Réglages ▸ Modèles d’IA ▸ Clés API** |
 | **Clé ou secret API invalide.** | une des deux chaînes est fausse | vérifier, souvent un espace en trop |
-| **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan sur app.scenario.com |
+| **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan chez votre fournisseur |
 | **Trop de requêtes. Nouvelle tentative en cours…** | vous avez dépassé le débit autorisé | rien, le studio réessaie tout seul |
-| **Le service Scenario est momentanément indisponible.** | panne côté serveur | réessayer plus tard |
-| **Impossible de joindre Scenario. Vérifiez votre connexion.** | votre connexion internet | vérifier le réseau |
+| **Le service de génération est momentanément indisponible.** | panne côté serveur | réessayer plus tard |
+| **Impossible de joindre le service de génération. Vérifiez votre connexion.** | votre connexion internet | vérifier le réseau |
 | **La génération a échoué.** | le modèle a refusé la demande | souvent un paramètre hors limites, ou un prompt refusé |
 | **Impossible d’enregistrer le résultat sur le disque.** | le dossier du projet n’est plus accessible | disque plein, projet déplacé, droits en écriture |
 | **Valeur invalide.** | un champ du formulaire | le champ concerné est signalé |

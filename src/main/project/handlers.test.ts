@@ -6,6 +6,8 @@ import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor, DocumentKind, DocumentWrite } from '@shared/domain/document'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { IDLE_RESCAN } from '@shared/domain/project'
+import { noGame } from '@shared/domain/game'
+import { noContext } from '@shared/domain/projectContext'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
 import { ownFileOf } from '@main/assets/protocol'
@@ -14,12 +16,13 @@ import { invoke, openWindow, resetHandlers } from '@main/ipc/testHarness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
-import { ProjectOpenError, type FolderVerdict, type ProjectOpenFailure } from './store'
+import { NoProjectError, ProjectOpenError, type FolderVerdict } from './store'
+import type { ProjectOpenFailure } from '@shared/domain/project'
 import type { AsyncCatalog } from './catalogClient'
 
 vi.mock('electron', async () => (await import('@main/ipc/testHarness')).mockElectron())
 
-const PROJECT = '/Users/someone/Films/Reel.scenario'
+const PROJECT = '/Users/someone/Films/Reel'
 
 const MANIFEST = { version: 1, name: 'Reel', createdAt: '', updatedAt: '' }
 
@@ -94,7 +97,10 @@ function base(catalog: AsyncCatalog) {
       // of, so a test that cares about a verdict is the one that sets it.
       inspect: vi.fn(async () => 'blank'),
       open: vi.fn(),
-      current: () => null,
+      // 🛑 The SAME folder `path()` answers. Left at `null` this store was one production can
+      // never be in — a catalogue answering under no open project — and the two channels that
+      // read `current()` to keep quiet at launch read a lie.
+      current: () => ({ path: PROJECT, manifest: MANIFEST }),
       path: () => PROJECT,
       catalog: () => catalog,
       touch: vi.fn(),
@@ -128,17 +134,28 @@ function base(catalog: AsyncCatalog) {
       search: vi.fn(async () => []),
       walk: vi.fn(async () => []),
       names: vi.fn(async () => []),
+      named: vi.fn(async () => []),
     },
     // Answers an empty batch by default: what a channel DOES with an outcome is what these
     // suites are about, and `fileOps.test.ts` is where the outcome itself is settled.
     files: emptyFileOps(),
     // Idle: a window may watch a pass and call one off, and no channel here starts one.
     reconciler: { request: vi.fn(() => false), stop: vi.fn(), state: () => IDLE_RESCAN },
+    // Empty: a project carrying no context is the ordinary one, and `context.test.ts` is where
+    // the file itself is settled.
+    context: { read: vi.fn(async () => noContext()), write: vi.fn(async () => noContext()) },
+    // A project declaring no game is the ordinary one, and `game.test.ts` settles the file.
+    game: { read: vi.fn(async () => noGame()), write: vi.fn(async () => noGame()) },
+    scripts: { list: vi.fn(async () => []), write: vi.fn(async () => true) },
     // An empty string is what `shell.openPath` answers when the system took the file.
     openInSystem: vi.fn(async () => ''),
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
     // anything by not caring.
     askUser: vi.fn(async () => 2),
+    // Takes the folder without complaint: a system that REFUSES is what a test says itself.
+    trashFolder: vi.fn(async () => {}),
+    // None running unless a case says so: no question is raised, which is the ordinary studio.
+    runningJobCount: () => 0,
   }
 }
 
@@ -197,6 +214,44 @@ describe('project handlers', () => {
     })
   })
 
+  /**
+   * The one decision this channel makes, and the reason it is not folded into `project:close`:
+   * it must be answerable BEFORE the window asks about unsaved documents.
+   */
+  describe('asking whether the project may close', () => {
+    const closing = (running: number, answer = 0): ProjectHandlerDeps => {
+      const injected = deps(catalog)
+      injected.runningJobCount = () => running
+      injected.askUser = vi.fn(async () => answer)
+      registerProjectHandlers(injected)
+      return injected
+    }
+
+    // The ordinary close, and it must cost nothing: a dialog on every close would be a question
+    // about a situation that is not happening.
+    it('says yes without a word when nothing is running', async () => {
+      const injected = closing(0)
+
+      await expect(invoke(CHANNELS.projectAskLeave)).resolves.toBe(true)
+
+      expect(injected.askUser).not.toHaveBeenCalled()
+    })
+
+    it('asks when a generation is still running, and answers what was pressed', async () => {
+      const injected = closing(2, 1)
+
+      await expect(invoke(CHANNELS.projectAskLeave)).resolves.toBe(true)
+
+      expect(injected.askUser).toHaveBeenCalled()
+    })
+
+    it('refuses the closing when the question is turned down', async () => {
+      closing(2, 0)
+
+      await expect(invoke(CHANNELS.projectAskLeave)).resolves.toBe(false)
+    })
+  })
+
   describe('creating a project from the folder that was chosen', () => {
     /**
      * Registered on the spot, with the verdict the chosen folder would give and the button the
@@ -220,7 +275,6 @@ describe('project handlers', () => {
 
       expect(injected.project.create).toHaveBeenCalledWith(
         '/Users/someone/Mes Projets/Bande-annonce',
-        'Bande-annonce',
       )
     })
 
@@ -488,7 +542,7 @@ describe('project handlers', () => {
     // those as the project in front would swap the studio out from under whoever renamed it.
     it('tells nobody when it is another project on the shelf', async () => {
       const window = openWindow()
-      renaming('/Users/someone/Films/Other.scenario')
+      renaming('/Users/someone/Films/Other')
 
       await invoke(CHANNELS.projectRename, PROJECT, 'Summer')
 
@@ -528,6 +582,162 @@ describe('project handlers', () => {
       await expect(invoke(CHANNELS.projectRename, 'relative/summer', 'Summer')).rejects.toThrow()
 
       expect(rename).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * 🛑 The gesture that DESTROYS, and the only one of this file that does: the folder goes to the
+   * system's trash whole. `projectRename` above moves it; this one hands it away.
+   */
+  describe('putting a project folder in the trash', () => {
+    /**
+     * A folder that really holds a project, which is the gate this channel puts before the bin:
+     * left at the fixture's `blank`, every case below would have passed on the early refusal
+     * rather than on what it means to say.
+     */
+    const binning = (current: string | null, more: Partial<ProjectHandlerDeps> = {}) => {
+      const injected = deps(catalog, more)
+      injected.project.inspect = vi.fn((): Promise<FolderVerdict> => Promise.resolve('project'))
+      injected.project.current = () =>
+        current === null ? null : { path: current, manifest: MANIFEST }
+      registerProjectHandlers(injected)
+      return injected
+    }
+
+    it('hands the folder to the system and says it went', async () => {
+      const injected = binning(null)
+
+      await expect(invoke(CHANNELS.projectTrash, PROJECT)).resolves.toBe('trashed')
+
+      expect(injected.trashFolder).toHaveBeenCalledWith(PROJECT)
+    })
+
+    /**
+     * 🛑 The catalogue is a thread holding a file INSIDE the folder, so a project binned from
+     * under an open database leaves the studio reading a folder that is in the trash.
+     */
+    it('closes the project first when the folder is the open one', async () => {
+      const injected = binning(PROJECT)
+
+      await invoke(CHANNELS.projectTrash, PROJECT)
+
+      expect(injected.project.close).toHaveBeenCalled()
+    })
+
+    // The shelf lists projects that are not open, which is most of them: binning one of those
+    // must not shut the studio down around whoever asked.
+    it('leaves the open project alone when another folder is binned', async () => {
+      const injected = binning('/Users/someone/Films/Other')
+
+      await invoke(CHANNELS.projectTrash, PROJECT)
+
+      expect(injected.project.close).not.toHaveBeenCalled()
+    })
+
+    /**
+     * A row outlives the folder it names, so this is the ordinary case rather than a failure —
+     * and `shell.trashItem` throws on a path that is not there.
+     */
+    it('answers that nothing went, for a folder the disk has already lost', async () => {
+      const injected = binning(null, { exists: vi.fn(() => false) })
+
+      // 🛑 `missing`, never the same answer as the refusal below: an unplugged drive reads exactly
+      // like a deleted folder here, and the caller must not prune an account link over it.
+      await expect(invoke(CHANNELS.projectTrash, PROJECT)).resolves.toBe('missing')
+
+      expect(injected.trashFolder).not.toHaveBeenCalled()
+    })
+
+    /**
+     * 🛑 `parseProjectPath` refuses a relative path and NOTHING else, so without this gate a path
+     * a model built from a NAME — the measured failure — bins whatever folder it happens to hit.
+     */
+    it('refuses a folder that holds no project, and bins nothing', async () => {
+      const injected = binning(null)
+      injected.project.inspect = vi.fn((): Promise<FolderVerdict> => Promise.resolve('occupied'))
+      resetHandlers()
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectTrash, '/Users/someone/Documents')).resolves.toBe(
+        'not-a-project',
+      )
+
+      expect(injected.trashFolder).not.toHaveBeenCalled()
+    })
+
+    it('says so in the journal, and still refuses, when the system will not take it', async () => {
+      const injected = binning(null, {
+        trashFolder: vi.fn(() => Promise.reject(new Error('EPERM'))),
+      })
+
+      await expect(invoke(CHANNELS.projectTrash, PROJECT)).rejects.toThrow()
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.projectNotTrashed',
+      })
+    })
+
+    // The same refusal opening a project applies: a relative path has no project to be relative
+    // to, and this one bins whatever it is handed.
+    it('refuses a folder that is not absolute', async () => {
+      const injected = binning(null)
+
+      await expect(invoke(CHANNELS.projectTrash, 'relative/summer')).rejects.toThrow()
+
+      expect(injected.trashFolder).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * 🛑 The two channels the window reaches on the way IN, before anything is open. Answered empty
+   * rather than `no-project`: every launch wrote two errors in the journal over a studio doing
+   * nothing wrong, and a real failure was buried among them.
+   */
+  describe('answering with no project open', () => {
+    /**
+     * 🛑 The store THROWS here, as the real one does with nothing open — `catalog()` on the way in,
+     * and `documents.list` from the `path()` inside its walk. Left answering, the fixture made the
+     * guard untestable: removing it kept the suite green.
+     */
+    const shut = () => {
+      const injected = deps(catalog, {
+        documents: {
+          ...deps(catalog).documents,
+          list: vi.fn(() => Promise.reject(new NoProjectError())),
+        },
+      })
+      injected.project.current = () => null
+      injected.project.catalog = () => {
+        throw new NoProjectError()
+      }
+      registerProjectHandlers(injected)
+      return injected
+    }
+
+    it('searches no assets rather than raising no-project', async () => {
+      shut()
+
+      await expect(invoke(CHANNELS.assetsSearch, { limit: 10 })).resolves.toEqual([])
+    })
+
+    it('lists no documents rather than raising no-project', async () => {
+      shut()
+
+      await expect(invoke(CHANNELS.documentList)).resolves.toEqual([])
+    })
+
+    // A catalogue that is OPEN and fails is news, and this is what used to be buried under the
+    // two errors above — `orWhenGone` answers empty for a project that GOES, never for a failure.
+    it('still raises when a project is open and the catalogue gives out', async () => {
+      const injected = deps(catalog)
+      injected.project.catalog = () => {
+        throw new Error('database is locked')
+      }
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.assetsSearch, { limit: 10 })).rejects.toThrow()
     })
   })
 
@@ -718,7 +928,6 @@ describe('project handlers', () => {
       video: 1,
       audio: 0,
       mesh: 0,
-      texture: 0,
       skybox: 0,
       animation: 0,
     })
@@ -848,7 +1057,8 @@ describe('project handlers', () => {
 
     const backend = () => ({
       importFromUrl: vi.fn(),
-      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(),
     })
 
@@ -877,7 +1087,7 @@ describe('project handlers', () => {
       return root
     }
 
-    it('writes each one into the project as a texture of its own', async () => {
+    it('writes each one into the project as a picture of its own', async () => {
       const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
       const assets = backend()
       registerProjectHandlers(
@@ -888,7 +1098,7 @@ describe('project handlers', () => {
 
       expect(wrote(assets).request).toMatchObject({
         id: 'asset-new',
-        type: 'texture',
+        type: 'image',
         // Read here because this is the only place the extracted name reaches: it carries TWO
         // holes, and nothing else in the suite would notice `{{name}} — {{channel}}` going out
         // whole. See `main/no-unfilled-placeholder.test.ts`.
@@ -912,7 +1122,7 @@ describe('project handlers', () => {
     it('leaves a model that already has its pictures alone, and answers with them', async () => {
       const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
       await catalog.add(
-        asset({ id: 'asset-tex', type: 'texture', derivedFrom: 'asset-1', name: 'Skeleton base' }),
+        asset({ id: 'asset-tex', type: 'image', derivedFrom: 'asset-1', name: 'Skeleton base' }),
       )
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
@@ -1009,7 +1219,7 @@ describe('project handlers', () => {
       await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
 
       expect(wrote(assets).request).toMatchObject({
-        type: 'texture',
+        type: 'image',
         extension: '.png',
         probe: expect.objectContaining({ width: 8, height: 4 }),
       })
@@ -1040,12 +1250,13 @@ describe('project handlers', () => {
   describe('a channel the renderer computed', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
-      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(),
     })
 
     /**
-     * A channel goes in as a `texture`, which is what puts it under the right facet of the shelf,
+     * A channel goes in as a picture whose `map` is set, which is what a slot reads of the shelf,
      * and carries its `map` so the catalogue can later be asked which normal maps a project holds.
      */
     it('files it as a channel of the project, under a new identifier', async () => {
@@ -1063,7 +1274,7 @@ describe('project handlers', () => {
         {
           id: 'asset-new',
           name: 'Brique — Normale',
-          type: 'texture',
+          type: 'image',
           extension: '.png',
           map: 'normal',
           derivedFrom: 'asset-1',
@@ -1098,7 +1309,7 @@ describe('project handlers', () => {
     it('never hands back where the file sits', async () => {
       const assets = backend()
       assets.importFromBytes = vi.fn(async () =>
-        asset({ id: 'asset-new', type: 'texture', sourcePath: '/Users/someone/secret.png' }),
+        asset({ id: 'asset-new', type: 'image', sourcePath: '/Users/someone/secret.png' }),
       )
       registerProjectHandlers(deps(catalog, { assets }))
 
@@ -1111,7 +1322,7 @@ describe('project handlers', () => {
       expect(saved).toEqual(expect.not.objectContaining({ sourcePath: expect.anything() }))
     })
 
-    /** Bytes with no channel are an ordinary picture: this door files textures, and says so. */
+    /** Bytes with no channel are an ordinary picture: this door files channels, and says so. */
     it('refuses a request that names no channel', async () => {
       registerProjectHandlers(deps(catalog, { assets: backend() }))
 
@@ -1203,6 +1414,7 @@ describe('project handlers', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
       importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 
@@ -1347,7 +1559,7 @@ describe('project handlers', () => {
     })
 
     /**
-     * A texture channel edited as a picture is still a channel. Read from the catalogue rather
+     * A channel edited as a picture is still a channel. Read from the catalogue rather
      * than sent by the renderer, for the reason `saveTexture` gives: the kind is what the folder
      * and the extension follow, and a channel filed as a plain picture leaves its shelf.
      */
@@ -1355,7 +1567,7 @@ describe('project handlers', () => {
       const assets = backend()
       const sourced = {
         ...catalog,
-        find: vi.fn(async () => asset({ id: 'asset-1', type: 'texture', map: 'normal' })),
+        find: vi.fn(async () => asset({ id: 'asset-1', type: 'image', map: 'normal' })),
       }
       registerProjectHandlers(deps(sourced, { assets }))
 
@@ -1366,7 +1578,7 @@ describe('project handlers', () => {
       })
 
       expect(assets.importFromBytes).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'texture', map: 'normal' }),
+        expect.objectContaining({ type: 'image', map: 'normal' }),
         expect.anything(),
       )
     })
@@ -1433,6 +1645,7 @@ describe('project handlers', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
       importFromBytes: vi.fn(async () => asset({ id: 'asset-2', type: 'image' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-2', type: 'image' })),
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 

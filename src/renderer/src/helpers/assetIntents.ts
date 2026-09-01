@@ -8,11 +8,11 @@ import {
 import { workspaceOfType } from '@shared/domain/assetKind'
 import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { openDocument } from '@/app/dockviewApi'
-import { restoreDocument } from '@/app/documentIo'
-import { loadTake } from '@/spaces/audio/loadTake'
-import { becomeAsset, placeAsset } from '@/spaces/image/placeAsset'
-import { placeTextureChannel } from '@/spaces/textures/placeChannel'
+import { openDocument } from '@/features/shell/components/dockviewApi'
+import { restoreDocument } from '@/features/shell/documentIo'
+import { loadTake } from '@/features/audio/components/TakeEditor/loadTake'
+import { becomeAsset, placeAsset } from '@/features/image/placeAsset'
+import { placeMaterialChannel } from '@/features/material/components/placeChannel'
 import { documentOfKind, useDocuments } from '@/stores/documents'
 import { addAnimationTo, addModelTo } from '@/stores/scenes'
 import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
@@ -216,7 +216,7 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     // the opening chunk's reach into the editors at two files, and nothing here runs before a
     // double-click lands on a picture.
     revisit: async (documentId, asset) => {
-      const { reportAssetDrift } = await import('@/spaces/image/assetFidelity')
+      const { reportAssetDrift } = await import('@/features/image/assetFidelity')
       await reportAssetDrift(documentId, asset.id, asset.name)
     },
     ...inDocument('image', placeAsset, isLocalPicture, becomeAsset),
@@ -234,12 +234,12 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     ),
   },
   {
-    id: 'textures.channel',
-    workspace: 'textures',
-    labelKey: 'intents.textureChannel',
+    id: 'materials.channel',
+    workspace: 'materials',
+    labelKey: 'intents.materialChannel',
     accepts: PICTURES,
     // The base colour is what a bare drop fills; a named channel comes from the slot itself.
-    ...inDocument('texture', placeTextureChannel, isLocalPicture),
+    ...inDocument('material', placeMaterialChannel, isLocalPicture),
   },
 ]
 
@@ -258,9 +258,15 @@ export function intentsFor(type: AssetType): readonly AssetIntent[] {
  *
  * `null` would mean a kind whose own space takes nothing of it, which no kind does today — a
  * test holds the six.
+ *
+ * A picture that HOLDS A CHANNEL is edited in Materials, and `map` is the whole of what says so:
+ * the studio stopped filing channels under a kind of their own — a channel is a picture — and
+ * without this a double-click on a normal map would open the pixels rather than the material
+ * they belong to.
  */
 export function editorIntent(asset: Asset): AssetIntent | null {
-  const workspace = workspaceOfType(asset.type)
+  const workspace = asset.map ? 'materials' : workspaceOfType(asset.type)
+
   return (
     ASSET_INTENTS.find(
       intent => intent.workspace === workspace && intent.accepts.includes(asset.type),
@@ -269,16 +275,14 @@ export function editorIntent(asset: Asset): AssetIntent | null {
 }
 
 /**
- * Where the PIXELS of a picture are edited, when that is not already where its kind is edited.
+ * Where the PIXELS of a picture are edited — Images, for every picture on this disk.
  *
- * A texture and a sky are ASSEMBLED in spaces of their own — one holds channels, the other a
- * projection — and neither writes an image back: `IO_BY_KIND` gives neither a `writeAsset`, and
- * says why at its own line. So a texture pulled out of a model could be looked at and never
- * retouched, which is the half of « extract, edit, and the model follows » that was missing.
- *
- * `null` for a picture Images already opens on a double-click, and for one that is not on disk.
+ * Whether a row here would double up with a surface's own double-click is the CALLER's question:
+ * refusing an `image` here left the assembling spaces, which have no such gesture, with none at
+ * all. `null` for a picture not on disk — `assetUrl` answers 404 for a cloud row.
  */
 export function pixelEditorIntent(asset: Asset): AssetIntent | null {
-  if (!isLocalPicture(asset) || editorIntent(asset)?.workspace === 'image') return null
-  return ASSET_INTENTS.find(intent => intent.workspace === 'image') ?? null
+  return isLocalPicture(asset) ? IMAGE_INTENT : null
 }
+
+const IMAGE_INTENT = ASSET_INTENTS.find(intent => intent.workspace === 'image') ?? null

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SCENARIO_CLOUD } from './aiCloud'
 import type { ModelSummary } from './model'
 import { motionProvidersOf, rigProvidersOf, rigRefusalOf, type RigProvider } from './rigProvider'
 
@@ -11,6 +12,7 @@ function model(
     id,
     name: id,
     family: '3d',
+    runsOn: SCENARIO_CLOUD,
     source: 'other',
     origin: 'official',
     featured: false,

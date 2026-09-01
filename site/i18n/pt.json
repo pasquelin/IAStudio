@@ -1,0 +1,378 @@
+{
+  "meta": {
+    "lang": "pt",
+    "name": "Português",
+    "short": "PT",
+    "flag": "🇧🇷",
+    "docs": "en",
+    "ogLocale": "pt_BR"
+  },
+  "head": {
+    "title": "IA Studio — seis ateliês de geração, uma só janela",
+    "description": "Aplicação de desktop multimodal: imagem, vídeo, 3D, áudio, texturas e skyboxes numa interface de painéis acopláveis. Ditado offline e pilotagem por servidor MCP.",
+    "ogTitle": "IA Studio — seis ateliês de geração, uma só janela",
+    "ogDescription": "Seis ateliês de geração numa só janela. Electron, React 19, TypeScript. macOS, Windows, Linux."
+  },
+  "nav": {
+    "skip": "Ir para o conteúdo",
+    "home": "Início",
+    "video": "Vídeo",
+    "threeD": "3D",
+    "image": "Imagem",
+    "audio": "Áudio",
+    "textures": "Materiais",
+    "skyboxes": "Skyboxes",
+    "architecture": "Arquitetura",
+    "docs": "Docs",
+    "build": "Versão de desenvolvimento",
+    "download": "Baixar",
+    "languageLabel": "Idioma"
+  },
+  "hero": {
+    "eyebrow": "Aplicação de desktop · projeto independente",
+    "lede": "Seis ateliês de geração numa só janela. Painéis acopláveis, linha de tempo com timecode, inspetor, biblioteca em disco: as ferramentas de um software de produção, aplicadas aos modelos generativos.",
+    "browse": "Percorrer os ateliês",
+    "source": "Ver o código-fonte",
+    "meta": {
+      "stack": "Electron · React 19 · TypeScript",
+      "platforms": "macOS, Windows, Linux",
+      "languages": "Francês e inglês"
+    }
+  },
+  "home": {
+    "eyebrow": "Início · o ponto de partida",
+    "title": "Um projeto é uma pasta. Nada mais.",
+    "lede": "Abra uma pasta e ela vira um projeto: documentos, assets importados, gerações. Tudo fica no disco, em formatos que outros programas já leem — OpenRaster, OpenTimelineIO, glTF, MaterialX —, explorado a partir da aplicação e versionado por git sem sair da janela.",
+    "alt": "Tela inicial: faixa para retomar o último projeto, lista dos projetos abertos recentemente, atalhos para os seis ateliês, fluxo das criações publicadas por todos e painel de biblioteca da conta.",
+    "specs": {
+      "0": {
+        "term": "Ateliês",
+        "title": "Seis espaços, uma janela",
+        "text": "Imagem, Vídeo, 3D, Áudio, Materiais e Skyboxes. Cada um tem as suas ferramentas e abre numa aba, ao lado dos outros."
+      },
+      "1": {
+        "term": "Painéis",
+        "title": "Acopláveis e destacáveis",
+        "text": "Modelos, Explorador, Assets, Inspetor, Linha de tempo. A janela arruma-se como se quiser, e a disposição fica guardada por ateliê."
+      },
+      "2": {
+        "term": "Biblioteca",
+        "title": "O disco primeiro",
+        "text": "As gerações caem na pasta do projeto. A biblioteca da conta remota liga-se depois, com uma chave de API."
+      }
+    }
+  },
+  "video": {
+    "eyebrow": "Ateliê · saída .mp4",
+    "lede": "Dois monitores, uma linha de tempo multipista e modelos que produzem os planos.",
+    "list": {
+      "0": {
+        "term": "Monitores",
+        "text": "Fonte e Programa, como numa estação de montagem: o clipe escolhido de um lado, a montagem tal como será exportada do outro."
+      },
+      "1": {
+        "term": "Linha de tempo",
+        "text": "Pistas de vídeo e áudio, ferramentas de seleção, lâmina e mão, reprodução por timecode."
+      },
+      "2": {
+        "term": "Modelos",
+        "text": "Sequence-to-Video, Video Cut, Video Concat, Video Studio."
+      }
+    },
+    "alt": "Ateliê Vídeo: monitores Fonte e Programa lado a lado, painel Assets, inspetor de clipe, linha de tempo de quatro pistas V1, A1, V2 e A2.",
+    "chips": {
+      "0": "Fonte 00:00:00:00",
+      "1": "V1 · A1 · V2 · A2",
+      "2": "25 qps",
+      "3": "Assets do projeto"
+    }
+  },
+  "threeD": {
+    "eyebrow": "Ateliê · saída .glb",
+    "lede": "Uma malha gerada, posta numa cena que se ilumina, se anima e se exporta.",
+    "list": {
+      "0": {
+        "term": "Viewport",
+        "text": "Grade, gizmo de orientação e contador sobreposto: triângulos, vértices, chamadas de desenho, memória de texturas."
+      },
+      "1": {
+        "term": "Iluminação",
+        "text": "Cinco fontes — ambiente, direcional, hemisférica, pontual, holofote — expostas como pistas, com quadros-chave na linha de tempo."
+      },
+      "2": {
+        "term": "Exportação",
+        "text": "A malha sai em .glb onde a largar, pronta para um motor."
+      }
+    },
+    "alt": "Ateliê 3D: carro gerado posto num cenário de montanha, gizmo de deslocação e contador de triângulos sobrepostos, árvore de cena e inspetor à direita, linha de tempo das luzes em baixo.",
+    "chips": {
+      "0": "Triângulos · Vértices · Chamadas",
+      "1": "Duração 5 s",
+      "2": "25 qps",
+      "3": "Ambiente Estúdio"
+    }
+  },
+  "image": {
+    "eyebrow": "Ateliê · saída .png",
+    "lede": "Uma tela com camadas, onde a geração é uma ferramenta entre outras.",
+    "list": {
+      "0": {
+        "term": "Camadas",
+        "text": "Empilhamento, visibilidade, bloqueio. Cada geração chega como camada, acima do que já existe."
+      },
+      "1": {
+        "term": "Ferramentas",
+        "text": "Mover, mão, escala, enquadramento, seleção, formas, pincel, lápis, borracha, texto, preenchimento da camada, conta-gotas."
+      },
+      "2": {
+        "term": "Rastreabilidade",
+        "text": "O inspetor guarda o modelo que produziu a camada, o seu peso e a sua data de criação."
+      }
+    },
+    "alt": "Ateliê Imagem: tela de fundo transparente com um esqueleto recortado, catálogo de modelos à esquerda, painéis Camadas e Inspetor à direita, faixa de assets em baixo.",
+    "chips": {
+      "0": "Camadas",
+      "1": "Zoom 84,6 %",
+      "2": "Modelo guardado",
+      "3": "Faixa de assets"
+    }
+  },
+  "audio": {
+    "eyebrow": "Ateliê · saída .wav",
+    "lede": "Compor e montar som em várias pistas, na mesma janela que o resto.",
+    "list": {
+      "0": {
+        "term": "Pistas",
+        "text": "Montagem multipista, as mesmas ferramentas da linha de tempo de vídeo, reprodução alinhada ao mesmo timecode."
+      },
+      "1": {
+        "term": "Formas de onda",
+        "text": "Calculadas num processo separado: uma hora de som não congela a interface durante a análise."
+      },
+      "2": {
+        "term": "Modelos",
+        "text": "Música, ambientes e efeitos, gerados pela API e depois largados diretamente numa pista."
+      }
+    },
+    "alt": "Ateliê Áudio: monitor Programa a mostrar a forma de onda da montagem, monitor Fonte por baixo, catálogo de modelos de geração sonora, linha de tempo de quatro pistas de áudio.",
+    "chips": {
+      "0": "Programa 00:00:00:00",
+      "1": "A1 · A2 · A3 · A4",
+      "2": "Formas de onda",
+      "3": "Assets do projeto"
+    }
+  },
+  "textures": {
+    "eyebrow": "Ateliê · saída .png ×4",
+    "lede": "Um material, não uma imagem: cada canal é produzido e depois verificado separadamente.",
+    "list": {
+      "0": {
+        "term": "Canais",
+        "text": "Oito: Cor base, Normal, Rugosidade, Metal, Oclusão, Altura, Emissão, Cavidade. Sete saem de uma geração, a Emissão regula-se aqui mesmo; todos se exportam ficheiro a ficheiro."
+      },
+      "1": {
+        "term": "Pré-visualização",
+        "text": "O material é aplicado sobre um volume de teste — esfera, cubo, cilindro, plano, nó — e iluminado em tempo real, antes da exportação."
+      },
+      "2": {
+        "term": "Emendas",
+        "text": "Canais lado a lado em 4096 × 4096, utilizáveis tal como estão num motor."
+      }
+    },
+    "alt": "Ateliê Materiais: cubo de pré-visualização com o material, inspetor aberto nos canais — cor base e normal — e depois nas definições do material, faixa de imagens geradas.",
+    "chips": {
+      "0": "4096 × 4096",
+      "1": "4 canais",
+      "2": "Pré-visualização em volume",
+      "3": "Exportação separada"
+    }
+  },
+  "skyboxes": {
+    "eyebrow": "Ateliê · saída .hdr",
+    "lede": "Um céu que serve de cenário e, ao mesmo tempo, de fonte de luz.",
+    "list": {
+      "0": {
+        "term": "Projeções",
+        "text": "360°, equirretangular, cruz, seis faces. Passa-se de uma vista a outra sem reexportar."
+      },
+      "1": {
+        "term": "Controlo",
+        "text": "Ângulo de visão ajustável e objetos de teste, para julgar a luz sobre uma esfera fosca e uma brilhante."
+      },
+      "2": {
+        "term": "Uso",
+        "text": "O céu produzido aqui ilumina diretamente a cena do ateliê 3D."
+      }
+    },
+    "alt": "Ateliê Skyboxes: céu de montanhas nevadas em projeção de 360 graus, duas esferas de teste no chão — uma fosca, outra espelhada — e definições do sol à direita.",
+    "chips": {
+      "0": "360°",
+      "1": "Equirret.",
+      "2": "Cruz",
+      "3": "6 faces",
+      "4": "Objetos de teste"
+    }
+  },
+  "ticker": {
+    "0": "Texto → Imagem",
+    "1": "Imagem → Imagem",
+    "2": "Recorte",
+    "3": "Reenquadramento",
+    "4": "Corte",
+    "5": "Texto → Vídeo",
+    "6": "Sequência → Vídeo",
+    "7": "Montagem",
+    "8": "Concatenação",
+    "9": "Imagem → 3D",
+    "10": "Voxel",
+    "11": "Texto → Áudio",
+    "12": "Material PBR",
+    "13": "Cor · Normal · Rugosidade · Metal",
+    "14": "Skybox 360°",
+    "15": "Equirretangular"
+  },
+  "architecture": {
+    "eyebrow": "Sob o capô",
+    "title": "Nenhum formulário de geração é escrito à mão.",
+    "lede": "Os parâmetros de um modelo são próprios dele e mudam sem aviso. São por isso lidos em tempo de execução e transformados em campos: um modelo novo aparece com as suas definições, sem uma linha de código a mais.",
+    "racks": {
+      "0": "Interface",
+      "1": "A ponte para a API",
+      "2": "Na sua máquina"
+    },
+    "cells": {
+      "0": {
+        "tag": "Ateliês",
+        "title": "Seis modos, uma disposição",
+        "text": "Painéis acopláveis e destacáveis, abas, disposição guardada por ateliê entre duas sessões."
+      },
+      "1": {
+        "tag": "Motores",
+        "title": "Recriados a partir do seu estado",
+        "text": "Destacar um painel destrói o seu contexto gráfico. O motor reconstrói-se idêntico — o que dá a anulação e a gravação de uma só vez."
+      },
+      "2": {
+        "tag": "Biblioteca",
+        "title": "Pasta de projeto",
+        "text": "Um projeto é uma pasta legível sem a aplicação, explorada por um verdadeiro gestor de ficheiros e seguida por git a partir do estúdio — ramos, versões, conflitos. Importação, exportação e catálogo partilham o mesmo índice, que reencontra os seus ficheiros mesmo deslocados para fora da aplicação."
+      },
+      "3": {
+        "tag": "ModelRegistry",
+        "title": "Os campos vêm do modelo",
+        "text": "O esquema declarado pelo modelo torna-se uma lista de campos, apresentada tal como está. Um tipo desconhecido recai numa entrada bruta em vez de fazer desaparecer o formulário."
+      },
+      "4": {
+        "tag": "JobManager",
+        "title": "Um só sítio interroga",
+        "text": "Toda a geração é assíncrona. Um único componente segue o avanço, limita o número de tarefas simultâneas e espera em caso de recusa do serviço."
+      },
+      "5": {
+        "tag": "Segredos",
+        "title": "A interface nunca vê a chave",
+        "text": "Chave e segredo são cifrados pelo cofre do sistema. A janela pergunta «estou ligado?», nunca «qual é a minha chave?»."
+      },
+      "6": {
+        "tag": "Ditado",
+        "title": "Offline, por inteiro",
+        "text": "Um motor de reconhecimento de voz corre num processo separado, no seu computador. Uma vez trazido o modelo, nada do que é dito sai para a rede."
+      },
+      "7": {
+        "tag": "Servidor MCP",
+        "title": "O estúdio pilota-se de fora",
+        "text": "233 ações em 16 famílias, dos documentos aos assets, da cena à montagem, do ficheiro ao repositório git: um agente faz o que a interface faz, pelos mesmos caminhos."
+      },
+      "8": {
+        "tag": "Carga",
+        "title": "A linha de exibição fica livre",
+        "text": "Miniaturas, formas de onda, malhas pesadas e codificação de vídeo vão para o processador gráfico, para linhas de cálculo ou para um processo à parte."
+      }
+    }
+  },
+  "docs": {
+    "eyebrow": "Documentação &amp; demonstração",
+    "title": "Tudo está escrito ao lado do código.",
+    "videoLabel": "Demonstração do IA Studio: percurso pelos seis ateliês, de uma geração 3D até à montagem.",
+    "links": {
+      "0": {
+        "text": "O manual, vinte capítulos — também legíveis na aplicação",
+        "label": "Manual"
+      },
+      "1": {
+        "text": "Os invariantes, os motores e o que atravessa a fronteira",
+        "label": "Arquitetura"
+      },
+      "2": {
+        "text": "Pilotar o estúdio a partir de um agente, pelo servidor MCP",
+        "label": "Servidor MCP"
+      },
+      "3": {
+        "text": "Dezassete decisões, com o que foi descartado e porquê",
+        "label": "Decisões"
+      },
+      "4": {
+        "text": "Publicar uma versão: assinatura, artefactos, recuo",
+        "label": "Publicação"
+      },
+      "5": {
+        "text": "Licença do código-fonte — PolyForm Noncommercial 1.0.0",
+        "label": "Licença"
+      }
+    },
+    "manualFile": "user-guide.md"
+  },
+  "download": {
+    "eyebrow": "Instalação",
+    "title": "Três plataformas, um só repositório.",
+    "lede": "Cinco instaladores, produzidos pela mesma cadeia de integração a cada versão. Enquanto a primeira versão pública não chega, o repositório clona-se e arranca em três comandos.",
+    "items": {
+      "0": {
+        "os": "macOS",
+        "kind": "Apple Silicon · .dmg",
+        "state": "Versão a caminho"
+      },
+      "1": {
+        "os": "macOS",
+        "kind": "Intel · .dmg",
+        "state": "Versão a caminho"
+      },
+      "2": {
+        "os": "Windows",
+        "kind": "x64 · .exe",
+        "state": "Versão a caminho"
+      },
+      "3": {
+        "os": "Linux",
+        "kind": "x86_64 · .AppImage",
+        "state": "Versão a caminho"
+      },
+      "4": {
+        "os": "Debian, Ubuntu",
+        "kind": "x86_64 · .deb",
+        "state": "Versão a caminho"
+      }
+    },
+    "note": "O instalador rege-se pelas <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">condições de utilização</a>; o código-fonte, pela licença <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial&nbsp;1.0.0</a>. A aplicação não dá acesso a nenhum serviço de geração: usa a chave de API que você fornece, sob a sua conta e a suas expensas."
+  },
+  "foot": {
+    "groups": {
+      "0": "IA Studio",
+      "1": "Ateliês",
+      "2": "Recursos",
+      "3": "Contacto"
+    },
+    "about": "Aplicação de desktop multimodal, desenvolvida a solo. Electron, React, TypeScript.",
+    "resources": {
+      "0": "Descarregamento",
+      "1": "Repositório",
+      "2": "Licença"
+    },
+    "legal": "Código-fonte sob licença <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · aplicação distribuída sob as suas <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">condições de utilização</a> · componentes de terceiros listados nos <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">avisos</a>. © 2026 Alban Pasquelin.",
+    "docsLink": "Documentação",
+    "changelog": "Alterações"
+  },
+  "status": {
+    "project": "projeto",
+    "workshop": "ateliê",
+    "position": "posição"
+  }
+}

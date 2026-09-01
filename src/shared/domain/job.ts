@@ -24,12 +24,61 @@ export type Job = {
   /** A code, never a message: the renderer translates it — see `domain/failure.ts`. */
   error?: JobFailure
   /**
-   * What it cost, in creative units.
+   * What it cost, in the unit `costUnit` names.
    *
    * Read from `creativeUnitsCost` beside a submission, and from `billing.cuCost` on the job
    * itself — which is where a job resumed from a previous session can still find it.
    */
   cost?: number
+  /**
+   * The unit the figure above is quoted in. ABSENT means Scenario's creative units, which every
+   * job carried before a second cloud arrived — and nothing on disk has to be rewritten for it.
+   *
+   * 🛑 Two clouds, two counters, and nothing is ever added across them: a Tripo credit is not a
+   * creative unit and no rate anywhere converts one into the other.
+   */
+  costUnit?: string
+  /**
+   * Whether the service running it takes a cancellation at all. Absent means yes, which every
+   * job carried before a second cloud arrived.
+   *
+   * 🛑 A property of the SERVICE, decided where the runners live: read off the target by the
+   * window instead, a row would carry a rule of the main process and name a cloud to apply it.
+   */
+  cancellable?: boolean
+  /**
+   * The id the runner issued. Ours (`id`) is minted before submit; a local runner files what it
+   * produced under this one (`local_…`). Absent until submit has answered.
+   */
+  remoteId?: string
+  /**
+   * What a generation that writes no file answered — the script a code model wrote.
+   *
+   * 🛑 Not an asset, and deliberately: a script is a DOCUMENT of the project, so it lands in an
+   * editor rather than on the shelf, and the window is what puts it there.
+   */
+  text?: string
+  /**
+   * A sentence a runner wants said on the job's own row — a free rig check's verdict, today.
+   *
+   * 🛑 Never `text`: that one is a DOCUMENT, and the Code space lands it in an editor for any
+   * claimed job — a verdict written there would overwrite the script open in the tab.
+   */
+  note?: JobNote
+}
+
+/** What a runner says on a row, as `JobFailure` does: a KEY, never a message. */
+export type JobNote = {
+  readonly labelKey: string
+  /** The holes of the sentence, and their values are KEYS too — the row translates each. */
+  readonly params?: Readonly<Record<string, string>>
+  /** Absent reads as a plain fact; `warning` is what should stop a spend. */
+  readonly tone?: 'warning'
+}
+
+/** The runner's own id (`local_…`). Collecting under ours files nothing and still succeeds. */
+export function runnerIdOf(job: Job): string {
+  return job.remoteId ?? job.id
 }
 
 /**
@@ -55,6 +104,14 @@ export type JobProgress = Pick<Job, 'id' | 'status' | 'progress'> & {
   assetIds?: string[]
   error?: JobFailure
   cost?: number
+  costUnit?: string
+  /**
+   * 🛑 These three or the window never gets them: settling emits a progress event and nothing
+   * else, the whole-job list being announced only when the LIST gains or loses an entry.
+   */
+  note?: JobNote
+  finishedAt?: string
+  remoteId?: string
 }
 
 /** All of them, in the order a job goes through. The jobs panel names each one from a bundle. */

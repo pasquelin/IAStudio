@@ -133,7 +133,7 @@ One gap remains: **switching projects** closes the open documents without asking
 
 ### There is no "Open" menu, and none is needed
 
-A picture from the shelf comes **in** to an open document — dragged onto the canvas, sent by
+A picture from the Explorer comes **in** to an open document — dragged onto the canvas, sent by
 right-click, or chosen with the **Image…** tool: it becomes a layer. And **double-clicked, it opens
 a document of its own**. See [Image workspace](08-image-workspace.md).
 
@@ -180,26 +180,27 @@ stated intention.
 ### Cropping does not give its pixels back on undo
 
 **All five are offered** — Merge down, Flatten, mirroring, the quarter turn, and now the **crop**
-(`F`). What blocked them was a layer's surface not following its document; it follows it now.
+(`C`). What blocked them was a layer's surface not following its document; it follows it now.
 
 The crop does come with a limit worth knowing before you use it: **shrinking the document throws
 away for good whatever falls outside the frame**. `⌘Z` restores the original size, but the removed
 area comes back empty, and the brush strokes it held do not come back either. This is Photoshop's
 behaviour with "Delete cropped pixels" ticked — except that its history can give them back.
 
-**The reason.** Pixels do not live in the document but in GPU textures, and the history only keeps
+**The reason.** Pixels do not live in the document but in GPU images, and the history only keeps
 512 px tiles of them, capped at 256 MB. A hard crop would remove more tiles than that cap allows.
 Keeping the whole picture from before would mean full-size snapshots in the undo stack, which the
 studio rules out precisely so `⌘Z` stays instant on heavy documents.
 
 **What to do:** press `⇧⌘E` before a wide crop, if you may want to come back.
 
-### Fill is not a paint bucket
+### The paint bucket does not stop at outlines
 
-**Fill layer** (`G`) fills the **entire** layer, edge to edge. It is not the region fill you may know
-from elsewhere — the one that stops at outlines.
+**Paint bucket** (`G`) fills the **entire** layer, edge to edge — or the whole **selected area**, if
+there is one. It is not the region fill you may know from elsewhere — the one that stops at the
+outlines of the drawing.
 
-That is not a defect: it is a different tool, and its name says so.
+That is not a defect: it is a different tool, and a selection is the only way to bound it.
 
 ### History stops at 100
 
@@ -275,7 +276,7 @@ without that refusal, saving would erase those clips from the file. Bring the mi
 the project, open the edit again, and saving works once more.
 
 And what that format does not carry as a standard — fades, gains, image and sound links, the 3D
-scene behind a live clip — travels in the file but **is read by Scenario alone**.
+scene behind a live clip — travels in the file but **is read by IA Studio alone**.
 
 ### A sequence's settings are fixed
 
@@ -328,7 +329,7 @@ what you do when the result has to serve elsewhere rather than carry on being ed
 
 ---
 
-## Textures workspace
+## Materials workspace
 
 ### What is missing
 
@@ -450,16 +451,6 @@ ssh agent are kept.
 
 ## Settings and shortcuts
 
-### Two families have no default model
-
-**Settings ▸ Generation** offers seven sub-sections: Image, Video, 3D, Audio, Upscaling, Background
-removal, Vectorisation. **Texture** and **Skybox** are missing, even though both are now model
-families in their own right.
-
-The consequence: in the Textures and Skyboxes workspaces the **Generate** panel only appears once a
-model has been chosen by hand, and it has to be chosen again every session — the other workspaces
-can remember theirs.
-
 ### A project always stays on your disk
 
 The settings file provides for a choice between "on your disk" and "in the cloud" for where a
@@ -467,7 +458,7 @@ project lives. **The second is not implemented**, and the choice is therefore of
 the interface. Offering a button that leads nowhere would be a promise the software cannot keep.
 
 > **Not to be confused with your account's library**, which does exist: you can **send** assets to
-> it from the shelf. These are two different things — one is where the project itself is kept, the
+> it from the Explorer. These are two different things — one is where the project itself is kept, the
 > other is a stock of assets online, beside the project. See [Assets](07-assets.md).
 
 ### Fetching has no button
@@ -480,17 +471,13 @@ A direct consequence, and not a failure: of the seven badges an asset can wear, 
 appear** — "to fetch", "changed on both sides" and "belongs to another project". As long as
 nothing moves without you asking, the other side cannot get ahead of yours.
 
-### On Windows and Linux, `⌘` is taken literally
+### On Windows and Linux, `⌘` is displayed where `Ctrl` is pressed
 
-Two separate defects, one of display, one of function.
+The shortcuts **work**: `⌘` reads as `Ctrl` everywhere, including the ones a surface listens for
+itself. What is left is the display — the tooltips and the shortcuts screen draw the Mac `⌘`
+symbol instead of writing `Ctrl`.
 
-**Display**: the tooltips and the shortcuts screen draw the Mac `⌘` symbol instead of `Ctrl`,
-everywhere.
-
-**Function**: the shortcuts the system menu carries — `⌘Z`, `⌘S`, `⌘N` — do answer to `Ctrl`, since
-it is the menu that fires them. But the ones a surface listens for itself, such as `⌘D` in the 3D
-view, expect the **Windows** key rather than `Ctrl`: for now they are out of reach anywhere but on
-a Mac.
+**The Windows key fires nothing**: it belongs to the desktop, and the studio gives it no command.
 
 ---
 
@@ -500,20 +487,20 @@ These are not gaps: they are accepted boundaries.
 
 ### It does not work offline to generate
 
-The making happens on Scenario's servers. Without a connection you can open, retouch, edit and save —
+The making happens on the provider's servers. Without a connection you can open, retouch, edit and save —
 but not create new content.
 
 ### It is not free to use
 
-Every generation consumes credit on your Scenario account. The studio bills you nothing: it forwards.
+Every generation consumes credit on your remote account. The studio bills you nothing: it forwards.
 But your account does count.
 
 **And it cannot tell you what is left.** The **Help ▸ Usage…** window shows what has been spent
-over 7, 31 or 120 days — never a balance, because the Scenario API exposes none. The euro amount
+over 7, 31 or 120 days — never a balance, because the generation API exposes none. The euro amount
 beside it is computed from the public prepaid pack grid: an order of magnitude, not your invoice.
 
 What it can tell you is what a generation is about to cost: the **Generate** button carries an
-estimate before you press it. How much is left to pay for it is something your Scenario account
+estimate before you press it. How much is left to pay for it is something your remote account
 knows and the studio does not.
 
 ### It does not replace Photoshop, Blender or Premiere
@@ -541,16 +528,14 @@ cannot leak your account.
 
 ## Summary: in order of importance
 
-If you only remember five things from this chapter:
+If you only remember four things from this chapter:
 
 1. **all six documents save now**, and closing a tab asks before losing anything; what does not
    come back is the undo history;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **the video export comes out silent** — the final file is deliverable, the edit's sound is not in it;
-4. **the Texture and Skybox families have no default model** — both workspaces make you pick one
-   again every session;
-5. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
+4. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
 
 Everything else is comfort.
 

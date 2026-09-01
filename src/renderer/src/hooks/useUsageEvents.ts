@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { ApiFailure } from '@shared/domain/failure'
 import type { UsageCursors, UsageEventPage, UsagePeriod } from '@shared/domain/usage'
 import { getBridge } from '@/services/bridge'
-import { failureOf, type Answer } from '@/usage/answer'
+import { failureOf, type Answer } from '@/features/usage/answer'
 
 export type EventsState = {
   page: UsageEventPage | null
@@ -40,7 +40,7 @@ export function useUsageEvents(period: UsagePeriod): EventsState {
 
     let live = true
 
-    bridge.scenario
+    bridge.provider
       .usageEvents(period, cursors)
       .then(answered => {
         if (!live) return

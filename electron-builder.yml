@@ -1,4 +1,4 @@
-appId: com.scenario.app
+appId: com.pasquelin.iastudio
 # `productName` is deliberately absent: electron-builder would prefer it over the one in
 # package.json, which is the copy `shared/constants.test.ts` pins to APP_NAME. Declaring it
 # here would leave the shipped name unguarded.
@@ -23,7 +23,7 @@ artifactName: ${name}-${version}-${platform}-${arch}.${ext}
 publish:
   provider: github
   owner: pasquelin
-  repo: scenario
+  repo: IAStudio
   releaseType: draft
 
 files:
@@ -32,9 +32,6 @@ files:
   # Read at runtime by `nativeImage`: window icon on Windows and Linux, About dialog.
   - build/icon.png
   - '!**/*.map'
-  # Redundant today — a whitelist already excludes it — but the exclusion must not depend on
-  # every other entry staying positive. An asar opens in a text editor; the API key is in here.
-  - '!secrets{,/**/*}'
 
 # `devTools: false` is a per-webContents preference; these are process-level switches that
 # would otherwise reopen the same door. `--remote-debugging-port` attaches CDP to the main
@@ -56,6 +53,10 @@ asarUnpack:
   # them from disk by name. The rule above unpacks the addon alone, which loads and then fails
   # looking for a `libonnxruntime.dylib` still sealed in the archive.
   - '**/sherpa-onnx-*/**'
+  # llama.cpp is the same shape: `llama-addon.node` sits beside `libllama`, `libggml-base` and one
+  # `libggml-cpu-*` per micro-architecture, all opened from disk by name. Unpacking the addon
+  # alone gives a packaged build that loads it and then fails looking for its libraries.
+  - '**/@node-llama-cpp/**'
 
 # The encoder the studio ships with. `beforePack` fetches the one matching the target about to
 # be packed, so a run building several of them gives each its own. Outside the asar on purpose:
@@ -63,6 +64,11 @@ asarUnpack:
 beforePack: scripts/before-pack.mjs
 
 extraResources:
+  # Le runtime qu'un jeu exporté embarque — un module ES bâti par `pnpm game:runtime`. Hors de
+  # l'asar parce qu'il est COPIÉ dans le dossier du jeu, et qu'on ne copie pas depuis une archive.
+  - from: resources/gameRuntime
+    to: gameRuntime
+    filter: ['**/*']
   - from: resources/ffmpeg
     to: ffmpeg
     filter: ['**/*']
@@ -71,6 +77,17 @@ extraResources:
   # because it lets the microphone be checked before the 640 MB recognition model is there.
   - from: resources/stt
     to: stt
+    filter: ['**/*']
+  # The interpreter the local AI engine runs on, plus the engine's own sources — 67 Mo, fetched
+  # by `pnpm engine:fetch` against a pinned digest. Outside the asar because an interpreter has
+  # to be executable on disk to be spawned, exactly like ffmpeg.
+  #
+  # The tensor libraries are NOT here: measured 2026-08-22 at 682 Mo on macOS, 693 on Windows
+  # and 4,7 Go on Linux. They are fetched on first use — and what is fetched must be an archive
+  # THIS BUILD SIGNED, since an environment resolved on the person's machine will not load under
+  # the hardened runtime.
+  - from: resources/engine
+    to: engine
     filter: ['**/*']
   # The animations a character can be made to play, one folder each. In the repository rather
   # than fetched: they are the only thing the animations panel has to offer on a fresh install.
@@ -87,6 +104,12 @@ extraResources:
   # produced, and a readme has no business inside an application bundle.
   - from: resources/templates
     to: templates
+    filter: ['**/*.png']
+  # One picture per local model, about a kilobyte each, written by `pnpm models:thumbnails`.
+  # Shipped rather than fetched for the reason the whole catalogue is: they have its life cycle,
+  # so no link can die and a panel draws offline.
+  - from: resources/models
+    to: models
     filter: ['**/*.png']
   # Beside the application rather than only inside its Help window: a notice reachable only from
   # a running app is out of reach for whoever cannot start it, and the FFmpeg source offer has to
@@ -122,7 +145,7 @@ mac:
     # key is missing when the microphone is first touched. Not localised: an Info.plist string
     # needs an `InfoPlist.strings` per language, which electron-builder does not assemble.
     NSMicrophoneUsageDescription:
-      Scenario Studio uses the microphone to turn what you say into text, on this computer.
+      IA Studio uses the microphone to turn what you say into text, on this computer.
       Nothing you say is sent anywhere.
   # `notarize` is deliberately left at its default rather than pinned to false: electron-builder
   # only notarises what it managed to sign, so an unsigned build skips it on its own — and the
@@ -175,16 +198,16 @@ nsis:
 linux:
   icon: build/icon.svg
   category: Graphics
-  synopsis: Image, video, 3D, audio, texture and skybox creation on the Scenario API
+  synopsis: Image, video, 3D, audio, texture and skybox creation studio
   maintainer: Alban Pasquelin <alban.pasquelin@gmail.com>
   # The one surface of the studio that ships its wording instead of reading it: a `.desktop` file
   # is written at build time and read by the desktop shell, long before any bundle is loaded. It
   # localises the only way it can — one key per locale, `Comment` being the C fallback.
   desktop:
     entry:
-      StartupWMClass: Scenario Studio
-      Comment: Image, video, 3D, audio, texture and skybox creation on the Scenario API
-      Comment[fr]: Création d’images, vidéos, modèles 3D, audio, textures et skyboxes sur l’API Scenario
+      StartupWMClass: IA Studio
+      Comment: Image, video, 3D, audio, texture and skybox creation studio
+      Comment[fr]: Studio de création d’images, vidéos, modèles 3D, audio, textures et skyboxes
   target: [AppImage, deb]
 
 appImage:

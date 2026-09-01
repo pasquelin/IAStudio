@@ -13,6 +13,7 @@ import {
   PATH_KINDS,
   rootSections,
   sectionEntry,
+  sectionOfFamily,
   SETTING_REGISTRY,
   SETTING_SECTIONS,
   UNLISTED_PATHS,
@@ -208,6 +209,23 @@ describe('settings registry', () => {
 
     expect(new Set(ids).size).toBe(ids.length)
     expect(sectionEntry('media')?.labelKey).toBe('settings.media')
+  })
+
+  /**
+   * One screen per family since ADR-23 removed the per-family default picker: an action that
+   * cannot find a model has ONE place to send the person, and two screens claiming a family
+   * would be free to send them to the one that no longer chooses anything.
+   */
+  it('finds the employment screen of a family, which is where a model is chosen', () => {
+    expect(
+      SETTING_SECTIONS.filter(section => section.family === 'image').map(one => one.id),
+    ).toEqual(['ai.image'])
+    expect(sectionOfFamily('image')).toBe('ai.image')
+    expect(sectionOfFamily('skybox')).toBe('ai.skybox')
+    // The three the canvas edits reach for had no screen of their own until they had an
+    // employment: without one, Cutout and Vectorize stop on "no model set" with nowhere to go.
+    expect(sectionOfFamily('vectorization')).toBe('ai.vectorization')
+    expect(sectionOfFamily('other')).toBeUndefined()
   })
 
   it('finds a descriptor by path, and nothing for one it does not describe', () => {

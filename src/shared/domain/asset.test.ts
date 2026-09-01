@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assetBadgeOf,
   assetIdFromUrl,
+  assetMasterUrl,
   assetUrl,
   hostedParts,
   hostedUrl,
@@ -10,7 +11,9 @@ import {
   isTimeless,
   mediaDuration,
   posterUrl,
+  roleForAsset,
   withoutSourcePath,
+  MASTER_HOST,
   POSTER_HOST,
   type Asset,
 } from './asset'
@@ -30,14 +33,18 @@ describe('asset URLs', () => {
     expect(assetIdFromUrl(assetUrl('asset_1'))).toBe('asset_1')
   })
 
+  it('names the original on a host of its own, so an export does not play the proxy', () => {
+    expect(hostedParts(assetMasterUrl('asset_1'))).toEqual({ host: MASTER_HOST, id: 'asset_1' })
+  })
+
   it('survives an identifier needing encoding', () => {
     expect(assetIdFromUrl(assetUrl('asset/1 2'))).toBe('asset/1 2')
   })
 
   it('refuses a URL that is not ours to serve', () => {
     expect(assetIdFromUrl('https://cdn.cloud.scenario.com/asset_1')).toBeNull()
-    expect(assetIdFromUrl('scenario://other/asset_1')).toBeNull()
-    expect(assetIdFromUrl('scenario://asset/')).toBeNull()
+    expect(assetIdFromUrl('ia-studio://other/asset_1')).toBeNull()
+    expect(assetIdFromUrl('ia-studio://asset/')).toBeNull()
     expect(assetIdFromUrl('not a url')).toBeNull()
   })
 })
@@ -163,7 +170,7 @@ describe('how long the media runs', () => {
    */
   it('tells a picture from an asset whose length is merely unknown', () => {
     expect(isTimeless(asset({ type: 'image' }))).toBe(true)
-    expect(isTimeless(asset({ type: 'texture' }))).toBe(true)
+    expect(isTimeless(asset({ type: 'image' }))).toBe(true)
     expect(isTimeless(asset({ type: 'skybox' }))).toBe(true)
 
     expect(isTimeless(asset({ type: 'video' }))).toBe(false)
@@ -207,10 +214,8 @@ describe('the badge an asset wears', () => {
     expect(assetBadgeOf(asset({ ...twin, syncStatus: 'error' }), OWNER)).toBe('error')
   })
 
-  it('reads a twin the catalogue said nothing about as settled', () => {
-    // Rows written before the catalogue tracked sync — assets collected from a generation,
-    // which were downloaded from the very twin they point at.
-    expect(assetBadgeOf(asset({ remoteAssetId: 'asset_x' }), OWNER)).toBe('synced')
+  it('reads a remote id without a sync status as local-only', () => {
+    expect(assetBadgeOf(asset({ remoteAssetId: 'asset_x' }), OWNER)).toBe('local-only')
   })
 
   it('says so when the twin belongs to another project', () => {
@@ -231,5 +236,33 @@ describe('the badge an asset wears', () => {
       syncStatus: 'synced',
     })
     expect(assetBadgeOf(twin, null)).toBe('synced')
+  })
+})
+
+/**
+ * The one role that is not an asset TYPE's. A material is a document, and the pictures that
+ * serve one are still pictures — what files them apart is what they are FOR, which their channel
+ * is the only thing left to say since the studio stopped filing a channel under a kind.
+ */
+describe('the role an asset is filed under', () => {
+  it('files a picture that holds a channel with the materials', () => {
+    expect(roleForAsset({ type: 'image', map: 'normal' })).toBe('materials')
+    expect(roleForAsset({ type: 'image', map: 'baseColor' })).toBe('materials')
+  })
+
+  /** An ORM packs two channels and claims neither — and it is what the unpack gesture reads. */
+  it('files a picture out of a packed glTF slot with the materials', () => {
+    expect(roleForAsset({ type: 'image', packedSlot: 'metallicRoughnessTexture' })).toBe(
+      'materials',
+    )
+  })
+
+  it('files a picture that holds none with the pictures', () => {
+    expect(roleForAsset({ type: 'image' })).toBe('image')
+  })
+
+  it('tells a mesh from the motion that drives it', () => {
+    expect(roleForAsset({ type: 'mesh' })).toBe('models')
+    expect(roleForAsset({ type: 'animation' })).toBe('animations')
   })
 })

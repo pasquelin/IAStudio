@@ -6,7 +6,8 @@ import {
   SETTING_REGISTRY,
   type SettingDescriptor,
 } from '@shared/domain/settingsRegistry'
-import { parsePartialSettings, salvagePartialSettings } from './validation'
+import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { parsePartialSettings, parseStoredAccounts, salvagePartialSettings } from './validation'
 
 /** A value the descriptor itself says is acceptable — no second table of examples to maintain. */
 function acceptable(descriptor: SettingDescriptor): SettingValue {
@@ -24,6 +25,29 @@ function acceptable(descriptor: SettingDescriptor): SettingValue {
       return '/some/path'
   }
 }
+
+/**
+ * 🛑 The shelf is written by the MAIN process without passing through this parser, so a field the
+ * schema demands and nothing writes any more empties the WHOLE file: `salvagePartialSettings` does
+ * one `safeParse` and answers `{}` on any failure. Measured 2026-08-31, with a green gate — theme,
+ * keys, shortcuts and shelf all back to their defaults on the launch after a project was opened.
+ */
+describe('a shelf entry crossing the boundary', () => {
+  const entry = { path: '/projects/jeu1', openedAt: '2026-08-31T10:00:00.000Z' }
+  const held = { storage: { recentProjects: [entry], projectsFolder: '/projects' } }
+
+  it('takes what this build writes, and keeps the rest of the file with it', () => {
+    expect(salvagePartialSettings(held)).toEqual(held)
+    expect(parsePartialSettings(held)).toEqual(held)
+  })
+
+  // A file written when the name still lived beside the path: the field is stripped, not refused.
+  it('reads an entry written when the name still lived beside the path', () => {
+    const older = { storage: { recentProjects: [{ ...entry, name: 'Vieux' }] } }
+
+    expect(salvagePartialSettings(older)).toEqual({ storage: { recentProjects: [entry] } })
+  })
+})
 
 describe('settings validation', () => {
   /*
@@ -111,6 +135,79 @@ describe('settings validation', () => {
 })
 
 /**
+ * `texture` named the material family until 2026-08-26, and a family name is half of four stored
+ * keys. Every one of them fails in SILENCE — the choice reads as none made, the own-model list
+ * blanks whole — so nothing but these cases would say the rename cost a person their settings.
+ */
+describe('a family renamed since the file was written', () => {
+  it('brings a role choice up to date rather than reading it as no choice made', () => {
+    const salvaged = salvagePartialSettings({
+      ai: { roles: { 'texture/txt2img_texture': { kind: 'local', modelId: 'ssd-1b' } } },
+    })
+
+    expect(salvaged.ai?.roles).toEqual({
+      'material/txt2img_texture': { kind: 'local', modelId: 'ssd-1b' },
+    })
+  })
+
+  it('brings a per-project choice up to date too', () => {
+    const salvaged = salvagePartialSettings({
+      ai: {
+        projectRoles: {
+          '/Repérages': { 'texture/img2img_texture': { kind: 'cloud', providerId: 'scenario' } },
+        },
+      },
+    })
+
+    expect(salvaged.ai?.projectRoles).toEqual({
+      '/Repérages': { 'material/img2img_texture': { kind: 'cloud', providerId: 'scenario' } },
+    })
+  })
+
+  /** `ownModels` carries `.catch([])`: one stale family used to take the whole list down with it. */
+  it('keeps an imported model whose family moved, and the ones beside it', () => {
+    const own = (id: string, family: string): unknown => ({
+      id,
+      name: id,
+      format: 'gguf',
+      loader: 'llamacpp',
+      rank: 1,
+      licence: 'MIT',
+      licenceUrl: '',
+      source: '',
+      files: [],
+      diskBytes: 1,
+      reservationBytes: 1,
+      family,
+      serves: [`${family}/txt2img_texture`],
+    })
+
+    const salvaged = salvagePartialSettings({
+      ai: { ownModels: [own('one', 'texture'), own('two', 'image')] },
+    })
+
+    expect(salvaged.ai?.ownModels?.map(model => model.family)).toEqual(['material', 'image'])
+    expect(salvaged.ai?.ownModels?.[0]?.serves).toEqual(['material/txt2img_texture'])
+  })
+
+  it('carries the legacy default model of that family into its employment', () => {
+    const salvaged = salvagePartialSettings({
+      generation: { defaultModels: { texture: 'ssd-1b' } },
+    })
+
+    expect(salvaged.ai?.roles).toEqual({
+      'material/txt2img_texture': { kind: 'local', modelId: 'ssd-1b' },
+    })
+  })
+
+  it('leaves a family that never moved alone', () => {
+    const roles = { 'image/txt2img': { kind: 'local', modelId: 'ssd-1b' } }
+
+    expect(salvagePartialSettings({ ai: { roles } }).ai?.roles).toEqual(roles)
+  })
+})
+
+/**
  * The bar order is the one branch a stale or hand-edited file is likely to carry wrong, since
  * it is written by a gesture rather than typed into a screen. Before it existed, an unknown key
  * was simply stripped — it must not become the key that costs the file.
@@ -148,6 +245,82 @@ describe('salvaging the bar order', () => {
   })
 })
 
+/**
+ * A book written before clouds became a list carries `activeId` and no `providerId` anywhere. Its
+ * pointer is Scenario's — which is what it always was — and nothing on disk is rewritten for it.
+ */
+describe('reading an account book back', () => {
+  const key = { key: 'api_k', secret: 's3cr3t' }
+
+  it('reads an old pointer as the Scenario one', () => {
+    const book = parseStoredAccounts(
+      JSON.stringify({ accounts: [{ id: 'a', name: 'Studio', credentials: key }], activeId: 'a' }),
+    )
+
+    expect(book?.activeByProvider).toEqual({ [SCENARIO_CLOUD]: 'a' })
+  })
+
+  it('keeps a pointer per cloud once one is written', () => {
+    const book = parseStoredAccounts(
+      JSON.stringify({
+        accounts: [{ id: 'g', name: 'Google', credentials: key, providerId: 'google' }],
+        activeByProvider: { google: 'g' },
+      }),
+    )
+
+    expect(book?.activeByProvider).toEqual({ google: 'g' })
+    expect(book?.accounts[0]?.providerId).toBe('google')
+  })
+
+  it('answers an empty choice for a book that names none', () => {
+    const book = parseStoredAccounts(JSON.stringify({ accounts: [], activeId: null }))
+
+    expect(book?.activeByProvider).toEqual({})
+  })
+})
+
+/**
+ * A role choice names a cloud from a registry that can lose an entry between two builds — the
+ * `ai` schema advertises exactly that. One such line must cost its own line and nothing else.
+ */
+describe('salvaging the AI role choices', () => {
+  const withTheme = (ai: unknown): unknown => ({ ai, appearance: { theme: 'light' } })
+
+  it('drops a choice naming a cloud this build no longer holds, keeping the rest', () => {
+    const salvaged = salvagePartialSettings(
+      withTheme({
+        roles: {
+          assistant: { kind: 'cloud', providerId: 'nowhere' },
+          'image/txt2img': { kind: 'local', modelId: 'llama3.2:3b' },
+        },
+      }),
+    )
+
+    expect(salvaged.ai?.roles).toEqual({
+      'image/txt2img': { kind: 'local', modelId: 'llama3.2:3b' },
+    })
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  // The whole file goes through one `safeParse`: without the per-entry catch, this line took the
+  // theme, the projects folder and every binding down with it.
+  it('keeps the other settings when a choice is not a provider at all', () => {
+    const salvaged = salvagePartialSettings(withTheme({ roles: { assistant: 'llama' } }))
+
+    expect(salvaged.ai?.roles).toEqual({})
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+
+  it('keeps the other settings when a project override is unreadable', () => {
+    const salvaged = salvagePartialSettings(
+      withTheme({ projectRoles: { '/a/project': { assistant: { kind: 'nether' } } } }),
+    )
+
+    expect(salvaged.ai?.projectRoles).toEqual({ '/a/project': {} })
+    expect(salvaged.appearance?.theme).toBe('light')
+  })
+})
+
 /** The home's band order is written by the same kind of gesture, and costs the same if refused. */
 describe('salvaging the home section order', () => {
   const withTheme = (home: unknown): unknown => ({ home, appearance: { theme: 'light' } })
@@ -160,7 +333,9 @@ describe('salvaging the home section order', () => {
       // so its entry is salvaged where `projects` — still a panel — would be dropped.
       { id: 'tools', visible: true },
       { id: 'projects', visible: true },
-      { id: 'explore', visible: false },
+      // The feed of everything published on Scenario, dropped with the band itself.
+      { id: 'explore', visible: true },
+      { id: 'models', visible: false },
     ]
 
     const salvaged = salvagePartialSettings(withTheme({ sections }))
@@ -168,7 +343,7 @@ describe('salvaging the home section order', () => {
     expect(salvaged.home?.sections).toEqual([
       { id: 'spotlight', visible: true },
       { id: 'tools', visible: true },
-      { id: 'explore', visible: false },
+      { id: 'models', visible: false },
     ])
   })
 
@@ -262,5 +437,34 @@ describe('the account each project works under', () => {
     expect(() =>
       parsePartialSettings({ storage: { projectAccounts: { '/projects/a': '' } } }),
     ).toThrow()
+  })
+})
+
+/**
+ * The model each cloud answers with — typed by hand, so the file is where a stale one arrives:
+ * a cloud dropped from the registry between two releases, or a downgrade after one was added.
+ */
+describe('the model a cloud is talked to with', () => {
+  it('keeps a name typed for a cloud the registry holds', () => {
+    const parsed = parsePartialSettings({
+      assistant: { cloudModels: { deepseek: 'deepseek-reasoner' } },
+    })
+
+    expect(parsed.assistant?.cloudModels).toEqual({ deepseek: 'deepseek-reasoner' })
+  })
+
+  /** The whole file goes through ONE parse: refusing this key reset the theme along with it. */
+  it('drops a cloud this build no longer knows, keeping the rest of the file', () => {
+    const salvaged = salvagePartialSettings({
+      appearance: { theme: 'light' },
+      assistant: {
+        model: 'claude-opus-4-8',
+        cloudModels: { gone: 'x', deepseek: 'deepseek-chat' },
+      },
+    })
+
+    expect(salvaged.assistant?.cloudModels).toEqual({ deepseek: 'deepseek-chat' })
+    expect(salvaged.assistant?.model).toBe('claude-opus-4-8')
+    expect(salvaged.appearance?.theme).toBe('light')
   })
 })

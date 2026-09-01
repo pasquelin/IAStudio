@@ -2,7 +2,7 @@ import { rm } from 'node:fs/promises'
 import type { Settings } from '@shared/domain/settings'
 import { log } from '@main/log'
 import { writeAtomic, writeQueue } from '@main/persistence'
-import type { McpEndpoint } from './endpoint'
+import { mcpEndpointJson, type McpEndpoint } from './endpoint'
 import type { McpDeps, RunningMcp } from './server'
 
 /**
@@ -21,16 +21,26 @@ export type McpControl = {
 }
 
 export type McpControlDeps = McpDeps & {
-  /** Where the port and the token are written, so a client can be pointed here. */
+  /** Where the port and the token are written, for `stdio.ts` to read per message. */
   configPath: string
+  /**
+   * Said once the server has settled, open or shut — the port alone, never the token.
+   *
+   * A window cannot work this out for itself: the setting that asks for the door is broadcast
+   * before the port is bound, so anything reading on that change reads the instant before.
+   */
+  onSettled?: (endpoint: McpEndpoint | null) => void
 }
 
-export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpControl {
+export function createMcpControl({ configPath, onSettled, ...deps }: McpControlDeps): McpControl {
   let running: RunningMcp | null = null
   let wanted = false
   // The toggle is a checkbox, and two clicks in quick succession would otherwise start a second
   // server before the first had a port. The same queue the studio's other small files use.
   const queue = writeQueue()
+
+  const endpointNow = (): McpEndpoint | null =>
+    running ? { port: running.port, token: running.token } : null
 
   const publish = async ({ port, token }: McpEndpoint): Promise<void> => {
     /**
@@ -42,7 +52,7 @@ export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpCo
      * is the whole of what stands between a local process and `tools/call`, since a caller with
      * no `Origin` is admitted by design. At the default mode it lands world-readable.
      */
-    await writeAtomic(configPath, `${JSON.stringify({ port, token }, null, 2)}\n`, { mode: 0o600 })
+    await writeAtomic(configPath, mcpEndpointJson({ port, token }), { mode: 0o600 })
   }
 
   const unpublish = async (): Promise<void> => {
@@ -57,19 +67,21 @@ export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpCo
         if (wanted && !running) {
           /**
            * Loaded here and not at the top of the file, which is the point of the whole
-           * arrangement: the MCP SDK pulls some two hundred modules, zod among them, and this
-           * setting is off by default. A static import would put that on the launch of every
-           * studio that never opens the door — on the one path that blocks the main loop from
-           * end to end.
+           * arrangement: the MCP SDK pulls some two hundred modules, zod among them, on the one
+           * path that blocks the main loop from end to end. A packaged studio pays it only if
+           * the person opened the door; a development one always does, the setting being on.
            */
           const { startMcp } = await import('./server')
           const started = await startMcp(deps)
           // Published before it is held: a server whose endpoint could not be written is one no
           // client can reach, so it is stopped rather than left listening unannounced.
-          await publish(started).catch(async (error: unknown) => {
+          try {
+            await publish(started)
+          } catch (error) {
+            // Stopped rather than left listening unannounced, per the note above.
             await started.close()
             throw error
-          })
+          }
           running = started
           return
         }
@@ -93,6 +105,9 @@ export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpCo
         wanted = false
         log.warn('mcp', `could not settle the server: ${String(error)}`)
       })
+      // After both branches and after the repair: what is announced is what IS listening, which
+      // a failed start makes different from what was asked for.
+      .finally(() => onSettled?.(endpointNow()))
 
   // A file left by a crash, a kill, or a quit that raced its own cleanup names a port nothing is
   // listening on — and the next process to take that port inherits a client pointed at it. There
@@ -106,7 +121,7 @@ export function createMcpControl({ configPath, ...deps }: McpControlDeps): McpCo
       void settle()
     },
 
-    endpoint: () => (running ? { port: running.port, token: running.token } : null),
+    endpoint: endpointNow,
 
     stop: async () => {
       wanted = false

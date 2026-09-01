@@ -18,9 +18,9 @@ names the object involved and says what failed.
 |---|---|
 | "Generation “…” failed", "Generation “…” cancelled", "2 assets generated in Image and Modelling" | Generation |
 | "Could not import “…”", "“…” is unreadable" | Import |
-| "Could not send “…”", "The tags of “…” did not reach the library", "The Scenario API refused a request", "The file could not be shown" | Library |
+| "Could not send “…”", "The tags of “…” did not reach the library", "The generation API refused a request", "The file could not be shown" | Library |
 | "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed" | Document |
-| "This folder is not a Scenario project", "The project could not be created in this folder", "The system could not open this file" | Project |
+| "This folder is not an IA Studio project", "The project could not be created in this folder", "The system could not open this file" | Project |
 | "Part of the interface could not be drawn", "A workspace’s stored layout could not be read" | Interface |
 
 Filter by **level** — information, warning, failure — or by **topic**: each is a menu whose
@@ -29,7 +29,7 @@ button says what it keeps. The detail is in [chapter 3](03-the-window.md#the-jou
 The panel closes three ways: a click beside it, `Escape`, or switching to another application.
 Clicking the icon again works too. The same holds for the generations bar to its left.
 
-> **A successful generation says which shelf it landed in** — useful as soon as a model produces
+> **A successful generation says which folder it landed in** — useful as soon as a model produces
 > something other than what the workspace you are in shows.
 
 **A failure also raises a toast** in the corner, which does not fade on its own. If you missed
@@ -46,13 +46,13 @@ telling you what they are missing in order to fill up.
 |---|---|
 | "No project open" | you need to create or open a project (`⌘N` / `⌘O`) |
 | "No document open. Generate or open an asset to get started." | the centre of the window is waiting for a first tab |
-| "No asset yet. Generate something to get started." | the project's shelf is still empty |
+| "No asset yet. Generate something to get started." | the project's folder is still empty |
 | "No generation running." | nothing is generating right now — the generations list is empty |
 | "Open a project to generate." | the form is waiting for a project to drop the result into |
-| "Open a project to see its assets." | the same, for the shelf |
+| "Open a project to see its assets." | the same, for the Explorer |
 | "Open a scene to see its contents." | the **Scene** panel is waiting for an open scene |
 | "Open a scene to see its meshes." / "Open a scene to see its lights." | the same, for the two neighbouring panels |
-| "No model chosen" / "Pick one from the list" | the Generation panel is waiting for a model to be selected |
+| "No model chosen" / "Nothing is billed until you pick a model." | no model has been confirmed — Scenario is unused until you pick one |
 | "This model takes no parameters." | that is normal: some models take only a prompt |
 | "No result for this filter." | your search finds nothing; widen it |
 | "No setting matches this search." | the same, in the settings window |
@@ -84,7 +84,7 @@ panel when it cannot show anything.
 **What it means.** No account is stored, or the one that was has been removed.
 
 **What to do.** Settings (`⌘,`) → **Account** → give it a name, paste your key and secret →
-**Add an account**. They are taken from [app.scenario.com](https://app.scenario.com).
+**Add an account**. They are taken from your provider's dashboard.
 
 ### "The keychain did not give your accounts back. Try again once it is unlocked — nothing was changed."
 
@@ -112,7 +112,7 @@ connected, there is nothing to list.
 1. **check there is no space** stuck to the start or the end of what you pasted. This is by far the
    most frequent cause;
 2. **check you have not swapped** the key and the secret;
-3. **regenerate the pair** at [app.scenario.com](https://app.scenario.com) and paste it again.
+3. **regenerate the pair** at your provider's dashboard and paste it again.
 
 > **This message does not fix itself.** The studio **never** retries an invalid key, whatever the
 > "Max retries" setting says: retrying would not fix it, it would only delay this message.
@@ -123,10 +123,10 @@ connected, there is nothing to list.
 does not cover it.
 
 **What to do.** Check the key's permissions and your subscription's state at
-[app.scenario.com](https://app.scenario.com). A read-only key, for instance, can list models without
+your provider's dashboard. A read-only key, for instance, can list models without
 being able to launch a generation.
 
-### "Cannot reach Scenario. Check your connection."
+### "Cannot reach the generation service. Check your connection."
 
 **What it means.** The request never arrived. This is not a refusal from the service, it is the
 journey that failed.
@@ -138,13 +138,13 @@ journey that failed.
 3. try again: the studio already does so on its own (see below), but a long outage exhausts its
    attempts.
 
-### "The Scenario service is temporarily unavailable."
+### "The generation service is temporarily unavailable."
 
 **What it means.** The service answered, but only to say it has a problem of its own. This does not
 come from you.
 
 **What to do.** Wait. The studio retries on its own, spacing out its attempts. If it lasts, check
-[status.scenario.com](https://status.scenario.com) or Scenario's support.
+your provider's status page, or its support.
 
 ### "Resource not found."
 
@@ -271,7 +271,7 @@ The studio only retries **what another attempt can repair**.
 |---|---|
 | Too many requests | **yes** |
 | Service unavailable | **yes** |
-| Cannot reach Scenario | **yes** |
+| Cannot reach the generation service | **yes** |
 | Invalid key or secret | no |
 | Insufficient permissions | no |
 | Resource not found | no |
@@ -304,7 +304,7 @@ the line away once it is finished.
 
 ### "Video preparation unavailable: no lighter copy, no waveform."
 
-**Where it shows.** On an amber warning triangle, on the asset shelf's title bar: hover it, or
+**Where it shows.** On an amber warning triangle, on the Explorer's title bar: hover it, or
 reach it with the keyboard. The same state is written out in full, and permanently, in
 **Settings ▸ Media**.
 
@@ -359,7 +359,7 @@ brew reinstall ffmpeg
 **What it means.** This file has the same fingerprint as an asset already present. The studio
 refuses to keep two copies.
 
-**This is not an error.** Look for it in the **Assets** panel: it is already there.
+**This is not an error.** Look for it in the **Explorer**: it is already there.
 
 ### "Unreadable file"
 
@@ -388,7 +388,7 @@ message.
 | What the detail says | What happened | What to do |
 |---|---|---|
 | `no destination` | **the ordinary case**: no workspace knows how to open this kind of asset | right-click lists what this asset can become |
-| `not on disk` | the asset is in your Scenario library, not on this disk yet | fetch it into the project — see [Assets](07-assets.md) |
+| `not on disk` | the asset is in your remote library, not on this disk yet | fetch it into the project — see [Assets](07-assets.md) |
 | `no project` | no project is open, and a document is a file: it needs a folder | open or create a project |
 | `no document` | the document could not be created | check that the project folder can be written to |
 
@@ -467,16 +467,19 @@ What follows concerns only the way in for a program outside, covered in
 [chapter 20](20-driving-from-outside.md). Every action refusal is listed there; these are the
 connection troubles.
 
-### "The box is ticked, but my client will not connect"
+### "My client says the studio is not answering"
 
-**The commonest cause: the line is from an earlier launch.** The port and the token change every
-time the studio starts. Yesterday's points at a port where nothing is listening any more.
+**What it means.** Your client did start the way in, and it found no address to reach: the studio
+is not running, or the box is not ticked.
 
-**What to do.** **Settings ▸ Advanced ▸ Connection command ▸ Copy**, and paste the line into your
-terminal again. A client already registered under the same name is replaced, so there is nothing to
-remove first.
+**What to do.** Open the studio, and check **Settings ▸ Way in (MCP)** — the section says which port
+it is listening on, or that it is not. Then ask your client again: **there is nothing to paste
+again**, since what you gave it held no port and no token.
 
-### "The box is ticked, the line is fresh, and still nothing is listening"
+> **If the line is from an installation that has moved**, that is the other case: it names a path
+> to the application, and that path has changed. **Connection command ▸ Copy** gives a fresh one.
+
+### "The box is ticked and still nothing is listening"
 
 **What it means.** The way in failed to start — another program held the place, or the system
 refused. **The box stays ticked**, because it describes what you asked for, not what succeeded.
@@ -668,7 +671,7 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 
 | Symptom | First thing to try |
 |---|---|
-| The model catalogue is empty | **Settings ▸ Account**, then sign in |
+| The model catalogue is empty | **Settings ▸ AI models ▸ API keys**, then sign in |
 | "Invalid API key or secret." | look for a stray space in what was pasted |
 | "Too many requests" repeatedly | lower **Concurrent generations** to 2 |
 | "Generation “…” failed" | restore the model's parameters to default, relaunch |

@@ -6,6 +6,7 @@ import {
   type CommandScope,
 } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
+import { IS_MAC } from '@/helpers/platform'
 import { isTyping } from '@/helpers/typing'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
@@ -28,7 +29,8 @@ export type ShortcutsOptions = {
    * `publishCommand`. Those reach it in a background tab too; keys never do.
    */
   documentId?: string
-  onCommand: (command: CommandId) => void
+  /** `false` says the surface had nothing to do with it — an undo on an empty stack. */
+  onCommand: (command: CommandId) => boolean | void
   /** Fires when the held set actually changes — never on a frame tick. */
   onMotionChange?: (held: Set<MotionId>) => void
   /**
@@ -79,9 +81,12 @@ export function useShortcuts({
   useEffect(
     () =>
       subscribeToCommands((command, to) => {
-        if (commandDescriptor(command)?.scope !== scope) return
-        if (to === null ? !listens : to !== documentId) return
-        handlers.current.onCommand(command)
+        if (commandDescriptor(command)?.scope !== scope) return false
+        if (to === null ? !listens : to !== documentId) return false
+
+        // `void` from a surface means it acted: only one that says `false` outright is reported
+        // as having done nothing.
+        return handlers.current.onCommand(command) !== false
       }),
     [scope, listens, documentId, handlers],
   )
@@ -128,14 +133,12 @@ export function useShortcuts({
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      const typing = isTyping(event.target)
-      const signature = signatureOf(event)
-
       // A field keeps every command, and the lookup is skipped rather than thrown away: ⌘E would
       // flatten a layer while its name is being typed, and the ⌘Z reflex would undo the typing
       // rather than the merge. `commandFor` walks the whole registry, on every keystroke typed.
-      if (typing) return
+      if (isTyping(event.target)) return
 
+      const signature = signatureOf(event, IS_MAC)
       const command = commandFor(signature, scope, currentOverrides())
       if (!command) return
       if (copiesText(signature) && holdsText()) return

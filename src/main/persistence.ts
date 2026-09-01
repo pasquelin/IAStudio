@@ -1,4 +1,4 @@
-import { access, rename, rm, writeFile } from 'node:fs/promises'
+import { access, open, rename, rm, writeFile } from 'node:fs/promises'
 
 /**
  * How the studio writes the small files it keeps for the user — the job notes, the pinned
@@ -41,7 +41,12 @@ export async function writeAtomic(
   } catch (error) {
     // The tidy-up must not become the failure: what the caller has to hear is why the content
     // could not be written, not why the staging copy would not go away.
-    await rm(staging, { force: true }).catch(() => {})
+    try {
+      await rm(staging, { force: true })
+    } catch {
+      // The tidy-up must not become the failure: the caller hears the write, not this.
+    }
+
     throw error
   }
 }
@@ -71,9 +76,20 @@ export function writeQueue(): WriteQueue {
   }
 }
 
+const codeOf = (error: unknown): string | null =>
+  error instanceof Error && 'code' in error ? String(error.code) : null
+
 /** Node reports a missing path this way, and it is the one failure that is not an error. */
-export const isMissing = (error: unknown): boolean =>
-  error instanceof Error && 'code' in error && error.code === 'ENOENT'
+export const isMissing = (error: unknown): boolean => codeOf(error) === 'ENOENT'
+
+/**
+ * Nothing sits there — the absence above, plus a parent that turned out not to be a directory.
+ * What walks a path it did not build reads the two the same way.
+ */
+export const isAbsent = (error: unknown): boolean => {
+  const code = codeOf(error)
+  return code === 'ENOENT' || code === 'ENOTDIR'
+}
 
 /**
  * Whether a path is there at all. Anything that is not a plain absence — a permission that
@@ -85,3 +101,17 @@ export const exists = (path: string): Promise<boolean> =>
     () => true,
     () => false,
   )
+
+/** The head of a file and no more of it — what keeps a listing from reading a project whole. */
+export async function firstBytes(file: string, limit: number): Promise<Buffer> {
+  const handle = await open(file, 'r')
+  try {
+    // `allocUnsafe`: every byte handed back is one `read` wrote, and zeroing the rest per document
+    // is work a listing pays for nothing.
+    const buffer = Buffer.allocUnsafe(limit)
+    const { bytesRead } = await handle.read(buffer, 0, limit, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}

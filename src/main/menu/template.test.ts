@@ -13,6 +13,7 @@ import {
 import { CAPTURE_QUALITIES } from '@shared/domain/sceneCapture'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import type { DocumentKind } from '@shared/domain/document'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
@@ -28,7 +29,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   setDisplay: () => {},
   exportScene: () => {},
   captureScene: () => {},
-  exportTexture: () => {},
+  exportMaterial: () => {},
   exportSkybox: () => {},
   ...overrides,
 })
@@ -36,7 +37,8 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
 const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
-  tools: ['meshes', 'lights', 'explorer', 'models', 'generator', 'inspector', 'assets'],
+  kind: 'scene',
+  tools: ['meshes', 'lights', 'explorer', 'generator', 'inspector', 'assets'],
   checked: [],
   abilities: [],
   isMac: true,
@@ -261,7 +263,7 @@ describe('every command the studio declares', () => {
     }
 
     // Every workspace posts its own rows, so the union is what the studio actually offers.
-    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'textures', 'skyboxes']
+    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'materials', 'skyboxes']
     for (const workspace of spaces) collect(menuTemplate(options({ workspace })))
 
     const stranded = COMMAND_REGISTRY.filter(
@@ -382,7 +384,7 @@ describe('the Edit menu', () => {
 
 describe('menuTemplate', () => {
   it('names the application menu after the product, not the binary', () => {
-    expect(labels(menuTemplate(options()))[0]).toBe('Scenario Studio')
+    expect(labels(menuTemplate(options()))[0]).toBe('IA Studio')
   })
 
   it('leaves About to the application menu on macOS, where it belongs', () => {
@@ -407,7 +409,7 @@ describe('menuTemplate', () => {
   it('interpolates the product name rather than spelling it out per language', () => {
     const appMenu = menuTemplate(options())[0]
     const about = Array.isArray(appMenu?.submenu) ? appMenu.submenu[0] : undefined
-    expect(about?.label).toBe('À propos de Scenario Studio')
+    expect(about?.label).toBe('À propos d’IA Studio')
     expect(about?.label).not.toContain('{{name}}')
   })
 
@@ -634,17 +636,26 @@ describe('the export menu', () => {
     ])
   })
 
-  /**
-   * Every one of the six sends something out since the image gained its two rows, so the empty
-   * fallback below `exportSubmenu` is now unreachable by any workspace — kept for the compiler,
-   * and named here rather than left looking like a case somebody forgot to cover.
-   */
-  it('shows the row in every space, each space sending something out', () => {
+  /** Every space that MAKES something sends it out; Code does not, and the row is absent rather
+   * than empty. Both halves asserted, so a Code export would be named here. */
+  it('shows the row in every space that makes a file of its own, and in no other', () => {
     for (const workspace of WORKSPACE_IDS) {
-      expect(
-        submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(item => item.label),
-      ).toContain('Exporter')
+      const file = submenuOf(menuTemplate(options({ workspace })), 'Fichier').map(one => one.label)
+
+      expect(file.includes('Exporter'), workspace).toBe(workspace !== 'code')
     }
+  })
+
+  /**
+   * 🛑 The 3D space opens two KINDS, and the row follows the kind rather than the space: a
+   * `.ui.json` is already a file of the project, like a script, so there is nothing to export.
+   */
+  it('drops the row for an interface, which the 3D space opens beside its scenes', () => {
+    const file = (kind: DocumentKind) =>
+      submenuOf(menuTemplate(options({ workspace: '3d', kind })), 'Fichier').map(one => one.label)
+
+    expect(file('scene')).toContain('Exporter')
+    expect(file('gui')).not.toContain('Exporter')
   })
 
   it('offers every declared format, for the scene and for the selection', () => {
@@ -684,7 +695,7 @@ describe('the export menu', () => {
   })
 
   it('offers the five targets where a texture is what is being edited', () => {
-    const exports = exportsIn(menuTemplate(options({ workspace: 'textures' })))
+    const exports = exportsIn(menuTemplate(options({ workspace: 'materials' })))
 
     expect(submenuOf(exports, 'Matière').map(item => item.label)).toEqual([
       'glTF / GLB (.glb)',
@@ -696,15 +707,15 @@ describe('the export menu', () => {
   })
 
   it('asks for the engine the row names', () => {
-    const exportTexture = vi.fn()
+    const exportMaterial = vi.fn()
     const exports = exportsIn(
-      menuTemplate(options({ workspace: 'textures', actions: actions({ exportTexture }) })),
+      menuTemplate(options({ workspace: 'materials', actions: actions({ exportMaterial }) })),
     )
     const roblox = submenuOf(exports, 'Matière')[3]
 
     roblox?.click?.(...([] as never[] as [never, never, never]))
 
-    expect(exportTexture).toHaveBeenCalledWith({ target: 'roblox' })
+    expect(exportMaterial).toHaveBeenCalledWith({ target: 'roblox' })
   })
 
   it('shows each workspace only the export that belongs to it', () => {
@@ -713,8 +724,8 @@ describe('the export menu', () => {
 
     expect(labels('3d')).toContain('Scène')
     expect(labels('3d')).not.toContain('Matière')
-    expect(labels('textures')).toContain('Matière')
-    expect(labels('textures')).not.toContain('Scène')
+    expect(labels('materials')).toContain('Matière')
+    expect(labels('materials')).not.toContain('Scène')
     expect(labels('skyboxes')).toContain('Ciel')
     expect(labels('skyboxes')).not.toContain('Matière')
     // Two rows rather than a submenu of formats, as the montage has: what an image writes is
@@ -924,5 +935,88 @@ describe('the home', () => {
     const panels = submenuOf(submenuOf(reported, 'Affichage'), 'Modules')
 
     expect(labels(panels)).toEqual(['Vos projets'])
+  })
+})
+
+/**
+ * The keys a caret has a use for — bare letters, `[`, `Delete`, anything Shift or Alt reaches. On
+ * macOS a declared accelerator is reserved with the system whatever `registerAccelerator` says,
+ * and typing a layer name armed a tool, letter by letter.
+ *
+ * A `global` command is the exception, and the case below says why: no window listens for that
+ * scope, so the menu is its only door and its key stays declared.
+ */
+describe('the keys the menu leaves to a field', () => {
+  const rowsOf = (items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
+    items.flatMap(item => [item, ...(Array.isArray(item.submenu) ? rowsOf(item.submenu) : [])])
+
+  const everyRow = (given: Partial<MenuOptions> = {}): MenuItemConstructorOptions[] =>
+    [...WORKSPACE_IDS, null].flatMap(workspace =>
+      rowsOf(menuTemplate(options({ ...given, workspace }))),
+    )
+
+  const typedRows = (rows: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
+    rows.filter(row => row.accelerator !== undefined && !/Cmd|Ctrl/.test(String(row.accelerator)))
+
+  const macRows = everyRow()
+
+  it('declares none of them on macOS, where the system would take the key', () => {
+    const declared = typedRows(macRows).map(
+      row => `${String(row.label)} — ${String(row.accelerator)}`,
+    )
+
+    expect(declared).toEqual([])
+  })
+
+  it('shows them elsewhere without reserving them', () => {
+    const shown = typedRows(everyRow({ isMac: false }))
+
+    expect(shown.length).toBeGreaterThan(0)
+    expect(shown.filter(row => row.registerAccelerator !== false)).toEqual([])
+  })
+
+  /** A remap is what the registry never saw coming — and Alt writes a character on a Mac. */
+  it('answers to the binding in force, not to the default', () => {
+    const overrides = { 'scene.duplicate': 'Alt+KeyK' }
+    // Off macOS the row still SHOWS the remapped key, which is what proves it reached it.
+    const shown = typedRows(everyRow({ overrides, isMac: false })).map(row => row.accelerator)
+
+    expect(shown).toContain('Alt+K')
+    expect(typedRows(everyRow({ overrides }))).toEqual([])
+  })
+
+  /**
+   * The one scope no window hears — `commandFor` excludes it. Dropping the key would leave the
+   * row as the only way in and no key at all, where the studio would rather keep both.
+   */
+  it('leaves a global command its key, the menu being its only door', () => {
+    const remapped = everyRow({ overrides: { 'document.save': 'KeyS' } })
+
+    expect(typedRows(remapped).map(row => row.accelerator)).toContain('S')
+  })
+
+  it('keeps the chords a field would never write', () => {
+    expect(macRows.find(row => row.id === 'scene.group')?.accelerator).toBe('CmdOrCtrl+G')
+  })
+})
+
+/**
+ * The 3D space opens a scene AND the interfaces shown over it. What the Edit menu offers has to
+ * follow the tab in front: Group, Carve or Weld over an interface act on a scene nobody is
+ * looking at, and Undo has to pop the history the tab actually holds.
+ */
+describe('the edit menu of a space that opens two kinds', () => {
+  const editRows = (kind: DocumentKind): string =>
+    labels(submenuOf(menuTemplate(options({ workspace: '3d', kind })), 'Édition')).join(' ')
+
+  it('offers what acts on a scene over a scene, and none of it over an interface', () => {
+    expect(editRows('scene')).toContain('Grouper')
+    expect(editRows('gui')).not.toContain('Grouper')
+  })
+
+  /** Both keep an Undo — what changes is WHOSE history it pops, which the scope decides. */
+  it('keeps an undo over either kind', () => {
+    expect(editRows('scene')).toContain('Annuler')
+    expect(editRows('gui')).toContain('Annuler')
   })
 })

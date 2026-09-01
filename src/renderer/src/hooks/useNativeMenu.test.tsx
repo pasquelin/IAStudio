@@ -1,3 +1,4 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MenuAbility, MenuCheck } from '@shared/domain/command'
@@ -26,7 +27,7 @@ const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
 // What saving does is `documentIo`'s own suite; what this one is about is the menu reaching it.
-vi.mock('@/app/documentIo', () => ({
+vi.mock('@/features/shell/documentIo', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
   saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))
@@ -270,17 +271,15 @@ describe('what the native menu is told', () => {
     expect(lastPublished().surface).toBe('3d')
   })
 
-  it('leaves the generator out while the section has no model', () => {
+  /**
+   * It used to be left out while nothing served the section's family, and the native menu said so
+   * too — so the way to a model was missing from the one place that offers one. ADR-23 § D.
+   */
+  it('announces the generator whether or not a model is chosen', () => {
     renderHook(() => useNativeMenu())
-    expect(lastPublished().tools).toContain('models')
-    expect(lastPublished().tools).not.toContain('generator')
-  })
+    expect(lastPublished().tools).toContain('generator')
 
-  // The section did not change, but what it can do did — and the menu is built app-wide, so
-  // nothing else would tell it.
-  it('announces the generator as soon as a model is chosen', () => {
-    renderHook(() => useNativeMenu())
-    useModels.getState().select('image', 'flux-dev')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'flux-dev')
     expect(lastPublished().tools).toContain('generator')
   })
 

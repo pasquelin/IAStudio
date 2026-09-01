@@ -1,5 +1,16 @@
+import { currentModelFamily } from '@shared/domain/model'
+import { LANDING_CHOICES } from '@shared/domain/settings'
+import { isRecord, mapKeys } from '@shared/guards'
 import { z } from 'zod'
+import {
+  isCloudProviderId,
+  SCENARIO_CLOUD,
+  type CloudAuth,
+  type CloudProviderId,
+} from '@shared/domain/aiCloud'
+import { currentAiRoleKey, type RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
+import { ASSISTANT_STEPS_DEFAULT, assistantStepsWithin } from '@shared/domain/assistantSteps'
 import { LANGUAGE_PREFERENCES } from '@shared/i18n/languages'
 import {
   DENSITIES,
@@ -26,9 +37,11 @@ import {
   VIEWPORT_QUALITIES,
 } from '@shared/domain/scene'
 import { HEX_COLOR } from '@shared/domain/color'
+import { localModelSchema } from '@main/ai/localModelSchema'
+import { migratedRoleChoices } from './migratedRoleChoices'
 import type { AccountBook, Credentials } from './accounts'
 
-// Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
+// Built from the shared unions, never retyped — the same reason `provider/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
 const scale = boundsOf('appearance.fontScale')
 
@@ -55,15 +68,21 @@ const retries = boundsOf('generation.maxRetries')
 const generation = z.object({
   concurrentJobs: z.number().int().min(jobs.min).max(jobs.max).optional(),
   maxRetries: z.number().int().min(retries.min).max(retries.max).optional(),
-  // Keys are model families and values model ids, both free strings here: the API adds
-  // families and models on its own schedule, and an unknown one must not fail the write.
+  // What the same branch held before employments carried the preference. Read only to be
+  // MIGRATED below — never written again. Keys are families and values model ids, both free
+  // strings: the API added models on its own schedule and an unknown one must not fail a read.
   defaultModels: z.record(z.string().min(1), z.string().min(1)).optional(),
   captionArrivals: z.boolean().optional(),
+  landing: z.enum(LANDING_CHOICES).optional(),
 })
 
 const recentProject = z.object({
   path: z.string().min(1),
-  name: z.string().min(1),
+  /**
+   * 🛑 No `name`, and required it emptied every setting: a project is named by its FOLDER, so
+   * nothing writes one any more — and this schema refusing the entry made `salvagePartialSettings`
+   * answer `{}` for the WHOLE file. Theme, keys, shortcuts and shelf, gone on the next write.
+   */
   openedAt: z.string().min(1),
   // Optional, and it has to stay so: a file written before 13 August carries no such field, and
   // requiring it would fail validation for every entry a user already had.
@@ -114,6 +133,7 @@ const homeSection = z.object({
 const home = z
   .object({
     enabled: z.boolean().optional(),
+    news: z.boolean().optional(),
     sections: z
       .array(homeSection.nullable().catch(null))
       .transform(entries => entries.filter(entry => entry !== null))
@@ -147,6 +167,8 @@ const lens = boundsOf('three.fieldOfView')
 const moveStep = boundsOf('three.snapTranslate')
 const turnStep = boundsOf('three.snapRotate')
 const scaleStep = boundsOf('three.snapScale')
+const surfaceOffset = boundsOf('three.snapSurfaceOffset')
+const handles = boundsOf('three.gizmoSize')
 
 const three = z.object({
   showGrid: z.boolean().optional(),
@@ -157,6 +179,9 @@ const three = z.object({
   snapTranslate: z.number().min(moveStep.min).max(moveStep.max).optional(),
   snapRotate: z.number().min(turnStep.min).max(turnStep.max).optional(),
   snapScale: z.number().min(scaleStep.min).max(scaleStep.max).optional(),
+  gizmoSize: z.number().min(handles.min).max(handles.max).optional(),
+  snapSurfaceAlign: z.boolean().optional(),
+  snapSurfaceOffset: z.number().min(surfaceOffset.min).max(surfaceOffset.max).optional(),
   shadows: z.boolean().optional(),
   shadowQuality: z.enum(SHADOW_QUALITIES).optional(),
   // Read from the shared list, never retyped: what the panel offers and what this refuses have
@@ -200,7 +225,26 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 // Enumerated rather than left a string: a model the API does not serve is answered with a 400,
 // and the panel that writes this offers a fixed list — so anything else came from a hand-edited
 // file, and the defaults are a better answer than a failing assistant.
-const assistant = z.object({ model: z.enum(ASSISTANT_MODELS).optional() })
+const assistant = z.object({
+  model: z.enum(ASSISTANT_MODELS).optional(),
+  /**
+   * Free text where the model above is enumerated: each cloud names its own, and the field that
+   * writes this offers no list. Unknown ids are DROPPED rather than refused — a cloud that left
+   * the registry costs its line, where a `refine` on the key would reset the whole file.
+   */
+  cloudModels: z
+    .record(z.string().min(1), z.string().max(200).catch(''))
+    .transform(entries =>
+      Object.fromEntries(
+        Object.entries(entries).filter(([id, name]) => isCloudProviderId(id) && name.trim() !== ''),
+      ),
+    )
+    .optional(),
+  // Clamped rather than refused: a hand-edited zero is a chain that can never run one round, and
+  // a hand-edited thousand is a bill. `boundsOf` reads the registry, so the field and the file
+  // cannot disagree.
+  steps: z.number().int().catch(ASSISTANT_STEPS_DEFAULT).transform(assistantStepsWithin).optional(),
+})
 
 const mcp = z.object({
   enabled: z.boolean().optional(),
@@ -230,7 +274,51 @@ const dictation = z.object({
   inputDeviceId: z.string().min(1).optional(),
 })
 
-const partialSettings = z.object({
+/**
+ * A provider, as narrow as the union it mirrors: a `kind` this does not name is dropped rather
+ * than stored, so a hand-edited file cannot point a role at something nothing can serve.
+ *
+ * Exported because the IPC gate parses the very same shape (`main/ai/validation.ts`), and two
+ * spellings of it would let a choice pass the door and be stripped by the store.
+ */
+export const roleProvider = z.union([
+  z.object({ kind: z.literal('local'), modelId: z.string().min(1) }),
+  // The id is checked against the REGISTRY, so a cloud added is stored without touching this and
+  // a cloud removed stops being read back — a role then falls back rather than pointing nowhere.
+  z.object({
+    kind: z.literal('cloud'),
+    providerId: z.string().refine(id => isCloudProviderId(id)),
+  }),
+])
+
+/**
+ * One unreadable choice costs its own line and nothing else, exactly as `shortcuts.overrides`
+ * above: the whole file goes through ONE `safeParse`, so without the `.catch` a single role
+ * pointing at a cloud that has since left the registry — the case this schema's own note
+ * advertises — would reset the theme, the projects folder and every binding along with it.
+ */
+const roleChoices = z
+  .record(z.string().min(1), roleProvider.nullable().catch(null))
+  .transform(entries =>
+    Object.fromEntries(
+      // Predicated rather than plain: a bare filter leaves `null` in the value type, and the
+      // stored shape has no room for one.
+      Object.entries(entries).filter((entry): entry is [string, RoleProvider] => entry[1] !== null),
+    ),
+  )
+
+// Declared here or dropped in silence, the same trap `storage.projectAccounts` carries: a zod
+// object STRIPS what it does not name, and this branch is reparsed on every settings write.
+const ai = z.object({
+  roles: roleChoices.optional(),
+  projectRoles: z.record(z.string().min(1), roleChoices).optional(),
+  // `.catch([])` for the reason `roleChoices` carries its own: one hand-edited manifest must not
+  // reset the theme, the projects folder and every binding along with it.
+  ownModels: z.array(localModelSchema).catch([]).optional(),
+})
+
+const partialSettingsShape = z.object({
+  ai: ai.optional(),
   general: general.optional(),
   home: home.optional(),
   workspaces: workspaces.optional(),
@@ -246,6 +334,79 @@ const partialSettings = z.object({
   mcp: mcp.optional(),
   dictation: dictation.optional(),
 })
+
+/**
+ * A family renamed since this file was written, brought up to date BEFORE any shape above reads
+ * it — a family name is half of four stored keys, and every one of them fails QUIETLY.
+ *
+ * `ownModels` carries `.catch([])`, so a single stale `family` blanks the whole list; a stale role
+ * key reads as "no choice made"; a stale `defaultModels` entry never reaches `migratedRoleChoices`.
+ * Idempotent, so it runs on what the renderer sends as readily as on what the disk holds.
+ */
+function withCurrentFamilies(value: unknown): unknown {
+  if (!isRecord(value)) return value
+
+  const brought: Record<string, unknown> = { ...value }
+  if (isRecord(value.ai)) brought.ai = currentAi(value.ai)
+  if (isRecord(value.generation) && isRecord(value.generation.defaultModels)) {
+    brought.generation = {
+      ...value.generation,
+      defaultModels: mapKeys(value.generation.defaultModels, currentModelFamily),
+    }
+  }
+
+  return brought
+}
+
+function currentAi(ai: Record<string, unknown>): Record<string, unknown> {
+  const brought: Record<string, unknown> = { ...ai }
+  if (isRecord(ai.roles)) brought.roles = mapKeys(ai.roles, currentAiRoleKey)
+  if (isRecord(ai.projectRoles)) {
+    brought.projectRoles = Object.fromEntries(
+      Object.entries(ai.projectRoles).map(([project, roles]) => [
+        project,
+        isRecord(roles) ? mapKeys(roles, currentAiRoleKey) : roles,
+      ]),
+    )
+  }
+  if (Array.isArray(ai.ownModels)) brought.ownModels = ai.ownModels.map(currentOwnModel)
+
+  return brought
+}
+
+function currentOwnModel(model: unknown): unknown {
+  if (!isRecord(model)) return model
+
+  const brought: Record<string, unknown> = { ...model }
+  if (typeof model.family === 'string') brought.family = currentModelFamily(model.family)
+  if (Array.isArray(model.serves)) {
+    brought.serves = model.serves.map(role =>
+      typeof role === 'string' ? currentAiRoleKey(role) : role,
+    )
+  }
+
+  return brought
+}
+
+/**
+ * The one place `generation.defaultModels` is still read, and it leaves as `ai.roles` — ADR-23.
+ *
+ * On the whole object rather than on either branch: the migration needs both at once, and a
+ * transform on `generation` alone could not reach the choices already made on the employment
+ * side, which have to win.
+ */
+const partialSettings = z
+  .preprocess(withCurrentFamilies, partialSettingsShape)
+  .transform(parsed => {
+    const { defaultModels, ...generation } = parsed.generation ?? {}
+    if (defaultModels === undefined) return parsed
+
+    return {
+      ...parsed,
+      generation,
+      ai: { ...parsed.ai, roles: migratedRoleChoices(defaultModels, parsed.ai?.roles ?? {}) },
+    }
+  })
 
 /** Validates what the renderer sends. Throws: an out-of-bounds write must not be persisted. */
 export function parsePartialSettings(value: unknown): PartialSettings {
@@ -280,11 +441,24 @@ export function parseSettingAction(value: unknown): SettingActionId {
 // and the API answers 401 to a credential that only differs by whitespace.
 const credential = z.string().trim().min(1)
 
-export function parseCredentials(key: unknown, secret: unknown): Credentials {
+export function parseCredentials(
+  key: unknown,
+  secret: unknown,
+  auth: CloudAuth = 'key-secret',
+): Credentials {
+  if (auth === 'key') return { key: credential.parse(key), secret: '' }
+
   return { key: credential.parse(key), secret: credential.parse(secret) }
 }
 
-const storedCredentials = z.object({ key: credential, secret: credential })
+/** Absent or Scenario: every caller written before clouds were a list. */
+export function parseCloudProviderId(value: unknown): CloudProviderId {
+  if (value === undefined || value === null || value === '') return SCENARIO_CLOUD
+  if (!isCloudProviderId(value)) throw new Error(`unknown cloud: ${String(value)}`)
+  return value
+}
+
+const storedCredentials = z.object({ key: credential, secret: z.string().trim() })
 
 /**
  * Reads back what this process wrote, on the same `credential` schema as the input path. A
@@ -317,23 +491,31 @@ const storedAccount = z.object({
   id: accountId,
   name: accountName,
   credentials: storedCredentials,
+  // Absent on every key written before clouds became a list, and `providerOf` reads that absence
+  // as Scenario — which is why no stored file has to be rewritten.
+  providerId: z.string().min(1).optional(),
 })
 
 const storedBook = z.object({
   // `catch` per entry rather than on the array: one unreadable account costs its own row, not
   // every key the user holds.
   accounts: z.array(storedAccount.nullable().catch(null)),
-  // Caught for the same reason as an entry: a corrupt `activeId` must cost the pointer, not
-  // the whole book.
-  activeId: z.string().min(1).nullable().catch(null),
+  // The shape written since clouds became a list. Caught like an entry: a corrupt pointer costs
+  // the pointer, not the whole book.
+  activeByProvider: z.record(z.string().min(1), z.string().min(1)).catch({}).optional(),
+  // What the same file held before. Read only to be MIGRATED below — never written again.
+  activeId: z.string().min(1).nullable().catch(null).optional(),
 })
 
 /**
  * Reads a book back from disk, keeping whatever still parses — and repairing nothing.
  *
- * The repair is `settleBook`, and it runs one step later, inside `withEnvironment`. It has to:
- * the `activeId` on disk may well name the development account, which lives in a file and not
- * in this blob, and repointing it here would send every launch to the wrong key.
+ * The repair is `settleBook`, and it runs one step later. A pointer that names nothing is
+ * repointed there, not here: this function only parses.
+ *
+ * A book written before clouds became a list carries `activeId` and no `providerId` anywhere: its
+ * pointer is read as Scenario's, which is what it always was. Nothing is rewritten until the next
+ * write, and `settleBook` repairs whatever the migration could not name.
  *
  * Null means the blob is not a book at all, which is what tells the caller to look for a lone
  * pair to migrate instead.
@@ -342,8 +524,10 @@ export function parseStoredAccounts(plain: string): AccountBook | null {
   const parsed = storedBook.safeParse(JSON.parse(plain))
   if (!parsed.success) return null
 
+  const migrated = parsed.data.activeId ? { [SCENARIO_CLOUD]: parsed.data.activeId } : {}
+
   return {
     accounts: parsed.data.accounts.filter(entry => entry !== null),
-    activeId: parsed.data.activeId,
+    activeByProvider: parsed.data.activeByProvider ?? migrated,
   }
 }

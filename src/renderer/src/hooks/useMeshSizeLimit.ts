@@ -22,7 +22,7 @@ export function useMeshSizeLimit(modelId: string | null): number | undefined {
 
     let live = true
     void getBridge()
-      ?.scenario.describeModel(modelId)
+      ?.provider.describeModel(modelId)
       .then(model => {
         if (live) setLimit(model.fields.find(field => field.kind === 'mesh')?.maxSize)
       })

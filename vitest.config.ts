@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 const alias = {
   '@shared': resolve('src/shared'),
   '@main': resolve('src/main'),
+  '@game': resolve('src/game'),
   '@': resolve('src/renderer/src'),
 }
 
@@ -107,22 +108,27 @@ const TEST_POOL = 'threads'
  * a stale entry costs only the second it wastes.
  */
 const DOM_BOUND = [
-  'src/renderer/src/app/documentIo.test.ts',
+  'src/renderer/src/features/shell/documentIo.test.ts',
   // The composer makes a canvas per layer to read its pixels back, and a spy has to have
   // something to stand in FOR.
-  'src/renderer/src/spaces/image/psdDocument.test.ts',
+  'src/renderer/src/features/image/psdDocument.test.ts',
   // Not for a DOM: the name it proposes is « Sans titre N », composed by `i18next` — only the
   // renderer setup initialises it, and an uninitialised `t` answers with no string at all.
-  'src/renderer/src/app/newDocument.test.ts',
+  'src/renderer/src/features/shell/newDocument.test.ts',
+  // The same reason: a generated script asked for a tab of its own is named the same way.
+  'src/renderer/src/stores/codeGeneration.test.ts',
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
-  'src/renderer/src/app/toolComponents.test.ts',
-  'src/renderer/src/app/unsavedGuard.test.ts',
-  'src/renderer/src/dictation/insertAtCaret.test.ts',
+  'src/renderer/src/features/shell/components/ToolWindow/toolComponents.test.ts',
+  'src/renderer/src/features/shell/unsavedGuard.test.ts',
+  // `renderHook` mounts into a document, and this one has no component to make it a `.tsx`.
+  'src/renderer/src/hooks/useTaskChoices.test.ts',
+  'src/renderer/src/features/dictation/insertAtCaret.test.ts',
   'src/renderer/src/engines/audio/audioRender.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
   'src/renderer/src/engines/canvas/CanvasOverlay.test.ts',
+  'src/renderer/src/engines/code/CodeEditor.test.ts',
   'src/renderer/src/engines/core/canvas2d.test.ts',
   'src/renderer/src/engines/core/offScreenHost.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
@@ -148,7 +154,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
   'src/renderer/src/engines/scene/threeFactory.test.ts',
   'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',
-  'src/renderer/src/engines/texture/TextureRenderer.test.ts',
+  'src/renderer/src/engines/material/MaterialRenderer.test.ts',
   'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
   'src/renderer/src/engines/timeline/painter.test.ts',
   // The stage it stands in for hands back a canvas, and a canvas is what the sink wraps.
@@ -157,32 +163,38 @@ const DOM_BOUND = [
   'src/renderer/src/helpers/menuIcon.test.ts',
   // Not for a DOM of their own: they read the labels a menu is raised with, and `i18next` is only
   // initialised by the renderer setup — `initI18n` reads `localStorage`, which node has not.
-  'src/renderer/src/panels/assets/assetMenu.test.ts',
-  'src/renderer/src/panels/layers/layerMenu.test.ts',
-  'src/renderer/src/spaces/three/sceneAddMenu.test.ts',
-  'src/renderer/src/spaces/three/sceneNodeMenu.test.ts',
-  'src/renderer/src/helpers/modelForFamily.test.ts',
-  'src/renderer/src/helpers/scrollParent.test.ts',
+  'src/renderer/src/features/explorer/assetMenu.test.ts',
+  'src/renderer/src/features/image/components/Layer/List/layerMenu.test.ts',
+  'src/renderer/src/features/scene/components/Scene/Document/sceneAddMenu.test.ts',
+  'src/renderer/src/features/scene/components/Scene/sceneNodeMenu.test.ts',
+  'src/renderer/src/helpers/modelForCapability.test.ts',
   'src/renderer/src/helpers/toolRegistry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',
+  'src/renderer/src/hooks/useAssistantDoor.test.ts',
   'src/renderer/src/hooks/useAutomaticPulls.test.ts',
   'src/renderer/src/hooks/useColumnKeys.test.ts',
   'src/renderer/src/hooks/useContextMenu.test.ts',
   'src/renderer/src/hooks/useCostEstimate.test.ts',
   'src/renderer/src/hooks/useLatest.test.ts',
   'src/renderer/src/hooks/useLoadable.test.ts',
+  // Not for a DOM either: it reads the sentences out of the French bundle, which only the
+  // renderer setup initialises.
+  'src/renderer/src/hooks/useModelFit.test.ts',
+  'src/renderer/src/hooks/useModelReach.test.ts',
   'src/renderer/src/hooks/usePlanRefusal.test.ts',
   'src/renderer/src/hooks/useReloadKey.test.ts',
   'src/renderer/src/hooks/useShortcutLabel.test.ts',
   'src/renderer/src/i18n/index.test.ts',
-  'src/renderer/src/spaces/image/imageTools.test.ts',
-  'src/renderer/src/spaces/textures/deriveChannel.test.ts',
-  'src/renderer/src/spaces/three/sceneTools.test.ts',
-  'src/renderer/src/spaces/video/videoTools.test.ts',
+  'src/renderer/src/features/image/imageTools.test.ts',
+  'src/renderer/src/features/material/deriveChannel.test.ts',
+  'src/renderer/src/features/scene/components/Scene/sceneTools.test.ts',
+  'src/renderer/src/features/video/components/videoTools.test.ts',
   'src/renderer/src/stores/dictation.test.ts',
   'src/renderer/src/stores/documents.test.ts',
   'src/renderer/src/stores/layouts.test.ts',
   // Reads what a previous session stored back out of `localStorage`, as the layouts do.
+  // The frames a game runs on are `requestAnimationFrame`, which only a browser has.
+  'src/renderer/src/stores/play.test.ts',
   'src/renderer/src/stores/skeletonProfiles.test.ts',
   'src/renderer/src/stores/models.test.ts',
   'src/renderer/src/testSetup.test.ts',
@@ -233,13 +245,55 @@ export default defineConfig({
           // The same split as the tests, and it has to be stated: a project with no benchmark
           // glob of its own keeps the unanchored default and runs EVERY bench of the tree —
           // this one was measuring the main process's, under jsdom, on top of the `node` project
-          // already doing it. No `.bench.tsx` exists today; the day one does, it lands here.
+          // already doing it. A `.bench.tsx` lands HERE, and `tools.bench.tsx` is one on purpose:
+          // it needs the `localStorage` that `persist` writes to, which `node` does not have.
           benchmark: { include: ['src/renderer/**/*.bench.tsx'] },
           // Stylesheets are stubbed to an empty string by default, `?raw` included — which
           // silently empties the checks that read a rule back. Only the raw reads are spared;
           // nothing that a component imports for its styles is processed.
           css: { include: [/\.css\?raw$/] },
           setupFiles: ['src/renderer/src/testSetup.ts'],
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          /**
+           * The bench's own fixtures, which `src` globs never reach. Free and offline, unlike
+           * `pnpm banc`, so it belongs to the gate. Anchored on `scripts/banc/` and not on
+           * `scripts/`: that is what `tsconfig.banc.json` covers, and a test outside it would
+           * run having never been typechecked.
+           */
+          name: 'banc',
+          // jsdom: the bench drives the REAL renderer handlers through `runAction`, and the
+          // stores they read are written for a window.
+          environment: 'jsdom',
+          setupFiles: ['src/renderer/src/testSetupStores.ts'],
+          pool: TEST_POOL,
+          testTimeout: TEST_TIMEOUT,
+          include: ['scripts/banc/**/*.test.ts'],
+          benchmark: { include: ['scripts/banc/**/*.bench.ts'] },
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          /**
+           * The game runtime, which is neither the window nor the main process: it has to run
+           * inside an exported game that ships none of the studio, so it gets a project of its
+           * own rather than a corner of one — no setup file, and nothing of the studio in scope.
+           *
+           * jsdom because that is where a game runs: a port reading a `KeyboardEvent` needs one.
+           * What this tree may IMPORT is held by `src/main/game-imports.test.ts`.
+           */
+          name: 'game',
+          environment: 'jsdom',
+          pool: TEST_POOL,
+          testTimeout: TEST_TIMEOUT,
+          // `.tsx` as well, though nothing here may import React: the guards sweep `\.tsx?$`, and
+          // a file no project includes runs nowhere while looking covered.
+          include: ['src/game/**/*.test.ts', 'src/game/**/*.test.tsx'],
+          benchmark: { include: ['src/game/**/*.bench.ts'] },
         },
       },
       {
@@ -254,7 +308,7 @@ export default defineConfig({
           pool: TEST_POOL,
           testTimeout: TEST_TIMEOUT,
           include: ['src/renderer/**/*.test.ts'],
-          // The three renderer benchmarks, anchored for the reason the `node` project gives.
+          // The renderer's benchmarks, anchored for the reason the `node` project gives.
           benchmark: { include: ['src/renderer/**/*.bench.ts'] },
           exclude: DOM_BOUND,
           // The half of the renderer setup that needs no browser. Without it these suites kept

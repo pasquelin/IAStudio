@@ -1,11 +1,13 @@
+import { orElse } from '@shared/promises'
 import { watch, type FSWatcher } from 'node:fs'
 import { cp, mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { exists } from '@main/persistence'
 import { isStagingName } from '@shared/domain/document'
 import { entriesByName, isHiddenEntry, pathIn, type FolderEntry } from '@shared/domain/folder'
-import { isUnwatchedByGit } from '@shared/domain/git'
-import { foldForSearch } from '@shared/text'
+import { GIT_FOLDER, isUnwatchedByGit } from '@shared/domain/git'
+import { INDEX_FOLDER } from '@shared/domain/project'
+import { matchesWords, searchWords } from '@shared/text'
 
 /**
  * How far a search walks. A project is someone's own folder and can hold a checkout of anything;
@@ -13,6 +15,20 @@ import { foldForSearch } from '@shared/text'
  * nobody was looking for by the time the tree has drawn its ancestors.
  */
 const MAX_SEARCH_DEPTH = 12
+
+/**
+ * Folders no walk goes DOWN into. A different question from `isHiddenEntry`, which decides what
+ * is SHOWN: `node_modules` wears no dot, so it is listed like any folder and unfolds when asked
+ * — it is only never CROSSED. `folderRoles.bench.ts` holds what it costs.
+ */
+const UNWALKED: ReadonlySet<string> = new Set(['node_modules'])
+
+/**
+ * What the studio's OWN walk refuses on top, DERIVED so a name added above reaches both: `named`
+ * reads hidden entries to find the studio's markers, and none of them is under either of these.
+ * A reader asking to SEE them is the other question, and `hidden` still answers it.
+ */
+const UNWALKED_BY_THE_STUDIO: ReadonlySet<string> = new Set([...UNWALKED, GIT_FOLDER, INDEX_FOLDER])
 
 export type FolderReader = {
   /**
@@ -30,7 +46,8 @@ export type FolderReader = {
    * at a time, so it cannot filter what it has never read — a word matching a file nobody has
    * unfolded would answer nothing. The tree rebuilds the ancestors of what comes back.
    *
-   * Folded on both sides (`foldForSearch`), so `foret` finds `Forêt`.
+   * Matched by WORDS in any order and folded on both sides (`matchesWords`), so `foret` finds
+   * `Forêt` and `green sailboat` finds a file whose name puts the two three commas apart.
    */
   search: (term: string, hidden?: boolean) => Promise<FolderEntry[]>
   /**
@@ -54,6 +71,14 @@ export type FolderReader = {
    * a destination that has gone is told apart from an empty one.
    */
   names: (relative: string) => Promise<readonly string[] | null>
+  /**
+   * Every entry of the WHOLE project folder called exactly `name`, hidden ones included.
+   *
+   * Beside `walk` rather than a filter over it: `walk` materialises a `FolderEntry` per file of
+   * the project — a hundred thousand of them — and the role markers are ten. The predicate goes
+   * DOWN into the one traversal instead of the array coming back up.
+   */
+  named: (name: string) => Promise<FolderEntry[]>
 }
 
 /**
@@ -105,12 +130,13 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
   const walkAll = async (
     hidden: boolean,
     keep: (entry: FolderEntry) => boolean,
-    sorted = true,
+    sorted: boolean,
+    unwalked: ReadonlySet<string>,
   ): Promise<FolderEntry[]> => {
     const found: FolderEntry[] = []
 
     const walk = async (relative: string, depth: number): Promise<void> => {
-      const entries = await level(relative, hidden, sorted).catch((): FolderEntry[] => [])
+      const entries = await orElse(level(relative, hidden, sorted), [])
       const deeper: Promise<void>[] = []
 
       for (const entry of entries) {
@@ -120,6 +146,7 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
         // writing, half-landed. A document wears the extension of an open format now, and a
         // glTF delivered unpacked into `Repérages.gltf/` is material the rescan must see.
         if (isStagingName(entry.name)) continue
+        if (unwalked.has(entry.name)) continue
         deeper.push(walk(entry.path, depth + 1))
       }
 
@@ -139,12 +166,13 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
     list: async (relative, hidden) => await level(relative, hidden),
 
     search: async (term, hidden = false) => {
-      // Trimmed here as well as in the panel: a term of spaces alone would otherwise match every
-      // name holding one, which is most of them.
-      const wanted = foldForSearch(term.trim())
-      if (wanted === '') return []
+      // By WORDS, not by substring: a file named after the prompt that made it holds the words a
+      // person searches by, three commas apart — see `matchesWords`. Folded once, here, rather
+      // than once per entry of a walk that crosses the whole project.
+      const words = searchWords(term)
+      if (words.length === 0) return []
 
-      return await walkAll(hidden, entry => foldForSearch(entry.name).includes(wanted))
+      return await walkAll(hidden, entry => matchesWords(entry.name, words), true, UNWALKED)
     },
 
     walk: async (hidden = false) =>
@@ -155,9 +183,13 @@ export function createFolderReader(rootOf: () => string, languageOf: () => strin
       // and not one caller of this keeps the order — the domain view groups what comes back, the
       // document listing re-sorts by code unit, and the reconciliation pass puts it into a `Set`.
       // This is the walk that crosses a hundred thousand files on every save.
-      await walkAll(hidden, entry => entry.kind === 'file', false),
+      await walkAll(hidden, entry => entry.kind === 'file', false, UNWALKED),
 
-    names: async relative => await readdir(join(rootOf(), relative)).catch(() => null),
+    names: async relative => await orElse(readdir(join(rootOf(), relative)), null),
+
+    // Unsorted, and hidden shown: what this answers is the studio's own bookkeeping.
+    named: async name =>
+      await walkAll(true, entry => entry.name === name, false, UNWALKED_BY_THE_STUDIO),
   }
 }
 

@@ -82,10 +82,14 @@ export type MediaService = {
   cancel: (assetId: string) => void
 }
 
+export function webCodecsReads(codec: string | undefined): boolean {
+  return codec !== undefined && DECODABLE_CODECS.includes(codec)
+}
+
 export function needsProxy(probe: MediaProbe): boolean {
   // An audio-only file has no picture to stand in for.
   if (probe.height === undefined) return false
-  return !DECODABLE_CODECS.includes(probe.codec) || probe.height > 1080
+  return !webCodecsReads(probe.codec) || probe.height > 1080
 }
 
 /** How far along the whole ingest each stage is — announced when the stage starts. */
@@ -112,6 +116,27 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
    * nothing — and then write the same proxy file from two ffmpeg processes at once.
    */
   const claimed = new Set<string>()
+  const hashWaiters = new Map<string, Array<() => void>>()
+
+  const occupyHash = (hash: string): boolean => {
+    if (claimed.has(hash)) return false
+    claimed.add(hash)
+    return true
+  }
+
+  const waitForHash = (hash: string): Promise<void> =>
+    new Promise(resolve => {
+      const waitingOn = hashWaiters.get(hash) ?? []
+      waitingOn.push(resolve)
+      hashWaiters.set(hash, waitingOn)
+    })
+
+  const freeHash = (hash: string): void => {
+    claimed.delete(hash)
+    const waitingOn = hashWaiters.get(hash)
+    hashWaiters.delete(hash)
+    waitingOn?.forEach(resume => resume())
+  }
 
   // A pool, not a burst: forty rushes picked at once would be forty ffmpeg processes.
   const acquire = async (): Promise<void> => {
@@ -285,11 +310,10 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
 
         // Claimed before the catalogue is asked, and without an await in between: the question
         // and the answer must not be separated, or two picks of the same bytes both hear "no".
-        if (claimed.has(hash)) {
+        if (!occupyHash(hash)) {
           stage = 'duplicate'
           return
         }
-        claimed.add(hash)
         mine = hash
 
         // The row already in the catalogue keeps its tags, its proxy and its waveform, and this
@@ -315,7 +339,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       } finally {
         release()
         running.delete(assetId)
-        if (mine) claimed.delete(mine)
+        if (mine) freeHash(mine)
 
         // Two outcomes leave nothing worth keeping: a file that is not media, and bytes the
         // catalogue already holds. Both drop the row this pick minted rather than write to it.
@@ -323,7 +347,11 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         if (stage === 'duplicate' || stage === 'unreadable') {
           // Swallowed: this runs in a `finally`, and the project may have been closed while the
           // file was being read — a throw here would escape the ingest nobody is awaiting.
-          await deps.discard(assetId).catch(() => {})
+          try {
+            await deps.discard(assetId)
+          } catch {
+            // Runs in a `finally` on a project that may be closed, as the note above says.
+          }
         } else if (stage !== 'queued') {
           // Saved whatever else happened: a proxy that failed after the probe and the hash
           // succeeded must not throw them away — there is no retry, and re-picking makes a
@@ -353,6 +381,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       const cancelled = (): boolean => controller.signal.aborted
       const fields: Partial<Asset> = {}
       let stage: IngestStage = 'queued'
+      let mine: string | null = null
 
       const advance = (next: IngestStage): void => {
         stage = next
@@ -373,6 +402,9 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         fields.hash = await deps.hash(path)
         if (cancelled()) return
 
+        while (!occupyHash(fields.hash)) await waitForHash(fields.hash)
+        mine = fields.hash
+
         await deriveFiles(
           { assetId, source: path, kind, probe, key: fields.hash, poster },
           fields,
@@ -387,6 +419,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         // Only if the entry is still MINE: the run this one replaced ends after it, and a blind
         // delete would take the live controller out — leaving "cancel" with nothing to abort.
         if (running.get(assetId) === controller) running.delete(assetId)
+        if (mine) freeHash(mine)
 
         // Never discarded, whatever happened: the row stands for an asset the account holds,
         // and a proxy that failed is a take that plays without one — not a take that is gone.

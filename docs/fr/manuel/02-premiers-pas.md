@@ -51,11 +51,11 @@ forme d’onde. L’application distribuée, elle, porte déjà ces binaires.
 
 ## Étape 2 — Obtenir une clé API
 
-Le studio ne fabrique rien lui-même. Il demande à Scenario, et Scenario a besoin de savoir qui
+Le studio ne fabrique rien lui-même. Il demande au service de génération, et celui-ci a besoin de savoir qui
 demande. C’est le rôle de la **clé API** et du **secret API** : un identifiant et un mot de
 passe, réservés aux programmes.
 
-1. Créez ou ouvrez votre compte sur [app.scenario.com](https://app.scenario.com).
+1. Créez ou ouvrez votre compte chez votre fournisseur de génération.
 2. Cherchez la section des clés API dans les réglages de votre compte.
 3. Créez une clé. Le site vous donne **deux chaînes de caractères** : une clé et un secret.
 4. **Copiez-les tout de suite.** Le secret n’est souvent affiché qu’une fois.
@@ -69,7 +69,7 @@ passe, réservés aux programmes.
 ## Étape 3 — Brancher votre compte
 
 1. Ouvrez les réglages : `⌘,` sur macOS, `Ctrl+,` sur Windows et Linux. Ou par le menu —
-   **Scenario Studio ▸ Réglages…** sur macOS, **Fichier ▸ Réglages…** ailleurs, car il n’y a
+   **IA Studio ▸ Réglages…** sur macOS, **Fichier ▸ Réglages…** ailleurs, car il n’y a
    de menu d’application que sur macOS.
 2. Dans la liste de gauche, cliquez sur **Compte**.
 3. Donnez-lui un **nom** — ce que vous voulez : « Studio », « Perso », votre prénom.
@@ -77,16 +77,16 @@ passe, réservés aux programmes.
 5. Cliquez **Ajouter un compte**.
 
 **Pourquoi un nom ?** Parce que le studio en tient plusieurs. Une clé API porte son propre projet
-Scenario, et vous pouvez passer de l’un à l’autre depuis la barre de titre. Pour un premier
+distant, et vous pouvez passer de l’un à l’autre depuis la barre de titre. Pour un premier
 compte, le nom n’a aucune importance — mettez ce qui vous vient.
 
-Le studio vérifie immédiatement auprès de Scenario. Trois réponses possibles :
+Le studio vérifie immédiatement auprès du fournisseur. Trois réponses possibles :
 
 | Ce qui s’affiche | Ce que ça veut dire |
 |---|---|
 | Une pastille verte **Utilisé** sur la ligne du compte | tout va bien, vous pouvez fermer les réglages |
 | **Clé ou secret API invalide.** | une des deux chaînes est fausse — souvent un espace collé en trop au début ou à la fin |
-| **Impossible de joindre Scenario. Vérifiez votre connexion.** | ce n’est pas votre clé, c’est votre connexion internet |
+| **Impossible de joindre le service de génération. Vérifiez votre connexion.** | ce n’est pas votre clé, c’est votre connexion internet |
 
 **Où vont vos identifiants.** Ils sont chiffrés par le trousseau de votre système — Keychain sur
 macOS, le gestionnaire d’identifiants sur Windows, le trousseau du bureau sur Linux — et rangés
@@ -131,8 +131,13 @@ Ce qu’il installe dedans :
 
 ```
 Mon premier projet/        ← le dossier que VOUS avez choisi
-├── assets/           tout ce que vous fabriquez et importez
-├── documents/        vos travaux en cours
+├── Images/           un dossier par section du studio : ce que vous y créez
+├── Video/              et ce que vous y générez y atterrit ensemble
+├── Audio/
+├── Materials/
+├── Skyboxes/
+├── Scripts/
+├── Modelling/        scènes, modèles et animations, dans trois sous-dossiers
 ├── .project.json     la carte d'identité du projet — caché
 └── .index/           le catalogue et ses caches — à garder, caché
 ```
@@ -157,7 +162,7 @@ Le chapitre [Les projets](04-projets.md) détaille chaque dossier.
 
 En haut de la fenêtre, cliquez sur **Image**.
 
-À gauche, le panneau **Modèles** se remplit. Ce sont les modèles du catalogue Scenario capables
+À gauche, le panneau **Modèles** se remplit. Ce sont les modèles du catalogue distant capables
 de fabriquer des images. Il y en a beaucoup.
 
 Pour un premier essai, prenez-en un au hasard parmi ceux mis en avant : cliquez sur une
@@ -203,7 +208,7 @@ comptez de dix secondes à deux minutes. Vous n’avez pas à rester à regarder
 toute seule, et vous pouvez faire autre chose pendant ce temps.
 
 Quand la ligne affiche **Terminée**, votre image est arrivée. Elle est rangée dans le panneau
-**Assets** — l’étagère du projet — et sur votre disque, dans `Images/`.
+l’**Explorateur** — le dossier du projet — et sur votre disque, dans `Images/`.
 
 **Cliquez sur la vignette** : l’**Inspecteur**, à droite, montre tout ce qu’on sait d’elle — sa
 taille, son poids, le modèle qui l’a faite, le prompt que vous avez écrit, et la *graine* qui

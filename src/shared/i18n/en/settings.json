@@ -7,18 +7,20 @@
     "noResult": "No setting matches this search.",
     "restoreDefault": "Restore the default value",
     "restoreDefaultHint": "Puts back the original value, the one from before any change",
-    "account": "Account",
+    "account": "API keys",
     "appearance": "Appearance",
     "generation": "Generation",
     "media": "Media",
     "git": "Versions",
     "dictation": "Dictation",
-    "accountDescription": "API credentials, encrypted by the system keychain.",
+    "ai": "AI models",
+    "accountDescription": "One key per service, encrypted by the keychain.",
     "appearanceDescription": "Theme and control density.",
     "generationDescription": "Generation queue and default models, per family.",
     "gitDescription": "Version tracking of the project folder, by git. Your files only.",
     "mediaDescription": "Preparation of imported files: proxies and waveforms.",
     "dictationDescription": "Speaking a text instead of typing it. Everything happens on this computer: nothing you say is sent anywhere.",
+    "aiDescription": "Which AI serves each operation. The studio here, Ollama here, or an online service you have a key for.",
     "theme": {
       "title": "Theme",
       "help": "Picks the colours of the whole application. The dark theme rests the eyes over a long session in a dimly lit room; the light one reads better in broad daylight. “System” follows your computer’s own setting and switches on its own, for instance when evening comes.",
@@ -31,6 +33,10 @@
       "help": "Sets how big the buttons are and how tall the rows sit. “Compact” fits more on screen; “Comfortable” leaves more air between things, which makes them easier to aim at with a mouse.",
       "comfortable": "Comfortable",
       "compact": "Compact"
+    },
+    "assistantSteps": {
+      "title": "Assistant chaining steps",
+      "help": "How many actions the assistant may chain for one request, when each depends on what the one before answered — find a file, open it, then place it in a scene. Every step is a billed round trip, so this number is the only thing keeping a misread request from running without end. Twelve covers most chains."
     },
     "concurrentJobs": {
       "title": "Concurrent generations",
@@ -157,7 +163,8 @@
       "canvas": "In the image",
       "skybox": "In the sky",
       "audio": "In the audio editor",
-      "texture": "In the material"
+      "material": "In the material",
+      "gui": "In an interface"
     },
     "spaces": "Workspaces",
     "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",
@@ -184,7 +191,7 @@
     },
     "viewportQuality": {
       "title": "Viewport quality",
-      "help": "How finely the same frame is drawn. Nothing about the models or the textures changes — only the number of pixels worked out. Performance also caps how fine the shadows get.",
+      "help": "How finely the same frame is drawn. Nothing about the models or the images changes — only the number of pixels worked out. Performance also caps how fine the shadows get.",
       "performance": "Performance",
       "balanced": "Balanced",
       "high": "High"
@@ -218,6 +225,18 @@
       "title": "Scale step",
       "help": "How much the scale moves in one step while snapping is on. What is reachable is the multiples of the step: 0.1 lands exactly on tenths and halves, 0.25 on quarters."
     },
+    "gizmoSize": {
+      "title": "Handle size",
+      "help": "The MOST room the transform handles take on screen. They never grow past the object they hold: on a small part they follow its size, and beyond that they keep to this share of the view rather than growing without end."
+    },
+    "snapSurfaceAlign": {
+      "title": "Align to surface",
+      "help": "While the surface snap is on, what you lay down lies along the slope it meets. Unchecked, it keeps its own orientation and only drops."
+    },
+    "snapSurfaceOffset": {
+      "title": "Surface offset",
+      "help": "How many metres what you lay down floats above the surface. Zero rests it on contact; a few centimetres keep two faces from fighting over the same plane on screen."
+    },
     "fieldOfView": {
       "title": "Field of view",
       "help": "How much the camera takes in, in degrees. A narrow angle pulls close and flattens, like a telephoto lens; a wide one shows far more but bends the edges. 60 is close to what an eye sees."
@@ -236,7 +255,7 @@
     },
     "openLogFolder": {
       "title": "Technical log",
-      "help": "Opens the file manager on the log the studio writes on every launch. This is the file you will be asked for when something fails without saying anything on screen.",
+      "help": "Opens the file manager on the logs the studio writes on every launch: “main.log”, the one you will be asked for when something fails with nothing on screen, and “assistant.log”, which keeps in full what is sent to each model and what it answers.",
       "button": "Show the technical log"
     },
     "openSettingsFile": {
@@ -248,24 +267,24 @@
       "help": "Opens a way in on this machine alone, through which a client such as Claude Code can run the same actions the assistant runs. Anything that spends or uploads asks for a yes on screen, exactly as it does here. Switched off, nothing is listening."
     },
     "mcpDelegateFiles": {
-      "title": "Let it touch files without asking",
-      "help": "Moving, renaming, binning, putting a git-tracked file back. The Explorer takes some of those back, never all. Without this, each one is asked about."
+      "title": "Move and delete my files without asking me",
+      "help": "An outside client may move, rename or bin a file of your project, and put a git-tracked file back, without showing anything. The Explorer takes some of those back, never all. Unticked, every gesture is put in front of you first."
     },
     "mcpDelegateAsset": {
-      "title": "Let it upload without asking",
-      "help": "Sending an image to your library, where it stays. It costs no creative units. Without this, every upload is asked about."
+      "title": "Upload to my library without asking me",
+      "help": "An outside client may send an image to your library, where it stays. It costs no creative units. Unticked, every upload is put in front of you first."
     },
     "mcpDelegateRemote": {
-      "title": "Let it publish to a server without asking",
-      "help": "Sending a branch to a remote git repository. It is the only gesture that leaves this machine, and nothing here takes it back. Arm it knowingly."
+      "title": "Publish to a remote server without asking me",
+      "help": "An outside client may send a branch to a remote git repository. It is the only gesture that leaves this machine, and nothing here takes it back. Arm it knowingly."
     },
     "mcpDelegateBudget": {
-      "title": "Creative units spendable without asking",
-      "help": "What a client may spend in this window before the studio starts asking again. At zero, every spend is asked about. A generation the API declines to price is never started without you, whatever this holds."
+      "title": "Spend creative units without asking me",
+      "help": "What an outside client may spend in this window before the studio starts asking again. At zero, every spend is put in front of you first. A generation the API declines to price is never started without you, whatever this holds."
     },
     "copyMcpCommand": {
       "title": "Connection command",
-      "help": "Copies the line to paste in a terminal to connect a client. The token and the port change every time the studio starts, so the line has to be copied again after each launch.",
+      "help": "Copies the line to paste in a terminal to connect a client. It holds no port and no token, so it stays true for every launch to come.",
       "button": "Copy"
     },
     "installResolveBridge": {
@@ -303,6 +322,113 @@
     "sectionHint": "Shows the settings of this section",
     "sectionStagedHint": "This section has changes that were not applied",
     "searchSectionHint": "Opens the whole section, rather than the one result",
-    "searchResultHint": "Goes to the setting, in the section it belongs to"
+    "searchResultHint": "Goes to the setting, in the section it belongs to",
+    "landing": {
+      "title": "Where a generation lands",
+      "help": "When a document of the same kind is already open. With nothing open, the result opens.",
+      "ask": "Ask every time",
+      "document": "Into the open document",
+      "newTab": "In a tab of its own"
+    },
+    "homeNews": {
+      "title": "Model news",
+      "help": "Reads the trending models and the articles published on Hugging Face, the host every weight of the catalogue already comes from. Unticked, the studio contacts nobody for this band."
+    },
+    "mcp": "Way in (MCP)",
+    "mcpDescription": "The studio’s second door: another program on this machine — Claude Code, Cursor, any client speaking the MCP protocol — runs the same actions the assistant runs, from its own project. Shut to start with.",
+    "mcpListening": "Open: the studio is listening on 127.0.0.1:{{port}}, on this machine alone.",
+    "mcpClosed": "Shut: nothing is listening. Tick the setting above to open the door.",
+    "mcpHowTo": "Connect a client",
+    "mcpStepOpen": "Tick “Drive the studio from outside”, whenever suits you. The way in starts at once, and a client already configured finds it.",
+    "mcpStepCopy": "Copy the connection command, for a client driven from a terminal — or the configuration block, for a client that reads a file. Neither holds a port or a token.",
+    "mcpStepPaste": "Paste it into a terminal open in your project, or the block into your client’s configuration file.",
+    "mcpNothingToRedo": "Only needs doing once. What you paste names the studio as a program to start, never an address to reach, so it keeps working across every launch — including the ones where the port and the token are new, which is all of them. A client already registered under the same name is replaced; there is nothing to remove first.",
+    "mcpExamples": "What a client can do",
+    "mcpExampleGenerate": "“Find a night skybox model, prepare the generation, but do not send it.”",
+    "mcpExampleTidy": "“Sort this week’s rushes into one folder per day.”",
+    "mcpExampleScene": "“Put a sphere two metres to the right of the cube and light it warm.”",
+    "mcpGuards": "What guards the door",
+    "mcpGuardLocal": "The way in listens on this machine only: nothing from the network reaches it.",
+    "mcpGuardToken": "A new token every launch; a request without it is refused.",
+    "mcpGuardOrigin": "A request from a web page open in your browser is refused on that ground alone.",
+    "mcpGuardConsent": "Anything that spends or uploads shows on screen and waits for your yes — except what you delegated above.",
+    "copyMcpConfig": {
+      "title": "Configuration block",
+      "help": "Copies the same connection as JSON, for a client configured by a file rather than by a command. Like the command, it stays true for every launch.",
+      "button": "Copy the JSON"
+    },
+    "memory": "Assistant memory",
+    "memoryDescription": "What the assistant has learned about your projects. What it learned about a project lives in that project’s folder and travels with it; what it learned about how you work stays on this machine.",
+    "memoryProject": "This project",
+    "memoryGlobal": "This machine",
+    "memoryProjectHint": "What the assistant learned about the open project. That file travels with the folder.",
+    "memoryGlobalHint": "What the assistant learned about how you work. It never leaves this machine.",
+    "memoryGraph": "Graph",
+    "memoryGraphCount": "{{memories, number}} memories · {{links, number}} links",
+    "memoryGraphDescription": "What the assistant has learned, and what holds together. One dot per memory, a line between two that are about the same thing.",
+    "memoryGraphEmpty": "It takes at least two connected memories before a graph shows anything.",
+    "memorySearch": "Search the memory",
+    "memoryEmpty": "The assistant has learned nothing here yet.",
+    "memoryUnmatched": "No memory answers that search.",
+    "memoryNoProject": "Open a project to see what the assistant learned about it.",
+    "memoryUnreadable": "The memory file could not be read whole. What follows may be incomplete.",
+    "memoryTooNew": "This file was written by a newer build of the studio. Nothing has been changed.",
+    "memoryPin": "Pin",
+    "memoryPinHint": "A pinned memory is always given to the assistant, whatever the question.",
+    "memoryUnpin": "Unpin",
+    "memoryUnpinHint": "The assistant will only receive it when it answers the question asked.",
+    "memoryArchive": "Archive",
+    "memoryArchiveHint": "Sets it aside without erasing it: still readable, no longer given.",
+    "memoryRestore": "Put back to use",
+    "memoryRestoreHint": "The assistant may draw on it again.",
+    "memoryForget": "Forget",
+    "memoryForgetHint": "The forgetting is written into the file: nothing is erased, the trace remains.",
+    "memoryEdit": "Edit the summary",
+    "memorySource": "Written by",
+    "memorySourceAction": "an action ({{ref}})",
+    "memorySourcePerson": "you",
+    "memorySourceAssistant": "the assistant",
+    "memorySourceImport": "an import",
+    "memoryRefs": "It is about",
+    "memoryReplaces": "It replaces",
+    "memoryAlsoAbout": "is about it too",
+    "memoryLinks": "It points to",
+    "memorySupersedes": "Replaces {{id}}",
+    "memoryReindex": "Rebuild the index",
+    "memoryReindexHelp": "Reads the file back and rebuilds the search index. Nothing learned is lost.",
+    "memoryEmbed": "Compute the vectors",
+    "memoryEmbedHelp": "Lets the assistant find a memory without knowing its exact words. Needs an embedding model installed.",
+    "memoryEmbedPending_other": "{{count, number}} memories to compute",
+    "memoryEmbedNone": "Every memory has its vector.",
+    "memoryEmbedNoModel": "No embedding model is chosen. The search runs on words alone.",
+    "memoryStopEmbed": "Stop",
+    "memoryStopEmbedHelp": "What has already been computed is kept.",
+    "memoryPurge": "Forget everything",
+    "memoryPurgeHelp": "Erases this project’s memory file, and everything the assistant had learned from it.",
+    "memoryPurgeConfirm": "Erase everything the assistant learned about this project?",
+    "memoryFilterAll": "All",
+    "memoryCount_other": "{{count, number}} memories",
+    "memoryEmbedPending_one": "{{count, number}} memory to compute",
+    "memoryCount_one": "{{count, number}} memory",
+    "memoryEmbedPending_many": "{{count, number}} memories to compute",
+    "memoryCount_many": "{{count, number}} memories",
+    "memoryUpkeep": "Upkeep",
+    "memoryMerge": "Merge the duplicates",
+    "memoryMergeHelp": "Keeps the most important of each group saying the same thing, links the others to it and archives them. Nothing is erased.",
+    "memoryMergeNone": "Nothing says the same thing twice.",
+    "memoryMergeFound_one": "{{count, number}} duplicate",
+    "memoryMergeFound_many": "{{count, number}} duplicates",
+    "memoryMergeFound_other": "{{count, number}} duplicates",
+    "memoryStale": "Archive what sleeps",
+    "memoryStaleHelp": "Sets aside what nothing has drawn on for six months. Pinned memories are never touched.",
+    "memoryStaleNone": "Nothing has slept long enough.",
+    "memoryStaleFound_one": "{{count, number}} sleeping memory",
+    "memoryStaleFound_many": "{{count, number}} sleeping memories",
+    "memoryStaleFound_other": "{{count, number}} sleeping memories",
+    "memoryCompact": "Compact the file",
+    "memoryCompactHelp": "Rewrites the file with one line per standing memory. This is where what was forgotten finally leaves the disk.",
+    "memoryRelations": "What this memory touches",
+    "memoryPromote": "Keep everywhere",
+    "memoryPromoteHint": "Copies this memory into the machine’s own, so it serves in every project of yours. What the project learned stays there too."
   }
 }

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_MESSAGES, ACTIVITY_TOPICS } from '../domain/activity'
 import { TRACK_PROPERTIES } from '../domain/animation'
+import {
+  CAMERA_POST_MODES,
+  POST_CATEGORIES,
+  POST_COSTS,
+  POST_EFFECT_IDS,
+  POST_EFFECTS,
+} from '../domain/postProcessing'
+import { POST_PRESET_IDS } from '../domain/postPresets'
 import { HOME_SECTION_IDS } from '../domain/home'
 import {
   BACKGROUND_KINDS,
@@ -14,12 +22,19 @@ import {
   VIEWPORT_QUALITIES,
 } from '../domain/scene'
 import { CAPTURE_QUALITIES } from '../domain/sceneCapture'
+import { COMPONENTS } from '../domain/componentRegistry'
+import { CONTEXT_TEMPLATES } from '../domain/projectContext'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES } from '../domain/asset'
 import { FILE_DOMAINS } from '../domain/fileRole'
 import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_REF_KINDS, GIT_STAGES } from '../domain/git'
 import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
+import { CLOUD_IDS } from '../domain/aiCloud'
+import { localFieldKeys } from '../domain/localFields'
+import { tripoFieldKeys } from '../domain/tripo'
+import { COMPATIBILITIES } from '../domain/aiMemory'
+import { STANDALONE_ROLES } from '../domain/aiRole'
 import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
 import { foldForSearch } from '../text'
@@ -36,12 +51,12 @@ import {
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
-import { PBR_CHANNELS, type PbrChannel } from '../domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '../domain/material'
 import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 import { americanVerbs, americanWords, frenchWords } from './spelling-fixtures'
-import { screenLabels, unquotedMenuSegments } from './menuPath-fixtures'
+import { asRead, screenLabels, settingsTree, unquotedMenuSegments } from './menuPath-fixtures'
 import modelTextFr from './model-text.fr.json'
 
 /** Every key, nested ones included, in the order the file writes them. */
@@ -215,7 +230,7 @@ describe('the translation bundles', () => {
    * wrong at exactly the point where the grouping would show.
    */
   it.each(CODES)('hands every count it writes to the number formatter in %s', code => {
-    const factors = new Set(['texture.tilingPreviewTimes'])
+    const factors = new Set(['material.tilingPreviewTimes'])
 
     const raw = [...BUNDLES[code]]
       .filter(([key]) => !factors.has(key.replace(/_(one|other|zero|two|few|many)$/, '')))
@@ -227,7 +242,7 @@ describe('the translation bundles', () => {
 
   /**
    * The sentences that read the same in both bundles because nobody translates them: the brand,
-   * the names of file formats and of the engines a texture is exported to, two paths, a
+   * the names of file formats and of the engines a material is exported to, two paths, a
    * copyright line, and an example someone types over.
    *
    * Anything else arriving here is an English sentence pasted into the French file — the one
@@ -242,7 +257,6 @@ describe('the translation bundles', () => {
 
     const untranslatedOnPurpose = new Set([
       'about.copyright',
-      'accounts.fromEnvFile',
       'accounts.namePlaceholder',
       'app.name',
       'exportFormats.gltf',
@@ -252,9 +266,11 @@ describe('the translation bundles', () => {
       // language, and translating `/usr/bin/git` would be inventing a folder nobody has.
       'settings.gitBinary.placeholder',
       // Two engines and a format. `roblox` and `raw` are one word each, which this already skips.
-      'textureExportTargets.gltf',
-      'textureExportTargets.unity',
-      'textureExportTargets.unreal',
+      'materialExportTargets.gltf',
+      'materialExportTargets.unity',
+      'materialExportTargets.unreal',
+      // A console, and consoles keep their name. `preset_psx` reads as one word to `wordsOf`.
+      'postfx.preset_gameBoy',
     ])
 
     const copied = [...BUNDLES.fr]
@@ -396,6 +412,16 @@ describe('the translation bundles', () => {
       { dropped: /maillages?/i, kept: 'maille', except: ['sceneDisplay.wireframeHint'] },
       { dropped: /matériaux?/i, kept: 'matière' },
       /**
+       * A texture IS a picture, and the studio stopped filing it apart — the kind is gone, the
+       * shelf is gone, and what a picture serves is read off its channel. The word survives in
+       * KEYS, which come from the API and are not screen text.
+       *
+       * No `except`: the two senses this would wrongly catch — the glTF vocabulary of a file
+       * "with its textures beside it", and the audio one of a sound with no texture — live in
+       * `docs/`, which this guard cannot reach anyway.
+       */
+      { dropped: /textures?/i, kept: 'image' },
+      /**
        * `rigué` is English wearing a French ending, and the workspace that gave a mesh its bones
        * had already decided against it: seven of its nine sentences said `squelette`, two command
        * hints still said `rigué` and `un rig`.
@@ -429,17 +455,17 @@ describe('the translation bundles', () => {
         kept: 'clip',
         except: [
           'meshes.plane',
-          'texture.shapePlane',
+          'material.shapePlane',
           'inspector.shot',
           'inspector.addRailHint',
           'objects.pathHint',
           'animation.addShotHint',
           'animation.addShotNeedsCamera',
-          'assistant.actions.cameraShot.description',
-          'assistant.actions.cameraRail.description',
-          'assistant.actions.cameraAddRail.description',
+          'assistant.actions.cameraAddShot.description',
+          'assistant.actions.cameraBindPathToShot.description',
+          'assistant.actions.cameraCreateAndBindPath.description',
           'assistant.actions.cameraReorder.description',
-          'assistant.actions.cameraTarget.description',
+          'assistant.actions.cameraAimShotAt.description',
           // The same sense as the three above: `scene.state` hands back the shots, and says so.
           'assistant.actions.sceneState.description',
           'assistant.fields.startSeconds',
@@ -450,6 +476,8 @@ describe('the translation bundles', () => {
     ],
     en: [
       { dropped: /\bfile browsers?\b/i, kept: 'file manager' },
+      /** The same word settled on the French side, for the same reason. */
+      { dropped: /\btextures?\b/i, kept: 'image' },
       { dropped: /\bpreferences?\b/i, kept: 'settings' },
       {
         dropped: /\bpictures?\b/i,
@@ -492,6 +520,20 @@ describe('the translation bundles', () => {
        * spot — the manual keeps `reveals` as a plain English verb.
        */
       { dropped: /\breveals?\b/i, kept: 'show' },
+      /**
+       * The scene registry a model reads: eight `actions.*.description` said `node` under titles
+       * that said `object`, and the French says `objet` at all 38 sites. The lookahead keeps the
+       * TOOL names, the registry calling its scene tools `node.*`, so a drift inside
+       * `nodeCarve` still reddens.
+       * Two blind spots: the model calls `node.add` while reading a description that says
+       * `object`, and the manual glossary still heads an entry `Node`, which no guard here
+       * reaches. `except` is the graph node, the referent `TWO_THINGS.nœud` already separates.
+       */
+      {
+        dropped: /\bnodes?\b(?!\.[a-z])/i,
+        kept: 'object',
+        except: ['inspector.node', 'inspector.expressionHint'],
+      },
     ],
   }
 
@@ -500,15 +542,34 @@ describe('the translation bundles', () => {
    * plural, `montages` slips through the very typo the canary is there to catch — `montagess?`
    * still reads it, and the canary shipped green when it was.
    */
-  const ENGLISH_SAMPLES = ['file browser', 'preference', 'picture', 'log', 'montage', 'reveal']
+  const ENGLISH_SAMPLES = [
+    'file browser',
+    'preference',
+    'picture',
+    'log',
+    'montage',
+    'reveal',
+    'texture',
+    'node',
+  ]
 
   /**
    * The negative half. Each word matches its reading once the boundary is dropped, which is what
    * makes it worth asserting — a sample no reading could ever touch is green by construction.
-   * `preferences?` has none: no English word carries `preference` inside a longer one. Which is
+   * `preferences?` has none: no English word carries `preference` inside a longer one.
+   * `node.markAsCuttingTool` proves the other half — what rejects it is the LOOKAHEAD, not the boundary. Which is
    * the blind spot — a reading added tomorrow without a near miss of its own stays green.
    */
-  const ENGLISH_NEAR_MISSES = ['profile browser', 'catalogue', 'pictured', 'remontage', 'revealed']
+  const ENGLISH_NEAR_MISSES = [
+    'profile browser',
+    'catalogue',
+    'pictured',
+    'remontage',
+    'revealed',
+    'textured',
+    'anode',
+    'node.markAsCuttingTool',
+  ]
 
   it.each(CODES)('says one thing one way in %s', code => {
     const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
@@ -562,6 +623,8 @@ describe('the translation bundles', () => {
       'des rigs',
       'plan',
       'plans',
+      'texture',
+      'textures',
     ]
 
     // The canary of an assertion on an empty list: a reading that stopped matching would pass it.
@@ -632,10 +695,36 @@ describe('the translation bundles', () => {
       '150,000. when smart low poly is on and face limit is unset, defaults to 10,000',
   ])
 
+  /**
+   * `texture` is not asked of this dictionary, and the reason is the same one twice over: these
+   * are a MODEL's own parameters — `texture quality`, `texture seed` — where the word is the
+   * trade's for what a mesh wears, and the studio neither chose the parameter nor can rename it
+   * in a sentence that cites it by name.
+   *
+   * What the studio DID drop is the shelf: a texture is a picture in the catalogue now. The two
+   * are not in conflict — a 3D model still wears textures, they are just filed as the pictures
+   * they are.
+   */
+  const TEXTURE_ON_A_MESH: ReadonlySet<string> = new Set([
+    'texture quality',
+    'texture alignment',
+    'texture seed',
+    'enable texturing. set to false for a model without textures',
+    "texture quality level. 'detailed' gives hd quality textures",
+    'determines the prioritization of texture alignment in the 3d model',
+    'random seed for texture generation. using the same seed will produce identical textures',
+    'generate segmented 3d model parts. incompatible with texture, pbr, and quad',
+    'enable pbr generation. default value is true. if this option is set to true, texture ' +
+      'parameters will be ignored',
+  ])
+
   it('says one thing one way in the dictionary of what a model wrote about itself', () => {
+    const exempt = (source: string, kept: string): boolean =>
+      kept === 'image' ? TEXTURE_ON_A_MESH.has(source) : PAVAGE_NOT_THE_OBJECT.has(source)
+
     const drifted = Object.entries(modelTextFr).flatMap(([source, french]) =>
       SETTLED_WORDS.fr
-        .filter(({ dropped }) => dropped.test(french) && !PAVAGE_NOT_THE_OBJECT.has(source))
+        .filter(({ dropped, kept }) => dropped.test(french) && !exempt(source, kept))
         .map(({ kept }) => `${source} — say "${kept}"`),
     )
 
@@ -643,12 +732,14 @@ describe('the translation bundles', () => {
   })
 
   it('drops a dictionary exemption once its entry stops saying the word', () => {
-    const covering = [...PAVAGE_NOT_THE_OBJECT].filter(source => {
-      const french = Object.entries(modelTextFr).find(([key]) => key === source)?.[1]
-      return french === undefined || !/maillages?/i.test(french)
-    })
+    const stale = (exempted: ReadonlySet<string>, word: RegExp): string[] =>
+      [...exempted].filter(source => {
+        const french = Object.entries(modelTextFr).find(([key]) => key === source)?.[1]
+        return french === undefined || !word.test(french)
+      })
 
-    expect(covering).toEqual([])
+    expect(stale(PAVAGE_NOT_THE_OBJECT, /maillages?/i)).toEqual([])
+    expect(stale(TEXTURE_ON_A_MESH, /textures?/i)).toEqual([])
   })
 
   /**
@@ -741,6 +832,14 @@ describe('the translation bundles', () => {
       reads: ['show all', 'fit to view'],
       separates: 'lifting a filter, and fitting the view',
     },
+    marche: {
+      reads: ['walk', 'step'],
+      separates: 'a movement Tripo retargets, and the step height a game character climbs',
+    },
+    blessure: {
+      reads: ['hurt', 'damage'],
+      separates: 'a movement Tripo retargets, and the post effect laid over the picture',
+    },
   }
 
   type Split = Record<string, { reads: readonly string[]; separates: string }>
@@ -824,6 +923,12 @@ describe('the translation bundles', () => {
       reads: ['échec', 'échouée'],
       separates: "an ingest status, and a job's, which agrees with `tâche`",
     },
+    forget: {
+      reads: ['retirer', 'oublier'],
+      separates:
+        'a post preset taken off the list, and a memory the assistant lets go of — which is ' +
+        'written down rather than erased, so « retirer » would say the opposite of what happens',
+    },
     free: {
       reads: ['libre', 'gratuit'],
       separates: 'a camera aiming at nothing, and what a generation costs',
@@ -835,8 +940,8 @@ describe('the translation bundles', () => {
     metalness: {
       reads: ['métallicité', 'métal'],
       separates:
-        'the 3D inspector writes the trade word beside `Rugosité`, the textures panel the short ' +
-        'one that fits a tile — `docs/fr/manuel/12-espace-textures.md` says so in as many words. ' +
+        'the 3D inspector writes the trade word beside `Rugosité`, the materials panel the short ' +
+        'one that fits a tile — `docs/fr/manuel/12-espace-matieres.md` says so in as many words. ' +
         'Nothing conceptual separates them: a product call, not a translation one',
     },
     import: {
@@ -851,7 +956,7 @@ describe('the translation bundles', () => {
       reads: ['créer un projet', 'nouveau projet'],
       separates: 'the button that does it, and the menu entry that names it',
     },
-    none: { reads: ['aucune', 'aucun'], separates: 'agreement — a texture, and a model' },
+    none: { reads: ['aucune', 'aucun'], separates: 'agreement — a material, and a model' },
     normal: {
       reads: ['normal', 'normale'],
       separates: 'the blend mode, which carries the CSS name, and the normal map',
@@ -866,6 +971,10 @@ describe('the translation bundles', () => {
     pause: {
       reads: ['mettre en pause', 'pause'],
       separates: "the inspector's action, and the transport button, which has room for a word",
+    },
+    run: {
+      reads: ['course', 'jouer'],
+      separates: 'a movement Tripo retargets, and starting the game',
     },
     scale: {
       reads: ['redimensionner', 'échelle'],
@@ -894,10 +1003,10 @@ describe('the translation bundles', () => {
   /**
    * The blind spot of both tables above, and it took a manual sentence to see it: `formsOf`
    * groups by the SOURCE term, so a label shortened on BOTH sides at once lands in no group and
-   * neither table can reach it. `docs/fr/manuel/12-espace-textures.md` says the panel shortens
+   * neither table can reach it. `docs/fr/manuel/12-espace-matieres.md` says the panel shortens
    * THREE channel names; only `metalness` ever surfaced, its English having stayed put.
    *
-   * So the channels are read by KEY instead: `texture.channel.<c>` against the 3D inspector's
+   * So the channels are read by KEY instead: `material.channel.<c>` against the 3D inspector's
    * name for the same channel, every language. Four of the five comparable ones diverge.
    */
   const INSPECTOR_FIELD: Record<PbrChannel, string | null> = {
@@ -920,7 +1029,6 @@ describe('the translation bundles', () => {
    * the day both agree again. A channel absent here and divergent is drift, in either language.
    */
   const NAMED_TWICE: Partial<Record<PbrChannel, string>> = {
-    baseColor: "`Texture` is three.js' own name for `map`; the tile names the channel instead",
     normal: 'the inspector counts them, as the trade writes the map; the tile names one channel',
     metalness: 'the trade word beside `Rugosité`, and the short one that fits a tile',
     ao: 'the full name beside the other maps, and the short one that fits a tile',
@@ -933,7 +1041,7 @@ describe('the translation bundles', () => {
     return field === null
       ? []
       : CODES.map(code => [
-          BUNDLES[code].get(`texture.channel.${channel}`),
+          BUNDLES[code].get(`material.channel.${channel}`),
           BUNDLES[code].get(`inspector.fields.${field}`),
         ])
   }
@@ -1146,6 +1254,11 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * amount of typechecking sees it: the key exists only once the template has run.
  */
 const DYNAMIC_KEYS: readonly string[] = [
+  // The three sentences `tripoRigCheckNote` composes for a job's row. Nothing reads them as a
+  // literal any more — the runner names one, and the window translates whatever it is handed.
+  'tripoRigCheck.riggable',
+  'tripoRigCheck.riggableAs',
+  'tripoRigCheck.notRiggable',
   // `FILE_DOMAINS` and not `ASSET_TYPES`: the same six, plus the one a file has when the studio
   // has no domain to file it under — an explorer shows those too, and « other » is an answer
   // rather than a failure to classify.
@@ -1165,6 +1278,19 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...TRACK_PROPERTIES.map(property => `animation.${property}`),
   ...HOME_SECTION_IDS.map(id => `home.sections.${id}`),
   ...[...new Set(TOOL_PLACEMENTS.map(placement => placement.id))].map(id => `panels.${id}`),
+  // Every word the component registry names, read off the registry itself. A third component,
+  // or a fourth value of a choice, arrives with its lines or this goes red — the descriptor is
+  // read through `t(<variable>)` from the add menu, the section heading and every field label,
+  // so nothing else would see it.
+  ...Object.values(COMPONENTS).flatMap(descriptor => [
+    descriptor.titleKey,
+    descriptor.descriptionKey,
+    ...descriptor.fields.map(field => field.labelKey),
+    ...descriptor.fields.flatMap(field => (field.options ?? []).map(one => `game.values.${one}`)),
+  ]),
+  // The ways into a first context card, read off the list rather than off a literal: a model
+  // added without its two lines would offer the reader its own key as a menu row.
+  ...CONTEXT_TEMPLATES.flatMap(template => [template.titleKey, template.bodyKey]),
   // The six sides and the seven ways of drawing them. Composed on BOTH sides now — the 3D bar
   // offers them as modes, and the native View menu offers a row each — which is exactly why the
   // lists moved here: a menu is built in the main process, out of reach of the renderer's guard.
@@ -1186,6 +1312,24 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...explained('environment.visibility_', HELPER_VISIBILITIES),
   ...explained('environment.quality_', VIEWPORT_QUALITIES),
   ...explained('environment.unit_', DISPLAY_UNITS),
+  // The composition catalogue, composed on three sides at once — the stack rows, the library and
+  // the inspector's generated controls. An effect added without its two lines would offer the
+  // reader its own identifier as a row of the Add menu.
+  ...explained('postfx.effect_', POST_EFFECT_IDS),
+  ...POST_CATEGORIES.map(category => `postfx.category_${category}`),
+  ...POST_COSTS.map(cost => `postfx.cost_${cost}`),
+  ...explained('postfx.mode_', CAMERA_POST_MODES),
+  ...POST_PRESET_IDS.map(preset => `postfx.preset_${preset}`),
+  // Every parameter of every effect, and every value of every closed list one offers. The panel
+  // is GENERATED from the catalogue, so a knob without a line is a knob labelled by its own key.
+  ...POST_EFFECT_IDS.flatMap(effect =>
+    Object.keys(POST_EFFECTS[effect].params).map(param => `postfx.param_${param}`),
+  ),
+  ...POST_EFFECT_IDS.flatMap(effect =>
+    Object.values(POST_EFFECTS[effect].params).flatMap(spec =>
+      spec.control === 'choice' ? spec.options.map(option => `${spec.labelPrefix}${option}`) : [],
+    ),
+  ),
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),
@@ -1224,10 +1368,10 @@ const DYNAMIC_KEYS: readonly string[] = [
    * shipped once, with `images-generation` sitting in a French table.
    */
   ...ASSISTANT_MODELS.map(model => `assistant.models.${model}`),
-  // Composed from the shared PBR union to name a link row of the texture inspector. This family
+  // Composed from the shared PBR union to name a link row of the material inspector. This family
   // has no compiler guard, so a ninth channel — and the domain warns the API adds types without
   // notice — would label its row with its own key.
-  ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  ...PBR_CHANNELS.map(channel => `material.channel.${channel}`),
   // The usage report showed what the API called things — `images-generation` sat in a French
   // table, and `video` beside a `Vidéo` the bundle already knew.
   ...USAGE_ACTIONS.map(action => `usage.actionNames.${action}`),
@@ -1237,6 +1381,23 @@ const DYNAMIC_KEYS: readonly string[] = [
   // What the microphone answered, said in the language of whoever is reading. The detail of a
   // failure never reaches the screen — it names a file path — so the code is all there is.
   ...STT_ERROR_CODES.map(code => `dictation.errors.${code}`),
+  // The employments no space holds. The generation ones are named by `families` and
+  // `capabilities` above, which the manager reuses rather than opening a second vocabulary.
+  ...STANDALONE_ROLES.map(role => `aiRoles.${role}`),
+  // The verdict the machine returns on a model. A value without its word would put a raw key on
+  // the one line that says whether an AI can run here at all.
+  ...COMPATIBILITIES.map(fit => `aiModels.fit.${fit}`),
+  // A cloud is named by its REGISTRY entry, so the second one to arrive needs no code change —
+  // and no line here either. Without its two keys it would offer itself as `aiClouds.x`.
+  ...CLOUD_IDS.flatMap(id => [`aiClouds.${id}`, `aiClouds.${id}Hint`]),
+  /**
+   * Every label of a form the studio DERIVES rather than fetches — the knobs of a local model,
+   * and those of the cloud whose catalogue is data. Both are read through `translate(<variable>)`
+   * in the main process, out of reach of the renderer's guard, so a knob without its line reaches
+   * the panel as `tripoFields.pbr`.
+   */
+  ...localFieldKeys(),
+  ...tripoFieldKeys(),
 ]
 
 /**
@@ -1555,8 +1716,12 @@ describe('a menu path a sentence quotes', () => {
    */
   it.each(CODES)('quotes no menu path the screen does not carry, in %s', code => {
     const labels = screenLabels(TRANSLATIONS[code])
+    const rooted = {
+      root: asRead(TRANSLATIONS[code].settings.title),
+      tree: settingsTree(TRANSLATIONS[code]),
+    }
     const invented = [...BUNDLES[code]].flatMap(([key, value]) =>
-      unquotedMenuSegments(value, labels).map(found => `${key} — ${found}`),
+      unquotedMenuSegments(value, labels, rooted).map(found => `${key} — ${found}`),
     )
 
     expect(invented).toEqual([])
@@ -1572,6 +1737,43 @@ describe('a menu path a sentence quotes', () => {
     expect(unquotedMenuSegments('Collez-les dans Réglages ▸ Trousseau.', labels)).toEqual([
       '"Trousseau" in Collez-les dans Réglages ▸ Trousseau',
     ])
+  })
+
+  /**
+   * Three sources feed one root, and a path may name any of them. Missing the actions read
+   * `Réglages ▸ Avancé ▸ Outils de développement` as invented — a true path, called false.
+   */
+  it('carries the screens, the settings AND the actions of a root section', () => {
+    const held = settingsTree(TRANSLATIONS.fr).get(asRead(TRANSLATIONS.fr.settings.ai))
+
+    expect(held?.has(asRead(TRANSLATIONS.fr.settings.account))).toBe(true)
+    expect(
+      settingsTree(TRANSLATIONS.fr)
+        .get(asRead(TRANSLATIONS.fr.settings.advanced))
+        ?.has(asRead(TRANSLATIONS.fr.settings.openDevtools.title)),
+    ).toBe(true)
+  })
+
+  /**
+   * The reading above is the whole screen; this one is the window the path opens on. Both cases
+   * are green without `rooted`, which is what let `Réglages ▸ Compte` ship.
+   */
+  it('reads a settings path against the SECTIONS, not against every label on screen', () => {
+    const labels = new Set(['réglages', 'compte', 'clés api', 'modèles d’ia'])
+    const rooted = {
+      root: 'réglages',
+      tree: new Map([['modèles d’ia', new Set(['clés api'])]]),
+    }
+
+    expect(
+      unquotedMenuSegments('Collez-les dans Réglages ▸ Modèles d’IA ▸ Compte.', labels, rooted),
+    ).toEqual(['"Compte" in Collez-les dans Réglages ▸ Modèles d’IA ▸ Compte'])
+    expect(unquotedMenuSegments('Collez-les dans Réglages ▸ Clés API.', labels, rooted)).toEqual([
+      '"Clés API" in Collez-les dans Réglages ▸ Clés API',
+    ])
+    expect(
+      unquotedMenuSegments('Collez-les dans Réglages ▸ Modèles d’IA ▸ Clés API.', labels, rooted),
+    ).toEqual([])
   })
 })
 
@@ -1611,7 +1813,7 @@ const borrowedWords = (english: Map<string, string>, french: Map<string, string>
 
 describe('a word one surface owns', () => {
   /**
-   * `assistant.actions.cameraShot.description` told an assistant which `layer` a camera shot
+   * `assistant.actions.cameraAddShot.description` told an assistant which `layer` a camera shot
    * lands on, where the French said `étage` and the manual says `line` — `layer` naming a sheet
    * of the image stack everywhere else. `TWO_THINGS` cannot see it: it reads labels, and drops
    * anything ending in a full stop.

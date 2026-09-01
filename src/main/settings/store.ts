@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { AccountSummary } from '@shared/domain/account'
+import { SCENARIO_CLOUD, type CloudProviderId } from '@shared/domain/aiCloud'
 import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/domain/settings'
 import {
   AccountError,
@@ -7,17 +8,15 @@ import {
   activeCredentials,
   addAccount,
   credentialsByFingerprint,
+  credentialsFor,
   bookFromCredentials,
   EMPTY_BOOK,
   removeAccount,
   renameAccount,
   settleBook,
   summariesOf,
-  withEnvironment,
-  withoutEnvironment,
   type AccountBook,
   type Credentials,
-  type StoredAccount,
 } from './accounts'
 import { parseStoredAccounts, parseStoredCredentials, salvagePartialSettings } from './validation'
 
@@ -50,6 +49,8 @@ export type KeyedAccount = {
   id: string
   name: string
   credentials: Credentials
+  /** Which cloud the key opens. Absent means Scenario, exactly as the stored account leaves it. */
+  providerId?: CloudProviderId
 }
 
 export type SettingsStore = {
@@ -69,7 +70,11 @@ export type SettingsStore = {
    */
   keyedAccounts: () => KeyedAccount[]
   /** All four throw an `AccountError`: a refused name, an unknown id, or a locked keychain. */
-  addAccount: (name: string, credentials: Credentials) => AccountChange
+  addAccount: (
+    name: string,
+    credentials: Credentials,
+    providerId?: CloudProviderId,
+  ) => AccountChange
   renameAccount: (id: string, name: string) => AccountChange
   removeAccount: (id: string) => AccountChange
   activateAccount: (id: string) => AccountChange
@@ -81,6 +86,8 @@ export type SettingsStore = {
   settleAccounts: () => void
   /** Main process only. Never expose over IPC — see spec § 4, invariant 1. */
   readCredentials: () => Credentials | null
+  /** Main process only. The active key of one cloud, or none. */
+  readCredentialsFor: (provider: CloudProviderId) => Credentials | null
   /**
    * The credentials behind an `accountFingerprint`, or `null` if that key is no longer held.
    * Main process only. What lets a job outliving a session be polled on the account that paid
@@ -122,9 +129,12 @@ function movedKey(before: AccountBook, after: AccountBook): boolean {
   return from?.key !== to?.key || from?.secret !== to?.secret
 }
 
-function merge(base: Settings, partial: PartialSettings): Settings {
+/** One write folded onto what stands, branch by branch. Exported for the bench's settings port,
+ * which must merge exactly as this does. */
+export function mergedSettings(base: Settings, partial: PartialSettings): Settings {
   return {
     general: { ...base.general, ...partial.general },
+    ai: { ...base.ai, ...partial.ai },
     home: { ...base.home, ...partial.home },
     workspaces: { ...base.workspaces, ...partial.workspaces },
     appearance: { ...base.appearance, ...partial.appearance },
@@ -148,25 +158,47 @@ function merge(base: Settings, partial: PartialSettings): Settings {
  */
 export type SettingsStoreOptions = {
   onChange?: (settings: Settings) => void
+  /** What an unwritten profile starts from, and what `reset` goes back to. */
+  defaults?: Settings
   /** Injected so a test can name the accounts it creates. */
   newAccountId?: () => string
-  /**
-   * The account `secrets/.env` stands for in development, read afresh each time: the file is
-   * the truth about it, and nothing here ever writes it back.
-   */
-  environmentAccount?: () => StoredAccount | null
 }
 
 export function createSettingsStore(
   adapter: PersistenceAdapter,
   {
     onChange,
+    defaults = DEFAULT_SETTINGS,
     newAccountId = () => `account_${randomUUID()}`,
-    environmentAccount = () => null,
   }: SettingsStoreOptions = {},
 ): SettingsStore {
-  const read = (): Settings =>
-    merge(DEFAULT_SETTINGS, salvagePartialSettings(adapter.read(SETTINGS_KEY)))
+  /**
+   * 🛑 Held between writes, and the config file is no longer re-read for each ask: one edited by
+   * hand while the studio runs is seen at the next write, not at the next read. The price of a
+   * read was a zod pass over the whole file plus a rebuild of all fifteen sections, on a call the
+   * main process makes from many hot paths — `services.ts` alone asks eighteen times.
+   */
+  let cached: Settings | null = null
+
+  /**
+   * Frozen because it is now SHARED: every caller between two writes holds the same object, so
+   * one of them writing into a section would change what the others read — and the file behind
+   * it would still say the old thing. A write goes through `write`, which rebuilds it.
+   */
+  const frozen = (settings: Settings): Settings => {
+    for (const section of Object.values(settings)) Object.freeze(section)
+    return Object.freeze(settings)
+  }
+
+  const read = (): Settings => {
+    cached ??= frozen(mergedSettings(defaults, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
+    return cached
+  }
+
+  /** What was just written is re-read rather than assumed: the schema may narrow what it stores. */
+  const forgetSettings = (): void => {
+    cached = null
+  }
 
   const readRaw = (key: string): string | null => adapter.read<string>(key) ?? null
 
@@ -236,19 +268,11 @@ export function createSettingsStore(
     return credentials ? bookFromCredentials(credentials, MIGRATED_ACCOUNT_ID) : EMPTY_BOOK
   }
 
-  /**
-   * What the studio runs on: the keychain's accounts, plus the development one behind them,
-   * repaired once the list is whole. The repair comes last on purpose — a stored `activeId` may
-   * name the account that lives in a file, and judged against the blob alone it names nothing.
-   *
-   * Takes the persisted book so a caller holding one already need not read it twice.
-   */
-  const readBook = (persisted = persistedBook()): AccountBook =>
-    settleBook(withEnvironment(persisted, environmentAccount()))
+  /** The keychain's accounts, repaired. Takes a held book so a caller need not read it twice. */
+  const readBook = (persisted = persistedBook()): AccountBook => settleBook(persisted)
 
-  /** Only what the keychain owns: the development account is read back from its file. */
   const writeBook = (book: AccountBook): void => {
-    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(withoutEnvironment(book))))
+    adapter.write(ACCOUNTS_KEY, adapter.encrypt(JSON.stringify(book)))
   }
 
   /** Runs one change and reports whether it moved the active key — never guessed by a caller. */
@@ -283,16 +307,18 @@ export function createSettingsStore(
     read,
 
     write: partial => {
-      const merged = merge(read(), partial)
+      const merged = mergedSettings(read(), partial)
       adapter.write(SETTINGS_KEY, merged)
+      forgetSettings()
       announce(merged)
       return merged
     },
 
     reset: () => {
-      adapter.write(SETTINGS_KEY, DEFAULT_SETTINGS)
-      announce(DEFAULT_SETTINGS)
-      return DEFAULT_SETTINGS
+      adapter.write(SETTINGS_KEY, defaults)
+      forgetSettings()
+      announce(defaults)
+      return defaults
     },
 
     subscribe: listener => {
@@ -307,10 +333,18 @@ export function createSettingsStore(
         id: account.id,
         name: account.name,
         credentials: account.credentials,
+        ...(account.providerId ? { providerId: account.providerId } : {}),
       })),
 
-    addAccount: (name, credentials) =>
-      apply(book => addAccount(book, { id: newAccountId(), name, credentials })),
+    addAccount: (name, credentials, providerId) =>
+      apply(book =>
+        addAccount(book, {
+          id: newAccountId(),
+          name,
+          credentials,
+          ...(providerId && providerId !== SCENARIO_CLOUD ? { providerId } : {}),
+        }),
+      ),
 
     renameAccount: (id, name) => apply(book => renameAccount(book, id, name)),
 
@@ -352,6 +386,8 @@ export function createSettingsStore(
     },
 
     readCredentials: () => activeCredentials(readBook()),
+
+    readCredentialsFor: provider => credentialsFor(readBook(), provider),
 
     credentialsOf: fingerprint => credentialsByFingerprint(readBook(), fingerprint),
 

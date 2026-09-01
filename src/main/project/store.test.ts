@@ -1,14 +1,15 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   LEGACY_MANIFEST_FILE,
   MANIFEST_FILE,
   MANIFEST_VERSION,
   MACHINE_FOLDERS,
-  STARTER_FOLDERS,
+  projectName,
 } from '@shared/domain/project'
+import { DEFAULT_ROLE_PATHS, ROLE_MARKER } from '@shared/domain/folderRole'
 import { isRecord } from '@shared/guards'
 import {
   createProjectStore,
@@ -16,6 +17,7 @@ import {
   NoProjectError,
   orWhenGone,
   ProjectOpenError,
+  ProjectRenameError,
   type ProjectStore,
 } from './store'
 import { CATALOGUE_CLOSED } from './catalogClient'
@@ -23,7 +25,7 @@ import { memoryCatalog } from './catalog-fixtures'
 
 type ExecDone = (error: Error | null, stdout: string, stderr: string) => void
 
-/** Hoisted: `store.ts` promisifies `execFile` as it loads, before any `beforeEach` could run. */
+/** Hoisted: `hideFromExplorer.ts` promisifies `execFile` as it loads, before a `beforeEach` runs. */
 const execFileMock = vi.hoisted(() =>
   vi.fn((_command: string, _args: string[], done: ExecDone) => {
     done(null, '', '')
@@ -48,7 +50,7 @@ describe('project store', () => {
   let clock: string
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-project-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-project-'))
     onChange = vi.fn()
     clock = '2026-08-06T10:00:00.000Z'
     store = createProjectStore({
@@ -57,22 +59,23 @@ describe('project store', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
     })
   })
 
   afterEach(async () => {
-    store.close()
+    await store.close()
     await rm(root, { recursive: true, force: true })
     execFileMock.mockClear()
   })
 
   it('creates the whole tree and its manifest', async () => {
-    const project = await store.create(root, 'My project')
+    const project = await store.create(root)
 
     // The folder handed in IS the project. Nothing is made from the name — a name that fabricated
     // a subfolder put a project inside the folder the user had just made for it.
     expect(project.path).toBe(root)
-    for (const folder of [...MACHINE_FOLDERS, ...STARTER_FOLDERS]) {
+    for (const folder of [...MACHINE_FOLDERS, ...Object.values(DEFAULT_ROLE_PATHS)]) {
       expect(await exists(join(project.path, folder))).toBe(true)
     }
 
@@ -86,7 +89,6 @@ describe('project store', () => {
     )
     expect(manifest).toEqual({
       version: 1,
-      name: 'My project',
       createdAt: '2026-08-06T10:00:00.000Z',
       updatedAt: '2026-08-06T10:00:00.000Z',
     })
@@ -94,8 +96,36 @@ describe('project store', () => {
 
   // The rule the entry states: what the folder holds for the user stays in the open, what the
   // machine keeps goes under a dot. `layouts/` was neither — nothing has ever written to it.
+  it('says what each folder it laid down is for, so a rename cannot lose one', async () => {
+    const project = await store.create(root)
+
+    expect(await readFile(join(project.path, 'Modelling/Models', ROLE_MARKER), 'utf8')).toBe(
+      'models\n',
+    )
+  })
+
+  /**
+   * 🛑 What the manual promises, and it has to hold WITHOUT closing the project: renaming a role
+   * folder while it is open once left the map naming where it used to be, so the next write laid
+   * the default back down and orphaned the folder the user had just renamed, marker and all.
+   */
+  it('follows a role folder renamed while the project is open', async () => {
+    const project = await store.create(root)
+    await rename(join(project.path, 'Images'), join(project.path, 'Mes photos'))
+
+    expect(await store.folderFor('image')).toBe('Mes photos')
+    expect(await exists(join(project.path, 'Images'))).toBe(false)
+  })
+
+  it('empties the roles with the project, so none answers for a folder nobody has open', async () => {
+    await store.create(root)
+    await store.close()
+
+    expect(store.roles()).toEqual({})
+  })
+
   it('leaves no folder behind that nothing writes to', () => {
-    expect([...MACHINE_FOLDERS, ...STARTER_FOLDERS]).not.toContain('layouts')
+    expect([...MACHINE_FOLDERS, ...Object.values(DEFAULT_ROLE_PATHS)]).not.toContain('layouts')
   })
 
   /**
@@ -107,11 +137,11 @@ describe('project store', () => {
    * be what stops a project from opening.
    */
   it('puts back the caches on open, and never the folders the user was given', async () => {
-    const project = await store.create(root, 'My project')
+    const project = await store.create(root)
 
     await rm(join(project.path, 'Images'), { recursive: true, force: true })
     await rm(join(project.path, '.index/peaks'), { recursive: true, force: true })
-    store.close()
+    await store.close()
 
     await store.open(project.path)
 
@@ -131,7 +161,6 @@ describe('project store', () => {
       join(path, 'project.json'),
       JSON.stringify({
         version: 1,
-        name: 'Older project',
         createdAt: '2026-08-01T10:00:00.000Z',
         updatedAt: '2026-08-01T10:00:00.000Z',
       }),
@@ -140,7 +169,7 @@ describe('project store', () => {
 
     const project = await store.open(path)
 
-    expect(project.manifest.name).toBe('Older project')
+    expect(projectName(project.path)).toBe(basename(path))
 
     // Migrated as it is read, so the parc converges on its own rather than on the next release.
     // The content is checked, not just the presence: a migration writing the wrong bytes would
@@ -203,7 +232,7 @@ describe('project store', () => {
    * own manifest, destroyed without a word. Only an absent file may fall back.
    */
   it('refuses to overwrite a manifest it merely failed to read', async () => {
-    const created = await store.create(root, 'My project')
+    const created = await store.create(root)
     const hidden = join(created.path, MANIFEST_FILE)
     const before = await readFile(hidden, 'utf8')
 
@@ -214,7 +243,7 @@ describe('project store', () => {
     )
     // Writable but unreadable, which is what a restore tool or a syncing service can leave.
     await chmod(hidden, 0o200)
-    store.close()
+    await store.close()
 
     await expect(store.open(created.path)).rejects.toThrow()
 
@@ -315,7 +344,7 @@ describe('project store', () => {
     }
 
     it('writes the moment of the last save, and leaves the creation alone', async () => {
-      const project = await store.create(root, 'My project')
+      const project = await store.create(root)
       clock = '2026-08-06T11:30:00.000Z'
 
       store.touch()
@@ -329,7 +358,7 @@ describe('project store', () => {
     // Autosave fires far faster than the clock moves: a write per save of the same millisecond
     // would spend the disk on a field nobody would see change.
     it('writes nothing when the stamp would not change', async () => {
-      const project = await store.create(root, 'My project')
+      const project = await store.create(root)
       const before = await stat(join(project.path, MANIFEST_FILE))
 
       store.touch()
@@ -362,7 +391,7 @@ describe('project store', () => {
 
     it('hides what the machine keeps, through the attribute the Explorer reads', async () => {
       asWindows()
-      await store.create(root, 'My project')
+      await store.create(root)
 
       const hidden = execFileMock.mock.calls.flatMap(([, args]) => args.slice(1))
       expect(hidden.some(path => path.endsWith('.index'))).toBe(true)
@@ -380,7 +409,6 @@ describe('project store', () => {
         join(path, 'project.json'),
         JSON.stringify({
           version: 1,
-          name: 'Older project',
           createdAt: '2026-08-01T10:00:00.000Z',
           updatedAt: '2026-08-01T10:00:00.000Z',
         }),
@@ -401,14 +429,120 @@ describe('project store', () => {
         done(new Error('attrib is not on the PATH'), '', '')
       })
 
-      await expect(store.create(root, 'My project')).resolves.toBeTruthy()
+      await expect(store.create(root)).resolves.toBeTruthy()
     })
   })
 
   it('announces the project it just opened', async () => {
-    const project = await store.create(root, 'My project')
+    const project = await store.create(root)
     expect(onChange).toHaveBeenCalledWith(project)
     expect(store.current()).toEqual(project)
+  })
+
+  it('announces that no project is open once it is closed', async () => {
+    await store.create(root)
+    await store.close()
+
+    expect(onChange).toHaveBeenLastCalledWith(null)
+    expect(store.current()).toBeNull()
+  })
+
+  /**
+   * The same order `activate` keeps before a swap: what is still queued belongs to the project
+   * being left, and its catalogue is about to stop answering.
+   */
+  it('settles what belongs to the project before its catalogue goes', async () => {
+    let settled = false
+    const settling = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+      onRoles: () => {},
+      // Read INSIDE the settling: the project still being there is the order this exists for.
+      settle: async () => {
+        settled = settling.current() !== null
+      },
+    })
+
+    await settling.create(join(root, 'settling'))
+    await settling.close()
+
+    expect(settled).toBe(true)
+  })
+
+  /**
+   * `touch` replaces the project with a new object carrying a fresh stamp on every document
+   * saved, and `autosaveOpenDocuments` fires on a timer from any window. Read by identity, the
+   * guard below then took an autosave for another project and left the catalogue open while the
+   * window that asked had already gone back to the home.
+   */
+  it('closes all the same when a save stamped the manifest while it settled', async () => {
+    let stamping: (() => void) | null = null
+    const stamped = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+      onRoles: () => {},
+      settle: async () => {
+        stamping?.()
+      },
+    })
+
+    await stamped.create(join(root, 'stamped'))
+    clock = '2026-08-06T11:00:00.000Z'
+    stamping = stamped.touch
+
+    await stamped.close()
+
+    expect(stamped.current()).toBeNull()
+    expect(onChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('announces nothing when there was no project to close', async () => {
+    vi.mocked(onChange).mockClear()
+
+    await store.close()
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `projectOpen` and `projectClose` are independent handlers: a closing that settles slowly —
+   * a journal flush on a network volume — must not tear down whatever opened meanwhile.
+   */
+  it('leaves alone a project opened while it was settling', async () => {
+    // Held for the closing alone: `activate` settles too, so a hold that outlived the first
+    // await would block the very opening this case has to let through.
+    let hold: Promise<void> | null = null
+    const racing = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+      onRoles: () => {},
+      settle: async () => {
+        if (hold) await hold
+      },
+    })
+
+    const first = await racing.create(join(root, 'first'))
+    const second = await racing.create(join(root, 'second'))
+    await racing.open(first.path)
+
+    let release = (): void => {}
+    hold = new Promise<void>(resolve => {
+      release = resolve
+    })
+
+    const closing = racing.close()
+    hold = null
+    await racing.open(second.path)
+    release()
+    await closing
+
+    expect(racing.current()).toEqual(second)
+    expect(onChange).toHaveBeenLastCalledWith(second)
+
+    await racing.close()
   })
 
   describe('inspecting a folder before creating in it', () => {
@@ -427,14 +561,14 @@ describe('project store', () => {
     })
 
     it('recognises a folder that is already a project', async () => {
-      const created = await store.create(root, 'My project')
+      const created = await store.create(root)
       expect(await store.inspect(created.path)).toBe('project')
     })
 
     // The catalogue would have two owners for the same files, and the outer project indexes the
     // inner one's assets as its own.
     it('refuses a folder sitting anywhere under a project', async () => {
-      await store.create(root, 'Outer')
+      await store.create(root)
 
       await expect(store.inspect(join(root, 'documents'))).rejects.toMatchObject({
         reason: 'nested',
@@ -451,8 +585,8 @@ describe('project store', () => {
      * by deleting a hidden file by hand.
      */
     it('refuses a folder that already holds projects', async () => {
-      await store.create(join(root, 'Reel'), 'Reel')
-      store.close()
+      await store.create(join(root, 'Reel'))
+      await store.close()
 
       await expect(store.inspect(root)).rejects.toMatchObject({ reason: 'holds-projects' })
     })
@@ -493,17 +627,17 @@ describe('project store', () => {
   })
 
   it('reopens a project it created', async () => {
-    const created = await store.create(root, 'My project')
-    store.close()
+    const created = await store.create(root)
+    await store.close()
 
     expect(store.current()).toBeNull()
     expect(await store.open(created.path)).toEqual(created)
   })
 
   it('refuses a manifest it cannot make sense of', async () => {
-    const created = await store.create(root, 'My project')
+    const created = await store.create(root)
     await writeFile(join(created.path, '.project.json'), '{"name":42}', 'utf8')
-    store.close()
+    await store.close()
 
     await expect(store.open(created.path)).rejects.toThrow()
   })
@@ -511,15 +645,15 @@ describe('project store', () => {
   // A folder carrying both is a project opened once since the rename: the old file is left where
   // it is, so it must not be the one that wins.
   it('prefers the hidden manifest over the one left beside it', async () => {
-    const created = await store.create(root, 'My project')
+    const created = await store.create(root)
     await writeFile(
       join(created.path, 'project.json'),
       JSON.stringify({ ...created.manifest, name: 'Stale name' }),
       'utf8',
     )
-    store.close()
+    await store.close()
 
-    expect((await store.open(created.path)).manifest.name).toBe('My project')
+    expect(projectName((await store.open(created.path)).path)).toBe(basename(created.path))
   })
 
   it('keeps the open project when the next one fails to open', async () => {
@@ -531,10 +665,11 @@ describe('project store', () => {
       },
       now: () => '2026-08-06T10:00:00.000Z',
       onChange,
+      onRoles: () => {},
     })
 
-    const first = await fragile.create(join(root, 'first'), 'First')
-    const second = await fragile.create(join(root, 'second'), 'Second')
+    const first = await fragile.create(join(root, 'first'))
+    const second = await fragile.create(join(root, 'second'))
     await fragile.open(first.path)
 
     failNext = true
@@ -544,7 +679,7 @@ describe('project store', () => {
     expect(fragile.current()).toEqual(first)
     expect(() => fragile.catalog()).not.toThrow()
 
-    fragile.close()
+    await fragile.close()
   })
 
   it('refuses to hand out a catalogue or a path with no project open', () => {
@@ -553,7 +688,7 @@ describe('project store', () => {
   })
 
   it('indexes into the project that is open, and only that one', async () => {
-    await store.create(root, 'First')
+    await store.create(root)
     await store.catalog().add({
       id: 'asset_1',
       name: 'Boulder',
@@ -563,14 +698,14 @@ describe('project store', () => {
       createdAt: '2026-08-06T10:00:00.000Z',
     })
 
-    await store.create(root, 'Second')
+    await store.create(root)
     await expect(store.catalog().search({})).resolves.toEqual([])
   })
 })
 
 /**
- * Renaming a project — the manifest's `name`, never the folder. The folder is what
- * `recentProjects`, `storage.lastProject` and every absolute path in the catalogue are keyed on.
+ * Renaming a project: the manifest's `name` AND its folder, since 2026-08-31. Two names for one
+ * thing is what made `projects.list` answer `{name: "Jeu2", path: ".../jeu1"}`.
  */
 describe('renaming a project', () => {
   let root: string
@@ -586,11 +721,12 @@ describe('renaming a project', () => {
       openCatalog: async () => memoryCatalog(),
       now: () => clock,
       onChange,
+      onRoles: () => {},
     })
   })
 
   afterEach(async () => {
-    store.close()
+    await store.close()
     await rm(root, { recursive: true, force: true })
     execFileMock.mockClear()
   })
@@ -598,15 +734,16 @@ describe('renaming a project', () => {
   const manifestAt = async (path: string): Promise<unknown> =>
     JSON.parse(await readFile(join(path, MANIFEST_FILE), 'utf8'))
 
-  it('writes the new name into the manifest and leaves the folder where it is', async () => {
-    const made = await store.create(root, 'Before')
+  it('moves the folder to the new name, and writes it into the manifest', async () => {
+    const made = await store.create(join(root, 'Before'))
 
     const renamed = await store.rename(made.path, 'After')
 
-    expect(renamed.path).toBe(made.path)
-    expect(renamed.manifest.name).toBe('After')
-    expect(await exists(made.path)).toBe(true)
-    expect(await manifestAt(made.path)).toMatchObject({ name: 'After' })
+    expect(renamed.path).toBe(join(root, 'After'))
+    expect(projectName(renamed.path)).toBe('After')
+    expect(await exists(made.path)).toBe(false)
+    // The manifest carries no name at all: the folder is the only place it lives.
+    expect(await manifestAt(renamed.path)).not.toHaveProperty('name')
   })
 
   /**
@@ -615,7 +752,7 @@ describe('renaming a project', () => {
    * to prevent, arriving through the one gesture that reads as harmless.
    */
   it('never touches the date the project was made', async () => {
-    const made = await store.create(root, 'Before')
+    const made = await store.create(join(root, 'Before'))
     clock = '2026-12-25T00:00:00.000Z'
 
     const renamed = await store.rename(made.path, 'After')
@@ -625,38 +762,82 @@ describe('renaming a project', () => {
   })
 
   it('replaces the open project in memory, so the studio reads the new name at once', async () => {
-    const made = await store.create(root, 'Before')
+    const made = await store.create(join(root, 'Before'))
 
-    await store.rename(made.path, 'After')
+    const renamed = await store.rename(made.path, 'After')
 
-    expect(store.current()?.manifest.name).toBe('After')
+    expect(projectName(store.current()?.path ?? '')).toBe('After')
+    expect(store.current()?.path).toBe(renamed.path)
   })
 
   /**
-   * `onChange` means "another project is in front now": it resumes remembered jobs and re-arms the
-   * folder watch. Firing it for a rename would double-track running jobs to update a word.
+   * 🛑 The catalogue is a thread holding a file INSIDE the folder that just moved. Reopened rather
+   * than left pointing at the old path — and Windows would not have let the folder move at all.
    */
-  it('does not announce a project change', async () => {
-    const made = await store.create(root, 'Before')
-    vi.mocked(onChange).mockClear()
+  it('answers from the catalogue of the folder it moved to', async () => {
+    const made = await store.create(join(root, 'Before'))
 
     await store.rename(made.path, 'After')
 
-    expect(onChange).not.toHaveBeenCalled()
+    await expect(store.catalog().search({})).resolves.toEqual([])
+  })
+
+  /**
+   * 🛑 Announced, and staying silent cost more than it saved: `onChange` is the only thing that
+   * redirects the folder watch, follows the assistant's memory and re-keys the account link — all
+   * of which stayed on a folder that had just moved.
+   */
+  it('announces the folder it moved to, for everything keyed on the old one', async () => {
+    const made = await store.create(join(root, 'Before'))
+    vi.mocked(onChange).mockClear()
+
+    const renamed = await store.rename(made.path, 'After')
+
+    expect(onChange).toHaveBeenCalledWith(renamed)
   })
 
   // The home's shelf lists projects that are not open, and renaming one must not open it.
   it('renames a project that is not open, without opening it', async () => {
-    const other = await store.create(join(root, 'other'), 'Other')
-    const open = await store.create(join(root, 'open'), 'Open')
+    const other = await store.create(join(root, 'other'))
+    const open = await store.create(join(root, 'open'))
 
     const renamed = await store.rename(other.path, 'Renamed')
 
-    expect(renamed.manifest.name).toBe('Renamed')
-    expect(await manifestAt(other.path)).toMatchObject({ name: 'Renamed' })
-    // Still the one that was open, and its manifest untouched.
+    expect(projectName(renamed.path)).toBe('Renamed')
+    // Still the one that was open, and its folder untouched.
     expect(store.current()?.path).toBe(open.path)
-    expect(await manifestAt(open.path)).toMatchObject({ name: 'Open' })
+    expect(projectName(open.path)).toBe('open')
+  })
+
+  /**
+   * 🛑 Measured by inode, never deduced: APFS and NTFS fold case where ext4 does not, so `jeu1` →
+   * `Jeu1` is a plain rename on this Mac and « that name is taken » on a Linux runner — and
+   * `process.platform` answers for neither, since the volume is what decides.
+   */
+  it('takes a name that differs only in case', async () => {
+    const made = await store.create(join(root, 'jeu1'))
+
+    const renamed = await store.rename(made.path, 'Jeu1')
+
+    expect(projectName(renamed.path)).toBe('Jeu1')
+    expect(await exists(renamed.path)).toBe(true)
+  })
+
+  it('refuses a name a folder beside it already carries', async () => {
+    await store.create(join(root, 'Taken'))
+    const made = await store.create(join(root, 'Before'))
+
+    await expect(store.rename(made.path, 'Taken')).rejects.toThrow(ProjectRenameError)
+    expect(await exists(made.path)).toBe(true)
+  })
+
+  // Refused rather than transformed: a studio that quietly renamed « Brique 1/2 » to « Brique 1 2 »
+  // would list a project under a name nobody typed.
+  it('refuses a name the disk cannot carry', async () => {
+    const made = await store.create(join(root, 'Before'))
+
+    await expect(store.rename(made.path, 'Brique 1/2')).rejects.toThrow(ProjectRenameError)
+    expect(await exists(made.path)).toBe(true)
   })
 
   // A folder gone since the shelf last saw it is the ordinary case there, and it must not be

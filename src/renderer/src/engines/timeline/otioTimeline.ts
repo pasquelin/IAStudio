@@ -2,7 +2,7 @@
  * A montage, translated to OpenTimelineIO and back.
  *
  * The standard part is the truth: another application edits the cut, not our metadata. The
- * `scenario` domain only RESTORES what the standard rounded away — an exact microsecond, a fade,
+ * `iastudio` domain only RESTORES what the standard rounded away — an exact microsecond, a fade,
  * a gain — and it is ignored the moment it disagrees with the frame the standard holds. Trusting
  * it blindly would silently undo a trim made in Resolve.
  */
@@ -36,6 +36,7 @@ import {
   newClipId,
   nextTrackId,
   playsThrough,
+  readSelection,
   reindexTracks,
   type Clip,
   type SequenceState,
@@ -207,6 +208,26 @@ function trackOf(
 }
 
 /**
+ * The studio metadata a save RECOMPOSES from the state, and its keys.
+ *
+ * Written here rather than listed by the reader that skips them: a key added to one copy and not
+ * the other is carried AND written, and the spread hides it — nothing reddens.
+ */
+export function studioComposedBy(state: SequenceState): Record<string, unknown> {
+  const { width, height, sampleRate } = state.settings
+  return {
+    width,
+    height,
+    sampleRate,
+    playhead: state.playhead,
+    selectedId: state.selectedId,
+    selectedTrackId: state.selectedTrackId,
+  }
+}
+
+export const STUDIO_COMPOSED_KEYS: readonly string[] = Object.keys(studioComposedBy(EMPTY_SEQUENCE))
+
+/**
  * The montage as an OTIO timeline, ready to be serialized.
  *
  * Tracks come out BOTTOM first — the last child of a stack is the layer on top, the opposite of
@@ -216,7 +237,7 @@ export function otioTimelineOf(
   state: SequenceState,
   { name, documentId, studio, sourceOf }: OtioWriteOptions,
 ): OtioTimeline {
-  const { fps, width, height, sampleRate } = state.settings
+  const { fps } = state.settings
   return {
     OTIO_SCHEMA: 'Timeline.1',
     name,
@@ -224,11 +245,7 @@ export function otioTimelineOf(
       [STUDIO_METADATA_KEY]: {
         ...studio,
         ...(documentId ? { [DOCUMENT_ID_KEY]: documentId } : {}),
-        width,
-        height,
-        sampleRate,
-        playhead: state.playhead,
-        selectedId: state.selectedId,
+        ...studioComposedBy(state),
       },
     },
     global_start_time: timeAt(0, fps),
@@ -545,7 +562,6 @@ function sequenceIn(content: unknown, linking: Relinking): SequenceState {
   if (tracks.length === 0) return EMPTY_SEQUENCE
 
   const studio = otioStudioMetadata(content)
-  const selectedId = readString(studio, 'selectedId', '')
   const read: SequenceState = {
     settings: {
       width: readNumber(studio, 'width', DEFAULT_SETTINGS.width),
@@ -554,7 +570,7 @@ function sequenceIn(content: unknown, linking: Relinking): SequenceState {
       sampleRate: readNumber(studio, 'sampleRate', DEFAULT_SETTINGS.sampleRate),
     },
     tracks: reindexTracks(tracks),
-    selectedId: tracks.some(t => t.clips.some(c => c.id === selectedId)) ? selectedId : null,
+    ...readSelection(studio, tracks),
     playhead: readPositive(studio, 'playhead', 0),
   }
 

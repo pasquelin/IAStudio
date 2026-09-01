@@ -1,23 +1,76 @@
+import { primaryRoleOf, type AiRoleId } from './aiRole'
+import { CATALOGUE_FAMILIES, type ModelFamily } from './model'
 import { reconcileOrder } from './order'
 
 /**
  * Workspace registry, shared by both processes. It sits here for the same reason as
  * `domain/tool.ts`: the document domain needs `WorkspaceId`, and `shared/` cannot import from
- * the renderer. The renderer enriches these ids with icons and model families.
+ * the renderer. The renderer enriches these ids with icons.
  */
-export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'textures' | 'skyboxes'
+export type WorkspaceId = 'image' | 'video' | '3d' | 'audio' | 'materials' | 'skyboxes' | 'code'
 
-/** Rail order. */
+/** Rail order. Code sits after 3D: a game is written for the scene one has just been shaping. */
 export const WORKSPACE_IDS: readonly WorkspaceId[] = [
   'image',
   'video',
   '3d',
+  'code',
   'audio',
-  'textures',
+  'materials',
   'skyboxes',
 ]
 
 export const DEFAULT_WORKSPACE: WorkspaceId = 'image'
+
+/**
+ * What a space generates with, or `null` where it generates nothing. Shared rather than kept
+ * beside the icons: the window draws a model browser per space and the assistant names the spaces
+ * nothing can generate in — two tables would drift the day one moves.
+ *
+ * No `null` left since Code gained `code`. The type keeps it: a space that produces nothing is a
+ * shape this record must still be able to express, and `roleOfWorkspace` already answers for it.
+ */
+export const FAMILY_BY_WORKSPACE: Record<WorkspaceId, ModelFamily | null> = {
+  image: 'image',
+  video: 'video',
+  '3d': '3d',
+  code: 'code',
+  audio: 'audio',
+  materials: 'material',
+  skyboxes: 'skybox',
+}
+
+/**
+ * The spaces a model can be run in. What the generator panel stands on, and it is derived rather
+ * than listed: a space added without a family would otherwise get an icon opening onto a picker
+ * with nothing to pick.
+ */
+export const GENERATIVE_WORKSPACE_IDS: readonly WorkspaceId[] = WORKSPACE_IDS.filter(
+  id => FAMILY_BY_WORKSPACE[id] !== null,
+)
+
+/**
+ * The spaces a REMOTE LIBRARY can be browsed in — every generative one but Code.
+ *
+ * 🛑 Not the same list as above: a code model is served by a chat, which publishes no assets, so
+ * the shelf would have stood beside a script editor listing pictures.
+ */
+export const LIBRARY_WORKSPACE_IDS: readonly WorkspaceId[] = WORKSPACE_IDS.filter(id => {
+  const family = FAMILY_BY_WORKSPACE[id]
+  return family !== null && CATALOGUE_FAMILIES.includes(family)
+})
+
+/**
+ * The employment a generation in this space would run under, or `null` where none would — any
+ * space with no family, and any whose family declares no primary employment.
+ *
+ * Written once because three readers ask it: the briefing that names the armed model, the list of
+ * spaces nothing serves, and the panel that arms one. Each carried its own `family === null`.
+ */
+export function roleOfWorkspace(workspace: WorkspaceId): AiRoleId | null {
+  const family = FAMILY_BY_WORKSPACE[workspace]
+  return family === null ? null : primaryRoleOf(family)
+}
 
 /**
  * Exported because the id often arrives from outside the type system — a stored order, an IPC

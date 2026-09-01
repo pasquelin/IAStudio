@@ -1,6 +1,7 @@
+import { codeIn } from '../guards'
+import { pathBaseNameOf } from './fileName'
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
-import { DEFAULT_ASSET_FOLDERS } from './asset'
 import { parentOf } from './folder'
 
 export const MANIFEST_VERSION = 1
@@ -29,6 +30,20 @@ export const INDEX_FOLDER = '.index'
 export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
 
 /**
+ * The studio's own folder inside a project — for what it keeps that no rescan could rebuild.
+ *
+ * NOT `.index/`, and the difference is the whole reason both exist: `.index/` is a cache the
+ * studio's `.gitignore` excludes, this travels with the project and is meant to be committed.
+ */
+export const STUDIO_FOLDER = '.ia-studio'
+
+/** What the assistant has learned about this project. One JSON object per line, appended. */
+export const MEMORY_FILE = `${STUDIO_FOLDER}/memory.ndjson`
+
+/** Its searchable half, under the cache: thrown away and rebuilt from the file above. */
+export const MEMORY_INDEX_FILE = `${INDEX_FOLDER}/memory.db`
+
+/**
  * Where a move that is under way writes down what it has already done.
  *
  * Moving three hundred files is not one operation the filesystem can undo: it is three hundred,
@@ -39,9 +54,27 @@ export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
  */
 export const PENDING_FILES_FILE = `${INDEX_FOLDER}/pending-files.ndjson`
 
+/**
+ * Where the last folder-role resolution was written down — a CACHE, never the answer. What binds
+ * a role to a folder is the marker the folder carries; this only spares the walk.
+ *
+ * Declared beside the other `.index/` paths rather than in the resolver, for the reason
+ * `INDEX_FOLDER` gives: three spellings of one folder is how one ends up pointing at a folder
+ * nothing creates.
+ */
+export const ROLE_CACHE_FILE = `${INDEX_FOLDER}/folder-roles.json`
+
+/**
+ * 🛑 NO name, and that is the whole point: a project is named by its FOLDER — see `projectName`.
+ * Held here as well, it was a second copy nothing kept aligned, and a folder renamed in Finder
+ * went on being drawn under the name this file remembered.
+ *
+ * What stays is what the disk cannot answer: `version` says whether this build can read the
+ * project at all, and `createdAt` is what both shelves order by — no file system gives a creation
+ * date that is portable and survives a copy.
+ */
 export type Manifest = {
   version: number
-  name: string
   createdAt: string
   updatedAt: string
 }
@@ -56,12 +89,15 @@ export type Project = {
  * the same reason it is: the settings are replicated in every window, so the home reads the
  * list without a channel of its own.
  *
- * The name is stored rather than derived from the folder: a project renamed in its manifest
- * would otherwise be listed under the name of the folder it happens to sit in.
+ * The NAME is not here — it is read off the path by `projectName`, and a rename moves the folder.
  */
 export type RecentProject = {
+  /**
+   * 🛑 The one identity, and the NAME is read off it — see `projectName`. Stored beside the path,
+   * the name was a third copy: a rename had to write it separately, and a shelf that kept the old
+   * one listed a project twice under two names for one folder.
+   */
   path: string
-  name: string
   /** ISO 8601, stamped when it was last opened. What decides which entry is evicted. */
   openedAt: string
   /**
@@ -135,6 +171,18 @@ export function projectPickerFolder(
 }
 
 /**
+ * What a project is CALLED: the name of its folder, and nothing else — one source of truth.
+ *
+ * NFC like every other name this studio reads off the disk: macOS writes `Été` as two code
+ * points, and a name compared or drawn as it came would not match the same word typed here.
+ */
+export function projectName(path: string): string {
+  // 🛑 The trailing separator goes FIRST: `/Projets/jeu1/` is a path a model writes and a picker
+  // returns, and read as it came the name is the empty string — an unnamed project everywhere.
+  return pathBaseNameOf(path.replace(/[/\\]+$/, '')).normalize('NFC')
+}
+
+/**
  * The folder holding an absolute path, or nothing when there is no folder above it to name.
  *
  * Both separators, unlike `parentOf` in `domain/folder.ts`, which walks the `/`-joined ids the
@@ -153,6 +201,72 @@ function parentFolder(path: string): string | undefined {
 }
 
 /**
+ * Whether a path names a place on this disk, or only a folder to be put somewhere.
+ *
+ * 🛑 Both shapes, and Windows too: a model that answers `test3` means a NAME, and one that
+ * answers `C:\\Projets\\test3` or `/Users/…/test3` means a place. Read wrong either way, the
+ * studio writes a project where nobody asked for one.
+ */
+export function isAbsolutePath(path: string): boolean {
+  return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\')
+}
+
+/**
+ * Why a folder will not serve as a project. Each case asks the person for a different thing: pick
+ * another folder, repair this one, update the studio, or — for a folder inside a project already,
+ * or one holding projects — name one that is neither.
+ */
+export type ProjectOpenFailure =
+  'not-a-project' | 'unreadable' | 'too-new' | 'nested' | 'holds-projects'
+
+/** Why a project cannot take a NAME. About the name asked for, never about the folder. */
+export type ProjectRenameFailure = 'unsafe-name' | 'taken'
+
+export const PROJECT_RENAME_FAILURES: readonly ProjectRenameFailure[] = ['unsafe-name', 'taken']
+
+export const PROJECT_OPEN_FAILURES: readonly ProjectOpenFailure[] = [
+  'not-a-project',
+  'unreadable',
+  'too-new',
+  'nested',
+  'holds-projects',
+]
+
+/**
+ * The reason inside a rejection that crossed the boundary, or nothing for a failure that is not
+ * about the folder.
+ *
+ * 🛑 Matched at the END, never compared whole: `ipcMain.handle` wraps what it rethrows — `Error
+ * invoking remote method 'project:create': Error: holds-projects` — so an equality test never
+ * fires and every refusal reads as unexpected.
+ */
+export const projectFailureIn = (message: string): ProjectOpenFailure | null =>
+  codeIn(message, PROJECT_OPEN_FAILURES)
+
+export const projectRenameFailureIn = (message: string): ProjectRenameFailure | null =>
+  codeIn(message, PROJECT_RENAME_FAILURES)
+
+/**
+ * Where a project called `name` goes when the model named no place: under the folder this person
+ * keeps projects in. Nothing where none is known yet, which is the first project of a machine.
+ */
+export function projectPathFor(name: string, within: string | undefined): string | undefined {
+  if (isAbsolutePath(name)) return name
+  if (!within) return undefined
+
+  /**
+   * 🛑 A NAME, never a path: `../Secret` joined to the projects folder leaves it, and the main
+   * process only checks that what it receives is absolute — `..` passes that. A model that means
+   * somewhere else says so absolutely, where a person can read it in the question.
+   */
+  if (/[\\/]/.test(name) || name.split(/[\\/]/).includes('..') || name.startsWith('~')) {
+    return undefined
+  }
+
+  return `${within.replace(/[\\/]$/, '')}/${name}`
+}
+
+/**
  * The list after a project has been opened: most recently opened first, one entry per path,
  * bounded. This is STORAGE order — what gets evicted — and not what any screen draws; see
  * `projectsByCreation`.
@@ -168,7 +282,6 @@ export function withRecentProject(
 ): RecentProject[] {
   const entry: RecentProject = {
     path: project.path,
-    name: project.manifest.name,
     openedAt,
     createdAt: project.manifest.createdAt,
   }
@@ -211,22 +324,45 @@ export function planProjectAccount(
 }
 
 /**
- * The list with one entry wearing a new name, and nothing else touched — not its dates, and above
- * all not its ORDER: a rename is not an opening.
+ * A table keyed BY FOLDER, re-keyed onto the folder a project moved to.
  *
- * The name is stored rather than derived from the folder, so renaming a project in its manifest and
- * leaving this list alone would go on listing it under the old one until it was next opened. The
- * two writes therefore belong together, which is why this sits beside the manifest's own constants
- * rather than inside whichever surface offered the rename.
+ * 🛑 Three of them exist — `storage.projectAccounts`, `ai.projectRoles`, and the layouts a window
+ * adopts — and a rename moves the key of all three since 2026-08-31. Left behind, the account link
+ * is orphaned and `planProjectAccount` answers `adopt`: the project silently comes back on
+ * whichever key is active, and the write that follows is destructive.
+ */
+export function movedProjectKey<T>(
+  held: Record<string, T>,
+  from: string,
+  to: string,
+): Record<string, T> {
+  const moving = held[from]
+  if (moving === undefined) return held
+
+  return {
+    ...Object.fromEntries(Object.entries(held).filter(([key]) => key !== from)),
+    [to]: moving,
+  }
+}
+
+/**
+ * The list with one entry moved to the folder it now lives in, and nothing else touched — not its
+ * dates, and above all not its ORDER: a rename is not an opening.
+ *
+ * 🛑 The destination is dropped FIRST. Left in, a rename onto a folder the shelf already knew
+ * listed it twice — two rows, one folder, measured 2026-08-31. The name is not written at all: it
+ * is read off the path, so moving the entry IS renaming it.
  *
  * A path the list does not hold is not an error: the open project need not be a remembered one.
  */
-export function renamedRecentProject(
+export function movedRecentProject(
   recent: readonly RecentProject[],
-  path: string,
-  name: string,
+  from: string,
+  to: string,
 ): RecentProject[] {
-  return recent.map(entry => (entry.path === path ? { ...entry, name } : entry))
+  return recent
+    .filter(entry => entry.path !== to || entry.path === from)
+    .map(entry => (entry.path === from ? { ...entry, path: to } : entry))
 }
 
 /**
@@ -287,18 +423,6 @@ export const MACHINE_FOLDERS: readonly string[] = [
   POSTERS_FOLDER,
   THUMBNAILS_FOLDER,
 ]
-
-/**
- * What a new project opens with — ORDINARY folders from the first second, renamed, filled and
- * thrown away like any the user makes. They are a starting point, not a layout the studio reads
- * anything back from.
- *
- * Derived from `DEFAULT_ASSET_FOLDERS` rather than relisted, so adding a kind cannot leave the
- * writer pointing at a folder this never created. `assets/` and `documents/` are no longer among
- * them: a document lands in `documents/` when nothing says otherwise and the folder appears with
- * the first save, exactly as an import recreates `Images/`.
- */
-export const STARTER_FOLDERS: readonly string[] = Object.values(DEFAULT_ASSET_FOLDERS)
 
 /**
  * The one folder every asset used to be filed under, back when the tree was the studio's.

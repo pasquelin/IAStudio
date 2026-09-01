@@ -70,6 +70,15 @@ export function run<S>(state: S, history: History<S>, command: Command<S>): [S, 
 }
 
 /**
+ * One convention for what a history entry is called. Coalescing turns on two consecutive commands
+ * sharing an id, so a format drifting by a character would break it in silence — a drag costing
+ * one undo per frame. Beside `composed` because every engine names entries the same way.
+ */
+export function commandId(label: string, ids: readonly string[]): string {
+  return `${label}:${ids.join(',')}`
+}
+
+/**
  * Several commands as ONE entry in the history: applied in order, reverted in reverse.
  *
  * What the user did in one gesture is one ⌘Z — three nodes nudged together, a take laid down as

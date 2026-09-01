@@ -7,7 +7,7 @@ import { create } from 'zustand'
  * Hidden by default: what a montage is for is the whole edit, and the half showing a single clip
  * is what one opens when a clip needs looking at on its own.
  *
- * Session state, and a store of its own for the reason `useTextureViews` gives: how one is
+ * Session state, and a store of its own for the reason `useMaterialViews` gives: how one is
  * looking at a document is not something one made of it, and it must not travel in the `.otio`.
  */
 export type MonitorPairState = {

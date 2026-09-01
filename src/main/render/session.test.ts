@@ -88,4 +88,25 @@ describe('a render staged on disk', () => {
     await session.cancel()
     await expect(session.cancel()).resolves.toBeUndefined()
   })
+
+  it('aborts an encode still running, so Stop does not wait for ffmpeg', async () => {
+    let signal: AbortSignal | undefined
+    const encode = vi.fn(
+      (_args: readonly string[], next?: AbortSignal) =>
+        new Promise<void>((_resolve, reject) => {
+          signal = next
+          next?.addEventListener('abort', () =>
+            queueMicrotask(() => reject(new Error('cancelled'))),
+          )
+        }),
+    )
+    const session = await startRender({ encode, scratch })
+    await session.frame(1, png(1))
+
+    const finishing = session.finish('/out/film.mp4', 25).catch((error: unknown) => error)
+    await session.cancel()
+
+    expect(signal?.aborted).toBe(true)
+    await expect(finishing).resolves.toEqual(new Error('cancelled'))
+  })
 })

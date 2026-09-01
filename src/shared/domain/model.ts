@@ -18,6 +18,12 @@ export type FieldKind =
   | 'raw'
   /** An object whose top-level keys are known. `raw` is the one whose shape is NOT. */
   | 'record'
+  /**
+   * A run the same service already finished, named by ITS id — never a file. What fills the
+   * list is the window, which is the only side that knows what has run; a runner that uploaded
+   * here would spend the upload and be refused, the endpoint wanting a task and not a token.
+   */
+  | 'task'
 
 export type FieldOption = {
   value: string
@@ -27,6 +33,8 @@ export type FieldOption = {
 export type FieldDescriptor = {
   key: string
   kind: FieldKind
+  /** A LIST of `kind` rather than one — the word `ActionField` already uses for the same thing. */
+  repeated?: true
   label: string
   help?: string
   required: boolean
@@ -63,8 +71,10 @@ export type ModelFamily =
   | 'video'
   | '3d'
   | 'audio'
-  | 'texture'
+  | 'material'
   | 'skybox'
+  /** Source text, and the one family no catalogue of this studio publishes — see `CODE_FAMILY`. */
+  | 'code'
   | 'upscale'
   | 'background-removal'
   | 'vectorization'
@@ -75,8 +85,9 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
   'video',
   '3d',
   'audio',
-  'texture',
+  'material',
   'skybox',
+  'code',
   'upscale',
   'background-removal',
   'vectorization',
@@ -84,8 +95,44 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
 ]
 
 /**
+ * The family a language model serves and a diffusion catalogue does not.
+ *
+ * 🛑 It is served by CHAT — a cloud that answers `/v1/chat/completions`, or a text model on this
+ * machine — never by the Scenario catalogue, which publishes no code model and no code
+ * capability. Named rather than spelled, because three modules narrow on it: what Scenario is
+ * asked for, which clouds hold a library to browse, and which target the job runner routes to a
+ * chat rather than to a generation.
+ */
+export const CODE_FAMILY: ModelFamily = 'code'
+
+/**
+ * The families a catalogue of generated ASSETS publishes — every one but `code`.
+ *
+ * What Scenario declares it serves, and what a remote library is browsable for. Derived rather
+ * than listed: a family added to the studio joins the catalogue unless it is `code`, which is
+ * the exception this constant exists to state once.
+ */
+export const CATALOGUE_FAMILIES: readonly ModelFamily[] = MODEL_FAMILIES.filter(
+  family => family !== CODE_FAMILY,
+)
+
+/**
+ * What a family a settings file still spells the old way is called today — `texture` named the
+ * material family until 2026-08-26.
+ *
+ * A family name is half of a key WRITTEN TO DISK (`ai.roles`, `ai.ownModels`, the browser's own
+ * choice), and nothing reddens when one goes unread: the choice comes back as "none made".
+ */
+const RENAMED_FAMILIES: Record<string, ModelFamily> = { texture: 'material' }
+
+/** Left alone when the family never moved, so it may be run over a whole stored record. */
+export function currentModelFamily(stored: string): string {
+  return RENAMED_FAMILIES[stored] ?? stored
+}
+
+/**
  * Who published the model. The API exposes no author name — only an opaque `authorId` — so
- * `SCENARIO_MAINTAINER` is the closest thing to an authorship signal there is to filter on.
+ * `PROVIDER_MAINTAINER` is the closest thing to an authorship signal there is to filter on.
  */
 export type ModelOrigin = 'official' | 'community'
 
@@ -114,7 +161,7 @@ export const MODEL_IDS_BATCH_LIMIT = 100
  * Neither Scenario Skybox was in it, which is how "Official" emptied a space whose every model
  * Scenario maintains.
  */
-export const SCENARIO_MAINTAINER = 'Scenario'
+export const PROVIDER_MAINTAINER = 'Scenario'
 
 /** Scenario's own highlight, and the badge their grid shows: 29 of the 640 public models. */
 export const FEATURED_TAG = 'sc:featured'
@@ -191,10 +238,20 @@ export function tagOfFamily(family: ModelFamily): string | undefined {
   return second ? undefined : only?.tag
 }
 
+/**
+ * Where a model runs, when it is not a cloud's: this machine.
+ *
+ * A value of `ModelSummary.runsOn` beside the cloud ids of `aiCloud.ts`, and NOT a second field —
+ * a model knows where it runs, and the panel never switches "to the cloud": ADR-21 as amended.
+ */
+export const LOCAL_RUNTIME = 'local'
+
 export type ModelSummary = {
   id: string
   name: string
   family: ModelFamily
+  /** `LOCAL_RUNTIME`, or the id of the cloud that serves it. What the Local/Scenario facet reads. */
+  runsOn: string
   /**
    * Where the model comes from — `scenario`, `civitai`, `huggingface`, … Left a plain string
    * rather than a union: the API adds values without warning, and an unknown origin must not
@@ -202,6 +259,21 @@ export type ModelSummary = {
    */
   source: string
   origin: ModelOrigin
+  /**
+   * Whether the weights are on THIS disk — absent for a model that runs in a cloud, where there
+   * is nothing to install and the question means nothing.
+   *
+   * A model of this machine that has not been fetched cannot generate: the panel greys it and
+   * offers the download, rather than letting a click end in a failure the person cannot read.
+   */
+  installed?: boolean
+  /**
+   * Whether a click can fetch the weights. Absent means yes when `installed` is false.
+   * False for a card listed before any engine can open it: nothing to pull, so no dialog.
+   */
+  downloadable?: boolean
+  /** What the download weighs. Absent for a cloud model, which downloads nothing. */
+  diskBytes?: number
   featured: boolean
   capabilities: readonly string[]
   tags: readonly string[]
@@ -239,23 +311,99 @@ export type ModelSort = 'relevance' | 'recent' | 'oldest'
 export const MODEL_SORTS: readonly ModelSort[] = ['relevance', 'recent', 'oldest']
 
 /**
- * Capabilities worth offering as a filter, per family — taken from the API's own enum. Only a
- * head of it: `controlnet_inpaint_ip_adapter` and its kin are combinations a user filters by
- * their parts, not by name.
+ * Every capability a family has, and the ONE list a role may be composed from — `aiRoleId`
+ * refuses anything absent here, so a family with none can be served by nothing.
+ *
+ * Mostly the API's own enum. Five are the studio's own words, and they are NOT enum values:
+ * skybox panoramas answer image capabilities, and the last five of this record name employments
+ * the enum has no value for at all. What finds their models is `STUDIO_CAPABILITIES`, and a
+ * listing narrowed by one of them server-side answers nothing.
+ *
+ * ORDER IS A CONTRACT: `primaryRoleOf` takes the first, so a capability appended to a family
+ * leaves what that family generates by default alone. `rig` and `motion` are appended for that
+ * reason. Combinations like `controlnet_inpaint_ip_adapter` are filtered by their parts.
  */
 export const CAPABILITIES_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   image: ['txt2img', 'img2img', 'inpaint', 'outpaint', 'controlnet', 'reference'],
   video: ['txt2video', 'img2video', 'video2video'],
-  '3d': ['txt23d', 'img23d', '3d23d'],
+  '3d': ['txt23d', 'img23d', '3d23d', 'rig', 'motion'],
   audio: ['txt2audio', 'audio2audio', 'video2audio'],
-  texture: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
-  // Empty like its tags and its publishers below, and for the same reason: the family is four
-  // models wide, and a two-option menu narrowing four rows only ever answers "fewer".
-  skybox: [],
-  upscale: [],
-  'background-removal': [],
-  vectorization: [],
+  material: ['txt2img_texture', 'img2img_texture', 'controlnet_texture', 'reference_texture'],
+  skybox: ['txt2skybox', 'img2skybox'],
+  // Written and rewritten, and nothing else: what a chat can be asked for that lands in a script.
+  // Neither is an API enum value — no catalogue publishes them, and `STUDIO_CAPABILITIES` does
+  // not name them either, since what serves them is a cloud key or a text model, never a listing.
+  code: ['txt2code', 'code2code'],
+  upscale: ['upscale'],
+  'background-removal': ['cutout'],
+  vectorization: ['vectorize'],
   other: [],
+}
+
+/**
+ * A capability the studio NAMES and the API's enum does not hold, with what finds its models.
+ *
+ * Without this a role like `3d/rig` would key a preference nothing could ever serve: `matches`
+ * narrows on the capabilities the API published, and no model publishes `rig`.
+ *
+ * Three shapes, and each one is measured rather than chosen:
+ *   - neither `answers` nor `tags` — every model of the family serves it. The three families
+ *     whose whole membership IS the employment: `FAMILY_TAGS` already filed them.
+ *   - `answers` and `tags` — the enum value is too coarse alone. Measured 2026-08-18: `3d23d`
+ *     covers 19 public models and 5 of them rig; the rest remesh, retexture, unwrap or segment.
+ *   - `tags` alone — no enum value narrows them at all. The motion models span `txt23d`,
+ *     `video23d` and `3d23d`, so a list built on the capability would be either three quarters
+ *     wrong or a list of everything.
+ *
+ * 🛑 The tags are AUTHORS' words, not Scenario's `sc:` namespace, so nothing makes them
+ * contractual. They are the only signal there is; a publisher who spells one differently
+ * disappears from the employment and nothing reddens.
+ */
+export type StudioCapability = {
+  capability: string
+  family: ModelFamily
+  /** The API capability its models actually answer, when one narrows them. */
+  answers?: string
+  /** Author tags, one of which a model must carry. Matched case-insensitively. */
+  tags?: readonly string[]
+  /** Author tags that disqualify: a rigger is not a motion generator, and both carry `Animation`. */
+  excludes?: readonly string[]
+}
+
+export const STUDIO_CAPABILITIES: readonly StudioCapability[] = [
+  // The panoramas answer image capabilities and are found by tag — the family is what
+  // `SKYBOX_TAG` already filed them under, and `answers` is what tells the two apart.
+  { capability: 'txt2skybox', family: 'skybox', answers: 'txt2img' },
+  { capability: 'img2skybox', family: 'skybox', answers: 'img2img' },
+  { capability: 'rig', family: '3d', answers: '3d23d', tags: ['rigging'] },
+  { capability: 'motion', family: '3d', tags: ['motion', 'animation'], excludes: ['rigging'] },
+  { capability: 'upscale', family: 'upscale' },
+  { capability: 'cutout', family: 'background-removal' },
+  { capability: 'vectorize', family: 'vectorization' },
+]
+
+/** The rule that finds a studio capability's models, or nothing when it names none. */
+export function studioCapability(capability: string): StudioCapability | undefined {
+  return STUDIO_CAPABILITIES.find(entry => entry.capability === capability)
+}
+
+function ownsTag(tags: readonly string[], wanted: readonly string[]): boolean {
+  return tags.some(tag => wanted.includes(tag.toLowerCase()))
+}
+
+/**
+ * Whether a model of the right family serves this studio capability.
+ *
+ * Takes the two fields it reads rather than a `ModelSummary`: the catalogue answers one shape and
+ * `LocalModel` another, and both sides ask this question.
+ */
+export function servesStudioCapability(
+  entry: StudioCapability,
+  model: { capabilities: readonly string[]; tags: readonly string[] },
+): boolean {
+  if (entry.answers !== undefined && !model.capabilities.includes(entry.answers)) return false
+  if (entry.excludes && ownsTag(model.tags, entry.excludes)) return false
+  return entry.tags === undefined || ownsTag(model.tags, entry.tags)
 }
 
 /**
@@ -289,11 +437,13 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   '3d': ['Image to 3D', 'Text to 3D', '3D to 3D', 'PBR', 'Multiview', 'Motion'],
   audio: ['Audio', 'TTS', 'Music', 'Text to Music', 'Text to Speech'],
   // Empty until the same count is run over the family: it was split out of `image` on its
-  // capabilities, and borrowing that list would offer tags no texture model may carry.
-  texture: [],
-  // Empty for the reason `CAPABILITIES_BY_FAMILY` gives above: four rows leave a facet nothing
-  // to narrow.
+  // capabilities, and borrowing that list would offer tags no material model may carry.
+  material: [],
+  // Empty like its publishers: Scenario's four panoramas leave a facet nothing to narrow.
   skybox: [],
+  // Empty, and it cannot be otherwise: no catalogue lists a code model, so there is no listing
+  // for a tag to narrow. The choice is a cloud or a model on this machine.
+  code: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],
@@ -375,9 +525,11 @@ export const PUBLISHERS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
   video: ['Kling', 'Vidu', 'Alibaba', 'Wan', 'Bytedance', 'Luma', 'Google', 'Grok'],
   '3d': ['Tripo', 'Tencent', 'Meshy', 'Hunyuan', 'Rodin'],
   audio: ['ElevenLabs', 'Google', 'Bytedance'],
-  texture: [],
+  material: [],
   // Empty for the same reason as its tags: Scenario, BFL and Tencent publish one model each.
   skybox: [],
+  // Empty: a cloud is the publisher, and it is already what the person picks.
+  code: [],
   upscale: [],
   'background-removal': [],
   vectorization: [],
@@ -402,6 +554,8 @@ export const PERIOD_DAYS: Record<ModelPeriod, number> = {
 
 export type ModelQuery = {
   family?: ModelFamily
+  /** Narrows to what runs in one place — `LOCAL_RUNTIME`, or a cloud id. Applied by the registry. */
+  runsOn?: string
   search?: string
   origin?: ModelOrigin
   capabilities?: readonly string[]

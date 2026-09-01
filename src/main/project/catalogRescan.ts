@@ -1,3 +1,4 @@
+import { chunk } from '@shared/collections'
 import type { FiledAsset } from './catalog'
 
 /**
@@ -142,10 +143,10 @@ export async function rescanProject(
     const found = new Map<string, string | null>()
     onProgress({ done: 0, total: orphans.length })
 
-    for (let start = 0; start < orphans.length; start += BATCH) {
+    let done = 0
+    for (const batch of chunk(orphans, BATCH)) {
       if (stopped()) return found
 
-      const batch = orphans.slice(start, start + BATCH)
       const hashes = await Promise.all(batch.map(path => disk.hash(path)))
 
       batch.forEach((path, index) => {
@@ -154,7 +155,8 @@ export async function rescanProject(
         found.set(hash, found.has(hash) ? null : path)
       })
 
-      onProgress({ done: Math.min(start + BATCH, orphans.length), total: orphans.length })
+      done += batch.length
+      onProgress({ done, total: orphans.length })
 
       // Between batches, and only here: a fingerprint cannot be interrupted once begun, so what
       // a stop actually buys is the batches that have not started.

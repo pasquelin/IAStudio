@@ -1,14 +1,16 @@
 /**
  * Radiance RGBE — the `.hdr` file, written by hand.
  *
- * Forty lines and no dependency, against a parser three ships and an encoder it does not. The
- * format is a text header, a resolution line, then one byte each for red, green, blue and a
- * SHARED exponent: three mantissas and one power of two, which is what buys a picture far more
- * range than eight bits a channel while staying eight bits a channel.
+ * Forty lines and no third-party dependency, against a parser three ships and an encoder it does
+ * not. The format is a text header, a resolution line, then one byte each for red, green, blue
+ * and a SHARED exponent: three mantissas and one power of two, which is what buys a picture far
+ * more range than eight bits a channel while staying eight bits a channel.
  *
  * Written FLAT — no run-length pass. The spec makes the compressed scanline optional and every
  * reader takes both, and a picture whose pixels barely repeat is what a sky is.
  */
+
+import { clamp } from '../numeric'
 
 /** What Radiance opens on, and the only variant this writes. `-Y` then `+X` is the usual order. */
 const HEADER = '#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n'
@@ -40,7 +42,7 @@ function rgbeOf(red: number, green: number, blue: number, into: Uint8Array, at: 
   into[at + 1] = Math.min(255, Math.floor(green * scale))
   into[at + 2] = Math.min(255, Math.floor(blue * scale))
   // Biased by 128, which is what lets one byte carry an exponent that goes both ways.
-  into[at + 3] = Math.min(255, Math.max(0, exponent + 128))
+  into[at + 3] = clamp(exponent + 128, 0, 255)
 }
 
 /**

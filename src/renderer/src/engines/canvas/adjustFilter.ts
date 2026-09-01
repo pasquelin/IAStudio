@@ -2,7 +2,7 @@ import { defaultFilterVert, Filter } from 'pixi.js'
 import { adjustUniformsOf, type AdjustmentStack } from '@shared/domain/adjustments'
 // The weights themselves, read rather than written a third time: this pass, the three.js one and
 // the texture chunks all declared the same three numbers.
-import { LUMA } from '@/engines/texture/derive/glsl'
+import { LUMA } from '@/engines/material/derive/glsl'
 
 /**
  * Colour grading as one filter pass. The GLSL is the one `engines/gpu/passes/adjust.ts` grades

@@ -12,13 +12,29 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DOCUMENT_VERSION, type DocumentDescriptor } from '@shared/domain/document'
+import {
+  documentFolderOf,
+  DOCUMENT_VERSION,
+  LEGACY_DOCUMENTS_FOLDER,
+  type DocumentDescriptor,
+} from '@shared/domain/document'
+import { isHiddenEntry } from '@shared/domain/folder'
 import type { OraSurface } from '@shared/domain/openRaster'
 import { exists } from '@main/persistence'
 import { orphanStagingCopies, type DocumentFiles } from './documents'
 import { documentFilesAt } from './project-fixtures'
 
 const NOW = '2026-08-07T10:00:00.000Z'
+
+/**
+ * Where a first save lands, per kind — four shelves here, where `documents/` was one for all.
+ * Read off the domain rather than spelt out: what these cases are about is that a document lands
+ * with its own section, not that the section is called what it is called today.
+ */
+const SCENES = documentFolderOf('scene')
+const IMAGES = documentFolderOf('image')
+const SKIES = documentFolderOf('skybox')
+const MATERIALS = documentFolderOf('material')
 
 /**
  * Whether this volume hands back a file stored DECOMPOSED when asked for its composed name —
@@ -72,8 +88,15 @@ describe('createDocumentFiles', () => {
   let root = ''
   let documents: DocumentFiles
 
+  /**
+   * What a folder holds as a reader SEES it — the role marker left out, exactly as the explorer
+   * leaves it out. `readdir` shows it; nothing in the studio does.
+   */
+  const held = async (folder: string): Promise<string[]> =>
+    (await readdir(join(root, folder))).filter(name => !isHiddenEntry(name))
+
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'scenario-documents-'))
+    root = await mkdtemp(join(tmpdir(), 'ia-studio-documents-'))
     documents = documentFilesAt(root, NOW)
   })
 
@@ -95,9 +118,45 @@ describe('createDocumentFiles', () => {
   //
   // The name is the document's own. It was the id — a uuid — which is what the explorer showed
   // the user beside a tab bearing the title, two names for one document.
-  it('creates the documents folder, names the file after the document, and leaves no staging file', async () => {
+  it('creates the landing folder, names the file after the document, and leaves no staging file', async () => {
     await documents.write('doc-1', 'scene', { title: 'Untitled', content: '{}' })
-    expect(await readdir(join(root, 'documents'))).toEqual(['Untitled.gltf'])
+    expect(await held(SCENES)).toEqual(['Untitled.gltf'])
+  })
+
+  /**
+   * 🛑 The whole of what a script is on disk — the text, and nothing around it. And the ID that
+   * comes back is the file's STEM, not the one it was written under: nothing in a `.ts` can
+   * carry an id, so a renamed script is a different document to the layout and the recent list.
+   */
+  it('writes a script as the text it is, and lists it under Code by its file name', async () => {
+    // The folder the window hands it, which is `documentFolderOf('script')` — this side falls
+    // back to the same answer when a caller names none.
+    await documents.write(
+      'doc-1',
+      'script',
+      { title: 'Walk', content: 'export default 1\n' },
+      false,
+      'scripts',
+    )
+
+    expect(await readFile(join(root, 'scripts', 'Walk.ts'), 'utf8')).toBe('export default 1\n')
+    expect(await documents.list()).toEqual([
+      { id: 'Walk', kind: 'script', title: 'Walk', workspace: 'code', path: 'scripts/Walk.ts' },
+    ])
+  })
+
+  /**
+   * 🛑 Under the id the DISK gives it — its stem — and that is why the window writes a script
+   * before it opens a tab on it. Under a fresh uuid, `locate` could never find this file again
+   * and every save would lay a `Walk 2.ts`, `Walk 3.ts` beside it, autosave included.
+   */
+  it('writes a script twice into the one file, its path being its identity', async () => {
+    const draft = (content: string) => ({ title: 'Walk', content })
+    await documents.write('Walk', 'script', draft('a\n'), false, 'scripts')
+    await documents.write('Walk', 'script', draft('b\n'), false, 'scripts')
+
+    expect(await readdir(join(root, 'scripts'))).toEqual(['Walk.ts'])
+    expect((await documents.read('Walk', 'script'))?.content).toBe('b\n')
   })
 
   // The envelope on the first line, the content under it: listing a project then reads a short
@@ -105,7 +164,7 @@ describe('createDocumentFiles', () => {
   it('writes the envelope on a line of its own', async () => {
     await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
 
-    const [head, body] = (await readFile(join(root, 'documents', 'Level.gltf'), 'utf8')).split('\n')
+    const [head, body] = (await readFile(join(root, SCENES, 'Level.gltf'), 'utf8')).split('\n')
     expect(JSON.parse(head ?? '')).toEqual({
       version: DOCUMENT_VERSION,
       kind: 'scene',
@@ -127,7 +186,7 @@ describe('createDocumentFiles', () => {
         kind: 'scene',
         title: 'Level',
         workspace: '3d',
-        path: 'documents/Level.gltf',
+        path: `${SCENES}/Level.gltf`,
       },
     ])
   })
@@ -142,8 +201,12 @@ describe('createDocumentFiles', () => {
       updatedAt: NOW,
       content: { nodes: ['a'] },
     }
-    await mkdir(join(root, 'documents'), { recursive: true })
-    await writeFile(join(root, 'documents', 'doc-1.gltf'), JSON.stringify(legacy), 'utf8')
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
+    await writeFile(
+      join(root, LEGACY_DOCUMENTS_FOLDER, 'doc-1.gltf'),
+      JSON.stringify(legacy),
+      'utf8',
+    )
 
     expect(await documents.read('doc-1', 'scene')).toEqual({
       version: 1,
@@ -169,8 +232,12 @@ describe('createDocumentFiles', () => {
       updatedAt: NOW,
       content: { nodes: Array.from({ length: 4_000 }, (_, n) => `node-${n}`) },
     }
-    await mkdir(join(root, 'documents'), { recursive: true })
-    await writeFile(join(root, 'documents', 'doc-1.gltf'), JSON.stringify(legacy), 'utf8')
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
+    await writeFile(
+      join(root, LEGACY_DOCUMENTS_FOLDER, 'doc-1.gltf'),
+      JSON.stringify(legacy),
+      'utf8',
+    )
 
     expect((await documents.list())[0]).toMatchObject({ id: 'doc-1', kind: 'scene' })
   })
@@ -218,8 +285,8 @@ describe('createDocumentFiles', () => {
   // Under the name a document written before version 3 wears, for the reason spelt out below on
   // the kind disagreement: a broken envelope cannot say which document it belongs to.
   it('reports a file it cannot parse rather than answering null', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
-    await writeFile(join(root, 'documents', 'doc-1.gltf'), '{ truncated', 'utf8')
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
+    await writeFile(join(root, LEGACY_DOCUMENTS_FOLDER, 'doc-1.gltf'), '{ truncated', 'utf8')
 
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow()
   })
@@ -233,11 +300,12 @@ describe('createDocumentFiles', () => {
    * that used to address it, and reads as never saved rather than as broken.
    */
   it('refuses a file whose kind disagrees with its extension', async () => {
-    await documents.write('doc-1', 'texture', { title: 'Untitled', content: '{}' })
-    const source = await readFile(join(root, 'documents', 'Untitled.mtlx'), 'utf8')
-    await writeFile(join(root, 'documents', 'doc-1.gltf'), source, 'utf8')
+    await documents.write('doc-1', 'material', { title: 'Untitled', content: '{}' })
+    const source = await readFile(join(root, MATERIALS, 'Untitled.mtlx'), 'utf8')
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
+    await writeFile(join(root, LEGACY_DOCUMENTS_FOLDER, 'doc-1.gltf'), source, 'utf8')
 
-    await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/texture/)
+    await expect(documents.read('doc-1', 'scene')).rejects.toThrow(/material/)
   })
 
   /**
@@ -250,15 +318,19 @@ describe('createDocumentFiles', () => {
     const head = (kind: string): string =>
       `${JSON.stringify({ version: DOCUMENT_VERSION, kind, title: kind, updatedAt: NOW })}\n{}`
     await writeFile(join(root, 'documents', 'Dusk.gltf'), head('skybox'), 'utf8')
-    await writeFile(join(root, 'documents', 'Rock.gltf'), head('texture'), 'utf8')
+    await writeFile(join(root, 'documents', 'Rock.gltf'), head('material'), 'utf8')
 
     expect((await documents.list()).map(one => one.kind)).toEqual(['skybox'])
   })
 
   it('refuses a file written by a later build instead of flattening it', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
     const later = { version: 99, kind: 'scene', title: 'Ahead', updatedAt: NOW }
-    await writeFile(join(root, 'documents', 'doc-1.gltf'), `${JSON.stringify(later)}\n{}`, 'utf8')
+    await writeFile(
+      join(root, LEGACY_DOCUMENTS_FOLDER, 'doc-1.gltf'),
+      `${JSON.stringify(later)}\n{}`,
+      'utf8',
+    )
 
     await expect(documents.read('doc-1', 'scene')).rejects.toThrow()
   })
@@ -292,11 +364,11 @@ describe('createDocumentFiles', () => {
    */
   it('writes a sky as glTF, and finds it again by its own head', async () => {
     const sky = JSON.stringify({
-      asset: { version: '2.0', generator: 'Scenario Studio' },
+      asset: { version: '2.0', generator: 'IA Studio' },
       scene: 0,
       scenes: [{ name: 'Crépuscule', nodes: [0] }],
       nodes: [{ name: 'Sun', rotation: [0, 0, 0, 1] }],
-      extras: { scenario: { sun: { intensity: 2 } } },
+      extras: { iastudio: { sun: { intensity: 2 } } },
     })
     await documents.write('doc-sky', 'skybox', { title: 'Crépuscule', content: sky })
 
@@ -304,14 +376,12 @@ describe('createDocumentFiles', () => {
     expect(listed).toMatchObject([{ id: 'doc-sky', kind: 'skybox', title: 'Crépuscule' }])
 
     // Whole, and still glTF: the envelope went into `asset.extras` rather than in front of it.
-    const onDisk: unknown = JSON.parse(
-      await readFile(join(root, 'documents', 'Crépuscule.gltf'), 'utf8'),
-    )
+    const onDisk: unknown = JSON.parse(await readFile(join(root, SKIES, 'Crépuscule.gltf'), 'utf8'))
     expect(onDisk).toMatchObject({ asset: { version: '2.0' }, scene: 0 })
 
     await documents.rename('doc-sky', 'skybox', 'Aube')
-    expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"scenario"')
-    expect(await readdir(join(root, 'documents'))).toEqual(['Aube.gltf'])
+    expect((await documents.read('doc-sky', 'skybox'))?.content).toContain('"iastudio"')
+    expect(await held(SKIES)).toEqual(['Aube.gltf'])
   })
 
   /**
@@ -333,20 +403,20 @@ describe('createDocumentFiles', () => {
       values: [{ input: 'specular_roughness', type: 'float', value: 0.5 }],
       studio: { material: { edgeIntensity: 0.4 } },
     })
-    await documents.write('doc-mat', 'texture', { title: 'Laiton', content: material })
+    await documents.write('doc-mat', 'material', { title: 'Laiton', content: material })
 
     const listed = await documents.list()
-    expect(listed).toMatchObject([{ id: 'doc-mat', kind: 'texture', title: 'Laiton' }])
+    expect(listed).toMatchObject([{ id: 'doc-mat', kind: 'material', title: 'Laiton' }])
 
     // Real MaterialX, not a spelling of the studio's own wearing the extension.
-    const onDisk = await readFile(join(root, 'documents', 'Laiton.mtlx'), 'utf8')
+    const onDisk = await readFile(join(root, MATERIALS, 'Laiton.mtlx'), 'utf8')
     expect(onDisk.startsWith('<?xml version="1.0"?>\n<materialx version="1.39"')).toBe(true)
-    expect(onDisk).toContain('<standard_surface name="SR_scenario" type="surfaceshader">')
+    expect(onDisk).toContain('<standard_surface name="SR_iastudio" type="surfaceshader">')
 
-    await documents.rename('doc-mat', 'texture', 'Bronze')
-    expect(await readdir(join(root, 'documents'))).toEqual(['Bronze.mtlx'])
+    await documents.rename('doc-mat', 'material', 'Bronze')
+    expect(await held(MATERIALS)).toEqual(['Bronze.mtlx'])
     // The dial no MaterialX input can carry survived the rewrite the rename does.
-    expect((await documents.read('doc-mat', 'texture'))?.content).toContain('edgeIntensity')
+    expect((await documents.read('doc-mat', 'material'))?.content).toContain('edgeIntensity')
     expect(await documents.list()).toMatchObject([{ id: 'doc-mat', title: 'Bronze' }])
   })
 
@@ -357,11 +427,11 @@ describe('createDocumentFiles', () => {
    */
   it('removes nothing when the file at that address belongs to the other kind', async () => {
     await documents.write('twin', 'scene', { title: 'Twin', content: '{}' })
-    await rename(join(root, 'documents', 'Twin.gltf'), join(root, 'documents', 'twin.gltf'))
+    await rename(join(root, SCENES, 'Twin.gltf'), join(root, SCENES, 'twin.gltf'))
 
     await documents.remove('twin', 'skybox')
 
-    expect(await readdir(join(root, 'documents'))).toEqual(['twin.gltf'])
+    expect(await held(SCENES)).toEqual(['twin.gltf'])
   })
 
   /**
@@ -372,11 +442,11 @@ describe('createDocumentFiles', () => {
    */
   it('leaves behind a document whose envelope stopped reading, having nowhere to look', async () => {
     await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
-    await writeFile(join(root, 'documents', 'Level.gltf'), '{ truncated', 'utf8')
+    await writeFile(join(root, SCENES, 'Level.gltf'), '{ truncated', 'utf8')
 
     await documents.remove('doc-1', 'scene')
 
-    expect(await readdir(join(root, 'documents'))).toEqual(['Level.gltf'])
+    expect(await held(SCENES)).toEqual(['Level.gltf'])
   })
 
   // Two windows on one document is a case the studio already lives with; a shared staging name
@@ -391,7 +461,7 @@ describe('createDocumentFiles', () => {
     expect(file?.content).toMatch(/^(a+|b+)$/)
     // One file, and it is the one the first write named: a document already on disk keeps the
     // file it is in, so a second write cannot leave a copy under another name beside it.
-    expect(await readdir(join(root, 'documents'))).toEqual(['A.gltf'])
+    expect(await held(SCENES)).toEqual(['A.gltf'])
   })
 
   // An autosave still staging its copy would otherwise rename it back over a document the
@@ -405,7 +475,7 @@ describe('createDocumentFiles', () => {
     await Promise.all([writing, removing])
 
     expect(await documents.read('doc-1', 'scene')).toBeNull()
-    expect(await readdir(join(root, 'documents'))).toEqual([])
+    expect(await held(SCENES)).toEqual([])
   })
 
   /**
@@ -415,9 +485,9 @@ describe('createDocumentFiles', () => {
    */
   describe('a document written before the file carried a name', () => {
     const legacyFile = (id: string, envelope: object, content = '{}'): Promise<void> =>
-      mkdir(join(root, 'documents'), { recursive: true }).then(() =>
+      mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true }).then(() =>
         writeFile(
-          join(root, 'documents', `${id}.gltf`),
+          join(root, LEGACY_DOCUMENTS_FOLDER, `${id}.gltf`),
           `${JSON.stringify(envelope)}\n${content}`,
           'utf8',
         ),
@@ -434,7 +504,7 @@ describe('createDocumentFiles', () => {
           kind: 'scene',
           title: 'Niveau',
           workspace: '3d',
-          path: 'documents/6d517ff3.gltf',
+          path: `${LEGACY_DOCUMENTS_FOLDER}/6d517ff3.gltf`,
         },
       ])
     })
@@ -443,7 +513,7 @@ describe('createDocumentFiles', () => {
       await legacyFile('6d517ff3', V2, '{"nodes":[]}')
 
       expect((await documents.read('6d517ff3', 'scene'))?.content).toBe('{"nodes":[]}')
-      expect(await readdir(join(root, 'documents'))).toEqual(['6d517ff3.gltf'])
+      expect(await readdir(join(root, LEGACY_DOCUMENTS_FOLDER))).toEqual(['6d517ff3.gltf'])
     })
 
     // Opening a project must not rewrite it; saving one is where the stamp goes in.
@@ -452,7 +522,7 @@ describe('createDocumentFiles', () => {
       await documents.write('6d517ff3', 'scene', { title: 'Niveau', content: '{}' })
 
       expect((await documents.read('6d517ff3', 'scene'))?.id).toBe('6d517ff3')
-      expect(await readdir(join(root, 'documents'))).toEqual(['6d517ff3.gltf'])
+      expect(await readdir(join(root, LEGACY_DOCUMENTS_FOLDER))).toEqual(['6d517ff3.gltf'])
     })
   })
 
@@ -463,14 +533,18 @@ describe('createDocumentFiles', () => {
    * what it recognises. With no extension there is no claim for the envelope to contradict.
    */
   it('reads a document whose extension was lost, and names it after its envelope', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
     const envelope = {
       version: 2,
       kind: 'audio',
       title: 'ElevenLabs Sound Effects 2',
       updatedAt: NOW,
     }
-    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+    await writeFile(
+      join(root, LEGACY_DOCUMENTS_FOLDER, 'demo'),
+      `${JSON.stringify(envelope)}\n{}`,
+      'utf8',
+    )
 
     expect(await documents.list()).toEqual([
       {
@@ -478,7 +552,7 @@ describe('createDocumentFiles', () => {
         kind: 'audio',
         title: 'ElevenLabs Sound Effects 2',
         workspace: 'audio',
-        path: 'documents/demo',
+        path: `${LEGACY_DOCUMENTS_FOLDER}/demo`,
       },
     ])
   })
@@ -491,13 +565,17 @@ describe('createDocumentFiles', () => {
    * destroy the document — right name, unreadable body, gone from every list at the next walk.
    */
   it('gives the extension back to such a document when it is renamed', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
-    const envelope = { version: 2, kind: 'texture', title: 'Perdu', updatedAt: NOW }
-    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
+    const envelope = { version: 2, kind: 'material', title: 'Perdu', updatedAt: NOW }
+    await writeFile(
+      join(root, LEGACY_DOCUMENTS_FOLDER, 'demo'),
+      `${JSON.stringify(envelope)}\n{}`,
+      'utf8',
+    )
 
-    await documents.rename('demo', 'texture', 'Retrouvé')
+    await documents.rename('demo', 'material', 'Retrouvé')
 
-    expect(await readdir(join(root, 'documents'))).toEqual(['Retrouvé.mtlx'])
+    expect(await readdir(join(root, LEGACY_DOCUMENTS_FOLDER))).toEqual(['Retrouvé.mtlx'])
     expect((await documents.list()).map(one => one.title)).toEqual(['Retrouvé'])
   })
 
@@ -507,32 +585,36 @@ describe('createDocumentFiles', () => {
    * was, where a rename that went through would have left a document nothing can read again.
    */
   it('refuses to rename a document into a spelling its body cannot be written in', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
     const envelope = { version: 2, kind: 'audio', title: 'Perdu', updatedAt: NOW }
-    await writeFile(join(root, 'documents', 'demo'), `${JSON.stringify(envelope)}\n{}`, 'utf8')
+    await writeFile(
+      join(root, LEGACY_DOCUMENTS_FOLDER, 'demo'),
+      `${JSON.stringify(envelope)}\n{}`,
+      'utf8',
+    )
 
     await expect(documents.rename('demo', 'audio', 'Retrouvé')).rejects.toThrow()
-    expect(await readdir(join(root, 'documents'))).toEqual(['demo'])
+    expect(await readdir(join(root, LEGACY_DOCUMENTS_FOLDER))).toEqual(['demo'])
   })
 
   // A stray note the user dropped in there is not a document, and must stay a plain file.
   it('leaves a file that is not a document alone', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
-    await writeFile(join(root, 'documents', 'notes'), 'a note of mine', 'utf8')
+    await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
+    await writeFile(join(root, LEGACY_DOCUMENTS_FOLDER, 'notes'), 'a note of mine', 'utf8')
 
     expect(await documents.list()).toEqual([])
   })
 
   /**
    * What the phase opens: a document lives where the user filed it, and the listing walks the
-   * project to find it. `documents/` is only where a first save lands.
+   * project to find it. the kind's own shelf is only where a first save lands.
    */
   describe('documents the user filed themselves', () => {
     it('finds one wherever in the project it sits', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
       await mkdir(join(root, 'Acte 1', 'Ruelles'), { recursive: true })
       await rename(
-        join(root, 'documents', 'Niveau.gltf'),
+        join(root, SCENES, 'Niveau.gltf'),
         join(root, 'Acte 1', 'Ruelles', 'Niveau.gltf'),
       )
 
@@ -543,11 +625,11 @@ describe('createDocumentFiles', () => {
       expect((await documents.read('doc-1', 'scene'))?.content).toBe('{"nodes":[]}')
     })
 
-    // A rename that moved the file back to `documents/` would tidy the project behind the user.
+    // A rename that moved the file back to its kind's shelf would tidy the project behind the user.
     it('renames one where it sits, without moving it', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
       await mkdir(join(root, 'Acte 1'), { recursive: true })
-      await rename(join(root, 'documents', 'Niveau.gltf'), join(root, 'Acte 1', 'Niveau.gltf'))
+      await rename(join(root, SCENES, 'Niveau.gltf'), join(root, 'Acte 1', 'Niveau.gltf'))
       await documents.list()
 
       expect(await documents.rename('doc-1', 'scene', 'Décor')).toMatchObject({
@@ -560,13 +642,13 @@ describe('createDocumentFiles', () => {
     it('lets two folders each hold a document of the same name', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'first' })
       await mkdir(join(root, 'Acte 1'), { recursive: true })
-      await rename(join(root, 'documents', 'Niveau.gltf'), join(root, 'Acte 1', 'Niveau.gltf'))
+      await rename(join(root, SCENES, 'Niveau.gltf'), join(root, 'Acte 1', 'Niveau.gltf'))
       await documents.write('doc-2', 'scene', { title: 'Autre', content: 'second' })
       await documents.list()
 
       await documents.rename('doc-2', 'scene', 'Niveau')
 
-      expect(await readdir(join(root, 'documents'))).toEqual(['Niveau.gltf'])
+      expect(await held(SCENES)).toEqual(['Niveau.gltf'])
       expect(await readdir(join(root, 'Acte 1'))).toEqual(['Niveau.gltf'])
     })
   })
@@ -578,12 +660,12 @@ describe('createDocumentFiles', () => {
    */
   it('follows a document whose file was renamed by hand', async () => {
     await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{"nodes":[]}' })
-    await rename(join(root, 'documents', 'Niveau.gltf'), join(root, 'documents', 'Décor.gltf'))
+    await rename(join(root, SCENES, 'Niveau.gltf'), join(root, SCENES, 'Décor.gltf'))
 
     expect((await documents.read('doc-1', 'scene'))?.content).toBe('{"nodes":[]}')
     expect((await documents.list())[0]).toMatchObject({
       id: 'doc-1',
-      path: 'documents/Décor.gltf',
+      path: `${SCENES}/Décor.gltf`,
     })
   })
 
@@ -594,10 +676,7 @@ describe('createDocumentFiles', () => {
 
     expect((await documents.read('doc-1', 'scene'))?.content).toBe('first')
     expect((await documents.read('doc-2', 'scene'))?.content).toBe('second')
-    expect([...(await readdir(join(root, 'documents')))].sort()).toEqual([
-      'Niveau 2.gltf',
-      'Niveau.gltf',
-    ])
+    expect([...(await held(SCENES))].sort()).toEqual(['Niveau 2.gltf', 'Niveau.gltf'])
   })
 
   /**
@@ -607,12 +686,12 @@ describe('createDocumentFiles', () => {
    * `filePlan` asks the folder for the same question, and now so does this.
    */
   it('suffixes around a file it was never told about', async () => {
-    await mkdir(join(root, 'documents'), { recursive: true })
-    await writeFile(join(root, 'documents/Niveau.gltf'), 'theirs', 'utf8')
+    await mkdir(join(root, SCENES), { recursive: true })
+    await writeFile(join(root, SCENES, 'Niveau.gltf'), 'theirs', 'utf8')
 
     await documents.write('doc-1', 'scene', { title: 'Niveau', content: 'mine' })
 
-    expect(await readFile(join(root, 'documents/Niveau.gltf'), 'utf8')).toBe('theirs')
+    expect(await readFile(join(root, SCENES, 'Niveau.gltf'), 'utf8')).toBe('theirs')
     expect((await documents.read('doc-1', 'scene'))?.content).toBe('mine')
   })
 
@@ -623,7 +702,7 @@ describe('createDocumentFiles', () => {
   it('writes a title the disk cannot hold under a name it can', async () => {
     await documents.write('doc-1', 'scene', { title: 'Brique 1/2', content: '{}' })
 
-    expect(await readdir(join(root, 'documents'))).toEqual(['Brique 1 2.gltf'])
+    expect(await held(SCENES)).toEqual(['Brique 1 2.gltf'])
   })
 
   /**
@@ -645,10 +724,7 @@ describe('createDocumentFiles', () => {
      */
     const secondOfTwo = async (): Promise<DocumentDescriptor> => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":["mine"]}' })
-      await copyFile(
-        join(root, 'documents', 'Level.gltf'),
-        join(root, 'documents', 'Level copie.gltf'),
-      )
+      await copyFile(join(root, SCENES, 'Level.gltf'), join(root, SCENES, 'Level copie.gltf'))
 
       const second = (await documents.list()).find(one => one.id !== 'doc-1')
       if (!second) throw new Error('expected the pair to be told apart')
@@ -665,7 +741,7 @@ describe('createDocumentFiles', () => {
     })
 
     // Listed and unopenable is the worst of both: the row is there, the double-click gives an
-    // empty tab, and the next ⌘S writes that emptiness under `documents/<the whole path>.gltf`.
+    // empty tab, and the next ⌘S writes that emptiness under `<the shelf>/<the whole path>.gltf`.
     it('reads it back rather than answering nothing', async () => {
       const second = await secondOfTwo()
 
@@ -686,7 +762,7 @@ describe('createDocumentFiles', () => {
 
       await documents.remove(second.id, 'scene')
 
-      expect(await readdir(join(root, 'documents'))).toEqual([
+      expect(await held(SCENES)).toEqual([
         basename(second.path) === 'Level.gltf' ? 'Level copie.gltf' : 'Level.gltf',
       ])
     })
@@ -714,7 +790,7 @@ describe('createDocumentFiles', () => {
 
     it('is not written over, and the write says so rather than failing', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
-      const file = join(root, 'documents', 'Level.gltf')
+      const file = join(root, SCENES, 'Level.gltf')
       await changeBehindTheStudio(file)
 
       expect(await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })).toBe(
@@ -732,7 +808,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
       expect((await documents.list()).map(entry => entry.kind)).toEqual(['scene'])
 
-      const file = join(root, 'documents', 'Level.gltf')
+      const file = join(root, SCENES, 'Level.gltf')
       await writeFile(
         file,
         `${JSON.stringify({ version: DOCUMENT_VERSION, kind: 'skybox', title: 'Level', updatedAt: NOW, id: 'doc-1' })}\n{}`,
@@ -745,7 +821,7 @@ describe('createDocumentFiles', () => {
 
     it('is written over once the caller says the user agreed', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{"nodes":[]}' })
-      await changeBehindTheStudio(join(root, 'documents', 'Level.gltf'))
+      await changeBehindTheStudio(join(root, SCENES, 'Level.gltf'))
 
       const written = await documents.write(
         'doc-1',
@@ -774,9 +850,9 @@ describe('createDocumentFiles', () => {
         kind: 'scene',
         title: 'Décor',
         workspace: '3d',
-        path: 'documents/Décor.gltf',
+        path: `${SCENES}/Décor.gltf`,
       })
-      expect(await readdir(join(root, 'documents'))).toEqual(['Décor.gltf'])
+      expect(await held(SCENES)).toEqual(['Décor.gltf'])
       expect(await documents.read('doc-1', 'scene')).toMatchObject({
         title: 'Décor',
         content: '{"nodes":[]}',
@@ -785,13 +861,17 @@ describe('createDocumentFiles', () => {
 
     // The one case the old code forbade outright, `openInTab` being the only guard it had.
     it('renames a document written before the file carried a name', async () => {
-      await mkdir(join(root, 'documents'), { recursive: true })
+      await mkdir(join(root, LEGACY_DOCUMENTS_FOLDER), { recursive: true })
       const v2 = { version: 2, kind: 'scene', title: 'Niveau', updatedAt: NOW }
-      await writeFile(join(root, 'documents', '6d517ff3.gltf'), `${JSON.stringify(v2)}\n{}`, 'utf8')
+      await writeFile(
+        join(root, LEGACY_DOCUMENTS_FOLDER, '6d517ff3.gltf'),
+        `${JSON.stringify(v2)}\n{}`,
+        'utf8',
+      )
 
       await documents.rename('6d517ff3', 'scene', 'Décor')
 
-      expect(await readdir(join(root, 'documents'))).toEqual(['Décor.gltf'])
+      expect(await readdir(join(root, LEGACY_DOCUMENTS_FOLDER))).toEqual(['Décor.gltf'])
       expect((await documents.read('6d517ff3', 'scene'))?.id).toBe('6d517ff3')
     })
 
@@ -804,10 +884,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-2', 'scene', { title: 'Décor', content: 'second' })
 
       await expect(documents.rename('doc-2', 'scene', 'Niveau')).rejects.toThrow(/duplicate/)
-      expect([...(await readdir(join(root, 'documents')))].sort()).toEqual([
-        'Décor.gltf',
-        'Niveau.gltf',
-      ])
+      expect([...(await held(SCENES))].sort()).toEqual(['Décor.gltf', 'Niveau.gltf'])
     })
 
     it('says which refusal it is, rather than calling every one a duplicate', async () => {
@@ -821,7 +898,7 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
 
       await expect(documents.rename('doc-1', 'scene', 'Niveau')).resolves.toMatchObject({
-        path: 'documents/Niveau.gltf',
+        path: `${SCENES}/Niveau.gltf`,
       })
     })
 
@@ -839,7 +916,7 @@ describe('createDocumentFiles', () => {
 
       await documents.rename('doc-1', 'image', 'Affiche')
 
-      expect(await readdir(join(root, 'documents'))).toEqual(['Affiche.ora'])
+      expect(await held(IMAGES)).toEqual(['Affiche.ora'])
       expect((await documents.read('doc-1', 'image'))?.parts).toEqual(oraParts(['data/p_a.png']))
     })
 
@@ -850,11 +927,11 @@ describe('createDocumentFiles', () => {
      */
     it('refuses when something already stands where it would land, and changes nothing', async () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
-      await mkdir(join(root, 'documents', 'Décor.gltf', 'in the way'), { recursive: true })
+      await mkdir(join(root, SCENES, 'Décor.gltf', 'in the way'), { recursive: true })
 
       await expect(documents.rename('doc-1', 'scene', 'Décor')).rejects.toThrow()
       expect((await documents.read('doc-1', 'scene'))?.title).toBe('Niveau')
-      expect(await readdir(join(root, 'documents', 'Décor.gltf'))).toEqual(['in the way'])
+      expect(await readdir(join(root, SCENES, 'Décor.gltf'))).toEqual(['in the way'])
     })
 
     /**
@@ -866,9 +943,9 @@ describe('createDocumentFiles', () => {
       await documents.write('doc-1', 'scene', { title: 'Niveau', content: '{}' })
 
       await expect(documents.rename('doc-1', 'scene', 'niveau')).resolves.toMatchObject({
-        path: 'documents/niveau.gltf',
+        path: `${SCENES}/niveau.gltf`,
       })
-      expect(await readdir(join(root, 'documents'))).toEqual(['niveau.gltf'])
+      expect(await held(SCENES)).toEqual(['niveau.gltf'])
     })
 
     /**
@@ -884,8 +961,8 @@ describe('createDocumentFiles', () => {
      * job has no translation back and the document is listed but unreachable.
      */
     it('lets a name change its case on a file the disk spells decomposed', async ({ skip }) => {
-      await mkdir(join(root, 'documents'), { recursive: true })
-      if (!(await volumeAnswersComposedNames(join(root, 'documents')))) return skip()
+      await mkdir(join(root, SCENES), { recursive: true })
+      if (!(await volumeAnswersComposedNames(join(root, SCENES)))) return skip()
 
       const envelope = `${JSON.stringify({
         version: DOCUMENT_VERSION,
@@ -894,7 +971,7 @@ describe('createDocumentFiles', () => {
         updatedAt: NOW,
         id: 'doc-1',
       })}\n{}`
-      await writeFile(join(root, 'documents', 'Été.gltf'.normalize('NFD')), envelope, 'utf8')
+      await writeFile(join(root, SCENES, 'Été.gltf'.normalize('NFD')), envelope, 'utf8')
 
       await expect(documents.rename('doc-1', 'scene', 'ÉTÉ')).resolves.toMatchObject({
         title: 'ÉTÉ',
@@ -910,7 +987,7 @@ describe('createDocumentFiles', () => {
         documents.rename('doc-1', 'scene', 'Décor'),
       ])
 
-      expect(await readdir(join(root, 'documents'))).toEqual(['Décor.gltf'])
+      expect(await held(SCENES)).toEqual(['Décor.gltf'])
     })
   })
 
@@ -939,14 +1016,14 @@ describe('createDocumentFiles', () => {
             kind: 'scene',
             title: 'Level',
             workspace: '3d',
-            path: 'documents/Level.gltf',
+            path: `${SCENES}/Level.gltf`,
           },
           {
             id: 'doc-2',
             kind: 'image',
             title: 'Poster',
             workspace: 'image',
-            path: 'documents/Poster.ora',
+            path: `${IMAGES}/Poster.ora`,
           },
         ]),
       )
@@ -958,8 +1035,8 @@ describe('createDocumentFiles', () => {
 
     it('ignores what is not a document of a kind this build knows', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
-      await writeFile(join(root, 'documents', 'notes.txt'), 'a note', 'utf8')
-      await writeFile(join(root, 'documents', 'old.blend'), 'x', 'utf8')
+      await writeFile(join(root, SCENES, 'notes.txt'), 'a note', 'utf8')
+      await writeFile(join(root, SCENES, 'old.blend'), 'x', 'utf8')
 
       expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
     })
@@ -967,7 +1044,7 @@ describe('createDocumentFiles', () => {
     // One document truncated by a crash must not cost the user the listing of all the others.
     it('skips a document it cannot read and lists the rest', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
-      await writeFile(join(root, 'documents', 'broken.gltf'), '{ not json', 'utf8')
+      await writeFile(join(root, SCENES, 'broken.gltf'), '{ not json', 'utf8')
 
       expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
     })
@@ -975,8 +1052,8 @@ describe('createDocumentFiles', () => {
     // The folder's word beats the file's, exactly as `read` has it.
     it('skips a document whose extension disagrees with what it holds', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
-      const written = await readFile(join(root, 'documents', 'Level.gltf'), 'utf8')
-      await writeFile(join(root, 'documents', 'doc-2.ora'), written, 'utf8')
+      const written = await readFile(join(root, SCENES, 'Level.gltf'), 'utf8')
+      await writeFile(join(root, SCENES, 'doc-2.ora'), written, 'utf8')
 
       expect((await documents.list()).map(entry => entry.id)).toEqual(['doc-1'])
     })
@@ -986,13 +1063,13 @@ describe('createDocumentFiles', () => {
     it('sweeps a staging copy no write is holding', async () => {
       await documents.write('doc-1', 'scene', { title: 'Level', content: '{}' })
       await writeFile(
-        join(root, 'documents', 'doc-9.gltf.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'),
+        join(root, SCENES, 'doc-9.gltf.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'),
         '{}',
         'utf8',
       )
 
       await documents.list()
-      expect(await readdir(join(root, 'documents'))).toEqual(['Level.gltf'])
+      expect(await held(SCENES)).toEqual(['Level.gltf'])
     })
 
     /**
@@ -1006,7 +1083,7 @@ describe('createDocumentFiles', () => {
         parts: oraParts(),
       })
       await writeFile(
-        join(root, 'documents', 'Planche.ora.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'),
+        join(root, IMAGES, 'Planche.ora.3f2a1c88-9d4e-4b7a-8c15-2e6f0a7b9d31.tmp'),
         'half a container',
         'utf8',
       )
@@ -1014,7 +1091,7 @@ describe('createDocumentFiles', () => {
       const listed = await documents.list()
 
       expect(listed.map(entry => entry.id)).toEqual(['doc-1'])
-      expect(await readdir(join(root, 'documents'))).toEqual(['Planche.ora'])
+      expect(await held(IMAGES)).toEqual(['Planche.ora'])
     })
   })
 
@@ -1051,19 +1128,19 @@ describe('createDocumentFiles', () => {
         parts: oraParts(['data/p_a.png']),
       })
 
-      expect(await readdir(join(root, 'documents'))).toEqual(['Poster.ora'])
-      const bytes = await readFile(join(root, 'documents', 'Poster.ora'))
+      expect(await held(IMAGES)).toEqual(['Poster.ora'])
+      const bytes = await readFile(join(root, IMAGES, 'Poster.ora'))
       expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b])
       expect(bytes.subarray(30, 38).toString('utf8')).toBe('mimetype')
     })
 
     /**
      * The defect `writeAtomic` had: the tidy-up threw over the error it was cleaning up after,
-     * and the caller heard the wrong one. A `documents` that is a FILE is what makes them
+     * and the caller heard the wrong one. A landing folder that is a FILE is what makes them
      * distinguishable — `mkdir` fails on it, naming itself.
      */
     it('reports why the write failed, not why the tidy-up would not go away', async () => {
-      await writeFile(join(root, 'documents'), 'a file where the folder goes')
+      await writeFile(join(root, IMAGES), 'a file where the folder goes')
 
       await expect(
         documents.write('doc-1', 'image', { title: 'Poster', content: oraContent() }),
@@ -1083,7 +1160,7 @@ describe('createDocumentFiles', () => {
           kind: 'image',
           title: 'Poster',
           workspace: 'image',
-          path: 'documents/Poster.ora',
+          path: `${IMAGES}/Poster.ora`,
         },
       ])
     })
@@ -1113,7 +1190,7 @@ describe('createDocumentFiles', () => {
       })
       await documents.write('doc-1', 'image', { title: 'Poster', content: oraContent() })
 
-      expect(await readdir(join(root, 'documents'))).toEqual(['Poster.ora'])
+      expect(await held(IMAGES)).toEqual(['Poster.ora'])
     })
 
     it('takes the container away on remove', async () => {
@@ -1125,7 +1202,7 @@ describe('createDocumentFiles', () => {
       await documents.remove('doc-1', 'image')
 
       expect(await documents.list()).toEqual([])
-      expect(await readdir(join(root, 'documents'))).toEqual([])
+      expect(await held(IMAGES)).toEqual([])
     })
 
     /**
@@ -1193,7 +1270,7 @@ describe('createDocumentFiles', () => {
       JSON.stringify({
         OTIO_SCHEMA: 'Timeline.1',
         name: 'Bande',
-        metadata: { scenario: studio },
+        metadata: { iastudio: studio },
         global_start_time: null,
         tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
       })
@@ -1276,7 +1353,7 @@ describe('createDocumentFiles', () => {
       JSON.stringify({
         asset: { version: '2.0' },
         scene: 0,
-        scenes: [{ nodes: [], extras: { scenario: studio } }],
+        scenes: [{ nodes: [], extras: { iastudio: studio } }],
         nodes: [],
       })
 

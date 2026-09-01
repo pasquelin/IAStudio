@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TEXTURE_MATERIAL } from './texture'
+import { DEFAULT_TEXTURE_MATERIAL } from './material'
 import { nextStyleName, type MaterialStyle } from './style'
 
 function styleNamed(name: string): MaterialStyle {

@@ -21,16 +21,16 @@ part où écrire le document.
 ### Faire entrer une image existante
 
 **Un document image n’est pas condamné à partir du blanc.** Trois gestes y posent une image de
-votre étagère, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
+vos assets, et les trois font la même chose : un **calque de plus**, au-dessus de la pile,
 nommé d’après l’asset et **déjà actif** : c’est lui que le prochain trait recevra.
 
 | Geste | Ce qu’il faut |
 |---|---|
 | **Glisser-déposer** l’image sur la toile | l’onglet image ouvert devant vous |
 | **Clic droit ▸ Placer comme calque** | un onglet image ouvert, en avant ou non |
-| L’outil **Image…**, groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
+| L’outil **Image…**, groupe Formes | rien : il ouvre l’Explorateur, vous y choisissez |
 
-> Seules les **images du projet** entrent — celles que vous voyez dans l’étagère, générées ou
+> Seules les **images du projet** entrent — celles que vous voyez dans l’Explorateur, générées ou
 > importées. Une image qui n’a pas encore été téléchargée dans le projet n’est pas déposable.
 
 **Le double-clic ne figure pas dans ce tableau, et c’est la nuance du chapitre** : il n’entre dans
@@ -38,7 +38,7 @@ aucun document ouvert. Il ouvre l’image dans un onglet **à elle** : elle n’
 plus, le document EST l’image — et rouvrir la même image revient à cet onglet-là plutôt que d’en
 ouvrir un second. C’est la règle de tout le studio, décrite dans [Les assets](07-assets.md).
 
-Il n’y a **pas de menu « Ouvrir »** : on ouvre par un double-clic, sur l’image dans l’étagère ou
+Il n’y a **pas de menu « Ouvrir »** : on ouvre par un double-clic, sur l’image dans l’Explorateur ou
 sur le document dans l’Explorateur. Le `+` du rail gauche, lui, part du blanc — et ce
 document-là ne porte aucun asset derrière lui. La nuance compte au moment de fermer l’onglet, voir
 la fin de ce chapitre.
@@ -118,16 +118,15 @@ Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 |---|---|---|
 | **Déplacement** | `V` | fait glisser le contenu du calque actif |
 | **Main** | `H` | déplace la vue |
-| **Échelle** | `K` | fait apparaître huit poignées et une rotation autour du calque actif |
 
 > **C’est le groupe armé à l’ouverture.** Un document s’ouvre sur **Déplacement**, jamais sur le
 > pinceau : le premier clic sur une image que vous venez d’ouvrir ne doit pas pouvoir y laisser
-> une trace. Le pinceau est à une touche — `P`.
+> une trace. Le pinceau est à une touche — `B`.
 
 ### Le menu **Image**
 
-Six entrées. Les quatre dernières agissent sur **tout le document**, calques compris — pas sur le
-calque actif :
+**Douze entrées.** Les six premières travaillent le document lui-même, et les quatre dernières
+d’entre elles agissent sur **tout le document**, calques compris — pas sur le calque actif :
 
 | Entrée | Ce qu’elle fait |
 |---|---|
@@ -138,8 +137,9 @@ calque actif :
 | **Rotation horaire** | un quart de tour vers la droite ; **le cadre pivote avec** — un portrait devient un paysage |
 | **Rotation antihoraire** | un quart de tour vers la gauche, même chose |
 
-Aucune n’a de raccourci par défaut : le menu est leur seule porte. Vous pouvez leur en donner un
-dans les [réglages](14-reglages.md), comme à n’importe quelle commande.
+**Seule Fusionner porte un raccourci par défaut** — `⌘E`. Pour les cinq autres, le menu est la
+seule porte ; vous pouvez leur en donner un dans les [réglages](14-reglages.md), comme à n’importe
+quelle commande.
 
 > **Un miroir suivi du même miroir rend exactement l’image de départ.** Ce n’est pas une évidence :
 > le studio retourne le calque plutôt que de réécrire ses pixels, et c’est ce qui évite qu’un
@@ -152,11 +152,21 @@ dans les [réglages](14-reglages.md), comme à n’importe quelle commande.
 qui reste reçoit l’image composée de ce qui disparaît. `⌘Z` rend la pile — et l’image avec, tant que
 le document n’a pas changé de taille entre-temps.
 
+**La septième entrée est seule dans son bloc** : **Faire un masque de la sélection**, qui masque
+le calque actif hors de la zone tracée. Elle est grise tant qu’il n’y a pas à la fois une zone et
+un calque actif. Le panneau des calques porte la même action.
+
+**Les cinq dernières demandent au modèle** : **Régénérer la zone**, **Étendre**, **Détourer**,
+**Agrandir**, **Vectoriser**. Aucune ne part toute seule — elle remplit le formulaire du panneau
+Génération et vous le montre. **Le menu n’est pas leur seule porte** : la barre d’outils les porte
+aussi, dans son groupe Retouches par modèle, décrit plus bas.
+[Tous les raccourcis](15-raccourcis.md) dit ce que chacune envoie.
+
 ### Groupe Cadre
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Recadrage** | `F` | glissez un cadre sur l’image, ajustez-le, puis `⏎` pour rogner |
+| **Recadrage** | `C` | glissez un cadre sur l’image, ajustez-le, puis `⏎` pour rogner |
 | **Section** | — | *pas encore disponible* |
 | **Découpe** | — | *pas encore disponible* |
 
@@ -202,8 +212,8 @@ suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Rectangle** | `R` | Maj pour un carré |
-| **Trait** | `⇧R` | Maj pour le contraindre à 45° |
+| **Rectangle** | `U` | Maj pour un carré |
+| **Trait** | `⇧U` | Maj pour le contraindre à 45° |
 | **Flèche** | `A` | Maj pour la contraindre à 45° |
 | **Ellipse** | `O` | Maj pour un cercle |
 | **Polygone** | — | tracé depuis son centre |
@@ -214,8 +224,8 @@ suivant. Le **Lasso** l’ignore : une zone tracée point par point n’a pas de
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Pinceau** | `P` | peint, bord adouci |
-| **Crayon** | `⇧P` | peint, bord net |
+| **Pinceau** | `B` | peint, bord adouci |
+| **Crayon** | `⇧B` | peint, bord net |
 | **Plume** | — | *pas encore disponible* |
 
 ### Groupe Texte
@@ -232,24 +242,20 @@ règle le **contenu**, le **corps** et la **police**.
 d’abord, puis celles de votre machine. Ce que dit
 [l’espace Modélisation](09-espace-modelisation.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
 
-### Groupe Gomme
-
-| Outil | Raccourci | Ce qu’il fait |
-|---|---|---|
-| **Gomme ponctuelle** | `E` | efface au passage du pointeur |
-| **Gomme sélective** | — | efface l’intérieur de la sélection d’un geste |
-
-La gomme efface **vers la transparence**, elle ne peint pas en blanc.
-
 ### Outils isolés
+
+Ceux-là n’ont pas de groupe : le bouton arme l’outil, il n’y a pas de menu à ouvrir.
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Commentaire** | — | *pas encore disponible* |
-| **Remplir le calque** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
+| **Gomme** | `E` | efface au passage du pointeur |
+| **Pot de peinture** | `G` | remplit le calque actif — ou la **zone sélectionnée**, s’il y en a une |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
 | **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
 | **Réglages du pinceau** | `[` et `]` | la taille, la dureté et l’opacité |
+
+La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 > **Ces deux contrôles suivent l’outil armé, et disparaissent quand il ne les lit pas.** La
 > pipette, le pointeur, le recadrage et la légende ne peignent aucun pixel : la barre n’affiche
@@ -259,11 +265,35 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 > l’inspecteur applique déjà à un sprite, qui n’a aucune section d’ombre plutôt qu’une section
 > morte.
 
-> **Remplir n’est pas un pot de peinture.** Il ne cherche pas la plage de couleur sous le
+> **Ce pot ne s’arrête pas aux contours.** Il ne cherche pas la plage de couleur sous le
 > pointeur : il remplit **tout le calque**, d’un bord à l’autre — ou, **si une zone est
 > sélectionnée, cette zone seulement**. C’est ce qui donne un fond uni en un geste, et une zone sa
 > couleur plate ; ce n’est pas le remplissage par proximité de couleur que vous connaissez
 > peut-être ailleurs.
+
+### Groupe Retouches par modèle
+
+Après les outils, séparé d’eux par un trait, un groupe qui n’en est pas un : **ses lignes ne
+s’arment pas, elles agissent.** Cliquer le bouton ouvre la liste au lieu de reprendre un outil.
+Après lui viennent les deux boutons du recadrage, gris tant qu’aucun cadre n’est tracé, puis la
+couleur et les réglages du pinceau.
+
+| Ligne | Ce qu’elle envoie |
+|---|---|
+| **Régénérer la zone** | la région masquée du calque actif, à repeindre |
+| **Étendre** | l’image aplatie, à prolonger au-delà de ses bords |
+| **Détourer** | l’image aplatie, dont retirer l’arrière-plan |
+| **Agrandir** | l’image aplatie, à redéfinir plus finement |
+| **Vectoriser** | l’image aplatie, à convertir en tracés |
+
+Ce sont les cinq entrées du bas du menu **Image** : deux portes, une seule action. Le groupe est
+gris le temps qu’une retouche se prépare — aplatir puis téléverser prend ce que prend le réseau, et
+un bouton qui ne dit rien pendant ce temps-là laisse croire que le clic est passé à côté.
+
+**Aucune ne part toute seule** : chacune remplit le formulaire du panneau Génération et vous le
+montre. Détourer, Agrandir et Vectoriser demandent en plus un modèle réglé dans
+**Réglages ▸ Modèles d’IA** ; sans lui, l’édition ouvre l’écran où en choisir un plutôt que de
+partir. [Les modèles](05-modeles.md) dit quelle famille chacune attend.
 
 ### Les réglages du pinceau
 
@@ -360,7 +390,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > l’enregistrement garde la pile intacte pour continuer à travailler.
 >
 > **Et si ce document a été ouvert depuis un asset, `⌘S` réécrit AUSSI cet asset** — la vignette
-> de l’étagère suit donc ce que vous éditez, au lieu de montrer la génération d’origine. Les deux
+> de l’Explorateur suit donc ce que vous éditez, au lieu de montrer la génération d’origine. Les deux
 > écritures sont dans cet ordre, et il compte : le document porte les calques et l’historique,
 > l’asset une image plate. Si la seconde échoue, votre travail est déjà sur le disque et c’est la
 > vignette qui est en retard — jamais l’inverse.
@@ -372,7 +402,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > n’est jamais touché** : l’édition entre dans le projet, votre fichier reste où il est.
 >
 > **Le studio le dit quand il constate que le document ne mesure plus son asset**, à deux moments
-> qui ne se valent pas. En rouvrant l’asset depuis l’étagère alors que son onglet est déjà là,
+> qui ne se valent pas. En rouvrant l’asset depuis l’Explorateur alors que son onglet est déjà là,
 > c’est un avertissement : rien n’est encore écrit, vous pouvez choisir. À l’enregistrement, c’est
 > un constat — **rien n’est refusé et l’écriture a lieu**. Et il se tait quand il ne peut pas
 > mesurer : un asset illisible, ou un onglet qui n’a pas fini de s’ouvrir. Pour garder l’original
@@ -382,7 +412,7 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > dialogue ne demande de nom : la copie s’appelle *« (le nom) copie »*, et l’asset que vous aviez
 > ouvert reste tel qu’il était au dernier `⌘S`.
 >
-> L’image s’écrit en **dossier** `documents/<id>.ora/` : un `document.json` pour la pile, et un
+> L’image s’écrit en **dossier** `Images/<nom>.ora` : un `document.json` pour la pile, et un
 > `.png` par calque — plus un second pour son masque, s’il en a un. C’est volontairement
 > inspectable : vous pouvez ouvrir le dossier et regarder les calques un par un.
 >

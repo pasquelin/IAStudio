@@ -17,8 +17,10 @@ const JOB: Job = {
 function backendSpy(): { backend: LocalBackend; imported: ImportRequest[] } {
   const imported: ImportRequest[] = []
   const backend: LocalBackend = {
-    // The collector only ever downloads; the two write paths belong to the audio editor.
+    // The cloud collector only ever downloads; the three write paths belong elsewhere — two to
+    // the audio editor, one to the collector of a generation made on this machine.
     importFromBytes: () => Promise.reject(new Error('not used by the collector')),
+    importFromFile: () => Promise.reject(new Error('not used by the collector')),
     replaceBytes: () => Promise.reject(new Error('not used by the collector')),
     importFromUrl: request => {
       imported.push(request)
@@ -49,8 +51,41 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_1'] })
+    expect(await collect(JOB, ['remote_1'], null)).toMatchObject({ ids: ['asset_1'] })
     expect(imported[0]).toMatchObject({ name: 'Flux', type: 'image', jobId: 'job_1' })
+  })
+
+  /**
+   * The API echoes back the prompt it was SENT, so a project with a context would name every one
+   * of its assets after the world rather than after their subject — and the row's name IS the
+   * file's name. The recipe follows: a « regenerate » must reopen on what was typed, or the
+   * context stacks on itself at every replay.
+   */
+  it('names an output after what the person wrote, not after what was sent', async () => {
+    const { backend, imported } = backendSpy()
+    const sent = 'a house\n\nProject context —\nWorld: A medieval forest'
+    const collect = createAssetCollector({
+      retrieve: () =>
+        Promise.resolve({
+          ...remote('image'),
+          generation: {
+            modelId: 'model_flux',
+            modelLabel: 'Flux',
+            prompt: sent,
+            params: { prompt: sent, seed: 3 },
+          },
+        }),
+      backend,
+      newId: () => 'asset_1',
+      heldFor: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'], { written: 'a house', sent })
+
+    expect(imported[0]).toMatchObject({
+      name: 'a house',
+      generation: { prompt: 'a house', params: { prompt: 'a house', seed: 3 } },
+    })
   })
 
   it('numbers the outputs when a generation returns several', async () => {
@@ -63,7 +98,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1', 'remote_2'])
+    await collect(JOB, ['remote_1', 'remote_2'], null)
     expect(imported.map(request => request.name)).toEqual(['Flux 1', 'Flux 2'])
   })
 
@@ -77,7 +112,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    expect(await collect(JOB, ['remote_caption', 'remote_image'])).toMatchObject({
+    expect(await collect(JOB, ['remote_caption', 'remote_image'], null)).toMatchObject({
       ids: ['asset_1'],
     })
     expect(imported).toHaveLength(1)
@@ -92,8 +127,21 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]).toMatchObject({ remoteAssetId: 'remote_1', type: 'mesh' })
+  })
+
+  it('files a cloud generation without counting it as synced', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve(remote('image')),
+      backend,
+      newId: () => 'asset_1',
+      heldFor: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'], null)
+    expect(imported[0]?.sync).toBe(false)
   })
 
   /**
@@ -111,7 +159,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]?.thumbnailUrl).toBe('https://cdn.example/thumbnails/x')
   })
 
@@ -124,13 +172,13 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]?.thumbnailUrl).toBeUndefined()
   })
 
   // One converter job answers with several pictures. Filed as plain images, the material
   // would be lost: the channel a picture carries is what makes it part of one.
-  it('files a PBR channel as a texture, whatever its kind says', async () => {
+  it('files a PBR channel as the picture it is, its channel remembered', async () => {
     const { backend, imported } = backendSpy()
     const collect = createAssetCollector({
       retrieve: () => Promise.resolve({ ...remote('image'), metadataType: 'texture-normal' }),
@@ -139,8 +187,8 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
-    expect(imported[0]).toMatchObject({ type: 'texture', map: 'normal' })
+    await collect(JOB, ['remote_1'], null)
+    expect(imported[0]).toMatchObject({ type: 'image', map: 'normal' })
     expect(imported[0]?.mapInverted).toBeUndefined()
   })
 
@@ -153,7 +201,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]).toMatchObject({ map: 'roughness', mapInverted: true })
   })
 
@@ -176,7 +224,7 @@ describe('asset collector', () => {
           : null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]?.derivedFrom).toBe('asset_source')
   })
 
@@ -194,7 +242,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]?.derivedFrom).toBeUndefined()
   })
 
@@ -207,7 +255,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(imported[0]?.type).toBe('image')
     expect(imported[0]?.map).toBeUndefined()
   })
@@ -229,7 +277,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await collect(JOB, ['a', 'b', 'c'])
+    await collect(JOB, ['a', 'b', 'c'], null)
     expect(peak).toBe(1)
   })
 
@@ -249,7 +297,7 @@ describe('asset collector', () => {
       }),
     })
 
-    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_already_here'] })
+    expect(await collect(JOB, ['remote_1'], null)).toMatchObject({ ids: ['asset_already_here'] })
     expect(retrieve).not.toHaveBeenCalled()
     expect(imported).toEqual([])
   })
@@ -276,7 +324,7 @@ describe('asset collector', () => {
       }),
     })
 
-    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_thrown_away'] })
+    expect(await collect(JOB, ['remote_1'], null)).toMatchObject({ ids: ['asset_thrown_away'] })
     expect(retrieve).toHaveBeenCalled()
     expect(imported[0]).toMatchObject({ id: 'asset_thrown_away', jobId: JOB.id })
   })
@@ -302,7 +350,7 @@ describe('asset collector', () => {
       }),
     })
 
-    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_thrown_away'] })
+    expect(await collect(JOB, ['remote_1'], null)).toMatchObject({ ids: ['asset_thrown_away'] })
     expect(imported).toEqual([])
   })
 
@@ -318,7 +366,7 @@ describe('asset collector', () => {
       heldFor: async () => null,
     })
 
-    await expect(collect(JOB, ['remote_1'])).rejects.toThrow('gone from the account')
+    await expect(collect(JOB, ['remote_1'], null)).rejects.toThrow('gone from the account')
   })
 
   it('collects its own output even when the library already holds a copy from elsewhere', async () => {
@@ -330,7 +378,7 @@ describe('asset collector', () => {
       heldFor: async () => ({ id: 'asset_pulled_from_cloud', type: 'image', onDisk: true }),
     })
 
-    expect(await collect(JOB, ['remote_1'])).toMatchObject({ ids: ['asset_generated'] })
+    expect(await collect(JOB, ['remote_1'], null)).toMatchObject({ ids: ['asset_generated'] })
     expect(imported[0]).toMatchObject({ jobId: JOB.id, name: 'Flux' })
   })
 })
@@ -362,7 +410,7 @@ describe('what the collector records about a generation', () => {
       remote_1: { url: 'https://cdn/a.png', kind: 'image', generation },
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(seen[0]?.generation).toEqual(generation)
   })
 
@@ -376,7 +424,7 @@ describe('what the collector records about a generation', () => {
       },
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(seen[0]).toMatchObject({
       remoteOwnerId: 'proj_a',
       remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
@@ -389,7 +437,7 @@ describe('what the collector records about a generation', () => {
       remote_2: { url: 'https://cdn/b.png', kind: 'image', metadataType: 'texture-normal' },
     })
 
-    await collect(JOB, ['remote_1', 'remote_2'])
+    await collect(JOB, ['remote_1', 'remote_2'], null)
     expect(seen.map(one => [one.groupId, one.outputIndex, one.map])).toEqual([
       ['job_1', 0, 'baseColor'],
       ['job_1', 1, 'normal'],
@@ -399,7 +447,7 @@ describe('what the collector records about a generation', () => {
   it('leaves a lone output ungrouped, because one asset is not a set', async () => {
     const { collect, seen } = collectorOn({})
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(seen[0]?.groupId).toBeUndefined()
     expect(seen[0]?.outputIndex).toBeUndefined()
   })
@@ -409,7 +457,7 @@ describe('what the collector records about a generation', () => {
       remote_1: { url: 'https://cdn/a.png', kind: 'image', metadataType: 'skybox-base-360' },
     })
 
-    await collect(JOB, ['remote_1'])
+    await collect(JOB, ['remote_1'], null)
     expect(seen[0]?.type).toBe('skybox')
   })
 })

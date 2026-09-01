@@ -1,42 +1,24 @@
-import { useEffect, useState } from 'react'
-import type { ModelFamily, ModelSummary } from '@shared/domain/model'
-import { getBridge } from '@/services/bridge'
+import { type ModelFamily, type ModelSummary } from '@shared/domain/model'
+import { useLocalModels } from './useLocalModels'
+import { useModelPages } from './useModelPages'
 
 /**
- * A `<select>` is not a browser: past a hundred entries it stops being usable long before it
- * stops being complete. The picker deliberately shows only the head of the catalogue — the
- * order is the API's own relevance score, so the most used models are the ones it holds.
+ * The models of one family, local and cloud. Read through the registry rather than a store: it
+ * already caches the catalogue in the main process, and no window needs a second replica.
+ *
+ * `null` is « do not ask », not « ask for everything »: a surface that will draw nothing must not
+ * send a listing per selection — measured on screen, the inspector did exactly that.
  */
-const PICKER_LIMIT = 100
+export function useFamilyModels(family: ModelFamily | null): readonly ModelSummary[] {
+  const narrowed = family ? { family } : {}
+  const onThisMachine = useLocalModels(['models', 'family', family], narrowed, family !== null)
 
-/**
- * The models of one family, fetched here rather than through a store: this list is read by
- * one screen, it is already cached by the registry in the main process, and the settings
- * window has no reason to hold a second replica of the catalogue.
- */
-export function useFamilyModels(family: ModelFamily | null): ModelSummary[] {
-  const [models, setModels] = useState<ModelSummary[]>([])
+  // Eight, for the hundred the single wide ask used to bring: what reads this derives the list of
+  // services from it, so a model past the ceiling is a service that vanishes.
+  const pages = useModelPages(['models', 'family', family], narrowed, family !== null, 8)
 
-  useEffect(() => {
-    // `null` is « do not ask », not « ask for everything »: a surface that will draw nothing must
-    // not send a listing per selection — measured on screen, the inspector did exactly that.
-    if (!family) return
-
-    let live = true
-    void getBridge()
-      ?.scenario.searchModels({ family, limit: PICKER_LIMIT })
-      .then(page => {
-        if (live) setModels(page.items)
-      })
-      .catch(() => {
-        // Not authenticated, or offline: an empty picker says so on its own.
-        if (live) setModels([])
-      })
-
-    return () => {
-      live = false
-    }
-  }, [family])
-
-  return models
+  // 🛑 `exhausted`, not `pending`: what reads this picks the FIRST service off the list and reads
+  // its schema, so a list still growing changed that pick under the user — and the « mesh too
+  // large » sentence appeared, then vanished. The manifests stand in until the walk is over.
+  return pages.exhausted ? pages.items : onThisMachine
 }

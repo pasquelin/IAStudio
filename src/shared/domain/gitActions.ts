@@ -30,6 +30,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitStatus.title',
     descriptionKey: 'assistant.actions.gitStatus.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -38,6 +39,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitLog.title',
     descriptionKey: 'assistant.actions.gitLog.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -52,10 +54,11 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'git.commitFiles',
-    titleKey: 'assistant.actions.gitCommitFiles.title',
-    descriptionKey: 'assistant.actions.gitCommitFiles.description',
+    name: 'git.listCommitFiles',
+    titleKey: 'assistant.actions.gitListCommitFiles.title',
+    descriptionKey: 'assistant.actions.gitListCommitFiles.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'hash', kind: 'text', labelKey: 'assistant.fields.commitHash', required: true },
@@ -66,6 +69,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitDiff.title',
     descriptionKey: 'assistant.actions.gitDiff.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'path', kind: 'text', labelKey: 'assistant.fields.gitPath', required: true },
@@ -77,6 +81,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitBranches.title',
     descriptionKey: 'assistant.actions.gitBranches.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -85,6 +90,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitStashes.title',
     descriptionKey: 'assistant.actions.gitStashes.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -93,6 +99,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitInit.title',
     descriptionKey: 'assistant.actions.gitInit.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -101,6 +108,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitStage.title',
     descriptionKey: 'assistant.actions.gitStage.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [PATHS],
   }),
@@ -109,6 +117,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitUnstage.title',
     descriptionKey: 'assistant.actions.gitUnstage.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [PATHS],
   }),
@@ -119,6 +128,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitRestore.title',
     descriptionKey: 'assistant.actions.gitRestore.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [PATHS],
   }),
@@ -127,6 +137,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitCommit.title',
     descriptionKey: 'assistant.actions.gitCommit.description',
     commitment: 'none',
+    repeatable: true,
     // Recording a version adds one; amending REPLACES the one already recorded, and its message
     // and its parent are gone with it. That is the same loss `git.restore` is asked about.
     raises: input => (input.amend === true ? 'files' : 'none'),
@@ -141,6 +152,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitCreateBranch.title',
     descriptionKey: 'assistant.actions.gitCreateBranch.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.branchName', required: true },
@@ -153,6 +165,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitCheckout.title',
     descriptionKey: 'assistant.actions.gitCheckout.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.branchName', required: true },
@@ -163,6 +176,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitStash.title',
     descriptionKey: 'assistant.actions.gitStash.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'message', kind: 'text', labelKey: 'assistant.fields.message', required: false },
@@ -173,6 +187,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitStashPop.title',
     descriptionKey: 'assistant.actions.gitStashPop.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -189,6 +204,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitTag.title',
     descriptionKey: 'assistant.actions.gitTag.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.tagName', required: true },
@@ -200,6 +216,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitStashDrop.title',
     descriptionKey: 'assistant.actions.gitStashDrop.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -217,6 +234,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitResolve.title',
     descriptionKey: 'assistant.actions.gitResolve.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       PATHS,
@@ -234,6 +252,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitAbortMerge.title',
     descriptionKey: 'assistant.actions.gitAbortMerge.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -242,6 +261,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitRemotes.title',
     descriptionKey: 'assistant.actions.gitRemotes.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -250,6 +270,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitAddRemote.title',
     descriptionKey: 'assistant.actions.gitAddRemote.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.remoteName', required: true },
@@ -262,6 +283,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitFetch.title',
     descriptionKey: 'assistant.actions.gitFetch.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -271,6 +293,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitPull.title',
     descriptionKey: 'assistant.actions.gitPull.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -283,6 +306,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.gitPush.title',
     descriptionKey: 'assistant.actions.gitPush.description',
     commitment: 'remote',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {

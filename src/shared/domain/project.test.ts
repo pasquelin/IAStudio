@@ -3,27 +3,28 @@ import type { AccountSummary } from './account'
 import {
   listedAt,
   planProjectAccount,
+  projectPathFor,
   projectPickerFolder,
   landedInDefaultFolder,
   projectsByCreation,
-  renamedRecentProject,
+  movedRecentProject,
+  projectName,
   RECENT_PROJECTS_MAX,
   withRecentProject,
   type Project,
   type RecentProject,
 } from './project'
 
-function project(path: string, name = path): Project {
+function project(path: string): Project {
   return {
     path,
-    manifest: { version: 1, name, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01' },
+    manifest: { version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01' },
   }
 }
 
 function recent(count: number): RecentProject[] {
   return Array.from({ length: count }, (_, index) => ({
     path: `/projects/p${index}`,
-    name: `P${index}`,
     openedAt: '2026-01-01T00:00:00Z',
   }))
 }
@@ -36,7 +37,6 @@ describe('remembering an opened project', () => {
 
     expect(list[0]).toEqual({
       path: '/projects/new',
-      name: '/projects/new',
       openedAt: '2026-08-08T10:00:00Z',
       createdAt: '2026-01-01T00:00:00Z',
     })
@@ -51,10 +51,15 @@ describe('remembering an opened project', () => {
     expect(twice).toHaveLength(3)
   })
 
-  it('keeps the name the manifest gives, not the folder it sits in', () => {
-    const list = withRecentProject([], project('/somewhere/untitled', 'Summer campaign'), 'now')
+  /**
+   * 🛑 The folder, and NOTHING beside it. Stored as well, the name was a third copy — a rename
+   * had to write it separately, and a shelf holding the old one listed one folder twice.
+   */
+  it('remembers a folder and reads its name off it', () => {
+    const list = withRecentProject([], project('/somewhere/Summer campaign'), 'now')
 
-    expect(list[0]?.name).toBe('Summer campaign')
+    expect(list[0]).not.toHaveProperty('name')
+    expect(projectName(list[0]?.path ?? '')).toBe('Summer campaign')
   })
 
   it('stays bounded, dropping the one opened longest ago', () => {
@@ -75,7 +80,7 @@ describe('listing the projects for the eye', () => {
     path: string,
     createdAt: string,
     openedAt = '2026-01-01T00:00:00Z',
-  ): RecentProject => ({ path, name: path, openedAt, createdAt })
+  ): RecentProject => ({ path, openedAt, createdAt })
 
   it('puts the newest-MADE project first, whatever order they are stored in', () => {
     const list = projectsByCreation([
@@ -107,7 +112,7 @@ describe('listing the projects for the eye', () => {
    * the first one made after the upgrade.
    */
   it('falls back to the opening date for an entry that predates the field', () => {
-    const legacy: RecentProject = { path: '/legacy', name: 'L', openedAt: '2026-08-12T00:00:00Z' }
+    const legacy: RecentProject = { path: '/legacy', openedAt: '2026-08-12T00:00:00Z' }
 
     expect(listedAt(legacy)).toBe('2026-08-12T00:00:00Z')
     expect(projectsByCreation([made('/older', '2026-03-01T00:00:00Z'), legacy])[0]?.path).toBe(
@@ -138,17 +143,26 @@ describe('listing the projects for the eye', () => {
  * its old name until it is next opened.
  */
 describe('renaming a remembered project', () => {
-  const entry = (path: string, name: string): RecentProject => ({
+  const entry = (path: string): RecentProject => ({
     path,
-    name,
     openedAt: '2026-08-01T00:00:00Z',
     createdAt: '2026-05-01T00:00:00Z',
   })
 
-  it('renames the one entry and no other', () => {
-    const list = renamedRecentProject([entry('/a', 'A'), entry('/b', 'B')], '/b', 'Renamed')
+  it('moves the one entry and no other, the name following its folder', () => {
+    const list = movedRecentProject([entry('/a'), entry('/b')], '/b', '/Renamed')
 
-    expect(list.map(one => one.name)).toEqual(['A', 'Renamed'])
+    expect(list.map(one => projectName(one.path))).toEqual(['a', 'Renamed'])
+  })
+
+  /**
+   * 🛑 The destination is dropped first. Left in, renaming onto a folder the shelf already knew
+   * listed it TWICE — two rows for one folder, which is what a person saw on 2026-08-31.
+   */
+  it('leaves one row where the shelf already knew the folder moved to', () => {
+    const list = movedRecentProject([entry('/a'), entry('/b')], '/a', '/b')
+
+    expect(list.map(one => one.path)).toEqual(['/b'])
   })
 
   /**
@@ -157,26 +171,53 @@ describe('renaming a remembered project', () => {
    * word would silently reshuffle the list or throw away a different project.
    */
   it('touches neither date, so nothing moves and nothing is evicted differently', () => {
-    const before = entry('/a', 'A')
+    const before = entry('/a')
 
-    expect(renamedRecentProject([before], '/a', 'Renamed')[0]).toEqual({
+    expect(movedRecentProject([before], '/a', '/Renamed')[0]).toEqual({
       ...before,
-      name: 'Renamed',
+      path: '/Renamed',
     })
   })
 
   // The open project need not be a remembered one, so an unknown path is not an error.
   it('leaves a list that does not hold the path alone', () => {
-    const list = [entry('/a', 'A')]
+    const list = [entry('/a')]
 
-    expect(renamedRecentProject(list, '/elsewhere', 'Renamed')).toEqual(list)
+    expect(movedRecentProject(list, '/elsewhere', '/Renamed')).toEqual(list)
   })
 
   it('leaves the list it was given alone', () => {
-    const list = [entry('/a', 'A')]
-    renamedRecentProject(list, '/a', 'Renamed')
+    const list = [entry('/a')]
+    movedRecentProject(list, '/a', '/Renamed')
 
-    expect(list[0]?.name).toBe('A')
+    expect(list[0]?.path).toBe('/a')
+  })
+})
+
+describe('what a project is called', () => {
+  it('is the name of its folder, on either separator', () => {
+    expect(projectName('/Users/someone/Mes Projets/jeu1')).toBe('jeu1')
+    expect(projectName('C:\\Projets\\jeu1')).toBe('jeu1')
+  })
+
+  // macOS writes `Été` as two code points. Read as it came, it would not match the word typed here.
+  it('reads a decomposed name as the word it spells', () => {
+    expect(projectName('/Projets/E\u0301te\u0301')).toBe('Été')
+  })
+
+  /**
+   * 🛑 A path a model writes and a picker returns. Read as it came, the name is the empty string —
+   * an untitled project in the title bar, the breadcrumb, `projects.list` and the briefing.
+   */
+  it('reads a folder named with a trailing separator', () => {
+    expect(projectName('/Users/x/Projets/jeu1/')).toBe('jeu1')
+    expect(projectName('C:\\Projets\\jeu1\\')).toBe('jeu1')
+  })
+
+  // Nothing above a volume root is a folder, so there is no name to read — and none to invent.
+  it('answers nothing for a path that names no folder', () => {
+    expect(projectName('/')).toBe('')
+    expect(projectName('')).toBe('')
   })
 })
 
@@ -227,7 +268,6 @@ describe('planning the account a project opens on', () => {
 describe('where the folder dialog should open', () => {
   const madeIn = (path: string): RecentProject => ({
     path,
-    name: 'A project',
     openedAt: '2026-08-16T10:00:00Z',
     createdAt: '2026-08-16T10:00:00Z',
   })
@@ -283,5 +323,30 @@ describe('an asset filed in the default folder of its kind', () => {
   // An asset linked where the user left it, or one that lives in the library alone.
   it('is not an asset with no file in the project', () => {
     expect(landedInDefaultFolder(undefined, 'Images')).toBe(false)
+  })
+})
+
+describe('projectPathFor', () => {
+  it('puts a bare name under the projects folder', () => {
+    expect(projectPathFor('test3', '/Users/x/Projets')).toBe('/Users/x/Projets/test3')
+  })
+
+  /**
+   * 🛑 The main process only checks that what it receives is ABSOLUTE, and `..` passes that: the
+   * folder was created outside the projects folder, on a yes that never named it.
+   */
+  it('refuses a name that would leave the folder it is put in', () => {
+    expect(projectPathFor('../Secret', '/Users/x/Projets')).toBeUndefined()
+    expect(projectPathFor('a/b', '/Users/x/Projets')).toBeUndefined()
+    expect(projectPathFor('~/ailleurs', '/Users/x/Projets')).toBeUndefined()
+  })
+
+  it('leaves an absolute path where it points', () => {
+    expect(projectPathFor('/tmp/Ailleurs', '/Users/x/Projets')).toBe('/tmp/Ailleurs')
+  })
+
+  // The first project of a machine: no folder is known, so nothing can be composed.
+  it('answers nothing where no folder is known', () => {
+    expect(projectPathFor('test3', undefined)).toBeUndefined()
   })
 })

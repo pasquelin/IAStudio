@@ -1,5 +1,6 @@
 import { action, type ActionCommitment, type AssistantAction } from './assistantAction'
 import { COMMAND_REGISTRY, type CommandId } from './command'
+import { LANDING_TARGETS } from './landingTarget'
 import { MODEL_FAMILIES } from './model'
 import { WORKSPACE_IDS } from './workspace'
 
@@ -38,10 +39,11 @@ export function commitmentOfCommand(id: string): ActionCommitment {
  */
 export const CORE_ACTIONS: readonly AssistantAction[] = [
   action({
-    name: 'command.run',
-    titleKey: 'assistant.actions.commandRun.title',
-    descriptionKey: 'assistant.actions.commandRun.description',
+    name: 'command.runStudioCommand',
+    titleKey: 'assistant.actions.commandRunStudioCommand.title',
+    descriptionKey: 'assistant.actions.commandRunStudioCommand.description',
     commitment: 'none',
+    repeatable: true,
     raises: input =>
       typeof input.command === 'string' ? commitmentOfCommand(input.command) : 'none',
     reach: 'both',
@@ -51,6 +53,12 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.command',
         required: true,
+        /**
+         * 🛑 The WHOLE registry, the five that raise a native picker included — leaving them out
+         * was tried and is worse: `options` is what the validator holds an input to, so
+         * `command.runStudioCommand project.new` came back `badInput` quoting the 126 remaining names, where
+         * the handler answers `nativeDialog` and says to use the action taking a path.
+         */
         options: COMMAND_REGISTRY.map(descriptor => descriptor.id),
       },
     ],
@@ -60,6 +68,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.workspaceOpen.title',
     descriptionKey: 'assistant.actions.workspaceOpen.description',
     commitment: 'none',
+    repeatable: true,
     asksItself: true,
     reach: 'both',
     fields: [
@@ -94,6 +103,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelsSearch.title',
     descriptionKey: 'assistant.actions.modelsSearch.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [
       { key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true },
@@ -111,6 +121,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.modelsSelect.title',
     descriptionKey: 'assistant.actions.modelsSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'both',
     fields: [
       {
@@ -128,6 +139,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.generatorPrepare.title',
     descriptionKey: 'assistant.actions.generatorPrepare.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [
       {
@@ -138,24 +150,57 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         options: MODEL_FAMILIES,
       },
       { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
+      /**
+       * 🛑 The employment, since a family alone names its FIRST — so `code` armed `txt2code` and
+       * a call could never reach `code2code`, which is what « rewrite this script » is.
+       *
+       * `text` rather than a closed set of the twenty-five: only the named family's own are
+       * valid, so nine listings out of ten would be wrong, and the narrow briefing pays 8 000
+       * characters for eleven actions. An employment the family does not declare is ignored.
+       */
+      { key: 'operation', kind: 'text', labelKey: 'assistant.fields.operation', required: false },
       // `raw`, because the shape is the target model's own and is only known once
-      // `GET /models/{id}` has answered — which `model.schema` is there to ask.
+      // `GET /models/{id}` has answered — which `models.readGenerationModelFields` is there to ask.
       { key: 'parameters', kind: 'raw', labelKey: 'assistant.fields.parameters', required: true },
     ],
+  }),
+  /**
+   * 🛑 `mcp`, not `both`: the brain in the window SEES the panel, where a client outside it has
+   * only this to read the destination from before it spends. Out of the short list, never out of
+   * reach — and the narrow briefing is 8 000 characters that the catalogue never gives ground on.
+   */
+  action({
+    name: 'generator.readArmedGeneration',
+    titleKey: 'assistant.actions.generatorReadArmedGeneration.title',
+    descriptionKey: 'assistant.actions.generatorReadArmedGeneration.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [],
   }),
   action({
     name: 'generator.submit',
     titleKey: 'assistant.actions.generatorSubmit.title',
     descriptionKey: 'assistant.actions.generatorSubmit.description',
     commitment: 'credits',
+    repeatable: true,
     reach: 'both',
-    fields: [],
+    fields: [
+      {
+        key: 'landing',
+        kind: 'choice',
+        labelKey: 'assistant.fields.landing',
+        required: false,
+        options: LANDING_TARGETS,
+      },
+    ],
   }),
   action({
     name: 'jobs.list',
     titleKey: 'assistant.actions.jobsList.title',
     descriptionKey: 'assistant.actions.jobsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [],
   }),
@@ -170,6 +215,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.promptSuggest.title',
     descriptionKey: 'assistant.actions.promptSuggest.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [
       { key: 'draft', kind: 'longText', labelKey: 'assistant.fields.draft', required: true },
@@ -180,6 +226,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.promptTranslate.title',
     descriptionKey: 'assistant.actions.promptTranslate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [{ key: 'text', kind: 'longText', labelKey: 'assistant.fields.text', required: true }],
   }),
@@ -190,6 +237,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.promptDescribeStyle.title',
     descriptionKey: 'assistant.actions.promptDescribeStyle.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'both',
     fields: [],
   }),
@@ -205,7 +253,24 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.chatClose.title',
     descriptionKey: 'assistant.actions.chatClose.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'both',
     fields: [],
+  }),
+  /**
+   * How a model too small to be shown the whole registry asks for the rest of it.
+   *
+   * The brain answers this one itself and asks again — see `answeredTurn`. It is in the registry
+   * all the same, because the two doors read one table: a client that reached `tools/list` has
+   * no use for it, but a handler is what keeps the registry and the table exhaustive of each other.
+   */
+  action({
+    name: 'actions.find',
+    titleKey: 'assistant.actions.actionsFind.title',
+    descriptionKey: 'assistant.actions.actionsFind.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'both',
+    fields: [{ key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true }],
   }),
 ]

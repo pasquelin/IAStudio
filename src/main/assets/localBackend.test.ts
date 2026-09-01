@@ -8,6 +8,8 @@ import type { AsyncCatalog } from '@main/project/catalogClient'
 // the first is what production injects, the second is the same answer without the `null` arm.
 import { hashOrNull, hashSource } from '@main/media/runner'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
+import { isHiddenEntry } from '@shared/domain/folder'
+import { roleFolderAt } from '@main/project/project-fixtures'
 import {
   createLocalBackend,
   extensionFromUrl,
@@ -43,15 +45,16 @@ describe('local backend', () => {
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'scenario-assets-'))
-    // No landing folder is laid down: `DEFAULT_ASSET_FOLDERS` is a default now, not a layout, and
-    // every import below writes into a folder that has to be created on the way. A user who threw
-    // `Images/` away gets it back rather than an import that fails.
+    // No landing folder is laid down: a role's folder is a default, not a layout, and every
+    // import below writes into one that has to be created on the way. A user who threw `Images/`
+    // away gets it back rather than an import that fails.
     await mkdir(join(root, '.index/posters'), { recursive: true })
 
     catalog = memoryCatalog()
     backend = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -80,6 +83,7 @@ describe('local backend', () => {
     const probing = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -104,6 +108,7 @@ describe('local backend', () => {
     const probing = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -168,7 +173,11 @@ describe('local backend', () => {
     })
 
     expect(second.path).toBe(first.path)
-    expect(await readdir(join(root, 'Images'))).toEqual(['Boulder.png'])
+    // The role marker left out, exactly as the explorer leaves it out: `readdir` shows it,
+    // nothing in the studio does.
+    expect((await readdir(join(root, 'Images'))).filter(name => !isHiddenEntry(name))).toEqual([
+      'Boulder.png',
+    ])
   })
 
   /**
@@ -216,7 +225,27 @@ describe('local backend', () => {
     expect(rewritten.path).toBe('Audio/Prise.wav')
   })
 
-  // One folder per kind, and the catalogue reads a texture's channel off the folder it sits in.
+  /**
+   * A generation made on this machine is already a file: reading it to write it back put video,
+   * audio, meshes and panoramas through the main process's heap whole, twice.
+   */
+  it('moves a file already on this machine instead of copying its bytes through', async () => {
+    const source = join(root, 'handover.png')
+    await writeFile(source, BYTES)
+
+    const asset = await backend.importFromFile(
+      { id: 'asset_1', name: 'Cube', type: 'image', extension: '.png' },
+      source,
+    )
+
+    expect(asset.path).toBe('Images/Cube.png')
+    expect(await readFile(join(root, asset.path ?? ''))).toEqual(Buffer.from(BYTES))
+    // The length comes off the file that landed, there being no buffer to measure.
+    expect(asset.bytes).toBe(BYTES.byteLength)
+    await expect(readFile(source)).rejects.toThrow()
+  })
+
+  // One folder per kind, and the catalogue reads a channel off the row rather than off the folder.
   it('files each kind under its own folder', async () => {
     const landed = async (type: AssetType): Promise<string | undefined> => {
       const asset = await backend.importFromBytes(
@@ -226,9 +255,9 @@ describe('local backend', () => {
       return asset.path
     }
 
-    expect(await landed('mesh')).toBe('3D/Prise.bin')
+    expect(await landed('mesh')).toBe('Modelling/Models/Prise.bin')
     expect(await landed('audio')).toBe('Audio/Prise.bin')
-    expect(await landed('skybox')).toBe('Sky/Prise.bin')
+    expect(await landed('skybox')).toBe('Skyboxes/Prise.bin')
   })
 
   /**
@@ -284,7 +313,7 @@ describe('local backend', () => {
       id: 'asset_1',
       url: 'https://cdn.example/render.png',
       name: 'Albedo',
-      type: 'texture',
+      type: 'image',
       jobId: 'job_1',
       remoteAssetId: 'asset_remote',
       remoteOwnerId: 'proj_a',
@@ -307,6 +336,23 @@ describe('local backend', () => {
       remoteOwnerId: 'proj_a',
       remoteUpdatedAt: '2026-08-06T09:00:00.000Z',
     })
+  })
+
+  it("records a generation's remote id without counting it as synced", async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/render.png',
+      name: 'Boulder',
+      type: 'image',
+      remoteAssetId: 'asset_remote',
+      sync: false,
+    })
+
+    expect(asset.remoteAssetId).toBe('asset_remote')
+    expect(asset.syncStatus).toBeUndefined()
+    // Same clock as `localChangedAt`, so the library page does not read as a conflict and a
+    // follow-up generation reuses the id rather than pushing a duplicate.
+    expect(asset.remoteSyncedAt).toBe('2026-08-06T10:00:00.000Z')
   })
 
   // Downloaded from the very twin it points at: the two cannot differ yet.
@@ -338,6 +384,23 @@ describe('local backend', () => {
     expect(asset.remoteSyncedAt).toBeUndefined()
     expect(asset.groupId).toBeUndefined()
     expect(asset.outputIndex).toBeUndefined()
+  })
+
+  /**
+   * The channel is what files it there, and it is all that is left to: a picture of a surface has
+   * been an ordinary `image` since the studio stopped giving one a kind of its own, so nothing
+   * else tells seven channels of one material from seven photographs.
+   */
+  it('lands a picture that holds a channel with the materials', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_map',
+      url: 'https://cdn.example/normal.png',
+      name: 'Rouille',
+      type: 'image',
+      map: 'normal',
+    })
+
+    expect(asset.path).toBe('Materials/Rouille.png')
   })
 
   it('writes the file to disk and indexes it', async () => {
@@ -399,6 +462,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -426,6 +490,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -448,6 +513,7 @@ describe('local backend', () => {
     const failing = createLocalBackend({
       download: vi.fn(() => Promise.reject(new Error('offline'))),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -614,6 +680,7 @@ describe('local backend', () => {
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -674,6 +741,7 @@ describe('the still brought down beside the bytes', () => {
     backend = createLocalBackend({
       download,
       projectPath: () => root,
+      folderFor: roleFolderAt(root),
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
       hash: hashOrNull,
@@ -721,7 +789,7 @@ describe('the still brought down beside the bytes', () => {
    * `posterUrl` like every other surface, and the still would be painted under its waveform.
    */
   it('writes none for a kind that has a picture of its own', async () => {
-    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'audio']
+    const alreadyShowable: AssetType[] = ['image', 'skybox', 'audio']
     for (const type of alreadyShowable) {
       const asset = await backend.importFromUrl({
         id: `asset_${type}`,
@@ -735,7 +803,7 @@ describe('the still brought down beside the bytes', () => {
     }
 
     // One download per asset, and not one thumbnail among them.
-    expect(download).toHaveBeenCalledTimes(4)
+    expect(download).toHaveBeenCalledTimes(3)
   })
 
   // The model is the asset; the still is a convenience. A CDN answering 404 must not cost the
@@ -753,7 +821,7 @@ describe('the still brought down beside the bytes', () => {
       thumbnailUrl: 'https://cdn.example/thumb/gone.jpg',
     })
 
-    expect(asset.path).toBe('3D/Skeleton.glb')
+    expect(asset.path).toBe('Modelling/Models/Skeleton.glb')
     expect(asset.posterPath).toBeUndefined()
   })
 

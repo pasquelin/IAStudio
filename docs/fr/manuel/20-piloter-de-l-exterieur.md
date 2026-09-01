@@ -17,13 +17,16 @@ Elle a deux portes, et **elles donnent sur la même pièce** :
 Les deux lisent **le même catalogue**, et **rien qui engage quelque chose ne part sans que vous
 l’ayez vu à l’écran** — d’où que vienne la demande.
 
-Elles n’en voient pas la même part, et c’est délibéré. **L’assistant en connaît onze**, celles
-d’une phrase parlée : ouvrir un espace, chercher un modèle, préparer une génération. **Le point
-d’entrée les offre toutes**, tout ce qu’un programme conduit délibérément — l’arbre des fichiers,
-la pile de calques, le montage, le ciel, la matière, la scène 3D, le squelette d’un personnage, le
-dépôt git, la bibliothèque distante, les panneaux du studio. La raison est prosaïque : le modèle
-qui lit vos phrases reçoit le catalogue entier avant chacune d’elles, et le catalogue entier n’y
-laisserait plus de place pour la phrase.
+**Le point d’entrée les offre toutes** — tout ce qu’un programme conduit délibérément : l’arbre
+des fichiers, la pile de calques, le montage, le ciel, la matière, la scène 3D, le squelette d’un
+personnage, le dépôt git, la bibliothèque distante, les panneaux du studio.
+
+**L’assistant, lui, en reçoit autant que le modèle qui vous répond peut en tenir.** Le catalogue
+entier là où il y a la place — un nuage de discussion, un modèle local à grande fenêtre — et
+seulement les actions d’une phrase parlée là où il n’y en a pas : ouvrir un espace, chercher un
+modèle, préparer une génération. Dans ce dernier cas il lui reste de quoi **demander le reste** en
+cours de route, ce qui lui coûte un aller-retour. Vous n’avez rien à régler : cela suit le modèle
+choisi dans la fenêtre de l’assistant.
 
 ---
 
@@ -35,7 +38,7 @@ studio, avec un champ, et c’est tout.
 Vous y écrivez ce que vous voulez faire, en une phrase ordinaire :
 
 > *Ouvre un nouveau fichier 3D*
-> *Cherche un modèle de texture pour de la pierre*
+> *Cherche un modèle de matière pour de la pierre*
 > *Prépare une génération d’image en 1024 par 1024*
 
 L’assistant lit la phrase, choisit une ou plusieurs actions dans le catalogue, et les exécute.
@@ -43,21 +46,36 @@ Chaque étape s’affiche dans le fil, avec ce qu’elle a donné.
 
 ### Ce que l’assistant peut lire
 
-**Rien de ce que vous n’avez pas écrit.** Il reçoit votre phrase et **les dix derniers échanges**
-de la conversation en cours, rendus en texte. Il ne voit ni vos images, ni vos projets, ni le
-contenu de vos documents — il connaît le *catalogue* des actions et leurs paramètres, pas ce sur
-quoi elles vont s’appliquer.
+**Votre phrase, les dix derniers échanges, et l’état du studio.** Il sait quel espace est ouvert,
+quel document est devant et s’il porte des modifications non enregistrées, quel modèle est armé
+pour cet espace, ce qui y est sélectionné, et ce que la fiche du projet raconte
+([chapitre 4](04-projets.md#le-contexte-du-projet)). C’est ce qui lui permet de comprendre
+« fais-moi un vélo » comme une génération dans l’espace où vous êtes, plutôt que comme un document
+à créer.
+
+**Il ne voit pas vos documents pour autant** : ni vos images, ni leur contenu — il connaît le
+*catalogue* des actions et leurs paramètres, et l’état de la fenêtre, pas ce que vos fichiers
+contiennent.
 
 Une exception, et elle est explicite : **Décrire le style des références** lit les images de
 référence déjà posées sur le formulaire du Générateur. C’est le seul endroit où l’assistant
 regarde une image, et il faut l’avoir demandé.
 
-### Choisir le modèle qui vous lit
+### Choisir qui vous répond
 
 Le sélecteur est **dans la fenêtre de l’assistant**, pas dans les réglages — le moment où l’on veut
-un modèle plus solide, c’est au milieu d’une phrase qui n’a pas été comprise.
+un modèle plus solide, c’est au milieu d’une phrase qui n’a pas été comprise. Il liste tout ce qui
+peut répondre, groupé par l’endroit où cela tourne :
 
-| Modèle | Ce qu’il vaut |
+- **Sur cette machine** — les modèles installés, Ollama compris. Rien ne sort de l’ordinateur.
+- **Vos clés** — les services pour lesquels une clé est enregistrée dans *Réglages ▸ Clés API*. Le
+  nom exact du modèle se règle à côté du service, dans *Réglages ▸ Modèles d’IA*.
+- **Le studio** — le catalogue distant, sur l’un des quatre modèles ci-dessous.
+
+C’est le même choix que *Réglages ▸ Modèles d’IA ▸ Assistant* : le changer ici le change là-bas, et
+il vaut pour le projet ouvert dès lors que c’est le projet qui l’avait fixé.
+
+| Modèle du studio | Ce qu’il vaut |
 |---|---|
 | **Haiku 4.5** *(départ)* | le plus rapide et le moins cher |
 | **Sonnet 4.6** | l’équilibre |
@@ -67,9 +85,10 @@ un modèle plus solide, c’est au milieu d’une phrase qui n’a pas été com
 Le moins cher suffit pour ouvrir un espace ou chercher un modèle. Les autres tiennent mieux une
 demande qui enchaîne trois ou quatre actions.
 
-> **Il n’y a ni second compte, ni seconde clé à saisir.** L’assistant réfléchit sur un modèle du
-> catalogue Scenario, avec la connexion que vous avez déjà. C’est aussi pour cette raison que
-> **réfléchir se paie** — voir juste en dessous.
+> **Sous *Le studio*, il n’y a ni second compte, ni seconde clé à saisir.** L’assistant réfléchit
+> sur un modèle du catalogue distant, avec la connexion que vous avez déjà. C’est aussi pour cette
+> raison que **réfléchir se paie** — voir juste en dessous. Un service à vous ou un modèle de cette
+> machine ne consomme, lui, aucune unité créative.
 
 ### Ce que ça coûte
 
@@ -119,7 +138,7 @@ Quatre choses, et il faut les quatre pour qu’une demande passe :
 
 ### L’ouvrir
 
-**Réglages ▸ Avancé ▸ Piloter le studio depuis l’extérieur.** Cochez la case ; le point d’entrée
+**Réglages ▸ Point d’entrée (MCP) ▸ Piloter le studio depuis l’extérieur.** Cochez la case ; le point d’entrée
 démarre aussitôt. Décochez-la, il s’arrête et **plus rien n’écoute**.
 
 ---
@@ -128,40 +147,71 @@ démarre aussitôt. Décochez-la, il s’arrête et **plus rien n’écoute**.
 
 C’est le cas le plus courant, et il tient en trois gestes.
 
-### 1. Ouvrir la porte
+### 1. Copier la ligne de connexion
 
-**Réglages ▸ Avancé**, cochez **Piloter le studio depuis l’extérieur**.
-
-### 2. Copier la ligne de connexion
-
-Juste en dessous, **Commande de connexion ▸ Copier**. Le studio met dans votre presse-papiers une
-ligne de cette forme :
+**Réglages ▸ Point d’entrée (MCP) ▸ Commande de connexion ▸ Copier.** Le studio met dans votre
+presse-papiers une ligne de cette forme :
 
 ```
-claude mcp add --transport http <nom> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <nom> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-Le nombre après `127.0.0.1:` et le jeton après `Bearer` **sont les vôtres, et ceux de ce
-lancement-ci**. Ils ne sont pas dans ce manuel parce qu’ils ne peuvent pas y être : ils changent.
+**Ni port, ni jeton, ni adresse.** Ce que vous collez désigne **le studio comme un programme à
+démarrer**, pas un endroit à joindre. C’est ce qui fait que cette ligne reste vraie à tous les
+lancements — voir plus bas.
 
-### 3. Coller dans un terminal
+### 2. Coller dans un terminal
 
 Ouvrez un terminal **dans le dossier du projet où vous travaillez avec Claude Code**, et collez la
-ligne. C’est tout : Claude Code connaît désormais le studio, et voit ses outils.
+ligne. Claude Code connaît désormais le studio.
 
-Pour vérifier, demandez-lui la liste de ses serveurs MCP — le studio doit y figurer, connecté.
+### 3. Ouvrir la porte
 
-### Ce qu’il faut refaire à chaque lancement
+Remontez dans la même rubrique et cochez **Piloter le studio depuis l’extérieur**. Elle dit alors
+sur quel port le studio écoute, ce qu’un client peut faire, et ce qui garde la porte.
 
-**Le port et le jeton changent à chaque démarrage du studio.** La ligne copiée hier ne vaut plus
-aujourd’hui : le client s’adresse à un port où plus rien n’écoute, ou présente un jeton périmé.
+**Cet ordre n’est pas une exigence** — c’est celui de l’écran, et il n’a de sens que depuis que ce
+qui se copie ne porte plus d’adresse : la case peut être cochée avant, après, ou déjà l’être.
 
-**Le geste est donc à refaire après chaque lancement** : recopier la commande, et la recoller. Un
-client déjà enregistré sous le même nom se remplace ; il n’y a rien à supprimer avant.
+**C’est en cochant que les outils apparaissent** : porte fermée, votre client trouve bien le
+studio mais s’entend répondre qu’il ne répond pas. Pour vérifier, demandez-lui la liste de ses
+serveurs MCP — le studio doit y figurer, connecté.
 
-> **C’est le prix des deux verrous du milieu**, et c’est délibéré. Un port fixe et un jeton
-> permanent tiendraient tout seuls d’une session à l’autre — et tiendraient aussi pour n’importe
-> quel programme ayant lu ce fichier une fois.
+### Un client qui se configure par un fichier
+
+Tous ne se pilotent pas depuis un terminal. Pour ceux-là, **Bloc de configuration ▸ Copier le
+JSON** met dans le presse-papiers le même branchement, dans la forme qu’un fichier de
+configuration attend :
+
+```json
+{
+  "mcpServers": {
+    "ia-studio": {
+      "command": "/Applications/IA Studio.app/Contents/MacOS/IA Studio",
+      "args": ["--mcp-stdio=…"]
+    }
+  }
+}
+```
+
+Collez-le dans le fichier de configuration MCP de votre client. Comme la commande, il ne porte ni
+port ni jeton.
+
+### Il n’y a rien à refaire
+
+**Le port et le jeton changent bien à chaque démarrage du studio** : les deux verrous du milieu
+sont intacts, et c’est délibéré — un port fixe et un jeton permanent tiendraient d’une session à
+l’autre, et tiendraient aussi pour n’importe quel programme les ayant lus une fois.
+
+**Mais votre client ne les connaît pas.** Il démarre le studio, et c’est ce programme-là qui va
+lire l’adresse du lancement en cours — à chaque message qu’il porte, jamais une fois pour toutes.
+
+**La ligne collée une fois vaut donc pour tous les lancements suivants**, y compris ceux où le port
+et le jeton sont neufs, c’est-à-dire tous. Un client déjà enregistré sous le même nom se
+remplace ; il n’y a rien à supprimer avant.
+
+> **Studio fermé, ou case décochée** : votre client s’entend répondre que le studio ne répond pas,
+> plutôt que d’attendre. Rouvrez-le, et il repart — sans que rien ne soit à recoller.
 
 ### Ce que vous pouvez lui demander
 
@@ -173,7 +223,7 @@ votre projet de code :
 > *Liste les générations en cours*
 > *Prépare une génération d’image avec ce prompt, mais ne l’envoie pas*
 > *Range les rushes de la semaine dans un dossier par jour*
-> *Génère une texture de pierre, attends-la, et pose-la dans la scène*
+> *Génère une matière de pierre, attends-la, et pose-la dans la scène*
 > *Ajoute un calque de texte « Générique » en bas de l’image, en 64 points*
 > *Pose une sphère à deux mètres à droite du cube et éclaire-la en chaud*
 > *Enregistre une version avec un message qui décrit ce qu’on vient de faire*
@@ -187,7 +237,7 @@ n’est parti.
 
 ## Le catalogue
 
-**Quatorze familles.** Le tableau ci-dessous dit ce que chacune couvre et ce qu’elle **engage** —
+**Quinze familles.** Le tableau ci-dessous dit ce que chacune couvre et ce qu’elle **engage** —
 c’est cette dernière colonne qui décide si le studio vous demandera quelque chose. Ni le nombre
 d’actions ni la liste exacte ne sont recopiés ici : ils bougent, et **c’est votre client qui les
 lit à la source** quand vous lui demandez ses outils, avec le détail de chaque paramètre.
@@ -198,13 +248,14 @@ lit à la source** quand vous lui demandez ses outils, avec le détail de chaque
 | **Les fichiers** | ouvrir un projet, le renommer, lister, chercher, déplacer, copier, renommer, mettre à la corbeille, montrer dans le gestionnaire de fichiers, annuler et refaire le dernier lot | **des fichiers** pour ce qui déplace ou détruit |
 | **Les documents** | ouvrir, mettre devant, renommer, fermer, exporter dans le projet | **des fichiers** pour fermer, renommer et exporter |
 | **Générer** | lire les entrées d’un modèle, chiffrer, préparer, lancer, attendre, annuler | **des unités créatives** pour lancer, et pour lancer seulement |
-| **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les textures d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
+| **La bibliothèque** | chercher, lire, étiqueter, légender, retirer des assets, repérer ceux dont le fichier a disparu, extraire les images d’un modèle | **des fichiers** pour retirer, **un serveur** pour retirer aussi de la bibliothèque distante |
 | **La bibliothèque distante** | parcourir la vôtre et le flux public, chercher des ressemblances, prévoir, rapatrier, envoyer | **un asset** pour envoyer |
 | **L’image** | la pile de calques : ajouter, styler, placer, grouper, fusionner, recadrer, régler un masque, poser et déplacer les repères | rien |
 | **Le montage** | Vidéo et Audio : poser un bloc, le déplacer, le rogner, le couper, régler fondus, niveau et vitesse, tenir les pistes. L’export du document sort la **coupe** en OpenTimelineIO, jamais un film — le rendu image par image demande une session que rien d’extérieur ne peut tenir | rien, sauf l’export |
 | **Le ciel et la matière** | régler l’image d’un ciel, y placer le soleil, choisir sous quelle projection le regarder, remplir les canaux d’une matière, la remapper, choisir la forme sur laquelle la juger et la rendre | rien |
 | **La 3D** | la scène : poser un objet, l’orienter, le tailler, l’éclairer, le peindre, l’habiller de cartes, écrire un texte, tracer un chemin, le rattacher, et la regarder — depuis une face, dans l’une des façons de dessiner, et en prendre une image. Le décor aussi : ce qui éclaire la scène, ce qui est derrière elle, sa brume, son sol, son rendu, et les décors tout prêts | rien |
 | **Les personnages** | rendre un modèle animable, ajouter ou retirer un os, lui donner une articulation du standard, poser une poignée qu’il atteint, lister ce qu’il peut jouer, poser un bloc d’animation et le régler, poser et retirer des clés, tenir les canaux, régler durée et cadence | rien |
+| **Le contexte du projet** | lire les fiches qui disent ce que le projet raconte, en ajouter une, en réécrire une, l’allumer ou l’éteindre, la supprimer | **des fichiers** pour réécrire le texte d’une fiche et pour en supprimer une — ajouter et éteindre ne détruisent rien |
 | **Le versionnage** | lire le dépôt et l’historique, indexer, enregistrer, brancher, remiser, trancher un conflit, rapatrier, publier | **des fichiers** pour ce qui réécrit la copie de travail, **un serveur** pour publier |
 | **Les réglages** | lire et changer les réglages, actionner les boutons de la fenêtre, lister les comptes, en activer un, en renommer un | **des fichiers** pour les deux boutons que rien ne reprend |
 | **Autour des documents** | la fenêtre, le compte, les mises à jour, les polices, les recettes épinglées, les styles de matière, les panneaux du studio, la dictée, et les trois fenêtres du menu Aide | **des fichiers** pour supprimer un style et pour installer une mise à jour |
@@ -349,7 +400,7 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 
 - **Il ne rend jamais une clé API ni un secret.** Il peut dire quels comptes existent, lequel est
   actif, et renommer l’étiquette de l’un d’eux — jamais ce qu’ils contiennent, et il ne peut ni en
-  ajouter ni en supprimer. Ce qui part vers Scenario part comme d’habitude, avec vos identifiants,
+  ajouter ni en supprimer. Ce qui part vers le fournisseur part comme d’habitude, avec vos identifiants,
   depuis votre machine.
 - **Il ne s’autorise rien lui-même.** Les quatre lignes qui laissent passer un engagement sans
   question ne s’écrivent que dans la fenêtre des réglages : un client qui demande à les changer
@@ -357,7 +408,9 @@ dans la fenêtre : il y a toujours quelqu’un pour être demandé.
 - **Il ne dépense jamais de lui-même.** Une seule action dépense — lancer la génération préparée —
   et elle demande, avec son estimation.
 - **Il ne survit pas à la fermeture.** Le studio fermé, le point d’entrée n’existe plus, et le
-  jeton du lancement avec lui.
+  jeton du lancement avec lui. Ce que votre client garde n’est pas une adresse mais une façon de
+  démarrer le studio : rien de ce qu’il détient n’ouvre quoi que ce soit tant que le studio ne
+  tourne pas, la case cochée.
 
 > **Il lit et modifie en revanche le dossier de votre projet**, ce qui n’était pas le cas des
 > premières versions de ce point d’entrée. C’est ce qui permet à un assistant de programmation de

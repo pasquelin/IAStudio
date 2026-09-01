@@ -1,30 +1,37 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
+import type { MemoryIndexing, MemoryScope } from '@shared/domain/assistantMemory'
+import type { AiOverview } from '@shared/domain/aiOverview'
+import type { Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import type { TaskProgress } from '@shared/domain/taskProgress'
 import type { SttEvent } from '@shared/domain/dictation'
 import type { FileOutcome } from '@shared/domain/fileOp'
+import type { RoleFolders } from '@shared/domain/folderRole'
 import type { Project, RescanState } from '@shared/domain/project'
+import type { ContextState } from '@shared/domain/projectContext'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
 import type { Language } from '@shared/i18n/languages'
 import type { UpdateState } from '@shared/domain/update'
 import type { WindowState } from '@shared/domain/window'
+import type { AssistantProgress } from '@shared/domain/assistant'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import {
   CHANNELS,
   EVENTS,
   type AssistantActionRequest,
   type LogEntry,
+  type McpState,
   type SceneAddRequest,
   type SceneDisplayRequest,
   type SceneViewRequest,
   type SceneCaptureCommand,
   type SceneExportCommand,
   type SkyboxExportCommand,
-  type TextureExportCommand,
+  type MaterialExportCommand,
   type StudioBridge,
   type ToolRequest,
   type Unsubscribe,
@@ -49,37 +56,63 @@ const bridge: StudioBridge = {
     onChange: callback => subscribe<Settings>(EVENTS.settingsChanged, callback),
     onSection: callback => subscribe<SettingsSectionId>(EVENTS.settingsSection, callback),
   },
+  memory: {
+    list: (scope, query) => ipcRenderer.invoke(CHANNELS.memoryList, scope, query),
+    recall: (scope, ask) => ipcRenderer.invoke(CHANNELS.memoryRecall, scope, ask),
+    read: (scope, id) => ipcRenderer.invoke(CHANNELS.memoryRead, scope, id),
+    remember: (scope, draft) => ipcRenderer.invoke(CHANNELS.memoryRemember, scope, draft),
+    amend: (scope, id, patch) => ipcRenderer.invoke(CHANNELS.memoryAmend, scope, id, patch),
+    forget: (scope, id) => ipcRenderer.invoke(CHANNELS.memoryForget, scope, id),
+    rebuild: scope => ipcRenderer.invoke(CHANNELS.memoryRebuild, scope),
+    reset: scope => ipcRenderer.invoke(CHANNELS.memoryReset, scope),
+    pending: scope => ipcRenderer.invoke(CHANNELS.memoryPending, scope),
+    index: scope => ipcRenderer.invoke(CHANNELS.memoryIndex, scope),
+    stopIndex: scope => ipcRenderer.invoke(CHANNELS.memoryStopIndex, scope),
+    compact: scope => ipcRenderer.invoke(CHANNELS.memoryCompact, scope),
+    onChanged: callback => subscribe<MemoryScope>(EVENTS.memoryChanged, callback),
+    onIndexed: callback => subscribe<MemoryIndexing>(EVENTS.memoryIndexed, callback),
+  },
+  mcp: {
+    state: () => ipcRenderer.invoke(CHANNELS.mcpState),
+    onState: callback => subscribe<McpState>(EVENTS.mcpState, callback),
+  },
   accounts: {
     list: () => ipcRenderer.invoke(CHANNELS.accountsList),
-    add: (name, key, secret) => ipcRenderer.invoke(CHANNELS.accountsAdd, name, key, secret),
+    add: (name, key, secret, providerId) =>
+      ipcRenderer.invoke(CHANNELS.accountsAdd, name, key, secret, providerId),
     rename: (id, name) => ipcRenderer.invoke(CHANNELS.accountsRename, id, name),
     remove: id => ipcRenderer.invoke(CHANNELS.accountsRemove, id),
     activate: id => ipcRenderer.invoke(CHANNELS.accountsActivate, id),
+    credits: () => ipcRenderer.invoke(CHANNELS.accountsCredits),
     onChange: callback => subscribe<AccountSummary[]>(EVENTS.accountsChanged, callback),
   },
-  scenario: {
-    searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),
-    modelPreviews: assetIds => ipcRenderer.invoke(CHANNELS.scenarioModelPreviews, assetIds),
-    describeModel: modelId => ipcRenderer.invoke(CHANNELS.scenarioDescribeModel, modelId),
-    plan: () => ipcRenderer.invoke(CHANNELS.scenarioPlan),
-    suggestPrompts: request => ipcRenderer.invoke(CHANNELS.scenarioSuggestPrompts, request),
-    translatePrompt: draft => ipcRenderer.invoke(CHANNELS.scenarioTranslatePrompt, draft),
-    describeStyle: images => ipcRenderer.invoke(CHANNELS.scenarioDescribeStyle, images),
-    generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
-    estimateCost: (target, body) => ipcRenderer.invoke(CHANNELS.scenarioEstimateCost, target, body),
-    uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.scenarioUploadAsset, name, image),
-    cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
-    listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
+  provider: {
+    searchModels: query => ipcRenderer.invoke(CHANNELS.providerSearchModels, query),
+    modelPreviews: assetIds => ipcRenderer.invoke(CHANNELS.providerModelPreviews, assetIds),
+    describeModel: modelId => ipcRenderer.invoke(CHANNELS.providerDescribeModel, modelId),
+    plan: () => ipcRenderer.invoke(CHANNELS.providerPlan),
+    suggestPrompts: request => ipcRenderer.invoke(CHANNELS.providerSuggestPrompts, request),
+    translatePrompt: draft => ipcRenderer.invoke(CHANNELS.providerTranslatePrompt, draft),
+    describeStyle: images => ipcRenderer.invoke(CHANNELS.providerDescribeStyle, images),
+    generate: (modelId, body, use) =>
+      ipcRenderer.invoke(CHANNELS.providerGenerate, modelId, body, use),
+    estimateCost: (target, body, use) =>
+      ipcRenderer.invoke(CHANNELS.providerEstimateCost, target, body, use),
+    uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.providerUploadAsset, name, image),
+    cancelJob: jobId => ipcRenderer.invoke(CHANNELS.providerCancelJob, jobId),
+    listJobs: () => ipcRenderer.invoke(CHANNELS.providerListJobs),
     onProgress: callback => subscribe<JobProgress>(EVENTS.jobProgress, callback),
     onJobsChanged: callback => subscribe<Job[]>(EVENTS.jobsChanged, callback),
-    usageReport: period => ipcRenderer.invoke(CHANNELS.scenarioUsageReport, period),
+    usageReport: period => ipcRenderer.invoke(CHANNELS.providerUsageReport, period),
     usageEvents: (period, cursors) =>
-      ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),
+      ipcRenderer.invoke(CHANNELS.providerUsageEvents, period, cursors),
   },
   project: {
     create: path => ipcRenderer.invoke(CHANNELS.projectCreate, path),
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),
     current: () => ipcRenderer.invoke(CHANNELS.projectCurrent),
+    close: () => ipcRenderer.invoke(CHANNELS.projectClose),
+    askLeave: () => ipcRenderer.invoke(CHANNELS.projectAskLeave),
     onChange: callback => subscribe<Project | null>(EVENTS.projectChanged, callback),
     listFolder: (relative, hidden) =>
       ipcRenderer.invoke(CHANNELS.projectListFolder, relative, hidden),
@@ -90,11 +123,18 @@ const bridge: StudioBridge = {
     onRescan: callback => subscribe<RescanState>(EVENTS.projectRescan, callback),
     rescanState: () => ipcRenderer.invoke(CHANNELS.projectRescanState),
     stopRescan: () => ipcRenderer.invoke(CHANNELS.projectStopRescan),
+    folderRoles: () => ipcRenderer.invoke(CHANNELS.projectFolderRoles),
+    folderFor: role => ipcRenderer.invoke(CHANNELS.projectFolderFor, role),
+    onFolderRoles: callback => subscribe<RoleFolders>(EVENTS.projectFolderRoles, callback),
     fileFacts: relative => ipcRenderer.invoke(CHANNELS.projectFileFacts, relative),
+    readContext: () => ipcRenderer.invoke(CHANNELS.projectReadContext),
+    writeContext: cards => ipcRenderer.invoke(CHANNELS.projectWriteContext, cards),
+    onContextChanged: callback => subscribe<ContextState>(EVENTS.projectContext, callback),
     exportInto: request => ipcRenderer.invoke(CHANNELS.projectExport, request),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
     rename: (path, name) => ipcRenderer.invoke(CHANNELS.projectRename, path, name),
+    trash: path => ipcRenderer.invoke(CHANNELS.projectTrash, path),
     renameFile: (relative, name) => ipcRenderer.invoke(CHANNELS.projectRenameFile, relative, name),
     moveFiles: (paths, folder) => ipcRenderer.invoke(CHANNELS.projectMoveFiles, paths, folder),
     trashFiles: paths => ipcRenderer.invoke(CHANNELS.projectTrashFiles, paths),
@@ -142,6 +182,13 @@ const bridge: StudioBridge = {
     pickPath: (kind, startIn) => ipcRenderer.invoke(CHANNELS.dialogPickPath, kind, startIn),
     exportPicture: (name, image) => ipcRenderer.invoke(CHANNELS.dialogExportPicture, name, image),
   },
+  game: {
+    read: () => ipcRenderer.invoke(CHANNELS.gameRead),
+    write: game => ipcRenderer.invoke(CHANNELS.gameWrite, game),
+    scripts: () => ipcRenderer.invoke(CHANNELS.gameScripts),
+    writeScript: (path, source) => ipcRenderer.invoke(CHANNELS.gameWriteScript, path, source),
+    export: request => ipcRenderer.invoke(CHANNELS.gameExport, request),
+  },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
@@ -152,10 +199,12 @@ const bridge: StudioBridge = {
     confirmClose: title => ipcRenderer.invoke(CHANNELS.documentConfirmClose, title),
     confirmDelete: title => ipcRenderer.invoke(CHANNELS.documentConfirmDelete, title),
     confirmOverwrite: title => ipcRenderer.invoke(CHANNELS.documentConfirmOverwrite, title),
+    confirmFlatten: (title, format, lost) =>
+      ipcRenderer.invoke(CHANNELS.documentConfirmFlatten, title, format, lost),
   },
   assets: {
     search: query => ipcRenderer.invoke(CHANNELS.assetsSearch, query),
-    onChanged: callback => subscribe<void>(EVENTS.assetsChanged, callback),
+    onChanged: callback => subscribe<readonly Asset[]>(EVENTS.assetsChanged, callback),
     counts: () => ipcRenderer.invoke(CHANNELS.assetsCounts),
     peaks: assetId => ipcRenderer.invoke(CHANNELS.assetsPeaks, assetId),
     reveal: assetId => ipcRenderer.invoke(CHANNELS.assetsReveal, assetId),
@@ -198,6 +247,10 @@ const bridge: StudioBridge = {
   scene: {
     export: request => ipcRenderer.invoke(CHANNELS.sceneExport, request),
   },
+  post: {
+    export: request => ipcRenderer.invoke(CHANNELS.postExport, request),
+    import: () => ipcRenderer.invoke(CHANNELS.postImport),
+  },
   montage: {
     export: request => ipcRenderer.invoke(CHANNELS.montageExport, request),
     import: id => ipcRenderer.invoke(CHANNELS.montageImport, { id }),
@@ -209,8 +262,8 @@ const bridge: StudioBridge = {
     finish: id => ipcRenderer.invoke(CHANNELS.renderFinish, id),
     cancel: id => ipcRenderer.invoke(CHANNELS.renderCancel, id),
   },
-  texture: {
-    export: request => ipcRenderer.invoke(CHANNELS.textureExport, request),
+  material: {
+    export: request => ipcRenderer.invoke(CHANNELS.materialExport, request),
   },
   skybox: {
     export: request => ipcRenderer.invoke(CHANNELS.skyboxExport, request),
@@ -235,8 +288,31 @@ const bridge: StudioBridge = {
   },
   assistant: {
     think: request => ipcRenderer.invoke(CHANNELS.assistantThink, request),
+    stop: () => ipcRenderer.invoke(CHANNELS.assistantStop),
     onAction: callback => subscribe<AssistantActionRequest>(EVENTS.assistantAction, callback),
+    onStream: callback => subscribe<AssistantProgress>(EVENTS.assistantStream, callback),
     actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
+    note: note => ipcRenderer.invoke(CHANNELS.assistantNote, note),
+    said: key => ipcRenderer.invoke(CHANNELS.assistantSaid, key),
+    window: () => ipcRenderer.invoke(CHANNELS.assistantWindow),
+  },
+  ai: {
+    overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),
+    choose: (role, provider, scope) => ipcRenderer.invoke(CHANNELS.aiChoose, role, provider, scope),
+    chooseMany: (writes, scope) => ipcRenderer.invoke(CHANNELS.aiChooseMany, writes, scope),
+    install: modelId => ipcRenderer.invoke(CHANNELS.aiInstall, modelId),
+    cancelInstall: () => ipcRenderer.invoke(CHANNELS.aiCancelInstall),
+    installOllama: () => ipcRenderer.invoke(CHANNELS.aiInstallOllama),
+    cancelInstallOllama: () => ipcRenderer.invoke(CHANNELS.aiCancelInstallOllama),
+    readEngine: () => ipcRenderer.invoke(CHANNELS.aiReadEngine),
+    installEngine: () => ipcRenderer.invoke(CHANNELS.aiInstallEngine),
+    cancelInstallEngine: () => ipcRenderer.invoke(CHANNELS.aiCancelInstallEngine),
+    remove: modelId => ipcRenderer.invoke(CHANNELS.aiRemove, modelId),
+    load: modelId => ipcRenderer.invoke(CHANNELS.aiLoad, modelId),
+    cancelLoad: () => ipcRenderer.invoke(CHANNELS.aiCancelLoad),
+    unload: modelId => ipcRenderer.invoke(CHANNELS.aiUnload, modelId),
+    addOwnModel: () => ipcRenderer.invoke(CHANNELS.aiAddOwnModel),
+    onChanged: callback => subscribe<AiOverview>(EVENTS.ai, callback),
   },
   dictation: {
     state: () => ipcRenderer.invoke(CHANNELS.dictationState),
@@ -251,6 +327,11 @@ const bridge: StudioBridge = {
   },
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
+  },
+  gameWindow: {
+    open: () => ipcRenderer.invoke(CHANNELS.gameWindowOpen),
+    close: () => ipcRenderer.invoke(CHANNELS.gameWindowClose),
+    onClosed: callback => subscribe<void>(EVENTS.gameWindowClosed, callback),
   },
   help: {
     open: page => ipcRenderer.invoke(CHANNELS.helpOpen, page),
@@ -269,8 +350,8 @@ const bridge: StudioBridge = {
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
     language: () => ipcRenderer.invoke(CHANNELS.windowLanguage),
     onLanguage: callback => subscribe<Language>(EVENTS.windowLanguage, callback),
-    setWorkspace: (workspace, tools, checked, abilities) =>
-      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked, abilities),
+    setWorkspace: (workspace, tools, checked, abilities, kind) =>
+      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked, abilities, kind),
   },
   menu: {
     popup: items => ipcRenderer.invoke(CHANNELS.menuPopup, items),
@@ -281,13 +362,16 @@ const bridge: StudioBridge = {
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
     onSceneCapture: callback => subscribe<SceneCaptureCommand>(EVENTS.sceneCapture, callback),
-    onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
+    onMaterialExport: callback => subscribe<MaterialExportCommand>(EVENTS.materialExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
     report: entry => ipcRenderer.invoke(CHANNELS.diagnosticsReport, entry),
     trace: entry => ipcRenderer.invoke(CHANNELS.diagnosticsTrace, entry),
+  },
+  news: {
+    read: topic => ipcRenderer.invoke(CHANNELS.newsRead, topic),
   },
   updates: {
     state: () => ipcRenderer.invoke(CHANNELS.updateState),

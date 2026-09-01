@@ -1,11 +1,12 @@
 import { readFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { join } from 'node:path'
+import { projectName } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import type { TextureExtraction } from '@main/assets/textureExtraction'
-import { parseAssetIds } from '@main/assets/validation'
+import { parseAssetId, parseAssetIds } from '@main/assets/validation'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
@@ -17,26 +18,31 @@ import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/localBackend'
 import { fileFactsOf } from './fileFacts'
 import type { FileOps } from './fileOps'
+import type { GameScriptStore } from './gameScripts'
+import type { ProjectGameStore } from './game'
 import type { FolderReader } from './folder'
 import type { Reconciler } from './reconcile'
 import type { ActivityReport } from './activityLog'
 import {
   askCloseChoice,
   askDeleteDocument,
+  askFlattenDocument,
   askOverwriteDocument,
   type AskUser,
 } from './documentDialogs'
 import type { DocumentFiles } from './documents'
-import { askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
-import { openFailureKey, type ProjectStore } from './store'
+import { askLeaveWithJobs, askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
+import type { ProjectContextStore } from './context'
+import { holdsAProject, openFailureKey, orWhenGone, type ProjectStore } from './store'
 import {
-  parseAssetId,
   parseAssetQuery,
+  parseContextCards,
   parseDocumentDraft,
   parseDocumentId,
   parseDocumentKind,
   parseDocumentTitle,
   parseFolderPath,
+  parseFolderRole,
   parseFolderPaths,
   parseForceWrite,
   parseHiddenShown,
@@ -47,6 +53,7 @@ import {
   parseSaveAudio,
   parseSaveLayered,
   parseSavePicture,
+  parseGame,
   parseSaveTexture,
   parseSearchTerm,
 } from './validation'
@@ -87,6 +94,11 @@ export type ProjectHandlerDeps = {
   files: FileOps
   /** The pass that puts the catalogue and the folder back in agreement — watched, never asked for. */
   reconciler: Reconciler
+  /** The project's own context. Read straight off the disk, so no window holds a stale copy. */
+  context: ProjectContextStore
+  /** What makes the project a GAME — its manifest, and the scripts a Play compiles. */
+  game: ProjectGameStore
+  scripts: GameScriptStore
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
@@ -95,6 +107,17 @@ export type ProjectHandlerDeps = {
   openInSystem: (file: string) => Promise<string>
   /** `dialog.showMessageBox`, injected for the same reason — see `documentDialogs`. */
   askUser: AskUser
+  /**
+   * `shell.trashItem` on an ABSOLUTE path, which is what tells it apart from the one the folder
+   * writer takes: this bins a project folder from the outside, never a file within one.
+   */
+  trashFolder: (path: string) => Promise<void>
+  /**
+   * How many generations are still running. Counted here rather than sent by the window: the
+   * manager holds them, and a replica a beat behind would put a number in a dialog nobody could
+   * check.
+   */
+  runningJobCount: () => number
 }
 
 export function registerProjectHandlers({
@@ -109,8 +132,13 @@ export function registerProjectHandlers({
   folder,
   files,
   reconciler,
+  context,
+  game,
+  scripts,
   openInSystem,
   askUser,
+  trashFolder,
+  runningJobCount,
 }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, async (_event, path) => {
     // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
@@ -120,9 +148,10 @@ export function registerProjectHandlers({
     try {
       // Inside, unlike the path above: this name comes from the FOLDER the user picked, not from
       // an argument, so a refusal is a sentence about their choice and owes them one. The root of
-      // a volume has no basename, and is turned away here by the rule that refuses a nameless
-      // rename — left outside, it failed in complete silence.
-      const named = parseProjectTitle(basename(root))
+      // a volume has no name, and is turned away here by the rule that refuses a nameless one —
+      // left outside, it failed in complete silence. Through `projectName`, never a second
+      // basename of its own: the dialog would then spell `Été` in a form nothing else uses.
+      const named = parseProjectTitle(projectName(root))
 
       const verdict = await project.inspect(root)
 
@@ -133,7 +162,7 @@ export function registerProjectHandlers({
       // The one refusal that is the user's to give, so it is asked before anything is written.
       if (verdict === 'occupied' && !(await askUseOccupiedFolder(askUser, named))) return null
 
-      return await project.create(root, named)
+      return await project.create(root)
     } catch (error) {
       // Same silence as opening: `createPicked` watches nothing either, so a folder that could
       // not be written said nothing at all. The path is left out — the user picked it from a
@@ -162,6 +191,18 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.projectCurrent, () => project.current())
 
+  // `lastProject` is the renderer's own write, as forgetting a project already is — the settings
+  // are replicated, so writing them here would be the same write twice. See `projectRename`.
+  handle(CHANNELS.projectClose, () => project.close())
+
+  // Its own channel because it has to be answerable BEFORE the window asks about unsaved
+  // documents: answering for three documents and then being asked whether to leave at all is the
+  // wrong order to put two questions in. Reached by all four ways out of a project.
+  handle(CHANNELS.projectAskLeave, async () => {
+    const running = runningJobCount()
+    return running === 0 || (await askLeaveWithJobs(askUser, running))
+  })
+
   handle(CHANNELS.projectRevealFile, async (_event, relative) => {
     reveal(join(project.path(), parseFolderPath(relative)))
   })
@@ -171,6 +212,16 @@ export function registerProjectHandlers({
   handle(CHANNELS.projectFileFacts, async (_event, relative) =>
     fileFactsOf(join(project.path(), parseFolderPath(relative))),
   )
+
+  handle(CHANNELS.projectReadContext, async () => context.read())
+
+  // Broadcast rather than returned alone: every window replicates the file, and one that kept
+  // showing the cards of before would preview a generation nobody is going to get.
+  handle(CHANNELS.projectWriteContext, async (_event, cards) => {
+    const state = await context.write(parseContextCards(cards))
+    broadcast(EVENTS.projectContext, state)
+    return state
+  })
 
   // An absolute path, unlike the one above: the home's shelf points at projects that are NOT
   // open, so there is no root to resolve against. `parseProjectPath` is the same refusal
@@ -190,7 +241,7 @@ export function registerProjectHandlers({
   })
 
   /**
-   * The PROJECT's name, in its manifest. The folder is left where it is — see the channel's doc.
+   * The PROJECT's name, which is its FOLDER's — so the folder MOVES. See the channel's doc.
    *
    * Broadcast rather than answered alone, and only for the project that is open: every window
    * replicates it, and the title bar of a second one would go on naming the old name. The
@@ -211,6 +262,36 @@ export function registerProjectHandlers({
       record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotRenamed' })
       throw error
     }
+  })
+
+  /**
+   * 🛑 `inspect` is not politeness, it is the last gate: `parseProjectPath` refuses a relative path
+   * and NOTHING else, so a path a model built from a name would otherwise bin `~/Documents` behind
+   * a card reading "put a project in the trash". The settings keyed on it are the caller's half.
+   */
+  handle(CHANNELS.projectTrash, async (_event, path) => {
+    const folderPath = parseProjectPath(path)
+    // 🛑 Told apart from the refusal below, and the caller acts on the difference: a folder that is
+    // merely not there may be a drive left unplugged, so nothing keyed on it may be dropped.
+    if (!exists(folderPath)) return 'missing'
+    if (!(await holdsAProject(project, folderPath))) {
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotTrashed' })
+      return 'not-a-project'
+    }
+
+    // Closed first: the catalogue is a thread holding a file INSIDE the folder, and a project
+    // cannot be binned from under an open database.
+    if (project.current()?.path === folderPath) await project.close()
+
+    try {
+      await trashFolder(folderPath)
+    } catch (error) {
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotTrashed' })
+      throw error
+    }
+
+    record({ level: 'info', topic: 'project', messageKey: 'activity.projectTrashed' })
+    return 'trashed'
   })
 
   /**
@@ -289,6 +370,11 @@ export function registerProjectHandlers({
   // A window never asks FOR a pass — opening a project and coming back to the front are what do.
   // What it may do is watch one and call it off.
   handle(CHANNELS.projectRescanState, async () => reconciler.state())
+  // `async` for the same reason the listing above is: the other side awaits an invoke.
+  handle(CHANNELS.projectFolderRoles, async () => project.roles())
+  handle(CHANNELS.projectFolderFor, async (_event, role) =>
+    project.folderFor(parseFolderRole(role)),
+  )
   handle(CHANNELS.projectStopRescan, async () => reconciler.stop())
 
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
@@ -315,10 +401,17 @@ export function registerProjectHandlers({
     return failure === ''
   })
 
-  handle(CHANNELS.assetsSearch, async (_event, query) => {
-    const found = await project.catalog().search(parseAssetQuery(query))
-    return found.map(withoutSourcePath)
-  })
+  /**
+   * 🛑 Empty rather than `no-project`: the window searches its assets and lists its documents on
+   * the way IN, so every launch wrote two errors over a studio doing nothing wrong. `orWhenGone`
+   * rather than a check of its own — it also catches the catalogue closing mid-read.
+   */
+  handle(CHANNELS.assetsSearch, (_event, query) =>
+    orWhenGone(async () => {
+      const found = await project.catalog().search(parseAssetQuery(query))
+      return found.map(withoutSourcePath)
+    }, []),
+  )
 
   handle(CHANNELS.assetsCounts, () => project.catalog().countByType())
 
@@ -513,10 +606,9 @@ export function registerProjectHandlers({
         {
           id: newAssetId(),
           name: request.name,
-          // A channel is a texture in the catalogue, which is what puts it under the right
-          // facet of the shelf and what `PICTURES` then lets a tile show. Decided here and
-          // never sent by the renderer: the kind is what the extension and the folder follow.
-          type: 'texture',
+          // A channel is a picture in the catalogue — `map`, set below, is what says which
+          // channel it holds. Decided here and never sent by the renderer.
+          type: 'image',
           extension: PNG_EXTENSION,
           map: request.map,
           ...(probe ? { probe } : {}),
@@ -544,7 +636,18 @@ export function registerProjectHandlers({
     return (await extractTextures(source)).map(withoutSourcePath)
   })
 
-  handle(CHANNELS.documentList, () => documents.list())
+  handle(CHANNELS.gameRead, () => game.read())
+
+  handle(CHANNELS.gameWrite, (_event, manifest) => game.write(parseGame(manifest)))
+
+  handle(CHANNELS.gameScripts, () => scripts.list())
+
+  handle(CHANNELS.gameWriteScript, (_event, path, source) =>
+    scripts.write(parseFolderPath(path), String(source)),
+  )
+
+  // The second of the two — see `assetsSearch` above for why these answer empty.
+  handle(CHANNELS.documentList, () => orWhenGone(() => documents.list(), []))
 
   handle(CHANNELS.documentRead, (_event, id, kind) =>
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),
@@ -586,6 +689,10 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.documentConfirmDelete, (_event, title) =>
     askDeleteDocument(askUser, parseDocumentTitle(title)),
+  )
+
+  handle(CHANNELS.documentConfirmFlatten, (_event, title, format, lost) =>
+    askFlattenDocument(askUser, parseDocumentTitle(title), String(format), String(lost)),
   )
 
   handle(CHANNELS.documentConfirmOverwrite, (_event, title) =>

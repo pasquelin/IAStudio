@@ -2,9 +2,10 @@ import { readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
-import { DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
+import { documentFolderOf, DOCUMENT_KINDS, type DocumentKind } from '@shared/domain/document'
 import { ORA_MERGED_PATH, ORA_MIMETYPE } from '@shared/domain/openRaster'
 import { documentFilesAt, snapshotDocuments, withTempProject } from './project-fixtures'
+import { projectName } from '@shared/domain/project'
 
 const NOW = '2026-08-16T10:00:00.000Z'
 
@@ -21,7 +22,7 @@ const bodyOf = (kind: DocumentKind): string =>
           name: kind,
           // What `otioBody` stamps on every save, so what is written here comes back byte for
           // byte: the id, and which of the two kinds `.otio` names this file is.
-          metadata: { scenario: { documentId: `doc-${kind}`, documentKind: kind } },
+          metadata: { iastudio: { documentId: `doc-${kind}`, documentKind: kind } },
           tracks: { OTIO_SCHEMA: 'Stack.1', children: [] },
         },
         null,
@@ -31,7 +32,22 @@ const bodyOf = (kind: DocumentKind): string =>
       ? // An image IS its OpenRaster container, so its content is the stack that container
         // holds — anything else is refused at the write, like a montage that is not a timeline.
         JSON.stringify({ width: 64, height: 32, nodes: [], studio: '{"layers":[]}' })
-      : `{"of":"${kind}"}`
+      : kind === 'gui'
+        ? // Same family: an interface IS its JSON, and a body that is not one is refused. The
+          // stamp is written here too, so what comes back equals what went in.
+          JSON.stringify(
+            {
+              iastudio: { documentId: `doc-${kind}`, documentKind: kind },
+              version: 1,
+              mode: 'screen',
+              design: { width: 1920, height: 1080 },
+              root: { type: 'screen', id: 'root', children: [] },
+              bindings: [],
+            },
+            null,
+            2,
+          )
+        : `{"of":"${kind}"}`
 
 /** The surfaces beside it: the flatten the spec demands, and nothing else for an empty stack. */
 const PIXELS = Uint8Array.from(
@@ -49,7 +65,7 @@ describe('the project fixture', () => {
   it('creates a real project folder, and takes it away with the test', async () => {
     const { root, project } = await withTempProject('Mine')
 
-    expect(project.manifest.name).toBe('Mine')
+    expect(projectName(project.path)).toMatch(/^Mine-/)
     expect(await readdir(root)).toContain('.project.json')
   })
 
@@ -107,7 +123,7 @@ describe('the project fixture', () => {
      * another tool leaves on disk, and it is exactly the loss a file count cannot see.
      */
     await writeFile(
-      join(root, 'documents', 'Cover.ora'),
+      join(root, documentFolderOf('image'), 'Cover.ora'),
       zipSync({
         mimetype: [strToU8(ORA_MIMETYPE), { level: 0 }],
         'stack.xml': strToU8(
@@ -117,7 +133,7 @@ describe('the project fixture', () => {
             `composite-op="svg:src-over" src="data/p_a.png"/>` +
             `</stack></image>\n`,
         ),
-        'scenario/document.json': strToU8('{"layers":[]}'),
+        'iastudio/document.json': strToU8('{"layers":[]}'),
       }),
     )
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DEFAULT_VIDEO_TOOL, type VideoToolId } from '@/spaces/video/videoTools'
+import { DEFAULT_VIDEO_TOOL, type VideoToolId } from '@/features/video/components/videoTools'
 
 type VideoToolState = {
   tool: VideoToolId

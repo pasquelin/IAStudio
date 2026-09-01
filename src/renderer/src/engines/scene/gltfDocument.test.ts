@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_ID_KEY, DOCUMENT_KIND_KEY, STUDIO_METADATA_KEY } from '@shared/domain/document'
-import { gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
+import { GLTF_SCENE_STATE, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
 import {
   gltfDocumentOf,
@@ -52,11 +52,24 @@ describe('gltfDocumentOf', () => {
 
   it('leaves out a placement that is the default, and writes one that is not', () => {
     const moved = meshNode('moved')
-    moved.transform = { ...moved.transform, position: { x: 1, y: 2, z: 3 } }
+    moved.transform = {
+      ...moved.transform,
+      position: { x: 1, y: 2, z: 3 },
+      scale: { x: 2, y: 2, z: 2 },
+    }
     const document = write({ ...EMPTY_SCENE, nodes: [meshNode('still'), moved] })
 
     expect(nodesOf(document)[0]).toEqual({ name: 'still' })
     expect(nodesOf(document)[1]?.translation).toEqual([1, 2, 3])
+    expect(nodesOf(document)[1]?.scale).toEqual([2, 2, 2])
+  })
+
+  it('writes a rotation as a quaternion, four numbers where the descriptor holds three', () => {
+    const turned = meshNode('turned')
+    turned.transform = { ...turned.transform, rotation: { x: 0, y: Math.PI / 2, z: 0 } }
+
+    const quarterTurn = [0, Math.sin(Math.PI / 4), 0, Math.cos(Math.PI / 4)]
+    expect(nodesOf(write({ ...EMPTY_SCENE, nodes: [turned] }))[0]?.rotation).toEqual(quarterTurn)
   })
 
   it('writes a camera the standard way, its angle in radians', () => {
@@ -93,6 +106,7 @@ describe('gltfDocumentOf', () => {
     const lights = isRecord(extensions) ? extensions.lights : null
     const light = Array.isArray(lights) && isRecord(lights[0]) ? lights[0] : {}
     expect(light.type).toBe('spot')
+    expect(light.color).toEqual([1, 1, 1])
     expect(light.intensity).toBe(2)
     expect(light.range).toBe(8)
     expect(light.spot).toEqual({ innerConeAngle: 0.5, outerConeAngle: 1 })
@@ -139,6 +153,15 @@ describe('sceneFromGltf', () => {
   })
 })
 
+/** This build's own file with its animation replaced — a later build's rows, in this file. */
+function withTimeline(over: Record<string, unknown>): Record<string, unknown> {
+  const held = JSON.parse(JSON.stringify(write({ ...EMPTY_SCENE, nodes: [meshNode('a')] })))
+  const state = gltfStudioMetadata(held)[GLTF_SCENE_STATE]
+  if (!isRecord(state) || !isRecord(state.animation)) throw new Error('no animation written')
+  Object.assign(state.animation, over)
+  return held
+}
+
 /**
  * Each case asserts WHICH member was found, never that something was.
  *
@@ -173,6 +196,56 @@ describe('sceneHoldsMore', () => {
     const more = enriched({ nodes: [...(Array.isArray(nodes) ? nodes : []), { name: 'Empty' }] })
 
     expect(sceneHoldsMore(more)).toEqual(['nodes'])
+  })
+
+  /**
+   * 🛑 The same loss as an unknown component, one member deeper: a save recomposes the timeline
+   * whole, so a row a later build wrote and this one cannot read is one the first ⌘S takes away.
+   */
+  it('names a timeline row a later build wrote and this one cannot read', () => {
+    const held = withTimeline({
+      transitions: [{ id: 't1', at: 0, kind: 'iris', duration: 100 }],
+      template: 'documentary',
+    })
+
+    expect(sceneHoldsMore(held).sort()).toEqual(['animation.template', 'animation.transitions'])
+  })
+
+  /** 🛑 The quietest loss of all: `readList` answers empty and nothing counts a difference. */
+  it('names a list a later build wrote as something other than an array', () => {
+    const held = withTimeline({ events: { e1: { id: 'e1', at: 0, name: 'Opened' } } })
+
+    expect(sceneHoldsMore(held)).toEqual(['animation.events'])
+  })
+
+  /** A member COMPOSED from something narrower has to be looked INTO — the repository's own rule. */
+  it('names a timeline member this build has no name for', () => {
+    const held = withTimeline({ markers: [{ id: 'm1', at: 0 }] })
+
+    expect(sceneHoldsMore(held)).toEqual(['animation.markers'])
+  })
+
+  /**
+   * 🛑 `readList` FILTERS, it does not key by id: both rows come back and both are written back.
+   * Counted as a loss, a repeat opened the document read-only and refused every ⌘S over a round
+   * trip that was faithful. What it really costs is a row swallowed at PLAY.
+   */
+  it('says nothing about two rows under one id, and gives both back', () => {
+    const held = withTimeline({
+      events: [
+        { id: 'e1', at: 0, name: 'First' },
+        { id: 'e1', at: 1, name: 'Second' },
+      ],
+    })
+
+    expect(sceneHoldsMore(held)).toEqual([])
+    expect(sceneFromGltf(held).animation.events).toHaveLength(2)
+  })
+
+  it('says nothing about a timeline whose rows it reads whole', () => {
+    const held = withTimeline({ events: [{ id: 'e1', at: 0, name: 'Opened' }] })
+
+    expect(sceneHoldsMore(held)).toEqual([])
   })
 
   it('names an asset field beyond the ones a save writes back', () => {

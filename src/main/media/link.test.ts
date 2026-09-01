@@ -31,7 +31,7 @@ describe('media kind from a file name', () => {
 
   /**
    * Announced nowhere rather than accepted and then failing in the viewport: an asset is served
-   * flat as `scenario://asset/<id>`, so a file naming its buffers or its textures beside itself
+   * flat as `ia-studio://asset/<id>`, so a file naming its buffers or its textures beside itself
    * would 404 on every one and show an empty model with nothing said.
    */
   it('leaves out a shape that points at files beside it', () => {

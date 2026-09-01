@@ -6,6 +6,7 @@ import type { CameraPlacement } from '../scene/sceneView'
 import type { SceneState } from '../scene/sceneState'
 import type { SinkLike } from './decoderPool'
 import { createModelScene, createSceneSink } from './sceneSink'
+import { createSequentialSink } from './sequentialSink'
 import { sceneIdOfSource } from './timelineState'
 
 /**
@@ -34,8 +35,7 @@ export type SinkPort = {
  * The same frame at every position. A still has no timeline of its own, and `seek` asks for
  * whatever sits under the playhead — so every second answers the one picture there is.
  *
- * It costs a texture upload per painted frame for a picture that never changes: `SinkLike` has
- * no way to answer « unchanged », and `null` already means « hide this track ».
+ * `stable` tells the engine the picture never changes, so the next seek can skip the upload.
  */
 export function createStillSink(picture: StillPicture): SinkLike {
   return {
@@ -44,6 +44,7 @@ export function createStillSink(picture: StillPicture): SinkLike {
     getSample: async () => ({ toVideoFrame: picture.frame, close: () => {} }),
     close: picture.close,
     holdsDecoder: false,
+    stable: true,
   }
 }
 
@@ -84,21 +85,19 @@ async function openVideo(blob: Blob): Promise<SinkLike | null> {
 
   try {
     const track = await input.getPrimaryVideoTrack()
-    if (track) {
-      const sink = new VideoSampleSink(track)
-      return {
-        getSample: seconds => sink.getSample(seconds),
-        close: () => input.dispose(),
-        holdsDecoder: true,
-      }
+    if (!track) {
+      input.dispose()
+      return null
     }
+    const sink = new VideoSampleSink(track)
+    return createSequentialSink({
+      samplesAtTimestamps: timestamps => sink.samplesAtTimestamps(timestamps),
+      close: () => input.dispose(),
+    })
   } catch (error) {
     input.dispose()
     throw error
   }
-
-  input.dispose()
-  return null
 }
 
 /**
@@ -142,6 +141,8 @@ export type StudioSinkDeps = {
   viewOf: (sceneId: string) => CameraPlacement | null
   /** The catalogue row behind an id — what tells a model apart from a rush. */
   assetOf: (assetId: string) => Asset | null
+  /** Bytes of an asset. Absent uses the playback scheme, which prefers the proxy. */
+  readAsset?: (assetId: string) => Promise<Blob>
   /** What the 3D is drawn at: the sequence's own frame size, never the monitor's. */
   size: () => { width: number; height: number }
   /** Absent opens a real one; a test hands a stub, since jsdom has no WebGL at all. */
@@ -154,6 +155,11 @@ export type StudioSinkDeps = {
  */
 export function createStudioSink(deps: StudioSinkDeps): (source: string) => Promise<SinkLike> {
   const openStage = deps.createStage ?? createSceneStage
+  const port: SinkPort = {
+    read: deps.readAsset ?? browserPort.read,
+    openVideo,
+    openPicture,
+  }
 
   return async source => {
     const sceneId = sceneIdOfSource(source)
@@ -174,6 +180,6 @@ export function createStudioSink(deps: StudioSinkDeps): (source: string) => Prom
       })
     }
 
-    return chooseSink(source, browserPort)
+    return chooseSink(source, port)
   }
 }

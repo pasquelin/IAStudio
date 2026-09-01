@@ -1,7 +1,8 @@
-import { EquirectangularReflectionMapping, Scene, Texture, type WebGLRenderer } from 'three'
+import { Color, EquirectangularReflectionMapping, Scene, Texture, type WebGLRenderer } from 'three'
 import type * as ThreeModule from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { createEnvironment, type ViewportEnvironment } from './environment'
+import { NEUTRAL_ADJUSTMENTS } from '@shared/domain/adjustments'
+import { createEnvironment, PMREM_QUIET_MS, type ViewportEnvironment } from './environment'
 
 /**
  * `PMREMGenerator` prefilters by rendering a mip chain, which needs a GL context jsdom cannot
@@ -32,6 +33,20 @@ const newTarget = (): FakeTarget => {
 const fromEquirectangular = vi.fn(() => newTarget())
 const fromScene = vi.fn(() => newTarget())
 const disposeGenerator = vi.fn()
+
+/**
+ * The graded picture, so a test can tell it apart from the source it was made of. A RENDER TARGET
+ * texture, which is what the grading pass hands back — and what three caches a backdrop's cubemap
+ * on, for ever, unless something says it was redrawn.
+ */
+const graded = Object.assign(new Texture(), { isRenderTargetTexture: true })
+const gradeOf = vi.fn((source: Texture | null) => (source ? graded : null))
+const disposeGrading = vi.fn()
+
+/** No GL context in jsdom, and what the pass DOES is `skyGrading.test.ts`. */
+vi.mock('../gpu/skyGrading', () => ({
+  createSkyGrading: () => ({ of: gradeOf, dispose: disposeGrading }),
+}))
 
 vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
@@ -213,6 +228,159 @@ describe('the environment of a viewport', () => {
       change()
       expect(requestRender).toHaveBeenCalled()
     }
+  })
+
+  describe('the grading a sky document asks for', () => {
+    const GRADED = { ...NEUTRAL_ADJUSTMENTS, exposure: 1 }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    it('hangs the source untouched while nothing is graded, building no pass at all', () => {
+      const environment = environmentOf()
+      const sky = new Texture()
+
+      environment.setAdjustments(NEUTRAL_ADJUSTMENTS)
+      environment.setTexture(sky)
+
+      expect(gradeOf).not.toHaveBeenCalled()
+      expect(scene.background).toBe(sky)
+    })
+
+    it('hangs and prefilters the GRADED picture, on the mapping a sky is drawn with', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+
+      environment.setAdjustments(GRADED)
+
+      expect(scene.background).toBe(graded)
+      expect(graded.mapping).toBe(EquirectangularReflectionMapping)
+
+      environment.refresh()
+      expect(fromEquirectangular).toHaveBeenCalledWith(graded)
+    })
+
+    it('grades a picture that arrives after the stack did', () => {
+      const environment = environmentOf()
+      environment.setAdjustments(GRADED)
+
+      environment.setTexture(new Texture())
+
+      expect(scene.background).toBe(graded)
+    })
+
+    /**
+     * The whole reason the two halves are split: a slider dragged in the sky's tab emits a value
+     * a frame, and a mip chain per value drops the viewport to single digits.
+     */
+    it('follows the hand on the picture and prefilters once the drag settles', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+
+      environment.setAdjustments(GRADED)
+      environment.setAdjustments({ ...GRADED, exposure: 2 })
+      expect(fromEquirectangular).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(PMREM_QUIET_MS)
+      expect(fromEquirectangular).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not prefilter twice when a refresh lands before the quiet is out', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+      environment.setAdjustments(GRADED)
+
+      environment.refresh()
+      vi.advanceTimersByTime(PMREM_QUIET_MS)
+
+      expect(fromEquirectangular).toHaveBeenCalledTimes(1)
+    })
+
+    // The stack of a sky nobody has touched is the same object on every apply of every frame.
+    it('grades nothing again for a stack it already holds', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+      environment.setAdjustments(GRADED)
+      gradeOf.mockClear()
+
+      environment.setAdjustments(GRADED)
+
+      expect(gradeOf).not.toHaveBeenCalled()
+    })
+
+    it('puts the room back over a grading rebuild that was still owed', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+      environment.setAdjustments(GRADED)
+
+      environment.setStudio()
+      vi.advanceTimersByTime(PMREM_QUIET_MS)
+
+      expect(fromEquirectangular).not.toHaveBeenCalled()
+      expect(scene.environment).toBe(targets[0]?.texture)
+    })
+
+    /**
+     * Found by looking at the sky viewport, with every gate green: `WebGLEnvironments.getCube`
+     * caches the equirectangular-to-cubemap conversion of a backdrop on the texture and expires it
+     * never, so a target redrawn in place hung the FIRST picture for ever — mean 184.76 across a
+     * full source swap, 5.92 once this fires.
+     */
+    it('says a backdrop redrawn in place is not the picture three already converted', () => {
+      const environment = environmentOf()
+      const dropped = vi.fn()
+      graded.addEventListener('dispose', dropped)
+      environment.setTexture(new Texture())
+      environment.setAdjustments(GRADED)
+      expect(dropped).not.toHaveBeenCalled()
+
+      environment.setAdjustments({ ...GRADED, exposure: 2 })
+
+      expect(dropped).toHaveBeenCalled()
+      graded.removeEventListener('dispose', dropped)
+    })
+
+    /**
+     * A viewport whose backdrop is a COLOUR wrote it onto `scene.background` itself. Grading the
+     * sky it is lit by must not wipe it: « do not show the picture » is not « show nothing ».
+     */
+    it('leaves a backdrop it did not hang alone', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+      environment.setBackgroundVisible(false)
+      const chosen = new Color('#123456')
+      scene.background = chosen
+
+      environment.setAdjustments(GRADED)
+
+      expect(scene.background).toBe(chosen)
+    })
+
+    /**
+     * Fired on a null source, `refresh` drops the room `setStudio` installed — and a sky that then
+     * fails to decode would leave the scene with no image-based light at all.
+     */
+    it('prefilters nothing while the picture is still decoding', () => {
+      const environment = environmentOf()
+      environment.setStudio()
+      const room = scene.environment
+
+      environment.setAdjustments(GRADED)
+      vi.advanceTimersByTime(PMREM_QUIET_MS)
+
+      expect(scene.environment).toBe(room)
+    })
+
+    it('frees the pass it built', () => {
+      const environment = environmentOf()
+      environment.setTexture(new Texture())
+      environment.setAdjustments(GRADED)
+
+      environment.dispose()
+
+      expect(disposeGrading).toHaveBeenCalled()
+    })
   })
 
   it('leaves the scene holding nothing, and frees what it built', () => {

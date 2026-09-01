@@ -50,9 +50,30 @@ tooltip, along with the whole path, which a narrow panel truncates.
 **Removing asks for no confirmation**: nothing is lost, and reopening the project puts its row
 back. It is the gesture that cleans up a list where a moved folder lingers.
 
+**Removing a project from the list does not close it.** The two gestures are distinct: removing
+erases a row from a list of shortcuts, closing hands the studio back to the home. Removing the row
+of the OPEN project therefore leaves the Explorer, the timeline and the tabs exactly where they
+were — it is **Close the project**, in the title bar's project menu, that empties them.
+
+**A running generation is not lost by closing.** It carries on where it runs, and its result is
+filed in this project — never in another one, even if you open another in the meantime. It does
+stay in the generations bar while it runs, but **what it produces will not land in the project
+you open instead**: reopening its own is what brings the result back. **The studio asks you
+first** before letting you leave the project — closing it or swapping it for another — saying how
+many are still running.
+
+And when one of them finishes while its project is not open, **the studio writes it in its
+journal** — the Activity panel — naming the generation and the project its result is waiting in.
+Without that line the generation would leave the bar showing nothing, which looks like lost work:
+it is not, but its project has to be reopened **within seven days** to collect it.
+
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel
 > layout when you change it.
+
+**Leaving a project asks first what to do with unsaved work**, document by document — save it,
+drop it, or give up leaving. That holds for all three ways of leaving one: closing it, opening
+another from the list, picking one in the dialogue. Giving up leaves everything exactly where it was.
 
 ---
 
@@ -61,18 +82,26 @@ back. It is the gesture that cleans up a list where a moved folder lingers.
 ```
 My project/
 │
-├── Images/               SEVEN FOLDERS TO START FROM
+├── Images/               ONE FOLDER PER SECTION OF THE STUDIO
 ├── Video/                  laid down at creation, and ordinary: rename them,
-├── Audio/                  empty them, throw them away, arrange them otherwise
-├── 3D/
-├── Textures/
-├── Sky/
-├── Animations/
+├── Audio/                  move them, empty them, arrange them otherwise
+├── Materials/            your materials, and the pictures that serve one
+├── Skyboxes/
+├── Scripts/
+├── Modelling/            the Modelling section files three things
+│   ├── Scenes/             your scenes
+│   ├── Models/             your meshes
+│   └── Animations/         your motions
 │                           …and whatever you make beside them
+│
+│   Each carries a .ia-studio-role — HIDDEN — saying which section it serves
 │
 ├── .project.json         the identity card — HIDDEN
 │
-├── .scenario/            A BACKUP OF THE CATALOGUE — HIDDEN
+├── .project-context.json  WHAT THE PROJECT IS ABOUT — HIDDEN
+│                        the world, the look, the forbidden — see below
+│
+├── .ia-studio/            A BACKUP OF THE CATALOGUE — HIDDEN
 │   └── items.json          what a file cannot say about itself
 │
 └── .index/               THE CATALOGUE AND ITS CACHES — KEEP THIS, HIDDEN
@@ -88,12 +117,41 @@ Your files stay visible and you arrange them as you see fit — you must be able
 copy them, repair them. The identity card, the index and the backup do not: they are the studio's
 tools, not your work.
 
-> **The seven starter folders are only a starting point.** They are laid down at creation and never
-> put back: delete `Images/` and it stays deleted — except the day a generation needs somewhere to
-> land, where the studio recreates it rather than refusing to work.
+> **These folders are only a starting point.** They are laid down at creation and never put back:
+> delete `Images/` and it stays deleted — except the day a generation needs somewhere to land,
+> where the studio recreates it rather than refusing to work.
+
+> **Rename them, move them: they go on serving their section.** What binds a folder to a section
+> is not its name but a small hidden file it carries, `.ia-studio-role`. It travels with the
+> folder — a rename in the Finder or in Windows Explorer, a move, a copy, a zip. Rename
+> `Modelling/` to “My models” and the next mesh still lands there.
+>
+> In the studio's explorer, a folder serving a section wears that section's icon, and **its name
+> stays the one on disk** — what you read in the studio is what you read in the Finder. The icon
+> and the tooltip are what say the section, in your language; the folder never changes name
+> because you changed language.
+>
+> A fresh folder wearing the original name — you renamed `Images/`, then made an `Images/` by hand
+> — is an ordinary folder: the marker decides, not the word.
+
+> **The names on disk are English, and that is deliberate.** A folder following the interface
+> language would be renamed at every language change, and everything the catalogue knows about
+> what it holds would point beside the file. The studio translates what a folder SERVES, never its
+> name.
+
+> **`Materials/` is the only one that answers to no kind of file.** It holds your **materials**
+> — the `.mtlx` documents — and the **pictures that serve one**: a base colour, a normal, a
+> roughness land there, where a photograph lands in `Images/`. What tells them apart is not their
+> nature, both being pictures, but **the channel** the second one carries.
+
+> **A project created before this layout keeps its own, untouched.** `3D/`, `Sky/`, `documents/`,
+> `scripts/`, `Textures/`: nothing is moved, nothing is renamed, and everything in them stays
+> readable and editable. Every file carries its own path, and nothing reads its role off the name
+> of the folder holding it. Only files made FROM NOW ON land in the new layout, which appears
+> beside the old one. You can rearrange everything by hand, at your own pace, or not at all.
 
 > **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
-> sets it on `.project.json` and on `.index/` itself. **`.scenario/` does not get it**: the day it
+> sets it on `.project.json` and on `.index/` itself. **`.ia-studio/` does not get it**: the day it
 > appears — it is only written after a pass that found something — you will see it in Windows
 > Explorer, beside your own folders. There is nothing to do about it: it is the backup described
 > below. If setting the attribute fails, **the project opens anyway**: a service
@@ -117,16 +175,16 @@ when a medium is imported, and throwing them away costs one reimport. `filmstrip
 ahead of time and stays empty — nothing writes to it yet.
 
 **`posters/` is not one.** It is the picture a thumbnail carries, and **two kinds get one**: video
-and 3D model — the two no thumbnail could tell apart otherwise, a shelf of rushes being a shelf of
+and 3D model — the two no thumbnail could tell apart otherwise, a list of rushes being a list of
 grey rectangles.
 
 For an imported video the frame is grabbed **a tenth of the way in**, not at the start: a take
-opens on black often enough that a shelf of first frames would be a shelf of black tiles. For a
+opens on black often enough that a list of first frames would be a list of black tiles. For a
 model, it is the preview that came down with it.
 
 **It is written once** — on import or on fetching — and nothing remakes it afterwards. Throw that
 folder away and your thumbnails fall back to their kind's generic glyph. None of your work is
-lost; it is the shelf that stops being readable at a glance.
+lost; it is the Explorer that stops being readable at a glance.
 
 **`catalog.db` is not one.** It is what holds every asset's name, its tags, its dimensions, the
 model and prompt that produced it, what it derives from — and, for an imported medium, **the path
@@ -138,7 +196,7 @@ import; the pass that re-reads the folder when a project opens FINDS files that 
 does not guess again what they are. Deleting `.index/` therefore leaves a project whose files are
 all still there and about which nothing says what they are.
 
-> **That is what `.scenario/items.json` is for.** After every pass that changed something, the
+> **That is what `.ia-studio/items.json` is for.** After every pass that changed something, the
 > studio copies into it what a file cannot say about itself: its name, its tags, the model and the
 > prompt that produced it — keyed by the fingerprint of the contents, so that a file found again
 > can be recognised. It is not a source: the studio never reads it of its own accord. It is what is
@@ -166,7 +224,7 @@ point it at and looks for this file inside.
 
 - **`updatedAt` moves on every document saved.** It is the last time this project did some work,
   not the last time it was opened.
-- **Pointing at a folder that holds none** gets you "This folder is not a Scenario project", in the
+- **Pointing at a folder that holds none** gets you "This folder is not an IA Studio project", in the
   journal and in a toast at the bottom right — not a system message.
 - **A file that was truncated or edited by hand** is reported as unreadable, and the studio refuses
   to open it rather than guessing at what it holds.
@@ -179,6 +237,110 @@ point it at and looks for this file inside.
 > writes the new shape beside them. **The old file is left where it is**: the folder is yours, you
 > may be syncing it, and an earlier version of the studio can still read it. Renaming the folder to
 > drop its extension is yours to do if you care to; the studio does not touch it.
+
+---
+
+## The project's context
+
+You are working on a medieval film. You ask for « a house » and you get a suburban bungalow. You
+rewrite « a medieval half-timbered cottage, in a misty forest, oil painting » — and you rewrite it
+on every generation, all day long.
+
+**The project's context is where that is written once.** It lives in the **Context** panel, in the
+lower half of the left column beside the Explorer and Git: all three speak about the open project —
+its tree, its history, and what it is about.
+
+The project menu in the title bar leads there too: **The project's context**, between the list of
+projects and the two ways to open another. It is one of the two rows that act on the open project
+rather than leaving it — the other is **Close the project**.
+
+### Cards, and nothing imposed
+
+A context is a list of **cards**. Each carries a title you choose, a text you write, and a switch.
+
+```
+PROJECT CONTEXT                       [+]
+──────────────────────────────────────────
+☑ World
+  Middle Ages, 13th century. Deep forest,
+  a kingdom in decline.
+
+☑ Art direction
+  Oil paint, chiaroscuro, ochres and muted
+  greens.
+
+☐ Character: Aldric
+  A scarred knight, tarnished armour.
+
+☑ Forbidden
+  Concrete, neon, modern clothing.
+──────────────────────────────────────────
+                412 / 600 characters sent
+```
+
+**No rubric is imposed**, and deliberately so: a novelist, an architect and a game studio describe a
+world in entirely different words. The `+` button offers three ways to begin — World, Art direction,
+Forbidden — but they are starting points only: rename them, rewrite them, delete them.
+
+**A card that is off keeps its text and adds nothing.** That is how a character is set aside for a
+series of images without being lost.
+
+### What is sent, and the counter
+
+The text of the cards that are on is added **under** your prompt, never in front of it:
+
+```
+a ruined house
+
+Project context —
+World: Middle Ages, 13th century. Deep forest, a kingdom in decline.
+Art direction: Oil paint, chiaroscuro, ochres and muted greens.
+Forbidden: Concrete, neon, modern clothing.
+```
+
+The counter at the foot of the panel says what is actually sent. **The bound is six hundred
+characters, and it comes from the models rather than from the studio**: many text encoders read only
+seventy-seven tokens — some three hundred characters — and drop the rest without a word. Past the
+bound, **the last cards are not sent**; they are dropped whole, never cut mid-sentence.
+
+### Reference images
+
+A card can carry up to **four images**: drop them onto it from the library.
+
+They do not travel on their own. The generation panel shows them with a **Use these references**
+button, and nothing moves without that click — a reference image changes which operation the model
+runs and what it costs, which is not something that should happen by surprise. The button does not
+appear for a model that takes no image.
+
+### The file, and what happens if it breaks
+
+The context is written to `.project-context.json`, **at the root of your project folder**. So it
+follows the project: copied to a disk, sent to someone, versioned in Git — it is there. It is
+readable JSON and you may edit it by hand.
+
+If the studio cannot read it, **it leaves it untouched** and the panel says which of the two things
+happened:
+
+| What the panel says | What to do |
+|---|---|
+| The file cannot be read | Repair it, or delete it to start over. Nothing was overwritten |
+| Written by a newer build | Update the studio |
+
+A project with no file has no context, and that is the ordinary case: nothing is created until you
+write a first card.
+
+### What the context touches, and what it does not
+
+**It applies to every generation** — images, video, 3D models, audio, skies — as soon as
+the model has a description field. An upscale, a conversion, a mesh made from a picture have none:
+the context then does nothing, silently.
+
+**The assistant receives it too.** It knows which project it is working in without being told.
+
+**Your file names do not change.** A generated asset is named after the start of its prompt; it is
+**what you wrote** that names it, never the version the context lengthened. Likewise « Regenerate »
+reopens the form on your own prompt rather than on the lengthened one — otherwise the context would
+add to itself at every replay.
 
 ---
 
@@ -200,8 +362,10 @@ what one folder holds, and choosing a folder opens its contents in the next colu
 folder chosen is where the document goes** — there are not two things to keep track of. The whole
 path is written above the columns. You never leave the project: nothing else is offered.
 
-The columns open on the folder the Explorer is showing, or on `documents/` when nothing is picked
-there. Below them, **New folder** makes one in the chosen folder without leaving the window.
+The columns open on the folder the Explorer is showing, or, when nothing is picked there, on
+the section's own folder — `Modelling/Scenes/` for a scene, `Images/` for an image, `Materials/`
+for a material. Below them, **New folder** makes one in the chosen folder without leaving the
+window.
 
 It is saved with `⌘S` / `Ctrl+S` — into the folder you chose when you made it, and afterwards
 wherever you filed it — under an extension that says what it is:
@@ -213,12 +377,12 @@ wherever you filed it — under an extension that says what it is:
 | video sequence | `.otio` | Video |
 | sound being edited | `.otio` | Audio |
 | sky | `.gltf` | Skyboxes |
-| material | `.mtlx` | Textures |
+| material | `.mtlx` | Materials |
 
 The extension is there so the folder **reads at a glance**. `a3f1.gltf` next to `b204.mtlx` says
 what each one is; `a3f1.json` next to `b204.json` says nothing.
 
-> **All seven kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
+> **All six kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
 > closed document is reopened. Closing a tab whose work is not written asks before losing it.
 
 ### Walking the project — the Explorer panel
@@ -244,8 +408,8 @@ the two is always lit:
 | **By folder** | the project as it is filed on disk, as a tree |
 | **By domain** | every file in the project grouped by what it **is**, wherever it is filed |
 
-**By domain** ignores folders. It lays down at most eight headings — the studio's seven kinds, plus
-**Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
+**By domain** ignores folders. It lays down at most eight headings — the studio's six kinds, **Material**
+for a `.mtlx` document, and **Other** for what belongs to none — each followed by how many files it counts. **A domain nothing
 fills does not appear**: eight empty headings over a new project would say nothing at all.
 
 A heading names, it does not open: it cannot be selected, it cannot be renamed, and nothing drops
@@ -349,7 +513,7 @@ document: undoing on the canvas must not reach your disk.
 > "This cannot be undone.", and it means it.
 
 **One refusal, greyed rather than hidden.** What the studio keeps for itself — everything starting
-with a dot: `.index/`, `.scenario/`, `.project.json` — cannot be renamed or trashed, and receives
+with a dot: `.index/`, `.ia-studio/`, `.project.json` — cannot be renamed or trashed, and receives
 nothing either. Those are its tools; renaming one would break the project for a name nobody reads.
 **The same refusal holds on both sides of a drag**: you see before you let go.
 
@@ -366,7 +530,7 @@ the window.
 **Renaming goes through the gesture of the thing.** An asset and a document each have one, and
 the Explorer leads to it: the name changes, and the file follows in the same move. A document
 renamed here keeps its tab open, which takes the new name. An asset renamed here changes name
-everywhere at once — the Explorer, the shelf, the Inspector, the tab editing it — because there
+everywhere at once — the Explorer, the Inspector, the tab editing it — because there
 is only **one name**: its index row's name IS its file's name.
 
 > **A picture you dropped in yourself renames too**, even where the studio holds no entry for
@@ -407,7 +571,7 @@ moment is enough on its own.
 
 **It recognises a file by its contents, not by its path.** Move a picture from one folder to
 another, rename it, do both: the entry finds it again and follows. The ids do not change, so **a
-3D scene keeps pointing at its texture** after you have filed it elsewhere.
+3D scene keeps pointing at its image** after you have filed it elsewhere.
 
 **It never deletes an entry.** A file it cannot find is **dated as gone**, and its entry stays:
 the prompt, the seed and the lineage are written on no disk, and losing them because a file is on
@@ -774,7 +938,7 @@ The studio works, but several things are unavailable, and say so:
 | What you see | Why |
 |---|---|
 | "Open a project to generate." | a made image has to land somewhere |
-| "Open a project to see its assets." | the shelf shows a project's contents |
+| "Open a project to see its assets." | the Explorer shows a project's contents |
 | The rail's **+** button is greyed out | a document is a file in a project folder |
 
 ---

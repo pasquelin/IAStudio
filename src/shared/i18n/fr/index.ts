@@ -1,18 +1,25 @@
 import activity from './activity.json'
+import ai from './ai.json'
 import assets from './assets.json'
 import assistant from './assistant.json'
+import code from './code.json'
 import commands from './commands.json'
 import common from './common.json'
+import context from './context.json'
 import environment from './environment.json'
 import fileInfo from './fileInfo.json'
+import game from './game.json'
 import git from './git.json'
 import image from './image.json'
 import inspector from './inspector.json'
+import material from './material.json'
+import memory from './memory.json'
 import models from './models.json'
+import postfx from './postfx.json'
 import scene from './scene.json'
 import settings from './settings.json'
 import shell from './shell.json'
-import texture from './texture.json'
+import ui from './ui.json'
 import usage from './usage.json'
 
 /**
@@ -26,20 +33,27 @@ import usage from './usage.json'
  */
 export const fr = {
   ...activity,
+  ...ai,
   ...assets,
   ...assistant,
+  ...code,
   ...commands,
   ...common,
+  ...context,
   ...environment,
   ...fileInfo,
+  ...game,
   ...git,
   ...image,
   ...inspector,
+  ...memory,
   ...models,
+  ...postfx,
   ...scene,
   ...settings,
   ...shell,
-  ...texture,
+  ...material,
+  ...ui,
   ...usage,
 }
 

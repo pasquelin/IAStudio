@@ -7,14 +7,17 @@
  */
 import {
   type ActionName,
+  type AskedQuestion,
   assistantAction,
+  MOST_QUESTIONS,
+  type AssistantAsk,
   type AssistantCall,
   type AssistantAnswer,
 } from '@shared/domain/assistant'
-import { isRecord } from '@shared/guards'
+import { isRecord, readText } from '@shared/guards'
 
 /** What `parseReply` answers: the reply without the cost, which only the caller knows. */
-type Reply = Omit<AssistantAnswer, 'cost'>
+export type Reply = Omit<AssistantAnswer, 'cost'>
 
 /**
  * Pulls the object out of whatever the model wrapped it in.
@@ -43,17 +46,76 @@ export function jsonIn(text: string): unknown {
   }
 }
 
-function callIn(value: unknown): AssistantCall | null {
+/**
+ * 🛑 An empty PLACEHOLDER is not a question: `""`, `{}`, `[]`, `false` and `{"questions":[]}` all
+ * mean « none ». Refusing the whole reply over one costs two billed rounds on a shape the retry
+ * cannot even name — it only ever complains about the three keys, which such an answer has.
+ */
+function asksNothing(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0
+  if (isRecord(value)) {
+    return (
+      Object.keys(value).length === 0 ||
+      (Array.isArray(value.questions) && value.questions.length === 0)
+    )
+  }
+
+  return typeof value !== 'string' || value.trim() === ''
+}
+
+/** The question or questions, or nothing where the key carries none to read. */
+function askIn(value: unknown): AssistantAsk | null {
+  const listed = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.questions)
+      ? value.questions
+      : null
+
+  if (listed) {
+    if (listed.length === 0 || listed.length > MOST_QUESTIONS) return null
+
+    const questions: AskedQuestion[] = []
+    for (const one of listed) {
+      const question = questionIn(one)
+      if (!question) return null
+      questions.push(question)
+    }
+    return { questions }
+  }
+
+  const one = questionIn(value)
+  return one ? { questions: [one] } : null
+}
+
+/**
+ * 🛑 A bare STRING is recovered, not dropped: it was thrown in silence and the calls beside it
+ * sent. Wrapped rather than read apart, so both spellings yield the same question.
+ *
+ * The choices are FILTERED rather than refused: an empty list is legitimate — the answer is typed.
+ */
+function questionIn(value: unknown): AskedQuestion | null {
+  const held = typeof value === 'string' ? { question: value } : value
+  if (!isRecord(held)) return null
+
+  const question = readText(held, 'question')
+  if (question === null) return null
+
+  const raw = Array.isArray(held.choices) ? held.choices : []
+  const choices = raw.filter((one): one is string => typeof one === 'string' && one.trim() !== '')
+
+  return { question, choices, ...(held.note === true ? { note: true } : {}) }
+}
+
+function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall | null {
   if (!isRecord(value)) return null
 
   /**
-   * Held to the share the model was SHOWN, not to the registry — `instruction.ts` lists it the
-   * `both` actions and nothing else, so an action it names from the other seventy-six is an
-   * action it invented. Checking against the whole registry let a hallucinated `git.checkout`
-   * through on the strength of the name alone.
+   * 🛑 Held to what the briefing NAMED, which is the whole registry now that the catalogue is
+   * names alone — a hallucinated action is still refused. Whether the model had that action's
+   * FIELDS is a different question, and one `answeredTurn` answers by opening them.
    */
   const action = assistantAction(typeof value.action === 'string' ? value.action : '')
-  if (!action || action.reach !== 'both') return null
+  if (!action || !shown.has(action.name)) return null
 
   // An action with no fields may legitimately arrive without an input at all.
   const input = value.input
@@ -72,7 +134,7 @@ function callIn(value: unknown): AssistantCall | null {
  * down to the ones it does. Dropping the unknown call silently would run the remainder of a plan
  * whose author meant it to run entire — the studio would do half of something nobody asked for.
  */
-export function parseReply(text: string): Reply | null {
+export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply | null {
   const parsed = jsonIn(text)
   if (!isRecord(parsed)) return null
 
@@ -82,20 +144,26 @@ export function parseReply(text: string): Reply | null {
   // Absent is allowed and means none; present and not a list is a shape nobody meant.
   if (rawCalls !== undefined && !Array.isArray(rawCalls)) return null
 
+  /**
+   * 🛑 Asking WINS, before the calls are even read: told to ask, a model asks and acts in the same
+   * breath — `[M]` on qwen3.8, « Crée un nouveau projet » came back with the question and a
+   * `command.runStudioCommand` beside it. A plan written before the answer was known is written against a guess.
+   */
+  const ask = askIn(parsed.ask)
+  if (ask) return { say, ask, calls: [] }
+
+  // 🛑 Content that cannot be read REFUSES the whole reply rather than running what stood beside
+  // it: a model that meant to stop and ask had its question dropped and its plan carried out.
+  if (!asksNothing(parsed.ask)) return null
+
   const calls: AssistantCall[] = []
   for (const raw of Array.isArray(rawCalls) ? rawCalls : []) {
-    const call = callIn(raw)
+    const call = callIn(raw, shown)
     if (!call) return null
     calls.push(call)
   }
 
-  /**
-   * Neither a word nor a deed, which is not an answer a person can be shown — and the check that
-   * has to sit at the end of EVERY path rather than at the end of the happy one. An early return
-   * for the no-calls case let `[1,2,3]` and `{}` through as an empty reply, which the caller
-   * would have shown as the assistant having nothing to say.
-   */
-  if (say.trim() === '' && calls.length === 0) return null
-
-  return { say, calls }
+  // Neither a word nor a deed, which is not an answer a person can be shown — and the check has
+  // to sit at the end of EVERY path: an early return let `[1,2,3]` and `{}` through as empty.
+  return say.trim() === '' && calls.length === 0 ? null : { say, calls }
 }

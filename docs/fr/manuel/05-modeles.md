@@ -9,7 +9,7 @@
 Le programme distant qui fabrique. Vous lui donnez une phrase, et parfois une image ; il rend
 une image, une vidéo, un son ou un objet 3D.
 
-Il y a **plusieurs centaines de modèles** dans le catalogue Scenario, et ils ne savent pas tous
+Il y a **plusieurs centaines de modèles** dans le catalogue distant, et ils ne savent pas tous
 faire la même chose. Certains sont excellents pour les personnages et médiocres pour les
 paysages. Certains ne prennent que du texte, d’autres exigent une image de départ. Certains
 rendent en dix secondes, d’autres en trois minutes.
@@ -68,7 +68,7 @@ selon l’espace, parce qu’ils n’ont pas de sens partout.
 
 | Valeur | Ce que ça veut dire |
 |---|---|
-| **Officiel** | publié par Scenario |
+| **Officiel** | publié par le fournisseur |
 | **Communauté** | publié par quelqu’un d’autre |
 
 ### Capacité — ce que le modèle sait recevoir et rendre
@@ -110,14 +110,14 @@ C’est le filtre le plus utile. Le vocabulaire est technique mais court :
 | **Audio vers audio** | un son est transformé en un autre |
 | **Vidéo vers audio** | une vidéo reçoit une bande son |
 
-**Dans l’espace Textures**
+**Dans l’espace Matières**
 
 | Capacité | En français clair |
 |---|---|
-| **Texte vers texture** | une phrase devient une matière |
-| **Image vers texture** | une image est transformée en matière |
-| **Guidage de texture** | il suit une structure que vous imposez |
-| **Texture de référence** | il s’inspire d’une matière que vous fournissez |
+| **Texte vers matière** | une phrase devient une matière |
+| **Image vers matière** | une image est transformée en matière |
+| **Guidage de matière** | il suit une structure que vous imposez |
+| **Matière de référence** | il s’inspire d’une matière que vous fournissez |
 
 ### Tag — les mots-clés des publieurs
 
@@ -149,7 +149,7 @@ Les grands noms du domaine, différents selon l’espace :
 
 Utile pour voir ce qui vient de sortir.
 
-> **L’espace Skyboxes n’a ni capacités, ni tags, ni éditeurs à filtrer, et l’espace Textures n’a
+> **L’espace Skyboxes n’a ni capacités, ni tags, ni éditeurs à filtrer, et l’espace Matières n’a
 > ni tags ni éditeurs** : ces familles ne comptent que quelques modèles.
 
 ---
@@ -163,7 +163,7 @@ le panneau **Génération**, juste en dessous, fera travailler.
 revenez : votre modèle d’image est toujours là.
 
 Vous pouvez aussi fixer un **modèle par défaut** pour chaque famille, une fois pour toutes :
-**Réglages ▸ Génération ▸ Image** (ou Vidéo, 3D, Audio, Agrandissement, Détourage,
+**Réglages ▸ Modèles d’IA ▸ Image** (ou Vidéo, 3D, Audio, Agrandissement, Détourage,
 Vectorisation). Laissez le réglage sur « Demander à chaque fois » pour choisir à chaque
 génération.
 
@@ -179,15 +179,15 @@ le trouvez pas, la première question à se poser est **« suis-je dans le bon e
 Trois familles n’ont pas d’espace du tout : **agrandissement**, **détourage** et
 **vectorisation**. Leurs modèles reçoivent une image et en rendent une, comme les modèles d’image,
 mais ils font un travail à part et le studio les range à part. Le panneau **Modèles** ne les
-montre donc nulle part : leur modèle se choisit dans **Réglages ▸ Génération**, et ce sont les
+montre donc nulle part : leur modèle se choisit dans **Réglages ▸ Modèles d’IA**, et ce sont les
 éditions du menu **Image** — Agrandir, Détourer, Vectoriser — qui les emploient.
 
 | Édition | Famille demandée | Où se règle son modèle |
 |---|---|---|
 | Régénérer la zone, Étendre | image | panneau **Modèles** de l’espace Image |
-| Agrandir | agrandissement | **Réglages ▸ Génération ▸ Agrandissement** |
-| Détourer | détourage | **Réglages ▸ Génération ▸ Détourage** |
-| Vectoriser | vectorisation | **Réglages ▸ Génération ▸ Vectorisation** |
+| Agrandir | agrandissement | **Réglages ▸ Modèles d’IA ▸ Agrandissement** |
+| Détourer | détourage | **Réglages ▸ Modèles d’IA ▸ Détourage** |
+| Vectoriser | vectorisation | **Réglages ▸ Modèles d’IA ▸ Vectorisation** |
 
 Sans modèle réglé, l’édition ne part pas et ouvre l’écran où en choisir un. Rien n’est envoyé,
 rien n’est facturé.

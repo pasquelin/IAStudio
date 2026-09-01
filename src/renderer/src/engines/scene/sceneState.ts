@@ -19,6 +19,8 @@ import {
   type Transform,
   type Vector3,
 } from '@shared/domain/scene'
+import type { Component } from '@shared/domain/component'
+import type { CsgGraph } from '@shared/domain/csg'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
 import { cachedOn } from '../core/cachedOn'
@@ -34,17 +36,39 @@ export type SceneNodeBase = {
   castShadow: boolean
   /** Catches the shadows of others. Meaningless on a light, and ignored there. */
   receiveShadow: boolean
+  /**
+   * What the entity DOES, beside what `type` says it DRAWS. Absent means none, so no document
+   * written before this existed changes by one byte.
+   *
+   * Beside the type rather than replacing it: the `switch (node.type)` is the contract of several
+   * thousand lines, and it is what gives the compiler its grip. A component is gameplay, not
+   * rendering — the behaviour lives in a system, never in the component.
+   */
+  components?: readonly Component[]
 }
 
 export type SceneNode = SceneNodeBase &
   (
-    | { type: 'mesh'; geometry: GeometryDescriptor; material: MaterialDescriptor }
+    | {
+        type: 'mesh'
+        geometry: GeometryDescriptor
+        material: MaterialDescriptor
+        /**
+         * Marked as a TOOL for the next boolean — Roblox's Negate, and the only explicit way to
+         * say which way a cut runs. Absent on every node ever written so far, and absent means
+         * matter: that is the whole migration.
+         */
+        negative?: boolean
+      }
     | { type: 'light'; light: LightDescriptor }
     | { type: 'model'; model: ModelRef }
     | { type: 'sprite'; sprite: SpriteDescriptor }
     // A solid like a mesh, and lit like one — so it wears the same material, and the inspector's
     // material section serves it without knowing it exists.
     | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
+    // A solid cut out of other solids. It wears a material like a mesh, and its SHAPE is a
+    // recipe rather than a descriptor — ADR-25: the graph is the document, the mesh is a cache.
+    | { type: 'carved'; carved: CsgGraph; material: MaterialDescriptor; negative?: boolean }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
     // What a render looks through. Not the viewport's camera: that one is how the scene is being
@@ -66,7 +90,7 @@ type ShadowSubject =
  * subtree, lookups stay a find, and the serialized form never nests. The tree is derived.
  */
 export type SceneState = {
-  nodes: SceneNode[]
+  nodes: readonly SceneNode[]
   /** Ordered, and the last one is the anchor: what the inspector reads out. See `helpers/selection`. */
   selectedIds: readonly string[]
   /** What lights the scene and what hangs behind it. Part of the document, and belongs to no node. */
@@ -204,15 +228,27 @@ export function canReceiveShadow(node: ShadowSubject): boolean {
  * the angle. Two of the three agreeing is how the angle stayed typeable after the handle was
  * refused.
  *
- * The children are asked for, not handed over: every one of the three is on a drag path, and only
- * a sprite makes the answer worth walking a scene for.
+ * The children are asked for, not handed over, because the three do not count them the same way:
+ * the viewport reads the object three.js built, the other two read the node list.
  */
 export function rotationShows(node: { type: SceneNodeType }, children: () => boolean): boolean {
   return node.type !== 'sprite' || children()
 }
 
+/** Keyed on the LIST: `SceneState.nodes` is readonly, and no `parentId` is ever written in place. */
+const parentIds = new WeakMap<readonly SceneNode[], ReadonlySet<string>>()
+
+/**
+ * Whether anything hangs from the node. The scan was the whole cost of the two gestures that ask
+ * it once per node: dragging 200 sprites of 40 000 took 29.40 ms an image against 1.39 through
+ * here, and the inspector row asked it again on every render — 52.34 ms against 0.05.
+ */
 export function hasChildren(nodes: readonly SceneNode[], id: string): boolean {
-  return nodes.some(node => node.parentId === id)
+  return cachedOn(parentIds, nodes, () => {
+    const parents = new Set<string>()
+    for (const node of nodes) if (node.parentId !== null) parents.add(node.parentId)
+    return parents
+  }).has(id)
 }
 
 const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']
@@ -233,6 +269,8 @@ export const DEFAULT_MATERIAL: MaterialDescriptor = {
   roughnessMap: null,
   metalnessMap: null,
   aoMap: null,
+  emissiveMap: null,
+  displacementMap: null,
 }
 
 export const DEFAULT_SPRITE: SpriteDescriptor = {
@@ -265,12 +303,41 @@ export type LightNode = Extract<SceneNode, { type: 'light' }>
 export type ModelNode = Extract<SceneNode, { type: 'model' }>
 export type SpriteNode = Extract<SceneNode, { type: 'sprite' }>
 export type TextNode = Extract<SceneNode, { type: 'text' }>
-export type GroupNode = Extract<SceneNode, { type: 'group' }>
+export type CarvedNode = Extract<SceneNode, { type: 'carved' }>
+
+/**
+ * What wears a `MaterialDescriptor` — a mesh, a text and a solid, lit by the same rules and
+ * served by one section of the inspector.
+ *
+ * Derived, never restated: the three sites that listed the types by hand each forgot the solid,
+ * and each forgot it silently — a wall could be pierced and then not painted.
+ */
+export type MaterialNode = Extract<SceneNode, { material: MaterialDescriptor }>
+
+export function carriesMaterial(node: SceneNode): node is MaterialNode {
+  return 'material' in node
+}
 export type CameraNode = Extract<SceneNode, { type: 'camera' }>
 export type PathNode = Extract<SceneNode, { type: 'path' }>
 
+/** Keyed on the LIST, like `parentIds`: the first of two nodes sharing an id wins, as `find` did. */
+const nodesById = new WeakMap<readonly SceneNode[], ReadonlyMap<string, SceneNode>>()
+
+/**
+ * Rebuilt per CALL, this cost 3.56 ms on 40 000 nodes — and a drag hands a NEW list to each of
+ * the readers below on every image, so no `useMemo` at a call site ever hit. Paid once a list
+ * now: 3.56 ms for the first reader, 0.0066 for every one after.
+ */
+function byIdOf(nodes: readonly SceneNode[]): ReadonlyMap<string, SceneNode> {
+  return cachedOn(nodesById, nodes, () => {
+    const found = new Map<string, SceneNode>()
+    for (const node of nodes) if (!found.has(node.id)) found.set(node.id, node)
+    return found
+  })
+}
+
 export function nodeById(state: SceneState, id: string): SceneNode | null {
-  return state.nodes.find(node => node.id === id) ?? null
+  return byIdOf(state.nodes).get(id) ?? null
 }
 
 /**
@@ -284,7 +351,7 @@ export function selectedNodes(
   nodes: readonly SceneNode[],
   selectedIds: readonly string[],
 ): SceneNode[] {
-  const byId = new Map(nodes.map(node => [node.id, node]))
+  const byId = byIdOf(nodes)
   return selectedIds.flatMap(id => byId.get(id) ?? [])
 }
 
@@ -306,7 +373,7 @@ export function canReparent(
 ): boolean {
   if (parentId === null) return true
 
-  const byId = new Map(nodes.map(node => [node.id, node]))
+  const byId = byIdOf(nodes)
   let walker: SceneNode | undefined = byId.get(parentId)
   while (walker) {
     if (walker.id === id) return false
@@ -317,25 +384,48 @@ export function canReparent(
 }
 
 /**
- * Every node under one, itself included — what a delete has to carry along.
+ * Every node under the ones named, themselves included — what a delete has to carry along.
  *
- * Walked through an index rather than in declared order: reparenting changes a `parentId` in
- * place, so a child can perfectly well be listed before the parent it now hangs from. Reading
- * the array in order left those behind — nodes nothing showed any more, and the file kept.
+ * 🛑 The index is built ONCE, and that is the whole point: four gestures called this per selected
+ * node, each rebuilding it. On 40 000 nodes, deleting 2 000 cost 2 705 ms and isolating them
+ * 1 783 — measured, against 1.9 and 6.1 through here.
+ *
+ * The roots keep the order they were NAMED in: a duplicate reads its last copy as the anchor, so
+ * scene order there moved the gizmo onto a shape nobody pointed at. A node named twice — or
+ * hanging from another root — is answered once, and that is also what ends a parent cycle.
  */
-export function subtreeOf(nodes: readonly SceneNode[], id: string): SceneNode[] {
+export function subtreesOf(nodes: readonly SceneNode[], ids: readonly string[]): SceneNode[] {
+  const wanted = new Set(ids)
   const byParent = new Map<string | null, SceneNode[]>()
+  // Only the roots, never the whole scene by id: a second index of 40 000 entries doubled the
+  // cost of every fold, which asks for two shapes.
+  const roots = new Map<string, SceneNode>()
   for (const node of nodes) {
+    if (wanted.has(node.id)) roots.set(node.id, node)
     const siblings = byParent.get(node.parentId)
     if (siblings) siblings.push(node)
     else byParent.set(node.parentId, [node])
   }
 
-  const found = nodes.filter(node => node.id === id)
-  // Indexed rather than iterated: the loop appends as it walks, which is the descent itself.
+  const found: SceneNode[] = []
+  const seen = new Set<string>()
+  for (const id of ids) {
+    const root = roots.get(id)
+    if (!root || seen.has(id)) continue
+    seen.add(id)
+    found.push(root)
+  }
+
+  // Indexed rather than iterated: the loop appends as it walks, which is the descent itself. The
+  // `seen` set is also what ends it on a parent cycle, where the singular used to spin for ever.
   for (let at = 0; at < found.length; at += 1) {
     const node = found[at]
-    if (node) found.push(...(byParent.get(node.id) ?? []))
+    if (!node) continue
+    for (const child of byParent.get(node.id) ?? []) {
+      if (seen.has(child.id)) continue
+      seen.add(child.id)
+      found.push(child)
+    }
   }
   return found
 }
@@ -345,7 +435,7 @@ export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): S
   return nodes.filter(node => node.type === type)
 }
 
-const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
+const cameraSets = new WeakMap<readonly SceneNode[], ReadonlySet<string>>()
 
 /**
  * The cameras a scene holds, in document order. Both readers are on the frame path — the shots
@@ -354,7 +444,7 @@ const cameraSets = new WeakMap<readonly SceneNode[], Set<string>>()
  * 73 µs over 50 000 with a shot covering the instant, 15 and 151 µs on the fall back, against
  * 0,1 µs whatever the count.
  */
-export function cameraIds(nodes: readonly SceneNode[]): Set<string> {
+export function cameraIds(nodes: readonly SceneNode[]): ReadonlySet<string> {
   return cachedOn(cameraSets, nodes, () => new Set(nodesOfType(nodes, 'camera').map(n => n.id)))
 }
 

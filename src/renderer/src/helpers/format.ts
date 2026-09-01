@@ -117,6 +117,17 @@ export function formatMoment(time: string, language: string, zone: Zone): string
   ).format(parsed)
 }
 
+const MONEY = new Map<string, Intl.NumberFormat>()
+
+/** An amount in the currency its source quoted. Never converted: the studio holds no rate. */
+export function formatMoney(amount: number, currency: string, locale: string): string {
+  return kept(
+    MONEY,
+    `money:${currency}:${locale}`,
+    () => new Intl.NumberFormat(locale, { style: 'currency', currency }),
+  ).format(amount)
+}
+
 const DECIMALS = new Map<string, Intl.NumberFormat>()
 
 /**
@@ -167,6 +178,29 @@ export function formatDecimal(
 export function formatUnits(units: number, locale: string): string {
   return formatDecimal(units, locale, { digits: units !== 0 && Math.abs(units) < 10 ? 2 : 0 })
 }
+
+/**
+ * A count in at most THREE digits — `999`, `1,2 k`, `24 k`, `1,2 M`.
+ *
+ * Under a thousand it stays whole: two significant digits would round 999 up to `1 k`, which is
+ * a number the studio never counted.
+ */
+export function formatCompact(value: number, language: string): string {
+  if (Math.abs(value) < 1000) return formatDecimal(value, language, { digits: 0 })
+
+  return kept(
+    COMPACTS,
+    `compact:${language}`,
+    () =>
+      new Intl.NumberFormat(language, {
+        notation: 'compact',
+        compactDisplay: 'short',
+        maximumSignificantDigits: 2,
+      }),
+  ).format(value)
+}
+
+const COMPACTS = new Map<string, Intl.NumberFormat>()
 
 /** The four the studio ever reaches: an asset larger than a tebibyte is not a thing it makes. */
 export type ByteUnit = 'byte' | 'kibibyte' | 'mebibyte' | 'gibibyte'

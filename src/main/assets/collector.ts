@@ -1,9 +1,11 @@
+import { orElse } from '@shared/promises'
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import { assetTypeOfRemote, workspaceOfType } from '@shared/domain/assetKind'
+import { withAuthoredPrompt } from '@shared/domain/projectContext'
 import { generatedAssetName } from '@shared/domain/assetName'
-import { channelFromScenarioType } from '@shared/domain/texture'
+import { channelFromProviderType } from '@shared/domain/material'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import type { AssetCollector } from '@main/scenario/jobManager'
+import type { AssetCollector } from '@main/provider/jobManager'
 import type { LocalBackend } from './localBackend'
 
 /**
@@ -60,10 +62,10 @@ export function createAssetCollector({
     mine: HeldAsset | null,
   ): Promise<RemoteAsset | null> => {
     if (!mine) return await retrieve(remoteAssetId)
-    return await retrieve(remoteAssetId).catch(() => null)
+    return await orElse(retrieve(remoteAssetId), null)
   }
 
-  return async (job, remoteAssetIds) => {
+  return async (job, remoteAssetIds, authored) => {
     const collected: string[] = []
     // A set, and read back as one: the seven channels of a PBR pack are one shelf, not seven.
     const shelves = new Set<WorkspaceId>()
@@ -100,7 +102,7 @@ export function createAssetCollector({
         continue
       }
 
-      const source = channelFromScenarioType(remote.metadataType)
+      const source = channelFromProviderType(remote.metadataType)
       const type = assetTypeOfRemote(remote)
       if (!type) continue
 
@@ -109,6 +111,10 @@ export function createAssetCollector({
       // `onDisk` is not read here: a lineage points at an id, and a row keeps its own whatever
       // became of its file.
       const parent = remote.parentId ? await heldFor(remote.parentId) : null
+
+      // What the PERSON wrote, and only then what the API echoed: the echo carries whatever the
+      // project's context added, and every row of a shelf would read the same.
+      const written = authored?.written ?? remote.generation?.prompt
 
       const asset = await backend.importFromUrl({
         // The row this job already made for this output, when there is one: `write` finds it,
@@ -122,7 +128,7 @@ export function createAssetCollector({
         // where everything of one model reads the same. The label is the fallback, and an
         // honest one — an upscale takes a picture and no words.
         name: generatedAssetName({
-          ...(remote.generation?.prompt ? { prompt: remote.generation.prompt } : {}),
+          ...(written ? { prompt: written } : {}),
           label: job.label,
           index,
           total: remoteAssetIds.length,
@@ -130,6 +136,8 @@ export function createAssetCollector({
         type,
         jobId: job.id,
         remoteAssetId,
+        // Provenance, not a twin: pushing is a later, explicit gesture.
+        sync: false,
         // One job, one group. The API has no notion of a set, but the seven channels of a PBR
         // pack are exactly the outputs of one conversion — and a lone output is not a group.
         ...(remoteAssetIds.length > 1 ? { groupId: job.id, outputIndex: index } : {}),
@@ -138,7 +146,15 @@ export function createAssetCollector({
         ...(remote.thumbnailUrl ? { thumbnailUrl: remote.thumbnailUrl } : {}),
         ...(remote.ownerId ? { remoteOwnerId: remote.ownerId } : {}),
         ...(remote.updatedAt ? { remoteUpdatedAt: remote.updatedAt } : {}),
-        ...(remote.generation ? { generation: remote.generation } : {}),
+        // The WRITTEN prompt, never the one the context lengthened: it names the file, it is
+        // what full-text search matches, and it is what a « regenerate » must reopen on.
+        ...(remote.generation
+          ? {
+              generation: authored
+                ? withAuthoredPrompt(remote.generation, authored)
+                : remote.generation,
+            }
+          : {}),
         ...(parent ? { derivedFrom: parent.id } : {}),
         // Absent rather than false: an ordinary map is not "a map that is not inverted".
         ...(source ? { map: source.channel } : {}),

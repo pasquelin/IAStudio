@@ -1,4 +1,4 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import { action, RELATIVE_FIELD, type ActionField, type AssistantAction } from './assistantAction'
 import { BLEND_MODES } from './canvasBlend'
 
 /**
@@ -9,7 +9,7 @@ import { BLEND_MODES } from './canvasBlend'
  * what opacity, where, how big.
  *
  * None of them names a document. They act on the image tab in front, which is the same rule
- * `command.run` follows, and `studio.state` says which one that is. A client changes it with
+ * `command.runStudioCommand` follows, and `studio.state` says which one that is. A client changes it with
  * `document.activate` rather than by naming it here — one way of saying "the document I mean",
  * not two.
  *
@@ -47,6 +47,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasState.title',
     descriptionKey: 'assistant.actions.canvasState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -55,6 +56,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerAdd.title',
     descriptionKey: 'assistant.actions.layerAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -82,7 +84,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
         required: false,
         ...SIDES,
       },
-      // `#rrggbb`, as every other colour of the registry — and as `layer.shape`, which repaints
+      // `#rrggbb`, as every other colour of the registry — and as `layer.editShapeLayer`, which repaints
       // what this one draws: two spellings of one concept had a client refused on its own value.
       { key: 'fill', kind: 'color', labelKey: 'assistant.fields.shapeFill', required: false },
       {
@@ -101,6 +103,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerRemove.title',
     descriptionKey: 'assistant.actions.layerRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -109,6 +112,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerSelect.title',
     descriptionKey: 'assistant.actions.layerSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -117,6 +121,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerRename.title',
     descriptionKey: 'assistant.actions.layerRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -128,10 +133,11 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
      * Every dial of a layer at once, and each one optional: a client that wants to change the
      * opacity alone must not have to restate the blend mode it did not read.
      */
-    name: 'layer.style',
-    titleKey: 'assistant.actions.layerStyle.title',
-    descriptionKey: 'assistant.actions.layerStyle.description',
+    name: 'layer.setOpacityBlendAndVisibility',
+    titleKey: 'assistant.actions.layerSetOpacityBlendAndVisibility.title',
+    descriptionKey: 'assistant.actions.layerSetOpacityBlendAndVisibility.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -167,6 +173,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerTransform.title',
     descriptionKey: 'assistant.actions.layerTransform.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -177,13 +184,15 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
       // Degrees, not radians: the state stores radians, and a client writing 90 for a quarter
       // turn is right more often than one writing 1.5707963.
       { key: 'rotation', kind: 'number', labelKey: 'assistant.fields.rotation', required: false },
+      RELATIVE_FIELD,
     ],
   }),
   action({
-    name: 'layer.text',
-    titleKey: 'assistant.actions.layerText.title',
-    descriptionKey: 'assistant.actions.layerText.description',
+    name: 'layer.editTextLayer',
+    titleKey: 'assistant.actions.layerEditTextLayer.title',
+    descriptionKey: 'assistant.actions.layerEditTextLayer.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -240,10 +249,11 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'layer.move',
-    titleKey: 'assistant.actions.layerMove.title',
-    descriptionKey: 'assistant.actions.layerMove.description',
+    name: 'layer.reorderInStack',
+    titleKey: 'assistant.actions.layerReorderInStack.title',
+    descriptionKey: 'assistant.actions.layerReorderInStack.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -256,6 +266,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerDuplicate.title',
     descriptionKey: 'assistant.actions.layerDuplicate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -267,6 +278,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerGroup.title',
     descriptionKey: 'assistant.actions.layerGroup.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -284,6 +296,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerUngroup.title',
     descriptionKey: 'assistant.actions.layerUngroup.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -292,6 +305,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerMergeDown.title',
     descriptionKey: 'assistant.actions.layerMergeDown.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [LAYER],
   }),
@@ -300,6 +314,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasResize.title',
     descriptionKey: 'assistant.actions.canvasResize.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'width', kind: 'integer', labelKey: 'assistant.fields.width', required: true, min: 1 },
@@ -325,6 +340,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.canvasCrop.title',
     descriptionKey: 'assistant.actions.canvasCrop.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'x', kind: 'number', labelKey: 'assistant.fields.x', required: true },
@@ -348,6 +364,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.layerLock.title',
     descriptionKey: 'assistant.actions.layerLock.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -366,10 +383,11 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
      * A shape stays a shape after it is drawn, which is the whole point of keeping its two points
      * rather than its pixels — and until now only the drawing could say what it was painted with.
      */
-    name: 'layer.shape',
-    titleKey: 'assistant.actions.layerShape.title',
-    descriptionKey: 'assistant.actions.layerShape.description',
+    name: 'layer.editShapeLayer',
+    titleKey: 'assistant.actions.layerEditShapeLayer.title',
+    descriptionKey: 'assistant.actions.layerEditShapeLayer.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -404,10 +422,11 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
      * than a bare number because each dial swings its own range, and a schema is where a client
      * should read that rather than by being refused.
      */
-    name: 'layer.adjustment',
-    titleKey: 'assistant.actions.layerAdjustment.title',
-    descriptionKey: 'assistant.actions.layerAdjustment.description',
+    name: 'layer.setAdjustmentAmount',
+    titleKey: 'assistant.actions.layerSetAdjustmentAmount.title',
+    descriptionKey: 'assistant.actions.layerSetAdjustmentAmount.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -446,10 +465,11 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'canvas.orient',
-    titleKey: 'assistant.actions.canvasOrient.title',
-    descriptionKey: 'assistant.actions.canvasOrient.description',
+    name: 'canvas.flipOrRotate',
+    titleKey: 'assistant.actions.canvasFlipOrRotate.title',
+    descriptionKey: 'assistant.actions.canvasFlipOrRotate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -467,10 +487,11 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
      * Carving one is `canvas.maskFromSelection`, a command, because the pixels are the engine's —
      * so a layer wearing none is refused rather than given an empty one that hides everything.
      */
-    name: 'layer.mask',
-    titleKey: 'assistant.actions.layerMask.title',
-    descriptionKey: 'assistant.actions.layerMask.description',
+    name: 'layer.setMaskOptions',
+    titleKey: 'assistant.actions.layerSetMaskOptions.title',
+    descriptionKey: 'assistant.actions.layerSetMaskOptions.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       LAYER,
@@ -491,6 +512,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.guideAdd.title',
     descriptionKey: 'assistant.actions.guideAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -513,6 +535,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.guideMove.title',
     descriptionKey: 'assistant.actions.guideMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       GUIDE,
@@ -529,6 +552,7 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.guideRemove.title',
     descriptionKey: 'assistant.actions.guideRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [GUIDE],
   }),

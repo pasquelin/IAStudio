@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { registerChatPanel } from '@/assistant/chatPanel'
+import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useDictation } from '@/stores/dictation'
@@ -15,8 +15,8 @@ const saveDocument = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const saveDocumentAs = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const importOtioz = vi.hoisted(() => vi.fn())
 
-vi.mock('@/app/documentIo', () => ({ saveDocument, saveDocumentAs }))
-vi.mock('@/app/otioImport', () => ({ importOtioz }))
+vi.mock('@/features/shell/documentIo', () => ({ saveDocument, saveDocumentAs }))
+vi.mock('@/features/shell/otioImport', () => ({ importOtioz }))
 
 const createPicked = vi.fn()
 const openPicked = vi.fn()
@@ -33,7 +33,7 @@ beforeEach(() => {
 /** What the bus heard while one command was routed. */
 function published(command: CommandId): { verdict: string; heard: CommandId[] } {
   const heard: CommandId[] = []
-  const stop = subscribeToCommands(id => heard.push(id))
+  const stop = subscribeToCommands(id => heard.push(id) > 0)
   const verdict = routeCommand(command)
   stop()
   return { verdict, heard }
@@ -98,14 +98,22 @@ describe('a command the application performs itself', () => {
   })
 })
 
-describe('the assistant’s own window', () => {
-  it('is toggled while it is mounted', () => {
-    const toggle = vi.fn()
-    const drop = registerChatPanel({ toggle })
+describe('the assistant', () => {
+  it('takes the caret where the conversation already stands', () => {
+    const focus = vi.fn()
+    const drop = registerChatPanel({ focus })
 
     expect(routeCommand('app.assistant')).toBe('ran')
-    expect(toggle).toHaveBeenCalled()
+    expect(focus).toHaveBeenCalled()
     drop()
+  })
+
+  /**
+   * 🛑 A settings window and a mirror hold neither host and no shell. Writing the docks store
+   * there and answering "done" reported a gesture that could not have happened.
+   */
+  it('answers noSurface in a window that stages no conversation', () => {
+    expect(routeCommand('app.assistant')).toBe('noSurface')
   })
 
   // A settings window and a mirror have no overlay: saying so beats reporting a window that
@@ -143,7 +151,7 @@ describe('moving a space along the bar', () => {
 
     expect(routeCommand('spaces.moveLeft')).toBe('ran')
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
+      workspaces: { order: ['video', 'image', '3d', 'code', 'audio', 'materials', 'skyboxes'] },
     })
   })
 
@@ -158,7 +166,7 @@ describe('moving a space along the bar', () => {
 
 /**
  * The point of the whole module, and the one thing no other case would catch: the schema of
- * `command.run` offers every id the registry declares, so an id nothing routes is a promise the
+ * `command.runStudioCommand` offers every id the registry declares, so an id nothing routes is a promise the
  * studio cannot keep. Fourteen of the hundred and twenty were in that state.
  */
 describe('the registry as a whole', () => {
@@ -175,7 +183,7 @@ describe('the registry as a whole', () => {
     // `document.save` and `document.saveAs` want a tab, and the spaces one that can still move.
     useDocuments.setState({ activeId: 'doc-1' })
     useLayouts.setState({ activeWorkspace: 'video' })
-    const drop = registerChatPanel({ toggle: () => {} })
+    const drop = registerChatPanel({ focus: () => {} })
 
     const unrouted = COMMAND_REGISTRY.filter(
       descriptor => descriptor.scope === 'global' || descriptor.scope === 'spaces',
@@ -194,10 +202,15 @@ describe('the registry as a whole', () => {
       ),
     ]
     const disarms = surfaceScopes.map(scope => armCommandScope(scope))
+    // A mounted surface both arms its scope AND listens: `ran` now says something ACTED, so a
+    // scope armed with nobody behind it answers `nothingToDo` — which is not what this holds.
+    const stopListening = subscribeToCommands(() => true)
 
     const stranded = COMMAND_REGISTRY.filter(descriptor =>
       surfaceScopes.some(scope => scope === descriptor.scope),
     ).filter(descriptor => routeCommand(descriptor.id) !== 'ran')
+
+    stopListening()
 
     expect(stranded.map(descriptor => descriptor.id)).toEqual([])
     for (const disarm of disarms) disarm()

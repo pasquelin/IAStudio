@@ -18,7 +18,7 @@ const frenchText = (key: string): string => {
 }
 
 describe('the registry, published as tools', () => {
-  it('offers every action, and nothing else', () => {
+  it('offers every action of the wire, and nothing else', () => {
     expect(
       mcpTools()
         .map(tool => tool.name)
@@ -27,7 +27,7 @@ describe('the registry, published as tools', () => {
   })
 
   /**
-   * The dot has to go: an action is `command.run`, and the tool-name grammar clients hold us to
+   * The dot has to go: an action is `command.runStudioCommand`, and the tool-name grammar clients hold us to
    * takes letters, digits, underscore and dash. A name that fails it is refused by the client
    * rather than by us, which is the hardest kind of failure to place.
    */
@@ -47,7 +47,10 @@ describe('the registry, published as tools', () => {
   it('says on the tool itself what running it engages', () => {
     const submit = mcpTools().find(tool => tool.name === 'generator_submit')
 
-    expect(submit?.description).toContain('spends creative units')
+    // Never a UNIT: what a run costs is the unit of whichever cloud serves it, and one of them
+    // sells credits rather than creative units.
+    expect(submit?.description).toContain('Refuses with a consent token first')
+    expect(submit?.description).not.toContain('creative units')
   })
 
   /**
@@ -61,10 +64,13 @@ describe('the registry, published as tools', () => {
     // Named rather than counted: a `filter` that empties leaves the loop below green while every
     // tool it guarded goes back to announcing an immediate run.
     expect(marked.map(action => action.name).sort()).toEqual([
-      'assets.remove',
-      'command.run',
+      'assets.removeFromLibrary',
+      'command.runStudioCommand',
+      'context.writeProjectCard',
+      // Named a folder, it writes without a picker to ask first — see `gameActions`.
+      'game.export',
       'git.commit',
-      'settings.action',
+      'settings.pressButton',
     ])
     for (const action of marked) {
       const tool = mcpTools().find(one => one.name === toolName(action.name))
@@ -84,13 +90,34 @@ describe('the registry, published as tools', () => {
   it('says so when the handler raises the studio’s own question', () => {
     const marked = ACTION_REGISTRY.filter(entry => entry.asksItself)
 
-    expect(marked.map(action => action.name).sort()).toEqual(['document.close', 'workspace.open'])
+    expect(marked.map(action => action.name).sort()).toEqual([
+      'document.close',
+      'project.close',
+      'workspace.open',
+    ])
     for (const action of marked) {
       const tool = mcpTools().find(one => one.name === toolName(action.name))
 
       expect(action.commitment, action.name).toBe('none')
       expect(tool?.description, action.name).not.toContain('Runs straight away')
       expect(tool?.description, action.name).toContain('wait on the person at the screen')
+    }
+  })
+
+  /**
+   * Named rather than counted, like the two flags above. A lot engages nothing of its OWN, so
+   * `commitment` alone announced "Runs straight away" for fifty calls that may each engage.
+   */
+  it('says so when a call carries other calls', () => {
+    const marked = ACTION_REGISTRY.filter(entry => entry.runsOthers)
+
+    expect(marked.map(action => action.name)).toEqual(['studio.batch'])
+    for (const action of marked) {
+      const tool = mcpTools().find(one => one.name === toolName(action.name))
+
+      expect(action.commitment, action.name).toBe('none')
+      expect(tool?.description, action.name).not.toContain('Runs straight away')
+      expect(tool?.description, action.name).toContain('cleared on its own terms')
     }
   })
 
@@ -187,6 +214,35 @@ describe('an action’s inputs, as JSON Schema', () => {
     expect(schema.properties['settings']).not.toHaveProperty('enum')
   })
 
+  /**
+   * 🛑 `maximum`/`minimum` are NUMERIC keywords: emitted on a `{type: 'string'}` they are ignored
+   * by every validator, so the contract announced a bound nobody applied — for every text field
+   * of the 282 actions. A string is bounded by `maxLength`.
+   */
+  it('bounds a string by its length and a number by its value', () => {
+    const schema = schemaOfFields([
+      {
+        key: 'summary',
+        kind: 'text',
+        labelKey: 'assistant.fields.memorySummary',
+        required: true,
+        max: 200,
+      },
+      {
+        key: 'importance',
+        kind: 'integer',
+        labelKey: 'assistant.fields.memoryImportance',
+        required: false,
+        max: 5,
+      },
+    ])
+
+    expect(schema.properties['summary']).toMatchObject({ maxLength: 200 })
+    expect(schema.properties['summary']).not.toHaveProperty('maximum')
+    expect(schema.properties['importance']).toMatchObject({ maximum: 5 })
+    expect(schema.properties['importance']).not.toHaveProperty('maxLength')
+  })
+
   it('leaves no required parameter without a type a client can build from', () => {
     const untyped = mcpTools().flatMap(tool =>
       tool.inputSchema.required
@@ -198,7 +254,7 @@ describe('an action’s inputs, as JSON Schema', () => {
     )
 
     // The two that legitimately have none: a generation model's own parameters, whose shape only
-    // `GET /models/{id}` knows — and `model_schema` is published so a client can ask.
+    // `GET /models/{id}` knows — and `models_readGenerationModelFields` is published so a client can ask.
     expect(untyped).toEqual(['generator_prepare.parameters', 'cost_estimate.parameters'])
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WRITTEN_SOURCES } from '@/design/testHarness'
+import { WRITTEN_SOURCES } from '@/components/testHarness'
 
 /**
  * The stores, as text. Taken from the renderer-wide sweep the other written-form guards read
@@ -221,7 +221,7 @@ describe('what a store exports about a shared word', () => {
       'sceneHistoryOf',
       'sequenceHistoryOf',
       'skyboxHistoryOf',
-      'textureHistoryOf',
+      'materialHistoryOf',
       'canvasViewOf',
       'sceneViewOf',
       'skyboxViewOf',

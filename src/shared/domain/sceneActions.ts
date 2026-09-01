@@ -1,5 +1,12 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import {
+  action,
+  ENVIRONMENT_FIELDS,
+  RELATIVE_FIELD,
+  type ActionField,
+  type AssistantAction,
+} from './assistantAction'
 import { EASINGS } from './animation'
+import { CSG_OPERATIONS } from './csg'
 import { FONT_SOURCES } from './font'
 import { CAPTURE_QUALITIES } from './sceneCapture'
 import {
@@ -7,13 +14,13 @@ import {
   BACKGROUND_KINDS,
   DISPLAY_MODES,
   ENV_INTENSITY,
-  ENVIRONMENT_KINDS,
   ENVIRONMENT_PRESETS,
   EXPOSURE,
   FOG_DENSITY,
   FOG_KINDS,
   GROUND_SIZE,
   LIGHT_ENTRIES,
+  MATERIAL_SLOTS,
   MESH_ENTRIES,
   OBJECT_ENTRIES,
   TEXTURE_SLOTS,
@@ -142,6 +149,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.sceneState.title',
     descriptionKey: 'assistant.actions.sceneState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -150,6 +158,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeAdd.title',
     descriptionKey: 'assistant.actions.nodeAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -175,6 +184,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeAddModel.title',
     descriptionKey: 'assistant.actions.nodeAddModel.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
@@ -182,10 +192,85 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    /**
+     * Marks shapes as tools for the next fold, or takes the mark off — Roblox's Negate, and the
+     * one explicit way to say which way a cut runs through either door.
+     */
+    name: 'node.markAsCuttingTool',
+    titleKey: 'assistant.actions.nodeMarkAsCuttingTool.title',
+    descriptionKey: 'assistant.actions.nodeMarkAsCuttingTool.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'nodeIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.nodeIds',
+        required: true,
+        repeated: true,
+      },
+      { key: 'negative', kind: 'boolean', labelKey: 'assistant.fields.negative', required: false },
+    ],
+  }),
+  action({
+    /**
+     * Folds shapes into one solid. The ORDER OF THE IDS says nothing — `carvePlan` elects the
+     * matter, and `matterId` is what names one outright.
+     */
+    name: 'node.combineIntoSolid',
+    titleKey: 'assistant.actions.nodeCombineIntoSolid.title',
+    descriptionKey: 'assistant.actions.nodeCombineIntoSolid.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'nodeIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.nodeIds',
+        required: true,
+        repeated: true,
+      },
+      {
+        key: 'operation',
+        kind: 'choice',
+        labelKey: 'assistant.fields.csgOperation',
+        required: true,
+        options: CSG_OPERATIONS,
+      },
+      { key: 'matterId', kind: 'text', labelKey: 'assistant.fields.matterId', required: false },
+    ],
+  }),
+  action({
+    /**
+     * The same fold run the other way — one call to repair a cut that came out inverted, where
+     * the alternative is an undo and a rule to explain.
+     */
+    name: 'node.swapSolidMatterAndTool',
+    titleKey: 'assistant.actions.nodeSwapSolidMatterAndTool.title',
+    descriptionKey: 'assistant.actions.nodeSwapSolidMatterAndTool.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [{ key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true }],
+  }),
+  action({
+    /** Undoes a fold: the brushes the graph kept come back as meshes, where they stood. */
+    name: 'node.separate',
+    titleKey: 'assistant.actions.nodeSeparate.title',
+    descriptionKey: 'assistant.actions.nodeSeparate.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [NODE],
+  }),
+  action({
     name: 'node.remove',
     titleKey: 'assistant.actions.nodeRemove.title',
     descriptionKey: 'assistant.actions.nodeRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -194,6 +279,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeRename.title',
     descriptionKey: 'assistant.actions.nodeRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -205,6 +291,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeTransform.title',
     descriptionKey: 'assistant.actions.nodeTransform.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -217,13 +304,15 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
       vector('x', 'scale'),
       vector('y', 'scale'),
       vector('z', 'scale'),
+      RELATIVE_FIELD,
     ],
   }),
   action({
-    name: 'node.visible',
-    titleKey: 'assistant.actions.nodeVisible.title',
-    descriptionKey: 'assistant.actions.nodeVisible.description',
+    name: 'node.setVisible',
+    titleKey: 'assistant.actions.nodeSetVisible.title',
+    descriptionKey: 'assistant.actions.nodeSetVisible.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -236,10 +325,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * the same descriptor. `tilesPerMetre` is the exception: a text's outline is not a primitive,
      * so its UVs never go through the tiling, and naming it on one is refused rather than filed.
      */
-    name: 'node.material',
-    titleKey: 'assistant.actions.nodeMaterial.title',
-    descriptionKey: 'assistant.actions.nodeMaterial.description',
+    name: 'node.setMeshMaterial',
+    titleKey: 'assistant.actions.nodeSetMeshMaterial.title',
+    descriptionKey: 'assistant.actions.nodeSetMeshMaterial.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -251,10 +341,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'node.geometry',
-    titleKey: 'assistant.actions.nodeGeometry.title',
-    descriptionKey: 'assistant.actions.nodeGeometry.description',
+    name: 'node.setPrimitiveParameters',
+    titleKey: 'assistant.actions.nodeSetPrimitiveParameters.title',
+    descriptionKey: 'assistant.actions.nodeSetPrimitiveParameters.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, ...GEOMETRY_FIELDS],
   }),
@@ -264,10 +355,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * neither, so the field the node cannot hold is refused — which is the same row the inspector
      * hides rather than draws inert.
      */
-    name: 'node.shadow',
-    titleKey: 'assistant.actions.nodeShadow.title',
-    descriptionKey: 'assistant.actions.nodeShadow.description',
+    name: 'node.setShadowCastAndReceive',
+    titleKey: 'assistant.actions.nodeSetShadowCastAndReceive.title',
+    descriptionKey: 'assistant.actions.nodeSetShadowCastAndReceive.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -286,10 +378,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'node.sprite',
-    titleKey: 'assistant.actions.nodeSprite.title',
-    descriptionKey: 'assistant.actions.nodeSprite.description',
+    name: 'node.setSpriteSettings',
+    titleKey: 'assistant.actions.nodeSetSpriteSettings.title',
+    descriptionKey: 'assistant.actions.nodeSetSpriteSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -301,13 +394,14 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /**
-     * What a text says, in what face, at what size. Its material is `node.material`'s — the same
+     * What a text says, in what face, at what size. Its material is `node.setMeshMaterial`'s — the same
      * bargain the inspector strikes, where one section lights both a mesh and a text.
      */
-    name: 'node.text',
-    titleKey: 'assistant.actions.nodeText.title',
-    descriptionKey: 'assistant.actions.nodeText.description',
+    name: 'node.setTextSettings',
+    titleKey: 'assistant.actions.nodeSetTextSettings.title',
+    descriptionKey: 'assistant.actions.nodeSetTextSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -327,10 +421,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     /** The shape of a rail. Its points are `path.addPoint` and its two neighbours. */
-    name: 'node.path',
-    titleKey: 'assistant.actions.nodePath.title',
-    descriptionKey: 'assistant.actions.nodePath.description',
+    name: 'node.setPathShape',
+    titleKey: 'assistant.actions.nodeSetPathShape.title',
+    descriptionKey: 'assistant.actions.nodeSetPathShape.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -348,6 +443,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.pathAddPoint.title',
     descriptionKey: 'assistant.actions.pathAddPoint.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -362,6 +458,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.pathMovePoint.title',
     descriptionKey: 'assistant.actions.pathMovePoint.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, POINT_INDEX, vector('x', 'point'), vector('y', 'point'), vector('z', 'point')],
   }),
@@ -371,21 +468,59 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.pathRemovePoint.title',
     descriptionKey: 'assistant.actions.pathRemovePoint.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, POINT_INDEX],
   }),
   action({
     /**
-     * The maps of an imported model, pointed at pictures of the project. Its own action rather
-     * than `node.material`'s slots: a model's file already carries a colour and a finish per
-     * material, and what the studio offers is a slot for a picture edited elsewhere to land in.
+     * The MATERIAL a model wears in ONE of its slots, named by the title of its document. An empty
+     * title takes the whole dress off, and the model goes back to what its own file carries.
+     *
+     * A reference: what that material holds is resolved when the scene is read, so editing it
+     * reaches every model wearing it. The slot is Blender's — a model carries one material per
+     * primitive of its mesh, and a caller that names none means the first.
      */
-    name: 'model.textures',
-    titleKey: 'assistant.actions.modelTextures.title',
-    descriptionKey: 'assistant.actions.modelTextures.description',
+    name: 'model.wearMaterial',
+    titleKey: 'assistant.actions.modelWearMaterial.title',
+    descriptionKey: 'assistant.actions.modelWearMaterial.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
-    fields: [NODE, { ...TEXTURES, required: true }],
+    fields: [
+      NODE,
+      { key: 'material', kind: 'text', labelKey: 'assistant.fields.material', required: false },
+      {
+        key: 'slot',
+        kind: 'integer',
+        labelKey: 'assistant.fields.materialSlot',
+        required: false,
+        min: 0,
+        // A mesh of more primitives than this is not a model anyone dresses by hand, and the list
+        // GROWS to reach the slot named: unbounded, one call could ask for a million rows.
+        max: MATERIAL_SLOTS - 1,
+      },
+    ],
+  }),
+  action({
+    /**
+     * The simple way to cover a model: ONE picture as its base colour, which is what Roblox's
+     * `TextureID` is. No asset takes the dress off.
+     *
+     * EXCLUSIVE with `model.wearMaterial`: a model is covered one way or the other, never both,
+     * so this drops whatever materials it wore. Nothing is derived from the picture — a normal
+     * computed from the luminance of a photograph turns painted shadow into relief.
+     */
+    name: 'model.wearImage',
+    titleKey: 'assistant.actions.modelWearImage.title',
+    descriptionKey: 'assistant.actions.modelWearImage.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      NODE,
+      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+    ],
   }),
   action({
     /**
@@ -394,10 +529,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * ACCEPTED: an ambient light has no cone and a hemisphere has no single colour, so naming one
      * where it does not belong is refused rather than filed against a field that is not there.
      */
-    name: 'node.light',
-    titleKey: 'assistant.actions.nodeLight.title',
-    descriptionKey: 'assistant.actions.nodeLight.description',
+    name: 'node.setLightSettings',
+    titleKey: 'assistant.actions.nodeSetLightSettings.title',
+    descriptionKey: 'assistant.actions.nodeSetLightSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -411,6 +547,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
         required: false,
       },
       dial('intensity', { min: 0 }),
+      RELATIVE_FIELD,
       // Zero means no falloff at all — three.js reads it as "reaches everywhere".
       dial('distance', { min: 0 }),
       dial('decay', { min: 0, max: 4 }),
@@ -426,10 +563,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   action({
     // The lens, and nothing of where the camera stands: a camera is moved by `node.transform`
     // like anything else in the tree.
-    name: 'node.camera',
-    titleKey: 'assistant.actions.nodeCamera.title',
-    descriptionKey: 'assistant.actions.nodeCamera.description',
+    name: 'node.setCameraLens',
+    titleKey: 'assistant.actions.nodeSetCameraLens.title',
+    descriptionKey: 'assistant.actions.nodeSetCameraLens.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -451,10 +589,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * `shotsWith`'s rule, the same one the band's button obeys — a client that could choose its
      * own layer would be a second law over what is on air.
      */
-    name: 'camera.shot',
-    titleKey: 'assistant.actions.cameraShot.title',
-    descriptionKey: 'assistant.actions.cameraShot.description',
+    name: 'camera.addShot',
+    titleKey: 'assistant.actions.cameraAddShot.title',
+    descriptionKey: 'assistant.actions.cameraAddShot.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
@@ -479,10 +618,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * The rail a shot runs its camera along, and which stretch of it. An empty `pathId` unbinds:
      * the camera then stays wherever its transform and its keys put it.
      */
-    name: 'camera.rail',
-    titleKey: 'assistant.actions.cameraRail.title',
-    descriptionKey: 'assistant.actions.cameraRail.description',
+    name: 'camera.bindPathToShot',
+    titleKey: 'assistant.actions.cameraBindPathToShot.title',
+    descriptionKey: 'assistant.actions.cameraBindPathToShot.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
@@ -502,13 +642,14 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
   action({
     /**
      * A rail LAID where the camera stands, aimed down its line of sight, and bound to the shot in
-     * one gesture — the inspector's own button. `camera.rail` binds one that already exists; this
+     * one gesture — the inspector's own button. `camera.bindPathToShot` binds one that already exists; this
      * makes one, because a rail drives nothing without a shot to run it.
      */
-    name: 'camera.addRail',
-    titleKey: 'assistant.actions.cameraAddRail.title',
-    descriptionKey: 'assistant.actions.cameraAddRail.description',
+    name: 'camera.createAndBindPath',
+    titleKey: 'assistant.actions.cameraCreateAndBindPath.title',
+    descriptionKey: 'assistant.actions.cameraCreateAndBindPath.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true }],
   }),
@@ -521,6 +662,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.cameraReorder.title',
     descriptionKey: 'assistant.actions.cameraReorder.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, { key: 'by', kind: 'integer', labelKey: 'assistant.fields.by', required: true }],
   }),
@@ -529,10 +671,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * What a shot aims its camera at: a node it follows, a fixed point, or nothing at all —
      * which leaves the camera aimed by its own rotation.
      */
-    name: 'camera.target',
-    titleKey: 'assistant.actions.cameraTarget.title',
-    descriptionKey: 'assistant.actions.cameraTarget.description',
+    name: 'camera.aimShotAt',
+    titleKey: 'assistant.actions.cameraAimShotAt.title',
+    descriptionKey: 'assistant.actions.cameraAimShotAt.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
@@ -547,10 +690,20 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeReparent.title',
     descriptionKey: 'assistant.actions.nodeReparent.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
       { key: 'parentId', kind: 'text', labelKey: 'assistant.fields.parentId', required: false },
+      // Absent, the node keeps the place it already has among its new siblings — which is what
+      // hanging it somewhere means, and what dropping a row ONTO another does on screen.
+      {
+        key: 'index',
+        kind: 'integer',
+        labelKey: 'assistant.fields.nodeIndex',
+        required: false,
+        min: 0,
+      },
     ],
   }),
   action({
@@ -558,6 +711,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.nodeSelect.title',
     descriptionKey: 'assistant.actions.nodeSelect.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -578,6 +732,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.viewDirection.title',
     descriptionKey: 'assistant.actions.viewDirection.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -594,6 +749,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.viewDisplay.title',
     descriptionKey: 'assistant.actions.viewDisplay.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -611,13 +767,14 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * view's own pixels; the four qualities are the menu's rows, and this is the only door onto
      * the other three.
      *
-     * `none` for the reason `command.run scene.capture` already is: the picture lands in the
+     * `none` for the reason `command.runStudioCommand scene.capture` already is: the picture lands in the
      * project's own library, which the studio treats as no question asked.
      */
     name: 'scene.capture',
     titleKey: 'assistant.actions.sceneCapture.title',
     descriptionKey: 'assistant.actions.sceneCapture.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -634,10 +791,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * A ready-made world, in one call — the flyout of the environment panel. Each one is a PATCH
      * and leaves what it is not about exactly as it was, so a ground somebody turned on stays on.
      */
-    name: 'world.preset',
-    titleKey: 'assistant.actions.worldPreset.title',
-    descriptionKey: 'assistant.actions.worldPreset.description',
+    name: 'world.applyPreset',
+    titleKey: 'assistant.actions.worldApplyPreset.title',
+    descriptionKey: 'assistant.actions.worldApplyPreset.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -656,22 +814,14 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
    * a density to a linear fog.
    */
   action({
-    name: 'world.environment',
-    titleKey: 'assistant.actions.worldEnvironment.title',
-    descriptionKey: 'assistant.actions.worldEnvironment.description',
+    name: 'world.setSceneLighting',
+    titleKey: 'assistant.actions.worldSetSceneLighting.title',
+    descriptionKey: 'assistant.actions.worldSetSceneLighting.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
-      {
-        key: 'kind',
-        kind: 'choice',
-        labelKey: 'assistant.fields.environmentKind',
-        required: false,
-        options: ENVIRONMENT_KINDS,
-      },
-      // Names the sky, and naming one is enough: a document lit by an asset is `skybox` by that
-      // fact alone, which spares a client two calls to do one thing.
-      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: false },
+      ...ENVIRONMENT_FIELDS,
       {
         key: 'intensity',
         kind: 'number',
@@ -684,10 +834,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'world.background',
-    titleKey: 'assistant.actions.worldBackground.title',
-    descriptionKey: 'assistant.actions.worldBackground.description',
+    name: 'world.setBackground',
+    titleKey: 'assistant.actions.worldSetBackground.title',
+    descriptionKey: 'assistant.actions.worldSetBackground.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -709,10 +860,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'world.fog',
-    titleKey: 'assistant.actions.worldFog.title',
-    descriptionKey: 'assistant.actions.worldFog.description',
+    name: 'world.setFog',
+    titleKey: 'assistant.actions.worldSetFog.title',
+    descriptionKey: 'assistant.actions.worldSetFog.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -736,10 +888,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'world.ground',
-    titleKey: 'assistant.actions.worldGround.title',
-    descriptionKey: 'assistant.actions.worldGround.description',
+    name: 'world.setGroundPlane',
+    titleKey: 'assistant.actions.worldSetGroundPlane.title',
+    descriptionKey: 'assistant.actions.worldSetGroundPlane.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'visible', kind: 'boolean', labelKey: 'assistant.fields.visible', required: false },
@@ -769,10 +922,11 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'world.render',
-    titleKey: 'assistant.actions.worldRender.title',
-    descriptionKey: 'assistant.actions.worldRender.description',
+    name: 'world.setToneMapping',
+    titleKey: 'assistant.actions.worldSetToneMapping.title',
+    descriptionKey: 'assistant.actions.worldSetToneMapping.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {

@@ -26,6 +26,7 @@ import {
   type ModelRef,
   type SceneWorld,
 } from '@shared/domain/scene'
+import { CSG_OPERATIONS, type CsgPart } from '@shared/domain/csg'
 import { readWorld } from './sceneWorld'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { isRig } from '@shared/domain/rig'
@@ -34,15 +35,27 @@ import {
   DEFAULT_FPS,
   EASINGS,
   EMPTY_TIMELINE,
+  SCENE_SUBJECT_ID,
   sheetFromAnimated,
+  TIMELINE_TEMPLATES,
   TRACK_PROPERTIES,
+  TRANSITION_KINDS,
   type AnimationTimeline,
   type AnimationTrack,
   type CameraShot,
   type Keyframe,
+  type TimelineEvent,
+  type TimelineMedia,
+  type TimelineTemplate,
+  type TimelineTransition,
+  type TransitionKind,
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
+import { readCameraPost } from '@shared/domain/postProcessing'
 import { isRecord, readNumber } from '@shared/guards'
+import type { Component } from '@shared/domain/component'
+import { isComponentType } from '@shared/domain/componentRegistry'
+import { newId } from '@/helpers/ids'
 import { clamp } from '@shared/numeric'
 import {
   GEOMETRY_SPECS,
@@ -70,7 +83,9 @@ export type ScenePayload = {
 }
 
 export function scenePayload(state: SceneState): ScenePayload {
-  const alive = new Set(state.nodes.map(node => node.id))
+  // The scene's own composition line stands beside the nodes, never among them: without it here
+  // a save would quietly drop `@scene` from the sheet, and the composition would lose its line.
+  const alive = new Set([...state.nodes.map(node => node.id), SCENE_SUBJECT_ID])
   const sheet = state.animation.sheet.filter(id => alive.has(id))
 
   return {
@@ -132,7 +147,7 @@ function playingModels(nodes: readonly SceneNode[]): string[] {
  * the engine is what reports that this machine cannot honour it.
  */
 function revived(node: SceneNode): SceneNode {
-  const filled = { ...node, ...withDefaults(node) }
+  const filled = { ...withComponentsRead(node), ...withDefaults(node) }
 
   // Every descriptor a spec table describes is laid over its default, so a field the table has
   // gained since the file was written arrives with a value instead of `undefined`. `measures`
@@ -141,14 +156,37 @@ function revived(node: SceneNode): SceneNode {
   if (filled.type === 'mesh') {
     return { ...filled, material: revivedMaterial(filled.material) }
   }
+  if (filled.type === 'carved') {
+    const material = revivedMaterial(filled.material)
+    // A brush written before it kept its own material takes the solid's, so `separateNode`
+    // always hands back something painted rather than a hole in the descriptor.
+    const painted = (part: CsgPart): CsgPart => ({
+      ...part,
+      material: revivedMaterial(part.material ?? material),
+    })
+
+    return {
+      ...filled,
+      material,
+      carved: {
+        ...filled.carved,
+        base: painted(filled.carved.base),
+        steps: filled.carved.steps.map(step => ({ ...step, part: painted(step.part) })),
+      },
+    }
+  }
   if (filled.type === 'sprite') {
     return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
   }
   if (filled.type === 'camera') {
-    return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
+    const { post, ...lens } = { ...DEFAULT_CAMERA, ...filled.camera }
+    const read = readCameraPost(post, newId)
+    // `inherit` is what an ABSENT field already means, so it is not written back: a camera that
+    // follows the scene reads the same in a file written before compositions existed.
+    return { ...filled, camera: read.mode === 'inherit' ? lens : { ...lens, post: read } }
   }
   if (filled.type === 'model') {
-    return { ...filled, model: withLanes(filled.model) }
+    return { ...filled, model: withDress(withLanes(filled.model)) }
   }
   if (filled.type === 'path') {
     return { ...filled, path: { ...DEFAULT_PATH, ...filled.path } }
@@ -161,6 +199,27 @@ function revived(node: SceneNode): SceneNode {
     text: { ...DEFAULT_TEXT, ...filled.text, font: readFontRef(filled.text.font) },
   }
 }
+
+/**
+ * The components the studio can act on, and only those.
+ *
+ * A type this build does not know is dropped from the STATE — nothing would simulate it and no
+ * form could show it — and `sceneHoldsMore` then refuses to save the file over it, exactly as it
+ * refuses a glTF extension we do not write. Dropping and saving would lose an author's work in
+ * silence; refusing says so.
+ *
+ * An untouched node comes back untouched: a document written before components existed keeps no
+ * key, so it saves back byte for byte.
+ */
+function withComponentsRead(node: SceneNode): SceneNode {
+  if (node.components === undefined) return node
+
+  const raw: unknown = node.components
+  return { ...node, components: Array.isArray(raw) ? raw.filter(isKnownComponent) : [] }
+}
+
+const isKnownComponent = (value: unknown): value is Component =>
+  isRecord(value) && isComponentType(value.type)
 
 /**
  * A material over its defaults, with its tiling held inside the bounds the field offers.
@@ -195,6 +254,22 @@ function withLanes(model: ModelRef): ModelRef {
   return next
 }
 
+/**
+ * A model's dress, folding the single material id every document written before the two modes
+ * existed spells. Read and never written again — dropping it would undress every model already
+ * saved, and a model back in its file's own material looks exactly like one never dressed.
+ */
+function withDress(model: ModelRef): ModelRef {
+  if (model.dress || !model.materialDocumentId) return model
+
+  const next: ModelRef = {
+    ...model,
+    dress: { kind: 'materials', documentIds: [model.materialDocumentId] },
+  }
+  delete next.materialDocumentId
+  return next
+}
+
 /** The flags, filled in where the file holds none — `null` included. */
 function withDefaults(node: SceneNode): Pick<SceneNode, 'castShadow' | 'receiveShadow'> {
   const defaults = shadowDefaults(node)
@@ -224,7 +299,11 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (!isOptionalFlag(value.castShadow) || !isOptionalFlag(value.receiveShadow)) return false
 
   if (value.type === 'mesh') {
-    return describes(value.geometry, GEOMETRY_SPECS) && isMaterial(value.material)
+    return (
+      describes(value.geometry, GEOMETRY_SPECS) &&
+      isMaterial(value.material) &&
+      isOptionalFlag(value.negative)
+    )
   }
   // A model is a reference and nothing else: an absent or non-string `assetId` costs the node,
   // never the file. What it points at is resolved when the scene is built, not here — a project
@@ -237,7 +316,12 @@ function isSceneNode(value: unknown): value is SceneNode {
       isOptionalClips(value.model.clips) &&
       isOptionalLanes(value.model.lanes) &&
       isOptionalRig(value.model.rig) &&
-      isOptionalTextureOverrides(value.model.textures)
+      isOptionalTextureOverrides(value.model.textures) &&
+      isOptionalDress(value.model.dress) &&
+      // A document id, never resolved here: the material may have been deleted, and a scene that
+      // still opens with a model wearing its file's own maps is better than one that will not.
+      (value.model.materialDocumentId === undefined ||
+        typeof value.model.materialDocumentId === 'string')
     )
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
   // checked against the same table.
@@ -246,6 +330,11 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'text') return isText(value.text) && isMaterial(value.material)
   // A group carries nothing of its own: everything it is has already been checked above.
   if (value.type === 'group') return true
+  // The recipe, and the material it wears like a mesh. A graph that does not read is the node
+  // refused rather than a solid drawn from half a recipe — glTF being index-bound, half a graph
+  // is a broken file, not a partly right one.
+  if (value.type === 'carved')
+    return isCsgGraph(value.carved) && isMaterial(value.material) && isOptionalFlag(value.negative)
   // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
   // camera is without them, and `revived` lays them under whatever the file did say.
   if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
@@ -254,6 +343,33 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'path') return isPath(value.path)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
+}
+
+/**
+ * A boolean recipe: one base brush, then any number of steps. The shapes go through the very
+ * table a mesh's does, so a primitive gained is accepted here the day it is offered on screen.
+ */
+function isCsgGraph(value: unknown): boolean {
+  if (!isRecord(value) || !isCsgPart(value.base)) return false
+  if (!Array.isArray(value.steps)) return false
+
+  return value.steps.every(
+    step =>
+      isRecord(step) && CSG_OPERATIONS.some(one => one === step.operation) && isCsgPart(step.part),
+  )
+}
+
+function isCsgPart(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.name !== 'string') return false
+  if (!isTransform(value.transform)) return false
+  // A shape, or a whole recipe: a solid folded into another solid nests here, and the check
+  // walks down with it. `base` is what a graph has and a descriptor never does.
+  const shape = value.geometry
+  const nested = isRecord(shape) && 'base' in shape
+  if (!(nested ? isCsgGraph(shape) : describes(shape, GEOMETRY_SPECS))) return false
+  // Absent on a document written before a brush kept its own: the solid's material is laid under
+  // it in `revived`, which is what a separate then hands back.
+  return value.material === undefined || isMaterial(value.material)
 }
 
 function isOptionalFlag(value: unknown): boolean {
@@ -361,6 +477,24 @@ function isOptionalTextureOverrides(value: unknown): boolean {
 }
 
 /**
+ * What covers a model, or nothing. A dress spelling NEITHER kind costs the node rather than being
+ * dropped to nothing: its author meant something this reader cannot name, and silently undressing
+ * the model would hide that.
+ */
+function isOptionalDress(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  if (value.kind === 'image') return typeof value.assetId === 'string'
+
+  return (
+    value.kind === 'materials' &&
+    Array.isArray(value.documentIds) &&
+    value.documentIds.every(id => typeof id === 'string')
+  )
+}
+
+/**
  * The timeline a file holds, or an empty one. Read track by track rather than refused whole, on
  * the rule the nodes already follow: a project folder is user territory, and one malformed track
  * must not cost the animation around it.
@@ -375,14 +509,112 @@ function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTim
   const duration = readNumber(value, 'duration', DEFAULT_DURATION)
   const fps = readNumber(value, 'fps', DEFAULT_FPS)
 
+  // 🛑 Read back or LOST: a save recomposes the timeline whole from the state, so a row this
+  // build does not read is a row the next `⌘S` drops without a word — see `sceneHoldsMore`,
+  // which is what tells a reader before it happens.
+  const events = readList(value.events, isTimelineEvent)
+  const audio = readList(value.audio, isTimelineMedia)
+  const video = readList(value.video, isTimelineMedia)
+  const transitions = readList(value.transitions, isTimelineTransition)
+
   return {
     duration: duration > 0 ? duration : DEFAULT_DURATION,
     fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
     shots,
     sheet: readSheet(value.sheet, tracks, shots, playingModels(nodes)),
+    // Absent rather than empty: a document that never had one must come back as it was written,
+    // and `document.test.ts` compares what a round trip gives back.
+    ...(events.length > 0 ? { events } : {}),
+    ...(audio.length > 0 ? { audio } : {}),
+    ...(video.length > 0 ? { video } : {}),
+    ...(transitions.length > 0 ? { transitions } : {}),
+    ...(isTimelineTemplate(value.template) ? { template: value.template } : {}),
   }
 }
+
+/**
+ * Which timeline rows of a WRITTEN animation this build cannot read back, named `events`,
+ * `audio`, `video`, `transitions` or `template`.
+ *
+ * 🛑 Beside the reading rather than beside the guard that reports it: what a build keeps is
+ * decided here, so a predicate that grows a case must not leave a second copy elsewhere saying
+ * something else. Counted, because what is lost is the DIFFERENCE.
+ */
+export function timelineRowsLost(written: unknown): string[] {
+  if (!isRecord(written)) return []
+
+  const lists: readonly [string, (one: unknown) => boolean][] = [
+    ['events', isTimelineEvent],
+    ['audio', isTimelineMedia],
+    ['video', isTimelineMedia],
+    ['transitions', isTimelineTransition],
+  ]
+  const lost = lists
+    .filter(([name, holds]) => {
+      const rows = written[name]
+      if (rows === undefined) return false
+      // 🛑 Not an ARRAY at all — a later build keying its rows by id for an O(1) reach — is the
+      // whole list lost, and the quietest way to lose one: `readList` answers empty and the
+      // first ⌘S writes a timeline without it.
+      if (!Array.isArray(rows)) return true
+      // A row this build cannot read. A REPEATED id is not one of them: `readList` filters and
+      // keeps every row that holds, duplicates included, so a save writes both back untouched.
+      return rows.some(one => !holds(one))
+    })
+    .map(([name]) => name)
+
+  // A template a later build named decides what a panel offers, and this one would drop it.
+  if (written.template !== undefined && !isTimelineTemplate(written.template)) {
+    lost.push('template')
+  }
+  // 🛑 A MEMBER this build has no name for — `markers`, `subtitles` — is lost the same way, and
+  // the rule is the repository's own: a member COMPOSED from something narrower has to be looked
+  // INTO. `readTimeline` recomposes the whole object from the names below, so anything else goes.
+  lost.push(...Object.keys(written).filter(key => !TIMELINE_MEMBERS.has(key)))
+  return lost
+}
+
+/** Every member `readTimeline` gives back. What is not here is what a save would drop. */
+const TIMELINE_MEMBERS = new Set([
+  'duration',
+  'fps',
+  'tracks',
+  'shots',
+  'sheet',
+  'events',
+  'audio',
+  'video',
+  'transitions',
+  'template',
+])
+
+/** Whatever of a list this build can read, in order. Anything else is dropped, and SAID. */
+const readList = <T>(value: unknown, holds: (one: unknown) => one is T): T[] =>
+  Array.isArray(value) ? value.filter(holds) : []
+
+const isTimelineEvent = (value: unknown): value is TimelineEvent =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.at === 'number' &&
+  typeof value.name === 'string'
+
+const isTimelineMedia = (value: unknown): value is TimelineMedia =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.assetId === 'string' &&
+  typeof value.start === 'number' &&
+  typeof value.duration === 'number'
+
+const isTimelineTransition = (value: unknown): value is TimelineTransition =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.at === 'number' &&
+  typeof value.duration === 'number' &&
+  TRANSITION_KINDS.includes(value.kind as TransitionKind)
+
+const isTimelineTemplate = (value: unknown): value is TimelineTemplate =>
+  typeof value === 'string' && TIMELINE_TEMPLATES.includes(value as TimelineTemplate)
 
 /**
  * Which objects the band shows. Without one, rebuilt ONCE from what is animated — a file written
@@ -467,8 +699,15 @@ function isTrack(value: unknown): value is AnimationTrack {
   if (typeof target.nodeId !== 'string') return false
   if (target.bone !== undefined && typeof target.bone !== 'string') return false
   if (!TRACK_PROPERTIES.some(property => property === target.property)) return false
+  // A composition channel that names no effect and no parameter drives nothing: kept, it would
+  // sit on the sheet as a row whose keys reach nowhere.
+  if (target.property === 'post' && !isPostTarget(target.post)) return false
 
   return Array.isArray(value.keys) && value.keys.every(isKeyframe)
+}
+
+function isPostTarget(value: unknown): boolean {
+  return isRecord(value) && typeof value.effectId === 'string' && typeof value.param === 'string'
 }
 
 function isKeyframe(value: unknown): value is Keyframe {

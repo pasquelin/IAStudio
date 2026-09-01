@@ -6,6 +6,7 @@ import {
   mdiLightbulbOutline,
   mdiShapeOutline,
   mdiShapePlusOutline,
+  mdiVectorDifference,
   mdiVectorPolyline,
   mdiVideoOutline,
 } from '@mdi/js'
@@ -38,7 +39,7 @@ export type NodeKind = {
  */
 export type PanelNodeType = Exclude<
   SceneNodeType,
-  'model' | 'sprite' | 'text' | 'group' | 'camera' | 'path'
+  'model' | 'sprite' | 'text' | 'group' | 'camera' | 'path' | 'carved'
 >
 
 /**
@@ -49,6 +50,9 @@ export const NODE_KINDS: Record<PanelNodeType, NodeKind> = {
   mesh: { icon: mdiShapeOutline, entries: MESH_PRIMITIVES, namespace: 'meshes' },
   light: { icon: mdiLightbulbOutline, entries: LIGHT_TYPES, namespace: 'lights' },
 }
+
+/** A solid is made by cutting a selection, never picked from a menu — like a group. */
+export const CARVED_ICON = mdiVectorDifference
 
 const OBJECT_ICONS: Record<ObjectKind, string> = {
   sprite: mdiImageOutline,

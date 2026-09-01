@@ -13,9 +13,12 @@ const MAP_TYPES: Record<ShadowQuality, ShadowMapType> = {
 type ShadowMapHolder = { shadowMap: { type: ShadowMapType } }
 
 /**
- * Points the renderer at the map type a setting asks for. Nothing else to do: three.js watches
- * the type itself and recompiles what it has to — `shadowMap.needsUpdate` is read only when
- * `autoUpdate` is off, which it never is here.
+ * Points the renderer at the map type a setting asks for, and nothing more: three.js watches the
+ * type itself and recompiles what it has to.
+ *
+ * It does NOT reach the screen on its own. The scene viewport keeps `autoUpdate` off, so the
+ * recompile lives inside a shadow pass that only runs on `needsUpdate` — the caller has to ask
+ * for a frame, which `configure` does when the quality moved.
  */
 export function applyShadowQuality(renderer: ShadowMapHolder, quality: ShadowQuality): void {
   renderer.shadowMap.type = MAP_TYPES[quality]

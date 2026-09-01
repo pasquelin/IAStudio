@@ -1,4 +1,11 @@
-import { Group, Mesh, MeshStandardMaterial, type BufferGeometry } from 'three'
+import {
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  RepeatWrapping,
+  type BufferGeometry,
+  type Texture,
+} from 'three'
 import { geometryFor } from '../scene/threeFactory'
 
 /**
@@ -12,13 +19,24 @@ import { geometryFor } from '../scene/threeFactory'
 export type TestObjects = {
   readonly group: Group
   setVisible: (visible: boolean) => void
-  setGroundVisible: (visible: boolean) => void
+  /**
+   * The picture the floor wears, which this tunes to the floor's size. Freeing it belongs to
+   * whoever loaded it — `dispose` here leaves it alone.
+   */
+  setGroundMap: (map: Texture) => void
   dispose: () => void
 }
 
 const SPHERE_RADIUS = 1
 const SPHERE_OFFSET = 1.4
+/** Metres across, and therefore tiles across: one square of the working textures is one metre. */
 const GROUND_SIZE = 40
+
+/**
+ * Clamped by three to what the card allows. Without it the forty tiles mip to flat grey at the
+ * grazing angles a floor is mostly seen at — which is the one thing it is there to show.
+ */
+const GROUND_ANISOTROPY = 8
 
 export type TestObjectsOptions = {
   /**
@@ -62,8 +80,14 @@ export function createTestObjects({ probeDistance = 0 }: TestObjectsOptions = {}
       group.visible = visible
     },
 
-    setGroundVisible: visible => {
-      ground.visible = visible
+    setGroundMap: map => {
+      map.wrapS = RepeatWrapping
+      map.wrapT = RepeatWrapping
+      map.repeat.set(GROUND_SIZE, GROUND_SIZE)
+      map.anisotropy = GROUND_ANISOTROPY
+      ground.material.map = map
+      // Gaining a map is another shader, and three builds it on the version moving.
+      ground.material.needsUpdate = true
     },
 
     dispose: () => {

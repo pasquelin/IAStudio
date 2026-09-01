@@ -1,0 +1,74 @@
+import { mdiPlus, mdiTrashCanOutline } from '@mdi/js'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuRow } from '@/components/MenuRow'
+import { ToolButton } from '@/components/ToolButton'
+import { removeNodes } from '@/engines/scene/commands'
+import { labelKeyOf, NODE_KINDS, type PanelNodeType } from '@/engines/scene/nodeKinds'
+import { selectedNodes } from '@/engines/scene/sceneState'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
+import { useAddNode } from '@/hooks/useAddNode'
+import { sceneOf, useScenes } from '@/stores/scenes'
+
+/**
+ * Add and delete, on the panel's own title bar. Shared by the mesh and light panels, which
+ * differ only by the registry that fills the flyout and by the node type they may remove.
+ */
+export function NodeActions({ documentId, type }: { documentId: string; type: PanelNodeType }) {
+  const { t } = useTranslation()
+  const kind = NODE_KINDS[type]
+  const { entries, namespace } = kind
+  const addNodeOf = useAddNode(documentId)
+
+  const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
+  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
+  // The panel owns half the scene, and must not delete the other half's selection: a mixed
+  // selection deleted from the mesh panel takes its meshes and leaves its lights standing.
+  const removable = useMemo(
+    () =>
+      selectedNodes(nodes, selectedIds)
+        .filter(node => node.type === type)
+        .map(node => node.id),
+    [nodes, selectedIds, type],
+  )
+
+  return (
+    <>
+      <MenuButton
+        icon={mdiPlus}
+        label={t(`${namespace}.add`)}
+        description={t(`${namespace}.addHint`)}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        rowCount={entries.length}
+        opensOnClick
+        rows={close =>
+          entries.map(entry => (
+            <MenuRow
+              key={entry.kind}
+              label={t(labelKeyOf(kind.namespace, entry))}
+              icon={entry.icon}
+              disabled={entry.disabled}
+              tip={HINT_RIGHT(t(`${labelKeyOf(kind.namespace, entry)}Hint`))}
+              onSelect={() => {
+                addNodeOf(entry.kind)
+                close()
+              }}
+            />
+          ))
+        }
+      />
+
+      <ToolButton
+        icon={mdiTrashCanOutline}
+        label={t(`${namespace}.remove`)}
+        description={t(`${namespace}.removeHint`)}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        disabled={removable.length === 0}
+        onClick={() => useScenes.getState().runCommand(documentId, removeNodes(nodes, removable))}
+      />
+    </>
+  )
+}

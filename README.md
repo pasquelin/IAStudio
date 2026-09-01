@@ -1,8 +1,8 @@
 <div align="center">
 
-# Scenario Studio
+# IA Studio
 
-**A desktop creation studio built on the [Scenario](https://docs.scenario.com) API.**
+**A desktop creation studio for generative models.**
 Generate and edit images, videos, 3D models, audio, textures and skyboxes — in one place, on your machine.
 
 [![Electron](https://img.shields.io/badge/Electron-43-2b2d30?logo=electron&logoColor=9feaf9)](https://www.electronjs.org)
@@ -14,12 +14,12 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 [![Tests](https://img.shields.io/badge/tests-9000%2B%20passing-2b2d30?logo=vitest&logoColor=6da95f)](#quality-bar)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-2b2d30)](#license)
 
-**[→ Presentation site](https://pasquelin.github.io/scenario/)**
+**[→ Presentation site](https://pasquelin.github.io/IAStudio/)**
 
 </div>
 
 <div align="center">
-  <img src="docs/assets/images/studio-3d.png" alt="Scenario Studio in the Modelling workspace: the model catalogue and the project explorer on the left, a generated car standing in the scene viewport in the centre, the scene outliner and the inspector on the right, and across the bottom the timeline with one row per light and object" width="900">
+  <img src="docs/assets/images/studio-3d.png" alt="IA Studio in the Modelling workspace: the model catalogue and the project explorer on the left, a generated car standing in the scene viewport in the centre, the scene outliner and the inspector on the right, and across the bottom the timeline with one row per light and object" width="900">
 </div>
 
 ---
@@ -61,7 +61,7 @@ to come.
 ## Getting started
 
 **Requirements** — Node **24** (the version in `.nvmrc`, which is also what CI runs), [pnpm](https://pnpm.io), macOS / Windows / Linux, and a
-Scenario API key and secret from [app.scenario.com](https://app.scenario.com).
+API key and secret from your generation provider.
 
 ```bash
 pnpm install
@@ -71,10 +71,6 @@ pnpm start
 
 Then open **Settings** (`⌘,` / `Ctrl+,`) and enter your API key and secret. They are encrypted
 with the OS keychain and never leave the main process.
-
-In development you can drop them in `secrets/.env` instead (`SCENARIO_API_KEY`,
-`SCENARIO_API_SECRET`) — read at runtime, never bundled, and always outranked by what you save in
-Settings. See [`secrets/README.md`](secrets/README.md).
 
 Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained:
 [Settings](docs/en/manual/14-settings.md) · how configuration is layered:
@@ -106,10 +102,10 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 ```
 src/
 ├── main/          Electron main process — the only side that holds secrets
-│   ├── scenario/    API client, model registry, job manager, credentials
+│   ├── provider/    API client, model registry, job manager, credentials
 │   ├── project/     project folders, manifest, SQLite catalogue
 │   ├── settings/    encrypted store and its handlers
-│   ├── assets/      asset ingestion and the scenario:// protocol
+│   ├── assets/      asset ingestion and the ia-studio:// protocol
 │   ├── media/       ffmpeg-backed media work
 │   ├── menu/        native menu, built from the shared registries
 │   └── window/      window lifecycle, navigation lockdown
@@ -178,20 +174,14 @@ LGPL-2.1 elsewhere. Its corresponding sources are attached to every release. The
 
 ---
 
-## Trademarks and independence
+## Independence
 
-This is an **independent project**, developed personally by Alban Pasquelin. It is **not
-published, endorsed, supported by, or affiliated with Scenario Labs**.
+This is an **independent project**, developed personally by Alban Pasquelin. Its name, its
+icon and its interface are its own, and it reproduces no third party's brand.
 
-“Scenario”, the Scenario API and any associated signs are trademarks of their respective
-owners. They are named here **descriptively and nominatively only**, to identify the
-third-party service this application can connect to — no other wording would allow it. No
-logo, typeface, brand asset or visual identity belonging to Scenario Labs is reproduced
-anywhere in this repository: every screenshot shows this application's own interface, and
-every icon is its own.
-
-The application **provides no generation service and resells none**. It connects to the
-public API using **the key you supply, under your own account**: your use of it is governed
-by Scenario Labs' own terms, which you accept directly with them, and the cost is yours.
+The application **provides no generation service and resells none**. It connects to a
+generation API using **the key you supply, under your own account**: your use of that
+service is governed by its own provider's terms, which you accept directly with them, and
+the cost is yours.
 
 © 2026 Alban Pasquelin.

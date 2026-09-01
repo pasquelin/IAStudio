@@ -112,7 +112,7 @@ describe('a sky on its way out as six faces', () => {
 
 describe('a material, whose losses are derived from the recipes rather than listed', () => {
   /**
-   * Read off the recipes of `textureExport` one by one. Spot assertions on a trait or two passed
+   * Read off the recipes of `materialExport` one by one. Spot assertions on a trait or two passed
    * happily while `channelsWrittenBy` dropped a channel from every target — this is what actually
    * fails when a recipe stops writing something.
    */

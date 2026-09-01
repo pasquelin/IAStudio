@@ -1,11 +1,15 @@
 {
+  "a11y": {
+    "namedValue": "{{value}} — {{name}}"
+  },
   "actions": {
     "generate": "Generate",
     "close": "Close",
     "removeTool": "Remove tool",
     "retry": "Try again",
     "retryHint": "Renders this area again, without restarting the studio",
-    "generateHint": "Starts the generation with the settings above; it is followed in the generations bar"
+    "generateHint": "Starts the generation with the settings above; it is followed in the generations bar",
+    "cancel": "Cancel"
   },
   "jobs": {
     "none": "No generation running.",
@@ -24,7 +28,8 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
-    "cancel": "Cancel job"
+    "cancel": "Cancel job",
+    "cancelRefused": "This service does not stop a generation once started: it runs to its end and is billed."
   },
   "tasks": {
     "running_one": "{{count, number}} task",
@@ -40,7 +45,8 @@
     "audio": "Audio",
     "image": "Image",
     "mesh": "3D model",
-    "bundle": "Edit with its media"
+    "bundle": "Edit with its media",
+    "weights": "Model weights"
   },
   "sorts": {
     "relevance": "Quality: highest first",
@@ -62,18 +68,19 @@
     "planRestricted": "This model is not included in your plan.",
     "notFound": "Resource not found.",
     "rateLimited": "Too many requests. Retrying…",
-    "server": "The Scenario service is temporarily unavailable.",
-    "network": "Cannot reach Scenario. Check your connection.",
+    "server": "The generation service is temporarily unavailable.",
+    "network": "The connection was interrupted. Check the network and try again.",
     "unexpected": "An unexpected error occurred.",
     "invalidValue": "Invalid value.",
     "rejected": "The generation failed.",
+    "incompleteModel": "The model files are incomplete. Reinstall the model, then run it again.",
     "storage": "Could not save the result to disk.",
     "panelCrashed": "This panel ran into an error.",
     "windowCrashed": "The application ran into an error."
   },
   "licences": {
     "title": "Licences",
-    "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
+    "intro": "IA Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
     "sources": "Corresponding sources:",
     "sourcesUnmodified": "Corresponding sources, unmodified:",
     "bundled": "shipped with the application",

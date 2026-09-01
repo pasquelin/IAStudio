@@ -31,18 +31,21 @@ Elle n’affiche qu’une chose à la fois :
 Tant que le studio lit vos projets, elle reste muette plutôt que d’annoncer « Tout est prêt »
 puis de se corriger.
 
-### Les trois bandes
+### Les quatre bandes
 
-Le centre empile trois bandes, dans cet ordre :
+Le centre empile quatre bandes, dans cet ordre :
 
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
 | **Où vous en étiez** | la bannière : reprendre, connecter, ou créer | rien |
 | **Outils** | ce que le studio sait commencer, et de quoi créer ou ouvrir un projet | rien |
-| **Explorer** | ce que tout le monde a publié, par type | une clé API |
+| **Vos modèles** | ce que ce studio sait faire tourner, et avec quoi | rien |
+| **Ce qui bouge** | les modèles qui montent et les articles publiés au dehors | le réglage, coché par défaut |
 
-**Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
-**Explorer** n’existe pas sur cet écran.
+**Aucune des quatre n’exige plus de clé API.** La règle n’a pas changé — une bande à qui il manque
+quelque chose n’est pas grisée, elle n’est pas là — mais elle n’a plus de cas : le fil de ce que
+tout le monde publiait tenait la troisième place jusqu’ici, et il fallait une clé API pour en voir
+une seule vignette.
 
 **Outils** liste les espaces dans le même ordre que la barre des espaces, avec **Nouveau projet**,
 **Ouvrir un projet** et **Réglages** à côté. C’est la bande qui parle encore sur une machine sans
@@ -50,17 +53,79 @@ clé, sans projet et sans historique.
 
 Tout le reste de l’accueil est un panneau, logé dans les deux colonnes.
 
-### Explorer, le fil sans fin
+### Vos modèles, ce que le studio sait faire tourner
 
-Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types que la
-bibliothèque distante sait rendre, en onglets. Pas d’onglet « tout », et **pas d’onglet
-Animation** : le studio en connaît un septième type, que le fil ne sait pas servir.
+Elle répond à la question qu’on se pose au deuxième lancement : **qu’est-ce qui est installé,
+qu’est-ce qui tourne, et qu’est-ce qui manque.** Elle se lit de haut en bas, du verdict au détail.
 
-- **il se charge en descendant** : le fil pagine tant que vous scrollez ;
-- **il reste en bas de page**, et ne se déplace pas ;
-- **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre.
+**En tête, où vous en êtes** : « 5 opérations sur 23 ont un modèle », une barre, puis une ou deux lignes de
+conseil. Les conseils sont classés par ce qu’ils COÛTENT et non par ce qu’ils rapportent — choisir
+parmi ce qui est déjà sur le disque ne coûte rien, installer coûte des gigaoctets, une clé coûte de
+l’argent. On ne vous propose donc jamais de dépenser avant de vous avoir dit que vous aviez déjà la
+réponse.
 
-C’est la seule bande qui puisse être masquée.
+**Puis deux colonnes**, côte à côte quand le centre est assez large et l’une sous l’autre sinon.
+C’est la largeur du CENTRE qui décide, pas celle de la fenêtre : ouvrir un panneau à gauche
+resserre la bande, et elle repasse sur une colonne.
+
+**À gauche, ce dont vous disposez** — une source par ligne. Le nom et son bouton partagent la
+première ligne, la lecture est sous les deux : ce qui agit sur une source est à côté d’elle, pas à
+l’autre bout de l’écran.
+
+| Ligne | Ce qu’elle dit | Le bouton |
+|---|---|---|
+| **Sur cet ordinateur** | combien de modèles sont installés, ce qu’ils pèsent, combien sont chargés en mémoire | **Gérer** |
+| **Ollama** | s’il est là, s’il répond, et les modèles qu’il a listés | **Installer** ou **Choisir** |
+| **En ligne** | les comptes dont une clé est renseignée, nommés un par un | **Ajouter une clé** ou **Gérer les clés** |
+| **Machine** | mémoire vive, puce, mémoire vidéo, disque — chaque chiffre nomme son sujet | aucun : elle rapporte, et rien ici n’agit dessus |
+
+**Les deux colonnes s’arrêtent où leur contenu s’arrête**, sans être étirées l’une sur l’autre :
+une carte tirée à la hauteur de sa voisine se lit comme une carte à qui il manque quelque chose.
+
+**À droite, vos espaces** — une ligne par famille, une jauge en points, et la fraction servie. Un
+espace qui n’a qu’une opération nomme directement ce qui la sert. Un filet ferme la liste avant
+l’Assistant et la Dictée : ils n’appartiennent à aucun espace.
+
+**« Opération » est le mot de la génération**, pas un mot de plus : c’est ce que le panneau de
+génération appelle déjà « Opération » — Texte vers image, Retouche interne, Squelettage. Une
+famille en tient plusieurs, et un modèle peut en servir plusieurs à la fois.
+
+**Dessous, ce qu’un seul téléchargement couvre.** C’est la lecture que le gestionnaire ne donne
+pas d’un coup d’œil : le catalogue tient vingt-cinq modèles pour dix-neuf opérations, et ce qui les
+sépare n’est pas la qualité. Un modèle d’image qui sait aussi les matières répond à six opérations
+pour quatre gigaoctets là où un autre en sert un pour cent trente-trois. Les familles qu’il
+traverse sont nommées, pas comptées. Ce que la machine ne peut pas tenir reste affiché, marqué
+**hors de portée** — le cacher ferait paraître le catalogue plus petit qu’il n’est.
+
+**Rien ne s’installe depuis cette bande** : chaque bouton ouvre la section des réglages où le
+geste se fait — voir [Les modèles](05-modeles.md).
+
+**Elle parle sur une machine vide**, et c’est la moitié de son intérêt : sans clé et sans modèle,
+elle le dit, avec le chemin pour y remédier.
+
+### Ce qui bouge, hors du studio
+
+Ce que les autres publient — **les modèles qui montent** sur Hugging Face, et **les articles**
+parus là-bas. Les puces au-dessus de la bande filtrent : Image, Vidéo, 3D, Audio, ou Articles. Une
+seule catégorie s’affiche à la fois, et c’est une seule requête.
+
+**Pas de puce Matière ni Ciel**, et ce n’est pas un oubli : rien ne publie ces deux-là comme une
+catégorie à part — le studio les sert avec des modèles d’image — donc une puce pour l’une d’elles
+répéterait la liste Image sous un autre nom.
+
+**Huit lignes, et rien de plus vieux qu’un mois.** Le flux d’articles en porte cinq cents ; une
+bande d’accueil n’est pas un lecteur de flux. Au-delà d’un mois ce n’est plus une actualité, c’est
+de l’histoire.
+
+**Un clic ouvre la page dans votre navigateur.** Rien n’est téléchargé, rien n’est installé : ce
+sont les modèles et les articles de quelqu’un d’autre.
+
+> **C’est le seul appel sortant du studio pour autre chose qu’un modèle ou une génération.** Il va
+> sur `huggingface.co`, l’hôte d’où viennent déjà tous les poids du catalogue, donc personne
+> n’apprend rien de neuf. **Réglages ▸ Général ▸ Actualités des modèles** le coupe ; la bande
+> reste alors, et dit qu’elle est coupée.
+
+**Les deux dernières bandes peuvent être masquées** ; les deux premières sont épinglées.
 
 ### Cliquer une vignette l’ouvre
 
@@ -71,21 +136,17 @@ pas « ouvrir » est une action secondaire, révélée au survol dans le coin de
 chaque création, rouvre le formulaire déjà rempli — modèle, prompt et réglages sont gardés à côté
 de l’asset.
 
-**Une exception : un asset de la bibliothèque que vous n’avez pas encore rapatrié.** Le clic le
-**récupère**, et le bouton le dit ; une fois descendu, il s’ouvre comme les autres. Rien n’est
-téléchargé sans que vous l’ayez demandé. Sans projet ouvert, ou pendant un transfert, la vignette
-ne répond pas.
-
-C’est là, et nulle part ailleurs, qu’on rapatrie ; l’étagère, elle, sait envoyer — voir
-[Les assets](07-assets.md).
+**Rapatrier un asset distant ne se fait plus depuis cet écran** : le panneau qui listait ce que
+votre compte détient en ligne a quitté l’accueil. Le geste vit dans le panneau **Bibliothèque**, au clic
+droit sur une vignette de la bibliothèque — voir [Les assets](07-assets.md).
 
 ### Ranger la page
 
 **Masquer cette section**, au survol d’un titre de bande. Les sections masquées sont comptées en
 bas de page — « 1 section masquée » — avec un bouton **Les réafficher**.
 
-Seul **Explorer** porte ce bouton : **Où vous en étiez** et **Outils** sont épinglées, et c’est ce
-qui garantit que cet écran n’est jamais vide.
+**Vos modèles** et **Ce qui bouge** portent ce bouton ; **Où vous en étiez** et **Outils** sont
+épinglées, et c’est ce qui garantit que cet écran n’est jamais vide.
 
 ### La colonne de gauche
 
@@ -115,19 +176,14 @@ d’emploi est au chapitre
 
 ### La colonne de droite
 
-| Panneau | Moitié | Ce qu’il montre | Il faut |
-|---|---|---|---|
-| **Votre bibliothèque** | 1re | ce que votre compte détient en ligne | une clé API |
+**L’accueil n’en a pas.** Ce n’est pas un oubli : la colonne de droite est, dans chaque espace,
+celle de ce qui agit sur le document qu’on a devant soi, et l’accueil n’en ouvre aucun. Le seul
+panneau qui y avait tenu listait ce que votre compte détient en ligne ; il a quitté l’écran, et ce
+qu’il disait de vos moyens est dit par la bande **Vos modèles**, en pleine largeur.
 
-**« Il faut » ne veut pas dire la même chose que pour les bandes.** Une bande à qui il manque
-quelque chose disparaît ; **un panneau reste et dit ce qui lui manque**. Sans clé, *Votre
-bibliothèque* dit qu’elle est vide **ou** qu’aucune clé n’est renseignée, sans trancher — et si
-le serveur refuse, elle offre de **réessayer**.
-
-**Rien n’y est gardé.** La bibliothèque est relue à chaque visite, et les vignettes sont des
-adresses signées qui expirent ; les retenir ferait un panneau d’images cassées quinze jours plus
-tard, sans rien pour l’expliquer. Changer de clé la relit aussi : une autre clé est une autre
-bibliothèque.
+**« Il faut » ne veut pas dire la même chose pour un panneau que pour une bande.** Une bande à qui
+il manque quelque chose disparaît ; **un panneau reste et dit ce qui lui manque** — c’est ce que
+font l’Explorateur et Git dans la colonne de gauche.
 
 > **L’accueil peut être coupé.** **Réglages ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. Ce que vous masquez se règle sur l’accueil
@@ -171,7 +227,7 @@ dessus sont **plus sombres**, avec des coins arrondis.
 
 Elle ne porte pas le nom du fichier, mais les **six espaces de travail** :
 
-**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes**
+**Image** · **Vidéo** · **3D** · **Audio** · **Matières** · **Skyboxes**
 
 Un clic change d’espace ; l’espace actif est plus clair que les autres. Changer d’espace fait
 trois choses :
@@ -187,7 +243,7 @@ Sur macOS, les trois pastilles restent à leur place habituelle, à gauche.
 | Geste | Comment |
 |---|---|
 | **Glisser** | attrapez un espace et lâchez-le sur un autre |
-| **Clavier** | `⌥←` / `⌥→` sur l’espace focalisé — les flèches nues parcourent la barre |
+| **Clavier** | `⌥⌘←` / `⌥⌘→` (`Ctrl+Page↑` / `Ctrl+Page↓`) sur l’espace focalisé — les flèches nues parcourent la barre |
 | **Clic droit** | **Déplacer à gauche** / **Déplacer à droite** |
 
 Les deux touches se remappent sous le contexte *Dans la barre des espaces* de
@@ -214,7 +270,7 @@ Un clic ouvre la liste de vos comptes, celui en cours étant coché, plus **Gér
 mène aux réglages. Sans aucun compte enregistré, le bouton va directement aux réglages.
 
 > **Changer de compte change la bibliothèque, pas votre travail.** Chaque clé API porte son propre
-> projet Scenario — ses modèles, ses assets, son crédit. Votre projet local est sur votre disque et
+> projet distant — ses modèles, ses assets, son crédit. Votre projet local est sur votre disque et
 > n’appartient à aucun compte.
 
 Les clés se tapent dans les réglages, et nulle part ailleurs.
@@ -236,7 +292,7 @@ dessous dans la seconde.
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif — à l’accueil, un **nouveau projet** |
 | *séparateur* | |
-| Icônes de la **moitié haute** | Modèles, Génération, puis Assets — ce que Scenario propose ; l’accueil y met **Vos projets** |
+| Icônes de la **moitié haute** | Modèles, Génération, puis Bibliothèque — ce que le fournisseur propose ; l’accueil y met **Vos projets** |
 | *séparateur* | |
 | Icônes de la **moitié basse** | l’Explorateur puis Git, à l’accueil comme dans les espaces |
 | Tout en bas | Timeline puis Historique, selon l’espace ; à l’accueil, l’Historique seul |
@@ -250,11 +306,11 @@ dessous dans la seconde.
 Les icônes de la colonne de droite — Calques, Scène, Lumières, Mailles, Animations, celles que
 l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
-En **Vidéo**, en **Audio**, en **Textures** et en **Skyboxes**, la moitié haute de cette colonne
+En **Vidéo**, en **Audio**, en **Matières** et en **Skyboxes**, la moitié haute de cette colonne
 est vide : ces quatre espaces n’y déclarent rien, et le rail ne porte alors que l’Inspecteur — ce
 qu’un ciel ou une matière EST y est décrit par l’inspecteur lui-même.
 
-À l’accueil, il n’en porte qu’une : **Votre bibliothèque**, et rien sous le trait.
+À l’accueil, il n’en porte aucune : cet écran n’a pas de colonne de droite.
 
 ### Le rail ne montre que ce que l’espace sait faire
 
@@ -311,9 +367,9 @@ garde sa taille.
 
 | Panneau | Zone | Moitié | Visible dans | Ce que c’est |
 |---|---|---|---|---|
-| **Modèles** | gauche | 1re | partout | le catalogue Scenario, filtré sur l’espace actif |
+| **Modèles** | gauche | 1re | partout | le catalogue distant, filtré sur l’espace actif |
 | **Génération** | gauche | 1re | partout *(si un modèle est choisi)* | le formulaire du modèle choisi |
-| **Assets** | gauche | 1re | partout | l’étagère : ce que le projet tient, ce que votre clé possède, ce qui est en train d’être produit |
+| **Bibliothèque** | gauche | 1re | partout | ce que votre clé possède en ligne, ce que la communauté publie, ce qui est en train d’être produit — **absente sans clé API** |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
@@ -332,12 +388,12 @@ garde sa taille.
 > seulement si ce projet est suivi par git** : sans projet, l’accueil est celui qu’il a toujours
 > été, deux colonnes et rien en bas.
 
-**La colonne de gauche se lit en deux temps : ce que Scenario propose, puis ce qui est déjà à
-vous.** En haut, **Modèles**, **Génération** et **Assets**, qui se relaient — un modèle à choisir,
-son formulaire, et l’étagère de ce qu’il produit. En bas, l’**Explorateur** et **Git**, qui se
+**La colonne de gauche se lit en deux temps : ce que le fournisseur propose, puis ce qui est déjà à
+vous.** En haut, **Modèles**, **Génération** et la **Bibliothèque**, qui se relaient — un modèle à
+choisir, son formulaire, et ce que le compte héberge. En bas, l’**Explorateur** et **Git**, qui se
 relaient aussi : le dossier de votre projet, et ce qui y a changé.
 
-La coupure entre les deux moitiés est ce qui rend le geste possible : l’étagère et l’Explorateur
+La coupure entre les deux moitiés est ce qui rend le geste possible : la Bibliothèque et l’Explorateur
 tiennent l’écran **ensemble**, et rien n’entre dans le projet sans passer de l’une à l’autre.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
@@ -361,7 +417,7 @@ l’espace y déclare. C’est ce que vous voyez à la première ouverture, et c
 Réinitialiser la disposition** rétablit.
 
 La moitié haute de gauche s’ouvre sur les **Modèles** dans tous les espaces — choisir un modèle
-est ce par quoi tout commence, et l’étagère se demande. La moitié basse s’ouvre sur
+est ce par quoi tout commence, et la Bibliothèque se demande. La moitié basse s’ouvre sur
 l’**Explorateur**, partout aussi.
 
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |
@@ -370,7 +426,7 @@ l’**Explorateur**, partout aussi.
 | **Vidéo** | *rien* | Timeline |
 | **3D** | Scène | Timeline |
 | **Audio** | *rien* | Timeline |
-| **Textures** | *rien* | Historique |
+| **Matières** | *rien* | Historique |
 | **Skyboxes** | *rien* | Historique |
 
 > **L’Historique demande un dossier suivi par git.** Tant que le suivi n’est pas en place — pas
@@ -512,18 +568,33 @@ Un échec fait apparaître une **bulle** dans le coin bas-droit, au-dessus de la
 
 Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre ailleurs.
 
+**Trois d’entre eux n’apparaissent que dans l’espace qui les emploie** : Outils et Image quand
+vous éditez une image, Ajouter quand vous éditez une scène. Un menu absent n’est pas un menu grisé
+— il n’est pas là.
+
 | Menu | Ce qu’on y trouve |
 |---|---|
-| **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Réglages… |
+| **IA Studio** | *macOS seulement* : À propos, **Réglages…**, et les commandes du système |
+| **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Enregistrer sous…, Importer ▸, Exporter ▸. **Hors macOS, Réglages… est ici** |
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
-| **Affichage** | Modules, Réinitialiser la disposition, Plein écran, zoom de l’image |
-| **Objets** | **Ajouter ▸ Maille**, **Ajouter ▸ Lumière** — dans l’espace Modélisation |
+| **Outils** | *espace Image* : les dix-huit outils de la barre, plus **Réduire** et **Agrandir le pinceau** |
+| **Image** | *espace Image* : les douze entrées décrites dans [l’espace Image](08-espace-image.md) |
+| **Ajouter** | *espace Modélisation* : **Maille ▸**, **Lumière ▸**, **Objet ▸** |
+| **Affichage** | **Assistant**, Modules ▸, Réinitialiser la disposition, Plein écran — plus ce que l’espace ajoute |
 | **Fenêtre** | les commandes de fenêtre du système |
-| **Aide** | À propos de Scenario Studio, Consommation…, Licences |
+| **Aide** | **Manuel utilisateur**, Consommation…, Licences. **Hors macOS, À propos est ici** |
 
 Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**.
 
 **Affichage ▸ Modules** ne liste que ce que l’espace peut ouvrir, comme le rail.
+
+**Affichage change de longueur selon ce que vous éditez.** Une image y ajoute les quatre zooms,
+les Règles, les Repères, Effacer les repères et le Magnétisme ; une scène y ajoute **Mode de
+rendu ▸**, **Point de vue ▸**, **Capturer la vue ▸**, puis la projection, les quatre vues, les
+arêtes en quads, les squelettes et le mode pose.
+
+> **Assistant est la seule porte de `⌘K`.** La commande est globale : elle est déclenchée par ce
+> menu et non par la fenêtre, donc sans cette ligne le raccourci n’atteindrait rien.
 
 ### La fenêtre de consommation
 
@@ -546,7 +617,7 @@ en pied de fenêtre pour les autres :
 
 - **le montant en euros est indicatif.** Calculé sur la grille publique des packs prépayés : un
   ordre de grandeur, pas une facture ;
-- **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
+- **il n’y a pas de solde.** L’API de génération n’expose que ce qui a été dépensé, jamais ce qui
   reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
 - **les jours et les heures de cet écran sont comptés en UTC**, comme l’API les date. La barre
   d’une journée ne suit donc pas forcément votre calendrier ;
@@ -560,7 +631,7 @@ le dit et renvoie aux réglages.
 
 ### La fenêtre des licences
 
-**Aide ▸ Licences** liste les logiciels que Scenario Studio embarque : nom, version, et nom court
+**Aide ▸ Licences** liste les logiciels qu’IA Studio embarque : nom, version, et nom court
 de la licence (`MIT`, `Apache-2.0`…). Cliquez une ligne : le **texte entier** se déplie, et le
 lien vers les sources s’affiche quand la licence l’exige.
 

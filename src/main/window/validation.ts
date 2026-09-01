@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import type { ContextMenuItem } from '@shared/domain/contextMenu'
 import { PATH_KINDS, type PathKind } from '@shared/domain/settingsRegistry'
-import { parseBase64 } from '@main/scenario/validation'
 import { pathSegment } from '@main/validation'
 
 // Throws rather than falling back: the value decides which native picker opens, and a renderer
@@ -21,11 +20,6 @@ export function parseStartIn(value: unknown): string | undefined {
 
 export function parseFileName(value: unknown): string {
   return pathSegment.parse(value)
-}
-
-/** The same rule the upload path applies: only the payload, never a data URL. */
-export function parseBase64Payload(value: unknown): string {
-  return parseBase64(value)
 }
 
 /**

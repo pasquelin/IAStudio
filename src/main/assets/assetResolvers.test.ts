@@ -9,10 +9,13 @@ const { createAssetResolvers } = await import('./assetResolvers')
 const { ASSET_HOST, POSTER_HOST, THUMB_HOST } = await import('@shared/domain/asset')
 const { FAVORITE_HOST } = await import('@shared/domain/favorite')
 const { TEMPLATE_HOST } = await import('@shared/domain/sceneTemplate')
+const { ANIMATION_HOST } = await import('@shared/domain/animationLibrary')
+const { MODEL_HOST } = await import('@shared/domain/localModel')
+const { TEXTURE_HOST } = await import('@shared/domain/checkerTexture')
 const { CATALOGUE_CLOSED } = await import('@main/project/catalogClient')
 const { NoProjectError } = await import('@main/project/store')
 
-const PROJECT = '/projects/My project.scenario'
+const PROJECT = '/projects/My project'
 
 const asset = (fields: Partial<Asset>): Asset => ({
   id: 'asset-1',
@@ -24,15 +27,22 @@ const asset = (fields: Partial<Asset>): Asset => ({
   ...fields,
 })
 
-const resolversReading = (findAsset: () => Promise<Asset | null>) =>
+type Deps = Parameters<typeof createAssetResolvers>[0]
+
+const hostsWith = (overrides: Partial<Deps> = {}) =>
   createAssetResolvers({
     projectPath: () => PROJECT,
-    findAsset,
+    findAsset: () => Promise.resolve(null),
     favouriteThumbnail: () => '/userData/favorites/favorite_1.png',
     thumbnailOf: () => Promise.resolve(null),
     bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
     bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
+    bundledModel: file => Promise.resolve(`/resources/models/${file}`),
+    bundledTexture: file => Promise.resolve(`/resources/textures/${file}`),
+    ...overrides,
   })
+
+const resolversReading = (findAsset: () => Promise<Asset | null>) => hostsWith({ findAsset })
 
 describe('what the asset scheme resolves', () => {
   it('serves the file a row names, and the still beside it, off the same identifier', async () => {
@@ -48,16 +58,9 @@ describe('what the asset scheme resolves', () => {
 
   it('serves nothing while no project is open, without asking the catalogue', async () => {
     const findAsset = vi.fn(() => Promise.resolve(asset({ path: 'assets/rush.mp4' })))
-    const resolvers = createAssetResolvers({
-      projectPath: () => null,
-      findAsset,
-      favouriteThumbnail: () => null,
-      thumbnailOf: () => Promise.resolve(null),
-      bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
-      bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
-    })
+    const hosts = hostsWith({ projectPath: () => null, findAsset })
 
-    await expect(resolvers[ASSET_HOST]?.('asset-1')).resolves.toBeNull()
+    await expect(hosts[ASSET_HOST]?.('asset-1')).resolves.toBeNull()
     expect(findAsset).not.toHaveBeenCalled()
   })
 
@@ -89,37 +92,28 @@ describe('what the asset scheme resolves', () => {
 
   // Kept outside every project, which is why no catalogue can answer for it.
   it('reads a favourite off the folder beside the settings, and a thumbnail off its cache', async () => {
-    const resolvers = createAssetResolvers({
-      projectPath: () => PROJECT,
-      findAsset: () => Promise.resolve(null),
-      favouriteThumbnail: () => '/userData/favorites/favorite_1.png',
+    const hosts = hostsWith({
       thumbnailOf: relative => Promise.resolve(`${PROJECT}/.index/thumbs/${relative}.png`),
-      bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
-      bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
     })
 
-    await expect(resolvers[FAVORITE_HOST]?.('favorite_1')).resolves.toBe(
+    await expect(hosts[FAVORITE_HOST]?.('favorite_1')).resolves.toBe(
       '/userData/favorites/favorite_1.png',
     )
-    await expect(resolvers[THUMB_HOST]?.('folder/file.png')).resolves.toBe(
+    await expect(hosts[THUMB_HOST]?.('folder/file.png')).resolves.toBe(
       `${PROJECT}/.index/thumbs/folder/file.png.png`,
     )
   })
 
-  // Shipped beside the app and common to every project, like the animations: the window asks
-  // for one before any project is open, when the new-document window is drawing its tiles.
-  it('serves a template still with no project open', async () => {
-    const resolvers = createAssetResolvers({
-      projectPath: () => null,
-      findAsset: () => Promise.resolve(null),
-      favouriteThumbnail: () => null,
-      thumbnailOf: () => Promise.resolve(null),
-      bundledAnimation: id => Promise.resolve(`/resources/animations/${id}`),
-      bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
-    })
+  // Shipped beside the app and common to every project: one is asked for before any project is
+  // open — the new-document window drawing its tiles, a sky judged in an empty studio.
+  it.each([
+    [TEMPLATE_HOST, 'basic.png', '/resources/templates/basic.png'],
+    [MODEL_HOST, 'text.png', '/resources/models/text.png'],
+    [ANIMATION_HOST, 'walk', '/resources/animations/walk'],
+    [TEXTURE_HOST, 'GridLarge.png', '/resources/textures/GridLarge.png'],
+  ])('serves %s with no project open', async (host, key, file) => {
+    const hosts = hostsWith({ projectPath: () => null })
 
-    await expect(resolvers[TEMPLATE_HOST]?.('basic.png')).resolves.toBe(
-      '/resources/templates/basic.png',
-    )
+    await expect(hosts[host]?.(key)).resolves.toBe(file)
   })
 })

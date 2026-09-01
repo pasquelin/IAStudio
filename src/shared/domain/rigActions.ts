@@ -1,5 +1,5 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
-import { TRACK_PROPERTIES } from './animation'
+import { DIRECT_PROPERTIES } from './animation'
 import { BODY_PARTS, HUMANOID_ROLES } from './humanoid'
 import { CLIP_SOURCES, CLIP_SPEED, MAX_CLIP_FADE, ROOT_MOTIONS } from './scene'
 
@@ -48,6 +48,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigState.title',
     descriptionKey: 'assistant.actions.rigState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -60,6 +61,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigFit.title',
     descriptionKey: 'assistant.actions.rigFit.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -68,6 +70,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigClear.title',
     descriptionKey: 'assistant.actions.rigClear.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -76,6 +79,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.rigHands.title',
     descriptionKey: 'assistant.actions.rigHands.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -86,6 +90,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneAdd.title',
     descriptionKey: 'assistant.actions.boneAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, { ...BONE, key: 'parent', labelKey: 'assistant.fields.parentBone' }],
   }),
@@ -94,6 +99,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneRemove.title',
     descriptionKey: 'assistant.actions.boneRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, BONE],
   }),
@@ -102,6 +108,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneRename.title',
     descriptionKey: 'assistant.actions.boneRename.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -116,6 +123,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.boneRole.title',
     descriptionKey: 'assistant.actions.boneRole.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -134,6 +142,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.ikAdd.title',
     descriptionKey: 'assistant.actions.ikAdd.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE, BONE],
   }),
@@ -142,6 +151,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.ikRemove.title',
     descriptionKey: 'assistant.actions.ikRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -157,6 +167,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationsList.title',
     descriptionKey: 'assistant.actions.animationsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [NODE],
   }),
@@ -165,10 +176,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
      * A block laid on the band, from any of the three sources. `assetId` names a clip of the
      * library and `clipName` one of the two others, so exactly one of them belongs to a call.
      */
-    name: 'animation.add',
-    titleKey: 'assistant.actions.animationAdd.title',
-    descriptionKey: 'assistant.actions.animationAdd.description',
+    name: 'animation.addBlock',
+    titleKey: 'assistant.actions.animationAddBlock.title',
+    descriptionKey: 'assistant.actions.animationAddBlock.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -184,10 +196,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'animation.remove',
-    titleKey: 'assistant.actions.animationRemove.title',
-    descriptionKey: 'assistant.actions.animationRemove.description',
+    name: 'animation.removeBlock',
+    titleKey: 'assistant.actions.animationRemoveBlock.title',
+    descriptionKey: 'assistant.actions.animationRemoveBlock.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -203,10 +216,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
      * INSIDE the clip, `startSeconds` where the block sits on the band. The two are three's clock
      * and the band's, and they are never handed to one another.
      */
-    name: 'animation.block',
-    titleKey: 'assistant.actions.animationBlock.title',
-    descriptionKey: 'assistant.actions.animationBlock.description',
+    name: 'animation.setBlockSettings',
+    titleKey: 'assistant.actions.animationSetBlockSettings.title',
+    descriptionKey: 'assistant.actions.animationSetBlockSettings.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       NODE,
@@ -261,10 +275,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'animation.settings',
-    titleKey: 'assistant.actions.animationSettings.title',
-    descriptionKey: 'assistant.actions.animationSettings.description',
+    name: 'animation.setBandLengthAndRate',
+    titleKey: 'assistant.actions.animationSetBandLengthAndRate.title',
+    descriptionKey: 'assistant.actions.animationSetBandLengthAndRate.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -284,6 +299,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.animationAutoKey.title',
     descriptionKey: 'assistant.actions.animationAutoKey.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [{ key: 'on', kind: 'boolean', labelKey: 'assistant.fields.autoKey', required: true }],
   }),
@@ -295,10 +311,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
      *
      * `property` narrows it to a single channel, which is what a client driving one axis wants.
      */
-    name: 'key.pose',
-    titleKey: 'assistant.actions.keyPose.title',
-    descriptionKey: 'assistant.actions.keyPose.description',
+    name: 'key.writePoseKeys',
+    titleKey: 'assistant.actions.keyWritePoseKeys.title',
+    descriptionKey: 'assistant.actions.keyWritePoseKeys.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       ...SUBJECT,
@@ -314,16 +331,17 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.trackProperty',
         required: false,
-        options: TRACK_PROPERTIES,
+        options: DIRECT_PROPERTIES,
       },
     ],
   }),
   action({
     // The counterpart, and it has to exist: a pose one cannot undo is a pose one is stuck with.
-    name: 'key.clear',
-    titleKey: 'assistant.actions.keyClear.title',
-    descriptionKey: 'assistant.actions.keyClear.description',
+    name: 'key.removeSubjectKeys',
+    titleKey: 'assistant.actions.keyRemoveSubjectKeys.title',
+    descriptionKey: 'assistant.actions.keyRemoveSubjectKeys.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       ...SUBJECT,
@@ -338,11 +356,12 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     // The band's toolbar button: every channel of every subject at once, on the channels that
-    // already exist. It opens none — that is `key.pose`'s errand, one subject at a time.
-    name: 'key.all',
-    titleKey: 'assistant.actions.keyAll.title',
-    descriptionKey: 'assistant.actions.keyAll.description',
+    // already exist. It opens none — that is `key.writePoseKeys`'s errand, one subject at a time.
+    name: 'key.writeKeysOnOpenChannels',
+    titleKey: 'assistant.actions.keyWriteKeysOnOpenChannels.title',
+    descriptionKey: 'assistant.actions.keyWriteKeysOnOpenChannels.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -359,6 +378,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.keyMove.title',
     descriptionKey: 'assistant.actions.keyMove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       TRACK,
@@ -385,6 +405,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.channelRemove.title',
     descriptionKey: 'assistant.actions.channelRemove.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [TRACK],
   }),
@@ -393,10 +414,11 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
      * How one WORKS on a channel rather than what one made — muted, solo, locked — so it goes
      * through the store without an entry in the history, exactly as a montage's flags do.
      */
-    name: 'channel.flags',
-    titleKey: 'assistant.actions.channelFlags.title',
-    descriptionKey: 'assistant.actions.channelFlags.description',
+    name: 'channel.setMuteSoloLock',
+    titleKey: 'assistant.actions.channelSetMuteSoloLock.title',
+    descriptionKey: 'assistant.actions.channelSetMuteSoloLock.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       TRACK,

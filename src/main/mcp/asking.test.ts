@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AssistantCall } from '@shared/domain/assistant'
 import type { AssistantActionRequest } from '@shared/ipc'
 import { createRemoteActions } from './asking'
 
 const call: AssistantCall = { action: 'workspace.open', input: { workspace: '3d' } }
+
+/** The short wait, quoted rather than imported: `asking.ts` keeps it to itself. */
+const READ_WAIT_MS = 2_000
 
 /** A window that always takes the request, and hands back what it was asked under. */
 function windowThatAnswers() {
@@ -44,6 +47,43 @@ describe('asking the window in front to act', () => {
     const actions = createRemoteActions({ send: () => true, timeoutMs: 1 })
 
     await expect(actions.run(call)).resolves.toEqual({ ok: false, refusal: 'timedOut' })
+  })
+
+  /**
+   * 🛑 Derived from what the call ENGAGES, not from who is calling. The assistant's state read
+   * sits in front of every sentence typed, and a `documents.list` from an MCP client hits a
+   * window that may be reloading — neither raises a question, so neither waits two minutes for
+   * a person to read one.
+   */
+  it('waits far less for a call that asks nobody', async () => {
+    const actions = createRemoteActions({ send: () => true })
+    const started = Date.now()
+
+    // `documents.list` commits nothing, so the cap is the read one and not the two minutes.
+    await expect(actions.run({ action: 'documents.list', input: {} })).resolves.toEqual({
+      ok: false,
+      refusal: 'timedOut',
+    })
+    expect(Date.now() - started).toBeLessThan(10_000)
+  }, 15_000)
+
+  /**
+   * 🛑 A lot engages nothing OF ITS OWN and carries up to fifty calls that each may. On the two
+   * seconds a reading call gets, the client was answered `timedOut` while the lot still ran.
+   */
+  it('gives a lot the long wait, though the lot itself engages nothing', async () => {
+    vi.useFakeTimers()
+    const actions = createRemoteActions({ send: () => true })
+    const lot = actions.run({ action: 'studio.batch', input: { calls: '[]' } })
+
+    await vi.advanceTimersByTimeAsync(READ_WAIT_MS * 2)
+    await expect(Promise.race([lot, Promise.resolve('still waiting')])).resolves.toBe(
+      'still waiting',
+    )
+
+    await vi.advanceTimersByTimeAsync(120_000)
+    await expect(lot).resolves.toEqual({ ok: false, refusal: 'timedOut' })
+    vi.useRealTimers()
   })
 
   // An answer that arrives after the wait ended, or a window answering twice.

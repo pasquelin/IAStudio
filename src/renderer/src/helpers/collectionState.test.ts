@@ -119,4 +119,25 @@ describe('local filtering', () => {
 
     expect(filterLocally(ROWS, state, FILTER)).toHaveLength(3)
   })
+
+  /**
+   * The same search the project folder answers, and the reason it had to change here too: two
+   * fields reading « Rechercher » in one studio cannot answer differently. An asset carries the
+   * prompt that made it as its name, so the words a person types sit scattered through it.
+   */
+  it('matches by words in any order, not by a run of characters', () => {
+    const named: Row[] = [
+      {
+        id: 'd',
+        name: 'a beautiful sailing ship, sailboat, on the open sea, green',
+        capabilities: [],
+      },
+    ]
+    const found = (search: string) =>
+      filterLocally(named, { ...DEFAULT_COLLECTION_STATE, search }, FILTER)
+
+    expect(found('green sailboat')).toHaveLength(1)
+    expect(found('sailboat green')).toHaveLength(1)
+    expect(found('green submarine')).toHaveLength(0)
+  })
 })

@@ -13,6 +13,8 @@ type Signature = {
   at: number
   magic: readonly number[]
   domain: SourceDomain
+  /** What the bytes say the file is CALLED, with its dot — for the formats a name may lie about. */
+  extension?: string
 }
 
 const ascii = (text: string): number[] => [...text].map(character => character.charCodeAt(0))
@@ -22,11 +24,11 @@ const ascii = (text: string): number[] => [...text].map(character => character.c
  * before the generic `ftyp` that every one of them carries.
  */
 const SIGNATURES: readonly Signature[] = [
-  { at: 0, magic: [0x89, 0x50, 0x4e, 0x47], domain: 'image' },
-  { at: 0, magic: [0xff, 0xd8, 0xff], domain: 'image' },
-  { at: 0, magic: ascii('GIF8'), domain: 'image' },
-  { at: 0, magic: ascii('<svg'), domain: 'image' },
-  { at: 0, magic: ascii('glTF'), domain: 'mesh' },
+  { at: 0, magic: [0x89, 0x50, 0x4e, 0x47], domain: 'image', extension: '.png' },
+  { at: 0, magic: [0xff, 0xd8, 0xff], domain: 'image', extension: '.jpg' },
+  { at: 0, magic: ascii('GIF8'), domain: 'image', extension: '.gif' },
+  { at: 0, magic: ascii('<svg'), domain: 'image', extension: '.svg' },
+  { at: 0, magic: ascii('glTF'), domain: 'mesh', extension: '.glb' },
   { at: 0, magic: ascii('fLaC'), domain: 'audio' },
   { at: 0, magic: ascii('OggS'), domain: 'audio' },
   { at: 0, magic: ascii('ID3'), domain: 'audio' },
@@ -34,7 +36,7 @@ const SIGNATURES: readonly Signature[] = [
   { at: 0, magic: [0xff, 0xf3], domain: 'audio' },
   { at: 0, magic: [0xff, 0xf2], domain: 'audio' },
   { at: 0, magic: [0x1a, 0x45, 0xdf, 0xa3], domain: 'video' },
-  { at: 8, magic: ascii('WEBP'), domain: 'image' },
+  { at: 8, magic: ascii('WEBP'), domain: 'image', extension: '.webp' },
   { at: 8, magic: ascii('WAVE'), domain: 'audio' },
   { at: 8, magic: ascii('avif'), domain: 'image' },
   { at: 8, magic: ascii('avis'), domain: 'image' },
@@ -54,4 +56,15 @@ function matches(bytes: Uint8Array, { at, magic }: Signature): boolean {
  */
 export function domainFromSignature(bytes: Uint8Array): SourceDomain | null {
   return SIGNATURES.find(signature => matches(bytes, signature))?.domain ?? null
+}
+
+/**
+ * What the bytes say the file is CALLED, or `null` where the table names no suffix for them.
+ *
+ * 🛑 For a name that comes from a SERVICE rather than from the person: measured 2026-08-31, a
+ * cloud answered a picture at `…/generated_image.png` whose bytes are a JPEG. A suffix the user
+ * wrote still wins — see `domainFromSignature` — but one a server invented does not.
+ */
+export function extensionFromSignature(bytes: Uint8Array): string | null {
+  return SIGNATURES.find(signature => matches(bytes, signature))?.extension ?? null
 }

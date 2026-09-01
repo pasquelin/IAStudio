@@ -1,5 +1,6 @@
+import type { DocumentKind } from './document'
 import type { DisplayMode } from './scene'
-import type { Signature } from './shortcut'
+import { reservedByPlatform, type Signature } from './shortcut'
 import { HOME_SURFACE, type ToolSurface } from './tool'
 import type { WorkspaceId } from './workspace'
 
@@ -27,7 +28,8 @@ export type CommandScope =
   | 'canvas'
   | 'skybox'
   | 'audio'
-  | 'texture'
+  | 'material'
+  | 'gui'
 
 export type CommandId =
   | 'project.new'
@@ -49,6 +51,7 @@ export type CommandId =
   | 'explorer.trash'
   | 'explorer.undo'
   | 'explorer.redo'
+  | 'scene.navigate'
   | 'scene.select'
   | 'scene.translate'
   | 'scene.rotate'
@@ -60,6 +63,12 @@ export type CommandId =
   | 'scene.add'
   | 'scene.addToSheet'
   | 'scene.removeFromSheet'
+  | 'scene.negate'
+  | 'scene.carve'
+  | 'scene.weld'
+  | 'scene.intersect'
+  | 'scene.separate'
+  | 'scene.invertCarve'
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.copy'
@@ -150,8 +159,10 @@ export type CommandId =
   | 'skybox.redo'
   | 'audio.undo'
   | 'audio.redo'
-  | 'texture.undo'
-  | 'texture.redo'
+  | 'material.undo'
+  | 'material.redo'
+  | 'gui.undo'
+  | 'gui.redo'
 
 /**
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
@@ -207,6 +218,12 @@ export type CommandDescriptor = {
    */
   defaultBinding: Signature | null
   /**
+   * 🛑 It raises a system dialogue, so `command.runStudioCommand` refuses it: the assistant cannot fill a
+   * native modal, cannot read what was chosen in it, and re-ran the command on its next round —
+   * a second Finder over the first. The action taking a path is what does this deliberately.
+   */
+  raisesDialog?: true
+  /**
    * Held rather than tapped: it reports pressed and released instead of firing once.
    *
    * A held command is heard by the window even when its scope is `global`, which is the one
@@ -228,6 +245,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'project.new',
     scope: 'global',
+    raisesDialog: true,
     titleKey: 'commands.projectNew.title',
     helpKey: 'commands.projectNew.help',
     defaultBinding: 'Meta+KeyN',
@@ -235,6 +253,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'project.open',
     scope: 'global',
+    raisesDialog: true,
     titleKey: 'commands.projectOpen.title',
     helpKey: 'commands.projectOpen.help',
     defaultBinding: 'Meta+KeyO',
@@ -258,6 +277,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'montage.import',
     scope: 'global',
+    raisesDialog: true,
     titleKey: 'commands.montageImport.title',
     helpKey: 'commands.montageImport.help',
     defaultBinding: null,
@@ -309,14 +329,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'spaces',
     titleKey: 'commands.spacesMoveLeft.title',
     helpKey: 'commands.spacesMoveLeft.help',
-    defaultBinding: 'Alt+ArrowLeft',
+    defaultBinding: 'Alt+Meta+ArrowLeft',
   }),
   command({
     id: 'spaces.moveRight',
     scope: 'spaces',
     titleKey: 'commands.spacesMoveRight.title',
     helpKey: 'commands.spacesMoveRight.help',
-    defaultBinding: 'Alt+ArrowRight',
+    defaultBinding: 'Alt+Meta+ArrowRight',
   }),
 
   /**
@@ -384,6 +404,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
 
+  // `Backquote` as in Blender's walk mode. It is the one key near the letters that no tool and
+  // no direction claims, which matters here: this mode hands the letters to the camera.
+  command({
+    id: 'scene.navigate',
+    scope: 'scene',
+    titleKey: 'commands.sceneNavigate.title',
+    helpKey: 'commands.sceneNavigate.help',
+    defaultBinding: 'Backquote',
+  }),
   // `KeyV` as in every editor that has a pointer tool. Not `KeyQ` or `KeyW`, which fly the
   // camera: `useShortcuts` reads both tables on the same keydown, so one key would do both.
   command({
@@ -548,6 +577,52 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: null,
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
+  // The verbs of a solid. No default key: nothing in a 3D package claims one for these, and
+  // reserving a letter here would take it from a tool a hand reaches for far more often.
+  // `N` as in négatif and in negate, `I` as in inverser and in invert — the two the hand reaches
+  // for while modelling, and the only two letters this scope had left that say what they do.
+  command({
+    id: 'scene.negate',
+    scope: 'scene',
+    titleKey: 'commands.sceneNegate.title',
+    helpKey: 'commands.sceneNegate.help',
+    defaultBinding: 'KeyN',
+  }),
+  command({
+    id: 'scene.carve',
+    scope: 'scene',
+    titleKey: 'commands.sceneCarve.title',
+    helpKey: 'commands.sceneCarve.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.weld',
+    scope: 'scene',
+    titleKey: 'commands.sceneWeld.title',
+    helpKey: 'commands.sceneWeld.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.intersect',
+    scope: 'scene',
+    titleKey: 'commands.sceneIntersect.title',
+    helpKey: 'commands.sceneIntersect.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.separate',
+    scope: 'scene',
+    titleKey: 'commands.sceneSeparate.title',
+    helpKey: 'commands.sceneSeparate.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.invertCarve',
+    scope: 'scene',
+    titleKey: 'commands.sceneInvertCarve.title',
+    helpKey: 'commands.sceneInvertCarve.help',
+    defaultBinding: 'KeyI',
+  }),
   command({
     id: 'scene.group',
     scope: 'scene',
@@ -928,6 +1003,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   command({
     id: 'canvas.export',
     scope: 'canvas',
+    raisesDialog: true,
     titleKey: 'commands.canvasExport.title',
     helpKey: 'commands.canvasExport.help',
     defaultBinding: 'Shift+Meta+KeyE',
@@ -936,6 +1012,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     /** The stack rather than the flatten — no default binding, ⇧⌘E being the flatten's. */
     id: 'canvas.exportLayered',
     scope: 'canvas',
+    raisesDialog: true,
     titleKey: 'commands.canvasExportLayered.title',
     helpKey: 'commands.canvasExportLayered.help',
     defaultBinding: null,
@@ -977,7 +1054,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasToolCrop.title',
     helpKey: 'commands.canvasToolCrop.help',
-    defaultBinding: 'KeyF',
+    defaultBinding: 'KeyC',
   }),
   command({
     id: 'canvas.toolSelectRectangle',
@@ -1005,14 +1082,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasToolShapeRectangle.title',
     helpKey: 'commands.canvasToolShapeRectangle.help',
-    defaultBinding: 'KeyR',
+    defaultBinding: 'KeyU',
   }),
   command({
     id: 'canvas.toolShapeLine',
     scope: 'canvas',
     titleKey: 'commands.canvasToolShapeLine.title',
     helpKey: 'commands.canvasToolShapeLine.help',
-    defaultBinding: 'Shift+KeyR',
+    defaultBinding: 'Shift+KeyU',
   }),
   command({
     id: 'canvas.toolShapeArrow',
@@ -1047,14 +1124,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     scope: 'canvas',
     titleKey: 'commands.canvasToolBrush.title',
     helpKey: 'commands.canvasToolBrush.help',
-    defaultBinding: 'KeyP',
+    defaultBinding: 'KeyB',
   }),
   command({
     id: 'canvas.toolPencil',
     scope: 'canvas',
     titleKey: 'commands.canvasToolPencil.title',
     helpKey: 'commands.canvasToolPencil.help',
-    defaultBinding: 'Shift+KeyP',
+    defaultBinding: 'Shift+KeyB',
   }),
   command({
     id: 'canvas.toolText',
@@ -1160,17 +1237,34 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   }),
 
   // The other one, and worse: the manual already promised ⌘Z on a style applied to a material
-  // (`docs/fr/manuel/12-espace-textures.md`) while nothing at all could reach that history.
+  // (`docs/fr/manuel/12-espace-matieres.md`) while nothing at all could reach that history.
   command({
-    id: 'texture.undo',
-    scope: 'texture',
+    id: 'material.undo',
+    scope: 'material',
     titleKey: 'commands.undo.title',
     helpKey: 'commands.undo.help',
     defaultBinding: 'Meta+KeyZ',
   }),
   command({
-    id: 'texture.redo',
-    scope: 'texture',
+    id: 'material.redo',
+    scope: 'material',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+
+  // The 3D space holds two kinds, so ⌘Z has to follow the DOCUMENT in front rather than the
+  // space — `scopeOfDocument` below is what tells a scene's history from an interface's.
+  command({
+    id: 'gui.undo',
+    scope: 'gui',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'gui.redo',
+    scope: 'gui',
     titleKey: 'commands.redo.title',
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
@@ -1186,7 +1280,8 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'canvas',
   'skybox',
   'audio',
-  'texture',
+  'material',
+  'gui',
 ]
 
 /**
@@ -1198,7 +1293,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
  * **Total, not partial, and that is the guard.** A workspace whose store holds a history and is
  * missing here reaches nothing: the native role keeps the accelerator, ⌘Z never reaches the
  * window, and the failure is silent. It cost Skyboxes once, Audio until its bar
- * was asked to stop drawing the only undo it had, and Textures for as long as the manual
+ * was asked to stop drawing the only undo it had, and Materials for as long as the manual
  * promised a key nothing answered. Written as a full `Record`, the next workspace added does
  * not COMPILE until someone answers the question for it — `Partial` let all four slip through.
  *
@@ -1212,15 +1307,46 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   video: 'sequence',
   skyboxes: 'skybox',
   audio: 'audio',
-  textures: 'texture',
+  materials: 'material',
+  // Monaco holds its own undo stack, and it is the one a cursor in a script expects: routing ⌘Z
+  // through the studio's history would give back a whole file where a keystroke was undone.
+  code: null,
+}
+
+/**
+ * 🛑 The scope a KIND edits through, read before the space. `null` inherits the space's, which is
+ * right for every kind a space opens alone — the 3D space opens both a scene and the interfaces
+ * shown over it, and ⌘Z on an interface would otherwise pop the scene's history.
+ *
+ * Total, not partial, and that is the guard: the next kind added does not COMPILE until someone
+ * answers for it, the way `SCOPE_BY_WORKSPACE` above is total for the same reason.
+ */
+const SCOPE_BY_KIND: Record<DocumentKind, CommandScope | null> = {
+  image: null,
+  scene: null,
+  sequence: null,
+  audio: null,
+  skybox: null,
+  material: null,
+  script: null,
+  gui: 'gui',
 }
 
 /**
  * The surface a workspace edits through, or `null` where nothing is undoable — which the home
  * is: it covers the spaces rather than editing one, so it holds no history of its own.
  */
-export function scopeOfWorkspace(surface: ToolSurface | null): CommandScope | null {
-  return surface && surface !== HOME_SURFACE ? SCOPE_BY_WORKSPACE[surface] : null
+
+export function scopeOfWorkspace(
+  surface: ToolSurface | null,
+  kind?: DocumentKind | null,
+): CommandScope | null {
+  // The surface FIRST: the home covers the spaces and edits nothing, and `activeId` is not
+  // cleared on the way there — so the last interface opened would otherwise arm ⌘Z over a
+  // screen holding no editor at all.
+  if (!surface || surface === HOME_SURFACE) return null
+
+  return (kind && SCOPE_BY_KIND[kind]) ?? SCOPE_BY_WORKSPACE[surface]
 }
 
 /** The command of that scope, when it declares one. Every editing scope declares undo and redo. */
@@ -1247,6 +1373,28 @@ export function commandsIn(scope: CommandScope): readonly CommandDescriptor[] {
 
 /** What the user remapped. Only the commands they actually changed appear here. */
 export type BindingOverrides = Partial<Record<CommandId, Signature>>
+
+/**
+ * What ships away from macOS, where the desktop's own convention differs. Read UNDER the user's
+ * remaps, so remapping one still wins and resetting it lands back on the platform's key.
+ *
+ * Merged at the two places bindings are read — `stores/bindings.ts` and `buildMenu` — rather
+ * than passed to `bindingOf`, which a dozen callers ask without knowing which system they are on.
+ */
+const AWAY_FROM_MAC: BindingOverrides = {
+  // F11 on Windows and on every Linux desktop; ⌃⌘F belongs to macOS alone.
+  'window.fullScreen': 'F11',
+  // Ctrl+PageUp/PageDown steps between tabs on Windows and Linux, where macOS uses ⌘⌥←/→.
+  'spaces.moveLeft': 'Meta+PageUp',
+  'spaces.moveRight': 'Meta+PageDown',
+}
+
+const ON_MAC: BindingOverrides = {}
+
+/** The bindings this system ships, before anything the user remapped. Never a fresh object. */
+export function platformDefaults(isMac: boolean): BindingOverrides {
+  return isMac ? ON_MAC : AWAY_FROM_MAC
+}
 
 /**
  * The key a command answers to. Resolved on demand rather than kept as a full table: a command
@@ -1328,7 +1476,11 @@ export function conflicts(overrides: BindingOverrides): readonly CommandId[] {
     bySignature.set(signature, [...(bySignature.get(signature) ?? []), descriptor])
   }
 
-  const clashing: CommandId[] = []
+  // Reported alongside the clashes between two commands: bound to one of these, a command is
+  // just as unreachable, and the screen has one place to say so.
+  const clashing: CommandId[] = COMMAND_REGISTRY.filter(descriptor =>
+    reservedByPlatform(bindingOf(descriptor.id, overrides)),
+  ).map(descriptor => descriptor.id)
 
   for (const sharing of bySignature.values()) {
     if (sharing.length < 2) continue

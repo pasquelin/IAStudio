@@ -13,7 +13,7 @@ import {
   nodeById,
   rotationShows,
   selectedNodes,
-  subtreeOf,
+  subtreesOf,
   type SceneState,
 } from './sceneState'
 
@@ -86,33 +86,50 @@ describe('canReparent', () => {
   })
 })
 
-describe('subtreeOf', () => {
-  const nodes = [mesh('a'), mesh('b', 'a'), mesh('c', 'b'), mesh('d')]
+describe('subtreesOf', () => {
+  const nodes = [mesh('a'), mesh('b', 'a'), mesh('c', 'b'), mesh('d'), mesh('e', 'd')]
 
   it('carries a node and everything under it, however deep', () => {
-    expect(subtreeOf(nodes, 'a').map(node => node.id)).toEqual(['a', 'b', 'c'])
+    expect(subtreesOf(nodes, ['a']).map(node => node.id)).toEqual(['a', 'b', 'c'])
   })
 
-  it('is the node alone when nothing hangs from it', () => {
-    expect(subtreeOf(nodes, 'd').map(node => node.id)).toEqual(['d'])
-  })
-
-  it('leaves the branches beside it alone', () => {
-    expect(subtreeOf(nodes, 'b').map(node => node.id)).toEqual(['b', 'c'])
+  it('is the node alone when nothing hangs from it, and empty when nothing answers', () => {
+    expect(subtreesOf(nodes, ['c']).map(node => node.id)).toEqual(['c'])
+    expect(subtreesOf(nodes, ['nowhere'])).toEqual([])
   })
 
   /**
-   * Reparenting changes a `parentId` in place, so a child can perfectly well be listed before
-   * the parent it now hangs from. Reading the array in order left those behind — nodes nothing
+   * Reparenting rewrites a `parentId` without moving the node, so a child can perfectly well be
+   * listed before the parent it now hangs from. Reading the array in order left those behind — nodes nothing
    * showed any more, that no delete could reach, and that the file kept.
    */
   it('finds a branch whose child is declared before its parent', () => {
     const jumbled = [mesh('c', 'a'), mesh('a', 'b'), mesh('b')]
     expect(
-      subtreeOf(jumbled, 'b')
+      subtreesOf(jumbled, ['b'])
         .map(node => node.id)
         .sort(),
     ).toEqual(['a', 'b', 'c'])
+  })
+
+  /**
+   * A duplicate reads its LAST copy as the anchor — the row an inspector shows and a gizmo lands
+   * on. Scene order there would move it onto a shape nobody pointed at.
+   */
+  it('keeps the roots in the order they were named, and their branches after them', () => {
+    expect(subtreesOf(nodes, ['d', 'a']).map(node => node.id)).toEqual(['d', 'a', 'e', 'b', 'c'])
+  })
+
+  it('names a shared descendant once, so the caller no longer dedupes', () => {
+    expect(subtreesOf(nodes, ['a', 'b']).map(node => node.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  /** The singular used to spin for ever here; the `seen` set is what ends the descent. */
+  it('ends on a parent cycle rather than spinning', () => {
+    expect(subtreesOf([mesh('a', 'b'), mesh('b', 'a')], ['a']).map(node => node.id)).toEqual([
+      'a',
+      'b',
+    ])
   })
 })
 

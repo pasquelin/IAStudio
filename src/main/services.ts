@@ -1,36 +1,46 @@
+import { orElse } from '@shared/promises'
+import { APP_NAME } from '@shared/constants'
 import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
+import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { availableParallelism } from 'node:os'
+import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { availableParallelism, totalmem } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
-import type { AccountSummary } from '@shared/domain/account'
+import { activeProvidersOf, scenarioAccount, type AccountSummary } from '@shared/domain/account'
+import type { AiOverview } from '@shared/domain/aiOverview'
+import { outputExtensionOf } from '@shared/domain/localFields'
+import type { LocalModel } from '@shared/domain/localModel'
+import { needsOwnFolder } from '@shared/domain/localModel'
 import {
   ASSET_ID_PREFIX,
-  DEFAULT_ASSET_FOLDERS,
+  roleForAsset,
   type Asset,
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import { folderForRole } from '@shared/domain/folderRole'
 import type { MediaCapabilities } from '@shared/domain/media'
 import {
   LEGACY_ASSETS_FOLDER,
   THUMBNAIL_SIZE,
   landedInDefaultFolder,
   planProjectAccount,
+  projectName,
   withRecentProject,
   type Project,
   type ProjectAccountPlan,
 } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
-import type { AuthState } from '@shared/domain/settings'
+import { defaultSettings, type AuthState } from '@shared/domain/settings'
 import { log } from './log'
-import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { textAt, TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
+import { createNewsService, type NewsService } from '@main/news/newsStore'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/autoCaption'
@@ -41,21 +51,83 @@ import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import {
   bundledAnimations,
+  bundledEngine,
+  bundledGameRuntime,
   bundledFfmpeg,
+  bundledModels,
   bundledTemplates,
+  bundledTextures,
   bundledVad,
   resourcesRoot,
 } from './resources'
-import { bundledTemplateFile } from './templateThumbnails'
+import { bundledFile } from './bundledFile'
 import { bundledAnimationFile } from './animations'
 import { createAssetText } from './assistant/assetText'
 import { createRemoteActions, type RemoteActions } from './mcp/asking'
 import { createMcpControl, type McpControl } from './mcp/control'
+import {
+  checkoutOf,
+  clientName,
+  mcpConfigWith,
+  mcpEndpointPath,
+  mcpLaunch,
+  mcpStateOf,
+  type McpLaunch,
+} from './mcp/endpoint'
+
+const MCP_CLIENT = clientName(APP_NAME)
 import type { AssistantBrain } from './assistant/brainPort'
-import { createScenarioBrain } from './assistant/brainScenario'
+import { createProviderBrain } from './assistant/brainProvider'
+import { providerLimits } from './assistant/providerLimits'
+import { createLocalBrain } from './assistant/brainLocal'
+import { projectPickerFolder } from '@shared/domain/project'
+import { machineFolders } from './assistant/machineFolders'
+import { createHttpChatBrain } from './assistant/brainHttp'
+import { createRoutedBrain } from './assistant/brainRouted'
+import { describeStudio } from './assistant/studioState'
 import { createSession, type DictationSession } from './dictation/session'
-import { fetchModel, modelIsComplete } from './dictation/modelDownload'
-import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/modelStore'
+import { STT_MODEL } from '@shared/domain/dictation'
+import { chatModelOf, CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
+import type { WorkspaceId } from '@shared/domain/workspace'
+import { spacesWithNoModel, SPACE_ROLES } from './ai/spacesWithNoModel'
+import { createAiManager, type AiManager } from './ai/manager'
+import { catalogueWith, modelWith } from './ai/catalogue'
+import { electronHardwarePort } from './ai/electronHardwarePort'
+import { electronLlamaPort } from './ai/electronLlamaPort'
+import { llamaLocalRuntime } from './ai/llamaRuntime'
+import { ensureOllama, ollamaInstalled } from './ai/ensureOllama'
+import { installEngineLibraries } from './ai/installEngineLibraries'
+import { spawnLines } from './ai/spawnLines'
+import {
+  extractOllamaArchive,
+  fetchOllamaArchive,
+  installOllama,
+  needsZstd,
+  zstdOnPath,
+} from './ai/installOllama'
+import { ollamaHttpPort, ollamaLocalRuntime } from './ai/ollamaRuntime'
+import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
+import { readyCloudsOf } from './ai/cloudReadiness'
+import { createLocalJobRunner } from './ai/localJobRunner'
+import { createRoutedCollector } from './ai/routedCollector'
+import { createLocalCollector } from './assets/localCollector'
+import { createPythonClient } from './ai/pythonClient'
+import { openPythonProcess } from './ai/pythonProcess'
+import { pythonRuntime } from './ai/pythonRuntime'
+import { createPythonSupervisor } from './ai/pythonSupervisor'
+import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
+import { ownModelFrom } from './ai/ownModel'
+import { createCodeJobRunner, isRetryableCloudChat } from './ai/codeJobRunner'
+import { createRoutedJobRunner } from './ai/routedJobRunner'
+import { createRetry, isRetryable } from './provider/retry'
+import { fetchModel, modelIsComplete } from './ai/modelInstall'
+import {
+  createDownloadHost,
+  defaultModelFolder,
+  ensureFolder,
+  migrateSttFolder,
+} from './ai/modelStore'
 import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
@@ -83,18 +155,21 @@ import { createTextureExtraction, type TextureExtraction } from './assets/textur
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
-import { exists } from './persistence'
+import { exists, firstBytes, writeAtomic } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
   type AssetCollector,
   type JobAccount,
   type JobManager,
-} from './scenario/jobManager'
-import { runnerOf } from './scenario/runner'
+} from './provider/jobManager'
+import { runnerOf } from './provider/runner'
 import type { AskUser } from './project/documentDialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import { createFileOps, type FileOps } from './project/fileOps'
+import { createProjectGame, type ProjectGameStore } from './project/game'
+import { createGameScripts, type GameScriptStore } from './project/gameScripts'
+import { keepScriptPaths } from './project/scriptPaths'
 import {
   createFolderReader,
   createFolderWriter,
@@ -102,16 +177,29 @@ import {
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
+import { composedContext } from '@shared/domain/projectContext'
+import { createProjectContext, type ProjectContextStore } from '@main/project/context'
+import { createPromptContext, type PromptContext } from '@main/provider/promptContext'
 import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } from './project/store'
 import { createReconciler, type Reconciler } from './project/reconcile'
 import { createActivityLog, type ActivityLog } from './project/activityLog'
+import { createSaid, type Said } from './assistant/said'
+import { createTranscript, type Transcript } from './assistant/transcript'
+import { logsFolder } from './logFile'
 import { openCatalogThread } from './project/catalogThread'
-import { catalogOf } from './scenario/modelCatalog'
-import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './scenario/uploader'
-import { createAssetInputResolver } from './scenario/assetInputs'
-import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './scenario/assetCatalog'
-import { generationOfMetadata } from './scenario/assetNormalizer'
-import { createOwnerScope, type OwnerScope } from './scenario/ownerScope'
+import { createEmbedder, EMBEDDER_IDLE_MS } from './memory/embedder'
+import { embedModelId, embedWeightsOf, type EmbedChoiceDeps } from './memory/embedChoice'
+import { openEmbedProcess } from './memory/embedProcess'
+import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
+import { createMemoryVectors, type MemoryVectors } from './memory/memoryVectors'
+import { openMemoryThread } from './memory/memoryThread'
+import { catalogOf } from './provider/modelCatalog'
+import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
+import { createAssetInputResolver } from './provider/assetInputs'
+import { createLocalAssetInputResolver } from './ai/localAssetInputs'
+import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './provider/assetCatalog'
+import { generationOfMetadata } from './provider/assetNormalizer'
+import { createOwnerScope, type OwnerScope } from './provider/ownerScope'
 import { accountFingerprint } from './settings/accounts'
 import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
 import { isRecord } from '@shared/guards'
@@ -120,18 +208,27 @@ import {
   createClientProvider,
   recordFailuresTo,
   type ClientProvider,
-} from './scenario/client'
-import { costEstimatorOf, type CostEstimator } from './scenario/cost'
-import { createUsageReader, type UsageReader } from './scenario/usage'
-import { createJobStore } from './scenario/jobStore'
-import { createRateLimiters, limitedTransport } from './scenario/rateLimiter'
-import { createCredentialsWatch } from './scenario/credentialsWatch'
-import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
-import { createModelRegistry, type ModelRegistry } from './scenario/modelRegistry'
-import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
-import { createAssistQueue } from './scenario/assistQueue'
-import { createPromptAssist, type PromptAssist } from './scenario/promptAssist'
-import { promptAssistApiOf } from './scenario/promptAssistApi'
+} from './provider/client'
+import { costEstimatorOf, type CostEstimator } from './provider/cost'
+import { createUsageReader, type UsageReader } from './provider/usage'
+import { createJobStore } from './provider/jobStore'
+import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
+import type { ModelDescriptor } from '@shared/domain/model'
+import {
+  isTripoModelId,
+  tripoDescriptorOf,
+  TRIPO_CATALOGUE,
+  TRIPO_CLOUD,
+} from '@shared/domain/tripo'
+import { createCredentialsWatch } from './provider/credentialsWatch'
+import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
+import { createPlanReader, teamsOf, type PlanReader } from './provider/plan'
+import { createCreditsReader, type CreditsReader } from './provider/credits'
+import { createTripoApi, isRetryableTripo, tripoRetryAfterMs } from './provider/tripoApi'
+import { createTripoRunner, tripoLaneOf } from './provider/tripoRunner'
+import { createAssistQueue } from './provider/assistQueue'
+import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
+import { promptAssistApiOf } from './provider/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
@@ -146,6 +243,13 @@ import { applyTheme } from './window/theme'
  */
 const USAGE_CONCURRENCY = 4
 
+/**
+ * How long rows landing in the catalogue are gathered before the windows are told. Shorter than
+ * the shelf's own 200 ms trailing debounce, so a burst still reads once — this only stops fifty
+ * imports from being fifty structured clones to every window.
+ */
+const ANNOUNCE_MS = 50
+
 export type Services = {
   settings: SettingsStore
   client: ClientProvider
@@ -156,13 +260,17 @@ export type Services = {
   usage: UsageReader
   /** Which models the account's plan may run, so the picker refuses one before the API does. */
   plan: PlanReader
+  /** What each stored key has LEFT. See `credits.ts`. */
+  credits: CreditsReader
   /** What a run would cost, asked before it is run. See `cost.ts`. */
   estimateCost: CostEstimator
+  /** The open project's context, joined to what a generation sends. See `promptContext.ts`. */
+  promptContext: PromptContext
   /**
    * Runs the resolved ffmpeg with those arguments. Exposed because a render encodes too, and a
    * second resolver is how two flows start disagreeing about which binary this machine has.
    */
-  encodeVideo: (args: readonly string[]) => Promise<void>
+  encodeVideo: (args: readonly string[], signal?: AbortSignal) => Promise<void>
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
   captionArrivals: AutoCaption
   /** Names a chosen selection, whatever it is already called. */
@@ -175,12 +283,20 @@ export type Services = {
   /** Drops the file an asset owns, leaving a linked one where it lies. */
   removeAssetFile: (asset: Asset) => Promise<void>
   project: ProjectStore
+  /** What the assistant has learned — the open project's, and the machine's own. */
+  memory: MemoryHost
+  /** The embeddings of both memories, and the one process that computes them. */
+  memoryVectors: MemoryVectors
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
   styles: StylesStore
   /** What the studio did, and what it failed to do — the surface it had none of. */
   journal: ActivityLog
+  /** The WHOLE of what the assistant sent and read back — see `assistant/transcript.ts`. */
+  transcribe: Transcript
+  /** What the last prompts carried, for a reader who unfolds one — see `assistant/said.ts`. */
+  said: Said
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
   flushJobs: () => Promise<void>
   documents: DocumentFiles
@@ -204,8 +320,23 @@ export type Services = {
   remoteActions: RemoteActions
   /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
   mcp: McpControl
+  /** How a client spawns this application as its way in. No address, so it never goes stale. */
+  mcpLaunch: McpLaunch
+  /** Which AI serves each role, what the machine holds, and what may be installed. */
+  ai: AiManager
+  /** Rank 3's gesture, whole: a picker, a GGUF header, an entry. Rejects on a file it cannot read. */
+  addOwnAiModel: () => Promise<AiOverview>
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
+  /**
+   * Lets the local AI engine go, with the door it started.
+   *
+   * Beside `dictation` and for the same reason: a `utilityProcess` dies with the app, a spawned
+   * interpreter does not. Its worker holds gigabytes of device memory, and nothing on the machine
+   * gives them back — the SIGTERM handler written into `core/supervisor.py` never fires unless
+   * somebody sends the signal.
+   */
+  disposeAiEngine: () => Promise<void>
   /** Opens the system screen where microphone access is granted back after a refusal. */
   openMicrophoneSettings: () => void
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
@@ -220,6 +351,10 @@ export type Services = {
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
+  /** The catalogue's rows for those ids — what an export follows to find an asset's file. */
+  assetsById: (ids: readonly string[]) => Promise<readonly Asset[]>
+  /** Where the runtime an exported game embeds sits, beside the app. */
+  runtimeFolder: () => string
   /** The process that packs and unpacks a montage bundle, forked on the first one asked for. */
   bundles: () => BundleClient
   /** Where a bundle is read FROM. A file the user pointed at, so nothing confines it. */
@@ -234,6 +369,8 @@ export type Services = {
   folder: FolderReader
   /** The pass that puts the catalogue and the project folder back in agreement. */
   reconciler: Reconciler
+  /** The project's own context, read off the disk on every ask. */
+  context: ProjectContextStore
   /**
    * Everything that WRITES to the project folder, and the stack that takes a batch back.
    *
@@ -242,15 +379,22 @@ export type Services = {
    * about — which is why the two asset renames live in there rather than here.
    */
   files: FileOps
+  game: ProjectGameStore
+  scripts: GameScriptStore
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */
   askUser: AskUser
+  /** Sends a whole project folder to the system's trash, named by its own absolute path. */
+  trashFolder: (path: string) => Promise<void>
+  /** How many generations have not settled — what closing the project asks about. */
+  runningJobCount: () => number
   pickMedia: () => Promise<string[]>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
   broadcastAccounts: (accounts: AccountSummary[]) => void
   updates: Updates
+  news: NewsService
 }
 
 /** Two cores left to the interface and to whatever else the machine is doing — CLAUDE.md § 6. */
@@ -258,6 +402,20 @@ const spareCores = (): number => Math.max(1, availableParallelism() - 2)
 
 const timestamp = (): string => new Date().toISOString()
 const newAssetId = (): string => `${ASSET_ID_PREFIX}${randomUUID()}`
+
+/**
+ * Our entry added to the checkout's client configuration, which is the PROJECT's file and not
+ * ours. A malformed one is left exactly as it is: the throw lands here rather than overwriting it.
+ */
+async function leaveClientConfig(path: string, launch: McpLaunch): Promise<void> {
+  try {
+    const merged = mcpConfigWith(await orElse(readFile(path, 'utf8'), ''), launch, MCP_CLIENT)
+    if (merged !== null) await writeAtomic(path, merged)
+  } catch (error) {
+    // An unwritable or unreadable checkout costs a convenience, never a launch.
+    log.warn('mcp', `could not leave a client configuration at ${path}: ${String(error)}`)
+  }
+}
 
 async function openDialog(options: Electron.OpenDialogOptions): Promise<string[]> {
   const parent = BrowserWindow.getFocusedWindow()
@@ -341,6 +499,14 @@ function pickImportPath(extension: string, language: Language): Promise<string |
   }).then(chosen => chosen[0] ?? null)
 }
 
+/** The weights file someone points at — rank 3 of ADR-20, and the gesture is theirs alone. */
+function pickWeights(language: Language): Promise<string | null> {
+  return openDialog({
+    properties: ['openFile'],
+    filters: [{ name: TRANSLATIONS[language].dialog.weights, extensions: ['gguf'] }],
+  }).then(chosen => chosen[0] ?? null)
+}
+
 /** Translated here, where the dialog opens: a native picker shows these names as they are. */
 function pickMedia(language: Language): Promise<string[]> {
   const t = TRANSLATIONS[language].dialog
@@ -395,12 +561,10 @@ function machineLanguages(): string[] {
  * `lastProject` on its own, and every window replicates these settings.
  */
 export function createSettings(): SettingsStore {
-  // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
-  const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
-
   const settings = createSettingsStore(createElectronAdapter(), {
-    // Read afresh on every account read, so editing the file is enough to change the account.
-    environmentAccount: () => environmentAccount(fallback),
+    // Passed, never read at the bottom: it is the only setting whose default depends on which
+    // run this is, and a development checkout opens its way in with nothing to tick.
+    defaults: defaultSettings(isDevelopment),
     onChange: current => {
       // Before the broadcast: the renderer reads `prefers-color-scheme` to resolve `system`,
       // and Chromium only answers with the new value once `themeSource` has moved.
@@ -428,6 +592,12 @@ export function createSettings(): SettingsStore {
   return settings
 }
 
+/** The clock these two ports are injected with — written twice in this file, forty lines apart. */
+const afterDelay = (run: () => void, delayMs: number): (() => void) => {
+  const timer = setTimeout(run, delayMs)
+  return () => clearTimeout(timer)
+}
+
 /**
  * Composition root of the main process. Everything stateful is built here, once, so no module
  * reaches for a singleton and every collaborator stays injectable in tests.
@@ -450,7 +620,7 @@ export function createServices(settings: SettingsStore): Services {
   const limiters = createRateLimiters({
     now: () => performance.now(),
     delay,
-    onSaturated: () => log.info('scenario', 'rate limit reached, requests are queueing'),
+    onSaturated: () => log.info('provider', 'rate limit reached, requests are queueing'),
   })
 
   // One transport for every client: the one in force, the one a resumed job needs, and the one
@@ -463,15 +633,107 @@ export function createServices(settings: SettingsStore): Services {
     watch: credentials.watch,
     transport,
   })
+  /**
+   * The merged catalogue, rebuilt only when the supplied list itself moves.
+   *
+   * The registry memoises on the ARRAY it is handed, so a fresh one per call — which a merge is —
+   * defeated it, and the panel recomposed every summary on each keystroke of its search field.
+   */
+  let merged: { of: string; all: readonly LocalModel[] } | null = null
+
+  /** Stable, so an empty answer hands the merge below the same identity every time. */
+  const NOTHING_DISCOVERED: readonly LocalModel[] = []
+
+  /**
+   * What the MANAGER knows and the registry asks for — built after it, so the answers arrive
+   * through a box the registry keeps for the life of the process.
+   *
+   * 🛑 ONE box for both, written in ONE place: two boxes filled at two sites meant one could be
+   * forgotten, and one WAS — the discovered tags never reached the registry, so a model chosen in
+   * the settings had its id asked of Scenario, which answers 404. Nothing reddened; the `satisfies`
+   * at the filling site is what makes a forgotten half fail to compile.
+   */
+  const fromManager: {
+    installedIds: () => ReadonlySet<string>
+    discovered: () => readonly LocalModel[]
+  } = {
+    installedIds: () => new Set<string>(),
+    // "Not here yet", which is the honest answer before the manager has composed once.
+    discovered: () => NOTHING_DISCOVERED,
+  }
+
+  const mergedCatalogue = (): readonly LocalModel[] => {
+    const own = settings.read().ai.ownModels
+    const found = fromManager.discovered()
+    // 🛑 Keyed by the IDS and not by the array: `settings.read()` re-parses, and zod 4 hands back
+    // a fresh array every time — measured — so an identity check never held and the merge was
+    // rebuilt on every keystroke of the panel's search field, which is what it was written to stop.
+    // The discovered ids join the key: a tag that appears must reach the picker, and one deleted
+    // outside must leave it.
+    const key = [...own, ...found].map(one => one.id).join('\u0000')
+    if (merged?.of !== key) merged = { of: key, all: catalogueWith(own, found) }
+
+    return merged.all
+  }
+
+  const holdsTripo = (): boolean => settings.readCredentialsFor(TRIPO_CLOUD) !== null
+
+  /**
+   * Where a generation hands its file over, made once. Both producers write here — the engine on
+   * this machine, and the download of a cloud whose result URLs expire.
+   */
+  let generationFolderMade: Promise<string> | null = null
+
+  const generationFolder = async (): Promise<string> => {
+    const folder = join(app.getPath('temp'), 'ia-studio-generations')
+    generationFolderMade ??= ensureFolder(folder).then(() => folder)
+    return await generationFolderMade
+  }
+
+  /**
+   * Tripo's whole catalogue, described from DATA — their API publishes no listing. Built once
+   * per language: 50 entries and 303 knobs, counted 2026-08-31, and the registry asks on every
+   * search.
+   */
+  let tripoCatalogue: { language: Language; models: ModelDescriptor[] } | null = null
+
+  const describedTripo = (): readonly ModelDescriptor[] => {
+    const spoken = language()
+    if (tripoCatalogue?.language === spoken) return tripoCatalogue.models
+
+    const said = (key: string): string => textAt(TRANSLATIONS[spoken], key)
+    const models = TRIPO_CATALOGUE.map(entry => tripoDescriptorOf(entry, said))
+
+    tripoCatalogue = { language: spoken, models }
+    return models
+  }
+
+  /** What the picker is OFFERED, which is nothing while no key answers for it. */
+  const tripoModels = (): readonly ModelDescriptor[] => (holdsTripo() ? describedTripo() : [])
+
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
+    publishedModels: tripoModels,
+    // Whether or not a key is held: a stored id must be answered from here rather than asked of
+    // a catalogue that has never heard of it.
+    publishedModelOf: modelId => describedTripo().find(model => model.id === modelId) ?? null,
+    // The two catalogues merge in `catalogue.ts` and nowhere else: one panel, one set of filters,
+    // and a model that says where it runs — ADR-21 as amended.
+    localModels: mergedCatalogue,
+    // Deferred: the registry is built before the manager, and what is installed changes
+    // under it — a download landing must ungrey the card it was greying.
+    isInstalled: modelId => fromManager.installedIds().has(modelId),
+    translate: key => textAt(TRANSLATIONS[language()], key),
   })
 
   const plan = createPlanReader({
     catalog: () => teamsOf(client.require()),
     watch: credentials.watch,
   })
+
+  // Every stored key, not the active one: both screens list them all.
+  const credits = createCreditsReader({ accounts: () => settings.keyedAccounts() })
 
   // Bounded and separate from the `JobManager`: none of this produces an asset or has a status
   // to poll, and a library fetch of three hundred must not become three hundred calls.
@@ -485,7 +747,11 @@ export function createServices(settings: SettingsStore): Services {
   // at once and must leave the active account exactly as it found it. Through the same transport
   // all the same, so each key spends from its own window rather than around it.
   const usage = createUsageReader({
-    accounts: () => settings.keyedAccounts(),
+    // Scenario's own keys, and only those: this reader speaks the Scenario SDK, so another
+    // cloud's key would spend a round trip to be told 401 and land in the report as a failure
+    // under an account that never had usage to report.
+    accounts: () =>
+      settings.keyedAccounts().filter(one => (one.providerId ?? SCENARIO_CLOUD) === SCENARIO_CLOUD),
     clientFor: credentials => clientFor(credentials, transport),
     queue: createAssistQueue({
       concurrency: () => USAGE_CONCURRENCY,
@@ -521,7 +787,7 @@ export function createServices(settings: SettingsStore): Services {
   const linkOpenProject = (): Relink => {
     const current = project.current()
     const accounts = settings.accounts()
-    const active = accounts.find(account => account.active) ?? null
+    const active = scenarioAccount(accounts)
     if (!current || !active) return { kind: 'unchanged', active }
 
     const links = settings.read().storage.projectAccounts
@@ -539,6 +805,17 @@ export function createServices(settings: SettingsStore): Services {
   }
 
   /**
+   * The manager's overview is pulled from inputs it cannot watch — the open project, and the
+   * clouds a key is held for. This is the nudge, and it is owed at EVERY one of them: without it a
+   * settings window left open keeps a stale path, stale badges and a stale list of providers.
+   */
+  const republishAi = (after: string): void => {
+    void ai.refresh().catch((error: unknown) => {
+      log.warn('ai', `republishing after ${after} failed: ${String(error)}`)
+    })
+  }
+
+  /**
    * Puts the studio back on the account a project last worked under, so reopening it lands on the
    * library it was filled from rather than on whichever key was last switched to elsewhere.
    *
@@ -547,7 +824,7 @@ export function createServices(settings: SettingsStore): Services {
    */
   const applyProjectAccount = (
     plan: ProjectAccountPlan,
-    active: AccountSummary | undefined,
+    active: AccountSummary | null,
     projectPath: string,
   ): void => {
     if (plan.kind === 'restore') {
@@ -566,6 +843,7 @@ export function createServices(settings: SettingsStore): Services {
       // cost a refetch of the model catalogue and the plan for nothing.
       if (change.credentialsChanged) credentials.changed()
       broadcast(EVENTS.accountsChanged, change.accounts)
+      republishAi('an account change')
 
       opened?.record({
         level: 'info',
@@ -606,7 +884,7 @@ export function createServices(settings: SettingsStore): Services {
   const settleOpenedProject = (current: Project): void => {
     const stored = settings.read()
     const accounts = settings.accounts()
-    const active = accounts.find(account => account.active)
+    const active = scenarioAccount(accounts)
     const links = stored.storage.projectAccounts
     const plan = planProjectAccount(links[current.path], accounts)
 
@@ -629,9 +907,20 @@ export function createServices(settings: SettingsStore): Services {
     applyProjectAccount(plan, active, current.path)
   }
 
+  /**
+   * Declared before the store because its `onChange` names it, and it needs nothing of the store:
+   * a memory is opened from a PATH, and the path is what `onChange` hands over.
+   */
+  const memory = createMemoryHost({
+    userData: app.getPath('userData'),
+    open: openMemoryThread,
+    onTrouble: why => log.warn('memory', why),
+  })
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
+    onRoles: roles => broadcast(EVENTS.projectFolderRoles, roles),
     onChange: current => {
       if (current) settleOpenedProject(current)
       broadcast(EVENTS.projectChanged, current)
@@ -646,6 +935,11 @@ export function createServices(settings: SettingsStore): Services {
       // after the fix would otherwise show exactly what it showed before it.
       if (current) void catchUpProject()
 
+      // Told which project it belongs to; it opens nothing until something asks it a question.
+      memory.follow(current?.path ?? null)
+      // And the vectors let go of the queue that was serving the previous one — see `release`.
+      memoryVectors.release()
+
       // One watch at a time, and it belongs to the project that is open: left running, the
       // previous project's folder would go on announcing changes the explorer would answer by
       // re-reading a folder that is no longer on screen.
@@ -658,6 +952,8 @@ export function createServices(settings: SettingsStore): Services {
       // `activate` finishes before it publishes — so a move this session interrupted is already
       // a row at the right path rather than one this pass would go looking for.
       if (current) reconciler.request()
+
+      republishAi('a project change')
     },
     settle: async () => {
       // Both before the catalogue stops answering: the journal writes into it, and the pending
@@ -665,6 +961,9 @@ export function createServices(settings: SettingsStore): Services {
       await Promise.all([opened?.flush(), jobStore.flush()])
     },
   })
+
+  /** Nothing is cached: a few hundred bytes against a generation of several seconds. */
+  const context = createProjectContext({ rootOf: () => project.current()?.path ?? null })
 
   /**
    * Declared after the store because it reads it, and named before it because the store's own
@@ -688,7 +987,9 @@ export function createServices(settings: SettingsStore): Services {
        * Only when something actually changed, which is what keeps a pass on every focus quiet.
        */
       if (found.moved + found.missing + found.returned > 0) {
-        broadcast(EVENTS.assetsChanged)
+        // No rows: a rescan refiles files it found on disk, and naming them would mean
+        // reading each one back out of the catalogue to say what a re-read says anyway.
+        broadcast(EVENTS.assetsChanged, [])
         broadcast(EVENTS.projectFolderChanged)
       }
 
@@ -732,12 +1033,17 @@ export function createServices(settings: SettingsStore): Services {
   })
   opened = journal
 
+  // Beside the journal and beside `main.log`, never inside either: a briefing is 90 505 characters
+  // on a door with room, and both are bounded far below one turn's worth of them.
+  const transcribe = createTranscript(logsFolder)
+  const said = createSaid()
+
   // Every reduced API failure, from one place rather than from each handler that remembers to.
   // `describeFailure` is what `reducedBy` already holds — the only text allowed to travel.
   recordFailuresTo((scope, detail) => {
     journal.record({
       level: 'error',
-      topic: scope === 'scenario' ? 'generation' : 'library',
+      topic: scope === 'provider' ? 'generation' : 'library',
       messageKey: 'activity.apiRefused',
       detail,
     })
@@ -809,7 +1115,7 @@ export function createServices(settings: SettingsStore): Services {
     // `onImported` does, and `announce` swallows what that listener raises: a project closed while
     // the catalogue was answering would have cost a mesh its textures, silently.
     const root = project.current()?.path
-    const folder = DEFAULT_ASSET_FOLDERS[asset.type]
+    const folder = folderForRole(roleForAsset(asset), project.roles())
 
     if (!root || legacyLayoutSettled.has(root)) return
     if (!landedInDefaultFolder(asset.path, folder)) return
@@ -826,12 +1132,62 @@ export function createServices(settings: SettingsStore): Services {
   }
 
   /**
+   * Rows waiting to be announced. Fifty imports are otherwise fifty structured clones to every
+   * window, each re-arming the shelf's trailing debounce so its read lands only after the burst.
+   */
+  let landed: Asset[] = []
+  let announcing: ReturnType<typeof setTimeout> | null = null
+
+  const announceAsset = (asset: Asset): void => {
+    landed.push(asset)
+    if (announcing) return
+
+    announcing = setTimeout(() => {
+      announcing = null
+      const rows = landed
+      landed = []
+      broadcast(EVENTS.assetsChanged, rows)
+    }, ANNOUNCE_MS)
+  }
+
+  /**
+   * The proxy, the waveform and the poster a take needs. No row is carried back: `derive` writes
+   * through the catalogue rather than through `announce`, so what changed is a query away.
+   */
+  const deriveLandedFiles = async (
+    asset: Asset,
+    kind: 'video' | 'audio',
+    path: string,
+    probe: MediaProbe,
+  ): Promise<void> => {
+    try {
+      await media.derive({
+        assetId: asset.id,
+        path: join(project.path() ?? '', path),
+        kind,
+        probe,
+        // The library's own still is a picture of the take; ours would be a frame of it.
+        poster: !asset.posterPath,
+        // The user is waiting on this take: what is being prepared belongs on screen.
+        announce: true,
+      })
+      broadcast(EVENTS.assetsChanged, [])
+    } catch (error: unknown) {
+      log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`)
+    }
+  }
+
+  /**
    * What every asset that lands in the project goes through — a download, a generation collected,
    * a file the explorer adopted. Named rather than inlined because the adoption needs the very
    * same derivation: two callers, one deriver, and no way for the two to drift apart.
    */
   const onAssetLanded = (asset: Asset): void => {
     noteLegacyLayout(asset)
+
+    // For EVERY kind, which is what tells the other windows: said only after a derivation, or
+    // only for a mesh, a picture rewritten by ⌘S reached its own window and no other.
+    announceAsset(asset)
 
     // A take that came down from the API never met the picker, so nothing ever derived what
     // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
@@ -840,42 +1196,24 @@ export function createServices(settings: SettingsStore): Services {
     // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
     // missing — in which case there is no ffmpeg to derive anything with either.
     if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
-      void media
-        .derive({
-          assetId: asset.id,
-          path: join(project.path() ?? '', asset.path),
-          kind: asset.type,
-          probe: asset.probe,
-          // The library's own still is a picture of the take; ours would be a frame of it.
-          poster: !asset.posterPath,
-          // The user is waiting on this take: what is being prepared belongs on screen.
-          announce: true,
-        })
-        .then(() => broadcast(EVENTS.assetsChanged))
-        .catch((error: unknown) =>
-          log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
-        )
+      void deriveLandedFiles(asset, asset.type, asset.path, asset.probe)
       return
     }
 
     if (asset.type !== 'mesh') return
-    void extractTextures(asset)
-      .then(textures => {
-        // The one write no window ordered, so the one nothing else would say out loud: the
-        // import that started this is long answered, and its shelf refreshed, by the time a
-        // GLB has been read and its pictures written.
-        if (textures.length > 0) broadcast(EVENTS.assetsChanged)
-      })
-      .catch((error: unknown) =>
-        // The journal already carries the line `extractTextures` writes; this is the rejection
-        // itself, which nothing else would ever hear.
-        log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
-      )
+    // Nothing to say when it lands: every picture it writes goes through `announce`, so each
+    // one now announces itself above. This used to be the only line that told the windows.
+    void extractTextures(asset).catch((error: unknown) =>
+      // The journal already carries the line `extractTextures` writes; this is the rejection
+      // itself, which nothing else would ever hear.
+      log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+    )
   }
 
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
+    folderFor: role => project.folderFor(role),
     catalog: () => project.catalog(),
     now: timestamp,
     // The same function the rescan hashes with (`projectDisk` passes the very same one), which
@@ -918,7 +1256,12 @@ export function createServices(settings: SettingsStore): Services {
     // one depth bound, rather than a second one free to disagree about how deep a project goes.
     walkFiles: () => folder.walk(),
     folderNames: relative => folder.names(relative),
+    folderFor: role => project.folderFor(role),
   })
+
+  const projectRoot = (): string | null => project.current()?.path ?? null
+  const game = createProjectGame({ rootOf: projectRoot })
+  const scripts = createGameScripts({ rootOf: projectRoot, walk: () => folder.walk() })
 
   const files = createFileOps({
     // `null` rather than `''`: with no project open there is no folder to write in, and every
@@ -927,7 +1270,11 @@ export function createServices(settings: SettingsStore): Services {
     folder,
     catalog: () => project.catalog(),
     newBatchId: () => randomUUID(),
-    assetsChanged: () => broadcast(EVENTS.assetsChanged),
+    // Copies, moves and deletions, which name folders rather than rows — see `fileOps`.
+    assetsChanged: () => broadcast(EVENTS.assetsChanged, []),
+    // 🛑 The one reference the studio holds by PATH: a script moved in the explorer would
+    // otherwise leave `game.json` pointing where the file no longer is, and nothing goes red.
+    pathsChanged: changes => void keepScriptPaths(game, changes),
   })
 
   const ffmpeg = createFfmpegResolver(() => ({
@@ -1005,7 +1352,7 @@ export function createServices(settings: SettingsStore): Services {
       })
 
       // The shelf and the strip both read what was just written, and neither asked for it.
-      if (done > 0) broadcast(EVENTS.assetsChanged)
+      if (done > 0) broadcast(EVENTS.assetsChanged, [])
     } catch (error: unknown) {
       log.warn('media', `could not catch up the project's takes: ${String(error)}`)
     } finally {
@@ -1013,27 +1360,357 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  // The model is read from where the user pointed, or from beside the settings file. Read on
-  // every call rather than kept: the folder is a setting, and it can change while the studio
-  // is open.
+  /**
+   * 🛑 PROVISIONAL, and named so rather than hidden: ADR-19 lists `appBudgetBytes` and
+   * `headroomBytes` under what it does NOT decide, and nothing has measured them.
+   *
+   * `[M]` Three quarters, not a half. At a half, a 16 GB machine offered 5.5 GB once the headroom
+   * and the window were taken off, and the 7B model — 8 GB reserved — was unusable on a machine
+   * that runs it. The figure is still a policy and not a measurement; what IS measured is that the
+   * previous one refused a model that works.
+   *
+   * On a machine with a dedicated card this is not what decides: the video memory is, and it is
+   * READ rather than budgeted — see `potOf` in `hardwareProbe.ts`.
+   */
+  const PROVISIONAL_BUDGET = {
+    appBudgetBytes: Math.round((totalmem() * 3) / 4),
+    headroomBytes: 2_000_000_000,
+    // What the viewport was measured holding with a 3D scene open, 2026-08-21.
+    rendererReservedBytes: 475_000_000,
+  }
+
+  // Where the user pointed, or beside the settings file. Read on every call rather than kept:
+  // the folder is a setting, and it can change while the studio is open.
   const modelFolder = (): string =>
     settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
 
+  // Nothing waits on it: what it carries is a model already on the disk, and an install that
+  // reaches the new folder first simply downloads what the move would have brought.
+  void migrateSttFolder(modelFolder()).catch((error: unknown) => {
+    log.warn('ai', `moving the previous model folder failed: ${String(error)}`)
+  })
+
   const downloads = createDownloadHost()
 
-  const dictation = createSession({
-    modelFolder,
-    vadPath: () => bundledVad(resourcesRoot()),
-    settings: () => settings.read().dictation,
-    modelIsReady: () => modelIsComplete(downloads, modelFolder()),
-    download: async (onProgress, signal) => {
-      const folder = modelFolder()
+  /**
+   * ADR-21 § C: what thinks for each cloud, keyed by the registry. Whether a key is HELD is not
+   * here — one account listing answers it for every cloud at once (`activeProvidersOf`).
+   * Scenario's brain is a getter because it is built further down.
+   */
+  const clouds: Record<string, { brain: () => AssistantBrain }> = {}
+  for (const cloud of CLOUD_PROVIDERS) {
+    // Captured so the narrowing survives into the closures below, which a property access does not.
+    const chat = cloud.chat
+    // A cloud that answers no conversation gets no brain — it generates, and nothing else.
+    if (chat === undefined) continue
+    if (chat.kind === 'scenario') {
+      clouds[cloud.id] = { brain: () => providerBrain }
+    } else {
+      const http = createHttpChatBrain({
+        chat,
+        cloud: cloud.id,
+        credentials: () => settings.readCredentialsFor(cloud.id),
+        model: () => chatModelOf(settings.read().assistant.cloudModels[cloud.id], chat.model),
+        notReady,
+      })
+      clouds[cloud.id] = { brain: () => http }
+    }
+  }
+
+  /**
+   * Where a model's files land. One folder for the whole catalogue — the manifests name their own
+   * files — EXCEPT for a loader handed a FOLDER: two of those would overwrite each other's index.
+   */
+  const folderFor = (model: LocalModel): string =>
+    needsOwnFolder(model.loader) ? join(modelFolder(), model.id) : modelFolder()
+
+  /**
+   * What each LOADER can do on this machine — the unit ADR-20 writes its whitelist on, and ONE
+   * table: a runtime that installs but cannot converse, or the reverse, would otherwise read as
+   * ready on one side and be unreachable on the other.
+   */
+  const fetchedFiles = fileRuntime({
+    folderFor,
+    isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+    fetch: async (model, folder, onProgress, signal) => {
       await ensureFolder(folder)
       // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
       // resumes from what already arrived. A leftover that is not a prefix of what is being
       // fetched cannot survive anyway — it fails its digest and is removed there.
-      await fetchModel(downloads, { folder, onProgress, signal })
+      await fetchModel(downloads, model, { folder, onProgress, signal })
     },
+    removeFiles: async (model, folder) => {
+      // The whole folder when it is the model's own, which is what takes its subfolders with it;
+      // file by file when it is shared, where a recursive remove would take the catalogue.
+      if (needsOwnFolder(model.loader)) {
+        await rm(folder, { recursive: true, force: true })
+        return
+      }
+
+      for (const file of model.files) await rm(join(folder, file.name), { force: true })
+    },
+  })
+
+  // One port, held: it owns the addon, so the memory reading and the inference are the same
+  // process's — which is what lets a snapshot say `runtime` rather than `probe`.
+  const llama = electronLlamaPort()
+  let hold =
+    (_modelId: string): (() => void) =>
+    () => {}
+
+  /** A model the person supplied names its own file; everything else lands in the model folder. */
+  const weightsOf = (model: LocalModel): string =>
+    // The FIRST file: a split GGUF names its shards `-00001-of-0000N`, and llama.cpp is handed
+    // the first one and finds the rest beside it.
+    model.weightsPath ?? join(modelFolder(), model.files[0]?.name ?? '')
+
+  let lookup = (modelId: string): LocalModel | null =>
+    modelWith(modelId, settings.read().ai.ownModels)
+  const modelOf = (modelId: string): LocalModel | null => lookup(modelId)
+  const isLocalTarget = (targetId: string): boolean => modelOf(targetId) !== null
+
+  /**
+   * The local AI engine, supervised. Started on the first ask and never at launch: forking Python
+   * to be told nothing is installed would cost a start-up nobody asked for.
+   */
+  const engine = createPythonSupervisor({
+    open: listeners => {
+      const bundled = bundledEngine(resourcesRoot(), process.platform)
+      return createPythonClient(
+        openPythonProcess({
+          command: bundled.python,
+          args: ['-m', 'ia_studio_engine.core.supervisor'],
+          sources: bundled.sources,
+          processName: 'the local AI engine',
+        }),
+        listeners,
+      )
+    },
+    now: Date.now,
+    delay: ms => sleepFor(ms),
+  })
+
+  const engineRuntime = pythonRuntime({
+    folderFor,
+    isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
+    fetch: async (model, folder, onProgress, signal) => {
+      await ensureFolder(folder)
+      await fetchModel(downloads, model, { folder, onProgress, signal })
+    },
+    removeFiles: (_model: LocalModel, folder: string) =>
+      rm(folder, { recursive: true, force: true }),
+    baseOf: model => (model.attaches ? modelOf(model.attaches.model) : null),
+    engine: () => engine.engine(),
+    running: () => engine.current(),
+    log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
+    onUsed: modelId => hold(modelId),
+  })
+
+  const ollamaPort = ollamaHttpPort()
+  const ollamaDir = join(app.getPath('userData'), 'ollama')
+
+  const OLLAMA_LOOK_MS = 10_000
+  let installedOllama: { at: number; yes: boolean } | null = null
+
+  /**
+   * 🛑 `[M]` Remembered, and only for a window: the search joins the usual locations, a studio copy
+   * and ONE CANDIDATE PER PATH ENTRY — 46 on this machine — and `some` short-circuits on none of
+   * them while Ollama is absent. It sat on every compose, so on every assistant turn.
+   */
+  const ollamaIsInstalled = (): boolean => {
+    if (installedOllama !== null && Date.now() - installedOllama.at < OLLAMA_LOOK_MS) {
+      return installedOllama.yes
+    }
+
+    installedOllama = {
+      at: Date.now(),
+      yes: ollamaInstalled(process.platform, process.env, existsSync, ollamaDir),
+    }
+    return installedOllama.yes
+  }
+  const startOllama = ensureOllama({
+    platform: process.platform,
+    env: process.env,
+    extraDir: ollamaDir,
+    exists: existsSync,
+    // Detached and unref'd: a ChildProcess handle would be a way to kill a service we don't own.
+    spawn: (command, args) => {
+      const child = spawn(command, [...args], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+      })
+      child.unref()
+      child.on('error', error => {
+        log.warn('ai', `local chat service did not start: ${String(error)}`)
+      })
+    },
+    ping: () =>
+      ollamaPort.tags().then(
+        () => true,
+        () => false,
+      ),
+  })
+
+  let forgetDiscovered = (): void => {}
+  let refreshOverview = (): Promise<void> => Promise.resolve()
+  const runtimes: LocalRuntimes = {
+    'sherpa-onnx': fetchedFiles,
+    diffusers: engineRuntime,
+    plugin: engineRuntime,
+    llamacpp: llamaLocalRuntime({
+      files: fetchedFiles,
+      weightsOf,
+      port: llama,
+      modelOf,
+      onUsed: modelId => hold(modelId),
+    }),
+    ollama: ollamaLocalRuntime(ollamaPort, {
+      ensure: startOllama,
+      onStale: () => {
+        forgetDiscovered()
+        void refreshOverview().catch((error: unknown) => {
+          log.warn('ai', `overview unpublished after a stale local model: ${String(error)}`)
+        })
+      },
+    }),
+  }
+
+  // Declared before the manager because its `emit` reaches back into it, and `?.` would not save
+  // a `const` from its temporal dead zone — an overview emitted during construction would throw.
+  let dictation: DictationSession | null = null
+
+  const ai = createAiManager({
+    facts: () => hardwareProbe(electronHardwarePort(modelFolder, llama.vram)),
+    snapshotOf: (facts, runtimeBytes) =>
+      memorySnapshotOf(facts, PROVISIONAL_BUDGET, Date.now(), runtimeBytes),
+    settings: () => settings.read(),
+    writeSettings: partial => settings.write(partial),
+    currentProjectPath: () => project.current()?.path ?? null,
+    readyClouds: () => readyCloudsOf(activeProvidersOf(settings.accounts())),
+    runtimes,
+    emit: overview => {
+      broadcast(EVENTS.ai, overview)
+      // 🛑 The speech model is in this catalogue, so it is installed and deleted from a screen
+      // the session never hears about — without this, a model fetched there left the microphone
+      // hidden and the status line offering to download files already on the disk.
+      void dictation?.probeModel()
+    },
+    log: (level, message) => log[level]('ai', message),
+    now: Date.now,
+    ollamaInstalled: ollamaIsInstalled,
+    engineMissing: async () => {
+      // Started on this ask: the core imports no tensor library, so this is the 33 ms hello and
+      // never a door. Answered `null` when it will not start — unknown, which is not "ready".
+      const client = await engine.engine()
+      if (!client) return null
+
+      const needs = await client.requirements()
+      return [...needs.absent.map(one => one.name), ...needs.stale.map(one => one.name)]
+    },
+    installEngine: async (onProgress, signal) => {
+      const client = await engine.engine()
+      if (!client) throw new Error('the local AI engine is not answering')
+
+      await installEngineLibraries({
+        python: bundledEngine(resourcesRoot(), process.platform).python,
+        // The engine's own declaration, never a list written here.
+        declaration: (await client.requirements()).declaration,
+        spawn: spawnLines,
+        onProgress,
+        signal,
+      })
+    },
+    installOllama: async (onProgress, signal) => {
+      // The studio just put one there: the remembered answer would keep saying otherwise.
+      installedOllama = null
+      await installOllama({
+        platform: process.platform,
+        arch: process.arch,
+        env: process.env,
+        extraDir: ollamaDir,
+        exists: existsSync,
+        ensureFolder,
+        download: fetchOllamaArchive,
+        extract: extractOllamaArchive,
+        remove: path => rm(path, { force: true }),
+        chmod: path => chmod(path, 0o755),
+        ensure: startOllama,
+        canUnpack: kind => !needsZstd(kind) || zstdOnPath(),
+        onProgress,
+        signal,
+      })
+      installedOllama = null
+    },
+  })
+  // A declaration, not a const: the cloud brains are wired above `ai`, and hoisting is what lets
+  // them reach this. 🛑 `unservedRoles`, never `overview()` — see its note on the manager.
+  async function notReady(): Promise<readonly WorkspaceId[]> {
+    return spacesWithNoModel(await ai.unservedRoles(SPACE_ROLES))
+  }
+
+  hold = ai.hold
+  lookup = modelId => ai.lookup(modelId)
+  forgetDiscovered = () => ai.forgetDiscovered()
+  refreshOverview = () => ai.refresh()
+  // Filled here rather than captured above: the registry was built first and asks per summary.
+  // 🛑 Both members at once — `fromManager` says what forgetting one costs.
+  Object.assign(fromManager, {
+    installedIds: () => ai.installedIds(),
+    discovered: () => ai.discovered(),
+  } satisfies typeof fromManager)
+
+  /**
+   * What the person chose for the embedding role, and where its weights sit. Split in two on
+   * purpose: `chosenId` is asked on every recall, and resolving a `.gguf` path is what it must
+   * not pay for.
+   */
+  const embedDeps: EmbedChoiceDeps = {
+    choices: () => settings.read().ai.roles,
+    byProject: () => settings.read().ai.projectRoles,
+    projectPath: () => project.current()?.path ?? null,
+    installedIds: () => ai.installedIds(),
+    modelOf,
+  }
+
+  const memoryVectors = createMemoryVectors({
+    host: memory,
+    embedder: createEmbedder({
+      chosenId: () => embedModelId(embedDeps),
+      weightsFor: modelId => embedWeightsOf(embedDeps, modelId, weightsOf),
+      open: openEmbedProcess,
+      onTrouble: why => log.warn('memory', why),
+      idleMs: EMBEDDER_IDLE_MS,
+      schedule: afterDelay,
+    }),
+    onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
+    onTrouble: why => log.warn('memory', why),
+  })
+
+  /** The whole of rank 3's gesture: a picker, a header, an entry. */
+  const addOwnAiModel = async (): Promise<AiOverview> => {
+    const picked = await pickWeights(language())
+    if (picked === null) return await ai.overview()
+
+    // A window of the head, never the whole file: a manifest is read out of the first pages, and
+    // these files run to gigabytes.
+    return await ai.addOwnModel(
+      await ownModelFrom(picked, {
+        readHead: firstBytes,
+        sizeOf: async path => (await stat(path)).size,
+      }),
+    )
+  }
+
+  dictation = createSession({
+    modelFolder,
+    vadPath: () => bundledVad(resourcesRoot()),
+    settings: () => settings.read().dictation,
+    modelIsReady: () => modelIsComplete(downloads, STT_MODEL, modelFolder()),
+    // Through the manager, which holds the ONE install lock: the status line and the manager
+    // screen fetch the same files into the same folder, and two streams onto one `.part` would
+    // fail a digest rather than a download.
+    download: (onProgress, signal) => ai.installModel(STT_MODEL, onProgress, signal),
     requestMicrophone: () =>
       requestMicrophone({
         platform: process.platform,
@@ -1044,10 +1721,7 @@ export function createServices(settings: SettingsStore): Services {
     emit: event => broadcast(EVENTS.dictation, event),
     log: (level, message) => log[level]('dictation', message),
     join,
-    schedule: (run, delayMs) => {
-      const timer = setTimeout(run, delayMs)
-      return () => clearTimeout(timer)
-    },
+    schedule: afterDelay,
   })
 
   const collectorOf = (scenario: Scenario): AssetCollector =>
@@ -1085,7 +1759,13 @@ export function createServices(settings: SettingsStore): Services {
 
   // Rebuilt only when the client is, so every job of one account shares a single graph rather
   // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
-  let bound: { scenario: Scenario; id: string; account: JobAccount } | null = null
+  let bound: { scenario: Scenario | null; id: string; account: JobAccount } | null = null
+
+  /** The account id a job on THIS machine is filed under. Not a fingerprint: nothing was paid for. */
+  const LOCAL_ACCOUNT_ID = 'local'
+
+  /** A job of this machine, told from a cloud's by the id its runner minted. */
+  const isLocalJob = (remoteId: string): boolean => remoteId.startsWith('local_')
 
   const uploads = createAssetUploader(() => client.require().assets)
 
@@ -1094,9 +1774,19 @@ export function createServices(settings: SettingsStore): Services {
   // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
   // retried twice, one courtesy estimate would take three slots of the window precisely when
   // there are none left, and hold the transport for half a minute for a figure nobody waits on.
-  const estimateCost = costEstimatorOf((target, body) =>
-    client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
+  // 🛑 Tripo is unpriced, and not by oversight: they publish no dry run, and quoting credits
+  // under the `UC` label would put two counters under one word. The cost arrives with the job.
+  const estimateCost = costEstimatorOf(
+    (target, body) =>
+      client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
+    targetId => isLocalTarget(targetId) || isTripoModelId(targetId),
   )
+
+  const promptContext = createPromptContext({
+    cards: async () => (await context.read()).cards,
+    fieldsOf: async targetId => (await models.describe(targetId)).fields,
+    log: message => log.warn('provider', message),
+  })
 
   const ownerScope = createOwnerScope(credentials.watch)
 
@@ -1159,6 +1849,12 @@ export function createServices(settings: SettingsStore): Services {
     activeOwnerId: ownerScope.current,
   })
 
+  /** The same pictures, for a model that runs HERE: a path on this disk, and nothing sent. */
+  const localAssetInputs = createLocalAssetInputResolver({
+    find: assetId => project.catalog().find(assetId),
+    projectPath: () => project.path(),
+  })
+
   // Built here rather than beside the other Scenario services, because it needs the resolver
   // above and the resolver needs the project and the cloud backend.
   const prompts = createPromptAssist({
@@ -1188,9 +1884,130 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  const accountOn = (scenario: Scenario): JobAccount => ({
-    runner: runnerOf(scenario),
-    collect: collectorOf(scenario),
+  /**
+   * Generations on this machine, behind the shape the job manager speaks — so it keeps holding
+   * the queue, the concurrency bound and the retries, and keeps knowing about ONE runner.
+   */
+  const localJobs = createLocalJobRunner({
+    generate: async request => {
+      const model = modelOf(request.model)
+      const generate = model ? runtimes[model.loader]?.generate : undefined
+      if (!model || !generate) throw new Error(`nothing here generates with ${request.model}`)
+
+      const release = ai.hold(request.model)
+      try {
+        await ai.ensureLoaded(request.model)
+
+        // The main process owns where it lands, and the engine only fills it — which is what makes
+        // the file ours to file and ours to delete.
+        const folder = await generationFolder()
+
+        return await generate({
+          model: model.id,
+          modality: request.modality,
+          prompt: request.prompt,
+          fields: request.fields,
+          // The extension follows the MODALITY: the collector reads it back off the path to file
+          // the asset, so a video written as `.png` lands as a picture nothing can play.
+          destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
+          onProgress: request.onProgress,
+          signal: request.signal,
+        })
+      } finally {
+        release()
+      }
+    },
+
+    chat: async request => {
+      const model = modelOf(request.model)
+      const chat = model ? runtimes[model.loader]?.chat : undefined
+      if (!chat) throw new Error(`nothing here converses with ${request.model}`)
+
+      return await chat(request)
+    },
+    modelOf,
+    newId: () => randomUUID(),
+    log: (level, message) => log[level]('ai', message),
+  })
+
+  /**
+   * What a generation made HERE leaves behind: a file the studio owns, filed and then dropped.
+   *
+   * Nothing is retrieved and nothing is downloaded, which is why the cloud collector cannot serve
+   * — every branch of it turns on a remote asset id there is none of.
+   */
+  const collectLocal = createLocalCollector({
+    producedBy: jobId => localJobs.producedBy(jobId) ?? tripoJobs.producedBy(jobId),
+    discard: path => rm(path, { force: true }),
+    backend: assets,
+    newId: newAssetId,
+    log: (level, message) => log[level]('ai', message),
+  })
+
+  /**
+   * Scripts written by a chat cloud. Held outside `accountOn` because it belongs to no account of
+   * Scenario's: its key is the cloud's own, and a switch of Scenario account leaves it alone.
+   */
+  const codeJobs = createCodeJobRunner({
+    chatOf: cloud => {
+      const chat = CLOUD_PROVIDERS.find(one => one.id === cloud)?.chat
+      return chat === undefined || chat.kind === 'scenario' ? null : chat
+    },
+    keyOf: cloud => settings.readCredentialsFor(cloud)?.key ?? null,
+    modelOf: cloud => settings.read().assistant.cloudModels[cloud],
+    post: (input, init) => fetch(input, init),
+    // The studio's own backoff, told what a CHAT cloud can recover from: `isRetryable` reads a
+    // Scenario SDK error, and a chat refusal is neither.
+    retry: createRetry({
+      maxRetries: () => settings.read().generation.maxRetries,
+      sleep: delay,
+      retryable: isRetryableCloudChat,
+    }),
+    newId: () => randomUUID(),
+    log: (level, message) => log[level]('ai', message),
+  })
+
+  /**
+   * Held OUTSIDE `accountOn`, like the chat runner: its key is Tripo's own. Results come down on
+   * the poll that saw them succeed — their URLs are signed five minutes — and are filed by the
+   * LOCAL collector, there being no library to fetch them back from.
+   */
+  // 🛑 ONE client, not one per call: it remembers whether their grouped read is served, and a
+  // fresh one every poll threw that away — a wasted round trip every two seconds for the session.
+  const tripoApi = createTripoApi({
+    key: () => settings.readCredentialsFor(TRIPO_CLOUD)?.key ?? null,
+  })
+
+  const tripoJobs = createTripoRunner({
+    api: () => (holdsTripo() ? tripoApi : null),
+    download,
+    readFile: path => readFile(path),
+    writeFile: (path, bytes) => writeFile(path, bytes),
+    // The main process owns where it lands and the service only fills it — which is what makes
+    // the file ours to file and ours to delete, exactly as a local generation's is.
+    destinationFor: async (taskId, extension) =>
+      join(await generationFolder(), `${taskId}${extension}`),
+    gather: ms => delay(ms),
+    log: (level, message) => log[level]('provider', message),
+  })
+
+  const accountOn = (scenario: Scenario | null): JobAccount => ({
+    runner: createRoutedJobRunner({
+      local: localJobs,
+      code: codeJobs,
+      tripo: () => (holdsTripo() ? tripoJobs : null),
+      cloud: () => (scenario ? runnerOf(scenario) : null),
+      isLocalTarget,
+    }),
+    // Routed like the runner, and by the same question: a job id says which of the two owns what
+    // it produced. A local generation needs no account, so it is collected with none held.
+    collect: createRoutedCollector({
+      local: collectLocal,
+      cloud: () => (scenario ? collectorOf(scenario) : null),
+      // Tripo files through the LOCAL collector: what it produced is already a file on this disk.
+      owns: jobId => localJobs.owns(jobId) || tripoJobs.owns(jobId),
+      wroteText: jobId => codeJobs.owns(jobId),
+    }),
   })
 
   const jobStore = createJobStore(() => app.getPath('userData'))
@@ -1199,13 +2016,15 @@ export function createServices(settings: SettingsStore): Services {
     accounts: {
       // Read once per job and kept, so a switch mid-flight does not have the new key asked about
       // the previous account's job id — see `JobAccount`.
+      // Answered even with no account at all: a generation on this machine needs none, and the
+      // routed runner refuses a CLOUD target readably rather than never being reached.
       active: () => {
-        const scenario = client.get()
+        const scenario = client.get() ?? null
         const held = settings.readCredentials()
-        if (!scenario || !held) return null
 
         if (bound?.scenario !== scenario) {
-          bound = { scenario, id: accountFingerprint(held), account: accountOn(scenario) }
+          const id = held ? accountFingerprint(held) : LOCAL_ACCOUNT_ID
+          bound = { scenario, id, account: accountOn(scenario) }
         }
 
         return { id: bound.id, account: bound.account }
@@ -1215,22 +2034,52 @@ export function createServices(settings: SettingsStore): Services {
       // to the account that paid for it, whichever one the user has switched to since.
       of: accountId => {
         const credentials = settings.credentialsOf(accountId)
-        return credentials ? accountOn(clientFor(credentials, transport)) : null
+        if (credentials) return accountOn(clientFor(credentials, transport))
+
+        // 🛑 `LOCAL_ACCOUNT_ID` is "no Scenario key was held", not an account gone: a job of
+        // another cloud is written down under it, and `null` would abandon a paid generation.
+        return accountId === LOCAL_ACCOUNT_ID ? accountOn(null) : null
       },
     },
     projectPath: () => project.current()?.path ?? null,
-    resolveAssetInputs: assetInputs.resolveBody,
+    // The folder IS the name — there is nowhere else to read it from, and nothing to fall back on.
+    projectNameOf: path => projectName(path),
+    // Routed on WHERE the target runs: a local model needs its picture off the disk, and
+    // uploading it to an account would be a transfer nobody asked for.
+    // Routed on WHERE the target runs. Anything but Scenario takes the LOCAL resolver: pushing
+    // a picture to a Scenario library for a generation billed elsewhere is a transfer nobody
+    // asked for — the Tripo runner sends it to Tripo itself.
+    resolveAssetInputs: (body, target) =>
+      isLocalTarget(target.id) || isTripoModelId(target.id)
+        ? localAssetInputs.resolveBody(body)
+        : assetInputs.resolveBody(body),
     persist: (unfinished, handled) => {
+      // 🛑 A local job is never written down: its whole state lived in the memory of the process
+      // that ran it, so a launch that resumed one would poll a runner that has never heard of it.
+      const stored = unfinished.filter(job => !isLocalJob(job.remoteId))
+
       // Nothing waits on this: the write is settled at quit and on a project change, which are
       // the two moments the process may not outlive it. Said out loud all the same — a full disk
       // or an unreadable file turns every note into a no-op, and the loss this whole mechanism
       // exists to prevent would then happen with nothing anywhere saying why.
-      void jobStore.write(unfinished, handled).catch((error: unknown) => {
+      void jobStore.write(stored, handled).catch((error: unknown) => {
         log.warn('jobs', `keeping notes of running jobs failed: ${String(error)}`)
       })
     },
     concurrency: () => settings.read().generation.concurrentJobs,
+    localConcurrency: () => 1,
+    isLocalTarget,
+    // Their reference publishes no cancellation, so a job reported as stopped would go on being
+    // billed. Said HERE, where the runners live: the row only draws what it is told.
+    cancellableTarget: targetId => !isTripoModelId(targetId),
+    // Tripo counts its own concurrency per CATEGORY — one picture at a time against ten meshes —
+    // so its ceilings are respected before the request rather than discovered by a 429.
+    lane: tripoLaneOf,
     maxRetries: () => settings.read().generation.maxRetries,
+    // Two clouds word a refusal two ways, and the SDK's reader answers `false` for everything
+    // Tripo says — so their rate limit would have failed a job that one wait would have saved.
+    retryable: error => isRetryable(error) || isRetryableTripo(error),
+    retryDelayFor: tripoRetryAfterMs,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
     onListChanged: list => broadcast(EVENTS.jobsChanged, list),
     record: report => journal.record(report),
@@ -1246,8 +2095,13 @@ export function createServices(settings: SettingsStore): Services {
    * difference is what keeps every sentence typed at the assistant out of the jobs bar and its
    * answers out of the asset browser — see `JobManager.run`.
    */
-  const brain = createScenarioBrain({
-    run: body => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body),
+  const providerBrain = createProviderBrain({
+    run: (body, signal) => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body, signal),
+    // Invariant 5, applied to the one form of this studio that was written by hand: what the
+    // door accepts is read off the model, once, rather than declared here and left to rot.
+    limits: providerLimits(
+      async () => (await catalogOf(client.require()).retrieve(ASSISTANT_MODEL_ID)).model.inputs,
+    ),
     readText: createAssetText({
       retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,
       // The signed CDN url the asset carries, for the rare answer too long to have been
@@ -1255,6 +2109,7 @@ export function createServices(settings: SettingsStore): Services {
       download: async url => await (await fetch(url)).text(),
     }),
     model: () => settings.read().assistant.model,
+    notReady,
   })
 
   // To the studio window alone, and it says when there is none — which is the difference between
@@ -1262,6 +2117,59 @@ export function createServices(settings: SettingsStore): Services {
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
   })
+
+  /**
+   * WHICH brain answers is the manager's decision, asked on every turn — ADR-21 § A: the assistant
+   * is an employment like any other, served by a model on this machine or by a registered cloud,
+   * the local side winning by default.
+   */
+  const brain = createRoutedBrain({
+    providerOf: () => ai.providerOf(ASSISTANT_ROLE),
+    modelOf,
+    // Both halves are required, and neither is guessed: a runtime that cannot converse and a
+    // manifest with no window are the two ways a local model has nothing to answer with.
+    localBrain: model => {
+      const chat = runtimes[model.loader]?.chat
+      if (!chat || model.contextTokens === undefined) return null
+
+      return createLocalBrain({
+        chat,
+        modelId: model.id,
+        contextTokens: model.contextTokens,
+        notReady,
+      })
+    },
+    cloudBrain: id => clouds[id]?.brain() ?? null,
+    // Read here rather than taken from the window: this is the one point every brain goes
+    // through, and a context a renderer could name is one it could forge.
+    contextOf: async () => composedContext((await context.read()).cards),
+    // Asked of the window by the door an MCP client reads `studio.state` by: one reading of what
+    // the studio is, or the assistant and a client on the wire would see two different studios.
+    stateOf: async () => {
+      const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
+      return outcome.ok ? describeStudio(outcome.data) : ''
+    },
+    // A count and never a recall: the briefing says a memory EXISTS, the model asks it if it
+    // wants to. `held` opens nothing when no project is open.
+    memoriesOf: () => memoryVectors.held('project'),
+    // Read on every turn rather than once: `app.getPath` answers the live OS folders, which a
+    // person can move.
+    foldersOf: () => {
+      const { projectsFolder, recentProjects } = settings.read().storage
+      return machineFolders(
+        name => app.getPath(name),
+        projectPickerFolder(projectsFolder, recentProjects),
+      )
+    },
+  })
+
+  const checkout = checkoutOf(app.getAppPath())
+  const endpointPath = mcpEndpointPath(app.getPath('userData'), checkout)
+  const launch = mcpLaunch(process.execPath, checkout, endpointPath)
+
+  // A development checkout gets the client configuration Claude Code reads on its own. It holds
+  // no address, so it is written once and never removed — unlike `endpointPath`.
+  if (checkout !== null) void leaveClientConfig(join(checkout, '.mcp.json'), launch)
 
   /**
    * The door onto the machine, built here and opened only if the setting says so.
@@ -1273,7 +2181,8 @@ export function createServices(settings: SettingsStore): Services {
   const mcp = createMcpControl({
     run: remoteActions.run,
     version: app.getVersion(),
-    configPath: join(app.getPath('userData'), 'mcp.json'),
+    configPath: endpointPath,
+    onSettled: endpoint => broadcast(EVENTS.mcpState, mcpStateOf(endpoint)),
   })
 
   const captioner = createCaptioner({
@@ -1303,7 +2212,7 @@ export function createServices(settings: SettingsStore): Services {
         [],
       )
       const poster = asset ? posterFileOf(current.path, asset) : null
-      return poster ? await readFile(poster).catch(() => null) : null
+      return poster ? await orElse(readFile(poster), null) : null
     },
     // The same bound the ingest pool takes: previewing is the system's work, but a folder
     // scrolled fast asks for hundreds at once and each one leaves this process.
@@ -1320,7 +2229,9 @@ export function createServices(settings: SettingsStore): Services {
       favouriteThumbnail: favoriteId => favorites.thumbnailPath(favoriteId),
       thumbnailOf: relative => thumbnails.of(relative),
       bundledAnimation: id => bundledAnimationFile(bundledAnimations(resourcesRoot()), id),
-      bundledTemplate: file => bundledTemplateFile(bundledTemplates(resourcesRoot()), file),
+      bundledTemplate: file => bundledFile(bundledTemplates(resourcesRoot()), file),
+      bundledModel: file => bundledFile(bundledModels(resourcesRoot()), file),
+      bundledTexture: file => bundledFile(bundledTextures(resourcesRoot()), file),
     }),
   )
 
@@ -1344,12 +2255,18 @@ export function createServices(settings: SettingsStore): Services {
     settings,
     favorites,
     styles,
+    disposeAiEngine: async () => {
+      ai.dispose()
+      engine.dispose()
+      await llama.unload()
+    },
     client,
     models,
     jobs,
     prompts,
     usage,
     plan,
+    credits,
     estimateCost,
     captionArrivals: captioner.onArrival,
     describeAssets: captioner.describe,
@@ -1359,10 +2276,14 @@ export function createServices(settings: SettingsStore): Services {
     ownerScope,
     removeAssetFile,
     project,
+    memory,
+    memoryVectors,
     // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
     // here, and an export named against nothing is a refusal rather than a failure.
     projectPath: () => project.current()?.path ?? null,
     journal,
+    transcribe,
+    said,
     flushJobs: () => jobStore.flush(),
     documents,
     assets,
@@ -1372,6 +2293,9 @@ export function createServices(settings: SettingsStore): Services {
     assistant: brain,
     remoteActions,
     mcp,
+    mcpLaunch: launch,
+    ai,
+    addOwnAiModel,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>
@@ -1401,14 +2325,16 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     savePicture,
     pickSavePath,
-    encodeVideo: async args => {
+    encodeVideo: async (args, signal) => {
       const binary = ffmpeg.path()
       if (!binary) throw new Error('ffmpeg was not found')
-      await runProcess(binary, args)
+      await runProcess(binary, args, { signal })
     },
     // The same picker the settings use for a folder: a second dialog with slightly different
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
+    assetsById: ids => project.catalog().search({ ids, limit: ids.length }),
+    runtimeFolder: () => bundledGameRuntime(resourcesRoot()),
     // Forked on the first bundle asked for, then kept — most sessions export none. Forgotten
     // when it exits, so a crash costs the export it was writing and not the session.
     bundles: () =>
@@ -1420,9 +2346,21 @@ export function createServices(settings: SettingsStore): Services {
     exists: existsSync,
     folder,
     files,
+    game,
+    scripts,
     reconciler,
+    context,
+    promptContext,
     openInSystem: file => shell.openPath(file),
     askUser,
+    trashFolder: path => shell.trashItem(path),
+    // Nothing to leave means nothing to ask about: `pickedProject` reaches the question on a
+    // studio that has never opened a project, where a job of a project closed earlier would
+    // otherwise be counted.
+    runningJobCount: () => {
+      const current = project.current()
+      return current ? jobs.runningIn(current.path) : 0
+    },
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's
     // contents under the new one. And the open project remembers the switch, so reopening it
@@ -1449,9 +2387,23 @@ export function createServices(settings: SettingsStore): Services {
       // asking the API again would cost a call to learn something it already told us.
       return state.authenticated && owner !== null ? { ...state, ownerId: owner } : state
     },
-    // Every window carries the switch, not just the one that made it: the studio and the
-    // settings window both show which account is active.
-    broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),
+    // Every window carries the switch, not just the one that made it — and so does the AI
+    // manager, for which clouds are ready is one of the inputs its overview is pulled from.
+    broadcastAccounts: accounts => {
+      broadcast(EVENTS.accountsChanged, accounts)
+      republishAi('an account change')
+    },
+    // The one outward read this studio makes for something other than a model or a job. Bound
+    // to `net.fetch` so it follows the session's proxy, as every other outward call does.
+    news: createNewsService({
+      read: async (url, signal) => {
+        const response = await net.fetch(url, { signal })
+        if (!response.ok) throw new Error(`${url} answered ${response.status}`)
+
+        return response.text()
+      },
+      now: () => Date.now(),
+    }),
     updates: createUpdates({
       // Through `default`: `autoUpdater` is a defineProperty getter, which the ESM loader cannot
       // see as a named export. Measured under Electron 43 — the named read answers `undefined`.

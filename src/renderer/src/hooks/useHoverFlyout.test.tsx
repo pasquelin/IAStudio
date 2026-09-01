@@ -1,6 +1,20 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useHoverFlyout } from './useHoverFlyout'
+import { useHoverFlyout, type HoverFlyout } from './useHoverFlyout'
+
+/** What a walk of the rows looks like to the hook — only the key matters to it. */
+const keyEvent = (key: string) =>
+  new KeyboardEvent('keydown', { key }) as unknown as Parameters<
+    HoverFlyout['flyoutProps']['onKeyDown']
+  >[0]
+
+/** The chord is read by `triggerProps`, so it is PRESSED on a real button rather than called. */
+const keyOpened = () => {
+  const { result } = renderHook(() => useHoverFlyout(3))
+  render(<button {...result.current.triggerProps}>open</button>)
+  fireEvent.keyDown(screen.getByRole('button'), { key: 'ArrowDown', altKey: true })
+  return result
+}
 
 /** Longer than the hook's grace period, whatever it is set to. */
 const AFTER_GRACE = 1000
@@ -97,17 +111,69 @@ describe('useHoverFlyout', () => {
       expect(result.current.asked).toBe(true)
     })
 
-    // The walk it is holding would otherwise end 220 ms after a mouse moved off a bar nobody
-    // touched, with the focus thrown back to the opener.
-    it('does not let the grace period close a menu that was asked for', () => {
+    it('lets the pointer close what a click opened', () => {
       const { result } = renderHook(() => useHoverFlyout(3))
       act(() => result.current.open())
 
       act(() => result.current.wrapProps.onPointerLeave())
       act(() => vi.advanceTimersByTime(AFTER_GRACE))
 
+      expect(result.current.showing).toBe(false)
+    })
+
+    /**
+     * Clicked open, then WALKED with the arrows: the walk is a keyboard gesture whatever opened
+     * the menu, so from the first arrow the pointer stops being allowed to end it. Without this,
+     * moving the mouse off the bar mid-walk closed the rows and threw the focus back.
+     */
+    it('holds a clicked menu from the first arrow pressed in its rows', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+
+      act(() => result.current.flyoutProps.onKeyDown(keyEvent('ArrowDown')))
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => vi.advanceTimersByTime(AFTER_GRACE))
+
       expect(result.current.showing).toBe(true)
-      expect(result.current.asked).toBe(true)
+    })
+
+    // A row PRESSED is a choice, not a walk: it must not pin the menu the caller is closing.
+    it('is not held by a key that does not walk the rows', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+
+      act(() => result.current.flyoutProps.onKeyDown(keyEvent('Enter')))
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => vi.advanceTimersByTime(AFTER_GRACE))
+
+      expect(result.current.showing).toBe(false)
+    })
+
+    // The one opening the pointer may not close — see `leave`.
+    it('holds a menu the keyboard opened against the pointer leaving', () => {
+      const result = keyOpened()
+
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => vi.advanceTimersByTime(AFTER_GRACE))
+
+      expect(result.current.showing).toBe(true)
+    })
+
+    /**
+     * Closing by the grace period has to forget the ask as thoroughly as `close` does: left
+     * behind, the next menu the pointer merely WANDERS into takes the focus and the caret with
+     * it — the very thing telling the two openings apart exists to prevent.
+     */
+    it('forgets it was asked for once the grace period closed it', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => vi.advanceTimersByTime(AFTER_GRACE))
+
+      act(() => result.current.wrapProps.onPointerEnter())
+
+      expect(result.current.showing).toBe(true)
+      expect(result.current.asked).toBe(false)
     })
 
     it('forgets it was asked for once it is closed', () => {

@@ -1,0 +1,292 @@
+import { describe, expect, it, vi } from 'vitest'
+import { localModel } from '@shared/domain/localModel-fixtures'
+import type { ChatRequest } from './localRuntimes'
+import { ollamaHttpPort, ollamaLocalRuntime, type OllamaPort } from './ollamaRuntime'
+
+const QWEN = localModel({
+  id: 'qwen3:8b',
+  name: 'qwen3:8b',
+  format: 'gguf',
+  loader: 'ollama',
+  files: [],
+})
+
+const port = (over: Partial<OllamaPort> = {}): OllamaPort => ({
+  tags: () => Promise.resolve([{ name: 'qwen3:8b', size: 5_000_000_000 }]),
+  pull: () => Promise.resolve(),
+  remove: () => Promise.resolve(),
+  chat: () => Promise.resolve('answered'),
+  generateImage: () => Promise.resolve([]),
+  ...over,
+})
+
+const request: ChatRequest = {
+  model: 'qwen3:8b',
+  contextTokens: 4096,
+  messages: [{ role: 'user', content: 'hi' }],
+  json: false,
+}
+
+describe('ollamaLocalRuntime', () => {
+  it('reads ready and installed when the service answers', async () => {
+    const reading = await ollamaLocalRuntime(port()).read([QWEN])
+
+    expect(reading.ready).toBe(true)
+    expect(reading.installed.has('qwen3:8b')).toBe(true)
+  })
+
+  it('reads not ready when nothing answers and nothing can start it', async () => {
+    const reading = await ollamaLocalRuntime(
+      port({ tags: () => Promise.reject(new Error('ECONNREFUSED')) }),
+    ).read([QWEN])
+
+    expect(reading).toEqual({ ready: false, installed: new Set(), loaded: new Set() })
+  })
+
+  it('retries the listing after ensure brings the service up', async () => {
+    let up = false
+    const tags = vi.fn(() =>
+      up
+        ? Promise.resolve([{ name: 'qwen3:8b', size: 5_000_000_000 }])
+        : Promise.reject(new Error('ECONNREFUSED')),
+    )
+    const reading = await ollamaLocalRuntime(port({ tags }), {
+      ensure: async () => {
+        up = true
+        return true
+      },
+    }).read([QWEN])
+
+    expect(reading.ready).toBe(true)
+    expect(reading.installed.has('qwen3:8b')).toBe(true)
+    expect(tags).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not call remove when a chat fails — a missing tag is not ours to delete', async () => {
+    const remove = vi.fn()
+    const onStale = vi.fn()
+    const runtime = ollamaLocalRuntime(
+      port({ remove, chat: () => Promise.reject(new Error('404')) }),
+      {
+        onStale,
+      },
+    )
+
+    await expect(runtime.chat?.(request)).rejects.toThrow(/404/)
+    expect(remove).not.toHaveBeenCalled()
+    expect(onStale).toHaveBeenCalledOnce()
+  })
+
+  it('discovers chat tags and skips embeddings', async () => {
+    const runtime = ollamaLocalRuntime(
+      port({
+        tags: () =>
+          Promise.resolve([
+            { name: 'qwen3:8b', size: 5_000_000_000 },
+            { name: 'nomic-embed-text', size: 270_000_000 },
+          ]),
+      }),
+    )
+
+    expect((await runtime.discover?.())?.map(model => model.id)).toEqual(['qwen3:8b'])
+  })
+
+  it('discovers nothing when the service is down', async () => {
+    const runtime = ollamaLocalRuntime(
+      port({ tags: () => Promise.reject(new Error('ECONNREFUSED')) }),
+    )
+
+    expect(await runtime.discover?.()).toEqual([])
+  })
+
+  it('asks the service once when discover and read run together', async () => {
+    const tags = vi.fn(() => Promise.resolve([{ name: 'qwen3:8b', size: 5_000_000_000 }]))
+    const runtime = ollamaLocalRuntime(port({ tags }))
+
+    await Promise.all([runtime.discover?.(), runtime.read([QWEN])])
+
+    expect(tags).toHaveBeenCalledOnce()
+  })
+
+  it('pulls, deletes and chats by the tag name', async () => {
+    const pull = vi.fn(() => Promise.resolve())
+    const remove = vi.fn(() => Promise.resolve())
+    const chat = vi.fn(() => Promise.resolve('hi'))
+    const runtime = ollamaLocalRuntime(port({ pull, remove, chat }))
+
+    await runtime.install(QWEN, () => {}, new AbortController().signal)
+    await runtime.remove(QWEN)
+    expect(await runtime.chat?.(request)).toBe('hi')
+    expect(pull).toHaveBeenCalledWith('qwen3:8b', expect.any(Function), expect.any(AbortSignal))
+    expect(remove).toHaveBeenCalledWith('qwen3:8b')
+    expect(chat).toHaveBeenCalledWith(request)
+  })
+
+  it('discovers an image-generation tag as an image model', async () => {
+    const runtime = ollamaLocalRuntime(
+      port({
+        tags: () =>
+          Promise.resolve([
+            { name: 'x/z-image-turbo', size: 6_000_000_000, capabilities: ['image'] },
+          ]),
+      }),
+    )
+
+    expect((await runtime.discover?.())?.[0]).toMatchObject({
+      id: 'x/z-image-turbo',
+      family: 'image',
+      modality: 'image',
+    })
+  })
+
+  it('writes the generated picture and does not delete the tag', async () => {
+    const remove = vi.fn()
+    const writeFile = vi.fn(() => Promise.resolve())
+    const runtime = ollamaLocalRuntime(
+      port({
+        remove,
+        generateImage: async request => {
+          request.onProgress(1)
+          return ['aGVsbG8=']
+        },
+      }),
+      { writeFile },
+    )
+
+    const written = await runtime.generate?.({
+      model: 'x/z-image-turbo',
+      modality: 'image',
+      prompt: 'a cat',
+      fields: { width: 1024, height: 1024 },
+      destination: '/tmp/cat.png',
+      onProgress: () => {},
+    })
+
+    expect(written?.path).toBe('/tmp/cat.png')
+    expect(writeFile).toHaveBeenCalledWith('/tmp/cat.png', Buffer.from('hello'))
+    expect(remove).not.toHaveBeenCalled()
+  })
+})
+
+describe('ollamaHttpPort', () => {
+  /** The service answers one JSON object per line, and a chunk boundary falls wherever it falls. */
+  const streaming = (chunks: readonly string[]): typeof fetch =>
+    vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk))
+              controller.close()
+            },
+          }),
+        ),
+      ),
+    ) as unknown as typeof fetch
+
+  it('reports a pull whose frames are cut across chunks', async () => {
+    const seen: { received: number; total: number }[] = []
+    await ollamaHttpPort(
+      'http://x',
+      streaming(['{"completed":1,"tot', 'al":4}\n{"completed":4,"total":4}\n']),
+    ).pull('qwen3:8b', progress => seen.push(progress), new AbortController().signal)
+
+    expect(seen).toEqual([
+      { received: 1, total: 4 },
+      { received: 4, total: 4 },
+    ])
+  })
+
+  it('assembles a streamed answer, and reports it as it arrives', async () => {
+    const seen: string[] = []
+    const answer = await ollamaHttpPort(
+      'http://x',
+      streaming([
+        '{"message":{"content":"{\\"say\\":"}}\n{"message":{"content":"\\"hi\\"}"',
+        '}}\n{"message":{"content":""},"done":true,"prompt_eval_count":2366,"eval_count":18}\n',
+      ]),
+    ).chat({
+      model: 'qwen3:8b',
+      contextTokens: 4096,
+      messages: [{ role: 'user', content: 'hi' }],
+      json: true,
+      onProgress: progress => seen.push(progress.delta),
+    })
+
+    expect(answer).toBe('{"say":"hi"}')
+    expect(seen).toEqual(['{"say":', '"hi"}', ''])
+  })
+
+  // What the person watches beside the words: a count nothing else on this door publishes.
+  it('reports what the prompt and the answer cost', async () => {
+    const seen: { promptTokens?: number; replyTokens?: number }[] = []
+    await ollamaHttpPort(
+      'http://x',
+      streaming([
+        '{"message":{"content":"x"},"done":true,"prompt_eval_count":2366,"eval_count":18}\n',
+      ]),
+    ).chat({
+      model: 'qwen3:8b',
+      contextTokens: 4096,
+      messages: [{ role: 'user', content: 'hi' }],
+      json: false,
+      onProgress: progress => seen.push(progress),
+    })
+
+    expect(seen.at(-1)).toMatchObject({ promptTokens: 2366, replyTokens: 18 })
+  })
+
+  // `localJobRunner` and the image door call this too: hundreds of parses for nobody is waste.
+  it('reads a whole body, and asks for no stream, when nobody is watching', async () => {
+    const post = vi.fn(async (_url: string, _init?: RequestInit) =>
+      Response.json({ message: { content: 'answered whole' } }),
+    ) as unknown as typeof fetch
+
+    const answer = await ollamaHttpPort('http://x', post).chat({
+      model: 'qwen3:8b',
+      contextTokens: 4096,
+      messages: [{ role: 'user', content: 'hi' }],
+      json: false,
+    })
+
+    expect(answer).toBe('answered whole')
+    expect(String(vi.mocked(post).mock.calls[0]?.[1]?.body)).toContain('"stream":false')
+  })
+
+  it('keeps the image of a last frame that carries no newline', async () => {
+    const images = await ollamaHttpPort(
+      'http://x',
+      streaming(['{"completed":1,"total":2}\n', '{"images":["aGVsbG8="]}']),
+    ).generateImage({
+      model: 'z-image-turbo',
+      prompt: 'a cat',
+      onProgress: () => {},
+    })
+
+    expect(images).toEqual(['aGVsbG8='])
+  })
+
+  /**
+   * The body is what this machine's Ollama answered on 2026-08-28, cut to what is read: the
+   * window travels under `details`, so no second call to `/api/show` is worth its round trip.
+   */
+  it('reads the window a tag was built with, and leaves it out when nothing says', async () => {
+    const answering = (body: unknown): typeof fetch =>
+      vi.fn(() => Promise.resolve(Response.json(body))) as unknown as typeof fetch
+
+    const tags = await ollamaHttpPort(
+      'http://x',
+      answering({
+        models: [
+          { name: 'qwen3.8:latest', size: 17_741_872_154, details: { context_length: 262_144 } },
+          { name: 'old:7b', size: 4_000_000_000, details: { format: 'gguf' } },
+        ],
+      }),
+    ).tags()
+
+    expect(tags).toEqual([
+      { name: 'qwen3.8:latest', size: 17_741_872_154, contextTokens: 262_144 },
+      { name: 'old:7b', size: 4_000_000_000 },
+    ])
+  })
+})

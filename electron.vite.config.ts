@@ -18,7 +18,7 @@ const principal = resolve('src/main')
  */
 function strippedDecoderUrls(): Plugin {
   return {
-    name: 'scenario:stripped-decoder-urls',
+    name: 'provider:stripped-decoder-urls',
     transform(source, id) {
       if (!DECODER_MODULES.includes(basename(id))) return null
 
@@ -68,16 +68,21 @@ export default defineConfig(({ command }) => ({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        // The catalogue's thread and the three worker processes are entry points of their own:
-        // each is resolved beside the bundled main, so each has to land there as a file of its own.
+        // The two threads and the four worker processes are entry points of their own: each is
+        // resolved beside the bundled main, so each has to land there as a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
           catalogWorker: resolve('src/main/project/catalogWorker.ts'),
+          memoryWorker: resolve('src/main/memory/memoryWorker.ts'),
           peaksWorker: resolve('src/main/media/peaksWorker.ts'),
           bundleWorker: resolve('src/main/bundle/bundleWorker.ts'),
           sttWorker: resolve('src/main/dictation/sttWorker.ts'),
+          embedWorker: resolve('src/main/memory/embedWorker.ts'),
         },
-        output: { entryFileNames: '[name].js' },
+        // 🛑 Chunks land BESIDE the entry, never under `chunks/`: eight sites of `src/main`
+        // resolve a path from their own file, and one directory deeper sends every one of them
+        // too far — measured, the studio died on `out/build/icon.png`. `main-chunks-stay-flat`.
+        output: { entryFileNames: '[name].js', chunkFileNames: '[name]-[hash].js' },
       },
     },
   },
@@ -96,7 +101,11 @@ export default defineConfig(({ command }) => ({
   renderer: {
     root: resolve('src/renderer'),
     plugins: [react(), tailwindcss(), strippedDecoderUrls()],
-    resolve: { alias: { '@': resolve('src/renderer/src'), '@shared': partage } },
+    // `@game` here as well as in `tsconfig.web.json`: a path the compiler resolves and the
+    // bundler does not fails at RUNTIME with a green typecheck.
+    resolve: {
+      alias: { '@': resolve('src/renderer/src'), '@game': resolve('src/game'), '@shared': partage },
+    },
     build: {
       rollupOptions: {
         input: {

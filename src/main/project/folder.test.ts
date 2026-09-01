@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { FSWatcher } from 'node:fs'
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { ROLE_MARKER } from '@shared/domain/folderRole'
 import {
   createFolderReader,
   createFolderWriter,
@@ -89,6 +90,15 @@ describe('reading the project folder', () => {
   })
 
   // The path is the tree's id as well as the path, and it is what the next read is asked for.
+  it('shows a package folder, which the walks refuse to cross', async () => {
+    const root = await project()
+    await mkdir(join(root, 'node_modules'), { recursive: true })
+
+    const entries = await createFolderReader(() => root, inFrench).list('')
+
+    expect(entries.map(entry => entry.name)).toContain('node_modules')
+  })
+
   it('names each entry relative to the project root', async () => {
     const root = await project()
     await writeFile(join(root, 'documents', 'a3f1.gltf'), '{}')
@@ -140,6 +150,23 @@ describe('searching the project folder', () => {
     (await createFolderReader(() => root, inFrench).search(term, hidden)).map(entry => entry.path)
 
   /**
+   * 🛑 The search a person actually types, and the one a substring could never answer: this
+   * studio names a picture after the prompt that made it, so the words are in the name but
+   * scattered through it. `green sailboat` found nothing in a folder holding
+   * `a beautiful sailing ship, sailboat, on the open sea, green….png`.
+   */
+  it('finds a name by its words, wherever they sit in it and in any order', async () => {
+    const root = await project()
+    const named = 'a beautiful sailing ship, sailboat, on the open sea, green.png'
+    await writeFile(join(root, named), '')
+
+    expect(await namesFound(root, 'green sailboat')).toEqual([named])
+    expect(await namesFound(root, 'sailboat green')).toEqual([named])
+    // Every word has to be there: one that is not is a different file.
+    expect(await namesFound(root, 'green submarine')).toEqual([])
+  })
+
+  /**
    * The whole reason this channel exists: the tree reads one folder at a time, so a file three
    * folds down is a file it has never seen — and a search that filtered what is loaded would
    * answer nothing for it.
@@ -185,6 +212,15 @@ describe('searching the project folder', () => {
     expect(await namesFound(root, 'ruelle')).toEqual(['Repérages.gltf/ruelle.png'])
   })
 
+  it('leaves a package folder out of what it answers', async () => {
+    const root = await project()
+    await mkdir(join(root, 'node_modules', 'sailboat'), { recursive: true })
+    await writeFile(join(root, 'node_modules', 'sailboat', 'sailboat.js'), '')
+    await writeFile(join(root, 'sailboat.png'), '')
+
+    expect(await namesFound(root, 'sailboat')).toEqual(['sailboat.png'])
+  })
+
   it('answers nothing at all for an empty term', async () => {
     const root = await project()
 
@@ -219,6 +255,41 @@ describe('walking the project folder for what it holds', () => {
 
     expect(await walked(root)).not.toContain('.index/catalog.db')
     expect(await walked(root, true)).toContain('.index/catalog.db')
+  })
+
+  /**
+   * A package folder wears no dot, so nothing else would stop it: a project beside a checkout
+   * answered forty thousand files nobody wrote. Refused at BOTH settings of `hidden`, which is
+   * what tells a second axis from an effect of the hidden filter.
+   */
+  it('never goes down into a package folder', async () => {
+    const root = await project()
+    await mkdir(join(root, 'Scripts', 'node_modules', 'left-pad'), { recursive: true })
+    await writeFile(join(root, 'Scripts', 'node_modules', 'left-pad', 'index.js'), '')
+    await writeFile(join(root, 'Scripts', 'game.ts'), '')
+
+    const files = await walked(root)
+    expect(files).toContain('Scripts/game.ts')
+    expect(files).not.toContain('Scripts/node_modules/left-pad/index.js')
+    expect(await walked(root, true)).not.toContain('Scripts/node_modules/left-pad/index.js')
+  })
+})
+
+/**
+ * The studio looking for its own markers, which is not a reader looking at a folder: it reads
+ * hidden entries, and refuses on top the two folders none of its markers can be under.
+ */
+describe('finding every entry of one name', () => {
+  it('crosses neither packages, nor git, nor the index it rebuilds', async () => {
+    const root = await project()
+    for (const folder of ['Images', 'node_modules', '.git', '.index']) {
+      await mkdir(join(root, folder), { recursive: true })
+      await writeFile(join(root, folder, ROLE_MARKER), '')
+    }
+
+    const found = await createFolderReader(() => root, inFrench).named(ROLE_MARKER)
+
+    expect(found.map(entry => entry.path)).toEqual([`Images/${ROLE_MARKER}`])
   })
 })
 
@@ -354,7 +425,7 @@ describe('following the project folder', () => {
 
   /**
    * Those two and NOT everything under a dot, which is how the explorer decides what to hide:
-   * `.scenario/items.json` holds the prompt, model and seed of every asset, it is deliberately
+   * `.ia-studio/items.json` holds the prompt, model and seed of every asset, it is deliberately
    * versioned, and the studio rewrites it whenever one is generated. Skipped, the version panel
    * would not know the one file no rescan can rebuild had changed.
    */
@@ -367,7 +438,7 @@ describe('following the project folder', () => {
     const { open, emit } = driving()
     watches.push(watchProjectFolder('/projects/demo', announce, open))
 
-    emit('.scenario/items.json')
+    emit('.ia-studio/items.json')
     vi.advanceTimersByTime(5000)
 
     expect(announce).toHaveBeenCalledTimes(1)

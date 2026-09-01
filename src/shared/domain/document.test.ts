@@ -8,7 +8,10 @@ import {
   kindsForExtension,
   kindForWorkspace,
   workspaceForKind,
+  documentExtensionOf,
+  documentStemOf,
 } from './document'
+import { extensionOf, stemOf } from './fileName'
 import { WORKSPACE_IDS } from './workspace'
 
 describe('kindForWorkspace', () => {
@@ -32,8 +35,8 @@ describe('kindForWorkspace', () => {
     expect(kindForWorkspace('skyboxes')).toBe('skybox')
   })
 
-  it('gives the textures workspace a material to edit', () => {
-    expect(kindForWorkspace('textures')).toBe('texture')
+  it('gives the materials workspace a material to edit', () => {
+    expect(kindForWorkspace('materials')).toBe('material')
   })
 
   // Every workspace opens a document of its own now. The `null` branch stays for the next one
@@ -56,14 +59,22 @@ describe('workspaceForKind', () => {
     expect(workspaceForKind('skybox')).toBe('skyboxes')
   })
 
-  // A document filed under a workspace that does not open it is a tab nothing can render, and
-  // listing a project folder builds one descriptor per file from this answer alone.
-  it('agrees with kindForWorkspace on every kind', () => {
+  /**
+   * A document filed under a workspace that does not open it is a tab nothing can render, and
+   * listing a project folder builds one descriptor per file from this answer alone.
+   *
+   * Not a bijection any more: the 3D space opens a scene AND the interfaces shown over it, so
+   * what `kindForWorkspace` answers is the one its New button makes — the FIRST of the list.
+   */
+  it('files every kind under a workspace that opens it', () => {
     for (const kind of DOCUMENT_KINDS) {
-      const workspace = workspaceForKind(kind)
-      expect(workspace).not.toBeNull()
-      if (workspace) expect(kindForWorkspace(workspace)).toBe(kind)
+      expect(workspaceForKind(kind)).not.toBeNull()
     }
+  })
+
+  it('answers the kind a space CREATES, where it opens more than one', () => {
+    expect(kindForWorkspace('3d')).toBe('scene')
+    expect(workspaceForKind('gui')).toBe('3d')
   })
 })
 
@@ -88,6 +99,11 @@ describe('kindForExtension', () => {
       '.otio',
       '.gltf',
       '.mtlx',
+      // TypeScript's own, and the one file the studio writes with nothing of its own in it.
+      '.ts',
+      // The one COMPOUND spelling: plain JSON, so any tool reads it, under a suffix that tells
+      // an interface from every other `.json` a project holds.
+      '.ui.json',
     ])
     for (const gone of ['.img', '.scene', '.seq', '.aud', '.sky', '.tex']) {
       expect(kindForExtension(gone)).toBeNull()
@@ -117,7 +133,7 @@ describe('isDocumentKind', () => {
   })
 
   it('rejects what a hand-edited file could hold', () => {
-    expect(isDocumentKind('material')).toBe(false)
+    expect(isDocumentKind('sculpture')).toBe(false)
     expect(isDocumentKind('')).toBe(false)
     expect(isDocumentKind(null)).toBe(false)
     expect(isDocumentKind(undefined)).toBe(false)
@@ -146,5 +162,57 @@ describe('documentPath', () => {
     expect(kindsForExtension('.gltf')).toEqual(['scene', 'skybox'])
     expect(kindsForExtension('.ora')).toEqual(['image'])
     expect(kindsForExtension('.txt')).toEqual([])
+  })
+})
+
+/**
+ * 🛑 `extensionOf` cuts at the LAST dot, so it answers `.json` for `hud.ui.json`. Everything that
+ * tells a document by its extension asks `documentExtensionOf` instead — and a `.json` that is
+ * not one of ours must not become a document because of it.
+ */
+describe('a compound extension', () => {
+  it('is read whole, where the plain reading stops at the last dot', () => {
+    expect(documentExtensionOf('hud.ui.json')).toBe('.ui.json')
+    expect(extensionOf('hud.ui.json')).toBe('.json')
+  })
+
+  it('leaves every other name to the plain reading', () => {
+    expect(documentExtensionOf('Level.gltf')).toBe('.gltf')
+    expect(documentExtensionOf('package.json')).toBe('.json')
+    expect(documentExtensionOf('Untitled')).toBe('')
+  })
+
+  /** The whole point: a `.json` of the project is not a document, and a `.ui.json` is. */
+  it('tells a document from an ordinary json', () => {
+    expect(kindForExtension(documentExtensionOf('hud.ui.json'))).toBe('gui')
+    expect(kindForExtension(documentExtensionOf('tsconfig.json'))).toBeNull()
+  })
+
+  it('names a dotted stem no document, however many dots it holds', () => {
+    expect(documentExtensionOf('my.hud.ui.json')).toBe('.ui.json')
+    expect(documentExtensionOf('a.b.c.txt')).toBe('.txt')
+  })
+})
+
+/**
+ * The stem is the pair of the extension, and it has to be read the same way: `stemOf` cuts at
+ * the last dot, so pairing it with a compound suffix made a copy `hud.ui 2.ui.json` — and the
+ * one after it `hud.ui 2.ui 2.ui.json`.
+ */
+describe('the stem of a document name', () => {
+  it('drops the whole compound extension, not the last dot', () => {
+    expect(documentStemOf('hud.ui.json')).toBe('hud')
+    expect(stemOf('hud.ui.json')).toBe('hud.ui')
+  })
+
+  it('reads every other name as the plain stem does', () => {
+    expect(documentStemOf('Level.gltf')).toBe('Level')
+    expect(documentStemOf('package.json')).toBe('package')
+    expect(documentStemOf('Untitled')).toBe('Untitled')
+  })
+
+  /** Stem and extension spell the file back, which is what the explorer badge compares. */
+  it.each(['hud.ui.json', 'Level.gltf', 'notes.txt', 'Untitled'])('spells %s back', name => {
+    expect(`${documentStemOf(name)}${documentExtensionOf(name)}`).toBe(name)
   })
 })

@@ -4,6 +4,7 @@ import {
   clipAt,
   createFrameSink,
   fitInside,
+  reusePaintedSource,
   spritesOffFrame,
   swapTexture,
   TimelineEngine,
@@ -37,10 +38,17 @@ describe('timeline engine', () => {
     expect(clipAt(track, 1_000_000)).toBeNull()
   })
 
+  it('reuses a still already on the sprite, and not a live source', () => {
+    const painted = new Map([['V1', 'logo']])
+    expect(reusePaintedSource('logo', 'V1', id => id === 'logo', painted)).toBe(true)
+    expect(reusePaintedSource('logo', 'V1', () => false, painted)).toBe(false)
+    expect(reusePaintedSource('rush', 'V1', () => true, painted)).toBe(false)
+    expect(reusePaintedSource(null, 'V1', () => true, painted)).toBe(false)
+  })
+
   /**
-   * The paint loop only reaches tracks still in the frame, so nothing else would ever take these
-   * down: a source monitor whose selection moves from a rush to a take turns its one track from
-   * picture to sound, and the rush's last image would stay on screen over another clip's sound.
+   * The paint loop only reaches tracks still in the frame, so a source monitor switching a rush
+   * to a take would otherwise keep the rush on screen over the take's sound.
    */
   it('hands back the sprite of a track that left the frame, so it can go dark', () => {
     const sprites = new Map([

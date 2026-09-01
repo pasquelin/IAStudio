@@ -4,9 +4,6 @@ out/
 release/
 .DS_Store
 *.log
-secrets/*
-!secrets/.env.example
-!secrets/README.md
 .playwright-mcp/
 # Doc écrite ailleurs et déposée ici — pas de la doc de projet
 docs/specs
@@ -21,11 +18,18 @@ CLAUDE.md
 .claude/
 # Sorties d'exécution, jamais du code
 logs/
+# L'environnement et les caches du moteur Python : uv les matérialise, git ne les porte pas.
+engine/.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
 
 # Shipped with the app, fetched by `pnpm ffmpeg:fetch` and `pnpm stt:fetch` — binaries and
 # model weights, never committed.
 resources/ffmpeg/
 resources/stt/
+# L'interpréteur du moteur — 67 Mo, écrit par `pnpm engine:fetch` contre un digest épinglé.
+resources/engine/
 src/renderer/public/decoders/
 
 # Signing material. A safety net, never a permission: certificates belong in the GitHub
@@ -35,3 +39,16 @@ src/renderer/public/decoders/
 *.cer
 *.provisionprofile
 *.mobileprovision
+
+# 🛑 Les secrets de la machine — la clé du banc d'essai vit dans `secret/.env`. Le DOSSIER entier
+# est ignoré, pas seulement le fichier : ce qui y tombe demain l'est aussi. Une clé commitée reste
+# dans l'historique après le commit qui la retire, et le dépôt part chez qui le clone.
+secret/
+
+# La configuration que lit un client MCP, écrite au lancement d'un run de développement. Elle
+# porte le chemin ABSOLU de cette machine vers l'exécutable — vraie ici, fausse partout ailleurs.
+.mcp.json
+resources/gameRuntime/
+
+# Vitrine bâtie (site/build.mjs) — jamais versionnée, rebâtie à chaque publication.
+_site/

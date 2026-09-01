@@ -23,11 +23,11 @@ recherche. »
 
 Trois boutons en bas de la fenêtre.
 
-| Bouton | Ce qu’il fait |
-|---|---|
+| Bouton        | Ce qu’il fait                                           |
+| ------------- | ------------------------------------------------------- |
 | **Appliquer** | enregistre les changements et laisse la fenêtre ouverte |
-| **OK** | enregistre et ferme la fenêtre |
-| **Annuler** | jette les changements non enregistrés |
+| **OK**        | enregistre et ferme la fenêtre                          |
+| **Annuler**   | jette les changements non enregistrés                   |
 
 Tant qu’un réglage est modifié sans être appliqué, une **pastille** apparaît à côté de lui, avec
 l’infobulle « Modifié, pas encore appliqué ».
@@ -45,8 +45,8 @@ section Avancé, plus bas.
 ### Un réglage grisé
 
 Certains réglages dépendent d’un autre. **Taille de la grille** ne sert à rien si la grille n’est
-pas affichée : il reste visible, mais grisé, avec la raison écrite en dessous — *« Sans effet tant
-que "Afficher la grille" est désactivé. »*
+pas affichée : il reste visible, mais grisé, avec la raison écrite en dessous — _« Sans effet tant
+que "Afficher la grille" est désactivé. »_
 
 Rien n’est jamais caché : un réglage qu’on ne peut pas changer maintenant reste à sa place, avec
 son explication.
@@ -55,7 +55,7 @@ son explication.
 
 ## Général
 
-*Langue de l’application et ce qu’elle fait en s’ouvrant.*
+_Langue de l’application et ce qu’elle fait en s’ouvrant._
 
 ### Langue
 
@@ -63,11 +63,11 @@ son explication.
 
 La langue de tous les textes de l’application : menus, boutons, messages.
 
-| Valeur | Effet |
-|---|---|
-| **Système** | reprend la langue de votre ordinateur — **anglais** si ce n’est ni le français ni l’anglais |
-| **Français** | français |
-| **English** | anglais |
+| Valeur       | Effet                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| **Système**  | reprend la langue de votre ordinateur — **anglais** si ce n’est ni le français ni l’anglais |
+| **Français** | français                                                                                    |
+| **English**  | anglais                                                                                     |
 
 > **Une machine en allemand, en espagnol ou en japonais ouvre le studio en anglais**, pas en
 > français.
@@ -80,7 +80,7 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 
 > **Le formulaire de génération suit aussi, mais pas toujours jusqu’au bout.** Les noms des
 > réglages qu’un modèle propose — et les phrases d’explication sous eux — sont écrits par le
-> modèle, et l’API Scenario ne les rend qu’en anglais. Le studio les traduit lui-même. Un réglage
+> modèle, et l’API de génération ne les rend qu’en anglais. Le studio les traduit lui-même. Un réglage
 > qu’il ne connaît pas encore reste donc **en anglais** plutôt que de disparaître, et un modèle
 > publié demain arrive dans sa langue d’origine.
 >
@@ -94,10 +94,10 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 
 Ce que l’application fait quand vous la lancez.
 
-| Valeur | Effet |
-|---|---|
+| Valeur                        | Effet                                   |
+| ----------------------------- | --------------------------------------- |
 | **Rouvrir le dernier projet** | vous remet là où vous vous étiez arrêté |
-| **Ne rien ouvrir** | démarre sur une fenêtre vide |
+| **Ne rien ouvrir**            | démarre sur une fenêtre vide            |
 
 « Ne rien ouvrir » est plus rapide au démarrage, et plus reposant si vous jonglez entre beaucoup
 de projets.
@@ -117,13 +117,25 @@ espace de travail, il faut décocher celui-ci.
 Ce qui se règle **sur l’accueil lui-même**, et pas ici : quelles bandes sont affichées — voir
 [La fenêtre](03-la-fenetre.md#laccueil-avant-tout-le-reste).
 
+### Actualités des modèles
+
+**Interrupteur. Départ : activé.**
+
+La bande **Ce qui bouge**, en bas de l’accueil, lit les modèles qui montent et les articles parus
+sur Hugging Face. **C’est le seul appel sortant du studio pour autre chose qu’un modèle ou une
+génération**, et il va sur l’hôte d’où viennent déjà tous les poids du catalogue : personne
+n’apprend rien de neuf. Décoché, le studio ne contacte personne pour cette bande, qui reste et
+dit qu’elle est coupée.
+
+Une réponse est gardée six heures, et la bande montre huit lignes au plus, rien de plus vieux qu’un mois : ce sont des tendances, pas un fil d’actualité.
+
 ---
 
 ## Compte
 
-*Identifiants API, chiffrés par le trousseau du système.*
+_Identifiants API, chiffrés par le trousseau du système._
 
-C’est ici qu’on branche le studio à [Scenario](https://www.scenario.com). Sans cette étape, tout
+C’est ici qu’on branche le studio à votre service de génération. Sans cette étape, tout
 ce qui touche à la génération reste inerte : le catalogue de modèles est vide, le bouton
 **Générer** ne répond pas.
 
@@ -132,7 +144,7 @@ ce qui touche à la génération reste inerte : le catalogue de modèles est vid
 Pas un seul. Vous pouvez enregistrer autant de clés API que vous voulez, chacune sous un nom que
 vous choisissez — « Studio », « Client X », « Perso ».
 
-**Pourquoi c’est utile.** Une clé API **porte son propre projet Scenario** : ses modèles, ses
+**Pourquoi c’est utile.** Une clé API **porte son propre projet distant** : ses modèles, ses
 assets, son crédit. Changer de compte change **la bibliothèque distante** que vous parcourez.
 
 > **Cela ne touche jamais votre projet local.** Vos dossiers, vos images, vos montages sont sur
@@ -143,23 +155,23 @@ assets, son crédit. Changer de compte change **la bibliothèque distante** que 
 
 Le formulaire, sous la liste. Trois champs :
 
-| Champ | Ce que c’est |
-|---|---|
-| **Nom** | ce que vous voulez, pour vous y retrouver — « Studio, Client X… » |
-| **Clé API** | votre identifiant, visible pendant que vous le tapez |
-| **Secret API** | votre mot de passe, masqué par des points |
+| Champ          | Ce que c’est                                                      |
+| -------------- | ----------------------------------------------------------------- |
+| **Nom**        | ce que vous voulez, pour vous y retrouver — « Studio, Client X… » |
+| **Clé API**    | votre identifiant, visible pendant que vous le tapez              |
+| **Secret API** | votre mot de passe, masqué par des points                         |
 
-Prenez la clé et le secret sur [app.scenario.com](https://app.scenario.com), dans les réglages de
+Prenez la clé et le secret chez votre fournisseur, dans les réglages de
 votre compte. Puis **Ajouter un compte** — le bouton affiche « Ajout… » le temps de l’écriture.
 
 **Le bouton reste éteint** tant que les trois champs ne sont pas valides.
 
 Le nom obéit à trois règles, et le studio dit laquelle a été enfreinte :
 
-| Règle | Message si elle est enfreinte |
-|---|---|
-| Un nom est obligatoire | « Un nom est obligatoire. » |
-| 60 caractères au maximum | « Ce nom est trop long. » |
+| Règle                                          | Message si elle est enfreinte          |
+| ---------------------------------------------- | -------------------------------------- |
+| Un nom est obligatoire                         | « Un nom est obligatoire. »            |
+| 60 caractères au maximum                       | « Ce nom est trop long. »              |
 | Deux comptes ne peuvent pas porter le même nom | « Un autre compte porte déjà ce nom. » |
 
 L’unicité est vérifiée **sans tenir compte de la casse** : « Studio » et « studio » sont le même
@@ -168,10 +180,10 @@ nom.
 **Deux autres messages peuvent apparaître ici**, plus rares, et ils ne se règlent pas de la même
 façon :
 
-| Message | Ce qui s’est passé | Quoi faire |
-|---|---|---|
-| « Ce compte n’existe plus. » | vous agissez sur un compte supprimé entre-temps — par une autre fenêtre du studio, le plus souvent | fermez les réglages et rouvrez-les : la liste se relit |
-| « Le compte n’a pas pu être enregistré. » | l’écriture a échoué sans que le studio sache dire pourquoi | réessayez une fois ; si cela recommence, voir [Quand ça coince](16-depannage.md) |
+| Message                                   | Ce qui s’est passé                                                                                 | Quoi faire                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| « Ce compte n’existe plus. »              | vous agissez sur un compte supprimé entre-temps — par une autre fenêtre du studio, le plus souvent | fermez les réglages et rouvrez-les : la liste se relit                           |
+| « Le compte n’a pas pu être enregistré. » | l’écriture a échoué sans que le studio sache dire pourquoi                                         | réessayez une fois ; si cela recommence, voir [Quand ça coince](16-depannage.md) |
 
 Le premier n’est jamais votre faute et ne perd rien. Le second est le seul message de cette
 section qui mérite un deuxième essai.
@@ -184,9 +196,9 @@ section qui mérite un deuxième essai.
 
 Une ligne par compte. Sur celle du compte **en cours d’utilisation**, une pastille :
 
-| Pastille | Ce qu’elle dit |
-|---|---|
-| **Utilisé**, en vert | c’est ce compte qui travaille, et sa clé fonctionne |
+| Pastille                   | Ce qu’elle dit                                         |
+| -------------------------- | ------------------------------------------------------ |
+| **Utilisé**, en vert       | c’est ce compte qui travaille, et sa clé fonctionne    |
 | **Non connecté**, en rouge | c’est ce compte qui travaille, mais sa clé est refusée |
 
 Les autres lignes n’en portent pas : seul le compte actif peut dire si sa clé marche, puisque
@@ -194,28 +206,15 @@ c’est le seul qu’on interroge.
 
 Trois boutons par ligne :
 
-| Bouton | Effet |
-|---|---|
-| **Utiliser ce compte** | bascule dessus. Absent sur la ligne déjà active |
-| **Renommer** | remplace la ligne par un champ de saisie, avec **Enregistrer** et **Annuler** |
-| **Supprimer** | retire le compte et sa clé |
-
-### Le compte venu d’un fichier
-
-Si vous avez lancé le studio depuis son code source avec un fichier `secrets/.env`, ces
-identifiants apparaissent **comme un compte ordinaire** dans la liste, avec une étiquette grise
-`secrets/.env`.
-
-Il s’utilise comme les autres — le bouton **Utiliser ce compte** fonctionne — mais il n’a **ni
-Renommer ni Supprimer** : ces deux boutons sont absents, pas grisés.
-
-Ce compte se modifie en éditant le fichier. Si vous en croisez un par un autre chemin, le studio
-le dit : « Ce compte vient de `secrets/.env` : modifiez ce fichier pour le renommer ou le
-retirer. »
+| Bouton                 | Effet                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| **Utiliser ce compte** | bascule dessus. Absent sur la ligne déjà active                               |
+| **Renommer**           | remplace la ligne par un champ de saisie, avec **Enregistrer** et **Annuler** |
+| **Supprimer**          | retire le compte et sa clé                                                    |
 
 ### Quand la liste est vide
 
-> « Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque Scenario. »
+> « Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque distante. »
 
 Rien n’est enregistré, et rien ne fonctionne : ni catalogue, ni génération.
 
@@ -231,16 +230,16 @@ pouvait pas relire. Déverrouillez votre trousseau, réessayez, tout est encore 
 
 ## Apparence
 
-*Thème et densité des contrôles.*
+_Thème et densité des contrôles._
 
 ### Thème
 
 **Choix. Départ : Sombre.**
 
-| Valeur | Effet |
-|---|---|
-| **Sombre** | fond gris très foncé — repose les yeux dans une pièce peu éclairée |
-| **Clair** | fond clair — se lit mieux en plein jour |
+| Valeur      | Effet                                                                  |
+| ----------- | ---------------------------------------------------------------------- |
+| **Sombre**  | fond gris très foncé — repose les yeux dans une pièce peu éclairée     |
+| **Clair**   | fond clair — se lit mieux en plein jour                                |
 | **Système** | suit le réglage de votre ordinateur, et bascule tout seul le soir venu |
 
 > **Le fond reste opaque, quel que soit le thème.** Pas de transparence, pas de flou derrière la
@@ -252,10 +251,10 @@ pouvait pas relire. Déverrouillez votre trousseau, réessayez, tout est encore 
 
 Règle la taille des boutons et la hauteur des lignes.
 
-| Valeur | Hauteur des contrôles | Pour qui |
-|---|---|---|
-| **Confort** | 28 px | plus d’air, plus faciles à viser à la souris |
-| **Compact** | 24 px | plus de choses à l’écran, sur un petit écran ou avec beaucoup de panneaux |
+| Valeur      | Hauteur des contrôles | Pour qui                                                                  |
+| ----------- | --------------------- | ------------------------------------------------------------------------- |
+| **Confort** | 28 px                 | plus d’air, plus faciles à viser à la souris                              |
+| **Compact** | 24 px                 | plus de choses à l’écran, sur un petit écran ou avec beaucoup de panneaux |
 
 ### Couleur d’accent
 
@@ -294,7 +293,7 @@ machine un peu lente où elles saccadent au lieu de fluidifier.
 
 ## Génération
 
-*File de génération et modèles par défaut, par famille.*
+_File de génération et modèles par défaut, par famille._
 
 ### Générations simultanées
 
@@ -322,11 +321,11 @@ voit.
 
 **Ce qui compte comme « sans nom utile »**, et rien d’autre :
 
-| Ce que le studio renomme | Exemples |
-|---|---|
-| un nom vide, ou un préfixe d’appareil suivi d’un numéro | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
-| les noms que donnent les systèmes, dans les deux langues | `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image`, `Untitled`, `Download` |
-| une capture d’écran **suivie de son horodatage ou de son numéro** | `Capture d’écran 2026-08-09 à 10.30.45`, `Screenshot (3)` |
+| Ce que le studio renomme                                          | Exemples                                                                                 |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| un nom vide, ou un préfixe d’appareil suivi d’un numéro           | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12`                                        |
+| les noms que donnent les systèmes, dans les deux langues          | `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image`, `Untitled`, `Download` |
+| une capture d’écran **suivie de son horodatage ou de son numéro** | `Capture d’écran 2026-08-09 à 10.30.45`, `Screenshot (3)`                                |
 
 **Un nom que vous avez choisi n’est jamais remplacé**, même s’il commence par les mêmes mots :
 `Capture d’écran du menu principal` reste tel quel.
@@ -349,24 +348,20 @@ l’application réessaie toute seule. Ce nombre dit combien de fois avant d’a
 
 ### Modèle par défaut, par famille
 
-Sept sous-sections : **Image**, **Vidéo**, **3D**, **Audio**, **Agrandissement**, **Détourage**,
-**Vectorisation**.
+Neuf sous-sections : **Image**, **Vidéo**, **3D**, **Audio**, **Matières**, **Skyboxes**,
+**Agrandissement**, **Détourage**, **Vectorisation**.
 
 Les trois dernières n’ont pas d’espace de travail à elles : ce sont les familles que les éditions
 du canvas — Agrandir, Détourer, Vectoriser — vont chercher. Le panneau **Modèles** ne montre que
 la famille de l’espace ouvert, donc **c’est ici, et seulement ici, que leur modèle se choisit**.
 
-> **La famille Texture n’a pas encore la sienne.** Elle existe pourtant comme famille de modèles
-> depuis peu. Conséquence concrète : dans l’espace Textures, il faut choisir un modèle à la main à
-> chaque session — voir [Ce qui n’existe pas encore](18-limites.md).
-
 Chacune tient un seul réglage : le modèle que le panneau **Génération** présélectionne quand vous
 arrivez dans cet espace.
 
-| Valeur | Effet |
-|---|---|
-| **Demander à chaque fois** *(départ)* | aucun modèle présélectionné, vous choisissez |
-| *un modèle* | ce modèle est déjà en place à l’ouverture de l’espace |
+| Valeur                                | Effet                                                 |
+| ------------------------------------- | ----------------------------------------------------- |
+| **Demander à chaque fois** _(départ)_ | aucun modèle présélectionné, vous choisissez          |
+| _un modèle_                           | ce modèle est déjà en place à l’ouverture de l’espace |
 
 Réglez-le une fois que vous avez trouvé le modèle avec lequel vous travaillez le plus : cela
 enlève un clic à chaque session.
@@ -379,7 +374,7 @@ enlève un clic à chaque session.
 
 ## Espaces de travail
 
-*Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.*
+_Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image._
 
 Une seule sous-section pour l’instant : **3D**.
 
@@ -394,7 +389,7 @@ choses et à quelle hauteur. On le cache pour juger une image sans rien autour.
 
 ### Taille de la grille
 
-**Nombre entier. De 2 à 500 mètres. Départ : 20.** *(grisé si la grille est masquée)*
+**Nombre entier. De 2 à 500 mètres. Départ : 20.** _(grisé si la grille est masquée)_
 
 Jusqu’où le quadrillage s’étend, et donc combien de carreaux il compte — **un carreau vaut
 toujours un mètre**.
@@ -426,10 +421,10 @@ réglage du dessus.
 
 Ce que la caméra embrasse.
 
-| Angle | Effet |
-|---|---|
-| **petit** (30–45°) | rapproche et aplatit, comme un téléobjectif |
-| **60°** | proche de ce que voit un œil |
+| Angle               | Effet                                        |
+| ------------------- | -------------------------------------------- |
+| **petit** (30–45°)  | rapproche et aplatit, comme un téléobjectif  |
+| **60°**             | proche de ce que voit un œil                 |
 | **grand** (85–100°) | montre beaucoup plus, mais déforme les bords |
 
 ### Les trois pas du magnétisme
@@ -437,11 +432,11 @@ Ce que la caméra embrasse.
 Le magnétisme s’allume dans la **barre d’outils de la scène** (touche `M`) ; ces trois réglages
 disent seulement **de combien** il avance à chaque cran.
 
-| Réglage | Bornes | Départ | Ce qu’il fait |
-|---|---|---|---|
-| **Pas de déplacement** | 0,1 à 10 m, par 0,1 | **0,5 m** | de combien un objet avance d’un cran |
-| **Pas de rotation** | 1° à 90°, par 1 | **15°** | l’angle d’un cran de rotation |
-| **Pas d’échelle** | 0,05 à 1, par 0,05 | **0,1** | de combien l’échelle avance d’un cran |
+| Réglage                | Bornes              | Départ    | Ce qu’il fait                         |
+| ---------------------- | ------------------- | --------- | ------------------------------------- |
+| **Pas de déplacement** | 0,001 à 10 m, par 0,1 | **0,5 m** | de combien un objet avance d’un cran  |
+| **Pas de rotation**    | 1° à 90°, par 1     | **15°**   | l’angle d’un cran de rotation         |
+| **Pas d’échelle**      | 0,01 à 1, par 0,05  | **0,1**   | de combien l’échelle avance d’un cran |
 
 **15° est la valeur classique** : vingt-quatre positions sur un tour, dont tous les angles ronds —
 30, 45, 90. La rotation compte ses crans **depuis l’endroit où elle a commencé**, pas depuis zéro.
@@ -452,10 +447,10 @@ disent seulement **de combien** il avance à chaque cran.
 
 Le grain du bord d’une ombre.
 
-| Valeur | Effet |
-|---|---|
-| **Dure** | un bord net, découpé au couteau — c’est le moins coûteux |
-| **Douce** | un bord adouci, plus proche de la réalité |
+| Valeur    | Effet                                                    |
+| --------- | -------------------------------------------------------- |
+| **Dure**  | un bord net, découpé au couteau — c’est le moins coûteux |
+| **Douce** | un bord adouci, plus proche de la réalité                |
 
 **Ce réglage dit à quoi ressemble une ombre, pas qui en projette une.** Cela se décide objet par
 objet, dans l’Inspecteur — voir [Espace Modélisation](09-espace-modelisation.md).
@@ -475,7 +470,7 @@ si une scène chargée commence à ramer, montez à 4096 pour une image finale.
 
 ## Raccourcis
 
-*Les touches qui déclenchent chaque action. Cliquez sur une touche pour la remplacer.*
+_Les touches qui déclenchent chaque action. Cliquez sur une touche pour la remplacer._
 
 Cette section a son chapitre : [Tous les raccourcis](15-raccourcis.md).
 
@@ -483,8 +478,8 @@ Cette section a son chapitre : [Tous les raccourcis](15-raccourcis.md).
 
 ## Dictée
 
-*Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous
-dites n’est envoyé nulle part.*
+_Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous
+dites n’est envoyé nulle part._
 
 Le geste est décrit dans [Générer](06-generer.md#dicter-au-lieu-de-taper) ; ici, ce qui se règle.
 
@@ -546,7 +541,7 @@ comptes de la machine.
 
 ## Médias
 
-*Préparation des fichiers importés : proxies et waveforms.*
+_Préparation des fichiers importés : proxies et waveforms._
 
 ### Chemin de ffmpeg
 
@@ -571,9 +566,9 @@ du monde. Le studio s’en sert pour deux choses, à l’import :
 
 Sous le champ, le studio dit ce qu’il a retenu :
 
-| Message | Ce qu’il veut dire |
-|---|---|
-| « ffmpeg est disponible : proxies et waveforms seront préparés. » | tout va bien — le cas normal |
+| Message                                                                    | Ce qu’il veut dire                                 |
+| -------------------------------------------------------------------------- | -------------------------------------------------- |
+| « ffmpeg est disponible : proxies et waveforms seront préparés. »          | tout va bien — le cas normal                       |
 | « ffmpeg reste introuvable. L’import fonctionne, sans proxy ni waveform. » | même celui de l’application manque : voir plus bas |
 
 **Le second message est devenu rare.** Il n’arrive plus guère qu’à qui lance le studio depuis son
@@ -589,7 +584,7 @@ Le bouton **Parcourir…** ouvre le sélecteur de fichiers de votre système.
 
 ## Versions
 
-*Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.*
+_Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers._
 
 Cette section règle le panneau **Git** et le panneau **Historique**. Elle ne concerne à aucun
 moment le studio lui-même : ce qui est suivi, c’est le dossier de votre projet.
@@ -622,7 +617,7 @@ qu’un ferait échouer chaque enregistrement sur l’autre.
 
 ## Stockage
 
-*Où vos projets sont rangés sur le disque.*
+_Où vos projets sont rangés sur le disque._
 
 ### Dossier des projets
 
@@ -639,7 +634,7 @@ Laissez vide pour repartir à chaque fois du dernier endroit visité.
 
 ## Avancé
 
-*Ce dont on n’a besoin que pour comprendre un problème, ou pour repartir de zéro.*
+_Ce dont on n’a besoin que pour comprendre un problème, ou pour repartir de zéro._
 
 ### Détail du journal
 
@@ -647,12 +642,12 @@ Laissez vide pour repartir à chaque fois du dernier endroit visité.
 
 Combien l’application raconte ce qu’elle fait, dans son journal.
 
-| Valeur | Ce qui est écrit |
-|---|---|
-| **Rien** | plus rien du tout |
-| **Erreurs seulement** | ce qui a échoué |
+| Valeur                        | Ce qui est écrit           |
+| ----------------------------- | -------------------------- |
+| **Rien**                      | plus rien du tout          |
+| **Erreurs seulement**         | ce qui a échoué            |
 | **Erreurs et avertissements** | et ce qui a failli échouer |
-| **Tout** *(départ)* | chaque étape |
+| **Tout** _(départ)_           | chaque étape               |
 
 « Tout » est utile pour comprendre un problème, et bavard le reste du temps. Ce réglage ne change
 rien à ce que fait le logiciel — seulement à ce qu’il en dit.
@@ -683,11 +678,11 @@ vous y trouverez dépend du réglage juste au-dessus : à « Rien », il ne s’
 Ouvre votre gestionnaire de fichiers sur l’endroit où vos réglages sont enregistrés, un fichier
 nommé `settings.json`.
 
-| Système | Où |
-|---|---|
-| macOS | `~/Library/Application Support/Scenario Studio/settings.json` |
-| Windows | `%APPDATA%\Scenario Studio\settings.json` |
-| Linux | `~/.config/Scenario Studio/settings.json` |
+| Système | Où                                                      |
+| ------- | ------------------------------------------------------- |
+| macOS   | `~/Library/Application Support/IA Studio/settings.json` |
+| Windows | `%APPDATA%\IA Studio\settings.json`                     |
+| Linux   | `~/.config/IA Studio/settings.json`                     |
 
 Utile pour en faire une copie avant de changer de machine, ou pour l’envoyer à quelqu’un qui vous
 aide à comprendre un problème.
@@ -722,12 +717,15 @@ donner à votre place.
 Copie la ligne à coller dans un terminal pour brancher un client :
 
 ```
-claude mcp add --transport http <nom> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <nom> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-**Le port et le jeton changent à chaque démarrage du studio**, et c’est pour cette raison qu’il y a
-un bouton plutôt qu’une valeur affichée : il n’y a rien à noter, seulement une ligne à recopier
-après chaque lancement.
+**Elle ne porte ni port ni jeton** : elle désigne le studio comme un programme à démarrer, pas une
+adresse à joindre. Ceux-là changent bien à chaque démarrage — c’est votre client qui va les lire,
+au moment où il en a besoin. **La ligne se colle donc une fois, et vaut pour tous les lancements
+suivants.**
+
+Le chemin est celui de **votre** installation, d’où le bouton plutôt qu’une valeur imprimée ici.
 
 ### Outils de développement
 
@@ -745,15 +743,15 @@ nécessaire pour se servir du logiciel.**
 
 ### Tout réinitialiser
 
-**Bouton : Réinitialiser.** *(avec confirmation)*
+**Bouton : Réinitialiser.** _(avec confirmation)_
 
 Remet **TOUS** les réglages dans l’état d’une installation neuve : thème, langue, raccourcis,
 modèles par défaut, tout.
 
 Le studio demande d’abord confirmation :
 
-> *Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière
-> est définitif.*
+> _Remettre tous les réglages à zéro ? Vos projets ne sont pas touchés, mais ce retour en arrière
+> est définitif._
 
 **Vos projets, vos images et vos montages ne sont pas touchés.** Seuls les réglages le sont.
 
@@ -767,40 +765,45 @@ Le studio demande d’abord confirmation :
 
 Ce que vous avez sur une installation neuve, d’un coup d’œil.
 
-| Section | Réglage | Départ | Limites |
-|---|---|---|---|
-| Général | Langue | Système | Système, Français, English |
-| Général | À l’ouverture | Rouvrir le dernier projet | — |
-| Général | Afficher l’accueil | activé | — |
-| Apparence | Thème | Sombre | Sombre, Clair, Système |
-| Apparence | Densité | Confort | Confort, Compact |
-| Apparence | Couleur d’accent | celle du thème | — |
-| Apparence | Taille du texte | 1 | 0,85 à 1,40 |
-| Apparence | Limiter les animations | décochée | — |
-| Génération | Générations simultanées | 3 | 1 à 16 |
-| Génération | Nommer les assets rapatriés | cochée | — |
-| Génération | Tentatives maximum | 4 | 0 à 10 |
-| Génération | Modèle par défaut ×7 | Demander à chaque fois | — |
-| 3D | Afficher la grille | cochée | — |
-| 3D | Taille de la grille | 20 m | 2 à 500 |
-| 3D | Vitesse de déplacement | 4 m/s | 0,5 à 20 |
-| 3D | Accélération | 3× | 1 à 10 |
-| 3D | Angle de vue | 60° | 30 à 100 |
-| 3D | Pas de déplacement | 0,5 m | 0,1 à 10 |
-| 3D | Pas de rotation | 15° | 1 à 90 |
-| 3D | Pas d’échelle | 0,1 | 0,05 à 1 |
-| 3D | Douceur des ombres | Douce | Dure ou Douce |
-| 3D | Finesse des ombres | 2048 | 512, 1024, 2048, 4096 |
-| Dictée | Activer la dictée | activée | — |
-| Dictée | Façon de déclencher | Maintenir la touche | Maintenir la touche, Basculer marche/arrêt |
-| Dictée | Silence qui termine une phrase | 600 ms | 200 à 2000 |
-| Dictée | Aperçu pendant que vous parlez | 700 ms | 0 à 2000 |
-| Dictée | Fils de calcul | 2 | 1 à 8 |
-| Dictée | Libérer la mémoire après | 10 min | 0 à 120 |
-| Médias | Chemin de ffmpeg | vide | — |
-| Stockage | Dossier des projets | vide | — |
-| Avancé | Détail du journal | Tout | Rien → Tout |
-| Avancé | Piloter le studio depuis l’extérieur | décochée | — |
+| Section    | Réglage                              | Départ                    | Limites                                    |
+| ---------- | ------------------------------------ | ------------------------- | ------------------------------------------ |
+| Général    | Langue                               | Système                   | Système, Français, English                 |
+| Général    | À l’ouverture                        | Rouvrir le dernier projet | —                                          |
+| Général    | Afficher l’accueil                   | activé                    | —                                          |
+| Général    | Actualités des modèles               | activé                    | —                                          |
+| Apparence  | Thème                                | Sombre                    | Sombre, Clair, Système                     |
+| Apparence  | Densité                              | Confort                   | Confort, Compact                           |
+| Apparence  | Couleur d’accent                     | celle du thème            | —                                          |
+| Apparence  | Taille du texte                      | 1                         | 0,85 à 1,40                                |
+| Apparence  | Limiter les animations               | décochée                  | —                                          |
+| Génération | Générations simultanées              | 3                         | 1 à 16                                     |
+| Génération | Nommer les assets rapatriés          | cochée                    | —                                          |
+| Génération | Tentatives maximum                   | 4                         | 0 à 10                                     |
+| Génération | Modèle par défaut ×7                 | Demander à chaque fois    | —                                          |
+| 3D         | Afficher la grille                   | cochée                    | —                                          |
+| 3D         | Taille de la grille                  | 20 m                      | 2 à 500                                    |
+| 3D         | Vitesse de déplacement               | 4 m/s                     | 0,5 à 20                                   |
+| 3D         | Accélération                         | 3×                        | 1 à 10                                     |
+| 3D         | Angle de vue                         | 60°                       | 30 à 100                                   |
+| 3D         | Pas de déplacement                   | 0,5 m                     | 0,001 à 10                                 |
+| 3D         | Pas de rotation                      | 15°                       | 1 à 90                                     |
+| 3D         | Pas d’échelle                        | 0,1                       | 0,01 à 1                                   |
+| 3D         | Douceur des ombres                   | Douce                     | Dure ou Douce                              |
+| 3D         | Finesse des ombres                   | 2048                      | 512, 1024, 2048, 4096                      |
+| Dictée     | Activer la dictée                    | activée                   | —                                          |
+| Dictée     | Façon de déclencher                  | Maintenir la touche       | Maintenir la touche, Basculer marche/arrêt |
+| Dictée     | Silence qui termine une phrase       | 600 ms                    | 200 à 2000                                 |
+| Dictée     | Aperçu pendant que vous parlez       | 700 ms                    | 0 à 2000                                   |
+| Dictée     | Fils de calcul                       | 2                         | 1 à 8                                      |
+| Dictée     | Libérer la mémoire après             | 10 min                    | 0 à 120                                    |
+| Médias     | Chemin de ffmpeg                     | vide                      | —                                          |
+| Stockage   | Dossier des projets                  | vide                      | —                                          |
+| Avancé     | Détail du journal                    | Tout                      | Rien → Tout                                |
+| Point d’entrée | Piloter le studio depuis l’extérieur | décochée              | —                                          |
+| Point d’entrée | Laisser toucher aux fichiers sans demander | décochée        | —                                          |
+| Point d’entrée | Laisser téléverser sans demander     | décochée              | —                                          |
+| Point d’entrée | Laisser publier vers un serveur sans demander | décochée      | —                                          |
+| Point d’entrée | Unités créatives dépensables sans demander | 0               | 0 à 10 000                                 |
 
 ---
 

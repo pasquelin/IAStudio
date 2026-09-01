@@ -8,6 +8,7 @@
 import type { CheckerTextureId } from '@shared/domain/checkerTexture'
 import type { MaterialDescriptor } from '@shared/domain/scene'
 import { defaultMeshMaterial } from './checkerTextures'
+import { newComponent } from '@shared/domain/componentRegistry'
 import { groupNode, meshNode, transformAt } from './nodeFactory'
 import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
@@ -324,7 +325,13 @@ function obstacles(parentId: string): SceneNode[] {
   ]
 }
 
-/** One group per family: thirty parts flat in the outliner is a list nobody reads. */
+/**
+ * One group per family: thirty parts flat in the outliner is a list nobody reads.
+ *
+ * 🛑 Every part is SOLID, groups included in the tidying: the physics composes a parent's place
+ * now (`game/hierarchy.ts`), so a set can be both readable and something one bumps into. It was
+ * the other way round for one lot — the floor at the root, the rest walked through.
+ */
 export function playgroundNodes(): SceneNode[] {
   const ground = groupNode(IDENTITY_TRANSFORM, 'Ground')
   const enclosure = groupNode(IDENTITY_TRANSFORM, 'Enclosure')
@@ -332,15 +339,20 @@ export function playgroundNodes(): SceneNode[] {
 
   return [
     ground,
-    ...floorSlabs(ground.id),
-    ...courtWalls(ground.id),
     enclosure,
-    ...walls(enclosure.id),
     course,
-    ...courtStair(course.id),
-    ...terrace(course.id),
-    ...walkway(course.id),
-    ...jumps(course.id),
-    ...obstacles(course.id),
+    ...[
+      ...floorSlabs(ground.id),
+      ...courtWalls(ground.id),
+      ...walls(enclosure.id),
+      ...courtStair(course.id),
+      ...terrace(course.id),
+      ...walkway(course.id),
+      ...jumps(course.id),
+      ...obstacles(course.id),
+    ].map(solid),
   ]
 }
+
+/** A part the physics feels — the shape it draws, read as the volume it stops you at. */
+const solid = (node: SceneNode): SceneNode => ({ ...node, components: [newComponent('Collider')] })

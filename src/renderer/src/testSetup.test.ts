@@ -1,6 +1,7 @@
 import { getConfig } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import config from '../../../vitest.config.ts?raw'
+import { isMacUserAgent } from './helpers/platform'
 
 /**
  * Neither bound is ours, and that is the whole design of this file.
@@ -47,5 +48,16 @@ describe('the renderer test setup', () => {
   it('expires before the runner gives up on the case', () => {
     expect(CASE_MS).toBeGreaterThan(0)
     expect(getConfig().asyncUtilTimeout).toBeLessThan(CASE_MS)
+  })
+})
+
+/**
+ * The pin the keyboard cases stand on. Its absence is silent rather than loud: jsdom builds its
+ * user agent from the machine, so every ⌘ chord would be signed with Ctrl on the Linux runner
+ * and with ⌘ here — green on one, red on the other, and neither would say why.
+ */
+describe('the desktop the renderer cases are written for', () => {
+  it('is macOS, whatever the machine running them is', () => {
+    expect(isMacUserAgent(navigator.userAgent)).toBe(true)
   })
 })

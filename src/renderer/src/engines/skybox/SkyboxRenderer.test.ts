@@ -14,6 +14,7 @@ import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import type * as AdjustModule from '../gpu/passes/adjust'
 import type { AdjustPass } from '../gpu/passes/adjust'
 import type { GpuPipeline } from '../gpu/gpuPipeline'
+import type * as EnvironmentModule from '../viewport/environment'
 import type * as TestObjectsModule from '../viewport/testObjects'
 import type { TestObjects } from '../viewport/testObjects'
 import { fakeEnvironment, fakeTextureSource } from '../viewport/viewport-fixtures'
@@ -50,12 +51,18 @@ vi.mock('../viewport/testObjects', async importOriginal => {
     ...actual,
     createTestObjects: (options: Parameters<typeof actual.createTestObjects>[0]) => {
       probes = actual.createTestObjects(options)
+      // Watched rather than doubled: what the floor DOES with a map is `testObjects.test.ts`.
+      vi.spyOn(probes, 'setGroundMap')
       return probes
     },
   }
 })
 
-vi.mock('../viewport/environment', () => ({ createEnvironment: () => environment }))
+vi.mock('../viewport/environment', async importOriginal => ({
+  // Partial: the quiet this engine debounces on is the module's, and a total mock hides it.
+  ...(await importOriginal<typeof EnvironmentModule>()),
+  createEnvironment: () => environment,
+}))
 vi.mock('../gpu/gpuPipeline', () => ({ createGpuPipeline: () => pipeline }))
 vi.mock('../gpu/passes/adjust', async importOriginal => {
   const actual = await importOriginal<typeof AdjustModule>()
@@ -74,6 +81,12 @@ vi.mock('../gpu/passes/adjust', async importOriginal => {
 })
 
 const host = document.createElement('div')
+
+/** Where a picture of the open project is read from — the floor's grid answers on another host. */
+const ASSET_URL = 'ia-studio://asset/'
+
+/** The floor's grid, shipped beside the app: no project takes part in answering for it. */
+const GRID_URL = 'ia-studio://texture/GridLarge.png'
 
 /** Azimuth `0` aims at `+Z`, which is where a ray through the centre of the frame goes. */
 const SUN_AHEAD = 0
@@ -168,21 +181,21 @@ describe('the renderer of a skybox', () => {
   }
 
   /**
-   * Waits for the grading pass, not for the load: `apply` returns before the texture arrives,
-   * and a test that only waits for the request runs while the engine still holds no picture.
+   * Waits for the PICTURE, not for the request: `apply` returns before the texture arrives, and a
+   * test that only waits for the ask runs while the engine still holds nothing.
    */
   const applied = async (renderer: SkyboxRenderer, content: SkyboxContent): Promise<void> => {
-    const graded = pipeline.renderTo.mock.calls.length
     renderer.apply(content)
     // Draining the microtasks, not polling: `vi.waitFor` probes on a real interval and advances
     // the fake clock 50 ms per probe, which both costs wall time and eats into the quiet delay
     // the prefilter tests measure.
     await vi.advanceTimersByTimeAsync(0)
-    expect(pipeline.renderTo).toHaveBeenCalledTimes(graded + 1)
+    expect(environment.setTexture).toHaveBeenLastCalledWith(expect.any(Texture))
   }
 
-  const gradedTarget = (): WebGLRenderTarget | undefined =>
-    pipeline.createTarget.mock.results[0]?.value
+  /** What the engine asked of the SHELF — the floor's grid, read at construction, is not that. */
+  const skyLoads = (): string[] =>
+    source.load.mock.calls.map(([url]) => url).filter(url => url.startsWith(ASSET_URL))
 
   const pointerAt = (type: string, x: number, y: number, button = 0): PointerEvent =>
     new PointerEvent(type, { clientX: x, clientY: y, button, bubbles: true })
@@ -215,24 +228,21 @@ describe('the renderer of a skybox', () => {
       expect(environment.setBackgroundVisible).toHaveBeenCalledWith(false)
     })
 
-    it('grades into a half-float target', () => {
+    // The pipeline is for the FLAT views alone now; the grading target belongs to `skyGrading`.
+    it('builds no grading target of its own', () => {
       mounted()
 
-      expect(pipeline.createTarget).toHaveBeenCalledWith(
-        expect.any(Number),
-        expect.any(Number),
-        'float',
-      )
+      expect(pipeline.createTarget).not.toHaveBeenCalled()
     })
   })
 
   describe('the source picture', () => {
-    // Handing the cache a URL it had built itself made it encode the whole `scenario://` address
+    // Handing the cache a URL it had built itself made it encode the whole `ia-studio://` address
     // as an asset id, and no sky could ever load.
     it('asks for the sky by asset id, not by a URL it built itself', async () => {
       await applied(mounted(), skyOf('sky-1'))
 
-      expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
+      expect(source.load).toHaveBeenCalledWith(`${ASSET_URL}sky-1`, 'flipY')
     })
 
     /**
@@ -251,39 +261,43 @@ describe('the renderer of a skybox', () => {
       await applied(renderer, skyOf('sky-1'))
 
       renderer.refreshSource()
-      expect(source.load).toHaveBeenCalledTimes(1)
+      expect(skyLoads()).toHaveLength(1)
 
       version = 'after'
       renderer.refreshSource()
 
       await vi.advanceTimersByTimeAsync(0)
-      expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
+      expect(source.load).toHaveBeenLastCalledWith(`${ASSET_URL}sky-1?v=after`, 'flipY')
     })
 
-    it('grades the picture it was given into the background', async () => {
+    it('hangs the picture it was given, and prefilters it on the spot', async () => {
       await applied(mounted(), skyOf('sky-1'))
 
-      expect(environment.setTexture).toHaveBeenCalledWith(gradedTarget()?.texture)
+      expect(environment.setTexture).toHaveBeenCalledWith(expect.any(Texture))
+      // A picture LANDING is rare enough to pay for at once; the drag that must not is a dial.
+      expect(environment.refresh).toHaveBeenCalled()
     })
 
-    it('hands the picture and the adjustments to the grading pass', async () => {
+    /**
+     * The grading lives in `ViewportEnvironment`, which the SCENE reads too — one description of
+     * what a sky is worth, not two. What this engine owes is handing its stack over.
+     */
+    it('hands the adjustments to the environment, which grades and prefilters', async () => {
       const content = skyOf('sky-1')
       content.adjustments = { ...content.adjustments, exposure: 1.7 }
 
       await applied(mounted(), content)
 
-      expect(adjust.setAdjustments).toHaveBeenCalledWith(content.adjustments)
-      expect(adjust.setSource).toHaveBeenCalledWith(expect.any(Texture))
-      expect(pipeline.renderTo).toHaveBeenCalledWith(adjust.material, gradedTarget())
+      expect(environment.setAdjustments).toHaveBeenCalledWith(content.adjustments)
     })
 
-    it('clears the grading source when the picture goes', async () => {
+    it('takes the picture away when the document names none', async () => {
       const renderer = mounted()
       await applied(renderer, skyOf('sky-1'))
 
       renderer.apply(createSkyboxContent())
 
-      expect(adjust.setSource).toHaveBeenLastCalledWith(null)
+      expect(environment.setTexture).toHaveBeenLastCalledWith(null)
     })
 
     it('loads a sky once, however many times the same state comes back', async () => {
@@ -292,7 +306,7 @@ describe('the renderer of a skybox', () => {
 
       renderer.apply(skyOf('sky-1'))
 
-      expect(source.load).toHaveBeenCalledTimes(1)
+      expect(skyLoads()).toHaveLength(1)
     })
 
     it('frees the previous sky when another one is chosen', async () => {
@@ -301,8 +315,8 @@ describe('the renderer of a skybox', () => {
 
       await applied(renderer, skyOf('sky-2'))
 
-      expect(source.freed[0]).toHaveBeenCalled()
-      expect(source.freed[1]).not.toHaveBeenCalled()
+      expect(source.freedFor(`${ASSET_URL}sky-1`)).toHaveBeenCalled()
+      expect(source.freedFor(`${ASSET_URL}sky-2`)).not.toHaveBeenCalled()
     })
 
     it('takes the background away when the picture goes', async () => {
@@ -317,7 +331,7 @@ describe('the renderer of a skybox', () => {
     it('asks for nothing on a document that never had a picture', () => {
       mounted().apply(createSkyboxContent())
 
-      expect(source.load).not.toHaveBeenCalled()
+      expect(skyLoads()).toEqual([])
       expect(environment.setTexture).not.toHaveBeenCalled()
     })
 
@@ -340,7 +354,9 @@ describe('the renderer of a skybox', () => {
       // before it does would pass whether the guard is there or not.
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(pipeline.renderTo).toHaveBeenCalledTimes(1)
+      // One picture hung, the quick one — the slow arrival must reach the environment with nothing.
+      expect(environment.setTexture).toHaveBeenLastCalledWith(expect.any(Texture))
+      expect(environment.refresh).toHaveBeenCalledTimes(1)
     })
 
     it('grades nothing while the viewport has no pipeline', async () => {
@@ -349,61 +365,81 @@ describe('the renderer of a skybox', () => {
       renderer.apply(skyOf('sky-1'))
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(source.load).toHaveBeenCalled()
+      expect(skyLoads()).toHaveLength(1)
       expect(pipeline.renderTo).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the probes' floor", () => {
+    // NO PRIMITIVE IS BORN BARE — a white plane says nothing about the scale of what lights it.
+    it('dresses the floor with the shipped grid, read from beside the app', async () => {
+      mounted()
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(source.load).toHaveBeenCalledWith(GRID_URL)
+      expect(probes.setGroundMap).toHaveBeenCalledWith(expect.any(Texture))
+    })
+
+    it('frees a grid that arrives after the engine went away', async () => {
+      let arrive: (texture: Texture) => void = () => {}
+      source.load.mockImplementationOnce(() => new Promise(resolve => (arrive = resolve)))
+      const renderer = mounted()
+
+      renderer.dispose()
+      mountedRenderers.length = 0
+      const grid = new Texture()
+      const freed = vi.spyOn(grid, 'dispose')
+      arrive(grid)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(freed).toHaveBeenCalled()
+      expect(probes.setGroundMap).not.toHaveBeenCalled()
     })
   })
 
   describe('the prefiltered map', () => {
     /**
-     * The burst is one of adjustments, which is the only kind that still grades: a content built
-     * whole would pass whatever the engine skips, and three frames that change nothing would
-     * count the prefilter the first `apply` had already armed.
+     * The QUIET is `ViewportEnvironment`'s, and `environment.test.ts` holds it — a scene grading
+     * the same sky must not pay it twice. What this engine owes is one push per value, so the
+     * one debounce downstream sees the drag it is there to absorb.
      */
-    it('prefilters once for a burst of changes, not once per change', async () => {
+    it('pushes one grading per value of a drag, and the quiet is downstream', async () => {
       const renderer = mounted()
       const sky = skyOf('sky-1')
       await applied(renderer, sky)
-      // Almost the whole delay, so a burst that failed to reschedule would fire before the wait
-      // below and be counted twice rather than once.
-      await vi.advanceTimersByTimeAsync(110)
-      expect(environment.refresh).not.toHaveBeenCalled()
+      vi.mocked(environment.setAdjustments).mockClear()
 
       for (const exposure of [1.1, 1.2, 1.3])
         renderer.apply(edited(sky, 'adjustments', { ...sky.adjustments, exposure }))
-      await vi.advanceTimersByTimeAsync(110)
-      expect(environment.refresh).not.toHaveBeenCalled()
-      await vi.advanceTimersByTimeAsync(10)
 
-      expect(environment.refresh).toHaveBeenCalledTimes(1)
+      expect(environment.setAdjustments).toHaveBeenCalledTimes(3)
     })
 
     /**
-     * A sun drag does not postpone it, which is a change of behaviour and a decision: the sun is
-     * a light, not part of the graded picture, so the drag has no prefilter of its own to delay.
-     * Before the guard, every frame rescheduled the one an exposure edit already owed, and the
-     * probes stayed lit by a stale map for as long as the hand kept moving.
+     * The sun is a LIGHT, not part of the graded picture. Before the guard, every frame of a sun
+     * drag re-graded the picture into the float target — two hundred passes for a hand moving.
      */
-    it('runs a prefilter that was already owed, even mid-drag on the sun', async () => {
+    it('grades nothing at all for a drag that only moves the sun', async () => {
       const renderer = mounted()
       const sky = skyOf('sky-1')
       await applied(renderer, sky)
-      await vi.advanceTimersByTimeAsync(110)
+      vi.mocked(environment.setAdjustments).mockClear()
 
       for (const frame of draggedSun(sky, 50)) renderer.apply(frame)
-      await vi.advanceTimersByTimeAsync(10)
 
-      expect(environment.refresh).toHaveBeenCalledTimes(1)
+      expect(environment.setAdjustments).not.toHaveBeenCalled()
     })
 
-    it('never prefilters after the engine is gone', async () => {
+    /** The quiet it armed is the environment's, and disposing that is what cancels it. */
+    it('hands the environment back, so no prefilter outlives the engine', async () => {
       const renderer = mounted()
       await applied(renderer, skyOf('sky-1'))
-      renderer.apply(skyOf('sky-1'))
+      vi.mocked(environment.refresh).mockClear()
 
       renderer.dispose()
       await vi.advanceTimersByTimeAsync(500)
 
+      expect(environment.dispose).toHaveBeenCalled()
       expect(environment.refresh).not.toHaveBeenCalled()
     })
   })
@@ -434,21 +470,15 @@ describe('the renderer of a skybox', () => {
       expect(light.color.getHexString()).toBe('ff8800')
     })
 
-    /**
-     * Measured before the guard: two hundred frames of the sun's colour cost two hundred grading
-     * passes into the 2048×1024 float target, and two hundred of everything else besides.
-     */
-    it('grades nothing more for a drag that only moves the sun', async () => {
+    /** Everything BESIDES the picture is skipped too: two hundred frames cost one of each. */
+    it('touches nothing else for a drag that only moves the sun', async () => {
       const renderer = mounted()
       const sky = skyOf('sky-1')
       await applied(renderer, sky)
-      const gradedOnce = pipeline.renderTo.mock.calls.length
 
       for (const frame of draggedSun(sky, 200)) renderer.apply(frame)
       await vi.advanceTimersByTimeAsync(0)
 
-      expect(pipeline.renderTo).toHaveBeenCalledTimes(gradedOnce)
-      expect(adjust.setAdjustments).toHaveBeenCalledTimes(1)
       expect(environment.setIntensity).toHaveBeenCalledTimes(1)
       expect(environment.setBackgroundVisible).toHaveBeenCalledTimes(1)
     })
@@ -472,7 +502,7 @@ describe('the renderer of a skybox', () => {
 
       await applied(renderer, brighter)
 
-      expect(adjust.setAdjustments).toHaveBeenLastCalledWith(brighter.adjustments)
+      expect(environment.setAdjustments).toHaveBeenLastCalledWith(brighter.adjustments)
     })
 
     it('takes the backdrop away when the document turns it off', async () => {
@@ -620,20 +650,17 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('going away', () => {
-    // `probes` stays out: covering it would mean a fourth double for three meshes that own
-    // nothing else. `test-objects.ts` has no test at all — that is its own lot.
-    it('frees its sky, its target, its passes and its viewport', async () => {
+    // The meshes themselves stay out — `testObjects.test.ts` covers what they wear and free.
+    it('frees its sky, its grid, its environment, its quad and its viewport', async () => {
       const renderer = mounted()
-      const target = vi.spyOn(gradedTarget() ?? new WebGLRenderTarget(1, 1), 'dispose')
       await applied(renderer, skyOf('sky-1'))
 
       renderer.dispose()
 
-      expect(source.freed[0]).toHaveBeenCalled()
-      expect(target).toHaveBeenCalled()
+      expect(source.freedFor(`${ASSET_URL}sky-1`)).toHaveBeenCalled()
+      expect(source.freedFor(GRID_URL)).toHaveBeenCalled()
       expect(environment.dispose).toHaveBeenCalled()
       expect(pipeline.dispose).toHaveBeenCalled()
-      expect(adjust.dispose).toHaveBeenCalled()
       expect(disposeViewport).toHaveBeenCalled()
     })
 

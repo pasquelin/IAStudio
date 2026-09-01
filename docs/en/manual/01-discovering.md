@@ -9,7 +9,7 @@
 You describe what you want, in words. A distant computer makes it. You get the result on your own
 machine, and you carry on working with it.
 
-That is the whole idea. What Scenario Studio adds, compared to a website where you type a sentence
+That is the whole idea. What IA Studio adds, compared to a website where you type a sentence
 and download an image, is **everything that comes after**:
 
 - your creations are **filed** in a project, on your disk, not in an overflowing "Downloads"
@@ -33,11 +33,11 @@ according to what you are making. Those six arrangements are called **workspaces
 
 | Workspace | What you make there | An example |
 |---|---|---|
-| **Image** | still images | a poster, an illustration, a flat texture |
+| **Image** | still images | a poster, an illustration, a material map |
 | **Video** | moving sequences | a ten-second shot, an edit of several takes |
 | **3D** | scenes with volume | a set, an object under a light |
 | **Audio** | sounds and music | an ambience, a sound effect, a musical bed |
-| **Textures** | materials | wood, rusted metal, fabric — to dress a 3D object |
+| **Materials** | materials | wood, rusted metal, fabric — to dress a 3D object |
 | **Skyboxes** | 360° skies | what you see around you when you look up in a scene |
 
 You switch workspace by clicking its name, at the top of the window. The panels rearrange
@@ -61,11 +61,12 @@ you can open it in your file browser and look inside.
 
 ### 2. An **asset**
 
-A raw-material file in your project: an image, a video, a sound, a 3D object, a texture, a sky.
+A raw-material file in your project: an image, a video, a sound, a 3D object, a sky.
 
 Keep this in mind: **an asset is a finished file you can reuse**.
 
-Assets live in the **Assets** panel, familiarly called "the shelf".
+Assets live in the **Explorer** once they are on your disk, and in the **Library** while they are
+only online.
 
 ### 3. A **document**
 
@@ -83,11 +84,11 @@ There are six kinds of document, one per workspace:
 | Video | a sequence | `.otio` |
 | Audio | a sound being edited | `.otio` |
 | Skyboxes | a sky | `.gltf` |
-| Textures | a material | `.mtlx` |
+| Materials | a material | `.mtlx` |
 
 ### 4. A **model**
 
-The distant program that makes things. There are several hundred in the Scenario catalogue, and
+The distant program that makes things. There are several hundred in the remote catalogue, and
 they cannot all do the same thing: one draws images from text, another turns an image into a 3D
 object, a third composes music.
 
@@ -109,7 +110,7 @@ It is the most important field in the generation form. A few principles, develop
 
 A request being made.
 
-You press **Generate**, and the request leaves for Scenario. It does not come straight back:
+You press **Generate**, and the request leaves for the provider. It does not come straight back:
 depending on the model, it takes anywhere from a few seconds to several minutes. Meanwhile, the
 request lives in the **status line**, at the bottom of the window, with a progress bar, and you can
 keep working — or cancel it.
@@ -141,7 +142,7 @@ below. You can hide one, move it up, move it down, delete it. That is what makes
 |---|---|
 | **A computer** | macOS, Windows or Linux |
 | **An internet connection** | to generate. To work on what you already have, no |
-| **A Scenario account** | with an API key and an API secret — see [First steps](02-first-steps.md) |
+| **An account with a generation provider** | with an API key and an API secret — see [First steps](02-first-steps.md) |
 
 **What you do not need**: to know how to draw, how to program, or what a neural network is. The
 studio is made to be driven, not understood.
@@ -152,9 +153,9 @@ studio is made to be driven, not understood.
 
 Better said now — it saves you looking.
 
-- **It does not work offline to generate.** The making happens on Scenario's servers. Without a
+- **It does not work offline to generate.** The making happens on the provider's servers. Without a
   connection you can open, edit, adjust and save, but not create new content.
-- **It is not free to use.** Every generation consumes credit on your Scenario account. The studio
+- **It is not free to use.** Every generation consumes credit on your remote account. The studio
   does not bill you — it only forwards — but your account does count.
 - **It does not replace Photoshop, Blender or Premiere.** It does a useful part of each, in one
   place, around generation. The chapter [What does not exist yet](18-limits.md) says exactly where

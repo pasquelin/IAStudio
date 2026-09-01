@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { UPLOAD_KIND_BY_TYPE, uploadMimeTypeOf } from './assetMime'
 
 describe('the kind the API files an upload under', () => {
-  it('sends a texture and a sky up as the pictures they are', () => {
-    // The API has no notion of either; what makes them one is how the studio reads them back.
-    expect(UPLOAD_KIND_BY_TYPE.texture).toBe('image')
+  it('sends a sky up as the picture it is', () => {
+    // The API has no notion of one; what makes it a sky is how the studio reads it back.
     expect(UPLOAD_KIND_BY_TYPE.skybox).toBe('image')
   })
 

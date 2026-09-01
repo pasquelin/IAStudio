@@ -9,7 +9,89 @@ import {
 } from './dynamicForm'
 import { field } from './dynamic-form-fixtures'
 
+describe('a field that holds several values', () => {
+  // `''` is neither what its control writes back nor what its schema accepts.
+  it('opens on an empty list rather than on a blank', () => {
+    const fields = [field({ key: 'files', kind: 'image', repeated: true })]
+
+    expect(defaultValues(fields)).toEqual({ files: [] })
+  })
+
+  // Prompt assistance saw no reference picture at all on a multiview.
+  it('offers every picture it holds as a reference, not only the first', () => {
+    const fields = [field({ key: 'files', kind: 'image', repeated: true })]
+
+    expect(referencePictures(fields, { files: ['asset_7', 'asset_8'] })).toEqual([
+      'asset_7',
+      'asset_8',
+    ])
+  })
+})
+
 describe('default values', () => {
+  /**
+   * 🛑 Two models sharing a key share nothing else: a scheduler the next one does not list would
+   * render a `<select>` on no option at all, and a required field then reads empty in silence.
+   */
+  it('leaves behind a carried value the new model cannot hold', () => {
+    const field: FieldDescriptor = {
+      key: 'scheduler',
+      kind: 'choice',
+      label: 'Scheduler',
+      required: true,
+      default: 'Euler',
+      options: [{ value: 'Euler', label: 'Euler' }],
+    }
+
+    expect(defaultValues([field], undefined, { scheduler: 'DPM++ 2M' })).toEqual({
+      scheduler: 'Euler',
+    })
+  })
+
+  // A knob carried past the new model's bounds fails validation on a field nobody ever touched.
+  it('leaves behind a number the new model puts out of range', () => {
+    const field: FieldDescriptor = {
+      key: 'steps',
+      kind: 'integer',
+      label: 'Steps',
+      required: false,
+      default: 25,
+      min: 1,
+      max: 30,
+    }
+
+    expect(defaultValues([field], undefined, { steps: 80 })).toEqual({ steps: 25 })
+  })
+  /**
+   * 🛑 What the panel FILLED is not what the person typed. Carried alike, a source withdrawn from
+   * the panel above came straight back into the request it had just left — the list said one
+   * thing about what would be sent, the form below it said another.
+   */
+  it('drops a carried value the last preset had put there, and keeps a typed one', () => {
+    const image = field({ key: 'image' })
+
+    expect(defaultValues([image], undefined, { image: 'asset-1' }, { image: 'asset-1' })).toEqual({
+      image: '',
+    })
+    expect(defaultValues([image], undefined, { image: 'typed' }, { image: 'asset-1' })).toEqual({
+      image: 'typed',
+    })
+  })
+
+  /**
+   * 🛑 Only the SOURCES may be dropped this way. Told the whole preset instead, this blanked a
+   * prompt « regenerate with these parameters » had prefilled, the moment picking an image
+   * changed the operation and took the stored preset with it — § 22's own case, undone.
+   */
+  it('keeps what no source ever put there', () => {
+    expect(defaultValues([field({ key: 'mask' })], undefined, { mask: 'drawn' }, {})).toEqual({
+      mask: 'drawn',
+    })
+    expect(defaultValues([field({ key: 'prompt' })], undefined, { prompt: 'a cat' }, {})).toEqual({
+      prompt: 'a cat',
+    })
+  })
+
   it('uses what the model published, and a blank otherwise', () => {
     expect(
       defaultValues([

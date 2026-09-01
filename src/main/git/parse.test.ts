@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  failureOf,
+  gitFailureOf,
   filesOf,
   parseLog,
   parseNameStatus,
@@ -209,12 +209,12 @@ describe('why a command did not answer', () => {
     ['fatal: unable to access https://github.com: Could not resolve host: github.com', 'network'],
     ['CONFLICT (content): Merge conflict in documents/board.scimg', 'conflict'],
   ])('reads %s', (message, reason) => {
-    expect(failureOf(new Error(message))).toBe(reason)
+    expect(gitFailureOf(new Error(message))).toBe(reason)
   })
 
   /** Anything unrecognised stays unrecognised: a guessed sentence is worse than git's own. */
   it('does not guess at a message it has no pattern for', () => {
-    expect(failureOf(new Error('fatal: something nobody has seen'))).toBe('unknown')
+    expect(gitFailureOf(new Error('fatal: something nobody has seen'))).toBe('unknown')
   })
 })
 

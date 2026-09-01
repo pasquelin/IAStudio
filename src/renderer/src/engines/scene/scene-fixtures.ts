@@ -9,7 +9,7 @@ import {
 } from '@shared/domain/scene'
 import type { Bounds } from './rigFit'
 import type { RigState } from './rigState'
-import type { TextureCache } from './textureCache'
+import type { PictureOrientation, TextureCache } from './textureCache'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -42,6 +42,11 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
     geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
     material: DEFAULT_MATERIAL,
   }
+}
+
+/** Nothing but shapes, for the benches that measure what a node COUNT costs. */
+export function meshNodes(count: number): MeshNode[] {
+  return Array.from({ length: count }, (_unused, index) => meshNode(`node_${index}`))
 }
 
 /** The one light kind that builds a helper and a target beside itself. */
@@ -171,13 +176,16 @@ export function scriptedTextureCache() {
   const acquired: string[] = []
   const released: string[] = []
   const spaces = new Map<string, ColorSpace>()
+  /** Which way up each slot asked for its picture — `from-image` for a model's own maps. */
+  const orientations = new Map<string, PictureOrientation>()
   /** What the catalogue would say each asset was last written at — set by the test that cares. */
   const versions = new Map<string, string>()
 
   const cache: TextureCache = {
-    acquire: (assetId, colorSpace) => {
+    acquire: (assetId, colorSpace, _version, orientation = 'flipY') => {
       acquired.push(assetId)
       spaces.set(assetId, colorSpace)
+      orientations.set(assetId, orientation)
       return new Promise(resolve => pending.set(assetId, resolve))
     },
     release: assetId => {
@@ -192,6 +200,7 @@ export function scriptedTextureCache() {
     acquired,
     released,
     spaces,
+    orientations,
     versions,
     settle: async (assetId: string, texture: Texture | null = new Texture()) => {
       pending.get(assetId)?.(texture)

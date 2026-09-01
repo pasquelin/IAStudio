@@ -35,16 +35,17 @@ service reçoit une image, pas une pile.
 
 Le document, lui, garde ses calques. Aplatir n’est pas destructif ici.
 
-**Arêtes** *(canal de texture)*
+**Arêtes** *(canal de matière)*
 Une image en noir et blanc qui dit où sont les bords d’une surface. Elle ne s’affiche pas
 directement : elle sert à d’autres calculs.
 
 **Asset**
 Un fichier de matière première dans votre *projet* : une image, une vidéo, un son, un objet 3D,
-une *texture*, un ciel. Le mot est anglais et n’a pas d’équivalent français court ; « ressource »
+un *ciel*. Le mot est anglais et n’a pas d’équivalent français court ; « ressource »
 ou « média » s’en approchent. Retenez : **un asset est un fichier fini, réutilisable**.
 
-Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement *l’étagère*.
+Les assets vivent dans l’**Explorateur** une fois sur votre disque, et dans la **Bibliothèque**
+tant qu’ils ne sont qu’en ligne.
 
 **Assistant**
 La fenêtre où l’on dit ce que l’on veut faire, en une phrase ordinaire, plutôt que de le cliquer.
@@ -68,7 +69,7 @@ La petite marque sur une vignette de l’*étagère*, qui dit où en est ce fich
 compte actif. Voir [Les assets](07-assets.md).
 
 **Bibliothèque** *(du compte)*
-Le stock d’assets qui vit en ligne, du côté de votre compte Scenario — par opposition au
+Le stock d’assets qui vit en ligne, du côté de votre compte distant — par opposition au
 *projet*, qui est un dossier sur votre disque. Les deux sont séparés et rien ne circule entre eux
 sans une action de votre part. Aujourd’hui, seul le sens **projet → bibliothèque** a un bouton
 (**Envoyer**).
@@ -92,10 +93,10 @@ tout comme avant.
 Sa force est là : il n’écrit jamais dans les pixels des autres calques. Vous pouvez le régler
 cent fois, ou le supprimer, sans avoir rien abîmé.
 
-**Canal** *(d’une texture)*
-Une des images qui composent une matière. Une *texture* n’est pas une image mais un jeu d’images
+**Canal** *(d’une matière)*
+Une des images qui composent une matière. Une *matière* n’est pas une image mais un jeu d’images
 superposées, chacune répondant à une question différente : quelle couleur ? quel relief ? mat ou
-brillant ? Le studio en connaît huit — voir [Espace Textures](12-espace-textures.md).
+brillant ? Le studio en connaît huit — voir [Espace Matières](12-espace-matieres.md).
 
 **Canvas**
 La surface de dessin, au centre de l’espace Image. C’est là qu’on peint, qu’on gomme, qu’on
@@ -118,13 +119,13 @@ Ce qu’un *modèle* sait faire, écrit en abrégé. Le catalogue les affiche co
 | txt2audio | texte vers son |
 
 **Catalogue**
-La liste des *modèles* disponibles sur Scenario. Plusieurs centaines. Le panneau **Modèles** ne
+La liste des *modèles* disponibles chez le fournisseur. Plusieurs centaines. Le panneau **Modèles** ne
 vous montre à chaque fois que ceux qui savent fabriquer ce que l’*espace de travail* en cours
 fabrique.
 
 **Clé API**
-Votre identifiant auprès de Scenario, l’équivalent d’un nom d’utilisateur. Elle va toujours avec
-un *secret API*. Toutes deux se prennent sur [app.scenario.com](https://app.scenario.com), et se
+Votre identifiant auprès du fournisseur, l’équivalent d’un nom d’utilisateur. Elle va toujours avec
+un *secret API*. Toutes deux se prennent sur le tableau de bord de votre fournisseur, et se
 collent dans Réglages → **Compte**.
 
 **Clip**
@@ -135,7 +136,7 @@ plusieurs clips ; couper un clip ne touche jamais le fichier d’origine.
 Une clé API enregistrée, sous un nom que vous choisissez. Le studio en tient **plusieurs**, et le
 sélecteur de la barre de titre passe de l’un à l’autre.
 
-Chaque clé porte **son propre projet Scenario** — ses modèles, ses assets, son crédit. Changer de
+Chaque clé porte **son propre projet distant** — ses modèles, ses assets, son crédit. Changer de
 compte change donc la bibliothèque distante que vous parcourez, **jamais** les fichiers de votre
 projet local, qui sont sur votre disque et n’appartiennent à aucun compte.
 
@@ -154,7 +155,7 @@ devient grise ; au-dessus, elle durcit et perd du détail dans les extrêmes.
 La couleur qui signale ce qui est sélectionné ou en cours dans l’interface : le contour du panneau
 actif, la *tête de lecture*, le cadre d’une sélection. Réglable dans Réglages → **Apparence**.
 
-**Couleur de base** *(canal de texture)*
+**Couleur de base** *(canal de matière)*
 La couleur d’une matière, telle qu’elle serait sous un éclairage parfaitement neutre : sans ombre,
 sans reflet, sans relief. L’aspect « peinture » de la surface.
 
@@ -176,13 +177,13 @@ La taille des contrôles de l’interface. **Confort** laisse de l’air (28 px 
 resserre (24 px) pour faire tenir plus de choses à l’écran.
 
 **Dérivé** *(canal)*
-Un *canal* de texture que le studio a calculé à partir d’un autre, plutôt que reçu d’un *modèle*.
+Un *canal* de matière que le studio a calculé à partir d’un autre, plutôt que reçu d’un *modèle*.
 Le calcul se relance depuis le menu de sa vignette, autant de fois qu’on veut.
 
 **Détourage** *(background removal)*
 Retirer le fond d’une image pour ne garder que le sujet, sur du transparent. La commande
 **Détourer** est dans le menu Image ; son modèle se règle dans
-**Réglages ▸ Génération ▸ Détourage**.
+**Réglages ▸ Modèles d’IA ▸ Détourage**.
 
 **Dictée**
 Écrire un texte en le disant plutôt qu'en le tapant. La reconnaissance tourne **sur cet
@@ -222,7 +223,7 @@ réserve aux applications — un autre logiciel ne le perd pas, il ne le voit pa
 La hauteur d’une chose au-dessus de l’horizon, en degrés. Pour le soleil d’une *skybox* : 0° au
 ras de l’horizon, 90° à la verticale. Se combine avec l’*azimut*.
 
-**Émission** *(canal de texture)*
+**Émission** *(canal de matière)*
 Ce qui brille par soi-même dans une matière : une enseigne au néon, des braises, un écran allumé.
 Une zone émissive reste visible même sans lumière autour.
 
@@ -242,14 +243,14 @@ comme une carte du monde contient la Terre. C’est sous cette forme qu’une *s
 avant d’être repliée autour de vous.
 
 **Espace de travail**
-Un des six arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+Un des six arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **Matières**,
 **Skyboxes**. Changer d’espace réorganise les *panneaux* et refiltre le *catalogue*.
 
 Ce n’est pas six logiciels : c’est un logiciel qui se réarrange.
 
 **Étagère**
-Le surnom du panneau **Assets**. On y range ce qu’on a fabriqué et importé ; on y pioche pour
-travailler.
+L’ancien surnom du panneau **Assets**, qui listait à la fois le projet et le compte. Il n’existe
+plus : le projet se lit dans l’**Explorateur**, le compte dans la **Bibliothèque**.
 
 **Étalonnage**
 Le réglage général des couleurs et des lumières d’une image, après coup : *exposition*,
@@ -265,9 +266,9 @@ sombre.
 ## F
 
 **Famille** *(de modèles)*
-Le grand type de ce qu’un *modèle* fabrique : image, vidéo, 3D, audio, texture, ciel,
+Le grand type de ce qu’un *modèle* fabrique : image, vidéo, 3D, audio, matière, ciel,
 agrandissement, détourage, vectorisation. Sept d’entre elles ont leur *modèle par défaut* dans les
-réglages ; Texture et Ciel ne l’ont pas encore. Les trois dernières — agrandissement, détourage,
+réglages ; Matière et Ciel ne l’ont pas encore. Les trois dernières — agrandissement, détourage,
 vectorisation — n’ont pas d’espace de travail : ce sont les éditions du menu Image qui les
 emploient.
 
@@ -292,7 +293,7 @@ Une montée depuis le silence (fondu d’entrée) ou une descente vers lui (fond
 ## G
 
 **Générer**
-Demander à un *modèle* de fabriquer quelque chose. La demande part chez Scenario, revient sous
+Demander à un *modèle* de fabriquer quelque chose. La demande part chez le fournisseur, revient sous
 forme de *tâche*, et le résultat atterrit dans vos *assets*.
 
 **Gizmo**
@@ -331,7 +332,7 @@ Deux sens, hélas :
 
 ## H
 
-**Hauteur** *(canal de texture)*
+**Hauteur** *(canal de matière)*
 Une image en niveaux de gris qui dit le relief réel d’une surface : le blanc est en haut, le noir
 en bas. Plus fort que les *normales*, parce qu’il déplace vraiment la géométrie au lieu de
 simuler.
@@ -402,16 +403,16 @@ Un masque se fabrique aussi à partir d’une *sélection*, en une commande.
 
 **Matière** *(material)*
 Ce dont une surface est faite : sa couleur, son grain, ce qu’elle renvoie de la lumière. C’est ce
-que l’espace **Textures** fabrique, et ce que la section **Matière** de l’**Inspecteur** règle sur un
+que l’espace **Matières** fabrique, et ce que la section **Matière** de l’**Inspecteur** règle sur un
 objet 3D. Le studio ne dit jamais *matériau* : un seul mot pour une seule chose.
 
 **MCP** *(Model Context Protocol)*
 La langue commune que parlent les assistants de programmation et les outils qu’ils pilotent. Le
 studio peut se présenter comme l’un de ces outils : un client comme Claude Code lance alors les
-mêmes actions que l’*assistant*. Fermé au départ, à ouvrir dans Réglages → **Avancé**. Voir
+mêmes actions que l’*assistant*. Fermé au départ, à ouvrir dans Réglages → **Point d’entrée (MCP)**. Voir
 [Piloter le studio depuis l’extérieur](20-piloter-de-l-exterieur.md).
 
-**Métallicité** *(canal de texture)*
+**Métallicité** *(canal de matière)*
 Zone par zone : cette partie est-elle du métal, ou non ? Ce n’est pas un curseur d’aspect mais un
 interrupteur physique, parce que le métal et le non-métal réfléchissent la lumière de deux façons
 différentes. Les valeurs intermédiaires n’existent quasiment pas dans la nature — elles servent à
@@ -439,7 +440,7 @@ Réglable par *famille*, dans Réglages → **Génération**.
 Un élément de l’arbre d’une *scène* 3D : une *maille*, une lumière, un sprite, un groupe. C’est ce
 que l’**Outliner** liste et ce que l’**Inspecteur** décrit.
 
-**Normales** *(canal de texture)*
+**Normales** *(canal de matière)*
 Une image aux couleurs étranges — des bleus, des violets — qui encode les **micro-reliefs** d’une
 surface : les bosses et les creux qui accrochent la lumière, sans ajouter un seul triangle à
 l’objet. C’est ce qui donne son grain à une pierre ou son tissage à une étoffe.
@@ -452,7 +453,7 @@ enchaînés ne se donnent pas un coup de volume l’un à l’autre.
 
 ## O
 
-**Occlusion ambiante** *(AO, canal de texture)*
+**Occlusion ambiante** *(AO, canal de matière)*
 Une image en niveaux de gris qui marque les endroits où la lumière ambiante entre mal : les creux,
 les coins, les jointures. Elle ajoute de la profondeur à une matière qui semblait plate.
 
@@ -542,7 +543,7 @@ Une des deux bandes d’icônes collées aux bords gauche et droit de la fenêtr
 icône ouvre ou ferme le *panneau* correspondant.
 
 **Recadrage** *(crop)*
-Poser un cadre sur une image et ne garder que ce qui tombe dedans. L’outil `F` de l’espace Image :
+Poser un cadre sur une image et ne garder que ce qui tombe dedans. L’outil `C` de l’espace Image :
 on glisse le cadre, on l’ajuste, `⏎` l’applique. **Un recadrage rogne, il n’agrandit jamais** — le
 cadre ne sort pas de l’image.
 
@@ -583,7 +584,7 @@ deux bouts l’allongent.
 Faire tourner toute une *skybox* autour de vous. Le réglage le plus utile d’un ciel : il place le
 soleil du côté qui vous arrange, instantanément, sans rien regénérer.
 
-**Rugosité** *(canal de texture)*
+**Rugosité** *(canal de matière)*
 Mat ou brillant, zone par zone. Une surface rugueuse éparpille la lumière et n’a pas de reflet
 net ; une surface lisse la renvoie et miroite. C’est ce qui distingue un asphalte sec d’une flaque
 d’eau — la couleur est presque la même.
@@ -602,7 +603,7 @@ places, leurs *matières* et leur animation. C’est le *document* de cet espace
 `.gltf`.
 
 **Secret API**
-La seconde moitié de vos identifiants Scenario, l’équivalent d’un mot de passe. Il va toujours
+La seconde moitié de vos identifiants d’API, l’équivalent d’un mot de passe. Il va toujours
 avec une *clé API*, et ne s’affiche jamais en clair une fois enregistré.
 
 **Sélection** *(dans une image)*
@@ -665,10 +666,6 @@ l’encombrement au lieu de le résoudre.
 La ligne verticale qui marque l’instant en cours dans le montage. On la déplace pour se situer, et
 c’est à son endroit qu’un *clip* se coupe.
 
-**Texture**
-Une matière destinée à habiller un objet 3D : du bois, du métal rouillé, du tissu. **Ce n’est pas
-une image**, mais un jeu de *canaux* superposés, chacun répondant à une question différente.
-
 **Thème**
 Le jeu de couleurs de l’interface : **Sombre**, **Clair**, ou **Système** (qui suit votre
 ordinateur et bascule tout seul). Le fond reste toujours opaque — dans un studio, un fond
@@ -684,7 +681,7 @@ vous regardez n’y a pas accès : il sait seulement si la connexion fonctionne.
 ## U
 
 **Unité créative** *(UC)*
-Ce qu’une génération dépense sur votre compte Scenario. C’est le service qui fixe le tarif,
+Ce qu’une génération dépense sur votre compte distant. C’est le service qui fixe le tarif,
 jamais le studio : une vidéo ne coûte pas ce que coûte une image, et deux modèles d’images ne
 coûtent pas la même chose non plus.
 
@@ -700,7 +697,7 @@ dépense rien et ne génère rien.
 **Vectorisation**
 Convertir une image en tracés — des lignes et des courbes, qui s’agrandissent sans jamais devenir
 floues. La commande **Vectoriser** est dans le menu Image ; son modèle se règle dans
-**Réglages ▸ Génération ▸ Vectorisation**.
+**Réglages ▸ Modèles d’IA ▸ Vectorisation**.
 
 **Vignette** *(thumbnail)*
 La petite image qui représente un *asset* dans l’étagère ou un *modèle* dans le catalogue.

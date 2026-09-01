@@ -1,7 +1,7 @@
 import { action, type ActionField, type AssistantAction } from './assistantAction'
 import { SETTINGS_SECTION_IDS } from './settings'
 import { TOOL_IDS } from './tool'
-import { HELP_PAGES } from './window'
+import { WINDOW_PAGES } from './window'
 
 const PANEL: ActionField = {
   key: 'panel',
@@ -20,7 +20,7 @@ const PANEL: ActionField = {
  * takes nothing away from anyone.
  *
  * Two of them answer a command as well — `settings.open` and `window.fullScreen` — and are here
- * all the same: a program asks for a capability by name, and finding it under `command.run` means
+ * all the same: a program asks for a capability by name, and finding it under `command.runStudioCommand` means
  * knowing the id of a menu row first.
  */
 
@@ -30,6 +30,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.authState.title',
     descriptionKey: 'assistant.actions.authState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -38,6 +39,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.windowState.title',
     descriptionKey: 'assistant.actions.windowState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -46,6 +48,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.windowFullScreen.title',
     descriptionKey: 'assistant.actions.windowFullScreen.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -54,6 +57,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.settingsOpen.title',
     descriptionKey: 'assistant.actions.settingsOpen.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -70,6 +74,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.updatesState.title',
     descriptionKey: 'assistant.actions.updatesState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -78,6 +83,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.mediaCapabilities.title',
     descriptionKey: 'assistant.actions.mediaCapabilities.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -86,10 +92,11 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
      * The path-taking half of `media.ingest`, whose own channel raises the native picker no client
      * can fill. Adds a row, takes nothing away — hence `none`, like a new folder.
      */
-    name: 'media.adopt',
-    titleKey: 'assistant.actions.mediaAdopt.title',
-    descriptionKey: 'assistant.actions.mediaAdopt.description',
+    name: 'media.indexFileInPlace',
+    titleKey: 'assistant.actions.mediaIndexFileInPlace.title',
+    descriptionKey: 'assistant.actions.mediaIndexFileInPlace.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [{ key: 'path', kind: 'text', labelKey: 'assistant.fields.filePath', required: true }],
   }),
@@ -98,63 +105,70 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.fontsList.title',
     descriptionKey: 'assistant.actions.fontsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'favorites.list',
-    titleKey: 'assistant.actions.favoritesList.title',
-    descriptionKey: 'assistant.actions.favoritesList.description',
+    name: 'favorites.listPinnedRecipes',
+    titleKey: 'assistant.actions.favoritesListPinnedRecipes.title',
+    descriptionKey: 'assistant.actions.favoritesListPinnedRecipes.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
   action({
-    name: 'favorite.pin',
-    titleKey: 'assistant.actions.favoritePin.title',
-    descriptionKey: 'assistant.actions.favoritePin.description',
+    name: 'favorite.pinAssetRecipe',
+    titleKey: 'assistant.actions.favoritePinAssetRecipe.title',
+    descriptionKey: 'assistant.actions.favoritePinAssetRecipe.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
     ],
   }),
   action({
-    name: 'favorite.unpin',
-    titleKey: 'assistant.actions.favoriteUnpin.title',
-    descriptionKey: 'assistant.actions.favoriteUnpin.description',
+    name: 'favorite.unpinAssetRecipe',
+    titleKey: 'assistant.actions.favoriteUnpinAssetRecipe.title',
+    descriptionKey: 'assistant.actions.favoriteUnpinAssetRecipe.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       { key: 'favoriteId', kind: 'text', labelKey: 'assistant.fields.favoriteId', required: true },
     ],
   }),
   action({
-    name: 'fileInfo.open',
-    titleKey: 'assistant.actions.fileInfoOpen.title',
-    descriptionKey: 'assistant.actions.fileInfoOpen.description',
+    name: 'fileInfo.openWindow',
+    titleKey: 'assistant.actions.fileInfoOpenWindow.title',
+    descriptionKey: 'assistant.actions.fileInfoOpenWindow.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [{ key: 'path', kind: 'text', labelKey: 'assistant.fields.filePath', required: true }],
   }),
   action({
-    name: 'mirror.open',
-    titleKey: 'assistant.actions.mirrorOpen.title',
-    descriptionKey: 'assistant.actions.mirrorOpen.description',
+    name: 'mirror.openVideoReturnWindow',
+    titleKey: 'assistant.actions.mirrorOpenVideoReturnWindow.title',
+    descriptionKey: 'assistant.actions.mirrorOpenVideoReturnWindow.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [],
   }),
   action({
     /**
-     * The three of the Help menu, which are windows of the main process and not panels — so no
-     * command of the registry reaches them, and this was the whole of what an outside client
-     * could not open.
+     * Windows of the main process and not panels — so no command of the registry reaches them,
+     * and this was the whole of what an outside client could not open. Named for the Help menu,
+     * which three of the four belong to; see `WindowPage`.
      */
-    name: 'help.open',
-    titleKey: 'assistant.actions.helpOpen.title',
-    descriptionKey: 'assistant.actions.helpOpen.description',
+    name: 'help.openStudioWindow',
+    titleKey: 'assistant.actions.helpOpenStudioWindow.title',
+    descriptionKey: 'assistant.actions.helpOpenStudioWindow.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       {
@@ -162,7 +176,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
         kind: 'choice',
         labelKey: 'assistant.fields.helpPage',
         required: true,
-        options: HELP_PAGES,
+        options: WINDOW_PAGES,
       },
     ],
   }),
@@ -172,6 +186,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.updatesInstall.title',
     descriptionKey: 'assistant.actions.updatesInstall.description',
     commitment: 'files',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -180,6 +195,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.dictationState.title',
     descriptionKey: 'assistant.actions.dictationState.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -192,6 +208,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.dictationStart.title',
     descriptionKey: 'assistant.actions.dictationStart.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [],
   }),
@@ -200,6 +217,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.dictationStop.title',
     descriptionKey: 'assistant.actions.dictationStop.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       // Told apart because they differ where it matters: one keeps what was heard, the other
@@ -212,6 +230,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.panelsList.title',
     descriptionKey: 'assistant.actions.panelsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -224,6 +243,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.panelOpen.title',
     descriptionKey: 'assistant.actions.panelOpen.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [PANEL],
   }),
@@ -232,6 +252,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.panelClose.title',
     descriptionKey: 'assistant.actions.panelClose.description',
     commitment: 'none',
+    repeatable: false,
     reach: 'mcp',
     fields: [PANEL],
   }),

@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { clipLane, embeddedClip } from '@shared/domain/scene'
+import { clipLane, embeddedClip, wornMaterials } from '@shared/domain/scene'
 import type { Rig, RigBone } from '@shared/domain/rig'
 import { rigFit } from './rigFit'
 import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
   addNodes,
+  carveNodes,
+  separateNode,
   addIkChain,
   addRigBone,
   addRigHands,
   batch,
   copiesOf,
   groupNodes,
+  invertCarve,
   moveNodes,
+  negateNodes,
   reparentNode,
+  reorderNodes,
   multi,
   removeIkChain,
   removeNode,
@@ -31,7 +36,8 @@ import {
   setMaterialOn,
   setModelLanes,
   setModelRig,
-  setModelTextures,
+  dressModel,
+  wearMaterialAt,
   setNodeVisible,
   setRigBoneRole,
   setWorld,
@@ -59,7 +65,13 @@ import {
   nodeById,
   type SceneState,
 } from './sceneState'
-import type { EnvironmentRef, Transform } from '@shared/domain/scene'
+import type { EnvironmentRef, GeometryDescriptor, Transform } from '@shared/domain/scene'
+import type { CsgOperation } from '@shared/domain/csg'
+import { carvedNode, groupNode } from './nodeFactory'
+import { csgPartOf } from '@shared/domain/csg'
+import { csgGraphOf } from '../csg/csg-fixtures'
+
+const CUBE_SHAPE: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
@@ -371,6 +383,63 @@ describe('removeNodes', () => {
     expect(applied.selectedIds).toEqual([])
     expect(command.revert(applied).nodes.map(node => node.id)).toEqual(['a', 'b', 'c'])
   })
+
+  /** One sweep records where each node left from, and putting them back out of ascending order
+   * lands every later one a slot off — which only a scattered subtree shows. */
+  it('puts a scattered subtree back at the very indices it left', () => {
+    const start: SceneState = {
+      ...EMPTY_SCENE,
+      // The child declared BEFORE the parent it hangs from, which reparenting makes ordinary.
+      nodes: [mesh('leaf', 'branch'), mesh('keep'), mesh('branch'), mesh('other')],
+      selectedIds: [],
+    }
+    const command = removeNodes(start.nodes, ['branch'])
+    const applied = command.apply(start)
+
+    expect(applied.nodes.map(node => node.id)).toEqual(['keep', 'other'])
+    expect(command.revert(applied).nodes.map(node => node.id)).toEqual([
+      'leaf',
+      'keep',
+      'branch',
+      'other',
+    ])
+  })
+
+  /**
+   * What `multi` of one command per node gave for free, and the single sweep took away: a delete
+   * that reaches nothing must not push an entry. Otherwise ⌘Z gains a step doing nothing, and the
+   * redo stack is cleared for an edit that never happened.
+   */
+  it('refuses a delete that reaches no node at all', () => {
+    const nodes = [mesh('a')]
+
+    expect(removeNodes(nodes, []).refuses?.({ ...EMPTY_SCENE, nodes })).toBe(true)
+    expect(removeNodes(nodes, ['nowhere']).refuses?.({ ...EMPTY_SCENE, nodes })).toBe(true)
+    expect(removeNodes(nodes, ['a']).refuses?.({ ...EMPTY_SCENE, nodes })).toBe(false)
+  })
+
+  /** `applySelection` hands the same array back when nothing changed, and everything watching
+   * the selection re-renders on a fresh one — see `helpers/selection`. */
+  it('leaves the selection untouched, by reference, when nothing selected is deleted', () => {
+    const nodes = [mesh('a'), mesh('b')]
+    const start: SceneState = { ...EMPTY_SCENE, nodes, selectedIds: ['b'] }
+
+    expect(removeNodes(nodes, ['a']).apply(start).selectedIds).toBe(start.selectedIds)
+  })
+})
+
+/**
+ * The LAST copy is the anchor — the row an inspector reads and a gizmo lands on. The roots
+ * therefore keep the order they were PICKED in: reading them in scene order moved the gizmo onto
+ * the copy of a shape nobody had pointed at, and no test held either order.
+ */
+describe('copiesOf', () => {
+  it('keeps the picked order, so the copy of the anchor is the anchor', () => {
+    const nodes = [mesh('a'), mesh('b')]
+    const picked = [nodes[1], nodes[0]].filter(node => node !== undefined)
+
+    expect(copiesOf(nodes, picked).map(copy => copy.name)).toEqual(['b', 'a'])
+  })
 })
 
 describe('moveNodes', () => {
@@ -461,6 +530,108 @@ describe('setLightOn', () => {
     expect(setLightOn(start.nodes, anchor.light, 'intensity', 4).apply(start).nodes[1]).toBe(
       ambient,
     )
+  })
+})
+
+describe('reorderNodes', () => {
+  // The outliner reads a level off the order of `nodes`: `a`, `b`, then `c` inside `b`.
+  const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), mesh('b'), mesh('c', 'b')] }
+  const order = (state: SceneState, parentId: string | null = null): string[] =>
+    state.nodes.filter(node => node.parentId === parentId).map(node => node.id)
+
+  it('moves a node down its own level, and puts it back', () => {
+    const command = reorderNodes(['a'], null, 1)
+    const moved = command.apply(start)
+
+    expect(order(moved)).toEqual(['b', 'a'])
+    expect(order(command.revert(moved))).toEqual(['a', 'b'])
+  })
+
+  it('moves a node up its own level', () => {
+    expect(order(reorderNodes(['b'], null, 0).apply(start))).toEqual(['b', 'a'])
+  })
+
+  // The other half of the gesture: a row dropped between two rows of ANOTHER level changes both
+  // where it hangs and where it sits.
+  it('lands in another level at the place asked for', () => {
+    const moved = reorderNodes(['a'], 'b', 0).apply(start)
+
+    expect(order(moved, 'b')).toEqual(['a', 'c'])
+    expect(order(moved)).toEqual(['b'])
+  })
+
+  it('takes a node back out of the group holding it', () => {
+    const moved = reorderNodes(['c'], null, 0).apply(start)
+
+    expect(order(moved)).toEqual(['c', 'a', 'b'])
+    expect(order(moved, 'b')).toEqual([])
+  })
+
+  // Applied, it would close the tree on itself and every walk of it would run forever.
+  it('refuses a move under its own descendant, and leaves the scene untouched', () => {
+    expect(reorderNodes(['b'], 'c', 0).apply(start)).toBe(start)
+  })
+
+  it('leaves an unknown node alone', () => {
+    expect(reorderNodes(['ghost'], null, 0).apply(start)).toBe(start)
+  })
+
+  /**
+   * A parent ahead of its own children is the one property the rest of the engine reads the flat
+   * array for. The case that breaks it is a GROUP dragged past its own children, which needs a
+   * fourth node to be aimed at — `b` holds `c`, and `d` is the row it lands after.
+   */
+  it('carries what hangs from a group when the group moves past it', () => {
+    const held: SceneState = { ...start, nodes: [...start.nodes, mesh('d')] }
+    const moved = reorderNodes(['b'], null, 2).apply(held)
+    const ids = moved.nodes.map(node => node.id)
+
+    expect(order(moved)).toEqual(['a', 'd', 'b'])
+    expect(order(moved, 'b')).toEqual(['c'])
+    expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('c'))
+  })
+
+  /**
+   * 🛑 The case a command PER MEMBER gets wrong, and it is the everyday one: two rows already in
+   * the receiving level, dragged past a row that sits between them. `index` counts the level once
+   * BOTH have left it, so a member still in place must not be counted as a sibling by the other —
+   * measured before this was one command: they landed two apart.
+   */
+  it('lands a batch contiguous, even at the end of the level it came from', () => {
+    const five: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [mesh('a'), mesh('b'), mesh('c'), mesh('d'), mesh('e')],
+    }
+    const command = reorderNodes(['a', 'c'], null, 3)
+    const moved = command.apply(five)
+
+    expect(order(moved)).toEqual(['b', 'd', 'e', 'a', 'c'])
+    expect(order(command.revert(moved))).toEqual(['a', 'b', 'c', 'd', 'e'])
+  })
+
+  it('carries the whole batch into another level, in the order given', () => {
+    const moved = reorderNodes(['a', 'c'], 'b', 0).apply(start)
+
+    expect(order(moved, 'b')).toEqual(['a', 'c'])
+    expect(order(moved)).toEqual(['b'])
+  })
+
+  // It already travels inside the member carrying it, and taking it twice would put it in the
+  // flat array twice.
+  it('takes a member nested inside another member only once', () => {
+    const moved = reorderNodes(['b', 'c'], null, 0).apply(start)
+
+    expect(moved.nodes.map(node => node.id)).toEqual(['b', 'c', 'a'])
+    expect(order(moved, 'b')).toEqual(['c'])
+  })
+
+  // The place it came from is only known once the move runs — a redo has to capture it again.
+  it('captures where it came from again when it is replayed', () => {
+    const command = reorderNodes(['a'], null, 1)
+    const moved = command.apply(start)
+    const back = command.revert(moved)
+
+    expect(order(command.apply(back))).toEqual(['b', 'a'])
   })
 })
 
@@ -725,6 +896,58 @@ describe('batch', () => {
     const two = batch('transform', start.nodes, () => null)
     expect(one.id).not.toBe(two.id)
   })
+
+  it('refuses only when every target refuses, so one node still worth moving makes an entry', () => {
+    const same = batch('rename', start.nodes, node => renameNode(node.id, node.name))
+    const one = batch('rename', start.nodes, node =>
+      renameNode(node.id, node.id === 'a' ? 'other' : node.name),
+    )
+
+    expect(same.refuses?.(start)).toBe(true)
+    expect(one.refuses?.(start)).toBe(false)
+  })
+
+  it('refuses a batch that reaches nothing, rather than pushing an entry doing nothing', () => {
+    expect(batch('rename', start.nodes, () => null).refuses?.(start)).toBe(true)
+  })
+
+  it('never refuses an edit that has no opinion, however many nodes it covers', () => {
+    const command = batch('material', start.nodes, node =>
+      setMeshMaterial(node.id, DEFAULT_MATERIAL),
+    )
+    expect(command.refuses?.(start)).toBe(false)
+  })
+
+  it('writes in scene order, whatever order the targets came in', () => {
+    const applied = batch('rename', [...start.nodes].reverse(), node =>
+      renameNode(node.id, `${node.id}!`),
+    ).apply(start)
+
+    expect(applied.nodes.map(node => node.id)).toEqual(['a', 'b', 'c'])
+    expect(applied.nodes.map(node => node.name)).toEqual(['a!', 'b!', 'c!'])
+  })
+
+  it('hands back the state itself when nothing was written', () => {
+    expect(batch('rename', start.nodes, () => null).apply(start)).toBe(start)
+  })
+
+  it('leaves the scene alone for a target it does not hold, forwards and back', () => {
+    const command = batch('rename', [{ id: 'ghost' }], target => renameNode(target.id, 'x'))
+    expect(command.apply(start)).toBe(start)
+    expect(command.revert(start)).toBe(start)
+  })
+
+  it('hands back the same selection, so nothing watching it re-renders', () => {
+    const picked: SceneState = { ...start, selectedIds: ['a'] }
+    const applied = batch('rename', picked.nodes, node => renameNode(node.id, 'x')).apply(picked)
+    expect(applied.selectedIds).toBe(picked.selectedIds)
+  })
+
+  it('recaptures as it is replayed, so a redo undoes to where the redo started', () => {
+    const command = batch('rename', start.nodes, node => renameNode(node.id, 'once'))
+    const again = command.apply(command.revert(command.apply(start)))
+    expect(command.revert(again).nodes.map(node => node.name)).toEqual(['a', 'b', 'c'])
+  })
 })
 
 /**
@@ -761,6 +984,7 @@ describe('a revert asked for before its apply', () => {
     ['setLight', setLight('l', { kind: 'ambient', color: '#fff', intensity: 2 })],
     ['setSprite', setSprite('s', DEFAULT_SPRITE)],
     ['reparentNode', reparentNode('a', 'l')],
+    ['reorderNodes', reorderNodes(['a'], null, 0)],
     ['setWorld', setWorld({ environment: { kind: 'skybox', assetId: 'sky-1' } })],
   ]
 
@@ -818,41 +1042,68 @@ describe('an edit spread over a selection', () => {
   })
 })
 
-describe('setModelTextures', () => {
+describe('dressModel', () => {
   const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
 
-  const texturesOf = (state: SceneState) => {
+  const dressOf = (state: SceneState) => {
     const node = nodeById(state, 'm')
-    return node?.type === 'model' ? node.model.textures : undefined
+    return node?.type === 'model' ? node.model.dress : undefined
   }
 
-  it('writes the overrides and gives them back on undo', () => {
+  const wornBy = (state: SceneState, slot = 0) => wornMaterials(dressOf(state))[slot]
+
+  it('writes the reference and gives it back on undo', () => {
     const before = withModel()
-    const applied = setModelTextures('m', { map: { assetId: 'tex-1' } })
+    const applied = wearMaterialAt('m', 0, 'mat-1')
 
     const after = applied.apply(before)
-    expect(texturesOf(after)).toEqual({ map: { assetId: 'tex-1' } })
-    expect(texturesOf(applied.revert(after))).toBeUndefined()
+    expect(wornBy(after)).toBe('mat-1')
+    expect(dressOf(applied.revert(after))).toBeUndefined()
   })
 
-  // An empty set is « the file's own maps », which a document should not carry a field to say.
-  it('drops the field when the last override goes', () => {
-    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(withModel())
+  // No dress at all is « the file's own maps », which a document should not carry a field to say.
+  it('drops the field when the dress is taken off', () => {
+    const dressed = wearMaterialAt('m', 0, 'mat-1').apply(withModel())
 
-    expect(texturesOf(setModelTextures('m', {}).apply(dressed))).toBeUndefined()
+    expect(dressOf(dressModel('m', null).apply(dressed))).toBeUndefined()
+  })
+
+  // The whole point of the union: a model covered by a picture wears no material, and the other
+  // way round. Two fields would have let a switch leave the old one behind, worn by nobody.
+  it('cannot wear a picture and a material at once', () => {
+    const dressed = wearMaterialAt('m', 0, 'mat-1').apply(withModel())
+    const covered = dressModel('m', { kind: 'image', assetId: 'pic-1' }).apply(dressed)
+
+    expect(dressOf(covered)).toEqual({ kind: 'image', assetId: 'pic-1' })
+    expect(wornMaterials(dressOf(covered))).toEqual([])
+  })
+
+  // A car is a body, a glass and a set of tyres: naming the second must not name the first.
+  it('names one slot without filling the ones before it', () => {
+    const dressed = wearMaterialAt('m', 2, 'mat-3').apply(withModel())
+
+    expect(wornMaterials(dressOf(dressed))).toEqual(['', '', 'mat-3'])
+  })
+
+  // Emptying a row is not removing it: the list is what the user built, and a row that vanished
+  // under the finger that cleared it is a gesture nobody asked for.
+  it('keeps a slot that is emptied', () => {
+    const two = wearMaterialAt('m', 1, 'mat-2').apply(
+      wearMaterialAt('m', 0, 'mat-1').apply(withModel()),
+    )
+
+    expect(wornMaterials(dressOf(wearMaterialAt('m', 1, '').apply(two)))).toEqual(['mat-1', ''])
   })
 
   // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
   it('leaves the lanes of the model alone, and is left alone by them', () => {
     const lane = clipLane('main', [embeddedClip('c1', 'run', { speed: 2 })])
     const blocked = setModelLanes('m', [lane]).apply(withModel())
-    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(blocked)
+    const dressed = wearMaterialAt('m', 0, 'mat-1').apply(blocked)
 
     const node = nodeById(dressed, 'm')
     expect(node?.type === 'model' && node.model.lanes).toEqual([lane])
-    expect(texturesOf(setModelLanes('m', []).apply(dressed))).toEqual({
-      map: { assetId: 'tex-1' },
-    })
+    expect(wornBy(setModelLanes('m', []).apply(dressed))).toBe('mat-1')
   })
 
   // One empty lane is exactly what the band shows a model that has never played anything, so
@@ -1015,5 +1266,231 @@ describe('editing a skeleton bone by bone', () => {
 
   it('reaches for nothing from a root, which has no bone above it to turn', () => {
     expect(ikOf(addIkChain('m', 'Hips').apply(rigged()))).toBeUndefined()
+  })
+})
+
+describe('carveNodes', () => {
+  // 2.4 of matter against the cube's 1, and a bounding box twelve times bigger: the shape the
+  // election has to get right, and the one it would get wrong on the box alone.
+  const wall = () => ({
+    ...mesh('wall'),
+    name: 'Wall',
+    geometry: { kind: 'box', width: 4, height: 3, depth: 0.2 } satisfies GeometryDescriptor,
+  })
+  const cube = (x: number) => ({
+    ...mesh('cube'),
+    transform: { ...IDENTITY_TRANSFORM, position: { x, y: 0, z: 0 } },
+  })
+
+  const carved = (picked: SceneState['nodes'], operation: CsgOperation = 'subtract') => {
+    const command = carveNodes(picked, operation, picked)
+    if (!command) throw new Error('the cut was refused')
+    return command.apply({ ...EMPTY_SCENE, nodes: picked })
+  }
+
+  const solidOf = (picked: SceneState['nodes'], operation: CsgOperation = 'subtract') => {
+    const solid = carved(picked, operation).nodes[0]
+    if (solid?.type !== 'carved') throw new Error('the cut produced no solid')
+    return solid
+  }
+
+  it('leaves one solid where the two shapes were', () => {
+    const next = carved([wall(), cube(1)])
+
+    expect(next.nodes).toHaveLength(1)
+    expect(next.nodes[0]?.type).toBe('carved')
+  })
+
+  it('keeps the matter name and placement, so a wall gains a window', () => {
+    const matter = {
+      ...wall(),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 7, y: 0, z: 0 } },
+    }
+    const solid = carved([matter, cube(7)]).nodes[0]
+
+    expect(solid?.name).toBe('Wall')
+    expect(solid?.transform.position.x).toBe(7)
+  })
+
+  it('refuses a selection nothing can be cut out of', () => {
+    expect(carveNodes([wall()], 'subtract', [wall()])).toBeNull()
+  })
+
+  // The reason `CsgPart` carries a material at all: welding a red cube to a blue sphere and
+  // separating them must not hand both back in one colour.
+  it('gives each shape back the colour it wore before the fold', () => {
+    const red = { ...wall(), material: { ...DEFAULT_MATERIAL, color: '#ff0000' } }
+    const blue = { ...cube(1), material: { ...DEFAULT_MATERIAL, color: '#0000ff' } }
+    const solid = carved([red, blue]).nodes[0]
+    if (solid?.type !== 'carved') throw new Error('the cut produced no solid')
+
+    const back = separateNode(solid).apply({ ...EMPTY_SCENE, nodes: [solid] })
+    const colours = back.nodes.map(node => (node.type === 'mesh' ? node.material.color : null))
+
+    expect(colours).toEqual(['#ff0000', '#0000ff'])
+  })
+
+  it('gives back the very shapes it folded in, still where they stood', () => {
+    const solid = solidOf([wall(), cube(1)])
+    const back = separateNode(solid).apply({ ...EMPTY_SCENE, nodes: [solid] })
+
+    expect(back.nodes).toHaveLength(2)
+    expect(back.nodes.map(node => node.type)).toEqual(['mesh', 'mesh'])
+    expect(back.nodes[1]?.transform.position.x).toBeCloseTo(1)
+  })
+
+  /** Two shapes, one union, and the order of the clicks says nothing about which is which. */
+  it('folds to the same solid whichever shape was clicked first', () => {
+    const [big, small] = [wall(), cube(1)]
+
+    expect(solidOf([small, big]).carved).toEqual(solidOf([big, small]).carved)
+    expect(solidOf([small, big]).name).toBe('Wall')
+  })
+
+  /** Roblox's Negate: what is marked is a tool, whatever else is picked and whatever its size. */
+  it('carves the marked shape out, even when the marked one is the bigger', () => {
+    const solid = solidOf([{ ...wall(), negative: true }, cube(1)])
+
+    expect(solid.name).toBe('cube')
+    expect(solid.carved.steps[0]?.part.name).toBe('Wall')
+  })
+
+  /** A union holding a negative IS a piercing — how Roblox spells a subtraction, and the same
+   * result: no Percer button is needed for the gesture to run the right way. */
+  it('pierces rather than welds when the selection holds a marked shape', () => {
+    const solid = solidOf([wall(), { ...cube(1), negative: true }], 'unite')
+
+    expect(solid.name).toBe('Wall')
+    expect(solid.carved.steps[0]?.operation).toBe('subtract')
+  })
+
+  /**
+   * What makes the round trip idle: separate a solid, fold the same selection again, and the same
+   * solid comes back — whichever button is pressed, because the marks travelled with the brushes.
+   */
+  it('gives a subtracted brush back marked, so folding it again cuts the same way', () => {
+    const solid = solidOf([wall(), cube(1)])
+    const back = separateNode(solid).apply({ ...EMPTY_SCENE, nodes: [solid] })
+
+    expect(back.nodes.map(node => (node.type === 'mesh' ? node.negative === true : null))).toEqual([
+      false,
+      true,
+    ])
+    expect(carveNodes(back.nodes, 'unite', back.nodes)).not.toBeNull()
+  })
+})
+
+/**
+ * The one gesture that repairs a fold which ran backwards — no undo, and nothing to understand.
+ * The election weighs matter, and a generous tool can out-weigh the thin wall it pierces.
+ */
+describe('invertCarve', () => {
+  const wall = () => ({
+    ...mesh('wall'),
+    name: 'Wall',
+    geometry: { kind: 'box', width: 4, height: 3, depth: 0.2 } satisfies GeometryDescriptor,
+  })
+  const cube = () => ({ ...mesh('cube'), name: 'Cube' })
+
+  const folded = () => {
+    const picked = [wall(), cube()]
+    const command = carveNodes(picked, 'subtract', picked)
+    if (!command) throw new Error('the cut was refused')
+    const state = command.apply({ ...EMPTY_SCENE, nodes: picked })
+    const solid = state.nodes[0]
+    if (solid?.type !== 'carved') throw new Error('the cut produced no solid')
+    return { solid, state }
+  }
+
+  it('swaps the matter and the tool, in one command', () => {
+    const { solid, state } = folded()
+    expect(solid.name).toBe('Wall')
+
+    const flipped = invertCarve(solid, state.nodes)
+    if (!flipped) throw new Error('the solid carries a tool')
+    const after = flipped.apply(state)
+    const made = after.nodes.find(node => node.type === 'carved')
+
+    expect(after.nodes).toHaveLength(1)
+    expect(made?.name).toBe('Cube')
+    expect(made?.type === 'carved' && made.carved.steps[0]?.part.name).toBe('Wall')
+  })
+
+  /** Pressed twice, a hand has to land back where it started — or the button is a trap. */
+  it('gives the first solid back when it is run again', () => {
+    const { solid, state } = folded()
+    const once = invertCarve(solid, state.nodes)?.apply(state)
+    const flipped = once?.nodes.find(node => node.type === 'carved')
+    if (flipped?.type !== 'carved' || !once) throw new Error('the first flip was refused')
+
+    const twice = invertCarve(flipped, once.nodes)?.apply(once)
+    expect(twice?.nodes.find(node => node.type === 'carved')?.name).toBe('Wall')
+  })
+
+  it('is taken back by one undo', () => {
+    const { solid, state } = folded()
+    const flipped = invertCarve(solid, state.nodes)
+    if (!flipped) throw new Error('the solid carries a tool')
+
+    expect(flipped.revert(flipped.apply(state)).nodes.map(node => node.id)).toEqual(
+      state.nodes.map(node => node.id),
+    )
+  })
+
+  it('refuses a solid of one brush, which has no other way to run', () => {
+    const only = carvedNode(csgGraphOf(csgPartOf('Alone', CUBE_SHAPE, DEFAULT_MATERIAL)))
+    if (only.type !== 'carved') throw new Error('a solid')
+    expect(invertCarve(only, [only])).toBeNull()
+  })
+})
+
+describe('negateNodes', () => {
+  const shapes = () => [mesh('a'), mesh('b')]
+  const marked = (state: SceneState) =>
+    state.nodes.map(node => (node.type === 'mesh' ? node.negative === true : null))
+
+  const run = (nodes: SceneState['nodes']) => negateNodes(nodes).apply({ ...EMPTY_SCENE, nodes })
+
+  it('marks a selection nothing of which is marked', () => {
+    expect(marked(run(shapes()))).toEqual([true, true])
+  })
+
+  /** One button for both, which is what Roblox's Negate is — and the way back out of a mark. */
+  it('takes the mark off a selection wholly marked', () => {
+    const already = shapes().map(node => ({ ...node, negative: true }))
+    expect(marked(run(already))).toEqual([false, false])
+  })
+
+  it('marks the rest rather than unmarking, when only part of the selection is marked', () => {
+    const [one, other] = shapes()
+    if (!one || !other) throw new Error('two shapes')
+    expect(marked(run([{ ...one, negative: true }, other]))).toEqual([true, true])
+  })
+
+  it('leaves a node carrying no shape alone', () => {
+    const nodes = [mesh('a'), groupNode()]
+    const next = negateNodes(nodes).apply({ ...EMPTY_SCENE, nodes })
+
+    expect(next.nodes[1]).toEqual(nodes[1])
+  })
+
+  it('refuses a selection carrying no shape at all, rather than costing an empty undo', () => {
+    expect(negateNodes([groupNode()]).refuses?.(EMPTY_SCENE)).toBe(true)
+  })
+
+  /**
+   * Each node back to ITS OWN mark, not to a shared default: one sweep writes the whole selection
+   * now — 3.9 ms for 500 shapes in a 40 000-node scene against 219 ms one command per node — and
+   * a revert that forgot which of them was already marked would be the price of that sweep.
+   */
+  it('gives every shape back the mark it wore, and not a shared one', () => {
+    const [one, other] = shapes()
+    if (!one || !other) throw new Error('two shapes')
+    const nodes = [{ ...one, negative: true }, other]
+    const command = negateNodes(nodes)
+    const state = { ...EMPTY_SCENE, nodes }
+
+    expect(marked(command.apply(state))).toEqual([true, true])
+    expect(marked(command.revert(command.apply(state)))).toEqual([true, false])
   })
 })

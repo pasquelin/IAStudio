@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { posterUrl, type AssetType } from '@shared/domain/asset'
-import type { LinkOption } from '@/design/LinkField/LinkField'
+import type { LinkOption } from '@/components/LinkField/LinkField'
 import { useProjectPictureAssets } from './useProjectPictureAssets'
 
 /**
@@ -22,4 +22,15 @@ export function useProjectPictures(types: readonly AssetType[]): readonly LinkOp
       })),
     [pictures],
   )
+}
+
+/**
+ * What stands for a DOCUMENT among the offered pictures: a material shows its base colour, a sky
+ * the picture it hangs. Looked up rather than built, so the URL carries the version.
+ */
+export function urlOfPicture(
+  pictures: readonly LinkOption[],
+  assetId: string | null | undefined,
+): string | undefined {
+  return assetId ? pictures.find(one => one.id === assetId)?.url : undefined
 }

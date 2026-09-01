@@ -57,7 +57,7 @@ Retenez ces deux lignes et vous ne serez bloqué nulle part.
 3. cliquez l’icône **Génération** du rail gauche — choisir un modèle n’ouvre pas le panneau à
    votre place — puis écrivez votre phrase dans le **prompt** ;
 4. **Générer**. La ligne d’état, en bas à droite, suit l’avancement ;
-5. le résultat arrive dans le panneau **Assets**, et dans `Images/` sur votre disque.
+5. le résultat arrive dans la **Bibliothèque**, et dans `Images/` sur votre disque.
 
 **Le piège.** Sans projet ouvert, il n’y a **ni formulaire ni bouton** : le panneau affiche à la
 place « Ouvrez un projet pour générer. » Ce n’est pas un bouton grisé, c’est le panneau entier qui
@@ -90,7 +90,7 @@ dessus en calque (voir [Espace Image](08-espace-image.md)).
 Le menu **Image ▸ Agrandir** aplatit le document, l’envoie, et ouvre le formulaire de
 l’agrandisseur avec votre image déjà dedans. C’est vous qui appuyez sur **Générer**.
 
-Une fois, avant la première : **Réglages ▸ Génération ▸ Agrandissement**, choisissez un modèle.
+Une fois, avant la première : **Réglages ▸ Modèles d’IA ▸ Agrandissement**, choisissez un modèle.
 Sans lui, la commande n’envoie rien et ouvre cet écran — le panneau **Modèles** ne peut pas servir
 ici, il ne montre que la famille de l’espace ouvert.
 
@@ -133,10 +133,10 @@ tout le reste sont cuits dans les fichiers. Voir [Espace Skyboxes](13-espace-sky
 
 ## Faire une matière pour un objet 3D
 
-Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’on juge **sur un objet
-éclairé**, pas à plat.
+Une *matière* n’est pas une image : c’est une surface qu’on juge **sur un objet éclairé**, pas
+à plat.
 
-1. espace **Textures** ;
+1. espace **Matières** ;
 2. bouton **+** du rail gauche ;
 3. **glissez une image du projet sur l’aperçu** — un cadre bleu confirme que le dépôt sera pris.
    Elle devient la **couleur de base** ;
@@ -163,9 +163,9 @@ voulu. Pour viser les normales ou la rugosité, déposez sur **leur ligne** dans
 2. panneau **Modèles** → filtre **Capacité**, visible sans rien déplier → **Image vers vidéo** ;
 3. choisissez un modèle, donnez-lui votre image, décrivez le mouvement voulu ;
 4. **Générer** — comptez plus longtemps que pour une image : quelques minutes est normal ;
-5. le clip arrive dans les **Assets**.
+5. le clip arrive dans la **Bibliothèque**.
 
-**Pour le voir en grand** : **double-cliquez** le clip dans l’étagère. Un montage s’ouvre pour lui,
+**Pour le voir en grand** : **double-cliquez** le clip dans l’Explorateur. Un montage s’ouvre pour lui,
 avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 
 ---
@@ -175,9 +175,9 @@ avec le clip déjà posé — le `+` du rail gauche n’est pas un préalable.
 1. espace **Audio** ;
 2. panneau **Modèles** : les éditeurs proposés sont ElevenLabs, Google, Bytedance ;
 3. décrivez le son voulu, **Générer** ;
-4. le son arrive dans les **Assets**.
+4. le son arrive dans la **Bibliothèque**.
 
-**Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’étagère. Un onglet
+**Pour l’écouter et le retoucher :** **double-cliquez** votre son dans l’Explorateur. Un onglet
 s’ouvre pour lui, et la forme d’onde apparaît — le `+` du rail gauche n’est pas un préalable.
 
 ---
@@ -207,7 +207,7 @@ accélère.
 
 1. espace **Vidéo** ;
 2. bouton **+** du rail gauche : une séquence neuve ;
-3. **glissez** votre premier clip depuis l’étagère — en Vidéo elle est dans la **colonne de
+3. **glissez** votre premier clip depuis l’Explorateur — en Vidéo elle est dans la **colonne de
    droite**, la bande basse étant prise par la timeline — sur une piste image ;
 4. glissez le second **juste après** : il se cale sur l’image la plus proche, mais **il ne colle
    pas au bord du premier**. Lâchez-le trop tôt et il recouvre son voisin ; l’aimantation aux bords
@@ -228,7 +228,7 @@ final.
 
 ## Rogner un son et le faire monter en douceur
 
-1. **double-cliquez** votre son dans l’étagère — l’espace Audio s’ouvre avec lui ;
+1. **double-cliquez** votre son dans l’Explorateur — l’espace Audio s’ouvre avec lui ;
 2. tirez les bords de la région pour **rogner** ;
 3. posez un **fondu d’entrée** et un **fondu de sortie** ;
 4. l’outil **A/B** compare avec l’original, avant vos retouches — c’est un outil à lui seul, pas
@@ -249,11 +249,11 @@ aucune surface : il ouvre l’asset dans un onglet à lui.
 |---|---|---|
 | un clip sur un montage | glisser sur la **timeline** | un onglet séquence |
 | une image en calque | glisser sur la **toile** | un onglet image |
-| une image en couleur de base | glisser sur l’**aperçu de la matière** | un onglet texture |
+| une image en couleur de base | glisser sur l’**aperçu de la matière** | un onglet matière |
 | une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-Une texture se double-clique comme les autres : une **matière à elle** s’ouvre, dont elle remplit
+Une image qui porte un canal se double-clique comme les autres : une **matière à elle** s’ouvre, dont elle remplit
 la couleur de base. Pour la poser dans la matière que vous avez devant vous, c’est le
 glisser-déposer ou le clic droit ▸ **Utiliser comme couleur de base**.
 
@@ -263,7 +263,7 @@ glisser-déposer ou le clic droit ▸ **Utiliser comme couleur de base**.
 
 ## Faire entrer mes propres fichiers
 
-1. panneau **Assets** → bouton **Importer un média**, sur sa ligne de titre ;
+1. dans l’**Explorateur**, clic droit sur le vide, puis **Importer un média** ;
 2. choisissez vos fichiers. Formats acceptés : vidéo (`mp4` `mov` `mkv` `webm` `avi` `mxf`
    `m4v`), audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif`
    `tiff` `exr`), 3D (`glb`) ;
@@ -281,7 +281,7 @@ ses textures à côté — ainsi que `.obj`, `.fbx` et les HDRI (`.hdr`) sont re
 
 ## Refaire une image que j’avais réussie
 
-1. cliquez l’image dans le panneau **Assets** ;
+1. cliquez l’image dans l’**Explorateur** ;
 2. regardez l’**Inspecteur**, à droite : s’il connaît la génération, il affiche le **modèle**, le
    **prompt** et la **graine** ;
 3. bouton **Régénérer** : le modèle et ses paramètres reviennent dans le panneau Génération, prêts
@@ -313,9 +313,9 @@ rebrancher le compte.
 
 ## Travailler avec deux comptes
 
-Chaque clé API porte **son propre** projet Scenario : ses modèles, ses assets, son crédit.
+Chaque clé API porte **son propre** projet distant : ses modèles, ses assets, son crédit.
 
-1. **Réglages ▸ Compte** : ajoutez-en un second, avec son nom à lui ;
+1. **Réglages ▸ Modèles d’IA ▸ Clés API** : ajoutez-en un second, avec son nom à lui ;
 2. **Utiliser ce compte** bascule ;
 3. plus rapide au quotidien : le nom du compte, en haut à droite de la fenêtre, ouvre la liste
    d’un clic.
@@ -349,7 +349,7 @@ encore, et rien à l’écran ne le dit sur le moment.
 |---|---|---|
 | **retrouver l’historique** d’un document rouvert | la pile d’annulation est vide | seul l’état est enregistré, pas les gestes qui y ont mené |
 | **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
-| **détourer ou vectoriser** une image | les **Réglages ▸ Génération** s’ouvrent sur la section voulue | le modèle se choisit là, une fois pour toutes |
+| **détourer ou vectoriser** une image | les **Réglages ▸ Modèles d’IA** s’ouvrent sur la section voulue | le modèle se choisit là, une fois pour toutes |
 | **exporter une vidéo** | aucun bouton | l’export vidéo n’est pas écrit — l’image, elle, sort par `⇧⌘E` |
 | **annuler un recadrage** | la taille revient, les pixels rognés non | l’historique ne garde pas l’image d’avant en entier |
 
@@ -366,14 +366,14 @@ Tout est détaillé, sans rien cacher, dans
 | une variante d’une image | Image | filtre *Image vers image* → donner l’image |
 | une image plus grande | Image | menu **Image ▸ Agrandir**, après avoir réglé son modèle |
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
-| une matière | Textures | `+` → glisser une image sur l’aperçu → `⌘S` |
+| une matière | Matières | `+` → glisser une image sur l’aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |
 | un son | Audio | Modèles → Générer, puis double-clic sur le son |
 | une scène 3D | 3D | `+` → une lumière **d’abord**, puis les objets → `⌘S` |
 | éclairer une scène d’un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
 | poser un modèle 3D dans la scène ouverte | 3D | glisser la maille sur la vue, ou clic droit |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
-| importer mes fichiers | partout | Assets → Importer un média |
+| importer mes fichiers | partout | Explorateur → Importer un média |
 | refaire la même image | partout | Inspecteur → Régénérer |
 | emporter mon projet | — | copier le dossier |
 

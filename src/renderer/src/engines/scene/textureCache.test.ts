@@ -29,7 +29,7 @@ function deferredSource() {
     })
   }
 
-  const urlOf = (assetId: string) => `scenario://asset/${assetId}`
+  const urlOf = (assetId: string) => `ia-studio://asset/${assetId}`
 
   return {
     load,
@@ -55,7 +55,7 @@ describe('createTextureCache', () => {
     const loading = cache.acquire('tex-1', NoColorSpace)
     const texture = source.settle('tex-1')
 
-    expect(source.calls).toEqual(['scenario://asset/tex-1'])
+    expect(source.calls).toEqual(['ia-studio://asset/tex-1'])
     await expect(loading).resolves.toBe(texture)
   })
 
@@ -223,7 +223,7 @@ describe('createTextureCache', () => {
 
     void cache.acquire('tex-1', NoColorSpace, '2026-08-13T10:00:00.000Z')
 
-    expect(source.calls).toEqual(['scenario://asset/tex-1?v=2026-08-13T10%3A00%3A00.000Z'])
+    expect(source.calls).toEqual(['ia-studio://asset/tex-1?v=2026-08-13T10%3A00%3A00.000Z'])
   })
 
   it('reads the same asset again when its version moved', () => {
@@ -248,11 +248,72 @@ const SOURCES: Record<string, string> = import.meta.glob(
  * which built a `TextureLoader` of its own to fill the very port this module declares.
  */
 describe('the one texture loader', () => {
-  it('is built in exactly one place', () => {
+  it('does not build a TextureLoader — PNG and JPEG decode off the UI thread', () => {
     const building = Object.entries(SOURCES)
       .filter(([, source]) => source.includes('new TextureLoader('))
       .map(([path]) => path)
 
-    expect(building).toEqual(['./textureCache.ts'])
+    expect(building).toEqual([])
+  })
+})
+
+describe('the orientation a picture is decoded in', () => {
+  /**
+   * glTF stores its UVs for an unflipped picture and `GLTFLoader` configures no orientation, so a
+   * map of the project put over one of a model's own lands upside down under the studio's default.
+   */
+  it('loads the same asset once per orientation', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    const cache = createTextureCache(load, silent)
+
+    await cache.acquire('tex-1', NoColorSpace)
+    await cache.acquire('tex-1', NoColorSpace, undefined, 'from-image')
+
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(load.mock.calls.map(([, orientation]) => orientation)).toEqual(['flipY', 'from-image'])
+  })
+
+  // Held apart, or releasing one holder would free the picture the other is still drawing with.
+  it('keeps the two apart when one of them is released', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    const cache = createTextureCache(load, silent)
+
+    await cache.acquire('tex-1', NoColorSpace)
+    await cache.acquire('tex-1', NoColorSpace, undefined, 'from-image')
+    cache.release('tex-1', NoColorSpace, undefined, 'from-image')
+
+    // The upright holder never let go, so asking again answers what it holds rather than reloading.
+    await cache.acquire('tex-1', NoColorSpace)
+
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('what an open editor is drawing', () => {
+  const shown = (): ImageBitmap =>
+    ({ width: 1, height: 1, close: () => {} }) as unknown as ImageBitmap
+
+  /**
+   * The whole of the live link: a stroke reaches a model before anything has been written, and
+   * the file is never asked for while an editor is standing in front of it.
+   */
+  it('is loaded instead of the file behind the asset', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    vi.stubGlobal('createImageBitmap', () => Promise.resolve(shown()))
+    const cache = createTextureCache(load, silent, undefined, () => shown())
+
+    expect(await cache.acquire('tex-1', NoColorSpace)).not.toBeNull()
+    expect(load).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  // Revoked, the asset goes back to its file — and the slot must reach it, not a held preview.
+  it('leaves the file to answer once nothing is being shown', async () => {
+    const load = vi.fn<TextureSource>(() => Promise.resolve(new Texture()))
+    const cache = createTextureCache(load, silent, undefined, () => null)
+
+    await cache.acquire('tex-1', NoColorSpace)
+
+    expect(load).toHaveBeenCalledTimes(1)
   })
 })

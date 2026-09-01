@@ -95,5 +95,6 @@ export function createSceneSink({ read, stage }: SceneSinkDeps): SinkLike {
     },
     close: stage.dispose,
     holdsDecoder: false,
+    stable: false,
   }
 }

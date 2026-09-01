@@ -19,9 +19,11 @@ import { buildPath, geometryFor, PATH_CURVE_NAME, sizeKnobFor } from './threeFac
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
   applyCamera,
-  applyGeometry,
+  wearGeometry,
   applyLight,
   applyMaterial,
+  applyNegative,
+  unmarkTools,
   applyPath,
   applySprite,
   giveSecondUvSet,
@@ -29,6 +31,70 @@ import {
   standardMaterialOf,
   tiledGeometry,
 } from './threeSync'
+
+describe('applyNegative', () => {
+  const painted = (negative: boolean): MeshStandardMaterial => {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, { ...DEFAULT_MATERIAL, color: '#00ff00' }, '')
+    applyNegative(material, '#ff715b', negative)
+    return material
+  }
+
+  /** Roblox's look for a tool: seen through, and not wearing the paint it will be cut with. */
+  it('shows a marked shape red and translucent', () => {
+    const material = painted(true)
+
+    expect(material.color.getHexString()).toBe('ff715b')
+    expect(material.transparent).toBe(true)
+    expect(material.opacity).toBeLessThan(1)
+  })
+
+  // Or a tool standing in front of the matter would hide it rather than show through it.
+  it('lets a marked shape be seen through by whatever stands behind it', () => {
+    expect(painted(true).depthWrite).toBe(false)
+  })
+
+  /** Taking the mark off has to give the shape its own paint back, opaque, in the same pass. */
+  it('leaves an unmarked shape exactly as its descriptor asked', () => {
+    const material = painted(false)
+
+    expect(material.color.getHexString()).toBe('00ff00')
+    expect(material.transparent).toBe(false)
+    expect(material.opacity).toBe(1)
+    expect(material.depthWrite).toBe(true)
+  })
+})
+
+describe('unmarkTools', () => {
+  /**
+   * The export SHARES its materials — `placedCopy` says so — so a mark left on one shipped a red,
+   * 45 %-opaque cube into every `.glb`. A mark is an editing role, not a finish.
+   */
+  it('gives an exported copy back the paint the mark was covering', () => {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, { ...DEFAULT_MATERIAL, color: '#00ff00' }, '')
+    applyNegative(material, '#ff715b', true)
+    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material)
+
+    unmarkTools(mesh)
+    const worn = standardMaterialOf(mesh)
+
+    expect(worn?.color.getHexString()).toBe('00ff00')
+    expect(worn?.transparent).toBe(false)
+    expect(worn?.opacity).toBe(1)
+    // The one on screen keeps its mark: the copy is what travels, and the viewport is not it.
+    expect(material.color.getHexString()).toBe('ff715b')
+  })
+
+  it('leaves a shape that carries no mark exactly as it was', () => {
+    const material = new MeshStandardMaterial()
+    applyMaterial(material, { ...DEFAULT_MATERIAL, color: '#00ff00' }, '')
+    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material)
+
+    unmarkTools(mesh)
+    expect(mesh.material).toBe(material)
+  })
+})
 
 describe('applyMaterial', () => {
   it('writes the descriptor into the material it was given', () => {
@@ -113,22 +179,34 @@ describe('applySprite', () => {
   })
 })
 
-describe('applyGeometry', () => {
-  it('swaps in the geometry the descriptor asks for', () => {
-    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
+describe('wearGeometry', () => {
+  const box = (width: number): BufferGeometry =>
+    geometryFor({ kind: 'box', width, height: 1, depth: 1 })
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
+  it('puts the mesh on the shape it is given', () => {
+    const mesh = new Mesh(box(1))
+    const next = box(2)
 
-    expect(mesh.geometry.type).toBe('SphereGeometry')
+    wearGeometry(mesh, next)
+
+    expect(mesh.geometry).toBe(next)
   })
 
-  it('disposes the geometry it replaces', () => {
-    const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
-    const dispose = vi.spyOn(mesh.geometry, 'dispose')
+  it('hands back the shape it took off, rather than disposing it', () => {
+    const worn = box(1)
+    const mesh = new Mesh(worn)
+    const dispose = vi.spyOn(worn, 'dispose')
 
-    applyGeometry(mesh, { kind: 'box', width: 2, height: 1, depth: 1 }, 1)
+    // The caller frees it: only it knows which cache lent it, and disposing one the cache still
+    // lends empties every other node of that shape.
+    expect(wearGeometry(mesh, box(2))).toBe(worn)
+    expect(dispose).not.toHaveBeenCalled()
+  })
 
-    expect(dispose).toHaveBeenCalled()
+  it('says nothing was taken off when the mesh already wore that shape', () => {
+    const worn = box(1)
+
+    expect(wearGeometry(new Mesh(worn), worn)).toBeNull()
   })
 })
 
@@ -215,7 +293,7 @@ describe('tiledGeometry', () => {
     const mesh = new Mesh(tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 1))
     expect(spanOf(mesh.geometry).u).toBeCloseTo(4)
 
-    applyGeometry(mesh, { kind: 'plane', width: 4, height: 4 }, 2)
+    wearGeometry(mesh, tiledGeometry({ kind: 'plane', width: 4, height: 4 }, 2))
     expect(spanOf(mesh.geometry).u).toBeCloseTo(8)
   })
 })
@@ -530,12 +608,15 @@ describe('applyPath', () => {
 })
 
 // An occlusion map reads the second UV set; without this, nudging a radius would stop it dead.
-describe('applyGeometry and the second UV set', () => {
+describe('wearGeometry and the second UV set', () => {
   it('carries it over to the shape that replaces the one that had it', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
     giveSecondUvSet(mesh.geometry)
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
+    wearGeometry(
+      mesh,
+      geometryFor({ kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }),
+    )
 
     expect(mesh.geometry.attributes.uv1).toBeDefined()
   })
@@ -543,7 +624,10 @@ describe('applyGeometry and the second UV set', () => {
   it('does not invent one for a shape that never had it', () => {
     const mesh = new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }))
 
-    applyGeometry(mesh, { kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }, 1)
+    wearGeometry(
+      mesh,
+      geometryFor({ kind: 'sphere', radius: 2, widthSegments: 8, heightSegments: 6 }),
+    )
 
     expect(mesh.geometry.attributes.uv1).toBeUndefined()
   })

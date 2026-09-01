@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { withQueries } from '@/app/query-fixtures'
+import { withQueries } from '@/features/shell/components/query-fixtures'
 import { usePages, type Page } from './usePages'
 
 type Row = { id: string }
@@ -145,6 +145,14 @@ describe('a listing read page by page', () => {
 
     expect(read).not.toHaveBeenCalled()
     expect(idsOf()).toBe('')
+  })
+
+  // A surface waiting on this one waited for the whole session: react-query calls a disabled
+  // query pending, and the asset shelf read that as « the library is still answering ».
+  it('is not waiting on a page it is not allowed to ask for', () => {
+    render(withQueries(<Listing read={() => new Promise(() => {})} enabled={false} />))
+
+    expect(screen.getByTestId('state')).toHaveTextContent('exhausted')
   })
 
   // No bridge is an answer: there is nothing to ask, and nothing more to wait for.

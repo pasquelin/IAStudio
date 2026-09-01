@@ -36,6 +36,8 @@ describe('settings handlers', () => {
       openSettings,
       runAction,
       setPending,
+      credits: { balances: () => Promise.resolve({}), forget: () => {} },
+      mcpState: () => ({ listening: false, port: null }),
     })
   })
 
@@ -82,6 +84,8 @@ describe('settings handlers', () => {
       openSettings,
       runAction,
       setPending,
+      credits: { balances: () => Promise.resolve({}), forget: () => {} },
+      mcpState: () => ({ listening: false, port: null }),
     })
 
     expect(invoke(CHANNELS.settingsOpen, 'account')).toBeUndefined()

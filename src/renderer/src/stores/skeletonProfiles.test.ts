@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
 import { skeletonProfilesOf, useSkeletonProfiles } from './skeletonProfiles'
 
-const SUMMER = '/projects/summer'
-const WINTER = '/projects/winter'
+const SUMMER = '/projects/Summer'
+const WINTER = '/projects/Winter'
 
 const profile = (roles: Record<string, 'Hips' | 'Spine'>, bones = Object.keys(roles)) => ({
   signature: skeletonSignatureOf(bones),
@@ -45,7 +45,7 @@ describe('what each project knows about the skeletons it has read', () => {
   // is not one of the fifty-two would be a plan built out of nonsense.
   it('drops a stored profile that is not one, and keeps the rest', async () => {
     localStorage.setItem(
-      'scenario-studio:skeleton-profiles',
+      'ia-studio:skeleton-profiles',
       JSON.stringify({
         state: {
           byProject: {

@@ -4,7 +4,7 @@
  * Only the detector, and deliberately so: it weighs 640 KB while the recognition model weighs
  * 640 MB. The small one ships, so the studio can open the microphone, draw a level and know
  * whether anyone is speaking without a download; the large one is fetched at runtime, once, by
- * `main/dictation/modelDownload.ts`.
+ * `main/ai/modelInstall.ts`.
  *
  *     node scripts/fetch-stt.mjs
  *     node scripts/fetch-stt.mjs --digests    # after rotating the URL
@@ -57,7 +57,7 @@ export async function fetchStt(options = {}) {
   const destination = options.destination ?? DESTINATION
   const verify = options.verify ?? true
 
-  const work = mkdtempSync(join(tmpdir(), 'scenario-stt-'))
+  const work = mkdtempSync(join(tmpdir(), 'ia-studio-stt-'))
   rmSync(destination, { recursive: true, force: true })
   mkdirSync(destination, { recursive: true })
 

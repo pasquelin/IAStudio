@@ -20,7 +20,7 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   return answer as T
 }
 
-const PROJECT = '/Users/someone/Films/Reel.scenario'
+const PROJECT = '/Users/someone/Films/Reel'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -80,6 +80,16 @@ describe('the favourites channels', () => {
     expect(recipe?.generation).toMatchObject({ modelId: 'flux_2', prompt: 'a mossy boulder' })
     expect(recipe?.label).toBe('FLUX.2')
     expect(recipe?.type).toBe('image')
+  })
+
+  /**
+   * The bound the asset channels carry, applied here too: the id reaches a filter expression and
+   * the request line the SDK logs, and `favorites` read it from a schema that had none.
+   */
+  it('refuses an asset id past the bound the asset channels carry', async () => {
+    await register()
+
+    await expect(invoke(CHANNELS.favoritesPin, 'a'.repeat(201))).rejects.toThrow()
   })
 
   it('copies a still of the asset beside the recipe', async () => {

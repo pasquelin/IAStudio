@@ -1,26 +1,31 @@
+import { aiRoleId } from '@shared/domain/aiRole'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ModelFamily } from '@shared/domain/model'
-import { DEFAULT_COLLECTION_STATE, setFacetValue } from '@/helpers/collectionState'
-import { ORIGIN_FACET } from '@/panels/models/modelFilters'
+import {
+  COLLECTION_PERSIST_VERSION,
+  DEFAULT_COLLECTION_STATE,
+  setFacetValue,
+} from '@/helpers/collectionState'
+import { ORIGIN_FACET } from '@/features/models/modelFilters'
 import { useModels } from './models'
 
 beforeEach(() => {
-  useModels.setState({ selected: {}, collections: {}, preset: {}, prepared: null })
+  useModels.setState({ selected: {}, collections: {}, preset: {} })
 })
 
 describe('choosing a model', () => {
   it('files it under the family it belongs to', () => {
-    useModels.getState().select('image', 'model_flux')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'model_flux')
 
-    expect(useModels.getState().selected.image).toBe('model_flux')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_flux')
   })
 
   it('leaves the other families alone', () => {
-    useModels.setState({ selected: { image: 'model_flux' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'model_flux' } })
 
-    useModels.getState().select('video', 'model_kling')
+    useModels.getState().select(aiRoleId('video', 'txt2video'), 'model_kling')
 
-    expect(useModels.getState().selected.image).toBe('model_flux')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_flux')
   })
 
   /**
@@ -28,11 +33,11 @@ describe('choosing a model', () => {
    * Image was on. See `select` for why the distinction is not recorded.
    */
   it('replaces the choice already filed under that family', () => {
-    useModels.setState({ selected: { image: 'model_flux' } })
+    useModels.setState({ selected: { [aiRoleId('image', 'txt2img')]: 'model_flux' } })
 
-    useModels.getState().select('image', 'model_sdxl')
+    useModels.getState().select(aiRoleId('image', 'txt2img'), 'model_sdxl')
 
-    expect(useModels.getState().selected.image).toBe('model_sdxl')
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_sdxl')
   })
 
   /**
@@ -41,7 +46,7 @@ describe('choosing a model', () => {
    */
   describe('what survives a restart', () => {
     const stored = (family: ModelFamily): { selections?: Record<string, readonly string[]> } => {
-      const raw = localStorage.getItem('scenario-studio:models')
+      const raw = localStorage.getItem('ia-studio:models')
       return raw ? (JSON.parse(raw).state?.collections?.[family] ?? {}) : {}
     }
 
@@ -68,13 +73,53 @@ describe('choosing a model', () => {
       expect(stored('skybox').selections).toBeUndefined()
     })
   })
+})
 
-  /** A choice made by hand closes the parenthesis an action opened — see `prepared`. */
-  it('drops a preparation the user has just overruled', () => {
-    useModels.setState({ prepared: 'upscale' })
+/**
+ * `texture` named the material family until 2026-08-26, and this blob keys BOTH halves of the
+ * browser by it. A key nothing reads reddens nowhere: the generator opens on no model, and
+ * `searchless` drops the browser's own state for that family at the first write.
+ */
+describe('a blob written before the material family was renamed', () => {
+  it('restores the choice and the browser state under the name they have now', async () => {
+    localStorage.setItem(
+      'ia-studio:models',
+      JSON.stringify({
+        version: COLLECTION_PERSIST_VERSION + 1,
+        state: {
+          selected: { 'texture/txt2img_texture': 'model_sdxl' },
+          collections: { texture: DEFAULT_COLLECTION_STATE },
+        },
+      }),
+    )
 
-    useModels.getState().select('video', 'model_kling')
+    await useModels.persist.rehydrate()
 
-    expect(useModels.getState().prepared).toBeNull()
+    expect(useModels.getState().selected[aiRoleId('material', 'txt2img_texture')]).toBe(
+      'model_sdxl',
+    )
+    expect(useModels.getState().collections.material).toEqual(DEFAULT_COLLECTION_STATE)
+  })
+
+  /**
+   * The older shape still, where `selected` was keyed per FAMILY. `withRoleKeys` walks
+   * `MODEL_FAMILIES` to re-file it per employment, so a family it no longer names is a choice it
+   * cannot see — the rename has to land before it, not after.
+   */
+  it('restores a choice filed per family, under the name that family has now', async () => {
+    localStorage.setItem(
+      'ia-studio:models',
+      JSON.stringify({
+        version: COLLECTION_PERSIST_VERSION,
+        state: { selected: { texture: 'model_sdxl', image: 'model_flux' } },
+      }),
+    )
+
+    await useModels.persist.rehydrate()
+
+    expect(useModels.getState().selected[aiRoleId('material', 'txt2img_texture')]).toBe(
+      'model_sdxl',
+    )
+    expect(useModels.getState().selected[aiRoleId('image', 'txt2img')]).toBe('model_flux')
   })
 })

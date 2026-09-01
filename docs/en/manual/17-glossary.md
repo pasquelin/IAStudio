@@ -22,7 +22,7 @@ panel, the *playhead*, the frame around a selection. Adjustable in Settings → 
 A stored API key, under a name you choose. The studio holds **several**, and the switcher in the
 title bar moves between them.
 
-Each key carries **its own Scenario project** — its models, its assets, its credit. Switching
+Each key carries **its own remote project** — its models, its assets, its credit. Switching
 accounts therefore changes the remote library you browse, **never** the files in your local project,
 which are on your disk and belong to no account.
 
@@ -36,24 +36,25 @@ back.
 That is its strength: it never writes into the other layers' pixels. You can adjust it a hundred
 times, or delete it, having spoilt nothing.
 
-**Ambient occlusion** *(AO, texture channel)*
+**Ambient occlusion** *(AO, material channel)*
 A greyscale image marking the places ambient light struggles to reach: hollows, corners, joints. It
 adds depth to a material that looked flat.
 
 **API key**
-Your identifier with Scenario, the equivalent of a username. It always goes with an *API secret*.
-Both are taken from [app.scenario.com](https://app.scenario.com) and pasted into Settings →
+Your identifier with the provider, the equivalent of a username. It always goes with an *API secret*.
+Both are taken from your provider's dashboard and pasted into Settings →
 **Account**.
 
 **API secret**
-The second half of your Scenario credentials, the equivalent of a password. It always goes with an
+The second half of your API credentials, the equivalent of a password. It always goes with an
 *API key*, and is never displayed in the clear once stored.
 
 **Asset**
-A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *texture*, a sky.
+A raw-material file in your *project*: an image, a video, a sound, a 3D object, a *sky*.
 Keep this in mind: **an asset is a finished, reusable file**.
 
-Assets live in the **Assets** panel, familiarly called *the shelf*.
+Assets live in the **Explorer** once they are on your disk, and in the **Library** while they are
+only online.
 
 **Assistant**
 The window where you say what you want to do, in an ordinary sentence, rather than clicking it.
@@ -74,7 +75,7 @@ east, south, west, north. It pairs with *elevation*, which gives its height.
 
 **Background removal** *(cut out)*
 Taking the background out of a picture to keep only the subject, on transparency. The **Cut out**
-command lives in the Image menu; its model is set in **Settings ▸ Generation ▸ Background removal**.
+command lives in the Image menu; its model is set in **Settings ▸ AI models ▸ Background removal**.
 
 **Backoff** → see *Exponential backoff*.
 
@@ -84,7 +85,7 @@ The small mark on a thumbnail in the *shelf*, saying where that file stands with
 another project. It is not stored but **recomputed** — it depends on the active account. See
 [Assets](07-assets.md).
 
-**Base colour** *(texture channel)*
+**Base colour** *(material channel)*
 A material's colour, as it would be under perfectly neutral light: no shadow, no reflection, no
 relief. The "paint" aspect of the surface.
 
@@ -118,13 +119,13 @@ What a *model* can do, written in shorthand. The catalogue shows them as filters
 | txt2audio | text to sound |
 
 **Catalogue**
-The list of *models* available on Scenario. Several hundred. The **Models** panel only ever shows you
+The list of *models* available from the provider. Several hundred. The **Models** panel only ever shows you
 the ones that can make what the current *workspace* makes.
 
-**Channel** *(of a texture)*
-One of the images a material is made of. A *texture* is not an image but a set of stacked images,
+**Channel** *(of a material)*
+One of the images a material is made of. A *material* is not an image but a set of stacked images,
 each answering a different question: what colour? what relief? matte or glossy? The studio knows
-eight — see [Textures workspace](12-textures-workspace.md).
+eight — see [Materials workspace](12-materials-workspace.md).
 
 **Clip**
 A piece of video or sound placed on a *track* of the edit. The same *asset* can give several clips;
@@ -144,7 +145,7 @@ The gap between dark and light areas. Below 1, the image flattens and goes grey;
 and loses detail at the extremes.
 
 **Creative unit** *(CU)*
-What a generation spends on your Scenario account. The service sets the rate, never the studio: a
+What a generation spends on your remote account. The service sets the rate, never the studio: a
 video does not cost what an image costs, and two image models do not cost the same either.
 
 You meet it in three places: the **Generate** button carries an estimate — `~12 CU` — before you
@@ -169,7 +170,7 @@ The size of the interface's controls. **Comfortable** leaves air (28 px tall); *
 (24 px) to fit more on screen.
 
 **Derived** *(channel)*
-A texture *channel* the studio computed from another, rather than received from a *model*. The
+A material *channel* the studio computed from another, rather than received from a *model*. The
 computation is relaunched from its thumbnail's menu, as many times as you like.
 
 **Dictation**
@@ -202,7 +203,7 @@ reserves for applications — another application does not lose it, it does not 
 
 ## E
 
-**Edges** *(texture channel)*
+**Edges** *(material channel)*
 A black-and-white image saying where a surface's borders are. It is not displayed directly: it feeds
 other calculations.
 
@@ -210,7 +211,7 @@ other calculations.
 The height of something above the horizon, in degrees. For a *skybox*'s sun: 0° flat on the horizon,
 90° straight overhead. It pairs with *azimuth*.
 
-**Emission** *(texture channel)*
+**Emission** *(material channel)*
 What glows by itself in a material: a neon sign, embers, a lit screen. An emissive area stays visible
 even with no light around.
 
@@ -241,8 +242,8 @@ A rise from silence (fade in) or a fall towards it (fade out). Avoids the "click
 starts or stops dead.
 
 **Family** *(of models)*
-The broad type of what a *model* makes: image, video, 3D, audio, texture, sky, upscaling, background
-removal, vectorisation. Seven of them have their *default model* in settings; Texture and Sky do
+The broad type of what a *model* makes: image, video, 3D, audio, material, sky, upscaling, background
+removal, vectorisation. Seven of them have their *default model* in settings; Material and Sky do
 not yet. The last three — upscaling, background removal, vectorisation — have no workspace at all:
 it is the Image menu's edits that use them.
 
@@ -271,7 +272,7 @@ The document keeps its layers. Flattening is not destructive here.
 ## G
 
 **Generate**
-To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
+To ask a *model* to make something. The request leaves for the provider, comes back as a *job*, and the
 result lands in your *assets*.
 
 **Gizmo**
@@ -317,7 +318,7 @@ A high-dynamic-range image: an image that keeps the real gap between sun and sha
 ordinary image crushes everything between black and white. It is the natural format of a *skybox*
 meant to light. Extensions `.hdr` and `.exr`.
 
-**Height** *(texture channel)*
+**Height** *(material channel)*
 A greyscale image giving a surface's real relief: white is high, black is low. Stronger than
 *normals*, because it actually displaces the geometry rather than simulating it.
 
@@ -381,7 +382,7 @@ move it down, delete it.
 That is what makes an image **editable** instead of a final flat.
 
 **Library** *(of the account)*
-The stock of assets living online, on your Scenario account's side — as opposed to the *project*,
+The stock of assets living online, on your remote account's side — as opposed to the *project*,
 which is a folder on your disk. The two are separate and nothing travels between them without an
 action of yours. Today only the **project → library** direction has a button (**Send**).
 
@@ -408,20 +409,20 @@ A mask can also be made from a *selection*, in one command.
 
 **Material**
 What a surface is made of: its colour, its grain, what it gives back of the light. It is what the
-**Textures** workspace makes, and what the **Material** section of the **Inspector** sets on a 3D
+**Materials** workspace makes, and what the **Material** section of the **Inspector** sets on a 3D
 object.
 
 **MCP** *(Model Context Protocol)*
 The common tongue coding assistants speak to the tools they drive. The studio can present itself as
 one of those tools: a client such as Claude Code then runs the same actions the *assistant* runs.
-Shut to start with, opened in Settings → **Advanced**. See
+Shut to start with, opened in Settings → **Way in (MCP)**. See
 [Driving the studio from outside](20-driving-from-outside.md).
 
 **Mesh**
 A 3D object, described by its points and the triangles joining them. It is the shape, without the
 material or the light.
 
-**Metalness** *(texture channel)*
+**Metalness** *(material channel)*
 Area by area: is this part metal, or not? It is not a look slider but a physical switch, because
 metal and non-metal reflect light in two different ways. Intermediate values barely exist in nature —
 they serve to soften the boundary between two areas.
@@ -446,7 +447,7 @@ lists and what the **Inspector** describes.
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
 played in sequence from jolting each other's volume.
 
-**Normals** *(texture channel)*
+**Normals** *(material channel)*
 An oddly coloured image — blues, purples — encoding a surface's **micro-relief**: the bumps and
 hollows that catch light, without adding a single triangle to the object. That is what gives stone
 its grain and cloth its weave.
@@ -520,7 +521,7 @@ opens or closes the matching *panel*.
 To relaunch a generation with the settings that produced a given result — same *model*, same
 *prompt*, same *seed*. The starting point of any controlled variation.
 
-**Roughness** *(texture channel)*
+**Roughness** *(material channel)*
 Matte or glossy, area by area. A rough surface scatters light and has no sharp reflection; a smooth
 one returns it and mirrors. That is what separates dry asphalt from a puddle — the colour is nearly
 the same.
@@ -565,8 +566,8 @@ Two separate settings, on every object of a 3D scene. **Casts a shadow**: the ob
 distant piece of set can do neither without anyone noticing.
 
 **Shelf**
-The nickname of the **Assets** panel. You file what you have made and imported there; you pick from
-it to work.
+The former nickname of the **Assets** panel, which listed both the project and the account. It no
+longer exists: the project is read in the **Explorer**, the account in the **Library**.
 
 **Skybox**
 What you see all around you in a 3D scene when you turn your head: the sky, the horizon, the distant
@@ -604,10 +605,6 @@ carries a dot (`•`) beside its name.
 **Temperature**
 An image's shift towards cold (blue) or warm (orange). It is the setting that stops a photograph
 taken under a bulb from looking yellow.
-
-**Texture**
-A material meant to dress a 3D object: wood, rusted metal, fabric. **It is not an image**, but a set
-of stacked *channels*, each answering a different question.
 
 **Theme**
 The interface's colour scheme: **Dark**, **Light**, or **System** (which follows your computer and
@@ -661,7 +658,7 @@ plausible matter where there was only a smeared pixel.
 **Vectorisation**
 Turning a picture into paths — lines and curves, which scale up without ever going blurry. The
 **Vectorise** command lives in the Image menu; its model is set in
-**Settings ▸ Generation ▸ Vectorisation**.
+**Settings ▸ AI models ▸ Vectorisation**.
 
 ---
 
@@ -672,7 +669,7 @@ The drawing of a sound: those waves showing where it is loud and where it is sil
 you spot a phrase or a beat without listening. Making it requires *ffmpeg*.
 
 **Workspace**
-One of the studio's six arrangements: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+One of the studio's six arrangements: **Image**, **Video**, **3D**, **Audio**, **Materials**,
 **Skyboxes**. Switching workspace rearranges the *panels* and refilters the *catalogue*.
 
 It is not six applications: it is one application that rearranges itself.

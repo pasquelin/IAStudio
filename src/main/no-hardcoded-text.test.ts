@@ -264,15 +264,16 @@ describe('the main process', () => {
  * everyone — the rest of this file has no business taking that long.
  */
 describe('the registries', () => {
-  // Three trees where the bound-sentence check below reads four: `main` writes its screens through
-  // `TRANSLATIONS`, not through a registry. That it stops at three is its own question.
+  // Every tree but `main`, where the bound-sentence check below reads that one too: `main` writes
+  // its screens through `TRANSLATIONS`, not through a registry. That it stops short is its own
+  // question.
   const trees = PROJECT_TREES.slice(1)
 
   // The `slice` above is a POSITION, and a position is not a promise: reorder `PROJECT_TREES` and
   // this check silently stops reading `renderer` while every assertion below stays green. Named
   // rather than counted, because the count would survive the reorder. Asked for by the review.
-  it('drops the main tree and keeps the other three, whatever their order becomes', () => {
-    expect(trees.map(tree => basename(tree))).toEqual(['renderer', 'shared', 'preload'])
+  it('drops the main tree and keeps the others, whatever their order becomes', () => {
+    expect(trees.map(tree => basename(tree))).toEqual(['renderer', 'shared', 'preload', 'game'])
   })
 
   it(

@@ -16,6 +16,7 @@ const MESSAGE_KEY: Record<JobFailure, string> = {
   network: 'errors.network',
   rejected: 'errors.rejected',
   storage: 'errors.storage',
+  'incomplete-model': 'errors.incompleteModel',
   unexpected: 'errors.unexpected',
 }
 
@@ -36,7 +37,7 @@ export function failureKeyOf(error: unknown): string {
 
   /**
    * Matched at the end, not compared whole: `ipcMain.handle` does not hand the rejection over
-   * untouched, it wraps the message — `Error invoking remote method 'scenario:search-models':
+   * untouched, it wraps the message — `Error invoking remote method 'provider:search-models':
    * Error: rate-limited`. An equality test never fires, and every failure reads as unexpected.
    */
   const found = CODES.find(code => error.message === code || error.message.endsWith(`: ${code}`))

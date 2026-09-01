@@ -42,8 +42,8 @@ export function renameAsset(assetId: string, was: string, name: string): void {
 }
 
 /**
- * Every document opened from the asset, not the first: two can legitimately edit one — a texture
- * is a channel in Textures and pixels in Images. The name never travels back the other way, and a
+ * Every document opened from the asset, not the first: two can legitimately edit one — a picture
+ * is a channel in Materials and pixels in Images. The name never travels back the other way, and a
  * document whose rename fails only reaches the journal: the asset's rename is what was asked for.
  */
 function renameDocumentsOfAsset(assetId: string, name: string): void {

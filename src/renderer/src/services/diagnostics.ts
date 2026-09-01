@@ -27,6 +27,9 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'document.close',
   'document.delete',
   'assets.reveal',
+  // Asked for again, refused again: a second generation the editor turns down is a second thing
+  // the person paid for and did not get.
+  'code.land',
   // A double-click is a gesture too: refusing the same asset twice must say so twice.
   'assets.open',
   // The same double-click, one step earlier — before there is an asset to open. A reader whose
@@ -35,9 +38,6 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // Same gesture, same rule — and here silence costs more: each reopening re-arms a ⌘S that
   // would write the document's size back over a bigger picture.
   'canvas.size',
-  // ⌘S again: pressed a second time precisely because the first left the source file alone, and
-  // a refusal said once reads as a save that worked.
-  'canvas.flatten',
   // Picking an edit from the Image menu is a gesture too, and it was the one refusal of that menu
   // that said nothing at all — the caller swallowed everything it threw.
   'canvas.edit',
@@ -54,13 +54,13 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'project.forget',
   // A drop is a gesture: dropping the same cloud picture twice must say so twice, which is the
   // very defect `feat/documents-erreurs` fixed for the others.
-  'texture.channel',
+  'material.channel',
   // And so is pressing Measure: the second press happens precisely because the first said
   // nothing, and a silent button is how a measurement that keeps failing looks like one that ran.
-  'texture.seam',
+  'material.seam',
   // Picking a row of the export menu is one as well, and it is the same row twice that says the
   // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
-  'texture.export',
+  'material.export',
   'skybox.export',
   // The two of this branch, for that same reason and one more: both spend minutes before they can
   // fail, so a second press silenced is a wait nobody is told the outcome of.

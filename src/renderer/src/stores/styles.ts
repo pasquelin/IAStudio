@@ -1,6 +1,7 @@
+import { orElse } from '@shared/promises'
 import { create } from 'zustand'
 import { nextStyleName, type MaterialStyle } from '@shared/domain/style'
-import type { MaterialSettings } from '@shared/domain/texture'
+import type { MaterialSettings } from '@shared/domain/material'
 import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
 
@@ -45,10 +46,7 @@ export const useStyles = create<StylesState>()((set, get) => {
     load: async () => {
       if (get().loaded) return
 
-      const styles = await getBridge()
-        ?.styles.list()
-        // An unreadable file is an empty panel, never a workspace that loses a panel over it.
-        .catch(() => [])
+      const styles = await orElse(getBridge()?.styles.list(), [])
 
       // A write that landed while the read was in flight is NEWER than the read: answering with
       // the read would put the panel back to what the disk held before the save, and `loaded`

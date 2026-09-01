@@ -30,6 +30,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # Not a link of the gate: `pnpm validate` runs `engine:check` itself. This only puts the
+      # tool that link shells out to on PATH — the engine is Python, and uv drives it.
+      - uses: astral-sh/setup-uv@v10
+
       - run: pnpm install --frozen-lockfile
 
       # The gate itself, not a copy of its links. Spelling them out one by one gave a prettier

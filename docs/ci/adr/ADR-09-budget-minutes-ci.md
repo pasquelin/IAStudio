@@ -5,7 +5,7 @@
 
 ## Contexte
 
-Le cadrage supposait un budget contraint. `pasquelin/scenario` est **public** : les runners
+Le cadrage supposait un budget contraint. `pasquelin/IAStudio` est **public** : les runners
 hébergés y sont gratuits et illimités, et la contrainte tombe.
 
 Elle ne tombe que tant que le dépôt reste public. Sur dépôt privé, les minutes sont pondérées

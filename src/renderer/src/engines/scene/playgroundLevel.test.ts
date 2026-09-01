@@ -179,6 +179,14 @@ describe('the playground level', () => {
     expect(nodes.filter(node => node.parentId === null)).toEqual(groups)
   })
 
+  /** 🛑 A set one can climb, fall off and bump into — which is the whole claim it makes. */
+  it('makes every part of it solid', () => {
+    const parts = playgroundNodes().filter(node => node.type !== 'group')
+
+    expect(parts.length).toBeGreaterThan(20)
+    expect(parts.every(node => node.components?.some(one => one.type === 'Collider'))).toBe(true)
+  })
+
   /** No shape is born bare — see `checkerTextures`. A grey set says nothing about its own scale. */
   it('dresses every part in a working texture', () => {
     rememberCheckerTextures([

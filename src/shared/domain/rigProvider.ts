@@ -9,21 +9,16 @@
  * Shared rather than kept in the main process because both sides read it: the catalogue is
  * fetched there, and the inspector is what has to grey a row out BEFORE it is clicked.
  */
-import type { ModelSummary } from './model'
+import { servesStudioCapability, studioCapability, type ModelSummary } from './model'
 import { isBeyondPlan, type PlanAccess } from './plan'
 
-/** What every 3D-to-3D model of the platform answers. It is the coarse half of the question. */
-const RIG_CAPABILITY = '3d23d'
-
 /**
- * The fine half, and the reason it is needed: MEASURED on 2026-08-18, `3d23d` covers 19 public
- * models and only five of them rig — the rest remesh, retexture, unwrap, segment or animate.
- *
- * An author's word rather than a namespaced `sc:` claim, so it is not contractual; it is
- * nonetheless the only signal there is, and the catalogue is still what answers. Compared
- * case-insensitively: the five spell it `Rigging`, their neighbours spell theirs in every case.
+ * What finds a rigger and what finds a motion generator, read off `STUDIO_CAPABILITIES` rather
+ * than spelled again: `3d/rig` and `3d/motion` are employments a person picks a model FOR, and
+ * two lists answering the same question are free to disagree.
  */
-const RIG_TAG = 'rigging'
+const RIG = studioCapability('rig')
+const MOTION = studioCapability('motion')
 
 export type RigProvider = {
   modelId: string
@@ -45,6 +40,11 @@ export function rigProvidersOf(models: readonly ModelSummary[]): RigProvider[] {
   return models.filter(model => isRigger(model)).map(asProvider)
 }
 
+/** Whether the catalogue offers this model as a rigger. */
+function isRigger(model: ModelSummary): boolean {
+  return RIG !== undefined && servesStudioCapability(RIG, model)
+}
+
 /**
  * The models that MAKE a motion, as opposed to putting a skeleton in a mesh.
  *
@@ -59,14 +59,8 @@ export function rigProvidersOf(models: readonly ModelSummary[]): RigProvider[] {
  */
 export function motionProvidersOf(models: readonly ModelSummary[]): RigProvider[] {
   return models
-    .filter(model => !isRigger(model) && ownsTag(model.tags, MOTION_TAGS))
+    .filter(model => MOTION !== undefined && servesStudioCapability(MOTION, model))
     .map(asProvider)
-}
-
-const MOTION_TAGS: readonly string[] = ['motion', 'animation']
-
-function isRigger(model: ModelSummary): boolean {
-  return model.capabilities.includes(RIG_CAPABILITY) && ownsTag(model.tags, [RIG_TAG])
 }
 
 function asProvider({ id, name, requiredPlanLevel }: ModelSummary): RigProvider {
@@ -107,8 +101,4 @@ export function providersRefusalOf(
   const refusals = providers.map(provider => rigRefusalOf(provider, plan, mesh))
   // The first one, since they all refuse: one sentence rather than a list nobody reads.
   return refusals.every(refusal => refusal !== null) ? (refusals[0] ?? null) : null
-}
-
-function ownsTag(tags: readonly string[], wanted: readonly string[]): boolean {
-  return tags.some(tag => wanted.includes(tag.toLowerCase()))
 }

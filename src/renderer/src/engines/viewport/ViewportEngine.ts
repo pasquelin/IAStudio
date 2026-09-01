@@ -4,9 +4,13 @@ import {
   LinearSRGBColorSpace,
   MeshBasicMaterial,
   NoToneMapping,
+  type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
+  Raycaster,
   Scene,
+  SRGBColorSpace,
+  Vector2,
   Vector3,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -15,6 +19,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
+import { dollyTo, notchesOf, PIVOT_AHEAD } from './dolly'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
 import {
@@ -53,10 +58,12 @@ export type ViewportEngineOptions = {
   onOverlay?: (renderer: WebGLRenderer) => void
   /**
    * Called just before each pane is drawn, so whoever owns the scene can say how THIS view shows
-   * it. The one seam that makes a per-view display mode possible: `overrideMaterial` and a
-   * camera's layers are read at render time, so a pane's answer only has to hold for its own pass.
+   * it, and answering whether that changed what the scene wears — which is what tells the frame
+   * its shadow maps are worth drawing again. The one seam that makes a per-view display mode
+   * possible: `overrideMaterial` and a camera's layers are read at render time, so a pane's
+   * answer only has to hold for its own pass.
    */
-  onPane?: (index: number, camera: ViewportCamera) => void
+  onPane?: (index: number, camera: ViewportCamera) => boolean
   /**
    * Called around the inset pass, and it hands back the call that undoes whatever it did.
    *
@@ -100,9 +107,59 @@ export type ViewportEngineOptions = {
    * the two `mount` calls came first, and nothing would guard it.
    */
   onPaneArmed?: (event: PointerEvent) => void
+  /**
+   * What the wheel's ray may land the pivot on. Without it the ray would take the grid, a light's
+   * helper or the gizmo for scenery, and none of those is a place to aim at.
+   */
+  pickTargets?: () => Object3D[]
+  /**
+   * A first refusal on the wheel, for a caller the notches mean something else to — flying, where
+   * they set the speed. `true` consumes the event and no dolly happens.
+   */
+  onWheel?: (event: WheelEvent) => boolean
+  /**
+   * Draws the scene the way its owner COMPOSES it, and answers whether it drew anything.
+   *
+   * The one seam through which the viewport, every camera preview and every off-screen render
+   * reach the same code — without this engine learning what a post-processing stack is, which is
+   * the same line it holds against gizmos and outliners. `false` means « nothing composed », and
+   * the plain render happens here.
+   */
+  onDraw?: (request: DrawRequest) => boolean
   fieldOfView?: number
   near?: number
   far?: number
+}
+
+/**
+ * Which surface is being drawn, so its owner can answer with the composition that belongs to it:
+ * a pane films through the SCENE's, a preview through its camera's, and an off-screen render
+ * through whichever camera the film is on at that instant.
+ */
+export type DrawSurface = 'pane' | 'inset' | 'offscreen'
+
+/**
+ * One request to draw the scene somewhere. Sizes are in DEVICE pixels — an effect that reads a
+ * resolution reads the one it is actually drawing at, never a CSS measure.
+ */
+export type DrawRequest = {
+  scene: Scene
+  camera: ViewportCamera
+  surface: DrawSurface
+  /** Which pane, for a `pane` request. Zero everywhere else. */
+  paneIndex: number
+  /**
+   * Which node of the document the camera belongs to, when it is one — a preview and an
+   * off-screen render film through a camera the document holds, and what that camera composes
+   * with lives on the node. `null` for a pane, which looks through the workshop's own.
+   */
+  cameraNodeId: string | null
+  /** `null` is the canvas. */
+  target: WebGLRenderTarget | null
+  /** Where on the canvas, when only part of it is being drawn. Absent means all of it. */
+  rect: PaneRect | null
+  width: number
+  height: number
 }
 
 /**
@@ -135,6 +192,8 @@ export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 /** A camera drawn over the panes, in a rectangle of its own — the camera preview. */
 export type InsetPane = {
   camera: PerspectiveCamera
+  /** Which node of the document that camera IS — what its owner resolves a composition by. */
+  cameraNodeId: string | null
   /** In CSS pixels, origin top-left, like every other pane rect. */
   rect: PaneRect
   /**
@@ -185,9 +244,15 @@ type ExtraPane = {
  */
 const EXTRA_PANE_HEIGHT = 6
 
-/** How far ahead of a borrowed camera its orbit turns. Reused, so lending allocates nothing. */
-const BORROWED_PIVOT = 5
+/** Reused, so lending allocates nothing. How FAR ahead is `PIVOT_AHEAD`, the one such distance. */
 const borrowedAim = new Vector3()
+
+/** Metres. What a wheel over nothing at all scales its step by — see `aimWheel`. */
+const DEFAULT_REACH = 10
+
+/** How long a wheel must be still before the framing it left is published. */
+const WHEEL_SETTLES_MS = 250
+const gaze = new Vector3()
 
 /** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
@@ -203,6 +268,17 @@ export class ViewportEngine {
   private projection: ProjectionKind = 'perspective'
 
   private renderer: WebGLRenderer | null = null
+  /** Only the wheel casts from here; picking is the caller's, which knows what a hit means. */
+  private readonly raycaster = new Raycaster()
+  /** `setFromCamera` takes a `Vector2` and nothing else. */
+  private readonly wheelNdc = new Vector2()
+  /**
+   * Where the wheel last aimed, held until the pointer moves. Re-picking per notch runs a
+   * full-scene raycast at trackpad rates — 8 to 32 ms a notch on a scene with no BVH tree.
+   */
+  private wheelAim: { readonly aim: Vector3; readonly aimed: Vector3 } | null = null
+  /** Pending « the wheel has stopped ». One gesture reports once — see `reportWheelSettled`. */
+  private wheelSettling: ReturnType<typeof setTimeout> | null = null
   private output: ViewportOutput = {}
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
@@ -535,7 +611,7 @@ export class ViewportEngine {
 
     const controls = new OrbitControls(orthographic, canvas)
     controls.enableDamping = true
-    controls.addEventListener('change', this.requestRender)
+    controls.addEventListener('change', this.requestCameraRender)
     // Only the pane under the pointer listens — see `armPaneUnderPointer`. Four live orbits on
     // one canvas would each answer the same drag, and the three off-screen ones would answer it
     // invisibly.
@@ -571,7 +647,7 @@ export class ViewportEngine {
       // merely hovers the pane, with no gesture to report it.
       if (camera) {
         camera.getWorldDirection(borrowedAim)
-        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, BORROWED_PIVOT)
+        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, PIVOT_AHEAD)
       }
       pane.controls.update()
     }
@@ -613,6 +689,9 @@ export class ViewportEngine {
    * scene editor that had to arm it would be the second place deciding which view is being used.
    */
   private readonly armPaneUnderPointer = (event: PointerEvent): void => {
+    // A pointer that moved aims somewhere else, whatever else this call decides.
+    this.wheelAim = null
+
     // Kept before the early return, never after: the move that lifts a freeze is one this
     // returns on, and `freezePanes` has nothing to re-arm from unless that move was recorded.
     this.lastPointer.clientX = event.clientX
@@ -695,6 +774,12 @@ export class ViewportEngine {
     if (this.output.alpha) renderer.setClearAlpha(0)
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
     renderer.shadowMap.enabled = this.options.shadows ?? false
+    // Drawn when this engine says so, never per frame: `requestRender` is what says a shadow
+    // could have moved, and a camera frame goes through `requestCameraRender` instead. Stale
+    // from here, so a context rebuilt under a mounted engine draws its maps on the first frame
+    // rather than showing a scene with no shadows until something else moves.
+    renderer.shadowMap.autoUpdate = false
+    this.shadowsStale = true
     // three.js clears the counters at the top of every `render`, and the overlay pass calls
     // `render` a second time — left automatic, a frame would report the trihedron alone.
     renderer.info.autoReset = false
@@ -703,7 +788,7 @@ export class ViewportEngine {
     if (this.options.controls !== 'none') {
       this.controls = new OrbitControls(this.camera, canvas)
       this.controls.enableDamping = true
-      this.controls.addEventListener('change', this.requestRender)
+      this.controls.addEventListener('change', this.requestCameraRender)
       // On `end` rather than on `change`: the latter fires per frame of an orbit, and whoever
       // listens here publishes into a store. Once the hand lets go is when the framing is a
       // decision rather than a gesture in progress.
@@ -717,6 +802,9 @@ export class ViewportEngine {
     this.host = host
     host.addEventListener('pointerdown', this.armPaneUnderPointer, true)
     host.addEventListener('pointermove', this.armPaneUnderPointer, true)
+    // Not passive: the dolly cancels the event, and a passive listener may not. On the host for
+    // the reason above — `OrbitControls` posts its own wheel listener on the canvas.
+    host.addEventListener('wheel', this.onWheelCapture, { capture: true, passive: false })
 
     // Drawn in the turn it is measured, never asked for: `setSize` blanks the drawing buffer, and
     // an observation lands after the frame callbacks of the paint that follows — see
@@ -736,7 +824,7 @@ export class ViewportEngine {
     this.observer?.disconnect()
     this.observer = null
 
-    this.controls?.removeEventListener('change', this.requestRender)
+    this.controls?.removeEventListener('change', this.requestCameraRender)
     this.controls?.dispose()
     this.controls = null
 
@@ -744,13 +832,18 @@ export class ViewportEngine {
 
     this.host?.removeEventListener('pointerdown', this.armPaneUnderPointer, true)
     this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
+    this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
+
+    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
+    this.wheelSettling = null
 
     if (this.insetCatchUp !== null) clearTimeout(this.insetCatchUp)
     this.insetCatchUp = null
     this.disposeInset()
 
     const canvas = this.renderer?.domElement
+    this.renderer?.forceContextLoss()
     this.renderer?.dispose()
     this.renderer = null
 
@@ -838,6 +931,94 @@ export class ViewportEngine {
     })
   }
 
+  /** Pane 0 is the main orbit; the rest read one past their own index, as the cameras do. */
+  private orbitOfPane(index: number): OrbitControls | null {
+    return index === 0 ? this.controls : (this.extras[index - 1]?.controls ?? null)
+  }
+
+  /** The wheel, taken from `OrbitControls` for perspective panes — why, in `dolly.ts`. */
+  private readonly onWheelCapture = (event: WheelEvent): void => {
+    if (this.options.onWheel?.(event) === true) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    const index = this.paneAtPointer(event)
+    if (index === null) return
+
+    const camera = this.cameraOfPane(index)
+    const orbit = this.orbitOfPane(index)
+    // An orthographic pane keeps the wheel `OrbitControls` gives it: it shows the same thing
+    // wherever it stands, so it zooms by scaling its frustum. Its `zoomToCursor` is NOT the way to
+    // anchor it — that one reads the whole canvas, so it drifts in every pane of a quad layout.
+    if (!(camera instanceof PerspectiveCamera) || !orbit?.enabled) return
+
+    const held = this.wheelAim ?? this.aimWheel(event, camera, orbit)
+    if (!held) return
+    this.wheelAim = held
+
+    const move = dollyTo({
+      position: camera.position,
+      forward: camera.getWorldDirection(gaze),
+      aim: held.aim,
+      aimed: held.aimed,
+      notches: notchesOf(event.deltaY),
+    })
+
+    camera.position.copy(move.position)
+    orbit.target.copy(move.pivot)
+    orbit.update()
+    this.requestRender()
+    this.reportWheelSettled(index)
+    // Held past a crossing, the aimed point sits BEHIND the camera and the distance to it grows
+    // again — every further notch of one flick would be larger than the last.
+    if (move.crossed) this.wheelAim = null
+
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  /**
+   * The end of a zoom, once the notches stop. `OrbitControls` dispatched `end` around every notch
+   * of the wheel it used to own; taking the wheel took that with it, and whoever listens publishes
+   * where the view now stands — a montage reads that framing back.
+   */
+  private reportWheelSettled(pane: number): void {
+    const settled = this.options.onCameraSettled
+    if (!settled) return
+
+    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
+    this.wheelSettling = setTimeout(() => {
+      this.wheelSettling = null
+      settled(pane)
+    }, WHEEL_SETTLES_MS)
+  }
+
+  /**
+   * What the pointer names, in world space. Both halves stay true while the camera only travels:
+   * a ray through an unmoved screen point keeps its world direction, and meets the same surface.
+   */
+  private aimWheel(
+    event: WheelEvent,
+    camera: PerspectiveCamera,
+    orbit: OrbitControls,
+  ): { readonly aim: Vector3; readonly aimed: Vector3 } | null {
+    const ndc = this.pointerNdcOf(event)
+    if (!ndc) return null
+
+    this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
+    const hit = this.raycaster.intersectObjects(this.options.pickTargets?.() ?? [], true)[0]
+    // Nothing under the pointer still deserves a distance: without one, a wheel over empty sky
+    // would have nothing to scale its step by. The pivot's own distance is what the view implies.
+    const reach = camera.position.distanceTo(orbit.target) || DEFAULT_REACH
+
+    return {
+      aim: this.raycaster.ray.direction.clone(),
+      aimed: hit ? hit.point : this.raycaster.ray.at(reach, new Vector3()),
+    }
+  }
+
   /**
    * Starts the frame clock now. A caller about to animate calls this first, or the first delta
    * it receives spans everything since the last frame — which was the last time anything moved,
@@ -847,7 +1028,28 @@ export class ViewportEngine {
     this.lastTime = performance.now()
   }
 
+  /** Whether anything but the camera has moved since the last frame drew its shadow maps. */
+  private shadowsStale = true
+
   readonly requestRender = (): void => {
+    // Stale by DEFAULT, and only ever cleared by a frame that drew: whoever forgets to say what
+    // moved pays a shadow pass, and whoever forgets the other way shows a shadow of what was.
+    this.shadowsStale = true
+    this.schedule()
+  }
+
+  /**
+   * A frame the CAMERA alone asked for — an orbit, a fly, a damping settling.
+   *
+   * A shadow map is drawn from a light, never from the camera, so the one drawn last still
+   * holds. Measured while orbiting on this Mac at 1600×900: 2.6 ms against 1.9 for one sun over
+   * 400 shadowed spheres, and 4.9 against 2.2 for four point lights, which cast six faces each.
+   */
+  readonly requestCameraRender = (): void => {
+    this.schedule()
+  }
+
+  private schedule(): void {
     if (this.frame !== null || this.renderer === null) return
     this.frame = requestAnimationFrame(this.renderFrame)
   }
@@ -886,6 +1088,30 @@ export class ViewportEngine {
   }
 
   /**
+   * The ONE call every surface of the studio draws a 3D scene through — the panes, the camera
+   * preview, and whatever renders off screen.
+   *
+   * `onDraw` is offered the request first and answers whether it drew. That answer is not
+   * decoration: what it composed is tone-mapped and encoded on the way OUT, where a plain render
+   * leaves the working space behind, and both the preview's quad and a film's pixels have to know
+   * which of the two they are looking at.
+   */
+  drawScene(request: DrawRequest): boolean {
+    const renderer = this.renderer
+    if (!renderer) return false
+
+    // BEFORE `onDraw`, and it is the whole contract: a film and a still hand over a target and
+    // then read its pixels back, so whoever draws must be pointed at it. Bound here rather than
+    // by each caller — a composition that plans no pass answers `false` without `PostComposer`
+    // ever running, and the plain render below would have gone to the canvas.
+    renderer.setRenderTarget(request.target)
+    if (this.options.onDraw?.(request) === true) return true
+
+    renderer.render(request.scene, request.camera)
+    return false
+  }
+
+  /**
    * One render in a single layout, four scissored ones in a quad — never four contexts.
    *
    * A second WebGL context per view would quadruple what the machine holds for a view that shows
@@ -893,9 +1119,23 @@ export class ViewportEngine {
    * what keeps a pane from clearing the three beside it.
    */
   private renderPanes(renderer: WebGLRenderer): void {
+    const ratio = renderer.getPixelRatio()
+
     if (this.extras.length === 0) {
-      this.options.onPane?.(0, this.camera)
-      renderer.render(this.scene, this.camera)
+      if (this.options.onPane?.(0, this.camera) === true) renderer.shadowMap.needsUpdate = true
+      this.drawScene({
+        scene: this.scene,
+        camera: this.camera,
+        surface: 'pane',
+        paneIndex: 0,
+        cameraNodeId: null,
+        target: null,
+        // No rectangle at all rather than one covering the canvas: a composition then draws
+        // without a scissor, which is one piece of state fewer on the frame path.
+        rect: null,
+        width: Math.round(renderer.domElement.clientWidth * ratio),
+        height: Math.round(renderer.domElement.clientHeight * ratio),
+      })
       return
     }
 
@@ -912,8 +1152,20 @@ export class ViewportEngine {
         const { x, y, width, height: paneHeight } = glRect(rect, height)
         renderer.setViewport(x, y, width, paneHeight)
         renderer.setScissor(x, y, width, paneHeight)
-        this.options.onPane?.(index, camera)
-        renderer.render(this.scene, camera)
+        // A pane that put the scene's lights out draws different shadows from the one beside
+        // it: what THIS pane wears is what its maps have to be drawn from.
+        if (this.options.onPane?.(index, camera) === true) renderer.shadowMap.needsUpdate = true
+        this.drawScene({
+          scene: this.scene,
+          camera,
+          surface: 'pane',
+          paneIndex: index,
+          cameraNodeId: null,
+          target: null,
+          rect: { x, y, width, height: paneHeight },
+          width: Math.round(width * ratio),
+          height: Math.round(paneHeight * ratio),
+        })
       }
     } finally {
       // In a `finally`, and both of them: a throw mid-pane would otherwise leave every later
@@ -1010,35 +1262,75 @@ export class ViewportEngine {
     const heldAlpha = renderer.getClearAlpha()
     const heldAutoClear = renderer.autoClear
     const heldMatrix = this.scene.matrixWorldAutoUpdate
-    const heldShadows = renderer.shadowMap.autoUpdate
     const loan = aspectLoan(target.width, target.height)
 
-    // Both of these are redone from scratch by every `render`, and the pane pass of THIS frame
-    // has just done them over a scene nothing has moved since — measured at 1,2 ms of the 5,1 the
-    // second pass cost. Only when the panes actually ran: the preview camera is a node of the
-    // scene, so `render` leaves its world matrix to the scene traversal (`camera.parent !== null`
-    // skips the camera's own update), and a grown preview skips the panes entirely.
-    if (panesDrawn) {
-      this.scene.matrixWorldAutoUpdate = false
-      renderer.shadowMap.autoUpdate = false
-    }
+    // Redone from scratch by every `render`, and the pane pass of THIS frame has just done it
+    // over a scene nothing has moved since — measured at 1,2 ms of the 5,1 the second pass cost.
+    // Only when the panes actually ran: the preview camera is a node of the scene, so `render`
+    // leaves its world matrix to the scene traversal (`camera.parent !== null` skips the
+    // camera's own update), and a grown preview skips the panes entirely. The shadow maps need
+    // no such care since `renderFrame` owns `needsUpdate`: the pane pass consumed it.
+    if (panesDrawn) this.scene.matrixWorldAutoUpdate = false
 
     try {
       renderer.setRenderTarget(target)
       renderer.autoClear = true
       renderer.setClearColor(inset.backdrop, 1)
       loan.frame(inset.camera)
-      renderer.render(this.scene, inset.camera)
+      this.dressInsetBlit(
+        renderer,
+        target,
+        this.drawScene({
+          scene: this.scene,
+          camera: inset.camera,
+          surface: 'inset',
+          paneIndex: 0,
+          cameraNodeId: inset.cameraNodeId,
+          target,
+          rect: null,
+          width: target.width,
+          height: target.height,
+        }),
+      )
     } finally {
       loan.restore()
       this.scene.matrixWorldAutoUpdate = heldMatrix
-      renderer.shadowMap.autoUpdate = heldShadows
       renderer.autoClear = heldAutoClear
       renderer.setClearColor(this.insetClear, heldAlpha)
       renderer.setRenderTarget(null)
       // In a `finally`, as `renderPanes` does: a throw here would otherwise leave the workshop
       // hidden for every later frame.
       restore?.()
+    }
+  }
+
+  /**
+   * How the preview's quad reads what was just drawn into its target, and it is not a detail: get
+   * it wrong and the preview comes back doubly tone-mapped, or washed out, with every gate green.
+   *
+   * A PLAIN render leaves the working space in the target — three skips tone mapping for anything
+   * but the canvas — so the quad wears the curve on the way out and the texture stays linear. A
+   * COMPOSED one has already been through the output transform, so the texture holds sRGB and the
+   * quad must apply nothing: it is declared sRGB so three decodes it once and the canvas encodes
+   * it once, which is the identity.
+   */
+  private dressInsetBlit(
+    renderer: WebGLRenderer,
+    target: WebGLRenderTarget,
+    composed: boolean,
+  ): void {
+    const blit = this.insetBlitOf(renderer)
+    const space = composed ? SRGBColorSpace : LinearSRGBColorSpace
+    const toneMapped = !composed && renderer.toneMapping !== NoToneMapping
+
+    if (target.texture.colorSpace !== space) {
+      target.texture.colorSpace = space
+      // The colour space is a shader DEFINE on the material sampling it, not a uniform.
+      blit.material.needsUpdate = true
+    }
+    if (blit.material.toneMapped !== toneMapped) {
+      blit.material.toneMapped = toneMapped
+      blit.material.needsUpdate = true
     }
   }
 
@@ -1157,6 +1449,11 @@ export class ViewportEngine {
 
     // The panes are skipped when the preview covers them whole: drawing a scene twice over to
     // throw the first one away is the most expensive thing a frame can do.
+    // Read by the first pass of the frame alone: three.js turns it back off once it has drawn
+    // the maps, and the preview pass behind it reuses what this one left.
+    renderer.shadowMap.needsUpdate = this.shadowsStale
+    this.shadowsStale = false
+
     const panesDrawn = !this.insetCoversAll()
     if (panesDrawn) this.renderPanes(renderer)
     // After the panes and before the overlay: the preview covers the view it sits on, and the
@@ -1184,8 +1481,16 @@ export class ViewportEngine {
     // Read per frame, never cached: a context restore replaces `info` and its two counter objects.
     recordFrame(renderer.info, this.stats)
 
+    // Armed again for whatever renders BETWEEN two frames — a film being written out, a capture,
+    // a scene clip — none of which comes through here and none of which would know to ask. The
+    // reuse is a property of the next viewport frame, so it is granted there and nowhere else:
+    // an exported video was reusing the maps of the pose the Render button was pressed on.
+    renderer.shadowMap.needsUpdate = true
+
     if (moving || settling) {
-      this.requestRender()
+      // A fly and a damping settling move the camera and nothing else: the shadow maps this
+      // frame drew are the ones the next one wants.
+      this.requestCameraRender()
       return
     }
 

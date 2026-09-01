@@ -30,6 +30,16 @@ export function clipAt(track: Track, time: Us): Clip | null {
   return track.clips.find(clip => time >= clip.start && time < clipEnd(clip)) ?? null
 }
 
+/** A still already on this sprite: skip the decode and the GPU upload. */
+export function reusePaintedSource(
+  source: string | null,
+  trackId: string,
+  stable: (assetId: string) => boolean,
+  painted: ReadonlyMap<string, string>,
+): boolean {
+  return source !== null && stable(source) && painted.get(trackId) === source
+}
+
 /**
  * The sprites whose track LEFT the frame, and which nothing else would ever take down.
  *
@@ -173,6 +183,8 @@ export class TimelineEngine {
   private readonly frame = new Container({ sortableChildren: true })
   private readonly backdrop = new Graphics()
   private readonly sprites = new Map<string, Sprite>()
+  /** Last source uploaded per track — stills skip the next seek when this still matches. */
+  private readonly painted = new Map<string, string>()
   private readonly pool: DecoderPool
   private state: SequenceState = EMPTY_SEQUENCE
   /** Guards against two seeks interleaving their awaits and painting out of order. */
@@ -246,8 +258,11 @@ export class TimelineEngine {
     this.clock.stop()
     this.sound.stop()
     playbackToken.release(this.deps.owner)
-    this.deps.onTime?.(this.clock.now())
+    // Said to have stopped BEFORE the last time is reported: a host that leaves the head to the
+    // clock while it runs would drop that report, and the document would keep the head it had
+    // before playing — the next play, split or export would then act a whole take too early.
     this.deps.onPlayingChange?.(false)
+    this.deps.onTime?.(this.clock.now())
   }
 
   playing(): boolean {
@@ -361,10 +376,16 @@ export class TimelineEngine {
       // tracks first appeared — never the order of the column. V2, opened after V1 already had
       // a sprite, composited OVER it, and a track dragged to another row kept its old depth.
       sprite.zIndex = depth
+      const source = clip ? clipSource(clip) : null
+      const reuse = reusePaintedSource(source, track.id, this.pool.stable, this.painted)
       return {
         sprite,
         clip,
-        frame: clip ? this.pool.frameAt(clipSource(clip), sourceTimeAt(clip, time)) : null,
+        source,
+        trackId: track.id,
+        reuse,
+        frame:
+          clip && source && !reuse ? this.pool.frameAt(source, sourceTimeAt(clip, time)) : null,
       }
     })
 
@@ -374,16 +395,24 @@ export class TimelineEngine {
       return
     }
 
-    asked.forEach(({ sprite, clip }, index) => {
+    asked.forEach(({ sprite, clip, source, trackId, reuse }, index) => {
+      if (reuse) {
+        sprite.visible = true
+        painted = true
+        return
+      }
+
       const frame = decoded[index]
       if (!frame) {
         sprite.visible = false
+        this.painted.delete(trackId)
         if (clip && this.pool.undecodable(clipSource(clip))) unreadable = true
         return
       }
 
       sprite.visible = true
       painted = true
+      if (source) this.painted.set(trackId, source)
       createFrameSink({
         upload: uploaded =>
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
@@ -398,10 +427,6 @@ export class TimelineEngine {
     this.draw()
   }
 
-  openSinks(): number {
-    return this.pool.openCount()
-  }
-
   dispose(): void {
     this.disposed = true
     this.pause()
@@ -410,9 +435,10 @@ export class TimelineEngine {
     this.unfollow?.()
     this.unfollow = null
     this.application?.renderer.off('resize', this.layout)
-    this.application?.destroy(true, { children: true, texture: true })
+    this.application?.destroy(true, { children: true, texture: true, textureSource: true })
     this.application = null
     this.sprites.clear()
+    this.painted.clear()
   }
 
   /** Pixi's own ticker is off — see `mount`. Every visible change ends here. */

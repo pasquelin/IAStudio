@@ -9,7 +9,7 @@
 The distant program that makes things. You give it a sentence, and sometimes an image; it returns
 an image, a video, a sound or a 3D object.
 
-There are **several hundred models** in the Scenario catalogue, and they cannot all do the same
+There are **several hundred models** in the remote catalogue, and they cannot all do the same
 thing. Some are excellent at characters and mediocre at landscapes. Some take only text, others
 require a starting image. Some return in ten seconds, others in three minutes.
 
@@ -65,7 +65,7 @@ workspace, because they do not make sense everywhere.
 
 | Value | What it means |
 |---|---|
-| **Official** | published by Scenario |
+| **Official** | published by the provider |
 | **Community** | published by somebody else |
 
 ### Capability — what the model can take in and give back
@@ -107,14 +107,14 @@ This is the most useful filter. The vocabulary is technical but short:
 | **Audio to audio** | a sound is turned into another |
 | **Video to audio** | a video gets a soundtrack |
 
-**In the Textures workspace**
+**In the Materials workspace**
 
 | Capability | In plain words |
 |---|---|
-| **Text to texture** | a sentence becomes a material |
-| **Image to texture** | an image is turned into a material |
-| **Texture guidance** | it follows a structure you impose |
-| **Texture reference** | it takes cues from a material you supply |
+| **Text to material** | a sentence becomes a material |
+| **Image to material** | an image is turned into a material |
+| **Material guidance** | it follows a structure you impose |
+| **Material reference** | it takes cues from a material you supply |
 
 ### Tag — the publishers' keywords
 
@@ -145,7 +145,7 @@ The big names in the field, different per workspace:
 
 Useful for seeing what has just come out.
 
-> **The Skyboxes workspace has no capabilities, tags or publishers to filter on, and the Textures
+> **The Skyboxes workspace has no capabilities, tags or publishers to filter on, and the Materials
 > workspace has no tags or publishers**: those families hold only a handful of models.
 
 ---
@@ -159,7 +159,7 @@ the **Generate** panel, just below, will put to work.
 image model is still there.
 
 You can also fix a **default model** for each family, once and for all:
-**Settings ▸ Generation ▸ Image** (or Video, 3D, Audio, Upscaling, Background removal, Vectorisation). Leave
+**Settings ▸ AI models ▸ Image** (or Video, 3D, Audio, Upscaling, Background removal, Vectorisation). Leave
 the setting on "Ask every time" to choose at each generation.
 
 ---
@@ -174,15 +174,15 @@ find it, the first question to ask is **"am I in the right workspace?"**.
 Three families have no workspace at all: **upscale**, **background removal** and
 **vectorisation**. Their models take an image and return one, like image models, but they do a job
 of their own and the studio files them apart. The **Models** panel therefore shows them nowhere:
-their model is chosen in **Settings ▸ Generation**, and it is the **Image** menu's edits — Upscale,
+their model is chosen in **Settings ▸ AI models**, and it is the **Image** menu's edits — Upscale,
 Cut out, Vectorise — that use them.
 
 | Edit | Family asked for | Where its model is set |
 |---|---|---|
 | Regenerate the region, Extend | image | the Image workspace's **Models** panel |
-| Upscale | upscale | **Settings ▸ Generation ▸ Upscaling** |
-| Cut out | background removal | **Settings ▸ Generation ▸ Background removal** |
-| Vectorise | vectorisation | **Settings ▸ Generation ▸ Vectorisation** |
+| Upscale | upscale | **Settings ▸ AI models ▸ Upscaling** |
+| Cut out | background removal | **Settings ▸ AI models ▸ Background removal** |
+| Vectorise | vectorisation | **Settings ▸ AI models ▸ Vectorisation** |
 
 With no model set, the edit request does not leave and opens the screen where you choose one.
 Nothing is sent, nothing is billed.

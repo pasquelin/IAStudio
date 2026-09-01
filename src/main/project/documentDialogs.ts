@@ -46,25 +46,32 @@ export async function askCloseChoice(ask: AskUser, title: string): Promise<Close
 }
 
 /**
- * A yes-or-no the studio must not assume the answer to: Cancel is the default AND what a
- * dismissed dialog gives back, so neither Return nor Escape can reach the answer that writes.
+ * A yes-or-no. By default Cancel is BOTH the default button and what a dismissed dialog gives
+ * back, so neither Return nor Escape reaches the answer that writes; `confirmByDefault` inverts
+ * that, and belongs only to a question whose yes destroys nothing.
  *
- * Shared, because that button arrangement is the whole of the decision — the two questions asked
- * this way sit in different files and would drift apart on which id means yes.
+ * Shared, because that button arrangement is the whole of the decision — the questions asked this
+ * way sit in different files and would drift apart on which id means yes.
  */
 export async function askConfirm(
   ask: AskUser,
   wording: { message: string; detail: string; confirm: string; cancel: string },
+  /** Only for a question whose YES destroys nothing — see `askFlattenDocument`. */
+  confirmByDefault = false,
 ): Promise<boolean> {
+  const buttons = confirmByDefault
+    ? [wording.confirm, wording.cancel]
+    : [wording.cancel, wording.confirm]
+  const cancelId = confirmByDefault ? 1 : 0
   const chosen = await ask({
     message: wording.message,
     detail: wording.detail,
-    buttons: [wording.cancel, wording.confirm],
-    defaultId: 0,
-    cancelId: 0,
+    buttons,
+    defaultId: confirmByDefault ? 0 : cancelId,
+    cancelId,
   })
 
-  return chosen === 1
+  return chosen === (confirmByDefault ? 0 : 1)
 }
 
 /**
@@ -97,4 +104,31 @@ export async function askDeleteDocument(ask: AskUser, title: string): Promise<bo
     confirm: t.deleteConfirm,
     cancel: t.cancel,
   })
+}
+
+/**
+ * Whether the picture behind this document may take the flatten.
+ *
+ * The one question of this file that DEFAULTS to yes: the document was written first and holds
+ * the whole stack, so what is at stake is a surprise rather than a loss.
+ */
+export async function askFlattenDocument(
+  ask: AskUser,
+  title: string,
+  format: string,
+  lost: string,
+): Promise<boolean> {
+  const language = windowLanguage()
+  const t = TRANSLATIONS[language].documents
+
+  return await askConfirm(
+    ask,
+    {
+      message: fillHoles(t.flattenTitle, { title, format }, language),
+      detail: fillHoles(t.flattenBody, { format, lost }, language),
+      confirm: t.flattenConfirm,
+      cancel: t.cancel,
+    },
+    true,
+  )
 }

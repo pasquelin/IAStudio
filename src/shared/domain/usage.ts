@@ -317,7 +317,7 @@ export type UsageEventPage = {
  *
  * It lives here rather than beside the aggregation because the WINDOW has to agree with it: a
  * journal row printed in another zone than the bar it sits under is a screen contradicting itself,
- * and `renderer/src/usage/format.test.ts` holds that pair. A rule restated on the far side of the
+ * and `renderer/src/features/usage/components/Usage/format.test.ts` holds that pair. A rule restated on the far side of the
  * boundary would be a copy, and a copy is what stops agreeing.
  */
 export function dayOf(time: string): string {

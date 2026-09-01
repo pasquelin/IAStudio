@@ -1,5 +1,5 @@
 import { ASSET_TYPES, type AssetType } from './asset'
-import { channelFromScenarioType } from './texture'
+import { channelFromProviderType, isMaterialPicture } from './material'
 import type { WorkspaceId } from './workspace'
 
 /**
@@ -23,14 +23,6 @@ export type RemoteTyping = {
 /** Skyboxes announce themselves in `metadata.type` and nowhere else once they are plain LDR. */
 function isSkyboxType(metadataType: string): boolean {
   return metadataType.startsWith('skybox') || metadataType === 'upscale-skybox'
-}
-
-/**
- * A picture of a material, as opposed to one channel of one. `texture`, `upscale-texture` and
- * the `inference-*-texture` family all describe a surface, and the studio files them as such.
- */
-function isTextureType(metadataType: string): boolean {
-  return metadataType === 'texture' || metadataType.endsWith('-texture')
 }
 
 /**
@@ -99,14 +91,14 @@ export function assetTypeOfRemote({
   metadataType,
   mimeType,
 }: RemoteTyping): AssetType | null {
-  if (metadataType !== undefined && channelFromScenarioType(metadataType)) return 'texture'
+  if (metadataType !== undefined && channelFromProviderType(metadataType)) return 'image'
 
   const byKind = kind === undefined ? undefined : TYPE_BY_KIND[kind]
   if (byKind !== undefined && byKind !== 'image') return byKind
 
   if (metadataType !== undefined) {
     if (isSkyboxType(metadataType)) return 'skybox'
-    if (isTextureType(metadataType)) return 'texture'
+    if (isMaterialPicture(metadataType)) return 'image'
 
     const produced = producedType(metadataType)
     if (produced !== null) return produced
@@ -137,7 +129,6 @@ const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
   video: 'video',
   audio: 'audio',
   mesh: '3d',
-  texture: 'textures',
   skybox: 'skyboxes',
   // Where a motion is USED, which is the only shelf that means anything for one: nothing
   // generates an animation on its own, it is laid on a character.
@@ -155,8 +146,8 @@ export function workspaceOfType(type: AssetType): WorkspaceId {
  * table is free to disagree with the first, and a space filed under a kind it does not produce
  * is a shelf that answers nothing.
  *
- * `null` for a space no kind is made in. There is none today, and the type is what keeps a
- * caller from assuming there never will be.
+ * `null` for a space no kind is made in — Materials, since a channel stopped being a kind of
+ * its own. `soleTypeOf` is what answers for it: the space takes one kind and makes none.
  */
 export function typeOfWorkspace(workspace: WorkspaceId): AssetType | null {
   return ASSET_TYPES.find(type => WORKSPACE_OF_TYPE[type] === workspace) ?? null

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, PICTURES, type Asset } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/assetKind'
 import { kindForWorkspace } from '@shared/domain/document'
 import { WORKSPACES } from './workspaces'
-import { ASSET_INTENTS, editorIntent, intentsFor } from './assetIntents'
+import { ASSET_INTENTS, editorIntent, intentsFor, pixelEditorIntent } from './assetIntents'
 
 const picture = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset_1',
@@ -30,18 +30,17 @@ describe('where an asset can be sent', () => {
     const ids = intentsFor('mesh').map(intent => intent.id)
 
     expect(ids).toContain('3d.mesh')
-    expect(ids).not.toContain('textures.channel')
+    expect(ids).not.toContain('materials.channel')
     expect(ids).not.toContain('image.layer')
   })
 
   it('offers every picture kind the same destinations', () => {
-    // A texture and a sky ARE pictures: the sky slot takes one, and so does a layer.
+    // A sky IS a picture: the sky slot takes one, and so does a layer.
     const picture = intentsFor('image').map(intent => intent.id)
 
-    expect(intentsFor('texture').map(intent => intent.id)).toEqual(picture)
     expect(intentsFor('skybox').map(intent => intent.id)).toEqual(picture)
     expect(picture).toContain('skyboxes.source')
-    expect(picture).toContain('textures.channel')
+    expect(picture).toContain('materials.channel')
   })
 
   it('gives every destination a distinct name', () => {
@@ -96,10 +95,12 @@ describe('where an asset is edited', () => {
     expect(editorIntent(picture())?.id).toBe('image.layer')
   })
 
-  // The two kinds a plain image shares its destinations with are edited in their own space,
-  // which is the whole difference between editing an asset and placing one.
-  it('edits a texture in Textures and a sky in Skyboxes', () => {
-    expect(editorIntent(picture({ type: 'texture' }))?.id).toBe('textures.channel')
+  /**
+   * A sky is told apart by its KIND; a channel is not, and cannot be — the studio files it as the
+   * picture it is. `map` is what remains of the distinction, and it is what has to answer here.
+   */
+  it('edits a channel in Materials and a sky in Skyboxes', () => {
+    expect(editorIntent(picture({ map: 'normal' }))?.id).toBe('materials.channel')
     expect(editorIntent(picture({ type: 'skybox' }))?.id).toBe('skyboxes.source')
   })
 
@@ -112,5 +113,15 @@ describe('where an asset is edited', () => {
   // invisible node — the `SKELETON_ONLY` trap `rigState` was written for.
   it('tells a motion apart from a model, though both live in 3D', () => {
     expect(editorIntent(picture({ type: 'animation' }))?.id).toBe('3d.animation')
+  })
+
+  /** The one decision left in it: a row the cloud still holds has no pixels on this disk. */
+  it('paints every local picture, and nothing that is not on disk', () => {
+    for (const type of PICTURES) {
+      expect(pixelEditorIntent(picture({ type }))?.workspace).toBe('image')
+    }
+
+    expect(pixelEditorIntent(picture({ location: 'cloud' }))).toBeNull()
+    expect(pixelEditorIntent(picture({ type: 'mesh' }))).toBeNull()
   })
 })

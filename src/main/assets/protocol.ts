@@ -3,6 +3,7 @@ import { isAbsolute, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { ASSET_SCHEME, hostedParts, type Asset } from '@shared/domain/asset'
 import { log } from '@main/log'
+import { webCodecsReads } from '@main/media/service'
 
 /**
  * Resolves an asset's stored path inside its project, or refuses.
@@ -21,13 +22,25 @@ export function assetFilePath(projectPath: string, relativePath: string): string
 }
 
 /**
- * Which file the scheme hands over: what the project owns, else the proxy of a linked media,
- * else the linked media itself. The proxy comes first because it exists precisely for sources
- * WebCodecs will not decode; a linked path must be absolute, which is what a picker returns.
+ * Which file the scheme hands over. The proxy comes first: it exists for sources WebCodecs
+ * will not decode, and for 4K the monitor must not open the original.
  */
 export function servedFileOf(projectPath: string, asset: Asset): string | null {
-  if (asset.path) return assetFilePath(projectPath, asset.path)
   if (asset.proxyPath) return assetFilePath(projectPath, asset.proxyPath)
+  if (asset.path) return assetFilePath(projectPath, asset.path)
+  return linkedFileOf(asset)
+}
+
+/**
+ * What an export composites from: the original when WebCodecs can read it, else the proxy.
+ * Playback uses `servedFileOf` and always prefers the proxy — a 4K original is the slow path.
+ */
+export function exportFileOf(projectPath: string, asset: Asset): string | null {
+  if (asset.path && webCodecsReads(asset.probe?.codec)) {
+    return assetFilePath(projectPath, asset.path)
+  }
+  if (asset.proxyPath) return assetFilePath(projectPath, asset.proxyPath)
+  if (asset.path) return assetFilePath(projectPath, asset.path)
   return linkedFileOf(asset)
 }
 
@@ -57,7 +70,7 @@ function linkedFileOf(asset: Asset): string | null {
 }
 
 /**
- * Declares the scheme before the app is ready. Required for `img-src scenario:` to be honoured
+ * Declares the scheme before the app is ready. Required for `img-src ia-studio:` to be honoured
  * and for the renderer to fetch over it at all; Electron ignores the call afterwards.
  */
 export function registerAssetScheme(): void {
@@ -125,7 +138,7 @@ export async function servedPath(url: string, resolvers: AssetResolvers): Promis
   if (!parsed) return null
 
   // `hasOwn`, not a plain lookup: every key of `Object.prototype` would otherwise be a live host,
-  // and `scenario://toString/x` would reach `net.fetch` with a path nobody registered.
+  // and `ia-studio://toString/x` would reach `net.fetch` with a path nobody registered.
   if (!Object.hasOwn(resolvers, parsed.host)) return null
 
   const resolveHost = resolvers[parsed.host]

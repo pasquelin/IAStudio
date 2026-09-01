@@ -1,11 +1,15 @@
 {
+  "a11y": {
+    "namedValue": "{{value}} — {{name}}"
+  },
   "actions": {
     "generate": "Générer",
     "close": "Fermer",
     "removeTool": "Retirer le module",
     "retry": "Réessayer",
     "retryHint": "Retente le rendu de cette zone, sans redémarrer le studio",
-    "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations"
+    "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations",
+    "cancel": "Annuler"
   },
   "jobs": {
     "none": "Aucune génération en cours.",
@@ -24,7 +28,8 @@
       "failed": "Échouée",
       "cancelled": "Annulée"
     },
-    "cancel": "Annuler la tâche"
+    "cancel": "Annuler la tâche",
+    "cancelRefused": "Ce service n’arrête pas une génération commencée : elle ira jusqu’au bout et sera facturée."
   },
   "tasks": {
     "running_one": "{{count, number}} tâche",
@@ -40,7 +45,8 @@
     "audio": "Audio",
     "image": "Image",
     "mesh": "Modèle 3D",
-    "bundle": "Montage et médias"
+    "bundle": "Montage et médias",
+    "weights": "Poids de modèle"
   },
   "sorts": {
     "relevance": "Qualité : les meilleurs",
@@ -62,18 +68,19 @@
     "planRestricted": "Ce modèle n’est pas inclus dans votre abonnement.",
     "notFound": "Ressource introuvable.",
     "rateLimited": "Trop de requêtes. Nouvelle tentative en cours…",
-    "server": "Le service Scenario est momentanément indisponible.",
-    "network": "Impossible de joindre Scenario. Vérifiez votre connexion.",
+    "server": "Le service de génération est momentanément indisponible.",
+    "network": "La connexion a été interrompue. Vérifiez le réseau et réessayez.",
     "unexpected": "Une erreur inattendue est survenue.",
     "invalidValue": "Valeur invalide.",
     "rejected": "La génération a échoué.",
+    "incompleteModel": "Les fichiers du modèle sont incomplets. Réinstallez-le, puis relancez la génération.",
     "storage": "Impossible d’enregistrer le résultat sur le disque.",
     "panelCrashed": "Ce panneau a rencontré une erreur.",
     "windowCrashed": "L’application a rencontré une erreur."
   },
   "licences": {
     "title": "Licences",
-    "intro": "Scenario Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
+    "intro": "IA Studio est livré avec les logiciels ci-dessous. Chacun garde sa propre licence, reproduite ici en entier.",
     "sources": "Sources correspondantes :",
     "sourcesUnmodified": "Sources correspondantes, sans modification :",
     "bundled": "livré avec l’application",

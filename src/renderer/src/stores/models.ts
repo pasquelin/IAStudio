@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
+import { currentAiRoleKey, primaryRoleOf, type AiRoleId } from '@shared/domain/aiRole'
+import { currentModelFamily, MODEL_FAMILIES, type ModelFamily } from '@shared/domain/model'
+import { isRecord, mapKeys } from '@shared/guards'
 import type { FormValues } from '@/helpers/dynamicForm'
 import {
   COLLECTION_PERSIST_VERSION,
@@ -8,6 +10,15 @@ import {
   withoutSearch,
   type CollectionState,
 } from '@/helpers/collectionState'
+
+/**
+ * Bumped past `COLLECTION_PERSIST_VERSION` because `selected` changed KEY, not shape: entries
+ * filed per family have to be re-filed per employment or every space opens on no model at all.
+ */
+const ROLE_KEYS_VERSION = COLLECTION_PERSIST_VERSION + 1
+
+/** Bumped again for the family RENAMED — `withCurrentFamilies` says which, and why it is silent. */
+const MODELS_PERSIST_VERSION = ROLE_KEYS_VERSION + 1
 
 type Collections = Partial<Record<ModelFamily, CollectionState>>
 
@@ -26,12 +37,57 @@ function searchless(collections: Collections): Collections {
   return stored
 }
 
+/**
+ * What a family's choice becomes once choices are filed per employment: the choice of its FIRST
+ * one, which is exactly what read it before — `resolveModelForFamily` only ever looked at
+ * `primaryRoleOf(family)`.
+ */
+function withRoleKeys(persisted: unknown): unknown {
+  if (typeof persisted !== 'object' || persisted === null) return persisted
+  const held = persisted as { selected?: Record<string, string> }
+  if (!held.selected) return persisted
+
+  const selected: Partial<Record<AiRoleId, string>> = {}
+  for (const family of MODEL_FAMILIES) {
+    const modelId = held.selected[family]
+    const role = primaryRoleOf(family)
+    if (modelId && role) selected[role] = modelId
+  }
+
+  return { ...held, selected }
+}
+
+/**
+ * A family renamed since this blob was written, brought up to date — under either shape, since
+ * `selected` was keyed per family before ADR-23 and per employment after it.
+ *
+ * Reached from `migrate`, so a blob already at the current version never sees it: the next family
+ * added to `RENAMED_FAMILIES` needs `MODELS_PERSIST_VERSION` bumped with it.
+ *
+ * Without it the choice comes back as none made — a key nothing reads reddens nowhere, and
+ * `searchless` quietly drops the browser's own state for that family at the first write.
+ */
+function withCurrentFamilies(persisted: unknown): unknown {
+  if (!isRecord(persisted)) return persisted
+
+  const brought: Record<string, unknown> = { ...persisted }
+  if (isRecord(persisted.selected)) brought.selected = mapKeys(persisted.selected, currentAiRoleKey)
+  if (isRecord(persisted.collections)) {
+    brought.collections = mapKeys(persisted.collections, currentModelFamily)
+  }
+
+  return brought
+}
+
 type ModelsState = {
   /**
-   * One choice per family: the panel follows the active workspace, and switching from Image
-   * to Video and back must not lose what was picked on either side.
+   * One choice per EMPLOYMENT, not per family — ADR-23 § C.
+   *
+   * Filed per family, choosing a model to retouch with replaced the one text-to-image was on:
+   * the two are different pickings, and the same weights serve both. Keyed by `AiRoleId` so that
+   * the cloud model a panel picked is remembered against the operation it was picked for.
    */
-  selected: Partial<Record<ModelFamily, string>>
+  selected: Partial<Record<AiRoleId, string>>
   /**
    * The browser's search, sort, thumbnail size and facets — one set per family, for the same
    * reason as the choice above and a sharper one.
@@ -44,33 +100,22 @@ type ModelsState = {
    */
   collections: Collections
   /**
-   * Parameters the generator should open on, per family. Set by "regenerate with these" in the
-   * inspector; kept out of the persisted state, since it belongs to one gesture and not to a
-   * preference.
-   */
-  preset: Partial<Record<ModelFamily, FormValues>>
-  /**
-   * The family an action asked the generator to open on, when it is not the workspace's own —
-   * Enlarge reaches for an upscaler. Without it the panel went on showing the image model it
-   * already held: the picture the edit had just uploaded never appeared, and Generate would
-   * have run the wrong model on it.
+   * Parameters the generator should open on, per EMPLOYMENT — the values an edit prepared for a
+   * retouch have no business reaching text-to-image, which the same weights also serve.
    *
-   * A parenthesis, not a preference: it lasts until a model is picked by hand or the user
-   * leaves the space — see `connectPreparation`.
+   * Kept out of the persisted state: it belongs to one gesture and not to a preference.
    */
-  prepared: ModelFamily | null
+  preset: Partial<Record<AiRoleId, FormValues>>
 
   /**
-   * Files the choice under the model's own family, which makes a choice GLOBAL to that family:
-   * picking an image model anywhere replaces the one the Image space was on. Assumed rather than
-   * worked around: the alternative is a second table filed per surface, persisted and migrated,
-   * to record a distinction — "chosen here" against "chosen there" — that nothing asks about.
+   * Files the choice under the EMPLOYMENT it was made for. Global to that employment: picking a
+   * model to retouch with in one document is picking it for every retouch, which is what a
+   * preference means. What it no longer touches is the other operations of the same family.
    */
-  select: (family: ModelFamily, modelId: string) => void
+  select: (role: AiRoleId, modelId: string) => void
   /** Picks the model AND the values to open its form on, in one write. */
-  prepare: (family: ModelFamily, modelId: string, params: FormValues) => void
+  prepare: (role: AiRoleId, modelId: string, params: FormValues) => void
   setCollection: (family: ModelFamily, collection: CollectionState) => void
-  dropPreparation: () => void
 }
 
 /**
@@ -83,28 +128,21 @@ export const useModels = create<ModelsState>()(
       selected: {},
       collections: {},
       preset: {},
-      prepared: null,
 
-      select: (family, modelId) =>
-        set(state => ({
-          selected: { ...state.selected, [family]: modelId },
-          prepared: null,
-        })),
+      select: (role, modelId) =>
+        set(state => ({ selected: { ...state.selected, [role]: modelId } })),
 
-      prepare: (family, modelId, params) =>
+      prepare: (role, modelId, params) =>
         set(state => ({
-          selected: { ...state.selected, [family]: modelId },
-          preset: { ...state.preset, [family]: params },
-          prepared: family,
+          selected: { ...state.selected, [role]: modelId },
+          preset: { ...state.preset, [role]: params },
         })),
 
       setCollection: (family, collection) =>
         set(state => ({ collections: { ...state.collections, [family]: collection } })),
-
-      dropPreparation: () => set(state => (state.prepared ? { prepared: null } : state)),
     }),
     {
-      name: 'scenario-studio:models',
+      name: 'ia-studio:models',
       // Bumped with the shape of `CollectionState`: an entry missing `thumbnailSize` lays the
       // grid out in zero-wide columns, which reads as a panel that lost its content.
       //
@@ -112,7 +150,14 @@ export const useModels = create<ModelsState>()(
       // renamed, so a state written before it restores `selected` and leaves `collections`
       // empty — every space opens unfiltered once, which is exactly what has to happen to the
       // shared filter this replaces. The orphan entry is gone at the first write.
-      version: COLLECTION_PERSIST_VERSION,
+      version: MODELS_PERSIST_VERSION,
+      // Renamed FIRST: `withRoleKeys` walks `MODEL_FAMILIES` to find a choice filed per family,
+      // and a family it no longer names is a choice it cannot see.
+      migrate: (persisted, version) => {
+        const brought = withCurrentFamilies(persisted)
+
+        return version >= ROLE_KEYS_VERSION ? brought : withRoleKeys(brought)
+      },
       // The search text is deliberately dropped: restoring it would open the studio on a
       // narrowed catalogue nobody typed, which reads as a catalogue gone missing.
       partialize: state => ({

@@ -1,4 +1,6 @@
 import { CLIP_DB, FLOOR_DB } from '@/engines/audio/level'
+import type { AudioData } from '@/engines/audio/audioData'
+import { decodeBytesOffThread } from '@/engines/audio/decodePort'
 import { fetchAsset } from '@/helpers/assetFetch'
 import type { AudioTap, LoadedSound, SoundCue, SoundPort } from './soundSchedule'
 
@@ -10,6 +12,7 @@ export type SoundOutput = Pick<
   | 'resume'
   | 'sampleRate'
   | 'decodeAudioData'
+  | 'createBuffer'
   | 'createAnalyser'
   | 'createBufferSource'
   | 'createGain'
@@ -86,6 +89,23 @@ function busFor(output: SoundOutput): SoundBus {
  * keeps summing, one per clip played, for as long as the window lives. The bus itself is not
  * part of that teardown — it outlives every clip, which is the point of it.
  */
+function bufferFromData(output: SoundOutput, data: AudioData): AudioBuffer {
+  const frames = Math.max(1, data.channels[0]?.length ?? 0)
+  const buffer = output.createBuffer(Math.max(1, data.channels.length), frames, data.sampleRate)
+  data.channels.forEach((channel, index) => buffer.copyToChannel(new Float32Array(channel), index))
+  return buffer
+}
+
+async function decodeAsset(output: SoundOutput, assetId: string): Promise<AudioBuffer> {
+  const response = await fetchAsset(assetId)
+  const bytes = await response.arrayBuffer()
+  try {
+    return bufferFromData(output, await decodeBytesOffThread(bytes.slice()))
+  } catch {
+    return output.decodeAudioData(bytes)
+  }
+}
+
 export function playFrom(output: SoundOutput, buffer: AudioBuffer): LoadedSound {
   return (cue: SoundCue) => {
     const source = output.createBufferSource()
@@ -152,8 +172,7 @@ export function createSoundPort(output: () => SoundOutput = sharedOutput): Sound
     },
     load: async assetId => {
       opened = true
-      const bytes = await (await fetchAsset(assetId)).arrayBuffer()
-      return playFrom(output(), await output().decodeAudioData(bytes))
+      return playFrom(output(), await decodeAsset(output(), assetId))
     },
   }
 }

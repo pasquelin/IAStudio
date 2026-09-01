@@ -10,39 +10,15 @@ import type { FontRef } from './font'
 import type { BodyPart } from './humanoid'
 import type { Rig } from './rig'
 import type { Us } from './time'
+import type { GeometryDescriptor } from './geometry'
+import { EMPTY_STACK, type CameraPost, type PostStack } from './postProcessing'
 import type { Vector3 } from './transform'
 
 /** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */
 export { isTransform, isVector3, type Transform, type Vector3 } from './transform'
 
-/**
- * Each primitive carries its own parameters rather than a shared bag of optionals: a sphere has
- * no depth, and a type that lets it have one stops describing anything.
- */
-export type GeometryDescriptor =
-  | { kind: 'box'; width: number; height: number; depth: number }
-  | { kind: 'capsule'; radius: number; height: number; capSegments: number; radialSegments: number }
-  | { kind: 'circle'; radius: number; segments: number }
-  | { kind: 'cylinder'; radiusTop: number; radiusBottom: number; height: number; segments: number }
-  | { kind: 'dodecahedron'; radius: number }
-  | { kind: 'icosahedron'; radius: number }
-  | { kind: 'lathe'; segments: number }
-  | { kind: 'octahedron'; radius: number }
-  | { kind: 'plane'; width: number; height: number }
-  | { kind: 'ring'; innerRadius: number; outerRadius: number; segments: number }
-  | { kind: 'sphere'; radius: number; widthSegments: number; heightSegments: number }
-  | { kind: 'tetrahedron'; radius: number }
-  | { kind: 'torus'; radius: number; tube: number; radialSegments: number; tubularSegments: number }
-  | {
-      kind: 'torusKnot'
-      radius: number
-      tube: number
-      tubularSegments: number
-      radialSegments: number
-      p: number
-      q: number
-    }
-  | { kind: 'tube'; radius: number; tubularSegments: number; radialSegments: number }
+/** Re-exported for the same reason as the transform above: this is where a scene is read from. */
+export type { GeometryDescriptor } from './geometry'
 
 /**
  * A texture is a reference to an asset of the project, never an image and never a three.js
@@ -61,6 +37,11 @@ export type CameraDescriptor = {
   fov: number
   near: number
   far: number
+  /**
+   * What this camera does with the scene's composition. Absent on every camera ever written,
+   * and absent means `inherit` — see `postOf`, the one place that says so.
+   */
+  post?: CameraPost
 }
 
 export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
@@ -120,18 +101,113 @@ export type ModelRef = {
    * into a single `ClipRef`. Never written again.
    */
   animation?: AnimationRef
+  /** What covers this model. Absent leaves it wearing what its own file carries. */
+  dress?: ModelDressRef
   /**
-   * Maps of the project put over the ones the file carries, slot by slot.
-   *
-   * A slot that is absent leaves what the GLB brought, which is why this is a partial and not the
-   * `MaterialDescriptor` a mesh wears: overriding a model means REPLACING one picture, never
-   * restating a colour and a roughness the file already got right.
-   *
-   * It applies to every material of the model at once. A file whose materials want different
-   * maps is not addressable here — the inside of a model is not a thing this document holds
-   * (see above), so there is no name to hang a per-material override on.
+   * @deprecated Read when a document written before `dress` existed is opened, and folded into a
+   * one-entry `materials`. Never written again.
    */
-  textures?: Partial<Record<TextureSlot, TextureRef>>
+  materialDocumentId?: string
+}
+
+/**
+ * What covers a model: ONE picture, or the material documents it wears — never both.
+ *
+ * A union rather than two fields, so a model dressed BOTH ways cannot be written at all: the two
+ * modes contradict each other, and holding them apart by convention is how they would drift.
+ *
+ * `image` is the simple mode — one picture as the base colour of the whole model, which is what
+ * Roblox's `TextureID` is. Nothing is derived from it: a normal computed from the luminance of a
+ * photograph turns painted shadow into relief, and that guess belongs to the other mode, where
+ * the user asks for it channel by channel and sees the result.
+ *
+ * `materials` is the advanced mode — Blender's material slots and Unreal's material elements. One
+ * document id per slot, in the order the file's own materials come, and a REFERENCE rather than a
+ * copy: what a material holds is resolved when the scene is READ, so editing it reaches every
+ * model wearing it. An empty entry leaves that slot wearing the file's own material.
+ *
+ * Both ride in `extras[studio]` verbatim, so no glTF reader sees them and no format head changes.
+ */
+export type ModelDressRef =
+  { kind: 'image'; assetId: string } | { kind: 'materials'; documentIds: readonly string[] }
+
+/**
+ * The empty slot of either mode: a picture not chosen yet, a slot keeping the file's own material.
+ *
+ * Stored rather than folded back to no dress at all, and that is what makes the mode STICK: a
+ * panel switched to one mode and not filled in must stay in it, or the choice undoes itself
+ * under the hand that made it.
+ *
+ * Read through `isWorn` and never compared to directly: every reader tested falsiness instead, so
+ * the constant could not have changed value without breaking them all in silence.
+ */
+export const NOTHING_WORN = ''
+
+/**
+ * How many material slots a model may be given. The list GROWS to reach the slot named, so an
+ * outside caller asking for a millionth one would allocate a million empty rows.
+ */
+export const MATERIAL_SLOTS = 64
+
+/** Whether a slot of either mode names something. The one reading of `NOTHING_WORN`. */
+export function isWorn(id: string | undefined): id is string {
+  return id !== undefined && id !== NOTHING_WORN
+}
+
+/**
+ * The material documents a model wears, slot by slot — empty for one dressed any other way.
+ *
+ * The empty answer is SHARED: a fresh array is a new snapshot on every call, which is a render
+ * loop the day this is read inside a zustand selector.
+ */
+export function wornMaterials(dress: ModelDressRef | undefined): readonly string[] {
+  return dress?.kind === 'materials' ? dress.documentIds : NO_MATERIALS
+}
+
+const NO_MATERIALS: readonly string[] = Object.freeze([])
+
+/**
+ * One slot of a material list, the rest carried over — and the list GROWN to reach it when the
+ * slot sits past its end, since a model's slots come from its file and the list may not have
+ * caught up. The gap fills with empty slots rather than shifting what is already worn.
+ */
+export function withMaterialAt(
+  worn: readonly string[],
+  slot: number,
+  documentId: string,
+): readonly string[] {
+  if (slot < 0 || slot >= MATERIAL_SLOTS || !Number.isInteger(slot)) return worn
+
+  const next = [...worn]
+  while (next.length <= slot) next.push(NOTHING_WORN)
+  next[slot] = documentId
+  return next
+}
+
+/**
+ * What a MATERIAL is worth to a model — its maps by slot, and the dials a plain standard material
+ * reads. Resolved from the document the node names, never stored on the node.
+ */
+export type ModelDress = {
+  textures: Partial<Record<TextureSlot, TextureRef>>
+  /** Absent where nothing is set — an empty finish still costs a `needsUpdate` per material. */
+  material?: ModelMaterial
+}
+
+/** What a model wears over its file. Every field optional: absent leaves what the glTF said. */
+export type ModelMaterial = {
+  color?: string
+  roughness?: number
+  metalness?: number
+  normalScale?: number
+  aoIntensity?: number
+  emissive?: string
+  emissiveIntensity?: number
+  /** Repeat and shift of every map at once — applied to the textures, not to the material. */
+  tiling?: { x: number; y: number }
+  offset?: { x: number; y: number }
+  /** Radians. */
+  rotation?: number
 }
 
 /**
@@ -335,11 +411,18 @@ export function clipFromAnimation(animation: AnimationRef): ClipRef {
 }
 
 /**
- * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters
- * it — so a brand new document is already lit without the studio shipping an HDRI; anything else
- * is a skybox of the project, named by asset id like every other reference a document stores.
+ * What lights a viewport, and the same three-way choice a model's dress is: nothing of the
+ * project, one PICTURE, or a DOCUMENT the scene follows.
+ *
+ * `studio` is procedural — three builds a small lit room and prefilters it — so a brand new
+ * document is already lit without the studio shipping an HDRI.
+ *
+ * `skybox` is one picture, hung as it is. `sky` names a sky DOCUMENT and takes everything it
+ * says: the graded picture, its sun, its environment intensity. A reference and not a copy, so
+ * turning the sun in that document turns the shadows of every scene naming it.
  */
-export type EnvironmentRef = { kind: 'studio' } | { kind: 'skybox'; assetId: string }
+export type EnvironmentRef =
+  { kind: 'studio' } | { kind: 'skybox'; assetId: string } | { kind: 'sky'; documentId: string }
 
 export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio' })
 
@@ -349,7 +432,7 @@ export const STUDIO_ENVIRONMENT: EnvironmentRef = Object.freeze({ kind: 'studio'
  * The two are EXCLUSIVE, and that is the whole reason a panel names them: a scene is lit by one
  * prefiltered map, so choosing a sky is what puts the procedural studio out.
  */
-export const ENVIRONMENT_KINDS: readonly EnvironmentRef['kind'][] = ['studio', 'skybox']
+export const ENVIRONMENT_KINDS: readonly EnvironmentRef['kind'][] = ['studio', 'skybox', 'sky']
 
 /**
  * The ready-made worlds a scene can be set up as. Only the names live here — what each one WRITES
@@ -372,7 +455,11 @@ export const ENVIRONMENT_PRESETS: readonly EnvironmentPreset[] = [
 export function readEnvironment(value: unknown): EnvironmentRef {
   if (typeof value !== 'object' || value === null) return STUDIO_ENVIRONMENT
 
-  const held: { kind?: unknown; assetId?: unknown } = value
+  const held: { kind?: unknown; assetId?: unknown; documentId?: unknown } = value
+  if (held.kind === 'sky' && typeof held.documentId === 'string' && held.documentId !== '') {
+    return { kind: 'sky', documentId: held.documentId }
+  }
+
   return held.kind === 'skybox' && typeof held.assetId === 'string' && held.assetId !== ''
     ? { kind: 'skybox', assetId: held.assetId }
     : STUDIO_ENVIRONMENT
@@ -535,6 +622,11 @@ export type SceneWorld = {
   exposure: number
   ground: GroundDescriptor
   play: ScenePlay
+  /**
+   * The scene's Default Post Processing — what the viewport shows, and what every camera films
+   * through unless it says otherwise. Part of the document like the fog, and belonging to no node.
+   */
+  post: PostStack
 }
 
 export const DEFAULT_WORLD: SceneWorld = Object.freeze({
@@ -549,6 +641,9 @@ export const DEFAULT_WORLD: SceneWorld = Object.freeze({
   exposure: 1,
   ground: DEFAULT_GROUND,
   play: DEFAULT_PLAY,
+  // Empty and ON: a scene opens composing nothing, and the switch is already where a first
+  // effect will be compared from.
+  post: EMPTY_STACK,
 })
 
 /** Bounds a slider and a stored value are both held to. */
@@ -575,7 +670,19 @@ export const SHADOW_QUALITIES: readonly ShadowQuality[] = ['hard', 'soft']
 export const SHADOW_MAP_SIZES: readonly number[] = [512, 1024, 2048, 4096]
 
 /** The maps a `MeshStandardMaterial` reads, in the order the inspector lists them. */
-export type TextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap' | 'aoMap'
+export type TextureSlot =
+  | 'map'
+  | 'normalMap'
+  | 'roughnessMap'
+  | 'metalnessMap'
+  | 'aoMap'
+  | 'emissiveMap'
+  /**
+   * Displaces VERTICES, so it shows nothing on a shape with no vertices to move — a plane of two
+   * triangles stays flat however strong the map. The material's own preview tessellates; a scene
+   * draws what its geometry has.
+   */
+  | 'displacementMap'
 
 export const TEXTURE_SLOTS: readonly TextureSlot[] = [
   'map',
@@ -583,6 +690,8 @@ export const TEXTURE_SLOTS: readonly TextureSlot[] = [
   'roughnessMap',
   'metalnessMap',
   'aoMap',
+  'emissiveMap',
+  'displacementMap',
 ]
 
 export type MaterialDescriptor = {

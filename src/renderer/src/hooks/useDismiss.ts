@@ -1,5 +1,17 @@
 import { useEffect, type RefObject } from 'react'
+import { portalAnchorAbove, portalOpenInside } from '@/components/portalAnchors'
 import { isComposing } from '@/helpers/composition'
+
+// 🛑 Through the surfaces a press crossed, not the DOM alone — see `portalAnchors.ts`.
+function inside(target: Node, surface: HTMLElement | null, opener?: HTMLElement | null): boolean {
+  let node: Node | null = target
+  while (node) {
+    if (surface?.contains(node) || opener?.contains(node)) return true
+    node = portalAnchorAbove(node)
+  }
+
+  return false
+}
 
 /**
  * `pointerdown` in capture, not `click`: a surface that survives until mouseup stays under the
@@ -22,13 +34,15 @@ export function useDismiss(
     const onPointerDown = (event: Event): void => {
       const target = event.target
       if (!(target instanceof Node)) return
-      if (surface.current?.contains(target) || opener?.contains(target)) return
-      onDismiss()
+      if (!inside(target, surface.current, opener)) onDismiss()
     }
     const onKeyDown = (event: KeyboardEvent): void => {
       // Escape cancels the candidate an input method is composing, and a surface holding a text
       // field would close under it — the assistant does. See `isComposing`.
-      if (event.key === 'Escape' && !isComposing(event)) onDismiss()
+      if (event.key !== 'Escape' || isComposing(event)) return
+      // 🛑 The INNER surface answers it: the pointer was taught to walk the chain and the key was
+      // not, so Escape in the journal's own filter menu closed the journal underneath it.
+      if (!portalOpenInside(surface.current)) onDismiss()
     }
     const onBlur = (): void => onLeave?.()
 

@@ -186,6 +186,16 @@ describe('adoptFile', () => {
     expect(landed).toHaveLength(1)
   })
 
+  /**
+   * 🛑 The ORDINARY answer, not a fault: the assistant calls this with a name a person spoke —
+   * `voilier vert`, straight from the sentence. An ENOENT crossing the boundary was logged as a
+   * handler error and counted on the status line as a studio failure, and the caller could not
+   * tell "no such file" from "the catalogue broke".
+   */
+  it('answers nothing for a path the project does not hold, rather than throwing', async () => {
+    await expect(adoptFile('voilier vert', deps())).resolves.toBeNull()
+  })
+
   it('refuses a path that leaves the project, and a folder', async () => {
     await mkdir(join(root, 'Textures'), { recursive: true })
 

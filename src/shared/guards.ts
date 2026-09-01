@@ -8,6 +8,16 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * The code inside a rejection that crossed the IPC boundary, or nothing when none of them is.
+ *
+ * 🛑 Matched at the END, never compared whole: `ipcMain.handle` wraps what it rethrows — `Error
+ * invoking remote method 'project:create': Error: holds-projects` — so an equality test never
+ * fires and every failure reads as unexpected.
+ */
+export const codeIn = <T extends string>(message: string, codes: readonly T[]): T | null =>
+  codes.find(code => message === code || message.endsWith(`: ${code}`)) ?? null
+
+/**
  * What a rejection says, whatever was thrown. A thrown string is as ordinary as a thrown
  * `Error` — a worker that dies, a loader that gives up — and both sides of the boundary need
  * the same answer for the same throw.
@@ -17,6 +27,17 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * The same record under renamed keys, for a blob read back from storage whose keys have since
+ * been renamed away. Two persisted shapes migrate this way, one per side of the boundary.
+ */
+export function mapKeys(
+  held: Record<string, unknown>,
+  rename: (key: string) => string,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(held).map(([key, value]) => [rename(key), value]))
 }
 
 /**
@@ -52,6 +73,27 @@ export function readNumber(source: Record<string, unknown>, key: string, fallbac
 export function readString(source: Record<string, unknown>, key: string, fallback: string): string {
   const value = source[key]
   return typeof value === 'string' ? value : fallback
+}
+
+/**
+ * A field held as WORDS, or nothing — blank counts as nothing.
+ *
+ * Distinct from `readString`, which answers a fallback: a caller that has to tell « absent » from
+ * « empty » wrote `readString(…, '').trim() === '' ? null : readString(…, '')`, reading the same
+ * key twice. Both sides of the boundary ask, which is why it lives here.
+ */
+export function readText(source: Record<string, unknown>, key: string): string | null {
+  const value = source[key]
+  return typeof value === 'string' && value.trim() !== '' ? value : null
+}
+
+/** A number held as a number, or nothing — where `readNumber` answers a fallback. */
+export function readOptionalNumber(
+  source: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  const value = source[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
 /**

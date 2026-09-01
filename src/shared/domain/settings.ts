@@ -1,14 +1,17 @@
 import type { LanguagePreference } from '../i18n/languages'
 // From the model module rather than from the registry: `shellActions.ts` reads this file, and the
 // registry reads it back — `import-cycles.test.ts` holds that count at zero.
+import type { AiRoleId, RoleProvider } from './aiRole'
 import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
+import { ASSISTANT_STEPS_DEFAULT } from './assistantSteps'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
 import type { ApiFailure } from './failure'
+import type { LandingTarget } from './landingTarget'
+import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
-import type { ModelFamily } from './model'
 import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
 
 /**
@@ -46,9 +49,14 @@ export const DENSITIES: readonly Density[] = ['comfortable', 'compact']
  * stylesheet, the renderer that publishes the attribute and the tests all read the same word.
  */
 export const THEME_ATTRIBUTE: Record<ResolvedTheme, string> = {
-  dark: 'scenario-dark',
-  light: 'scenario-light',
+  dark: 'iastudio-dark',
+  light: 'iastudio-light',
 }
+
+/** What a finished generation does with a document that is already open. */
+export type LandingChoice = 'ask' | LandingTarget
+
+export const LANDING_CHOICES: readonly LandingChoice[] = ['ask', 'document', 'newTab']
 
 /**
  * Settings the renderer may read. API credentials NEVER appear here: the renderer asks
@@ -72,6 +80,11 @@ export type Settings = {
    */
   home: {
     enabled: boolean
+    /**
+     * Whether the news band reads the hub. The one outward call the studio makes for something
+     * other than a model or a job, so it is a setting rather than a fact.
+     */
+    news: boolean
     sections: HomeSectionSetting[]
   }
   /**
@@ -94,8 +107,12 @@ export type Settings = {
   generation: {
     concurrentJobs: number
     maxRetries: number
-    /** Model preselected by the generator, per family. Absent means "ask every time". */
-    defaultModels: Partial<Record<ModelFamily, string>>
+    /**
+     * Where a finished generation goes when a document of its kind is already open: into that
+     * document, into a tab of its own, or the question. With nothing open there is nothing to
+     * ask — it opens.
+     */
+    landing: LandingChoice
     /**
      * Whether an asset arriving without a useful name gets described on its own.
      *
@@ -118,11 +135,35 @@ export type Settings = {
      * FAILS. A project on a drive that was not plugged in would have come back on someone else's
      * key, in silence, which is the one thing this exists to prevent.
      *
-     * Nothing prunes it, and `forget` deliberately leaves it alone for that same reason — pruning
-     * on the path an opening failed on is exactly the defect above. It grows by one short line per
-     * project ever opened, which is the cost of not losing a choice the user made.
+     * 🛑 Only a CONFIRMED bin prunes it — `project.trash` answering `trashed`, never `missing`.
+     * `forget`, a failed opening and a folder the disk cannot see right now all leave it alone:
+     * pruning on any of those is exactly the defect above. It grows by one short line per project
+     * ever opened, which is the cost of not losing a choice the user made.
      */
     projectAccounts: Record<string, string>
+  }
+  /**
+   * Which provider serves each AI role — see `docs/ci/adr/ADR-21-…`.
+   *
+   * `roles` is the default that follows the person; `projectRoles` is what one project overrides,
+   * BY FOLDER, exactly as `storage.projectAccounts` already does for the account. Kept out of
+   * `.project.json`, which ADR-21 § D asked for and its amendment of 21/08 reversed: an account id
+   * is minted locally, so half the scope could never travel anyway.
+   *
+   * Both are partial. An absent role is none: `providerFor` answers nothing until the person
+   * picks, so an account on file never spends on its own.
+   */
+  ai: {
+    roles: Partial<Record<AiRoleId, RoleProvider>>
+    projectRoles: Record<string, Partial<Record<AiRoleId, RoleProvider>>>
+    /**
+     * The models the person supplied themselves — rank 3 of ADR-20, and the ONE place they live.
+     *
+     * A manifest apiece rather than a path apiece: what a GGUF header answers is read once, at the
+     * moment they point at the file, and a header re-read on every compose would open every one of
+     * their files on every assistant turn.
+     */
+    ownModels: LocalModel[]
   }
   /**
    * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
@@ -148,6 +189,16 @@ export type Settings = {
     /** In degrees, like the inspector: radians are stored, never typed. */
     snapRotate: number
     snapScale: number
+    /**
+     * How big the transform handles are drawn, as a share of what `TransformControls` calls 1.
+     * Their size on SCREEN stays constant whatever the distance — that is the control's own
+     * doing, and what every 3D application does — so this is how much of the screen they take.
+     */
+    gizmoSize: number
+    /** Whether a surface snap turns what it lays down to match the slope it lands on. */
+    snapSurfaceAlign: boolean
+    /** Metres a surface snap leaves between what it lays down and what it landed on. */
+    snapSurfaceOffset: number
     /** Whether shadow maps are drawn at all — a depth pass per casting light, and the way out of it. */
     shadows: boolean
     /** How soft a shadow edge is. Which objects throw one is a property of the node. */
@@ -218,6 +269,22 @@ export type Settings = {
      * and opening the preferences to get there loses the sentence.
      */
     model: AssistantModel
+    /**
+     * The model each cloud is talked to with, by cloud id. Free text: every cloud names its own,
+     * and a list written here would be stale the week after. Absent means what the cloud declares.
+     */
+    cloudModels: Record<string, string>
+    /**
+     * 🛑 How many times ONE sentence may send the model back to work — the ceiling on a chain.
+     *
+     * A request like "open it, adjust it, put it in the scene" is several actions whose inputs
+     * are only known once the one before has answered, so the assistant asks again with what it
+     * learned. Each of those is a BILLED round trip, and a model that keeps re-running the same
+     * action would spend without end: this is the one thing between a chain and a runaway.
+     *
+     * Reached, the assistant stops and says so rather than pretending it finished.
+     */
+    steps: number
   }
   /**
    * The same actions the assistant runs, offered to a client outside the application — see
@@ -290,10 +357,13 @@ export type Settings = {
  */
 export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject', autosave: true },
-  home: { enabled: true, sections: [...DEFAULT_HOME_SECTIONS] },
+  home: { enabled: true, news: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
-  generation: { concurrentJobs: 3, maxRetries: 4, defaultModels: {}, captionArrivals: true },
+  generation: { concurrentJobs: 3, maxRetries: 4, captionArrivals: true, landing: 'ask' },
+  // Empty on a fresh install, and that is the point: no choice made means the local side is
+  // taken wherever it can serve, so the studio works before anyone has an account.
+  ai: { roles: {}, projectRoles: {}, ownModels: [] },
   three: {
     showGrid: true,
     gridSize: 20,
@@ -303,6 +373,9 @@ export const DEFAULT_SETTINGS: Settings = {
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
+    gizmoSize: 0.75,
+    snapSurfaceAlign: true,
+    snapSurfaceOffset: 0,
     shadows: true,
     shadowQuality: 'soft',
     shadowMapSize: 2048,
@@ -324,7 +397,7 @@ export const DEFAULT_SETTINGS: Settings = {
   advanced: { logLevel: 'info' },
   media: {},
   git: {},
-  assistant: { model: DEFAULT_ASSISTANT_MODEL },
+  assistant: { model: DEFAULT_ASSISTANT_MODEL, cloudModels: {}, steps: ASSISTANT_STEPS_DEFAULT },
   mcp: {
     enabled: false,
     delegateFiles: false,
@@ -340,6 +413,20 @@ export const DEFAULT_SETTINGS: Settings = {
     threads: 2,
     idleUnloadMinutes: 10,
   },
+}
+
+/**
+ * The settings a profile that has never been written starts from.
+ *
+ * `mcp.enabled` is the only one that depends on which run this is, and it is PASSED rather than
+ * read here: a development checkout opens its way in with nothing to tick, and a distributed
+ * application does not — there, the door stays the person's to open. `main/mcp/production-unchanged.test.ts`
+ * holds that difference.
+ */
+export function defaultSettings(isDevelopment: boolean): Settings {
+  if (!isDevelopment) return DEFAULT_SETTINGS
+
+  return { ...DEFAULT_SETTINGS, mcp: { ...DEFAULT_SETTINGS.mcp, enabled: true } }
 }
 
 /** Derived, so a section added to `Settings` is writable without being restated here. */
@@ -397,19 +484,26 @@ export type SettingsSectionId =
   | 'account'
   | 'appearance'
   | 'generation'
-  | 'generation.image'
-  | 'generation.video'
-  | 'generation.3d'
-  | 'generation.audio'
-  | 'generation.upscale'
-  | 'generation.background-removal'
-  | 'generation.vectorization'
+  | 'ai'
+  | 'ai.image'
+  | 'ai.video'
+  | 'ai.3d'
+  | 'ai.audio'
+  | 'ai.material'
+  | 'ai.skybox'
+  | 'ai.code'
+  | 'ai.upscale'
+  | 'ai.background-removal'
+  | 'ai.vectorization'
   | 'spaces'
   | 'spaces.three'
   | 'shortcuts'
   | 'dictation'
   | 'media'
   | 'git'
+  | 'mcp'
+  | 'memory'
+  | 'memory.graph'
   | 'storage'
   | 'advanced'
 
@@ -418,19 +512,26 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'account',
   'appearance',
   'generation',
-  'generation.image',
-  'generation.video',
-  'generation.3d',
-  'generation.audio',
-  'generation.upscale',
-  'generation.background-removal',
-  'generation.vectorization',
+  'ai',
+  'ai.image',
+  'ai.video',
+  'ai.3d',
+  'ai.audio',
+  'ai.material',
+  'ai.skybox',
+  'ai.code',
+  'ai.upscale',
+  'ai.background-removal',
+  'ai.vectorization',
   'spaces',
   'spaces.three',
   'shortcuts',
   'dictation',
   'media',
   'git',
+  'mcp',
+  'memory',
+  'memory.graph',
   'storage',
   'advanced',
 ]

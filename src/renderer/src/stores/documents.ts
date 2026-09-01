@@ -1,5 +1,5 @@
 import {
-  DOCUMENTS_FOLDER,
+  roleForKind,
   kindForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
@@ -7,12 +7,15 @@ import {
 import {
   checkDocumentName,
   documentFileName,
+  documentPathFor,
   DOCUMENT_NAME_FAILURES,
   type DocumentNameFailure,
   type NamedDocument,
 } from '@shared/domain/documentName'
 import { foldForFileName, nameFailureOf, safeFileName } from '@shared/domain/fileName'
-import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
+import { nameOf, parentOf } from '@shared/domain/folder'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
+import { refFromString } from '@shared/domain/ref'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
@@ -76,7 +79,7 @@ type DocumentsState = {
    * plus button raises hands over. Without `of` the document is numbered, for a caller with
    * nobody to ask.
    *
-   * `folder` is where its author filed it — `DOCUMENTS_FOLDER` for a caller who did not ask.
+   * `folder` is where its author filed it — `documentFolderOf` for a caller who did not ask.
    */
   create: (
     workspace: WorkspaceId,
@@ -106,6 +109,9 @@ type DocumentsState = {
 
 export type DocumentsSlice = Pick<DocumentsState, 'documents' | 'activeId'>
 
+/** The slice a reader outside the store needs to answer about the FOLDER as well as the tabs. */
+export type DocumentsRead = Pick<DocumentsState, 'documents' | 'stored' | 'activeId'>
+
 /**
  * The document in front, when it is one of a given kind. A scene panel handed an image
  * document would give `useScenes` a state and a history for a document that has no scene.
@@ -133,6 +139,76 @@ export function documentOfKind(
 }
 
 /**
+ * The document a project path names, open in a tab or merely sitting in the folder.
+ *
+ * `stored` first: it is the folder, and a document listed there but closed is exactly the case
+ * an open-by-path has to find. Both halves, for the same reason `documentForAsset` reads both.
+ */
+export function documentAtPath(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  path: string,
+): DocumentDescriptor | null {
+  return (
+    state.stored.find(one => one.path === path) ??
+    Object.values(state.documents).find(one => one.path === path) ??
+    null
+  )
+}
+
+/** The document an id names. `documents` first, unlike `documentAtPath`: the tab holds the edits. */
+export function documentById(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  id: string,
+): DocumentDescriptor | null {
+  return state.documents[id] ?? state.stored.find(one => one.id === id) ?? null
+}
+
+/**
+ * Every document of one kind this project holds — the folder and the tabs, keyed by id so a
+ * document open in a tab is not listed twice.
+ */
+export function documentsOfKind(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  kind: DocumentKind,
+): readonly DocumentDescriptor[] {
+  return [
+    ...new Map(
+      [...state.stored, ...Object.values(state.documents)]
+        .filter(one => one.kind === kind)
+        .map(one => [one.id, one]),
+    ).values(),
+  ]
+}
+
+/**
+ * The document of one kind carrying that title, or `null` — a title is what a spoken request has.
+ *
+ * Through `documentsOfKind`, so an OPEN tab answers for a document the folder still lists under
+ * its former title.
+ */
+export function documentNamedOfKind(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  kind: DocumentKind,
+  title: string,
+): string | null {
+  return documentsOfKind(state, kind).find(one => one.title === title)?.id ?? null
+}
+
+/**
+ * Which scene document a spoken name stands for — a `scene:`/`document:` reference, a title, or
+ * an id. Falls back to the word itself, which a reader then answers `null` for.
+ *
+ * Shared because two doors take the same word: a prefab a model names, and a scene a running
+ * game loads. Written twice, the two drifted the day one of them learned to read a reference.
+ */
+export function sceneDocumentNamed(named: string): string {
+  const ref = refFromString(named)
+  if (ref?.kind === 'prefab' || ref?.kind === 'document') return ref.id
+
+  return documentNamedOfKind(useDocuments.getState(), 'scene', named) ?? named
+}
+
+/**
  * The document already editing an asset, open or merely on disk, or `null` when none is.
  *
  * What keeps a double-click idempotent: opening the same asset twice must come back to its tab
@@ -148,7 +224,7 @@ export function documentForAsset(
   assetId: string,
   /**
    * Narrows to documents of one kind. One asset can legitimately be edited by two of them — a
-   * texture is a channel in the Textures space and pixels in the Images one — and a gesture
+   * texture is a channel in the Materials space and pixels in the Images one — and a gesture
    * asking for the second must not be handed the first.
    */
   kind?: DocumentKind,
@@ -165,9 +241,16 @@ export function documentForAsset(
 export const activeSceneId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'scene')
 
+/** The interface in front, as a selector. Same reason as `activeSceneId`, for its outliner. */
+export const activeGuiId = (state: DocumentsSlice): string | null => activeIdOfKind(state, 'gui')
+
 /** The image in front, as a selector. Same reason as `activeSceneId`, for the layer stack. */
 export const activeImageId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'image')
+
+/** The script in front, as a selector — what the code generator rewrites when asked to. */
+export const activeScriptId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'script')
 
 /** The sequence in front, as a selector. Same reason again, for the montage and its inspector. */
 export const activeSequenceId = (state: DocumentsSlice): string | null =>
@@ -193,9 +276,9 @@ export const activeMontageId = (state: DocumentsSlice): string | null =>
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')
 
-/** The texture in front, as a selector. Same reason again, for the material inspector. */
-export const activeTextureId = (state: DocumentsSlice): string | null =>
-  activeIdOfKind(state, 'texture')
+/** The material in front, as a selector. Same reason again, for the material inspector. */
+export const activeMaterialId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'material')
 
 /**
  * Whether this project holds the document an id names — open in a tab or sitting in the folder.
@@ -207,7 +290,7 @@ export function documentIsKnown(
   state: Pick<DocumentsState, 'documents' | 'stored'>,
   documentId: string,
 ): boolean {
-  return Boolean(state.documents[documentId]) || state.stored.some(one => one.id === documentId)
+  return documentById(state, documentId) !== null
 }
 
 export function documentsIn(
@@ -332,7 +415,13 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
 
     const title =
       of?.title ??
-      untitledDocumentName(takenDocumentNames({ documents: get().documents, stored }), kind)
+      untitledDocumentName(
+        takenDocumentNames(
+          { documents: get().documents, stored },
+          DEFAULT_ROLE_PATHS[roleForKind(kind)],
+        ),
+        kind,
+      )
 
     const document: DocumentDescriptor = {
       id: newId(),
@@ -344,7 +433,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // (there is no file to disagree with), and the first save answers for good: it may land on
       // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
       // folder holds.
-      path: pathIn(of?.folder ?? DOCUMENTS_FOLDER, documentFileName(title, kind)),
+      path: documentPathFor(title, kind, of?.folder),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
@@ -363,7 +452,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     ),
 
   rename: async (id, title) => {
-    const document = get().documents[id] ?? get().stored.find(entry => entry.id === id)
+    const document = documentById(get(), id)
     if (!document) return 'invalid'
 
     // Asked here as well as in the main process, and neither is the redundant one: this spares a
@@ -377,10 +466,16 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     const refused = checkDocumentName(title, document.kind, taken, id)
     if (refused) return refused
 
-    const renamed = await getBridge()
-      ?.documents.rename(id, document.kind, title)
-      .catch(error => asNameFailure(error))
-    if (renamed === undefined) return 'invalid'
+    const bridge = getBridge()
+    if (!bridge) return 'invalid'
+
+    let renamed
+    try {
+      renamed = await bridge.documents.rename(id, document.kind, title)
+    } catch (error) {
+      return asNameFailure(error)
+    }
+
     if (typeof renamed === 'string') return renamed
 
     // Both halves, and that is the point of doing it here: `documents` is what the tab reads and
@@ -444,11 +539,10 @@ export function takenDocumentNames(
     documents: Record<string, DocumentDescriptor>
     stored: readonly DocumentDescriptor[]
   },
-  folder: string = DOCUMENTS_FOLDER,
+  folder: string,
 ): NamedDocument[] {
   // One folder, never the project: two folders may each hold a `Niveau.gltf` and the disk is
-  // happy with both, so a name taken elsewhere in the tree is not taken here. The default is
-  // where a document nobody has placed goes, which is what every caller of this asks about.
+  // happy with both, so a name taken elsewhere in the tree is not taken here.
   return [...state.stored, ...Object.values(state.documents)]
     .filter(document => (parentOf(document.path) ?? '') === folder)
     .map(({ id, path }) => ({ id, fileName: nameOf(path) }))
@@ -461,7 +555,10 @@ export function takenDocumentNames(
  * Named after its KIND rather than « Sans titre », and the folder is why: the number is free per
  * FILE name, so the six kinds each held a « Sans titre 1 » a glyph alone told apart.
  */
-export function untitledDocumentName(taken: readonly NamedDocument[], kind: DocumentKind): string {
+export function untitledDocumentName(
+  taken: readonly Pick<NamedDocument, 'fileName'>[],
+  kind: DocumentKind,
+): string {
   const names = new Set(taken.map(document => foldForFileName(document.fileName)))
   // Composed, hence `COMPOSED_KEYS` — and read once, the word being the same at every number.
   const called = i18next.t(`documents.kinds.${kind}`)

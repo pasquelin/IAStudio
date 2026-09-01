@@ -1,0 +1,105 @@
+{
+  "game": {
+    "components": {
+      "CharacterController": {
+        "description": "Fait de l’objet celui qu’on dirige : il marche, il saute, il monte les marches.",
+        "title": "Personnage"
+      },
+      "Collider": {
+        "description": "Donne à l’objet un volume que les autres ne peuvent pas traverser.",
+        "title": "Volume"
+      },
+      "Health": {
+        "description": "Des points de vie, qui descendent quand l’entité est touchée et la font mourir à zéro.",
+        "title": "Santé"
+      },
+      "Movement": {
+        "description": "Fait aller et venir l’entité toute seule, le long d’un axe — une plate-forme, un ascenseur, un piège.",
+        "title": "Mouvement"
+      },
+      "RigidBody": {
+        "description": "Confie l’objet à la simulation : il tombe, il glisse, il se fait pousser.",
+        "title": "Physique"
+      },
+      "Script": {
+        "title": "Script",
+        "description": "Confie l’objet à du code : ce que l’auteur a écrit s’exécute à chaque pas."
+      },
+      "Trigger": {
+        "description": "Ne bloque rien et prévient quand quelque chose entre dans son volume ou en sort.",
+        "title": "Détecteur"
+      }
+    },
+    "fields": {
+      "axis": "Axe",
+      "current": "Actuelle",
+      "distance": "Distance",
+      "fidelity": "Précision",
+      "friction": "Frottement",
+      "gravityScale": "Pesanteur",
+      "height": "Hauteur",
+      "jumpSpeed": "Saut",
+      "kind": "Simulation",
+      "lockRotation": "Bloquer la rotation",
+      "mass": "Masse",
+      "max": "Maximum",
+      "mode": "Parcours",
+      "radius": "Rayon",
+      "restitution": "Rebond",
+      "script": "Fichier",
+      "slopeLimit": "Pente",
+      "snapDistance": "Accroche",
+      "speed": "Vitesse",
+      "stepHeight": "Marche"
+    },
+    "play": {
+      "faults_many": "{{count, number}} erreurs",
+      "faults_one": "{{count, number}} erreur",
+      "faults_other": "{{count, number}} erreurs",
+      "objects_many": "{{count, number}} objets",
+      "objects_one": "{{count, number}} objet",
+      "objects_other": "{{count, number}} objets",
+      "pause": "Pause",
+      "pauseHint": "Fige la partie là où elle en est",
+      "readout": "{{fps}} i/s · pas {{tick}}",
+      "start": "Jouer",
+      "startHint": "Lance la scène comme une partie, sans toucher au document",
+      "stop": "Arrêter",
+      "stopHint": "Jette la partie et remet la scène telle qu’elle était",
+      "openFault": "Ouvre le script à la ligne de la faute"
+    },
+    "section": {
+      "title": "Composants",
+      "add": "Ajouter un composant",
+      "addHint": "Donner à cet objet quelque chose à faire pendant la partie",
+      "remove": "Détacher",
+      "removeHint": "Détacher ce composant de l’objet",
+      "empty": "Cet objet ne fait rien pendant la partie.",
+      "emptyHint": "Un composant dit ce que l’objet FAIT, quand son type dit ce qu’il dessine."
+    },
+    "values": {
+      "auto": "Automatique",
+      "box": "Cube",
+      "convexes": "Convexes",
+      "dynamic": "Dynamique",
+      "fixed": "Fixe",
+      "hull": "Enveloppe",
+      "kinematic": "Pilotée",
+      "loop": "En boucle",
+      "once": "Une fois",
+      "pingPong": "Aller-retour",
+      "trimesh": "Triangles",
+      "unknown": "Valeur inconnue",
+      "x": "X",
+      "y": "Y",
+      "z": "Z"
+    },
+    "window": {
+      "debug": "Débogage",
+      "debugHint": "Ce que la partie dit d’elle-même : objets, images par seconde, pas, fautes",
+      "noFaults": "Aucune faute",
+      "title": "Partie",
+      "waiting": "En attente du studio…"
+    }
+  }
+}

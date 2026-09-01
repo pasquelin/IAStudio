@@ -1,11 +1,11 @@
-import type { AssetType } from '@shared/domain/asset'
-import { placementIn, type ToolId, type ToolSurface } from '@shared/domain/tool'
-import { showWorkspace } from '@/app/dockviewApi'
-import { setFacetValue } from '@/helpers/collectionState'
-import { shownTool, toolStateOf } from '@/helpers/toolRegistry'
-import { workspaceOfType } from '@/helpers/workspaces'
-import { TYPE_FACET } from '@/panels/assets/facets'
-import { useAssets } from '@/stores/assets'
+import {
+  placementIn,
+  type ToolId,
+  type ToolSlot,
+  type ToolSurface,
+  type ToolZone,
+} from '@shared/domain/tool'
+import { offeredPlacement, shownTools, toolStateOf } from '@/helpers/toolRegistry'
 import { toolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 
@@ -15,9 +15,10 @@ import { arrangementOf, useTools } from '@/stores/tools'
  * band is the montage in three spaces and the history in the other three, and a half that does
  * not match its placement renders a different panel altogether.
  *
- * No placement means this surface does not serve the tool — opening it would accent a rail
- * icon that is not drawn and show nothing. Answered rather than ignored, for the one caller that
- * has to say so: an MCP client naming a panel the surface in front does not carry.
+ * 🛑 OFFERED, not merely placed: a panel withheld by its `requires` would be written into the
+ * half and then resolved away, opening the column on something else entirely. Answered rather
+ * than ignored, for the one caller that has to say so: an MCP client naming a panel the surface
+ * in front does not carry.
  *
  * Already up is only focused, never rewritten: the half may be showing this panel because it is
  * the first one the section declares, and naming it would settle for all six sections a question
@@ -25,11 +26,12 @@ import { arrangementOf, useTools } from '@/stores/tools'
  */
 export function revealTool(tool: ToolId): boolean {
   const surface = toolSurface()
-  const placement = placementIn(tool, surface)
+  const state = toolStateOf()
+  const placement = offeredPlacement(tool, surface, state)
   if (!placement) return false
 
   const tools = useTools.getState()
-  if (toolIsShown(tool, surface)) tools.focus(placement.zone)
+  if (shownIn(tool, surface, placement.zone, placement.slot)) tools.focus(placement.zone)
   else tools.show(surface, placement.zone, tool)
   return true
 }
@@ -42,9 +44,12 @@ export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
   const placement = placementIn(tool, surface)
   if (!placement) return false
 
-  const { zone, slot } = placement
+  return shownIn(tool, surface, placement.zone, placement.slot)
+}
+
+function shownIn(tool: ToolId, surface: ToolSurface, zone: ToolZone, slot: ToolSlot): boolean {
   const { open } = arrangementOf(useTools.getState(), surface)
-  return shownTool(open[zone]?.[slot], zone, slot, surface, toolStateOf(surface)) === tool
+  return shownTools(open[zone], zone, surface, toolStateOf())[slot] === tool
 }
 
 /**
@@ -56,7 +61,7 @@ export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
 export function closeTool(tool: ToolId): boolean {
   const surface = toolSurface()
   const placement = placementIn(tool, surface)
-  if (!placement || !toolIsShown(tool, surface)) return false
+  if (!placement || !shownIn(tool, surface, placement.zone, placement.slot)) return false
 
   useTools.getState().close(surface, placement.zone, placement.slot)
   return true
@@ -68,24 +73,4 @@ export function closeTool(tool: ToolId): boolean {
  */
 export function revealAssets(): void {
   revealTool('assets')
-}
-
-/**
- * Brings the shelf up narrowed to one kind, in the workspace that makes it.
- *
- * Beside `revealAssets` rather than in the home that asks for it: naming a facet and writing it
- * into the browser's state is the panel's own language, and the home has no business speaking
- * it. The kind IS the scope the shelf asks the catalogue and the library for, so a click on
- * "Skyboxes" shows every sky rather than the four kinds that space happens to accept.
- */
-export function revealAssetsOfKind(type: AssetType): void {
-  // `showWorkspace` rather than the store's setter, so the tab strip and the rail agree: the
-  // centre holds every section at once, and a section chosen by hand brings its own tab forward.
-  showWorkspace(workspaceOfType(type))
-
-  const { collection, setCollection } = useAssets.getState()
-  setCollection(setFacetValue(collection, TYPE_FACET, type))
-
-  // After the workspace: the shelf lands wherever THAT space puts it.
-  revealAssets()
 }

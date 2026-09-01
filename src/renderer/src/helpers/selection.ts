@@ -1,3 +1,4 @@
+import { sameOrder } from '@shared/collections'
 /**
  * A selection as an ordered list of ids, and what a click does to one.
  *
@@ -17,6 +18,15 @@ export type Modifiers = { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean 
 /** What a click on `id` asks for, given the ids in the order they are drawn. */
 export type Pick = { ids: readonly string[]; mode: SelectionMode }
 
+/**
+ * What a gesture on one row acts on: the whole selection where that row is part of it, the row
+ * alone otherwise. A drag or a menu can start without a click, and must not wipe a range the
+ * user just built.
+ */
+export function actedOn(selected: readonly string[], id: string): readonly string[] {
+  return selected.includes(id) ? selected : [id]
+}
+
 export function applySelection(
   current: readonly string[],
   ids: readonly string[],
@@ -25,7 +35,25 @@ export function applySelection(
   const next = mode === 'replace' ? [...new Set(ids)] : toggled(current, ids)
   // Identity kept when the answer is the one already held: clicking the selected row again, or
   // in the void with nothing selected, must not re-render every panel that watches it.
-  return same(current, next) ? current : next
+  return samePicks(current, next) ? current : next
+}
+
+/**
+ * One id taken OFF, and never put on: `toggle` adds what it does not find, so a click landing
+ * after the selection moved would put back what it meant to remove. Identity kept when the id was
+ * not there, so nothing re-renders for a gesture that changed nothing.
+ */
+export function deselect(ids: readonly string[], id: string): readonly string[] {
+  return deselectAll(ids, new Set([id]))
+}
+
+/** The same for a whole set — a delete carries a subtree, and the rule lives in one place. */
+export function deselectAll(ids: readonly string[], gone: ReadonlySet<string>): readonly string[] {
+  return applySelection(
+    ids,
+    ids.filter(id => gone.has(id)),
+    'toggle',
+  )
 }
 
 function toggled(current: readonly string[], ids: readonly string[]): readonly string[] {
@@ -39,8 +67,9 @@ function toggled(current: readonly string[], ids: readonly string[]): readonly s
   return next
 }
 
-function same(current: readonly string[], next: readonly string[]): boolean {
-  return current.length === next.length && current.every((id, at) => id === next[at])
+/** Whether two picks name the same rows, in the same order. */
+export function samePicks(current: readonly string[], next: readonly string[]): boolean {
+  return sameOrder(current, next)
 }
 
 /**

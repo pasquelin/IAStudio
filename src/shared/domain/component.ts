@@ -1,0 +1,41 @@
+/**
+ * What an entity DOES, beside what its `type` says it draws.
+ *
+ * The state of a component is pure JSON — no function, no three.js object, no closure. That one
+ * decision is what makes serialisation, undo by `Command`, the `DynamicForm` inspector, the MCP
+ * schema and network replication all possible at once. The BEHAVIOUR lives in a system.
+ */
+export type JsonValue =
+  string | number | boolean | null | readonly JsonValue[] | { readonly [key: string]: JsonValue }
+
+/**
+ * A closed union, like `ActionName`, so the compiler holds the list and MCP publishes it.
+ *
+ * 🛑 **A type is declared by the lot that gives it a SYSTEM.** A component nothing simulates is a
+ * form field that does nothing, and thirty of them written ahead of their behaviour would be
+ * thirty guesses. The four physics ones arrived with Rapier, the script one with the sandbox.
+ */
+export type ComponentType =
+  'Health' | 'Movement' | 'Collider' | 'RigidBody' | 'Trigger' | 'CharacterController' | 'Script'
+
+export type Component = { type: ComponentType } & { readonly [key: string]: JsonValue }
+
+/**
+ * The list with `component` on it — replacing the one of its type rather than doubling it. One
+ * `Health` per entity: two would leave the winner to whichever a system happened to read first.
+ */
+export function withComponent(
+  components: readonly Component[],
+  component: Component,
+): readonly Component[] {
+  const at = components.findIndex(held => held.type === component.type)
+  if (at < 0) return [...components, component]
+  return components.map((held, index) => (index === at ? component : held))
+}
+
+export function withoutComponent(
+  components: readonly Component[],
+  type: ComponentType,
+): readonly Component[] {
+  return components.filter(component => component.type !== type)
+}

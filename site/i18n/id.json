@@ -1,0 +1,378 @@
+{
+  "meta": {
+    "lang": "id",
+    "name": "Bahasa Indonesia",
+    "short": "ID",
+    "flag": "🇮🇩",
+    "docs": "en",
+    "ogLocale": "id_ID"
+  },
+  "head": {
+    "title": "IA Studio — enam bengkel generasi, satu jendela",
+    "description": "Aplikasi desktop multimodal: gambar, video, 3D, audio, tekstur, dan skybox dalam antarmuka panel yang bisa ditambatkan. Dikte luring dan kendali lewat server MCP.",
+    "ogTitle": "IA Studio — enam bengkel generasi, satu jendela",
+    "ogDescription": "Enam bengkel generasi dalam satu jendela. Electron, React 19, TypeScript. macOS, Windows, Linux."
+  },
+  "nav": {
+    "skip": "Lompat ke konten",
+    "home": "Beranda",
+    "video": "Video",
+    "threeD": "3D",
+    "image": "Gambar",
+    "audio": "Audio",
+    "textures": "Material",
+    "skyboxes": "Skybox",
+    "architecture": "Arsitektur",
+    "docs": "Dokumen",
+    "build": "Versi pengembangan",
+    "download": "Unduh",
+    "languageLabel": "Bahasa"
+  },
+  "hero": {
+    "eyebrow": "Aplikasi desktop · proyek mandiri",
+    "lede": "Enam bengkel generasi dalam satu jendela. Panel yang bisa ditambatkan, lini masa berkode waktu, inspektur, pustaka di disk: perkakas perangkat lunak produksi, diterapkan pada model generatif.",
+    "browse": "Telusuri bengkelnya",
+    "source": "Lihat kode sumber",
+    "meta": {
+      "stack": "Electron · React 19 · TypeScript",
+      "platforms": "macOS, Windows, Linux",
+      "languages": "Prancis dan Inggris"
+    }
+  },
+  "home": {
+    "eyebrow": "Beranda · titik awal",
+    "title": "Sebuah proyek adalah sebuah folder. Tidak lebih.",
+    "lede": "Buka sebuah folder, dan ia menjadi proyek: dokumen, aset yang diimpor, hasil generasi. Semuanya tetap di disk, dalam format yang sudah dibaca perangkat lunak lain — OpenRaster, OpenTimelineIO, glTF, MaterialX —, dijelajahi dari aplikasi dan diversikan dengan git tanpa meninggalkan jendela.",
+    "alt": "Layar beranda: bilah untuk melanjutkan proyek terakhir, daftar proyek yang baru dibuka, pintasan ke enam bengkel, arus karya yang dipublikasikan semua orang, dan panel pustaka akun.",
+    "specs": {
+      "0": {
+        "term": "Bengkel",
+        "title": "Enam ruang, satu jendela",
+        "text": "Gambar, Video, 3D, Audio, Material, dan Skybox. Masing-masing punya perkakasnya sendiri dan terbuka sebagai tab, di sebelah yang lain."
+      },
+      "1": {
+        "term": "Panel",
+        "title": "Bisa ditambatkan dan dilepas",
+        "text": "Model, Penjelajah, Aset, Inspektur, Lini masa. Jendela dirapikan sesuka hati, dan tata letaknya diingat per bengkel."
+      },
+      "2": {
+        "term": "Pustaka",
+        "title": "Disk lebih dulu",
+        "text": "Hasil generasi jatuh ke folder proyek. Pustaka akun jarak jauh menyusul kemudian, dengan sebuah kunci API."
+      }
+    }
+  },
+  "video": {
+    "eyebrow": "Bengkel · keluaran .mp4",
+    "lede": "Dua monitor, lini masa multitrek, dan model yang menghasilkan gambar-gambarnya.",
+    "list": {
+      "0": {
+        "term": "Monitor",
+        "text": "Sumber dan Program, seperti di meja penyuntingan: klip yang dipilih di satu sisi, hasil suntingan sebagaimana akan diekspor di sisi lain."
+      },
+      "1": {
+        "term": "Lini masa",
+        "text": "Trek video dan audio, perkakas seleksi, bilah, dan tangan, pemutaran berkode waktu."
+      },
+      "2": {
+        "term": "Model",
+        "text": "Sequence-to-Video, Video Cut, Video Concat, Video Studio."
+      }
+    },
+    "alt": "Bengkel Video: monitor Sumber dan Program berdampingan, panel Aset, inspektur klip, lini masa empat trek V1, A1, V2, dan A2.",
+    "chips": {
+      "0": "Sumber 00:00:00:00",
+      "1": "V1 · A1 · V2 · A2",
+      "2": "25 bingkai/dtk",
+      "3": "Aset proyek"
+    }
+  },
+  "threeD": {
+    "eyebrow": "Bengkel · keluaran .glb",
+    "lede": "Sebuah jaring yang dihasilkan, diletakkan dalam adegan yang Anda terangi, animasikan, dan ekspor.",
+    "list": {
+      "0": {
+        "term": "Viewport",
+        "text": "Kisi, gizmo orientasi, dan penghitung yang ditumpangkan: segitiga, simpul, panggilan gambar, memori tekstur."
+      },
+      "1": {
+        "term": "Pencahayaan",
+        "text": "Lima sumber — ambien, terarah, hemisferis, titik, sorot — dipaparkan sebagai trek, dengan bingkai kunci pada lini masa."
+      },
+      "2": {
+        "term": "Ekspor",
+        "text": "Jaring keluar sebagai .glb ke tempat Anda menaruhnya, siap untuk sebuah mesin."
+      }
+    },
+    "alt": "Bengkel 3D: mobil hasil generasi diletakkan di latar pegunungan, gizmo pemindah dan penghitung segitiga ditumpangkan, pohon adegan dan inspektur di kanan, lini masa cahaya di bawah.",
+    "chips": {
+      "0": "Segitiga · Simpul · Panggilan",
+      "1": "Durasi 5 dtk",
+      "2": "25 bingkai/dtk",
+      "3": "Lingkungan Studio"
+    }
+  },
+  "image": {
+    "eyebrow": "Bengkel · keluaran .png",
+    "lede": "Sebuah kanvas berlapis, tempat generasi hanyalah satu perkakas di antara yang lain.",
+    "list": {
+      "0": {
+        "term": "Lapisan",
+        "text": "Penumpukan, keterlihatan, penguncian. Setiap generasi datang sebagai lapisan, di atas apa yang sudah ada."
+      },
+      "1": {
+        "term": "Perkakas",
+        "text": "Pindah, tangan, skala, bingkai, seleksi, bentuk, kuas, pensil, penghapus, teks, isi lapisan, pipet."
+      },
+      "2": {
+        "term": "Keterlacakan",
+        "text": "Inspektur menyimpan model yang menghasilkan lapisan itu, bobotnya, dan tanggal pembuatannya."
+      }
+    },
+    "alt": "Bengkel Gambar: kanvas berlatar transparan dengan kerangka yang dipotong, katalog model di kiri, panel Lapisan dan Inspektur di kanan, bilah aset di bawah.",
+    "chips": {
+      "0": "Lapisan",
+      "1": "Zoom 84,6 %",
+      "2": "Model tersimpan",
+      "3": "Bilah aset"
+    }
+  },
+  "audio": {
+    "eyebrow": "Bengkel · keluaran .wav",
+    "lede": "Menggubah dan menyunting suara di beberapa trek, dalam jendela yang sama dengan sisanya.",
+    "list": {
+      "0": {
+        "term": "Trek",
+        "text": "Penyuntingan multitrek, perkakas yang sama dengan lini masa video, pemutaran yang selaras pada kode waktu yang sama."
+      },
+      "1": {
+        "term": "Bentuk gelombang",
+        "text": "Dihitung dalam proses terpisah: satu jam suara tidak membekukan antarmuka selama dianalisis."
+      },
+      "2": {
+        "term": "Model",
+        "text": "Musik, suasana, dan efek, dihasilkan oleh API lalu langsung dijatuhkan ke sebuah trek."
+      }
+    },
+    "alt": "Bengkel Audio: monitor Program menampilkan bentuk gelombang hasil suntingan, monitor Sumber di bawahnya, katalog model generasi suara, lini masa empat trek audio.",
+    "chips": {
+      "0": "Program 00:00:00:00",
+      "1": "A1 · A2 · A3 · A4",
+      "2": "Bentuk gelombang",
+      "3": "Aset proyek"
+    }
+  },
+  "textures": {
+    "eyebrow": "Bengkel · keluaran .png ×4",
+    "lede": "Sebuah material, bukan sebuah gambar: tiap kanal dihasilkan lalu diperiksa terpisah.",
+    "list": {
+      "0": {
+        "term": "Kanal",
+        "text": "Delapan: Warna dasar, Normal, Kekasaran, Logam, Oklusi, Ketinggian, Emisi, Rongga. Tujuh keluar dari satu generasi, Emisi diatur di sini juga; semuanya diekspor berkas demi berkas."
+      },
+      "1": {
+        "term": "Pratinjau",
+        "text": "Material diterapkan pada volume uji — bola, kubus, silinder, bidang, simpul — dan diterangi secara langsung, sebelum diekspor."
+      },
+      "2": {
+        "term": "Sambungan",
+        "text": "Kanal yang bisa diubin pada 4096 × 4096, dapat dipakai apa adanya di sebuah mesin."
+      }
+    },
+    "alt": "Bengkel Material: kubus pratinjau membawa materialnya, inspektur terbuka pada kanal — warna dasar dan normal — lalu pada pengaturan material, bilah gambar hasil generasi.",
+    "chips": {
+      "0": "4096 × 4096",
+      "1": "4 kanal",
+      "2": "Pratinjau pada volume",
+      "3": "Ekspor terpisah"
+    }
+  },
+  "skyboxes": {
+    "eyebrow": "Bengkel · keluaran .hdr",
+    "lede": "Langit yang menjadi latar dan, pada saat yang sama, sumber cahaya.",
+    "list": {
+      "0": {
+        "term": "Proyeksi",
+        "text": "360°, ekuirektangular, salib, enam sisi. Berpindah dari satu tampilan ke tampilan lain tanpa mengekspor ulang."
+      },
+      "1": {
+        "term": "Kendali",
+        "text": "Sudut pandang yang bisa diatur dan objek uji, untuk menilai cahaya pada bola buram dan bola mengkilap."
+      },
+      "2": {
+        "term": "Kegunaan",
+        "text": "Langit yang dihasilkan di sini langsung menerangi adegan bengkel 3D."
+      }
+    },
+    "alt": "Bengkel Skybox: langit pegunungan bersalju dalam proyeksi 360 derajat, dua bola uji di tanah — satu buram, satu cermin — dan pengaturan matahari di kanan.",
+    "chips": {
+      "0": "360°",
+      "1": "Ekuirekt.",
+      "2": "Salib",
+      "3": "6 sisi",
+      "4": "Objek uji"
+    }
+  },
+  "ticker": {
+    "0": "Teks → Gambar",
+    "1": "Gambar → Gambar",
+    "2": "Pemotongan latar",
+    "3": "Bingkai ulang",
+    "4": "Pangkas",
+    "5": "Teks → Video",
+    "6": "Sekuens → Video",
+    "7": "Penyuntingan",
+    "8": "Penggabungan",
+    "9": "Gambar → 3D",
+    "10": "Voksel",
+    "11": "Teks → Audio",
+    "12": "Material PBR",
+    "13": "Warna · Normal · Kekasaran · Logam",
+    "14": "Skybox 360°",
+    "15": "Ekuirektangular"
+  },
+  "architecture": {
+    "eyebrow": "Di balik kap",
+    "title": "Tidak ada satu pun formulir generasi yang ditulis tangan.",
+    "lede": "Parameter sebuah model adalah miliknya sendiri dan berubah tanpa pemberitahuan. Karena itu parameter dibaca saat dijalankan dan diubah menjadi bidang isian: model baru muncul dengan pengaturannya, tanpa satu baris kode tambahan.",
+    "racks": {
+      "0": "Antarmuka",
+      "1": "Jembatan menuju API",
+      "2": "Di mesin Anda"
+    },
+    "cells": {
+      "0": {
+        "tag": "Bengkel",
+        "title": "Enam mode, satu tata letak",
+        "text": "Panel yang bisa ditambatkan dan dilepas, tab, tata letak yang diingat per bengkel di antara dua sesi."
+      },
+      "1": {
+        "tag": "Mesin",
+        "title": "Dibangun ulang dari keadaannya",
+        "text": "Melepas sebuah panel menghancurkan konteks grafisnya. Mesin membangun dirinya kembali persis sama — dan dari situ datang pembatalan serta penyimpanan sekaligus."
+      },
+      "2": {
+        "tag": "Pustaka",
+        "title": "Folder proyek",
+        "text": "Proyek adalah folder yang terbaca tanpa aplikasi ini, dijelajahi oleh pengelola berkas sungguhan dan dilacak oleh git dari dalam studio — cabang, versi, konflik. Impor, ekspor, dan katalog berbagi indeks yang sama, yang menemukan kembali berkasnya bahkan setelah dipindahkan ke luar aplikasi."
+      },
+      "3": {
+        "tag": "ModelRegistry",
+        "title": "Bidang isian datang dari model",
+        "text": "Skema yang dideklarasikan model menjadi daftar bidang isian, ditampilkan apa adanya. Tipe yang tak dikenal jatuh ke masukan mentah alih-alih membuat formulir lenyap."
+      },
+      "4": {
+        "tag": "JobManager",
+        "title": "Hanya satu tempat yang bertanya",
+        "text": "Setiap generasi bersifat asinkron. Satu komponen saja yang mengikuti kemajuan, membatasi jumlah tugas serentak, dan menunggu bila layanan menolak."
+      },
+      "5": {
+        "tag": "Rahasia",
+        "title": "Antarmuka tak pernah melihat kuncinya",
+        "text": "Kunci dan rahasia dienkripsi oleh brankas sistem. Jendela bertanya «apakah saya masuk?», tidak pernah «apa kunci saya?»."
+      },
+      "6": {
+        "tag": "Dikte",
+        "title": "Luring, sepenuhnya",
+        "text": "Mesin pengenalan suara berjalan dalam proses terpisah, di komputer Anda. Setelah modelnya diunduh, tak ada yang diucapkan keluar ke jaringan."
+      },
+      "7": {
+        "tag": "Server MCP",
+        "title": "Studio dikendalikan dari luar",
+        "text": "233 tindakan dalam 16 keluarga, dari dokumen ke aset, dari adegan ke suntingan, dari berkas ke repositori git: sebuah agen melakukan apa yang dilakukan antarmuka, lewat jalur yang sama."
+      },
+      "8": {
+        "tag": "Beban",
+        "title": "Utas tampilan tetap luang",
+        "text": "Gambar mini, bentuk gelombang, jaring berat, dan pengodean video pergi ke prosesor grafis, ke utas pekerja, atau ke proses tersendiri."
+      }
+    }
+  },
+  "docs": {
+    "eyebrow": "Dokumentasi &amp; demonstrasi",
+    "title": "Semuanya ditulis di samping kodenya.",
+    "videoLabel": "Demonstrasi IA Studio: menyusuri enam bengkel, dari sebuah generasi 3D hingga ke penyuntingan.",
+    "links": {
+      "0": {
+        "text": "Buku panduan, dua puluh bab — terbaca juga di dalam aplikasi",
+        "label": "Panduan"
+      },
+      "1": {
+        "text": "Invarian, mesin, dan apa yang menyeberangi batas",
+        "label": "Arsitektur"
+      },
+      "2": {
+        "text": "Mengendalikan studio dari sebuah agen, lewat server MCP",
+        "label": "Server MCP"
+      },
+      "3": {
+        "text": "Tujuh belas keputusan, beserta yang disingkirkan dan alasannya",
+        "label": "Keputusan"
+      },
+      "4": {
+        "text": "Menerbitkan sebuah versi: tanda tangan, artefak, pengembalian",
+        "label": "Penerbitan"
+      },
+      "5": {
+        "text": "Lisensi kode sumber — PolyForm Noncommercial 1.0.0",
+        "label": "Lisensi"
+      }
+    },
+    "manualFile": "user-guide.md"
+  },
+  "download": {
+    "eyebrow": "Pemasangan",
+    "title": "Tiga platform, satu repositori.",
+    "lede": "Lima pemasang, dihasilkan oleh rantai integrasi yang sama pada tiap versi. Sambil menunggu versi publik pertama, repositori bisa diklon dan dijalankan dengan tiga perintah.",
+    "items": {
+      "0": {
+        "os": "macOS",
+        "kind": "Apple Silicon · .dmg",
+        "state": "Versi menyusul"
+      },
+      "1": {
+        "os": "macOS",
+        "kind": "Intel · .dmg",
+        "state": "Versi menyusul"
+      },
+      "2": {
+        "os": "Windows",
+        "kind": "x64 · .exe",
+        "state": "Versi menyusul"
+      },
+      "3": {
+        "os": "Linux",
+        "kind": "x86_64 · .AppImage",
+        "state": "Versi menyusul"
+      },
+      "4": {
+        "os": "Debian, Ubuntu",
+        "kind": "x86_64 · .deb",
+        "state": "Versi menyusul"
+      }
+    },
+    "note": "Pemasang tunduk pada <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">ketentuan penggunaan</a>; kode sumbernya, pada lisensi <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial&nbsp;1.0.0</a>. Aplikasi ini tidak memberi akses ke layanan generasi mana pun: ia memakai kunci API yang Anda sediakan, atas akun Anda dan atas biaya Anda."
+  },
+  "foot": {
+    "groups": {
+      "0": "IA Studio",
+      "1": "Bengkel",
+      "2": "Sumber daya",
+      "3": "Kontak"
+    },
+    "about": "Aplikasi desktop multimodal, dikembangkan seorang diri. Electron, React, TypeScript.",
+    "resources": {
+      "0": "Unduhan",
+      "1": "Repositori",
+      "2": "Lisensi"
+    },
+    "legal": "Kode sumber di bawah lisensi <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · aplikasi didistribusikan menurut <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">ketentuan penggunaan</a> miliknya · komponen pihak ketiga tercantum dalam <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">pemberitahuan</a>. © 2026 Alban Pasquelin.",
+    "docsLink": "Dokumentasi",
+    "changelog": "Riwayat perubahan"
+  },
+  "status": {
+    "project": "proyek",
+    "workshop": "bengkel",
+    "position": "posisi"
+  }
+}

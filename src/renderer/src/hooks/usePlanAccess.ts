@@ -11,9 +11,8 @@ import { useReloadKey } from './useReloadKey'
  * `null` is the permissive answer wherever it is read: nothing is greyed out, and a picker
  * behaves exactly as it did before it asked. That is deliberate — see `isBeyondPlan`.
  *
- * Plain state rather than react-query, like `useFamilyModels` beside it: only the main window
- * mounts a `QueryClientProvider`, and this is read from the preferences window too. The caching
- * that matters is the main process's ten minutes; what this avoids is a second replica of it.
+ * Plain state rather than react-query: the caching that matters is the main process's ten
+ * minutes, and what this avoids is a second replica of it.
  */
 export function usePlanAccess(): PlanAccess | null {
   const [access, setAccess] = useState<PlanAccess | null>(null)
@@ -42,7 +41,7 @@ export function usePlanAccess(): PlanAccess | null {
 
     let live = true
     void getBridge()
-      ?.scenario.plan()
+      ?.provider.plan()
       .then(plan => {
         if (live) setAccess(plan)
       })

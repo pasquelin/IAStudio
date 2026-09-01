@@ -4,7 +4,7 @@ import { APP_NAME } from '@shared/constants'
 import type { SettingActionId } from '@shared/domain/settingsRegistry'
 import { installResolveScript } from '@main/bridge/resolveBridge'
 import { log } from '@main/log'
-import { mcpAddCommand, type McpEndpoint } from '@main/mcp/endpoint'
+import { clientName, mcpAddCommand, mcpConfigJson, type McpLaunch } from '@main/mcp/endpoint'
 import type { SettingsStore } from './store'
 
 export type ActionDeps = {
@@ -13,8 +13,8 @@ export type ActionDeps = {
   settingsPath: () => string
   /** Where `main.log` lives — the folder Electron hands out, not one this side works out. */
   logFile: () => string
-  /** Where the MCP server is listening, or `null` while it is off. */
-  mcpEndpoint: () => McpEndpoint | null
+  /** Holding no port and no token, it is as true with the way in shut — hence both buttons. */
+  mcpLaunch: McpLaunch
   /**
    * Says the bridge could not be installed, in the language the window is in. A dialog and not a
    * log line: nothing else answers this button, so a silent failure is one nobody finds out about.
@@ -30,7 +30,7 @@ export function runSettingAction({
   settings,
   settingsPath,
   logFile,
-  mcpEndpoint,
+  mcpLaunch,
   onResolveMissing,
 }: ActionDeps) {
   return (id: SettingActionId): void => {
@@ -51,13 +51,15 @@ export function runSettingAction({
         BrowserWindow.getFocusedWindow()?.webContents.openDevTools({ mode: 'detach' })
         return
 
-      case 'advanced.copyMcpCommand': {
-        // Nothing to copy while the server is off, and nothing to say about it either: the
-        // button sits under the switch that turns it on, which is the answer.
-        const endpoint = mcpEndpoint()
-        if (endpoint) clipboard.writeText(mcpAddCommand(endpoint, APP_NAME.toLowerCase()))
+      // Copied whether the way in is open or shut, which it could not be while what was copied
+      // carried a live port: someone configures their client first and ticks the switch after.
+      case 'mcp.copyCommand':
+        clipboard.writeText(mcpAddCommand(mcpLaunch, clientName(APP_NAME)))
         return
-      }
+
+      case 'mcp.copyConfig':
+        clipboard.writeText(mcpConfigJson(mcpLaunch, clientName(APP_NAME)))
+        return
 
       case 'advanced.installResolveBridge':
         // Revealed once written, which is the whole of the feedback: a file dropped in another

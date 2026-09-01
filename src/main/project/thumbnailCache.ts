@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, rm, stat, utimes } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -40,11 +41,11 @@ function keyOf(root: string, relative: string, size: number, modified: number): 
 
 /** Total bytes held, oldest read first — what an eviction walks. */
 async function heldFiles(folder: string): Promise<{ file: string; bytes: number; at: number }[]> {
-  const names = await readdir(folder).catch(() => [])
+  const names = await orElse(readdir(folder), [])
 
   const held = await Promise.all(
     names.map(async name => {
-      const stats = await stat(join(folder, name)).catch(() => null)
+      const stats = await orElse(stat(join(folder, name)), null)
       return stats?.isFile()
         ? { file: join(folder, name), bytes: stats.size, at: stats.mtimeMs }
         : null
@@ -72,7 +73,11 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
   const touch = async (file: string): Promise<void> => {
     // Read ONCE: the two stamps are the same instant, and an eviction reads one of them.
     const at = now()
-    await utimes(file, at, at).catch(() => {})
+    try {
+      await utimes(file, at, at)
+    } catch {
+      // Best effort, as the note above says: a read-only volume costs a place in the queue.
+    }
   }
   /** Written since the folder was last measured — measuring it is a `stat` per entry. */
   let sinceSweep = 0
@@ -100,7 +105,7 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
       const absolute = assetFilePath(root, relative)
       if (!absolute) return null
 
-      const source = await stat(absolute).catch(() => null)
+      const source = await orElse(stat(absolute), null)
       if (!source?.isFile()) return null
 
       const folder = join(root, THUMBNAILS_FOLDER)
@@ -138,7 +143,13 @@ export function createThumbnailCache(deps: ThumbnailCacheDeps): ThumbnailCache {
         return null
       }
 
-      await evict(folder, rendered.byteLength).catch(() => {})
+      try {
+        await evict(folder, rendered.byteLength)
+      } catch {
+        // A sweep that could not run leaves the folder bigger than its budget, never without
+        // the thumbnail that was just written.
+      }
+
       return cached
     },
   }

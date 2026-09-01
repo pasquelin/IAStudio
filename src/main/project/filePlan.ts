@@ -1,5 +1,6 @@
+import { documentExtensionOf, documentStemOf } from '@shared/domain/document'
 import type { PathChange, Refusal } from '@shared/domain/fileOp'
-import { extensionOf, foldForFileName, stemForSuffix, stemOf } from '@shared/domain/fileName'
+import { foldForFileName, stemForSuffix } from '@shared/domain/fileName'
 import { isPrivatePath, moveRefusal, nameOf, parentOf, pathIn } from '@shared/domain/folder'
 
 /**
@@ -85,8 +86,8 @@ export function freeName(taken: ReadonlySet<string>, fileName: string): string {
   const held = (candidate: string): boolean => taken.has(foldForFileName(candidate))
   if (!held(fileName)) return fileName
 
-  const extension = extensionOf(fileName)
-  const stem = stemForSuffix(stemOf(fileName))
+  const extension = documentExtensionOf(fileName)
+  const stem = stemForSuffix(documentStemOf(fileName))
 
   for (let n = 2; ; n += 1) {
     const candidate = `${stem} ${n}${extension}`
@@ -224,4 +225,24 @@ export function planFiles(request: FileRequest, folders: FolderSnapshot): FilePl
   }
 
   return { acts, refused }
+}
+
+/**
+ * What a planner reads the project as: only the folders asked for, and only those the disk
+ * answers for — a folder missing from the map is one that does not exist, which is how
+ * `planFiles` refuses a destination that has gone.
+ */
+export async function folderSnapshot(
+  names: (folder: string) => Promise<readonly string[] | null>,
+  folders: readonly string[],
+): Promise<FolderSnapshot> {
+  const unique = [...new Set(folders)]
+  const read = await Promise.all(unique.map(one => names(one)))
+
+  const known = new Map<string, readonly string[]>()
+  for (const [at, entries] of read.entries()) {
+    const path = unique[at]
+    if (path !== undefined && entries !== null) known.set(path, entries)
+  }
+  return known
 }

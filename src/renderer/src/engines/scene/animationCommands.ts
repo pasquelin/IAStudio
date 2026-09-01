@@ -1,6 +1,7 @@
 import {
+  DIRECT_PROPERTIES,
   POSE_PROPERTIES,
-  TRACK_PROPERTIES,
+  SCENE_SUBJECT_ID,
   type AnimationTimeline,
   type AnimationTrack,
   type CameraMotion,
@@ -11,8 +12,8 @@ import {
 } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
-import type { Command } from '../core/history'
-import { addNode, batch, moveNodes, multi, setCamera, setCameraOn } from './commands'
+import { commandId, type Command } from '../core/history'
+import { addNode, moveNodes, multi, setCamera, setCameraOn } from './commands'
 import type { FieldValue } from './propertyFields'
 import { pathNode } from './nodeFactory'
 import {
@@ -208,8 +209,12 @@ export function keyableProperties(
   state: SceneState,
   subject: { nodeId: string; bone?: string },
 ): readonly TrackProperty[] {
+  // The scene's composition has no pose and no lens: its channels are opened one parameter at a
+  // time from the composition panel, so the band's diamond must open none of its own.
+  if (subject.nodeId === SCENE_SUBJECT_ID) return []
+
   const camera = !subject.bone && nodeById(state, subject.nodeId)?.type === 'camera'
-  return camera ? TRACK_PROPERTIES : POSE_PROPERTIES
+  return camera ? DIRECT_PROPERTIES : POSE_PROPERTIES
 }
 
 /**
@@ -304,6 +309,19 @@ function dedupeMoves(moves: readonly NodeMove[]): NodeMove[] {
   return [...byId.values()]
 }
 
+// Narrowed as it is gathered: a `filter` on the same predicate leaves `AnimationTrack | undefined`
+// behind, and both callers then need a non-null assertion to read the track they just kept.
+function unlockedTracks(
+  state: SceneState,
+  trackIds: readonly string[],
+  keeps: (track: AnimationTrack) => boolean,
+): AnimationTrack[] {
+  return trackIds.flatMap(trackId => {
+    const track = trackById(state, trackId)
+    return track && !track.locked && keeps(track) ? [track] : []
+  })
+}
+
 /**
  * Takes a key off every channel of one subject at that instant.
  *
@@ -315,13 +333,31 @@ export function unkeySubject(
   trackIds: readonly string[],
   time: Us,
 ): Command<SceneState> | null {
-  const drops = trackIds
-    .map(trackId => trackById(state, trackId))
-    .filter(track => track && !track.locked && track.keys.some(key => key.time === time))
-    .map(track => removeAnimationKey(track!.id, time))
+  const drops = unlockedTracks(state, trackIds, track =>
+    track.keys.some(key => key.time === time),
+  ).map(track => removeAnimationKey(track.id, time))
 
   if (drops.length === 0) return null
   return drops.length === 1 && drops[0] ? drops[0] : multi('key:unset', drops)
+}
+
+/**
+ * Empties every channel of one subject, whatever instant its keys sit on.
+ *
+ * 🛑 There was no way to say « efface toutes les clés » in one call: `unkeySubject` takes one
+ * instant, so a client asking for all of them sent the same call over and over — measured on the
+ * bench pass of 2026-08-26, and it never cleared more than the key under the head.
+ */
+export function unkeySubjectWholly(
+  state: SceneState,
+  trackIds: readonly string[],
+): Command<SceneState> | null {
+  const drops = unlockedTracks(state, trackIds, track => track.keys.length > 0).map(track =>
+    keysCommand(`key:clear:${track.id}`, track.id, () => []),
+  )
+
+  if (drops.length === 0) return null
+  return drops.length === 1 && drops[0] ? drops[0] : multi('key:clear', drops)
 }
 
 /**
@@ -675,27 +711,35 @@ export function lensToCommand(
   if (name !== 'fov' || typeof value !== 'number') return setCameraOn(nodes, name, value)
   const soloed = anySoloed(timeline)
 
-  return batch('lens', nodes, node => {
-    if (node.type !== 'camera') return null
+  // Composed rather than batched: which of the two an angle becomes depends on the channel under
+  // it, and only one of them writes onto the node — see `batch`.
+  return multi(
+    commandId(
+      'lens',
+      nodes.map(node => node.id),
+    ),
+    nodes.flatMap(node => {
+      if (node.type !== 'camera') return []
 
-    // What the channels PLAY at that instant, which is what the field was showing. The same
-    // filter has to pick what gets written: a key laid on a muted channel is a number typed and
-    // lost, and a descriptor written under a locked one moves the lens twice.
-    const played = fovAt(timeline, node.id, at) ?? 0
-    const lenses = recordingTracksFor(timeline, node.id).filter(
-      track => track.target.property === 'fov' && playsThrough(track, soloed),
-    )
-    const lens = lenses[0]
-    if (!lens || !recordsKeys(lenses, recording)) {
-      return setCamera(node.id, { ...node.camera, fov: value - played })
-    }
+      // What the channels PLAY at that instant, which is what the field was showing. The same
+      // filter has to pick what gets written: a key laid on a muted channel is a number typed and
+      // lost, and a descriptor written under a locked one moves the lens twice.
+      const played = fovAt(timeline, node.id, at) ?? 0
+      const lenses = recordingTracksFor(timeline, node.id).filter(
+        track => track.target.property === 'fov' && playsThrough(track, soloed),
+      )
+      const lens = lenses[0]
+      if (!lens || !recordsKeys(lenses, recording)) {
+        return setCamera(node.id, { ...node.camera, fov: value - played })
+      }
 
-    // This channel's own share taken back out: whatever else plays goes on adding what it adds,
-    // so the key holds exactly what is left for the lens to READ the number typed.
-    return setAnimationKey(lens.id, at, {
-      x: value - node.camera.fov - (played - valueAt(lens, at).x),
-      y: 0,
-      z: 0,
-    })
-  })
+      // This channel's own share taken back out: whatever else plays goes on adding what it adds,
+      // so the key holds exactly what is left for the lens to READ the number typed.
+      return setAnimationKey(lens.id, at, {
+        x: value - node.camera.fov - (played - valueAt(lens, at).x),
+        y: 0,
+        z: 0,
+      })
+    }),
+  )
 }

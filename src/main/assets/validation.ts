@@ -14,7 +14,7 @@ import {
 import { CLOUD_ORDERS, type CloudQuery, type ExploreQuery } from '@shared/domain/cloudAsset'
 
 import { SYNC_POLICIES, type SyncPolicy } from '@shared/domain/sync'
-import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
+import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/provider/limits'
 
 /**
  * What the renderer is allowed to ask of the library.
@@ -29,7 +29,7 @@ import { GET_BULK_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
  * Bounded like every other string that crosses: an id travels into a filter expression and into
  * the request line the SDK logs, and that line is not truncated the way a failure detail is.
  */
-const assetId = z.string().trim().min(1).max(200)
+export const assetId = z.string().trim().min(1).max(200)
 
 export function parseAssetId(value: unknown): string {
   return assetId.parse(value)

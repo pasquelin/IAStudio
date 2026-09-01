@@ -15,12 +15,13 @@ export const WINDOW_CHROME_COLOR: Record<ResolvedTheme, string> = {
 }
 
 /**
- * Painted behind the splash before its first frame. Set apart from the chassis: the splash is a
- * standalone surface, not a panel sitting in the window frame.
+ * Painted behind the splash before its first frame, and the same in both themes because the page
+ * is: `splash.html` paints the icon's tile colour whatever the system says, so a light value here
+ * would flash light and snap dark. `splash.test.ts` pins this against what that page paints.
  */
 export const SPLASH_BACKGROUND_COLOR: Record<ResolvedTheme, string> = {
-  dark: '#22242a',
-  light: '#eceef1',
+  dark: '#161921',
+  light: '#161921',
 }
 
 /**
@@ -32,4 +33,4 @@ export const SPLASH_BACKGROUND_COLOR: Record<ResolvedTheme, string> = {
  */
 export const MIRROR_BACKGROUND = '#000000'
 
-export const APP_NAME = 'Scenario Studio'
+export const APP_NAME = 'IA Studio'

@@ -1,10 +1,12 @@
 import type { Asset } from '@shared/domain/asset'
-import { ASSET_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
+import { ASSET_HOST, MASTER_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
 import { ANIMATION_HOST } from '@shared/domain/animationLibrary'
 import { TEMPLATE_HOST } from '@shared/domain/sceneTemplate'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
+import { MODEL_HOST } from '@shared/domain/localModel'
+import { TEXTURE_HOST } from '@shared/domain/checkerTexture'
 import { orWhenGone } from '@main/project/store'
-import { posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
+import { exportFileOf, posterFileOf, servedFileOf, type AssetResolvers } from './protocol'
 
 /** What the hosts read, each behind the narrowest port that answers for it. */
 export type AssetResolverDeps = {
@@ -18,6 +20,10 @@ export type AssetResolverDeps = {
   bundledAnimation: (id: string) => Promise<string | null>
   /** The same, for the still drawn of a scene template — named by its FILE, not by an id. */
   bundledTemplate: (file: string) => Promise<string | null>
+  /** And for the picture of a local model, which is the same folder shape one level over. */
+  bundledModel: (file: string) => Promise<string | null>
+  /** And for a working texture, which a probe wears without any project having a row for it. */
+  bundledTexture: (file: string) => Promise<string | null>
 }
 
 /**
@@ -40,6 +46,7 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
 
   return {
     [ASSET_HOST]: assetId => fileOf(assetId, servedFileOf),
+    [MASTER_HOST]: assetId => fileOf(assetId, exportFileOf),
     [POSTER_HOST]: assetId => fileOf(assetId, posterFileOf),
     [FAVORITE_HOST]: favoriteId => Promise.resolve(deps.favouriteThumbnail(favoriteId)),
     // Named by a PATH rather than by an id, alone among the four: the explorer draws files, and
@@ -52,5 +59,7 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
     // Absent until someone has drawn it: the window then draws the template's glyph instead,
     // which is what makes shipping a picture per template optional rather than required.
     [TEMPLATE_HOST]: file => deps.bundledTemplate(file),
+    [MODEL_HOST]: file => deps.bundledModel(file),
+    [TEXTURE_HOST]: file => deps.bundledTexture(file),
   }
 }

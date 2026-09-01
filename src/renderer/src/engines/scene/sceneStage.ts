@@ -2,6 +2,11 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Us } from '@shared/domain/time'
 import { offScreenHost } from '@/engines/core/offScreenHost'
 import { reportFailure } from '@/services/diagnostics'
+import { environmentDressOf } from '@/features/skybox/components/environmentDress'
+import { wornModelDress } from '@/features/material/modelDress'
+import { assetVersionOf } from '@/stores/assets'
+import { onMaterialChange } from '@/stores/materialSources'
+import { onSkyChange } from '@/stores/skyboxSources'
 import { SceneRenderer } from './SceneRenderer'
 import type { CameraPlacement } from './sceneView'
 import { activeCameraAt } from './cameraShots'
@@ -59,6 +64,8 @@ export function createSceneStage({
 
   let renderer: SceneRenderer | null = null
   let failed = false
+  /** The reads this stage waits on, given back when it closes — see `watchDocuments`. */
+  const stopWatching: (() => void)[] = []
 
   /**
    * Built on the first frame asked for, never when the stage opens.
@@ -79,10 +86,17 @@ export function createSceneStage({
           onSelect: () => {},
           onTransform: () => {},
           onClips: (nodeId, clips) => onClips?.(nodeId, clips),
+          // The same port as the viewport, or a model in a clip wears the maps buried in its
+          // `.glb` while the same model on screen wears the project's — the render disagrees
+          // with what was framed, from the first frame.
+          assetVersion: assetVersionOf,
+          wornDress: wornModelDress,
+          environmentDress: environmentDressOf,
         })
 
       renderer.prepareOffscreen({ alpha: true, pixelRatio: 1 })
       renderer.mount(host)
+      watchDocuments()
       // No grid and no ground: a montage wants the scene, not the workshop it was built in.
       renderer.configure({ ...DEFAULT_SETTINGS.three, showGrid: false })
     } catch (error) {
@@ -93,6 +107,17 @@ export function createSceneStage({
       reportFailure('scene.render', 'montage', error)
     }
     return renderer
+  }
+
+  /**
+   * The documents a scene NAMES — a sky, a material — moving in their own tab, or landing off
+   * disk a beat after the first frame. Measured on a clip: with the FILE half alone it drew at the
+   * studio, then followed the first landing and no edit after it. `SceneDocument` gets both from
+   * `useSkyRefresh`; a stage has no React to hang a hook on, so it subscribes itself.
+   */
+  const watchDocuments = (): void => {
+    stopWatching.push(onSkyChange(() => renderer?.lightAgain()))
+    stopWatching.push(onMaterialChange(materialIds => renderer?.dressModels(materialIds)))
   }
 
   let shown: SceneState | null = null
@@ -146,6 +171,8 @@ export function createSceneStage({
     },
 
     dispose: () => {
+      for (const stop of stopWatching) stop()
+      stopWatching.length = 0
       renderer?.dispose()
       host.remove()
     },

@@ -9,7 +9,7 @@
 Vous décrivez ce que vous voulez, avec des mots. Un ordinateur distant le fabrique. Vous
 récupérez le résultat chez vous, et vous continuez à travailler dessus.
 
-Voilà l’idée entière. Ce que Scenario Studio ajoute par rapport à un site web où l’on tape une
+Voilà l’idée entière. Ce qu’IA Studio ajoute par rapport à un site web où l’on tape une
 phrase et où l’on télécharge une image, c’est **tout ce qui vient après** :
 
 - vos créations sont **rangées** dans un projet, sur votre disque, pas dans un dossier
@@ -33,11 +33,11 @@ selon ce que vous fabriquez. Ces six arrangements s’appellent des **espaces de
 
 | Espace | Ce qu’on y fabrique | Un exemple |
 |---|---|---|
-| **Image** | des images fixes | une affiche, une illustration, une texture à plat |
+| **Image** | des images fixes | une affiche, une illustration, une carte de matière |
 | **Vidéo** | des séquences animées | un plan de dix secondes, un montage de plusieurs prises |
 | **3D** | des scènes en volume | un décor, un objet posé sous une lumière |
 | **Audio** | des sons et des musiques | une ambiance, un bruitage, une nappe musicale |
-| **Textures** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
+| **Matières** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
 | **Skyboxes** | des ciels à 360° | ce qu’on voit autour de soi quand on lève les yeux dans une scène |
 
 Vous changez d’espace en cliquant sur son nom, en haut de la fenêtre. Les panneaux se
@@ -63,12 +63,13 @@ ordinaire — vous pouvez l’ouvrir dans votre explorateur de fichiers et regar
 ### 2. Un **asset**
 
 Un fichier de matière première dans votre projet : une image, une vidéo, un son, un objet 3D,
-une texture, un ciel.
+un ciel.
 
 Le mot est anglais et n’a pas de bon équivalent français court. On dit parfois « ressource »
 ou « média ». Retenez : **un asset est un fichier fini que vous pouvez réutiliser**.
 
-Les assets vivent dans le panneau **Assets**, qu’on appelle familièrement « l’étagère ».
+Les assets vivent dans l’**Explorateur** une fois sur votre disque, et dans la **Bibliothèque**
+tant qu’ils ne sont qu’en ligne.
 
 ### 3. Un **document**
 
@@ -87,11 +88,11 @@ Il y a six sortes de documents, une par espace :
 | Vidéo | une séquence | `.otio` |
 | Audio | un son en cours d’édition | `.otio` |
 | Skyboxes | un ciel | `.gltf` |
-| Textures | une matière | `.mtlx` |
+| Matières | une matière | `.mtlx` |
 
 ### 4. Un **modèle**
 
-Le programme distant qui fabrique. Il y en a plusieurs centaines dans le catalogue Scenario, et
+Le programme distant qui fabrique. Il y en a plusieurs centaines dans le catalogue distant, et
 ils ne savent pas tous faire la même chose : l’un dessine des images à partir de texte, un autre
 transforme une image en objet 3D, un troisième compose de la musique.
 
@@ -114,7 +115,7 @@ chapitre [Générer](06-generer.md) :
 
 Une demande de fabrication en cours.
 
-Vous appuyez sur **Générer**, et la demande part chez Scenario. Elle ne revient pas tout de
+Vous appuyez sur **Générer**, et la demande part chez le fournisseur. Elle ne revient pas tout de
 suite : selon le modèle, cela prend de quelques secondes à plusieurs minutes. Pendant ce temps,
 la demande vit dans la **ligne d’état**, en bas de la fenêtre, avec une barre de progression, et
 vous pouvez
@@ -147,7 +148,7 @@ supprimer. C’est ce qui rend une image **modifiable** au lieu d’être un apl
 |---|---|
 | **Un ordinateur** | macOS, Windows ou Linux |
 | **Une connexion internet** | pour générer. Pour travailler sur ce que vous avez déjà, non |
-| **Un compte Scenario** | avec une clé API et un secret API — voir [Premiers pas](02-premiers-pas.md) |
+| **Un compte chez un fournisseur de génération** | avec une clé API et un secret API — voir [Premiers pas](02-premiers-pas.md) |
 
 **Ce dont vous n’avez pas besoin** : savoir dessiner, savoir programmer, savoir ce qu’est un
 réseau de neurones. Le studio est fait pour être conduit, pas compris.
@@ -158,11 +159,11 @@ réseau de neurones. Le studio est fait pour être conduit, pas compris.
 
 Autant le dire tout de suite, cela évite de le chercher.
 
-- **Il ne travaille pas hors ligne pour générer.** La fabrication se passe sur les serveurs de
-  Scenario. Sans connexion, vous pouvez ouvrir, monter, régler et enregistrer, mais pas créer
+- **Il ne travaille pas hors ligne pour générer.** La fabrication se passe sur les serveurs du
+  fournisseur. Sans connexion, vous pouvez ouvrir, monter, régler et enregistrer, mais pas créer
   de nouveau contenu.
 - **Il n’est pas gratuit à l’usage.** Chaque génération consomme le crédit de votre compte
-  Scenario. Le studio ne vous le facture pas — il ne fait que transmettre — mais votre compte,
+  distant. Le studio ne vous le facture pas — il ne fait que transmettre — mais votre compte,
   lui, compte.
 - **Il ne remplace pas Photoshop, ni Blender, ni Premiere.** Il en fait une part utile, dans un
   seul endroit, autour de la génération. Le chapitre

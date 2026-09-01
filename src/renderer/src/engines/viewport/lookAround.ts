@@ -1,4 +1,10 @@
-import { clampElevation, normalizeAzimuth, type SphericalAngles } from '@shared/domain/angles'
+import type { Object3D } from 'three'
+import {
+  clampElevation,
+  directionFromAngles,
+  normalizeAzimuth,
+  type SphericalAngles,
+} from '@shared/domain/angles'
 
 /**
  * Turning the head in place, for a camera sitting at the centre of what it looks at.
@@ -28,4 +34,13 @@ export function turnBy(
     azimuth: normalizeAzimuth(angles.azimuth + deltaX * sensitivity),
     elevation: clampElevation(angles.elevation + deltaY * sensitivity),
   }
+}
+
+/**
+ * Aims a camera along the angles, from wherever it stands. The offset from its own position is
+ * what makes this a HEADING rather than a target: `lookAt` takes a point, never a direction.
+ */
+export function aimAlong(camera: Object3D, angles: SphericalAngles): void {
+  const { x, y, z } = directionFromAngles(angles)
+  camera.lookAt(camera.position.x + x, camera.position.y + y, camera.position.z + z)
 }

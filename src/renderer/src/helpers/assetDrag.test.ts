@@ -50,7 +50,7 @@ describe('asset drag', () => {
   })
 
   it('announces every kind under its own type', () => {
-    const kinds: AssetType[] = ['image', 'video', 'audio', 'mesh', 'texture', 'skybox']
+    const kinds: AssetType[] = ['image', 'video', 'audio', 'mesh', 'skybox']
 
     for (const type of kinds) {
       const dataTransfer = transfer()

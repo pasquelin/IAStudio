@@ -1,5 +1,6 @@
 import {
   actionsReaching,
+  needsConfirmation,
   type ActionCommitment,
   type ActionField,
   type ActionName,
@@ -52,6 +53,7 @@ const JSON_TYPE: Record<FieldKind, ScalarSchema['type']> = {
   color: 'string',
   image: 'string',
   mesh: 'string',
+  task: 'string',
   number: 'number',
   integer: 'integer',
   seed: 'integer',
@@ -75,8 +77,22 @@ function scalarSchema(field: ActionField): ScalarSchema {
     ...(type ? { type } : {}),
     description: englishText(field.labelKey),
     ...closed,
-    ...(field.min === undefined ? {} : { minimum: field.min }),
-    ...(field.max === undefined ? {} : { maximum: field.max }),
+    ...boundsOf(field, type),
+  }
+}
+
+/**
+ * 🛑 `minimum`/`maximum` are NUMERIC keywords: emitted on a `{type: 'string'}` they are ignored by
+ * every validator, so the contract announced a bound nobody applied. A string is bounded by
+ * `maxLength`, and `min`/`max` on a text field mean a length — that is what `fits` reads too.
+ */
+function boundsOf(field: ActionField, type: string | undefined): Record<string, number> {
+  const bounded =
+    type === 'string' ? { min: 'minLength', max: 'maxLength' } : { min: 'minimum', max: 'maximum' }
+
+  return {
+    ...(field.min === undefined ? {} : { [bounded.min]: field.min }),
+    ...(field.max === undefined ? {} : { [bounded.max]: field.max }),
   }
 }
 
@@ -101,29 +117,40 @@ export function schemaOfFields(fields: readonly ActionField[]): JsonSchema {
 /**
  * What the client is told an action engages, appended to its own description.
  *
- * On the tool rather than left to be discovered: a client that knows a call will ask the person
- * first can say so before making it, instead of appearing to hang for the two minutes the
- * question is allowed to stand.
+ * 🛑 It says what THIS door does, which is no longer what the window does: a client is refused
+ * with a consent token, never shown a modal it cannot see. Saying "asks the person on screen"
+ * described a wait that never comes.
  */
 const COMMITMENT_NOTE: Record<ActionCommitment, string> = {
   none: 'Runs straight away.',
-  files: 'Asks the person on screen first: it changes files in their project folder.',
-  asset: 'Asks the person on screen first: it uploads an image that stays in their library.',
+  files: 'Refuses with a consent token first: it changes files in the project folder.',
+  asset: 'Refuses with a consent token first: it uploads an image that stays in the library.',
   remote:
-    'Asks the person on screen first: it publishes to a server, and nothing here undoes that.',
-  credits: 'Asks the person on screen first, with an estimate: it spends creative units.',
+    'Refuses with a consent token first: it publishes to a server, and nothing here undoes that.',
+  studio:
+    'Refuses with a consent token first, and no setting ever waives that: it changes the ' +
+    'settings, the account that answers, or the project that is open.',
+  // Not « creative units »: what a run costs is the unit of whichever cloud serves it, and one
+  // of them sells credits. The estimate carries no unit either — some services publish none.
+  credits: 'Refuses with a consent token first, with an estimate where there is one: it spends.',
 }
 
-// The two ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`
-// marks a handler that raises the studio's own question, which is WHY its commitment is `none`.
-// Read alone, `commitment` sent both out as "Runs straight away".
+// The three ways `commitment` alone lies. `raises` lifts the floor from the input; `asksItself`
+// marks a handler that raises the studio's own question; `runsOthers` marks one that engages
+// nothing of its own and carries calls that do. Read alone, `commitment` sent all three out as
+// "Runs straight away".
 const OVERRIDE_NOTE = {
   asksItself:
     'Some calls wait on the person at the screen: the studio raises its own question rather than a confirmation.',
-  raises: 'What one call engages depends on what is given: it may ask the person on screen first.',
+  raises:
+    'What one call engages depends on what is given: it may be refused with a consent token first.',
+  runsOthers:
+    'It engages nothing of its own, and every call it carries is cleared on its own terms: one ' +
+    'of them needing a consent token refuses the whole lot, having run none of it.',
 }
 
 function noteOf(action: AssistantAction): string {
+  if (action.runsOthers) return OVERRIDE_NOTE.runsOthers
   if (action.asksItself) return OVERRIDE_NOTE.asksItself
   if (action.raises) return OVERRIDE_NOTE.raises
 
@@ -140,7 +167,7 @@ export type McpTool = {
 /**
  * The tool name for an action.
  *
- * The dot has to go: an action is `command.run` here, and the tool-name grammar clients hold us
+ * The dot has to go: an action is `command.runStudioCommand` here, and the tool-name grammar clients hold us
  * to accepts letters, digits, underscore and dash only. One substitution, reversed by
  * `actionOfTool`, rather than a second column in the registry that could drift from the first.
  */
@@ -152,12 +179,30 @@ export function actionOfTool(name: string): AssistantAction | null {
   return assistantAction(name.replace('_', '.'))
 }
 
+/**
+ * 🛑 Declared, or `additionalProperties: false` makes the way through unusable by a strict client.
+ *
+ * On the 40 that can engage and no others — measured 2026-08-29, `raises` included: an action
+ * whose floor rises from its input engages without saying so in its `commitment`.
+ */
+const CONSENT_FIELD: ActionField = {
+  key: 'consent',
+  kind: 'text',
+  labelKey: 'assistant.fields.consent',
+  required: false,
+}
+
+const canEngage = (action: AssistantAction): boolean =>
+  needsConfirmation(action.commitment) || action.raises !== undefined
+
 function toolOf(action: AssistantAction): McpTool {
   return {
     name: toolName(action.name),
     title: englishText(action.titleKey),
     description: `${englishText(action.descriptionKey)} ${noteOf(action)}`,
-    inputSchema: schemaOfFields(action.fields),
+    inputSchema: schemaOfFields(
+      canEngage(action) ? [...action.fields, CONSENT_FIELD] : action.fields,
+    ),
   }
 }
 

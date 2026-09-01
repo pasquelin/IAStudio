@@ -119,9 +119,11 @@ export function createUpdates({ loadUpdater, isPackaged, onChange }: UpdaterPort
 
     check: async () => {
       // Offline, or a release page answering 404, rejects here rather than through `error`.
-      await connect()
-        .then(autoUpdater => autoUpdater.checkForUpdates())
-        .catch(give)
+      try {
+        await (await connect()).checkForUpdates()
+      } catch (failure) {
+        give(failure)
+      }
     },
 
     install: () => {

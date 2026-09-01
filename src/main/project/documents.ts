@@ -3,7 +3,8 @@ import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join, relative, sep } from 'node:path'
 import {
   documentPath,
-  DOCUMENTS_FOLDER,
+  LEGACY_DOCUMENTS_FOLDER,
+  roleForKind,
   DOCUMENT_VERSION,
   isStagingName,
   isDocumentExtension,
@@ -15,6 +16,7 @@ import {
   type DocumentFile,
   type DocumentKind,
   type DocumentWrite,
+  documentExtensionOf,
 } from '@shared/domain/document'
 import {
   checkDocumentName,
@@ -22,7 +24,8 @@ import {
   nextFreeDocumentName,
   type NamedDocument,
 } from '@shared/domain/documentName'
-import { extensionOf, foldForFileName } from '@shared/domain/fileName'
+import type { FolderRole } from '@shared/domain/folderRole'
+import { foldForFileName } from '@shared/domain/fileName'
 import { parentOf, pathIn, type FolderEntry } from '@shared/domain/folder'
 import { exists, isMissing, writeAtomic } from '@main/persistence'
 import { bodyFormatOf, type DocumentHead } from './documentBody'
@@ -99,9 +102,9 @@ export type DocumentFilesDeps = {
    * than walked again here.
    *
    * That walk already carries what a listing needs and what a second one would have to be kept
-   * in step with: the depth bound, the refusal to descend into a document written as a folder,
-   * and the exclusion of everything under a dot. What is left for this file is which of those
-   * entries is a document, which is the only part it knows about.
+   * in step with — its depth bound and its refusals, `FolderReader.walk` being where they are
+   * written. What is left for this file is which of those entries is a document, which is the
+   * only part it knows about.
    */
   walkFiles: () => Promise<readonly FolderEntry[]>
   /**
@@ -112,6 +115,11 @@ export type DocumentFilesDeps = {
    * folders documents were actually found in, which is the only place a staging copy can be.
    */
   folderNames: (relative: string) => Promise<readonly string[] | null>
+  /**
+   * Where a first save goes when its caller names none — `ProjectStore.folderFor`. Asked rather
+   * than composed: only the main process reads the markers a rename leaves in place.
+   */
+  folderFor: (role: FolderRole) => Promise<string>
 }
 
 /**
@@ -127,7 +135,7 @@ function claimsDocument(path: string): boolean {
   // `extensionOf` and not `extname`: the studio has one spelling of "what is this file's
   // extension", and it exists because three sites had quietly disagreed about `.gitignore`.
   // Over the NAME, since it reads back to the last dot and a folder may hold one.
-  const extension = extensionOf(basename(path))
+  const extension = documentExtensionOf(basename(path))
   // A Set rather than `kindsForExtension`, which allocates: this runs once per file of the
   // project, and a hundred thousand of them is a hundred thousand arrays thrown away.
   return extension === '' || isDocumentExtension(extension)
@@ -173,7 +181,7 @@ export async function pooledHeads<T>(
  * reason: timing a copy of it would time something else.
  */
 export async function headOf(file: string): Promise<DocumentHead> {
-  return await bodyFormatOf(extensionOf(basename(file))).readHead(file)
+  return await bodyFormatOf(documentExtensionOf(basename(file))).readHead(file)
 }
 
 /**
@@ -199,6 +207,7 @@ export function createDocumentFiles({
   now,
   walkFiles,
   folderNames,
+  folderFor,
 }: DocumentFilesDeps): DocumentFiles {
   /**
    * In-flight work per DOCUMENT, so writing, renaming and removing one cannot interleave.
@@ -332,7 +341,7 @@ export function createDocumentFiles({
       // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
       // to become the failure: this copy's `rm` used to throw over the error the caller needed.
       // Durability across a power cut would want `fsync`; it has none.
-      const body = bodyFormatOf(extensionOf(basename(file))).write(document)
+      const body = bodyFormatOf(documentExtensionOf(basename(file))).write(document)
       await writeAtomic(file, body, { staging: copy })
       heads.forget(file)
     } finally {
@@ -359,7 +368,7 @@ export function createDocumentFiles({
    */
   const foundAt = async (path: string): Promise<FoundDocument | null> => {
     const entry = basename(path)
-    const extension = extensionOf(entry)
+    const extension = documentExtensionOf(entry)
     const claimed = kindsForExtension(extension)
     // An entry with no extension at all claims nothing, so there is nothing for the envelope to
     // contradict — and one that lost its extension is a document the studio would otherwise stop
@@ -409,10 +418,10 @@ export function createDocumentFiles({
   /**
    * The PROJECT, read once: every document it holds, wherever the user put it.
    *
-   * One walk, then the heads. The walk is the folder reader's — depth bound, no descent into a
-   * document written as a folder, nothing under a dot — and what it answers is filtered by
-   * extension BEFORE a single file is opened, which is what makes reading a whole project cost
-   * one open per document rather than one per file.
+   * One walk, then the heads. The walk is the folder reader's, with its own depth bound and its
+   * own refusals, and what it answers is filtered by extension BEFORE a single file is opened —
+   * which is what makes reading a whole project cost one open per document rather than one per
+   * file.
    *
    * Two files can claim the same id — a document duplicated in the Finder carries the id of the
    * one it was copied from. The first in path order keeps it and the second is called after its
@@ -441,7 +450,7 @@ export function createDocumentFiles({
      * a document — one or two in an ordinary project — rather than a second walk.
      */
     const folders = new Set(candidates.map(path => parentOf(path) ?? ''))
-    folders.add(DOCUMENTS_FOLDER)
+    folders.add(LEGACY_DOCUMENTS_FOLDER)
 
     const staged = await Promise.all(
       [...folders].map(async folder => {
@@ -533,9 +542,9 @@ export function createDocumentFiles({
 
   /**
    * Where a document written for the first time goes: under its own name, in the folder its
-   * author picked. `DOCUMENTS_FOLDER` is the fallback for a caller that names none — a default,
-   * not where documents live: they live wherever the user put them, which is what `walkFiles`
-   * finds.
+   * author picked. The kind's own folder is the fallback for a caller that names none — a
+   * default, not where documents live: they live wherever the user put them, which is what
+   * `walkFiles` finds.
    *
    * Suffixed rather than refused when the folder already holds that name — this is the studio
    * naming a document nobody has named yet ("Scène 2", the title of an asset opened twice),
@@ -545,11 +554,8 @@ export function createDocumentFiles({
    * answer worth having: this path is handed straight to a write that overwrites what it lands
    * on, and nothing else stands between the two.
    */
-  const freshFile = async (
-    kind: DocumentKind,
-    title: string,
-    folder = DOCUMENTS_FOLDER,
-  ): Promise<string> => {
+  const freshFile = async (kind: DocumentKind, title: string, named?: string): Promise<string> => {
+    const folder = named ?? (await folderFor(roleForKind(kind)))
     const taken = await namesIn(folder)
     return join(
       absoluteOf(folder),
@@ -565,7 +571,7 @@ export function createDocumentFiles({
   ): Promise<DocumentFile | null> => {
     let document: DocumentFile
     try {
-      document = bodyFormatOf(extensionOf(basename(file))).read(await readFile(file))
+      document = bodyFormatOf(documentExtensionOf(basename(file))).read(await readFile(file))
     } catch (error) {
       if (isMissing(error)) return null
       throw error
@@ -699,7 +705,7 @@ export function createDocumentFiles({
         // every other rename, `descriptorOf` refusing a file whose head its name denies, and
         // there the envelope-then-move order stands: a crash leaves the right title under the
         // old name, which renaming again repairs.
-        if (extensionOf(basename(from)) !== extensionOf(entry)) {
+        if (documentExtensionOf(basename(from)) !== documentExtensionOf(entry)) {
           await store(to, renamed)
           await rm(from, { force: true })
         } else {

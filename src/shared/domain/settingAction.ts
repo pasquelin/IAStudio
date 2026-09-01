@@ -10,7 +10,8 @@ export type SettingActionId =
   | 'advanced.openSettingsFile'
   | 'advanced.openLogFolder'
   | 'advanced.openDevtools'
-  | 'advanced.copyMcpCommand'
+  | 'mcp.copyCommand'
+  | 'mcp.copyConfig'
   | 'advanced.installResolveBridge'
   | 'advanced.reset'
 
@@ -19,7 +20,8 @@ export const SETTING_ACTION_IDS: readonly SettingActionId[] = [
   'advanced.openSettingsFile',
   'advanced.openLogFolder',
   'advanced.openDevtools',
-  'advanced.copyMcpCommand',
+  'mcp.copyCommand',
+  'mcp.copyConfig',
   'advanced.installResolveBridge',
   'advanced.reset',
 ]

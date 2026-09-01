@@ -54,8 +54,8 @@
     "textHint": "Click to place text on the active layer",
     "eraser": "Eraser",
     "eraserHint": "Erase back to transparency",
-    "fill": "Fill layer",
-    "fillHint": "Fill the whole active layer with the current colour",
+    "fill": "Paint bucket",
+    "fillHint": "Fill the whole active layer, or the selection when there is one",
     "picker": "Eyedropper",
     "pickerHint": "Pick up the colour under the pointer",
     "color": "Colour",
@@ -68,7 +68,7 @@
     "hardness": "Hardness",
     "opacity": "Opacity",
     "textName": "Text",
-    "textEditing": "Typing the caption"
+    "textEditing": "Text entry"
   },
   "imageView": {
     "zoom": "{{value}} — actual size",
@@ -124,8 +124,8 @@
     "remove": "Delete",
     "newName": "Style",
     "save": "Save as style",
-    "saveHint": "Keeps the current material settings, without its maps, to replay on another texture.",
-    "applyHint": "Puts these settings back on the open texture, leaving its channels alone",
+    "saveHint": "Keeps the current material settings, without its maps, to replay on another material.",
+    "applyHint": "Puts these settings back on the open material, leaving its channels alone",
     "renameHint": "Changes the saved style’s name, leaving what it holds alone",
     "removeHint": "Takes the style off the list; documents already using it keep their settings"
   },

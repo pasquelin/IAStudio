@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { visibleHomeSections, type HomeSectionId } from '@shared/domain/home'
-import { useSettings } from '@/stores/settings'
+import { hasApi, useSettings } from '@/stores/settings'
 
 /**
  * The sections to draw, in the user's order. The rules live in `domain/home.ts` — this only says
@@ -8,7 +8,7 @@ import { useSettings } from '@/stores/settings'
  */
 export function useHomeSections(): readonly HomeSectionId[] {
   const stored = useSettings(state => state.settings.home.sections)
-  const authenticated = useSettings(state => state.auth.authenticated)
+  const api = useSettings(hasApi)
 
-  return useMemo(() => visibleHomeSections(stored, { authenticated }), [stored, authenticated])
+  return useMemo(() => visibleHomeSections(stored, api), [stored, api])
 }

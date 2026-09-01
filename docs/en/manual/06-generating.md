@@ -13,7 +13,7 @@ This is the heart of the studio: you describe, it makes.
 **2. The request leaves.** It does not come straight back. It becomes a **job**, visible in the
 panel of the same name, with a progress bar.
 
-**3. The result arrives** in the Assets panel and on your disk.
+**3. The result arrives** in your account's **Library**, then on your disk.
 
 In between, you can keep working, switch workspace, open another document. Nothing blocks.
 
@@ -44,10 +44,10 @@ too — with no update to the studio.
 | A **colour square** | a colour | a click opens the system picker |
 | A **number with a die** 🎲 | the *seed* — see below | a number, or a click on the die |
 
-> **A picture placed on a form goes up to Scenario when you generate.** The model runs on
-> Scenario's servers: it can only read what the account's library holds. So the studio sends the
+> **A picture placed on a form goes up to the provider when you generate.** The model runs on
+> the provider's servers: it can only read what the account's library holds. So the studio sends the
 > project asset up, remembers the link between the two, and sends nothing the next time. You will
-> find it under **Your library**, on the home screen.
+> find it in the **Library** panel, among what the account's library holds.
 >
 > A picture edited since it went up is sent again: otherwise the generation would run on a version
 > you no longer see.
@@ -227,6 +227,32 @@ Neither is a failure, and nothing is spent.
 
 ---
 
+## The project's context, in the form
+
+If the open project carries a context, the panel shows it above the form, as it will be sent, with
+a ticked box:
+
+```
+☑ Apply the project's context
+┌────────────────────────────────────────┐
+│ Project context —                      │
+│ World: Middle Ages, 13th century…      │
+│ Art direction: oil paint, chiaro…      │
+└────────────────────────────────────────┘
+```
+
+**Unticking the box leaves the context out of that one shot**, without going to turn a card off in
+the Context panel. The box stays as you left it for as long as the panel is open.
+
+The price under the **Generate** button accounts for the context: what is quoted is what will be
+sent.
+
+The block is not drawn when there would be nothing to say — no card on, or a model with no
+description field. What a context holds, how it is written and where it is kept are in the
+[Projects](04-projects.md#the-projects-context) chapter.
+
+---
+
 ## The settings you meet most often
 
 They are not the same everywhere, but these names recur:
@@ -343,7 +369,7 @@ the rest.
 
 That number is adjustable: **Settings ▸ Generation ▸ Concurrent generations**, from 1 to 16.
 
-> **Raising this number does not speed up the service.** It only makes it likelier that Scenario
+> **Raising this number does not speed up the service.** It only makes it likelier that the provider
 > refuses your surplus requests. The queue exists precisely to spread a burst rather than have it
 > rejected. Three is a good balance.
 
@@ -360,7 +386,7 @@ Four by default.
 
 ### Closing the studio does not cancel a generation
 
-**A generation you started keeps running on Scenario's side, whether the studio is open or not.**
+**A generation you started keeps running on the provider's side, whether the studio is open or not.**
 What was missing was its ability to find it again on the way back: that is done. On the way out it
 notes the requests still running; on the next launch it picks them up where they are, and their
 result joins your assets as if nothing had happened.
@@ -375,7 +401,7 @@ Three things decide what you will actually see:
   hours, and short enough that a project abandoned mid-generation does not keep its notes for
   ever.
 
-**Cancelling, for its part, really stops the request** — on Scenario's side, not just in the
+**Cancelling, for its part, really stops the request** — on the provider's side, not just in the
 display.
 
 ### Switching accounts does not interrupt a running generation
@@ -396,9 +422,9 @@ first one carries on quietly.
 
 The line turns to **Done**, and the asset appears:
 
-- in the **Assets** panel — the project's shelf;
-- on your disk, in `Images/`, `Video/`, `Audio/`… depending on its type, until you file it
-  elsewhere.
+- in your account's **Library**, from which you can download it;
+- on your disk, in `Images/`, `Video/`, `Modelling/Models/`… depending on its type — or in `Materials/` when
+  it is a picture that serves a material — until you file it elsewhere.
 
 **What you can then do with it depends on its type**, and this is where the studio surprises
 people most often:
@@ -427,7 +453,7 @@ drop. See [Assets](07-assets.md).
 
 ## Regenerating with the same settings
 
-Select an asset in the shelf and look at the **Inspector**, on the right. If it knows the
+Select an asset in the Explorer and look at the **Inspector**, on the right. If it knows the
 generation that produced it, it shows the model, the prompt and the seed — and offers
 **Regenerate**.
 
@@ -443,12 +469,12 @@ the fastest way to explore a direction.
 
 | Message | Cause | What to do |
 |---|---|---|
-| **No credentials saved.** | no API key | **Settings ▸ Account** |
+| **No credentials saved.** | no API key | **Settings ▸ AI models ▸ API keys** |
 | **Invalid API key or secret.** | one of the two strings is wrong | check it, often a stray space |
-| **This API key lacks the required permissions.** | the key exists but cannot do this | check your plan at app.scenario.com |
+| **This API key lacks the required permissions.** | the key exists but cannot do this | check your plan with your provider |
 | **Too many requests. Retrying…** | you exceeded the allowed rate | nothing, the studio retries on its own |
-| **The Scenario service is temporarily unavailable.** | server-side outage | try again later |
-| **Cannot reach Scenario. Check your connection.** | your internet connection | check the network |
+| **The generation service is temporarily unavailable.** | server-side outage | try again later |
+| **Cannot reach the generation service. Check your connection.** | your internet connection | check the network |
 | **The generation failed.** | the model refused the request | often an out-of-range parameter, or a refused prompt |
 | **Could not save the result to disk.** | the project folder is no longer reachable | disk full, project moved, write permissions |
 | **Invalid value.** | one field of the form | the offending field is flagged |

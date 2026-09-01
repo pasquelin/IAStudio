@@ -1,4 +1,5 @@
 import { LANGUAGES } from '../i18n/languages'
+import { ASSISTANT_STEPS_MAX, ASSISTANT_STEPS_MIN } from './assistantSteps'
 import { DICTATION_MODES } from './dictation'
 import {
   DENSITIES,
@@ -48,9 +49,9 @@ export type SettingSectionEntry = {
   /** Set on a sub-section. The navigation builds its tree from this, and nothing else. */
   parent?: SettingsSectionId
   /**
-   * The model family this screen sets a default for. Declared rather than read back out of the
-   * id: an action that cannot find a model of a family has to open the screen that sets one,
-   * and slicing `'background-removal'` off the id would hand it a string nothing checks.
+   * The model family this screen chooses providers for. Declared rather than read back out of
+   * the id: an action that cannot find a model of a family has to open the screen that gives it
+   * one, and slicing `'background-removal'` off the id would hand it a string nothing checks.
    */
   family?: ModelFamily
 }
@@ -61,34 +62,31 @@ export function sectionOfFamily(family: ModelFamily): SettingsSectionId | undefi
 }
 
 /**
- * One screen per model family, each holding the default model of that family. Their labels are
- * the workspaces' own: a family and the space that works with it are the same idea to the user.
+ * One screen per family, holding every employment that family has and what serves each.
  *
- * The last three have no workspace of their own — they are the families the canvas edits reach
- * for — so they are named after the family. Without these screens, Cutout and Vectorize have
- * nowhere at all to be given a model, and both stop on "no model set".
+ * They carry `family:` since ADR-23 removed the per-family default picker: an action that cannot
+ * find a model has one place to send the person, and this is it. The last three have no
+ * workspace of their own — they are the families the canvas edits reach for.
  */
-const MODEL_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
-  { id: 'generation.image', labelKey: 'workspaces.image', parent: 'generation', family: 'image' },
-  { id: 'generation.video', labelKey: 'workspaces.video', parent: 'generation', family: 'video' },
-  { id: 'generation.3d', labelKey: 'workspaces.3d', parent: 'generation', family: '3d' },
-  { id: 'generation.audio', labelKey: 'workspaces.audio', parent: 'generation', family: 'audio' },
+const AI_FAMILY_SECTIONS: readonly SettingSectionEntry[] = [
+  { id: 'ai.image', labelKey: 'workspaces.image', parent: 'ai', family: 'image' },
+  { id: 'ai.video', labelKey: 'workspaces.video', parent: 'ai', family: 'video' },
+  { id: 'ai.3d', labelKey: 'workspaces.3d', parent: 'ai', family: '3d' },
+  { id: 'ai.audio', labelKey: 'workspaces.audio', parent: 'ai', family: 'audio' },
+  { id: 'ai.material', labelKey: 'workspaces.materials', parent: 'ai', family: 'material' },
+  { id: 'ai.skybox', labelKey: 'workspaces.skyboxes', parent: 'ai', family: 'skybox' },
+  { id: 'ai.code', labelKey: 'workspaces.code', parent: 'ai', family: 'code' },
+  { id: 'ai.upscale', labelKey: 'families.upscale', parent: 'ai', family: 'upscale' },
   {
-    id: 'generation.upscale',
-    labelKey: 'families.upscale',
-    parent: 'generation',
-    family: 'upscale',
-  },
-  {
-    id: 'generation.background-removal',
+    id: 'ai.background-removal',
     labelKey: 'families.background-removal',
-    parent: 'generation',
+    parent: 'ai',
     family: 'background-removal',
   },
   {
-    id: 'generation.vectorization',
+    id: 'ai.vectorization',
     labelKey: 'families.vectorization',
-    parent: 'generation',
+    parent: 'ai',
     family: 'vectorization',
   },
 ]
@@ -103,6 +101,7 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     id: 'account',
     labelKey: 'settings.account',
     descriptionKey: 'settings.accountDescription',
+    parent: 'ai',
   },
   {
     id: 'appearance',
@@ -114,7 +113,12 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     labelKey: 'settings.generation',
     descriptionKey: 'settings.generationDescription',
   },
-  ...MODEL_FAMILY_SECTIONS,
+  {
+    id: 'ai',
+    labelKey: 'settings.ai',
+    descriptionKey: 'settings.aiDescription',
+  },
+  ...AI_FAMILY_SECTIONS,
   {
     id: 'spaces',
     labelKey: 'settings.spaces',
@@ -144,6 +148,22 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     id: 'git',
     labelKey: 'settings.git',
     descriptionKey: 'settings.gitDescription',
+  },
+  {
+    id: 'mcp',
+    labelKey: 'settings.mcp',
+    descriptionKey: 'settings.mcpDescription',
+  },
+  {
+    id: 'memory',
+    labelKey: 'settings.memory',
+    descriptionKey: 'settings.memoryDescription',
+  },
+  {
+    id: 'memory.graph',
+    labelKey: 'settings.memoryGraph',
+    descriptionKey: 'settings.memoryGraphDescription',
+    parent: 'memory',
   },
   {
     id: 'storage',
@@ -284,6 +304,13 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.home.help',
   }),
   setting({
+    path: 'home.news',
+    kind: 'boolean',
+    section: 'general',
+    titleKey: 'settings.homeNews.title',
+    helpKey: 'settings.homeNews.help',
+  }),
+  setting({
     path: 'appearance.theme',
     kind: 'choice',
     section: 'appearance',
@@ -329,6 +356,15 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.reduceMotion.help',
   }),
   setting({
+    path: 'assistant.steps',
+    kind: 'number',
+    section: 'general',
+    titleKey: 'settings.assistantSteps.title',
+    helpKey: 'settings.assistantSteps.help',
+    min: ASSISTANT_STEPS_MIN,
+    max: ASSISTANT_STEPS_MAX,
+  }),
+  setting({
     path: 'generation.concurrentJobs',
     kind: 'number',
     section: 'generation',
@@ -345,6 +381,18 @@ export const SETTING_REGISTRY = [
     helpKey: 'settings.maxRetries.help',
     min: 0,
     max: 10,
+  }),
+  setting({
+    path: 'generation.landing',
+    kind: 'choice',
+    section: 'generation',
+    titleKey: 'settings.landing.title',
+    helpKey: 'settings.landing.help',
+    options: [
+      { value: 'ask', labelKey: 'settings.landing.ask' },
+      { value: 'document', labelKey: 'settings.landing.document' },
+      { value: 'newTab', labelKey: 'settings.landing.newTab' },
+    ],
   }),
   setting({
     path: 'generation.captionArrivals',
@@ -433,6 +481,35 @@ export const SETTING_REGISTRY = [
     min: 0.01,
     max: 1,
     step: 0.05,
+  }),
+  setting({
+    path: 'three.gizmoSize',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.gizmoSize.title',
+    helpKey: 'settings.gizmoSize.help',
+    // Up to twice what the object measures: the cap is a CEILING, and somebody working on a
+    // small part wants the handles to stand clear of it rather than hug its outline.
+    min: 0.75,
+    max: 2,
+    step: 0.05,
+  }),
+  setting({
+    path: 'three.snapSurfaceAlign',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.snapSurfaceAlign.title',
+    helpKey: 'settings.snapSurfaceAlign.help',
+  }),
+  setting({
+    path: 'three.snapSurfaceOffset',
+    kind: 'slider',
+    section: 'spaces.three',
+    titleKey: 'settings.snapSurfaceOffset.title',
+    helpKey: 'settings.snapSurfaceOffset.help',
+    min: 0,
+    max: 1,
+    step: 0.01,
   }),
   setting({
     path: 'three.shadows',
@@ -576,7 +653,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.enabled',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpEnabled.title',
     helpKey: 'settings.mcpEnabled.help',
   }),
@@ -588,7 +665,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.delegateFiles',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateFiles.title',
     helpKey: 'settings.mcpDelegateFiles.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -596,7 +673,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.delegateAsset',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateAsset.title',
     helpKey: 'settings.mcpDelegateAsset.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -604,7 +681,7 @@ export const SETTING_REGISTRY = [
   setting({
     path: 'mcp.delegateRemote',
     kind: 'boolean',
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateRemote.title',
     helpKey: 'settings.mcpDelegateRemote.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -615,7 +692,7 @@ export const SETTING_REGISTRY = [
     min: 0,
     max: 10_000,
     step: 1,
-    section: 'advanced',
+    section: 'mcp',
     titleKey: 'settings.mcpDelegateBudget.title',
     helpKey: 'settings.mcpDelegateBudget.help',
     dependsOn: { path: 'mcp.enabled', equals: true },
@@ -701,11 +778,20 @@ export const ACTION_REGISTRY: readonly SettingAction[] = [
   {
     // The port and the token are minted per launch, so there is nothing to write down and
     // nothing to show on this screen — only a line to paste, which is what this hands over.
-    id: 'advanced.copyMcpCommand',
-    section: 'advanced',
+    id: 'mcp.copyCommand',
+    section: 'mcp',
     titleKey: 'settings.copyMcpCommand.title',
     helpKey: 'settings.copyMcpCommand.help',
     buttonKey: 'settings.copyMcpCommand.button',
+  },
+  {
+    // The same two facts in the shape a client that reads a FILE takes them: one command line
+    // covers Claude Code, and nothing covered the others.
+    id: 'mcp.copyConfig',
+    section: 'mcp',
+    titleKey: 'settings.copyMcpConfig.title',
+    helpKey: 'settings.copyMcpConfig.help',
+    buttonKey: 'settings.copyMcpConfig.button',
   },
   {
     // Asked before acting, and it is the only action here that writes OUTSIDE the studio's own

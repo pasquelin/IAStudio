@@ -109,8 +109,8 @@
       "help": "Undoes the hiding and isolating done from the viewport. Objects the document itself declares hidden stay hidden."
     },
     "sceneSnap": {
-      "title": "Snap",
-      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the Modelling workspace settings."
+      "title": "All snaps",
+      "help": "Turns all four snaps on or off at once — surface, grid, angle, scale. A second press gives back exactly the ones that were on. The bar at the top of the viewport sets them one by one."
     },
     "sceneSpace": {
       "title": "Local frame",
@@ -134,7 +134,7 @@
     },
     "sceneCapture": {
       "title": "Capture the view",
-      "help": "Saves an image of the 3D view into the project’s images — without the grid, the handles or the rails. The menu offers definitions larger than the panel’s own."
+      "help": "Saves an image of the 3D view into the project’s images — without the grid, the handles or the rails. The menu offers resolutions larger than the panel’s own."
     },
     "sceneAdd": {
       "title": "Add",
@@ -142,11 +142,11 @@
     },
     "sceneAddToSheet": {
       "title": "Add to the animation band",
-      "help": "Puts the selected objects on the band, where keys are posed. The band shows only what is put there, so a scene of thousands of objects stays readable."
+      "help": "Puts the selected objects on the band, where keys are set. The band shows only what is put there, so a scene of thousands of objects stays readable."
     },
     "sceneRemoveFromSheet": {
-      "title": "Take off the animation band",
-      "help": "Removes the line from the band. Keys already posed stay, and an object keeps its line for as long as it holds one."
+      "title": "Remove from the animation band",
+      "help": "Removes the line from the band. Keys already set stay, and an object keeps its line for as long as it holds one."
     },
     "sceneGroup": {
       "title": "Group",
@@ -190,7 +190,7 @@
     },
     "sequenceExportCut": {
       "title": "Export edit (OTIO)…",
-      "help": "Writes the edit itself out as an OpenTimelineIO file, which other editing applications open — tracks, clips, in points, speeds and links to the media. Fades, gains and image/sound links travel in it too, but only Scenario reads them back."
+      "help": "Writes the edit itself out as an OpenTimelineIO file, which other editing applications open — tracks, clips, in points, speeds and links to the media. Fades, gains and image/sound links travel in it too, but only IA Studio reads them back."
     },
     "sequenceExportEdl": {
       "title": "Export edit list (EDL)…",
@@ -448,6 +448,34 @@
     "scenePoseMode": {
       "title": "Pose mode",
       "help": "Switches between picking objects and picking the bones of a rig."
+    },
+    "sceneNavigate": {
+      "title": "Navigate",
+      "help": "Move through the scene as in a game: the mouse holds the view, W A S D travel, E and Q rise and fall. The wheel sets the speed. Escape gives the mouse back."
+    },
+    "sceneNegate": {
+      "title": "Negate",
+      "help": "Marks the selected shapes as tools: they are cut out of the others, whichever button is pressed next and in whatever order they were clicked. A marked shape shows translucent red. Press again to take the mark off."
+    },
+    "sceneCarve": {
+      "title": "Carve",
+      "help": "Cuts the shapes marked Negate — failing that, the smaller ones — out of the biggest selected shape: a cube set inside a wall opens a window in it. The order of the clicks changes nothing. The original shapes are kept — Separate gives them back."
+    },
+    "sceneWeld": {
+      "title": "Join",
+      "help": "Merges the selected shapes into a single solid. A shape marked Negate is cut out of it instead of being added to it. The original shapes are kept — Separate gives them back."
+    },
+    "sceneIntersect": {
+      "title": "Keep overlap",
+      "help": "Keeps only the part where the selected shapes overlap, and throws the rest away. A shape marked Negate is cut out of it instead of being kept. The original shapes are kept — Separate gives them back."
+    },
+    "sceneInvertCarve": {
+      "title": "Flip the fold",
+      "help": "Folds the same shapes the other way round: what was carved becomes the matter, and the matter becomes the tool. One click, no undo — for the fold that ran backwards."
+    },
+    "sceneSeparate": {
+      "title": "Separate",
+      "help": "Breaks a solid apart and gives back the shapes it was made of, each where it stood."
     }
   }
 }

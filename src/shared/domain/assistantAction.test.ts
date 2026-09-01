@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type ActionField, validatesInput } from './assistantAction'
+import { inputProblem, readInput, validatesInput, type ActionField } from './assistantAction'
 
 const field = (partial: Partial<ActionField> & Pick<ActionField, 'key' | 'kind'>): ActionField => ({
   labelKey: 'assistant.fields.query',
@@ -91,6 +91,18 @@ describe('an input, checked against the fields that declare it', () => {
   })
 
   /**
+   * 🛑 A `max` on a text field is a LENGTH, and it was applied by nobody: an over-long value went
+   * through to the main process, zod threw there, and the client got a refusal naming no field to
+   * repair — so it retried the same call. `tools.ts` publishes it as `maxLength`.
+   */
+  it('holds a text field to the length its registry declares', () => {
+    const fields = [field({ key: 'summary', kind: 'text', required: true, max: 5 })]
+
+    expect(validatesInput(fields, { summary: 'short' })).toBe(true)
+    expect(validatesInput(fields, { summary: 'far too long' })).toBe(false)
+  })
+
+  /**
    * `raw` carries a generation model's own parameters, whose shape is only known once
    * `GET /models/{id}` has answered. Anything defined is therefore in bounds — and `null` is
    * defined, which is what a client sends to clear a value.
@@ -102,5 +114,89 @@ describe('an input, checked against the fields that declare it', () => {
     expect(validatesInput(fields, { parameters: 'a string' })).toBe(true)
     expect(validatesInput(fields, { parameters: null })).toBe(true)
     expect(validatesInput(fields, { parameters: undefined })).toBe(false)
+  })
+})
+
+describe('an input read for the handler that will get it', () => {
+  const many = [field({ key: 'assetIds', kind: 'text', required: true, repeated: true })]
+
+  /**
+   * Measured on the bench pass of 2026-08-25: `assetIds: "asset-4"` was refused eighteen times in
+   * one request. `badInput` says nothing of the shape, so the model sent the same call again.
+   */
+  it('lets a lone value fill a repeated field', () => {
+    expect(readInput(many, { assetIds: 'asset-4' })).toEqual({ assetIds: ['asset-4'] })
+    expect(readInput(many, { assetIds: ['asset-4'] })).toEqual({ assetIds: ['asset-4'] })
+  })
+
+  it('still refuses what the fields do not accept', () => {
+    expect(readInput(many, { assetIds: 2 })).toBeNull()
+    expect(readInput(many, { assetIsd: 'asset-4' })).toBeNull()
+    expect(readInput([field({ key: 'n', kind: 'number' })], { n: '1' })).toBeNull()
+  })
+})
+
+/**
+ * 🛑 Measured on the bench pass of 2026-08-25: 384 calls were sent again word for word after a
+ * refusal. `badInput` alone names neither the field nor what it takes, so there was nothing to
+ * repair from.
+ */
+describe('why an input was refused', () => {
+  it('names the field and what it takes', () => {
+    const fields = [
+      field({ key: 'workspace', kind: 'choice', required: true, options: ['3d', 'image'] }),
+      field({ key: 'at', kind: 'number' }),
+    ]
+
+    expect(inputProblem(fields, { workspace: '3d' })).toBeNull()
+    expect(inputProblem(fields, { workspace: 'nowhere' })).toContain('"workspace"')
+    expect(inputProblem(fields, { workspace: '3d', at: 'soon' })).toContain('"at"')
+    expect(inputProblem(fields, { at: 1 })).toContain('"workspace" is required')
+  })
+
+  /**
+   * A search and the call reading its result, sent in one breath: 41 calls of the bench pass of
+   * 2026-08-26 carried a value nobody had answered yet.
+   */
+  it('tells an empty value apart, and says to send it again next round', () => {
+    const problem = inputProblem([field({ key: 'shotId', kind: 'text', required: true })], {
+      shotId: '',
+    })
+
+    expect(problem).toContain('"shotId" was empty')
+    expect(problem).toContain('NEXT round')
+  })
+
+  /**
+   * The shape a caller writes when it has no value yet, and the studio used to take it as one:
+   * `nodeId: "<path_id>"` reached the scene as a name — 24 refusals on the bench pass of
+   * 2026-08-26, none of them saying what was wrong with it.
+   */
+  it('says a placeholder is not a value', () => {
+    const one = [field({ key: 'nodeId', kind: 'text', required: true })]
+
+    expect(inputProblem(one, { nodeId: '<path_id>' })).toContain('placeholder')
+    expect(inputProblem(one, { nodeId: '$ASSET_ID' })).toContain('placeholder')
+    expect(inputProblem(one, { nodeId: 'TODO' })).toContain('placeholder')
+    expect(inputProblem(one, { nodeId: 'node-7' })).toBeNull()
+  })
+
+  /**
+   * 🛑 The message above was unreachable for a year of one morning: `inputProblem` only speaks
+   * once something ELSE has refused, and `fits` took any non-blank string. A placeholder reached
+   * the handler and came back as `notFound`, and the case here was green on code nothing ran.
+   */
+  it('refuses a placeholder at the gate, not only in the message', () => {
+    const one = [field({ key: 'nodeId', kind: 'text', required: true })]
+
+    expect(readInput(one, { nodeId: '<path_id>' })).toBeNull()
+    expect(readInput(one, { nodeId: 'node-7' })).toEqual({ nodeId: 'node-7' })
+  })
+
+  it('names a field nothing declares, and what the action does take', () => {
+    const problem = inputProblem([field({ key: 'path', kind: 'text' })], { pah: 'assets' })
+
+    expect(problem).toContain('no field "pah"')
+    expect(problem).toContain('path')
   })
 })

@@ -21,11 +21,11 @@ nothing matches, it says so: "No setting matches this search."
 
 Three buttons at the bottom of the window.
 
-| Button | What it does |
-|---|---|
-| **Apply** | saves the changes and leaves the window open |
-| **OK** | saves and closes the window |
-| **Cancel** | throws away the unsaved changes |
+| Button     | What it does                                 |
+| ---------- | -------------------------------------------- |
+| **Apply**  | saves the changes and leaves the window open |
+| **OK**     | saves and closes the window                  |
+| **Cancel** | throws away the unsaved changes              |
 
 While a setting is changed but not applied, a **dot** appears beside it, with the tooltip "Changed,
 not applied yet".
@@ -42,8 +42,8 @@ one setting. To reset everything at once, see **Reset everything** in the Advanc
 ### A greyed-out setting
 
 Some settings depend on another. **Grid size** is useless if the grid is not shown: it stays
-visible, but greyed out, with the reason written underneath — *"Has no effect while 'Show the grid'
-is off."*
+visible, but greyed out, with the reason written underneath — _"Has no effect while 'Show the grid'
+is off."_
 
 Nothing is ever hidden: a setting you cannot change right now stays where it is, with its
 explanation.
@@ -52,7 +52,7 @@ explanation.
 
 ## General
 
-*The application’s language, and what it does when it opens.*
+_The application’s language, and what it does when it opens._
 
 ### Language
 
@@ -60,11 +60,11 @@ explanation.
 
 The language of every text in the application: menus, buttons, messages.
 
-| Value | Effect |
-|---|---|
-| **System** | follows your computer's own language — **English** if that is neither French nor English |
-| **Français** | French |
-| **English** | English |
+| Value        | Effect                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| **System**   | follows your computer's own language — **English** if that is neither French nor English |
+| **Français** | French                                                                                   |
+| **English**  | English                                                                                  |
 
 > **A machine set to German, Spanish or Japanese opens the studio in English**, not in French.
 
@@ -76,7 +76,7 @@ you write in them: a prompt written in English stays in English.
 
 > **The generation form follows too, but not always all the way.** The names of the settings a
 > model offers — and the explanatory sentences under them — are written by the model, and the
-> Scenario API only ever returns them in English. The studio translates them itself. A setting it
+> generation API only ever returns them in English. The studio translates them itself. A setting it
 > does not know yet therefore stays **in English** rather than disappearing, and a model published
 > tomorrow arrives in its original wording.
 >
@@ -91,10 +91,10 @@ you write in them: a prompt written in English stays in English.
 
 What the application does when you launch it.
 
-| Value | Effect |
-|---|---|
+| Value                       | Effect                           |
+| --------------------------- | -------------------------------- |
 | **Reopen the last project** | puts you back where you left off |
-| **Open nothing** | starts on an empty window |
+| **Open nothing**            | starts on an empty window        |
 
 "Open nothing" is quicker to start, and calmer if you juggle a lot of projects.
 
@@ -111,13 +111,25 @@ home still appears, offering to create one. To land directly in a workspace, unt
 What is set **on the home itself**, and not here: which bands are shown — see
 [The window](03-the-window.md#the-home-screen-before-anything-else).
 
+### Model news
+
+**Switch. Default: on.**
+
+The **What is moving** band, at the foot of the home, reads the models trending and the articles
+posted on Hugging Face. **This is the studio's only outward call for something other than a model
+or a generation**, and it goes to the host every weight of the catalogue already comes from:
+nobody learns anything new. Unticked, the studio contacts nobody for that band, which stays and
+says it is off.
+
+An answer is kept for six hours, and the band shows eight rows at most, nothing older than a month: these are trends, not a ticker.
+
 ---
 
 ## Account
 
-*API credentials, encrypted by the system keychain.*
+_API credentials, encrypted by the system keychain._
 
-This is where you connect the studio to [Scenario](https://www.scenario.com). Without this step,
+This is where you connect the studio to your generation service. Without this step,
 anything to do with generation stays inert: the model catalogue is empty, the **Generate** button
 does not answer.
 
@@ -126,7 +138,7 @@ does not answer.
 Not one. You can store as many API keys as you like, each under a name you choose — "Studio",
 "Client X", "Personal".
 
-**Why that is useful.** An API key **carries its own Scenario project**: its models, its assets, its
+**Why that is useful.** An API key **carries its own remote project**: its models, its assets, its
 credit. Switching accounts changes **the remote library** you browse.
 
 > **It never touches your local project.** Your folders, your images, your edits are on your disk
@@ -137,33 +149,33 @@ credit. Switching accounts changes **the remote library** you browse.
 
 The form, below the list. Three fields:
 
-| Field | What it is |
-|---|---|
-| **Name** | whatever you like, so you can tell them apart — "Studio, Client X…" |
-| **API key** | your identifier, visible as you type it |
-| **API secret** | your password, masked with dots |
+| Field          | What it is                                                          |
+| -------------- | ------------------------------------------------------------------- |
+| **Name**       | whatever you like, so you can tell them apart — "Studio, Client X…" |
+| **API key**    | your identifier, visible as you type it                             |
+| **API secret** | your password, masked with dots                                     |
 
-Take the key and the secret from [app.scenario.com](https://app.scenario.com), in your account
+Take the key and the secret from your provider, in your account
 settings. Then **Add an account** — the button reads "Adding…" while it writes.
 
 **The button stays off** until all three fields are valid.
 
 The name obeys three rules, and the studio says which one was broken:
 
-| Rule | Message when it is broken |
-|---|---|
-| A name is required | "A name is required." |
-| 60 characters at most | "This name is too long." |
+| Rule                             | Message when it is broken                 |
+| -------------------------------- | ----------------------------------------- |
+| A name is required               | "A name is required."                     |
+| 60 characters at most            | "This name is too long."                  |
 | Two accounts cannot share a name | "Another account already uses this name." |
 
 Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name.
 
 **Two other messages can appear here**, more rarely, and they are not fixed the same way:
 
-| Message | What happened | What to do |
-|---|---|---|
-| "This account no longer exists." | you are acting on an account deleted in the meantime — usually by another studio window | close settings and reopen them: the list is read again |
-| "The account could not be saved." | the write failed without the studio being able to say why | try once more; if it recurs, see [When something goes wrong](16-troubleshooting.md) |
+| Message                           | What happened                                                                           | What to do                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| "This account no longer exists."  | you are acting on an account deleted in the meantime — usually by another studio window | close settings and reopen them: the list is read again                              |
+| "The account could not be saved." | the write failed without the studio being able to say why                               | try once more; if it recurs, see [When something goes wrong](16-troubleshooting.md) |
 
 The first is never your fault and loses nothing. The second is the only message in this section
 that deserves a second attempt.
@@ -176,9 +188,9 @@ that deserves a second attempt.
 
 One row per account. On the row of the account **currently in use**, a badge:
 
-| Badge | What it says |
-|---|---|
-| **In use**, green | this account is the one working, and its key works |
+| Badge                  | What it says                                            |
+| ---------------------- | ------------------------------------------------------- |
+| **In use**, green      | this account is the one working, and its key works      |
 | **Not connected**, red | this account is the one working, but its key is refused |
 
 The other rows carry none: only the active account can report whether its key works, since it is the
@@ -186,26 +198,15 @@ only one being asked.
 
 Three buttons per row:
 
-| Button | Effect |
-|---|---|
-| **Use this account** | switches to it. Absent on the row that is already active |
-| **Rename** | replaces the row with a text field, with **Save** and **Cancel** |
-| **Remove** | deletes the account and its key |
-
-### The account that comes from a file
-
-If you launched the studio from its source code with a `secrets/.env` file, those credentials appear
-as **an ordinary account** in the list, with a grey `secrets/.env` badge.
-
-It is used like the others — the **Use this account** button works — but it has **no Rename and no
-Remove**: those two buttons are absent, not greyed out.
-
-This account is changed by editing the file. If you reach it by some other route, the studio says
-so: "This account comes from `secrets/.env`: edit that file to rename or remove it."
+| Button               | Effect                                                           |
+| -------------------- | ---------------------------------------------------------------- |
+| **Use this account** | switches to it. Absent on the row that is already active         |
+| **Rename**           | replaces the row with a text field, with **Save** and **Cancel** |
+| **Remove**           | deletes the account and its key                                  |
 
 ### When the list is empty
 
-> "No account yet. Add an API key to reach the Scenario library."
+> "No account yet. Add an API key to reach the remote library."
 
 Nothing is stored, and nothing works: no catalogue, no generation.
 
@@ -221,16 +222,16 @@ not read back. Unlock your keychain, try again, everything is still there.
 
 ## Appearance
 
-*Theme and control density.*
+_Theme and control density._
 
 ### Theme
 
 **Choice. Starts at: Dark.**
 
-| Value | Effect |
-|---|---|
-| **Dark** | very dark grey background — rests the eyes in a dimly lit room |
-| **Light** | light background — reads better in broad daylight |
+| Value      | Effect                                                                      |
+| ---------- | --------------------------------------------------------------------------- |
+| **Dark**   | very dark grey background — rests the eyes in a dimly lit room              |
+| **Light**  | light background — reads better in broad daylight                           |
 | **System** | follows your computer's setting, and switches on its own when evening comes |
 
 > **The background stays opaque, whatever the theme.** No transparency, no blur behind the window:
@@ -242,10 +243,10 @@ not read back. Unlock your keychain, try again, everything is still there.
 
 Sets how big the buttons are and how tall the rows sit.
 
-| Value | Control height | For whom |
-|---|---|---|
-| **Comfortable** | 28 px | more air, easier to aim at with a mouse |
-| **Compact** | 24 px | more on screen, on a small display or with many panels |
+| Value           | Control height | For whom                                               |
+| --------------- | -------------- | ------------------------------------------------------ |
+| **Comfortable** | 28 px          | more air, easier to aim at with a mouse                |
+| **Compact**     | 24 px          | more on screen, on a small display or with many panels |
 
 ### Accent colour
 
@@ -283,7 +284,7 @@ stutters instead of smoothing.
 
 ## Generation
 
-*Generation queue and default models, per family.*
+_Generation queue and default models, per family._
 
 ### Concurrent generations
 
@@ -311,11 +312,11 @@ sees in it.
 
 **What counts as "without a useful name"**, and nothing else:
 
-| What the studio renames | Examples |
-|---|---|
-| an empty name, or a device prefix followed by a number | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
-| the names operating systems give, in both languages | `Untitled`, `Download`, `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image` |
-| a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)` |
+| What the studio renames                                   | Examples                                                                                 |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| an empty name, or a device prefix followed by a number    | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12`                                        |
+| the names operating systems give, in both languages       | `Untitled`, `Download`, `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image` |
+| a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)`             |
 
 **A name you chose is never replaced**, even when it starts with the same words: `Screenshot of
 the main menu` stays as it is.
@@ -337,24 +338,20 @@ At **0**, it never tries twice.
 
 ### Default model, per family
 
-Seven sub-sections: **Image**, **Video**, **3D**, **Audio**, **Upscaling**,
-**Background removal**, **Vectorisation**.
+Nine sub-sections: **Image**, **Video**, **3D**, **Audio**, **Materials**, **Skyboxes**,
+**Upscaling**, **Background removal**, **Vectorisation**.
 
 The last three have no workspace of their own: they are the families the canvas edits — Upscale,
 Cut out, Vectorise — reach for. The **Models** panel only shows the open workspace's family, so
 **this is where, and only where, their model is chosen**.
 
-> **The Texture family does not have one yet.** It has nevertheless been a model family in its own
-> right for a short while. The practical consequence: in the Textures workspace you have to pick a
-> model by hand every session — see [What does not exist yet](18-limits.md).
-
 Each holds a single setting: the model the **Generate** panel preselects when you arrive in that
 workspace.
 
-| Value | Effect |
-|---|---|
-| **Ask every time** *(start)* | no model preselected, you choose |
-| *a model* | that model is already in place when the workspace opens |
+| Value                        | Effect                                                  |
+| ---------------------------- | ------------------------------------------------------- |
+| **Ask every time** _(start)_ | no model preselected, you choose                        |
+| _a model_                    | that model is already in place when the workspace opens |
 
 Set it once you have found the model you work with most: it saves a click every session.
 
@@ -366,7 +363,7 @@ Set it once you have found the model you work with most: it saves a click every 
 
 ## Workspaces
 
-*What only makes sense inside one space: the 3D view, the edit, the image.*
+_What only makes sense inside one space: the 3D view, the edit, the image._
 
 Only one sub-section for now: **3D**.
 
@@ -381,7 +378,7 @@ it to judge an image with nothing around it.
 
 ### Grid size
 
-**Whole number. From 2 to 500 metres. Starts at: 20.** *(greyed out if the grid is hidden)*
+**Whole number. From 2 to 500 metres. Starts at: 20.** _(greyed out if the grid is hidden)_
 
 How far the grid reaches, and therefore how many squares it has — **a square is always one metre**.
 
@@ -410,22 +407,22 @@ At 3 you go three times faster: enough to cross a large scene without touching t
 
 How much the camera takes in.
 
-| Angle | Effect |
-|---|---|
+| Angle               | Effect                                          |
+| ------------------- | ----------------------------------------------- |
 | **narrow** (30–45°) | pulls close and flattens, like a telephoto lens |
-| **60°** | close to what an eye sees |
-| **wide** (85–100°) | shows far more, but bends the edges |
+| **60°**             | close to what an eye sees                       |
+| **wide** (85–100°)  | shows far more, but bends the edges             |
 
 ### The three snapping steps
 
 Snapping is switched on in the **scene's toolbar** (the `M` key); these three settings only say
 **how far** it advances at each step.
 
-| Setting | Range | Starts at | What it does |
-|---|---|---|---|
-| **Move step** | 0.1 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
-| **Turn step** | 1° to 90°, in 1 | **15°** | the angle of one rotation step |
-| **Scale step** | 0.05 to 1, in 0.05 | **0.1** | how far the scale advances in one step |
+| Setting        | Range               | Starts at | What it does                           |
+| -------------- | ------------------- | --------- | -------------------------------------- |
+| **Move step**  | 0.001 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
+| **Turn step**  | 1° to 90°, in 1     | **15°**   | the angle of one rotation step         |
+| **Scale step** | 0.01 to 1, in 0.05  | **0.1**   | how far the scale advances in one step |
 
 **15° is the classic value**: twenty-four positions in a full turn, including every round angle —
 30, 45, 90. Rotation counts its steps **from where the turn began**, not from zero.
@@ -436,10 +433,10 @@ Snapping is switched on in the **scene's toolbar** (the `M` key); these three se
 
 The grain of a shadow’s edge.
 
-| Value | Effect |
-|---|---|
+| Value    | Effect                                        |
+| -------- | --------------------------------------------- |
 | **Hard** | a crisp edge, cut with a knife — the cheapest |
-| **Soft** | a softened edge, closer to reality |
+| **Soft** | a softened edge, closer to reality            |
 
 **This setting says what a shadow looks like, not who casts one.** That is decided object by
 object, in the Inspector — see [Modelling workspace](09-modelling-workspace.md).
@@ -458,7 +455,7 @@ starts to labour, raise to 4096 for a final image.
 
 ## Shortcuts
 
-*The keys that trigger each action. Click a key to replace it.*
+_The keys that trigger each action. Click a key to replace it._
 
 This section has its own chapter: [Every shortcut](15-shortcuts.md).
 
@@ -466,8 +463,8 @@ This section has its own chapter: [Every shortcut](15-shortcuts.md).
 
 ## Dictation
 
-*Speaking a text instead of typing it. Everything happens on this computer: nothing you say is
-sent anywhere.*
+_Speaking a text instead of typing it. Everything happens on this computer: nothing you say is
+sent anywhere._
 
 The gesture is described in [Generating](06-generating.md#speaking-instead-of-typing); here is
 what can be adjusted.
@@ -529,7 +526,7 @@ accounts on the machine.
 
 ## Media
 
-*Preparation of imported files: proxies and waveforms.*
+_Preparation of imported files: proxies and waveforms._
 
 ### Path to ffmpeg
 
@@ -554,9 +551,9 @@ order:
 
 Below the field, the studio says which it kept:
 
-| Message | What it means |
-|---|---|
-| "ffmpeg is available: proxies and waveforms will be prepared." | all is well — the normal case |
+| Message                                                                  | What it means                                    |
+| ------------------------------------------------------------------------ | ------------------------------------------------ |
+| "ffmpeg is available: proxies and waveforms will be prepared."           | all is well — the normal case                    |
 | "ffmpeg is still not found. Importing works, without proxy or waveform." | even the application's own is missing: see below |
 
 **The second message has become rare.** It now happens mostly to whoever runs the studio from its
@@ -571,7 +568,7 @@ The **Browse…** button opens your system's file picker.
 
 ## Versions
 
-*Version tracking of the project folder, by git. Your files only.*
+_Version tracking of the project folder, by git. Your files only._
 
 This section governs the **Git** panel and the **History** panel. It has nothing to do with the
 studio itself: what is tracked is your project folder.
@@ -604,7 +601,7 @@ recording fail on the other.
 
 ## Storage
 
-*Where your projects are kept on disk.*
+_Where your projects are kept on disk._
 
 ### Projects folder
 
@@ -621,7 +618,7 @@ Leave it empty to start from wherever you last were.
 
 ## Advanced
 
-*What is only needed to understand a problem, or to start over.*
+_What is only needed to understand a problem, or to start over._
 
 ### Log detail
 
@@ -629,12 +626,12 @@ Leave it empty to start from wherever you last were.
 
 How much the application says about what it is doing, in its log.
 
-| Value | What is written |
-|---|---|
-| **Nothing** | nothing at all |
-| **Errors only** | what failed |
-| **Errors and warnings** | and what nearly failed |
-| **Everything** *(start)* | each step |
+| Value                    | What is written        |
+| ------------------------ | ---------------------- |
+| **Nothing**              | nothing at all         |
+| **Errors only**          | what failed            |
+| **Errors and warnings**  | and what nearly failed |
+| **Everything** _(start)_ | each step              |
 
 "Everything" helps to understand a problem, and is chatty the rest of the time. This setting changes
 nothing about what the software does — only about what it says.
@@ -662,11 +659,11 @@ you find in it follows the setting just above: at "Nothing", not a line is writt
 
 Opens your file manager where your settings are saved, in a file called `settings.json`.
 
-| System | Where |
-|---|---|
-| macOS | `~/Library/Application Support/Scenario Studio/settings.json` |
-| Windows | `%APPDATA%\Scenario Studio\settings.json` |
-| Linux | `~/.config/Scenario Studio/settings.json` |
+| System  | Where                                                   |
+| ------- | ------------------------------------------------------- |
+| macOS   | `~/Library/Application Support/IA Studio/settings.json` |
+| Windows | `%APPDATA%\IA Studio\settings.json`                     |
+| Linux   | `~/.config/IA Studio/settings.json`                     |
 
 Useful to copy them before moving to another machine, or to send to someone helping you understand
 a problem.
@@ -698,12 +695,14 @@ had asked for it yourself in the assistant. A program outside cannot give it on 
 Copies the line to paste in a terminal to connect a client:
 
 ```
-claude mcp add --transport http <name> http://127.0.0.1:54321/mcp --header "Authorization: Bearer …"
+claude mcp add <name> -- "/Applications/IA Studio.app/Contents/MacOS/IA Studio" --mcp-stdio=…
 ```
 
-**The port and the token change every time the studio starts**, which is why there is a button
-rather than a value on display: there is nothing to write down, only a line to copy again after
-each launch.
+**It holds no port and no token**: it names the studio as a program to start, not an address to
+reach. Those do change at every start — and it is your client that reads them, at the moment it
+needs them. **So the line is pasted once, and holds for every launch after it.**
+
+The path is the one of **your** installation, hence the button rather than a value printed here.
 
 ### Developer tools
 
@@ -722,14 +721,14 @@ software.**
 
 ### Reset everything
 
-**Button: Reset.** *(with confirmation)*
+**Button: Reset.** _(with confirmation)_
 
 Puts **EVERY** setting back to a fresh install: theme, language, shortcuts, default models, all of
 it.
 
 The studio asks for confirmation first:
 
-> *Reset every setting? Your projects are untouched, but this cannot be undone.*
+> _Reset every setting? Your projects are untouched, but this cannot be undone._
 
 **Your projects, images and edits are untouched.** Only the settings are.
 
@@ -742,40 +741,45 @@ The studio asks for confirmation first:
 
 What you have on a fresh install, at a glance.
 
-| Section | Setting | Start | Limits |
-|---|---|---|---|
-| General | Language | System | System, Français, English |
-| General | On opening | Reopen the last project | — |
-| General | Show the home screen | on | — |
-| Appearance | Theme | Dark | Dark, Light, System |
-| Appearance | Density | Comfortable | Comfortable, Compact |
-| Appearance | Accent colour | the theme's own | — |
-| Appearance | Text size | 1 | 0.85 to 1.40 |
-| Appearance | Limit animations | unchecked | — |
-| Generation | Concurrent generations | 3 | 1 to 16 |
-| Generation | Name fetched assets | ticked | — |
-| Generation | Max retries | 4 | 0 to 10 |
-| Generation | Default model ×7 | Ask every time | — |
-| 3D | Show the grid | checked | — |
-| 3D | Grid size | 20 m | 2 to 500 |
-| 3D | Fly speed | 4 m/s | 0.5 to 20 |
-| 3D | Boost | 3× | 1 to 10 |
-| 3D | Field of view | 60° | 30 to 100 |
-| 3D | Move step | 0.5 m | 0.1 to 10 |
-| 3D | Rotate step | 15° | 1 to 90 |
-| 3D | Scale step | 0.1 | 0.05 to 1 |
-| 3D | Shadow softness | Soft | Hard or Soft |
-| 3D | Shadow detail | 2048 | 512, 1024, 2048, 4096 |
-| Dictation | Enable dictation | on | — |
-| Dictation | How it is triggered | Hold the key | Hold the key, Toggle on and off |
-| Dictation | Silence that ends a sentence | 600 ms | 200 to 2000 |
-| Dictation | Preview while you speak | 700 ms | 0 to 2000 |
-| Dictation | Compute threads | 2 | 1 to 8 |
-| Dictation | Free the memory after | 10 min | 0 to 120 |
-| Media | Path to ffmpeg | empty | — |
-| Storage | Projects folder | empty | — |
-| Advanced | Log detail | Everything | Nothing → Everything |
-| Advanced | Drive the studio from outside | unchecked | — |
+| Section    | Setting                       | Start                   | Limits                          |
+| ---------- | ----------------------------- | ----------------------- | ------------------------------- |
+| General    | Language                      | System                  | System, Français, English       |
+| General    | On opening                    | Reopen the last project | —                               |
+| General    | Show the home screen          | on                      | —                               |
+| General    | Model news                    | on                      | —                               |
+| Appearance | Theme                         | Dark                    | Dark, Light, System             |
+| Appearance | Density                       | Comfortable             | Comfortable, Compact            |
+| Appearance | Accent colour                 | the theme's own         | —                               |
+| Appearance | Text size                     | 1                       | 0.85 to 1.40                    |
+| Appearance | Limit animations              | unchecked               | —                               |
+| Generation | Concurrent generations        | 3                       | 1 to 16                         |
+| Generation | Name fetched assets           | ticked                  | —                               |
+| Generation | Max retries                   | 4                       | 0 to 10                         |
+| Generation | Default model ×7              | Ask every time          | —                               |
+| 3D         | Show the grid                 | checked                 | —                               |
+| 3D         | Grid size                     | 20 m                    | 2 to 500                        |
+| 3D         | Fly speed                     | 4 m/s                   | 0.5 to 20                       |
+| 3D         | Boost                         | 3×                      | 1 to 10                         |
+| 3D         | Field of view                 | 60°                     | 30 to 100                       |
+| 3D         | Move step                     | 0.5 m                   | 0.001 to 10                     |
+| 3D         | Rotate step                   | 15°                     | 1 to 90                         |
+| 3D         | Scale step                    | 0.1                     | 0.01 to 1                       |
+| 3D         | Shadow softness               | Soft                    | Hard or Soft                    |
+| 3D         | Shadow detail                 | 2048                    | 512, 1024, 2048, 4096           |
+| Dictation  | Enable dictation              | on                      | —                               |
+| Dictation  | How it is triggered           | Hold the key            | Hold the key, Toggle on and off |
+| Dictation  | Silence that ends a sentence  | 600 ms                  | 200 to 2000                     |
+| Dictation  | Preview while you speak       | 700 ms                  | 0 to 2000                       |
+| Dictation  | Compute threads               | 2                       | 1 to 8                          |
+| Dictation  | Free the memory after         | 10 min                  | 0 to 120                        |
+| Media      | Path to ffmpeg                | empty                   | —                               |
+| Storage    | Projects folder               | empty                   | —                               |
+| Advanced   | Log detail                    | Everything              | Nothing → Everything            |
+| Way in     | Drive the studio from outside | unchecked               | —                               |
+| Way in     | Let it touch files without asking | unchecked           | —                               |
+| Way in     | Let it upload without asking  | unchecked               | —                               |
+| Way in     | Let it publish to a server without asking | unchecked    | —                               |
+| Way in     | Creative units spendable without asking | 0                 | 0 to 10,000                     |
 
 ---
 

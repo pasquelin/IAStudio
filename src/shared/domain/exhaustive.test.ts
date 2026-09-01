@@ -10,6 +10,8 @@ import {
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
 import { CLOUD_ORDERS, type CloudOrder } from './cloudAsset'
+import { SETTINGS_SECTION_IDS, type SettingsSectionId } from './settings'
+import { WINDOW_PAGES, type WindowPage } from './window'
 import {
   ACTION_COMMITMENTS,
   ACTION_REACHES,
@@ -31,9 +33,11 @@ import {
   type ModelSort,
 } from './model'
 import { FONT_SOURCES, type FontSource } from './font'
+import { PLAY_STATES, type PlayState } from './gameRuntime'
 import { TEXTURE_SLOTS, type TextureSlot } from './scene'
 import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
 import { NAMED_KEYS, type NamedKey } from './shortcut'
+import { TARGET_KINDS, type TargetKind } from './target'
 
 /**
  * Each of these lists is walked to check something else — the i18n bundles above all, which are
@@ -50,13 +54,73 @@ import { NAMED_KEYS, type NamedKey } from './shortcut'
 const sorted = (values: readonly string[]): readonly string[] => [...values].sort()
 
 describe('the lists that stand for a union', () => {
+  /**
+   * `z.enum(TARGET_KINDS)` decides whether a whole thought parses, so a kind added to the union
+   * and forgotten here does not fail on that one target: `parseThought` throws, the window's
+   * `.catch` marks the turn lost, and every sentence of the session dies with nothing in the log.
+   */
+  it('names every kind a sentence can aim at', () => {
+    const all: Record<TargetKind, true> = { layer: true, node: true, clip: true, track: true }
+
+    expect(sorted(TARGET_KINDS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * 🛑 `z.enum(PLAY_STATES)` decides whether the WHOLE studio snapshot parses: a state added to
+   * the union and forgotten here makes `parseSnapshot` answer null, and the entire "Studio now:"
+   * block leaves every briefing without a word anywhere.
+   */
+  it('names every state a game can be in', () => {
+    const all: Record<PlayState, true> = { edit: true, playing: true, paused: true }
+
+    expect(sorted(PLAY_STATES)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * 🛑 Two doors read this list, and both fail at RUNTIME on a section the union knows and the
+   * list forgot: `z.enum(SETTINGS_SECTION_IDS)` refuses `settings.open`, and the MCP action
+   * publishes an option it will not accept. `readonly SettingsSectionId[]` accepts a short list,
+   * so the compiler says nothing — this was live for the sub-section added on 2026-08-29.
+   */
+  it('names every section the settings window can open', () => {
+    const all: Record<SettingsSectionId, true> = {
+      general: true,
+      account: true,
+      appearance: true,
+      generation: true,
+      ai: true,
+      'ai.image': true,
+      'ai.video': true,
+      'ai.3d': true,
+      'ai.audio': true,
+      'ai.material': true,
+      'ai.skybox': true,
+      'ai.code': true,
+      'ai.upscale': true,
+      'ai.background-removal': true,
+      'ai.vectorization': true,
+      spaces: true,
+      'spaces.three': true,
+      shortcuts: true,
+      dictation: true,
+      media: true,
+      git: true,
+      mcp: true,
+      memory: true,
+      'memory.graph': true,
+      storage: true,
+      advanced: true,
+    }
+
+    expect(sorted(SETTINGS_SECTION_IDS)).toEqual(sorted(Object.keys(all)))
+  })
+
   it('names every asset type', () => {
     const all: Record<AssetType, true> = {
       image: true,
       video: true,
       audio: true,
       mesh: true,
-      texture: true,
       skybox: true,
       animation: true,
     }
@@ -89,8 +153,9 @@ describe('the lists that stand for a union', () => {
       video: true,
       '3d': true,
       audio: true,
-      texture: true,
+      material: true,
       skybox: true,
+      code: true,
       upscale: true,
       'background-removal': true,
       vectorization: true,
@@ -125,6 +190,7 @@ describe('the lists that stand for a union', () => {
       document: true,
       project: true,
       shell: true,
+      assistant: true,
     }
 
     expect(sorted(ACTIVITY_LEVELS)).toEqual(sorted(Object.keys(levels)))
@@ -135,6 +201,11 @@ describe('the lists that stand for a union', () => {
   it('names every line the main process can write', () => {
     const messages: Record<ActivityMessage, true> = {
       apiRefused: true,
+      assistantAnswered: true,
+      assistantAsked: true,
+      assistantRan: true,
+      assistantRefused: true,
+      assistantSent: true,
       captionFailed: true,
       captioned: true,
       extractFailed: true,
@@ -152,17 +223,22 @@ describe('the lists that stand for a union', () => {
       imported: true,
       jobCancelled: true,
       jobFailed: true,
+      jobWaitsForProject: true,
       projectAccountMissing: true,
       projectAccountRestored: true,
       projectAccountSwitched: true,
       projectHoldsProjects: true,
       projectLegacyAssetsFolder: true,
+      projectNameTaken: true,
+      projectNameUnsafe: true,
       projectNested: true,
       projectNotAProject: true,
       projectNotCreated: true,
       projectNotRenamed: true,
       projectNotRevealed: true,
+      projectNotTrashed: true,
       projectTooNew: true,
+      projectTrashed: true,
       projectUnreadable: true,
       pullFailed: true,
       pulled: true,
@@ -180,25 +256,28 @@ describe('the lists that stand for a union', () => {
     const all: Record<LogScope, true> = {
       'scene.model': true,
       'scene.bvh': true,
+      'scene.carved': true,
       'scene.texture': true,
       'scene.animation': true,
       'scene.export': true,
+      'scene.post': true,
       'scene.render': true,
       'scene.capture': true,
       'sequence.export': true,
       'sequence.import': true,
       'document.export': true,
-      'texture.map': true,
-      'texture.channel': true,
-      'texture.seam': true,
-      'texture.shader': true,
-      'texture.export': true,
+      'material.map': true,
+      'material.channel': true,
+      'material.seam': true,
+      'material.shader': true,
+      'material.export': true,
       'skybox.source': true,
+      'skybox.probes': true,
       'skybox.export': true,
       'canvas.layer': true,
       'canvas.place': true,
+      'code.land': true,
       'canvas.size': true,
-      'canvas.flatten': true,
       'canvas.edit': true,
       'image.export': true,
       'document.load': true,
@@ -216,6 +295,7 @@ describe('the lists that stand for a union', () => {
       'document.rename': true,
       'project.reveal': true,
       'project.forget': true,
+      'project.close': true,
       'project.rename': true,
       'font.face': true,
       'shell.render': true,
@@ -255,7 +335,8 @@ describe('the lists that stand for a union', () => {
       'advanced.openSettingsFile': true,
       'advanced.openLogFolder': true,
       'advanced.openDevtools': true,
-      'advanced.copyMcpCommand': true,
+      'mcp.copyCommand': true,
+      'mcp.copyConfig': true,
       'advanced.installResolveBridge': true,
       'advanced.reset': true,
     }
@@ -263,7 +344,7 @@ describe('the lists that stand for a union', () => {
     expect(sorted(SETTING_ACTION_IDS)).toEqual(sorted(Object.keys(all)))
   })
 
-  // Read by `layer.text`, which offers the two as a choice: a third source no list named would be
+  // Read by `layer.editTextLayer`, which offers the two as a choice: a third source no list named would be
   // a face a client could not ask for.
   it('names every place a typeface comes from', () => {
     const all: Record<FontSource, true> = { embedded: true, system: true }
@@ -278,6 +359,8 @@ describe('the lists that stand for a union', () => {
       roughnessMap: true,
       metalnessMap: true,
       aoMap: true,
+      emissiveMap: true,
+      displacementMap: true,
     }
 
     expect(sorted(TEXTURE_SLOTS)).toEqual(sorted(Object.keys(all)))
@@ -294,6 +377,7 @@ describe('the lists that stand for a union', () => {
       unknownCommand: true,
       wrongSurface: true,
       generatorClosed: true,
+      ambiguousLanding: true,
       nothingPrepared: true,
       notSubmitted: true,
       badInput: true,
@@ -307,7 +391,9 @@ describe('the lists that stand for a union', () => {
       formChanged: true,
       notFound: true,
       notAllowed: true,
+      nativeDialog: true,
       notRenderable: true,
+      needsConsent: true,
       failed: true,
     }
 
@@ -328,6 +414,7 @@ describe('the lists that stand for a union', () => {
   it('names every level of commitment an action can carry', () => {
     const all: Record<ActionCommitment, true> = {
       none: true,
+      studio: true,
       files: true,
       asset: true,
       remote: true,
@@ -335,6 +422,22 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(ACTION_COMMITMENTS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * 🛑 `WINDOW_PAGES` is the `options` list of `help.openStudioWindow`, so a page added to the union and
+   * forgotten here compiles, is never published on the MCP wire, and nothing says so — the
+   * `Record<WindowPage, …>` in `help.ts` only catches an opener that is missing.
+   */
+  it('names every window a renderer may raise', () => {
+    const all: Record<WindowPage, true> = {
+      manual: true,
+      licences: true,
+      usage: true,
+      journal: true,
+    }
+
+    expect(sorted(WINDOW_PAGES)).toEqual(sorted(Object.keys(all)))
   })
 
   /**
@@ -362,17 +465,20 @@ describe('the lists that stand for a union', () => {
    */
   it('builds every action the union declares', () => {
     const all: Record<ActionName, true> = {
-      'command.run': true,
+      'command.runStudioCommand': true,
       'workspace.open': true,
       'models.search': true,
       'models.select': true,
       'generator.prepare': true,
+      'generator.readArmedGeneration': true,
       'generator.submit': true,
       'jobs.list': true,
       'prompt.suggest': true,
       'prompt.translate': true,
       'prompt.describeStyle': true,
       'chat.close': true,
+      'actions.find': true,
+      'target.select': true,
       'studio.state': true,
       'documents.list': true,
       'document.open': true,
@@ -380,61 +486,66 @@ describe('the lists that stand for a union', () => {
       'document.close': true,
       'document.rename': true,
       'document.save': true,
-      'document.remove': true,
+      'document.deleteFromDisk': true,
       'document.export': true,
       'activity.recent': true,
+      'projects.list': true,
       'project.open': true,
+      'project.close': true,
       'project.create': true,
+      'project.forget': true,
+      'project.trash': true,
+      'file.open': true,
       'files.list': true,
       'files.search': true,
       'files.move': true,
       'files.copy': true,
       'files.duplicate': true,
       'files.trash': true,
-      'files.undo': true,
-      'files.redo': true,
-      'files.history': true,
+      'files.undoFileOperation': true,
+      'files.redoFileOperation': true,
+      'files.readUndoStack': true,
       'file.rename': true,
       'file.facts': true,
       'file.reveal': true,
       'folder.new': true,
       'project.rename': true,
-      'model.schema': true,
+      'models.readGenerationModelFields': true,
       'cost.estimate': true,
-      'job.get': true,
-      'job.wait': true,
-      'job.cancel': true,
-      'task.cancel': true,
+      'job.readCloudGeneration': true,
+      'job.waitForCloudGeneration': true,
+      'job.cancelCloudGeneration': true,
+      'task.cancelLocalTask': true,
       'usage.report': true,
-      'assets.search': true,
+      'assets.searchProjectCatalogue': true,
       'assets.counts': true,
       'assets.absent': true,
-      'assets.describe': true,
+      'assets.captionImages': true,
       'asset.get': true,
       'asset.update': true,
       'asset.reveal': true,
       'asset.extractTextures': true,
-      'assets.remove': true,
+      'assets.removeFromLibrary': true,
       'canvas.state': true,
       'canvas.resize': true,
       'canvas.crop': true,
-      'canvas.orient': true,
+      'canvas.flipOrRotate': true,
       'layer.add': true,
       'layer.remove': true,
       'layer.select': true,
       'layer.rename': true,
-      'layer.style': true,
+      'layer.setOpacityBlendAndVisibility': true,
       'layer.transform': true,
-      'layer.text': true,
-      'layer.move': true,
+      'layer.editTextLayer': true,
+      'layer.reorderInStack': true,
       'layer.duplicate': true,
       'layer.group': true,
       'layer.ungroup': true,
       'layer.mergeDown': true,
       'layer.lock': true,
-      'layer.shape': true,
-      'layer.adjustment': true,
-      'layer.mask': true,
+      'layer.editShapeLayer': true,
+      'layer.setAdjustmentAmount': true,
+      'layer.setMaskOptions': true,
       'guide.add': true,
       'guide.move': true,
       'guide.remove': true,
@@ -452,28 +563,29 @@ describe('the lists that stand for a union', () => {
       'clip.select': true,
       'track.add': true,
       'track.remove': true,
-      'track.move': true,
+      'track.reorderTracks': true,
       'track.rename': true,
-      'track.adjust': true,
+      'track.setMuteSoloLockHeight': true,
       'skybox.state': true,
-      'skybox.view': true,
-      'skybox.adjust': true,
+      'skybox.setViewOptions': true,
+      'skybox.adjustImage': true,
       'skybox.resetAdjustments': true,
-      'skybox.sun': true,
-      'skybox.environment': true,
-      'skybox.source': true,
-      'texture.state': true,
-      'texture.material': true,
-      'texture.preview': true,
-      'texture.channel': true,
+      'skybox.setSun': true,
+      'skybox.setPreviewLighting': true,
+      'skybox.setSourceImage': true,
+      'material.state': true,
+      'material.setSurfaceSettings': true,
+      'material.setPreviewEnvironment': true,
+      'material.setPreviewDisplay': true,
+      'material.setChannelImage': true,
       'styles.list': true,
       'style.save': true,
       'style.rename': true,
       'style.remove': true,
-      'cloud.browse': true,
-      'cloud.explore': true,
-      'cloud.similar': true,
-      'cloud.plan': true,
+      'cloud.browseAccountLibrary': true,
+      'cloud.explorePublicFeed': true,
+      'cloud.findSimilarPublished': true,
+      'cloud.previewSync': true,
       'cloud.pull': true,
       'cloud.push': true,
       'auth.state': true,
@@ -489,49 +601,71 @@ describe('the lists that stand for a union', () => {
       'panel.open': true,
       'panel.close': true,
       'media.capabilities': true,
-      'media.adopt': true,
+      'media.indexFileInPlace': true,
       'fonts.list': true,
-      'favorites.list': true,
-      'favorite.pin': true,
-      'favorite.unpin': true,
-      'fileInfo.open': true,
-      'mirror.open': true,
-      'help.open': true,
+      'favorites.listPinnedRecipes': true,
+      'favorite.pinAssetRecipe': true,
+      'favorite.unpinAssetRecipe': true,
+      'fileInfo.openWindow': true,
+      'mirror.openVideoReturnWindow': true,
+      'help.openStudioWindow': true,
       'scene.state': true,
       'node.add': true,
       'node.addModel': true,
+      'node.markAsCuttingTool': true,
+      'node.combineIntoSolid': true,
+      'node.swapSolidMatterAndTool': true,
+      'node.separate': true,
       'node.remove': true,
       'node.rename': true,
       'node.transform': true,
-      'node.visible': true,
-      'node.material': true,
-      'node.geometry': true,
-      'node.shadow': true,
-      'node.sprite': true,
-      'node.text': true,
-      'node.path': true,
+      'node.setVisible': true,
+      'node.setMeshMaterial': true,
+      'node.setPrimitiveParameters': true,
+      'node.setShadowCastAndReceive': true,
+      'node.setSpriteSettings': true,
+      'node.setTextSettings': true,
+      'node.setPathShape': true,
       'path.addPoint': true,
       'path.movePoint': true,
       'path.removePoint': true,
-      'model.textures': true,
-      'node.light': true,
-      'node.camera': true,
-      'camera.shot': true,
-      'camera.rail': true,
-      'camera.addRail': true,
-      'camera.target': true,
+      'model.wearMaterial': true,
+      'model.wearImage': true,
+      'node.setLightSettings': true,
+      'node.setCameraLens': true,
+      'camera.addShot': true,
+      'camera.bindPathToShot': true,
+      'camera.createAndBindPath': true,
+      'camera.aimShotAt': true,
       'camera.reorder': true,
       'node.reparent': true,
       'node.select': true,
       'view.direction': true,
       'view.display': true,
       'scene.capture': true,
-      'world.preset': true,
-      'world.environment': true,
-      'world.background': true,
-      'world.fog': true,
-      'world.ground': true,
-      'world.render': true,
+      'world.applyPreset': true,
+      'world.setSceneLighting': true,
+      'world.setBackground': true,
+      'world.setFog': true,
+      'world.setGroundPlane': true,
+      'world.setToneMapping': true,
+      'post.state': true,
+      'post.add': true,
+      'post.remove': true,
+      'post.move': true,
+      'post.set': true,
+      'post.setEffectEnabled': true,
+      'post.setWholeStackEnabled': true,
+      'post.applyPreset': true,
+      'post.listPresets': true,
+      'post.duplicate': true,
+      'post.reset': true,
+      'post.key': true,
+      'post.unkey': true,
+      'post.savePreset': true,
+      'post.renamePreset': true,
+      'post.deleteSavedPreset': true,
+      'post.setCameraStackMode': true,
       'rig.state': true,
       'rig.fit': true,
       'rig.clear': true,
@@ -543,20 +677,20 @@ describe('the lists that stand for a union', () => {
       'ik.add': true,
       'ik.remove': true,
       'animations.list': true,
-      'animation.add': true,
-      'animation.remove': true,
-      'animation.block': true,
-      'animation.settings': true,
+      'animation.addBlock': true,
+      'animation.removeBlock': true,
+      'animation.setBlockSettings': true,
+      'animation.setBandLengthAndRate': true,
       'animation.autoKey': true,
-      'key.pose': true,
-      'key.clear': true,
-      'key.all': true,
+      'key.writePoseKeys': true,
+      'key.removeSubjectKeys': true,
+      'key.writeKeysOnOpenChannels': true,
       'key.move': true,
       'channel.remove': true,
-      'channel.flags': true,
+      'channel.setMuteSoloLock': true,
       'git.status': true,
       'git.log': true,
-      'git.commitFiles': true,
+      'git.listCommitFiles': true,
       'git.diff': true,
       'git.branches': true,
       'git.stashes': true,
@@ -578,9 +712,41 @@ describe('the lists that stand for a union', () => {
       'git.fetch': true,
       'git.pull': true,
       'git.push': true,
+      'component.attach': true,
+      'component.detach': true,
+      'component.set': true,
+      'play.start': true,
+      'play.stop': true,
+      'play.pause': true,
+      'play.resume': true,
+      'play.step': true,
+      'play.loadScene': true,
+      'runtime.report': true,
+      'runtime.errors': true,
+      'script.list': true,
+      'script.read': true,
+      'script.write': true,
+      'studio.describe': true,
+      'studio.docs': true,
+      'studio.batch': true,
+      'timeline.addSceneCue': true,
+      'timeline.removeSceneCue': true,
+      'timeline.setPanelRows': true,
+      'game.applyTemplate': true,
+      'prefab.define': true,
+      'prefab.instantiate': true,
+      'game.export': true,
+      'memory.recall': true,
+      'memory.read': true,
+      'memory.write': true,
+      'memory.forget': true,
+      'memory.link': true,
+      'context.readProjectCards': true,
+      'context.writeProjectCard': true,
+      'context.deleteProjectCard': true,
       'settings.read': true,
       'settings.write': true,
-      'settings.action': true,
+      'settings.pressButton': true,
       'accounts.list': true,
       'accounts.activate': true,
       'accounts.rename': true,

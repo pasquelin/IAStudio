@@ -6,7 +6,7 @@ import { NO_ASSETS, useCatalogueAssets } from './useCatalogueAssets'
 /**
  * The motions a PROJECT files, never the ones the browser happens to be showing — `useAssets` is a
  * scope, paged and narrowed by the space in front, so a library built out of it listed whatever
- * had been browsed. Same reason as `useDerivedTextures` and `useProjectPictures`.
+ * had been browsed. Same reason as `useProjectPictures`.
  */
 export function useProjectAnimations(): readonly Asset[] {
   // Spelt out because leaving it off is not "no bound": the main answers `DEFAULT_LIMIT`, which is

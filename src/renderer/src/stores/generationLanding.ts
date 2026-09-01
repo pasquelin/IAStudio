@@ -1,6 +1,7 @@
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { DocumentKind } from '@shared/domain/document'
 import { isFinished, type Job } from '@shared/domain/job'
+import type { LandingTarget } from '@shared/domain/landingTarget'
 import type { LogScope } from '@shared/ipc'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -37,16 +38,93 @@ export type GenerationLanding = {
   land: (documentId: string, asset: Asset) => void
 }
 
+/** Hands over the jobs that SUCCEEDED, each with the document it was claimed for. */
+type Landed = (jobs: ReadonlyMap<string, string | null>) => void
+
+/**
+ * The claimed document, or `null` for a tab of its own — and for one CLOSED since.
+ *
+ * 🛑 Asked by each consumer AFTER its own awaits, never once when the claim settles: a landing
+ * reads the catalogue over IPC first, and a tab closed during that round trip would be written
+ * into — resurrecting a document nothing shows, with a history nobody can reach.
+ */
+export function landingInto(documentId: string | null): string | null {
+  if (documentId === null) return null
+  return useDocuments.getState().documents[documentId] ? documentId : null
+}
+
+/**
+ * The half of a landing that is the same whatever comes back: who claimed which document, and
+ * when the claim is spent. Shared with the Code space, whose result is text rather than a row of
+ * the shelf — everything below this line is about assets.
+ */
+export type LandingClaims = {
+  claimOnSubmit: (into?: LandingTarget) => (job: Job | null) => void
+  /** Returns the unsubscribe. `null` for a tab of its own, and for a tab since closed. */
+  connect: (settled: Landed) => () => void
+}
+
+export function createLandingClaims(kind: DocumentKind): LandingClaims {
+  /**
+   * Which document each running generation was launched for. Session state: a claim restored
+   * tomorrow would drop a result into a document whose author has long moved on.
+   */
+  const claims = new Map<string, string | null>()
+
+  const settle = (jobs: readonly Job[], landed: Landed): void => {
+    if (claims.size === 0) return
+
+    const succeeded = new Map<string, string | null>()
+    for (const job of jobs) {
+      if (!claims.has(job.id) || !isFinished(job.status)) continue
+
+      // Dropped whatever the outcome: a failed or cancelled job has nothing to land, and a claim
+      // kept for it would outlive the window.
+      const documentId = claims.get(job.id) ?? null
+      claims.delete(job.id)
+      if (job.status === 'succeeded') succeeded.set(job.id, documentId)
+    }
+
+    if (succeeded.size > 0) landed(succeeded)
+  }
+
+  return {
+    claimOnSubmit: into => {
+      const open = activeIdOfKind(useDocuments.getState(), kind)
+      // `null` is a claim too, and that is the change: a workspace with nothing open used to
+      // claim NOTHING, so the result was paid for, collected, and left on the shelf unseen.
+      const target = open && into !== 'newTab' ? open : null
+
+      return job => {
+        if (job) claims.set(job.id, target)
+      }
+    },
+
+    connect: landed => {
+      const stop = useJobs.subscribe(state => settle(state.jobs, landed))
+      return () => {
+        stop()
+        // Nothing can land once nothing listens, so the claims go with the subscription rather
+        // than outliving it — which is also what lets a test reset by disconnecting.
+        claims.clear()
+      }
+    },
+  }
+}
+
 export type LandingChannel = {
   /**
-   * Takes note of the document a generation is being launched from, and hands back what claims
-   * the job once its id is known.
+   * Takes note of where a generation is being launched to, and hands back what claims the job
+   * once its id is known.
    *
    * In two halves because the two moments are: the target has to be read at the click, while a
    * job id only exists after `POST /generate` has answered — and a user who switches tabs during
    * that round trip would otherwise have the result land wherever they went.
+   *
+   * `into` overrides what the click would have read — what the question answers when it is
+   * asked. Absent, the open document takes it, and a tab of its own when there is none.
    */
-  claimOnSubmit: () => (job: Job | null) => void
+  claimOnSubmit: (into?: LandingTarget) => (job: Job | null) => void
   /** Follows the job list and lands what this workspace asked for. Returns the unsubscribe. */
   connect: () => () => void
 }
@@ -69,14 +147,7 @@ export function createGenerationLanding({
   scope,
   land,
 }: GenerationLanding): LandingChannel {
-  /**
-   * Which document each running generation was launched for.
-   *
-   * Session state, and deliberately not persisted: a job outlives neither the window that
-   * submitted it nor the tab it was meant for, and a claim restored tomorrow would drop a result
-   * into a document whose author has long moved on.
-   */
-  const claims = new Map<string, string>()
+  const claims = createLandingClaims(kind)
 
   /**
    * The catalogue is read rather than waited on: `useAssets` coalesces its refresh over a couple
@@ -86,7 +157,7 @@ export function createGenerationLanding({
    * The job hands back Scenario's own asset ids; what a document stores is the id of the row the
    * collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
    */
-  const settleInto = async (settled: ReadonlyMap<string, string>): Promise<void> => {
+  const settleInto = async (settled: ReadonlyMap<string, string | null>): Promise<void> => {
     const bridge = getBridge()
     if (!bridge) return
 
@@ -98,68 +169,41 @@ export function createGenerationLanding({
     // The claim is already spent by `settle`, so a read that throws loses a generation that was
     // PAID for — and, unhandled, takes an unhandled rejection with it. The `refresh` this
     // replaced could not reject; this one reaches the catalogue over IPC.
-    const rows = await bridge.assets
-      .search({ types: [...types], limit: SETTLE_LIMIT })
-      .catch(error => {
-        reportFailure(scope, kind, error)
-        return null
-      })
+    let rows
+    try {
+      rows = await bridge.assets.search({ types: [...types], limit: SETTLE_LIMIT })
+    } catch (error) {
+      reportFailure(scope, kind, error)
+      return
+    }
 
     if (!rows) return
-    const { documents } = useDocuments.getState()
     // The shelf still has to hear about them: it is what the browser shows.
     void useAssets.getState().refresh()
 
-    for (const [jobId, documentId] of settled) {
-      // The tab may have been closed while the job ran: writing into it would resurrect a
-      // document nothing shows, with a history nobody can reach.
-      if (!documents[documentId]) continue
+    for (const [jobId, claimed] of settled) {
+      // AFTER the read above, which is a round trip: `landingInto` says why.
+      const into = landingInto(claimed)
 
       // In catalogue order, which is the order they were rendered. Stopped at the first match
       // when that is all this workspace takes.
       for (const asset of rows) {
         if (asset.jobId !== jobId || !accepts(asset)) continue
 
-        land(documentId, asset)
+        // 🛑 Imported HERE, not at the top: `openAsset` reaches the editors, and naming it at
+        // module scope pulled four of them into the opening chunk — `eager-graph.test.ts` holds
+        // that boundary. The studio's one rule for this: a tab of its own, in the space that
+        // edits the kind, so no workspace says what opening its own output means.
+        if (into === null)
+          void import('@/helpers/openAsset').then(module => module.openAsset(asset))
+        else land(into, asset)
         if (takes === 'first') break
       }
     }
   }
 
-  const settle = (jobs: readonly Job[]): void => {
-    if (claims.size === 0) return
-
-    const succeeded = new Map<string, string>()
-    for (const job of jobs) {
-      const documentId = claims.get(job.id)
-      if (documentId === undefined || !isFinished(job.status)) continue
-
-      // Dropped whatever the outcome: a failed or cancelled job has nothing to land, and a claim
-      // kept for it would outlive the window.
-      claims.delete(job.id)
-      if (job.status === 'succeeded') succeeded.set(job.id, documentId)
-    }
-
-    if (succeeded.size > 0) void settleInto(succeeded)
-  }
-
   return {
-    claimOnSubmit: () => {
-      const documentId = activeIdOfKind(useDocuments.getState(), kind)
-
-      return job => {
-        if (job && documentId) claims.set(job.id, documentId)
-      }
-    },
-
-    connect: () => {
-      const stop = useJobs.subscribe(state => settle(state.jobs))
-      return () => {
-        stop()
-        // Nothing can land once nothing listens, so the claims go with the subscription rather
-        // than outliving it — which is also what lets a test reset by disconnecting.
-        claims.clear()
-      }
-    },
+    claimOnSubmit: claims.claimOnSubmit,
+    connect: () => claims.connect(succeeded => void settleInto(succeeded)),
   }
 }

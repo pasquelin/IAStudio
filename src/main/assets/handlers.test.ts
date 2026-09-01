@@ -3,11 +3,11 @@ import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloudAsset'
 import { invoke as invokeChannel, resetHandlers } from '@main/ipc/testHarness'
-import { recordFailuresTo } from '@main/scenario/client'
+import { NotAuthenticatedError, recordFailuresTo } from '@main/provider/client'
 import { createActivityLog, type ActivityLog } from '@main/project/activityLog'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import type { AsyncCatalog } from '@main/project/catalogClient'
-import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
+import type { RemoteAssetCatalog } from '@main/provider/assetCatalog'
 import { registerAssetHandlers, type AssetHandlerDeps } from './handlers'
 import type { CloudBackend } from './cloudBackend'
 
@@ -68,6 +68,7 @@ type Harness = {
 function setup(
   overrides: {
     remote?: Partial<RemoteAssetCatalog>
+    open?: AssetHandlerDeps['remote']
     push?: CloudBackend['push']
     renameFile?: AssetHandlerDeps['renameFile']
   } = {},
@@ -133,7 +134,7 @@ function setup(
 
   registerAssetHandlers({
     catalog: () => catalog,
-    remote: () => remote,
+    remote: overrides.open ?? (() => remote),
     cloud: () => cloud,
     // The real one is exercised in `autoCaption.test.ts`; here it must only stay out of the way.
     captionArrivals: async () => {},
@@ -330,13 +331,13 @@ describe('the public feed', () => {
       remote: {
         search: () =>
           Promise.resolve({
-            assets: [{ ...cloudAsset('a'), type: 'texture' }, cloudAsset('b')],
+            assets: [{ ...cloudAsset('a'), type: 'skybox' }, cloudAsset('b')],
             token: null,
           }),
       },
     })
 
-    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'texture' })
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'skybox' })
     expect(page.assets.map(asset => asset.id)).toEqual(['a'])
   })
 
@@ -518,6 +519,35 @@ describe('what a decorative band is allowed to write in the journal', () => {
     expect(noted).toEqual([])
   })
 
+  /**
+   * No key yet: there is no library to list. Refusing the handler used to dump a stack in the
+   * terminal — Electron logs every rejection — for a band that polls as it appears.
+   */
+  it('answers empty when no key is in place, rather than refusing the handler', async () => {
+    setup({
+      open: () => {
+        throw new NotAuthenticatedError()
+      },
+    })
+
+    await expect(invoke(CHANNELS.cloudBrowse, {})).resolves.toEqual({ assets: [], cursor: null })
+    await expect(invoke(CHANNELS.cloudExplore, { type: 'image' })).resolves.toEqual({
+      assets: [],
+      cursor: null,
+    })
+    await expect(invoke(CHANNELS.cloudSimilar, 'asset_1')).resolves.toEqual([])
+  })
+
+  it('still refuses a pull when no key is in place', async () => {
+    setup({
+      open: () => {
+        throw new NotAuthenticatedError()
+      },
+    })
+
+    await expect(invoke(CHANNELS.cloudPull, ['remote_1'])).rejects.toThrow('missing')
+  })
+
   it('still writes it for a call the user did make', async () => {
     // The contrast is the point: silence belongs to the reads nobody asked for, not to every
     // failure. Deleting a selection is a gesture, and its refusal belongs in the journal.
@@ -564,9 +594,9 @@ describe('renaming and tagging', () => {
   it('writes what a file is, leaving the file where it is', async () => {
     await harness.catalog.add(localAsset({ type: 'image', path: 'Repérages/ruelle.png' }))
 
-    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { type: 'texture' })
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { type: 'image' })
 
-    expect(updated).toMatchObject({ type: 'texture', path: 'Repérages/ruelle.png' })
+    expect(updated).toMatchObject({ type: 'image', path: 'Repérages/ruelle.png' })
   })
 
   it('tells the library which tags moved, not the whole set', async () => {

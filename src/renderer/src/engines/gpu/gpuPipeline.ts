@@ -23,7 +23,7 @@ import { WebGLRenderTarget } from 'three'
  * through the CPU, which is exactly what invariant 6 forbids.
  *
  * **One exception, and it is the shape of it that makes it one**: a pass whose result leaves as
- * a file exchanges nothing. `engines/texture/derive` opens a context of its own for the length
+ * a file exchanges nothing. `engines/material/derive` opens a context of its own for the length
  * of one derivation, because drawing into the viewport's would draw over the frame the user is
  * looking at. Anything that keeps its result on the GPU does not get to make that choice.
  */

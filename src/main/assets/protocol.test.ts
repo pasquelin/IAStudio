@@ -13,7 +13,8 @@ vi.mock('@main/log', () => ({ log }))
 // case before it left behind.
 beforeEach(() => vi.clearAllMocks())
 
-const { assetFilePath, posterFileOf, servedFileOf, servedPath } = await import('./protocol')
+const { assetFilePath, exportFileOf, posterFileOf, servedFileOf, servedPath } =
+  await import('./protocol')
 const { ASSET_HOST, POSTER_HOST } = await import('@shared/domain/asset')
 const { FAVORITE_HOST } = await import('@shared/domain/favorite')
 
@@ -27,7 +28,7 @@ const asset = (fields: Partial<Asset>): Asset => ({
   ...fields,
 })
 
-const PROJECT = resolve('/projects/My project.scenario')
+const PROJECT = resolve('/projects/My project')
 
 describe('asset file resolution', () => {
   it('resolves a path stored by the catalogue', () => {
@@ -58,6 +59,15 @@ describe('what the scheme serves for an asset', () => {
     expect(path).toBe(join(PROJECT, 'assets/img/asset_1.png'))
   })
 
+  it('serves the proxy of a file the project owns, so a 4K generation does not freeze the monitor', () => {
+    const generated = asset({
+      path: 'Video/take.mp4',
+      proxyPath: '.index/proxies/a.mp4',
+      probe: { duration: 1, codec: 'avc1', width: 3840, height: 2160 },
+    })
+    expect(servedFileOf(PROJECT, generated)).toBe(join(PROJECT, '.index/proxies/a.mp4'))
+  })
+
   it('serves the proxy of a linked rush, which is the point of making one', () => {
     // ProRes is not something WebCodecs decodes: served as is, the monitor would stay black.
     const linked = asset({ sourcePath: '/Volumes/Rushes/a.mov', proxyPath: '.index/proxies/a.mp4' })
@@ -75,6 +85,26 @@ describe('what the scheme serves for an asset', () => {
 
   it('serves nothing for an asset that has no file yet', () => {
     expect(servedFileOf(PROJECT, asset({}))).toBeNull()
+  })
+})
+
+describe('what an export composites from', () => {
+  it('takes the original of a WebCodecs-readable file, even when a proxy exists', () => {
+    const generated = asset({
+      path: 'Video/take.mp4',
+      proxyPath: '.index/proxies/a.mp4',
+      probe: { duration: 1, codec: 'h264', width: 3840, height: 2160 },
+    })
+    expect(exportFileOf(PROJECT, generated)).toBe(join(PROJECT, 'Video/take.mp4'))
+  })
+
+  it('takes the proxy of a ProRes the project copied in, or the monitor would stay black', () => {
+    const copied = asset({
+      path: 'Video/take.mov',
+      proxyPath: '.index/proxies/a.mp4',
+      probe: { duration: 1, codec: 'prores', width: 3840, height: 2160 },
+    })
+    expect(exportFileOf(PROJECT, copied)).toBe(join(PROJECT, '.index/proxies/a.mp4'))
   })
 })
 
@@ -122,7 +152,7 @@ describe('routing a URL of the scheme', () => {
 
   // One id, two files: the model and the picture of it. Only the host tells them apart.
   it('sends the same identifier to a different file on the poster host', async () => {
-    await expect(servedPath('scenario://poster/asset_1', resolvers)).resolves.toBe(
+    await expect(servedPath('ia-studio://poster/asset_1', resolvers)).resolves.toBe(
       '/projects/a/.index/posters/asset_1.jpg',
     )
     expect(resolvePoster).toHaveBeenCalledWith('asset_1')
@@ -130,12 +160,12 @@ describe('routing a URL of the scheme', () => {
   })
 
   it('sends an asset to the catalogue and a favourite to the folder beside the settings', async () => {
-    await expect(servedPath('scenario://asset/asset_1', resolvers)).resolves.toBe(
+    await expect(servedPath('ia-studio://asset/asset_1', resolvers)).resolves.toBe(
       '/projects/a/assets/img/asset_1.png',
     )
     expect(resolveAsset).toHaveBeenCalledWith('asset_1')
 
-    await expect(servedPath('scenario://favorite/favorite_1', resolvers)).resolves.toBe(
+    await expect(servedPath('ia-studio://favorite/favorite_1', resolvers)).resolves.toBe(
       '/userData/favorites/favorite_1.png',
     )
     expect(resolveFavorite).toHaveBeenCalledWith('favorite_1')
@@ -143,12 +173,12 @@ describe('routing a URL of the scheme', () => {
 
   /**
    * A plain object carries `Object.prototype`, so every one of its keys would be a live host —
-   * `scenario://toString/x` reached `net.fetch` with a path nobody registered.
+   * `ia-studio://toString/x` reached `net.fetch` with a path nobody registered.
    */
   it('serves nothing for a host that is only inherited', async () => {
-    await expect(servedPath('scenario://toString/x', resolvers)).resolves.toBeNull()
-    await expect(servedPath('scenario://constructor/x', resolvers)).resolves.toBeNull()
-    await expect(servedPath('scenario://__proto__/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('ia-studio://toString/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('ia-studio://constructor/x', resolvers)).resolves.toBeNull()
+    await expect(servedPath('ia-studio://__proto__/x', resolvers)).resolves.toBeNull()
   })
 
   /**
@@ -164,8 +194,8 @@ describe('routing a URL of the scheme', () => {
       },
     }
 
-    await expect(servedPath('scenario://asset/asset_1', rejecting)).resolves.toBeNull()
-    await expect(servedPath('scenario://asset/asset_1', throwing)).resolves.toBeNull()
+    await expect(servedPath('ia-studio://asset/asset_1', rejecting)).resolves.toBeNull()
+    await expect(servedPath('ia-studio://asset/asset_1', throwing)).resolves.toBeNull()
   })
 
   /**
@@ -174,7 +204,7 @@ describe('routing a URL of the scheme', () => {
    * a resolver that broke, and a 404 is the only trace it will ever leave outside the journal.
    */
   it('journals a resolver that refuses as a defect, not as a missing file', async () => {
-    await servedPath('scenario://asset/asset_1', {
+    await servedPath('ia-studio://asset/asset_1', {
       [ASSET_HOST]: () => Promise.reject(new TypeError('find is not a function')),
     })
 
@@ -183,7 +213,7 @@ describe('routing a URL of the scheme', () => {
   })
 
   it('serves nothing for a host neither resolver knows', async () => {
-    await expect(servedPath('scenario://something-else/1', resolvers)).resolves.toBeNull()
+    await expect(servedPath('ia-studio://something-else/1', resolvers)).resolves.toBeNull()
     await expect(servedPath('https://example.com/1', resolvers)).resolves.toBeNull()
   })
 })

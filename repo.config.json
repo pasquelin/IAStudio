@@ -1,0 +1,64 @@
+{
+  "name": "IA Studio",
+  "repo": "pasquelin/IAStudio",
+  "author": "Alban Pasquelin",
+  "license": "https://polyformproject.org/licenses/noncommercial/1.0.0/",
+  "site": {
+    "url": "https://pasquelin.github.io/IAStudio/",
+    "defaultLang": "en",
+    "schemaType": "SoftwareApplication",
+    "schema": {
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "macOS, Windows, Linux"
+    },
+    "copy": [
+      "assets"
+    ],
+    "optional": [
+      {
+        "path": "assets/release.json",
+        "hint": "aucune version publiée ; les cartes gardent leur libellé (pages.yml l'écrit à la release)"
+      }
+    ],
+    "examples": []
+  },
+  "llms": {
+    "parts": [
+      [
+        "llms.txt",
+        null
+      ],
+      [
+        "README.md",
+        "README"
+      ],
+      [
+        "docs/en/user-guide.md",
+        "User guide"
+      ],
+      [
+        "docs/en/architecture.md",
+        "Architecture"
+      ]
+    ]
+  },
+  "licences": {
+    "expected": "PolyForm-Noncommercial-1.0.0",
+    "noRuntimeDeps": false,
+    "bundled": [],
+    "allowed": [
+      "MIT",
+      "ISC",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "0BSD",
+      "Apache-2.0",
+      "CC0-1.0",
+      "Unlicense",
+      "Python-2.0",
+      "BlueOak-1.0.0",
+      "MPL-2.0"
+    ],
+    "_note": "MPL-2.0 est admise ici, et pas dans map3D ni panels : IA Studio distribue une application, pas une bibliothèque, et le copyleft de MPL porte sur le fichier. La condition — ne pas modifier les fichiers concernés — est tenue par scripts/collect-licences.mjs, qui refuse d'écrire les mentions si un paquet MPL est patché. Ce contrôle-ci ne la redouble pas."
+  }
+}

@@ -1,0 +1,1365 @@
+{
+  "$id": "https://pasquelin.github.io/IAStudio/schema/ui-1.schema.json",
+  "title": "IA Studio interface",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "screen",
+        "world"
+      ]
+    },
+    "design": {
+      "$ref": "#/$defs/UiSize"
+    },
+    "root": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "element": {
+            "type": "string"
+          },
+          "property": {
+            "type": "string"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "component"
+                  },
+                  "entity": {
+                    "type": "string"
+                  },
+                  "component": {
+                    "type": "string"
+                  },
+                  "field": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "entity",
+                  "component",
+                  "field"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "game"
+                  },
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "path"
+                ]
+              }
+            ]
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "element",
+          "property",
+          "source",
+          "fallback"
+        ]
+      }
+    }
+  },
+  "required": [
+    "version",
+    "mode",
+    "design",
+    "root",
+    "bindings"
+  ],
+  "$defs": {
+    "UiSize": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ]
+    },
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "place": {
+          "$ref": "#/$defs/UiPlacement"
+        },
+        "style": {
+          "$ref": "#/$defs/UiStyle"
+        },
+        "interaction": {
+          "$ref": "#/$defs/UiInteraction"
+        },
+        "type": {
+          "type": "string",
+          "const": "screen"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UiElement"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "visible",
+        "enabled",
+        "locked",
+        "place",
+        "style",
+        "interaction",
+        "type",
+        "children"
+      ]
+    },
+    "UiPlacement": {
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "type": "string",
+          "enum": [
+            "topLeft",
+            "top",
+            "topRight",
+            "left",
+            "center",
+            "right",
+            "bottomLeft",
+            "bottom",
+            "bottomRight"
+          ]
+        },
+        "pivot": {
+          "type": "string",
+          "enum": [
+            "topLeft",
+            "top",
+            "topRight",
+            "left",
+            "center",
+            "right",
+            "bottomLeft",
+            "bottom",
+            "bottomRight"
+          ]
+        },
+        "offset": {
+          "$ref": "#/$defs/UiPoint"
+        },
+        "size": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "fixed"
+                    },
+                    "length": {
+                      "type": "object",
+                      "properties": {
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "px",
+                            "percent"
+                          ]
+                        },
+                        "value": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "unit",
+                        "value"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "length"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "auto"
+                    }
+                  },
+                  "required": [
+                    "mode"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "stretch"
+                    }
+                  },
+                  "required": [
+                    "mode"
+                  ]
+                }
+              ]
+            },
+            "height": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "fixed"
+                    },
+                    "length": {
+                      "type": "object",
+                      "properties": {
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "px",
+                            "percent"
+                          ]
+                        },
+                        "value": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "unit",
+                        "value"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "length"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "auto"
+                    }
+                  },
+                  "required": [
+                    "mode"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "stretch"
+                    }
+                  },
+                  "required": [
+                    "mode"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "width",
+            "height"
+          ]
+        },
+        "min": {
+          "$ref": "#/$defs/UiSize"
+        },
+        "max": {
+          "$ref": "#/$defs/UiSize"
+        },
+        "aspect": {
+          "type": "number"
+        },
+        "margin": {
+          "$ref": "#/$defs/UiEdges"
+        },
+        "grow": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "anchor",
+        "pivot",
+        "offset",
+        "size",
+        "min",
+        "max",
+        "aspect",
+        "margin",
+        "grow"
+      ]
+    },
+    "UiPoint": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "UiEdges": {
+      "type": "object",
+      "properties": {
+        "top": {
+          "type": "number"
+        },
+        "right": {
+          "type": "number"
+        },
+        "bottom": {
+          "type": "number"
+        },
+        "left": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "top",
+        "right",
+        "bottom",
+        "left"
+      ]
+    },
+    "UiStyle": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "none"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "color"
+                },
+                "color": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "color"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "image"
+                },
+                "assetId": {
+                  "type": "string"
+                },
+                "fit": {
+                  "type": "string",
+                  "enum": [
+                    "contain",
+                    "cover",
+                    "fill",
+                    "none"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "assetId",
+                "fit"
+              ]
+            }
+          ]
+        },
+        "border": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number"
+            },
+            "color": {
+              "type": "string"
+            },
+            "radius": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "width",
+            "color",
+            "radius"
+          ]
+        },
+        "opacity": {
+          "type": "number"
+        },
+        "padding": {
+          "$ref": "#/$defs/UiEdges"
+        }
+      },
+      "required": [
+        "background",
+        "border",
+        "opacity",
+        "padding"
+      ]
+    },
+    "UiInteraction": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "focusable": {
+          "type": "boolean"
+        },
+        "cursor": {
+          "type": "string",
+          "enum": [
+            "default",
+            "pointer",
+            "text",
+            "notAllowed"
+          ]
+        }
+      },
+      "required": [
+        "action",
+        "focusable",
+        "cursor"
+      ]
+    },
+    "UiElement": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/__schema0"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "panel"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UiElement"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "stack"
+            },
+            "stack": {
+              "type": "object",
+              "properties": {
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "row",
+                    "column"
+                  ]
+                },
+                "gap": {
+                  "type": "number"
+                },
+                "align": {
+                  "type": "string",
+                  "enum": [
+                    "start",
+                    "center",
+                    "end",
+                    "stretch"
+                  ]
+                },
+                "justify": {
+                  "type": "string",
+                  "enum": [
+                    "start",
+                    "center",
+                    "end",
+                    "between",
+                    "around"
+                  ]
+                },
+                "wrap": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "direction",
+                "gap",
+                "align",
+                "justify",
+                "wrap"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UiElement"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "stack",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "grid"
+            },
+            "grid": {
+              "type": "object",
+              "properties": {
+                "columns": {
+                  "type": "number"
+                },
+                "gap": {
+                  "type": "number"
+                },
+                "align": {
+                  "type": "string",
+                  "enum": [
+                    "start",
+                    "center",
+                    "end",
+                    "stretch"
+                  ]
+                }
+              },
+              "required": [
+                "columns",
+                "gap",
+                "align"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UiElement"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "grid",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "scroll"
+            },
+            "scroll": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "type": "string",
+                  "enum": [
+                    "vertical",
+                    "horizontal",
+                    "both"
+                  ]
+                }
+              },
+              "required": [
+                "axis"
+              ]
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UiElement"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "scroll",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "spacer"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "$ref": "#/$defs/UiText"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "text"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "image"
+            },
+            "image": {
+              "type": "object",
+              "properties": {
+                "assetId": {
+                  "type": "string"
+                },
+                "fit": {
+                  "type": "string",
+                  "enum": [
+                    "contain",
+                    "cover",
+                    "fill",
+                    "none"
+                  ]
+                },
+                "tint": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "assetId",
+                "fit",
+                "tint"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "image"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "button"
+            },
+            "text": {
+              "$ref": "#/$defs/UiText"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/UiElement"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "text",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "progress"
+            },
+            "progress": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                },
+                "fill": {
+                  "type": "string"
+                },
+                "track": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value",
+                "min",
+                "max",
+                "fill",
+                "track"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "progress"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "slider"
+            },
+            "slider": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                },
+                "step": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "value",
+                "min",
+                "max",
+                "step"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "slider"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "input"
+            },
+            "input": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "placeholder": {
+                  "type": "string"
+                },
+                "maxLength": {
+                  "type": "number"
+                },
+                "secret": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "value",
+                "placeholder",
+                "maxLength",
+                "secret"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "input"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "place": {
+              "$ref": "#/$defs/UiPlacement"
+            },
+            "style": {
+              "$ref": "#/$defs/UiStyle"
+            },
+            "interaction": {
+              "$ref": "#/$defs/UiInteraction"
+            },
+            "type": {
+              "type": "string",
+              "const": "checkbox"
+            },
+            "checkbox": {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "checked"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "visible",
+            "enabled",
+            "locked",
+            "place",
+            "style",
+            "interaction",
+            "type",
+            "checkbox"
+          ]
+        }
+      ]
+    },
+    "UiText": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "font": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "embedded",
+                "system"
+              ]
+            },
+            "family": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "family"
+          ]
+        },
+        "size": {
+          "type": "number"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "color": {
+          "type": "string"
+        },
+        "wrap": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "font",
+        "size",
+        "weight",
+        "align",
+        "color",
+        "wrap"
+      ]
+    }
+  }
+}

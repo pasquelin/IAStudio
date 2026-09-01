@@ -46,7 +46,10 @@ export type Pages<T> = {
   byId: ReadonlyMap<string, T>
   /** Nothing more to ask for — the listing ran out, or the API refused. */
   exhausted: boolean
-  /** Still waiting on the first page: neither « empty » nor « finished ». */
+  /**
+   * Still waiting on the first page: neither « empty » nor « finished ». False for a listing that
+   * is not enabled — nothing is on its way, so nothing is being waited on.
+   */
   pending: boolean
   /** A page is on its way, the first one included. */
   fetching: boolean
@@ -108,9 +111,16 @@ export function usePages<T extends { id: string }>(
     asking.current = query.isFetchingNextPage
   })
 
+  /**
+   * 🛑 A listing nobody MAY read is not one still being read. React-query calls a disabled query
+   * pending — true as « no data yet », and a caller waiting on it waits for the whole session.
+   * Measured on the asset shelf, whose library half never arrived until the panel was reopened.
+   */
+  const pending = enabled && query.isPending
+
   // Never before the first page has answered: « nothing here » and « not read yet » look alike on
   // screen, and a band that said the first would announce an emptiness about to be denied.
-  const exhausted = !query.hasNextPage && !query.isPending
+  const exhausted = !query.hasNextPage && !pending
 
   useAutomaticPulls({
     // The query's own key, so the count starts afresh exactly when the listing changes question.
@@ -129,7 +139,7 @@ export function usePages<T extends { id: string }>(
     items,
     byId,
     exhausted,
-    pending: query.isPending,
+    pending,
     fetching: query.isFetching,
     fetchingMore: query.isFetchingNextPage,
     pagesRead: query.data?.pages.length ?? 0,

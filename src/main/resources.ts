@@ -57,7 +57,46 @@ export function bundledTextures(root: string): string {
   return join(root, 'textures')
 }
 
+/** The picture of each local model — one PNG named after the model it stands for. */
+export function bundledModels(root: string): string {
+  return join(root, 'models')
+}
+
 /** The still drawn of each scene template — one PNG named after the template it shows. */
 export function bundledTemplates(root: string): string {
   return join(root, 'templates')
 }
+
+/**
+ * The Python that runs the local AI engine, and the engine's own sources beside it.
+ *
+ * Shipped like ffmpeg — `extraResources`, outside the asar, because an interpreter has to be
+ * executable on disk to be spawned. Fetched by `pnpm engine:fetch`, and by `before-pack.mjs` per
+ * target. A run that does not find it reads as a runtime that is not answering.
+ *
+ * 🛑 Measured 2026-08-22: an environment the person installs themselves will NOT load under the
+ * hardened runtime — every Mach-O has to carry OUR signature or `dlopen` refuses it for a Team ID
+ * mismatch. What lands here is an archive this build signed, never a `uv pip install`.
+ */
+export function bundledEngine(
+  root: string,
+  platform: NodeJS.Platform,
+): {
+  python: string
+  sources: string
+} {
+  const home = join(root, 'engine')
+  return {
+    // Windows puts the interpreter at the root of its tree rather than under `bin`.
+    python:
+      platform === 'win32'
+        ? join(home, 'python', 'python.exe')
+        : join(home, 'python', 'bin', 'python3'),
+    // Same layout the pack ships: interpreter and sources as siblings. `engine:fetch` (and
+    // every `pnpm start`) recopies `engine/src` here, so this folder cannot lag the tree.
+    sources: join(home, 'src'),
+  }
+}
+
+/** The runtime an exported game embeds, built by `pnpm game:runtime` and shipped beside the app. */
+export const bundledGameRuntime = (root: string): string => join(root, 'gameRuntime')

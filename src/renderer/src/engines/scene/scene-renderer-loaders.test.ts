@@ -22,6 +22,10 @@ const disposeKtx2 = vi.fn()
  * The two decoders, stood in for. What is under test is not their own `dispose` — three.js owns
  * that — but whether the engine can still reach them once the cache holds the load function alone.
  */
+vi.mock('three/addons/libs/meshopt_decoder.module.js', () => ({
+  MeshoptDecoder: { supported: true, ready: Promise.resolve() },
+}))
+
 vi.mock('three/addons/loaders/DRACOLoader.js', () => ({
   DRACOLoader: class {
     constructor() {

@@ -269,8 +269,15 @@ describe('gain and speed', () => {
 })
 
 describe('reading a sequence back', () => {
+  // What is designated included: written with `selectedId: null` the case was green while the
+  // read no longer carried either half back.
   it('survives a serialize/deserialize round trip unchanged', () => {
-    const state: SequenceState = { ...EMPTY_SEQUENCE, tracks: [track([clip('a', 0, 1_000)])] }
+    const state: SequenceState = {
+      ...EMPTY_SEQUENCE,
+      tracks: [track([clip('a', 0, 1_000)])],
+      selectedId: 'a',
+      selectedTrackId: 'V1',
+    }
     expect(parseSequence(JSON.parse(JSON.stringify(state)))).toEqual(state)
   })
 

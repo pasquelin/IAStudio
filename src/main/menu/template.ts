@@ -19,6 +19,7 @@ import {
 import { placementIn, type ToolId, type ToolPlacement, type ToolSurface } from '@shared/domain/tool'
 import {
   bindingOf,
+  commandDescriptor,
   commandIn,
   scopeOfWorkspace,
   type BindingOverrides,
@@ -26,9 +27,10 @@ import {
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
-import { acceleratorOf } from '@shared/domain/shortcut'
+import type { DocumentKind } from '@shared/domain/document'
+import { acceleratorOf, typesText } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
-import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/textureExport'
+import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
@@ -37,7 +39,7 @@ import type {
   SceneExportCommand,
   SceneViewRequest,
   SkyboxExportCommand,
-  TextureExportCommand,
+  MaterialExportCommand,
   ToolRequest,
 } from '@shared/ipc'
 import {
@@ -64,7 +66,7 @@ export type MenuActions = {
   setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
   captureScene: (command: SceneCaptureCommand) => void
-  exportTexture: (command: TextureExportCommand) => void
+  exportMaterial: (command: MaterialExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
 }
 
@@ -81,6 +83,8 @@ export type MenuOptions = {
    * drops, which is the whole point of naming the surface rather than the workspace.
    */
   workspace: ToolSurface | null
+  /** The kind of the tab in front, which is what says whose history Undo pops. */
+  kind: DocumentKind | null
   /**
    * The panels the focused window can currently open, as it reported them. Not derived from the
    * registry here: whether the generator exists depends on a model being chosen, which only the
@@ -149,6 +153,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const {
     language,
     workspace,
+    kind,
     tools,
     checked,
     abilities,
@@ -158,13 +163,29 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     actions,
   } = options
 
+  // 🛑 The KIND and not the space alone: the 3D space also opens interfaces, and a scene row over
+  // one acts on a scene nobody is looking at. Every rank below reads this, never `workspace`.
+  const surface = scopeOfWorkspace(workspace, kind)
+
   /**
-   * The accelerator of a command, read off the registry. Written by hand until now, which is
-   * how the menu kept advertising a key a remapped command no longer answered to — and how a
-   * command could be fired by a shortcut the menu never mentioned.
+   * How a native row may carry a command's key, read off the registry so the menu never advertises
+   * one a remap has moved. `registerAccelerator` is Windows and Linux ONLY: on macOS a row that
+   * carries one has it RESERVED, which is how twenty-three rows swallowed `V`, `E` and `[` as typed.
    */
-  const shortcut = (command: CommandId): string | undefined =>
-    acceleratorOf(bindingOf(command, overrides))
+  const keyOf = (
+    command: CommandId,
+    registerAccelerator = true,
+  ): Pick<MenuItemConstructorOptions, 'accelerator' | 'registerAccelerator'> => {
+    const binding = bindingOf(command, overrides)
+    // `commandFor` excludes `global`, so the menu is that scope's only door: its key stays declared
+    // even where a remap has made it one a field would write.
+    const typed = typesText(binding) && commandDescriptor(command)?.scope !== 'global'
+    return {
+      accelerator: typed && isMac ? undefined : acceleratorOf(binding),
+      registerAccelerator: registerAccelerator && !typed,
+    }
+  }
+
   const t = TRANSLATIONS[language]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
@@ -183,7 +204,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
     label: t.menu.settings,
-    accelerator: shortcut('app.settings'),
+    ...keyOf('app.settings'),
     click: () => actions.openSettings(),
   }
 
@@ -261,9 +282,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   /** One engine per row, for the same reason a format is one: a dialog has no such control. */
   const textureItems = (): MenuItemConstructorOptions[] =>
-    TEXTURE_EXPORT_TARGETS.map(target => ({
-      label: t.textureExportTargets[target],
-      click: () => actions.exportTexture({ target }),
+    MATERIAL_EXPORT_TARGETS.map(target => ({
+      label: t.materialExportTargets[target],
+      click: () => actions.exportMaterial({ target }),
     }))
 
   /**
@@ -295,7 +316,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * commands keep their full title for the palette, where nothing stands above them.
    */
   const exportSubmenu = (): MenuItemConstructorOptions[] => {
-    if (workspace === '3d') {
+    if (surface === 'scene') {
       return [
         { label: t.menu.exportScene, submenu: exportItems('scene') },
         // Greyed rather than dropped: a row that comes and goes is one the eye has to look for.
@@ -307,7 +328,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
-    if (workspace === 'textures') return [{ label: t.menu.exportTexture, submenu: textureItems() }]
+    if (workspace === 'materials')
+      return [{ label: t.menu.exportMaterial, submenu: textureItems() }]
     if (workspace === 'skyboxes') return [{ label: t.menu.exportSkybox, submenu: skyboxItems() }]
 
     // A command rather than an action of its own, unlike the three above: what a montage exports
@@ -342,8 +364,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       ]
     }
 
-    // Unreachable by any of the six since the image gained its rows, and kept for the compiler
-    // alone: `menu/template.test.ts` names that rather than leaving it read as a case forgotten.
+    // Code and an interface reach this, both by design: a `.ts` and a `.ui.json` ARE already
+    // files of the project, so the row is absent rather than empty. An interface opens in the 3D
+    // space, hence the `surface` above rather than the workspace — `menu/template.test.ts` holds
+    // both halves.
     return []
   }
 
@@ -386,8 +410,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     // row worded for its place — « La vidéo… » under Export — read as a command reachable nowhere.
     id: command,
     label,
-    accelerator: shortcut(command),
-    registerAccelerator,
+    ...keyOf(command, registerAccelerator),
     click: () => actions.runCommand(command),
   })
 
@@ -409,7 +432,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     { role: 'undo', label: t.commands.undo.title },
     { role: 'redo', label: t.commands.redo.title },
   ]
-  const surface = scopeOfWorkspace(workspace)
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
 
@@ -423,11 +445,21 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * unlike the keyboard one, which is what makes a key safe here where a row would not be.
    */
   const sceneEditItems: MenuItemConstructorOptions[] =
-    workspace === '3d'
+    surface === 'scene'
       ? [
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
           commandItem('scene.group', t.commands.sceneGroup.title),
+          // The solids, under the grouping they read like: both fold a selection into one row
+          // of the outliner. Their keys are unbound, so the menu is where a hand finds them.
+          { type: 'separator' },
+          commandItem('scene.negate', t.commands.sceneNegate.title),
+          commandItem('scene.carve', t.commands.sceneCarve.title),
+          commandItem('scene.weld', t.commands.sceneWeld.title),
+          commandItem('scene.intersect', t.commands.sceneIntersect.title),
+          commandItem('scene.separate', t.commands.sceneSeparate.title),
+          commandItem('scene.invertCarve', t.commands.sceneInvertCarve.title),
+          { type: 'separator' },
           // Both, where the context menu shows one at a time: a row is posted before anything is
           // selected, so it cannot know which of the two the hand will want. Each does nothing
           // where it does not apply, which a menu row is allowed to do and a context row is not.
@@ -538,7 +570,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * changes once a session, not gestures repeated by the minute, which is what a menu is for.
    */
   const sceneViewMenu: MenuItemConstructorOptions[] =
-    workspace === '3d'
+    surface === 'scene'
       ? [
           { type: 'separator' },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
@@ -641,7 +673,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
-    workspace === '3d'
+    surface === 'scene'
       ? [
           {
             label: t.menu.add,
@@ -664,23 +696,23 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       submenu: [
         {
           label: t.menu.newProject,
-          accelerator: shortcut('project.new'),
+          ...keyOf('project.new'),
           click: () => actions.runCommand('project.new'),
         },
         {
           label: t.menu.openProject,
-          accelerator: shortcut('project.open'),
+          ...keyOf('project.open'),
           click: () => actions.runCommand('project.open'),
         },
         { type: 'separator' },
         {
           label: t.menu.saveDocument,
-          accelerator: shortcut('document.save'),
+          ...keyOf('document.save'),
           click: () => actions.runCommand('document.save'),
         },
         {
           label: t.menu.saveDocumentAs,
-          accelerator: shortcut('document.saveAs'),
+          ...keyOf('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },
         { type: 'separator' },
@@ -725,7 +757,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         { type: 'separator' },
         {
           label: t.menu.fullScreen,
-          accelerator: shortcut('window.fullScreen'),
+          ...keyOf('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
         ...developerItems(isDevelopment, roleItem),

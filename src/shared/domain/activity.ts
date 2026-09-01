@@ -12,7 +12,7 @@
  *
  * `detail` carries `describeFailure` and nothing else. An SDK error message embeds the request
  * that produced it, so it carries the `Authorization` header, so it carries the API key — see
- * `scenario/client.ts`. A journal is a file on disk that a user may well send to someone.
+ * `provider/client.ts`. A journal is a file on disk that a user may well send to someone.
  */
 export type ActivityLevel = 'info' | 'warn' | 'error'
 
@@ -25,7 +25,15 @@ export const ACTIVITY_LEVELS: readonly ActivityLevel[] = ['info', 'warn', 'error
  * bundle and renders through the one root, so a render that threw in the preferences would read
  * as a document's failure under any other topic.
  */
-export type ActivityTopic = 'generation' | 'import' | 'library' | 'document' | 'project' | 'shell'
+export type ActivityTopic =
+  | 'generation'
+  | 'import'
+  | 'library'
+  | 'document'
+  | 'project'
+  | 'shell'
+  /** What the assistant sent, read back, ran and asked — one round of a turn per few lines. */
+  | 'assistant'
 
 export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
   'generation',
@@ -34,6 +42,7 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
   'document',
   'project',
   'shell',
+  'assistant',
 ]
 
 /**
@@ -46,6 +55,11 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
  */
 export type ActivityMessage =
   | 'apiRefused'
+  | 'assistantAnswered'
+  | 'assistantAsked'
+  | 'assistantRan'
+  | 'assistantRefused'
+  | 'assistantSent'
   | 'captionFailed'
   | 'captioned'
   | 'extractFailed'
@@ -63,17 +77,22 @@ export type ActivityMessage =
   | 'imported'
   | 'jobCancelled'
   | 'jobFailed'
+  | 'jobWaitsForProject'
   | 'projectAccountMissing'
   | 'projectAccountRestored'
   | 'projectAccountSwitched'
   | 'projectHoldsProjects'
   | 'projectLegacyAssetsFolder'
+  | 'projectNameTaken'
+  | 'projectNameUnsafe'
   | 'projectNested'
   | 'projectNotAProject'
   | 'projectNotCreated'
   | 'projectNotRenamed'
   | 'projectNotRevealed'
+  | 'projectNotTrashed'
   | 'projectTooNew'
+  | 'projectTrashed'
   | 'projectUnreadable'
   | 'pullFailed'
   | 'pulled'
@@ -84,6 +103,11 @@ export type ActivityMessage =
 
 export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'apiRefused',
+  'assistantAnswered',
+  'assistantAsked',
+  'assistantRan',
+  'assistantRefused',
+  'assistantSent',
   'captionFailed',
   'captioned',
   'extractFailed',
@@ -101,17 +125,22 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'imported',
   'jobCancelled',
   'jobFailed',
+  'jobWaitsForProject',
   'projectAccountMissing',
   'projectAccountRestored',
   'projectAccountSwitched',
   'projectHoldsProjects',
   'projectLegacyAssetsFolder',
+  'projectNameTaken',
+  'projectNameUnsafe',
   'projectNested',
   'projectNotAProject',
   'projectNotCreated',
   'projectNotRenamed',
   'projectNotRevealed',
+  'projectNotTrashed',
   'projectTooNew',
+  'projectTrashed',
   'projectUnreadable',
   'pullFailed',
   'pulled',
@@ -264,4 +293,15 @@ export function matchesActivity(entry: ActivityDraft, filter: ActivityFilter): b
     (levels.length === 0 || levels.includes(entry.level)) &&
     (topics.length === 0 || topics.includes(entry.topic))
   )
+}
+
+/**
+ * Where the journal is read at length, as its own window rather than a bigger flyout: the flyout
+ * hangs from the status line and is closed by the next press, which is exactly wrong for a text
+ * one reads line by line while the studio keeps working.
+ */
+export const JOURNAL_ROUTE = 'journal'
+
+export function isJournalRoute(hash: string): boolean {
+  return hash.replace(/^#/, '') === JOURNAL_ROUTE
 }

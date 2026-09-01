@@ -7,18 +7,20 @@
     "noResult": "Aucun réglage ne correspond à cette recherche.",
     "restoreDefault": "Restaurer la valeur par défaut",
     "restoreDefaultHint": "Remet la valeur d’origine, celle d’avant toute modification",
-    "account": "Compte",
+    "account": "Clés API",
     "appearance": "Apparence",
     "generation": "Génération",
     "media": "Médias",
     "git": "Versions",
     "dictation": "Dictée",
-    "accountDescription": "Identifiants API, chiffrés par le trousseau du système.",
+    "ai": "Modèles d’IA",
+    "accountDescription": "Une clé par service, chiffrée par le trousseau.",
     "appearanceDescription": "Thème et densité des contrôles.",
     "generationDescription": "File de génération et modèles par défaut, par famille.",
     "gitDescription": "Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
+    "aiDescription": "Quelle IA sert chaque opération. Le studio ici, Ollama ici, ou un service en ligne dont vous avez la clé.",
     "theme": {
       "title": "Thème",
       "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
@@ -31,6 +33,10 @@
       "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
       "comfortable": "Confort",
       "compact": "Compact"
+    },
+    "assistantSteps": {
+      "title": "Étapes d’enchaînement de l’assistant",
+      "help": "Nombre d’actions que l’assistant peut enchaîner pour une seule demande, quand chacune dépend de ce que la précédente a répondu — chercher un fichier, l’ouvrir, puis le poser dans une scène. Chaque étape est un aller-retour facturé, alors ce nombre est la seule chose qui empêche une demande mal comprise de tourner sans fin. Douze suffit à la plupart des enchaînements."
     },
     "concurrentJobs": {
       "title": "Générations simultanées",
@@ -157,7 +163,8 @@
       "canvas": "Dans l’image",
       "skybox": "Dans le ciel",
       "audio": "Dans l’éditeur audio",
-      "texture": "Dans la matière"
+      "material": "Dans la matière",
+      "gui": "Dans une interface"
     },
     "spaces": "Espaces de travail",
     "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
@@ -184,7 +191,7 @@
     },
     "viewportQuality": {
       "title": "Qualité du viewport",
-      "help": "La finesse à laquelle la même image est dessinée. Rien des modèles ni des textures ne change — seul le nombre de pixels calculés. Le niveau Performance plafonne aussi la finesse des ombres.",
+      "help": "La finesse à laquelle la même vue est dessinée. Rien des modèles ni des images ne change — seul le nombre de pixels calculés. Le niveau Performance plafonne aussi la finesse des ombres.",
       "performance": "Performance",
       "balanced": "Équilibrée",
       "high": "Haute"
@@ -218,6 +225,18 @@
       "title": "Pas d’échelle",
       "help": "De combien l’échelle avance d’un cran quand le magnétisme est actif. Les valeurs atteignables sont les multiples du pas : 0,1 tombe pile sur les dixièmes et les demis, 0,25 sur les quarts."
     },
+    "gizmoSize": {
+      "title": "Taille des poignées",
+      "help": "La place MAXIMALE que les poignées de manipulation prennent à l’écran. Elles ne dépassent jamais l’objet qu’elles tiennent. Sur une petite pièce elles suivent sa taille, et au-delà elles s’en tiennent à cette part de la vue plutôt que de grandir sans fin."
+    },
+    "snapSurfaceAlign": {
+      "title": "Orienter selon la surface",
+      "help": "Quand le magnétisme de surface est actif, ce que vous posez se couche sur la pente de ce qu’il touche. Décoché, l’objet garde son orientation et ne fait que descendre."
+    },
+    "snapSurfaceOffset": {
+      "title": "Décalage de surface",
+      "help": "De combien de mètres ce que vous posez flotte au-dessus de la surface. Zéro le pose au contact. Quelques centimètres évitent que deux faces coplanaires scintillent l’une sur l’autre."
+    },
     "fieldOfView": {
       "title": "Angle de vue",
       "help": "Ce que la caméra embrasse, en degrés. Un petit angle rapproche et aplatit, comme un téléobjectif ; un grand angle montre beaucoup plus mais déforme les bords. 60 est proche de ce que voit un œil."
@@ -236,7 +255,7 @@
     },
     "openLogFolder": {
       "title": "Journal technique",
-      "help": "Ouvre le gestionnaire de fichiers sur le journal que le studio écrit à chaque lancement. C’est ce fichier qu’on vous demandera si quelque chose échoue sans rien afficher à l’écran.",
+      "help": "Ouvre le gestionnaire de fichiers sur les journaux que le studio écrit à chaque lancement : « main.log », celui qu’on vous demandera si quelque chose échoue sans rien afficher, et « assistant.log », qui garde en entier ce qui est envoyé à chaque modèle et ce qu’il répond.",
       "button": "Afficher le journal technique"
     },
     "openSettingsFile": {
@@ -248,24 +267,24 @@
       "help": "Ouvre un point d’entrée sur cette machine seule, par lequel un client comme Claude Code peut lancer les mêmes actions que l’assistant. Tout ce qui coûte ou téléverse demande votre accord à l’écran, exactement comme ici. Désactivé, rien n’écoute."
     },
     "mcpDelegateFiles": {
-      "title": "Laisser toucher aux fichiers sans demander",
-      "help": "Déplacer, renommer, mettre à la corbeille, revenir en arrière sur un fichier suivi par git. L’Explorateur reprend une partie de ces gestes, jamais tous. Sans ce réglage, chacun vous est demandé."
+      "title": "Déplacer et supprimer mes fichiers sans me demander",
+      "help": "Un client extérieur peut déplacer, renommer ou mettre à la corbeille un fichier de votre projet, et revenir en arrière sur un fichier suivi par git, sans rien afficher. L’Explorateur reprend une partie de ces gestes, jamais tous. Décoché, chaque geste vous est présenté avant."
     },
     "mcpDelegateAsset": {
-      "title": "Laisser téléverser sans demander",
-      "help": "Envoyer une image vers votre bibliothèque, où elle restera. Cela ne coûte aucune unité créative. Sans ce réglage, chaque téléversement vous est demandé."
+      "title": "Téléverser dans ma bibliothèque sans me demander",
+      "help": "Un client extérieur peut envoyer une image vers votre bibliothèque, où elle restera. Cela ne coûte aucune unité créative. Décoché, chaque téléversement vous est présenté avant."
     },
     "mcpDelegateRemote": {
-      "title": "Laisser publier vers un serveur sans demander",
-      "help": "Envoyer une branche vers un dépôt git distant. C’est le seul geste qui sorte de cette machine, et rien ici ne le rattrape. À n’armer qu’en connaissance de cause."
+      "title": "Publier vers un serveur distant sans me demander",
+      "help": "Un client extérieur peut envoyer une branche vers un dépôt git distant. C’est le seul geste qui sorte de cette machine, et rien ici ne le rattrape. À n’armer qu’en connaissance de cause."
     },
     "mcpDelegateBudget": {
-      "title": "Unités créatives dépensables sans demander",
-      "help": "Ce qu’un client peut dépenser dans cette fenêtre avant que le studio se remette à demander. À zéro, chaque dépense vous est demandée. Une génération que l’API refuse de chiffrer n’est jamais lancée sans vous, quel que soit ce montant."
+      "title": "Dépenser des unités créatives sans me demander",
+      "help": "Ce qu’un client extérieur peut dépenser dans cette fenêtre avant que le studio se remette à demander. À zéro, chaque dépense vous est présentée avant. Une génération que l’API refuse de chiffrer n’est jamais lancée sans vous, quel que soit ce montant."
     },
     "copyMcpCommand": {
       "title": "Commande de connexion",
-      "help": "Copie la ligne à coller dans un terminal pour brancher un client. Le jeton et le port changent à chaque démarrage du studio, la ligne est donc à recopier après chaque lancement.",
+      "help": "Copie la ligne à coller dans un terminal pour brancher un client. Elle ne porte ni port ni jeton : elle reste vraie pour tous les lancements à venir.",
       "button": "Copier"
     },
     "installResolveBridge": {
@@ -303,6 +322,113 @@
     "sectionHint": "Affiche les réglages de cette section",
     "sectionStagedHint": "Cette section a des changements non appliqués",
     "searchSectionHint": "Ouvre la section entière, au lieu du seul résultat",
-    "searchResultHint": "Va au réglage, dans la section à laquelle il appartient"
+    "searchResultHint": "Va au réglage, dans la section à laquelle il appartient",
+    "landing": {
+      "title": "Où atterrit une génération",
+      "help": "Quand un document du même genre est déjà ouvert. Sans rien d’ouvert, le résultat s’ouvre.",
+      "ask": "Demander à chaque fois",
+      "document": "Dans le document ouvert",
+      "newTab": "Dans un nouvel onglet"
+    },
+    "homeNews": {
+      "title": "Actualités des modèles",
+      "help": "Lit les modèles qui montent et les articles publiés sur Hugging Face, l’hôte d’où viennent déjà tous les poids du catalogue. Décoché, le studio ne contacte personne pour cette bande."
+    },
+    "mcp": "Point d’entrée (MCP)",
+    "mcpDescription": "La seconde porte du studio : un autre logiciel de cette machine — Claude Code, Cursor, tout client parlant le protocole MCP — lance les mêmes actions que l’assistant, depuis son propre projet. Fermée au départ.",
+    "mcpListening": "Ouvert : le studio écoute sur 127.0.0.1:{{port}}, sur cette machine seule.",
+    "mcpClosed": "Fermé : rien n’écoute. Cochez le réglage ci-dessus pour ouvrir la porte.",
+    "mcpHowTo": "Brancher un client",
+    "mcpStepOpen": "Cochez « Piloter le studio depuis l’extérieur », quand vous voulez. Le point d’entrée démarre aussitôt, et un client déjà configuré le trouve.",
+    "mcpStepCopy": "Copiez la commande de connexion, pour un client piloté depuis un terminal — ou le bloc de configuration, pour un client qui lit un fichier. Ni l’une ni l’autre ne porte de port ni de jeton.",
+    "mcpStepPaste": "Collez-la dans un terminal ouvert sur votre projet, ou le bloc dans le fichier de configuration de votre client.",
+    "mcpNothingToRedo": "À faire une seule fois. Ce que vous collez désigne le studio comme un programme à démarrer, jamais une adresse à joindre : cela reste valable à tous les lancements, y compris ceux où le port et le jeton sont neufs — c’est-à-dire tous. Un client déjà enregistré sous le même nom se remplace, il n’y a rien à supprimer avant.",
+    "mcpExamples": "Ce qu’un client peut faire",
+    "mcpExampleGenerate": "« Cherche un modèle de skybox nocturne, prépare la génération, mais ne l’envoie pas. »",
+    "mcpExampleTidy": "« Range les rushes de la semaine dans un dossier par jour. »",
+    "mcpExampleScene": "« Pose une sphère à deux mètres à droite du cube et éclaire-la en chaud. »",
+    "mcpGuards": "Ce qui garde la porte",
+    "mcpGuardLocal": "Le point d’entrée n’écoute que sur cette machine : rien du réseau ne l’atteint.",
+    "mcpGuardToken": "Un jeton neuf à chaque démarrage ; une demande sans lui est refusée.",
+    "mcpGuardOrigin": "Une demande venue d’une page web ouverte dans votre navigateur est refusée sur ce seul motif.",
+    "mcpGuardConsent": "Tout ce qui dépense ou téléverse s’affiche et attend votre accord — sauf ce que vous avez délégué ci-dessus.",
+    "copyMcpConfig": {
+      "title": "Bloc de configuration",
+      "help": "Copie le même branchement au format JSON, pour un client qui se configure par un fichier plutôt que par une commande. Comme elle, il reste vrai à chaque lancement.",
+      "button": "Copier le JSON"
+    },
+    "memory": "Mémoire de l’assistant",
+    "memoryDescription": "Ce que l’assistant a appris de vos projets. Ce qu’il retient d’un projet vit dans son dossier et le suit ; ce qu’il retient de votre façon de travailler reste sur cette machine.",
+    "memoryProject": "Ce projet",
+    "memoryGlobal": "Cette machine",
+    "memoryProjectHint": "Ce que l’assistant a appris du projet ouvert. Ce fichier voyage avec le dossier.",
+    "memoryGlobalHint": "Ce que l’assistant a appris de votre façon de travailler. Il ne quitte pas cette machine.",
+    "memoryGraph": "Graphe",
+    "memoryGraphCount": "{{memories, number}} mémoires · {{links, number}} liens",
+    "memoryGraphDescription": "Ce que l’assistant a appris, et ce qui se tient ensemble. Un point par mémoire, un trait entre deux mémoires qui parlent de la même chose.",
+    "memoryGraphEmpty": "Il faut au moins deux mémoires reliées pour qu’un graphe montre quelque chose.",
+    "memorySearch": "Chercher dans la mémoire",
+    "memoryEmpty": "L’assistant n’a encore rien retenu ici.",
+    "memoryUnmatched": "Aucune mémoire ne répond à cette recherche.",
+    "memoryNoProject": "Ouvrez un projet pour voir ce que l’assistant en a appris.",
+    "memoryUnreadable": "Le fichier de mémoire n’a pas pu être lu en entier. Ce qui suit peut être incomplet.",
+    "memoryTooNew": "Ce fichier a été écrit par une version plus récente du studio. Rien n’a été modifié.",
+    "memoryPin": "Épingler",
+    "memoryPinHint": "Une mémoire épinglée est toujours donnée à l’assistant, quelle que soit la question.",
+    "memoryUnpin": "Ne plus épingler",
+    "memoryUnpinHint": "L’assistant ne la recevra plus que si elle répond à la question posée.",
+    "memoryArchive": "Archiver",
+    "memoryArchiveHint": "La met de côté sans l’effacer : elle reste consultable et cesse d’être donnée.",
+    "memoryRestore": "Remettre en service",
+    "memoryRestoreHint": "L’assistant pourra de nouveau s’en servir.",
+    "memoryForget": "Oublier",
+    "memoryForgetHint": "L’oubli est écrit dans le fichier : rien n’est effacé, la trace reste.",
+    "memoryEdit": "Modifier le résumé",
+    "memorySource": "Écrite par",
+    "memorySourceAction": "une action ({{ref}})",
+    "memorySourcePerson": "vous",
+    "memorySourceAssistant": "l’assistant",
+    "memorySourceImport": "un import",
+    "memoryRefs": "Elle parle de",
+    "memoryReplaces": "Elle remplace",
+    "memoryAlsoAbout": "en parle aussi",
+    "memoryLinks": "Elle renvoie à",
+    "memorySupersedes": "Remplace {{id}}",
+    "memoryReindex": "Réindexer",
+    "memoryReindexHelp": "Relit le fichier et reconstruit l’index de recherche. Rien de ce qui a été appris n’est perdu.",
+    "memoryEmbed": "Calculer les vecteurs",
+    "memoryEmbedHelp": "Permet à l’assistant de retrouver une mémoire sans en connaître les mots exacts. Demande un modèle d’embedding installé.",
+    "memoryEmbedPending_other": "{{count, number}} mémoires à calculer",
+    "memoryEmbedNone": "Toutes les mémoires ont leur vecteur.",
+    "memoryEmbedNoModel": "Aucun modèle d’embedding n’est choisi. La recherche se fait sur les mots seuls.",
+    "memoryStopEmbed": "Arrêter",
+    "memoryStopEmbedHelp": "Ce qui a déjà été calculé est gardé.",
+    "memoryPurge": "Tout oublier",
+    "memoryPurgeHelp": "Efface le fichier de mémoire de ce projet, et tout ce que l’assistant en avait appris.",
+    "memoryPurgeConfirm": "Effacer tout ce que l’assistant a appris de ce projet ?",
+    "memoryFilterAll": "Tout",
+    "memoryCount_other": "{{count, number}} mémoires",
+    "memoryEmbedPending_one": "{{count, number}} mémoire à calculer",
+    "memoryCount_one": "{{count, number}} mémoire",
+    "memoryEmbedPending_many": "{{count, number}} mémoires à calculer",
+    "memoryCount_many": "{{count, number}} mémoires",
+    "memoryUpkeep": "Entretien",
+    "memoryMerge": "Fusionner les doublons",
+    "memoryMergeHelp": "Garde la plus importante de chaque groupe qui dit la même chose, relie les autres à elle et les archive. Rien n’est effacé.",
+    "memoryMergeNone": "Rien ne dit deux fois la même chose.",
+    "memoryMergeFound_one": "{{count, number}} doublon",
+    "memoryMergeFound_many": "{{count, number}} doublons",
+    "memoryMergeFound_other": "{{count, number}} doublons",
+    "memoryStale": "Archiver le dormant",
+    "memoryStaleHelp": "Met de côté ce que rien n’a servi depuis six mois. Ce qui est épinglé n’est jamais touché.",
+    "memoryStaleNone": "Rien ne dort depuis assez longtemps.",
+    "memoryStaleFound_one": "{{count, number}} mémoire dormante",
+    "memoryStaleFound_many": "{{count, number}} mémoires dormantes",
+    "memoryStaleFound_other": "{{count, number}} mémoires dormantes",
+    "memoryCompact": "Compacter le fichier",
+    "memoryCompactHelp": "Réécrit le fichier avec une ligne par mémoire debout. C’est là que ce qui a été oublié quitte le disque pour de bon.",
+    "memoryRelations": "Ce que cette mémoire touche",
+    "memoryPromote": "Retenir partout",
+    "memoryPromoteHint": "Recopie cette mémoire dans celle de la machine, pour qu’elle serve dans tous vos projets. Ce que le projet a appris y reste."
   }
 }

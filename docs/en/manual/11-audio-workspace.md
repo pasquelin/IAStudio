@@ -1,6 +1,6 @@
 # 11. Audio workspace
 
-[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Textures workspace →](12-textures-workspace.md)
+[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Materials workspace →](12-materials-workspace.md)
 
 The workspace where you shape a sound — shorten it, bring it up gently, even out its volume — and
 then lay it beside the others.
@@ -10,7 +10,7 @@ then lay it beside the others.
 ## How this workspace is laid out
 
 As in Video, the **bottom strip belongs to the edit**. The left column holds Models, Generate and
-the **asset shelf**, as it does everywhere else: a take is therefore dragged from the shelf to the
+the **Library**, as it does everywhere else: a take is therefore dragged from the Explorer to the
 edit without switching panels. The upper half of the right column is empty in this workspace; only
 the Inspector holds it, below the separator.
 
@@ -48,7 +48,7 @@ counts duration where the other two count frames.
 
 | Gesture | Where the take lands |
 |---|---|
-| **Double-click** an audio asset in the shelf | in **a tab of its own**, opened for it |
+| **Double-click** an audio asset in the Explorer | in **a tab of its own**, opened for it |
 | **Drop** the take on the lower monitor | in the tab **you have in front of you** |
 | **Right-click ▸ Open in the audio editor** | the same |
 
@@ -195,7 +195,7 @@ Only when you explicitly ask is a file written:
 | Button | What it does |
 |---|---|
 | **Apply** | creates a **new asset** holding the slice as you hear it, and **the clip on the edit now points at it**. The original is never touched |
-| **Save as new** | creates the same asset, but **leaves the edit where it is**. Take this when you want the edited version on the shelf without changing what the edit plays |
+| **Save as new** | creates the same asset, but **leaves the edit where it is**. Take this when you want the edited version on the Explorer without changing what the edit plays |
 
 Both name the new asset "*(edited)*".
 
@@ -226,7 +226,7 @@ The bottom strip holds the **same edit as the Video workspace**, with one differ
 This is what makes Audio an editing workspace rather than a plain take editor: music is built by
 laying sounds side by side.
 
-**The gestures are exactly those of the previous chapter** — dragging a take in from the shelf,
+**The gestures are exactly those of the previous chapter** — dragging a take in from the Explorer,
 trimming a clip by its edges, the blade, the fades, the gain, the inspector, the track headers
 with their mute, solo and lock. All of it is described in
 [Video workspace](10-video-workspace.md), and none of it changes here — bar one thing, and it
@@ -306,4 +306,4 @@ The detail is in [What does not exist yet](18-limits.md).
 
 ---
 
-[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Textures workspace →](12-textures-workspace.md)
+[← Video workspace](10-video-workspace.md) · [Contents](../user-guide.md) · [Next chapter: Materials workspace →](12-materials-workspace.md)

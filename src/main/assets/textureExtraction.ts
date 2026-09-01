@@ -23,13 +23,13 @@ function extensionOfMime(mimeType: string): string {
  * What a picture taken out of a model is called: the model's name and the role it played.
  *
  * The same shape a derived channel already uses, and the same words — a base colour extracted
- * from a `.glb` and one computed in the texture space are the same thing on the shelf, so they
+ * from a `.glb` and one computed in the materials space are the same thing on the shelf, so they
  * must not read as two different notions. A slot the studio has no channel for keeps its glTF
  * name, which is a fact about the file rather than a phrase anyone has to translate.
  */
 function extractedTextureName(modelName: string, texture: EmbeddedTexture): string {
   const language = windowLanguage()
-  const t = TRANSLATIONS[language].texture
+  const t = TRANSLATIONS[language].material
   const role = texture.channel ? t.channel[texture.channel] : texture.slot
 
   return fillHoles(t.derivedName, { name: modelName, channel: role }, language)
@@ -84,7 +84,7 @@ export function createTextureExtraction(deps: TextureExtractionDeps): TextureExt
 async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asset[]> {
   if (source.type !== 'mesh') throw new Error(`asset ${source.id} is not a mesh`)
 
-  const already = await deps.search({ derivedFrom: source.id, type: 'texture' })
+  const already = await deps.search({ derivedFrom: source.id, type: 'image' })
   if (already.length > 0) return [...already]
 
   const file = deps.fileOf(source)
@@ -92,7 +92,12 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
 
   // `Buffer` IS a `Uint8Array`, and the reader takes it as one: wrapping it would copy the
   // whole model — several hundred megabytes for a scan, on the process every window waits on.
-  const found = await readFile(file).then(embeddedTextures, (error: unknown) => {
+  // 🛑 The `try` holds the READ alone: the original handler was `readFile`'s second argument, so
+  // a reader that throws on a corrupt model is not this journal line, and never was.
+  let bytes
+  try {
+    bytes = await readFile(file)
+  } catch (error) {
     // Recorded and rethrown: the window says it too, but a project reopened tomorrow keeps
     // the line — and a file the disk refuses is exactly what one goes back to the journal for.
     deps.record({
@@ -102,7 +107,9 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
       params: { name: source.name },
     })
     throw error
-  })
+  }
+
+  const found = embeddedTextures(bytes)
 
   const created: Asset[] = []
   for (const texture of found) {
@@ -133,12 +140,14 @@ function requestFor(source: Asset, texture: EmbeddedTexture, id: string): WriteR
   return {
     id,
     name: extractedTextureName(source.name, texture),
-    type: 'texture',
+    type: 'image',
     extension: extensionOfMime(texture.mimeType),
     // Traceable both ways: the inspector shows a model's own pictures beside it by asking the
     // catalogue what was derived from it.
     derivedFrom: source.id,
-    ...(texture.channel ? { map: texture.channel } : {}),
+    // One or the other, never both: a slot naming exactly one channel says so through `map`, and
+    // the rest carry the slot they came out of so something can later tell an ORM from a coat.
+    ...(texture.channel ? { map: texture.channel } : { packedSlot: texture.slot }),
     // A PNG carries its size in its header, which `probePng` reads. A JPEG's is not read at all —
     // nothing probes an extracted picture afterwards, so its row shows none.
     ...(isPngBytes(texture.bytes) ? { probe: probePng(texture.bytes) ?? undefined } : {}),

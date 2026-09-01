@@ -280,10 +280,6 @@ function trimmedIn(clip: ClipRef, at: Us, span: Us, length: number | null): Clip
   return { ...clip, start, duration, offset, fadeIn: Math.min(clip.fadeIn, duration) }
 }
 
-export function clipsWithout(clips: readonly ClipRef[], clipId: string): readonly ClipRef[] | null {
-  return clips.some(clip => clip.id === clipId) ? clips.filter(clip => clip.id !== clipId) : null
-}
-
 /**
  * A copy of one block, laid end to end with the one it came from and carrying everything else.
  *

@@ -17,7 +17,7 @@ import { isRecord } from '../guards'
 
 export const GLTF_VERSION = '2.0'
 
-export const GLTF_GENERATOR = 'Scenario Studio'
+export const GLTF_GENERATOR = 'IA Studio'
 
 /** The one extension the studio writes today, and the one three.js reads on both sides. */
 export const KHR_LIGHTS_PUNCTUAL = 'KHR_lights_punctual'
@@ -30,6 +30,9 @@ export const GLTF_HEAD_LIMIT = 16 * 1024
 
 /** A rotation, in the order glTF stores one: x, y, z, w. */
 export type GltfQuaternion = readonly [number, number, number, number]
+
+/** A translation, a scale, a linear colour: what glTF calls a VEC3, and always three numbers. */
+export type GltfVec3 = readonly [number, number, number]
 
 export type GltfExtras = Record<string, unknown>
 

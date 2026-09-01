@@ -1,0 +1,8 @@
+{
+  "code": {
+    "unavailable": "L’éditeur n’a pas pu se charger.",
+    "noProblems": "Aucun problème",
+    "openProblem": "Ouvrir à cette ligne",
+    "at": "ligne {{line, number}}, colonne {{column, number}}"
+  }
+}

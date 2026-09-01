@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { rm, stat } from 'node:fs/promises'
 import { finished, pipeline } from 'node:stream/promises'
@@ -96,7 +97,7 @@ export async function writeOtiozFile(
   // rather than a count of files — one rush of thirty gigabytes among six small ones.
   let total = encodedContent.length
   for (const medium of media) {
-    const found = await stat(medium.path).catch(() => null)
+    const found = await orElse(stat(medium.path), null)
     if (!found?.isFile()) throw new MissingMediumError(medium.entry)
     // READ rather than listened for, and the only stop this walk has: the listener that carries
     // every other one is attached below, and one added to an already-raised signal never fires.
@@ -190,8 +191,19 @@ export async function writeOtiozFile(
     // Awaited on the stream FIRST: `destroy` closes the descriptor on a later tick, and Windows
     // refuses to unlink a file that still has an open handle — `force` only swallows `ENOENT`.
     // And a removal that fails anyway must not turn a stop into a reported failure.
-    await finished(out).catch(() => {})
-    await rm(path, { force: true }).catch(() => {})
+    // 🛑 Two blocks and not one: a destroyed stream is exactly what makes `finished` reject,
+    // and the removal below has to run anyway — that is the whole reason it waits for it.
+    try {
+      await finished(out)
+    } catch {
+      // The stop, or the failure being rethrown below, is what the caller hears.
+    }
+
+    try {
+      await rm(path, { force: true })
+    } catch {
+      // A half-written bundle that will not go must not turn a stop into a reported failure.
+    }
     if (error instanceof ExportCancelledError) return false
     throw error
   } finally {

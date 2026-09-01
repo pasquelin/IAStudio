@@ -84,8 +84,8 @@ avec des parties que le studio ne compose pas. Il s’ouvre, il s’affiche — 
 d’écrire**, avec la raison en clair. Ce n’est pas une précaution excessive : un glTF est lié par
 **index**, donc réécrire la scène depuis ce que le studio en connaît supprimerait ces parties, et
 un fichier à demi réécrit ne s’ouvrirait nulle part. Le même refus protège un ciel qui contient
-une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — un second
-matériau, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
+une scène entière, et une matière `.mtlx` qui porte plus que ce que le studio compose — une seconde
+matière, ou simplement un réglage de surface que l’éditeur de matières n’a pas, comme un vernis.
 
 **Un montage est protégé de la même façon**, et pour deux raisons distinctes. Un `.otio` qui porte
 un marqueur, un effet ou une transition que le studio ne compose pas s’ouvre en lecture seule ; et
@@ -138,7 +138,7 @@ Un point qui reste : **changer de projet** ferme les documents ouverts sans pose
 
 ### Il n’y a pas de menu « Ouvrir », et il n’en faut pas
 
-Une image de l’étagère **entre** dans un document ouvert — glissée sur la toile, envoyée par le
+Une image de l’Explorateur **entre** dans un document ouvert — glissée sur la toile, envoyée par le
 clic droit, ou choisie par l’outil **Image…** : elle y devient un calque. Et **double-cliquée,
 elle ouvre un document à elle**. Voir [Espace Image](08-espace-image.md).
 
@@ -186,7 +186,7 @@ passe pas est une intention affichée.
 ### Le recadrage ne rend pas ses pixels à l’annulation
 
 **Les cinq sont offerts** — Fusionner, Aplatir, le miroir, le quart de tour, et depuis peu le
-**recadrage** (`F`). Ce qui les bloquait était qu’une surface de calque ne suivait pas son
+**recadrage** (`C`). Ce qui les bloquait était qu’une surface de calque ne suivait pas son
 document ; elle le suit maintenant.
 
 Le recadrage a en revanche une limite qu’il faut connaître avant de s’en servir : **rétrécir le
@@ -195,7 +195,7 @@ la zone retirée revient vide, et les traits de pinceau qu’elle contenait ne r
 plus. C’est le comportement de Photoshop quand « Supprimer les pixels rognés » est coché — sauf
 que son historique à lui sait les rendre.
 
-**La raison.** Les pixels ne vivent pas dans le document mais dans des textures GPU, et
+**La raison.** Les pixels ne vivent pas dans le document mais dans des images GPU, et
 l’historique n’en garde que des tuiles de 512 px, plafonnées à 256 Mo. Un recadrage sévère
 retirerait plus de tuiles que ce plafond n’en autorise. Garder l’intégralité de l’image d’avant
 demanderait des instantanés pleine taille dans la pile d’annulation, ce que le studio s’interdit
@@ -203,12 +203,13 @@ justement pour que `⌘Z` reste instantané sur des documents lourds.
 
 **Ce qu’il faut faire :** `⇧⌘E` avant un recadrage large, si vous pensez revenir en arrière.
 
-### Remplir n’est pas un pot de peinture
+### Le pot de peinture ne s’arrête pas aux contours
 
-**Remplir le calque** (`G`) remplit le calque **entier**, d’un bord à l’autre. Ce n’est pas le
-remplissage par zone que vous connaissez peut-être ailleurs — celui qui s’arrête aux contours.
+**Pot de peinture** (`G`) remplit le calque **entier**, d’un bord à l’autre — ou toute la **zone
+sélectionnée**, s’il y en a une. Ce n’est pas le remplissage par zone que vous connaissez peut-être
+ailleurs — celui qui s’arrête aux contours du dessin.
 
-Ce n’est pas un défaut : c’est un outil différent, qui porte bien son nom.
+Ce n’est pas un défaut : c’est un outil différent, et une sélection est le seul moyen de le borner.
 
 ### L’historique s’arrête à 100
 
@@ -288,7 +289,7 @@ tant que c’est le cas : sans ce refus, enregistrer effacerait ces clips du fic
 médias manquants dans le projet, rouvrez le montage, et l’enregistrement redevient possible.
 
 Et ce que ce format ne porte pas en standard — fondus, gains, liens image/son, scène 3D d’un clip
-vivant — voyage dans le fichier mais **n’est lu que par Scenario**.
+vivant — voyage dans le fichier mais **n’est lu que par IA Studio**.
 
 ### Les réglages d’une séquence sont figés
 
@@ -341,7 +342,7 @@ nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas
 
 ---
 
-## Espace Textures
+## Espace Matières
 
 ### Ce qui manque
 
@@ -464,16 +465,6 @@ proxy et votre agent ssh, eux, sont conservés.
 
 ## Réglages et raccourcis
 
-### Deux familles n’ont pas de modèle par défaut
-
-**Réglages ▸ Génération** propose sept sous-sections : Image, Vidéo, 3D, Audio, Agrandissement,
-Détourage, Vectorisation. **Texture** et **Skybox** manquent, alors que ce sont désormais des
-familles de modèles à part entière.
-
-Conséquence : dans les espaces Textures et Skyboxes, le panneau **Génération** n’apparaît qu’après
-avoir choisi un modèle à la main, et il faut recommencer à chaque session — les autres espaces
-peuvent, eux, mémoriser leur choix.
-
 ### Un projet reste sur votre disque, toujours
 
 Le fichier de réglages prévoit un choix entre « sur votre disque » et « dans le nuage » pour
@@ -482,7 +473,7 @@ nulle part dans l’interface. Offrir un bouton qui ne mène nulle part serait u
 logiciel ne peut pas tenir.
 
 > **À ne pas confondre avec la bibliothèque de votre compte**, qui, elle, existe : vous pouvez
-> **envoyer** des assets vers elle depuis l’étagère. Ce sont deux choses différentes — l’une est
+> **envoyer** des assets vers elle depuis l’Explorateur. Ce sont deux choses différentes — l’une est
 > l’endroit où le projet lui-même est rangé, l’autre est un stock d’assets en ligne à côté du
 > projet. Voir [Les assets](07-assets.md).
 
@@ -497,17 +488,14 @@ Conséquence directe, et ce n’est pas une panne : sur les sept badges qu’un 
 à un autre projet ». Tant que rien ne bouge sans que vous le demandiez, l’autre côté ne peut pas
 prendre de l’avance sur le vôtre.
 
-### Sur Windows et Linux, `⌘` est pris au pied de la lettre
+### Sur Windows et Linux, `⌘` s’affiche là où `Ctrl` se presse
 
-Deux défauts distincts, l’un d’affichage, l’autre de fonctionnement.
+Les raccourcis **fonctionnent** : `⌘` se lit `Ctrl` partout, y compris ceux qu’une surface écoute
+elle-même. Ce qui reste est l’affichage — les infobulles et l’écran des raccourcis dessinent le
+symbole `⌘` du Mac au lieu d’écrire `Ctrl`.
 
-**L’affichage** : les infobulles et l’écran des raccourcis dessinent le symbole `⌘` du Mac au lieu
-de `Ctrl`, partout.
-
-**Le fonctionnement** : les raccourcis portés par le menu du système — `⌘Z`, `⌘S`, `⌘N` — répondent
-bien à `Ctrl`, c’est le menu qui les déclenche. Mais ceux qu’une surface écoute elle-même, comme
-`⌘D` dans la vue 3D, attendent la touche **Windows** et non `Ctrl` : ils sont pour l’instant hors
-d’atteinte ailleurs que sur un Mac.
+**La touche Windows, elle, ne déclenche rien** : elle appartient au bureau, et le studio ne lui
+donne aucune commande.
 
 ---
 
@@ -517,22 +505,22 @@ Ce ne sont pas des manques : ce sont des bornes assumées.
 
 ### Il ne travaille pas hors ligne pour générer
 
-La fabrication se passe sur les serveurs de Scenario. Sans connexion, vous pouvez ouvrir,
+La fabrication se passe sur les serveurs du fournisseur. Sans connexion, vous pouvez ouvrir,
 retoucher, monter, enregistrer — mais pas créer de nouveau contenu.
 
 ### Il n’est pas gratuit à l’usage
 
-Chaque génération consomme le crédit de votre compte Scenario. Le studio ne vous facture rien : il
+Chaque génération consomme le crédit de votre compte distant. Le studio ne vous facture rien : il
 transmet. Mais votre compte, lui, compte.
 
 **Et il ne peut pas vous dire ce qu’il vous reste.** La fenêtre **Aide ▸ Consommation…** montre ce
-qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l’API Scenario n’en expose
+qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l’API de génération n’en expose
 aucun. Le montant en euros qui l’accompagne est calculé sur la grille publique des packs
 prépayés : un ordre de grandeur, pas votre facture.
 
 Ce qu’il sait dire, en revanche, c’est ce qu’une génération va coûter : le bouton **Générer**
 porte une estimation avant que vous appuyiez. Combien il vous reste pour la payer, c’est votre
-compte Scenario qui le sait, pas le studio.
+compte distant qui le sait, pas le studio.
 
 ### Il ne remplace pas Photoshop, Blender ni Premiere
 
@@ -559,16 +547,14 @@ ne peut pas divulguer votre compte.
 
 ## Récapitulatif : par ordre d’importance
 
-Si vous ne deviez retenir que cinq choses de ce chapitre :
+Si vous ne deviez retenir que quatre choses de ce chapitre :
 
 1. **Les six documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
    quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **l’export vidéo sort muet** — le fichier final est livrable, le son du montage n’y est pas ;
-4. **les familles Texture et Skybox n’ont pas de modèle par défaut** — ces deux espaces font
-   rechoisir leur modèle à chaque session ;
-5. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
+4. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
 
 Tout le reste est du confort.
 

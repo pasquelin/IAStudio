@@ -1,6 +1,14 @@
-import { BoxGeometry, DirectionalLight, Layers, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import {
+  BoxGeometry,
+  DirectionalLight,
+  InstancedMesh,
+  Layers,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPaneMemory, dressForPane, type PaneEye } from './paneDress'
+import { createPaneMemory, dressForPane, forgetDress, type PaneEye } from './paneDress'
 import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
 import { EDGE_LAYER } from './sceneView'
 
@@ -231,5 +239,43 @@ describe('dressing a view before it is drawn', () => {
 
       expect(light).toHaveBeenCalledTimes(2)
     })
+  })
+
+  /**
+   * The frame reads this to know whether its shadow maps are worth drawing again: a pane that
+   * puts the scene's lights out draws different shadows from the one beside it, and one that
+   * wears what is already on has nothing to say.
+   */
+  it('says whether it changed what the scene wears', () => {
+    const mesh = cube()
+
+    expect(dressForPane([mesh], 'solid', false, materials, memory, eye())).toBe(true)
+    expect(dressForPane([mesh], 'solid', false, materials, memory, eye())).toBe(false)
+    expect(dressForPane([mesh], 'shaded', false, materials, memory, eye())).toBe(true)
+  })
+
+  /**
+   * An `InstancedMesh` draws in the place of the meshes it stands for, and they are the ones
+   * this walk used to see. Left out, sixty-four copies went on drawing shaded while everything
+   * around them wore the stand-in of a solid view — measured, and no gate went red on it.
+   */
+  it('replaces the material of an instance as it does of a mesh', () => {
+    const own = new MeshStandardMaterial()
+    const instance = new InstancedMesh(new BoxGeometry(1, 1, 1), own, 4)
+
+    dressForPane([instance], 'solid', false, materials, memory, eye())
+
+    expect(instance.material).not.toBe(own)
+  })
+
+  it('dresses the scene again once told to forget what it wears', () => {
+    const mesh = cube()
+    dressForPane([mesh], 'solid', false, materials, memory, eye())
+
+    // What a rebuilt instance needs: it is a NEW object wearing what its source wore, and a pass
+    // that believed the scene already dressed would walk past it.
+    forgetDress(memory)
+
+    expect(dressForPane([mesh], 'solid', false, materials, memory, eye())).toBe(true)
   })
 })

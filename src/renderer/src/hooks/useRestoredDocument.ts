@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { rehydrateDocument, restoreDocument } from '@/app/documentIo'
+import { rehydrateDocument, restoreDocument } from '@/features/shell/documentIo'
 
 /**
  * Fills a tab from the project when a file is there, from the space's own default otherwise —

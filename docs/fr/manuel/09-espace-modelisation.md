@@ -44,17 +44,22 @@ contourne, **orange pour tout ce qui se grimpe** — rampe, marches, blocs, pass
 
 ## Se déplacer dans la scène
 
-Deux modes de navigation, qui coexistent.
+Trois façons de se déplacer, qui coexistent.
 
 ### Tourner autour de la scène — la souris seule
 
 | Geste | Effet |
 |---|---|
 | **Clic gauche + glisser** dans le vide | fait tourner la vue autour du point regardé |
-| **Molette** | avance et recule |
+| **Molette** | avance et recule **vers ce que vise le pointeur** |
 | **Clic droit + glisser** *(voir ci-dessous)* | fait voler |
 
 C’est le mode par défaut. On tourne **autour** de la scène, comme si on en faisait le tour.
+
+> **La molette avance vers ce que vous visez, et ne bute sur rien.** Le point autour duquel la vue
+> tourne se replace sur ce que le pointeur désigne, et la caméra le **traverse** si vous continuez
+> — il n’y a pas de mur invisible devant lequel on ralentit sans jamais arriver. Le pas suit la
+> distance de ce que vous visez : vaste au loin, fin de près.
 
 ### Voler dans la scène — un bouton maintenu
 
@@ -80,7 +85,22 @@ déplacent pas la caméra — sans quoi le même geste bougerait l’objet et le
 > **Les touches sont lues à leur position physique.** WASD sur un clavier QWERTY et ZQSD sur un
 > clavier AZERTY sont **les mêmes quatre touches**. Il n’y a rien à reconfigurer.
 
-Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
+### Naviguer en continu — le mode, sans rien tenir
+
+Le bouton **Naviguer** de la barre d’outils, ou la touche <kbd>`</kbd> (celle sous Échap,
+<kbd>²</kbd> sur un clavier français), arme un mode où l’on n’a **plus rien à maintenir** :
+
+- la **souris devient le regard** — elle disparaît, et la vue suit ses mouvements ;
+- les **mêmes touches** que ci-dessus déplacent la caméra ;
+- la **molette règle la vitesse** au lieu d’avancer, le temps de la session ;
+- <kbd>Échap</kbd> rend la souris et quitte le mode.
+
+Les touches sont rappelées quelques secondes en bas du viewport à chaque fois que le mode s’arme.
+
+> **Tant que le mode est armé, les lettres appartiennent à la caméra.** <kbd>S</kbd> fait reculer
+> et n’appelle pas l’outil Redimensionner ; les outils reprennent leurs touches dès la sortie.
+
+Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ Modélisation**
 
 | Réglage | Ce qu’il fait | Défaut |
 |---|---|---|
@@ -98,10 +118,11 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 | **Déplacer** | `G` | tire l’objet le long des flèches de couleur |
 | **Pivoter** | `R` | fait pivoter l’objet avec les cercles de couleur |
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
-| **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
+| **Tous les magnétismes** | `M` | allume ou éteint les quatre magnétismes d’un coup ; une seconde pression rend ceux qui étaient allumés |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de **l’objet** plutôt que sur celle du monde |
 | **Mode de rendu** | `Z` | fait défiler les neuf façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
+| **Naviguer** | `` ` `` | arme le vol continu : la souris tient le regard, les touches déplacent |
 
 La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste est au menu natif :
 
@@ -114,8 +135,57 @@ La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste es
 | Copier, couper, coller | **les touches seules** — voir plus bas |
 
 **Le magnétisme sert à aligner.** Sans lui, un objet se pose à 1,0374 m du précédent ; avec lui,
-à 1 m tout rond. La finesse des crans — un pour le déplacement, un pour la rotation, un pour
-l’échelle — se règle dans **Réglages ▸ Espaces de travail ▸ 3D**.
+à 1 m tout rond.
+
+### La barre du haut — ce qui se règle en manipulant
+
+Une seconde barre flotte **en haut du viewport**, horizontale. Elle ne porte pas des outils mais
+des **comportements** : ce qu’on change *pendant* qu’on manipule, sans lâcher la souris.
+
+Chaque entrée est un groupe de **deux zones**. L’icône, à gauche, **allume ou éteint** ce
+magnétisme-là et rien d’autre. La valeur, à droite, **ouvre un menu** au survol, comme les menus
+de la barre d’outils — un clic dessus le referme. Choisir un cran **allume ce magnétisme au
+passage** : aller chercher un pas, c’est demander ce magnétisme, et le laisser éteint coûtait un
+second clic à chaque première utilisation.
+
+Les crans s’affichent **en colonnes**, pas en liste : une valeur se cherche du regard, et une
+colonne de neuf pas recouvrait la scène qu’on s’apprête à changer. Le cran actif est **peint**,
+là où il est — pas signalé par une coche à l’autre bout de la liste.
+
+| Entrée | Ce que l’icône bascule | Ce que le menu règle |
+|---|---|---|
+| **Vitesse de caméra** | *(rien : elle n’a pas de bascule)* | des paliers de 0,5 à 20 m/s, et un curseur libre entre eux |
+| **Magnétisme de surface** | poser ce qu’on déplace sur la première surface en dessous | s’orienter selon la pente, et de combien flotter au-dessus |
+| **Magnétisme de grille** | faire avancer un déplacement par pas réguliers | le pas, de 1 cm à 10 m |
+| **Magnétisme d’angle** | faire tourner par crans | l’angle, en incréments ou en divisions du tour |
+| **Magnétisme d’échelle** | faire varier l’échelle par crans | le ratio |
+
+La barre est en **haut à droite** du viewport ; la colonne d’outils tient déjà le côté gauche.
+
+**Les quatre sont indépendants.** Poser un accessoire sur une table pendant que son angle reste
+libre est le geste que la bascule unique ne savait pas dire. Le bouton **Tous les magnétismes**
+de la barre verticale, et la touche `M`, les éteignent tous d’un coup — et une seconde pression
+rend exactement ceux qui étaient allumés.
+
+**La vitesse de la barre est celle du vol.** C’est la même valeur que la molette règle quand le
+mode Naviguer est armé : les deux ne peuvent pas se contredire.
+
+Les crans eux-mêmes sont des **réglages**, partagés par tous les documents ; les quatre
+interrupteurs, eux, appartiennent au document en cours. Les mêmes crans se retrouvent dans
+**Réglages ▸ Espaces de travail ▸ Modélisation** et dans le panneau **Environnement**.
+
+**Le magnétisme de surface est le seul qui ne compte pas en crans** : il lance un rayon vers le
+bas depuis ce que vous tirez et le pose sur ce qu’il rencontre. Il n’agit que pendant un
+**déplacement** — pas pendant une rotation ni un redimensionnement.
+
+**Les poignées ne dépassent jamais l’objet qu’elles tiennent.** Sur une petite pièce elles
+suivent sa taille et rétrécissent avec elle quand on recule ; au-delà, elles gardent une taille
+constante à l’écran plutôt que de grandir sans fin — sans quoi elles deviendraient impossibles à
+attraper de loin. Le plafond se règle dans **Réglages ▸ Espaces de travail ▸ Modélisation ▸
+Taille des poignées**.
+
+Une lumière et une caméra n’ont pas de volume à mesurer : leurs poignées gardent la taille du
+réglage, sans quoi il n’y aurait plus rien à attraper.
 
 **Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
 toujours vers l’est. En repère local, elle pointe vers la droite **de l’objet** : c’est ce qu’on
@@ -145,7 +215,7 @@ Trois chemins mènent au même endroit :
 
 - le menu **Ajouter**, qui range les trois familles — maille, lumière, objet ;
 - les boutons **+** des panneaux **Mailles** et **Lumières** ;
-- le glisser-déposer, pour un modèle qui vient de l'étagère.
+- le glisser-déposer, pour un modèle qui vient de l'Explorateur.
 
 L’objet se pose à **l’origine de la scène** — le centre du monde, là où les axes se croisent.
 
@@ -153,11 +223,11 @@ L’objet se pose à **l’origine de la scène** — le centre du monde, là o�
 
 Les formes ci-dessous sont celles que le studio sait **construire**. Un modèle qui vient
 d’ailleurs — généré par un modèle *texte vers 3D*, ou importé depuis un `.glb` — entre par
-l’étagère :
+l’Explorateur :
 
 | Geste | Résultat |
 |---|---|
-| **Double-clic** sur une maille dans l’étagère | une **scène à elle** s’ouvre, avec la maille dedans |
+| **Double-clic** sur une maille dans l’Explorateur | une **scène à elle** s’ouvre, avec la maille dedans |
 | **Glisser-déposer** sur la vue 3D | elle entre dans la scène **ouverte devant vous** — n’importe où sur la vue, la barre d’outils comprise |
 | **Clic droit ▸ Ajouter à la scène** | idem, sans viser la vue — il suffit qu’une scène soit ouverte quelque part |
 
@@ -205,7 +275,7 @@ lettres — le **corps**, la **profondeur** (mettez-la à zéro pour des lettres
 **segments de courbe**, qui décident de la finesse des arrondis.
 
 Un texte est éclairé comme une maille, et porte la même **matière** : couleur, rugosité, métal,
-et les cinq textures. Il projette et reçoit les ombres.
+et les cinq images. Il projette et reçoit les ombres.
 
 #### Les polices offertes
 
@@ -231,13 +301,13 @@ que soit l’angle de la vue. C’est ce qu’on emploie pour une étincelle, un
 
 **Ajouter ▸ Objet ▸ Sprite** en pose un à l’origine. Il arrive sans image : choisissez-la dans
 l’Inspecteur, section **Sprite**, parmi les images du projet — les mêmes que celles qu’une
-matière accepte en texture.
+matière accepte dans un canal.
 
 | Réglage | Ce qu’il fait |
 |---|---|
 | **Couleur** | teinte l’image. Sur un sprite sans image, c’est la couleur du carré lui-même |
 | **Opacité** | de transparent à opaque |
-| **Texture** | l’image affichée, prise dans les assets du projet |
+| **Image** | l’image affichée, prise dans les assets du projet |
 
 Quatre choses à savoir :
 
@@ -437,6 +507,59 @@ ranger disparaîtrait de l’écran, et on le croirait perdu.
 
 ---
 
+## Percer, fusionner, croiser
+
+**Édition ▸ Percer**, ou les boutons de la barre d’outils, après le groupe.
+
+Posez un cube dans un mur, sélectionnez les deux — **dans l’ordre que vous voulez** — puis
+**Percer** : le mur gagne une fenêtre. C’est tout le principe. **La plus grosse forme est la
+matière**, les autres sont les outils qui la creusent, et l’ordre des clics n’y change rien.
+
+Une façon de marquer, trois de combiner, et deux pour revenir en arrière :
+
+| Bouton | Ce qu’il fait |
+|---|---|
+| **Négatif** | marque les formes choisies comme **outils** — elles deviennent rouges et translucides |
+| **Percer** | creuse les plus petites formes dans la plus grosse — le cube ouvre la fenêtre |
+| **Fusionner** | réunit les formes en un seul solide |
+| **Garder le commun** | ne garde que la partie où les formes se chevauchent |
+| **Séparer** | rend les formes d’origine, chacune là où elle était |
+| **Inverser le pli** | `I` — refait le pli à l’envers, sans annuler |
+
+**Si le pli part à l’envers, ne cherchez pas pourquoi : pressez `I`.** « Inverser le pli »
+refait le même pli dans l’autre sens — ce qui avait été creusé devient la matière — en un clic et
+sans rien annuler. C’est aussi une ligne du clic droit sur le solide.
+
+**Pour dire d’avance quelle forme sera creusée**, marquez l’outil : sélectionnez-le, pressez `N`,
+et il s’affiche en rouge translucide. Une forme marquée est **toujours** creusée dans les autres,
+quel que soit le bouton pressé ensuite — **Fusionner** avec un négatif dans la sélection perce donc
+au lieu de réunir. Presser `N` à nouveau retire la marque.
+
+> **La marque se voit, l’ordre des clics non.** C’est toute la raison d’être du bouton : avant,
+> rien à l’écran ne disait quel objet allait être creusé, et ajouter une forme la sélectionnant
+> aussitôt, le geste naturel donnait presque toujours le mauvais sens.
+
+**Rien n’est perdu.** Le solide garde en mémoire les formes dont il a été fait : **Séparer** vous
+les rend là où elles étaient, et `⌘Z` annule la découpe comme n’importe quelle autre action. Vous
+pouvez donc essayer sans crainte.
+
+> **Ce qui a été creusé revient marqué.** Une forme qui servait d’outil vous est rendue en rouge
+> translucide, pour que refaire le même pli donne le même solide. Pressez `N` pour lui retirer la
+> marque et en refaire une forme ordinaire.
+
+Le solide obtenu se comporte comme un objet ordinaire : il porte un nom, se déplace, se tourne,
+s’habille d’une matière, et la fenêtre suit le mur quand vous le déplacez.
+
+> **Le calcul ne se fait pas pendant que vous bougez le cube**, mais au moment où vous cliquez sur
+> le bouton — et il se fait à côté, sans figer l’écran. Sur une forme très détaillée, le solide
+> peut donc apparaître **plein pendant un instant** avant que le trou se creuse : ce n’est pas une
+> erreur, c’est le calcul qui n’a pas encore rendu sa réponse.
+
+> **Une seule forme ne se perce pas.** Il en faut au moins deux, et les boutons ne font rien tant
+> que ce n’est pas le cas. **Séparer** ne s’applique qu’à un solide à la fois.
+
+---
+
 ## Dupliquer, copier, coller
 
 Les quatre raccourcis que vous connaissez déjà. **Dupliquer** a sa ligne dans **Édition** ; les
@@ -502,7 +625,7 @@ montre son rayon, un tore montre son tube, un projecteur montre son angle.
 | **Identité** | le nom, modifiable |
 | **Transformation** | Position, Rotation, Échelle — trois nombres chacune (X, Y, Z). Un sprite sans enfant, sélectionné seul, n’a pas de ligne Rotation : elle ne se verrait nulle part |
 | **Géométrie** | ce qui définit la forme : rayon, largeur, segments… |
-| **Matière** | Couleur, Rugosité, Métallicité, Répétition au mètre, et cinq emplacements de textures |
+| **Matière** | Couleur, Rugosité, Métallicité, Répétition au mètre, et cinq emplacements d’images |
 
 #### Les champs de géométrie, tous
 
@@ -538,15 +661,15 @@ on ne peut pas prévoir le résultat sans essayer.
 | **Rugosité** | miroir parfait | mat complet |
 | **Métallicité** | plastique, bois, pierre | métal |
 
-Les cinq emplacements de textures — **Texture**, **Normales**, **Carte de rugosité**, **Carte de
+Les cinq emplacements d’images — **Image**, **Normales**, **Carte de rugosité**, **Carte de
 métallicité**, **Occlusion ambiante** — reçoivent des images du projet. Le bouton **Choisir une
-texture** ouvre la liste ; **Retirer la texture** la vide.
+image** ouvre la liste ; **Retirer l’image** la vide.
 
 **Toute forme neuve arrive déjà habillée** d’un damier de travail. Il sert à trois choses : juger
-une échelle, voir une texture s’étirer, et distinguer une face d’une autre. Remplacez-le quand
+une échelle, voir une image s’étirer, et distinguer une face d’une autre. Remplacez-le quand
 vous voulez — c’est un point de départ, pas une décoration.
 
-Quatre damiers sont copiés dans le dossier **Textures** du projet la première fois qu’une scène
+Quatre damiers sont copiés dans le dossier **Images** du projet la première fois qu’une scène
 en demande un : `CheckerLarge`, `CheckerSmall`, `GridLarge`, `GridSmall`. Ce sont des images du
 projet comme les autres.
 
@@ -620,7 +743,7 @@ faire ni l’un ni l’autre sans que cela se voie.
 > sans effet, le studio n’affiche rien.
 
 À quoi ressemble une ombre — bord net ou adouci, finesse du calcul — se règle une fois pour toute
-la scène dans **Réglages ▸ Espaces de travail ▸ 3D**.
+la scène dans **Réglages ▸ Espaces de travail ▸ Modélisation**.
 
 ### Environnement — le ciel qui éclaire
 
@@ -650,7 +773,7 @@ dans le nuage n’y figure pas : il serait choisi, et rien ne s’afficherait.
 Le quadrillage n’est **pas** un objet de la scène : c’est un repère, pour savoir où sont les
 choses et à quelle hauteur. Il n’apparaît dans aucun rendu.
 
-**Réglages ▸ Espaces de travail ▸ 3D** :
+**Réglages ▸ Espaces de travail ▸ Modélisation** :
 
 | Réglage | Ce qu’il fait | Défaut |
 |---|---|---|
@@ -711,7 +834,7 @@ plus.
 **Un sprite ne sort pas non plus**, et sans avertissement : aucun des deux formats n’a d’objet qui
 se tourne toujours vers la caméra. En glTF le fichier garde son nom et sa place, mais rien n’y est
 dessiné ; en USDZ il n’en reste rien du tout. Une image plate qui doit survivre à l’export se fait
-avec un plan et une texture.
+avec un plan et une image.
 
 **Une sélection imbriquée garde sa place.** Exporter un objet rangé dans un groupe l’écrit là où il
 est dans la scène, pas là où il est dans son groupe.
@@ -720,7 +843,7 @@ est dans la scène, pas là où il est dans son groupe.
 
 ## Enregistrer
 
-`⌘S` / `Ctrl+S` écrit la scène dans le projet, sous `documents/`.
+`⌘S` / `Ctrl+S` écrit la scène dans le projet, sous `Modelling/Scenes/`.
 
 **Les scènes 3D savent s’enregistrer**, comme les six autres types de documents.
 
@@ -728,7 +851,7 @@ est dans la scène, pas là où il est dans son groupe.
 l’arbre de la scène, le nom et la place de chaque objet, les caméras et les lumières
 directionnelles, ponctuelles et coniques. Ce que le standard ne porte pas — la forme des
 primitives, les matières, les rails, les plans de caméra, l’animation — voyage dans le même
-fichier mais **n’est lu que par Scenario**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
+fichier mais **n’est lu que par IA Studio**. Rien ne se perd d’un enregistrement à l’autre ; ce qui
 s’ouvre ailleurs est plus pauvre que ce que vous voyez ici.
 
 Un onglet dont le travail n’est pas encore écrit porte **un point** (`•`) à côté de son nom. Le
@@ -749,7 +872,7 @@ largeur de l’écran.
 
 ### Ce qu’un modèle apporte déjà
 
-Un personnage généré par Scenario — par un modèle *texte vers mouvement*, ou une capture depuis une
+Un personnage généré à distance — par un modèle *texte vers mouvement*, ou une capture depuis une
 vidéo — arrive avec ses **séquences d’animation** dans le fichier. Sélectionnez-le, et l’Inspecteur
 offre la section **Animation** :
 
@@ -856,13 +979,13 @@ Le bouton ouvre un petit volet, à côté de lui, avec deux réglages.
 | Réglage | Ce qu’il propose |
 |---|---|
 | **Type de personnage** | **Automatique**, **Humain**, **Animal**, **Autre** |
-| **Service** | **Automatique — le studio**, puis les services Scenario qui savent le faire |
+| **Service** | **Automatique — le studio**, puis les services distants qui savent le faire |
 
 **Le studio ne pose qu’un squelette HUMANOÏDE** — hanches, colonne, deux bras, deux jambes. Choisir
 **Animal** ou **Autre** affiche la raison et **grise Créer le squelette** : mieux vaut le dire que
 poser des hanches sur un cheval et vous laisser le découvrir.
 
-> **Les services Scenario sont listés, et aucun n’est choisissable aujourd’hui.** Chacun porte la
+> **Les services distants sont listés, et aucun n’est choisissable aujourd’hui.** Chacun porte la
 > raison qui l’en empêche — l’abonnement qui manque, la taille du modèle, ou qu’il n’est **pas
 > encore branché**. Le studio, lui, le fait **lui-même et gratuitement**, sans limite de taille :
 > c’est le sens d’« Automatique — le studio », et c’est ce que **Créer le squelette** lance.
@@ -881,7 +1004,7 @@ déroule un volet sous lui, avec trois onglets.
 |---|---|
 | **Bibliothèque** | tout ce qui est déjà sous la main, en une seule liste : les séquences que le fichier du personnage porte, celles livrées avec le studio, et les animations rangées dans le projet |
 | **Import** | un fichier pris sur le disque — `.glb`, `.gltf`, `.fbx` |
-| **IA** | les modèles Scenario qui **fabriquent** un mouvement |
+| **IA** | les modèles distants qui **fabriquent** un mouvement |
 
 **L’onglet Bibliothèque n’est pas le panneau *Animations*** décrit plus bas, et les deux listes ne
 se valent pas : l’onglet compte une source de plus — les animations rangées dans le projet — et il

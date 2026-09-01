@@ -30,18 +30,20 @@ It shows one thing at a time:
 While the studio reads your projects, it stays silent rather than announcing "Ready when you are"
 and then correcting itself.
 
-### The three bands
+### The four bands
 
-The centre stacks three bands, in this order:
+The centre stacks four bands, in this order:
 
 | Band | What it shows | It needs |
 |---|---|---|
 | **Where you left off** | the banner: resume, connect, or create | nothing |
 | **Tools** | what the studio knows how to start, and the way to create or open a project | nothing |
-| **Explore** | what everyone has published, by kind | an API key |
+| **Your models** | what this studio can run, and with what | nothing |
+| **What is moving** | the models trending outside, and the articles beside them | the setting, ticked by default |
 
-**A band that lacks what it needs is not greyed out: it is not there.** With no API key,
-**Explore** does not exist on this screen.
+**None of the four needs an API key any more.** The rule has not changed — a band that lacks what
+it needs is not greyed out, it is not there — but it has no case left: the feed of what everyone
+was publishing held the third place until now, and an API key was needed to draw a single tile.
 
 **Tools** lists the workspaces in the same order as the workspace bar, with **New project**,
 **Open project** and **Settings** beside them. It is the band that still says something on a
@@ -49,17 +51,77 @@ machine with no key, no project and no history.
 
 Everything else on the home is a panel, held in its two columns.
 
-### Explore, the endless feed
+### Your models, what the studio can run
 
-The feed of what **everyone** has published, one category at a time — the six kinds the remote
-library can serve, as tabs. There is no "all" tab, and **no Animation tab**: the studio knows a
-seventh kind the feed cannot serve.
+It answers the question everybody has on the second launch: **what is installed, what is running,
+and what is missing.** It reads top down, from the verdict to the detail.
 
-- **it loads as you go down**: the feed pages while you scroll;
-- **it stays at the foot of the page**, and does not move;
-- **the tiles do nothing.** They belong to someone else.
+**At the head, where you stand**: "5 operations of 23 have a model", a bar, then one or two lines of
+advice. The advice is ranked by what it COSTS rather than by what it unlocks — choosing among what
+is already on the disk costs nothing, installing costs gigabytes, a key costs money. So you are
+never offered a way to spend before being told you already hold the answer.
 
-It is the only band that can be hidden.
+**Then two columns**, side by side when the centre is wide enough and stacked when it is not. The
+CENTRE decides, not the window: opening a panel on the left narrows the band, and it falls back to
+one column.
+
+**On the left, what you have to work with** — one source per line. The name and its button share
+the first line, the reading sits under both: what acts on a source is beside it, not at the other
+end of the screen.
+
+| Line | What it says | The button |
+|---|---|---|
+| **On this computer** | how many models are installed, what they weigh, how many are held in memory | **Manage** |
+| **Ollama** | whether it is there, whether it answers, and the models it listed | **Install** or **Choose** |
+| **Online** | the accounts a key has been entered for, one by one | **Add a key** or **Manage keys** |
+| **Machine** | memory, chip, video memory, disk — one short line per figure, each naming its subject | none: it reports, and nothing here acts on it |
+
+**Neither column is stretched to the other**: a card pulled to its neighbour's height reads as a
+card with something missing.
+
+**On the right, your workspaces** — one line per family, a gauge in dots, and the served fraction.
+A workspace with a single operation names what serves it outright. A rule closes the list before
+the Assistant and Dictation: they belong to no workspace.
+
+**"Operation" is the generation panel's own word**, not one more: it is what that panel already
+calls an Operation — Text to image, Inpaint, Rigging. A family holds several, and one model can
+serve several at once.
+
+**Under them, what one download covers.** This is the reading the manager cannot give at a glance:
+the catalogue holds twenty-five models for nineteen operations, and what separates them is not
+the quality. An image model that also does materials answers six operations for four gigabytes
+where another answers one for a hundred and thirty-three. The families it spans are named, not
+counted. What the machine cannot hold stays on screen, marked **beyond this machine** — hiding it
+would make the catalogue look smaller than it is.
+
+**Nothing is installed from this band**: every button opens the settings section where the gesture
+lives — see [Models](05-models.md).
+
+**It speaks on a bare machine**, which is half its point: with no key and no model, it says so,
+with the way to fix it.
+
+### What is moving, outside the studio
+
+What other people publish — **the models trending** on Hugging Face, and **the articles** posted
+there. The chips above the band filter: Image, Video, 3D, Audio, or Articles. One category shows
+at a time, and that is one request.
+
+**No Material or Sky chip**, and that is not an oversight: nothing publishes either as a category
+of its own — the studio serves both with image models — so a chip for one would repeat the Image
+list under another name.
+
+**Eight rows, and nothing older than a month.** The article feed carries five hundred; a home
+band is not a feed reader. Past a month it is not news, it is history.
+
+**A click opens the page in your browser.** Nothing is downloaded, nothing is installed: these are
+somebody else's models and somebody else's articles.
+
+> **This is the studio's only outward call for something other than a model or a generation.** It
+> goes to `huggingface.co`, the host every weight of the catalogue already comes from, so nobody
+> learns anything new. **Settings ▸ General ▸ Model news** switches it off; the band then stays,
+> and says it is off.
+
+**The last two bands can be hidden**; the first two are pinned.
 
 ### Clicking a tile opens it
 
@@ -70,19 +132,17 @@ that is not "open" is a secondary action, revealed on hover in the corner of the
 creation, reopens the form already filled in — model, prompt and settings are kept beside the
 asset.
 
-**One exception: a library asset you have not fetched yet.** The click **fetches** it, and the
-button says so; once it is down, it opens like the others. Nothing is downloaded without your
-asking. With no project open, or while a transfer is running, the tile does not respond.
-
-That is where you fetch, and nowhere else; the shelf can send — see [Assets](07-assets.md).
+**Fetching a remote asset no longer happens on this screen**: the panel that listed what your
+account holds online has left the home. The gesture lives in the **Library** panel, on a
+right-click over a library tile — see [Assets](07-assets.md).
 
 ### Tidying the page
 
 **Hide this section**, when a band's heading is hovered. Hidden sections are counted at the foot
 of the page — "1 section hidden" — with a **Show them again** button.
 
-Only **Explore** carries that button: **Where you left off** and **Tools** are pinned, and that is
-what keeps this screen from ever being empty.
+**Your models** and **What is moving** carry that button; **Where you left off** and **Tools** are
+pinned, and that is what keeps this screen from ever being empty.
 
 ### The left column
 
@@ -111,18 +171,14 @@ their icons sit side by side in the rail. How to use it is in
 
 ### The right column
 
-| Panel | Half | What it shows | It needs |
-|---|---|---|---|
-| **Your library** | 1st | what your account holds online | an API key |
+**The home has none.** That is not an oversight: in every workspace the right column is where what
+acts on the document in front of you lives, and the home opens no document. The one panel that had
+stood there listed what your account holds online; it has left the screen, and what it said about
+your means is said by the **Your models** band, across the full width.
 
-**"It needs" does not mean here what it means for the bands.** A band missing what it needs
-disappears; **a panel stays and says what it lacks**. With no key, *Your library* says it is empty
-**or** that no key has been entered, without settling which — and if the server refuses, it offers
-to **try again**.
-
-**Nothing there is kept.** The library is read afresh on every visit, and the tiles are signed
-addresses that expire; holding on to them would make a panel of broken pictures a fortnight later,
-with nothing to explain it. Changing key reads it again too: another key is another library.
+**"It needs" does not mean the same for a panel as for a band.** A band missing what it needs
+disappears; **a panel stays and says what it lacks** — which is what the Explorer and Git do in
+the left column.
 
 > **The home can be skipped.** **Settings ▸ General ▸ Show the home screen**: unticked, the studio
 > goes straight to the workspace you left. What you hide is set on the home itself.
@@ -165,7 +221,7 @@ on it are **darker**, with rounded corners.
 
 It does not carry the file name, but the **six workspaces**:
 
-**Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes**
+**Image** · **Video** · **3D** · **Audio** · **Materials** · **Skyboxes**
 
 A click switches workspace; the active one is lighter than the others. Switching does three
 things:
@@ -181,7 +237,7 @@ On macOS, the three traffic lights stay where they always are, on the left.
 | Gesture | How |
 |---|---|
 | **Drag** | pick up a workspace and drop it onto another |
-| **Keyboard** | `⌥←` / `⌥→` on the focused workspace — the bare arrows walk the bar |
+| **Keyboard** | `⌥⌘←` / `⌥⌘→` (`Ctrl+PageUp` / `Ctrl+PageDown`) on the focused workspace — the bare arrows walk the bar |
 | **Right-click** | **Move left** / **Move right** |
 
 Both keys can be remapped under the *In the workspace bar* context of the
@@ -207,7 +263,7 @@ On the right of the title bar: a coloured dot, a name, a chevron.
 One click opens the list of your accounts, the current one ticked, plus **Manage accounts…**,
 which leads to the settings. With no account stored, the button goes straight to the settings.
 
-> **Switching accounts changes the library, not your work.** Each API key carries its own Scenario
+> **Switching accounts changes the library, not your work.** Each API key carries its own remote
 > project — its models, its assets, its credit. Your local project is on your disk and belongs to
 > no account.
 
@@ -229,7 +285,7 @@ zone's cut: the icons above it open in the first half, those below in the second
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace — on the home, a **new project** |
 | *separator* | |
-| **Upper half** icons | Models, Generate, then Assets — what Scenario offers; the home puts **Your projects** there |
+| **Upper half** icons | Models, Generate, then Library — what the provider offers; the home puts **Your projects** there |
 | *separator* | |
 | **Lower half** icons | the Explorer then Git, on the home as in the workspaces |
 | At the bottom | Timeline then History, depending on the workspace; on the home, History alone |
@@ -243,11 +299,11 @@ zone's cut: the icons above it open in the first half, those below in the second
 The right column's icons — Layers, Scene, Lights, Meshes, Animations, whichever the workspace
 declares, in that order — then, below the separator, Inspector.
 
-In **Video**, **Audio**, **Textures** and **Skyboxes** the upper half of that column is empty:
+In **Video**, **Audio**, **Materials** and **Skyboxes** the upper half of that column is empty:
 none of those four declares anything there, and the rail then carries the Inspector alone — what a
 sky or a material IS is described by the inspector itself.
 
-On the home it carries one: **Your library**, and nothing below the separator.
+On the home it carries none: this screen has no right column.
 
 ### The rail only shows what the workspace can do
 
@@ -301,9 +357,9 @@ close button never goes**, and the panel's name keeps its size.
 
 | Panel | Zone | Half | Visible in | What it is |
 |---|---|---|---|---|
-| **Models** | left | 1st | everywhere | the Scenario catalogue, filtered on the active workspace |
+| **Models** | left | 1st | everywhere | the remote catalogue, filtered on the active workspace |
 | **Generate** | left | 1st | everywhere *(if a model is chosen)* | the chosen model's form |
-| **Assets** | left | 1st | everywhere | the shelf: what the project holds, what your key owns, what is being made |
+| **Library** | left | 1st | everywhere | what your key owns online, what the community publishes, what is being made — **absent without an API key** |
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
@@ -321,12 +377,12 @@ close button never goes**, and the panel's name keeps its size.
 > appear only with a project open, and **History only if that project is tracked by git**: with
 > no project, the home is the screen it has always been — two columns and nothing below.
 
-**The left column reads in two parts: what Scenario offers, then what is already yours.** Above,
-**Models**, **Generate** and **Assets**, which take turns — a model to choose, its form, and the
-shelf of what it makes. Below, the **Explorer** and **Git**, which take turns as well: your
+**The left column reads in two parts: what the provider offers, then what is already yours.** Above,
+**Models**, **Generate** and the **Library**, which take turns — a model to choose, its form, and
+what the account hosts. Below, the **Explorer** and **Git**, which take turns as well: your
 project folder, and what has changed in it.
 
-The cut between the two halves is what makes the gesture possible: the shelf and the Explorer
+The cut between the two halves is what makes the gesture possible: the Library and the Explorer
 hold the screen **together**, and nothing enters the project without passing from one to the other.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
@@ -349,7 +405,7 @@ Until you have clicked an icon of a half, it shows the first panel the workspace
 That is what you see on first opening, and what **View ▸ Reset layout** restores.
 
 The upper left half opens on **Models** in every workspace — choosing a model is where everything
-starts, and the shelf is asked for. The lower half opens on the **Explorer**, everywhere too.
+starts, and the Explorer is asked for. The lower half opens on the **Explorer**, everywhere too.
 
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|
@@ -357,7 +413,7 @@ starts, and the shelf is asked for. The lower half opens on the **Explorer**, ev
 | **Video** | *nothing* | Timeline |
 | **3D** | Scene | Timeline |
 | **Audio** | *nothing* | Timeline |
-| **Textures** | *nothing* | History |
+| **Materials** | *nothing* | History |
 | **Skyboxes** | *nothing* | History |
 
 > **History needs a folder tracked by git.** Until tracking is in place — no project open, or a
@@ -498,18 +554,32 @@ A failure raises a **toast** in the bottom-right corner, above the status line.
 
 The system menu — at the top of the screen on macOS, at the top of the window elsewhere.
 
+**Three of them only appear in the workspace that uses them**: Tools and Image while you are
+editing a picture, Add while you are editing a scene. A missing menu is not a greyed menu — it is
+simply not there.
+
 | Menu | What is in it |
 |---|---|
-| **File** | New project…, Open project…, Save, Settings… |
+| **IA Studio** | *macOS only*: About, **Settings…**, and the system's commands |
+| **File** | New project…, Open project…, Save, Save as…, Import ▸, Export ▸. **Off macOS, Settings… is here** |
 | **Edit** | Undo, Redo, and the system's text commands |
-| **View** | Tool windows, Reset layout, Full screen, image zoom |
-| **Objects** | **Add ▸ Mesh**, **Add ▸ Light** — in the Modelling workspace |
+| **Tools** | *Image workspace*: the eighteen tools of the bar, plus **Smaller** and **Larger brush** |
+| **Image** | *Image workspace*: the twelve entries described in [the Image workspace](08-image-workspace.md) |
+| **Add** | *Modelling workspace*: **Mesh ▸**, **Light ▸**, **Object ▸** |
+| **View** | **Assistant**, Tool windows ▸, Reset layout, Full screen — plus whatever the workspace adds |
 | **Window** | the system's window commands |
-| **Help** | About Scenario Studio, Usage…, Licences |
+| **Help** | **User manual**, Usage…, Licences. **Off macOS, About is here** |
 
 The shortcuts shown in the menus are **the ones you have set**.
 
 **View ▸ Tool windows** only lists what the workspace can open, like the rail.
+
+**View changes length with what you are editing.** A picture adds the four zooms, Rulers, Guides,
+Clear guides and Snapping; a scene adds **Display mode ▸**, **Point of view ▸**, **Capture the
+view ▸**, then the projection, the four views, the quad edges, the skeletons and pose mode.
+
+> **Assistant is the only door to `⌘K`.** The command is global: it is fired by this menu rather
+> than by the window, so without that row the shortcut would reach nothing at all.
 
 ### The usage window
 
@@ -531,7 +601,7 @@ window's footer for the others:
 
 - **the euro amount is indicative.** Computed from the public prepaid pack grid: an order of
   magnitude, not an invoice;
-- **there is no balance.** The Scenario API only exposes what has been spent, never what is left.
+- **there is no balance.** The generation API only exposes what has been spent, never what is left.
   No figure will tell you how much you can still generate;
 - **this screen's days and hours are counted in UTC**, as the API dates them. A day's bar therefore
   need not follow your own calendar;
@@ -544,7 +614,7 @@ so and points to the settings.
 
 ### The licences window
 
-**Help ▸ Licences** lists the software Scenario Studio ships with: name, version, and the short
+**Help ▸ Licences** lists the software IA Studio ships with: name, version, and the short
 licence name (`MIT`, `Apache-2.0`…). Click a row: the **full text** unfolds, and the link to its
 sources appears when the licence requires it.
 

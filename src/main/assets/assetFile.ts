@@ -1,3 +1,4 @@
+import { orElse } from '@shared/promises'
 import { mkdir, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
@@ -51,7 +52,7 @@ async function freeAssetName(
   // Folded, because `exists` above answered for a case-insensitive volume: APFS and NTFS hold
   // one file for `Ruelle.png` and `ruelle.png`, and a raw Set would call the second one free.
   const taken = new Set(
-    (await readdir(join(root, folder)).catch(() => [])).map(entry => foldForFileName(entry)),
+    (await orElse(readdir(join(root, folder)), [])).map(entry => foldForFileName(entry)),
   )
   const free = (candidate: string): boolean =>
     !taken.has(foldForFileName(assetFileName(candidate, extension)))
@@ -69,10 +70,9 @@ async function freeAssetName(
 /**
  * The same answer as a path, which is what an import needs to write.
  *
- * The folder is CREATED rather than required. `DEFAULT_ASSET_FOLDERS` is a default and no longer
- * a layout: a user who threw `Images/` away did nothing wrong, and the two answers that were
- * available without this — failing the import, or emptying it into the project root — are both
- * worse than putting the folder back.
+ * The folder is CREATED rather than required: a user who threw `Images/` away did nothing wrong,
+ * and failing the import or emptying it into the project root are both worse than putting the
+ * folder back. `ProjectStore.folderFor` is what says WHICH folder, and marks it.
  */
 export async function freeAssetPath(
   root: string,
@@ -88,8 +88,8 @@ export async function freeAssetPath(
 /**
  * Moves an asset's file so that it is called after its new name, and answers where it now is.
  *
- * The extension and the folder are kept: a rename is neither a conversion nor a move, and a
- * texture's channel is read off the folder it sits in.
+ * The extension and the folder are kept: a rename is neither a conversion nor a move, and where
+ * a picture sits says nothing about what it is — the row does.
  *
  * Answers `undefined` for an asset that has no file of ours — one linked where the user left it,
  * one that lives in the library alone. Writing into a folder the user merely pointed at is a

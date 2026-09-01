@@ -1,6 +1,6 @@
 # 11. Espace Audio
 
-[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Textures →](12-espace-textures.md)
+[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Matières →](12-espace-matieres.md)
 
 L’espace où l’on met un son en forme — le raccourcir, le faire monter en douceur, égaliser son
 volume — puis où on le pose à côté des autres.
@@ -10,8 +10,8 @@ volume — puis où on le pose à côté des autres.
 ## Comment l’espace est disposé
 
 Comme en Vidéo, la **bande basse appartient au montage**. La colonne de gauche porte les Modèles,
-la Génération et l’**étagère à assets**, comme partout ailleurs : une prise se glisse donc de
-l’étagère au montage sans avoir à changer de panneau. La moitié haute de la colonne de droite est
+la Génération et l’**Explorateur**, comme partout ailleurs : une prise se glisse donc de
+l’Explorateur au montage sans avoir à changer de panneau. La moitié haute de la colonne de droite est
 vide dans cet espace ; seul l’Inspecteur l’occupe, sous le trait.
 
 Au centre, **deux moniteurs empilés** — là où la Vidéo pose les siens côte à côte. Ils prennent
@@ -49,7 +49,7 @@ C’est pourquoi sa règle compte en durée, quand les deux autres comptent en i
 
 | Geste | Où la prise atterrit |
 |---|---|
-| **Double-clic** sur un asset audio de l’étagère | dans un **onglet à lui**, ouvert pour l’occasion |
+| **Double-clic** sur un asset audio de l’Explorateur | dans un **onglet à lui**, ouvert pour l’occasion |
 | **Déposer** la prise sur le moniteur du bas | dans l’onglet **que vous avez devant vous** |
 | **Clic droit ▸ Ouvrir dans l’éditeur audio** | idem |
 
@@ -199,7 +199,7 @@ Ce n’est qu’au moment où vous le demandez explicitement qu’un fichier est
 | Bouton | Ce qu’il fait |
 |---|---|
 | **Appliquer** | crée un **nouvel asset** contenant la tranche telle que vous l’entendez, et **le clip du montage pointe désormais dessus**. L’original n’est jamais touché |
-| **Enregistrer comme nouveau** | crée le même asset, mais **laisse le montage où il est**. À prendre quand vous voulez la version éditée à l’étagère, sans changer ce que joue le montage |
+| **Enregistrer comme nouveau** | crée le même asset, mais **laisse le montage où il est**. À prendre quand vous voulez la version éditée à l’Explorateur, sans changer ce que joue le montage |
 
 Les deux nomment le nouvel asset « *(édité)* ».
 
@@ -232,7 +232,7 @@ piste image**. Un onglet audio neuf s’ouvre sur **quatre pistes son vides**, `
 C’est ce qui fait de l’Audio un espace de montage et non un simple éditeur de prise : une musique
 se construit en posant des sons les uns à côté des autres.
 
-**Les gestes sont exactement ceux du chapitre précédent** — glisser une prise depuis l’étagère,
+**Les gestes sont exactement ceux du chapitre précédent** — glisser une prise depuis l’Explorateur,
 tailler un clip par ses bords, la lame, les fondus, le gain, l’inspecteur, les en-têtes de piste
 avec leur muet, leur solo et leur verrou. Tout est décrit dans
 [Espace Vidéo](10-espace-video.md), et rien n’en change ici — à une chose près, qui se voit :
@@ -316,4 +316,4 @@ Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
-[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Textures →](12-espace-textures.md)
+[← Espace Vidéo](10-espace-video.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Matières →](12-espace-matieres.md)

@@ -1,0 +1,378 @@
+{
+  "meta": {
+    "lang": "it",
+    "name": "Italiano",
+    "short": "IT",
+    "flag": "🇮🇹",
+    "docs": "en",
+    "ogLocale": "it_IT"
+  },
+  "head": {
+    "title": "IA Studio — sei laboratori di generazione, una sola finestra",
+    "description": "Applicazione desktop multimodale: immagine, video, 3D, audio, texture e skybox in un'interfaccia a pannelli agganciabili. Dettatura offline e pilotaggio tramite server MCP.",
+    "ogTitle": "IA Studio — sei laboratori di generazione, una sola finestra",
+    "ogDescription": "Sei laboratori di generazione in una sola finestra. Electron, React 19, TypeScript. macOS, Windows, Linux."
+  },
+  "nav": {
+    "skip": "Vai al contenuto",
+    "home": "Home",
+    "video": "Video",
+    "threeD": "3D",
+    "image": "Immagine",
+    "audio": "Audio",
+    "textures": "Materiali",
+    "skyboxes": "Skybox",
+    "architecture": "Architettura",
+    "docs": "Docs",
+    "build": "Versione di sviluppo",
+    "download": "Scarica",
+    "languageLabel": "Lingua"
+  },
+  "hero": {
+    "eyebrow": "Applicazione desktop · progetto indipendente",
+    "lede": "Sei laboratori di generazione in una sola finestra. Pannelli agganciabili, timeline a timecode, ispettore, libreria su disco: gli strumenti di un software di produzione, applicati ai modelli generativi.",
+    "browse": "Percorri i laboratori",
+    "source": "Vedi il codice sorgente",
+    "meta": {
+      "stack": "Electron · React 19 · TypeScript",
+      "platforms": "macOS, Windows, Linux",
+      "languages": "Francese e inglese"
+    }
+  },
+  "home": {
+    "eyebrow": "Home · il punto di partenza",
+    "title": "Un progetto è una cartella. Nulla di più.",
+    "lede": "Aprite una cartella e diventa un progetto: documenti, asset importati, generazioni. Tutto resta sul disco, in formati che altri programmi leggono già — OpenRaster, OpenTimelineIO, glTF, MaterialX —, esplorato dall'applicazione e versionato con git senza lasciare la finestra.",
+    "alt": "Schermata iniziale: fascia per riprendere l'ultimo progetto, elenco dei progetti aperti di recente, scorciatoie verso i sei laboratori, flusso delle creazioni pubblicate da tutti e pannello libreria dell'account.",
+    "specs": {
+      "0": {
+        "term": "Laboratori",
+        "title": "Sei spazi, una finestra",
+        "text": "Immagine, Video, 3D, Audio, Materiali e Skybox. Ognuno ha i propri strumenti e si apre in una scheda, accanto agli altri."
+      },
+      "1": {
+        "term": "Pannelli",
+        "title": "Agganciabili e staccabili",
+        "text": "Modelli, Esplora risorse, Asset, Ispettore, Timeline. La finestra si sistema come si vuole, la disposizione è ricordata per laboratorio."
+      },
+      "2": {
+        "term": "Libreria",
+        "title": "Prima il disco",
+        "text": "Le generazioni finiscono nella cartella del progetto. La libreria dell'account remoto si collega dopo, con una chiave API."
+      }
+    }
+  },
+  "video": {
+    "eyebrow": "Laboratorio · uscita .mp4",
+    "lede": "Due monitor, una timeline multitraccia e modelli che producono le inquadrature.",
+    "list": {
+      "0": {
+        "term": "Monitor",
+        "text": "Sorgente e Programma, come su una stazione di montaggio: la clip scelta da un lato, il montaggio così come sarà esportato dall'altro."
+      },
+      "1": {
+        "term": "Timeline",
+        "text": "Tracce video e audio, strumenti selezione, lama e mano, riproduzione a timecode."
+      },
+      "2": {
+        "term": "Modelli",
+        "text": "Sequence-to-Video, Video Cut, Video Concat, Video Studio."
+      }
+    },
+    "alt": "Laboratorio Video: monitor Sorgente e Programma affiancati, pannello Asset, ispettore di clip, timeline a quattro tracce V1, A1, V2 e A2.",
+    "chips": {
+      "0": "Sorgente 00:00:00:00",
+      "1": "V1 · A1 · V2 · A2",
+      "2": "25 fps",
+      "3": "Asset del progetto"
+    }
+  },
+  "threeD": {
+    "eyebrow": "Laboratorio · uscita .glb",
+    "lede": "Una mesh generata, posata in una scena che si illumina, si anima e si esporta.",
+    "list": {
+      "0": {
+        "term": "Viewport",
+        "text": "Griglia, gizmo di orientamento e contatore in sovrimpressione: triangoli, vertici, chiamate di disegno, memoria delle texture."
+      },
+      "1": {
+        "term": "Illuminazione",
+        "text": "Cinque sorgenti — ambientale, direzionale, emisferica, puntiforme, faretto — esposte come tracce, con fotogrammi chiave sulla timeline."
+      },
+      "2": {
+        "term": "Esportazione",
+        "text": "La mesh esce in .glb dove la posate, pronta per un motore."
+      }
+    },
+    "alt": "Laboratorio 3D: automobile generata posata in uno scenario di montagna, gizmo di spostamento e contatore di triangoli in sovrimpressione, albero di scena e ispettore a destra, timeline delle luci in basso.",
+    "chips": {
+      "0": "Triangoli · Vertici · Chiamate",
+      "1": "Durata 5 s",
+      "2": "25 fps",
+      "3": "Ambiente Studio"
+    }
+  },
+  "image": {
+    "eyebrow": "Laboratorio · uscita .png",
+    "lede": "Una tela a livelli, dove la generazione è uno strumento fra gli altri.",
+    "list": {
+      "0": {
+        "term": "Livelli",
+        "text": "Impilamento, visibilità, blocco. Ogni generazione arriva come livello, sopra ciò che esiste già."
+      },
+      "1": {
+        "term": "Strumenti",
+        "text": "Sposta, mano, scala, inquadratura, selezione, forme, pennello, matita, gomma, testo, riempimento del livello, contagocce."
+      },
+      "2": {
+        "term": "Tracciabilità",
+        "text": "L'ispettore conserva il modello che ha prodotto il livello, il suo peso e la sua data di creazione."
+      }
+    },
+    "alt": "Laboratorio Immagine: tela a fondo trasparente con uno scheletro scontornato, catalogo di modelli a sinistra, pannelli Livelli e Ispettore a destra, fascia di asset in basso.",
+    "chips": {
+      "0": "Livelli",
+      "1": "Zoom 84,6 %",
+      "2": "Modello conservato",
+      "3": "Fascia di asset"
+    }
+  },
+  "audio": {
+    "eyebrow": "Laboratorio · uscita .wav",
+    "lede": "Comporre e montare il suono su più tracce, nella stessa finestra del resto.",
+    "list": {
+      "0": {
+        "term": "Tracce",
+        "text": "Montaggio multitraccia, gli stessi strumenti della timeline video, riproduzione allineata allo stesso timecode."
+      },
+      "1": {
+        "term": "Forme d'onda",
+        "text": "Calcolate in un processo separato: un'ora di suono non blocca l'interfaccia durante l'analisi."
+      },
+      "2": {
+        "term": "Modelli",
+        "text": "Musica, ambienti ed effetti, generati dall'API e poi posati direttamente su una traccia."
+      }
+    },
+    "alt": "Laboratorio Audio: monitor Programma che mostra la forma d'onda del montaggio, monitor Sorgente sotto, catalogo di modelli di generazione sonora, timeline a quattro tracce audio.",
+    "chips": {
+      "0": "Programma 00:00:00:00",
+      "1": "A1 · A2 · A3 · A4",
+      "2": "Forme d'onda",
+      "3": "Asset del progetto"
+    }
+  },
+  "textures": {
+    "eyebrow": "Laboratorio · uscita .png ×4",
+    "lede": "Un materiale, non un'immagine: ogni canale è prodotto e poi verificato separatamente.",
+    "list": {
+      "0": {
+        "term": "Canali",
+        "text": "Otto: Colore base, Normale, Rugosità, Metallo, Occlusione, Altezza, Emissione, Cavità. Sette escono da una generazione, l'Emissione si regola qui stesso; tutti si esportano file per file."
+      },
+      "1": {
+        "term": "Anteprima",
+        "text": "Il materiale è applicato su un volume di prova — sfera, cubo, cilindro, piano, nodo — e illuminato in tempo reale, prima dell'esportazione."
+      },
+      "2": {
+        "term": "Raccordi",
+        "text": "Canali affiancabili in 4096 × 4096, utilizzabili così come sono in un motore."
+      }
+    },
+    "alt": "Laboratorio Materiali: cubo di anteprima che porta il materiale, ispettore aperto sui canali — colore base e normale — poi sulle regolazioni del materiale, fascia di immagini generate.",
+    "chips": {
+      "0": "4096 × 4096",
+      "1": "4 canali",
+      "2": "Anteprima su volume",
+      "3": "Esportazione separata"
+    }
+  },
+  "skyboxes": {
+    "eyebrow": "Laboratorio · uscita .hdr",
+    "lede": "Un cielo che fa da scenario e, allo stesso tempo, da sorgente di luce.",
+    "list": {
+      "0": {
+        "term": "Proiezioni",
+        "text": "360°, equirettangolare, croce, sei facce. Si passa da una vista all'altra senza riesportare."
+      },
+      "1": {
+        "term": "Controllo",
+        "text": "Angolo di campo regolabile e oggetti di prova, per giudicare la luce su una sfera opaca e una lucida."
+      },
+      "2": {
+        "term": "Uso",
+        "text": "Il cielo prodotto qui illumina direttamente la scena del laboratorio 3D."
+      }
+    },
+    "alt": "Laboratorio Skybox: cielo di montagne innevate in proiezione a 360 gradi, due sfere di prova posate a terra — una opaca, l'altra a specchio — e regolazioni del sole a destra.",
+    "chips": {
+      "0": "360°",
+      "1": "Equirett.",
+      "2": "Croce",
+      "3": "6 facce",
+      "4": "Oggetti di prova"
+    }
+  },
+  "ticker": {
+    "0": "Testo → Immagine",
+    "1": "Immagine → Immagine",
+    "2": "Scontorno",
+    "3": "Reframe",
+    "4": "Ritaglio",
+    "5": "Testo → Video",
+    "6": "Sequenza → Video",
+    "7": "Montaggio",
+    "8": "Concatenazione",
+    "9": "Immagine → 3D",
+    "10": "Voxel",
+    "11": "Testo → Audio",
+    "12": "Materiale PBR",
+    "13": "Colore · Normale · Rugosità · Metallo",
+    "14": "Skybox 360°",
+    "15": "Equirettangolare"
+  },
+  "architecture": {
+    "eyebrow": "Sotto il cofano",
+    "title": "Nessun modulo di generazione è scritto a mano.",
+    "lede": "I parametri di un modello sono suoi e cambiano senza preavviso. Sono quindi letti all'esecuzione e trasformati in campi: un modello nuovo compare con le sue regolazioni, senza una riga di codice in più.",
+    "racks": {
+      "0": "Interfaccia",
+      "1": "Il ponte verso l'API",
+      "2": "Sulla vostra macchina"
+    },
+    "cells": {
+      "0": {
+        "tag": "Laboratori",
+        "title": "Sei modi, una disposizione",
+        "text": "Pannelli agganciabili e staccabili, schede, disposizione ricordata per laboratorio fra due sessioni."
+      },
+      "1": {
+        "tag": "Motori",
+        "title": "Ricreati dal loro stato",
+        "text": "Staccare un pannello distrugge il suo contesto grafico. Il motore si ricostruisce identico — il che dà l'annullamento e il salvataggio nello stesso momento."
+      },
+      "2": {
+        "tag": "Libreria",
+        "title": "Cartella di progetto",
+        "text": "Un progetto è una cartella leggibile senza l'applicazione, esplorata da un vero gestore di file e seguita da git dallo studio — rami, versioni, conflitti. Importazione, esportazione e catalogo condividono lo stesso indice, che ritrova i suoi file anche spostati fuori dall'applicazione."
+      },
+      "3": {
+        "tag": "ModelRegistry",
+        "title": "I campi vengono dal modello",
+        "text": "Lo schema dichiarato dal modello diventa un elenco di campi, reso così com'è. Un tipo sconosciuto ricade su un'immissione grezza invece di far sparire il modulo."
+      },
+      "4": {
+        "tag": "JobManager",
+        "title": "Un solo posto interroga",
+        "text": "Ogni generazione è asincrona. Un solo componente segue l'avanzamento, limita il numero di operazioni simultanee e attende in caso di rifiuto del servizio."
+      },
+      "5": {
+        "tag": "Segreti",
+        "title": "L'interfaccia non vede mai la chiave",
+        "text": "Chiave e segreto sono cifrati dall'archivio del sistema. La finestra chiede «sono connesso?», mai «qual è la mia chiave?»."
+      },
+      "6": {
+        "tag": "Dettatura",
+        "title": "Offline, interamente",
+        "text": "Un motore di riconoscimento vocale gira in un processo separato, sul vostro computer. Una volta scaricato il modello, nulla di ciò che si dice esce sulla rete."
+      },
+      "7": {
+        "tag": "Server MCP",
+        "title": "Lo studio si pilota dall'esterno",
+        "text": "233 azioni in 16 famiglie, dai documenti agli asset, dalla scena al montaggio, dal file al repository git: un agente fa ciò che fa l'interfaccia, per le stesse strade."
+      },
+      "8": {
+        "tag": "Carico",
+        "title": "Il thread di visualizzazione resta libero",
+        "text": "Miniature, forme d'onda, mesh pesanti e codifica video vanno sul processore grafico, in thread di calcolo o in un processo a parte."
+      }
+    }
+  },
+  "docs": {
+    "eyebrow": "Documentazione &amp; dimostrazione",
+    "title": "Tutto è scritto accanto al codice.",
+    "videoLabel": "Dimostrazione di IA Studio: percorso dei sei laboratori, da una generazione 3D fino al montaggio.",
+    "links": {
+      "0": {
+        "text": "Il manuale, venti capitoli — leggibili anche nell'applicazione",
+        "label": "Manuale"
+      },
+      "1": {
+        "text": "Gli invarianti, i motori e ciò che attraversa la frontiera",
+        "label": "Architettura"
+      },
+      "2": {
+        "text": "Pilotare lo studio da un agente, tramite il server MCP",
+        "label": "Server MCP"
+      },
+      "3": {
+        "text": "Diciassette decisioni, con ciò che è stato scartato e perché",
+        "label": "Decisioni"
+      },
+      "4": {
+        "text": "Pubblicare una versione: firma, artefatti, ritorno indietro",
+        "label": "Pubblicazione"
+      },
+      "5": {
+        "text": "Licenza del codice sorgente — PolyForm Noncommercial 1.0.0",
+        "label": "Licenza"
+      }
+    },
+    "manualFile": "user-guide.md"
+  },
+  "download": {
+    "eyebrow": "Installazione",
+    "title": "Tre piattaforme, un solo repository.",
+    "lede": "Cinque programmi di installazione, prodotti dalla stessa catena di integrazione a ogni versione. In attesa della prima versione pubblica, il repository si clona e si avvia in tre comandi.",
+    "items": {
+      "0": {
+        "os": "macOS",
+        "kind": "Apple Silicon · .dmg",
+        "state": "Versione in arrivo"
+      },
+      "1": {
+        "os": "macOS",
+        "kind": "Intel · .dmg",
+        "state": "Versione in arrivo"
+      },
+      "2": {
+        "os": "Windows",
+        "kind": "x64 · .exe",
+        "state": "Versione in arrivo"
+      },
+      "3": {
+        "os": "Linux",
+        "kind": "x86_64 · .AppImage",
+        "state": "Versione in arrivo"
+      },
+      "4": {
+        "os": "Debian, Ubuntu",
+        "kind": "x86_64 · .deb",
+        "state": "Versione in arrivo"
+      }
+    },
+    "note": "Il programma di installazione è regolato dalle <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">condizioni d'uso</a>; il codice sorgente, dalla licenza <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial&nbsp;1.0.0</a>. L'applicazione non dà accesso ad alcun servizio di generazione: usa la chiave API che fornite voi, sul vostro account e a vostre spese."
+  },
+  "foot": {
+    "groups": {
+      "0": "IA Studio",
+      "1": "Laboratori",
+      "2": "Risorse",
+      "3": "Contatti"
+    },
+    "about": "Applicazione desktop multimodale, sviluppata da solo. Electron, React, TypeScript.",
+    "resources": {
+      "0": "Download",
+      "1": "Repository",
+      "2": "Licenza"
+    },
+    "legal": "Codice sorgente sotto licenza <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · applicazione distribuita secondo le sue <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">condizioni d'uso</a> · componenti di terze parti elencati nelle <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">note</a>. © 2026 Alban Pasquelin.",
+    "docsLink": "Documentazione",
+    "changelog": "Modifiche"
+  },
+  "status": {
+    "project": "progetto",
+    "workshop": "laboratorio",
+    "position": "posizione"
+  }
+}

@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { isRecord } from '@shared/guards'
 import { LANGUAGES, TRANSLATIONS, type Language } from '@shared/i18n'
-import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
+import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/material'
+import { PICTURE_TRAITS } from '@shared/domain/formatCapability'
+import { FOLDER_ROLES } from '@shared/domain/folderRole'
+import { roleLabelKey } from '@/helpers/workspaces'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
 import { EASINGS } from '@shared/domain/animation'
+import { UI_ELEMENT_TYPES } from '@shared/domain/ui'
+import { UI_RESOLUTION_IDS } from '@shared/domain/uiResolution'
+import { UI_TEMPLATE_IDS } from '@shared/domain/uiTemplates'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import {
   ADJUSTMENT_KINDS,
@@ -14,22 +20,33 @@ import {
   type LayerKind,
 } from '@/engines/canvas/canvasState'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timelineState'
-import { LAYER_LOCKS } from '@/panels/layers/layerLocks'
-import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
+import { LAYER_LOCKS } from '@/features/image/components/Layer/layerLocks'
+import {
+  LAYER_OPERATIONS,
+  type LayerOperation,
+} from '@/features/image/components/Layer/LayerStackActions'
 import { ADD_ENTRIES } from '@/engines/scene/nodeKinds'
 import { ENVIRONMENT_PRESETS } from '@/engines/scene/environmentPresets'
 import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
+import { INPUT_ORIGINS, type InputOrigin } from '@/generation/generationInputs'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
-import { CHARACTER_KINDS } from '@/panels/inspector/RigSection'
+import { NAVIGATION_HINT_GROUPS } from '@/features/scene/components/Scene/SceneNavigationHint'
+import { CHARACTER_KINDS } from '@/features/scene/components/RigSection'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
-import { TRACK_FLAGS } from '@/panels/timeline/trackFlags'
-import { DOCUMENT_NAME_REFUSALS } from '@/newDocument/documentName'
+import { TRACK_FLAGS } from '@/features/timeline/components/trackFlags'
+import { DOCUMENT_NAME_REFUSALS } from '@/features/document/documentName'
 import { DOCUMENT_KINDS } from '@shared/domain/document'
 import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { FILE_KINDS } from '@shared/domain/folder'
-import { FILE_INFO_SECTIONS } from '@/fileInfo/sections'
+import { FILE_INFO_SECTIONS } from '@/features/document/components/FileInfoWindow/sections'
+import { CHOICE_SCOPES } from '@shared/domain/aiOverview'
+import { FIT_DETAIL_KEYS } from '@/hooks/useModelFit'
+import { CLOUD_IDS } from '@shared/domain/aiCloud'
+import { doorLabelKey } from '@/helpers/assistantDoor'
+import { ASSISTANT_STARTERS, starterKey } from '@/features/assistant/starters'
+import { SOURCES } from '@/features/assets/components/Asset/Browser/facets'
 
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature, and every key here is
@@ -54,11 +71,26 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * `inspector.layerKind_text` where a word belongs.
  */
 const COMPOSED_KEYS: readonly string[] = [
+  // How a chain ended when it did not end by itself — composed from the turn's own field. Lost
+  // from a bundle, the raw key lands where the one sentence saying a job was cut short belongs.
+  'assistant.ending.halted',
+  'assistant.ending.stopped',
+  // The three sentences an empty centre offers, per space. They are the button AND the draft it
+  // writes, so one gone missing puts a raw key on the largest surface of the window.
+  ...Object.values(ASSISTANT_STARTERS).flat().map(starterKey),
   // One button per kind in the timeline's bar, and the label composed from the kind. The union
   // lives in the renderer, so its check does too — beside the list it derives from.
   ...TRACK_KINDS.map(kind => `timeline.addTrack.${kind}`),
   ...TRACK_KINDS.map(kind => `timeline.addTrackHint.${kind}`),
+  // What answered a turn, in the journal — a cloud's name, or this machine. Missing, the line
+  // reads « Envoyé à deepseek » where every other surface says « DeepSeek ».
+  ...CLOUD_IDS.map(doorLabelKey),
+  doorLabelKey('local'),
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}`),
+  // What a format could not carry, named in the flatten dialogue. The PICTURE traits alone: the
+  // image is the one kind with a `traitsOf`, so no other family can reach that sentence — the day
+  // a second kind gains one, its traits belong here too.
+  ...PICTURE_TRAITS.map(trait => `traits.${trait}`),
   // The sentence beside each of them. A menu row explains what it does, and the explanation is
   // composed the same way the label is — so it goes missing the same way, and is caught here.
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}Hint`),
@@ -68,7 +100,24 @@ const COMPOSED_KEYS: readonly string[] = [
   ...LAYER_LOCKS.map(padlock => `${padlock.labelKey}Hint`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
+  // What each group of flight keys is FOR, composed from the table the hint walks. A group with
+  // no sentence would put a raw key over the viewport at the very moment the mode opens.
+  ...NAVIGATION_HINT_GROUPS.map(group => `sceneNavigation.${group.key}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
+  // One row per element type in the bar's flyout, and the same word again as the outliner's
+  // fallback title for an element its author has not named — the commonest state of a new one.
+  ...UI_ELEMENT_TYPES.map(type => `guiTools.types.${type}`),
+  ...UI_ELEMENT_TYPES.map(type => `guiTools.typeHints.${type}`),
+  // One row per canvas an interface can be composed for.
+  ...UI_RESOLUTION_IDS.map(id => `guiTools.resolutions.${id}`),
+  ...UI_RESOLUTION_IDS.map(id => `guiTools.resolutionHints.${id}`),
+  // The four an interface opens on, in the window that names a new document.
+  ...UI_TEMPLATE_IDS.map(id => `documents.uiTemplates.${id}`),
+  ...UI_TEMPLATE_IDS.map(id => `documents.uiTemplateHints.${id}`),
+
+  // Where a generation's source was taken from, written under its thumbnail. An origin with no
+  // sentence would put a raw key on the one line saying what the studio is about to send.
+  ...INPUT_ORIGINS.map(origin => `generation.sourceFrom_${origin}`),
   // What a shape layer is CALLED when the hand finishes drawing it. A kind with no name would
   // put a raw key in the stack, on the one row the user has to find the shape back by.
   ...SHAPE_KINDS.map(kind => `layers.shapeName_${kind}`),
@@ -91,9 +140,12 @@ const COMPOSED_KEYS: readonly string[] = [
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
-  ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  ...PBR_CHANNELS.map(channel => `material.channel.${channel}`),
   // Every row of the menu that says where an asset may go.
   ...ASSET_INTENTS.map(intent => `${intent.labelKey}Hint`),
+  // Which library a line of the remote browser came from. A source with no word would put a raw
+  // key inside the one facet that decides what the panel READS rather than what it draws.
+  ...SOURCES.map(source => `assets.sourceName.${source}`),
   // Everything a scene can gain: the panels' add menus draw the mesh and light families, and
   // the 3D bar's own add menu draws all three — `objects` included, which is why it is here.
   ...ADD_ENTRIES.flatMap(({ labelKey }) => [labelKey, `${labelKey}Hint`]),
@@ -107,6 +159,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.
   ...WORKSPACE_IDS.map(workspace => `workspaces.${workspace}`),
+  // What a folder in the explorer SERVES — the seven that ARE their section share one line,
+  // filled with the section's own label, so no name of a section is written twice.
+  ...FOLDER_ROLES.map(roleLabelKey),
   // Why a typed name was refused, read off the failure the shared check answers with. The
   // compiler holds the other half — the record has one entry per failure or it does not build.
   ...Object.values(DOCUMENT_NAME_REFUSALS),
@@ -127,6 +182,12 @@ const COMPOSED_KEYS: readonly string[] = [
     `documents.templateHints.${id}`,
   ]),
   ...SCENE_TEMPLATE_GROUPS.map(group => `documents.templateGroups.${group}`),
+  // What stands between a model and this machine, said with the figures. Read off the table the
+  // compiler holds one entry per obstacle in, so an obstacle added cannot arrive without a line.
+  ...Object.values(FIT_DETAIL_KEYS),
+  // What the manager's choices apply to. A third scope without its word would put a raw key in the
+  // select that decides where every choice of that screen lands.
+  ...CHOICE_SCOPES.map(scope => `aiModels.scope_${scope}`),
 ]
 
 describe('the keys the renderer composes', () => {
@@ -159,6 +220,14 @@ describe('the lists behind those keys', () => {
     const all: Record<LayerOperation, true> = { group: true, ungroup: true, duplicate: true }
 
     expect([...LAYER_OPERATIONS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  // The only surface that says what the studio is about to SEND: an origin with no line here
+  // stands under the raw key.
+  it('holds every place a generation source can come from', () => {
+    const all: Record<InputOrigin, true> = { explorer: true, scene: true, result: true }
+
+    expect([...INPUT_ORIGINS].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every kind a track can be', () => {

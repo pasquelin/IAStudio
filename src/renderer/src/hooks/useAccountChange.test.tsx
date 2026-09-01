@@ -10,11 +10,14 @@ const CLIENT: AccountSummary = { id: 'b', name: 'Client X', active: false }
 function activate(id: string): void {
   useAccounts.setState({
     accounts: [STUDIO, CLIENT].map(account => ({ ...account, active: account.id === id })),
+    // What `connect` sets alongside the list; without it every case here would read as the very
+    // first arrival, which is exactly the state this hook has to tell apart.
+    accountsLoaded: true,
   })
 }
 
 afterEach(() => {
-  useAccounts.setState({ accounts: [] })
+  useAccounts.setState({ accounts: [], accountsLoaded: false })
 })
 
 describe('useAccountChange', () => {
@@ -44,7 +47,23 @@ describe('useAccountChange', () => {
     expect(purge).not.toHaveBeenCalled()
   })
 
-  it('has nothing to drop when the first account arrives', () => {
+  /**
+   * 🛑 Measured on screen: a key added mid-session showed no cloud model until restart — the
+   * window HAD cached a listing, the local-only one the registry answers with no account.
+   */
+  it('drops what was cached under no account when a key is added mid-session', () => {
+    useAccounts.setState({ accounts: [], accountsLoaded: true })
+    const purge = vi.fn()
+    renderHook(() => useAccountChange(purge))
+
+    activate('a')
+
+    expect(purge).toHaveBeenCalledTimes(1)
+  })
+
+  // 🛑 The list lands a moment AFTER the window is up, so a watcher reading its baseline at
+  // mount calls that arrival a switch — and threw the whole cache away at every launch.
+  it('takes the first list as its baseline rather than as a switch', () => {
     const purge = vi.fn()
     renderHook(() => useAccountChange(purge))
 

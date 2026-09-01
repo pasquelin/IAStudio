@@ -1,6 +1,6 @@
 import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { nodeIdOf, SceneRenderer } from './SceneRenderer'
+import { nodeIdOf, SceneRenderer, type SceneRendererOptions } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
 import type { SkinWeights } from './skinWeights'
 import type { SceneState } from './sceneState'
@@ -31,7 +31,7 @@ function rendererLoading(load: (url: string) => Promise<Object3D>) {
 }
 
 /** The same, listening to which pictures the maps of a model ask for. */
-function rendererDressing(asked: string[]) {
+function rendererDressing(asked: string[], wornDress?: SceneRendererOptions['wornDress']) {
   return new SceneRenderer({
     onSelect: vi.fn(),
     onTransform: vi.fn(),
@@ -40,6 +40,7 @@ function rendererDressing(asked: string[]) {
       asked.push(url)
       return Promise.resolve(new Texture())
     },
+    ...(wornDress ? { wornDress } : {}),
   })
 }
 
@@ -133,15 +134,18 @@ describe('a model node', () => {
   })
 
   /**
-   * The override lands where the shadow flags do, and for the same reason: what a file brings
+   * The dress lands where the shadow flags do, and for the same reason: what a file brings
    * arrives after the sync that built the holder, and the next sync skips an unchanged node.
    */
-  it('dresses itself with the project picture as soon as its file lands', async () => {
+  it('wears the material it names as soon as its file lands', async () => {
     const asked: string[] = []
-    const renderer = rendererDressing(asked)
+    const renderer = rendererDressing(asked, () => ({
+      textures: { map: { assetId: 'tex-1' } },
+      material: {},
+    }))
 
     const node = modelNodeFixture('a', 'asset-a')
-    node.model = { ...node.model, textures: { map: { assetId: 'tex-1' } } }
+    node.model = { ...node.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
 
     await vi.waitFor(() => expect(asked).toHaveLength(1))
@@ -149,13 +153,16 @@ describe('a model node', () => {
     renderer.dispose()
   })
 
-  it('asks for the picture a later edit points it at', async () => {
+  it('asks for the pictures the material it is given later holds', async () => {
     const asked: string[] = []
-    const renderer = rendererDressing(asked)
+    const renderer = rendererDressing(asked, () => ({
+      textures: { normalMap: { assetId: 'tex-2' } },
+      material: {},
+    }))
 
     renderer.apply(withModels('a'))
     const dressed = modelNodeFixture('a', 'asset-a')
-    dressed.model = { ...dressed.model, textures: { normalMap: { assetId: 'tex-2' } } }
+    dressed.model = { ...dressed.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [dressed], selectedIds: [] })
 
     await vi.waitFor(() => expect(asked).toHaveLength(1))
@@ -164,8 +171,45 @@ describe('a model node', () => {
   })
 
   /**
-   * The last link of « extract a texture, edit it, and the model follows »: ⌘S rewrites the file
-   * behind an id that never moves, so nothing here would ever ask for it again on its own.
+   * A model that names NO material wears what its own `.glb` carries, and asks the project for
+   * nothing — the whole reason the reference is a gesture rather than a guess.
+   */
+  it('asks for no picture at all when it names no material', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing(asked, () => ({
+      textures: { map: { assetId: 'tex-1' } },
+      material: {},
+    }))
+
+    renderer.apply(withModels('a'))
+    await new Promise(settle => setTimeout(settle, 0))
+
+    expect(asked).toEqual([])
+    renderer.dispose()
+  })
+
+  /** Twenty trees out of one file, one material: every one of them is dressed. */
+  it('dresses every node naming the same material', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing(asked, () => ({
+      textures: { map: { assetId: 'shared-map' } },
+      material: {},
+    }))
+
+    const one = modelNodeFixture('a', 'asset-shared')
+    const two = modelNodeFixture('b', 'asset-shared')
+    one.model = { ...one.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
+    two.model = { ...two.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
+    renderer.apply({ ...EMPTY_SCENE, nodes: [one, two], selectedIds: [] })
+
+    await vi.waitFor(() => expect(asked.length).toBeGreaterThan(0))
+    expect(asked.every(url => url.includes('shared-map'))).toBe(true)
+    renderer.dispose()
+  })
+
+  /**
+   * The last link of « edit a picture of the material and the model follows »: ⌘S rewrites the
+   * file behind an id that never moves, so nothing here would ever ask for it again on its own.
    */
   it('loads its picture again once the catalogue says it was rewritten', async () => {
     const asked: string[] = []
@@ -179,10 +223,11 @@ describe('a model node', () => {
         return Promise.resolve(new Texture())
       },
       assetVersion: () => version,
+      wornDress: () => ({ textures: { map: { assetId: 'tex-1' } }, material: {} }),
     })
 
     const node = modelNodeFixture('a', 'asset-a')
-    node.model = { ...node.model, textures: { map: { assetId: 'tex-1' } } }
+    node.model = { ...node.model, dress: { kind: 'materials', documentIds: ['mat-1'] } }
     renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
     await vi.waitFor(() => expect(asked).toHaveLength(1))
 

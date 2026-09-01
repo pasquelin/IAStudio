@@ -1,6 +1,6 @@
-# Scenario Studio — the manual
+# IA Studio — the manual
 
-Welcome. This manual explains **everything** Scenario Studio does, from your first launch to
+Welcome. This manual explains **everything** IA Studio does, from your first launch to
 everyday work.
 
 It is written to be read by someone who has never opened a creative application, without lying to
@@ -14,9 +14,9 @@ first appears, then repeated in the [glossary](manual/17-glossary.md).
 
 ## In three sentences
 
-Scenario Studio is an application that installs on your computer. It can **make** images, videos,
+IA Studio is an application that installs on your computer. It can **make** images, videos,
 sounds, 3D objects, materials and skies — by asking artificial-intelligence models, online, at
-[Scenario](https://www.scenario.com). And it can then **assemble, adjust and file them**, on your
+a generation provider. And it can then **assemble, adjust and file them**, on your
 machine, without sending them anywhere.
 
 ---
@@ -38,7 +38,7 @@ machine, without sending them anywhere.
 | 4 | [Projects](manual/04-projects.md) | What a project is, what is inside it, how to save and move it |
 | 5 | [Finding a model](manual/05-models.md) | The catalogue, search, filters, and how to choose |
 | 6 | [Generating](manual/06-generating.md) | The form, the prompt, the job queue, errors and retries |
-| 7 | [Assets](manual/07-assets.md) | The project's shelf, search, importing your own files |
+| 7 | [Assets and the Library](manual/07-assets.md) | The remote library, downloading, importing your own files |
 
 ### The workspaces
 
@@ -48,7 +48,7 @@ machine, without sending them anywhere.
 | 9 | [Modelling workspace](manual/09-modelling-workspace.md) | Fly through a scene, place objects and lights, adjust them |
 | 10 | [Video workspace](manual/10-video-workspace.md) | Edit a sequence, cut, adjust tracks |
 | 11 | [Audio workspace](manual/11-audio-workspace.md) | Trim a sound, fade it, normalise it |
-| 12 | [Textures workspace](manual/12-textures-workspace.md) | Judge a material on a lit object |
+| 12 | [Materials workspace](manual/12-materials-workspace.md) | Judge a material on a lit object |
 | 13 | [Skyboxes workspace](manual/13-skyboxes-workspace.md) | Make a 360° sky and adjust it |
 
 ### Appendices
@@ -73,7 +73,7 @@ image in your project.
 **1. Connect your account.**
 Open settings with `⌘,` (macOS) or `Ctrl+,` (Windows, Linux). Go to **Account**. Give the account a
 **name**, then paste your **API key** and **API secret**, taken from
-[app.scenario.com](https://app.scenario.com). Click **Add an account**: the studio checks them
+your provider's dashboard. Click **Add an account**: the studio checks them
 straight away and puts a green **In use** badge on the row.
 
 **2. Create a project.**
@@ -81,7 +81,7 @@ straight away and puts a green **In use** badge on the row.
 you make will land inside it.
 
 **3. Choose a workspace.**
-At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **Materials**,
 **Skyboxes**. Click **Image**.
 
 **4. Choose a model.**
@@ -99,7 +99,7 @@ The request leaves. Bottom right of the window, the status line shows "1 generat
 fills. Click it for the detail. You can keep working while it runs.
 
 **7. Collect the result.**
-When the job reaches "Done", the image arrives in the **Assets** panel — the project's shelf —
+When the job reaches "Done", the image arrives in your account's **Library** — and in the folder
 and on your disk, in the `Images/` folder. Click it: the **Inspector**, on the right, shows
 its model, its prompt and its seed, and can open the folder holding it.
 
@@ -136,16 +136,16 @@ The keyboard symbols, once and for all:
 
 **Your credentials never leave your machine.** They are encrypted by your operating system's
 keychain — the same vault that holds your passwords — and only the part of the software that talks
-to Scenario can reach them. The screen you are looking at never knows what your key is: it only
+to the provider can reach them. The screen you are looking at never knows what your key is: it only
 knows whether it is connected.
 
-**Neither do your files.** Your projects are ordinary folders on your disk. What goes to Scenario
+**Neither do your files.** Your projects are ordinary folders on your disk. What goes to the provider
 is what you ask it to generate: the text of your prompt and, where relevant, the image you supply
 as input.
 
 **One exception, and it is ticked by default** — but it does not touch your files. The **Name
 fetched assets** setting, under **Settings ▸ Generation**, asks the API to name a picture that
-arrives without a useful one. **No byte leaves your disk**: that picture is already at Scenario,
+arrives without a useful one. **No byte leaves your disk**: that picture is already at the provider,
 since that is where it came from, and the studio sends only its id. What does get spent is
 **creative units**, with no click from you — the one place where the studio spends of its own
 accord. Untick it and that stops; [chapter 14](manual/14-settings.md) covers it.

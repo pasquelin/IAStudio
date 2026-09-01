@@ -19,6 +19,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.settingsRead.title',
     descriptionKey: 'assistant.actions.settingsRead.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -32,7 +33,8 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     name: 'settings.write',
     titleKey: 'assistant.actions.settingsWrite.title',
     descriptionKey: 'assistant.actions.settingsWrite.description',
-    commitment: 'none',
+    commitment: 'studio',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       {
@@ -49,6 +51,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     titleKey: 'assistant.actions.accountsList.title',
     descriptionKey: 'assistant.actions.accountsList.description',
     commitment: 'none',
+    repeatable: true,
     reach: 'mcp',
     fields: [],
   }),
@@ -56,7 +59,8 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     name: 'accounts.activate',
     titleKey: 'assistant.actions.accountsActivate.title',
     descriptionKey: 'assistant.actions.accountsActivate.description',
-    commitment: 'none',
+    commitment: 'studio',
+    repeatable: false,
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
@@ -68,7 +72,8 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     name: 'accounts.rename',
     titleKey: 'assistant.actions.accountsRename.title',
     descriptionKey: 'assistant.actions.accountsRename.description',
-    commitment: 'none',
+    commitment: 'studio',
+    repeatable: true,
     reach: 'mcp',
     fields: [
       { key: 'accountId', kind: 'text', labelKey: 'assistant.fields.accountId', required: true },
@@ -80,10 +85,11 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
      * The buttons of the settings window, which are not settings: they have no path and no value.
      * Two of them leave something behind, and `raises` is what asks about those two.
      */
-    name: 'settings.action',
-    titleKey: 'assistant.actions.settingsAction.title',
-    descriptionKey: 'assistant.actions.settingsAction.description',
+    name: 'settings.pressButton',
+    titleKey: 'assistant.actions.settingsPressButton.title',
+    descriptionKey: 'assistant.actions.settingsPressButton.description',
     commitment: 'none',
+    repeatable: true,
     raises: input => (IRREVERSIBLE.some(id => id === input.action) ? 'files' : 'none'),
     reach: 'mcp',
     fields: [

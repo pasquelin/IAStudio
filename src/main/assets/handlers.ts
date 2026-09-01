@@ -8,20 +8,21 @@ import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import {
   describeFailure,
-  failureOf,
+  apiFailureOf,
+  NotAuthenticatedError,
   persistableFailure,
   quietlyReducedBy,
   reducedBy,
-} from '@main/scenario/client'
-import type { RemoteAssetCatalog } from '@main/scenario/assetCatalog'
+} from '@main/provider/client'
+import type { RemoteAssetCatalog } from '@main/provider/assetCatalog'
 import {
   filterExpression,
   publicFeedFilter,
   NEWEST_FIRST,
   NSFW_EMPTY,
-} from '@main/scenario/filterExpression'
-import { remoteTypesFor } from '@main/scenario/remoteTypes'
-import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
+} from '@main/provider/filterExpression'
+import { remoteTypesFor } from '@main/provider/remoteTypes'
+import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/provider/limits'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { ActivityLog } from '@main/project/activityLog'
 import type { AutoCaption, DescribeAssets } from './autoCaption'
@@ -73,6 +74,16 @@ const reduced = reducedBy('assets')
  * is made again here.
  */
 const quietly = quietlyReducedBy('assets')
+
+const EMPTY_PAGE: CloudPage = { assets: [], cursor: null }
+
+/** A missing key is the ordinary first-run — Electron logs every rejected handler. */
+function emptyIfUnauthenticated<T>(empty: T) {
+  return (error: unknown): T => {
+    if (error instanceof Error && error.cause instanceof NotAuthenticatedError) return empty
+    throw error
+  }
+}
 
 /**
  * Whether this query has to go through the search index rather than the plain listing.
@@ -147,29 +158,32 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
   const pageSize = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
   const byRank = ranked(query)
 
-  const page = needsSearch(query)
-    ? await remote
-        .search({
-          ...(query.text ? { query: query.text } : {}),
-          ...defined({ filter: filterExpression(query) }),
-          ...(byRank ? {} : { sortBy: NEWEST_FIRST }),
-          limit: pageSize,
-          offset: offsetFrom(query.cursor),
-        })
-        .then(found => ({
-          ...found,
-          cursor: marked(byRank ? RANKED_CURSOR : OFFSET_CURSOR, found.token),
-        }))
-    : await remote
-        .list({
-          pageSize,
-          ...defined({
-            token: tokenFrom(query.cursor),
-            types: remoteTypesFor(query.types),
-            collectionId: query.collectionId,
-          }),
-        })
-        .then(found => ({ ...found, cursor: marked(TOKEN_CURSOR, found.token) }))
+  const page = await pageOf()
+
+  async function pageOf() {
+    if (needsSearch(query)) {
+      const found = await remote.search({
+        ...(query.text ? { query: query.text } : {}),
+        ...defined({ filter: filterExpression(query) }),
+        ...(byRank ? {} : { sortBy: NEWEST_FIRST }),
+        limit: pageSize,
+        offset: offsetFrom(query.cursor),
+      })
+
+      return { ...found, cursor: marked(byRank ? RANKED_CURSOR : OFFSET_CURSOR, found.token) }
+    }
+
+    const found = await remote.list({
+      pageSize,
+      ...defined({
+        token: tokenFrom(query.cursor),
+        types: remoteTypesFor(query.types),
+        collectionId: query.collectionId,
+      }),
+    })
+
+    return { ...found, cursor: marked(TOKEN_CURSOR, found.token) }
+  }
 
   // Applied to both branches, and after them. Neither endpoint narrows the way the studio does:
   // the listing sends no `types` at all for pictures, and the index only knows the API's eight
@@ -385,17 +399,17 @@ export function registerAssetHandlers({
   // a bug on the other side of the boundary, and reducing it to `unexpected` would hide it.
   handle(CHANNELS.cloudSimilar, (_event, assetId) => {
     const reference = parseAssetId(assetId)
-    return quietly(() => similar(remote(), reference))
+    return quietly(() => similar(remote(), reference)).catch(emptyIfUnauthenticated([]))
   })
 
   handle(CHANNELS.cloudExplore, (_event, query) => {
     const parsed = parseExploreQuery(query)
-    return quietly(() => explore(remote(), parsed))
+    return quietly(() => explore(remote(), parsed)).catch(emptyIfUnauthenticated(EMPTY_PAGE))
   })
 
   handle(CHANNELS.cloudBrowse, (_event, query) => {
     const parsed = parseCloudQuery(query)
-    return quietly(() => browse(remote(), parsed))
+    return quietly(() => browse(remote(), parsed)).catch(emptyIfUnauthenticated(EMPTY_PAGE))
   })
 
   handle(CHANNELS.cloudPull, async (_event, remoteAssetIds) => {
@@ -423,7 +437,7 @@ export function registerAssetHandlers({
           // produced it, so it carries the API key, and a journal is a file one may well send on.
           detail: persistableFailure(error),
         })
-        outcomes.push({ assetId: cloudAsset.id, ok: false, error: failureOf(error) })
+        outcomes.push({ assetId: cloudAsset.id, ok: false, error: apiFailureOf(error) })
       }
     }
 
@@ -457,7 +471,7 @@ export function registerAssetHandlers({
         outcomes.push({ assetId, ok: true })
       } catch (error) {
         log.error('assets', describeFailure(error))
-        const failure = failureOf(error)
+        const failure = apiFailureOf(error)
         outcomes.push({ assetId, ok: false, error: failure })
 
         const asset = await catalog().find(assetId)

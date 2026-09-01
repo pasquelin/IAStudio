@@ -33,7 +33,6 @@ texte : un binaire brut n’y survit pas.
 
 - **Noms hérités de `secrets/.env`** (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`) : le mot de passe
   applicatif est lié au mot de passe du compte et se révoque mal. ADR-04 retient la clé API.
-  Le fichier local garde ses noms — il sert un autre usage, la signature depuis le poste.
 - **Noms attendus nativement par `electron-builder`** (`CSC_LINK`, `CSC_KEY_PASSWORD`) : nommer
   d’après l’outil plutôt que d’après le contenu rend impossible de distinguer macOS de Windows,
   et la traduction se fait en une ligne d'`env:` dans le workflow.

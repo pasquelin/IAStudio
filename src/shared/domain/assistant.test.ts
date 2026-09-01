@@ -6,10 +6,12 @@ import {
   ACTION_REGISTRY,
   assistantAction,
   commitmentOfCommand,
+  findActions,
   needsConfirmation,
   refusalKey,
 } from './assistant'
 import { COMMAND_REGISTRY, type CommandId } from './command'
+import { delegated } from './delegation'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key
@@ -68,7 +70,7 @@ describe('the action registry', () => {
 
   it('lets a command be named only if the registry declares it', () => {
     const ids: readonly string[] = COMMAND_REGISTRY.map(descriptor => descriptor.id)
-    const offered = assistantAction('command.run')?.fields[0]?.options ?? []
+    const offered = assistantAction('command.runStudioCommand')?.fields[0]?.options ?? []
 
     expect(offered).toHaveLength(ids.length)
     for (const id of offered) expect(ids, id).toContain(id)
@@ -106,6 +108,52 @@ describe('what an action engages', () => {
     }
   })
 
+  /**
+   * The half of two-step discovery that lives in the registry: what a query finds is what the
+   * model is shown next, so an answer ranked by chance is a briefing about the wrong family.
+   */
+  it('finds an action by its name or its description, the closest first', () => {
+    const found = findActions('checkout branch')
+
+    expect(found[0]?.name).toBe('git.checkout')
+    expect(found.some(one => one.name === 'actions.find')).toBe(false)
+  })
+
+  it('finds nothing on an empty query rather than everything', () => {
+    expect(findActions('   ')).toEqual([])
+  })
+
+  /**
+   * 🛑 The five the widening put within a spoken sentence's reach, and the reason `studio`
+   * exists: the assistant's model is now shown the whole registry, where before it was shown
+   * eleven names. Which account answers decides whose library and whose invoice the next
+   * generation lands on, and no ⌘Z reaches any of it.
+   */
+  it.each([
+    'settings.write',
+    'accounts.activate',
+    'accounts.rename',
+    'project.open',
+    'project.create',
+  ])('asks before %s changes what the studio is', name => {
+    expect(assistantAction(name)?.commitment).toBe('studio')
+    expect(needsConfirmation('studio')).toBe(true)
+  })
+
+  /** And no switch waves it through, which is what tells it apart from the other four. */
+  it('never delegates what changes the studio itself', () => {
+    const armed = {
+      enabled: true,
+      delegateFiles: true,
+      delegateAsset: true,
+      delegateRemote: true,
+      delegateBudget: 1_000,
+    }
+
+    expect(delegated(armed, 'studio', 0, 0)).toBe(false)
+    expect(delegated(armed, 'files', 0, 0)).toBe(true)
+  })
+
   it('never spends credits through a command', () => {
     // Submitting is its own action, and the only one that reaches for the user's balance. A
     // command that started billing would slip past the estimate the assistant is meant to quote.
@@ -113,4 +161,68 @@ describe('what an action engages', () => {
       expect(commitmentOfCommand(descriptor.id), descriptor.id).not.toBe('credits')
     }
   })
+})
+
+describe('what a second identical call can bring', () => {
+  /**
+   * Named rather than counted, like `raises` and `asksItself`: a count stays green the day one
+   * action is freed while another is pinned, and a reading action pinned by mistake tells a model
+   * to stop watching its own generation.
+   */
+  it('names every action a turn refuses to run twice', () => {
+    const pinned = ACTION_REGISTRY.filter(entry => !entry.repeatable)
+
+    expect(pinned.map(entry => entry.name).sort()).toEqual([
+      'accounts.activate',
+      'animation.autoKey',
+      'asset.reveal',
+      'channel.setMuteSoloLock',
+      'chat.close',
+      'clip.select',
+      'dictation.start',
+      'dictation.stop',
+      'document.activate',
+      'document.close',
+      'document.open',
+      'favorite.pinAssetRecipe',
+      'favorite.unpinAssetRecipe',
+      'file.open',
+      'file.reveal',
+      'fileInfo.openWindow',
+      'help.openStudioWindow',
+      'layer.select',
+      'material.setPreviewDisplay',
+      'mirror.openVideoReturnWindow',
+      'models.select',
+      'node.select',
+      'panel.close',
+      'panel.open',
+      'play.pause',
+      'play.resume',
+      'play.start',
+      'play.stop',
+      'project.close',
+      'project.create',
+      'project.forget',
+      'project.open',
+      'project.rename',
+      'project.trash',
+      'settings.open',
+      'skybox.setViewOptions',
+      'target.select',
+      'view.direction',
+      'view.display',
+    ])
+  })
+
+  /**
+   * The four the measured loop was written against, spelled out: each ANSWERS differently on a
+   * second call, and `job.waitForCloudGeneration` says in its own description that it is made to be called again.
+   */
+  it.each(['jobs.list', 'job.waitForCloudGeneration', 'activity.recent', 'files.list'])(
+    'leaves %s callable as many times as a plan needs',
+    name => {
+      expect(assistantAction(name)?.repeatable).toBe(true)
+    },
+  )
 })

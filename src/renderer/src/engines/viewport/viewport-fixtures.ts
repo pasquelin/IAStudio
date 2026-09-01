@@ -11,7 +11,9 @@ import type { ViewportEnvironment } from './environment'
 export function fakeEnvironment(): ViewportEnvironment {
   return {
     setTexture: vi.fn(),
+    setAdjustments: vi.fn(),
     refresh: vi.fn(),
+    shownTexture: vi.fn(() => null),
     setStudio: vi.fn(),
     borrowStudio: vi.fn(),
     setIntensity: vi.fn(),
@@ -26,18 +28,27 @@ export type FakeTextureSource = {
   load: Mock<TextureSource>
   /** One spy per texture handed out, in the order they were asked for. */
   freed: ReturnType<typeof vi.spyOn>[]
+  /**
+   * The spy on the LAST texture served for a URL, for an engine reading more than one picture.
+   * A test asking about an earlier one of the same URL wants `freed` and its order.
+   */
+  freedFor: (url: string) => ReturnType<typeof vi.spyOn> | undefined
 }
 
 /** A source whose textures report their own disposal — how a leak is caught in a cache test. */
 export function fakeTextureSource(): FakeTextureSource {
   const freed: ReturnType<typeof vi.spyOn>[] = []
+  const byUrl = new Map<string, ReturnType<typeof vi.spyOn>>()
 
   return {
-    load: vi.fn<TextureSource>(async () => {
+    load: vi.fn<TextureSource>(async url => {
       const texture = new Texture()
-      freed.push(vi.spyOn(texture, 'dispose'))
+      const spy = vi.spyOn(texture, 'dispose')
+      freed.push(spy)
+      byUrl.set(url, spy)
       return texture
     }),
     freed,
+    freedFor: url => byUrl.get(url),
   }
 }

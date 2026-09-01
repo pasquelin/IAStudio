@@ -7,6 +7,8 @@ import {
   type WebGLRenderTarget,
 } from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { isNeutral, NEUTRAL_ADJUSTMENTS, type AdjustmentStack } from '@shared/domain/adjustments'
+import { createSkyGrading, type SkyGrading } from '../gpu/skyGrading'
 
 /**
  * Image-based lighting for a viewport: the equirectangular picture behind the scene, and the
@@ -20,8 +22,22 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 export type ViewportEnvironment = {
   /** Instant. Shows the picture; leaves the prefiltered map on the previous one. */
   setTexture: (texture: Texture | null) => void
+  /**
+   * How the picture is graded before it is shown and prefiltered — what the sky DOCUMENT says,
+   * never the scene's own dials. Instant, with the prefiltered map following after the quiet: a
+   * slider dragged in the sky's tab is one shader a frame, not two hundred mip chains.
+   *
+   * A neutral stack allocates nothing and draws nothing, which is what most skies are.
+   */
+  setAdjustments: (stack: AdjustmentStack) => void
   /** Expensive. Rebuilds the prefiltered map from the current texture — debounce the caller. */
   refresh: () => void
+  /**
+   * The picture as it is SHOWN — graded when the document grades, the source itself when it does
+   * not. What a FLAT view of a sky draws: it looks at the same image the backdrop hangs, and
+   * asking the grading twice would be a second target for one picture.
+   */
+  shownTexture: () => Texture | null
   /**
    * Neutral light with no picture behind it: three builds a small lit room and prefilters it,
    * so the studio ships no HDRI at all and a brand new project still shows a material under
@@ -49,6 +65,30 @@ export type ViewportEnvironment = {
   dispose: () => void
 }
 
+/**
+ * Milliseconds of quiet before the prefiltered map is rebuilt after a grading change. The picture
+ * follows the hand because it is one shader; a mip chain per frame of a drag drops a viewport to
+ * single digits.
+ */
+export const PMREM_QUIET_MS = 120
+
+/**
+ * Tells three that the backdrop it already converted has been REDRAWN under the same identity.
+ *
+ * `WebGLEnvironments.getCube` caches the equirectangular-to-cubemap conversion on the texture and
+ * nothing expires it — unlike `getPMREM` beside it, which honours `pmremVersion`. A target redrawn
+ * in place therefore hangs the FIRST picture for ever: measured in the sky viewport on 2026-08-26,
+ * the backdrop stayed at mean 184.76 across a full source swap and fell to 5.92 once this fired.
+ * The conversion three then redoes costs +3.3 ms a value on a dragged exposure (3.09 against 6.36
+ * over thirty), paid so the backdrop follows the hand at all.
+ *
+ * The EVENT and not `dispose()`: `WebGLTextures` listens for it on the render TARGET, never on its
+ * texture, so nothing that was just drawn is freed.
+ */
+function backdropRedrawn(texture: Texture): void {
+  if (texture.isRenderTargetTexture) texture.dispatchEvent({ type: 'dispose' })
+}
+
 export function createEnvironment(
   renderer: WebGLRenderer,
   scene: Scene,
@@ -59,7 +99,13 @@ export function createEnvironment(
   // asked for it, which is the frame where the user has just chosen a sky.
   generator.compileEquirectangularShader()
 
+  /** What was handed in, before grading — `source` is what is shown and prefiltered. */
+  let given: Texture | null = null
   let source: Texture | null = null
+  let stack: AdjustmentStack = NEUTRAL_ADJUSTMENTS
+  /** Built on the first stack that is not neutral, and never for a sky nobody has graded. */
+  let grading: SkyGrading | null = null
+  let quiet: ReturnType<typeof setTimeout> | null = null
   let prefiltered: WebGLRenderTarget | null = null
   let backgroundVisible = true
   /** The neutral room, prefiltered on the first ask and kept — see `borrowStudio`. */
@@ -68,8 +114,33 @@ export function createEnvironment(
   let owned: Texture | null = null
   let intensity = 1
 
+  /** What this module last hung, so hiding the picture never wipes a backdrop it did not put there. */
+  let hung: Texture | null = null
+
   const applyBackground = (): void => {
-    scene.background = backgroundVisible ? source : null
+    if (backgroundVisible) {
+      scene.background = source
+      hung = source
+      return
+    }
+    // Ours ALONE: a viewport showing a colour instead wrote it onto `scene.background` itself, and
+    // « do not show the picture » is not « show nothing » — a graded sky wiped the chosen colour.
+    if (scene.background === hung) scene.background = null
+    hung = null
+  }
+
+  const regrade = (): void => {
+    if (given && !isNeutral(stack)) grading ??= createSkyGrading(renderer)
+    const shown = grading ? grading.of(given, stack) : given
+    // A target redrawn IN PLACE, which is what both engines hand back: three caches the backdrop's
+    // cubemap on the texture and expires it never — see `backdropRedrawn`.
+    if (shown !== null && shown === source) backdropRedrawn(shown)
+
+    source = shown
+    // The graded target comes off the quad flat: without this it hangs as a plate on the camera.
+    if (source) source.mapping = EquirectangularReflectionMapping
+    applyBackground()
+    requestRender()
   }
 
   const roomMap = (): Texture => {
@@ -82,28 +153,62 @@ export function createEnvironment(
     return room.texture
   }
 
+  const cancelQuiet = (): void => {
+    if (quiet !== null) clearTimeout(quiet)
+    quiet = null
+  }
+
+  const refresh = (): void => {
+    // A rebuild already owed is now paid: leaving the timer would prefilter the same map twice.
+    cancelQuiet()
+
+    const previous = prefiltered
+    prefiltered = source ? generator.fromEquirectangular(source) : null
+    owned = prefiltered?.texture ?? null
+    scene.environment = owned
+    // Disposed after the new one is in place, never before: releasing the target still bound
+    // to `scene.environment` leaves every material pointing at freed GPU memory for a frame.
+    previous?.dispose()
+    requestRender()
+  }
+
+  const scheduleRefresh = (): void => {
+    cancelQuiet()
+    quiet = setTimeout(refresh, PMREM_QUIET_MS)
+  }
+
   return {
     setTexture: texture => {
       // Equirectangular unless told otherwise: it is the only shape a generator produces, and
       // a texture left on the default mapping shows as a flat plate stuck to the camera.
       if (texture) texture.mapping = EquirectangularReflectionMapping
-      source = texture
-      applyBackground()
-      requestRender()
+      given = texture
+      regrade()
     },
 
-    refresh: () => {
-      const previous = prefiltered
-      prefiltered = source ? generator.fromEquirectangular(source) : null
-      owned = prefiltered?.texture ?? null
-      scene.environment = owned
-      // Disposed after the new one is in place, never before: releasing the target still bound
-      // to `scene.environment` leaves every material pointing at freed GPU memory for a frame.
-      previous?.dispose()
-      requestRender()
+    setAdjustments: wanted => {
+      // By identity: a document replaces the section it edits rather than writing into it, so the
+      // stack of a sky nobody touched is the very same object on every apply.
+      if (wanted === stack) return
+      const wasNeutral = isNeutral(stack)
+      stack = wanted
+      // Neutral to neutral changes no pixel, and this runs on every apply of every viewport.
+      if (wasNeutral && isNeutral(wanted)) return
+
+      regrade()
+      // Only with something to prefilter: fired on a null source, `refresh` drops the room
+      // `setStudio` installed, and a sky that then fails to decode leaves the scene unlit for good.
+      if (source) scheduleRefresh()
     },
+
+    refresh,
+
+    shownTexture: () => source,
 
     setStudio: () => {
+      // A grading rebuild still owed would put the sky back over the room a beat later.
+      cancelQuiet()
+
       const previous = prefiltered
       // The same room a borrowed pass uses, prefiltered once: asking the generator again here
       // would build a second copy of a map already on the GPU.
@@ -122,6 +227,8 @@ export function createEnvironment(
     },
 
     setIntensity: wanted => {
+      // Called on every apply of every viewport, and a frame asked for is a shadow pass owed.
+      if (wanted === intensity) return
       intensity = wanted
       scene.environmentIntensity = wanted
       scene.backgroundIntensity = wanted
@@ -129,6 +236,7 @@ export function createEnvironment(
     },
 
     setRotation: radians => {
+      if (radians === scene.environmentRotation.y) return
       // Both, and by the same angle: turning the picture without turning what the spheres
       // reflect makes the sun sit in one place and light from another.
       scene.backgroundRotation.y = radians
@@ -137,12 +245,14 @@ export function createEnvironment(
     },
 
     setBackgroundVisible: visible => {
+      if (visible === backgroundVisible) return
       backgroundVisible = visible
       applyBackground()
       requestRender()
     },
 
     setBackgroundBlur: blur => {
+      if (blur === scene.backgroundBlurriness) return
       // Any value above zero routes the backdrop through a PMREM of three's own, built inside the
       // render loop on the first frame that asks — once per sky, cached by texture, not per frame.
       scene.backgroundBlurriness = blur
@@ -150,8 +260,11 @@ export function createEnvironment(
     },
 
     dispose: () => {
+      cancelQuiet()
       scene.background = null
       scene.environment = null
+      grading?.dispose()
+      grading = null
       prefiltered?.dispose()
       prefiltered = null
       // The room outlives every sky, so it is freed here and nowhere else.

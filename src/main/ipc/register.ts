@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { mcpStateOf } from '@main/mcp/endpoint'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { registerAssetHandlers } from '@main/assets/handlers'
@@ -12,6 +13,8 @@ import { registerFavoriteHandlers } from '@main/favorites/handlers'
 import { registerStyleHandlers } from '@main/styles/handlers'
 import { readFavoriteThumbnail } from '@main/favorites/thumbnail'
 import { registerAssistantHandlers } from '@main/assistant/handlers'
+import { registerMemoryHandlers } from '@main/memory/handlers'
+import { registerAiHandlers } from '@main/ai/handlers'
 import { registerDictationHandlers } from '@main/dictation/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
@@ -19,7 +22,7 @@ import { createCredentialVault } from '@main/git/credentials'
 import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
-import { registerScenarioHandlers } from '@main/scenario/handlers'
+import { registerProviderHandlers } from '@main/provider/handlers'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CURRENT } from '@main/logFile'
 import { runSettingAction } from '@main/settings/actions'
@@ -28,14 +31,18 @@ import { registerWindowControls } from '@main/window/controls'
 import { registerContextMenu } from '@main/window/contextMenu'
 import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
+import { registerPostPresetHandlers } from '@main/scene/postPreset'
 import { registerExportHandlers } from '@main/export/folder'
+import { registerGameExportHandler } from '@main/export/game'
 import { registerMontageHandlers } from '@main/export/montage'
 import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 import { registerMontageImportHandlers } from '@main/import/montageImport'
 import { registerRenderHandlers } from '@main/render/handlers'
+import { registerNewsHandlers } from '@main/news/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
 import { registerHelpWindows } from '@main/window/help'
+import { registerGameWindow } from '@main/window/gameWindow'
 import { registerMirrorWindow } from '@main/window/mirror'
 import { registerNewDocumentWindow } from '@main/window/newDocument'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
@@ -45,6 +52,7 @@ import type { Services } from '@main/services'
 export function registerIpc(services: Services): void {
   registerWindowControls()
   registerMirrorWindow()
+  registerGameWindow()
   registerHelpWindows()
   registerFileInfoWindow()
   registerNewDocumentWindow()
@@ -57,11 +65,14 @@ export function registerIpc(services: Services): void {
     ...services,
     openSettings: openSettingsWindow,
     setPending: markSettingsPending,
+    // The setting says what was WANTED; this says what is listening. Both sides of the answer
+    // come from `mcpStateOf`, so the pull and the push cannot disagree.
+    mcpState: () => mcpStateOf(services.mcp.endpoint()),
     runAction: runSettingAction({
       settings: services.settings,
       settingsPath: services.settings.path,
       logFile: () => join(app.getPath('logs'), CURRENT),
-      mcpEndpoint: services.mcp.endpoint,
+      mcpLaunch: services.mcpLaunch,
       onResolveMissing: () => {
         const t = TRANSLATIONS[services.language()].settings.installResolveBridge
         void services.askUser({
@@ -74,7 +85,7 @@ export function registerIpc(services: Services): void {
       },
     }),
   })
-  registerScenarioHandlers(services)
+  registerProviderHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
   registerBundledTextureHandlers({
     catalog: () => services.project.catalog(),
@@ -82,6 +93,7 @@ export function registerIpc(services: Services): void {
     newAssetId: services.newAssetId,
     folder: () => bundledTextures(resourcesRoot()),
     projectPath: () => services.project.path(),
+    roles: () => services.project.roles(),
     exists: services.exists,
   })
   const git = registerGitHandlers({
@@ -123,22 +135,30 @@ export function registerIpc(services: Services): void {
     newFavoriteId: () => `favorite_${randomUUID()}`,
     now: () => new Date().toISOString(),
   })
+  // One table for every long task of this process: the caller names it, this side runs it under
+  // that name, and the stop reaches it by the same name. Built here so no handler owns the door.
+  const running = createRunningTasks()
   registerStyleHandlers(services.styles)
   registerMediaHandlers(services)
   registerAssistantHandlers({
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
+    running,
+    journal: () => services.journal,
+    transcribe: services.transcribe,
+    said: services.said,
   })
+  registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
+  registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
   registerDictationHandlers({
     session: services.dictation,
     openPrivacySettings: services.openMicrophoneSettings,
   })
   registerDialogHandlers(services)
   registerSceneHandlers(services)
+  registerPostPresetHandlers(services)
   registerExportHandlers(services)
-  // One table for both: the window names a task, this side runs it under that name, and the stop
-  // button reaches it by the same name. Built here so neither handler owns the other's door.
-  const running = createRunningTasks()
+  registerGameExportHandler(services)
   registerMontageHandlers({ ...services, running })
   // The same table both ways: an unpack is as long as a pack, and the stop button is one button.
   registerMontageImportHandlers({ ...services, running })
@@ -148,6 +168,7 @@ export function registerIpc(services: Services): void {
     newId: () => `render_${randomUUID()}`,
     encode: services.encodeVideo,
   })
+  registerNewsHandlers(services.news)
   registerUpdateHandlers(services)
   // Built here rather than held by `Services`: the index reads nothing until a picker asks, so
   // it costs a closure at startup and a folder walk the first time someone opens the list.

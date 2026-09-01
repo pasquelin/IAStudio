@@ -1,14 +1,15 @@
 {
   "app": {
-    "name": "Scenario Studio"
+    "name": "IA Studio"
   },
   "workspaces": {
     "navigation": "Workspaces",
     "image": "Image",
     "video": "Video",
     "3d": "Modelling",
+    "code": "Code",
     "audio": "Audio",
-    "textures": "Textures",
+    "materials": "Materials",
     "skyboxes": "Skyboxes",
     "moveLeft": "Move left",
     "moveRight": "Move right",
@@ -16,7 +17,15 @@
     "moveLeftHint": "Puts this space before its left-hand neighbour on the bar",
     "moveRightHint": "Puts this space after its right-hand neighbour on the bar"
   },
+  "folderRoles": {
+    "section": "The {{label}} section’s folder",
+    "scenes": "Scenes, in the {{label}} section",
+    "models": "Models, in the {{label}} section",
+    "animations": "Animations, in the {{label}} section",
+    "gui": "Game interfaces"
+  },
   "panels": {
+    "assistant": "Assistant",
     "layers": "Layers",
     "meshes": "Meshes",
     "lights": "Lights",
@@ -27,12 +36,14 @@
     "models": "Models",
     "generator": "Generation",
     "inspector": "Inspector",
-    "assets": "Assets",
+    "assets": "Library",
     "scene": "Scene",
     "projects": "Your projects",
-    "library": "Your library",
     "animations": "Animations",
-    "text": "Text"
+    "text": "Text",
+    "context": "Context",
+    "problems": "Problems",
+    "guiTree": "Interface"
   },
   "view": {
     "projection": "Projection",
@@ -157,7 +168,7 @@
     "exportLayers": "Layered image (PSD)…",
     "exportScene": "Scene",
     "exportSelection": "Selection",
-    "exportTexture": "Material",
+    "exportMaterial": "Material",
     "exportSkybox": "Sky",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
@@ -186,7 +197,8 @@
     "sections": {
       "spotlight": "Where you left off",
       "tools": "Tools",
-      "explore": "Explore"
+      "models": "Your models",
+      "news": "What is moving"
     },
     "title": "Home",
     "tools": {
@@ -195,8 +207,9 @@
       "image": "Generate and retouch images on a layered canvas.",
       "video": "Cut, sequence and export moving images.",
       "3d": "Build a scene, light it, export the model.",
+      "code": "Write a game’s behaviour, one script at a time.",
       "audio": "Compose and edit sound across tracks.",
-      "textures": "Produce seamless material channels.",
+      "materials": "Produce seamless material channels.",
       "skyboxes": "Generate skies and light a scene with them.",
       "newProject": "New project",
       "newProjectHelp": "A folder that holds your documents and everything you bring in.",
@@ -218,10 +231,6 @@
       "rename": "Rename",
       "renameHint": "Change the project name, leaving its folder on disk where it is"
     },
-    "library": {
-      "fetch": "Fetch “{{name}}” into the project",
-      "none": "Your Scenario account library is empty, or no API key has been entered yet."
-    },
     "spotlight": {
       "resume": "Pick up where you left off",
       "resumeBody": "{{name}}, in {{project}}.",
@@ -231,7 +240,7 @@
       "running_other": "{{count, number}} generations running",
       "runningBody": "They carry on while you work, and land in the document that asked for them.",
       "connect": "Connect an API key",
-      "connectBody": "Models, generation and the shared library need a Scenario key and secret. Paste them into Settings ▸ Account — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
+      "connectBody": "Models, generation and the shared library need an API key and secret, but everything on your disk works without one. Paste them into Settings ▸ AI models ▸ API keys.",
       "connectAction": "Enter the API key",
       "ready": "Ready when you are",
       "readyBody": "{{project}} is open and holds nothing yet. Pick a workspace and make the first thing in it.",
@@ -250,16 +259,75 @@
     "retry": "Try again",
     "refused": "This panel did not get an answer.",
     "open": "Open “{{name}}”",
-    "explore": {
-      "loading": "Loading the feed…",
-      "none": "Nothing published in this category yet."
-    },
     "restoreHint": "Puts every hidden section back on the home, at once",
-    "exploreTabHint": "Shows only this category in the shelf",
     "closingActionHint": "Opens the creation space, the one where generating happens",
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
-    "spotlightConnectHint": "Opens the settings, at the account section",
+    "spotlightConnectHint": "Opens the settings, at the API keys section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens",
-    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back"
+    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back",
+    "models": {
+      "means": "What you have to work with",
+      "machine": "Machine",
+      "manage": "Manage",
+      "choose": "Choose",
+      "installOllama": "Install",
+      "addKey": "Add a key",
+      "manageKeys": "Manage keys",
+      "localNone": "No model installed",
+      "localCount_one": "{{count, number}} model installed",
+      "localCount_many": "{{count, number}} models installed",
+      "localCount_other": "{{count, number}} models installed",
+      "localLoaded_one": "{{count, number}} held in memory",
+      "localLoaded_many": "{{count, number}} held in memory",
+      "localLoaded_other": "{{count, number}} held in memory",
+      "localHint": "Opens the settings, where a model is installed, loaded and removed",
+      "ollamaMissing": "Not on this computer",
+      "ollamaIdle": "Installed, but closed",
+      "ollamaEmpty": "No model yet",
+      "ollamaCount_one": "{{count, number}} model ready",
+      "ollamaCount_many": "{{count, number}} models ready",
+      "ollamaCount_other": "{{count, number}} models ready",
+      "ollamaHint": "Opens the settings, at the AI section, where Ollama is installed and picked",
+      "cloudNone": "No API key",
+      "cloudHint": "Opens the settings, at the API keys section",
+      "employments": "Your workspaces",
+      "employmentHint": "Opens the settings, where what serves {{name}} is chosen",
+      "nothing": "No model on this machine and no API key: nothing can be generated yet.",
+      "coverage": "What one download covers",
+      "held": "Installed",
+      "beyond": "Beyond this machine",
+      "advice_choose_one": "{{names}} has its model installed: it only needs choosing.",
+      "advice_choose_many": "{{names}}{{rest}} have their models installed: they only need choosing.",
+      "advice_choose_other": "{{names}}{{rest}} have their models installed: they only need choosing.",
+      "advice_choose_action": "Choose",
+      "advice_install_one": "{{name}} covers {{count, number}} operation ({{families}}) for {{size}}.",
+      "advice_install_many": "{{name}} covers {{count, number}} operations ({{families}}) for {{size}}.",
+      "advice_install_other": "{{name}} covers {{count, number}} operations ({{families}}) for {{size}}.",
+      "advice_install_action": "Install",
+      "advice_key": "No API key: the models online ask for no download at all.",
+      "advice_key_action": "Add a key",
+      "adviceHint": "Opens the settings, where this advice is acted on",
+      "served": "{{count, number}} / {{total, number}}",
+      "verdict_one": "{{count, number}} operation of {{total, number}} has a model",
+      "verdict_many": "{{count, number}} operations of {{total, number}} have a model",
+      "verdict_other": "{{count, number}} operations of {{total, number}} have a model",
+      "verdictBar": "How many of your operations have a model",
+      "andOthers_one": " and {{count, number}} other",
+      "andOthers_many": " and {{count, number}} others",
+      "andOthers_other": " and {{count, number}} others"
+    },
+    "news": {
+      "articles": "Articles",
+      "topicHint": "Shows only this category in the band",
+      "reading": "Reading…",
+      "refused": "The source did not answer.",
+      "none": "Nothing to report in this category.",
+      "off": "News is switched off: the studio contacts nobody.",
+      "turnOn": "Switch it on",
+      "openHint": "Opens the page in your browser",
+      "downloads_one": "{{value}} download",
+      "downloads_many": "{{value}} downloads",
+      "downloads_other": "{{value}} downloads"
+    }
   }
 }

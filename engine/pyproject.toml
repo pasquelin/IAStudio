@@ -1,0 +1,83 @@
+[project]
+name = "ia-studio-engine"
+dynamic = ["version"]
+description = "The local AI engine of IA Studio: a supervised Python process that measures and executes."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+# The core carries no tensor library, and the empty list IS the measurement rather than an
+# oversight: `import torch` costs 620 ms warm and 8.7 s cold on the machine this was measured on,
+# which is why the core stays at the 10 ms of a bare interpreter. Workers pay it, once, and stay
+# alive. The `llm`, `diffusion`, `audio` and `3d` groups land with the worker that needs them.
+core = []
+# The door that holds tensors. NEVER installed by `pnpm engine:check`: the gate would then
+# download 682 Mo to be green, and the tests of `engine/tests` are written to need none of it.
+diffusion = [
+  "torch>=2.6",          # 2.6 is where `torch.load` stopped unpickling by default — spec § I.2
+  "diffusers>=0.40",
+  "transformers>=5.0",
+  "accelerate>=1.0",
+  # Not optional in practice: without it `transformers>=5` falls back to the PIL image processors
+  # and says so on every load. 1,9 Mo on macOS arm64, 7,7 on Linux, 3,5 on Windows — measured on
+  # the 0.28.0 wheels, against the 682 Mo this extra already costs.
+  "torchvision>=0.21",
+  # What `export_to_video` writes through — declared the day a video model entered the catalogue.
+  # Without them a generation denoises to its last step and then dies at the write.
+  "imageio>=2.34",
+  "imageio-ffmpeg>=0.5",
+  # Both arrive through diffusers anyway; declared because this door IMPORTS them directly —
+  # `modalities` reads and writes a WAV through numpy, and `skybox_fill` paints through Pillow.
+  # An undeclared import is one a dependency is free to drop from under us.
+  "numpy>=1.26",
+  "pillow>=10.0",
+]
+# TripoSR / TRELLIS / TripoSG / InstantMesh / LGM / CraftsMan3D / MMAudio. NEVER installed by
+# `pnpm engine:check`.
+plugin = [
+  # Everything the diffusers door needs, at the SAME bounds — and what `_require(…, "plugin")`
+  # promises: the adapters import diffusers, transformers and numpy right after the probe.
+  "ia-studio-engine[diffusion]",
+  "einops>=0.7",
+  # `_load_lgm` reads its unet and its splatter through `safetensors.torch.load_file`; the
+  # diffusers door only ever asks diffusers for `use_safetensors`.
+  "safetensors>=0.4",
+  "omegaconf>=2.3",
+  "trimesh>=4.0",
+  "huggingface-hub>=0.24",
+  "rembg>=2.0",
+  "torchaudio>=2.6",
+  "torchvision>=0.21",
+  # InstantMesh reads its iso-surface out of a triplane grid with marching cubes.
+  "pymcubes>=0.1",
+  # LGM: camera helpers and image ops (kiui), quaternions (roma), and the splat it writes.
+  "kiui>=0.2.3",
+  "roma>=1.5",
+  "plyfile>=1.0",
+  # CraftsMan3D builds its system on Lightning, and its iso-surface on scikit-image.
+  "pytorch-lightning>=2.1",
+  "scikit-image>=0.22",
+  "timm>=1.0",
+  "jaxtyping>=0.2",
+  "typeguard>=4.0",
+]
+
+[dependency-groups]
+# numpy and Pillow, and nothing heavier: `skybox_fill` is pure array work, and leaving it
+# untested was the one algorithmic file of this engine with no guard. Together they are ~37 MB installed —
+# the 682 MB of `diffusion` is what the gate still refuses to pay.
+dev = ["pytest>=8.4", "ruff>=0.14", "numpy>=1.26", "pillow>=10.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# One truth for the version: `__init__.py` holds it, the manifest reads it.
+[tool.hatch.version]
+path = "src/ia_studio_engine/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ia_studio_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,12 +1,28 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
+import type { CreditBalances } from './domain/credits'
+import type { AiOverview, ChoiceScope } from './domain/aiOverview'
+import type { AiRoleId, RoleProvider } from './domain/aiRole'
 import type { BundledAnimation } from './domain/animationLibrary'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
+import type { WindowNote } from './domain/assistantNote'
+import type {
+  Memory,
+  MemoryDraft,
+  MemoryPatch,
+  MemoryQuery,
+  MemoryRecallAsk,
+  MemoryIndexing,
+  MemoryScope,
+} from './domain/assistantMemory'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
+import type { GameManifest, GameScriptFile, GameState } from './domain/game'
 import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
+import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
+import type { FolderRole, RoleFolders } from './domain/folderRole'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
@@ -16,7 +32,9 @@ import type {
   ActionOutcome,
   AssistantAnswer,
   AssistantCall,
+  AssistantProgress,
   AssistantThought,
+  AssistantWindow,
 } from './domain/assistant'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
@@ -41,6 +59,7 @@ import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { PlanAccess } from './domain/plan'
 import type { Project, RescanState } from './domain/project'
+import type { ContextCard, ContextState, ContextUse } from './domain/projectContext'
 import type {
   PromptStyle,
   PromptSuggestion,
@@ -58,17 +77,18 @@ import type {
 import type { CaptureQuality } from './domain/sceneCapture'
 import type { InstalledCheckerTexture } from './domain/checkerTexture'
 import type { ExportTargetId } from './domain/exportRegistry'
+import type { GameExportOutcome, GameExportRequest } from './domain/gameExport'
 import type { TaskProgress } from './domain/taskProgress'
-import type { TextureExportTarget } from './domain/textureExport'
+import type { MaterialExportTarget } from './domain/materialExport'
 import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settingsRegistry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
-import type { PbrChannel } from './domain/texture'
+import type { PbrChannel } from './domain/material'
 import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
-import type { HelpPage, WindowState } from './domain/window'
+import type { WindowPage, WindowState } from './domain/window'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -81,6 +101,7 @@ export type Channels = {
   settingsWrite: 'settings:write'
   settingsAuthState: 'settings:auth-state'
   settingsOpen: 'settings:open'
+  mcpState: 'mcp:state'
   settingsRunAction: 'settings:run-action'
   settingsPending: 'settings:pending'
 
@@ -89,25 +110,28 @@ export type Channels = {
   accountsRename: 'accounts:rename'
   accountsRemove: 'accounts:remove'
   accountsActivate: 'accounts:activate'
+  accountsCredits: 'accounts:credits'
 
-  scenarioSearchModels: 'scenario:search-models'
-  scenarioModelPreviews: 'scenario:model-previews'
-  scenarioDescribeModel: 'scenario:describe-model'
-  scenarioPlan: 'scenario:plan'
-  scenarioSuggestPrompts: 'scenario:suggest-prompts'
-  scenarioTranslatePrompt: 'scenario:translate-prompt'
-  scenarioDescribeStyle: 'scenario:describe-style'
-  scenarioGenerate: 'scenario:generate'
-  scenarioEstimateCost: 'scenario:estimate-cost'
-  scenarioUploadAsset: 'scenario:upload-asset'
-  scenarioCancelJob: 'scenario:cancel-job'
-  scenarioListJobs: 'scenario:list-jobs'
-  scenarioUsageReport: 'scenario:usage-report'
-  scenarioUsageEvents: 'scenario:usage-events'
+  providerSearchModels: 'provider:search-models'
+  providerModelPreviews: 'provider:model-previews'
+  providerDescribeModel: 'provider:describe-model'
+  providerPlan: 'provider:plan'
+  providerSuggestPrompts: 'provider:suggest-prompts'
+  providerTranslatePrompt: 'provider:translate-prompt'
+  providerDescribeStyle: 'provider:describe-style'
+  providerGenerate: 'provider:generate'
+  providerEstimateCost: 'provider:estimate-cost'
+  providerUploadAsset: 'provider:upload-asset'
+  providerCancelJob: 'provider:cancel-job'
+  providerListJobs: 'provider:list-jobs'
+  providerUsageReport: 'provider:usage-report'
+  providerUsageEvents: 'provider:usage-events'
 
   projectCreate: 'project:create'
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
+  projectClose: 'project:close'
+  projectAskLeave: 'project:ask-leave'
   projectListFolder: 'project:list-folder'
   projectSearchFolder: 'project:search-folder'
   projectWalkFolder: 'project:walk-folder'
@@ -115,6 +139,7 @@ export type Channels = {
   projectRevealFile: 'project:reveal-file'
   projectRevealFolder: 'project:reveal-folder'
   projectRename: 'project:rename'
+  projectTrash: 'project:trash'
   projectRenameFile: 'project:rename-file'
   projectMoveFiles: 'project:move-files'
   projectTrashFiles: 'project:trash-files'
@@ -126,7 +151,23 @@ export type Channels = {
   projectFileHistory: 'project:file-history'
   projectStopRescan: 'project:stop-rescan'
   projectRescanState: 'project:rescan-state'
+  projectFolderRoles: 'project:folder-roles'
+  projectFolderFor: 'project:folder-for'
   projectFileFacts: 'project:file-facts'
+  projectReadContext: 'project:read-context'
+  projectWriteContext: 'project:write-context'
+  memoryList: 'memory:list'
+  memoryRecall: 'memory:recall'
+  memoryRead: 'memory:read'
+  memoryRemember: 'memory:remember'
+  memoryAmend: 'memory:amend'
+  memoryForget: 'memory:forget'
+  memoryRebuild: 'memory:rebuild'
+  memoryReset: 'memory:reset'
+  memoryPending: 'memory:pending'
+  memoryIndex: 'memory:index'
+  memoryStopIndex: 'memory:stop-index'
+  memoryCompact: 'memory:compact'
 
   /**
    * Opens one file's information window, or reveals the one that path already has.
@@ -173,6 +214,11 @@ export type Channels = {
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
 
+  gameRead: 'game:read'
+  gameWrite: 'game:write'
+  gameScripts: 'game:scripts'
+  gameWriteScript: 'game:write-script'
+
   documentList: 'document:list'
   documentRead: 'document:read'
   documentWrite: 'document:write'
@@ -181,6 +227,7 @@ export type Channels = {
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
   documentConfirmOverwrite: 'document:confirm-overwrite'
+  documentConfirmFlatten: 'document:confirm-flatten'
 
   assetsSearch: 'assets:search'
   assetsCounts: 'assets:counts'
@@ -222,7 +269,11 @@ export type Channels = {
   mediaAvailable: 'media:available'
 
   assistantThink: 'assistant:think'
+  assistantStop: 'assistant:stop'
   assistantActionResult: 'assistant:action-result'
+  assistantNote: 'assistant:note'
+  assistantSaid: 'assistant:said'
+  assistantWindow: 'assistant:window'
 
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'
@@ -233,7 +284,25 @@ export type Channels = {
   dictationCancelDownload: 'dictation:cancel-download'
   dictationOpenPrivacy: 'dictation:open-privacy'
 
+  aiOverview: 'ai:overview'
+  aiChoose: 'ai:choose'
+  aiChooseMany: 'ai:choose-many'
+  aiInstall: 'ai:install'
+  aiCancelInstall: 'ai:cancel-install'
+  aiInstallOllama: 'ai:install-ollama'
+  aiCancelInstallOllama: 'ai:cancel-install-ollama'
+  aiReadEngine: 'ai:read-engine'
+  aiInstallEngine: 'ai:install-engine'
+  aiCancelInstallEngine: 'ai:cancel-install-engine'
+  aiRemove: 'ai:remove'
+  aiLoad: 'ai:load'
+  aiCancelLoad: 'ai:cancel-load'
+  aiUnload: 'ai:unload'
+  aiAddOwnModel: 'ai:add-own-model'
+
   sceneExport: 'scene:export'
+  postExport: 'post:export'
+  postImport: 'post:import'
   montageExport: 'montage:export'
   montageImport: 'montage:import'
   renderStart: 'render:start'
@@ -241,10 +310,11 @@ export type Channels = {
   renderFinish: 'render:finish'
   renderCancel: 'render:cancel'
 
-  textureExport: 'texture:export'
+  materialExport: 'material:export'
   skyboxExport: 'skybox:export'
   montageStems: 'montage:stems'
   projectExport: 'project:export'
+  gameExport: 'game:export'
   taskCancel: 'task:cancel'
 
   fontsList: 'fonts:list'
@@ -262,10 +332,17 @@ export type Channels = {
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 
+  /** Opens the game window, or reveals the one already open. See `GAME_ROUTE`. */
+  gameWindowOpen: 'game:open-window'
+  /** Closes it. What a Stop pressed in the studio does — the window is the main process's. */
+  gameWindowClose: 'game:close-window'
+
   /** Opens one of the three windows the Help menu offers, or reveals the one already open. */
   helpOpen: 'help:open'
 
   menuPopup: 'menu:popup'
+
+  newsRead: 'news:read'
 
   updateState: 'update:state'
   updateInstall: 'update:install'
@@ -280,6 +357,7 @@ export const CHANNELS: Channels = {
   settingsWrite: 'settings:write',
   settingsAuthState: 'settings:auth-state',
   settingsOpen: 'settings:open',
+  mcpState: 'mcp:state',
   settingsRunAction: 'settings:run-action',
   settingsPending: 'settings:pending',
 
@@ -288,25 +366,28 @@ export const CHANNELS: Channels = {
   accountsRename: 'accounts:rename',
   accountsRemove: 'accounts:remove',
   accountsActivate: 'accounts:activate',
+  accountsCredits: 'accounts:credits',
 
-  scenarioSearchModels: 'scenario:search-models',
-  scenarioModelPreviews: 'scenario:model-previews',
-  scenarioDescribeModel: 'scenario:describe-model',
-  scenarioPlan: 'scenario:plan',
-  scenarioSuggestPrompts: 'scenario:suggest-prompts',
-  scenarioTranslatePrompt: 'scenario:translate-prompt',
-  scenarioDescribeStyle: 'scenario:describe-style',
-  scenarioGenerate: 'scenario:generate',
-  scenarioEstimateCost: 'scenario:estimate-cost',
-  scenarioUploadAsset: 'scenario:upload-asset',
-  scenarioCancelJob: 'scenario:cancel-job',
-  scenarioListJobs: 'scenario:list-jobs',
-  scenarioUsageReport: 'scenario:usage-report',
-  scenarioUsageEvents: 'scenario:usage-events',
+  providerSearchModels: 'provider:search-models',
+  providerModelPreviews: 'provider:model-previews',
+  providerDescribeModel: 'provider:describe-model',
+  providerPlan: 'provider:plan',
+  providerSuggestPrompts: 'provider:suggest-prompts',
+  providerTranslatePrompt: 'provider:translate-prompt',
+  providerDescribeStyle: 'provider:describe-style',
+  providerGenerate: 'provider:generate',
+  providerEstimateCost: 'provider:estimate-cost',
+  providerUploadAsset: 'provider:upload-asset',
+  providerCancelJob: 'provider:cancel-job',
+  providerListJobs: 'provider:list-jobs',
+  providerUsageReport: 'provider:usage-report',
+  providerUsageEvents: 'provider:usage-events',
 
   projectCreate: 'project:create',
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
+  projectClose: 'project:close',
+  projectAskLeave: 'project:ask-leave',
   projectListFolder: 'project:list-folder',
   projectSearchFolder: 'project:search-folder',
   projectWalkFolder: 'project:walk-folder',
@@ -314,6 +395,7 @@ export const CHANNELS: Channels = {
   projectRevealFile: 'project:reveal-file',
   projectRevealFolder: 'project:reveal-folder',
   projectRename: 'project:rename',
+  projectTrash: 'project:trash',
   projectRenameFile: 'project:rename-file',
   projectMoveFiles: 'project:move-files',
   projectTrashFiles: 'project:trash-files',
@@ -325,7 +407,23 @@ export const CHANNELS: Channels = {
   projectFileHistory: 'project:file-history',
   projectStopRescan: 'project:stop-rescan',
   projectRescanState: 'project:rescan-state',
+  projectFolderRoles: 'project:folder-roles',
+  projectFolderFor: 'project:folder-for',
   projectFileFacts: 'project:file-facts',
+  projectReadContext: 'project:read-context',
+  projectWriteContext: 'project:write-context',
+  memoryList: 'memory:list',
+  memoryRecall: 'memory:recall',
+  memoryRead: 'memory:read',
+  memoryRemember: 'memory:remember',
+  memoryAmend: 'memory:amend',
+  memoryForget: 'memory:forget',
+  memoryRebuild: 'memory:rebuild',
+  memoryReset: 'memory:reset',
+  memoryPending: 'memory:pending',
+  memoryIndex: 'memory:index',
+  memoryStopIndex: 'memory:stop-index',
+  memoryCompact: 'memory:compact',
 
   fileInfoOpen: 'window:file-info',
 
@@ -365,6 +463,11 @@ export const CHANNELS: Channels = {
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
 
+  gameRead: 'game:read',
+  gameWrite: 'game:write',
+  gameScripts: 'game:scripts',
+  gameWriteScript: 'game:write-script',
+
   documentList: 'document:list',
   documentRead: 'document:read',
   documentWrite: 'document:write',
@@ -373,6 +476,7 @@ export const CHANNELS: Channels = {
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
   documentConfirmOverwrite: 'document:confirm-overwrite',
+  documentConfirmFlatten: 'document:confirm-flatten',
 
   assetsSearch: 'assets:search',
   assetsCounts: 'assets:counts',
@@ -414,7 +518,11 @@ export const CHANNELS: Channels = {
   mediaAvailable: 'media:available',
 
   assistantThink: 'assistant:think',
+  assistantStop: 'assistant:stop',
   assistantActionResult: 'assistant:action-result',
+  assistantNote: 'assistant:note',
+  assistantSaid: 'assistant:said',
+  assistantWindow: 'assistant:window',
 
   dictationState: 'dictation:state',
   dictationStart: 'dictation:start',
@@ -425,7 +533,25 @@ export const CHANNELS: Channels = {
   dictationCancelDownload: 'dictation:cancel-download',
   dictationOpenPrivacy: 'dictation:open-privacy',
 
+  aiOverview: 'ai:overview',
+  aiChoose: 'ai:choose',
+  aiChooseMany: 'ai:choose-many',
+  aiInstall: 'ai:install',
+  aiCancelInstall: 'ai:cancel-install',
+  aiInstallOllama: 'ai:install-ollama',
+  aiCancelInstallOllama: 'ai:cancel-install-ollama',
+  aiReadEngine: 'ai:read-engine',
+  aiInstallEngine: 'ai:install-engine',
+  aiCancelInstallEngine: 'ai:cancel-install-engine',
+  aiRemove: 'ai:remove',
+  aiLoad: 'ai:load',
+  aiCancelLoad: 'ai:cancel-load',
+  aiUnload: 'ai:unload',
+  aiAddOwnModel: 'ai:add-own-model',
+
   sceneExport: 'scene:export',
+  postExport: 'post:export',
+  postImport: 'post:import',
   montageExport: 'montage:export',
   montageImport: 'montage:import',
   renderStart: 'render:start',
@@ -433,10 +559,11 @@ export const CHANNELS: Channels = {
   renderFinish: 'render:finish',
   renderCancel: 'render:cancel',
 
-  textureExport: 'texture:export',
+  materialExport: 'material:export',
   skyboxExport: 'skybox:export',
   montageStems: 'montage:stems',
   projectExport: 'project:export',
+  gameExport: 'game:export',
   taskCancel: 'task:cancel',
 
   fontsList: 'fonts:list',
@@ -452,9 +579,13 @@ export const CHANNELS: Channels = {
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
+  gameWindowOpen: 'game:open-window',
+  gameWindowClose: 'game:close-window',
   helpOpen: 'help:open',
 
   menuPopup: 'menu:popup',
+
+  newsRead: 'news:read',
 
   updateState: 'update:state',
   updateInstall: 'update:install',
@@ -537,6 +668,14 @@ export type RenderFrameRequest = {
   index: number
   /** Already encoded by the renderer: the GPU lives where the scene does. */
   png: Uint8Array
+}
+
+/** A composition on its way to a file. The name is a suggestion; the extension is the writer's. */
+export type PostPresetExportRequest = {
+  /** Suggested file name, without its extension. */
+  name: string
+  /** The preset file, already serialized — see `postPresetFile`. */
+  content: string
 }
 
 /** A scene on its way to a file the studio will never look at again. */
@@ -646,7 +785,11 @@ export type LogScope =
   // Apart from `scene.model`, though both read a `.glb`: a scope says a subject once, so an
   // animation that will not load would otherwise silence what the MODEL had to say.
   | 'scene.animation'
+  /** A boolean cut that would not evaluate. The node goes on drawing its uncut brush. */
+  | 'scene.carved'
   | 'scene.export'
+  /** A composition read back from a file another project wrote, or written out to one. */
+  | 'scene.post'
   | 'scene.render'
   /** A still of the view, on its way into the project's pictures. */
   | 'scene.capture'
@@ -655,12 +798,17 @@ export type LogScope =
   | 'sequence.import'
   /** An export asked for from outside, whichever space rendered it. */
   | 'document.export'
-  | 'texture.map'
-  | 'texture.channel'
-  | 'texture.seam'
-  | 'texture.shader'
-  | 'texture.export'
+  | 'material.map'
+  | 'material.channel'
+  | 'material.seam'
+  | 'material.shader'
+  | 'material.export'
   | 'skybox.source'
+  /**
+   * A working texture shipped beside the app that would not load. Apart from `skybox.source`,
+   * whose sentence blames the picture the user chose: this one is a defect of our packaging.
+   */
+  | 'skybox.probes'
   | 'skybox.export'
   | 'canvas.layer'
   /**
@@ -669,16 +817,18 @@ export type LogScope =
    * speak once, while this is a gesture and answers every time the hand repeats it.
    */
   | 'canvas.place'
+  /**
+   * A generated script the editor refused: it held changes nobody saved, and `⌘Z` does not reach
+   * into the code editor — so the answer is announced rather than written over the work.
+   */
+  | 'code.land'
   // Not `assets.open`, and the split is the point: the document DOES open here, and the code
   // carries on building it. What is reported is that it could not take the size of the picture
   // behind it — which matters because ⌘S writes the document's size back over that picture.
   // Said under `assets.open`, it read « this asset has nowhere to go » while the asset was
   // appearing on screen.
   | 'canvas.size'
-  /** A save that refused to flatten a document over a source file whose format cannot hold it. */
-  | 'canvas.flatten'
-  // An edit sent to a model, whose picture the editor could not produce. Its own scope because
-  // `canvas.flatten` already carries a sentence about a SAVE, and nothing was being saved here.
+  // An edit sent to a model, whose picture the editor could not produce.
   | 'canvas.edit'
   | 'image.export'
   | 'document.load'
@@ -710,6 +860,7 @@ export type LogScope =
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
   | 'project.forget'
+  | 'project.close'
   | 'project.rename'
   | 'font.face'
   // Not a document's: a render that threw and a stored layout React refused belong to the shell
@@ -728,27 +879,30 @@ export type LogScope =
   | 'explorer.open'
 
 export const LOG_SCOPES: readonly LogScope[] = [
+  'scene.carved',
   'scene.model',
   'scene.bvh',
   'scene.texture',
   'scene.animation',
   'scene.export',
+  'scene.post',
   'scene.render',
   'scene.capture',
   'sequence.export',
   'sequence.import',
   'document.export',
-  'texture.map',
-  'texture.channel',
-  'texture.seam',
-  'texture.shader',
-  'texture.export',
+  'material.map',
+  'material.channel',
+  'material.seam',
+  'material.shader',
+  'material.export',
   'skybox.source',
+  'skybox.probes',
   'skybox.export',
   'canvas.layer',
   'canvas.place',
+  'code.land',
   'canvas.size',
-  'canvas.flatten',
   'canvas.edit',
   'image.export',
   'document.load',
@@ -766,6 +920,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'document.rename',
   'project.reveal',
   'project.forget',
+  'project.close',
   'project.rename',
   'font.face',
   'shell.render',
@@ -811,8 +966,9 @@ export type LogEntry = {
  * for some of its rows, and the bundle guard would ask for a sentence no surface displays.
  */
 export type TraceScope =
-  // A promise nobody awaited, rejected. This is the renderer's own silence: the calls that cross
-  // to the main process throw their answer away, so a full disk on a rename reaches no `catch`.
+  // The renderer's own SILENCE, whether or not anything awaited: the calls that cross to the main
+  // process throw their answer away, so a full disk on a rename reaches no `catch` — and a caught
+  // rejection that ends in a state rather than a sentence says nothing either.
   'shell.dropped'
 
 /**
@@ -827,18 +983,25 @@ export type TraceEntry = { scope: TraceScope; message: string }
 
 /** Channels pushed from the main process to the renderer. */
 export const EVENTS = {
+  memoryChanged: 'evt:memory-changed',
+  memoryIndexed: 'evt:memory-indexed',
   jobProgress: 'evt:job-progress',
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
   assistantAction: 'evt:assistant-action',
+  assistantStream: 'evt:assistant-stream',
   dictation: 'evt:dictation',
+  ai: 'evt:ai',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   projectFolderChanged: 'evt:project-folder-changed',
   filesChanged: 'evt:files-changed',
   projectRescan: 'evt:project-rescan',
+  projectFolderRoles: 'evt:project-folder-roles',
+  projectContext: 'evt:project-context',
   assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
+  mcpState: 'evt:mcp-state',
   accountsChanged: 'evt:accounts-changed',
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
@@ -849,11 +1012,12 @@ export const EVENTS = {
   sceneDisplay: 'evt:scene-display',
   sceneExport: 'evt:scene-export',
   sceneCapture: 'evt:scene-capture',
-  textureExport: 'evt:texture-export',
+  materialExport: 'evt:material-export',
   skyboxExport: 'evt:skybox-export',
   taskProgress: 'evt:task-progress',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
+  gameWindowClosed: 'evt:game-window-closed',
   activity: 'evt:activity',
 }
 
@@ -897,7 +1061,7 @@ export type AssistantActionRequest = { callId: string; call: AssistantCall }
 export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
-export type TextureExportCommand = { target: TextureExportTarget }
+export type MaterialExportCommand = { target: MaterialExportTarget }
 
 /**
  * What the native menu asks of the sky in front: the six faces at a size, or the one panorama
@@ -912,6 +1076,17 @@ export type SkyboxExportCommand =
   | { kind: 'panorama'; target: Extract<ExportTargetId, 'sky.hdr' | 'sky.exr'> }
 
 /**
+ * Where the MCP server is listening, as a window may know it: the port, never the token.
+ *
+ * No `listening` beside it — it was `port !== null` in both producers, and a second field that
+ * can only ever agree is a second field that can one day disagree.
+ */
+export type McpState = { port: number | null }
+
+/** How binning a project folder ended — see `project.trash`. */
+export type ProjectBinned = 'trashed' | 'missing' | 'not-a-project'
+
+/**
  * What `window.studio` exposes. Every method that asks something maps to exactly one channel in
  * `CHANNELS`; every `on…` subscribes to exactly one entry of `EVENTS`.
  */
@@ -920,6 +1095,7 @@ export type StudioBridge = {
     read: () => Promise<Settings>
     write: (partial: PartialSettings) => Promise<Settings>
     authState: () => Promise<AuthState>
+
     /** Opens the settings window on a section, or focuses it there if it is already up. */
     open: (section: SettingsSectionId) => Promise<void>
     /**
@@ -942,6 +1118,72 @@ export type StudioBridge = {
     onSection: (callback: (section: SettingsSectionId) => void) => Unsubscribe
   }
   /**
+   * What the assistant has learned — the project's, and the machine's own.
+   *
+   * `scope` is on every call rather than implied by a second namespace: the two behave alike in
+   * every respect but which file they land in, and a window that filters a list by one of them
+   * would be a window that could get it wrong.
+   *
+   * A project scope answers nothing at all when no project is open. That is not a failure and
+   * is not reported as one — it is a studio on its home screen.
+   */
+  memory: {
+    list: (scope: MemoryScope, query: MemoryQuery) => Promise<readonly Memory[]>
+    /**
+     * What ANSWERS a question, best first — never the same call as `list`, which filters.
+     *
+     * 🛑 The one door the question is embedded behind: the model lives in the main process and a
+     * window that scored its own would be a window holding ten thousand vectors. Empty for a
+     * studio with no project open, and never a refusal.
+     */
+    recall: (scope: MemoryScope, ask: MemoryRecallAsk) => Promise<readonly Memory[]>
+    read: (scope: MemoryScope, id: string) => Promise<Memory | null>
+    remember: (scope: MemoryScope, draft: MemoryDraft) => Promise<Memory | null>
+    /** Nothing when no such memory is held, which a window tells from a refusal by asking again. */
+    amend: (scope: MemoryScope, id: string, patch: MemoryPatch) => Promise<Memory | null>
+    forget: (scope: MemoryScope, id: string) => Promise<boolean>
+    /** Reads the file back into the index. Answers how many memories stand once it has. */
+    rebuild: (scope: MemoryScope) => Promise<number>
+    /** Everything forgotten, the file included. What « reset this project's memory » runs. */
+    reset: (scope: MemoryScope) => Promise<void>
+    /**
+     * How many memories have no embedding yet for the model that is chosen. `0` where none is —
+     * a studio with no embedding model has nothing pending, it has nothing to compute.
+     */
+    pending: (scope: MemoryScope) => Promise<number>
+    /**
+     * Rewrites the file with one line per standing memory, dropping what was forgotten.
+     * Answers how many lines it saved. `0` where there was nothing to save.
+     */
+    compact: (scope: MemoryScope) => Promise<number>
+    /** Starts computing what is missing, in the background. Answers as soon as it has started. */
+    index: (scope: MemoryScope) => Promise<void>
+    /** Stops the run in flight. What it already wrote is kept — see `MemoryVectors`. */
+    stopIndex: (scope: MemoryScope) => Promise<void>
+    /** Fires for every window when any of them writes: two replicas of one file is one too many. */
+    onChanged: (callback: (scope: MemoryScope) => void) => Unsubscribe
+    /** How far the embedding of a scope has got. Silent while nothing is being computed. */
+    onIndexed: (callback: (progress: MemoryIndexing) => void) => Unsubscribe
+  }
+  /**
+   * The door onto this machine — its own pair, like `window` and `updates`, because the SETTING
+   * is precisely not the answer: a server that failed to bind is stopped and `mcp.enabled` still
+   * reads true.
+   *
+   * 🛑 The port and never the token. The token is the whole of what stands between a local
+   * process and `tools/call`; it goes to the clipboard from the main process, and no window
+   * holds it.
+   */
+  mcp: {
+    state: () => Promise<McpState>
+    /**
+     * The door settling, open or shut. Pushed rather than polled: the port is bound after the
+     * setting that asked for it has already been broadcast, so a window reading on that change
+     * reads the instant BEFORE it started listening.
+     */
+    onState: (callback: (state: McpState) => void) => Unsubscribe
+  }
+  /**
    * The stored API keys. An API key carries its own project and team — the API lists neither —
    * so switching accounts is the only way to change which library the studio reads. The local
    * project is untouched by any of it: it is the user's disk.
@@ -949,14 +1191,16 @@ export type StudioBridge = {
   accounts: {
     list: () => Promise<AccountSummary[]>
     /** Stores a key under a name. The name is required and must not already be taken. */
-    add: (name: string, key: string, secret: string) => Promise<AccountsResult>
+    add: (name: string, key: string, secret: string, providerId?: string) => Promise<AccountsResult>
     rename: (id: string, name: string) => Promise<AccountsResult>
     remove: (id: string) => Promise<AccountsResult>
     activate: (id: string) => Promise<AccountsResult>
     /** Every window follows the switch: the account is owned by the main process. */
     onChange: (callback: (accounts: AccountSummary[]) => void) => Unsubscribe
+    /** What each key has LEFT to spend. A key whose cloud publishes none is ABSENT, never zero. */
+    credits: () => Promise<CreditBalances>
   }
-  scenario: {
+  provider: {
     searchModels: (query?: ModelQuery) => Promise<ModelPage>
     /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
     modelPreviews: (assetIds: readonly string[]) => Promise<Record<string, string>>
@@ -979,13 +1223,22 @@ export type StudioBridge = {
     translatePrompt: (draft: string) => Promise<PromptTranslation>
     /** Reads the style of the reference pictures, so a prompt can be written from it. */
     describeStyle: (images: readonly string[]) => Promise<PromptStyle>
-    generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
+    /**
+     * Queues a generation. `use` says whether the open project's context joins this one shot;
+     * ABSENT MEANS APPLY — the context is what the project already says, and a caller that lost
+     * the field must not silently drop it.
+     */
+    generate: (modelId: string, body: Record<string, unknown>, use?: ContextUse) => Promise<Job>
     /**
      * What running that exact form would cost, without running it. `null` when the API declines
      * to price it; a rejection when the call itself failed, which a caller may treat as no
      * figure.
      */
-    estimateCost: (target: JobTarget, body: Record<string, unknown>) => Promise<CostEstimate>
+    estimateCost: (
+      target: JobTarget,
+      body: Record<string, unknown>,
+      use?: ContextUse,
+    ) => Promise<CostEstimate>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>
     cancelJob: (jobId: string) => Promise<void>
@@ -1026,6 +1279,17 @@ export type StudioBridge = {
     create: (path: string) => Promise<Project | null>
     open: (path: string) => Promise<Project>
     current: () => Promise<Project | null>
+    /**
+     * Leaves the open project with none in its place: the catalogue is closed and every window is
+     * told through `onChange`, exactly as opening another one tells them. The folder is untouched.
+     */
+    close: () => Promise<void>
+    /**
+     * Whether leaving this project may go ahead, asked when generations are still running: they
+     * survive it, but they leave the bar until this project is opened again, and nothing else in
+     * the studio would say so. `true` with none running — no question is raised.
+     */
+    askLeave: () => Promise<boolean>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
     /**
      * One level of the project folder, `''` being the root. The explorer walks it a folder at a
@@ -1037,11 +1301,15 @@ export type StudioBridge = {
      */
     listFolder: (relative: string, hidden: boolean) => Promise<FolderEntry[]>
     /**
-     * Every entry of the whole project folder whose name holds `term` — the explorer's second
-     * source of nodes, and the only one that can answer for a folder nobody has unfolded.
+     * Every entry of the project folder whose name holds `term` — the explorer's second source of
+     * nodes, and the only one that can answer for a folder nobody has unfolded.
      *
      * A flat list, in no order the reader should rely on: the tree rebuilds the ancestors of each
      * match and sorts what it draws. An empty term answers nothing rather than the whole folder.
+     *
+     * **Not `node_modules`.** It is listed and it unfolds; it is never crossed, holding thousands
+     * of entries and not one of them the user's — a project beside a checkout answered forty
+     * thousand matches nobody wrote.
      */
     searchFolder: (term: string, hidden: boolean) => Promise<FolderEntry[]>
     /**
@@ -1051,6 +1319,9 @@ export type StudioBridge = {
      * Folders do not come back: a folder is not a domain. A document written as a folder does,
      * as the item it is. The listing is flat and unordered; the panel groups and sorts it, and
      * asks the catalogue about the whole of it in one go (`AssetQuery.paths`).
+     *
+     * **Not `node_modules`**, at either setting of `hidden`: nothing under it is the user's work,
+     * and crossing it cost a save 142 ms where the rest of the project costs 8.
      */
     walkFolder: (hidden: boolean) => Promise<FolderEntry[]>
     /**
@@ -1077,6 +1348,24 @@ export type StudioBridge = {
     /** Calls off the pass that is running. What it had already written stays written. */
     stopRescan: () => Promise<void>
     /**
+     * Where each role's folder sits in the open project — PARTIAL, a role whose folder is gone
+     * being absent rather than pointed at its default. `{}` while no project is open.
+     *
+     * For DRAWING, never for deciding where to write: `folderFor` is what a write asks, and it
+     * lays the folder down. A window that composed a landing path from this map would file into
+     * a folder nothing marked — and a map replicated over an event is empty for a few frames.
+     */
+    folderRoles: () => Promise<RoleFolders>
+    /**
+     * The folder a role names, laid down with its marker if the project has none.
+     *
+     * Asked rather than composed, and that is the whole mechanism: only the main process reads
+     * the markers, so only it can say where a role went after a rename in the Finder — and
+     * laying the folder down is what keeps the role resolvable at the next open.
+     */
+    folderFor: (role: FolderRole) => Promise<string>
+    onFolderRoles: (callback: (roles: RoleFolders) => void) => Unsubscribe
+    /**
      * What the disk says about one entry — size and stamps, for a folder as much as for a file.
      *
      * Asked path by path rather than folded into `listFolder`: a listing of four hundred rows
@@ -1086,6 +1375,20 @@ export type StudioBridge = {
      * open while the file it names was moved in the Finder.
      */
     fileFacts: (relative: string) => Promise<FileFacts | null>
+    /**
+     * The project's own context — the world every generation made in it is set in.
+     *
+     * Empty for a project that carries none, which is most of them. `trouble` says the file is
+     * there and this build will not touch it: repair it, or update the studio.
+     */
+    readContext: () => Promise<ContextState>
+    /**
+     * The whole list at once — one write, one truth back. Rejected while `trouble` is set, so a
+     * file nobody could read is never overwritten by a window that showed none of it.
+     */
+    writeContext: (cards: readonly ContextCard[]) => Promise<ContextState>
+    /** Fires for every window when any of them writes: two replicas of one file is one too many. */
+    onContextChanged: (callback: (state: ContextState) => void) => Unsubscribe
     /**
      * Writes an export INSIDE the open project, in a folder of its own named by the caller.
      *
@@ -1112,18 +1415,37 @@ export type StudioBridge = {
      */
     revealFolder: (path: string) => Promise<boolean>
     /**
-     * Renames a PROJECT — the name in its manifest, never the folder on disk. Named by its own
-     * absolute path, so the home's shelf can rename one it has not opened.
+     * Renames a PROJECT: its FOLDER moves, and that is the whole of it — a project is named by
+     * its folder. Named by its own absolute path, so the home's shelf can rename one it has not
+     * opened, and it answers the project at its NEW path.
      *
-     * The folder is deliberately left alone: `recentProjects`, `storage.lastProject` and every
-     * absolute path the catalogue holds are keyed on it, and moving it would strand all three for
-     * a display name. The manifest already allows the two to differ, which is exactly why
-     * `RecentProject` stores the name instead of deriving it from the folder.
+     * 🛑 What is keyed on the folder moves with it, and the caller owns that half: the shelf,
+     * `storage.lastProject`, `storage.projectAccounts` and `ai.projectRoles`. The catalogue does
+     * not — its rows are relative, so it travels inside the folder.
      *
      * Answers the project as it now reads. Throws when the folder will not open — a project
      * renamed out from under the studio is the same failure `open` reports.
      */
     rename: (path: string, name: string) => Promise<Project>
+    /**
+     * Puts a project's FOLDER, and everything in it, in the system's trash. Named by its own
+     * absolute path, as `rename` is, so a project that is not open can go.
+     *
+     * 🛑 The trash, never a delete: `shell.trashItem` leaves the person a way back, and nothing
+     * here has one. The project is closed first when it is the open one — its catalogue holds a
+     * file inside the folder that is about to leave.
+     *
+     * 🛑 What is keyed on the folder is the caller's half, exactly as for `rename`: the shelf,
+     * `storage.lastProject`, `storage.projectAccounts` and `ai.projectRoles`. Left behind, they
+     * point a live account key at a folder that is gone.
+     *
+     * 🛑 Answers WHICH ending, never a boolean: `missing` is a folder the disk no longer holds —
+     * an unplugged drive as much as a deletion — and `not-a-project` is a folder that is there and
+     * holds no project. Read as one `false`, a caller pruned the account link of a project sitting
+     * on a drive that was merely not plugged in, which is the one thing `projectAccounts` exists
+     * to prevent. Throws only when the system refused the move.
+     */
+    trash: (path: string) => Promise<ProjectBinned>
     /**
      * Renames in place — the name only, never the folder it sits in.
      *
@@ -1255,6 +1577,33 @@ export type StudioBridge = {
      */
     exportPicture: (name: string, image: string) => Promise<string | null>
   }
+  /**
+   * What makes a project a GAME — the manifest beside the documents, and the `.ts` files a Play
+   * compiles. One project, one game: there is no document kind for either.
+   *
+   * 🛑 Only `scripts` has a caller in the window today; the three others are the editor's, and
+   * nothing in `src/main` is what knip watches — so nothing would report them as unreached.
+   */
+  game: {
+    read: () => Promise<GameState>
+    /** The whole manifest in, the whole truth back. Refuses a file the studio cannot read. */
+    write: (game: GameManifest) => Promise<GameState>
+    /** Every script of the project, with its text. What a PLAY hands the sandbox. */
+    scripts: () => Promise<readonly GameScriptFile[]>
+    /** Whether it was written. Refused for a path that is not a script of THIS project. */
+    writeScript: (path: string, source: string) => Promise<boolean>
+    /**
+     * Writes a game that runs with no studio, into a folder the person picks.
+     *
+     * 🛑 The WINDOW composes what goes in — the glTF of each scene and the JavaScript of each
+     * script — and this side writes the files and resolves what the catalogue holds. The same
+     * split every document format follows: the window makes the structure, the main the syntax.
+     *
+     * `null` when nobody picked a folder. Otherwise a report, whose `missing` names every asset
+     * a scene points at and the catalogue no longer holds.
+     */
+    export: (request: GameExportRequest) => Promise<GameExportOutcome | null>
+  }
   documents: {
     /** Every document the open project holds, read off its folder — the one source of truth. */
     list: () => Promise<DocumentDescriptor[]>
@@ -1303,18 +1652,32 @@ export type StudioBridge = {
      * `stale`, and answering no is what a dismissed dialog gives back.
      */
     confirmOverwrite: (title: string) => Promise<boolean>
+    /**
+     * Whether to let the asset behind this document take the FLATTENED picture, its format
+     * carrying no `lost`.
+     *
+     * Asked once per document and never again: ⌘S is the most frequent gesture of the studio, and
+     * a question at each one would be unbearable on a picture that keeps its layers. Nothing is
+     * destroyed either way — the document is written first, with the whole stack — so the safe
+     * answer here is the one that writes, unlike every other confirmation of this file.
+     */
+    confirmFlatten: (title: string, format: string, lost: string) => Promise<boolean>
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
     /**
-     * Says the catalogue was written by the MAIN process, with no window having asked — the
-     * pictures a model sheds on import are the case this exists for. Every other write is
-     * answered where it was ordered, and the shelf invalidates itself there.
+     * Says the catalogue was written — by this window or by any other, since every write goes
+     * through the main process and comes back here.
      *
-     * No payload: what changed is a query away, and a window that was told « these six rows »
-     * would still have to ask for the ones it is scoped to.
+     * The rows it carries are NOT for the shelf, which is scoped and pages and would have to ask
+     * anyway. They are for the version every texture slot compares (`assetVersionOf`): read from
+     * the shelf, that version is capped at the page it holds, so an older asset stopped
+     * propagating in silence. Written straight from here, it never is.
+     *
+     * An emitter that changed rows it cannot name — a rescan refiling twelve files — sends none,
+     * which means « something moved, ask ».
      */
-    onChanged: (callback: () => void) => Unsubscribe
+    onChanged: (callback: (changed: readonly Asset[]) => void) => Unsubscribe
     /**
      * How many assets of each kind the project holds — counted in SQL, so the answer is six
      * numbers rather than the catalogue itself.
@@ -1489,6 +1852,22 @@ export type StudioBridge = {
      */
     onEntries: (callback: (entries: readonly ActivityEntry[]) => void) => Unsubscribe
   }
+  post: {
+    /**
+     * Writes a post-processing composition wherever the save dialog lands, and answers the file
+     * NAME — never the path, exactly as a scene export does.
+     */
+    export: (request: PostPresetExportRequest) => Promise<string | null>
+    /**
+     * Opens the picker and hands back what the chosen file HOLDS, as text. `null` when the
+     * dialog was dismissed.
+     *
+     * Text and not a parsed object on purpose: the reader is `readPostPresetFile`, which drops
+     * every effect this build has no code for and names them — a decision about the STUDIO, and
+     * therefore one the window takes. This process only reads bytes off a disk.
+     */
+    import: () => Promise<string | null>
+  }
   scene: {
     /**
      * Writes an exported scene wherever the save dialog lands. Answers the file name it was
@@ -1534,7 +1913,7 @@ export type StudioBridge = {
     finish: (id: string) => Promise<string | null>
     cancel: (id: string) => Promise<void>
   }
-  texture: {
+  material: {
     /**
      * Writes an exported texture into a folder of its own, inside the one the dialog landed on.
      * Answers the folder's name, or `null` when the dialog was dismissed — the name, never the
@@ -1617,13 +1996,105 @@ export type StudioBridge = {
      */
     think: (request: AssistantThought) => Promise<AssistantAnswer>
     /**
+     * 🛑 Stops the round IN FLIGHT, which the chain's own stop cannot: that one is read BETWEEN
+     * two rounds, and a local model holds one for minutes with the machine at full tilt. The
+     * pending `think` then rejects, which the window reads as the end of the chain.
+     */
+    stop: () => Promise<void>
+    /**
      * An action the main process is asking THIS window to run, because it came from outside it.
      * Sent to the window in front alone — running it in every window at once is the trap the
      * native menu already avoids.
      */
     onAction: (callback: (request: AssistantActionRequest) => void) => Unsubscribe
+    /**
+     * What the model is writing, while it writes it — this window's turn alone.
+     *
+     * The answer still arrives whole through `think`; this is what makes the wait readable. A
+     * door that cannot stream simply never calls it, and the window then shows what it always did.
+     */
+    onStream: (callback: (progress: AssistantProgress) => void) => Unsubscribe
     /** What that window made of it, quoting the `callId` it was asked under. */
     actionResult: (result: AssistantActionResult) => Promise<void>
+    /**
+     * What the chain just did, for the journal — a call run, a refusal, a question answered.
+     *
+     * 🛑 Through the MAIN and not written here: the prompt and the raw answer are composed and
+     * read over there, and a reader following a turn needs both sides in one order.
+     */
+    note: (note: WindowNote) => Promise<void>
+    /**
+     * What the door in front reads in ONE go, asked before a turn rather than learned from one.
+     * `null` where it names no window — which the composer says, rather than inventing a ratio.
+     */
+    window: () => Promise<AssistantWindow | null>
+    /**
+     * What a round trip carried, whole — the journal keeps only its size, and a briefing is
+     * 90 505 characters. `null` for a line older than the ring, or written by another launch.
+     */
+    said: (key: string) => Promise<string | null>
+  }
+  /**
+   * The model manager: which AI serves each role, what the machine can hold, and what to install.
+   *
+   * Everything answers the WHOLE overview rather than a delta. It is read when a screen opens and
+   * after a gesture, never in a loop, and one row of it depends on a memory reading the window
+   * does not hold — a partial answer would have the two sides disagree.
+   */
+  ai: {
+    overview: () => Promise<AiOverview>
+    /**
+     * Writes the choice for a role, or clears it with `null` — which is not "none": the role
+     * falls back to whatever the machine offers, and the local side wins.
+     *
+     * `scope` decides where it lands: the application default, or the open project alone. Asking
+     * for `project` with none open is refused rather than silently written to the default.
+     */
+    choose: (
+      role: AiRoleId,
+      provider: RoleProvider | null,
+      scope: ChoiceScope,
+    ) => Promise<AiOverview>
+    chooseMany: (
+      writes: readonly { role: AiRoleId; provider: RoleProvider | null }[],
+      scope: ChoiceScope,
+    ) => Promise<AiOverview>
+    /** Fetches a model's files. One at a time: a second would compete for the same disk. */
+    install: (modelId: string) => Promise<AiOverview>
+    cancelInstall: () => Promise<AiOverview>
+    /** Puts Ollama on this computer when it is missing. Same disk lock as a model install. */
+    installOllama: () => Promise<AiOverview>
+    cancelInstallOllama: () => Promise<AiOverview>
+    /** Asks the local engine what its tensor libraries are missing. Wakes no door. */
+    readEngine: () => Promise<AiOverview>
+    /** Installs exactly what it named, with the interpreter the app ships. Cancellable. */
+    installEngine: () => Promise<AiOverview>
+    cancelInstallEngine: () => Promise<AiOverview>
+    /**
+     * Deletes the files. The choices that named it are left alone — they fall back on their own.
+     *
+     * A model the PERSON supplied loses its entry and keeps its file: they put it there, and the
+     * studio was merely pointed at it.
+     */
+    remove: (modelId: string) => Promise<AiOverview>
+    /**
+     * Holds the weights in memory — "activate", and nothing about visibility.
+     *
+     * Answers the overview whatever happened: a machine too small leaves `loadFailure` set with
+     * the two figures that were weighed, never an exception the window would have to word.
+     */
+    load: (modelId: string) => Promise<AiOverview>
+    cancelLoad: () => Promise<AiOverview>
+    unload: (modelId: string) => Promise<AiOverview>
+    /**
+     * Asks for a weights file and records what its header says — rank 3 of ADR-20.
+     *
+     * The picker is opened by the MAIN process, which is where a native dialog belongs, so this
+     * takes nothing: the gesture IS the argument. Answers the overview unchanged when the person
+     * closed the dialog, and rejects when the file is not one the studio can read.
+     */
+    addOwnModel: () => Promise<AiOverview>
+    onChanged: (callback: (overview: AiOverview) => void) => Unsubscribe
   }
   dictation: {
     /** The state as it stands, for a window that arrives after the events it missed. */
@@ -1682,6 +2153,12 @@ export type StudioBridge = {
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
       abilities: readonly MenuAbility[],
+      /**
+       * What the tab in front IS, `null` where none is. Carried beside the surface because one
+       * space now opens two kinds: the Undo row of a 3D space showing an interface must pop the
+       * interface's history, not the scene's.
+       */
+      kind: DocumentKind | null,
     ) => Promise<void>
   }
   /**
@@ -1695,11 +2172,25 @@ export type StudioBridge = {
     open: () => Promise<void>
   }
   /**
+   * The game window. Same line as `mirror`: what it PLAYS it reads for itself off a channel both
+   * windows share, and the only things this side owns are opening the window and closing it.
+   */
+  gameWindow: {
+    open: () => Promise<void>
+    close: () => Promise<void>
+    /**
+     * The window went away — closed by its own traffic lights, or by anything else the studio did
+     * not ask for. 🛑 The only way the studio learns it: a renderer that is being torn down has no
+     * turn left in which to say so, so the fact belongs to the main process.
+     */
+    onClosed: (callback: () => void) => Unsubscribe
+  }
+  /**
    * The three windows of the Help menu. Same line as `mirror` above: what each one SHOWS it reads
    * for itself, and the only thing this side owns is opening the window.
    */
   help: {
-    open: (page: HelpPage) => Promise<void>
+    open: (page: WindowPage) => Promise<void>
   }
   /**
    * One file's information, as a window of its own — the studio's ⌘I.
@@ -1742,7 +2233,7 @@ export type StudioBridge = {
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe
-    onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
+    onMaterialExport: (callback: (command: MaterialExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
   }
   diagnostics: {
@@ -1762,6 +2253,15 @@ export type StudioBridge = {
      * and how many times a thing happened is half of what it says.
      */
     trace: (entry: TraceEntry) => Promise<void>
+  }
+  news: {
+    /**
+     * One topic's rows — the models trending under a family, or the blog's articles.
+     *
+     * REJECTS rather than answering an empty page when the source refused: the band has to tell
+     * "nothing published" from "nobody answered", and an empty list says the first.
+     */
+    read: (topic: NewsTopic) => Promise<NewsPage>
   }
   updates: {
     /**

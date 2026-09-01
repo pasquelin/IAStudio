@@ -1,15 +1,15 @@
 /**
  * The port onto the skinning worker: what a rig looks like on the wire, and who is waiting.
  *
- * `bvhBuilder`'s shape — an injected `spawn`, one worker, a register of what is out, `abandon`
- * when it dies — with the two things that pattern has never carried: a request answers many
- * times, and a caller can take one back.
+ * `workerPort` holds the worker and the register; what is here is the wire — a request that
+ * answers many times, and a caller that can take one back, neither of which `bvhBuilder` carries.
  */
 import type { Rig, RigBone } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import type { Vector3 } from '@shared/domain/transform'
 import { SKIN_REGIONS, type SkinRegion, type SkinRequest, type SkinResponse } from './skinMessage'
 import type { SkinBinding } from './skinVertices'
+import { createWorkerPort } from '../core/workerPort'
 
 export type SkinWeights = {
   /**
@@ -25,49 +25,21 @@ export type SkinWeights = {
 }
 
 export function createSkinWeights(spawn: () => Worker): SkinWeights {
-  const waiting = new Map<number, Slot>()
-  let worker: Worker | null = null
-  let disposed = false
-  let nextId = 0
-
-  const abandon = (dead: Worker, reason: string): void => {
-    // A late event from a worker already replaced must not take its successor down with it.
-    if (worker !== dead) return
-
-    worker.terminate()
-    worker = null
-    for (const slot of waiting.values()) slot.reject(new Error(reason))
-    waiting.clear()
-  }
-
-  const workerOf = (): Worker => {
-    if (worker) return worker
-
-    const started = spawn()
-    started.addEventListener('message', (event: MessageEvent<SkinResponse>) =>
-      settle(waiting, event.data),
-    )
-    // The two failures no `try` inside the worker can catch.
-    started.addEventListener('error', event =>
-      abandon(started, `skinning worker failed: ${event.message}`),
-    )
-    started.addEventListener('messageerror', () =>
-      abandon(started, 'skinning worker sent an unreadable answer'),
-    )
-    worker = started
-    return started
-  }
+  const port = createWorkerPort<SkinBinding, SkinResponse>(spawn, 'skinning', answer => ({
+    skinIndex: answer.skinIndex,
+    skinWeight: answer.skinWeight,
+  }))
 
   return {
     bind: (positions, rig, watch) =>
       new Promise<SkinBinding | null>((resolve, reject) => {
-        if (disposed) {
+        if (port.isGone()) {
           resolve(null)
           return
         }
 
-        const id = (nextId += 1)
-        const running = workerOf()
+        const id = port.claim()
+        const running = port.running()
         const request: SkinRequest = { id, ...wireOf(positions, rig) }
 
         // Posted before it is recorded, so a payload the structured clone cannot carry throws
@@ -75,7 +47,7 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
         running.postMessage(request, [request.position.buffer, request.segments.buffer])
 
         const give = (): void => {
-          if (!waiting.delete(id)) return
+          if (!port.forget(id)) return
           watch?.signal?.removeEventListener('abort', give)
           running.postMessage({ id, cancel: true })
           resolve(null)
@@ -90,7 +62,7 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
             hand(value)
           }
 
-        waiting.set(id, {
+        port.record(id, {
           resolve: settled(resolve),
           reject: settled(reject),
           onProgress: watch?.onProgress,
@@ -107,39 +79,8 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
         watch?.signal?.addEventListener('abort', give)
       }),
 
-    dispose: () => {
-      disposed = true
-      worker?.terminate()
-      worker = null
-      // Resolved, not rejected: a window closing is nobody's failure.
-      for (const slot of waiting.values()) slot.resolve(null)
-      waiting.clear()
-    },
+    dispose: port.dispose,
   }
-}
-
-type Slot = {
-  resolve: (binding: SkinBinding | null) => void
-  reject: (error: Error) => void
-  onProgress?: (progress: number) => void
-}
-
-/**
- * A progress report leaves the slot in place; only a `done` message takes it out. That is the one
- * rule `bvhInflight` could do without, its every request answering exactly once.
- */
-function settle(waiting: Map<number, Slot>, response: SkinResponse): void {
-  const slot = waiting.get(response.id)
-  if (!slot) return
-
-  if (!response.done) {
-    slot.onProgress?.(response.progress)
-    return
-  }
-
-  waiting.delete(response.id)
-  if (response.ok) slot.resolve({ skinIndex: response.skinIndex, skinWeight: response.skinWeight })
-  else slot.reject(new Error(response.error))
 }
 
 /** A rig as numbers: one segment and one region per bone, in the order the bones are spelled. */
