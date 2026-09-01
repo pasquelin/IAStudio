@@ -177,8 +177,9 @@ const WIDE_RULES = [
   '  - The remote library is not this project. Look there only when asked to.',
   // Five requests died on it: the decor had just generated a picture, and the model answered
   // « je ne vois aucune image générée » — nothing in the studio block says one was made.
-  '  - "that picture", "the result", "the generated model": what a generation made is in the',
-  '    project catalogue. assets.searchProjectCatalogue with generated finds it; nothing else announces it.',
+  '  - "that picture", "the generated model": what a generation MADE is in the project catalogue.',
+  '    assets.searchProjectCatalogue with generated finds it; nothing else announces it. How a',
+  '    generation WENT is another question, and job.readCloudGeneration is what answers it.',
   // Twice over, a reference travelled as a PATH under a key nobody reads. The field belongs to
   // the model's own schema, and the value is an asset id.
   '  - To work FROM a picture, read models.readGenerationModelFields first and fill the field it names with an ASSET',

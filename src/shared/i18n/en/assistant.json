@@ -43,7 +43,7 @@
       },
       "actionsFind": {
         "title": "Find actions",
-        "description": "Searches by keywords across every action the studio publishes and hands back the ones that match, with their fields. Changes nothing on screen."
+        "description": "Searches by keywords across every action the studio publishes and hands back the ones that match, with their fields. Changes nothing on screen. This is also what answers « what can you do about X »: search the word, then say what came back."
       },
       "chatClose": {
         "title": "Close the conversation",
@@ -183,7 +183,7 @@
       },
       "jobReadCloudGeneration": {
         "title": "Read one job",
-        "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did."
+        "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did. Asked for « the result of my last generation », this is what says how it WENT; the image or the 3D model it produced is in the project catalogue."
       },
       "jobWaitForCloudGeneration": {
         "title": "Wait for a job to finish",
@@ -199,7 +199,7 @@
       },
       "usageReport": {
         "title": "Read the usage report",
-        "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it."
+        "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it. This is what answers « how many credits have I left »."
       },
       "assetsSearchProjectCatalogue": {
         "title": "Search the project’s catalogue",
@@ -743,7 +743,7 @@
       },
       "animationsList": {
         "title": "List what a character can play",
-        "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps — then the blocks already laid on its band."
+        "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps. This is what answers « what animations does this scene carry »; the keys a band holds are read with scene.state instead."
       },
       "animationAddBlock": {
         "title": "Lay an animation block",
@@ -1127,7 +1127,7 @@
       },
       "memoryRead": {
         "title": "Read one memory whole",
-        "description": "Answers the detail of one memory, what it refers to and where it came from, from its id."
+        "description": "Answers the DETAIL of one memory — what it refers to and where it came from — from an id memory.recall hands over. Recall gives the summaries; this is what « donne-moi le détail » asks for."
       },
       "memoryWrite": {
         "title": "Remember something about the project",

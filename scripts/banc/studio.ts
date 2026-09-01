@@ -413,6 +413,27 @@ export async function createStudio(
       describeModel: modelId => cloud.describeModel(modelId),
       generate: (modelId, body) => cloud.generate(modelId, body),
       cancelJob: jobId => cloud.cancelJob(jobId),
+      /**
+       * 🛑 The stub REJECTED with « no usage », so « combien me reste-t-il de crédits » could not
+       * be answered at all — the model sent the call eleven times over. What a headless run can
+       * honestly stand in for is the SHAPE of an answer, filled from the jobs this run has run.
+       */
+      usageReport: period =>
+        Promise.resolve({
+          period,
+          from: WHEN,
+          to: WHEN,
+          units: useJobs.getState().jobs.length,
+          discount: 0,
+          jobs: useJobs.getState().jobs.length,
+          daily: [],
+          accounts: [],
+          models: [],
+          actions: [],
+          assets: [],
+          silent: [],
+          price: null,
+        }),
     },
   })
 

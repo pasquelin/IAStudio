@@ -43,7 +43,7 @@
       },
       "actionsFind": {
         "title": "Chercher des actions",
-        "description": "Cherche par mots-clés dans toutes les actions que le studio publie et rend celles qui correspondent, avec leurs champs. Ne change rien à l’écran."
+        "description": "Cherche par mots-clés dans toutes les actions que le studio publie et rend celles qui correspondent, avec leurs champs. Ne change rien à l’écran. C’est aussi ce qui répond à « de quoi es-tu capable au sujet de X » : chercher le mot, puis dire ce qui est revenu."
       },
       "chatClose": {
         "title": "Refermer la conversation",
@@ -183,7 +183,7 @@
       },
       "jobReadCloudGeneration": {
         "title": "Lire une tâche",
-        "description": "Rend une génération entière — son état, son avancement, ce qu’elle a produit, ce qu’elle a coûté, et pourquoi elle a échoué le cas échéant."
+        "description": "Répond une génération entière — son état, où elle en est, ce qu’elle a produit, ce qu’elle a coûté et pourquoi elle a échoué le cas échéant. Demandé « le résultat de ma dernière génération », c’est ceci qui dit comment elle s’est PASSÉE ; l’image ou le modèle 3D qu’elle a produit est dans le catalogue du projet."
       },
       "jobWaitForCloudGeneration": {
         "title": "Attendre la fin d’une tâche",
@@ -199,7 +199,7 @@
       },
       "usageReport": {
         "title": "Lire le rapport de consommation",
-        "description": "Rend ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre de consommation l’affiche."
+        "description": "Répond ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre d’usage la montre. C’est ce qui répond à « combien me reste-t-il de crédits »."
       },
       "assetsSearchProjectCatalogue": {
         "title": "Chercher dans le catalogue du projet",
@@ -743,7 +743,7 @@
       },
       "animationsList": {
         "title": "Lister ce qu’un personnage peut jouer",
-        "description": "Rend les trois provenances d’un mouvement — les clips que porte le fichier du modèle, les animations livrées avec le studio, et celles que la bibliothèque du projet garde — puis les blocs déjà posés sur sa bande."
+        "description": "Répond les trois provenances d’un mouvement — les clips que le fichier du modèle porte, les animations livrées avec le studio, et celles que la bibliothèque du projet garde. C’est ce qui répond à « quelles animations porte cette scène » ; les clés d’une bande se lisent avec scene.state."
       },
       "animationAddBlock": {
         "title": "Poser un bloc d’animation",
@@ -1127,7 +1127,7 @@
       },
       "memoryRead": {
         "title": "Lire une mémoire en entier",
-        "description": "Répond le détail d’un souvenir, ce à quoi il se rapporte et d’où il vient, à partir de son identifiant."
+        "description": "Répond le DÉTAIL d’un souvenir — ce à quoi il se rapporte et d’où il vient — à partir d’un identifiant que memory.recall a rendu. Le rappel donne les résumés ; ceci est ce que « donne-moi le détail » demande."
       },
       "memoryWrite": {
         "title": "Retenir quelque chose du projet",
