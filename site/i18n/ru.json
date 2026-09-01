@@ -33,7 +33,6 @@
     "eyebrow": "Настольное приложение · независимый проект",
     "lede": "Шесть мастерских генерации в одном окне. Стыкуемые панели, таймлиния с таймкодом, инспектор, библиотека на диске: инструменты производственной программы, приложенные к генеративным моделям.",
     "browse": "Пройти по мастерским",
-    "source": "Посмотреть исходный код",
     "meta": {
       "stack": "Electron · React 19 · TypeScript",
       "platforms": "macOS, Windows, Linux",
@@ -364,12 +363,13 @@
     "about": "Мультимодальное настольное приложение, разработанное в одиночку. Electron, React, TypeScript.",
     "resources": {
       "0": "Загрузка",
-      "1": "Репозиторий",
-      "2": "Лицензия"
+      "1": "Лицензия"
     },
     "legal": "Исходный код под лицензией <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · приложение распространяется на своих <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">условиями использования</a> · сторонние компоненты перечислены в <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">уведомлениях</a>. © 2026 Alban Pasquelin.",
     "docsLink": "Документация",
-    "changelog": "Изменения"
+    "changelog": "Изменения",
+    "docsFr": "Док. 🇫🇷",
+    "docsEn": "Док. 🇬🇧"
   },
   "status": {
     "project": "проект",
