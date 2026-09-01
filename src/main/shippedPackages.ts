@@ -19,6 +19,7 @@ export const SHIPPED: string[] = [
   '@mdi/js',
   '@mdi/react',
   '@modelcontextprotocol/sdk',
+  '@pasquelin/panels',
   '@scenario-labs/sdk',
   'ag-psd',
   'better-sqlite3',

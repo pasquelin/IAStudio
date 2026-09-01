@@ -15,8 +15,8 @@ import { useCanvasViews } from '@/stores/canvasViews'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { bridgeWatchingLogs } from '@/services/fakeBridge'
-import { arrangedFor } from '@/stores/tool-fixtures'
-import { useTools } from '@/stores/tools'
+import { panelsStore } from '@/stores/panels'
+import { chassisFor } from '@/stores/panels-fixtures'
 import { ImageDocument } from './ImageDocument'
 
 const setTool = vi.fn()
@@ -489,16 +489,13 @@ describe('ImageDocument', () => {
 
   // Placing a picture arms no gesture: it is a choice, and the shelf is where one is made.
   it('brings the shelf forward instead of arming a tool that draws nothing', async () => {
-    useTools.setState({
-      arrangements: arrangedFor('image', { open: { left: { primary: 'assets' } } }),
-      focusedZone: null,
-    })
+    chassisFor('image', { left: { primary: 'assets' } })
     render(<ImageDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /^Rectangle/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Image/ }))
 
-    expect(useTools.getState().focusedZone).toBe('left')
+    expect(panelsStore.getState().focusedZone).toBe('left')
     expect(setTool).not.toHaveBeenCalledWith('shape')
   })
 })

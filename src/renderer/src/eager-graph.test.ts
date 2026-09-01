@@ -181,7 +181,7 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./features/shell/components/ToolWindow/toolComponents.ts')
+    expect(files).toContain('./features/shell/components/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.

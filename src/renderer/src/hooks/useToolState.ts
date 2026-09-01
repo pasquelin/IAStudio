@@ -4,8 +4,34 @@ import type { ToolState } from '@/helpers/toolRegistry'
 import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
 import { useDocuments } from '@/stores/documents'
 import { useGit } from '@/stores/git'
-import { useHomeVisible } from '@/stores/layouts'
+import { useHomeVisible, useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
+import { useSettings } from '@/stores/settings'
+
+/**
+ * The stores `toolStateOf` reads. 🛑 Written ONCE, and consumed twice — by the hook below and by
+ * anything driving the studio without a window: the two lists had already drifted, and a run
+ * that missed `useGit` never offered the Git panel at all.
+ */
+type Subscribable = { subscribe: (listener: () => void) => () => void }
+
+const SOURCES: Subscribable[] = [
+  useProject,
+  useGit,
+  useAccounts,
+  useDocuments,
+  useLayouts,
+  useSettings,
+]
+
+/**
+ * Calls back whenever what a surface can offer may have changed. For a caller outside React —
+ * the bench, a headless run — where `useToolState` cannot be used.
+ */
+export function subscribeToToolState(listener: () => void): () => void {
+  const stops = SOURCES.map(store => store.subscribe(listener))
+  return () => stops.forEach(stop => stop())
+}
 
 /**
  * What `toolStateOf` reads once, subscribed instead: a plain read would leave the icon out until

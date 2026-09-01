@@ -42,6 +42,8 @@ export type Tool = {
   slot: ToolSlot
   surfaces: readonly ToolSurface[]
   solo?: true
+  /** What the zone opens at while this panel leads it — see `ToolPlacement.opens`. */
+  opens?: number
 }
 
 const ICONS: Record<ToolId, string> = {
@@ -259,6 +261,18 @@ export function availableToolIds(surface: ToolSurface): ToolId[] {
   return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state)).map(
     tool => tool.id,
   )
+}
+
+/**
+ * Every panel this surface can offer right now, across all zones, in declaration order — which
+ * is the order the rail stacks them in and the order a half falls back through.
+ *
+ * The whole registry rather than one zone's: the chassis is DECLARED, so the shell hands it the
+ * panels it has and the library places them. `availableToolIds` answers the same question for
+ * the native menu, which lives in the main process and reads the state rather than subscribing.
+ */
+export function toolsOffered(surface: ToolSurface, state: ToolState): Tool[] {
+  return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state))
 }
 
 /**

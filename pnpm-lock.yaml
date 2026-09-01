@@ -23,6 +23,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(supports-color@7.2.0)(zod@4.4.3)
+      '@pasquelin/panels':
+        specifier: 0.2.0
+        version: 0.2.0(dockview-react@8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@scenario-labs/sdk':
         specifier: ^3.0.0
         version: 3.0.0
@@ -1317,6 +1320,17 @@ packages:
     resolution: {integrity: sha512-UqGPmo56KDfLlfXFAFIrNflHT8tFxWGEivWg3Zeyp4Uy2NlKN1FGPr6/BxcLGG3+kZ6Wp14g5Uj+n71boqZfiw==}
     cpu: [x64]
     os: [win32]
+
+  '@pasquelin/panels@0.2.0':
+    resolution: {integrity: sha512-nqN5bsjWWA6VW3OnWw627+pWVhJJyhicKDjVuLAdcT54gDGearIMABPwWvLUWcVCuyhPKQK2orD0fvMM9ZDpOA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      dockview-react: '>=8.0.0'
+      react: ^19.0.0
+      react-dom: ^19.0.0
+    peerDependenciesMeta:
+      dockview-react:
+        optional: true
 
   '@peculiar/asn1-schema@2.8.0':
     resolution: {integrity: sha512-7YT0U/ze0tF2QOBbE15gKZwy5tvgGyLRiRHLzhlbOpf7BT032oBSd0haZqXn5W6l26WLlu3dyxzjM+2638/z2Q==}
@@ -5583,6 +5597,13 @@ snapshots:
 
   '@oxc-resolver/binding-win32-x64-msvc@11.24.2':
     optional: true
+
+  '@pasquelin/panels@0.2.0(dockview-react@8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+    optionalDependencies:
+      dockview-react: 8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
   '@peculiar/asn1-schema@2.8.0':
     dependencies:

@@ -31,8 +31,7 @@ import { useSettings } from '@/stores/settings'
 import { useAccounts } from '@/stores/accounts'
 import { TRIPO_CLOUD } from '@shared/domain/tripo'
 import { chooseModels } from '@/stores/models-fixtures'
-import { arrangedFor } from '@/stores/tool-fixtures'
-import { useTools } from '@/stores/tools'
+import { chassisFor } from '@/stores/panels-fixtures'
 import { prepareEdit } from '@/features/image/aiActions'
 import panelSource from './Generator.tsx?raw'
 import { Generator } from './Generator'
@@ -134,7 +133,7 @@ describe('Generator', () => {
     // A job collects into its own project and nowhere else, so the panel asks for one before it
     // draws a form. Every case below is about the form, and each of them needs one.
     useProject.setState({ project: PROJECT, known: true })
-    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    chassisFor('image')
     useLayouts.setState({ activeWorkspace: 'image' })
     useGeneration.setState({ forcedCapability: null })
     useAssets.setState({ items: [] })
@@ -397,7 +396,7 @@ describe('the generator without a project', () => {
   beforeEach(() => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: true } })
-    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    chassisFor('image')
     useLayouts.setState({ activeWorkspace: 'image' })
     chooseModels({
       [aiRoleId('image', 'txt2img')]: 'model_flux',
@@ -458,7 +457,7 @@ describe('the generator on a second cloud', () => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
     useProject.setState({ project: PROJECT, known: true })
-    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    chassisFor('image')
     useLayouts.setState({ activeWorkspace: 'image' })
     useGeneration.setState({ forcedCapability: aiRoleId('image', 'txt2img') })
     // Read, and holding nothing of this machine: the guard is only reached past both.
@@ -505,7 +504,7 @@ describe('the generator on this machine', () => {
       selected: { [aiRoleId('image', 'txt2img')]: 'ssd-1b' },
       preset: {},
     })
-    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    chassisFor('image')
     useLayouts.setState({ activeWorkspace: 'image' })
     // Forced, because a canvas is open above and the panel would otherwise read that as working
     // FROM its picture. What this case is about is an account, not the detection.

@@ -409,11 +409,3 @@ export function isBottom(zone: ToolZone): boolean {
 export function isHorizontal(zone: ToolZone): boolean {
   return zone === 'top' || isBottom(zone)
 }
-
-/**
- * Zones whose panel sits before its resize handle. The opposite zones grow backwards, which
- * is also why their drag direction is inverted.
- */
-export function isLeading(zone: ToolZone): boolean {
-  return zone === 'left' || zone === 'top'
-}

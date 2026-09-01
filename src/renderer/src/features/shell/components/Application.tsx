@@ -8,7 +8,6 @@ import { useConnections } from '@/hooks/useConnections'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useDictationShortcut } from '@/hooks/useDictationShortcut'
-import { useWindowFit } from '@/hooks/useWindowFit'
 import { useAccounts } from '@/stores/accounts'
 import { useAiModels } from '@/stores/aiModels'
 import { useAssets } from '@/stores/assets'
@@ -36,7 +35,6 @@ import { Shell } from './Shell/Shell'
 export function Application() {
   useMainLogs()
   useNativeMenu()
-  useWindowFit()
 
   const connectSettings = useSettings(state => state.connect)
   const connectAccounts = useAccounts(state => state.connect)

@@ -1,5 +1,4 @@
 import { aiRoleId } from '@shared/domain/aiRole'
-import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import {
@@ -17,8 +16,14 @@ import { chooseModels } from '@/stores/models-fixtures'
 import { useGit } from '@/stores/git'
 import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
-import { useAvailableTools } from '@/hooks/useAvailableTools'
-import { shownTools, toolIcon, toolsAvailableIn, TOOLS, type ToolState } from './toolRegistry'
+import {
+  shownTools,
+  toolIcon,
+  toolsAvailableIn,
+  toolStateOf,
+  TOOLS,
+  type ToolState,
+} from './toolRegistry'
 
 /**
  * One half, through the resolver every reader uses: `shownTool` is private, precisely so that
@@ -64,8 +69,7 @@ const openProject = (): void => {
 }
 
 function idsOf(zone: ToolZone, workspace: WorkspaceId | typeof HOME_SURFACE): string[] {
-  const { result } = renderHook(() => useAvailableTools(zone, workspace))
-  return result.current.map(tool => tool.id)
+  return toolsAvailableIn(zone, workspace, toolStateOf()).map(tool => tool.id)
 }
 
 beforeEach(() => {
