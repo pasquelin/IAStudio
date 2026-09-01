@@ -4,7 +4,7 @@
  * enriches it with icons and components. Duplicating it in the main process would degrade
  * `ToolId` to `string` and force a cast back on the other side.
  */
-import type { Slot, Zone, ZoneSlots as ChassisZoneSlots } from '@pasquelin/panels'
+import type { Slot, Zone } from '@pasquelin/panels'
 import {
   GENERATIVE_WORKSPACE_IDS,
   LIBRARY_WORKSPACE_IDS,
@@ -126,16 +126,6 @@ export type ToolPlacement = {
    */
   opens?: number
 }
-
-/**
- * One tool per half, so an icon click swaps rather than stacks. Key absent, the half is closed;
- * `null`, it is open on no panel in particular; an id, on the panel the user chose.
- *
- * That third state earns its keep: what is open is stored once for all the sections, while the
- * panel that comes first in a half differs in each — the layers in Image, the shelf in Video,
- * the sky in Skyboxes. An id there would impose one section's answer on the other five.
- */
-export type ZoneSlots = ChassisZoneSlots<ToolId>
 
 /**
  * Tools sharing a zone AND a slot take turns; tools in different slots of the same zone show
@@ -379,7 +369,7 @@ export function workspacePlacementsOf(id: unknown): ToolPlacement[] {
  * offered on the home, where there may not be one.
  */
 export function placementIn(id: unknown, surface: ToolSurface): ToolPlacement | null {
-  return placementsOf(id).find(placement => serves(placement, surface)) ?? null
+  return TOOL_PLACEMENTS.find(one => one.id === id && serves(one, surface)) ?? null
 }
 
 export function serves(placement: ToolPlacement, surface: ToolSurface): boolean {

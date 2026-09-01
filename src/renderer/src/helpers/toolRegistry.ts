@@ -40,6 +40,8 @@ export type Tool = {
   zone: ToolZone
   slot: ToolSlot
   surfaces: readonly ToolSurface[]
+  /** What the studio must hold for this placement to be offered — see `ToolPlacement.requires`. */
+  requires?: ToolPlacement['requires']
   solo?: true
   /** What the zone opens at while this panel leads it — see `ToolPlacement.opens`. */
   opens?: number
@@ -133,15 +135,11 @@ export type ToolState = {
 }
 
 /**
- * Whether a section can offer this panel at all.
- *
- * WHAT each placement needs is declared beside it, in the registry; this only answers whether the
- * studio has it. Written as a run of `if (id === …)` it grew a third arm within a week of the
- * second, each of them a rule about a panel sitting a file away from where the panel is declared.
+ * Whether the studio holds what a placement asks for. WHAT it asks for is declared beside it, in
+ * the registry; this only answers whether the studio has it — passed in, never looked up again,
+ * since every caller has already matched the placement it is asking about.
  */
-function canOffer(id: ToolId, surface: ToolSurface, state: ToolState): boolean {
-  const requires = placementIn(id, surface)?.requires
-
+function meets(requires: ToolPlacement['requires'], state: ToolState): boolean {
   if (requires === 'project') return state.hasProject
   // `git` implies `project`, and the conjunction is not redundant: the repository is corrected
   // asynchronously, so a project just closed still reads `ready` until the next status lands.
@@ -158,7 +156,7 @@ export function offeredPlacement(
   state: ToolState,
 ): ToolPlacement | null {
   const placement = placementIn(id, surface)
-  return placement && canOffer(id, surface, state) ? placement : null
+  return placement && meets(placement.requires, state) ? placement : null
 }
 
 /**
@@ -174,5 +172,5 @@ export function availableToolIds(surface: ToolSurface): ToolId[] {
  * them in and the order a half falls back through. The chassis is DECLARED this list and places it.
  */
 export function toolsOffered(surface: ToolSurface, state: ToolState): Tool[] {
-  return TOOLS.filter(tool => serves(tool, surface) && canOffer(tool.id, surface, state))
+  return TOOLS.filter(tool => serves(tool, surface) && meets(tool.requires, state))
 }

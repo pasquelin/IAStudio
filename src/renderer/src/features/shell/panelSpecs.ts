@@ -30,15 +30,15 @@ export function panelSpecsOf(
  * Declares them into the store and brings the surface's view forward — what `<Shell>` does by
  * rendering `<Panel>`, for a run that has no window.
  *
- * Reads the stores RIGHT NOW, exactly as the shell reads them: call it once the answers a
- * `requires` asks about are set, and again whenever they change — `subscribeToToolState`.
+ * Reads the stores RIGHT NOW unless told otherwise: call it once the answers a `requires` asks
+ * about are set, and again whenever they change — `subscribeToToolState`.
  */
-export function declarePanelsOf(surface: ToolSurface): void {
-  const state = panelsStore.getState()
+export function declarePanelsOf(surface: ToolSurface, state: ToolState = toolStateOf()): void {
+  const chassis = panelsStore.getState()
 
   // `i18next` rather than `useTranslation`: this has no React tree, and the instance is the one
   // the window uses — so a headless run says what a reader would see, pseudo-locale included.
-  state.declare(panelSpecsOf(surface, toolStateOf(), id => i18next.t(toolTitleKey(id))))
-  state.setView(familyOf(surface))
-  state.settle()
+  chassis.declare(panelSpecsOf(surface, state, id => i18next.t(toolTitleKey(id))))
+  chassis.setView(familyOf(surface))
+  chassis.settle()
 }

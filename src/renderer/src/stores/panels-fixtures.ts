@@ -1,7 +1,7 @@
 import type { OpenByZone } from '@pasquelin/panels'
 import { familyOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
 import type { ToolState } from '@/helpers/toolRegistry'
-import { declarePanelsOf, panelSpecsOf } from '@/features/shell/panelSpecs'
+import { declarePanelsOf } from '@/features/shell/panelSpecs'
 import { LAYOUT_KEY } from '@/features/shell/layoutStorage'
 import { panelsStore } from './panels'
 
@@ -20,29 +20,16 @@ export function resetChassis(): void {
 /**
  * The chassis as `<Shell>` would have set it up for that surface, without mounting it.
  *
- * Named an arrangement, it is taken as the reader's own; left out, the halves are settled the
- * way a first launch settles them. Call it after the stores a `requires` reads are set.
+ * Named an arrangement, it is taken as the reader's own and nothing settles it; left out, the
+ * halves are settled the way a first launch settles them. `state` says what the studio holds —
+ * left out, the stores are read, so set them first.
  */
-export function chassisFor(surface: ToolSurface, open?: OpenByZone<ToolId>): void {
-  resetChassis()
-  if (open !== undefined) panelsStore.setState({ views: { [familyOf(surface)]: open } })
-  declarePanelsOf(surface)
-}
-
-/**
- * The same chassis, told what the studio holds rather than reading it — the panels a surface
- * offers are the answers to a `ToolState`, and a test that names it says which case it is about.
- */
-export function chassisOffering(
+export function chassisFor(
   surface: ToolSurface,
-  state: ToolState,
   open?: OpenByZone<ToolId>,
+  state?: ToolState,
 ): void {
   resetChassis()
   if (open !== undefined) panelsStore.setState({ views: { [familyOf(surface)]: open } })
-
-  const chassis = panelsStore.getState()
-  chassis.declare(panelSpecsOf(surface, state, id => id))
-  chassis.setView(familyOf(surface))
-  chassis.settle()
+  declarePanelsOf(surface, state)
 }

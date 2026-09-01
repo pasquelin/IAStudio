@@ -11,7 +11,7 @@ import { useGit } from '@/stores/git'
 import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
 import { panelsStore } from '@/stores/panels'
-import { chassisOffering } from '@/stores/panels-fixtures'
+import { chassisFor } from '@/stores/panels-fixtures'
 import { IN_CENTRE, IN_WORKSPACE, NO_CLOUD, NO_GIT, NO_PROJECT } from './toolRegistry-fixtures'
 import { toolIcon, toolsOffered, toolStateOf, TOOLS, type ToolState } from './toolRegistry'
 
@@ -27,7 +27,7 @@ function shown(
   state: ToolState,
 ): ToolId | undefined {
   const open: OpenByZone<ToolId> = tool === undefined ? {} : { [zone]: { [slot]: tool } }
-  chassisOffering(surface, state, open)
+  chassisFor(surface, open, state)
   return shownIn(panelsStore.getState(), zone)[slot]
 }
 
@@ -200,6 +200,9 @@ describe('a half open on no panel in particular', () => {
 
   it('shows nothing where the section fills no such half', () => {
     expect(shown(null, 'bottomRight', 'secondary', 'image', IN_WORKSPACE)).toBeUndefined()
+    // Named, too, and not only left unnamed: a band is read across its width, so a layout from
+    // before 17 August still naming the shelf in its second half must draw no phantom there.
+    expect(shown('assets', 'bottomRight', 'secondary', 'image', IN_WORKSPACE)).toBeUndefined()
   })
 })
 
@@ -274,7 +277,7 @@ describe('the glyphs of the rail', () => {
  */
 describe('a zone whose first half takes it whole', () => {
   it('draws nothing in the other half', () => {
-    chassisOffering('image', IN_WORKSPACE, { right: { primary: null, secondary: 'inspector' } })
+    chassisFor('image', { right: { primary: null, secondary: 'inspector' } }, IN_WORKSPACE)
 
     expect(shownIn(panelsStore.getState(), 'right')).toEqual({ primary: 'assistant' })
   })
@@ -282,7 +285,7 @@ describe('a zone whose first half takes it whole', () => {
   // The stored half is untouched: what silences it is a reading, so the inspector is back the
   // moment the assistant is not what the column draws.
   it('gives it back once the whole-zone panel is not the one drawn', () => {
-    chassisOffering('image', IN_CENTRE, { right: { primary: null, secondary: 'inspector' } })
+    chassisFor('image', { right: { primary: null, secondary: 'inspector' } }, IN_CENTRE)
 
     expect(shownIn(panelsStore.getState(), 'right')).toEqual({
       primary: 'layers',
@@ -291,7 +294,7 @@ describe('a zone whose first half takes it whole', () => {
   })
 
   it('leaves a zone alone where nothing takes it whole', () => {
-    chassisOffering('image', IN_WORKSPACE, { left: { primary: null, secondary: null } })
+    chassisFor('image', { left: { primary: null, secondary: null } }, IN_WORKSPACE)
 
     expect(shownIn(panelsStore.getState(), 'left')).toEqual({
       primary: 'generator',
