@@ -449,16 +449,30 @@ export async function createStudio(
 
         return { version: DOCUMENT_VERSION, kind, title: held.title, updatedAt: WHEN, content }
       },
-      // The file moves and the descriptor keeps its id: a document's identity survives a rename,
-      // which is the whole reason `DocumentDescriptor.id` is not its path.
+      /**
+       * The file moves and the descriptor keeps its id: a document's identity survives a rename,
+       * which is the whole reason `DocumentDescriptor.id` is not its path.
+       *
+       * 🛑 The WINDOW's descriptor when the folder holds none. A document created in this session
+       * has no file until it is saved, and the real port answers a path for it rather than
+       * throwing (`locate`, `main/project/documents.ts`). Throwing here came back to the model as
+       * « the title "Scène Finale" is invalid » — `asNameFailure` reads an unknown error as a bad
+       * NAME — and 41.2 spent twelve rounds arguing with a refusal about the wrong thing.
+       */
       rename: async (documentId, kind, title) => {
-        const held = documentsOnDisk.get(documentId)
-        if (!held) throw new Error(`no document ${documentId}`)
+        const held =
+          documentsOnDisk.get(documentId) ?? useDocuments.getState().documents[documentId]
+        if (!held || held.kind !== kind) throw new Error(`no document ${documentId}`)
 
         const renamed = documentFileName(title, kind)
-        await ops.rename(held.path, renamed)
         const next = { ...held, kind, title, path: pathIn(parentOf(held.path) ?? '', renamed) }
-        documentsOnDisk.set(documentId, next)
+        // Only a file that EXISTS moves, and it keeps the key the folder listed it under: a
+        // second entry for one file would have `documents.list` answer it twice.
+        if (folder.kindOf(held.path)) {
+          await ops.rename(held.path, renamed)
+          const listed = [...documentsOnDisk].find(([, one]) => one.path === held.path)?.[0]
+          documentsOnDisk.set(listed ?? documentId, next)
+        }
         return next
       },
     },
