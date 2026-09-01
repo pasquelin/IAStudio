@@ -191,7 +191,21 @@ export type AssistantTurn = {
    * finished, and a person told nothing would take a half-done job for a finished one.
    */
   ending?: 'halted' | 'stopped'
+  /**
+   * The opening answer neither called nor asked, and was sent back once — see `chainOn`. Read
+   * by the next round as the reason it is being asked again.
+   */
+  nudged?: boolean
 }
+
+/**
+ * 🛑 What a sent-back opening answer is told. A first answer with no call and no question was,
+ * measured 2026-09-02, mostly a recital of the state block: « il y a déjà une lumière
+ * directionnelle », three runs out of three, `scene.state` never called.
+ */
+export const NUDGE =
+  'You neither called nor asked: what the studio holds is READ, never recalled. Call the read ' +
+  'that answers, or "ask". If there is truly nothing to call, answer again.'
 
 /**
  * The conversation as the model reads it: one block per turn, oldest first.
@@ -284,6 +298,8 @@ function blockOf(turn: AssistantTurn): string {
   // 🛑 ONE line for the pair: `blockWithin` keeps a contiguous TAIL, so split in two a long
   // question was cut while its answer stayed, and the round read an answer to nothing.
   for (const asked of turn.asks) lines.push(`You asked: ${asked.question} — ${cameBack(asked)}`)
+
+  if (turn.nudged) lines.push(NUDGE)
 
   // Said rather than left out: a turn that shows as nothing at all would have the model repeat
   // the sentence it already failed on, instead of trying it another way.

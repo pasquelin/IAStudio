@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { NUDGE } from '@/features/assistant/components/Assistant/Conversation/conversation'
 import type {
   ActionName,
   ActionOutcome,
@@ -392,7 +393,8 @@ describe('watching the model write', () => {
 
 describe('saying something to the assistant', () => {
   it('keeps what was said and what came back', async () => {
-    brain()
+    // A second, silent round: an opening answer with no call is sent back once — see `NUDGE`.
+    brain(answer(), answer({ say: '' }))
     await useAssistant.getState().say('  ouvre un fichier 3D  ')
 
     const [turn] = useAssistant.getState().turns
@@ -426,10 +428,9 @@ describe('saying something to the assistant', () => {
   })
 
   /** The whole reason the total is on screen: five turns cost about what one picture does. */
-  it('adds up what the thinking cost', async () => {
-    brain(answer({ cost: 0.75 }), answer({ cost: 1 }))
+  it('adds up what the thinking cost, round after round', async () => {
+    brain(answer({ cost: 0.75 }), answer({ say: '', cost: 1 }))
     await useAssistant.getState().say('une')
-    await useAssistant.getState().say('deux')
 
     expect(useAssistant.getState().spent).toBe(1.75)
   })
@@ -471,7 +472,7 @@ describe('saying something to the assistant', () => {
       assistant: {
         think: () =>
           new Promise<AssistantAnswer>(resolve => {
-            release = () => resolve(answer())
+            release = () => resolve(answer({ say: '' }))
           }),
       },
     })
@@ -795,5 +796,20 @@ describe('a call that sets a named state, asked for twice', () => {
     await useAssistant.getState().say('remets-le devant')
 
     expect(runConfirmedAction).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('an opening answer that neither calls nor asks', () => {
+  it('is sent back once with the nudge, and the second answer stands', async () => {
+    const { asked } = brain(
+      answer({ say: 'La scène a déjà une lumière directionnelle.' }),
+      answer({ say: 'Vérifié.' }),
+    )
+
+    await useAssistant.getState().say('ajoute une lumière directionnelle')
+
+    expect(asked).toHaveLength(2)
+    expect(asked[1]?.history.join('\n')).toContain(NUDGE)
+    expect(useAssistant.getState().turns[0]?.lost).toBe(false)
   })
 })
