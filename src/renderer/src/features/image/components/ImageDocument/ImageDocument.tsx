@@ -535,6 +535,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           extras={
             <ImageDocumentBrush
               armed={canvasToolFor(tool, mode)}
+              cell={canvas.pixelCell}
               brush={brush}
               onBrush={setBrush}
               shortcuts={brushKeys}

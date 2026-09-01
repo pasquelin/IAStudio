@@ -92,6 +92,25 @@ export function brushRect(points: readonly { x: number; y: number }[], radius: n
   }
 }
 
+/** The one box a set of boxes falls in. */
+export function unionOf(rects: readonly Rect[]): Rect {
+  const first = rects[0]
+  if (!first) return { x: 0, y: 0, width: 0, height: 0 }
+
+  let left = first.x
+  let top = first.y
+  let right = first.x + first.width
+  let bottom = first.y + first.height
+
+  for (const rect of rects) {
+    left = Math.min(left, rect.x)
+    top = Math.min(top, rect.y)
+    right = Math.max(right, rect.x + rect.width)
+    bottom = Math.max(bottom, rect.y + rect.height)
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top }
+}
+
 /**
  * The same box, opened by a margin on all four sides.
  *

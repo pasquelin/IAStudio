@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { cellFor, cellsOfLine, cellsSpanning, gridIsLegible, stampRect } from './pixelGrid'
+import {
+  cellFor,
+  cellRuns,
+  cellsOfLine,
+  cellsSpanning,
+  gridIsLegible,
+  stampRect,
+} from './pixelGrid'
 
 describe('stampRect', () => {
   it('gives one rectangle for every point inside the same cell', () => {
@@ -73,6 +80,27 @@ describe('cellFor', () => {
 
   it('never asks for a cell of nothing, however many are wanted', () => {
     expect(cellFor(64, 4096)).toBe(1)
+  })
+})
+
+describe('cellRuns', () => {
+  // Two 2-cell squares one step apart on a diagonal share a row: one run, not two overlapping
+  // squares — which is what keeps a half-opaque stroke flat.
+  it('merges the squares of a line into one run per row', () => {
+    const runs = cellRuns(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      8,
+      16,
+    )
+
+    expect(runs).toEqual([
+      { x: 0, y: 0, width: 16, height: 8 },
+      { x: 0, y: 8, width: 24, height: 8 },
+      { x: 8, y: 16, width: 16, height: 8 },
+    ])
   })
 })
 

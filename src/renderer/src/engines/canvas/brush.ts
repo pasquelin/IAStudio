@@ -55,6 +55,12 @@ export const BRUSH_SETTINGS_BY_TOOL: Readonly<Record<CanvasTool, readonly BrushS
   picker: [],
 }
 
+/** The table's row, minus what a pixel grid takes away: nothing feathers on a grid. */
+export function brushSettingsOf(tool: CanvasTool, cell: number | null): readonly BrushSetting[] {
+  const reads = BRUSH_SETTINGS_BY_TOOL[tool]
+  return cell === null ? reads : reads.filter(setting => setting !== 'hardness')
+}
+
 export function readsBrushSetting(tool: CanvasTool, setting: BrushSetting): boolean {
   return BRUSH_SETTINGS_BY_TOOL[tool].includes(setting)
 }

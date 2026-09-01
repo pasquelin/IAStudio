@@ -82,6 +82,8 @@ const gpu: {
   containers: Placed[]
   /** The id of every texture a render was aimed at: which surface a stroke actually wrote to. */
   painted: number[]
+  /** Every square the stamp drew, in order — what a stroke on a grid is made of. */
+  stamps: Rect[]
   /** What the engine asked the asset loader for, so the parser it forces can be asserted. */
   loaded: { src: string; parser?: string }[]
   /** Set by the one test that needs a load to fail: an asset whose file is gone. */
@@ -110,6 +112,7 @@ const gpu: {
   sprites: [],
   containers: [],
   painted: [],
+  stamps: [],
   loaded: [],
   refuseLoad: false,
   unloaded: [],
@@ -247,7 +250,8 @@ vi.mock('pixi.js', () => {
     circle(): this {
       return this
     }
-    rect(): this {
+    rect(x: number, y: number, width: number, height: number): this {
+      gpu.stamps.push({ x, y, width, height })
       return this
     }
     fill(): this {
@@ -636,6 +640,7 @@ beforeEach(() => {
   gpu.sprites = []
   gpu.containers = []
   gpu.painted = []
+  gpu.stamps = []
   gpu.loaded = []
   gpu.extracted = []
   gpu.sampled = []
@@ -1473,6 +1478,17 @@ describe('the stencil holder and the stamp it borrows', () => {
     if (!stamp) throw new Error('a dab always draws through the paint space')
     return stamp
   }
+
+  /**
+   * The softener is hung by `setTool`, which a rebuilt engine can run BEFORE its first state —
+   * and nothing feathers on a grid. Without the first state counting as a change, every square
+   * came out blurred and the tiles were recorded a fringe too wide, silently.
+   */
+  it('hangs no softener when the first state it is handed is already on a grid', async () => {
+    const { host } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 8 }, 'brush')
+
+    expect(stampAfterAPlainDab(host).filters).toEqual([])
+  })
 
   it('keeps the stamp alive when a selection is dropped between two strokes', async () => {
     const { engine, host } = await mounted()
@@ -2914,6 +2930,29 @@ function drag(host: HTMLElement, x: number, y: number, shiftKey = false): void {
 function release(x = 400, y = 400): void {
   window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
 }
+
+describe('a stroke on a pixel grid', () => {
+  // The press stamps the first cell, each move the cells of the line after it — merged into one
+  // rectangle per row, so no fragment of a half-opaque stroke is drawn onto itself.
+  it('stamps the cells of the line, one run per row', async () => {
+    const { engine, host } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 8 }, 'pencil')
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 1 })
+    // A surface is born filled edge to edge, by the same `rect` — not a stamp.
+    gpu.stamps = []
+
+    press(host, 204, 204)
+    drag(host, 244, 228)
+    release()
+
+    // Bresenham from (25,25) to (30,28): 25 · 26,27 · 28,29 · 30 — one run per row.
+    expect(gpu.stamps).toEqual([
+      { x: 200, y: 200, width: 8, height: 8 },
+      { x: 208, y: 208, width: 16, height: 8 },
+      { x: 224, y: 216, width: 16, height: 8 },
+      { x: 240, y: 224, width: 8, height: 8 },
+    ])
+  })
+})
 
 describe('the crop tool', () => {
   /** A frame is placed by the drag and applied by ⏎: the release is not what commits it. */

@@ -20,12 +20,49 @@ export function cellFor(size: number, wanted: number): number {
 
 /** The square a dab stamps. Two points inside one cell give the same rectangle — that is the mode. */
 export function stampRect(at: Point, cell: number, brushSize: number): Rect {
-  const across = sided(brushSize / cell)
-  const back = Math.floor((across - 1) / 2)
+  const { across, back } = stampSpan(cell, brushSize)
   const column = cellOf(at.x, cell) - back
   const row = cellOf(at.y, cell) - back
 
   return { x: column * cell, y: row * cell, width: across * cell, height: across * cell }
+}
+
+/** The cell a document point falls in, as grid coordinates. */
+export function cellAt(point: Point, cell: number): Point {
+  return { x: cellOf(point.x, cell), y: cellOf(point.y, cell) }
+}
+
+/** How many cells a brush covers, and how many of them sit before the cell under the hand. */
+function stampSpan(cell: number, brushSize: number): { across: number; back: number } {
+  const across = sided(brushSize / cell)
+  return { across, back: Math.floor((across - 1) / 2) }
+}
+
+/**
+ * The squares of a line's cells merged into one rectangle per row. A square per cell overdrew
+ * every fragment `across` times and composited a half-opaque stroke onto itself. Cells of ONE
+ * line: a run is a hull, and a gap in a row would be filled.
+ */
+export function cellRuns(cells: readonly Point[], cell: number, brushSize: number): Rect[] {
+  const { across, back } = stampSpan(cell, brushSize)
+  const runs = new Map<number, { left: number; right: number }>()
+
+  for (const at of cells) {
+    const left = at.x - back
+    for (let row = at.y - back; row < at.y - back + across; row += 1) {
+      const run = runs.get(row)
+      if (run) {
+        run.left = Math.min(run.left, left)
+        run.right = Math.max(run.right, left + across)
+      } else runs.set(row, { left, right: left + across })
+    }
+  }
+  return [...runs].map(([row, run]) => ({
+    x: run.left * cell,
+    y: row * cell,
+    width: (run.right - run.left) * cell,
+    height: cell,
+  }))
 }
 
 /** Twice the longest side a document may have, so no legitimate stroke ever reaches it. */

@@ -101,9 +101,10 @@ import {
   type ShapeGeometry,
 } from './shapeGeometry'
 import type { Point, Size } from '../core/geometry'
-import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
+import { blurRadius, brushSettingsOf, DEFAULT_BRUSH, type BrushSettings } from './brush'
 import type { CanvasTool } from './canvasTool'
-import { brushRect, grownBy } from './tiles'
+import { brushRect, grownBy, unionOf } from './tiles'
+import { cellAt, cellRuns, cellsOfLine } from './pixelGrid'
 import {
   containIn,
   DEFAULT_VIEW,
@@ -791,8 +792,11 @@ export class CanvasEngine {
 
     // Dragging a guide rewrites the state sixty times a second and touches no pixel: walking the
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
-    // Grid on or off only: a change of cell size touches no surface.
-    const regridded = previous !== null && onPixelGrid(previous) !== onPixelGrid(state)
+    // Grid on or off only: a change of cell size touches no surface. A FIRST state counts as a
+    // change too: a softener hung by `setTool` before it would stay hung on the grid.
+    const regridded = onPixelGrid(previous) !== onPixelGrid(state)
+    // Nothing feathers on a grid, and the softener is tuned from the state as much as the tool.
+    if (regridded) this.tuneSoftener()
     if (previous && previous.layers === state.layers && !resized) {
       if (!regridded) return
       // The one change that reaches the GPU without a layer moving: the sampling, and the
@@ -1433,9 +1437,7 @@ export class CanvasEngine {
    * How far the edge of a dab is spread, in document pixels — zero for every tool that does not
    * feather.
    *
-   * **Which ones those are is `BRUSH_SETTINGS_BY_TOOL`, asked rather than restated.** The bar
-   * hides the hardness slider from the same table, so the two cannot drift into a control that
-   * moves nothing.
+   * Asked of `brushSettingsOf`, which the bar reads too, so slider and softener cannot drift.
    *
    * The pencil is hard by definition, and that is the whole of what tells it from the brush. The
    * eraser is hard for a reason of Pixi's: a filtered container is drawn into a texture of its
@@ -1446,7 +1448,12 @@ export class CanvasEngine {
    * the eraser silently stops erasing.
    */
   private softness(): number {
-    return readsBrushSetting(this.tool, 'hardness') ? blurRadius(this.brush) : 0
+    const feathers = brushSettingsOf(this.tool, this.pixelCell()).includes('hardness')
+    return feathers ? blurRadius(this.brush) : 0
+  }
+
+  private pixelCell(): number | null {
+    return this.state?.pixelCell ?? null
   }
 
   /**
@@ -3099,7 +3106,7 @@ export class CanvasEngine {
    * Paints a surface edge to edge. `clip` is the bucket's way back into the pixels, and its
    * presence is what makes the fill stop at the selection; a surface being born never does — a
    * mask born white inside a marquee and transparent outside would hide its layer everywhere
-   * else the moment it appeared.
+   * else the moment it appeared. A pixel grid changes nothing here: edge to edge is aligned.
    */
   private fill(surface: LayerSurface, color: number, clip?: Affine): void {
     const renderer = this.app?.renderer
@@ -3133,6 +3140,16 @@ export class CanvasEngine {
    * points leaves a dotted line. One dab every quarter-radius closes it.
    */
   private stroke(target: BrushTarget, from: Point, to: Point): void {
+    const cell = this.pixelCell()
+    if (cell !== null) {
+      // Bresenham, the first cell left out: `from` was stamped by the move before this one, and
+      // a second pass over it would compose a half-opaque stroke onto itself. A segment the line
+      // refuses still stamps where the hand IS, or the next one's first cell is a hole.
+      const cells = cellsOfLine(cellAt(from, cell), cellAt(to, cell))
+      this.stampCells(target, cells.length === 0 ? [cellAt(to, cell)] : cells.slice(1))
+      return
+    }
+
     const distance = Math.hypot(to.x - from.x, to.y - from.y)
     const step = Math.max(1, this.brush.size / 4)
     const count = Math.ceil(distance / step)
@@ -3156,8 +3173,38 @@ export class CanvasEngine {
    * each other, so a half-opaque stroke darkened at every joint.
    */
   private dab(target: BrushTarget, points: readonly Point[]): void {
+    if (points.length === 0) return
+    const cell = this.pixelCell()
+    if (cell !== null) {
+      return this.stampCells(
+        target,
+        points.map(point => cellAt(point, cell)),
+      )
+    }
+
+    const radius = this.brush.size / 2
+    this.paint(target, brushRect(points, radius), () => {
+      for (const point of points) this.stamp.circle(point.x, point.y, radius)
+    })
+  }
+
+  /** The cells of ONE line, as one rectangle per row — see `cellRuns`. */
+  private stampCells(target: BrushTarget, cells: readonly Point[]): void {
+    const cell = this.pixelCell()
+    if (cell === null || cells.length === 0) return
+
+    const runs = cellRuns(cells, cell, this.brush.size)
+    // One pixel of slack, as `brushRect` keeps: a layer placed on a fraction maps a run's edge
+    // onto a fragment the antialiasing paints, in a tile an undo would otherwise leave behind.
+    this.paint(target, grownBy(unionOf(runs), 1), () => {
+      for (const run of runs) this.stamp.rect(run.x, run.y, run.width, run.height)
+    })
+  }
+
+  /** What a disc and a run share: the tiles they cost, the one pass, the blend. */
+  private paint(target: BrushTarget, covered: Rect, trace: () => void): void {
     const renderer = this.app?.renderer
-    if (!renderer || points.length === 0) return
+    if (!renderer) return
 
     // Before a single pixel is written: what the tiles hold now is what an undo will put back.
     // Mapped onto the surface, like the dabs themselves — tiles index the texture, and a stroke
@@ -3167,13 +3214,11 @@ export class CanvasEngine {
     // container's transform has run, so its padding is a count of surface pixels while the
     // brush's radius is a count of document ones. Added before, a layer scaled 2× recorded half
     // the box its stroke actually covered, and an undo left the fringe behind.
-    this.patches?.touch(
-      grownBy(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)), this.fringe()),
-    )
+    this.patches?.touch(grownBy(mapRect(target.toSurface, covered), this.fringe()))
 
     const erasing = this.tool === 'eraser'
     this.stamp.clear()
-    for (const point of points) this.stamp.circle(point.x, point.y, this.brush.size / 2)
+    trace()
     this.stamp.fill({ color: erasing ? 0xffffff : this.brush.color, alpha: this.brush.opacity })
     // Erasing is the same stroke in `erase` blend: on a transparent layer, painting white
     // would just paint white.
@@ -3361,6 +3406,7 @@ export class CanvasEngine {
     const toSurface = invert(this.surfaceMatrix(layer, false, surface))
     if (!toSurface) return
 
+    // Floored already, so a pixel grid changes nothing here: a texel is what a cell is made of.
     const local = applyTo(toSurface, point)
     const x = Math.floor(local.x)
     const y = Math.floor(local.y)
