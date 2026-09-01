@@ -71,6 +71,14 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
 type AuxiliarySize = { width: number; height: number; minWidth: number; minHeight: number }
 
 /**
+ * Where macOS floats the three buttons, for every window of the studio that hides its bar.
+ *
+ * ONE offset, because `WindowTitleBar` stands exactly as tall as the studio's own `TitleBar`:
+ * two windows side by side put their lights on one line, which two offsets could not do.
+ */
+const TRAFFIC_LIGHTS = { x: 16, y: 14 }
+
+/**
  * The shape shared by every window that is not a document: a size typed here rather than taken
  * from the screen, and no full screen — macOS would give it a space of its own, hiding the studio
  * behind it.
@@ -84,7 +92,9 @@ function auxiliaryWindow(size: AuxiliarySize): BrowserWindow {
     show: false,
     backgroundColor: chromeColor(),
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
+    // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
+    // so two windows side by side put their lights on one line.
+    trafficLightPosition: TRAFFIC_LIGHTS,
     fullscreenable: false,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
@@ -154,7 +164,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
     show: false,
     backgroundColor: chromeColor(),
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 14 },
+    trafficLightPosition: TRAFFIC_LIGHTS,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
@@ -479,7 +489,9 @@ export function openCharacterWindow(assetId: string): BrowserWindow {
     // Framed like the studio and unlike the mirror or the game: this is a place one EDITS, and a
     // native bar over the studio's own chrome read as another application's window.
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
+    // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
+    // so two windows side by side put their lights on one line.
+    trafficLightPosition: TRAFFIC_LIGHTS,
     // Like every other window wearing `WindowTitleBar`: that bar's left inset is the room the
     // traffic lights float in, and macOS takes them away in full screen — see the component.
     fullscreenable: false,

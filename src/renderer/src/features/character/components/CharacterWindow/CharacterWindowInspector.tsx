@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HUMANOID_ROLES, isHumanoidRole, type HumanoidRole } from '@shared/domain/humanoid'
 import type { DisplayUnit } from '@shared/domain/scene'
@@ -27,6 +28,7 @@ import type { MeshSample } from '@/engines/scene/rigSnap'
 import { CharacterMotionList } from '../Character/Motion/CharacterMotionList'
 import { CharacterWindowFit } from './CharacterWindowFit'
 import { characterOf, useCharacters } from '@/stores/character'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
 import { useCharacterView, type BoneAxis } from '@/stores/characterView'
 
@@ -57,6 +59,7 @@ export function CharacterWindowInspector({
   const heldAxes = useCharacterView(state => state.heldAxes)
   const holdAxis = useCharacterView(state => state.holdCharacterAxis)
   const run = useCharacters(state => state.runCommand)
+  const [renaming, setRenaming] = useState(false)
   // The studio's own unit, exactly as a scene's transform section reads it: a joint measured in
   // metres in one window and in centimetres in the other is two answers to one question.
   const unit = useViewportSetting().view.units
@@ -89,15 +92,35 @@ export function CharacterWindowInspector({
 
           {rig && picked && (
             <>
-              {/* Renamed where it is read, as a layer and a track are: a rig arrives with the
-                  names its file spells, and `mixamorigHips` is not one anybody chose. */}
+              {/* Edited where it is read, on a double-click — the gesture every other name of
+                  this studio answers, and the shape `AssetInspector` gives it.
+
+                  🛑 Never a `TextField`, which is what a scene gives a NODE: a node is addressed
+                  by its id, so renaming it on every keystroke is harmless, where a bone is
+                  addressed by its NAME — the first letter typed renamed `Hips` to `H` and the
+                  panel lost the joint it was editing. */}
               <PropertyRow label={t('inspector.boneName')}>
-                <InlineRename
-                  value={picked}
-                  label={t('inspector.boneName')}
-                  gauge="inline"
-                  onCommit={to => run(assetId, renameCharacterBone(picked, to))}
-                />
+                {renaming ? (
+                  <InlineRename
+                    value={picked}
+                    label={t('inspector.boneName')}
+                    gauge="inline"
+                    onCommit={to => {
+                      setRenaming(false)
+                      run(assetId, renameCharacterBone(picked, to))
+                    }}
+                  />
+                ) : (
+                  // The hint explains rather than repeats — the name is already on screen, and
+                  // what is not is that a double-click opens it.
+                  <span
+                    className="block w-full truncate"
+                    onDoubleClick={() => setRenaming(true)}
+                    {...HINT_LEFT(t('inspector.boneNameHint'))}
+                  >
+                    {picked}
+                  </span>
+                )}
               </PropertyRow>
 
               {/* The joint's own place and turn, in its parent's frame — the same fields a

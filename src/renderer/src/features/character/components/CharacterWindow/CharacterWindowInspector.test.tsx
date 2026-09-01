@@ -71,6 +71,11 @@ describe('what a character is made of', () => {
     useCharacterView.getState().pickBone('Hips')
     show()
 
+    // Opened by a double-click, as every other name of the studio is — see `AssetInspector`.
+    // The name in the identity row, not the option of the role picker beside it.
+    const [shown] = screen.getAllByText('Hips')
+    await userEvent.dblClick(shown as HTMLElement)
+
     const field = screen.getByLabelText('Nom')
     await userEvent.clear(field)
     await userEvent.type(field, 'Bassin{Enter}')

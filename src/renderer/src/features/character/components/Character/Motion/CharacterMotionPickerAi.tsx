@@ -1,7 +1,8 @@
 import { mdiRobotOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { motionProvidersOf } from '@shared/domain/rigProvider'
-import { QuietNote } from '@/components/QuietNote'
+import { Collection } from '@/components/Collection/Collection'
+import { EmptyState } from '@/components/EmptyState'
 import { Row } from '@/components/Row'
 import { rigServiceNote } from '@/helpers/rigServiceNote'
 import { useFamilyModels } from '@/hooks/useFamilyModels'
@@ -19,25 +20,18 @@ export function CharacterMotionPickerAi() {
   const plan = usePlanAccess()
   const providers = motionProvidersOf(useFamilyModels('3d'))
 
-  if (providers.length === 0) {
-    return (
-      <div className="p-2">
-        <QuietNote>{t('inspector.animationAiNone')}</QuietNote>
-      </div>
-    )
-  }
-
   return (
-    <ul>
-      {providers.map(provider => (
-        <li key={provider.modelId}>
-          <Row
-            icon={mdiRobotOutline}
-            title={provider.name}
-            subtitle={rigServiceNote(provider, plan, { bytes: 0 }, t)}
-          />
-        </li>
-      ))}
-    </ul>
+    <Collection
+      label={t('inspector.animationAi')}
+      items={providers.map(provider => ({ ...provider, id: provider.modelId }))}
+      renderRow={provider => (
+        <Row
+          icon={mdiRobotOutline}
+          title={provider.name}
+          subtitle={rigServiceNote(provider, plan, { bytes: 0 }, t)}
+        />
+      )}
+      empty={<EmptyState icon={mdiRobotOutline} message={t('inspector.animationAiNone')} />}
+    />
   )
 }

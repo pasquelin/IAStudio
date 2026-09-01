@@ -20,12 +20,18 @@ export type WindowTitleBarProps = {
  * 🛑 No full-screen switch, and that is why every window wearing this is `fullscreenable: false`
  * — see `auxiliaryWindow`. macOS takes the traffic lights away in full screen, and the inset
  * would then be 96 px of nothing.
+ *
+ * Its height is the studio's, not one of its own: the lights are placed by the MAIN process, at
+ * one offset for every window, and a bar of another height puts them off that line.
  */
 export function WindowTitleBar({ title, actions }: WindowTitleBarProps) {
   return (
     <header
       style={DRAGGABLE}
-      className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
+      // The studio's own bar, to the gauge: `TitleBar` is `pt-2 pb-1` around a control, so a
+      // window wearing this one stands exactly as tall — and the traffic lights of two windows
+      // side by side land on one line. A height in pixels would be right at one density only.
+      className="text-body flex min-h-(--sc-control) shrink-0 items-center pt-2 pr-6 pb-1 pl-24 font-medium"
     >
       {/* A heading rather than bare words: it is the only thing naming the window to a reader,
           and Tailwind's preflight leaves an `h1` at the size its container gives it. */}

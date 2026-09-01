@@ -1,9 +1,9 @@
 import { mdiFileOutline, mdiPackageVariantClosed } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { ClipSource } from '@shared/domain/scene'
-import { QuietNote } from '@/components/QuietNote'
+import { Collection } from '@/components/Collection/Collection'
+import { EmptyState } from '@/components/EmptyState'
 import { Row } from '@/components/Row'
-import { rowSkin } from '@/components/styles'
 import { clipLabel } from '@/helpers/clipLabel'
 import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { useProjectAnimations } from '@/hooks/useProjectAnimations'
@@ -33,55 +33,47 @@ export function CharacterMotionPickerLibrary({
   const own = useModelFiles(state => clipsOfNode(state, documentId, nodeId))
   const motions = useProjectAnimations()
 
-  if (own.length === 0 && bundled.length === 0 && motions.length === 0) {
-    return (
-      <div className="p-2">
-        <QuietNote>{t('inspector.animationLibraryEmpty')}</QuietNote>
-      </div>
-    )
-  }
-
   /**
-   * One line per motion, whichever of the three it comes from — the row is the shared one.
+   * One entry per motion, whichever of the three it comes from — the row is the shared one.
    *
    * `label` is what goes into the document and `shown` is what the row reads: they part company
    * for a clip the exporter named, where a translated word must not be written into a glTF.
    */
-  const offer = (key: string, label: string, source: ClipSource, icon: string, shown = label) => (
-    <li key={key}>
-      <button type="button" className={rowSkin(false)} onClick={() => onChoose(source, label)}>
-        <Row icon={icon} title={shown} />
-      </button>
-    </li>
-  )
+  type Motion = { id: string; label: string; source: ClipSource; icon: string; shown: string }
+
+  const offered: Motion[] = [
+    ...own.map(clip => ({
+      id: `own:${clip}`,
+      label: clip,
+      source: { kind: 'embedded', name: clip } satisfies ClipSource,
+      icon: mdiFileOutline,
+      shown: clipLabel(clip, t),
+    })),
+    ...bundled.map(animation => ({
+      id: `bundled:${animation.name}`,
+      label: animation.name,
+      source: { kind: 'bundled', name: animation.name } satisfies ClipSource,
+      icon: mdiPackageVariantClosed,
+      shown: animation.name,
+    })),
+    ...motions.map(asset => ({
+      id: `asset:${asset.id}`,
+      label: asset.name,
+      source: { kind: 'asset', assetId: asset.id, name: asset.name } satisfies ClipSource,
+      icon: assetIcon('animation'),
+      shown: asset.name,
+    })),
+  ]
 
   return (
-    <ul>
-      {own.map(clip =>
-        offer(
-          `own:${clip}`,
-          clip,
-          { kind: 'embedded', name: clip },
-          mdiFileOutline,
-          clipLabel(clip, t),
-        ),
-      )}
-      {bundled.map(animation =>
-        offer(
-          `bundled:${animation.name}`,
-          animation.name,
-          { kind: 'bundled', name: animation.name },
-          mdiPackageVariantClosed,
-        ),
-      )}
-      {motions.map(asset =>
-        offer(
-          `asset:${asset.id}`,
-          asset.name,
-          { kind: 'asset', assetId: asset.id, name: asset.name },
-          assetIcon('animation'),
-        ),
-      )}
-    </ul>
+    <Collection
+      label={t('inspector.animationLibrary')}
+      items={offered}
+      onSelect={motion => onChoose(motion.source, motion.label)}
+      renderRow={motion => <Row icon={motion.icon} title={motion.shown} />}
+      empty={
+        <EmptyState icon={mdiPackageVariantClosed} message={t('inspector.animationLibraryEmpty')} />
+      }
+    />
   )
 }

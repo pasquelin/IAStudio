@@ -71,7 +71,7 @@ describe('choosing an animation', () => {
     useModelFiles.setState({ clips: { [DOCUMENT]: { a: ['NlaTrack'] } } })
     const { onChoose } = show()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Animation' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Animation' }))
 
     // The row READS « Animation » and the document keeps « NlaTrack »: a translated word written
     // into a glTF would follow the language the project happened to be created in.
@@ -81,7 +81,7 @@ describe('choosing an animation', () => {
   it('lists what the app ships with, and hands its source back on a click', async () => {
     const { onChoose } = show()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Capoeira' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Capoeira' }))
 
     expect(onChoose).toHaveBeenCalledWith({ kind: 'bundled', name: 'Capoeira' }, 'Capoeira')
   })
@@ -96,7 +96,7 @@ describe('choosing an animation', () => {
     })
     const { onChoose } = show()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'jig' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'jig' }))
 
     expect(onChoose).toHaveBeenCalledWith({ kind: 'asset', assetId: 'asset-9', name: 'jig' }, 'jig')
   })
@@ -105,8 +105,8 @@ describe('choosing an animation', () => {
     useAssets.setState({ items: [JIG] })
     show()
 
-    expect(await screen.findByRole('button', { name: 'Capoeira' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'jig' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: 'Capoeira' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'jig' })).not.toBeInTheDocument()
   })
 
   // Without a `limit` the main answers `DEFAULT_LIMIT` — 200, exactly the page the shelf reads by,
@@ -119,7 +119,7 @@ describe('choosing an animation', () => {
     })
     show()
 
-    await screen.findByRole('button', { name: 'jig' })
+    await screen.findByRole('option', { name: 'jig' })
 
     expect(search).toHaveBeenCalledWith({ type: 'animation', limit: ASSET_SEARCH_LIMIT_MAX })
   })

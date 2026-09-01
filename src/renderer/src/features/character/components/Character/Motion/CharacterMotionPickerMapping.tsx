@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clipKeyOf, type ClipSource } from '@shared/domain/scene'
+import { Collection } from '@/components/Collection/Collection'
 import { QuietNote } from '@/components/QuietNote'
 import { Row } from '@/components/Row'
 import { INLINE_LINK } from '@/components/styles'
@@ -43,18 +44,22 @@ export function CharacterMotionPickerMapping({
         {t(open ? 'inspector.animationHideJoints' : 'inspector.animationShowJoints')}
       </button>
       {open && (
-        <ul>
-          {body.missingInSource.map(role => (
-            <li key={`source:${role}`}>
-              <Row title={role} subtitle={t('inspector.animationJointAtRest')} />
-            </li>
-          ))}
-          {body.missingInTarget.map(role => (
-            <li key={`target:${role}`}>
-              <Row title={role} subtitle={t('inspector.animationJointDropped')} />
-            </li>
-          ))}
-        </ul>
+        <Collection
+          label={t('inspector.animationShowJoints')}
+          items={[
+            ...body.missingInSource.map(role => ({
+              id: `source:${role}`,
+              role,
+              note: t('inspector.animationJointAtRest'),
+            })),
+            ...body.missingInTarget.map(role => ({
+              id: `target:${role}`,
+              role,
+              note: t('inspector.animationJointDropped'),
+            })),
+          ]}
+          renderRow={joint => <Row title={joint.role} subtitle={joint.note} />}
+        />
       )}
     </div>
   )
