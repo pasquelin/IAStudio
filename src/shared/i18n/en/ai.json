@@ -58,6 +58,8 @@
     "sourceImage": "Starting image",
     "sourceViews": "Starting views",
     "sourceModel": "Starting 3D model",
+    "sourceTask": "Draft to refine",
+    "sourceTaskHelp": "A generation already run here. The service works from its task, not from a file — an imported model cannot be refined.",
     "sourceRig": "Rigged character",
     "style": "Style",
     "styleHelp": "The name of a style the service publishes — “lego”, “voxel”, “voronoi”.",

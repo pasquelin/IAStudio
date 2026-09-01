@@ -7,6 +7,7 @@ import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useModelText } from '@/hooks/useModelText'
 import { AssetDropField } from '../AssetDropField'
+import { AssetDropList } from '../AssetDropList'
 import { fieldHandle } from '../scHandle'
 import { CHECKBOX, FIELD, FIELD_FILL } from '../styles'
 import { ToolButton } from '../ToolButton'
@@ -101,7 +102,12 @@ export function DynamicFormControl({
         />
       )
 
-    case 'choice':
+    // A `task` is a closed list like any other, save that the window fills it. Nothing has run
+    // yet and it falls to the box below, which takes an id pasted by hand.
+    case 'task':
+    case 'choice': {
+      if (field.kind === 'task' && !field.options?.length) break
+
       return (
         <select id={id} data-sc={handle} className={FIELD} {...registration}>
           {!field.required && <option value="" />}
@@ -112,6 +118,7 @@ export function DynamicFormControl({
           ))}
         </select>
       )
+    }
 
     case 'color':
       return (
@@ -154,6 +161,19 @@ export function DynamicFormControl({
 
     case 'image':
     case 'mesh':
+      // A cardinality, not a kind: several pictures for one input, dropped one after another.
+      if (field.repeated && field.kind === 'image') {
+        return (
+          <AssetDropList
+            id={id}
+            registration={registration}
+            initial={initial}
+            placeholder={t('generation.dropViews')}
+            scId={`generation.${field.key}`}
+          />
+        )
+      }
+
       return (
         <AssetDropField
           id={id}
@@ -165,9 +185,11 @@ export function DynamicFormControl({
         />
       )
 
-    // An unknown kind renders as a plain input rather than making the form disappear —
-    // CLAUDE.md, invariant 5.
     default:
-      return <input id={id} data-sc={handle} type="text" className={FIELD} {...registration} />
+      break
   }
+
+  // An unknown kind renders as a plain input rather than making the form disappear — CLAUDE.md,
+  // invariant 5. A `task` with nothing to offer yet lands here too.
+  return <input id={id} data-sc={handle} type="text" className={FIELD} {...registration} />
 }

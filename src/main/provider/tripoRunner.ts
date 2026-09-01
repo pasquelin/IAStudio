@@ -83,10 +83,15 @@ const FILE_KINDS: readonly FieldKind[] = ['image', 'mesh', 'raw']
  */
 const WRAPPED_FIELDS: readonly string[] = ['file', 'files']
 
-function wrapped(key: string, held: string): unknown {
-  if (!WRAPPED_FIELDS.includes(key)) return held
+function reference(held: string): unknown {
+  return held.startsWith('http') ? { url: held } : { file_token: held }
+}
 
-  const one = held.startsWith('http') ? { url: held } : { file_token: held }
+function wrapped(key: string, held: string | readonly string[]): unknown {
+  if (!WRAPPED_FIELDS.includes(key)) return held
+  if (typeof held !== 'string') return held.map(reference)
+
+  const one = reference(held)
   return key === 'files' ? [one] : one
 }
 
@@ -137,6 +142,10 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
     )
   }
 
+  /** A path goes up; anything already theirs — a token, a URL — stands as it is. */
+  const uploaded = async (value: string): Promise<string> =>
+    isAbsolute(value) ? await sendUp(value) : value
+
   /**
    * The body their endpoint takes: the form's own keys, which ARE the API's, plus the model the
    * entry names. An empty value is left out rather than sent — their defaults are documented,
@@ -156,9 +165,25 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       // prompt opening on a slash — « /robot on a plinth » — was handed to `readFile` and failed
       // the job on an ENOENT nobody could read. A file arrives as a PATH because `services.ts`
       // routes a Tripo body through the LOCAL resolver.
-      const isFile = FILE_KINDS.includes(field.kind) && typeof value === 'string'
-      const held = isFile && isAbsolute(value) ? await sendUp(value) : value
-      sent[field.key] = isFile && typeof held === 'string' ? wrapped(field.key, held) : held
+      if (!FILE_KINDS.includes(field.kind)) {
+        sent[field.key] = value
+        continue
+      }
+
+      // A cardinality, never a second rule about files: a repeated field is a LIST of the same
+      // kind, and each of them goes up the one way above allows.
+      if (field.repeated) {
+        // A lone value is a list of ONE, never nothing: a control that has not caught up with a
+        // repeated field would otherwise send `[]`, which their refusal counts as no file at all.
+        const held = (Array.isArray(value) ? value : [value]).filter(one => typeof one === 'string')
+        if (held.length === 0) continue
+
+        sent[field.key] = wrapped(field.key, await Promise.all(held.map(uploaded)))
+        continue
+      }
+
+      sent[field.key] =
+        typeof value === 'string' ? wrapped(field.key, await uploaded(value)) : value
     }
 
     return sent

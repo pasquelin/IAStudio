@@ -6,6 +6,8 @@
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
     "dropModel": "Déposez un modèle 3D, ou collez son identifiant",
+    "dropViews": "Déposez les vues du modèle",
+    "removeView": "Retirer cette vue",
     "estimatedCost": "~{{units}} UC",
     "operation": "Opération",
     "operationHint": "Ce que la génération va faire du contenu de l’espace de travail",

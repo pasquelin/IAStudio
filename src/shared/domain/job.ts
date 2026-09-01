@@ -105,6 +105,13 @@ export type JobProgress = Pick<Job, 'id' | 'status' | 'progress'> & {
   error?: JobFailure
   cost?: number
   costUnit?: string
+  /**
+   * 🛑 These three or the window never gets them: settling emits a progress event and nothing
+   * else, the whole-job list being announced only when the LIST gains or loses an entry.
+   */
+  note?: JobNote
+  finishedAt?: string
+  remoteId?: string
 }
 
 /** All of them, in the order a job goes through. The jobs panel names each one from a bundle. */

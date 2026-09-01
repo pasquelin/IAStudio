@@ -103,7 +103,7 @@ const NEGATIVE_PROMPT: LocalFieldTemplate = {
  * `original_model_task_id` — and sending `input` to those is refused with code 1004.
  */
 function input(
-  kind: 'image' | 'mesh' | 'raw',
+  kind: 'image' | 'mesh' | 'raw' | 'task',
   labelKey: string,
   key = 'input',
 ): LocalFieldTemplate {
@@ -330,7 +330,9 @@ function meshEntries(line: TripoLine): TripoEntry[] {
       capability: 'img23d',
       // `files`, measured: « files or inputs are required for multiview_to_model ».
       fields: [
-        input('raw', 'tripoFields.sourceViews', 'files'),
+        // 🛑 SEVERAL, and their refusal says so: « files or inputs are required for
+        // multiview_to_model ». One view was wrapped into a list of one — refused or degenerate.
+        { ...input('image', 'tripoFields.sourceViews', 'files'), repeated: true },
         AUTOFIX,
         TEXTURE_ALIGNMENT,
         ...MESH_KNOBS,
@@ -398,9 +400,16 @@ const PROCESSING: readonly TripoEntry[] = [
     capability: '3d23d',
     lane: 'post-process',
     credits: 20,
-    // `draft_model_task_id`, measured — and it takes a TASK, never a file.
     fields: [
-      input('mesh', 'tripoFields.sourceModel', 'draft_model_task_id'),
+      /**
+       * 🛑 A TASK, never a file — measured. Declared `mesh`, the id of an asset was rewritten
+       * into a path, the file uploaded, and the token it answered sent under a field wanting a
+       * task id: an upload spent, then refused 1004.
+       */
+      {
+        ...input('task', 'tripoFields.sourceTask', 'draft_model_task_id'),
+        helpKey: 'tripoFields.sourceTaskHelp',
+      },
       quality('geometry_quality'),
       FACE_LIMIT,
     ],
@@ -652,6 +661,8 @@ export const TRIPO_CATALOGUE: readonly TripoEntry[] = [
   ]),
   ...imageEntries('generation/edit-multiview', 'img2img', EDIT_MULTIVIEW_MODELS, [
     PROMPT,
+    // 🛑 NOT `repeated`, and not an oversight: its key is `input`, which no wrapper touches, and
+    // nothing measured says this one takes a list. Its twin at `multiview-to-model` does.
     input('raw', 'tripoFields.sourceViews'),
   ]),
 ]

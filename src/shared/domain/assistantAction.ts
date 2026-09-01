@@ -605,11 +605,14 @@ const withinLength = (field: ActionField, value: string): boolean =>
 
 function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
+    // `task` is here for the compiler's sake: its options are composed by the window from what
+    // has run, so no action declares one.
     case 'text':
     case 'longText':
     case 'choice':
     case 'image':
     case 'mesh':
+    case 'task':
       return (
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&

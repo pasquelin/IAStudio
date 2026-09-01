@@ -18,6 +18,12 @@ export type FieldKind =
   | 'raw'
   /** An object whose top-level keys are known. `raw` is the one whose shape is NOT. */
   | 'record'
+  /**
+   * A run the same service already finished, named by ITS id — never a file. What fills the
+   * list is the window, which is the only side that knows what has run; a runner that uploaded
+   * here would spend the upload and be refused, the endpoint wanting a task and not a token.
+   */
+  | 'task'
 
 export type FieldOption = {
   value: string
@@ -27,6 +33,8 @@ export type FieldOption = {
 export type FieldDescriptor = {
   key: string
   kind: FieldKind
+  /** A LIST of `kind` rather than one — the word `ActionField` already uses for the same thing. */
+  repeated?: true
   label: string
   help?: string
   required: boolean

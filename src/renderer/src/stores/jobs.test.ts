@@ -14,6 +14,30 @@ describe('jobs store', () => {
     vi.unstubAllGlobals()
   })
 
+  /**
+   * 🛑 Settling emits a progress event and NEVER the whole job — the list is announced only when
+   * it gains or loses an entry. What is not copied here reaches no row: the unit was sent and
+   * dropped from the day a second cloud existed, and a free check's verdict said nothing at all.
+   */
+  it('keeps everything a settled job gained, not only its status', () => {
+    useJobs.getState().apply({
+      id: 'job_1',
+      status: 'succeeded',
+      progress: 1,
+      costUnit: 'credits',
+      note: { labelKey: 'tripoRigCheck.riggable' },
+      finishedAt: '2026-08-31T09:00:00.000Z',
+      remoteId: '9a1c-5248',
+    })
+
+    expect(useJobs.getState().jobs[0]).toMatchObject({
+      costUnit: 'credits',
+      note: { labelKey: 'tripoRigCheck.riggable' },
+      finishedAt: '2026-08-31T09:00:00.000Z',
+      remoteId: '9a1c-5248',
+    })
+  })
+
   it('updates a job in place without touching the others', () => {
     const before = useJobs.getState().jobs[1]
     useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.6 })

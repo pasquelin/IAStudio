@@ -53,6 +53,7 @@ const JSON_TYPE: Record<FieldKind, ScalarSchema['type']> = {
   color: 'string',
   image: 'string',
   mesh: 'string',
+  task: 'string',
   number: 'number',
   integer: 'integer',
   seed: 'integer',

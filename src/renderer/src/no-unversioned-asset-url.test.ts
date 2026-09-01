@@ -69,6 +69,10 @@ const ALLOWED = new Map<string, string>([
     'hole: the fallback when a row carries no poster — a thumbnail, so it costs a stale tile',
   ],
   [
+    'components/AssetDropList.tsx | <Thumbnail url={posters[assetId] ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />',
+    'the same hole as the field beside it, for the same reason and the same cost',
+  ],
+  [
     'features/context/components/Context/ContextPictures.tsx | <Thumbnail url={assetUrl(id)} className={FIELD_THUMBNAIL} />',
     'hole: same, in the context strip',
   ],

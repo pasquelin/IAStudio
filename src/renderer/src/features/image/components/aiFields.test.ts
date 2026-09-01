@@ -64,6 +64,20 @@ describe('filling a form from what the workspace holds', () => {
     ).toEqual({ image: 'asset-1' })
   })
 
+  /**
+   * 🛑 Handed the bare id, a repeated field showed nothing and the runner sent an empty list —
+   * the refusal `repeated` exists to stop, now silent and paid for.
+   */
+  it('puts a picture in a field that holds several as a list of one', () => {
+    const views: FieldDescriptor[] = [
+      { key: 'files', kind: 'image', label: 'Views', required: true, repeated: true },
+    ]
+
+    expect(
+      fillSourceFields(views, [{ role: 'source', kind: 'image', assetId: 'asset-1' }]),
+    ).toEqual({ files: ['asset-1'] })
+  })
+
   it('puts a mesh in the field a model takes one under', () => {
     expect(
       fillSourceFields(FIELDS, [{ role: 'source', kind: 'mesh', assetId: 'asset-2' }]),
