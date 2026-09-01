@@ -145,6 +145,8 @@ const DOM_BOUND = [
   // Drives the worker by dispatching at `self`, which only a browser global has.
   'src/renderer/src/engines/scene/retarget.worker.test.ts',
   // Writes a real GLB, and `GLTFExporter` reaches for `FileReader`.
+  'src/renderer/src/engines/scene/glbSkin.test.ts',
+  'src/renderer/src/engines/scene/rigRead.test.ts',
   'src/renderer/src/engines/scene/rigRoundTrip.test.ts',
   'src/renderer/src/engines/scene/sceneExport.test.ts',
   // A stage opens an off-screen host before anything else, and a host is a div in a document.
