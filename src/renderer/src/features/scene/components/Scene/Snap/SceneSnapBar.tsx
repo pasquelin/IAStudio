@@ -12,6 +12,7 @@ import { useSpeedReading } from '@/hooks/useSpeedReading'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
 import { useSceneViews, sceneViewOf } from '@/stores/sceneViews'
 import { SNAP_STEP_CONTROLS } from '../../sceneSnapControls'
+import { SceneSnapPlay } from './SceneSnapPlay'
 import { SceneSnapStepMenu } from './SceneSnapStepMenu'
 import { SceneSnapSurfaceMenu } from './SceneSnapSurfaceMenu'
 import { SceneSpeedMenu } from '../SceneSpeedMenu'
@@ -29,6 +30,8 @@ export type SceneSnapBarProps = {
   /** The session speed the wheel writes in flight, or `null` while nothing has moved it. */
   speed: number | null
   onSpeed: (speed: number) => void
+  /** Handed straight to `SceneSnapPlay` — what a running game reads its keys off. */
+  viewport: () => HTMLElement | null
 }
 
 /**
@@ -38,7 +41,7 @@ export type SceneSnapBarProps = {
  * and follows it from window to window, where the strip is the shell's and knows nothing of which
  * space is open. Same footing as `SceneCounters` and the navigation hint.
  */
-export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) {
+export function SceneSnapBar({ documentId, speed, onSpeed, viewport }: SceneSnapBarProps) {
   const { t } = useTranslation()
   const { view, set } = useViewportSetting()
   const snapping = useSceneViews(state => sceneViewOf(state, documentId).snapping)
@@ -138,6 +141,11 @@ export function SceneSnapBar({ documentId, speed, onSpeed }: SceneSnapBarProps) 
               />
             </Fragment>
           ))}
+
+          {/* Last, behind its own rule: starting a game is not one of the things one changes
+              WHILE manipulating, and it is the only control of this bar that leaves the editor. */}
+          <Separator />
+          <SceneSnapPlay documentId={documentId} viewport={viewport} />
         </>
       }
     />
