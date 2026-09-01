@@ -3,6 +3,7 @@ import {
   Mesh,
   Vector3,
   type BufferGeometry,
+  type Intersection,
   type Material,
   type Matrix4,
   type Object3D,
@@ -60,7 +61,12 @@ export type InstancedGroups = {
    * The meshes it draws with, for the passes that dress the scene: a display mode REPLACES a
    * mesh's material, and an instance left out of that walk keeps the one it was built with.
    */
-  drawn: () => readonly InstancedMesh[]
+  drawn: () => readonly Mesh[]
+  /**
+   * The node a ray met through one of the meshes it draws with, or nothing. An instance names
+   * nobody — a ray meets the source, kept on `DRAWN_BY_INSTANCE` — so only a lot ever answers.
+   */
+  nodeIdOf: (hit: Intersection) => string | null
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
 }
@@ -218,6 +224,8 @@ export function createInstancedGroups(
     },
 
     drawn: () => drawn,
+
+    nodeIdOf: () => null,
 
     dispose: clear,
   }

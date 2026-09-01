@@ -202,6 +202,7 @@ import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skelet
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
+import { createBatchedGroups } from './batching'
 import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
@@ -219,6 +220,8 @@ import {
 } from './textureCache'
 
 export type { TransformMode, TransformSpace } from './gizmoTarget'
+
+export type GroupingStrategy = 'instanced' | 'batched'
 
 export type SceneRendererOptions = {
   /**
@@ -322,6 +325,12 @@ export type SceneRendererOptions = {
    * into the pane the hand had already left.
    */
   onPane?: (pane: number) => void
+  /**
+   * How repeated shapes are drawn in fewer calls. `batched` — the default — opens one
+   * `BatchedMesh` per material; `instanced` keeps one `InstancedMesh` per shape and material,
+   * the path measured before the lots, kept so the two can be weighed on the same build.
+   */
+  grouping?: GroupingStrategy
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
@@ -857,7 +866,9 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
-    this.instances = createInstancedGroups(
+    this.instances = (
+      options.grouping === 'instanced' ? createInstancedGroups : createBatchedGroups
+    )(
       this.viewport.scene,
       mesh =>
         // What the document dresses it in, never what a view left on it: an instance born during
@@ -4428,12 +4439,16 @@ export class SceneRenderer {
     // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
     // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
     // clicks over empty space and selecting a lamp nobody could see.
+    // The lots too: a body a lot draws is met there, through the tree built for it, and named
+    // by its slot — its source is still met as well, on the layer instancing keeps it on.
     const targets = [
       ...this.objects.values(),
       ...[...this.helpers.values()].filter(helper => helper.visible),
+      ...this.instances.drawn(),
     ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
+    if (!hit) return null
+    return this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name))
   }
 
   /**
