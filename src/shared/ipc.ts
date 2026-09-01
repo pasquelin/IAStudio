@@ -237,6 +237,10 @@ export type Channels = {
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
   assetsSaveLayered: 'assets:save-layered'
+  /** Writes a character's own `.glb` back, its skeleton in it. See `SaveMeshRequest`. */
+  assetsSaveMesh: 'assets:save-mesh'
+  /** Files a motion in the project's `animations` folder, as a file of its own. */
+  assetsSaveAnimation: 'assets:save-animation'
   assetsReadLayered: 'assets:read-layered'
   assetsSaveTexture: 'assets:save-texture'
   texturesInstallBundled: 'textures:install-bundled'
@@ -332,6 +336,8 @@ export type Channels = {
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 
+  /** Opens the skeleton window on one character, or turns the open one towards it. */
+  characterWindowOpen: 'character:open-window'
   /** Opens the game window, or reveals the one already open. See `GAME_ROUTE`. */
   gameWindowOpen: 'game:open-window'
   /** Closes it. What a Stop pressed in the studio does — the window is the main process's. */
@@ -486,6 +492,8 @@ export const CHANNELS: Channels = {
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
   assetsSaveLayered: 'assets:save-layered',
+  assetsSaveMesh: 'assets:save-mesh',
+  assetsSaveAnimation: 'assets:save-animation',
   assetsReadLayered: 'assets:read-layered',
   assetsSaveTexture: 'assets:save-texture',
   texturesInstallBundled: 'textures:install-bundled',
@@ -579,6 +587,7 @@ export const CHANNELS: Channels = {
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
+  characterWindowOpen: 'character:open-window',
   gameWindowOpen: 'game:open-window',
   gameWindowClose: 'game:close-window',
   helpOpen: 'help:open',
@@ -623,6 +632,32 @@ export type SaveAudioRequest = SaveRequestBase & {
 export type SavePictureRequest = SaveRequestBase & {
   /** PNG payload, base64 and never a data URL — the prefix is part of the picture otherwise. */
   png: string
+}
+
+/**
+ * A character's own file on its way back to disk, its skeleton written into it.
+ *
+ * 🛑 `replaces` is REQUIRED where its neighbours make it optional: ⌘S rewrites the very `.glb`
+ * the window opened, in place. An optional one would be the door a copy appears beside it by —
+ * and « the open format must BE the document, never an export next to it ».
+ */
+export type SaveMeshRequest = {
+  replaces: string
+  /** The whole container, patched by the renderer that read it. */
+  glb: Uint8Array
+}
+
+/**
+ * A motion on its way into the project's `animations` folder — see
+ * `StudioBridge['assets']['saveAnimation']`.
+ *
+ * Always a NEW asset: a motion is a file of its own, playable by every character whose bones
+ * carry the same names, and overwriting one would take it from the others.
+ */
+export type SaveAnimationRequest = {
+  name: string
+  derivedFrom?: string
+  glb: Uint8Array
 }
 
 /**
@@ -1018,6 +1053,7 @@ export const EVENTS = {
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   gameWindowClosed: 'evt:game-window-closed',
+  characterWindowClosed: 'evt:character-window-closed',
   activity: 'evt:activity',
 }
 
@@ -1725,6 +1761,17 @@ export type StudioBridge = {
      */
     saveLayered: (request: SaveLayeredRequest) => Promise<Asset>
     /**
+     * Writes a character's own file back, skeleton and all — what ⌘S means in the skeleton
+     * window. It OVERWRITES, for `saveLayered`'s reason: the container holds everything, so
+     * writing it over the file it was read from loses nothing.
+     */
+    saveMesh: (request: SaveMeshRequest) => Promise<Asset>
+    /**
+     * Files a motion in the project's `animations` folder. Always a new asset: what makes a
+     * motion reusable is being a file no character owns.
+     */
+    saveAnimation: (request: SaveAnimationRequest) => Promise<Asset>
+    /**
      * Reads a layered picture back, or `null` for an asset that is not one.
      *
      * `null` rather than a throw: opening a `.png` through this path is the ordinary case, not a
@@ -2170,6 +2217,18 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * The skeleton window. Same line as `gameWindow`: what it EDITS travels between the windows on
+   * a channel they both share, and the only thing this side owns is opening one.
+   */
+  characterWindow: {
+    open: (assetId: string) => Promise<void>
+    /**
+     * It went away — closed by its own traffic lights, or by anything the studio did not ask
+     * for. 🛑 A renderer being torn down has no turn left in which to say so.
+     */
+    onClosed: (callback: () => void) => Unsubscribe
   }
   /**
    * The game window. Same line as `mirror`: what it PLAYS it reads for itself off a channel both

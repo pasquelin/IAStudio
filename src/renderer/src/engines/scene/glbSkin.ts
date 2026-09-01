@@ -62,7 +62,12 @@ export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
   const gltf: unknown = chunks && parsed(chunks.json)
   if (!chunks || !isRecord(gltf)) return file
 
-  const nodes = withoutOurs(Array.isArray(gltf.nodes) ? gltf.nodes : [])
+  const held = Array.isArray(gltf.skins) ? gltf.skins : []
+  // A skin whose joints are bones we wrote is one we wrote: nothing else marks it.
+  const ourSkins = new Set(
+    held.flatMap((skin, index) => (isOurSkin(gltf.nodes, skin) ? [index] : [])),
+  )
+  const nodes = withoutOurs(Array.isArray(gltf.nodes) ? gltf.nodes : [], ourSkins)
   const scenes = Array.isArray(gltf.scenes) ? gltf.scenes.map(one => ({ ...one })) : []
   const meshes = Array.isArray(gltf.meshes) ? gltf.meshes.map(cloneMesh) : []
   const accessors = Array.isArray(gltf.accessors) ? [...gltf.accessors] : []
@@ -111,7 +116,7 @@ export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
     }
   }
 
-  const skins = [...(Array.isArray(gltf.skins) ? gltf.skins : []), skin]
+  const skins = [...held.filter((_, index) => !ourSkins.has(index)), skin]
   const wearing = new Set(patch.skins.map(one => one.mesh))
   const dressed = nodes.map(node =>
     isRecord(node) && typeof node.mesh === 'number' && wearing.has(node.mesh)
@@ -185,8 +190,16 @@ function childrenOf(
   return children.length > 0 ? { children } : {}
 }
 
-/** The nodes this studio did not write — a second save replaces its skeleton, never doubles it. */
-function withoutOurs(nodes: readonly unknown[]): Record<string, unknown>[] {
+/**
+ * The nodes this studio did not write — a second save replaces its skeleton, never doubles it.
+ *
+ * 🛑 `skin` is cleared only where WE had put one: a character rigged elsewhere carries its own,
+ * and stripping it would hand back a file whose mesh follows nothing.
+ */
+function withoutOurs(
+  nodes: readonly unknown[],
+  ourSkins: ReadonlySet<number>,
+): Record<string, unknown>[] {
   const ours = new Set(
     nodes.flatMap((node, index) => (isRecord(node) && isOurBone(node.extras) ? [index] : [])),
   )
@@ -196,10 +209,20 @@ function withoutOurs(nodes: readonly unknown[]): Record<string, unknown>[] {
     .map(node => {
       const held = isRecord(node) ? { ...node } : {}
       if (Array.isArray(held.children)) held.children = held.children.filter(one => !ours.has(one))
-      delete held.skin
+      if (typeof held.skin === 'number' && ourSkins.has(held.skin)) delete held.skin
 
       return held
     })
+}
+
+/** A skin of ours is one whose joints are bones of ours — glTF marks a skin no other way. */
+function isOurSkin(nodes: unknown, skin: unknown): boolean {
+  if (!isRecord(skin) || !Array.isArray(skin.joints) || !Array.isArray(nodes)) return false
+
+  return skin.joints.every(joint => {
+    const node = typeof joint === 'number' ? nodes[joint] : null
+    return isRecord(node) && isOurBone(node.extras)
+  })
 }
 
 function isOurBone(extras: unknown): boolean {

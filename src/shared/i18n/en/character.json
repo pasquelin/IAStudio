@@ -1,0 +1,35 @@
+{
+  "character": {
+    "window": {
+      "title": "Skeleton and animation",
+      "waiting": "Waiting for the character…",
+      "missing": "This character is no longer in the project.",
+      "unreadable": "This file could not be read."
+    },
+    "skeleton": "Skeleton",
+    "motions": "Motions",
+    "band": "Motion being edited",
+    "restPose": "Rest pose",
+    "poseMode": "Pose mode",
+    "showBones": "Show bones",
+    "hideBones": "Hide bones",
+    "borrow": "Take the skeleton of…",
+    "borrowHint": "The skeleton is copied and fitted to this character. It belongs to it afterwards.",
+    "borrowFrom": "Character",
+    "borrowNone": "No character in this project carries a skeleton.",
+    "sockets": "Attachment points",
+    "socketAdd": "Add an attachment point",
+    "socketRemove": "Remove this attachment point",
+    "socketName": "Name",
+    "socketBone": "Bone",
+    "socketEmpty": "No attachment point. An object is hung on one from a scene.",
+    "motionAdd": "Add a motion",
+    "motionRemove": "Remove this motion",
+    "motionEmpty": "This character cannot play any motion yet.",
+    "motionNew": "New motion",
+    "saveFault_not-glb": "This file is not a model the studio can write back.",
+    "saveFault_no-buffer": "This file carries no geometry to skin.",
+    "saveFault_unknown-primitive": "The geometry of this file has changed since it was opened.",
+    "saveFault_compressed-primitive": "The geometry of this file is compressed. The studio cannot write a skeleton into it."
+  }
+}

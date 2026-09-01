@@ -11,13 +11,38 @@ import { HUMANOID_BODY_ROLES } from '@shared/domain/humanoid'
 import { glbChunksOf } from '@shared/domain/glbContainer'
 import type { Rig } from '@shared/domain/rig'
 import { glbSkinFaultOf, glbWithSkin, type GlbSkinPatch } from './glbSkin'
-import { positionsIn, skinnableMeshesOf } from './rigBuild'
+import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
 import { rigFit, type Bounds } from './rigFit'
 import { rigFromObject } from './rigRead'
 import { skinVertices } from './skinVertices'
 import { wireOf } from './skinWeights'
 
 const BOUNDS: Bounds = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
+
+/** A character already rigged, as a file from Blender or a service comes. */
+function animatableCharacter(): { holder: Object3D; rig: Rig } {
+  const holder = bareCharacter()
+  const rig = rigFit(BOUNDS)
+  applyRig(
+    holder,
+    rig,
+    skinnableMeshesOf(holder).flatMap((mesh: Mesh) => {
+      const binding = skinVertices({ id: 0, ...wireOf(positionsIn(mesh, holder), rig) })
+      return binding ? [{ mesh, binding }] : []
+    }),
+  )
+
+  return { holder, rig }
+}
+
+function skinnedIn(root: Object3D): number {
+  let found = 0
+  root.traverse(object => {
+    if (Reflect.get(object, 'isSkinnedMesh') === true) found += 1
+  })
+
+  return found
+}
 
 /** A bare mesh, as a downloaded character is before anybody rigs it. */
 function bareCharacter(): Object3D {
@@ -104,6 +129,19 @@ describe('putting a skeleton into a file', () => {
     expect((await read(file)).userData).toMatchObject({
       iastudio: { motions: [{ id: 'm1', name: 'Capoeira', assetId: 'asset-9' }] },
     })
+  })
+
+  // 🛑 A character rigged elsewhere carries its own skin, and a save that stripped it would hand
+  // back a file whose mesh follows nothing.
+  it('leaves a skin this studio did not write exactly where it is', async () => {
+    const { holder, rig } = animatableCharacter()
+    const already = await written(holder)
+    const patch = { bones: rig.bones, skins: [], extras: { motions: [] } }
+
+    const back = await read(glbWithSkin(already, patch))
+
+    expect(rigFromObject(back)?.bones.length).toBeGreaterThan(0)
+    expect(skinnedIn(back)).toBeGreaterThan(0)
   })
 
   it('refuses bytes that are not a container, and says so before it writes', () => {

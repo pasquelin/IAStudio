@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { projectName } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
+import { glbChunksOf } from '@shared/domain/glbContainer'
 import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
@@ -51,7 +52,9 @@ import {
   parseProjectPath,
   parseProjectTitle,
   parseSaveAudio,
+  parseSaveAnimation,
   parseSaveLayered,
+  parseSaveMesh,
   parseSavePicture,
   parseGame,
   parseSaveTexture,
@@ -66,6 +69,9 @@ const PNG_EXTENSION = '.png'
 
 /** What `saveLayered` writes: OpenRaster, the open container for a stack. */
 const ORA_EXTENSION = '.ora'
+
+/** What a character and a motion are both written as — binary glTF, the container both are. */
+const GLB_EXTENSION = '.glb'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
@@ -577,6 +583,44 @@ export function registerProjectHandlers({
     const probe = probePng(merged) ?? undefined
 
     return landPicture(request, bytes, ORA_EXTENSION, probe)
+  })
+
+  handle(CHANNELS.assetsSaveMesh, async (_event, value) => {
+    const request = parseSaveMesh(value)
+    // Checked against the CATALOGUE for `landPicture`'s reason, and it bites harder here: an id
+    // naming a take would write a `.glb` under `audio/<id>` and take the recording with it.
+    const replaced = await project.catalog().find(request.replaces)
+    if (replaced?.type !== 'mesh') {
+      throw new Error(`asset ${request.replaces} is not a model to overwrite`)
+    }
+
+    // On the BYTES, like every writer here: a container that is not one would open as nothing,
+    // and the character it replaced would be gone with nothing said.
+    if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
+
+    return withoutSourcePath(
+      await assets.replaceBytes(request.replaces, request.glb, GLB_EXTENSION, undefined),
+    )
+  })
+
+  handle(CHANNELS.assetsSaveAnimation, async (_event, value) => {
+    const request = parseSaveAnimation(value)
+    if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
+
+    // `animation` and not `mesh`, and that one word is what files it: `roleForAsset` reads the
+    // type and lands it in the project's own `animations` folder.
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: 'animation',
+          extension: GLB_EXTENSION,
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        request.glb,
+      ),
+    )
   })
 
   handle(CHANNELS.assetsReadLayered, async (_event, value) => {

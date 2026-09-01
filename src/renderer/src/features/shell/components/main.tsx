@@ -3,6 +3,7 @@ import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isJournalRoute } from '@shared/domain/activity'
 import { isFileInfoRoute } from '@shared/domain/fileInfo'
+import { characterAssetOf } from '@shared/domain/characterWindow'
 import { isGameWindowRoute } from '@shared/domain/gameWindow'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
@@ -55,6 +56,12 @@ const JournalWindow = lazy(async () => ({
 /** Split like its neighbours: the return is opened on purpose, and rarely. */
 const MirrorWindow = lazy(async () => ({
   default: (await import('@/features/video/components/MirrorWindow/MirrorWindow')).MirrorWindow,
+}))
+
+/** Lazy for the reason `GameWindow` is: it drags a `SceneRenderer`, and with it all of three.js. */
+const CharacterWindow = lazy(async () => ({
+  default: (await import('@/features/character/components/CharacterWindow/CharacterWindow'))
+    .CharacterWindow,
 }))
 
 /** Lazy for a harder reason than size: it drags a `SceneRenderer`, and with it all of three.js. */
@@ -119,6 +126,14 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <UsageWindow />
+      </Suspense>
+    )
+  }
+  const character = characterAssetOf(hash)
+  if (character) {
+    return (
+      <Suspense fallback={null}>
+        <CharacterWindow assetId={character} />
       </Suspense>
     )
   }

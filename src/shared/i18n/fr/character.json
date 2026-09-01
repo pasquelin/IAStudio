@@ -1,0 +1,35 @@
+{
+  "character": {
+    "window": {
+      "title": "Squelette et animation",
+      "waiting": "En attente du personnage…",
+      "missing": "Ce personnage n’est plus dans le projet.",
+      "unreadable": "Ce fichier n’a pas pu être lu."
+    },
+    "skeleton": "Squelette",
+    "motions": "Mouvements",
+    "band": "Mouvement en cours",
+    "restPose": "Pose de repos",
+    "poseMode": "Mode pose",
+    "showBones": "Afficher les os",
+    "hideBones": "Masquer les os",
+    "borrow": "Reprendre le squelette de…",
+    "borrowHint": "Le squelette est copié et ajusté à ce personnage. Il lui appartient ensuite.",
+    "borrowFrom": "Personnage",
+    "borrowNone": "Aucun personnage du projet ne porte de squelette.",
+    "sockets": "Points d’attache",
+    "socketAdd": "Ajouter un point d’attache",
+    "socketRemove": "Retirer ce point d’attache",
+    "socketName": "Nom",
+    "socketBone": "Os",
+    "socketEmpty": "Aucun point d’attache. Un objet s’y accroche depuis une scène.",
+    "motionAdd": "Ajouter un mouvement",
+    "motionRemove": "Retirer ce mouvement",
+    "motionEmpty": "Ce personnage ne sait encore jouer aucun mouvement.",
+    "motionNew": "Nouveau mouvement",
+    "saveFault_not-glb": "Ce fichier n’est pas un modèle que le studio sait réécrire.",
+    "saveFault_no-buffer": "Ce fichier ne porte aucune géométrie à habiller.",
+    "saveFault_unknown-primitive": "La géométrie de ce fichier a changé depuis son ouverture.",
+    "saveFault_compressed-primitive": "La géométrie de ce fichier est compressée. Le studio ne sait pas y écrire un squelette."
+  }
+}

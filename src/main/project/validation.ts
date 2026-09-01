@@ -34,7 +34,9 @@ import {
 import { isPbrChannel, type PbrChannel } from '@shared/domain/material'
 import type {
   SaveAudioRequest,
+  SaveAnimationRequest,
   SaveLayeredRequest,
+  SaveMeshRequest,
   SavePictureRequest,
   SaveTextureRequest,
 } from '@shared/ipc'
@@ -359,6 +361,33 @@ const oraSurface = z.object({
   path: oraPath,
   png: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_PICTURE_BYTES),
 })
+
+/**
+ * A character's own container. Bounded like a take is, and for the same reason: the renderer is
+ * the sandboxed side, and a model of a million triangles with its maps inside runs to hundreds
+ * of megabytes.
+ */
+const MAX_MESH_BYTES = 1024 * 1024 * 1024
+
+const saveMesh = z.object({
+  // Required, unlike every neighbour: ⌘S rewrites the file the window opened, in place.
+  replaces: assetId,
+  glb: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_MESH_BYTES),
+})
+
+export function parseSaveMesh(value: unknown): SaveMeshRequest {
+  return saveMesh.parse(value)
+}
+
+const saveAnimation = z.object({
+  name: z.string().trim().min(1).max(200),
+  derivedFrom: assetId.optional(),
+  glb: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_MESH_BYTES),
+})
+
+export function parseSaveAnimation(value: unknown): SaveAnimationRequest {
+  return saveAnimation.parse(value)
+}
 
 const saveLayered = z.object({
   replaces: assetId.optional(),

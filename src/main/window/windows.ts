@@ -6,6 +6,7 @@ import { JOURNAL_ROUTE } from '@shared/domain/activity'
 import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
+import { characterWindowRoute } from '@shared/domain/characterWindow'
 import { GAME_WINDOW_ROUTE } from '@shared/domain/gameWindow'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { NEW_DOCUMENT_ROUTE } from '@shared/domain/newDocument'
@@ -447,6 +448,51 @@ export function openGameWindow(): BrowserWindow {
 
   load(window, { hash: GAME_WINDOW_ROUTE })
   gameWindow = window
+  return window
+}
+
+/** The one skeleton window — one character at a time, as `openCharacterWindow` explains. */
+let characterWindow: BrowserWindow | null = null
+
+/**
+ * A character edited on its own: its skeleton, its points of attachment, the motions it knows.
+ *
+ * ONE window, turned towards whichever character is opened — comparing two skeletons side by
+ * side is not what this is for. It reloads rather than messaging the fragment across, so a
+ * window the system restores finds its subject in its own URL.
+ */
+export function openCharacterWindow(assetId: string): BrowserWindow {
+  const hash = characterWindowRoute(assetId)
+  if (characterWindow && !characterWindow.isDestroyed()) {
+    revealWindow(characterWindow)
+    load(characterWindow, { hash })
+    return characterWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 720,
+    minHeight: 520,
+    show: false,
+    backgroundColor: MIRROR_BACKGROUND,
+    title: TRANSLATIONS[windowLanguage()].character.window.title,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => {
+    // Identity-checked, like the game's: an older window closing must not clear the slot a newer
+    // one now holds, nor tell the studio a character it is still editing has gone.
+    if (characterWindow !== window) return
+    characterWindow = null
+    studioWindow()?.webContents.send(EVENTS.characterWindowClosed)
+  })
+
+  load(window, { hash })
+  characterWindow = window
   return window
 }
 

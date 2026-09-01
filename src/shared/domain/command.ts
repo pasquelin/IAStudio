@@ -24,6 +24,11 @@ export type CommandScope =
    */
   | 'explorer'
   | 'scene'
+  /**
+   * The skeleton window. Its own scope and not `scene`'s, because it edits a FILE rather than a
+   * document: ⌘Z there must not reach the scene a studio window is showing beside it.
+   */
+  | 'character'
   | 'sequence'
   | 'canvas'
   | 'skybox'
@@ -164,6 +169,8 @@ export type CommandId =
   | 'material.redo'
   | 'gui.undo'
   | 'gui.redo'
+  | 'character.undo'
+  | 'character.redo'
 
 /**
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
@@ -1227,6 +1234,22 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+  // The skeleton window keeps a history like every editor here, and it is the only one whose
+  // subject is a file: without this pair ⌘Z fills the stack and nothing can ever pop it.
+  command({
+    id: 'character.undo',
+    scope: 'character',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'character.redo',
+    scope: 'character',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
   // The take editor was one of two surfaces whose history had no key and no menu row: its two
   // buttons were the whole of it, so the bar could not be relieved of them without this pair.
   command({
@@ -1284,6 +1307,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'spaces',
   'explorer',
   'scene',
+  'character',
   'sequence',
   'canvas',
   'skybox',

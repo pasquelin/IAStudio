@@ -199,6 +199,8 @@ import type { SkinBinding } from './skinVertices'
 import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
+import { characterExtrasOf, type CharacterExtras } from '@shared/domain/character'
+import { rigFromObject } from './rigRead'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
@@ -257,6 +259,11 @@ export type SceneRendererOptions = {
    * five states it is in. Same reason as `onClips`: none of it lives in the document.
    */
   onRig?: (nodeId: string, rig: RigState) => void
+  /**
+   * The skeleton this model's FILE carries, as a document holds one, with what the studio wrote
+   * beside it. For the window that edits a character: only the engine ever decodes the file.
+   */
+  onCharacter?: (nodeId: string, rig: Rig | null, extras: CharacterExtras | null) => void
   /**
    * What a skeleton of that signature means, worked out from a document's own rig. Kept by the
    * project rather than here: this port dies with the viewport, and the mapping outlives it.
@@ -3498,6 +3505,9 @@ export class SceneRenderer {
       const rig = rigStateOf(holder, clipsOf(source))
       this.bindSkeleton(node.id, holder, rig.boneCount > 0)
       this.options.onRig?.(node.id, rig)
+      // Read off the very object that just landed: the skeleton window edits the FILE, and
+      // decoding it a second time to read its bones would pay for a million triangles twice.
+      this.options.onCharacter?.(node.id, rigFromObject(holder), characterExtrasOf(holder.userData))
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
       // on one of them would drive nothing at all until the next edit.
       this.applyPoses()
