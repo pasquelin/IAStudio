@@ -17,7 +17,6 @@ import {
   Quaternion,
   Raycaster,
   type Camera,
-  SkeletonHelper,
   SkinnedMesh,
   SpotLight,
   Sprite,
@@ -27,6 +26,7 @@ import {
   Vector4,
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
+  type Bone,
 } from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
@@ -150,7 +150,7 @@ import {
   type Projected,
   type ProjectedSegment,
 } from './bonePicking'
-import { rigStateOf, type RigState } from './rigState'
+import { type RigState, isBoneObject, rigStateOf } from './rigState'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
 import { PostComposer } from '../postfx/PostComposer'
@@ -206,7 +206,7 @@ import {
 } from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
-import { createBoneShapes, type BoneShapes } from './boneShapes'
+import { type BoneShapes, createBoneShapes, leafTail } from './boneShapes'
 import { createSkinWeights, type SkinWeights } from '../character/skinWeights'
 import type { SkinBinding } from '../character/skinVertices'
 import type { Rig } from '@shared/domain/rig'
@@ -456,11 +456,9 @@ BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
 BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
 Mesh.prototype.raycast = acceleratedRaycast
 
-/** Posed on long-lived helpers: a fresh closure each would keep its enclosing scope alive. */
-const NOOP = (): void => {}
-
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
+const BONE_TAIL = new Vector3()
 
 /** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
 const RAIL_SPOT = new Vector3()
@@ -681,8 +679,6 @@ export class SceneRenderer {
   private readonly animations = new SceneAnimations()
   /** The cameras the shots named last pass, so one they let go of can be put back where it was. */
   private railedCameras = new Set<string>()
-  /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
-  private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
   /**
    * Whether a click picks a BONE rather than a mesh.
@@ -1957,7 +1953,6 @@ export class SceneRenderer {
   }
 
   private refreshSkeletons(): void {
-    for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
     for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
     for (const solids of this.boneSolids.values()) solids.mesh.visible = this.skeletonsVisible()
     this.redraw()
@@ -1982,32 +1977,24 @@ export class SceneRenderer {
   private projectedSegments(camera: Camera): ProjectedSegment[] {
     const segments: ProjectedSegment[] = []
 
-    for (const [nodeId, helper] of this.skeletons) {
-      const held = new Set(helper.bones)
-      const childOf = new Map<Object3D, Object3D>()
-      for (const bone of helper.bones) {
-        const parent = bone.parent
-        if (parent && held.has(parent as never) && !childOf.has(parent)) childOf.set(parent, bone)
-      }
-
-      for (const bone of helper.bones) {
+    for (const [nodeId, solids] of this.boneSolids) {
+      // The very stretches drawn: the hips are clickable on the way to either leg, not only up
+      // the spine.
+      for (const { bone, child } of solids.links) {
         if (!bone.name) continue
 
         bone.getWorldPosition(BONE_WORLD)
+        // The stub drawn for a bone with no child is clickable too: a hand is taken by it.
+        if (child) child.getWorldPosition(BONE_TAIL)
+        else leafTail(bone, BONE_WORLD, BONE_TAIL)
         BONE_WORLD.project(camera)
-        const head = { x: BONE_WORLD.x, y: BONE_WORLD.y, z: BONE_WORLD.z }
-
-        const child = childOf.get(bone)
-        if (child) {
-          child.getWorldPosition(BONE_WORLD)
-          BONE_WORLD.project(camera)
-        }
+        BONE_TAIL.project(camera)
 
         segments.push({
           nodeId,
           bone: bone.name,
-          head,
-          tail: child ? { x: BONE_WORLD.x, y: BONE_WORLD.y, z: BONE_WORLD.z } : head,
+          head: { x: BONE_WORLD.x, y: BONE_WORLD.y, z: BONE_WORLD.z },
+          tail: { x: BONE_TAIL.x, y: BONE_TAIL.y, z: BONE_TAIL.z },
         })
       }
     }
@@ -2115,34 +2102,32 @@ export class SceneRenderer {
   }
 
   /**
-   * A helper is built from the instance and hung beside the nodes, like the grid and the
-   * trihedron — never inside the model, where the outliner would list it as part of the scene
-   * and a click could pick it.
+   * Joints and solids are built from the instance and hung beside the nodes, like the grid and
+   * the trihedron — never inside the model, where the outliner would list them and a click could
+   * pick them.
    */
   private bindSkeleton(nodeId: string, root: Object3D, hasBones: boolean): void {
     this.unbindSkeleton(nodeId)
 
     if (!hasBones) return
 
-    const helper = new SkeletonHelper(root)
-    helper.visible = this.skeletonsVisible()
-    // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
-    // on a line rather than on the model it belongs to.
-    helper.raycast = NOOP
-    this.skeletons.set(nodeId, helper)
-    this.viewport.scene.add(helper)
+    // Not three's `SkeletonHelper`: its lines showed through the solids, and a skeleton read as
+    // half wireframe — measured on screen.
+    const bones: Bone[] = []
+    root.traverse(object => {
+      if (isBoneObject(object)) bones.push(object)
+    })
 
-    // The joints beside the segments: the helper draws the bones and nothing marks where two of
-    // them MEET, which is the thing a click and a gizmo are actually aimed at.
-    const joints = createBoneJoints(helper.bones)
-    joints.points.visible = helper.visible
+    // The joints mark where two bones MEET, which is the thing a click and a gizmo are aimed at.
+    const joints = createBoneJoints(bones)
+    joints.points.visible = this.skeletonsVisible()
     this.joints.set(nodeId, joints)
     this.viewport.scene.add(joints.points)
 
-    // The bones as solids, beside the joints that mark where two of them meet: a segment tells
-    // nothing about a bone's facing, so a rotation had no landmark at all.
-    const solids = createBoneShapes(helper.bones)
-    solids.mesh.visible = helper.visible
+    // The bones as solids: a segment tells nothing about a bone's facing, so a rotation had no
+    // landmark at all.
+    const solids = createBoneShapes(bones)
+    solids.mesh.visible = this.skeletonsVisible()
     this.boneSolids.set(nodeId, solids)
     this.viewport.scene.add(solids.mesh)
     // A skeleton bound after the pick — every reload of a model does this — would otherwise draw
@@ -2164,13 +2149,6 @@ export class SceneRenderer {
       joints.dispose()
       this.joints.delete(nodeId)
     }
-
-    const helper = this.skeletons.get(nodeId)
-    if (!helper) return
-
-    helper.removeFromParent()
-    helper.dispose()
-    this.skeletons.delete(nodeId)
   }
 
   /**
@@ -2392,7 +2370,6 @@ export class SceneRenderer {
     this.environment?.borrowStudio(false)
 
     for (const helper of this.helpers.values()) hide(helper)
-    for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const joints of this.joints.values()) hide(joints.points)
     for (const solids of this.boneSolids.values()) hide(solids.mesh)
     for (const frustum of this.frustums.values()) hide(frustum)
@@ -2717,7 +2694,7 @@ export class SceneRenderer {
     this.environment?.dispose()
     this.environment = null
     this.animations.clear()
-    for (const id of [...this.skeletons.keys()]) this.unbindSkeleton(id)
+    for (const id of [...this.boneSolids.keys()]) this.unbindSkeleton(id)
     this.post?.dispose()
     this.post = null
     this.textureCache.dispose()

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { MenuAbility, MenuCheck } from '@shared/domain/command'
+import { scopeOfWorkspace, type MenuAbility, type MenuCheck } from '@shared/domain/command'
 import { revealTool } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
@@ -113,15 +113,20 @@ function publishMenuContext(): void {
   const abilities = [...scene.abilities, ...canvas]
 
   const front = useDocuments.getState()
-  const kind = (front.activeId ? front.documents[front.activeId] : undefined)?.kind ?? null
+  // The scope and not the kind, since the menu asks whose history ⌘Z pops: the 3D space opens
+  // both scenes and interfaces, and the two do not answer the same.
+  const scope = scopeOfWorkspace(
+    surface,
+    (front.activeId ? front.documents[front.activeId] : undefined)?.kind,
+  )
 
-  const signature = JSON.stringify([surface, tools, scene.checked, abilities, kind])
+  const signature = JSON.stringify([surface, tools, scene.checked, abilities, scope])
   if (signature === published) return
   published = signature
   publishedScene = sceneSignature(scene)
   publishedCanvas = canvas.join('|')
 
-  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities, kind)
+  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities, scope)
 }
 
 /** The listener of the two image stores — a layer drag writes one on every pointer move. */

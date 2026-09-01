@@ -74,7 +74,9 @@ type AuxiliarySize = { width: number; height: number; minWidth: number; minHeigh
  * Where macOS floats the three buttons, for every window of the studio that hides its bar.
  *
  * ONE offset, because `WindowTitleBar` stands exactly as tall as the studio's own `TitleBar`:
- * two windows side by side put their lights on one line, which two offsets could not do.
+ * two windows side by side put their lights on one line, which two offsets could not do. Both
+ * bars are `--sc-title-bar` tall — 2 × `y` plus the lights' 12px diameter, so a title is centred
+ * on them; `theme.test.ts` holds the two numbers together.
  */
 const TRAFFIC_LIGHTS = { x: 16, y: 14 }
 

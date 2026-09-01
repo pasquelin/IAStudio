@@ -6,7 +6,7 @@ import { createBoneShapes } from './boneShapes'
 const colours = () => ({ rest: '#808080', picked: '#346ef2' })
 
 /** Two bones, one under the other, so a world placement is not the local one. */
-function chain(): Bone[] {
+function chain(): [Bone, Bone] {
   const hips = new Bone()
   hips.name = 'Hips'
   hips.position.set(0, 1, 0)
@@ -21,6 +21,10 @@ function chain(): Bone[] {
   root.updateWorldMatrix(false, true)
   return [hips, spine]
 }
+
+/** How far a solid reaches off the Y axis its chain runs along. */
+const width = (corners: number[][]): number =>
+  Math.max(...corners.map(([x, , z]) => Math.hypot(x ?? 0, z ?? 0)))
 
 /** The corners of one bone's solid, as triples. */
 function cornersOf(shapes: ReturnType<typeof createBoneShapes>, bone: number): number[][] {
@@ -53,6 +57,45 @@ describe('drawing a bone as a solid', () => {
     const off = cornersOf(shapes, 0).filter(([x, , z]) => Math.hypot(x ?? 0, z ?? 0) > 1e-6)
 
     expect(off.length).toBeGreaterThan(0)
+    shapes.dispose()
+  })
+
+  // The hips carry the spine and both legs: a solid up the spine and a bare line out to each leg
+  // read as a skeleton half wireframe — measured on screen.
+  it('lays one solid from a bone to EACH of its children', () => {
+    const [hips, spine] = chain()
+    const legs = ['LeftUpperLeg', 'RightUpperLeg'].map(name => {
+      const leg = new Bone()
+      leg.name = name
+      hips.add(leg)
+      return leg
+    })
+    const shapes = createBoneShapes([hips, spine, ...legs], colours)
+
+    // Three links off the hips, and a stub for each of the three leaves.
+    expect(shapes.mesh.geometry.getAttribute('position').count).toBe(6 * 8 * 3)
+    shapes.dispose()
+  })
+
+  // Sized to its own twelfth of a length, a hand's stub was 2 cm long and 2 mm wide: a hair.
+  it('ends a chain with a stub as wide as the bone before it', () => {
+    const shapes = createBoneShapes(chain(), colours)
+
+    expect(width(cornersOf(shapes, 1))).toBeCloseTo(width(cornersOf(shapes, 0)), 5)
+    shapes.dispose()
+  })
+
+  // Sized to itself alone, a 2 cm collar bone was a 2 mm hair between two solids.
+  it("never draws a short bone thinner than the skeleton's typical one allows", () => {
+    const [, spine] = chain()
+    const collar = new Bone()
+    collar.name = 'Collar'
+    collar.position.set(0, 0.02, 0)
+    spine.add(collar)
+    const shapes = createBoneShapes([...chain(), collar], colours)
+
+    // Link 1 runs spine → collar: 2 cm long, so 2 mm wide on its own.
+    expect(width(cornersOf(shapes, 1))).toBeGreaterThan(0.02 * 0.1)
     shapes.dispose()
   })
 

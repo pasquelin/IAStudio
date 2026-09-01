@@ -8,7 +8,7 @@
  * Pure, like `bonePicking.ts`: three runs under jsdom without a GPU, and every question here is
  * about the shape of a tree.
  */
-import { Box3, Matrix4, Mesh, Vector3, type AnimationClip, type Object3D } from 'three'
+import { Box3, Matrix4, Mesh, Vector3, type AnimationClip, type Bone, type Object3D } from 'three'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { boneRolesOf } from './boneRoles'
 import type { Bounds } from './rigFit'
@@ -83,7 +83,7 @@ export type RigState = {
 const FIT_SAMPLE = 30_000
 
 /** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
-export function isBoneObject(object: Object3D): boolean {
+export function isBoneObject(object: Object3D): object is Bone {
   return Reflect.get(object, 'isBone') === true
 }
 

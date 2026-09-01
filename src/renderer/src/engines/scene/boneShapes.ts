@@ -20,13 +20,19 @@ import {
   type Object3D,
 } from 'three'
 import { rootColour } from '../core/palette'
+import { boneLinksOf, type BoneLink } from './boneLinks'
 
-/** Triangles per bone: four from the head to the waist, four from the waist to the tail. */
+/** Triangles per link: four from the head to the waist, four from the waist to the tail. */
 const FACES = 8
 
 /** How far along the bone its widest ring sits, and how wide that ring is, as fractions. */
 const WAIST_ALONG = 0.12
 const WAIST_WIDE = 0.1
+/**
+ * No bone thinner than this fraction of the skeleton's median bone: sized to itself alone, the
+ * 2 cm collar bone was a 2 mm hair between two solids — measured on screen.
+ */
+const WAIST_FLOOR = 0.05
 
 /**
  * What a bone with no child is drawn as, as a fraction of its parent's length.
@@ -46,8 +52,13 @@ const BONE_COLOURS = (): BoneColours => ({
   picked: rootColour('--color-accent'),
 })
 
+/** What the mesh is named, which is how a suite finds the bones beside a node. */
+export const BONE_SHAPES = 'BoneShapes'
+
 export type BoneShapes = {
   mesh: Mesh
+  /** The stretches drawn, one solid each — what a click over the skeleton is measured against. */
+  links: readonly BoneLink<Bone>[]
   /** Reads every bone's world placement again — they move with the pose, every frame. */
   refresh: () => void
   /** Paints one bone as the CHOSEN one, or none. */
@@ -63,7 +74,8 @@ const UP = new Vector3()
 const RING = new Vector3()
 
 /**
- * One octahedron per bone, in WORLD space and hung beside the scene rather than inside it.
+ * One octahedron per LINK — a bone towards each of its children — in WORLD space and hung beside
+ * the scene rather than inside it.
  *
  * Inside, the outliner would list it and a click could pick it; beside, it is decoration exactly
  * as the helper it replaces was.
@@ -72,7 +84,8 @@ export function createBoneShapes(
   bones: readonly Bone[],
   readColours: () => BoneColours = BONE_COLOURS,
 ): BoneShapes {
-  const vertices = bones.length * FACES * 3
+  const links = boneLinksOf(bones)
+  const vertices = links.length * FACES * 3
   const positions = new Float32Array(vertices * 3)
   const colours = new Float32Array(vertices * 3)
 
@@ -96,6 +109,7 @@ export function createBoneShapes(
   })
 
   const mesh = new Mesh(geometry, material)
+  mesh.name = BONE_SHAPES
   // Off the raycaster, like the helper it replaces: a click has to land on the model, and bone
   // picking runs off the projected bones rather than off anything drawn.
   mesh.raycast = () => {}
@@ -104,29 +118,25 @@ export function createBoneShapes(
 
   const held = new Set<Object3D>(bones)
   const roots = bones.filter(bone => !bone.parent || !held.has(bone.parent))
-  const childOf = new Map<Bone, Bone>()
-  for (const bone of bones) {
-    const parent = bone.parent
-    if (parent && held.has(parent) && !childOf.has(parent as Bone))
-      childOf.set(parent as Bone, bone)
-  }
+  for (const root of roots) root.updateWorldMatrix(true, true)
+  const floor = medianLength(links) * WAIST_FLOOR
 
   const refresh = (): void => {
     for (const root of roots) root.updateWorldMatrix(true, true)
 
-    for (const [index, bone] of bones.entries()) {
+    for (const [index, { bone, child }] of links.entries()) {
       HEAD.setFromMatrixPosition(bone.matrixWorld)
-      const child = childOf.get(bone)
       if (child) TAIL.setFromMatrixPosition(child.matrixWorld)
       else leafTail(bone, HEAD, TAIL)
 
-      writeOctahedron(positions, index * FACES * 9, HEAD, TAIL)
+      writeOctahedron(positions, index * FACES * 9, HEAD, TAIL, waistOf(child, floor))
     }
     position.needsUpdate = true
   }
 
+  // Every link of the chosen bone: the hips picked are the hips towards the spine AND both legs.
   const pick = (picked: string | null): void => {
-    for (const [index, bone] of bones.entries()) {
+    for (const [index, { bone }] of links.entries()) {
       const paint = bone.name === picked ? pickedColour : restColour
       for (let corner = 0; corner < FACES * 3; corner += 1) {
         const at = (index * FACES * 3 + corner) * 3
@@ -143,6 +153,7 @@ export function createBoneShapes(
 
   return {
     mesh,
+    links,
     refresh,
     pick,
     dispose: () => {
@@ -152,13 +163,36 @@ export function createBoneShapes(
   }
 }
 
+/** The waist of the link just laid in `HEAD`/`TAIL`: a stub is as wide as the bone it ends. */
+function waistOf(child: Bone | null, floor: number): number {
+  const own = child ? HEAD.distanceTo(TAIL) : HEAD.distanceTo(TAIL) / LEAF
+  return Math.max(own * WAIST_WIDE, floor)
+}
+
+/** The typical bone of this skeleton, stubs left out: they are invented, not measured. */
+function medianLength(links: readonly BoneLink<Bone>[]): number {
+  const lengths = links
+    .filter(link => link.child !== null)
+    .map(({ bone, child }) =>
+      HEAD.setFromMatrixPosition(bone.matrixWorld).distanceTo(
+        TAIL.setFromMatrixPosition((child ?? bone).matrixWorld),
+      ),
+    )
+    .sort((one, two) => one - two)
+  const middle = Math.floor(lengths.length / 2)
+  if (lengths.length === 0) return 0
+  return lengths.length % 2 === 1
+    ? (lengths[middle] ?? 0)
+    : ((lengths[middle - 1] ?? 0) + (lengths[middle] ?? 0)) / 2
+}
+
 /**
  * Where a bone with no child points, and how far.
  *
  * Along its PARENT's direction: a leaf carries no direction of its own, and drawing it along an
  * arbitrary axis would make a fingertip point somewhere its finger does not.
  */
-function leafTail(bone: Bone, head: Vector3, into: Vector3): void {
+export function leafTail(bone: Bone, head: Vector3, into: Vector3): void {
   const parent = bone.parent
   if (!parent) {
     into.copy(head).addScaledVector(new Vector3(0, 1, 0), LEAF)
@@ -177,7 +211,13 @@ function leafTail(bone: Bone, head: Vector3, into: Vector3): void {
  * Eight triangles: head to waist ring, waist ring to tail. The ring is square and perpendicular
  * to the bone, which is what makes a turn about the bone's own axis visible.
  */
-function writeOctahedron(into: Float32Array, at: number, head: Vector3, tail: Vector3): void {
+function writeOctahedron(
+  into: Float32Array,
+  at: number,
+  head: Vector3,
+  tail: Vector3,
+  waist: number,
+): void {
   AXIS.copy(tail).sub(head)
   const length = AXIS.length()
   if (length <= 0) {
@@ -192,7 +232,6 @@ function writeOctahedron(into: Float32Array, at: number, head: Vector3, tail: Ve
   SIDE.copy(UP).cross(AXIS).normalize()
   UP.copy(AXIS).cross(SIDE).normalize()
 
-  const waist = length * WAIST_WIDE
   const ring: Vector3[] = []
   for (const [side, up] of [
     [1, 0],

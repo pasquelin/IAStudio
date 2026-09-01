@@ -1,6 +1,7 @@
 import { mdiSkull } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Transform } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
@@ -17,6 +18,8 @@ import { useAccounts } from '@/stores/accounts'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
 import { useConnections } from '@/hooks/useConnections'
+import { reportFailure } from '@/services/diagnostics'
+import { useMenuScope } from '@/hooks/useMenuScope'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { restWithin } from '@/engines/character/boneRest'
 import { setCharacterBoneRest } from '@/engines/character/characterCommands'
@@ -66,19 +69,21 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const mode = useCharacterView(state => state.mode)
   const lockedLengths = useCharacterView(state => state.lockedLengths)
 
-  // The window's own keys. Its OWN scope and not the scene's: ⌘Z here must not reach the scene a
-  // studio window is showing beside it.
-  useShortcuts({
-    scope: 'character',
-    enabled: true,
-    onCommand: command => {
-      const store = useCharacters.getState()
-      if (command === 'character.undo') store.undo(assetId)
-      if (command === 'character.redo') store.redo(assetId)
-      // Awaited by nobody, and there is nothing to extract: the journal carries the reason.
-      if (command === 'document.save') void saveCharacter(assetId, skins).catch(() => {})
-    },
-  })
+  // Its OWN scope and not the scene's: ⌘Z here must not reach the scene a studio window is
+  // showing beside it. Two doors to one handler: the keys the window sees, and the rows the menu
+  // fires — which is the only way ⌘S arrives, the menu carrying that key on macOS.
+  const runCommand = (command: CommandId): void => {
+    const store = useCharacters.getState()
+    if (command === 'character.undo') store.undo(assetId)
+    if (command === 'character.redo') store.redo(assetId)
+    // Awaited by nobody, and nothing to extract: the journal is the only place the failure goes.
+    if (command === 'document.save')
+      void saveCharacter(assetId, skins).catch(error =>
+        reportFailure('document.save', assetId, error),
+      )
+  }
+  useShortcuts({ scope: 'character', enabled: true, onCommand: runCommand })
+  useMenuScope('character', runCommand)
 
   useEffect(() => {
     engineRef.current?.setMode(mode)
@@ -171,13 +176,14 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     // The rigging services come from the model registry, which every window reads through the
     // same cache: without a client of its own this window is an error screen, not a character.
     <StudioQueries>
-      <div className="bg-chrome flex h-full w-full flex-col gap-(--sc-gutter) p-(--sc-gutter)">
-        {/* Frameless like the studio, so the traffic lights float in this strip rather than in a
-            bar the system draws. Unsaved is said the way every tab says it: a bullet after the
-            name, as `setDocumentTitle` writes one. */}
+      <div className="bg-chrome flex h-full w-full flex-col">
+        {/* Flush with the top like every other window's, so the title lands on the traffic
+            lights — padded by the gutter it sat 6px off them. Unsaved is said the way every tab
+            says it: a bullet after the name, as `setDocumentTitle` writes one. */}
         <WindowTitleBar title={`${t('character.window.titleOf', { name })}${dirty ? ' •' : ''}`} />
 
-        <div className="flex min-h-0 flex-1 gap-(--sc-gutter)">
+        {/* The gutter around the panes and not around the bar, as the studio frames its docks. */}
+        <div className="flex min-h-0 flex-1 gap-(--sc-gutter) p-(--sc-gutter)">
           <div className="bg-monitor relative min-w-0 flex-1 overflow-hidden rounded-(--radius-sc-lg)">
             <div ref={hostRef} className="absolute inset-0" />
             <Toolbar

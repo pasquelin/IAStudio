@@ -221,15 +221,18 @@ describe('what the native menu is told', () => {
     tools: readonly ToolId[]
     checked: readonly MenuCheck[]
     abilities: readonly MenuAbility[]
+    scope: string | null
   } {
     // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
-    const [surface, tools, checked, abilities] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+    const [surface, tools, checked, abilities, scope] = (setWorkspace.mock.lastCall ??
+      []) as unknown as [
       string,
       readonly ToolId[],
       readonly MenuCheck[],
       readonly MenuAbility[],
+      string | null,
     ]
-    return { surface, tools, checked, abilities }
+    return { surface, tools, checked, abilities, scope }
   }
 
   beforeEach(() => {
@@ -263,6 +266,18 @@ describe('what the native menu is told', () => {
     renderHook(() => useNativeMenu())
     useLayouts.getState().setHome(false)
     expect(lastPublished().surface).toBe('image')
+  })
+
+  /** Whose history ⌘Z pops is announced as a scope: the menu never sees a document kind. */
+  it('announces the history the space in front edits through', () => {
+    renderHook(() => useNativeMenu())
+    expect(lastPublished().scope).toBe('canvas')
+  })
+
+  it('announces no history over the home, which edits nothing', () => {
+    useLayouts.setState({ home: true })
+    renderHook(() => useNativeMenu())
+    expect(lastPublished().scope).toBeNull()
   })
 
   it('follows a change of section', () => {

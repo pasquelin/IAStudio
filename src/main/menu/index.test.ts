@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { scopeOfWorkspace } from '@shared/domain/command'
+import { isWorkspaceId } from '@shared/domain/workspace'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import {
@@ -28,12 +30,13 @@ vi.mock('@main/window/controls', () => ({ toggleFullScreen: vi.fn() }))
 /** What a window announces on startup and on every click of the space rail. */
 function announce(
   window: FakeWindow,
-  workspace: string,
+  workspace: string | null,
   tools: string[] = [],
   checked: string[] = [],
   abilities: string[] = [],
+  scope: string | null = workspace && isWorkspaceId(workspace) ? scopeOfWorkspace(workspace) : null,
 ): void {
-  invokeFrom(window, CHANNELS.windowWorkspace, workspace, tools, checked, abilities)
+  invokeFrom(window, CHANNELS.windowWorkspace, workspace, tools, checked, abilities, scope)
 }
 
 /**
@@ -131,6 +134,17 @@ describe('the window the menu belongs to', () => {
     expect(scene.sent).toEqual([{ channel: EVENTS.menuCommand, payload: 'scene.undo' }])
   })
 
+  // The skeleton window: no space announced, a history all the same.
+  it('fires the undo of a window that shows no space but reports a history', () => {
+    const skeleton = openWindow()
+    announce(skeleton, null, [], [], [], 'character')
+    focusWindow(skeleton)
+
+    runUndo()
+
+    expect(skeleton.sent).toEqual([{ channel: EVENTS.menuCommand, payload: 'character.undo' }])
+  })
+
   // The splash has no bridge: a command sent there is lost, and the fallback must step over it.
   it('steps over a window that cannot take the focus', () => {
     const splash = openWindow({ focusable: false })
@@ -181,6 +195,18 @@ describe('what makes the menu rebuild', () => {
     const before = menuBuilds()
 
     announce(window, '3d')
+
+    expect(menuBuilds()).toBe(before + 1)
+  })
+
+  // The 3D space keeps its panels across a scene and an interface; only the history changes.
+  it('rebuilds when the same workspace reports another history', () => {
+    const window = openWindow()
+    focusWindow(window)
+    announce(window, '3d', [], [], [], 'scene')
+    const before = menuBuilds()
+
+    announce(window, '3d', [], [], [], 'gui')
 
     expect(menuBuilds()).toBe(before + 1)
   })

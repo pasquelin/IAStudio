@@ -104,6 +104,15 @@ describe('picking a whole bone rather than the point at its head', () => {
     expect(nearestSegment([far, near], { x: 0, y: 0 })?.bone).toBe('Near')
   })
 
+  // The wrist is where the forearm ENDS and the hand STARTS: taking the first of the two made
+  // the hand unclickable, its joint always answering « LeftLowerArm » — measured on screen.
+  it('gives a shared joint to the bone that starts there, not the one that ends there', () => {
+    const hand = flat('LeftHand', [0.5, 0], [0.6, 0])
+
+    expect(nearestSegment([ARM, hand], { x: 0.5, y: 0.005 })?.bone).toBe('LeftHand')
+    expect(nearestSegment([hand, ARM], { x: 0.5, y: 0.005 })?.bone).toBe('LeftHand')
+  })
+
   // A bone with no child projects to a point, which is what the joint-only pick used to answer.
   it('still takes a bone with no child, which is its own head twice', () => {
     const tip = flat('LeftHand', [0.2, 0.2], [0.2, 0.2])

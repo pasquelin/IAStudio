@@ -92,6 +92,7 @@ export function nearestSegment(
 ): ProjectedSegment | null {
   let best: ProjectedSegment | null = null
   let bestDistance = Infinity
+  let bestAlong = Infinity
   let bestDepth = Infinity
 
   for (const segment of segments) {
@@ -102,12 +103,16 @@ export function nearestSegment(
     const near = nearestOn(segment, pointer)
     if (near.distance > reach) continue
 
+    // At a joint two bones meet: the one that STARTS there owns it — the wrist is the hand's
+    // joint, not the forearm's end — so the nearer to its own head wins before depth does.
     if (
       near.distance < bestDistance ||
-      (near.distance === bestDistance && near.depth < bestDepth)
+      (near.distance === bestDistance &&
+        (near.along < bestAlong || (near.along === bestAlong && near.depth < bestDepth)))
     ) {
       best = segment
       bestDistance = near.distance
+      bestAlong = near.along
       bestDepth = near.depth
     }
   }
@@ -119,11 +124,11 @@ function offScreen(point: Projected): boolean {
   return point.z < -1 || point.z > 1
 }
 
-/** How far the pointer falls from a segment, and how deep the segment is where it comes nearest. */
+/** How far the pointer falls from a segment, where along it (0 head, 1 tail) and how deep there. */
 function nearestOn(
   segment: ProjectedSegment,
   pointer: Pointer,
-): { distance: number; depth: number } {
+): { distance: number; along: number; depth: number } {
   const span = { x: segment.tail.x - segment.head.x, y: segment.tail.y - segment.head.y }
   const length = span.x * span.x + span.y * span.y
   const reach = { x: pointer.x - segment.head.x, y: pointer.y - segment.head.y }
@@ -136,6 +141,7 @@ function nearestOn(
 
   return {
     distance: Math.hypot(at.x - pointer.x, at.y - pointer.y),
+    along,
     depth: segment.head.z + (segment.tail.z - segment.head.z) * along,
   }
 }

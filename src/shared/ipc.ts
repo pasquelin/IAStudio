@@ -26,7 +26,7 @@ import type { FolderRole, RoleFolders } from './domain/folderRole'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
-import type { CommandId, MenuAbility, MenuCheck } from './domain/command'
+import type { CommandId, CommandScope, MenuAbility, MenuCheck } from './domain/command'
 import type { ContextMenuItem } from './domain/contextMenu'
 import type {
   ActionOutcome,
@@ -2196,16 +2196,17 @@ export type StudioBridge = {
      * that space offered the image tools over a screen that edits no image.
      */
     setWorkspace: (
-      surface: ToolSurface,
+      /** `null` for a window with no docks at all — the skeleton window has no panels to offer. */
+      surface: ToolSurface | null,
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
       abilities: readonly MenuAbility[],
       /**
-       * What the tab in front IS, `null` where none is. Carried beside the surface because one
-       * space now opens two kinds: the Undo row of a 3D space showing an interface must pop the
-       * interface's history, not the scene's.
+       * Whose history Undo pops, `null` where nothing is undoable. The scope rather than the kind
+       * of the tab in front: a window that shows no document at all — the skeleton window — still
+       * holds a history, and the menu would otherwise reserve ⌘Z for the platform's own.
        */
-      kind: DocumentKind | null,
+      scope: CommandScope | null,
     ) => Promise<void>
   }
   /**

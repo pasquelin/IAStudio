@@ -9,6 +9,7 @@ import {
   VectorKeyframeTrack,
 } from 'three'
 import type { Object3D } from 'three'
+import { BONE_SHAPES } from './boneShapes'
 import { describe, expect, it, vi } from 'vitest'
 import { assetClip, bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
@@ -214,47 +215,48 @@ describe('SceneRenderer and the bones a rig carries', () => {
    * The helpers hang beside the nodes, so the scene is where they are counted — reached by
    * walking up from the mounted model rather than into the engine: holder, then scene.
    */
-  const helpersAround = (loaded: Group): number =>
-    (loaded.parent?.parent?.children ?? []).filter(child => child.type === 'SkeletonHelper').length
+  const bonesAround = (loaded: Group): Object3D[] =>
+    (loaded.parent?.parent?.children ?? []).filter(child => child.name === BONE_SHAPES)
 
-  it('draws no helper for a model that carries no bone', async () => {
+  it('draws no bones for a model that carries none', async () => {
     const loaded = animatedModel([walk()])
     const engine = withModel(loaded)
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
 
     await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
-    expect(helpersAround(loaded)).toBe(0)
+    expect(bonesAround(loaded)).toHaveLength(0)
     engine.dispose()
   })
 
-  it('hangs one beside the nodes for a rigged model, hidden until asked for', async () => {
+  // The solids and not three's `SkeletonHelper`: its lines showed through them, and a skeleton
+  // read as half wireframe — measured on screen. The helper is kept, never hung in the scene.
+  it('hangs the bones beside the nodes for a rigged model, hidden until asked for', async () => {
     const loaded = rigged()
     const engine = withModel(loaded)
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
 
-    await vi.waitFor(() => expect(helpersAround(loaded)).toBe(1))
-
-    const helper = (loaded.parent?.parent?.children ?? []).find(
-      child => child.type === 'SkeletonHelper',
-    )
-    expect(helper?.visible).toBe(false)
+    await vi.waitFor(() => expect(bonesAround(loaded)).toHaveLength(1))
+    expect(bonesAround(loaded)[0]?.visible).toBe(false)
+    expect(
+      (loaded.parent?.parent?.children ?? []).filter(child => child.type === 'SkeletonHelper'),
+    ).toHaveLength(0)
 
     engine.setSkeletons(true)
-    expect(helper?.visible).toBe(true)
+    expect(bonesAround(loaded)[0]?.visible).toBe(true)
     engine.dispose()
   })
 
-  it('takes the helper away with the node it belonged to', async () => {
+  it('takes the bones away with the node they belonged to', async () => {
     const loaded = rigged()
     const engine = withModel(loaded)
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
-    await vi.waitFor(() => expect(helpersAround(loaded)).toBe(1))
+    await vi.waitFor(() => expect(bonesAround(loaded)).toHaveLength(1))
 
     // Kept before the node goes: the model is unparented with it, and the walk up would end early.
     const scene = loaded.parent?.parent
     engine.apply(EMPTY_SCENE)
 
-    expect((scene?.children ?? []).filter(child => child.type === 'SkeletonHelper')).toHaveLength(0)
+    expect((scene?.children ?? []).filter(child => child.name === BONE_SHAPES)).toHaveLength(0)
     engine.dispose()
   })
 })
