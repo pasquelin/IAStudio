@@ -21,6 +21,12 @@ et l'inverse) ; les deux valeurs sont écrites quand elles diffèrent.
 - Le flag `grouping: 'instanced' | 'batched'`. **Le défaut est `instanced`** — voir § 4.
 - Un trou du rapport B corrigé dans son propre commit : un noeud supprimé puis restauré reprend
   sa place dans le fichier exporté, racines et enfants (`sceneRendererExportOrder.test.ts`).
+- **Un défaut du chemin PAR DÉFAUT, trouvé par la revue et corrigé** : rien avant le regroupement
+  ne rafraîchissait les matrices-monde. La seule passe qui le faisait, celle des ombres, ne tourne
+  que si une lampe projette — sans lampe directionnelle, chaque copie d'un groupe neuf était
+  dessinée à l'ORIGINE, et un placement tapé dans l'inspecteur avait une passe de retard. Le
+  défaut précède ce chantier ; il est reproduit et gardé pour les deux stratégies
+  (`sceneRendererGroups.test.ts`).
 
 ## 1. Comment lire ces chiffres
 
@@ -177,13 +183,33 @@ mais ce que le tas dit est dominé par le ramasse-miettes.
 | mode d'affichage (clay, matcap) sur un lot | ⚠️ **non testé** | un `BatchedMesh` est un `Mesh`, `dressForPane` remplace son matériau comme celui d'une instance — vérifié par lecture, pas à l'écran |
 | picking de bout en bout par `nodeAt` | ⚠️ **non exercé** | `nodeAt` est privé et lit une caméra montée ; la garde est textuelle, le mapping est testé au module |
 
+## 6 bis. Ce que la revue a trouvé, et ce qui en a été fait
+
+Dix trouvailles, quatre angles de simplification puis une revue adverse. Six corrigées ici, avec
+leur garde ; quatre écrites plutôt que corrigées.
+
+| trouvaille | état |
+|---|---|
+| matrices-monde non rafraîchies avant le regroupement — **chemin par défaut** | corrigée, gardée, mordue par le harnais |
+| `layoutOf` mémorisé pour toujours alors qu'une carte d'occlusion ajoute `uv1` à une forme PARTAGÉE en place : deux formes que three refuse de mêler restaient dans un lot, et `addGeometry` jetait hors d'`apply` | corrigée (le compte d'attributs invalide la mémo), gardée |
+| `widen` lisait `boundingSphere` d'une forme que three n'a jamais mesurée — une source vit sur une couche que la caméra saute : rayon lu à zéro, lot cullable entier pendant un glissé | corrigée, gardée |
+| patches de prototype three-mesh-bvh éclatés sur deux modules : celui de `Mesh` manquant, un clic marchait tout le tampon du lot sous chaque instance | corrigée (`bvhPatches.ts`, un module importé pour son effet), gardée |
+| la vue de densité comptait un lot comme UNE forme, et son tampon réservé comme des triangles dessinés | corrigée : le lot porte ce qu'il dessine, gardée |
+| deux mémos WeakMap réécrits à côté de `cachedOn` | corrigée |
+| l'ordre d'export d'une SÉLECTION passe de l'ordre des clics à celui du document | assumé et **pinné** par un cas : ce qu'un fichier liste est ce que le document tient |
+| `pickable()` bâtit un `MeshBVH` par forme et par lot, sur le thread UI, au premier clic après CHAQUE regroupement | écrit, pas corrigé — voir § 7 |
+| `batching.ts` part dans chaque fenêtre alors qu'aucun appelant ne demande `batched` | assumé : le flag est ce que le chantier demandait, et il sert au banc |
+| l'ordre d'export se corrige chez l'exporteur, pas dans le graphe de scène | écrit — voir § 8 |
+
 ## 7. Ce que cette phase ne mesure pas
 
-- **Le coût d'un clic.** Sur le chemin par lots, les sources restent atteignables par le
-  raycaster ET les lots le sont : un clic rencontre les deux, au même point, et rend le même
-  noeud. Ce doublon n'est pas chronométré, ni le premier clic, qui bâtit les arbres des lots. Sur
-  le chemin instancié rien n'a changé : la source seule répond. `scenePicking.bench.ts` n'a pas
-  été rejoué.
+- **Le coût d'un clic, et il est connu sans être chiffré.** Sur le chemin par lots, `pickable()`
+  bâtit un `MeshBVH` par forme et par lot, **sur le thread UI, au premier clic qui suit chaque
+  regroupement** — les lots sont neufs, leurs arbres aussi. Sur seize copies d'un modèle de
+  150 000 triangles c'est une pause au clic, hors du worker que `bvhBuilder` tient pour cela
+  (invariant 6). Le doublon source + lot n'est pas chronométré non plus. Sur le chemin instancié
+  rien n'a changé : la source seule répond, et `pickable()` y rend une liste vide.
+  `scenePicking.bench.ts` n'a pas été rejoué.
 - **Une scène qui BOUGE pendant qu'elle est dessinée.** `moved` sur un lot réécrit la texture de
   matrices ENTIÈRE à la frame suivante — three n'a pas d'`addUpdateRange` sur une
   `DataTexture` — là où l'instance ne renvoie que seize flottants. `apply « 1 bougé »` ne le
@@ -201,7 +227,7 @@ mais ce que le tas dit est dominé par le ramasse-miettes.
   près et suit ce que la machine fait d'autre. Les rapports entre chemins tiennent dans les deux
   ordres ; les valeurs absolues sous 2 ms ne se comparent pas d'un rapport à l'autre.
 
-## 8. Deux choses à retenir pour la phase 2
+## 8. Trois choses à retenir pour la phase 2
 
 1. **Les régions de l'`InstancedMesh` ne coupent rien sur S2 et S3.** En vue tournée, l'instance
    dessine 20 000 corps sur 20 000 (S2) et 97 906 sur 100 000 (S3) : chaque groupe pèse moins de
@@ -211,6 +237,11 @@ mais ce que le tas dit est dominé par le ramasse-miettes.
    (12,0 → 11,7 et 16,4 → 16,1 ms sur S3, selon l'ordre).
 2. **Onze millisecondes sur douze à seize à S3 sont les sources cachées**, pas le dessin. Tant qu'elles
    sont dans le graphe, aucun culling ne descend sous ce plancher.
+3. **L'ordre des enfants d'un noeud rebâti est faux dans le GRAPHE, pas seulement à l'export.**
+   `syncNode` et `hangFromParent` ajoutent en fin de liste ; l'export le rattrape par un tri, ce
+   qui suffit à son consommateur et à rien d'autre. Insérer un noeud rebâti à son index de
+   document ferait disparaître `documentOrder`, `rank` et `byRank` d'un coup — et servirait tout
+   ce qui lit `children`. C'est un lot à soi, pas une ligne de celui-ci.
 
 ## 9. Le banc, pour rejouer
 

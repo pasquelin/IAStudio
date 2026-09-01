@@ -8,6 +8,7 @@ import {
   type Object3D,
   type Sphere,
 } from 'three'
+import { cachedOn } from '../core/cachedOn'
 import type { SceneNode } from './sceneState'
 
 /**
@@ -73,6 +74,15 @@ export type InstancedGroups = {
   dispose: () => void
 }
 
+/**
+ * What a lot really draws, written on it by whoever built it and read by the density view.
+ *
+ * A `BatchedMesh` holds ONE copy of each distinct shape in a buffer sized for what was reserved,
+ * so counting its triangles off that buffer answers neither what it draws nor what it holds.
+ * Only the builder knows, and three keeps the per-instance shape private.
+ */
+export const DRAWN_TRIANGLES = 'drawnTriangles'
+
 /** The meshes of one group and the nodes they stand for, index for index. */
 export type Grouped = { ids: string[]; meshes: Mesh[]; material: Material }
 
@@ -135,13 +145,7 @@ export function sweep(
  */
 export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode) => string {
   const spelled = new WeakMap<SceneNode, string>()
-  return node => {
-    const known = spelled.get(node)
-    if (known !== undefined) return known
-    const key = spell(node)
-    spelled.set(node, key)
-    return key
-  }
+  return node => cachedOn(spelled, node, () => spell(node))
 }
 
 const REACHED = new Vector3()

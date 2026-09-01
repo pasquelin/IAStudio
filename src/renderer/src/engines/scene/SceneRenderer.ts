@@ -28,7 +28,6 @@ import {
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
 } from 'three'
-import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
@@ -203,6 +202,7 @@ import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
+import './bvhPatches'
 import type { InstancedGroups } from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
@@ -420,15 +420,6 @@ const forward = new ThreeVector3()
 const right = new ThreeVector3()
 const step = new ThreeVector3()
 const flightGaze = new ThreeVector3()
-
-/**
- * three-mesh-bvh reads a `boundsTree` if the mesh has one and falls back to walking triangles if
- * it has none, so patching the prototypes once is safe for every mesh in the studio — the two
- * other 3D spaces included, where no tree is ever built.
- */
-BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
-BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
-Mesh.prototype.raycast = acceleratedRaycast
 
 /** Posed on long-lived helpers: a fresh closure each would keep its enclosing scope alive. */
 const NOOP = (): void => {}
@@ -1540,6 +1531,13 @@ export class SceneRenderer {
    * exactly what that helper sets aside.
    */
   private regroupInstances(): void {
+    if (!this.groupingStale && this.movedNodes.size === 0) return
+
+    // The world matrices are what a group COPIES, and nothing before here refreshes them: the
+    // one pass that did is `tuneShadows`, which only runs when a light casts. Without this a
+    // body of a fresh group was drawn at the origin, and a typed placement lagged one apply.
+    this.viewport.scene.updateMatrixWorld()
+
     if (this.groupingStale) {
       this.groupingStale = false
       this.movedNodes.clear()
@@ -1552,7 +1550,6 @@ export class SceneRenderer {
       if (instanced > 0) forgetDress(this.paneMemory)
       return
     }
-    if (this.movedNodes.size === 0) return
 
     // Only the slots that moved. Their region's bounds are widened rather than recut, so the
     // culling stays conservative until the next real change of content puts them back exact.

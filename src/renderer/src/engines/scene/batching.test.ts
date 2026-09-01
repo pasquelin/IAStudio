@@ -15,6 +15,7 @@ import {
 import { describe, expect, it } from 'vitest'
 import { meshNode } from './scene-fixtures'
 import { createBatchedGroups } from './batching'
+import { acceleratedRaycast } from 'three-mesh-bvh'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
 import type { MeshNode, SceneNode } from './sceneState'
 
@@ -221,6 +222,34 @@ describe('createBatchedGroups', () => {
   })
 })
 
+describe('what a lot needs of three-mesh-bvh', () => {
+  it('leaves both prototypes patched, the mesh one included', () => {
+    // A `BatchedMesh` overrides `raycast`, so patching it alone still walks the whole buffer
+    // under every instance: three-mesh-bvh's batched raycast calls `Mesh.prototype.raycast`,
+    // and unpatched that one never reaches a tree. Measured: 0 tree walks, and a click on a
+    // sphere came back with the faces of the boxes beside it.
+    expect(Mesh.prototype.raycast).toBe(acceleratedRaycast)
+    expect(BatchedMesh.prototype.raycast).toBe(acceleratedRaycast)
+  })
+
+  it('keeps a shape out of a lot once a second UV set is added to it in place', () => {
+    const scene = host()
+    const groups = createBatchedGroups(scene)
+    const shared: Shape = { geometry: new BoxGeometry(1, 1, 1), descriptor: BOX.descriptor }
+    const { nodes, objects } = laidOut(WORTH_INSTANCING * 2, at => (at % 2 === 0 ? shared : SPHERE))
+    groups.rebuild(nodes, id => objects.get(id))
+    expect(batchesIn(scene)).toHaveLength(1)
+
+    // What an occlusion map does to a SHARED shape: `uv1` is added in place. Spelled from a
+    // stale cache, the two shapes stay keyed together and `addGeometry` throws out of `apply`.
+    const uv = shared.geometry.getAttribute('uv')
+    shared.geometry.setAttribute('uv1', uv)
+
+    expect(() => groups.rebuild(nodes, id => objects.get(id))).not.toThrow()
+    expect(batchesIn(scene)).toHaveLength(2)
+  })
+})
+
 describe('a node dragged while its lot draws it', () => {
   it('follows the mesh, without waiting for the gesture to end', () => {
     const scene = host()
@@ -253,6 +282,30 @@ describe('a node dragged while its lot draws it', () => {
     groups.moved(['n0'], id => objects.get(id))
 
     expect(onlyBatch(scene).boundingSphere?.radius ?? 0).toBeGreaterThan(before)
+  })
+
+  it('reaches as far for a shape three never measured as for one it did', () => {
+    // A source sits on a layer the camera skips, so three never computes its bounds. Read as
+    // zero, a dragged body grew the lot only to its CENTRE, and half a body stuck out of the
+    // sphere the frustum tests — the lot could be culled with that body on screen.
+    const reachAfterDrag = (measured: boolean): number => {
+      const scene = host()
+      const groups = createBatchedGroups(scene)
+      const shape: Shape = { geometry: new BoxGeometry(1, 1, 1), descriptor: BOX.descriptor }
+      const { nodes, objects } = laidOut(WORTH_INSTANCING, () => shape)
+      groups.rebuild(nodes, id => objects.get(id))
+      if (measured) shape.geometry.computeBoundingSphere()
+      else shape.geometry.boundingSphere = null
+
+      const mesh = objects.get('n0')
+      if (!mesh) throw new Error('no mesh to drag')
+      mesh.position.set(0, 500, 0)
+      mesh.updateMatrixWorld(true)
+      groups.moved(['n0'], id => objects.get(id))
+      return onlyBatch(scene).boundingSphere?.radius ?? 0
+    }
+
+    expect(reachAfterDrag(false)).toBe(reachAfterDrag(true))
   })
 
   it('says nothing moved when no lot draws the node', () => {

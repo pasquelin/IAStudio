@@ -1,19 +1,23 @@
-import { BatchedMesh, Mesh, type BufferGeometry, type Material, type Object3D } from 'three'
 import {
-  acceleratedRaycast,
-  computeBatchedBoundsTree,
-  disposeBatchedBoundsTree,
-} from 'three-mesh-bvh'
+  BatchedMesh,
+  Mesh,
+  type BufferGeometry,
+  type DataTexture,
+  type Material,
+  type Object3D,
+} from 'three'
+import './bvhPatches'
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
-import { DRAWN_BY_INSTANCE, spellingOf, sweep, widen, type InstancedGroups } from './grouping'
+import {
+  DRAWN_BY_INSTANCE,
+  DRAWN_TRIANGLES,
+  spellingOf,
+  sweep,
+  widen,
+  type InstancedGroups,
+} from './grouping'
 import type { SceneNode } from './sceneState'
-
-// `Mesh.prototype.raycast` is patched by `SceneRenderer`, but a `BatchedMesh` overrides it with
-// a raycast of its own — one that walks every triangle of every instance without a tree.
-BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree
-BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree
-BatchedMesh.prototype.raycast = acceleratedRaycast
 
 /**
  * Draws every shape wearing one material in one call, whatever the shapes are.
@@ -71,7 +75,9 @@ export function createBatchedGroups(
         const shapes = new Set<BufferGeometry>()
         let vertices = 0
         let indices = 0
+        let triangles = 0
         for (const mesh of worn.meshes) {
+          triangles += trianglesOf(mesh.geometry)
           if (shapes.has(mesh.geometry)) continue
           shapes.add(mesh.geometry)
           vertices += mesh.geometry.getAttribute('position')?.count ?? 0
@@ -99,8 +105,10 @@ export function createBatchedGroups(
         lot.castShadow = first.castShadow
         lot.receiveShadow = first.receiveShadow
         // The lot's own bounds are what the frustum tests the whole of it by; per instance,
-        // three reads each geometry's own.
+        // three reads each geometry's own. The box is what a density view measures against.
         lot.computeBoundingSphere()
+        lot.computeBoundingBox()
+        lot.userData[DRAWN_TRIANGLES] = triangles
         host.add(lot)
         drawn.push(lot)
 
@@ -118,7 +126,12 @@ export function createBatchedGroups(
         if (!at || !(mesh instanceof Mesh)) continue
 
         at.lot.setMatrixAt(at.slot, mesh.matrixWorld)
-        widen(at.lot.boundingSphere, mesh.geometry, mesh.matrixWorld)
+        // The slot alone rather than the whole texture: `setMatrixAt` flags every matrix of the
+        // lot, which is 2.5 MB re-uploaded per pointer move on 40 000 bodies.
+        matricesOf(at.lot)?.addUpdateRange(at.slot * 16, 16)
+        // Its own bounds, computed if the source never had them: a mesh the camera skipped is a
+        // mesh three never measured, and a radius read as 0 lets a dragged lot be culled whole.
+        widen(at.lot.boundingSphere, boundedBy(mesh.geometry), mesh.matrixWorld)
         touched = true
       }
       return touched
@@ -144,20 +157,40 @@ export function createBatchedGroups(
   }
 }
 
-const layouts = new WeakMap<BufferGeometry, string>()
+/** The matrices a lot uploads. `_matricesTexture` is what r185 holds them in and its `.d.ts` hides. */
+function matricesOf(lot: BatchedMesh): DataTexture | null {
+  // `as`: the field is real and typed by three's own source, only absent from its declarations.
+  return (lot as unknown as { _matricesTexture?: DataTexture })._matricesTexture ?? null
+}
+
+/** A shape's own bounds, measured on first use: only a drawn mesh has had three measure it. */
+function boundedBy(geometry: BufferGeometry): BufferGeometry {
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere()
+  return geometry
+}
+
+const layouts = new WeakMap<BufferGeometry, { attributes: number; layout: string }>()
 
 /**
  * What three demands be the same across a lot: whether there is an index, and which attributes.
- * Held per geometry — the cache lends one shape to every node wearing it, and spelling the
- * attributes again for each of 50 000 nodes would cost a sort and five allocations apiece.
+ *
+ * Held per geometry, and REMEASURED when the attribute count moved: a shared shape is mutated in
+ * place when an occlusion map gives it a second UV set, and a stale spelling would group two
+ * shapes three refuses to mix — `addGeometry` throws out of `apply`, and nothing catches it.
  */
 function layoutOf(geometry: BufferGeometry): string {
+  const attributes = Object.keys(geometry.attributes).length
   const known = layouts.get(geometry)
-  if (known !== undefined) return known
-  const attributes = Object.entries(geometry.attributes)
+  if (known && known.attributes === attributes) return known.layout
+
+  const spelled = Object.entries(geometry.attributes)
     .map(([name, attribute]) => `${name}:${attribute.itemSize}${attribute.normalized ? 'n' : ''}`)
     .sort(byCodeUnit)
-  const layout = `${geometry.index ? 'i' : 'v'}${attributes.join(',')}`
-  layouts.set(geometry, layout)
+  const layout = `${geometry.index ? 'i' : 'v'}${spelled.join(',')}`
+  layouts.set(geometry, { attributes, layout })
   return layout
+}
+
+function trianglesOf(geometry: BufferGeometry): number {
+  return (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
 }

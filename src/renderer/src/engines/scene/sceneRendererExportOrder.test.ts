@@ -60,4 +60,17 @@ describe('the order an export lists the nodes in', () => {
 
     expect(await childrenOf(restored(settled, 'c1'), 'parent')).toEqual(['c0', 'c1', 'c2', 'c3'])
   })
+
+  it('is the document order for a selection too, not the order it was clicked in', async () => {
+    const nodes = ['b0', 'b1', 'b2', 'b3'].map(id => meshNode(id))
+    const renderer = rendererOf()
+    // Clicked back to front: what a file lists is what the document holds, never what a hand did.
+    renderer.apply({ ...sceneOf(nodes), selectedIds: ['b3', 'b1'] })
+
+    const file = new TextDecoder().decode(await renderer.exportTo('gltf', 'selection'))
+    // `as`: a `.gltf` file holds glTF, and `nodes` is the field this reads.
+    const listed = (JSON.parse(file) as { nodes?: { name?: string }[] }).nodes ?? []
+
+    expect(listed.flatMap(node => node.name ?? [])).toEqual(['b1', 'b3'])
+  })
 })
