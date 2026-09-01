@@ -6,6 +6,8 @@
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop an image, or paste its id",
     "dropModel": "Drop a 3D model, or paste its id",
+    "dropViews": "Drop the model’s views",
+    "removeView": "Remove this view",
     "estimatedCost": "~{{units}} CU",
     "operation": "Operation",
     "operationHint": "What the generation will do with the workspace content",

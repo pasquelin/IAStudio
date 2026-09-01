@@ -107,6 +107,10 @@ export const useJobs = create<JobsState>()((set, get) => ({
               assetIds: progress.assetIds ?? job.assetIds,
               ...(progress.error === undefined ? {} : { error: progress.error }),
               ...(progress.cost === undefined ? {} : { cost: progress.cost }),
+              // 🛑 Both of these are the row's only source: settling emits a progress event and
+              // never the whole job. The unit was sent and dropped here from the day it existed.
+              ...(progress.costUnit === undefined ? {} : { costUnit: progress.costUnit }),
+              ...(progress.note === undefined ? {} : { note: progress.note }),
             }
           : job,
       )

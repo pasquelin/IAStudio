@@ -21,16 +21,16 @@ export function JobRowDetail({ job }: { job: Job }) {
   // the whole point of that run. A KEY, and its holes are keys too — nothing here knows a cloud.
   if (job.note) {
     const { labelKey, params, tone } = job.note
-    // The holes are keys too, so each is said before it fills one. The tuple is annotated
-    // because `Object.fromEntries` widens to `any` otherwise, and i18next then widens its own
-    // return past what a node can hold.
+    // The holes are keys too, so each is said before it fills one. Under `replace` rather than
+    // loose: a hole named `count` or `lng` would be eaten as an i18next option, and the sentence
+    // would reach the screen with its hole open.
     const holes = Object.fromEntries(
       Object.entries(params ?? {}).map(([hole, key]): [string, string] => [hole, t(key)]),
     )
 
     return (
       <span className={cn('text-tiny', tone === 'warning' ? 'text-warning' : 'text-muted')}>
-        {t(labelKey, holes)}
+        {t(labelKey, { replace: holes })}
       </span>
     )
   }

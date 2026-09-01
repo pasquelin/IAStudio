@@ -7,6 +7,7 @@ import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
 import { CATALOGUE_FAMILIES } from '@shared/domain/model'
 import type { ContextUse } from '@shared/domain/projectContext'
 import { useDescriptor } from '@/hooks/useDescriptor'
+import { useTaskChoices } from '@/hooks/useTaskChoices'
 import { useGenerationContext } from '@/hooks/useGenerationContext'
 import { useModelForCapability } from '@/hooks/useModelForCapability'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
@@ -89,6 +90,9 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
 
+  /** The descriptor's own fields, plus the lists only this window can fill — see `useTaskChoices`. */
+  const fields = useTaskChoices(descriptor.data?.fields, modelId)
+
   /**
    * 🛑 What the form opens on: the values an edit prepared, over the sources the workspace holds.
    *
@@ -96,10 +100,7 @@ export function Generator() {
    * decided which operation ran. Selecting a picture switched the generator to image-to-image and
    * left the picture behind.
    */
-  const sources = useMemo(
-    () => fillSourceFields(descriptor.data?.fields ?? [], inputs),
-    [descriptor.data, inputs],
-  )
+  const sources = useMemo(() => fillSourceFields(fields, inputs), [fields, inputs])
   const preset = useMemo(() => ({ ...sources, ...prepared }), [sources, prepared])
   /**
    * Whether this shot carries the project's context. Held here and not in `values`: it must never
@@ -124,7 +125,7 @@ export function Generator() {
   const landing = role !== null && deviated?.from === role ? deviated.to : offered
 
   // Before the guards below return early: a hook cannot be called conditionally.
-  const cost = useCostEstimate(modelId, descriptor.data?.fields, contextUse)
+  const cost = useCostEstimate(modelId, fields, contextUse)
   const plan = usePlanAccess()
   const refusalFor = usePlanRefusal(plan)
 
@@ -216,9 +217,9 @@ export function Generator() {
       submit: into => runGeneration(body.current, into),
       // Which fields hold a picture is a fact of the model's schema, and this panel is the
       // only place that has it — see `GeneratorBridge`.
-      references: () => referencePictures(descriptor.data?.fields ?? [], body.current),
+      references: () => referencePictures(fields, body.current),
     })
-  }, [modelId, role, family, inputs, choice, landing, runGeneration, descriptor.data])
+  }, [modelId, role, family, inputs, choice, landing, runGeneration, fields])
 
   const watchValues = cost.onValuesChange
   const onValuesChange = useCallback(
@@ -323,7 +324,7 @@ export function Generator() {
             empty id would arm nothing under the name of nothing. */}
         {descriptor.data && modelId !== null && (
           <GeneratorContext
-            fields={descriptor.data.fields}
+            fields={fields}
             modelId={modelId}
             role={capability.chosen}
             use={contextUse}
@@ -356,7 +357,7 @@ export function Generator() {
               fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
             >
               <DynamicForm
-                fields={descriptor.data.fields}
+                fields={fields}
                 onSubmit={generate}
                 submitLabel={t('actions.generate')}
                 submitHint={t('actions.generateHint')}

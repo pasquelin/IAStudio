@@ -7,6 +7,7 @@ import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { useModelText } from '@/hooks/useModelText'
 import { AssetDropField } from '../AssetDropField'
+import { AssetDropList } from '../AssetDropList'
 import { fieldHandle } from '../scHandle'
 import { CHECKBOX, FIELD, FIELD_FILL } from '../styles'
 import { ToolButton } from '../ToolButton'
@@ -41,6 +42,23 @@ export function DynamicFormControl({
    * nothing a script could work out. This is the form a client most wants to fill.
    */
   const handle = fieldHandle(`generation.${field.key}`)
+
+  // Before the kinds: a repeated field is a LIST of one of them, and every list is dropped the
+  // same way. `image` is the only kind repeated today; a second one lands here rather than in a
+  // case of its own.
+  if (field.repeated) {
+    return (
+      <AssetDropList
+        id={id}
+        registration={registration}
+        initial={
+          Array.isArray(initial) ? initial.filter(one => typeof one === 'string') : undefined
+        }
+        placeholder={t('generation.dropViews')}
+        scId={`generation.${field.key}`}
+      />
+    )
+  }
 
   switch (field.kind) {
     case 'longText':
@@ -113,6 +131,22 @@ export function DynamicFormControl({
         </select>
       )
 
+    // A run of this same service, named by its id. Nothing has run yet — or the window has not
+    // been told — and it falls back to the plain box, which takes an id pasted by hand.
+    case 'task':
+      if (!field.options || field.options.length === 0) break
+
+      return (
+        <select id={id} data-sc={handle} className={FIELD} {...registration}>
+          {!field.required && <option value="" />}
+          {field.options.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )
+
     case 'color':
       return (
         <input
@@ -165,9 +199,11 @@ export function DynamicFormControl({
         />
       )
 
-    // An unknown kind renders as a plain input rather than making the form disappear —
-    // CLAUDE.md, invariant 5.
     default:
-      return <input id={id} data-sc={handle} type="text" className={FIELD} {...registration} />
+      break
   }
+
+  // An unknown kind renders as a plain input rather than making the form disappear — CLAUDE.md,
+  // invariant 5. A `task` with nothing to offer yet lands here too.
+  return <input id={id} data-sc={handle} type="text" className={FIELD} {...registration} />
 }

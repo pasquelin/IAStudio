@@ -418,6 +418,7 @@ export function createJobManager({
     if (entry.job.error !== undefined) progress.error = entry.job.error
     if (entry.job.cost !== undefined) progress.cost = entry.job.cost
     if (entry.job.costUnit !== undefined) progress.costUnit = entry.job.costUnit
+    if (entry.job.note !== undefined) progress.note = entry.job.note
     onProgress(progress)
   }
 
