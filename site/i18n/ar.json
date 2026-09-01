@@ -34,7 +34,6 @@
     "eyebrow": "تطبيق سطح مكتب · مشروع مستقل",
     "lede": "ستّ ورش توليد في نافذة واحدة. ألواح قابلة للإرساء، ومسار زمني بالرمز الزمني، ومفتّش، ومكتبة على القرص: أدوات برنامج إنتاج، مطبَّقة على النماذج التوليدية.",
     "browse": "تصفَّح الورش",
-    "source": "اطّلع على الشيفرة المصدرية",
     "meta": {
       "stack": "Electron · React 19 · TypeScript",
       "platforms": "macOS وWindows وLinux",
@@ -365,12 +364,13 @@
     "about": "تطبيق سطح مكتب متعدّد الوسائط، طُوِّر فرديًّا. Electron وReact وTypeScript.",
     "resources": {
       "0": "التنزيل",
-      "1": "المستودع",
-      "2": "الرخصة"
+      "1": "الرخصة"
     },
     "legal": "الشيفرة المصدرية تحت رخصة <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · والتطبيق يُوزَّع وفق <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">شروط الاستخدام</a> الخاصة به · ومكوّنات الأطراف الثالثة مذكورة في <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">الإشعارات</a>. © 2026 Alban Pasquelin.",
     "docsLink": "التوثيق",
-    "changelog": "سجل التغييرات"
+    "changelog": "سجل التغييرات",
+    "docsFr": "التوثيق 🇫🇷",
+    "docsEn": "التوثيق 🇬🇧"
   },
   "status": {
     "project": "المشروع",

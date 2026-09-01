@@ -33,7 +33,6 @@
     "eyebrow": "Application de bureau · projet indépendant",
     "lede": "Six ateliers de génération dans une seule fenêtre. Panneaux ancrables, timeline au timecode, inspecteur, bibliothèque sur disque : les outils d'un logiciel de production, appliqués aux modèles génératifs.",
     "browse": "Parcourir les ateliers",
-    "source": "Voir le code source",
     "meta": {
       "stack": "Electron · React 19 · TypeScript",
       "platforms": "macOS, Windows, Linux",
@@ -364,12 +363,13 @@
     "about": "Application de bureau multimodale, développée en solo. Electron, React, TypeScript.",
     "resources": {
       "0": "Téléchargement",
-      "1": "Dépôt",
-      "2": "Licence"
+      "1": "Licence"
     },
     "legal": "Code source sous licence <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> · application distribuée sous ses <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">conditions d'utilisation</a> · composants tiers listés dans les <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">mentions</a>. © 2026 Alban Pasquelin.",
     "docsLink": "Documentation",
-    "changelog": "Journal des changements"
+    "changelog": "Journal des changements",
+    "docsFr": "Docs 🇫🇷",
+    "docsEn": "Docs 🇬🇧"
   },
   "status": {
     "project": "projet",

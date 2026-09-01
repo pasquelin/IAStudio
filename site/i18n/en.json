@@ -33,7 +33,6 @@
     "eyebrow": "Desktop application · independent project",
     "lede": "Six generation workshops in a single window. Dockable panels, a timecoded timeline, an inspector, a library on disk: the tools of production software, applied to generative models.",
     "browse": "Browse the workshops",
-    "source": "View the source code",
     "meta": {
       "stack": "Electron · React 19 · TypeScript",
       "platforms": "macOS, Windows, Linux",
@@ -364,12 +363,13 @@
     "about": "Multimodal desktop application, built solo. Electron, React, TypeScript.",
     "resources": {
       "0": "Download",
-      "1": "Repository",
-      "2": "Licence"
+      "1": "Licence"
     },
     "legal": "Source code under the <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> licence · application distributed under its <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">terms of use</a> · third-party components listed in the <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">notices</a>. © 2026 Alban Pasquelin.",
     "docsLink": "Documentation",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "docsFr": "Docs 🇫🇷",
+    "docsEn": "Docs 🇬🇧"
   },
   "status": {
     "project": "project",

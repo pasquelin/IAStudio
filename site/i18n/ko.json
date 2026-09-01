@@ -33,7 +33,6 @@
     "eyebrow": "데스크톱 애플리케이션 · 독립 프로젝트",
     "lede": "여섯 개의 생성 작업실을 하나의 창에. 도킹 가능한 패널, 타임코드 타임라인, 인스펙터, 디스크 위의 라이브러리 — 제작 소프트웨어의 도구를 생성 모델에 그대로 적용했습니다.",
     "browse": "작업실 둘러보기",
-    "source": "소스 코드 보기",
     "meta": {
       "stack": "Electron · React 19 · TypeScript",
       "platforms": "macOS, Windows, Linux",
@@ -364,12 +363,13 @@
     "about": "멀티모달 데스크톱 애플리케이션, 혼자 개발했습니다. Electron, React, TypeScript.",
     "resources": {
       "0": "내려받기",
-      "1": "저장소",
-      "2": "라이선스"
+      "1": "라이선스"
     },
     "legal": "소스 코드는 <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/LICENSE\" target=\"_blank\" rel=\"noopener\">PolyForm Noncommercial 1.0.0</a> 라이선스 · 애플리케이션은 그 <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/EULA.md\" target=\"_blank\" rel=\"noopener\">이용 약관</a>에 따라 배포 · 서드파티 구성 요소는 <a href=\"https://github.com/pasquelin/IAStudio/blob/HEAD/THIRD-PARTY-NOTICES.md\" target=\"_blank\" rel=\"noopener\">고지</a>에 명시. © 2026 Alban Pasquelin.",
     "docsLink": "문서",
-    "changelog": "변경 내역"
+    "changelog": "변경 내역",
+    "docsFr": "문서 🇫🇷",
+    "docsEn": "문서 🇬🇧"
   },
   "status": {
     "project": "프로젝트",

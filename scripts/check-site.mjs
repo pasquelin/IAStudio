@@ -79,13 +79,45 @@ if (versDepot.length === 0) {
   griefs.push(`le lien vers le dépôt ne s'appelle pas « GitHub » mais « ${versDepot[0].texte} ».`)
 }
 
+/* Chaque destination partagée porte UN nom, et le même sur les trois. C'est l'inverse de
+   la règle précédente, et l'angle mort qu'elle laissait : « Source » et « GitHub » ont
+   désigné le même dépôt, sur deux vitrines puis à deux endroits d'une seule. Ne sont visées
+   que les destinations NOMMÉES ici — un lien au fil d'une phrase porte les mots de la
+   phrase, et ce n'est pas un défaut. */
+for (const [cible, attendu] of [
+  [DEPOT, 'GitHub'],
+  ['https://github.com/pasquelin', '@pasquelin'],
+]) {
+  const vers = liens.filter((l) => l.href.replace(/\/$/, '') === cible)
+  const noms = [...new Set(vers.map((l) => l.texte))].filter((n) => n !== '')
+  const fautifs = noms.filter((n) => n !== attendu)
+  if (fautifs.length > 0) {
+    griefs.push(`${cible} est appelé « ${fautifs.join(' », « ')} » ; le nom retenu est « ${attendu} ».`)
+  }
+  // UN lien, pas deux : répété dans la barre ET le pied, il double sans rien ajouter, et
+  // c'est par là que les libellés divergent.
+  if (vers.length > 1) {
+    griefs.push(`${cible} est lié ${vers.length} fois ; un seul lien par vitrine.`)
+  }
+}
+
 /* Ce que chaque vitrine doit offrir, où qu'elle le range. */
 for (const [quoi, motif] of [
   ['le changelog', /\/CHANGELOG\.md/],
   ['la licence', /\/LICENSE(\b|$)/],
   ['la documentation', /\/docs\//],
+  ['les mentions tierces', /THIRD-PARTY-NOTICES\.md/],
 ]) {
   if (!liens.some((l) => motif.test(l.href))) griefs.push(`aucun lien vers ${quoi}.`)
+}
+
+/* Des conditions d'utilisation là où la licence en appelle : PolyForm est restrictive, et
+   un EULA y précise ce qu'elle laisse ouvert pour le paquet distribué. Sous MIT il serait
+   inopérant — la licence accorde déjà tout, irrévocablement — et le lecteur y verrait des
+   restrictions qui ne s'appliquent pas. La condition se lit donc sur la licence, elle ne se
+   déclare pas par dépôt. */
+if (repo.licences.expected !== 'MIT' && !liens.some((l) => /EULA\.md/.test(l.href))) {
+  griefs.push(`aucun lien vers les conditions d'utilisation (licence ${repo.licences.expected}).`)
 }
 
 /* ------------------------------------------------------------ le contact */
@@ -96,8 +128,23 @@ const enClair = [...page.matchAll(/mailto:[^"'\s>]+|[\w.%+-]+@[\w.-]+\.[a-z]{2,}
 if (enClair.length > 0) {
   griefs.push(`adresse en clair sur la page : ${[...new Set(enClair)].join(', ')}.`)
 }
-if (!liens.some((l) => /linkedin\.com/i.test(l.href))) {
-  griefs.push(`aucun lien de contact vers LinkedIn.`)
+/* Le contact est LE MÊME sur les trois vitrines, et cette liste vit ICI plutôt que dans
+   `repo.config.json` : mise en config, chaque dépôt pourrait la sienne, et c'est
+   exactement l'écart qu'on ferme. Un lien de profil ajouté sur une seule vitrine — un
+   compte GitHub, un réseau de plus — la fait échouer, dans un sens comme dans l'autre. */
+const CONTACT = ['https://www.linkedin.com/in/alban-pasquelin/', 'https://github.com/pasquelin']
+
+const estPersonnel = (href) => /linkedin\.com|mailto:|^https:\/\/github\.com\/[\w-]+\/?$/i.test(href)
+const contactTrouve = [...new Set(liens.map((l) => l.href).filter(estPersonnel))].sort()
+const contactAttendu = [...CONTACT].sort()
+if (contactTrouve.join('|') !== contactAttendu.join('|')) {
+  const enTrop = contactTrouve.filter((h) => !contactAttendu.includes(h))
+  const manquants = contactAttendu.filter((h) => !contactTrouve.includes(h))
+  griefs.push(
+    'le contact diffère de celui des deux autres vitrines :' +
+      (manquants.length ? `\n      manquant : ${manquants.join(', ')}` : '') +
+      (enTrop.length ? `\n      en trop : ${enTrop.join(', ')}` : ''),
+  )
 }
 
 /* ------------------------------------------------------- les ancres internes */
