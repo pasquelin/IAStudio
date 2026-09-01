@@ -2,7 +2,7 @@ import { mdiCloseCircleOutline, mdiImagePlusOutline } from '@mdi/js'
 import { useEffect, useState } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { ASSET_TYPES, posterUrl, type Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
 import { useLatest } from '@/hooks/useLatest'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -75,8 +75,8 @@ export function AssetDropList({
     <div id={id} data-sc={scId && fieldHandle(scId)} className="flex flex-col gap-2">
       {ids.map((assetId, index) => (
         <div key={assetId} className="flex min-w-0 items-center gap-2">
-          {/* `Thumbnail` draws its own « no picture » mark, which is the one the studio uses. */}
-          <Thumbnail url={posters[assetId]} className={FIELD_THUMBNAIL} />
+          {/* The fallback its sibling uses: a preset carries ids this session never dropped. */}
+          <Thumbnail url={posters[assetId] ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />
           <span className={SLOT_LABEL}>{assetId}</span>
           <ToolButton
             icon={mdiCloseCircleOutline}

@@ -13,7 +13,12 @@ const DRAFT: FieldDescriptor = {
 }
 
 const done = (overrides: Parameters<typeof job>[0]) =>
-  job({ status: 'succeeded', finishedAt: '2026-08-31T09:00:00.000Z', ...overrides })
+  job({
+    status: 'succeeded',
+    finishedAt: '2026-08-31T09:00:00.000Z',
+    assetIds: ['asset-1'],
+    ...overrides,
+  })
 
 beforeEach(() => {
   useJobs.setState({ jobs: [] })
@@ -38,6 +43,17 @@ describe('useTaskChoices', () => {
 
   it('leaves out a run of another service, whose id means nothing here', () => {
     useJobs.setState({ jobs: [done({ id: 'j2', targetId: 'model_flux', remoteId: 'scenario-1' })] })
+
+    const { result } = renderHook(() => useTaskChoices([DRAFT], 'tripo:models/refine'))
+
+    expect(result.current[0]?.options).toEqual([])
+  })
+
+  // A free check writes no file, and refining what it answered is refused after the round trip.
+  it('leaves out a run that produced nothing to work on', () => {
+    useJobs.setState({
+      jobs: [done({ id: 'j5', targetId: 'tripo:a:b', remoteId: '9a1c', assetIds: [] })],
+    })
 
     const { result } = renderHook(() => useTaskChoices([DRAFT], 'tripo:models/refine'))
 

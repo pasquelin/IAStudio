@@ -73,7 +73,9 @@ export function fillSourceFields(
 
     if (!field || taken.has(field.key)) continue
     taken.add(field.key)
-    values[field.key] = input.assetId
+    // 🛑 A repeated field takes a LIST: handed the bare id, its control shows nothing and the
+    // runner sends an empty list — the very refusal `repeated` exists to stop.
+    values[field.key] = field.repeated ? [input.assetId] : input.assetId
   }
 
   return values

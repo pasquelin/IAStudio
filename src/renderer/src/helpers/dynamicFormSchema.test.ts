@@ -4,6 +4,19 @@ import { field } from './dynamic-form-fixtures'
 import { buildSchema } from './dynamicFormSchema'
 
 describe('schema building', () => {
+  /**
+   * 🛑 Validated as one value, a multiview form can never be submitted at all: zod refuses the
+   * array its control writes, `handleSubmit` never fires, and nothing is generated. Ever.
+   */
+  it('takes a list where the field holds one', () => {
+    const schema = buildSchema([
+      field({ key: 'files', kind: 'image', required: true, repeated: true }),
+    ])
+
+    expect(schema.safeParse({ files: ['asset_7', 'asset_8'] }).success).toBe(true)
+    expect(schema.safeParse({ files: [] }).success).toBe(false)
+  })
+
   it('keeps zod out of the module the panels read', () => {
     expect(formSource).not.toMatch(/from 'zod'/)
     // The other half: `dynamicForm` must still hold what the panels need, or the line above

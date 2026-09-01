@@ -9,6 +9,25 @@ import {
 } from './dynamicForm'
 import { field } from './dynamic-form-fixtures'
 
+describe('a field that holds several values', () => {
+  // `''` is neither what its control writes back nor what its schema accepts.
+  it('opens on an empty list rather than on a blank', () => {
+    const fields = [field({ key: 'files', kind: 'image', repeated: true })]
+
+    expect(defaultValues(fields)).toEqual({ files: [] })
+  })
+
+  // Prompt assistance saw no reference picture at all on a multiview.
+  it('offers every picture it holds as a reference, not only the first', () => {
+    const fields = [field({ key: 'files', kind: 'image', repeated: true })]
+
+    expect(referencePictures(fields, { files: ['asset_7', 'asset_8'] })).toEqual([
+      'asset_7',
+      'asset_8',
+    ])
+  })
+})
+
 describe('default values', () => {
   /**
    * 🛑 Two models sharing a key share nothing else: a scheduler the next one does not list would

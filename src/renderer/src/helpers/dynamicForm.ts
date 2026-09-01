@@ -85,6 +85,9 @@ export function defaultValues(
     else if (held !== undefined && held !== put && fits(field, held)) values[field.key] = held
     else if (field.default !== undefined) values[field.key] = field.default
     else if (field.kind === 'boolean') values[field.key] = false
+    // A list opens EMPTY, never blank: `''` is not what its control writes back, nor what its
+    // schema accepts.
+    else if (field.repeated) values[field.key] = []
     else values[field.key] = ''
   }
   return values
@@ -141,8 +144,12 @@ export function referencePictures(
 
   for (const field of fields) {
     if (field.kind !== 'image') continue
+
+    // A repeated field holds several of them, and prompt assistance saw none of a multiview.
     const value = values[field.key]
-    if (typeof value === 'string' && value.trim() !== '') pictures.push(value)
+    for (const one of Array.isArray(value) ? value : [value]) {
+      if (typeof one === 'string' && one.trim() !== '') pictures.push(one)
+    }
   }
 
   return pictures

@@ -15,6 +15,10 @@ const NONE: readonly Named[] = []
 const usable = (job: Job, service: string): job is Named =>
   job.status === 'succeeded' &&
   job.remoteId !== undefined &&
+  // 🛑 What it PRODUCED, or the list offers a free rig check and a run that wrote no file: the
+  // service refuses those after the round trip. What KIND it produced is not asked — the job
+  // does not say, and offering a picture to a mesh endpoint is a refusal this cannot yet stop.
+  job.assetIds.length > 0 &&
   serviceOfTarget(job.targetId) === service
 
 /**

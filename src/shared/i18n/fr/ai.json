@@ -59,7 +59,7 @@
     "sourceViews": "Vues de départ",
     "sourceModel": "Modèle 3D de départ",
     "sourceTask": "Brouillon à affiner",
-    "sourceTaskHelp": "Une génération 3D déjà faite ici. Le service travaille sur sa tâche, pas sur un fichier — un modèle importé ne peut pas être affiné.",
+    "sourceTaskHelp": "Une génération déjà faite ici. Le service travaille sur sa tâche, pas sur un fichier — un modèle importé ne peut pas être affiné.",
     "sourceRig": "Personnage à squelette",
     "style": "Style",
     "styleHelp": "Le nom d’un style que le service publie — « lego », « voxel », « voronoi ».",

@@ -19,6 +19,13 @@ function fieldSchema(field: FieldDescriptor): z.ZodType {
   if (field.kind === 'boolean') return z.boolean().optional()
 
   const base = isNumeric(field.kind) ? numericSchema(field) : z.string().min(1)
+  // 🛑 A repeated field holds an ARRAY, and validated as one value the form can never be
+  // submitted at all: zod refuses, `handleSubmit` never fires, and the panel says nothing useful.
+  if (field.repeated) {
+    const list = z.array(base)
+    return field.required ? list.min(1) : list.optional()
+  }
+
   return z.preprocess(blankToUndefined, field.required ? base : base.optional())
 }
 

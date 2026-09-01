@@ -173,7 +173,11 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       // A cardinality, never a second rule about files: a repeated field is a LIST of the same
       // kind, and each of them goes up the one way above allows.
       if (field.repeated) {
-        const held = Array.isArray(value) ? value.filter(one => typeof one === 'string') : []
+        // A lone value is a list of ONE, never nothing: a control that has not caught up with a
+        // repeated field would otherwise send `[]`, which their refusal counts as no file at all.
+        const held = (Array.isArray(value) ? value : [value]).filter(one => typeof one === 'string')
+        if (held.length === 0) continue
+
         sent[field.key] = wrapped(field.key, await Promise.all(held.map(uploaded)))
         continue
       }

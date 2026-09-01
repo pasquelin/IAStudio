@@ -125,6 +125,23 @@ describe('submitting to Tripo', () => {
     })
   })
 
+  // 🛑 An empty list is what their refusal counts as no file at all, and it was paid for.
+  it('leaves a repeated field out rather than sending an empty list', async () => {
+    const { runner, api } = harness()
+
+    await runner.submit(MULTIVIEW_TARGET, { files: [] })
+
+    expect(api.create.mock.calls[0]?.[1]).not.toHaveProperty('files')
+  })
+
+  it('takes a lone view for the list of one it is', async () => {
+    const { runner, api } = harness()
+
+    await runner.submit(MULTIVIEW_TARGET, { files: '/projects/kingdom/front.png' })
+
+    expect(api.create.mock.calls[0]?.[1]).toMatchObject({ files: [{ file_token: 'file-token-1' }] })
+  })
+
   it('passes a value that is already theirs — a task id, a URL — as it stands', async () => {
     const { runner, api } = harness()
 
