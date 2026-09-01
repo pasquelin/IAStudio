@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CAPABILITIES_BY_FAMILY } from './model'
 import {
   isTripoModelId,
+  tripoRigCheckOf,
   tripoDescriptorOf,
   tripoEntryOf,
   tripoFieldKeys,
@@ -227,5 +228,29 @@ describe('tripoFieldsOf', () => {
     const keys = new Set(tripoFieldKeys())
     expect(keys.has('tripoFields.qualityDetailed')).toBe(true)
     expect(keys.has('localFields.prompt')).toBe(true)
+  })
+})
+
+/**
+ * 🛑 MEASURED against the live service: `animations/rig-check` costs nothing and answers
+ * `{"riggable": true, "rig_type": "biped", "topology": "biped"}` — the one Tripo result that
+ * carries no URL, and what says whether the 25 credits a rig costs are worth spending.
+ */
+describe('tripoRigCheckOf', () => {
+  it('reads the verdict and the topology a rig should then be asked for', () => {
+    const answered = '{"riggable": true, "rig_type": "biped", "topology": "biped"}'
+
+    expect(tripoRigCheckOf(answered)).toEqual({ riggable: true, rigType: 'biped' })
+  })
+
+  it('drops a topology no bundle has a word for, rather than showing a raw key', () => {
+    expect(tripoRigCheckOf('{"riggable": true, "rig_type": "chimera"}')).toEqual({ riggable: true })
+  })
+
+  // Every other runtime writes a script on `job.text`, and a script is not this.
+  it('answers nothing for text that is not a verdict', () => {
+    expect(tripoRigCheckOf('export function main() {}')).toBeNull()
+    expect(tripoRigCheckOf('{"model_url": "https://cdn/x.glb"}')).toBeNull()
+    expect(tripoRigCheckOf(undefined)).toBeNull()
   })
 })

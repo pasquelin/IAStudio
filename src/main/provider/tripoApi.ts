@@ -86,6 +86,11 @@ export type TripoTask = {
    * it drew on the way. Picking here would file a mesh's intermediate picture as the mesh.
    */
   outputUrls: Readonly<Record<string, string>>
+  /**
+   * What the output says beside its files. `animations/rig-check` answers ONLY this — three
+   * facts and no URL — and a result thrown away leaves a task that succeeded saying nothing.
+   */
+  outputFacts?: Readonly<Record<string, unknown>>
 }
 
 export type TripoApi = {
@@ -130,6 +135,16 @@ function urlsIn(output: unknown): Record<string, string> {
   )
 }
 
+/** Everything their output says that is NOT a file — the free rig check answers only this. */
+function factsIn(output: unknown): Readonly<Record<string, unknown>> | undefined {
+  if (!isRecord(output)) return undefined
+
+  const facts = Object.entries(output).filter(
+    ([, value]) => !(typeof value === 'string' && value.startsWith('http')),
+  )
+  return facts.length > 0 ? Object.fromEntries(facts) : undefined
+}
+
 export function taskOf(payload: unknown): TripoTask | null {
   if (!isRecord(payload)) return null
   const taskId = textOf(payload, 'task_id') ?? textOf(payload, 'id')
@@ -141,10 +156,12 @@ export function taskOf(payload: unknown): TripoTask | null {
   // 🛑 `credits_consumed`, and their v2 says `consumed_credit`: a curl against the wrong host
   // once "proved" the other name and broke this. The studio speaks v3 — read v3.
   const credits = readOptionalNumber(payload, 'credits_consumed')
+  const facts = factsIn(payload['output'])
   return {
     taskId,
     status,
     outputUrls: urlsIn(payload['output']),
+    ...(facts === undefined ? {} : { outputFacts: facts }),
     ...(progress === undefined ? {} : { progress }),
     ...(credits === undefined ? {} : { credits }),
   }

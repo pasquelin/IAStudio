@@ -83,3 +83,29 @@ describe('the unit a cost is quoted in', () => {
     expect(screen.getByText('20 UC')).toBeDefined()
   })
 })
+
+/**
+ * 🛑 `animations/rig-check` is free, so its cost says nothing, and it writes no file, so the
+ * shelf says nothing either. The verdict is the whole point of the run — read off `job.text`,
+ * where the runner leaves a result that is not a file.
+ */
+describe('what a free rig check answered', () => {
+  it('names the topology a rig should then be asked for', () => {
+    render(<JobRow job={job({ facts: '{"riggable": true, "rig_type": "biped"}', cost: 0 })} />)
+
+    expect(screen.getByText('Squelettable · Bipède')).toBeDefined()
+  })
+
+  it('says a mesh cannot be rigged, rather than a cost of zero', () => {
+    render(<JobRow job={job({ facts: '{"riggable": false}', cost: 0 })} />)
+
+    expect(screen.getByText('Pas de squelette possible')).toBeDefined()
+  })
+
+  // A script lands in an editor, on `job.text`, and a row is not where a script belongs.
+  it('leaves a job carrying a script to its cost', () => {
+    render(<JobRow job={job({ text: 'export function main() {}', cost: 20 })} />)
+
+    expect(screen.getByText('20 UC')).toBeDefined()
+  })
+})

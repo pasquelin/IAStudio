@@ -24,6 +24,11 @@
     "tripo": "Tripo",
     "tripoHint": "3D and image generation. One API key. Serves the 3D and Image spaces."
   },
+  "tripoRigCheck": {
+    "riggable": "Riggable",
+    "riggableAs": "Riggable · {{topology}}",
+    "notRiggable": "Cannot be rigged"
+  },
   "tripoFields": {
     "texture": "Image",
     "textureHelp": "Unticked, the mesh comes back bare — and costs 10 credits less.",

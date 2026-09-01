@@ -184,6 +184,67 @@ describe('following a Tripo task', () => {
     expect(runner.producedBy('9a1c-5248')?.type).toBe('image')
   })
 
+  /**
+   * The free rig check writes no file, so `bringDown` has nothing to bring: the answer travels
+   * on the job itself, where the row that draws it can read it.
+   */
+  it('carries a result that is not a file on the job rather than dropping it', async () => {
+    // Not `entryOn`: the check takes no model of its own, so it is found by endpoint alone.
+    const check = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig-check')
+    if (!check) throw new Error('no animations/rig-check in the catalogue')
+    const target = { id: tripoModelId(check) }
+    const { runner } = harness([
+      {
+        taskId: '9a1c-5248',
+        status: 'success',
+        outputUrls: {},
+        outputFacts: { riggable: true, rig_type: 'biped' },
+      },
+    ])
+
+    await runner.submit(target, { input: 'asset-1' })
+
+    const answered = await runner.poll('9a1c-5248', target)
+
+    expect(answered.facts).toBe('{"riggable":true,"rig_type":"biped"}')
+    // 🛑 Never `text`: the Code space lands that one in an editor for ANY claimed job, so a
+    // verdict written there overwrites the script open in the tab.
+    expect(answered.text).toBeUndefined()
+  })
+
+  // It brings nothing down, so the warning that flags a genuinely lost mesh URL stays rare.
+  it('says nothing in the journal about a file it was never going to write', async () => {
+    const check = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig-check')
+    if (!check) throw new Error('no animations/rig-check in the catalogue')
+    const target = { id: tripoModelId(check) }
+    const log = vi.fn()
+    const { runner } = harness(
+      [{ taskId: '9a1c-5248', status: 'success', outputUrls: {}, outputFacts: { riggable: true } }],
+      { log },
+    )
+
+    await runner.submit(target, { input: 'asset-1' })
+    await runner.poll('9a1c-5248', target)
+
+    expect(log).not.toHaveBeenCalled()
+  })
+
+  // A mesh task answers `part_names` beside its URLs, and a row is not where that belongs.
+  it('says nothing on a job that produced a file', async () => {
+    const { runner } = harness([
+      {
+        taskId: '9a1c-5248',
+        status: 'success',
+        outputUrls: { model_url: 'https://cdn/x.glb' },
+        outputFacts: { part_names: ['a'] },
+      },
+    ])
+
+    await runner.submit(TEXT_TARGET, { prompt: 'a hat' })
+
+    expect((await runner.poll('9a1c-5248', TEXT_TARGET)).facts).toBeUndefined()
+  })
+
   it('downloads once, however many times the outcome is polled', async () => {
     const { runner, written } = harness([
       { taskId: '9a1c-5248', status: 'success', outputUrls: { model_url: 'https://cdn/x.glb' } },
