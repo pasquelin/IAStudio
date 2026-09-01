@@ -30,8 +30,12 @@ function listening(): { heard: unknown[]; close: () => void } {
   return { heard, close: () => channel.close() }
 }
 
-/** A `BroadcastChannel` delivers on a turn of the loop, never on a microtask. */
-const delivered = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
+/**
+ * A `BroadcastChannel` delivers on a turn of the loop, never on a microtask — and a single turn
+ * is not a promise it has arrived: waited that way, this file went red once in fifteen runs.
+ */
+const heardBy = (heard: unknown[], message: unknown): Promise<void> =>
+  vi.waitFor(() => expect(heard).toContainEqual(message))
 
 beforeEach(() => {
   clearCharacters()
@@ -45,6 +49,15 @@ describe('editing one character', () => {
     const nodes = sceneOf(useScenes.getState(), workshopIdOf(ASSET)).nodes
     expect(nodes).toHaveLength(1)
     expect(nodes[0]?.type === 'model' && nodes[0].model.assetId).toBe(ASSET)
+    stage.close()
+  })
+
+  // This window has no outliner to drag from: a band left to fill itself stays empty for ever.
+  it('puts that character on the animation sheet, where a scene waits to be dragged there', () => {
+    const stage = createCharacterStage({ renderer: renderer(), assetId: ASSET })
+
+    const scene = sceneOf(useScenes.getState(), workshopIdOf(ASSET))
+    expect(scene.animation.sheet).toEqual([scene.nodes[0]?.id])
     stage.close()
   })
 
@@ -74,9 +87,8 @@ describe('editing one character', () => {
     const stage = createCharacterStage({ renderer: renderer(), assetId: ASSET })
 
     stage.read(RIG, null, { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 2, z: 1 } })
-    await delivered()
 
-    expect(heard.heard).toContainEqual({
+    await heardBy(heard.heard, {
       kind: 'holds',
       assetId: ASSET,
       rig: RIG,
@@ -94,11 +106,10 @@ describe('editing one character', () => {
     stage.read(RIG, null, null)
 
     stage.close()
-    await delivered()
+    await heardBy(heard.heard, { kind: 'dropped', assetId: ASSET })
 
     expect(characterOf(useCharacters.getState(), ASSET).rig).toBeNull()
     expect(sceneOf(useScenes.getState(), workshopIdOf(ASSET)).nodes).toEqual([])
-    expect(heard.heard).toContainEqual({ kind: 'dropped', assetId: ASSET })
     heard.close()
   })
 

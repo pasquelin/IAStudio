@@ -10,7 +10,10 @@ import { type ClipBlock } from '@/engines/timeline/bandRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
 import { clipRefLabel } from '@/helpers/clipLabel'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
-import { TimelineClipSettings } from '../../../timeline/components/Timeline/TimelineClipSettings'
+import {
+  playedBlockOf,
+  TimelineClipSettings,
+} from '../../../timeline/components/Timeline/TimelineClipSettings'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -32,6 +35,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
+  const pickedBlock = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
   const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
   useHeadInsideBand(documentId, timeline.duration)
@@ -136,11 +140,14 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           <div className="min-w-0 flex-1">
             <AnimationCanvas documentId={documentId} rows={rows} />
           </div>
-          {/* Beside the block one is looking at: how a move plays used to be set in the inspector,
-              which could not see WHICH block and so described the first one it found. */}
-          <aside className="border-edge w-56 shrink-0 overflow-y-auto border-l px-2 py-1">
-            <TimelineClipSettings documentId={documentId} />
-          </aside>
+          {/* Beside the block one is looking at, and only then: mounted whatever was picked, it
+              was 224 px of bordered nothing on every band holding no block — the skeleton
+              window's own band holds none at all. */}
+          {playedBlockOf(nodes, pickedBlock) && (
+            <aside className="border-edge w-56 shrink-0 overflow-y-auto border-l px-2 py-1">
+              <TimelineClipSettings documentId={documentId} />
+            </aside>
+          )}
         </div>
       )}
     </div>

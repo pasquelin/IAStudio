@@ -90,7 +90,15 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
  * repo forbids. Composed anew on every open, from the asset id and nothing more.
  */
 export function workshopScene(assetId: string): SceneState {
-  return { ...EMPTY_SCENE, nodes: [modelNode(assetId, assetId)] }
+  const node = modelNode(assetId, assetId)
+
+  // 🛑 On the sheet at once, where a studio scene waits to be dragged there: this window has no
+  // outliner to drag FROM, so a band left to fill itself would stay on its empty state for ever.
+  return {
+    ...EMPTY_SCENE,
+    nodes: [node],
+    animation: { ...EMPTY_SCENE.animation, sheet: [node.id] },
+  }
 }
 
 /** The document this window's workshop scene lives under — one per character, in its own store. */

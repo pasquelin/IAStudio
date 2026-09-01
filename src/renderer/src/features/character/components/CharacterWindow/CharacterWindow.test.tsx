@@ -132,6 +132,14 @@ it('poses the bone the gizmo moved, and writes the skeleton only once the bar as
   expect(restOfSpine()?.position.y).toBeCloseTo(0.2, 5)
 })
 
+// Without it, laying a motion by hand is out of reach — and posing a character is what the
+// gizmo now does. The studio's own band, on this window's workshop scene.
+it('stands a band under the character, on the scene of its workshop', () => {
+  render(<CharacterWindow assetId={ASSET} />)
+
+  expect(screen.getByRole('region', { name: 'Mouvement en cours' })).toBeInTheDocument()
+})
+
 // The sentence is about the FILE landing, and a mesh with no skeleton is a character plainly on
 // screen — the panel beside it offers to rig it. Shown on « no rig » it stood over the model.
 it('drops the waiting note as soon as the engine has measured the mesh', async () => {

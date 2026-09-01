@@ -15,7 +15,7 @@ import { laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { setModelLanes } from '@/engines/scene/commands'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import type { ModelNode } from '@/engines/scene/sceneState'
+import type { ModelNode, SceneNode } from '@/engines/scene/sceneState'
 
 export type TimelineClipSettingsProps = { documentId: string }
 
@@ -27,18 +27,30 @@ export type TimelineClipSettingsProps = { documentId: string }
  * block, and the band is the one surface that shows which — the inspector had to guess, and it
  * guessed wrong: Play was armed over a block nobody had picked.
  */
-export function TimelineClipSettings({ documentId }: TimelineClipSettingsProps) {
-  const { t } = useTranslation()
-  const picked = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
-  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-
+/** The block the band holds picked, and the model that plays it — `null` while none is. */
+export function playedBlockOf(
+  nodes: readonly SceneNode[],
+  picked: string | null,
+): { holder: ModelNode; played: ClipRef } | null {
   const holder = nodes.find(
     (node): node is ModelNode =>
       node.type === 'model' &&
       (node.model.lanes ?? []).some(lane => lane.clips.some(clip => clip.id === picked)),
   )
   const played = holder?.model.lanes?.flatMap(lane => lane.clips).find(clip => clip.id === picked)
-  if (!holder || !played) return null
+
+  return holder && played ? { holder, played } : null
+}
+
+export function TimelineClipSettings({ documentId }: TimelineClipSettingsProps) {
+  const { t } = useTranslation()
+  const picked = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
+  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
+
+  const block = playedBlockOf(nodes, picked)
+  if (!block) return null
+
+  const { holder, played } = block
 
   // The chosen block replaced INSIDE its own lane, every other lane carried over untouched:
   // rewriting the whole field from one control would drop every block this row does not show.

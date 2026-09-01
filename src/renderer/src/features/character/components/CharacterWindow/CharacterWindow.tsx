@@ -28,6 +28,7 @@ import { useCharacterView } from '@/stores/characterView'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { AnimationPanel } from '@/features/animation/components/Animation/AnimationPanel'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
 import {
   CHARACTER_EDIT_REST,
@@ -247,6 +248,17 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             nodeId={nodeId ?? ''}
           />
         </div>
+
+        {/* The studio's own band, on this window's workshop scene: laying a key by hand is the
+            one thing a posed character is for, and a band written again here would be a second
+            copy of every gesture. No lanes and no shots live in a workshop, so what is left of
+            it is exactly the two this window needs — scrubbing, and keying. */}
+        <section
+          aria-label={t('character.band')}
+          className="bg-monitor mt-(--sc-gutter) h-64 shrink-0 overflow-hidden rounded-(--radius-sc-lg)"
+        >
+          <AnimationPanel documentId={workshopIdOf(assetId)} />
+        </section>
       </div>
 
       {/* Per window, and easy to forget: without it every tooltip attribute in here writes a
