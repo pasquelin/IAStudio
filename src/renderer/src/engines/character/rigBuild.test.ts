@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { Rig } from '@shared/domain/rig'
 import { INFLUENCES } from './skinMessage'
 import { emptyBinding } from './skinVertices'
-import { applyRig, bonesOfRig, positionsIn, skinnableMeshesOf } from './rigBuild'
+import { applyRig, bonesOfRig, positionsIn, restRig, skinnableMeshesOf, wearsRig } from './rigBuild'
 
 const REST = (x: number, y: number, z: number) => ({
   position: { x, y, z },
@@ -171,6 +171,70 @@ describe('putting a rig on a model', () => {
     applyRig(holder, RIG, [])
 
     expect(holder.children.some(child => child.name === 'Hips')).toBe(false)
+  })
+})
+
+describe('editing the rest of a rig a model already wears', () => {
+  /** The same rig with one joint moved — which is every drag of the gizmo in the window. */
+  const MOVED: Rig = {
+    ...RIG,
+    bones: RIG.bones.map(bone =>
+      bone.name === 'Spine' ? { ...bone, rest: REST(0.3, 0.2, 0) } : bone,
+    ),
+  }
+
+  const rigged = (): Object3D => {
+    const mesh = plainMesh()
+    const holder = modelWith(mesh)
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+    return holder
+  }
+
+  // What tells a rest EDIT from a rebuild: a joint moved changes where the bones stand and never
+  // which ones there are.
+  it('knows a model wearing these very bones from one that is not', () => {
+    const holder = rigged()
+
+    expect(wearsRig(holder, RIG)).toBe(true)
+    expect(wearsRig(holder, MOVED)).toBe(true)
+    expect(wearsRig(holder, { ...RIG, bones: RIG.bones.slice(0, 2) })).toBe(false)
+    expect(wearsRig(modelWith(plainMesh()), RIG)).toBe(false)
+  })
+
+  it('refuses a rig hanging the same bones off one another differently', () => {
+    const reparented: Rig = {
+      ...RIG,
+      bones: RIG.bones.map(bone => (bone.name === 'Head' ? { ...bone, parent: 'Hips' } : bone)),
+    }
+
+    expect(wearsRig(rigged(), reparented)).toBe(false)
+  })
+
+  it('puts the bones where the rig now rests', () => {
+    const holder = rigged()
+
+    restRig(holder, MOVED)
+
+    expect(holder.getObjectByName('Spine')?.position.x).toBeCloseTo(0.3, 6)
+  })
+
+  /**
+   * 🛑 The whole point, and the defect it was written for: a joint dragged onto the elbow it
+   * belongs in must not drag the arm with it. The weights are per vertex and unchanged; what
+   * changes is the pose they are measured FROM, so the deformation is the identity once more.
+   */
+  it('leaves the skin exactly where it was, which is what makes a skeleton editable', () => {
+    const holder = rigged()
+    const skinned = skinnedIn(holder)
+    if (!skinned) throw new Error('the fixture binds one skinned mesh')
+
+    const before = skinned.skeleton.boneInverses.map(one => one.elements.slice())
+    restRig(holder, MOVED)
+    const after = skinned.skeleton.boneInverses.map(one => one.elements.slice())
+
+    // The bone that moved is measured from somewhere else now, and the ones that did not are not.
+    expect(after[1]).not.toEqual(before[1])
+    expect(after[0]).toEqual(before[0])
   })
 })
 

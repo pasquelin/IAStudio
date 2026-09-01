@@ -149,6 +149,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     // edited by placing its joints, where a scene poses one by turning them.
     renderer.setSkeletons(true)
     renderer.setPoseMode(true)
+    // 🛑 This window EDITS a rest pose; it never strikes one. Without it a joint dragged onto the
+    // elbow it belongs in took the whole arm with it, the character stretched, and the leg bones
+    // ran out under its feet — measured on screen.
+    renderer.setRestEditing(true)
     renderer.setMode(useCharacterView.getState().mode)
 
     const stage = createCharacterStage({ renderer, assetId })

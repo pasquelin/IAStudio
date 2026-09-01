@@ -125,6 +125,73 @@ export function applyRig(
   }
 }
 
+/**
+ * Whether a model already wears exactly these bones — same names, same parents.
+ *
+ * What tells a REST EDIT from a rebuild: moving a joint changes where the bones stand and never
+ * which ones there are, and only the second needs the weights worked out again.
+ */
+export function wearsRig(holder: Object3D, rig: Rig): boolean {
+  const worn = new Map<string, Object3D>()
+  holder.traverse(object => {
+    if (object instanceof Bone && object.name) worn.set(object.name, object)
+  })
+  if (worn.size !== rig.bones.length) return false
+
+  return rig.bones.every(spec => {
+    const bone = worn.get(spec.name)
+    const parent = bone?.parent
+    return bone !== undefined && (spec.parent === null || parent?.name === spec.parent)
+  })
+}
+
+/**
+ * The bones a model already wears, put back where the rig now rests — and the skin left exactly
+ * where it was.
+ *
+ * This is a skeleton editor's EDIT mode, and the whole of what makes one usable: a joint dragged
+ * onto the elbow it belongs in must not drag the arm with it. The weights are per vertex and do
+ * not change; what changes is the pose every one of them is measured FROM, so the inverses are
+ * taken again and the deformation is the identity once more.
+ *
+ * 🛑 Without it, a rig edited after the first bind posed the character with weights bound to a
+ * rest pose that no longer existed — the model stretched, and the leg bones ran out under
+ * its feet. Measured on screen.
+ */
+export function restRig(holder: Object3D, rig: Rig): void {
+  const worn = new Map<string, Bone>()
+  holder.traverse(object => {
+    if (object instanceof Bone && object.name) worn.set(object.name, object)
+  })
+
+  for (const spec of rig.bones) {
+    const bone = worn.get(spec.name)
+    if (!bone) continue
+
+    bone.position.set(spec.rest.position.x, spec.rest.position.y, spec.rest.position.z)
+    bone.rotation.set(spec.rest.rotation.x, spec.rest.rotation.y, spec.rest.rotation.z)
+    bone.scale.set(spec.rest.scale.x, spec.rest.scale.y, spec.rest.scale.z)
+  }
+
+  restInverses(holder)
+}
+
+/**
+ * Every skin under `holder` re-measured from where its bones stand NOW.
+ *
+ * Apart from `restRig` because the gizmo writes to the bones directly, a frame at a time: what
+ * has to happen then is only this half, and re-reading a whole rig sixty times a second to do it
+ * would be the rig read for nothing.
+ */
+export function restInverses(holder: Object3D): void {
+  // Before the inverses, never after: `calculateInverses` reads each bone's `matrixWorld`, and a
+  // bone whose position was just written still carries the one from the frame before.
+  holder.updateWorldMatrix(false, true)
+  holder.traverse(object => {
+    if (object instanceof SkinnedMesh) object.skeleton.calculateInverses()
+  })
+}
+
 function isBone(bone: Bone | undefined): bone is Bone {
   return bone !== undefined
 }

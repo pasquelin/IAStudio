@@ -55,6 +55,16 @@ const REACH = 0.14
 const PASSES = 4
 
 /**
+ * How fine a joint's place is kept, as a fraction of height — a tenth of a millimetre on a metre.
+ *
+ * A centroid is a mean of thousands of vertices, so it lands on every digit a double can hold:
+ * `0.14618632793426520` in a field that keeps them all, which no panel is wide enough to read.
+ * Relative and not absolute, so a model authored in centimetres is kept as finely as the same
+ * model in metres — the whole of what `rigFit` means by proportioning off the height.
+ */
+const GRAIN = 1e-4
+
+/**
  * How many points a slice must hold before it is allowed to move a joint.
  *
  * A joint reading five vertices is a joint reading noise — a bolt, a strap, a stray triangle —
@@ -99,7 +109,8 @@ export function rigSnappedTo(rig: Rig, sample: MeshSample): Rig {
     }
   }
 
-  return { ...rig, bones: rig.bones.map(bone => rested(bone, world, fitted)) }
+  const grain = height * GRAIN
+  return { ...rig, bones: rig.bones.map(bone => rested(bone, world, fitted, grain)) }
 }
 
 /** Where every bone ends up in the model's space, by walking each one's parents back up. */
@@ -143,8 +154,12 @@ function sideOf(bone: RigBone): 'Left' | 'Right' | null {
  */
 function alongOf(bone: RigBone, bones: readonly RigBone[], world: Map<string, Vector3>): Axis {
   const here = world.get(bone.name)
+  // 🛑 The bone ARRIVING, and the one leaving only for a root that has none. A joint is the END
+  // of its parent, and reading the bone that leaves it turns the corner of every chain that
+  // turns one: the ankle took the FOOT's axis, so its slice ran the length of the foot and
+  // centred it halfway along the sole — under the mesh, forward of the leg. Measured on screen.
   const child = bones.find(candidate => candidate.parent === bone.name)
-  const other = world.get(child?.name ?? bone.parent ?? '')
+  const other = world.get(bone.parent ?? child?.name ?? '')
   if (!here || !other) return 'y'
 
   const span = { x: other.x - here.x, y: other.y - here.y, z: other.z - here.z }
@@ -191,20 +206,31 @@ function centred(
 }
 
 /** A bone rests in its PARENT's space, so the parent's new place is taken off before it is written. */
-function rested(bone: RigBone, moved: Map<string, Vector3>, world: Map<string, Vector3>): RigBone {
+function rested(
+  bone: RigBone,
+  moved: Map<string, Vector3>,
+  world: Map<string, Vector3>,
+  grain: number,
+): RigBone {
   const here = moved.get(bone.name) ?? world.get(bone.name)
   if (!here) return bone
 
   const parent =
     bone.parent === null ? null : (moved.get(bone.parent) ?? world.get(bone.parent) ?? null)
+  const offset = parent
+    ? { x: here.x - parent.x, y: here.y - parent.y, z: here.z - parent.z }
+    : here
+
+  return { ...bone, rest: { ...bone.rest, position: onGrain(offset, grain) } }
+}
+
+/** A place kept to the grain, so a field shows a number and not the whole of a double. */
+function onGrain(point: Vector3, grain: number): Vector3 {
+  if (grain <= 0) return point
 
   return {
-    ...bone,
-    rest: {
-      ...bone.rest,
-      position: parent
-        ? { x: here.x - parent.x, y: here.y - parent.y, z: here.z - parent.z }
-        : here,
-    },
+    x: Math.round(point.x / grain) * grain,
+    y: Math.round(point.y / grain) * grain,
+    z: Math.round(point.z / grain) * grain,
   }
 }

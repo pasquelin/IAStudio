@@ -28,8 +28,15 @@ const FACES = 8
 const WAIST_ALONG = 0.12
 const WAIST_WIDE = 0.1
 
-/** What a bone with no child is drawn as, as a fraction of its parent's length. */
-const LEAF = 0.35
+/**
+ * What a bone with no child is drawn as, as a fraction of its parent's length.
+ *
+ * SHORT, and that is the whole of the choice: a rig here has no tail of its own, so a leaf's
+ * length is invented — and an invented length that runs past the mesh draws bone where there is
+ * none. Measured on a toe: at a third of the foot it speared out through the front of the shoe.
+ * A stub says « the chain ends here » without claiming to fill anything.
+ */
+const LEAF = 0.12
 
 /** The two colours a bone takes. Handed in for `createBoneJoints`' reason: a runner resolves none. */
 export type BoneColours = { rest: string; picked: string }

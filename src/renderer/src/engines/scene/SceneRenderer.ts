@@ -196,7 +196,14 @@ import CsgWorker from '../csg/csg.worker?worker'
 import SkinWorker from '../character/skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
-import { applyRig, positionsIn, skinnableMeshesOf } from '../character/rigBuild'
+import {
+  applyRig,
+  positionsIn,
+  restInverses,
+  restRig,
+  skinnableMeshesOf,
+  wearsRig,
+} from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
 import { createBoneShapes, type BoneShapes } from './boneShapes'
@@ -685,6 +692,7 @@ export class SceneRenderer {
    * that lands on whichever the ray happens to meet first.
    */
   private poseMode = false
+  private restEditing = false
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
   /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
@@ -1925,6 +1933,24 @@ export class SceneRenderer {
     this.refreshSkeletons()
   }
 
+  /**
+   * Whether the bones on stage are the REST pose being edited rather than a pose being struck.
+   *
+   * The skeleton window sets it and nothing else does: there, a joint dragged is a joint put
+   * where it belongs, and the mesh must not follow it. A scene poses instead, and the whole
+   * point there is that the mesh DOES follow.
+   */
+  setRestEditing(on: boolean): void {
+    this.restEditing = on
+    if (on) this.restSkins()
+    this.redraw()
+  }
+
+  /** Every skin of the stage re-measured from where its bones stand now. */
+  private restSkins(): void {
+    for (const holder of this.objects.values()) restInverses(holder)
+  }
+
   /** The one place the rule lives: written three times, one copy was already wrong. */
   private skeletonsVisible(): boolean {
     return this.showSkeletons || this.poseMode
@@ -1999,6 +2025,19 @@ export class SceneRenderer {
   async skinModel(nodeId: string, rig: Rig): Promise<void> {
     const holder = this.objects.get(nodeId)
     if (!holder) return
+
+    // 🛑 A model already wearing these very bones is having its REST edited, not its rig
+    // rebuilt: the weights are per vertex and unchanged, so putting the bones back where the
+    // rig now rests and taking the inverses again is the whole of it. Re-weighing here would
+    // cost half a million distances per joint dragged — and `skinnableMeshesOf` answers nothing
+    // for a skinned model anyway, so this used to return in silence and leave the character
+    // posed against a rest pose that no longer existed.
+    if (wearsRig(holder, rig)) {
+      restRig(holder, rig)
+      this.bindIk(nodeId, holder, rig)
+      this.redraw()
+      return
+    }
 
     // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
     // the holder again after the awaits, when it may hold others.
@@ -4601,6 +4640,11 @@ export class SceneRenderer {
     // Before the panes are drawn and after everything that writes a pose — the head, a clip, a
     // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
     for (const chain of this.iks.values()) chain.update()
+    // 🛑 Before the joints are read and after the chains: while a skeleton is being EDITED the
+    // bones ARE the rest pose, so the skin follows them rather than being deformed by them. A
+    // joint would otherwise drag the arm along with it for the whole of the gesture and snap
+    // back only on release — see `restRig`.
+    if (this.restEditing) this.restSkins()
     // After the chains, never before: the joints have to show where the bones ENDED UP.
     for (const solids of this.boneSolids.values()) {
       if (solids.mesh.visible) solids.refresh()

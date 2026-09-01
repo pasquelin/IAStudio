@@ -79,7 +79,10 @@ export function CharacterWindowInspector({
   const turnBone = (rotation: Vector3): void => restedAt({ rotation: radiansOf(rotation) })
 
   return (
-    <Panel className="w-[320px] shrink-0">
+    // On Tailwind's own scale rather than a number invented here, and wide enough for the one
+    // row that decides it: three axis fields, their letters and the end column. At 320 px a
+    // joint's offset read `-0` — the value cut, not the field.
+    <Panel className="w-96 shrink-0">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PropertySection title={t('character.skeleton')} scId="character.skeleton">
           {!rig && (
