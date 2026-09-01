@@ -7,20 +7,15 @@ import { exportChannelsOf } from '@/engines/material/export/channels'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { materialOf, useMaterials } from '@/stores/materials'
 import type { MaterialExportPort } from '@/engines/material/export/exportPort'
+import { lendable } from '@/helpers/lendable'
 
 /** The GPU pass, which a headless run has not got — lent for the length of a run, see its sky twin. */
-let lent: MaterialExportPort | null = null
+const port = lendable<MaterialExportPort | null>(null)
 
-/** Swaps the renderer, and hands back the undo. */
-export function lendMaterialExportPort(port: MaterialExportPort): () => void {
-  const previous = lent
-  lent = port
-  return () => {
-    lent = previous
-  }
-}
+export const lendMaterialExportPort = port.lend
 
 async function materialExportPort(): Promise<MaterialExportPort> {
+  const lent = port.current()
   if (lent) return lent
   const { createMaterialExportPort } = await import('@/engines/material/export/exportPort')
   return createMaterialExportPort({ loadTexture })

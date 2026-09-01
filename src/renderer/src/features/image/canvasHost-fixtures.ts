@@ -7,10 +7,8 @@ export const FLATTEN = new Uint8Array([137, 80, 78, 71, 13, 10])
 
 /**
  * A fake engine behind the canvas port. Written once so a member added to `CanvasHost` is one
- * edit here rather than one per case — nine of them had spelled the same stubs out.
- *
- * 🛑 A rendered picture is what a WebGL context makes, and there is none here: what a headless
- * run can honestly stand in for is that the port ANSWERS, which is what `FLATTEN` is for.
+ * edit here rather than one per case — nine of them had spelled the same stubs out. What a
+ * headless run can honestly stand in for is that the port ANSWERS — see `PNG_HEAD`.
  */
 export function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): CanvasHost {
   const host = canvasHostStub({ flatten: async () => FLATTEN, ...overrides })

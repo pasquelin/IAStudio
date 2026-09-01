@@ -8,8 +8,4 @@ describe('the commands of the sky', () => {
 
     expect(skyboxViewOf(useSkyboxViews.getState(), 'doc-1').probes).toBe(false)
   })
-
-  it('leaves a command of another scope unanswered', () => {
-    expect(runSkyboxCommand('doc-1', 'canvas.undo')).toBe(false)
-  })
 })

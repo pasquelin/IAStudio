@@ -5,23 +5,15 @@ import { assetVersionOf } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import type { SkyboxExportPort } from '@/engines/skybox/exportPort'
+import { lendable } from '@/helpers/lendable'
 
-/**
- * The GPU pass, which a headless run has not got. Lent for the length of a run, like the picture
- * measurer is — and the chunk behind `import()` is then never asked for.
- */
-let lent: SkyboxExportPort | null = null
+/** The GPU pass, which a headless run has not got — lent for the length of a run, like the picture measurer. */
+const port = lendable<SkyboxExportPort | null>(null)
 
-/** Swaps the renderer, and hands back the undo. */
-export function lendSkyboxExportPort(port: SkyboxExportPort): () => void {
-  const previous = lent
-  lent = port
-  return () => {
-    lent = previous
-  }
-}
+export const lendSkyboxExportPort = port.lend
 
 async function skyboxExportPort(): Promise<SkyboxExportPort> {
+  const lent = port.current()
   if (lent) return lent
   const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
   return createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })

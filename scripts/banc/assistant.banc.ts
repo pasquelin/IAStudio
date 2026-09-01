@@ -55,11 +55,8 @@ const NO_BODY: readonly number[] = [204, 205, 304]
 /** The statuses that refuse the KEY rather than the request — and with it the whole run. */
 const DOOR_SHUT: readonly number[] = [401, 403]
 
-/**
- * 🛑 Set once the door refused the key, and every scenario after it fails on that line at once:
- * a dead key played 439 scenarios to the end, scored 0 % and wrote the word `auth` nowhere —
- * `0 sent` on every row was the only trace, measured 2026-09-01.
- */
+// 🛑 The first refusal fails every scenario after it: a dead key played 439 scenarios to 0 %
+// with `auth` written nowhere, `0 sent` its only trace — measured 2026-09-01.
 let shut: string | null = null
 
 /** Counts what crossed, and hands the response on untouched. */

@@ -86,13 +86,17 @@ type ScopeRunner = {
 }
 
 /** The scopes a headless run arms, each answered by the function its tab calls. */
-const SCOPE_RUNNERS: Partial<Record<CommandScope, ScopeRunner>> = {
-  scene: { front: state => frontDocumentIn(state, '3d'), run: runSceneCommand },
-  gui: { front: activeGuiId, run: runGuiCommand },
-  skybox: { front: activeSkyboxId, run: runSkyboxCommand },
-  material: { front: activeMaterialId, run: runMaterialCommand },
-  audio: { front: activeAudioId, run: runAudioCommand },
-}
+const SCOPE_RUNNERS = new Map<CommandScope, ScopeRunner>([
+  ['scene', { front: state => frontDocumentIn(state, '3d'), run: runSceneCommand }],
+  ['gui', { front: activeGuiId, run: runGuiCommand }],
+  ['skybox', { front: activeSkyboxId, run: runSkyboxCommand }],
+  ['material', { front: activeMaterialId, run: runMaterialCommand }],
+  ['audio', { front: activeAudioId, run: runAudioCommand }],
+])
+
+/** What the GPU exports answer here: one picture named after the document — see `PNG_HEAD`. */
+const stillNamed = ({ name }: { name: string }) =>
+  Promise.resolve([{ name, extension: '.png', bytes: PNG_HEAD }])
 
 /**
  * 🛑 Nothing here decides. Every call goes through `runConfirmedAction`, the door the window AND
@@ -519,18 +523,10 @@ export async function createStudio(
 
   const references: string[] = []
   const giveBackMeasure = lendPictureMeasure(() => Promise.resolve(PICTURE))
-  /**
-   * 🛑 The two exports that build their own WebGL context on the way out, which jsdom cannot
-   * give them: what stands in is the FILE LIST the writer takes — one picture, named after the
-   * document, and the bytes `drawing()` already answers a still with. Both refused
-   * « the document could not be rendered for export » on every run before, measured 2026-09-01.
-   */
-  const giveBackSky = lendSkyboxExportPort(({ name }) =>
-    Promise.resolve([{ name, extension: '.png', bytes: PNG_HEAD }]),
-  )
-  const giveBackMaterial = lendMaterialExportPort(({ name }) =>
-    Promise.resolve([{ name, extension: '.png', bytes: PNG_HEAD }]),
-  )
+  // 🛑 The two exports that build their own WebGL context on the way out, which jsdom has not
+  // got: both refused « could not be rendered for export » on every run, measured 2026-09-01.
+  const giveBackSky = lendSkyboxExportPort(stillNamed)
+  const giveBackMaterial = lendMaterialExportPort(stillNamed)
   const closeGenerator = installGeneratorPanel(cloud.fieldsOf, given => references.push(...given))
   // The person, who typed the sentence: a headless run has nobody to ask, and refusing every
   // spend would score the whole of sections 20 to 22 on a studio never asked to generate.
@@ -600,16 +596,15 @@ export async function createStudio(
   }
 
   /**
-   * 🛑 Every scope a headless run can stand in for, and each delegates rather than reimplements:
-   * `runSceneCommand` and its siblings are the functions the tabs themselves call. What stays
-   * unarmed lives inside a component and nowhere else — the explorer, the montage strip, the
-   * canvas tools — so `command.runStudioCommand` still answers `wrongSurface` there.
+   * 🛑 Every scope a headless run can stand in for delegates rather than reimplements — see
+   * `SCOPE_RUNNERS`. The explorer, the montage strip and the canvas tools live inside their
+   * components alone, so `command.runStudioCommand` still answers `wrongSurface` there.
    */
   const followTheCommandBus = (): (() => void) => {
-    const disarm = Object.keys(SCOPE_RUNNERS).map(scope => armCommandScope(scope as CommandScope))
+    const disarm = [...SCOPE_RUNNERS.keys()].map(armCommandScope)
     const stop = subscribeToCommands(command => {
       const scope = commandDescriptor(command)?.scope
-      const runner = scope === undefined ? undefined : SCOPE_RUNNERS[scope]
+      const runner = scope === undefined ? undefined : SCOPE_RUNNERS.get(scope)
       if (!runner) return false
       const documentId = runner.front(useDocuments.getState())
       return documentId !== null && runner.run(documentId, command)
@@ -629,23 +624,24 @@ export async function createStudio(
    * and the renderer is only what the runtime hands its placements to.
    */
   const followTheViewport = (): (() => void) => {
-    const held = new Set<string>()
-    const releaseCanvases: (() => void)[] = []
+    const held = new Map<string, () => void>()
     const stop = useDocuments.subscribe(state => {
       for (const [documentId, document] of Object.entries(state.documents)) {
         if (held.has(documentId)) continue
-        held.add(documentId)
         registerSceneEngine(documentId, drawing())
         // The canvas port too: a save and an export of an image read their pixels off it, and
         // with none both refused « an engine not yet mounted » — measured 2026-09-01.
-        if (document.kind === 'image') releaseCanvases.push(holdCanvas(documentId, fakeCanvas))
+        const releaseCanvas = document.kind === 'image' ? holdCanvas(documentId, fakeCanvas) : null
+        held.set(documentId, () => {
+          forgetSceneEngine(documentId)
+          releaseCanvas?.()
+        })
       }
     })
 
     return () => {
       stop()
-      for (const documentId of held) forgetSceneEngine(documentId)
-      for (const release of releaseCanvases) release()
+      for (const release of held.values()) release()
     }
   }
 

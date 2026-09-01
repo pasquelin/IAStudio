@@ -1,11 +1,9 @@
 import type { CommandId } from '@shared/domain/command'
-import { useSkyboxes } from '@/stores/skyboxes'
+import { runHistoryCommand } from '@/services/historyCommand'
+import { skyboxStore } from '@/stores/skyboxes'
 import { skyboxViewOf, useSkyboxViews } from '@/stores/skyboxViews'
 
-/**
- * The commands of the sky, reached the same way from the viewport, the menu and a headless run —
- * see `runSceneCommand`. Anything else of the scope is not this document's to answer.
- */
+/** The commands of the sky, reached the same way from the viewport and from a headless run. */
 export function runSkyboxCommand(documentId: string, command: CommandId): boolean {
   switch (command) {
     case 'skybox.view':
@@ -18,13 +16,7 @@ export function runSkyboxCommand(documentId: string, command: CommandId): boolea
       views.set(documentId, { probes: !skyboxViewOf(views, documentId).probes })
       return true
     }
-    case 'skybox.undo':
-      useSkyboxes.getState().undo(documentId)
-      return true
-    case 'skybox.redo':
-      useSkyboxes.getState().redo(documentId)
-      return true
     default:
-      return false
+      return runHistoryCommand(skyboxStore, 'skybox', documentId, command) ?? false
   }
 }
