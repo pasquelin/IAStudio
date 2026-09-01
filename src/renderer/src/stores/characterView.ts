@@ -15,11 +15,28 @@ type CharacterViewState = {
    */
   mode: TransformMode
   setCharacterMode: (mode: TransformMode) => void
+  /**
+   * The axes a joint is held still on, while one is being placed. Session state like the pick:
+   * a hold is how a hand moves a knee straight down without letting it drift forward, and it is
+   * not a property of the skeleton.
+   */
+  heldAxes: readonly BoneAxis[]
+  holdCharacterAxis: (axis: BoneAxis, held: boolean) => void
 }
+
+/** The three a joint can be held on. Named here because two surfaces and a command read it. */
+export type BoneAxis = 'x' | 'y' | 'z'
 
 export const useCharacterView = create<CharacterViewState>()(set => ({
   pickedBone: null,
   pickBone: pickedBone => set(state => (state.pickedBone === pickedBone ? state : { pickedBone })),
   mode: 'translate',
   setCharacterMode: mode => set({ mode }),
+  heldAxes: [],
+  holdCharacterAxis: (axis, held) =>
+    set(state => ({
+      heldAxes: held
+        ? [...new Set([...state.heldAxes, axis])]
+        : state.heldAxes.filter(one => one !== axis),
+    })),
 }))

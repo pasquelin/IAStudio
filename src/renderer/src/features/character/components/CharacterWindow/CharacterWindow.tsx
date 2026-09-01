@@ -2,6 +2,7 @@ import { mdiSkull } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import type { Transform, Vector3 } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { PANE_TOOLBAR } from '@/components/styles'
@@ -9,7 +10,6 @@ import { TooltipHost } from '@/components/TooltipHost'
 import { WindowTitleBar } from '@/components/WindowTitleBar'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { MeshSample } from '@/engines/scene/rigSnap'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
 import { createCharacterStage, workshopIdOf } from '@/character/characterStage'
@@ -112,8 +112,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
       onTransform: moves => {
         for (const move of moves) {
           if (!move.bone) continue
-          const rest = setCharacterBoneRest(move.bone, move.transform)
-          useCharacters.getState().runCommand(assetId, rest)
+          // 🛑 The padlock bites on the gizmo too, not just on the fields: a hold the viewport
+          // walked through would be a padlock that only draws itself.
+          const kept = boneRestHeld(assetId, move.bone, move.transform)
+          useCharacters.getState().runCommand(assetId, setCharacterBoneRest(move.bone, kept))
         }
       },
       // The workshop is the character and a floor: the furniture of a scene has nothing to say
@@ -165,20 +167,9 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     <StudioQueries>
       <div className="bg-chrome flex h-full w-full flex-col gap-(--sc-gutter) p-(--sc-gutter)">
         {/* Frameless like the studio, so the traffic lights float in this strip rather than in a
-            bar the system draws. It names the FILE being edited — the panel beside it holds the
-            sections, not the subject. */}
-        <WindowTitleBar
-          title={t('character.window.titleOf', { name })}
-          mark={
-            dirty && (
-              // The dock's own mark for an unsaved document, and the one it never explained:
-              // a bullet nobody can read is a bullet somebody asks about.
-              <span className="text-muted shrink-0" {...TIP_BOTTOM(t('character.window.unsaved'))}>
-                •
-              </span>
-            )
-          }
-        />
+            bar the system draws. Unsaved is said the way every tab says it: a bullet after the
+            name, as `setDocumentTitle` writes one. */}
+        <WindowTitleBar title={`${t('character.window.titleOf', { name })}${dirty ? ' •' : ''}`} />
 
         <div className="flex min-h-0 flex-1 gap-(--sc-gutter)">
           <div className="bg-monitor relative min-w-0 flex-1 overflow-hidden rounded-(--radius-sc-lg)">
@@ -195,7 +186,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             />
             {/* While the FILE is still landing, never while it merely carries no skeleton: a
                 bare mesh is on screen and animatable from the panel beside it, and the sentence
-                sat over a character plainly there. `bounds` is what the engine measured. */}
+                sat over a character plainly there. `sample` is what the engine measured. */}
             {!sample && (
               <div className="pointer-events-none absolute inset-0">
                 <EmptyState icon={mdiSkull} message={t('character.window.waiting')} />
@@ -224,5 +215,34 @@ async function leaveProject(leaving: Promise<() => void>): Promise<void> {
     ;(await leaving)()
   } catch {
     /* the connection never landed */
+  }
+}
+
+/**
+ * What a gizmo just wrote, with the held axes put back from where the joint rested.
+ *
+ * Here rather than in the command: a command is what the MCP and the fields both run, and a hold
+ * is a state of this WINDOW — one bound into the command would hold an axis for a caller that
+ * never closed a padlock.
+ */
+function boneRestHeld(assetId: string, bone: string, moved: Transform): Transform {
+  const held = useCharacterView.getState().heldAxes
+  if (held.length === 0) return moved
+
+  const rest = characterOf(useCharacters.getState(), assetId).rig?.bones.find(
+    one => one.name === bone,
+  )?.rest
+  if (!rest) return moved
+
+  const kept = (was: Vector3, next: Vector3): Vector3 => ({
+    x: held.includes('x') ? was.x : next.x,
+    y: held.includes('y') ? was.y : next.y,
+    z: held.includes('z') ? was.z : next.z,
+  })
+
+  return {
+    position: kept(rest.position, moved.position),
+    rotation: kept(rest.rotation, moved.rotation),
+    scale: moved.scale,
   }
 }

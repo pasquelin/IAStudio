@@ -144,7 +144,12 @@ import { createRefCache, type RefCache } from '../core/refCache'
 import { drivenNodes, lensAt, poseAt, postAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import { SECOND, type Us } from '@shared/domain/time'
-import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
+import {
+  nearestProjected,
+  nearestSegment,
+  type Projected,
+  type ProjectedSegment,
+} from './bonePicking'
 import { rigStateOf, type RigState } from './rigState'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
@@ -1944,29 +1949,44 @@ export class SceneRenderer {
   }
 
   /**
-   * Every bone on stage, as the screen sees it. Built per click rather than kept: a bone moves
-   * with its rig, and a cached projection would name whatever stood there a frame ago.
+   * Every bone as a SEGMENT on screen — from its own joint to its child's, which is the shape a
+   * hand aims at. Built per click rather than kept: a bone moves with its rig, and a cached
+   * projection would name whatever stood there a frame ago.
    */
-  private projectedBones(camera: Camera): ProjectedBone[] {
-    const projected: ProjectedBone[] = []
+  private projectedSegments(camera: Camera): ProjectedSegment[] {
+    const segments: ProjectedSegment[] = []
 
     for (const [nodeId, helper] of this.skeletons) {
+      const held = new Set(helper.bones)
+      const childOf = new Map<Object3D, Object3D>()
+      for (const bone of helper.bones) {
+        const parent = bone.parent
+        if (parent && held.has(parent as never) && !childOf.has(parent)) childOf.set(parent, bone)
+      }
+
       for (const bone of helper.bones) {
         if (!bone.name) continue
 
         bone.getWorldPosition(BONE_WORLD)
         BONE_WORLD.project(camera)
-        projected.push({
+        const head = { x: BONE_WORLD.x, y: BONE_WORLD.y, z: BONE_WORLD.z }
+
+        const child = childOf.get(bone)
+        if (child) {
+          child.getWorldPosition(BONE_WORLD)
+          BONE_WORLD.project(camera)
+        }
+
+        segments.push({
           nodeId,
           bone: bone.name,
-          x: BONE_WORLD.x,
-          y: BONE_WORLD.y,
-          z: BONE_WORLD.z,
+          head,
+          tail: child ? { x: BONE_WORLD.x, y: BONE_WORLD.y, z: BONE_WORLD.z } : head,
         })
       }
     }
 
-    return projected
+    return segments
   }
 
   /**
@@ -4287,7 +4307,9 @@ export class SceneRenderer {
       if (!ndc) return
 
       // The camera of the view under the pointer, never the main one — `nodeAt` says why.
-      const picked = nearestProjected(this.projectedBones(this.cameraInHand()), {
+      // The whole BONE, not the point at its head: a skeleton is clicked on its bones, and
+      // asking for the nearest joint left the middle of every one of them dead.
+      const picked = nearestSegment(this.projectedSegments(this.cameraInHand()), {
         x: ndc.x,
         y: ndc.y,
       })

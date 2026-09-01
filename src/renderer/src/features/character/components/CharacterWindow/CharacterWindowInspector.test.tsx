@@ -108,4 +108,21 @@ describe('what a character is made of', () => {
 
     expect(screen.getByText(/aucun mouvement/)).toBeInTheDocument()
   })
+
+  // Asked for at the first sight of the panel: a joint could only be put right by eye, and there
+  // was no way at all to hold one axis while another moved.
+  it('gives a picked joint the fields a scene gives a node, padlock included', async () => {
+    seedCharacter(ASSET, RIG, {})
+    useCharacterView.getState().pickBone('Spine')
+    show()
+
+    // Folded, the three axes share one line and there is no room for three padlocks — the same
+    // rule a scene's transform section follows.
+    const [unfold] = screen.getAllByRole('button', { expanded: false })
+    await userEvent.click(unfold as HTMLElement)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Figer l’axe X' }))
+
+    expect(useCharacterView.getState().heldAxes).toEqual(['x'])
+  })
 })

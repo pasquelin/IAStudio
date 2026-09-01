@@ -480,6 +480,9 @@ export function openCharacterWindow(assetId: string): BrowserWindow {
     // native bar over the studio's own chrome read as another application's window.
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
+    // Like every other window wearing `WindowTitleBar`: that bar's left inset is the room the
+    // traffic lights float in, and macOS takes them away in full screen — see the component.
+    fullscreenable: false,
     title: TRANSLATIONS[windowLanguage()].character.window.title,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
