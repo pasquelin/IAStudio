@@ -204,6 +204,18 @@ export function sided(value: number): number {
   return Math.max(1, Math.round(value))
 }
 
+/** No document has a longer side, so past this a cell is a mistake rather than a coarse grid. */
+const MAX_PIXEL_CELL = 8192
+
+/**
+ * A legal grid, or none. `sided` is not enough here: it answers `NaN` for `NaN`, which
+ * `JSON.stringify` writes as `null` — a document broken for the session and clean on reopening.
+ */
+export function pixelCellOf(raw: unknown): number | null {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 1) return null
+  return Math.min(Math.floor(raw), MAX_PIXEL_CELL)
+}
+
 /**
  * A text box as a layer stores one. The engine reads drags in floats, so one taken at 74% zoom
  * comes back as 471.5789473684211 — and the panel's fields keep every digit they are handed.
@@ -310,6 +322,8 @@ export type CanvasState = {
   dpi: number
   colorMode: ColorMode
   bitDepth: BitDepth
+  /** How many document pixels wide one square of the artwork is. `null` for no grid at all. */
+  pixelCell: number | null
   /** Bottom first, so the last one is what the eye sees on top. */
   layers: Layer[]
   activeLayerId: string | null
@@ -361,6 +375,7 @@ export const DEFAULT_CANVAS: CanvasState = {
   dpi: 72,
   colorMode: 'rgb',
   bitDepth: 8,
+  pixelCell: null,
   layers: [BASE_LAYER],
   activeLayerId: BASE_LAYER.id,
   guides: [],
@@ -719,6 +734,7 @@ export function deserializeCanvas(raw: string): CanvasState {
       dpi: typeof source.dpi === 'number' ? source.dpi : DEFAULT_CANVAS.dpi,
       colorMode: oneOf(COLOR_MODES, source.colorMode, 'rgb'),
       bitDepth: source.bitDepth === 16 || source.bitDepth === 32 ? source.bitDepth : 8,
+      pixelCell: pixelCellOf(source.pixelCell),
       layers,
       // An id naming no layer would leave the document unpaintable, with no way back.
       activeLayerId:

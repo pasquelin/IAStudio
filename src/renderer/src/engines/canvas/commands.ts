@@ -15,6 +15,7 @@ import {
   isRedrawn,
   layerById,
   mapLayers,
+  pixelCellOf,
   pixelLayer,
   sided,
   updateSiblings,
@@ -682,6 +683,24 @@ export function resizeCanvas(
       y: transform.y + offset.y,
     })),
   }))
+}
+
+/** Puts the document on a pixel grid, or takes it off one — see `CanvasState.pixelCell`. */
+export function setPixelCell(cell: number | null): Command<CanvasState> {
+  const wanted = pixelCellOf(cell)
+  let previous: number | null = null
+
+  return {
+    id: 'canvas:pixelCell',
+    apply: state => {
+      previous = state.pixelCell
+      return { ...state, pixelCell: wanted }
+    },
+    // The field alone, never a snapshot of the state: arming a layer and folding a group both
+    // write outside the history, and a snapshot would take those back too.
+    revert: state => ({ ...state, pixelCell: previous }),
+    refuses: state => state.pixelCell === wanted,
+  }
 }
 
 /**

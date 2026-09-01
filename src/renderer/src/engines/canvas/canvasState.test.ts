@@ -104,6 +104,16 @@ describe('reading back an older document', () => {
     expect([state.width, state.height]).toEqual([640, 480])
   })
 
+  // A file GIMP wrote carries no grid, and neither did this build before the pixel art mode.
+  it('reads a document that says nothing about a grid as being on none', () => {
+    const onAGrid = JSON.stringify({ ...DEFAULT_CANVAS, pixelCell: 16 })
+    const nonsense = JSON.stringify({ ...DEFAULT_CANVAS, pixelCell: 'sixteen' })
+
+    expect(deserializeCanvas(legacy).pixelCell).toBeNull()
+    expect(deserializeCanvas(onAGrid).pixelCell).toBe(16)
+    expect(deserializeCanvas(nonsense).pixelCell).toBeNull()
+  })
+
   it('reads every layer as a pixel layer, which is all there was', () => {
     expect(deserializeCanvas(legacy).layers.every(layer => layer.kind === 'pixel')).toBe(true)
   })

@@ -19,6 +19,7 @@ import {
   rotateImage,
   renameLayer,
   resizeCanvas,
+  setPixelCell,
   resizeImage,
   selectLayer,
   setLayerAdjustment,
@@ -323,6 +324,34 @@ describe('duplicateLayer', () => {
  * The distinction the whole model turns on: the canvas is a window onto layers that may be
  * larger than it. Changing the window is not resampling what is behind it.
  */
+describe('setPixelCell', () => {
+  it('puts the document on a grid and takes it back off', () => {
+    const [onAGrid] = roundTrip(DEFAULT_CANVAS, setPixelCell(16))
+
+    expect(onAGrid.pixelCell).toBe(16)
+    expect(setPixelCell(null).apply(onAGrid).pixelCell).toBeNull()
+  })
+
+  // A number field writes on every blur, and each of those would be a ⌘Z that does nothing.
+  it('costs no undo entry when the grid is already what is asked for', () => {
+    const onAGrid = setPixelCell(16).apply(DEFAULT_CANVAS)
+    const [, history] = run(onAGrid, emptyHistory(), setPixelCell(16))
+
+    expect(history.past).toEqual([])
+  })
+
+  /**
+   * `Math.max(1, NaN)` is `NaN`, and `JSON.stringify` writes that as `null`: the session
+   * would paint nothing while the file reopened clean, with nothing said anywhere.
+   */
+  it('reads a cell no document can hold as no grid at all', () => {
+    expect(setPixelCell(Number.NaN).apply(DEFAULT_CANVAS).pixelCell).toBeNull()
+    expect(setPixelCell(Number.POSITIVE_INFINITY).apply(DEFAULT_CANVAS).pixelCell).toBeNull()
+    expect(setPixelCell(0).apply(DEFAULT_CANVAS).pixelCell).toBeNull()
+    expect(setPixelCell(1e308).apply(DEFAULT_CANVAS).pixelCell).toBe(8192)
+  })
+})
+
 describe('resizeCanvas against resizeImage', () => {
   it('moves the frame without scaling anything', () => {
     const [after] = roundTrip(stack('a'), resizeCanvas(400, 300, { x: 10, y: 20 }))
