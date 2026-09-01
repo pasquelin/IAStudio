@@ -3,22 +3,22 @@ import { TRIPO_CATALOGUE, tripoModelId, type TripoEntry } from '@shared/domain/t
 import { isRetryableTripo, type TripoApi, type TripoTask } from './tripoApi'
 import { createTripoRunner, tripoLaneOf, type TripoRunnerDeps } from './tripoRunner'
 
-const entryOn = (endpoint: string): TripoEntry => {
+/** By endpoint, and by line where an endpoint serves several — the check and refine take none. */
+const entryOn = (endpoint: string, model?: string): TripoEntry => {
   const entry = TRIPO_CATALOGUE.find(
-    one => one.endpoint === endpoint && one.model === 'v3.1-20260211',
+    one => one.endpoint === endpoint && (model === undefined || one.model === model),
   )
   if (!entry) throw new Error(`no ${endpoint} in the catalogue`)
   return entry
 }
 
-const TEXT_TO_MODEL = entryOn('generation/text-to-model')
-const IMAGE_TO_MODEL = entryOn('generation/image-to-model')
+const LINE = 'v3.1-20260211'
+const TEXT_TO_MODEL = entryOn('generation/text-to-model', LINE)
+const IMAGE_TO_MODEL = entryOn('generation/image-to-model', LINE)
 
-// Not `entryOn`: the free check takes no model of its own, so it is found by endpoint alone.
-const RIG_CHECK = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig-check')
-if (!RIG_CHECK) throw new Error('no animations/rig-check in the catalogue')
-
-const RIG_CHECK_TARGET = { id: tripoModelId(RIG_CHECK) }
+const RIG_CHECK_TARGET = { id: tripoModelId(entryOn('animations/rig-check')) }
+const REFINE_TARGET = { id: tripoModelId(entryOn('models/refine')) }
+const MULTIVIEW_TARGET = { id: tripoModelId(entryOn('generation/multiview-to-model', LINE)) }
 const TEXT_TARGET = { id: tripoModelId(TEXT_TO_MODEL) }
 const IMAGE_TARGET = { id: tripoModelId(IMAGE_TO_MODEL) }
 
@@ -97,19 +97,14 @@ describe('submitting to Tripo', () => {
     expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: { file_token: 'file-token-1' } })
   })
 
-  /**
-   * 🛑 Their refusal names it: « files or inputs are required for multiview_to_model ». The one
-   * view the form could hold was wrapped into a list of ONE, which is not what several views is.
-   */
+  // 🛑 Their refusal names it: « files or inputs are required for multiview_to_model ». One
+  // view wrapped into a list of ONE is not what several views is.
   it('sends every view of a multiview up, and keeps them a list', async () => {
-    const many = TRIPO_CATALOGUE.find(one => one.endpoint === 'generation/multiview-to-model')
-    if (!many) throw new Error('no generation/multiview-to-model in the catalogue')
     const { runner, api } = harness()
 
-    await runner.submit(
-      { id: tripoModelId(many) },
-      { files: ['/projects/kingdom/front.png', '/projects/kingdom/left.png'] },
-    )
+    await runner.submit(MULTIVIEW_TARGET, {
+      files: ['/projects/kingdom/front.png', '/projects/kingdom/left.png'],
+    })
 
     expect(api.upload).toHaveBeenCalledTimes(2)
     expect(api.create.mock.calls[0]?.[1]).toMatchObject({
@@ -118,14 +113,11 @@ describe('submitting to Tripo', () => {
   })
 
   it('leaves a view already theirs alone while sending the one that is ours', async () => {
-    const many = TRIPO_CATALOGUE.find(one => one.endpoint === 'generation/multiview-to-model')
-    if (!many) throw new Error('no generation/multiview-to-model in the catalogue')
     const { runner, api } = harness()
 
-    await runner.submit(
-      { id: tripoModelId(many) },
-      { files: ['https://theirs/front.png', '/projects/kingdom/left.png'] },
-    )
+    await runner.submit(MULTIVIEW_TARGET, {
+      files: ['https://theirs/front.png', '/projects/kingdom/left.png'],
+    })
 
     expect(api.upload).toHaveBeenCalledTimes(1)
     expect(api.create.mock.calls[0]?.[1]).toMatchObject({
@@ -142,22 +134,16 @@ describe('submitting to Tripo', () => {
     expect(api.create.mock.calls[0]?.[1]).toMatchObject({ file: { url: 'https://theirs/hat.png' } })
   })
 
-  /**
-   * 🛑 Declared `mesh`, this field spent an upload and was refused: the asset id was rewritten
-   * into a path, the file sent, and the token it answered handed to a field wanting a TASK id.
-   * `task` is not a file kind, so the id travels as it stands.
-   */
+  // 🛑 Declared `mesh`, this field spent an upload and was refused 1004: the token it answered
+  // went under a field wanting a TASK id. `task` is not a file kind, so nothing goes up.
   it('hands refining the task it was given rather than uploading a file for it', async () => {
-    const refine = TRIPO_CATALOGUE.find(one => one.endpoint === 'models/refine')
-    if (!refine) throw new Error('no models/refine in the catalogue')
     const { runner, api } = harness()
 
     // A PATH, which is what the asset resolver hands down for an id the form dropped here while
     // the field was declared `mesh` — the shape that spent the upload.
-    await runner.submit(
-      { id: tripoModelId(refine) },
-      { draft_model_task_id: '/projects/kingdom/assets/draft.glb' },
-    )
+    await runner.submit(REFINE_TARGET, {
+      draft_model_task_id: '/projects/kingdom/assets/draft.glb',
+    })
 
     expect(api.upload).not.toHaveBeenCalled()
     expect(api.create.mock.calls[0]?.[1]).toMatchObject({

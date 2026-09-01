@@ -17,17 +17,22 @@ export type AssetDropListProps = {
   id?: string
   registration: UseFormRegisterReturn
   /** What the form starts with — a preset an edit action filled, or nothing. */
-  initial?: readonly string[]
+  initial?: unknown
   placeholder: string
   /** The handle the MCP steers this field by. Never a translated word. */
   scId?: string
 }
 
+const EMPTY_SLOT = cn(FIELD_THUMBNAIL, 'text-muted grid shrink-0 place-items-center')
+const SLOT_LABEL = 'text-muted min-w-0 flex-1 truncate text-xs'
+
+/** Whatever a preset left here, kept only where it is a list of ids. */
+const listed = (initial: unknown): readonly string[] =>
+  Array.isArray(initial) ? initial.filter(one => typeof one === 'string') : []
+
 /**
- * Several pictures for one input, in the order they were dropped.
- *
- * 🛑 One registration for the whole list, and the value it carries is an ARRAY: a field per slot
- * would hand react-hook-form as many refs under one name, and it keeps the last.
+ * Several pictures for one input, in the order they were dropped. 🛑 ONE registration for the
+ * whole list: a field per slot hands react-hook-form as many refs under a name, and it keeps one.
  */
 export function AssetDropList({
   id,
@@ -37,21 +42,19 @@ export function AssetDropList({
   scId,
 }: AssetDropListProps) {
   const { t } = useTranslation()
-  const [ids, setIds] = useState<readonly string[]>(initial ?? [])
-  // 🛑 Told through an effect rather than from the handler: a second picture dropped before the
+  const [ids, setIds] = useState<readonly string[]>(() => listed(initial))
+  const [posters, setPosters] = useState<Readonly<Record<string, string>>>({})
+  // Told through an effect rather than from the handler: a second picture dropped before the
   // first has re-rendered read the closure's stale array, and replaced it instead of joining it.
   const told = useLatest(registration)
-  /**
-   * The dropped picture's stamped URL, kept beside its id so a ⌘S that overwrote it repaints —
-   * and so nothing here builds a bare `assetUrl`, which would never reload.
-   */
-  const [posters, setPosters] = useState<Readonly<Record<string, string>>>({})
 
-  // A model switch resets the form; without this the old pictures outlive the value they stood for.
+  // Compared on the RAW prop, whose identity the form holds: a normalised copy is new every
+  // render, and the list would then reset on each one.
   const [seen, setSeen] = useState(initial)
   if (seen !== initial) {
     setSeen(initial)
-    setIds(initial ?? [])
+    setIds(listed(initial))
+    setPosters({})
   }
 
   // Through the registration, or react-hook-form never hears about a value nobody typed. Said on
@@ -61,8 +64,9 @@ export function AssetDropList({
   }, [ids, told])
 
   const take = (dropped: Asset): void => {
-    setIds(current => [...current, dropped.id])
-    // A kind with nothing to show a poster for keeps the placeholder rather than a broken frame.
+    // Two of the same view is not what the endpoint wants, and two children under one key is
+    // not what React wants either.
+    setIds(current => (current.includes(dropped.id) ? current : [...current, dropped.id]))
     const poster = posterUrl(dropped)
     if (poster) setPosters(seen => ({ ...seen, [dropped.id]: poster }))
   }
@@ -71,14 +75,9 @@ export function AssetDropList({
     <div id={id} data-sc={scId && fieldHandle(scId)} className="flex flex-col gap-2">
       {ids.map((assetId, index) => (
         <div key={assetId} className="flex min-w-0 items-center gap-2">
-          {posters[assetId] ? (
-            <Thumbnail url={posters[assetId]} className={FIELD_THUMBNAIL} />
-          ) : (
-            <span className={cn(FIELD_THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
-              <UiIcon path={mdiImagePlusOutline} size={14} />
-            </span>
-          )}
-          <span className="text-muted min-w-0 flex-1 truncate text-xs">{assetId}</span>
+          {/* `Thumbnail` draws its own « no picture » mark, which is the one the studio uses. */}
+          <Thumbnail url={posters[assetId]} className={FIELD_THUMBNAIL} />
+          <span className={SLOT_LABEL}>{assetId}</span>
           <ToolButton
             icon={mdiCloseCircleOutline}
             label={t('generation.removeView')}
@@ -95,10 +94,10 @@ export function AssetDropList({
         exclusive
         className="flex min-w-0 items-center gap-2 rounded"
       >
-        <span className={cn(FIELD_THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
+        <span className={EMPTY_SLOT}>
           <UiIcon path={mdiImagePlusOutline} size={14} />
         </span>
-        <span className="text-muted min-w-0 flex-1 truncate text-xs">{placeholder}</span>
+        <span className={SLOT_LABEL}>{placeholder}</span>
       </AssetDropTarget>
     </div>
   )

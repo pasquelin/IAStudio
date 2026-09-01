@@ -61,7 +61,7 @@ describe('AssetDropList', () => {
 
   it('takes one back out without disturbing the others', async () => {
     const onChange = vi.fn()
-    const { container } = render(
+    render(
       <AssetDropList
         registration={registration(onChange)}
         initial={['asset-7', 'asset-8']}
@@ -74,7 +74,22 @@ describe('AssetDropList', () => {
     await waitFor(() =>
       expect(onChange).toHaveBeenLastCalledWith({ target: { name: 'files', value: ['asset-8'] } }),
     )
-    expect(container).toBeDefined()
+  })
+
+  // Two of the same view is not what the endpoint wants, and two children under one key is not
+  // what React wants either.
+  it('takes the same picture only once, however often it is dropped', async () => {
+    const onChange = vi.fn()
+    const { container } = render(
+      <AssetDropList registration={registration(onChange)} placeholder="Drop views" />,
+    )
+
+    await drop(surfaceOf(container), 'asset-7')
+    await drop(surfaceOf(container), 'asset-7')
+
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith({ target: { name: 'files', value: ['asset-7'] } }),
+    )
   })
 
   it('says what it wants while it holds nothing', () => {

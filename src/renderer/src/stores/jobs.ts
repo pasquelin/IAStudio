@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { defined } from '@shared/guards'
 import { isFinished, type Job, type JobProgress, type JobTarget } from '@shared/domain/job'
 import type { ContextUse } from '@shared/domain/projectContext'
 import { connectThroughBridge, getBridge } from '@/services/bridge'
@@ -105,12 +106,16 @@ export const useJobs = create<JobsState>()((set, get) => ({
               status: progress.status,
               progress: progress.progress,
               assetIds: progress.assetIds ?? job.assetIds,
-              ...(progress.error === undefined ? {} : { error: progress.error }),
-              ...(progress.cost === undefined ? {} : { cost: progress.cost }),
-              // 🛑 Both of these are the row's only source: settling emits a progress event and
-              // never the whole job. The unit was sent and dropped here from the day it existed.
-              ...(progress.costUnit === undefined ? {} : { costUnit: progress.costUnit }),
-              ...(progress.note === undefined ? {} : { note: progress.note }),
+              ...defined({ error: progress.error, cost: progress.cost }),
+              // 🛑 Settling emits a progress event and never the whole job, so what is not
+              // copied here never reaches a row. The unit was sent and dropped from the day it
+              // existed, and `finishedAt` and `remoteId` were never sent at all.
+              ...defined({
+                costUnit: progress.costUnit,
+                note: progress.note,
+                finishedAt: progress.finishedAt,
+                remoteId: progress.remoteId,
+              }),
             }
           : job,
       )

@@ -12,6 +12,7 @@ import {
   type JobTarget,
   settlementOf,
 } from '@shared/domain/job'
+import { defined } from '@shared/guards'
 import type { ActivityReport } from '@main/project/activityLog'
 import { apiFailureOf } from './client'
 import type { AuthoredPrompt } from '@shared/domain/projectContext'
@@ -409,17 +410,21 @@ export function createJobManager({
     // progress into an entry it has no row for.
     if (entry.discreet) return
 
-    const progress: JobProgress = {
-      id: entry.job.id,
-      status: entry.job.status,
-      progress: entry.job.progress,
-    }
-    if (entry.job.assetIds.length > 0) progress.assetIds = entry.job.assetIds
-    if (entry.job.error !== undefined) progress.error = entry.job.error
-    if (entry.job.cost !== undefined) progress.cost = entry.job.cost
-    if (entry.job.costUnit !== undefined) progress.costUnit = entry.job.costUnit
-    if (entry.job.note !== undefined) progress.note = entry.job.note
-    onProgress(progress)
+    const { job } = entry
+    onProgress({
+      id: job.id,
+      status: job.status,
+      progress: job.progress,
+      ...(job.assetIds.length > 0 ? { assetIds: job.assetIds } : {}),
+      ...defined({
+        error: job.error,
+        cost: job.cost,
+        costUnit: job.costUnit,
+        note: job.note,
+        finishedAt: job.finishedAt,
+        remoteId: job.remoteId,
+      }),
+    })
   }
 
   /** The list gained or lost an entry — neither of which a progress event can express. */

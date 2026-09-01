@@ -165,17 +165,21 @@ export function createTripoRunner(deps: TripoRunnerDeps): TripoJobRunner {
       // prompt opening on a slash — « /robot on a plinth » — was handed to `readFile` and failed
       // the job on an ENOENT nobody could read. A file arrives as a PATH because `services.ts`
       // routes a Tripo body through the LOCAL resolver.
-      // A repeated field carries a LIST of them, each going up on its own — a multiview asks
-      // for several pictures, and one wrapped into a list of one is what their refusal named.
-      if (field.repeated && Array.isArray(value)) {
-        const paths = value.filter((one): one is string => typeof one === 'string')
-        sent[field.key] = wrapped(field.key, await Promise.all(paths.map(uploaded)))
+      if (!FILE_KINDS.includes(field.kind)) {
+        sent[field.key] = value
         continue
       }
 
-      const isFile = FILE_KINDS.includes(field.kind) && typeof value === 'string'
-      const held = isFile && isAbsolute(value) ? await sendUp(value) : value
-      sent[field.key] = isFile && typeof held === 'string' ? wrapped(field.key, held) : held
+      // A cardinality, never a second rule about files: a repeated field is a LIST of the same
+      // kind, and each of them goes up the one way above allows.
+      if (field.repeated) {
+        const held = Array.isArray(value) ? value.filter(one => typeof one === 'string') : []
+        sent[field.key] = wrapped(field.key, await Promise.all(held.map(uploaded)))
+        continue
+      }
+
+      sent[field.key] =
+        typeof value === 'string' ? wrapped(field.key, await uploaded(value)) : value
     }
 
     return sent

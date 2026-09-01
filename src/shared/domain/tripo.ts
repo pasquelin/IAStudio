@@ -661,6 +661,8 @@ export const TRIPO_CATALOGUE: readonly TripoEntry[] = [
   ]),
   ...imageEntries('generation/edit-multiview', 'img2img', EDIT_MULTIVIEW_MODELS, [
     PROMPT,
+    // 🛑 NOT `repeated`, and not an oversight: its key is `input`, which no wrapper touches, and
+    // nothing measured says this one takes a list. Its twin at `multiview-to-model` does.
     input('raw', 'tripoFields.sourceViews'),
   ]),
 ]

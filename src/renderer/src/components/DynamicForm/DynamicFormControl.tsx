@@ -43,23 +43,6 @@ export function DynamicFormControl({
    */
   const handle = fieldHandle(`generation.${field.key}`)
 
-  // Before the kinds: a repeated field is a LIST of one of them, and every list is dropped the
-  // same way. `image` is the only kind repeated today; a second one lands here rather than in a
-  // case of its own.
-  if (field.repeated) {
-    return (
-      <AssetDropList
-        id={id}
-        registration={registration}
-        initial={
-          Array.isArray(initial) ? initial.filter(one => typeof one === 'string') : undefined
-        }
-        placeholder={t('generation.dropViews')}
-        scId={`generation.${field.key}`}
-      />
-    )
-  }
-
   switch (field.kind) {
     case 'longText':
       // The box is the FRAME: it resizes, and the text takes what is left of it. The strip is
@@ -119,7 +102,12 @@ export function DynamicFormControl({
         />
       )
 
-    case 'choice':
+    // A `task` is a closed list like any other, save that the window fills it. Nothing has run
+    // yet and it falls to the box below, which takes an id pasted by hand.
+    case 'task':
+    case 'choice': {
+      if (field.kind === 'task' && !field.options?.length) break
+
       return (
         <select id={id} data-sc={handle} className={FIELD} {...registration}>
           {!field.required && <option value="" />}
@@ -130,22 +118,7 @@ export function DynamicFormControl({
           ))}
         </select>
       )
-
-    // A run of this same service, named by its id. Nothing has run yet — or the window has not
-    // been told — and it falls back to the plain box, which takes an id pasted by hand.
-    case 'task':
-      if (!field.options || field.options.length === 0) break
-
-      return (
-        <select id={id} data-sc={handle} className={FIELD} {...registration}>
-          {!field.required && <option value="" />}
-          {field.options.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      )
+    }
 
     case 'color':
       return (
@@ -188,6 +161,19 @@ export function DynamicFormControl({
 
     case 'image':
     case 'mesh':
+      // A cardinality, not a kind: several pictures for one input, dropped one after another.
+      if (field.repeated && field.kind === 'image') {
+        return (
+          <AssetDropList
+            id={id}
+            registration={registration}
+            initial={initial}
+            placeholder={t('generation.dropViews')}
+            scId={`generation.${field.key}`}
+          />
+        )
+      }
+
       return (
         <AssetDropField
           id={id}

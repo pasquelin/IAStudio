@@ -605,11 +605,14 @@ const withinLength = (field: ActionField, value: string): boolean =>
 
 function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
+    // `task` is here for the compiler's sake: its options are composed by the window from what
+    // has run, so no action declares one.
     case 'text':
     case 'longText':
     case 'choice':
     case 'image':
     case 'mesh':
+    case 'task':
       return (
         typeof value === 'string' &&
         (!field.required || value.trim() !== '') &&
@@ -638,10 +641,6 @@ function fits(field: ActionField, value: unknown): boolean {
       return typeof value === 'boolean'
     case 'raw':
       return value !== undefined
-    // Its `options` are composed by the window from what has actually run, so a task id that is
-    // not in the list is a stale list rather than a wrong value — checked, it would refuse one.
-    case 'task':
-      return typeof value === 'string' && value.trim() !== '' && !PLACEHOLDER.test(value)
     // `Object.keys` rather than `in`, which answers true for `__proto__`, `toString` and
     // `constructor` — names that reached a merge, vanished in it, and were answered `ok`.
     case 'record':
