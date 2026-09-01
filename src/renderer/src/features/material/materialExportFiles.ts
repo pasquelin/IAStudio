@@ -6,6 +6,25 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { exportChannelsOf } from '@/engines/material/export/channels'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { materialOf, useMaterials } from '@/stores/materials'
+import type { MaterialExportPort } from '@/engines/material/export/exportPort'
+
+/** The GPU pass, which a headless run has not got — lent for the length of a run, see its sky twin. */
+let lent: MaterialExportPort | null = null
+
+/** Swaps the renderer, and hands back the undo. */
+export function lendMaterialExportPort(port: MaterialExportPort): () => void {
+  const previous = lent
+  lent = port
+  return () => {
+    lent = previous
+  }
+}
+
+async function materialExportPort(): Promise<MaterialExportPort> {
+  if (lent) return lent
+  const { createMaterialExportPort } = await import('@/engines/material/export/exportPort')
+  return createMaterialExportPort({ loadTexture })
+}
 
 /**
  * A material, baked to the files one target asks for — the half of an export that has nothing to
@@ -23,8 +42,8 @@ export async function materialExportFiles(
   const state = materialOf(useMaterials.getState(), documentId)
   const name = documentExportName(useDocuments.getState(), documentId, 'material')
 
-  const { createMaterialExportPort } = await import('@/engines/material/export/exportPort')
-  const files = await createMaterialExportPort({ loadTexture })(
+  const bake = await materialExportPort()
+  const files = await bake(
     {
       target,
       channels: exportChannelsOf(state),

@@ -25,7 +25,7 @@ import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { emptyGame, SCRIPT_EXTENSION, type GameManifest } from '@shared/domain/game'
 import { followTheCanvas, type PaintedCells } from './canvasSurface'
 import { standInForWorkers } from './codeWorker'
-import { drawing } from '@/game/game-fixtures'
+import { drawing, PNG_HEAD } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { createGameStage } from '@/game/gameStage'
@@ -41,7 +41,23 @@ import { useProjectContext } from '@/stores/projectContext'
 import { useTasks } from '@/stores/tasks'
 import { unsavedDocumentIds } from '@/features/shell/documentIo'
 import type { PlayState } from '@shared/domain/gameRuntime'
-import { frontDocumentIn, useDocuments } from '@/stores/documents'
+import {
+  activeAudioId,
+  activeGuiId,
+  activeMaterialId,
+  activeSkyboxId,
+  frontDocumentIn,
+  useDocuments,
+} from '@/stores/documents'
+import { commandDescriptor, type CommandId, type CommandScope } from '@shared/domain/command'
+import { holdCanvas } from '@/features/image/canvasHosts'
+import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
+import { runAudioCommand } from '@/features/audio/components/audioCommands'
+import { runGuiCommand } from '@/features/gui/components/Gui/Document/guiCommands'
+import { runMaterialCommand } from '@/features/material/components/Material/materialCommands'
+import { runSkyboxCommand } from '@/features/skybox/components/Skybox/Document/skyboxCommands'
+import { lendSkyboxExportPort } from '@/features/skybox/components/Skybox/Document/skyboxExportFiles'
+import { lendMaterialExportPort } from '@/features/material/materialExportFiles'
 import { playReportOf, usePlay } from '@/stores/play'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { declarePanelsOf } from '@/features/shell/panelSpecs'
@@ -62,6 +78,21 @@ import { createMemoryGit, type MemoryGit } from './memoryGit'
 import { createMemoryShell, type MemoryShell } from './memoryShell'
 import { createMemoryFolder, type MemoryFolder } from './memoryFolder'
 import { projectName, withRecentProject } from '@shared/domain/project'
+
+type ScopeRunner = {
+  /** Which document answers the scope — the one in front of its kind, as the tab itself reads it. */
+  front: (state: ReturnType<typeof useDocuments.getState>) => string | null
+  run: (documentId: string, command: CommandId) => boolean
+}
+
+/** The scopes a headless run arms, each answered by the function its tab calls. */
+const SCOPE_RUNNERS: Partial<Record<CommandScope, ScopeRunner>> = {
+  scene: { front: state => frontDocumentIn(state, '3d'), run: runSceneCommand },
+  gui: { front: activeGuiId, run: runGuiCommand },
+  skybox: { front: activeSkyboxId, run: runSkyboxCommand },
+  material: { front: activeMaterialId, run: runMaterialCommand },
+  audio: { front: activeAudioId, run: runAudioCommand },
+}
 
 /**
  * 🛑 Nothing here decides. Every call goes through `runConfirmedAction`, the door the window AND
@@ -488,6 +519,18 @@ export async function createStudio(
 
   const references: string[] = []
   const giveBackMeasure = lendPictureMeasure(() => Promise.resolve(PICTURE))
+  /**
+   * 🛑 The two exports that build their own WebGL context on the way out, which jsdom cannot
+   * give them: what stands in is the FILE LIST the writer takes — one picture, named after the
+   * document, and the bytes `drawing()` already answers a still with. Both refused
+   * « the document could not be rendered for export » on every run before, measured 2026-09-01.
+   */
+  const giveBackSky = lendSkyboxExportPort(({ name }) =>
+    Promise.resolve([{ name, extension: '.png', bytes: PNG_HEAD }]),
+  )
+  const giveBackMaterial = lendMaterialExportPort(({ name }) =>
+    Promise.resolve([{ name, extension: '.png', bytes: PNG_HEAD }]),
+  )
   const closeGenerator = installGeneratorPanel(cloud.fieldsOf, given => references.push(...given))
   // The person, who typed the sentence: a headless run has nobody to ask, and refusing every
   // spend would score the whole of sections 20 to 22 on a studio never asked to generate.
@@ -557,20 +600,24 @@ export async function createStudio(
   }
 
   /**
-   * 🛑 The one scope a headless run can stand in for, and it delegates rather than reimplements:
-   * `runSceneCommand` is the function the viewport itself calls. The other scopes stay unarmed —
-   * their commands live inside components, so `command.runStudioCommand` still answers `wrongSurface` there.
+   * 🛑 Every scope a headless run can stand in for, and each delegates rather than reimplements:
+   * `runSceneCommand` and its siblings are the functions the tabs themselves call. What stays
+   * unarmed lives inside a component and nowhere else — the explorer, the montage strip, the
+   * canvas tools — so `command.runStudioCommand` still answers `wrongSurface` there.
    */
   const followTheCommandBus = (): (() => void) => {
-    const disarm = armCommandScope('scene')
+    const disarm = Object.keys(SCOPE_RUNNERS).map(scope => armCommandScope(scope as CommandScope))
     const stop = subscribeToCommands(command => {
-      const scene = frontDocumentIn(useDocuments.getState(), '3d')
-      return scene !== null && runSceneCommand(scene, command)
+      const scope = commandDescriptor(command)?.scope
+      const runner = scope === undefined ? undefined : SCOPE_RUNNERS[scope]
+      if (!runner) return false
+      const documentId = runner.front(useDocuments.getState())
+      return documentId !== null && runner.run(documentId, command)
     })
 
     return () => {
       stop()
-      disarm()
+      for (const one of disarm) one()
     }
   }
 
@@ -583,17 +630,22 @@ export async function createStudio(
    */
   const followTheViewport = (): (() => void) => {
     const held = new Set<string>()
+    const releaseCanvases: (() => void)[] = []
     const stop = useDocuments.subscribe(state => {
-      for (const documentId of Object.keys(state.documents)) {
+      for (const [documentId, document] of Object.entries(state.documents)) {
         if (held.has(documentId)) continue
         held.add(documentId)
         registerSceneEngine(documentId, drawing())
+        // The canvas port too: a save and an export of an image read their pixels off it, and
+        // with none both refused « an engine not yet mounted » — measured 2026-09-01.
+        if (document.kind === 'image') releaseCanvases.push(holdCanvas(documentId, fakeCanvas))
       }
     })
 
     return () => {
       stop()
       for (const documentId of held) forgetSceneEngine(documentId)
+      for (const release of releaseCanvases) release()
     }
   }
 
@@ -703,6 +755,8 @@ export async function createStudio(
       closeChooser()
       closeGenerator()
       giveBackMeasure()
+      giveBackSky()
+      giveBackMaterial()
       leaveTheDock()
       leaveTheCommandBus()
       leaveTheCanvas()

@@ -1,5 +1,4 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
-import { canvasHostStub } from '@/stores/canvas-fixtures'
 import { DEFAULT_WORLD } from '@shared/domain/scene'
 import type { Asset } from '@shared/domain/asset'
 import { otioStudioMetadata } from '@shared/domain/otio'
@@ -37,7 +36,8 @@ import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isOraSurfacePath } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
 import { addLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
-import { holdCanvas, type CanvasHost } from '@/features/image/canvasHosts'
+import { holdCanvas } from '@/features/image/canvasHosts'
+import { fakeCanvas, FLATTEN } from '@/features/image/canvasHost-fixtures'
 import { bytesToBase64 } from '@/helpers/base64'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
@@ -112,29 +112,8 @@ beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
 })
 
-/** The shared stub, plus the one coupling a suite about saving may not be allowed to break. */
-function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): CanvasHost {
-  const host = canvasHostStub({ flatten: async () => FLATTEN, ...overrides })
-
-  return {
-    ...host,
-    /**
-     * NOT overridable, because the engine cannot make the two disagree: `snapshot()` IS
-     * `flatten()` with a base64 pass after it. A fake that answered bytes to one and nothing to
-     * the other described a state no engine reaches, and it is what let ⌘S read the whole picture
-     * back off the card twice without a single case going red.
-     */
-    snapshot: async () => {
-      const png = await host.flatten()
-      return png && bytesToBase64(png)
-    },
-  }
-}
-
 /** The pixels a fake engine hands over: bytes, as `LayerPixels` and `OraSurface` now carry them. */
 const PIXELS = new Uint8Array([137, 80, 78, 71])
-/** The flatten `mergedimage.png` holds — the container has no document without one. */
-const FLATTEN = new Uint8Array([137, 80, 78, 71, 13, 10])
 
 /** An image document's content: the OpenRaster stack, as JSON, with the studio state inside it. */
 const oraContent = (studio: string): string =>

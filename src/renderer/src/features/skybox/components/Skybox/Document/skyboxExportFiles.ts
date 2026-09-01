@@ -4,6 +4,28 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { assetVersionOf } from '@/stores/assets'
 import { documentExportName, useDocuments } from '@/stores/documents'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import type { SkyboxExportPort } from '@/engines/skybox/exportPort'
+
+/**
+ * The GPU pass, which a headless run has not got. Lent for the length of a run, like the picture
+ * measurer is — and the chunk behind `import()` is then never asked for.
+ */
+let lent: SkyboxExportPort | null = null
+
+/** Swaps the renderer, and hands back the undo. */
+export function lendSkyboxExportPort(port: SkyboxExportPort): () => void {
+  const previous = lent
+  lent = port
+  return () => {
+    lent = previous
+  }
+}
+
+async function skyboxExportPort(): Promise<SkyboxExportPort> {
+  if (lent) return lent
+  const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
+  return createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })
+}
 
 /**
  * A sky, rendered to its six faces — the half of an export that has nothing to do with where it
@@ -28,8 +50,8 @@ export async function skyboxExportFiles(
 
   const target = command.kind === 'faces' ? 'sky.faces' : command.target
 
-  const { createSkyboxExportPort } = await import('@/engines/skybox/exportPort')
-  const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })(
+  const render = await skyboxExportPort()
+  const files = await render(
     { assetId: sky.source.assetId, adjustments: sky.adjustments, name, command },
     watch,
   )
