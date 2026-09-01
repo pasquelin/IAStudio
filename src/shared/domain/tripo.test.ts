@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { CAPABILITIES_BY_FAMILY } from './model'
 import {
   isTripoModelId,
+  tripoDescriptorOf,
   tripoEntryOf,
   tripoFieldKeys,
   tripoFieldsOf,
   tripoModelId,
   TRIPO_CATALOGUE,
+  TRIPO_CLOUD,
   TRIPO_LANE_LIMITS,
 } from './tripo'
 
@@ -79,6 +81,48 @@ describe('the Tripo catalogue', () => {
     expect(rig?.model).toBe('v2.5-20260210')
   })
 
+  /**
+   * 🛑 Sent neither, the service rigs to its OWN convention and to a topology it guesses: the
+   * character came back with `tripo0_Right_Limb_0..9` and seven anonymous `bone_N`, and a biped
+   * walk laid on it crawled. Measured 2026-08-31 against the live service.
+   */
+  it('tells rigging which skeleton to build and what shape to fit it to', () => {
+    const rig = TRIPO_CATALOGUE.find(one => one.endpoint === 'animations/rig')
+    const fieldOn = (key: string) => rig?.fields.find(one => one.key === key)
+
+    expect(fieldOn('spec')?.default).toBe('mixamo')
+    expect(fieldOn('spec')?.optionKeys?.map(one => one.value)).toEqual(['mixamo', 'tripo'])
+    expect(fieldOn('rig_type')?.default).toBe('biped')
+    expect(fieldOn('rig_type')?.optionKeys?.map(one => one.value)).toEqual([
+      'biped',
+      'quadruped',
+      'avian',
+      'aquatic',
+      'serpentine',
+      'hexapod',
+      'octopod',
+    ])
+  })
+
+  /**
+   * 🛑 Read by a person, never by the API: `banana_pro · image-to-multiview` put two of the
+   * service's own slugs in the picker. The word after the dot stays — THREE picture endpoints
+   * serve `img2img`, so the model alone would list the same name three times.
+   */
+  it('calls every model by a name, never by an API slug', () => {
+    const spelt = TRIPO_CATALOGUE.filter(
+      entry => /_/.test(entry.name) || entry.name.includes('-to-'),
+    ).map(entry => entry.name)
+
+    expect(spelt).toEqual([])
+  })
+
+  it('leaves no two models of one employment sharing a name', () => {
+    const seen = TRIPO_CATALOGUE.map(entry => `${entry.capability}|${entry.name}`)
+
+    expect(seen.length - new Set(seen).size).toBe(0)
+  })
+
   /** The four picture lists differ: a cartesian product offers runs the service refuses. */
   it('offers each picture endpoint only the models it admits', () => {
     const modelsOn = (endpoint: string): string[] =>
@@ -106,6 +150,28 @@ describe('the Tripo catalogue', () => {
   // The one ceiling that forces a lane per category rather than one number for the whole cloud.
   it('holds pictures to one at a time', () => {
     expect(TRIPO_LANE_LIMITS.image).toBe(1)
+  })
+})
+
+describe('tripoDescriptorOf', () => {
+  /**
+   * 🛑 Seen on screen: every Tripo row wore « Pas de moteur » — the badge for weights no engine
+   * can open — because the descriptor answered `installed: false`. `model.ts` says a cloud model
+   * leaves the three absent, the question meaning nothing where nothing is downloaded.
+   */
+  it('leaves out what only a model of this machine answers', () => {
+    const described = tripoDescriptorOf(TRIPO_CATALOGUE[0]!, key => key)
+
+    expect(described.installed).toBeUndefined()
+    expect(described.downloadable).toBeUndefined()
+    expect(described.diskBytes).toBeUndefined()
+  })
+
+  it('names the cloud it runs on, never the one the studio was built on', () => {
+    const described = tripoDescriptorOf(TRIPO_CATALOGUE[0]!, key => key)
+
+    expect(described.runsOn).toBe(TRIPO_CLOUD)
+    expect(described.origin).toBe('community')
   })
 })
 

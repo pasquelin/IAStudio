@@ -65,7 +65,21 @@
     "format_3MF": "3MF",
     "out_format": "Output format",
     "animation": "Animation",
-    "animationHelp": "The name of an animation from Tripo’s catalogue — “walk”, “run”, “idle”."
+    "animationHelp": "The name of an animation from Tripo’s catalogue — “walk”, “run”, “idle”.",
+    "spec": "Skeleton convention",
+    "specHelp": "Mixamo names the bones the standard way, which the studio can read back; Tripo keeps its own.",
+    "spec_mixamo": "Mixamo",
+    "spec_tripo": "Tripo",
+    "rig_type": "Topology",
+    "rig_typeHelp": "What the skeleton has to fit. Rig check answers which one, for free.",
+    "rig_type_biped": "Biped",
+    "rig_type_quadruped": "Quadruped",
+    "rig_type_avian": "Avian",
+    "rig_type_aquatic": "Aquatic",
+    "rig_type_serpentine": "Serpentine",
+    "rig_type_hexapod": "Hexapod",
+    "rig_type_octopod": "Octopod",
+    "rigSourceHelp": "The skeleton follows the mesh: a shape the service does not recognise comes back badly jointed. Look at the result before paying for an animation."
   },
   "localFields": {
     "prompt": "Description",

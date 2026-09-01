@@ -31,6 +31,8 @@ import { GeneratorLanding } from './Landing/GeneratorLanding'
 import { GeneratorLandingDialog } from './Landing/GeneratorLandingDialog'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
+import { useAccounts } from '@/stores/accounts'
+import { cloudsHeldFor } from '@/features/models/modelFilters'
 import { DynamicForm } from '@/components/dynamicFormLazy'
 import { cn } from '@/helpers/cn'
 import { PANEL_SCROLL } from '@/components/styles'
@@ -73,6 +75,7 @@ export function Generator() {
   const family = (role && partsOfRole(role)?.family) ?? null
 
   const authenticated = useSettings(state => state.auth.authenticated)
+  const accounts = useAccounts(state => state.accounts)
   const landingChoice = useSettings(state => state.settings.generation.landing)
   const setValue = useSettings(state => state.setValue)
   const project = useProject(state => state.project)
@@ -235,11 +238,20 @@ export function Generator() {
   const refusal = refusalFor(descriptor.data?.requiredPlanLevel)
 
   /**
-   * 🛑 The SCENARIO key, and only where Scenario can serve: a model of this machine needs no
-   * account, and neither does a family no catalogue publishes — a person holding an Anthropic key
-   * alone was shown the Scenario form in Code, with no way past it.
+   * 🛑 Whether ANY held cloud serves this family, never the Scenario key alone: a model of this
+   * machine needs no account, a family no catalogue publishes needs none — a person holding an
+   * Anthropic key alone was shown the Scenario form in Code — and neither does a family a SECOND
+   * cloud serves. Read on `authenticated` alone, a Tripo key was refused its own 3D and Image
+   * forms, with fifty models the picker was listing right beside it.
    */
-  if (!authenticated && !onThisMachine && family !== null && CATALOGUE_FAMILIES.includes(family)) {
+  const served = family === null ? [] : cloudsHeldFor(family, authenticated, accounts)
+
+  if (
+    served.length === 0 &&
+    !onThisMachine &&
+    family !== null &&
+    CATALOGUE_FAMILIES.includes(family)
+  ) {
     if (!catalogueRead) {
       return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
     }

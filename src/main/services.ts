@@ -213,13 +213,12 @@ import { costEstimatorOf, type CostEstimator } from './provider/cost'
 import { createUsageReader, type UsageReader } from './provider/usage'
 import { createJobStore } from './provider/jobStore'
 import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
-import type { ModelDescriptor, ModelOrigin } from '@shared/domain/model'
+import type { ModelDescriptor } from '@shared/domain/model'
 import {
   isTripoModelId,
-  tripoFieldsOf,
+  tripoDescriptorOf,
   TRIPO_CATALOGUE,
   TRIPO_CLOUD,
-  tripoModelId,
 } from '@shared/domain/tripo'
 import { createCredentialsWatch } from './provider/credentialsWatch'
 import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
@@ -693,8 +692,8 @@ export function createServices(settings: SettingsStore): Services {
 
   /**
    * Tripo's whole catalogue, described from DATA — their API publishes no listing. Built once
-   * per language: 54 entries and 274 knobs make a fresh build 429 bundle lookups, and the
-   * registry asks on every search.
+   * per language: 50 entries and 303 knobs, counted 2026-08-31, and the registry asks on every
+   * search.
    */
   let tripoCatalogue: { language: Language; models: ModelDescriptor[] } | null = null
 
@@ -703,23 +702,7 @@ export function createServices(settings: SettingsStore): Services {
     if (tripoCatalogue?.language === spoken) return tripoCatalogue.models
 
     const said = (key: string): string => textAt(TRANSLATIONS[spoken], key)
-    const models = TRIPO_CATALOGUE.map(entry => ({
-      id: tripoModelId(entry),
-      name: entry.name,
-      family: entry.family,
-      runsOn: TRIPO_CLOUD,
-      source: TRIPO_CLOUD,
-      // Nothing on another company's servers is published by the cloud this studio was built on.
-      origin: 'community' as ModelOrigin,
-      installed: false,
-      downloadable: false,
-      diskBytes: 0,
-      featured: false,
-      capabilities: [entry.capability],
-      tags: [],
-      thumbnail: '',
-      fields: tripoFieldsOf(entry, said),
-    }))
+    const models = TRIPO_CATALOGUE.map(entry => tripoDescriptorOf(entry, said))
 
     tripoCatalogue = { language: spoken, models }
     return models

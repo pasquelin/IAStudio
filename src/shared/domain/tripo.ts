@@ -1,4 +1,4 @@
-import type { FieldDescriptor, ModelFamily } from './model'
+import type { FieldDescriptor, ModelDescriptor, ModelFamily } from './model'
 import {
   ADVANCED_GROUP,
   fieldKeysOf,
@@ -448,11 +448,52 @@ const PROCESSING: readonly TripoEntry[] = [
     family: '3d',
     capability: 'rig',
     lane: 'animation',
-    credits: 10,
+    // 25, not the 10 their price page quotes — measured on a paid rig, 2026-08-31.
+    credits: 25,
     // 🛑 It takes a `model` of ITS OWN — measured: « allowed values: v1.0-20240301, v2.5-20260210 ».
     model: 'v2.5-20260210',
     fields: [
-      input('mesh', 'tripoFields.sourceModel'),
+      // Said here rather than nowhere: a rig that does not fit its mesh is only visible once the
+      // animation after it has been paid for, and that one costs again.
+      { ...input('mesh', 'tripoFields.sourceModel'), helpKey: 'tripoFields.rigSourceHelp' },
+      /**
+       * 🛑 The skeleton CONVENTION, and the reason a rig came back unusable. Sent nothing, they
+       * fall back to their own — bones called `tripo0_Right_Limb_0..9` and seven anonymous
+       * `bone_N`, which no retarget of ours can read. `mixamo` names them the standard way.
+       */
+      {
+        key: 'spec',
+        kind: 'choice',
+        labelKey: 'tripoFields.spec',
+        helpKey: 'tripoFields.specHelp',
+        required: false,
+        default: 'mixamo',
+        optionKeys: [
+          { value: 'mixamo', labelKey: 'tripoFields.spec_mixamo' },
+          { value: 'tripo', labelKey: 'tripoFields.spec_tripo' },
+        ],
+      },
+      /**
+       * The topology to rig FOR. `animations/rig-check` answers it for free and this is what it
+       * is answered for — a biped walk laid on their default made the character crawl.
+       */
+      {
+        key: 'rig_type',
+        kind: 'choice',
+        labelKey: 'tripoFields.rig_type',
+        helpKey: 'tripoFields.rig_typeHelp',
+        required: false,
+        default: 'biped',
+        optionKeys: [
+          'biped',
+          'quadruped',
+          'avian',
+          'aquatic',
+          'serpentine',
+          'hexapod',
+          'octopod',
+        ].map(value => ({ value, labelKey: `tripoFields.rig_type_${value}` })),
+      },
       {
         key: 'out_format',
         kind: 'choice',
@@ -497,6 +538,40 @@ const PROCESSING: readonly TripoEntry[] = [
 ]
 
 /**
+ * What a picture model is CALLED, spelt as the 3D lines are — `Tripo v3.1 · Image`, never a slug.
+ *
+ * 🛑 The word after the dot carries its weight and cannot be dropped: THREE picture endpoints
+ * serve `img2img`, so the model alone would list `Banana Pro` three times in one picker.
+ */
+function imageModelName(model: string): string {
+  const named = IMAGE_MODEL_NAMES[model]
+  if (named) return named
+
+  // A model the service adds before this table does: readable, and never a missing entry.
+  return model.replace(/[_-]/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase())
+}
+
+/** The word each picture endpoint is known by, in the register the 3D lines already use. */
+const ENDPOINT_WORDS: Readonly<Record<string, string>> = {
+  'generation/text-to-image': 'Text',
+  'generation/image-to-image': 'Image',
+  'generation/image-to-multiview': 'Multiview',
+  'generation/edit-multiview': 'Multiview edit',
+}
+
+/** 🛑 Their own spellings, measured 2026-08-31 — no `gemini-*` among them, whatever the docs say. */
+const IMAGE_MODEL_NAMES: Readonly<Record<string, string>> = {
+  seedream_v4: 'Seedream v4',
+  seedream_v5: 'Seedream v5',
+  banana: 'Banana',
+  banana2: 'Banana 2',
+  banana_pro: 'Banana Pro',
+  chat_image_1: 'Chat Image 1',
+  'chat_image_1.5': 'Chat Image 1.5',
+  chat_image_2: 'Chat Image 2',
+}
+
+/**
  * A picture endpoint, once per model the service admits FOR THAT ENDPOINT — measured, the four
  * lists differ, and a cartesian product over one of them offers runs that are refused.
  */
@@ -509,7 +584,7 @@ function imageEntries(
   return models.map(model => ({
     endpoint,
     model,
-    name: `${model} · ${endpoint.slice(endpoint.lastIndexOf('/') + 1)}`,
+    name: `${imageModelName(model)} · ${ENDPOINT_WORDS[endpoint] ?? endpoint}`,
     family: 'image',
     capability,
     lane: 'image',
@@ -560,6 +635,36 @@ export function tripoFieldsOf(
   translate: (key: string) => string,
 ): FieldDescriptor[] {
   return fieldsFrom(entry.fields, translate)
+}
+
+/**
+ * One entry as the model registry publishes it.
+ *
+ * 🛑 `installed`, `downloadable` and `diskBytes` are LEFT OUT, and `model.ts` says why: they are
+ * absent for a model that runs in a cloud, where there is nothing to install. Answered as
+ * `false`, every row wore « Pas de moteur » — the badge for weights no engine can open.
+ *
+ * Here rather than in `services.ts` so the shape is testable: the composition lived inside a
+ * module with no test, and nothing said what a Tripo row promises.
+ */
+export function tripoDescriptorOf(
+  entry: TripoEntry,
+  translate: (key: string) => string,
+): ModelDescriptor {
+  return {
+    id: tripoModelId(entry),
+    name: entry.name,
+    family: entry.family,
+    runsOn: TRIPO_CLOUD,
+    source: TRIPO_CLOUD,
+    // Nothing on another company's servers is published by the cloud this studio was built on.
+    origin: 'community',
+    featured: false,
+    capabilities: [entry.capability],
+    tags: [],
+    thumbnail: '',
+    fields: tripoFieldsOf(entry, translate),
+  }
 }
 
 /** The keys a bundle has to name, read off the catalogue rather than off a copy of it. */

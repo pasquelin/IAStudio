@@ -65,7 +65,21 @@
     "format_3MF": "3MF",
     "out_format": "Format de sortie",
     "animation": "Animation",
-    "animationHelp": "Le nom d’une animation du catalogue Tripo — « walk », « run », « idle »."
+    "animationHelp": "Le nom d’une animation du catalogue Tripo — « walk », « run », « idle ».",
+    "spec": "Convention de squelette",
+    "specHelp": "Mixamo nomme les os à la manière standard, que le studio sait relire. Tripo garde la sienne.",
+    "spec_mixamo": "Mixamo",
+    "spec_tripo": "Tripo",
+    "rig_type": "Topologie",
+    "rig_typeHelp": "Ce que le squelette doit épouser. La vérification de squelette répond laquelle, sans rien coûter.",
+    "rig_type_biped": "Bipède",
+    "rig_type_quadruped": "Quadrupède",
+    "rig_type_avian": "Oiseau",
+    "rig_type_aquatic": "Aquatique",
+    "rig_type_serpentine": "Serpentin",
+    "rig_type_hexapod": "Hexapode",
+    "rig_type_octopod": "Octopode",
+    "rigSourceHelp": "Le squelette suit la maille : une forme que le service ne reconnaît pas revient mal articulée. Regardez le résultat avant de payer une animation."
   },
   "localFields": {
     "prompt": "Description",

@@ -138,6 +138,8 @@ export function taskOf(payload: unknown): TripoTask | null {
 
   const percent = readOptionalNumber(payload, 'progress')
   const progress = percent === undefined ? undefined : percent / 100
+  // 🛑 `credits_consumed`, and their v2 says `consumed_credit`: a curl against the wrong host
+  // once "proved" the other name and broke this. The studio speaks v3 — read v3.
   const credits = readOptionalNumber(payload, 'credits_consumed')
   return {
     taskId,

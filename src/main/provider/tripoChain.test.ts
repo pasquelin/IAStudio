@@ -117,13 +117,15 @@ describe('a Tripo generation, end to end over a real socket', () => {
     await rm(folder, { recursive: true, force: true })
   })
 
-  const runnerOf = () =>
-    createTripoRunner({
-      api: () =>
-        createTripoApi({
-          key: () => 'the-key',
-          baseUrl: `http://127.0.0.1:${service.port()}/v3`,
-        }),
+  const runnerOf = () => {
+    // ONE client, as `services.ts` holds one: it remembers whether their grouped read is served,
+    // and a fresh client per call would never exercise that latch.
+    const api = createTripoApi({
+      key: () => 'the-key',
+      baseUrl: `http://127.0.0.1:${service.port()}/v3`,
+    })
+    return createTripoRunner({
+      api: () => api,
       download: async url => new Uint8Array(await (await fetch(url)).arrayBuffer()),
       readFile: path => readFile(path),
       writeFile: (path, bytes) => writeFile(path, bytes),
@@ -132,6 +134,7 @@ describe('a Tripo generation, end to end over a real socket', () => {
       gatherMs: 0,
       log: () => {},
     })
+  }
 
   /**
    * The one door of the port this chain reaches. `as`: `LocalBackend` publishes nine, and the

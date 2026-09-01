@@ -51,10 +51,19 @@ const DEFAULT_GATHER_MS = 50
  * `rendered_image_url` and `generated_image_url` — the last two are the picture it drew on the
  * way — while a text-to-image answers `generated_image_url` ALONE. Reading one list for both
  * filed a picture as a mesh, or a mesh's preview as its result.
+ *
+ * 🛑 Keyed by `AssetType` and not by `string`: a shelf with no row is a silent drop, and that is
+ * exactly what swallowed a paid retarget — `motion` files on `animation`, which nothing named.
  */
-const RESULT_URLS: Record<string, readonly string[]> = {
+const RESULT_URLS: Record<AssetType, readonly string[]> = {
   mesh: ['model_url', 'pbr_model'],
   image: ['generated_image_url', 'image_url', 'rendered_image_url'],
+  // A retarget answers `model_url` like any other model — measured 2026-08-31 on a paid one.
+  animation: ['model_url'],
+  // Declared holes: nothing of Tripo's produces these, and a missing row cost a paid retarget.
+  video: [],
+  audio: [],
+  skybox: [],
 }
 
 /** The field kinds that carry a file rather than a value — what the form fills with a path. */
