@@ -9,6 +9,8 @@
     },
     "skeleton": "Skeleton",
     "tools": "Skeleton tools",
+    "lockLengths": "Hold bone lengths",
+    "lockLengthsHint": "A joint dragged keeps its distance to its parent: the bone turns instead of stretching",
     "motions": "Motions",
     "band": "Motion being edited",
     "restPose": "Rest pose",

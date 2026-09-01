@@ -1,4 +1,4 @@
-import { mdiArrowAll, mdiAxisArrow, mdiCursorDefaultOutline } from '@mdi/js'
+import { mdiArrowAll, mdiAxisArrow, mdiCursorDefaultOutline, mdiRulerSquare } from '@mdi/js'
 import type { TransformMode } from '@/engines/scene/gizmoTarget'
 import type { ToolbarItem } from '@/components/Toolbar/tools'
 
@@ -39,3 +39,21 @@ export const CHARACTER_TOOLS: readonly (ToolbarItem & { mode: TransformMode })[]
     icon: mdiAxisArrow,
   },
 ]
+
+/**
+ * The one toggle of this bar: a joint dragged keeps its distance to its parent, so the bone TURNS
+ * instead of stretching.
+ *
+ * Not a mode — it qualifies whichever one is armed, exactly as the scene's magnet qualifies its
+ * three verbs. A bone stretched to the floor is what a hand asking for a hundred pixels got
+ * without it, and almost never what it meant.
+ */
+export const CHARACTER_LOCK_LENGTHS = 'lockLengths'
+
+export const CHARACTER_LOCK_TOOL: ToolbarItem = {
+  id: CHARACTER_LOCK_LENGTHS,
+  labelKey: 'character.lockLengths',
+  descriptionKey: 'character.lockLengthsHint',
+  icon: mdiRulerSquare,
+  separatorBefore: true,
+}

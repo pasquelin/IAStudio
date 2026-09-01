@@ -9,6 +9,8 @@
     },
     "skeleton": "Squelette",
     "tools": "Outils du squelette",
+    "lockLengths": "Figer les longueurs",
+    "lockLengthsHint": "Une articulation tirée garde sa distance à son parent : l’os pivote au lieu de s’étirer",
     "motions": "Mouvements",
     "band": "Mouvement en cours",
     "restPose": "Pose de repos",

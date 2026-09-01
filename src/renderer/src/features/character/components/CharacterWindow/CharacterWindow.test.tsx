@@ -54,14 +54,32 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
 
   const bar = screen.getByRole('toolbar')
 
-  expect(within(bar).getAllByRole('button')).toHaveLength(3)
+  // Three verbs and the one toggle that qualifies them all.
+  expect(within(bar).getAllByRole('button')).toHaveLength(4)
   // A joint is a point and a length: there is nothing about one to enlarge.
   expect(within(bar).queryByRole('button', { name: /échelle/i })).toBeNull()
-  expect(within(bar).getByRole('button', { pressed: true })).toHaveAccessibleName(/Déplacer/)
+  // The armed verb, which is the one the gizmo obeys — the lock beside it is pressed too.
+  expect(within(bar).getByRole('button', { name: /Déplacer/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
 
   await userEvent.click(within(bar).getByRole('button', { name: /Pivoter/ }))
 
   expect(useCharacterView.getState().mode).toBe('rotate')
+})
+
+// Refused on sight: a hand asking for a hundred pixels stretched a bone to the floor.
+it('holds the bone lengths from the first frame, and lets go of them on the bar', async () => {
+  render(<CharacterWindow assetId={ASSET} />)
+
+  const lock = within(screen.getByRole('toolbar')).getByRole('button', { name: /longueurs/i })
+
+  expect(useCharacterView.getState().lockedLengths).toBe(true)
+
+  await userEvent.click(lock)
+
+  expect(useCharacterView.getState().lockedLengths).toBe(false)
 })
 
 // The sentence is about the FILE landing, and a mesh with no skeleton is a character plainly on

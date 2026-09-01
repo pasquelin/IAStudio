@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { BoneAxis } from '@/engines/character/boneRest'
 import type { TransformMode } from '@/engines/scene/gizmoTarget'
 
 /**
@@ -22,16 +23,22 @@ type CharacterViewState = {
    */
   heldAxes: readonly BoneAxis[]
   holdCharacterAxis: (axis: BoneAxis, held: boolean) => void
+  /**
+   * Whether a joint dragged keeps its distance to its parent — which is what makes the bone TURN
+   * rather than stretch. On by default: a bone stretched to the floor is what a hand asking for a
+   * hundred pixels gets otherwise, and almost never what it meant.
+   */
+  lockedLengths: boolean
+  lockCharacterLengths: (locked: boolean) => void
 }
-
-/** The three a joint can be held on. Named here because two surfaces and a command read it. */
-export type BoneAxis = 'x' | 'y' | 'z'
 
 export const useCharacterView = create<CharacterViewState>()(set => ({
   pickedBone: null,
   pickBone: pickedBone => set(state => (state.pickedBone === pickedBone ? state : { pickedBone })),
   mode: 'translate',
   setCharacterMode: mode => set({ mode }),
+  lockedLengths: true,
+  lockCharacterLengths: lockedLengths => set({ lockedLengths }),
   heldAxes: [],
   holdCharacterAxis: (axis, held) =>
     set(state => ({

@@ -2,7 +2,7 @@ import { mdiSkull } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { Transform, Vector3 } from '@shared/domain/transform'
+import type { Transform } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { PANE_TOOLBAR } from '@/components/styles'
@@ -18,6 +18,7 @@ import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
 import { useConnections } from '@/hooks/useConnections'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { restWithin } from '@/engines/character/boneRest'
 import { setCharacterBoneRest } from '@/engines/character/characterCommands'
 import { characterOf, isCharacterDirty, useCharacters } from '@/stores/character'
 import { useCharacterView } from '@/stores/characterView'
@@ -25,7 +26,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
-import { CHARACTER_TOOLS } from './characterTools'
+import { CHARACTER_LOCK_LENGTHS, CHARACTER_LOCK_TOOL, CHARACTER_TOOLS } from './characterTools'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
 
 export type CharacterWindowProps = { assetId: string }
@@ -63,6 +64,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const nodeId = useScenes(state => sceneOf(state, workshopIdOf(assetId)).nodes[0]?.id)
   const picked = useCharacterView(state => state.pickedBone)
   const mode = useCharacterView(state => state.mode)
+  const lockedLengths = useCharacterView(state => state.lockedLengths)
 
   // The window's own keys. Its OWN scope and not the scene's: ⌘Z here must not reach the scene a
   // studio window is showing beside it.
@@ -181,11 +183,17 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             <Toolbar
               className={PANE_TOOLBAR}
               label={t('character.tools')}
-              tools={[...CHARACTER_TOOLS]}
+              tools={[...CHARACTER_TOOLS, { ...CHARACTER_LOCK_TOOL, pressed: lockedLengths }]}
               activeTool={mode}
               onTool={id => {
+                const view = useCharacterView.getState()
+                if (id === CHARACTER_LOCK_LENGTHS) {
+                  view.lockCharacterLengths(!view.lockedLengths)
+                  return
+                }
+
                 const chosen = CHARACTER_TOOLS.find(tool => tool.id === id)
-                if (chosen) useCharacterView.getState().setCharacterMode(chosen.mode)
+                if (chosen) view.setCharacterMode(chosen.mode)
               }}
             />
             {/* While the FILE is still landing, never while it merely carries no skeleton: a
@@ -223,30 +231,17 @@ async function leaveProject(leaving: Promise<() => void>): Promise<void> {
 }
 
 /**
- * What a gizmo just wrote, with the held axes put back from where the joint rested.
+ * What a gizmo just wrote, brought back within the holds this window offers.
  *
  * Here rather than in the command: a command is what the MCP and the fields both run, and a hold
  * is a state of this WINDOW — one bound into the command would hold an axis for a caller that
  * never closed a padlock.
  */
 function boneRestHeld(assetId: string, bone: string, moved: Transform): Transform {
-  const held = useCharacterView.getState().heldAxes
-  if (held.length === 0) return moved
-
-  const rest = characterOf(useCharacters.getState(), assetId).rig?.bones.find(
+  const view = useCharacterView.getState()
+  const rested = characterOf(useCharacters.getState(), assetId).rig?.bones.find(
     one => one.name === bone,
   )?.rest
-  if (!rest) return moved
 
-  const kept = (was: Vector3, next: Vector3): Vector3 => ({
-    x: held.includes('x') ? was.x : next.x,
-    y: held.includes('y') ? was.y : next.y,
-    z: held.includes('z') ? was.z : next.z,
-  })
-
-  return {
-    position: kept(rest.position, moved.position),
-    rotation: kept(rest.rotation, moved.rotation),
-    scale: moved.scale,
-  }
+  return rested ? restWithin(rested, moved, view) : moved
 }

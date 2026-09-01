@@ -23,6 +23,7 @@ import {
   setCharacterBoneRest,
   setCharacterBoneRole,
 } from '@/engines/character/characterCommands'
+import { restWithin } from '@/engines/character/boneRest'
 import { rigHandBones } from '@/engines/scene/rigFit'
 import type { MeshSample } from '@/engines/scene/rigSnap'
 import { CharacterMotionList } from '../Character/Motion/CharacterMotionList'
@@ -30,7 +31,7 @@ import { CharacterWindowFit } from './CharacterWindowFit'
 import { characterOf, useCharacters } from '@/stores/character'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useViewportSetting } from '@/hooks/useViewportSetting'
-import { useCharacterView, type BoneAxis } from '@/stores/characterView'
+import { useCharacterView } from '@/stores/characterView'
 
 export type CharacterWindowInspectorProps = {
   assetId: string
@@ -57,6 +58,7 @@ export function CharacterWindowInspector({
   const character = useCharacters(state => characterOf(state, assetId))
   const picked = useCharacterView(state => state.pickedBone)
   const heldAxes = useCharacterView(state => state.heldAxes)
+  const lockedLengths = useCharacterView(state => state.lockedLengths)
   const holdAxis = useCharacterView(state => state.holdCharacterAxis)
   const run = useCharacters(state => state.runCommand)
   const [renaming, setRenaming] = useState(false)
@@ -67,12 +69,13 @@ export function CharacterWindowInspector({
   const rig = character.rig
   const reaching = rig?.ik?.find(chain => chain.effector === picked)
 
-  /** One axis at a time, and never a held one: what the padlock refuses, a keystroke must too. */
+  /** The same holds the gizmo obeys: what a padlock refuses, a keystroke must refuse too. */
   const restedAt = (next: Partial<Transform>): void => {
     if (!picked || !rig) return
 
-    const rest = restOf(rig.bones, picked)
-    run(assetId, setCharacterBoneRest(picked, freeOnly(rest, { ...rest, ...next }, heldAxes)))
+    const rested = restOf(rig.bones, picked)
+    const within = restWithin(rested, { ...rested, ...next }, { heldAxes, lockedLengths })
+    run(assetId, setCharacterBoneRest(picked, within))
   }
 
   const moveBone = (shown: Vector3): void => restedAt({ position: inMetres(shown, unit) })
@@ -238,22 +241,4 @@ function degreesOf(vector: Vector3): Vector3 {
 
 function radiansOf(vector: Vector3): Vector3 {
   return { x: toRadians(vector.x), y: toRadians(vector.y), z: toRadians(vector.z) }
-}
-
-/**
- * The held axes put back from where they were: the padlock only DRAWS itself, and a hold that
- * did not bite would be a padlock the next keystroke walked straight through.
- */
-function freeOnly(from: Transform, to: Transform, held: readonly BoneAxis[]): Transform {
-  const kept = (was: Vector3, next: Vector3): Vector3 => ({
-    x: held.includes('x') ? was.x : next.x,
-    y: held.includes('y') ? was.y : next.y,
-    z: held.includes('z') ? was.z : next.z,
-  })
-
-  return {
-    position: kept(from.position, to.position),
-    rotation: kept(from.rotation, to.rotation),
-    scale: to.scale,
-  }
 }
