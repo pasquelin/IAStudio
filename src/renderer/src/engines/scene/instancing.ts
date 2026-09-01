@@ -20,19 +20,23 @@ import type { SceneNode } from './sceneState'
  *
  * The camera renders layer 0 alone, so nothing on this one costs a draw call — but the mesh stays
  * in the scene with its matrix up to date, which is what keeps picking, the gizmo and the
- * selection working untouched. A raycaster must enable it explicitly: see `pickableLayers`.
+ * selection working untouched. A raycaster must enable it explicitly: `withEveryLayer` in `SceneRenderer` does.
  */
 export const DRAWN_BY_INSTANCE = 2
 
 /**
  * Past this many nodes of one shape, drawing them one by one stops being free.
  *
- * Measured on this Mac at 1600×900: 2 000 separate meshes cost 2.68 ms a frame, 10 000 cost
- * 17.02 ms — one whole frame, 59 fps. The same 10 000 through one `InstancedMesh` cost 1.34 ms,
- * 744 fps, in a single draw call. Below this floor the grouping earns nothing and only adds a
- * second way for a mesh to be drawn.
+ * Measured on this Mac at 1600×900, 10 000 bodies, group size the only variable: a group of 16
+ * already gives back 90 % of the CPU a frame spends in `render` (8.62 ms against 0.86), and 4
+ * gives back 59 %. The curve is flat well before the old floor of 64 — 95 % at 32, 96 % at 64.
+ * The GPU never moves, 1.25 to 1.76 ms whatever the grouping.
+ *
+ * 🛑 The floor does NOT defend against a rebuild that grows as groups shrink: measured over three
+ * series, that cost is 10 to 30 ms with no trend against group size at all. What it did instead
+ * was pay the sweep and group nothing — below the old floor, the count of grouped nodes was zero.
  */
-export const WORTH_INSTANCING = 64
+export const WORTH_INSTANCING = 16
 
 export type InstancedGroups = {
   /**
