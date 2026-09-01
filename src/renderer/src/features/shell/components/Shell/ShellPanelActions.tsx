@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { memo, Suspense } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { ToolId } from '@shared/domain/tool'
 import { toolDefinition } from '../toolComponents'
@@ -8,8 +8,11 @@ import { toolDefinition } from '../toolComponents'
  *
  * Its own boundary, and an empty one: actions that throw must not take the close button with
  * them, and a failure notice does not fit on a header row.
+ *
+ * 🛑 Memoised, like `ShellPanelBody` and for the same path: the chassis rebuilds its content map
+ * on every render of the shell, and each of those re-ran every open panel's action bar.
  */
-export function ShellPanelActions({ tool }: { tool: ToolId }) {
+export const ShellPanelActions = memo(function ShellPanelActions({ tool }: { tool: ToolId }) {
   const { Actions } = toolDefinition(tool)
   if (Actions === undefined) return null
 
@@ -22,4 +25,4 @@ export function ShellPanelActions({ tool }: { tool: ToolId }) {
       </Suspense>
     </ErrorBoundary>
   )
-}
+})

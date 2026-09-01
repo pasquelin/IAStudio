@@ -9,9 +9,9 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
 /**
- * The stores `toolStateOf` reads. 🛑 Written ONCE, and consumed twice — by the hook below and by
- * anything driving the studio without a window: the two lists had already drifted, and a run
- * that missed `useGit` never offered the Git panel at all.
+ * The stores `toolStateOf` reads, for a caller that wants to be told when ANY of them moves. The
+ * hook below cannot read it — it needs one selector per store to re-render on its own answer —
+ * so `useToolState.test.ts` holds the two to the same set rather than this list alone.
  */
 type Subscribable = { subscribe: (listener: () => void) => () => void }
 

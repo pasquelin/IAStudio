@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Panel, Panels } from '@pasquelin/panels'
 import '@pasquelin/panels/styles.css'
@@ -33,7 +33,7 @@ import { toolIcon, toolTitleKey } from '@/helpers/toolRegistry'
 import { panelSpecsOf } from '../../panelSpecs'
 import { LAYOUT_KEY, layoutStorage } from '../../layoutStorage'
 import { useToolState } from '@/hooks/useToolState'
-import { familyOf } from '@shared/domain/tool'
+import { familyOf, type ToolId } from '@shared/domain/tool'
 import { panelsStore } from '@/stores/panels'
 import { ShellPanelActions } from './ShellPanelActions'
 import { ShellPanelBody } from './ShellPanelBody'
@@ -46,6 +46,22 @@ const COMPONENTS = { IconButton: ShellPanelButton }
 
 /** Stable for the store's lifetime: a new identity here would re-render the whole centre. */
 const dropFocus = (): void => panelsStore.getState().focus(null)
+
+/**
+ * One element per panel, held. 🛑 A glyph rebuilt in the render is a NEW element every time, and
+ * the chassis compares the declaration field by field to know whether anything moved: written
+ * inline, every render of the shell rewrote the whole registry — measured at 5 for 5.
+ */
+const ICONS = new Map<ToolId, ReactElement>()
+
+function iconOf(id: ToolId): ReactElement {
+  const held = ICONS.get(id)
+  if (held) return held
+
+  const made = <UiIcon path={toolIcon(id)} size={22} />
+  ICONS.set(id, made)
+  return made
+}
 
 /**
  * Assembles the studio: `@pasquelin/panels` draws the frame — icon rails on the edges, rounded
@@ -156,7 +172,7 @@ export function Shell() {
         <Panel
           key={spec.id}
           {...spec}
-          icon={<UiIcon path={toolIcon(spec.id)} size={22} />}
+          icon={iconOf(spec.id)}
           // 🛑 `undefined` for a panel that publishes none, never an element that renders null:
           // the chassis reads the PRESENCE of this prop to draw the header's separator and to
           // give the row's free width to the actions. Always passed, every panel wore a divider

@@ -55,9 +55,9 @@ export function hasActions(id: ToolId): boolean {
 }
 
 /**
- * Whether its actions take the row's free width. Only the montage asks for it — a band holding
- * a list with two buttons wants them at the end, which is what the chassis would otherwise give
- * every panel of a horizontal zone.
+ * Whether its actions take the row's free width. Only the montage asks for it: a transport is a
+ * whole bar, where a band holding a list with two buttons wants them at the end — which is what
+ * the chassis gives every panel of a horizontal zone otherwise.
  */
 export function fillsActions(id: ToolId): boolean {
   return TOOL_ENTRIES[id].role === 'fill-actions'
@@ -75,7 +75,6 @@ function panel({ load, role }: ToolEntry): ToolDefinition {
       role === null
         ? undefined
         : lazy(async () => ({ default: (await load()).definition.Actions ?? NoActions })),
-    fillActions: role === 'fill-actions',
   }
 }
 

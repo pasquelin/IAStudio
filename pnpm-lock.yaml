@@ -24,8 +24,8 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(supports-color@7.2.0)(zod@4.4.3)
       '@pasquelin/panels':
-        specifier: 0.3.1
-        version: 0.3.1(dockview-react@8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: 0.3.2
+        version: 0.3.2(dockview-react@8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@scenario-labs/sdk':
         specifier: ^3.0.0
         version: 3.0.0
@@ -1321,8 +1321,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@pasquelin/panels@0.3.1':
-    resolution: {integrity: sha512-rXZXbYRCbcEH2qH2ZCz/wdVR8pxsJwiZZYLPo0YV/n/LRp0+/AYcGmIHrF0x8bP850FbKZdB2g24vxEgZUmZXQ==}
+  '@pasquelin/panels@0.3.2':
+    resolution: {integrity: sha512-0Dl35EsTns4dtvgV2S1Wdc0hhMgzDlhopG2PI+w4auJid4GkJwwbqdM6bfuo32a2f24ay2fmZKX/zVLvVBfpCA==}
     engines: {node: '>=18'}
     peerDependencies:
       dockview-react: '>=8.0.0'
@@ -5598,7 +5598,7 @@ snapshots:
   '@oxc-resolver/binding-win32-x64-msvc@11.24.2':
     optional: true
 
-  '@pasquelin/panels@0.3.1(dockview-react@8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@pasquelin/panels@0.3.2(dockview-react@8.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
