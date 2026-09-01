@@ -9,7 +9,9 @@
 import {
   AnimationClip,
   Bone,
+  Matrix4,
   NumberKeyframeTrack,
+  Quaternion,
   QuaternionKeyframeTrack,
   Skeleton,
   SkinnedMesh,
@@ -268,6 +270,53 @@ function boneFilling(
 ): Object3D | undefined {
   const name = Object.keys(roles).find(bone => roles[bone] === role)
   return name === undefined ? undefined : root.getObjectByName(name)
+}
+
+/**
+ * 🛑 three copies the source bone's WORLD orientation onto the target one and stops there, so two
+ * skeletons whose rests differ fold in two — measured 2026-09-01 on a fitted rig whose 22 rests
+ * are all the identity, playing a Mixamo motion. `restSource⁻¹ · restTarget` makes it a delta.
+ *
+ * Both skeletons are read AT REST, so they are the worker's own — never a placed scene node,
+ * whose holder would fold its own rotation into every offset.
+ */
+export function restOffsetsOf(
+  target: Object3D,
+  source: Object3D,
+  names: Readonly<Record<string, string>>,
+): Record<string, Matrix4> {
+  const turns = worldTurnsOf(target)
+  const from = worldTurnsOf(source)
+
+  const offsets: Record<string, Matrix4> = {}
+  for (const [bone, other] of Object.entries(names)) {
+    const turn = turns.get(bone)
+    const rest = from.get(other)
+    if (!turn || !rest) continue
+
+    // Cloned: `invert` and `multiply` write in place, and two target bones may name one source
+    // bone — the second would then read a rest the first had destroyed.
+    offsets[bone] = new Matrix4().makeRotationFromQuaternion(rest.clone().invert().multiply(turn))
+  }
+
+  return offsets
+}
+
+/**
+ * Every named object's world ROTATION, in one walk — `getObjectByName` walks the whole tree per
+ * call, and this is asked once per bone of a 52-bone rig. The scale is dropped on purpose: a rig
+ * scaled by its holder would otherwise fold that scale into the delta.
+ */
+function worldTurnsOf(root: Object3D): Map<string, Quaternion> {
+  root.updateWorldMatrix(false, true)
+
+  const turns = new Map<string, Quaternion>()
+  root.traverse(object => {
+    if (object.name && !turns.has(object.name))
+      turns.set(object.name, object.getWorldQuaternion(new Quaternion()))
+  })
+
+  return turns
 }
 
 /**

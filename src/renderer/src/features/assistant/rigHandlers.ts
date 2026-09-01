@@ -33,7 +33,6 @@ import { channelNames } from '@/helpers/channelNames'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import {
   addIkChain,
-  addModelClip,
   addRigBone,
   addRigHands,
   removeIkChain,
@@ -53,7 +52,7 @@ import { useAnimationViews } from '@/stores/animationView'
 import { getBridge } from '@/services/bridge'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { clipsOfNode, rigOfNode, useModelFiles } from '@/stores/modelFiles'
-import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
+import { laySceneClip, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
 import { NO_SCENE } from './sceneHandlers'
 import { boolOf, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
@@ -181,11 +180,7 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
         `asset "${assetId}" is of type "${asset.type}", and a block wants one of type "animation" — assets.searchProjectCatalogue with type "animation" answers which are`,
       )
 
-    return editModelOf(
-      input,
-      node => addModelClip(node.id, assetClip(newId(), asset.id, asset.name)),
-      'that asset built no block on this model',
-    )
+    return layBlockOf(input, assetClip(newId(), asset.id, asset.name))
   }
 
   if (assetId !== null || clipName === null)
@@ -206,15 +201,19 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
       `"${clipName}" is not among the "${source}" clips this model can play — animations.list answers "embedded" and "bundled" by name`,
     )
 
-  return editModelOf(
+  return layBlockOf(
     input,
-    node =>
-      addModelClip(
-        node.id,
-        source === 'embedded' ? embeddedClip(newId(), clipName) : bundledClip(newId(), clipName),
-      ),
-    'that clip built no block on this model',
+    source === 'embedded' ? embeddedClip(newId(), clipName) : bundledClip(newId(), clipName),
   )
+}
+
+/** Laid through the very gesture the panels use, so a block an assistant lays lands CHOSEN too. */
+function layBlockOf(input: Record<string, unknown>, clip: ClipRef): ActionOutcome {
+  const open = model(input)
+  if (!open) return noModel(input)
+
+  laySceneClip(open.documentId, open.node.id, clip)
+  return { ok: true }
 }
 
 /** The animations shipped with the app, by folder — the picker's own second list. */

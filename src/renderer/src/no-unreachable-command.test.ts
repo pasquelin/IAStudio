@@ -118,6 +118,16 @@ const COMBINATORS: readonly string[] = [
 const SPREAD_OVER_A_SELECTION: readonly string[] = ['setGeometryOn', 'setLightOn', 'setCameraOn']
 
 /**
+ * Reached through a GESTURE of the store, which does the edit and one thing more that a panel and
+ * an action must not diverge on. Named one by one: reading the store whole would let every command
+ * it mentions read as published.
+ */
+const THROUGH_A_GESTURE: Readonly<Record<string, string>> = {
+  // Laying a block also CHOOSES it — `stores/scenes.ts`, and `animation.addBlock` performs it.
+  addModelClip: 'laySceneClip',
+}
+
+/**
  * Reached through `command.runStudioCommand` rather than by an action of its own — the OTHER door, which this
  * rule cannot see: a client fires the registry command beside each one and the surface in front
  * builds the edit. Listed so they do not read as gestures nothing can reach.
@@ -182,6 +192,7 @@ describe('what edits a document, and what an outside client may ask for', () => 
       ...SPREAD_OVER_A_SELECTION,
       ...NOT_PUBLISHED,
       ...Object.keys(THROUGH_A_COMMAND),
+      ...Object.keys(THROUGH_A_GESTURE),
     ])
     const orphans = COMMANDS.flatMap(([module, names]) =>
       names
@@ -204,6 +215,7 @@ describe('what edits a document, and what an outside client may ask for', () => 
       ...SPREAD_OVER_A_SELECTION,
       ...NOT_PUBLISHED,
       ...Object.keys(THROUGH_A_COMMAND),
+      ...Object.keys(THROUGH_A_GESTURE),
     ]
 
     expect(listed.filter(name => !declared.has(name)).sort()).toEqual([])

@@ -7,7 +7,7 @@ import { sceneNodeDrag } from '@/features/scene/components/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
 import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
-import { clipLabel } from '@/helpers/clipLabel'
+import { clipRefLabel } from '@/helpers/clipLabel'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
@@ -76,9 +76,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
           blocks.push({
             clipId: ref.id,
-            // Renamed only for a clip the model's OWN file spells — an asset or a bundle was
-            // named by the studio or by the user, and `animation_0.glb` is a name they chose.
-            name: ref.source.kind === 'embedded' ? clipLabel(ref.label, t) : ref.label,
+            name: clipRefLabel(ref, t),
             start: ref.start,
             // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
             // what is heard is a bar whose end shows a pose nothing holds.

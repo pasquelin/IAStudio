@@ -1,12 +1,12 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { clipLane, embeddedClip } from '@shared/domain/scene'
+import { bundledClip, clipLane, embeddedClip, type ClipLane } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { useAnimationViews } from '@/stores/animationView'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
 import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
 import { useSceneViews } from '@/stores/sceneViews'
@@ -118,6 +118,14 @@ describe('AnimationSection', () => {
     await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
     expect(runningNow()).toBe(true)
   })
+
+  /** A model node carrying these lanes, and nothing else changed. */
+  const withLanes = (...lanes: ClipLane[]): void => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [{ ...modelNodeFixture('a'), model: { assetId: 'asset-1', lanes } }],
+    })
+  }
 
   /** A model holding two blocks in one lane, the second of which is chosen on the band. */
   const withTwoBlocks = (): void => {
@@ -238,18 +246,8 @@ describe('AnimationSection', () => {
    */
   it('leaves the blocks it does not show alone when the played one is edited', async () => {
     const kept = embeddedClip('c2', 'run', { start: 5 })
-    installScene(DOCUMENT, {
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          ...modelNodeFixture('a'),
-          model: {
-            assetId: 'asset-1',
-            lanes: [clipLane('main', [embeddedClip('c1', 'walk'), kept])],
-          },
-        },
-      ],
-    })
+    withLanes(clipLane('main', [embeddedClip('c1', 'walk'), kept]))
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c1')
     show()
     await userEvent.click(screen.getByLabelText('En boucle'))
 
@@ -261,18 +259,8 @@ describe('AnimationSection', () => {
   // control would take a stacked animation off without ever showing it.
   it('leaves the lanes it does not show alone', async () => {
     const other = clipLane('second', [embeddedClip('c3', 'wave')])
-    installScene(DOCUMENT, {
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          ...modelNodeFixture('a'),
-          model: {
-            assetId: 'asset-1',
-            lanes: [clipLane('main', [embeddedClip('c1', 'walk')]), other],
-          },
-        },
-      ],
-    })
+    withLanes(clipLane('main', [embeddedClip('c1', 'walk')]), other)
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c1')
     show()
     await userEvent.click(screen.getByLabelText('En boucle'))
 
@@ -282,15 +270,8 @@ describe('AnimationSection', () => {
   // Its clip is gone from the file, so the picker lists nothing — but « none » has to stay
   // reachable, or a block that plays nothing could never be taken off.
   it('still offers a way out for a block whose clip the file no longer spells', async () => {
-    installScene(DOCUMENT, {
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          ...modelNodeFixture('a'),
-          model: { assetId: 'asset-1', lanes: [clipLane('main', [embeddedClip('c1', 'gone')])] },
-        },
-      ],
-    })
+    withLanes(clipLane('main', [embeddedClip('c1', 'gone')]))
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c1')
     show([])
     await userEvent.selectOptions(screen.getByLabelText('Clip'), '')
 
@@ -316,6 +297,27 @@ describe('AnimationSection', () => {
     show()
 
     expect(screen.getByRole('button', { name: /Jouer le clip/ })).toBeDisabled()
+  })
+
+  // It used to describe the first block of the first lane whenever nothing was picked, so Play
+  // was armed over a block the person had never pointed at.
+  it('says nothing of a block nobody picked, rather than falling back on the first', () => {
+    withLanes(clipLane('main', [embeddedClip('c1', 'walk')]))
+    show()
+
+    expect(screen.getByLabelText('Clip')).toHaveValue('')
+    expect(screen.getByRole('button', { name: /Jouer le clip/ })).toBeDisabled()
+  })
+
+  // The menu listed the file's own clips alone, so a library block fell on the first option and
+  // « none » stood over a block that was playing.
+  it('names a motion the file does not carry, instead of reading none', () => {
+    withLanes(clipLane('main', [bundledClip('c1', 'Capoeira')]))
+    useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c1')
+    show()
+
+    expect(screen.getByLabelText('Clip')).toHaveDisplayValue('Capoeira')
+    expect(screen.getByRole('button', { name: /Jouer le clip/ })).toBeEnabled()
   })
 
   // The label follows the clip rather than lagging behind it: it is what the band draws, and a
@@ -393,6 +395,23 @@ describe('AnimationSection', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
 
       expect(heldOf() ?? []).toEqual([])
+    })
+
+    // Browsing picks what it lays, so cancelling has to put back what was chosen before — the
+    // section went blank over a block the person had never touched.
+    it('gives the band back the block that was chosen before it opened', async () => {
+      installFakeBridge({
+        animations: { list: () => Promise.resolve([{ name: 'Capoeira', thumbnail: false }]) },
+      })
+      withLanes(clipLane('main', [embeddedClip('c1', 'walk')]))
+      useAnimationViews.getState().setPickedBlock(DOCUMENT, 'c1')
+      show([], ['mixamorig:Hips'])
+
+      await userEvent.click(screen.getByRole('button', { name: 'Ajouter une animation' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Capoeira' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+
+      expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).pickedBlock).toBe('c1')
     })
 
     /** Switching to another application is not an answer: alt-tab must not decide for anyone. */

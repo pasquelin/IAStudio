@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { clipKeyOf, DEFAULT_CLIP, type ClipRef, type ClipSource } from '@shared/domain/scene'
 import { EmptyState } from '@/components/EmptyState'
 import { laneHolding } from '@/engines/scene/clipBlend'
-import { addModelClip, removeModelClip } from '@/engines/scene/commands'
+import { removeModelClip } from '@/engines/scene/commands'
 import { nodeById, type SceneState } from '@/engines/scene/sceneState'
 import { clipLabel } from '@/helpers/clipLabel'
 import { useBundledAnimations } from '@/hooks/useBundledAnimations'
 import { newId } from '@/helpers/ids'
 import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { activeSceneId, useDocuments } from '@/stores/documents'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { laySceneClip, sceneOf, useScenes } from '@/stores/scenes'
 import { useScenePreview, useSceneViews, type WatchedPreview } from '@/stores/sceneViews'
 import { AnimationsPanelRow } from './AnimationsPanelRow'
 
@@ -64,7 +64,7 @@ export function AnimationsPanel() {
     }
 
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
-    useScenes.getState().runCommand(documentId, addModelClip(nodeId, laid))
+    laySceneClip(documentId, nodeId, laid)
     useSceneViews
       .getState()
       .setPreview(documentId, { nodeId, clipId: laid.id, at: 0, playing: true, laid })

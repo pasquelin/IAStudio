@@ -7,12 +7,13 @@
  * through an `AnimationMixer` frame by frame — 240 whole poses for eight seconds at 30 fps — and
  * that is pure arithmetic with no DOM and no GPU, which is exactly what invariant 6 sends away.
  */
-import { retargetClip } from 'three/addons/utils/SkeletonUtils.js'
-import type { SkinnedMesh } from 'three'
+import { retargetClip, type RetargetClipOptions } from 'three/addons/utils/SkeletonUtils.js'
+import type { Matrix4, SkinnedMesh } from 'three'
 import { messageOf } from '@shared/guards'
 import {
   clipFromWire,
   nodeTrackNameOf,
+  restOffsetsOf,
   skeletonScaleOf,
   skinnedFromWire,
   wireClipOf,
@@ -51,12 +52,15 @@ async function run(request: RetargetRequest): Promise<void> {
     // Measured HERE rather than on the caller's objects, so the size read is the one of the very
     // skeletons three is about to sample — the same space, whatever the scene did to the models.
     const scale = skeletonScaleOf(target, source)
+    // Read while both skeletons still stand at rest: `retargetClip` poses the source on its first
+    // frame before anything is sampled.
+    const offsets = restOffsetsOf(target, source, request.names)
     const adapted: WireClip[] = []
 
     for (const [index, clip] of request.clips.entries()) {
       if (cancelled.delete(request.id)) return
 
-      adapted.push(adaptOne(request, target, source, clip, scale))
+      adapted.push(adaptOne(request, target, source, clip, scale, offsets))
       post({ id: request.id, done: false, progress: (index + 1) / request.clips.length })
       // Yields the queue: without it a cancellation sent mid-request would sit unread until the
       // whole run it was meant to stop had finished.
@@ -85,16 +89,19 @@ function adaptOne(
   source: SkinnedMesh,
   clip: WireClip,
   scale: number,
+  localOffsets: Record<string, Matrix4>,
 ): WireClip {
-  // A FRESH options object per clip, and that is not tidiness: `retargetClip` WRITES its defaults
-  // back into what it is handed, so a shared one would fix every later clip at the first one's
-  // sampling rate.
-  const sampled = retargetClip(target, source, clipFromWire(clip), {
+  // A FRESH object per clip — `retargetClip` WRITES its defaults back into what it is handed, so a
+  // shared one would fix every later clip at the first one's rate — and held in a variable because
+  // `localOffsets` is read by the shipped `SkeletonUtils.js` and absent from `@types/three`.
+  const options: RetargetClipOptions & { localOffsets: Record<string, Matrix4> } = {
     names: request.names,
     hip: request.hip,
     fps: request.fps,
     scale,
-  })
+    localOffsets,
+  }
+  const sampled = retargetClip(target, source, clipFromWire(clip), options)
   const wire = wireClipOf(sampled)
 
   // `retargetClip` answers a duration of -1, meaning "read it off the tracks"; the wire carries a

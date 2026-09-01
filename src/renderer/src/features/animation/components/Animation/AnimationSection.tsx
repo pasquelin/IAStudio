@@ -2,6 +2,7 @@ import { mdiPause, mdiPlay } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  clipKeyOf,
   clipLane,
   CLIP_SPEED,
   DEFAULT_CLIP,
@@ -26,7 +27,7 @@ import { addModelClip, removeModelClip, setModelLanes } from '@/engines/scene/co
 import { laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import type { ModelNode } from '@/engines/scene/sceneState'
-import { clipLabel } from '@/helpers/clipLabel'
+import { clipLabel, clipRefLabel } from '@/helpers/clipLabel'
 import { newId } from '@/helpers/ids'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { clipsOfNode, rigOfNode, useModelFiles } from '@/stores/modelFiles'
@@ -55,16 +56,18 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const [opener, setOpener] = useState<HTMLElement | null>(null)
   /** The block the picker laid while browsing, so keeping it is doing nothing more. */
   const [picking, setPicking] = useState<{ clipId: string; source: ClipSource } | null>(null)
+  /** What was chosen before the picker opened: cancelling puts the band back where it stood. */
+  const [chosenBefore, setChosenBefore] = useState<string | null>(null)
 
   // Nothing has landed yet: a section explaining a model the studio has not read would be wrong
   // rather than empty.
   if (!rig) return null
 
   const lanes = node.model.lanes ?? []
-  // THE BLOCK ONE CHOSE on the band, and the first one only while nothing is chosen: a model may
-  // hold several, and a section that always described the first could not speak of the others.
-  const played =
-    lanes.flatMap(lane => lane.clips).find(clip => clip.id === picked) ?? lanes[0]?.clips[0] ?? null
+  const played = lanes.flatMap(lane => lane.clips).find(clip => clip.id === picked) ?? null
+  // By KEY and never by name: a bundled `walk` and the clip this file spells `walk` are two
+  // different things, and the menu would offer one for the other.
+  const playedKey = played && clipKeyOf(played.source)
 
   const running = played !== null && preview?.clipId === played.id && preview.playing
 
@@ -84,6 +87,9 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   // The chosen block is replaced INSIDE its own lane, every other lane carried over untouched:
   // rewriting the whole field from one control would drop every block this section does not show.
   const write = (next: ClipRef | null): void => {
+    // Laying a block is choosing it — every panel here describes the block the band shows chosen.
+    useAnimationViews.getState().setPickedBlock(documentId, next?.id ?? null)
+
     // Rewritten IN PLACE: a block moved to the front of its lane because a speed changed would
     // reorder what the band draws.
     const rewrite = (clips: readonly ClipRef[]): readonly ClipRef[] =>
@@ -104,8 +110,11 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   // Picking a clip on a model that had none starts from the defaults rather than from nothing,
   // and plays at once: a chosen clip standing at its first frame would read as a control that
   // did not work.
-  const choose = (name: string): void => {
-    const next = name === '' ? null : embeddedClip(played?.id ?? newId(), name, { ...played })
+  const choose = (key: string): void => {
+    // Its own option: rebuilding it would turn a library motion into a clip this file has not got.
+    if (key === playedKey) return
+
+    const next = key === '' ? null : embeddedClip(played?.id ?? newId(), key, { ...played })
     write(next)
     play(next)
   }
@@ -123,6 +132,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
     const laid = { ...DEFAULT_CLIP, id: newId(), source, label }
     takeBack()
     edit.run(addModelClip(node.id, laid))
+    useAnimationViews.getState().setPickedBlock(documentId, laid.id)
     setPicking({ clipId: laid.id, source })
     play(laid)
   }
@@ -136,6 +146,7 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
   const drop = (): void => {
     takeBack()
     keep()
+    useAnimationViews.getState().setPickedBlock(documentId, chosenBefore)
   }
 
   return (
@@ -143,7 +154,15 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
       <QuietNote>{t(`inspector.rigStatus_${rig.status}`)}</QuietNote>
 
       {/* The one way in, and it browses by LAYING: the preview is the result, never a rehearsal. */}
-      <button ref={setOpener} type="button" className={INLINE_LINK} onClick={() => setOpen(!open)}>
+      <button
+        ref={setOpener}
+        type="button"
+        className={INLINE_LINK}
+        onClick={() => {
+          if (!open) setChosenBefore(picked)
+          setOpen(!open)
+        }}
+      >
         {t('inspector.addAnimation')}
       </button>
       {open && (
@@ -169,10 +188,15 @@ export function AnimationSection({ documentId, node, edit }: AnimationSectionPro
       {(clips.length > 0 || played) && (
         <SelectField
           label={t('inspector.clip')}
-          value={played?.source.name ?? ''}
+          value={playedKey ?? ''}
           options={[
             { value: '', label: t('inspector.noClip') },
             ...clips.map(clip => ({ value: clip, label: clipLabel(clip, t) })),
+            // A motion this file does not spell — a library one, an imported one. Without a row
+            // of its own the browser shows the first, and « none » stood over a block that played.
+            ...(played && playedKey !== null && !clips.includes(playedKey)
+              ? [{ value: playedKey, label: clipRefLabel(played, t) }]
+              : []),
           ]}
           onChange={choose}
           scId="animation.clip"

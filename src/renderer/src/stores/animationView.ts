@@ -87,7 +87,15 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
     set(state => write(state, documentId, view => ({ ...view, selected, pickedBlock: null }))),
 
   setPickedBlock: (documentId, pickedBlock) =>
-    set(state => write(state, documentId, view => ({ ...view, pickedBlock, selected: [] }))),
+    set(state =>
+      write(state, documentId, view =>
+        // Identity is the answer to "the same block, again", for `moveRow`'s reason: a control
+        // that rewrites its block on every tick of a slider repaints the whole band with it.
+        view.pickedBlock === pickedBlock && view.selected.length === 0
+          ? view
+          : { ...view, pickedBlock, selected: [] },
+      ),
+    ),
 
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),
