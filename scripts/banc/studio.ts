@@ -41,15 +41,13 @@ import { useProjectContext } from '@/stores/projectContext'
 import { useTasks } from '@/stores/tasks'
 import { unsavedDocumentIds } from '@/features/shell/documentIo'
 import type { PlayState } from '@shared/domain/gameRuntime'
+import { documentById, frontDocumentIn, useDocuments } from '@/stores/documents'
 import {
-  activeAudioId,
-  activeGuiId,
-  activeMaterialId,
-  activeSkyboxId,
-  frontDocumentIn,
-  useDocuments,
-} from '@/stores/documents'
-import { commandDescriptor, type CommandId, type CommandScope } from '@shared/domain/command'
+  commandDescriptor,
+  scopeOfWorkspace,
+  type CommandId,
+  type CommandScope,
+} from '@shared/domain/command'
 import { holdCanvas } from '@/features/image/canvasHosts'
 import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
 import { runAudioCommand } from '@/features/audio/components/audioCommands'
@@ -79,20 +77,36 @@ import { createMemoryShell, type MemoryShell } from './memoryShell'
 import { createMemoryFolder, type MemoryFolder } from './memoryFolder'
 import { projectName, withRecentProject } from '@shared/domain/project'
 
-type ScopeRunner = {
-  /** Which document answers the scope — the one in front of its kind, as the tab itself reads it. */
-  front: (state: ReturnType<typeof useDocuments.getState>) => string | null
-  run: (documentId: string, command: CommandId) => boolean
+type ScopeRunner = (documentId: string, command: CommandId) => boolean
+
+/** The scopes a headless run can answer, each by the function its own tab calls. */
+const SCOPE_RUNNERS = new Map<CommandScope, ScopeRunner>([
+  ['scene', runSceneCommand],
+  ['gui', runGuiCommand],
+  ['skybox', runSkyboxCommand],
+  ['material', runMaterialCommand],
+  ['audio', runAudioCommand],
+])
+
+/** The document the studio shows — what a command with no address lands on. */
+function frontDocument(): DocumentDescriptor | null {
+  const { activeId, documents } = useDocuments.getState()
+  return activeId === null ? null : (documents[activeId] ?? null)
 }
 
-/** The scopes a headless run arms, each answered by the function its tab calls. */
-const SCOPE_RUNNERS = new Map<CommandScope, ScopeRunner>([
-  ['scene', { front: state => frontDocumentIn(state, '3d'), run: runSceneCommand }],
-  ['gui', { front: activeGuiId, run: runGuiCommand }],
-  ['skybox', { front: activeSkyboxId, run: runSkyboxCommand }],
-  ['material', { front: activeMaterialId, run: runMaterialCommand }],
-  ['audio', { front: activeAudioId, run: runAudioCommand }],
-])
+/**
+ * 🛑 The scope a document edits through, read off `scopeOfWorkspace` rather than off a table of
+ * this bench's own: an interface opens in the 3D space and answers `gui`, so a runner picked by
+ * workspace would have sent ⌘Z on an interface to the scene's history.
+ */
+const scopeOf = (document: DocumentDescriptor | null): CommandScope | null =>
+  document === null ? null : scopeOfWorkspace(document.workspace, document.kind)
+
+/** Where a command of this scope lands: the document it NAMES, or the one in front. */
+function addressedBy(scope: CommandScope, to: string | null): string | null {
+  const document = to === null ? frontDocument() : documentById(useDocuments.getState(), to)
+  return scopeOf(document) === scope ? (document?.id ?? null) : null
+}
 
 /** What the GPU exports answer here: one picture named after the document — see `PNG_HEAD`. */
 const stillNamed = ({ name }: { name: string }) =>
@@ -596,23 +610,41 @@ export async function createStudio(
   }
 
   /**
-   * 🛑 Every scope a headless run can stand in for delegates rather than reimplements — see
-   * `SCOPE_RUNNERS`. The explorer, the montage strip and the canvas tools live inside their
-   * components alone, so `command.runStudioCommand` still answers `wrongSurface` there.
+   * 🛑 Armed as a TAB arms it — the scope of the document in front, and that one only. Armed for
+   * good, `command.runStudioCommand` answered `nothingToDo` where the studio answers
+   * `wrongSurface`, and the bench would have taught a model a refusal the product never gives.
+   * The explorer, the montage strip and the canvas tools live inside their components alone, so
+   * those scopes stay unarmed here.
    */
   const followTheCommandBus = (): (() => void) => {
-    const disarm = [...SCOPE_RUNNERS.keys()].map(armCommandScope)
-    const stop = subscribeToCommands(command => {
+    let armedScope: CommandScope | null = null
+    let disarm: (() => void) | null = null
+
+    const followTheFront = (): void => {
+      const scope = scopeOf(frontDocument())
+      const answered = scope !== null && SCOPE_RUNNERS.has(scope) ? scope : null
+      if (answered === armedScope) return
+
+      disarm?.()
+      armedScope = answered
+      disarm = answered === null ? null : armCommandScope(answered)
+    }
+
+    const stop = subscribeToCommands((command, to) => {
       const scope = commandDescriptor(command)?.scope
       const runner = scope === undefined ? undefined : SCOPE_RUNNERS.get(scope)
-      if (!runner) return false
-      const documentId = runner.front(useDocuments.getState())
-      return documentId !== null && runner.run(documentId, command)
+      if (!runner || scope === undefined) return false
+
+      const documentId = addressedBy(scope, to)
+      return documentId !== null && runner(documentId, command)
     })
+    const unfollow = useDocuments.subscribe(followTheFront)
+    followTheFront()
 
     return () => {
       stop()
-      for (const one of disarm) one()
+      unfollow()
+      disarm?.()
     }
   }
 
@@ -631,11 +663,20 @@ export async function createStudio(
         registerSceneEngine(documentId, drawing())
         // The canvas port too: a save and an export of an image read their pixels off it, and
         // with none both refused « an engine not yet mounted » — measured 2026-09-01.
-        const releaseCanvas = document.kind === 'image' ? holdCanvas(documentId, fakeCanvas) : null
+        const canvas = document.kind === 'image' ? fakeCanvas() : null
+        const releaseCanvas = canvas && holdCanvas(documentId, () => canvas)
         held.set(documentId, () => {
           forgetSceneEngine(documentId)
           releaseCanvas?.()
         })
+      }
+
+      // 🛑 A CLOSED document gives its surfaces back: left registered, a scene nobody shows still
+      // answers `play.start`, and an image closed by the model still saves its pixels.
+      for (const [documentId, release] of [...held]) {
+        if (state.documents[documentId]) continue
+        release()
+        held.delete(documentId)
       }
     })
 
@@ -676,11 +717,6 @@ export async function createStudio(
     return outcome
   }
 
-  const front = (): DocumentDescriptor | null => {
-    const { activeId, documents } = useDocuments.getState()
-    return activeId === null ? null : (documents[activeId] ?? null)
-  }
-
   const studio: Studio = {
     run,
     state: async () => {
@@ -688,7 +724,7 @@ export async function createStudio(
       return read.ok ? describeStudio(read.data) : ''
     },
     documents: () => Object.values(useDocuments.getState().documents),
-    front,
+    front: frontDocument,
     files: () => folder.paths(),
     game: () => manifest,
     assets: () => catalog.rows(),

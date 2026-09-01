@@ -37,7 +37,8 @@ import { isOraSurfacePath } from '@shared/domain/openRaster'
 import { DEFAULT_CANVAS, pixelLayer, textLayer } from '@/engines/canvas/canvasState'
 import { addLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas } from '@/features/image/canvasHosts'
-import { fakeCanvas, FLATTEN } from '@/features/image/canvasHost-fixtures'
+import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
+import { PNG_HEAD } from '@/game/game-fixtures'
 import { bytesToBase64 } from '@/helpers/base64'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
@@ -366,7 +367,7 @@ describe('saveDocument', () => {
    */
   describe('the asset behind the document', () => {
     /** What a flat source is written with — the flatten ⌘S already captured, base64 as the channel takes it. */
-    const PNG = bytesToBase64(FLATTEN)
+    const PNG = bytesToBase64(PNG_HEAD)
 
     /** Which pictures the engine was told to forget, so the overwrite's second half is visible. */
     let forgotten: string[] = []
@@ -534,7 +535,7 @@ describe('saveDocument', () => {
     })
 
     /**
-     * A flat picture cannot hold a stack, so the `.png` takes the FLATTEN and the document keeps
+     * A flat picture cannot hold a stack, so the `.png` takes the PNG_HEAD and the document keeps
      * the layers. Refusing instead left a channel of a texture — always a `.png` — unable to
      * receive any edit carrying a layer, an opacity or a blend: the model never saw it.
      *
@@ -660,7 +661,7 @@ describe('saveDocument', () => {
         fakeCanvas({
           flatten: () => {
             flattens += 1
-            return Promise.resolve(FLATTEN)
+            return Promise.resolve(PNG_HEAD)
           },
           pixelSnapshots: () => {
             extractions += 1
@@ -731,7 +732,7 @@ describe('saveDocument', () => {
       expect(saveLayered.mock.calls[0]?.[0].document.stack.nodes).toHaveLength(2)
       expect(saveLayered.mock.calls[0]?.[0].document.surfaces).toContainEqual({
         path: 'mergedimage.png',
-        png: FLATTEN,
+        png: PNG_HEAD,
       })
     })
 
@@ -1067,7 +1068,7 @@ describe('saveDocument', () => {
    * copy — the gesture every application has, applied to an asset rather than to a file.
    */
   describe('saveDocumentAs', () => {
-    const PNG = bytesToBase64(FLATTEN)
+    const PNG = bytesToBase64(PNG_HEAD)
 
     /** What the engine was told to forget — nothing, for a gesture that overwrites nothing. */
     let forgotten: string[] = []
@@ -1445,7 +1446,7 @@ describe('an image document', () => {
       'image',
       expect.objectContaining({
         parts: [
-          { path: 'mergedimage.png', png: FLATTEN },
+          { path: 'mergedimage.png', png: PNG_HEAD },
           { path: 'data/p_layer-1.png', png: PIXELS },
           { path: 'data/m_layer-1.png', png: PIXELS },
         ],

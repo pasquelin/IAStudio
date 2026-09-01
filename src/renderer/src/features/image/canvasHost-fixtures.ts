@@ -1,9 +1,7 @@
+import { PNG_HEAD } from '@/game/game-fixtures'
 import { bytesToBase64 } from '@/helpers/base64'
 import { canvasHostStub } from '@/stores/canvas-fixtures'
 import type { CanvasHost } from './canvasHosts'
-
-/** The flatten `mergedimage.png` holds — the container has no document without one. */
-export const FLATTEN = new Uint8Array([137, 80, 78, 71, 13, 10])
 
 /**
  * A fake engine behind the canvas port. Written once so a member added to `CanvasHost` is one
@@ -11,7 +9,7 @@ export const FLATTEN = new Uint8Array([137, 80, 78, 71, 13, 10])
  * headless run can honestly stand in for is that the port ANSWERS — see `PNG_HEAD`.
  */
 export function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): CanvasHost {
-  const host = canvasHostStub({ flatten: async () => FLATTEN, ...overrides })
+  const host = canvasHostStub({ flatten: async () => PNG_HEAD, ...overrides })
 
   return {
     ...host,

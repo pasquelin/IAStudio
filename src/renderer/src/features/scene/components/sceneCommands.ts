@@ -1,7 +1,6 @@
 import type { CommandId } from '@shared/domain/command'
 import type { CsgOperation } from '@shared/domain/csg'
 import { canInvertCarve, canNegate, canSeparate } from '@/engines/csg/carve'
-import { canRedo, canUndo } from '@/engines/core/history'
 import {
   addNodes,
   carveNodes,
@@ -25,7 +24,8 @@ import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
-import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
+import { runHistoryCommand } from '@/services/historyCommand'
+import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /**
@@ -210,19 +210,9 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
      * 🛑 `false` on an empty stack, which is what a caller needs: answered `ok` regardless, a
      * model sent nine undos in a row and took the whole decor apart (bench pass, 2026-08-26).
      */
-    case 'scene.undo': {
-      if (!canUndo(sceneHistoryOf(store, documentId))) return false
-
-      store.undo(documentId)
-      return true
-    }
-
-    case 'scene.redo': {
-      if (!canRedo(sceneHistoryOf(store, documentId))) return false
-
-      store.redo(documentId)
-      return true
-    }
+    case 'scene.undo':
+    case 'scene.redo':
+      return runHistoryCommand(sceneStore, 'scene', documentId, command) ?? false
 
     default:
       return false
