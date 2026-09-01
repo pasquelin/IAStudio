@@ -3,7 +3,7 @@
     "actions": {
       "commandRunStudioCommand": {
         "title": "Run a command",
-        "description": "Fires a studio command by its identifier, exactly as a keyboard shortcut or a menu item would. The document it applies to has to be in front."
+        "description": "Fires a studio command by its identifier, exactly as a keyboard shortcut or a menu item would. The document it applies to has to be in front. An identifier reads <scope>.<verb>, and studio.state answers the scope of what is in front: taking an edit of a document back is <scope>.undo — scene.undo, canvas.undo, sequence.undo — and putting it back <scope>.redo. ONE call takes back ONE gesture, so a second takes back the one before it: read the document again rather than sending it twice. No other action undoes an edit, files.undoFileOperation covering project files alone."
       },
       "workspaceOpen": {
         "title": "Open a workspace",
@@ -827,7 +827,7 @@
       },
       "worldSetGroundPlane": {
         "title": "Set the ground of the scene",
-        "description": "Shows or hides the ground the scene owns, and sets its colour, its side, its opacity and whether shadows land on it. That ground belongs to the document, unlike the grid, which is a setting of the application."
+        "description": "Shows or hides the ground the scene owns, and sets its colour, its side, its opacity and whether shadows land on it. This is how a ground is ADDED to a scene: a plane added as an object is scenery, not the ground. That ground belongs to the document, unlike the grid, which is a setting of the application."
       },
       "worldSetToneMapping": {
         "title": "Set how the scene is rendered",
@@ -899,11 +899,11 @@
       },
       "settingsRead": {
         "title": "Read the settings",
-        "description": "Returns every setting the studio holds, section by section, exactly as the settings window shows them."
+        "description": "Returns every setting the studio holds, section by section, exactly as the settings window shows them. What the viewport DRAWS lives here — the grid, the shadows, the helpers — and so do the units, the theme and the language. No scene action turns any of them on."
       },
       "settingsWrite": {
         "title": "Change the settings",
-        "description": "Writes one or more settings, section by section. What is not named is left alone, and a change that names nothing the studio knows is refused rather than written without being read."
+        "description": "Writes one or more settings, section by section. This is how the grid and the shadows are turned on or set — read them first, since a change that names nothing the studio knows is refused rather than written blind. What is not named is left alone."
       },
       "accountsList": {
         "title": "List the accounts",
@@ -1027,7 +1027,7 @@
       },
       "componentAttach": {
         "title": "Attach a component",
-        "description": "Gives an object of the scene something to DO while the game runs — its health, its motion. Refused when the object already carries one of that type."
+        "description": "Gives an object of the scene something to DO while the game runs — its health, its motion. This is how an object is made to move by itself: node.transform puts it somewhere once and it stays there. Refused when the object already carries one of that type."
       },
       "componentDetach": {
         "title": "Detach a component",

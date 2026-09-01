@@ -121,6 +121,14 @@ describe('what the studio is, said to the model', () => {
   })
 
   /**
+   * 🛑 The scope, not the kind: `command.runStudioCommand` reads `<scope>.<verb>`, and an image
+   * document is kind `image` and scope `canvas` — a model reading the kind composed `image.undo`.
+   */
+  it('names the scope a command of the surface in front is written in', () => {
+    expect(describeStudio(studio({ commandScope: 'canvas' }))).toContain('canvas.<verb>')
+  })
+
+  /**
    * 🛑 Nothing else in the briefing announces a game, so a model asked « reprends la partie »
    * answered « Reprise de la partie. » without a single call — measured 2026-08-31.
    */
