@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountedConfirmer } from '@/features/assistant/confirm'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installDocument } from '@/stores/document-fixtures'
+import { trackByGit } from '@/stores/git-fixtures'
+import { useProject } from '@/stores/project'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { panelsStore } from '@/stores/panels'
 import { chassisFor, resetChassis } from '@/stores/panels-fixtures'
@@ -238,5 +240,33 @@ describe('the right column with a document in front', () => {
     expect(drawn()).not.toContain('Assistant')
     expect(drawn()).toContain('Inspecteur')
     expect(drawn()).toContain('Calques')
+  })
+})
+
+/**
+ * The montage carries a whole bar on its title row and wants the width; every other band panel
+ * wants its buttons at the end. The chassis guesses from "publishes actions in a horizontal
+ * zone", which is why the registry has to say.
+ */
+describe('a panel of the band', () => {
+  it('gives the row’s free width to the montage, and to it alone', () => {
+    useLayouts.setState({ activeWorkspace: 'video' })
+    renderShell()
+
+    expect(screen.getByText('Timeline')).toHaveClass('pnl-header__title--fixed')
+  })
+
+  it('leaves the history’s actions at the end of its row', () => {
+    trackByGit()
+    useProject.setState({
+      project: {
+        path: '/projects/one',
+        manifest: { version: 1, createdAt: '', updatedAt: '' },
+      },
+    })
+    renderShell()
+    panelsStore.getState().show('history')
+
+    expect(screen.getByText('Historique')).not.toHaveClass('pnl-header__title--fixed')
   })
 })

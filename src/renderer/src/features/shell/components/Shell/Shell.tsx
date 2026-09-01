@@ -28,7 +28,7 @@ import { AccountSelect } from '../AccountSelect'
 import { ProjectSelect } from '../ProjectSelect'
 import { TitleBar } from '../TitleBar/TitleBar'
 import { UiIcon } from '@/components/UiIcon'
-import { hasActions } from '../toolComponents'
+import { fillsActions, hasActions } from '../toolComponents'
 import { toolIcon, toolTitleKey } from '@/helpers/toolRegistry'
 import { panelSpecsOf } from '../../panelSpecs'
 import { useToolState } from '@/hooks/useToolState'
@@ -159,6 +159,7 @@ export function Shell() {
           // in front of its close button, and every band panel took the width the montage asks
           // for.
           actions={hasActions(spec.id) ? <ShellPanelActions tool={spec.id} /> : undefined}
+          fillActions={fillsActions(spec.id)}
         >
           <ShellPanelBody tool={spec.id} />
         </Panel>

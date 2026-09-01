@@ -54,6 +54,15 @@ export function hasActions(id: ToolId): boolean {
   return TOOL_ENTRIES[id].role !== null
 }
 
+/**
+ * Whether its actions take the row's free width. Only the montage asks for it — a band holding
+ * a list with two buttons wants them at the end, which is what the chassis would otherwise give
+ * every panel of a horizontal zone.
+ */
+export function fillsActions(id: ToolId): boolean {
+  return TOOL_ENTRIES[id].role === 'fill-actions'
+}
+
 /** A panel that publishes no actions still needs something for `lazy` to resolve to. */
 const NoActions = () => null
 
