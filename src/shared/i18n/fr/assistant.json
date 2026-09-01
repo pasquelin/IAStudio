@@ -43,7 +43,7 @@
       },
       "actionsFind": {
         "title": "Chercher des actions",
-        "description": "Cherche par mots-clés dans toutes les actions que le studio publie et rend celles qui correspondent, avec leurs champs. Ne change rien à l’écran."
+        "description": "Cherche par mots-clés dans toutes les actions que le studio publie et rend celles qui correspondent, avec leurs champs. Ne change rien à l’écran. C’est aussi ce qui répond à « de quoi es-tu capable au sujet de X » : chercher le mot, puis dire ce qui est revenu."
       },
       "chatClose": {
         "title": "Refermer la conversation",
@@ -183,7 +183,7 @@
       },
       "jobReadCloudGeneration": {
         "title": "Lire une tâche",
-        "description": "Rend une génération entière — son état, son avancement, ce qu’elle a produit, ce qu’elle a coûté, et pourquoi elle a échoué le cas échéant."
+        "description": "Répond une génération entière — son état, où elle en est, ce qu’elle a produit, ce qu’elle a coûté et pourquoi elle a échoué le cas échéant. Demandé « le résultat de ma dernière génération », c’est ceci qui dit comment elle s’est PASSÉE ; l’image ou le modèle 3D qu’elle a produit est dans le catalogue du projet."
       },
       "jobWaitForCloudGeneration": {
         "title": "Attendre la fin d’une tâche",
@@ -199,7 +199,7 @@
       },
       "usageReport": {
         "title": "Lire le rapport de consommation",
-        "description": "Rend ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre de consommation l’affiche."
+        "description": "Répond ce que le compte a dépensé sur une fenêtre de sept, trente-et-un ou cent vingt jours, telle que la fenêtre d’usage la montre. C’est ce qui répond à « combien me reste-t-il de crédits »."
       },
       "assetsSearchProjectCatalogue": {
         "title": "Chercher dans le catalogue du projet",
@@ -239,7 +239,7 @@
       },
       "canvasState": {
         "title": "Lire l’image en cours d’édition",
-        "description": "Rend le cadre de l’image devant — sa taille et sa résolution — et toute sa pile de calques mise à plat, chacun avec son identifiant, sa nature, son opacité, son mode de fusion et sa transformation."
+        "description": "Répond l’image en avant — sa taille, sa résolution, ses repères, et chaque calque de la pile à plat : identifiant, nom, sorte, et ce que chacun porte. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : un calque est visible, opaque, déverrouillé, en fondu normal, non rogné et non transformé."
       },
       "canvasResize": {
         "title": "Redimensionner l’image",
@@ -255,7 +255,7 @@
       },
       "layerSetMaskOptions": {
         "title": "Régler le masque d’un calque",
-        "description": "Dit si un masque cache ce qu’il couvre et s’il suit le calque quand il se déplace, ou le retire tout à fait. Un calque qui n’en porte aucun est refusé — creuser un masque appartient au moteur, par la commande qui le fait depuis la sélection."
+        "description": "Dit si un MASQUE — une forme creusée dans une sélection, qu’un calque porte — cache ce qu’il couvre et s’il suit le calque, ou le retire tout à fait. Cacher le calque LUI-MÊME, c’est layer.setOpacityBlendAndVisibility. Un calque qui n’en porte aucun est refusé : creuser un masque appartient au moteur, par la commande qui en fait un depuis la sélection."
       },
       "guideAdd": {
         "title": "Poser un repère",
@@ -287,7 +287,7 @@
       },
       "layerSetOpacityBlendAndVisibility": {
         "title": "Régler la composition d’un calque",
-        "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son masquage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel."
+        "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son écrêtage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel. C’EST ELLE qui cache un calque et le remontre — « masque ce calque » met la visibilité à faux, et n’a rien à voir avec un masque."
       },
       "layerTransform": {
         "title": "Placer un calque",
@@ -499,7 +499,7 @@
       },
       "styleSave": {
         "title": "Enregistrer la matière comme style",
-        "description": "Met de côté la matière du document devant sous le nom donné. Le nom sert de base, le studio le rendant unique s’il est déjà pris."
+        "description": "Enregistre la matière du document devant sous le nom donné. Le nom sert de base, le studio le rendant unique s’il est déjà pris."
       },
       "styleRename": {
         "title": "Renommer un style de matière",
@@ -543,11 +543,11 @@
       },
       "favoritesListPinnedRecipes": {
         "title": "Lister les recettes épinglées",
-        "description": "Rend les recettes mises de côté, avec le modèle qui les a produites et l’espace qui sait les refaire. Une recette garde de quoi relancer une génération."
+        "description": "Rend les recettes épinglées au projet, avec le modèle qui les a produites et l’espace qui sait les refaire. Une recette garde de quoi relancer une génération."
       },
       "favoritePinAssetRecipe": {
         "title": "Épingler la recette d’un asset",
-        "description": "Met de côté ce qui a produit un asset du projet ouvert, pour pouvoir le refaire. Un asset que personne n’a généré n’a pas de recette à garder."
+        "description": "Épingle ce qui a produit un asset du projet ouvert, pour pouvoir le refaire. Un asset que personne n’a généré n’a pas de recette à garder."
       },
       "favoriteUnpinAssetRecipe": {
         "title": "Retirer une recette épinglée",
@@ -595,7 +595,7 @@
       },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
-        "description": "Répond chaque objet du document 3D en avant — son identifiant, son nom, son type, son parent, sa visibilité et sa transformation, avec la géométrie, la matière ou la lumière qu’il porte — plus ce qui est sélectionné, les plans de caméra et le réglage de la scène. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : pas de champ parent veut dire aucun parent, pas de transformation veut dire à l’origine, sans rotation ni échelle, pas de couleur veut dire celle du studio."
+        "description": "Répond chaque objet du document 3D en avant — son identifiant, son nom, son type, son parent, sa visibilité et sa transformation, avec la géométrie, la matière ou la lumière qu’il porte — plus ce qui est sélectionné, les plans de caméra et le réglage de la scène. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : aucun parent, visible, à l’origine sans rotation ni échelle, la couleur du studio, une forme divisée comme sa sorte l’est toujours. Les mesures ne sont jamais omises. Une liste qui ne tient rien est omise entière."
       },
       "nodeAdd": {
         "title": "Ajouter un objet à la scène",
@@ -743,7 +743,7 @@
       },
       "animationsList": {
         "title": "Lister ce qu’un personnage peut jouer",
-        "description": "Rend les trois provenances d’un mouvement — les clips que porte le fichier du modèle, les animations livrées avec le studio, et celles que la bibliothèque du projet garde — puis les blocs déjà posés sur sa bande."
+        "description": "Répond les trois provenances d’un mouvement — les clips que le fichier du modèle porte, les animations livrées avec le studio, et celles que la bibliothèque du projet garde. C’est ce qui répond à « quelles animations porte cette scène » ; les clés d’une bande se lisent avec scene.state."
       },
       "animationAddBlock": {
         "title": "Poser un bloc d’animation",
@@ -855,7 +855,7 @@
       },
       "gitStashes": {
         "title": "Lister les remises",
-        "description": "Rend ce qui a été mis de côté, de la plus récente à la plus ancienne, pour qu’un client puisse en reprendre une par sa place dans la liste."
+        "description": "Rend ce qui a été remisé, de la plus récente à la plus ancienne, pour qu’un client puisse en reprendre une par sa place dans la liste."
       },
       "gitInit": {
         "title": "Commencer à enregistrer les versions",
@@ -887,7 +887,7 @@
       },
       "gitStash": {
         "title": "Remiser les modifications en cours",
-        "description": "Met de côté les modifications de la copie de travail et la ramène à la dernière version enregistrée. Les modifications quittent alors le disque."
+        "description": "Remise les modifications de la copie de travail et la ramène à la dernière version enregistrée. Les modifications quittent alors le disque."
       },
       "gitStashPop": {
         "title": "Reprendre une remise",
@@ -939,7 +939,7 @@
       },
       "nodeMarkAsCuttingTool": {
         "title": "Marquer des objets comme outils",
-        "description": "Marque des objets de la scène devant, ou retire la marque : un objet marqué est CREUSÉ dans les autres au pli suivant, quel que soit le pli demandé et quel que soit l’ordre des identifiants. Sans marque, la plus grosse forme est la matière."
+        "description": "Marque des objets de la scène devant, ou la retire avec « negative » à FAUX : un objet marqué est CREUSÉ dans les autres au pli suivant, quel que soit le pli demandé et quel que soit l’ordre des identifiants. Sans marque, la plus grosse forme est la matière."
       },
       "nodeCombineIntoSolid": {
         "title": "Percer, fusionner ou croiser des objets",
@@ -1127,7 +1127,7 @@
       },
       "memoryRead": {
         "title": "Lire une mémoire en entier",
-        "description": "Répond le détail d’un souvenir, ce à quoi il se rapporte et d’où il vient, à partir de son identifiant."
+        "description": "Répond le DÉTAIL d’un souvenir — ce à quoi il se rapporte et d’où il vient — à partir d’un identifiant que memory.recall a rendu. Le rappel donne les résumés ; ceci est ce que « donne-moi le détail » demande."
       },
       "memoryWrite": {
         "title": "Retenir quelque chose du projet",
@@ -1303,7 +1303,7 @@
       "nodeId": "Identifiant de l’objet",
       "nodeIds": "Identifiants des objets",
       "matterId": "Identifiant de la forme à creuser",
-      "negative": "Marquer, ou retirer la marque",
+      "negative": "Vrai marque l’objet comme outil de découpe, faux retire la marque",
       "nodeKind": "Ce qu’il faut ajouter",
       "relative": "À vrai, les valeurs sont des ÉCARTS et non des valeurs finales : position et rotation s’AJOUTENT à ce qui est là, échelle et intensité le MULTIPLIENT. Un mètre plus haut s’écrit positionY 1 avec relative vrai ; de moitié s’écrit scaleX 0,5 avec relative vrai",
       "positionX": "Position en largeur",
@@ -1441,7 +1441,7 @@
       "postValue": "Valeur numérique du paramètre",
       "postText": "Valeur textuelle du paramètre — un mot d’une liste, une couleur, un identifiant d’asset",
       "postOn": "Valeur d’un paramètre qui est un interrupteur",
-      "postEnabled": "Actif ou non",
+      "postEnabled": "Vrai allume toute la composition, faux l’éteint",
       "postPreset": "Préréglage à appliquer",
       "postMode": "Ce que la caméra fait de la composition de la scène",
       "postPresetName": "Nom à donner au préréglage",

@@ -43,7 +43,7 @@
       },
       "actionsFind": {
         "title": "Find actions",
-        "description": "Searches by keywords across every action the studio publishes and hands back the ones that match, with their fields. Changes nothing on screen."
+        "description": "Searches by keywords across every action the studio publishes and hands back the ones that match, with their fields. Changes nothing on screen. This is also what answers « what can you do about X »: search the word, then say what came back."
       },
       "chatClose": {
         "title": "Close the conversation",
@@ -183,7 +183,7 @@
       },
       "jobReadCloudGeneration": {
         "title": "Read one job",
-        "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did."
+        "description": "Returns one generation whole — its status, how far along it is, what it produced, what it cost, and why it failed if it did. Asked for « the result of my last generation », this is what says how it WENT; the image or the 3D model it produced is in the project catalogue."
       },
       "jobWaitForCloudGeneration": {
         "title": "Wait for a job to finish",
@@ -199,7 +199,7 @@
       },
       "usageReport": {
         "title": "Read the usage report",
-        "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it."
+        "description": "Returns what the account has spent over a window of seven, thirty-one or a hundred and twenty days, as the usage window shows it. This is what answers « how many credits have I left »."
       },
       "assetsSearchProjectCatalogue": {
         "title": "Search the project’s catalogue",
@@ -239,7 +239,7 @@
       },
       "canvasState": {
         "title": "Read the image being edited",
-        "description": "Returns the frame of the image in front — its size and resolution — and its whole layer stack flattened, each layer with its id, kind, opacity, blend mode and transform."
+        "description": "Answers the image in front — its size, its resolution, its guides, and every layer of the stack flattened: id, name, kind, and what each carries. A field STANDING AT ITS DEFAULT is left out, and absent means that default: a layer is drawn, whole, unlocked, blended normally, uncut and untransformed."
       },
       "canvasResize": {
         "title": "Resize the image",
@@ -255,7 +255,7 @@
       },
       "layerSetMaskOptions": {
         "title": "Set a layer’s mask",
-        "description": "Says whether a mask hides what it covers and whether it travels with the layer, or takes it off altogether. A layer wearing none is refused — carving a mask belongs to the engine, through the command that makes one from the selection."
+        "description": "Says whether a MASK — a shape carved out of a selection, which a layer wears — hides what it covers and whether it travels with the layer, or takes it off altogether. Hiding the layer ITSELF is layer.setOpacityBlendAndVisibility. A layer wearing no mask is refused: carving one belongs to the engine, through the command that makes one from the selection."
       },
       "guideAdd": {
         "title": "Lay a guide",
@@ -287,7 +287,7 @@
       },
       "layerSetOpacityBlendAndVisibility": {
         "title": "Set how a layer is composited",
-        "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was."
+        "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was. THIS is what hides a layer and shows it again — « masque ce calque » sets visible to false, and has nothing to do with a mask."
       },
       "layerTransform": {
         "title": "Place a layer",
@@ -499,7 +499,7 @@
       },
       "styleSave": {
         "title": "Save the material as a style",
-        "description": "Puts the material of the document in front aside under the given name. The name is a base, the studio making it unique when it is already taken."
+        "description": "Records the material of the document in front under the given name. The name is a base, the studio making it unique when it is already taken."
       },
       "styleRename": {
         "title": "Rename a material style",
@@ -543,11 +543,11 @@
       },
       "favoritesListPinnedRecipes": {
         "title": "List the pinned recipes",
-        "description": "Answers the recipes put aside, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
+        "description": "Answers the recipes pinned to the project, with the model that produced them and the workspace that knows how to make them again. A recipe keeps enough to start a generation over."
       },
       "favoritePinAssetRecipe": {
         "title": "Pin what produced an asset",
-        "description": "Puts aside what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
+        "description": "Pins what produced an asset of the open project, so it can be made again. An asset nobody generated has no recipe to keep."
       },
       "favoriteUnpinAssetRecipe": {
         "title": "Remove a pinned recipe",
@@ -595,7 +595,7 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no field named parent is no parent, no transform is standing at the origin unturned and unscaled, no colour is the studio’s own."
+        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",
@@ -743,7 +743,7 @@
       },
       "animationsList": {
         "title": "List what a character can play",
-        "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps — then the blocks already laid on its band."
+        "description": "Answers the three places a motion comes from — the clips the model’s own file carries, the animations shipped with the studio, and the ones the project library keeps. This is what answers « what animations does this scene carry »; the keys a band holds are read with scene.state instead."
       },
       "animationAddBlock": {
         "title": "Lay an animation block",
@@ -855,7 +855,7 @@
       },
       "gitStashes": {
         "title": "List the shelved changes",
-        "description": "Returns what has been set aside, newest first, so a client can put one back by its place in the list."
+        "description": "Returns what has been shelved, newest first, so a client can put one back by its place in the list."
       },
       "gitInit": {
         "title": "Start recording versions",
@@ -887,7 +887,7 @@
       },
       "gitStash": {
         "title": "Shelve the current changes",
-        "description": "Sets the working tree’s changes aside and returns it to the last recorded version. It takes the changes off the disk."
+        "description": "Shelves the working tree’s changes and returns it to the last recorded version. It takes the changes off the disk."
       },
       "gitStashPop": {
         "title": "Bring shelved changes back",
@@ -939,7 +939,7 @@
       },
       "nodeMarkAsCuttingTool": {
         "title": "Mark objects as tools",
-        "description": "Marks objects of the scene in front, or takes the mark off: a marked object is CUT OUT of the others at the next fold, whichever fold is asked for and whatever the order of the ids. With no mark, the biggest shape is the matter."
+        "description": "Marks objects of the scene in front, or takes the mark off with “negative” FALSE: a marked object is CUT OUT of the others at the next fold, whichever fold is asked for and whatever the order of the ids. With no mark, the biggest shape is the matter."
       },
       "nodeCombineIntoSolid": {
         "title": "Carve, join or intersect objects",
@@ -1127,7 +1127,7 @@
       },
       "memoryRead": {
         "title": "Read one memory whole",
-        "description": "Answers the detail of one memory, what it refers to and where it came from, from its id."
+        "description": "Answers the DETAIL of one memory — what it refers to and where it came from — from an id memory.recall hands over. Recall gives the summaries; this is what « donne-moi le détail » asks for."
       },
       "memoryWrite": {
         "title": "Remember something about the project",
@@ -1303,7 +1303,7 @@
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
       "matterId": "Identifier of the shape to be carved",
-      "negative": "Mark, or take the mark off",
+      "negative": "True marks it as a cutting tool, false takes the mark off",
       "nodeKind": "What to add",
       "relative": "Set true to give CHANGES rather than final values: position and rotation are ADDED to what stands, scale and intensity MULTIPLY it. One metre up is positionY 1 with relative true; half is scaleX 0.5 with relative true",
       "positionX": "Position in width",
@@ -1441,7 +1441,7 @@
       "postValue": "Numeric value of the parameter",
       "postText": "Textual value of the parameter — a word from a list, a colour, an asset id",
       "postOn": "Value of a parameter that is a switch",
-      "postEnabled": "On or off",
+      "postEnabled": "True switches the whole composition on, false off",
       "postPreset": "Preset to apply",
       "postMode": "What the camera does with the scene’s composition",
       "postPresetName": "Name to give the preset",

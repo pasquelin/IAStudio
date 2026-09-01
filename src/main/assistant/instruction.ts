@@ -145,7 +145,7 @@ const RULES = [
 
 /**
  * 🛑 The rules a door has to have ROOM for, and nothing more: naming an action is safe everywhere
- * now that every name is shown, so what sets them apart is the 2 320 characters they cost.
+ * now that every name is shown, so what sets them apart is the ~2 550 characters they cost.
  *
  * Scenario's door leaves 8 500 for the whole briefing and the names alone take 4 225, so it is
  * shown `RULES` and these are what it does without — see `studioBriefing`, which decides on room.
@@ -177,8 +177,9 @@ const WIDE_RULES = [
   '  - The remote library is not this project. Look there only when asked to.',
   // Five requests died on it: the decor had just generated a picture, and the model answered
   // « je ne vois aucune image générée » — nothing in the studio block says one was made.
-  '  - "that picture", "the result", "the generated model": what a generation made is in the',
-  '    project catalogue. assets.searchProjectCatalogue with generated finds it; nothing else announces it.',
+  '  - "that picture", "the generated model": what a generation MADE is in the project catalogue.',
+  '    assets.searchProjectCatalogue with generated finds it; nothing else announces it. How a',
+  '    generation WENT is another question, and job.readCloudGeneration is what answers it.',
   // Twice over, a reference travelled as a PATH under a key nobody reads. The field belongs to
   // the model's own schema, and the value is an asset id.
   '  - To work FROM a picture, read models.readGenerationModelFields first and fill the field it names with an ASSET',
@@ -195,8 +196,40 @@ const WIDE_RULES = [
   // holding one, « quel modèle 3D ? » to a project holding two.
   '  - Rule 3 is for what the person ALONE knows. ONE thing of that kind in front of you is the',
   '    one meant, and a question about what a read would have told you is a turn spent for nothing.',
+  /**
+   * 🛑 The other side of the rule above, and it only bites where a gesture DESTROYS: « supprime le
+   * bateau » names a file, an asset, a layer, a document and an instance at once, and the rule
+   * above — one of that kind — reads it as one of them and removes it. Measured 2026-09-01.
+   */
+  '  - ONE of a kind is the one meant, but a name that fits SEVERAL KINDS at once — a file, a',
+  '    layer, an object, a document — is not one thing. Before REMOVING on such a name, ask which,',
+  '    with the kinds as the choices. Before reading or moving, pick the one in front.',
+  /**
+   * 🛑 Twenty of the 121 failures of the 2026-09-01 pass were an answer with NO call at all, and
+   * nine of those told the person a gesture was done — « Repère supprimé. », « Voici les branches
+   * du projet. » Here and not in `FORMAT`, which every door pays: Scenario's composes 6 948 of
+   * the 6 980 it has, so a line there overruns it and the overrun comes off the person's sentence.
+   */
+  '  - "say" tells what the calls DID. With "calls" empty you did nothing: never write that a',
+  '    thing is done, nor that you are about to do it — call the action, or "ask".',
+  /**
+   * 🛑 The other half, and it fails the same way with no call at all: « il n'y a pas de fusion en
+   * cours » on a decor holding one, three runs out of three, `git.status` never called. What the
+   * studio holds is READ, never recalled — the state block is a summary and answers nothing.
+   */
+  '  - What the studio HOLDS is read, never recalled. "there is no merge under way", "the scene',
+  '    already has one", "nothing was generated" are readings: call the read, answer from it.',
   '  - "one metre more", "half", "25% more" are RELATIVE. Read the value that stands, do the',
   '    arithmetic, write the result: every field is an absolute value, never a difference.',
+  /**
+   * 🛑 Relative to ANOTHER thing, which the rule above does not cover: a `relative` field moves a
+   * thing from where IT stands, never from where a second one does. Measured 2026-09-01, « place
+   * la sphère 2 mètres à droite du cube » was sent as `relative: true, positionX: 2` — two metres
+   * from the sphere — and « juste après le premier » as the first clip's start rather than its end.
+   */
+  '  - "2 metres right of X", "above X", "right after X" are relative to X and NOT to the thing',
+  '    being moved: read X, add to ITS value, write the sum. A "relative" field moves a thing from',
+  '    where it already stands, so it is the wrong tool for these — and "after" is X\'s END.',
   '  - Never say a thing is done unless a call in this conversation did it.',
   '  - Reading is not doing: the request is done once the change it asked for has been WRITTEN.',
   // The same call sent four times after it answered ok, one refusal collected eight times on
@@ -707,3 +740,9 @@ export function instructionFor(briefing: string, utterance: string, ceiling: num
 // 🛑 A function and not a `const`, however single its use: `no-hardcoded-text.test.ts` reads a
 // sentence BOUND to a name as a line bound for a screen, and this one is bound for a model.
 const preambleOf = (briefing: string): string => `${briefing}\n\nThe person says:\n\n`
+
+/**
+ * 🛑 What joining the two costs, which the sentence used to pay: a briefing filling its room to
+ * the last character left the person 20 short of `UTTERANCE_ROOM`. Read off the preamble.
+ */
+export const PREAMBLE_COST = preambleOf('').length

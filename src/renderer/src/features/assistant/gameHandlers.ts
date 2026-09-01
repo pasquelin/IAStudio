@@ -4,6 +4,7 @@ import { componentValueOf, descriptorOf, isComponentType } from '@shared/domain/
 import { attachComponent, detachComponent, setComponentField } from '@/engines/scene/commands'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { activeSceneId, useDocuments } from '@/stores/documents'
+import { noSuchNode } from './sceneHandlers'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
@@ -32,8 +33,9 @@ function aim(input: Record<string, unknown>): Aimed | ActionOutcome {
     )
 
   const named = textOf(input, 'nodeId') ?? ''
-  const node = nodeAimed(sceneOf(useScenes.getState(), documentId), named)
-  if (!node) return refused('notFound', `no node "${named}" in the scene in front, by id or name`)
+  const scene = sceneOf(useScenes.getState(), documentId)
+  const node = nodeAimed(scene, named)
+  if (!node) return refused('notFound', noSuchNode(named, scene.nodes))
 
   const type = textOf(input, 'type') ?? ''
   if (!isComponentType(type)) return refused('badInput', `no component type "${type}"`)

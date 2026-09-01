@@ -362,7 +362,13 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '46.1 turns the cube into a cylinder',
     said: ['Change le cube en cylindre.'],
     setup: cubeScene,
-    passed: run => read.kindNamed(run, 'Cube Test') === 'cylinder',
+    /**
+     * 🛑 A cylinder WHERE the cube was, under any name: nothing in the studio changes the shape of
+     * an object — the inspector edits a geometry's measurements and never its kind — so the
+     * gesture is a removal and an addition, and what replaces it is not called « Cube Test ».
+     */
+    passed: run =>
+      read.nodesOfKind(run, 'cylinder').length === 1 && read.nodesOfKind(run, 'box').length === 0,
   },
   {
     name: '46.2 adds a billboard carrying the boat picture',

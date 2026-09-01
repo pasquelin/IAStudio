@@ -70,7 +70,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'files.move': ['4.5'],
   'files.copy': ['42.1'],
   'files.duplicate': ['4.3', '18.1'],
-  'files.trash': ['4.7', '4.8'],
+  'files.trash': ['4.7', '4.8', '30.4'],
   'files.undoFileOperation': ['29.2', '29.3', '29.5', '29.6'],
   'files.redoFileOperation': ['42.4'],
   'files.readUndoStack': ['42.2'],
@@ -95,7 +95,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'asset.get': ['43.1'],
   'asset.update': ['20.2'],
   'asset.reveal': ['43.5'],
-  'asset.extractTextures': ['3.4'],
+  'asset.extractTextures': ['2.5', '3.4'],
   'assets.removeFromLibrary': ['43.2'],
 
   'canvas.state': ['39.1'],

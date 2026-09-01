@@ -51,7 +51,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { runSceneCommand } from '@/features/scene/components/sceneCommands'
 import { installGeneratorPanel } from './generatorPanel'
 import { createBenchMemory } from './memoryStore'
-import { createMemoryCatalog } from './memoryCatalog'
+import { createMemoryCatalog, type MemoryCatalog } from './memoryCatalog'
 import { DOCUMENT_SOURCES, WHEN } from './project'
 import { createMemoryCloud } from './memoryCloud'
 import { createMemoryFiles } from './memoryFiles'
@@ -156,9 +156,25 @@ function freePath(disk: MemoryFolder, into: string, stem: string, extension: str
  */
 const speakFrench = (): Promise<void> => initI18n(DEFAULT_LANGUAGE)
 
+/**
+ * The pictures an extraction stands in for: what the project holds under Materials.
+ *
+ * 🛑 ALL of them, and the base-colour ones are not told apart — `memoryCatalog` files no `map`,
+ * so nothing here says which channel a picture is. A decor that needs that distinction has to
+ * give the catalogue the field first.
+ */
+const texturesOfTheProject = (catalog: MemoryCatalog): readonly Asset[] =>
+  catalog
+    .rows()
+    .filter(
+      one =>
+        one.type === 'image' && (one.path ?? '').startsWith(`${DEFAULT_ROLE_PATHS.materials}/`),
+    )
+
 export async function createStudio(
   seed: readonly { path: string; kind: FileKind }[],
   think?: Think,
+  answers: 'yes' | 'no' = 'yes',
 ): Promise<Studio> {
   await speakFrench()
   const folder = createMemoryFolder(seed)
@@ -281,6 +297,50 @@ export async function createStudio(
     assets: {
       search: query => catalog.search(query),
       /**
+       * 🛑 The stub REJECTED, so « ouvre la texture utilisée par mon modèle » had no answer at
+       * all. Reading pictures out of a `.glb` is what a backend does and this disk holds names,
+       * so what stands in FILES the project's own base-colour material pictures as fresh rows —
+       * copies keeping their id would have any later gesture land on the original.
+       */
+      extractTextures: async assetId => {
+        // The refusal the real channel gives: `handlers.ts` finds the asset and throws for a row
+        // that is not a mesh, so a hallucinated id answered `ok` with the whole shelf.
+        const held = await catalog.find(assetId)
+        if (!held || held.type !== 'mesh') throw new Error(`asset ${assetId} is not a mesh`)
+
+        // 🛑 Idempotent, as `textureExtraction.ts` is: it short-circuits on what it already filed,
+        // « without that, the two paths would double », and a model may repeat this call.
+        const already = catalog.rows().filter(one => one.derivedFrom === assetId)
+        if (already.length > 0) return already
+
+        const filed: Asset[] = []
+        for (const one of texturesOfTheProject(catalog)) {
+          const path = freePath(
+            folder,
+            DEFAULT_ROLE_PATHS.image,
+            stemOf(nameOf(one.path ?? '')),
+            '.png',
+          )
+          await folder.write(path)
+          filed.push(
+            await catalog.add({
+              ...one,
+              id: `texture-${path}`,
+              name: stemOf(nameOf(path)),
+              path,
+              derivedFrom: assetId,
+            }),
+          )
+        }
+        return filed
+      },
+      /**
+       * 🛑 The stub REJECTED, so « ouvre la texture utilisée par mon modèle » had no answer at
+       * all. Reading the pictures out of a `.glb` is what a backend does and this disk holds
+       * names, so what stands in is the project's OWN material pictures — the ones an extraction
+       * would have filed there, minus the maps that are not the base colour.
+       */
+      /**
        * 🛑 The stub REJECTED, so every still the bench ever took answered « the scene viewport
        * gave back no still » — a refusal that named the viewport for a port that had simply said
        * no. The picture lands on the disk and in the catalogue, as an indexing pass files one.
@@ -354,6 +414,27 @@ export async function createStudio(
       describeModel: modelId => cloud.describeModel(modelId),
       generate: (modelId, body) => cloud.generate(modelId, body),
       cancelJob: jobId => cloud.cancelJob(jobId),
+      /**
+       * 🛑 The stub REJECTED with « no usage », so « combien me reste-t-il de crédits » could not
+       * be answered at all — the model sent the call eleven times over. What a headless run can
+       * honestly stand in for is the SHAPE of an answer, filled from the jobs this run has run.
+       */
+      usageReport: period =>
+        Promise.resolve({
+          period,
+          from: WHEN,
+          to: WHEN,
+          units: useJobs.getState().jobs.length,
+          discount: 0,
+          jobs: useJobs.getState().jobs.length,
+          daily: [],
+          accounts: [],
+          models: [],
+          actions: [],
+          assets: [],
+          silent: [],
+          price: null,
+        }),
     },
   })
 
@@ -408,7 +489,7 @@ export async function createStudio(
   // The input goes back as it came: a headless run points at no folder, so what gets scored is
   // the model's own values.
   const closeConfirmer = registerConfirmer(request =>
-    Promise.resolve({ granted: true, input: request.input }),
+    Promise.resolve({ granted: answers === 'yes', input: request.input }),
   )
   /**
    * 🛑 Not optional: the chain WAITS on an `ask`, so a headless run with nobody to answer hangs on

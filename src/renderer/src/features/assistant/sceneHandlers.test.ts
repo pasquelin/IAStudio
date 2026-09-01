@@ -55,6 +55,28 @@ beforeEach(() => {
   })
 })
 
+describe('a node nobody holds', () => {
+  /**
+   * 🛑 Told only that its word matched nothing, a model invents another: « château », « chevalier »
+   * and « caméra » were each aimed at twice on the bench pass of 2026-09-01, on a scene holding
+   * « Cube Test ». The names it needs to correct itself fit in the refusal.
+   */
+  it('names what the scene does hold', async () => {
+    await runAction('node.add', { kind: 'box', name: 'Caisse' })
+
+    const outcome = await runAction('node.rename', { nodeId: 'château', name: 'x' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
+    expect(outcome.ok ? '' : (outcome.detail ?? '')).toContain('"Caisse"')
+  })
+
+  it('says the scene holds none rather than naming an empty list', async () => {
+    const outcome = await runAction('node.rename', { nodeId: 'château', name: 'x' })
+
+    expect(outcome.ok ? '' : (outcome.detail ?? '')).toContain('holds none')
+  })
+})
+
 describe('reading the scene in front', () => {
   /**
    * 🛑 What a node STANDS AT is left out, and absent reads as that default — the rule the action's
@@ -75,8 +97,8 @@ describe('reading the scene in front', () => {
     // The part that MOVED and it alone: an unturned rotation and an unscaled scale stay out.
     expect(node?.transform).toEqual({ position: { x: 2, y: 0, z: 0 } })
     // A colour and seven map slots, all `null` on a fresh mesh — 145 characters of "no texture".
-    expect(node?.material).not.toHaveProperty('color')
-    expect(node?.material).toMatchObject({ kind: 'standard' })
+    // Nothing left to say, so the member goes too: `material: {}` says only what absence says.
+    expect(node).not.toHaveProperty('material')
   })
 
   it('answers the flat list of nodes, with what each one carries', async () => {

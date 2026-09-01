@@ -6,6 +6,8 @@ import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import { embeddedFontOf, FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
+  type LayerLocks,
+  type Transform as LayerTransform,
   adjustmentLayer,
   allLayers,
   canMoveLayer,
@@ -153,6 +155,19 @@ function layerAimed(state: CanvasState, given: string | null): Layer | undefined
   return aimedAt(allLayers(state.layers), id => layerById(state, id), given)
 }
 
+/** Whether any of a layer's three locks is on — all three off is what a fresh layer holds. */
+const anyLock = (locked: LayerLocks): boolean => locked.pixels || locked.position || locked.alpha
+
+/** Whether a layer sits where a fresh one does: unmoved, unscaled, unturned, unskewed. */
+const placedFlat = (transform: LayerTransform): boolean =>
+  transform.x === 0 &&
+  transform.y === 0 &&
+  transform.scaleX === 1 &&
+  transform.scaleY === 1 &&
+  transform.rotation === 0 &&
+  transform.skewX === 0 &&
+  transform.skewY === 0
+
 function readState(): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
@@ -168,20 +183,26 @@ function readState(): ActionOutcome {
       guides: open.state.guides,
       // Flattened: a client that had to walk a tree to find a layer id would walk it wrong the
       // first time a group was collapsed.
+      /**
+       * 🛑 A value AT ITS DEFAULT is left out, and absent reads as that default: a layer is drawn,
+       * whole, unlocked, blended normally, uncut and untransformed. `resultLine` cuts by whole
+       * members and `layers` is the last one, so a stack of four spent 290 characters a layer
+       * saying « unchanged » and came back cut before the one a sentence named.
+       */
       layers: allLayers(open.state.layers).map(layer => ({
         id: layer.id,
         name: layer.name,
         kind: layer.kind,
-        visible: layer.visible,
-        opacity: layer.opacity,
+        ...(layer.visible ? {} : { visible: false }),
+        ...(layer.opacity === 1 ? {} : { opacity: layer.opacity }),
         // The three that were written and never read: a client could raise `fillOpacity`, lock a
         // layer and carve a mask, and had no way of learning that any of it had taken.
-        fillOpacity: layer.fillOpacity,
-        locked: layer.locked,
+        ...(layer.fillOpacity === 1 ? {} : { fillOpacity: layer.fillOpacity }),
+        ...(anyLock(layer.locked) ? { locked: layer.locked } : {}),
         ...(layer.mask ? { mask: layer.mask } : {}),
-        blend: layer.blend,
-        clipped: layer.clipped,
-        transform: layer.transform,
+        ...(layer.blend === 'normal' ? {} : { blend: layer.blend }),
+        ...(layer.clipped ? { clipped: true } : {}),
+        ...(placedFlat(layer.transform) ? {} : { transform: layer.transform }),
         ...(layer.kind === 'text'
           ? {
               text: layer.text,

@@ -98,6 +98,13 @@ export const CANVAS_SCENARIOS: readonly Scenario[] = [
       await soundBed(studio)
       await laid(studio, trackAt(studio, 1), 'waves on a wooden hull.wav', 6 * read.SECOND)
     },
-    passed: run => read.audioRow(run) === undefined && read.clips(run).length === 2,
+    /**
+     * 🛑 THE row that carried the sounds, not every audio row: the decor lays A1 with two sounds
+     * and leaves A2 empty, so « plus aucune piste audio » asked for the empty one to go as well —
+     * which the sentence never says. One audio row left, and the two video clips alone.
+     */
+    passed: run =>
+      read.tracks(run).filter(one => one.kind === 'audio').length === 1 &&
+      read.clips(run).length === 2,
   },
 ]

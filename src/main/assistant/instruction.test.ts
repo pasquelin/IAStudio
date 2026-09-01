@@ -227,7 +227,7 @@ describe('how much of the catalogue the model is shown', () => {
     expect(wide.text).toContain('has HAPPENED')
     expect(wide.text).toContain('the WHOLE path inside the project')
     expect(wide.text).toContain('Never write <something> where an id goes')
-    expect(wide.text).toContain('what a generation made is in the')
+    expect(wide.text).toContain('what a generation MADE is in the project catalogue')
     expect(wide.text).toContain('read models.readGenerationModelFields first')
   })
 
